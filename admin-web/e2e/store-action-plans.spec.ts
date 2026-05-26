@@ -20,6 +20,14 @@ test.beforeEach(async ({ page }) => {
   await routeStoreActionPlanApi(page)
 })
 
+function getActionPlansPanel(page: Page) {
+  return page.getByTestId('store-action-plans-panel')
+}
+
+function getActionPlanRow(page: Page, title = 'Net sales recovery plan') {
+  return getActionPlansPanel(page).getByTestId('store-action-plan-row').filter({ hasText: title })
+}
+
 test('store tasks renders persisted action plans from the workflow inbox', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
@@ -83,7 +91,7 @@ test('store tasks lists persisted action plan records with active status control
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlansPanel = getActionPlansPanel(page)
   await expect(actionPlansPanel.getByRole('heading', { name: 'Action plans' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1 plan')).toBeVisible()
   await expect(actionPlansPanel.getByText('Net sales recovery plan')).toBeVisible()
@@ -137,8 +145,7 @@ test('store tasks opens persisted action plan coaching detail on demand', async 
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
-  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Open coaching detail' }).click()
 
   await expect(actionPlanRow.getByLabel('Action plan coaching detail')).toBeVisible()
@@ -195,8 +202,8 @@ test('store tasks updates a persisted action plan status', async ({ page }) => {
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
-  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  const actionPlansPanel = getActionPlansPanel(page)
+  const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Update status' }).click()
   const statusForm = actionPlanRow.locator('form[aria-label="Action plan status"]')
   await statusForm.getByLabel('Status').selectOption('blocked')
@@ -232,8 +239,7 @@ test('store tasks keeps status update failures local to the action plan form', a
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
-  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Update status' }).click()
   const statusForm = actionPlanRow.locator('form[aria-label="Action plan status"]')
   await statusForm.getByLabel('Status').selectOption('blocked')
@@ -241,7 +247,7 @@ test('store tasks keeps status update failures local to the action plan form', a
 
   await expect(statusForm.getByRole('alert')).toContainText('Status could not be updated')
   await expect(statusForm.getByRole('alert')).toContainText('Terminal plan cannot be updated')
-  await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
+  await expect(actionPlanRow.locator('[data-slot="badge"]').filter({ hasText: 'Open' })).toBeVisible()
 })
 
 test('store tasks closes a persisted action plan with a resolution note', async ({ page }) => {
@@ -292,8 +298,8 @@ test('store tasks closes a persisted action plan with a resolution note', async 
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
-  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  const actionPlansPanel = getActionPlansPanel(page)
+  const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
   const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
   await closeForm.getByLabel('Resolution note').fill('Coaching completed with the store team')
@@ -328,8 +334,7 @@ test('store tasks keeps close failures local to the action plan form', async ({ 
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
-  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
   const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
   await closeForm.getByLabel('Resolution note').fill('Coaching completed with the store team')
@@ -337,7 +342,7 @@ test('store tasks keeps close failures local to the action plan form', async ({ 
 
   await expect(closeForm.getByRole('alert')).toContainText('Plan could not be closed')
   await expect(closeForm.getByRole('alert')).toContainText('Action plan was already closed')
-  await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
+  await expect(actionPlanRow.getByText('Open', { exact: true })).toBeVisible()
 })
 
 test('store tasks cancels a persisted action plan with a reason', async ({ page }) => {
@@ -388,8 +393,8 @@ test('store tasks cancels a persisted action plan with a reason', async ({ page 
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
-  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  const actionPlansPanel = getActionPlansPanel(page)
+  const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Cancel plan' }).click()
   const cancelForm = actionPlanRow.locator('form[aria-label="Cancel action plan"]')
   await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
@@ -424,8 +429,7 @@ test('store tasks keeps cancel failures local to the action plan form', async ({
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
-  const actionPlanRow = actionPlansPanel.locator('article.stacked-row').filter({ hasText: 'Net sales recovery plan' })
+  const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Cancel plan' }).click()
   const cancelForm = actionPlanRow.locator('form[aria-label="Cancel action plan"]')
   await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
@@ -433,7 +437,7 @@ test('store tasks keeps cancel failures local to the action plan form', async ({
 
   await expect(cancelForm.getByRole('alert')).toContainText('Plan could not be cancelled')
   await expect(cancelForm.getByRole('alert')).toContainText('Action plan was already cancelled')
-  await expect(actionPlanRow.locator('.status-pill').filter({ hasText: 'Open' })).toBeVisible()
+  await expect(actionPlanRow.getByText('Open', { exact: true })).toBeVisible()
 })
 
 test('store tasks creates an action plan from a KPI follow-up candidate', async ({ page }) => {
@@ -524,7 +528,7 @@ test('store tasks creates an action plan from a KPI follow-up candidate', async 
   await page.goto('/store/tasks')
 
   const firstKpiFollowUp = page
-    .locator('article.stacked-row')
+    .getByTestId('store-task-queue-row')
     .filter({ hasText: 'IstinyePark Demo Store' })
     .filter({ hasText: 'UPT at risk' })
     .first()
@@ -544,7 +548,7 @@ test('store tasks creates an action plan from a KPI follow-up candidate', async 
     priority: 'high',
     dueOn: '2026-05-27',
   })
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlansPanel = getActionPlansPanel(page)
   await expect(actionPlansPanel.getByText('UPT at risk')).toBeVisible()
   await expect(actionPlansPanel.getByText('May 27, 2026')).toBeVisible()
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
@@ -617,7 +621,7 @@ test('store tasks pages persisted action plan records', async ({ page }) => {
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlansPanel = getActionPlansPanel(page)
   await expect(actionPlansPanel.getByText('21 plan')).toBeVisible()
   await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
   await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
@@ -657,7 +661,7 @@ test('store tasks hides unsafe persisted action plan source links', async ({ pag
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlansPanel = getActionPlansPanel(page)
   await expect(actionPlansPanel.getByText('Unsafe source plan')).toBeVisible()
   await expect(actionPlansPanel.getByText('No plan summary')).toBeVisible()
   await expect(actionPlansPanel.getByRole('link', { name: 'Open source' })).toHaveCount(0)
@@ -698,7 +702,7 @@ test('store tasks recovers when the current action plan page becomes empty', asy
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = page.locator('.panel').filter({ hasText: 'Persisted follow-up' })
+  const actionPlansPanel = getActionPlansPanel(page)
   await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
   await actionPlansPanel.getByRole('button', { name: 'Next' }).click()
 

@@ -1,6 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { PencilLine, Save, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { getErrorMessage } from '../../lib/format'
 import type { TranslateFunction } from '../localization/dictionary'
 import {
@@ -79,12 +81,12 @@ export function StoreActionPlanStatusControl(input: {
   if (!isOpen) {
     return (
       <>
-        <button type="button" className="control-button" onClick={openForm}>
-          <PencilLine size={16} />
+        <Button type="button" size="sm" variant="outline" onClick={openForm}>
+          <PencilLine data-icon="inline-start" />
           {input.t('storeTasks.actionPlansUpdateStatusAction')}
-        </button>
+        </Button>
         {updateStatusMutation.isSuccess ? (
-          <span className="queue-subtitle">{input.t('storeTasks.actionPlansStatusSuccess')}</span>
+          <span className="tw:text-sm tw:text-muted-foreground">{input.t('storeTasks.actionPlansStatusSuccess')}</span>
         ) : null}
       </>
     )
@@ -92,16 +94,16 @@ export function StoreActionPlanStatusControl(input: {
 
   return (
     <form
-      className="stacked-row"
+      className="tw:flex tw:flex-col tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/80 tw:p-3"
       aria-label={input.t('storeTasks.actionPlansStatusFormLabel')}
       onSubmit={submitForm}
     >
-      <div className="key-grid">
-        <label className="control-select" htmlFor={statusId}>
+      <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2">
+        <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={statusId}>
           <span>{input.t('storeTasks.actionPlansStatusLabel')}</span>
           <select
             id={statusId}
-            className="control-input"
+            className="tw:h-9 tw:rounded-md tw:border tw:border-input tw:bg-transparent tw:px-3 tw:text-sm tw:shadow-xs tw:outline-none tw:focus-visible:border-ring tw:focus-visible:ring-ring/50 tw:focus-visible:ring-[3px]"
             value={status}
             onChange={(event) => setStatus(event.target.value as ActiveStoreActionPlanStatus)}
           >
@@ -112,11 +114,10 @@ export function StoreActionPlanStatusControl(input: {
             ))}
           </select>
         </label>
-        <label className="control-select" htmlFor={noteId}>
+        <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={noteId}>
           <span>{input.t('storeTasks.actionPlansStatusNoteLabel')}</span>
-          <input
+          <Input
             id={noteId}
-            className="control-input"
             value={note}
             maxLength={240}
             onChange={(event) => setNote(event.target.value)}
@@ -125,27 +126,28 @@ export function StoreActionPlanStatusControl(input: {
       </div>
 
       {updateStatusMutation.isError ? (
-        <p role="alert" className="queue-subtitle">
+        <p role="alert" className="tw:text-sm tw:text-destructive">
           {input.t('storeTasks.actionPlansStatusErrorTitle')}: {getErrorMessage(updateStatusMutation.error)}
         </p>
       ) : null}
 
-      <div className="action-cluster">
-        <button type="submit" className="control-button" disabled={!canSubmit}>
-          <Save size={16} />
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button type="submit" size="sm" disabled={!canSubmit}>
+          <Save data-icon="inline-start" />
           {updateStatusMutation.isPending
             ? input.t('storeTasks.actionPlansStatusSubmitting')
             : input.t('storeTasks.actionPlansStatusSubmit')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="control-button"
+          size="sm"
+          variant="outline"
           disabled={updateStatusMutation.isPending}
           onClick={closeForm}
         >
-          <X size={16} />
+          <X data-icon="inline-start" />
           {input.t('storeTasks.actionPlansStatusCancel')}
-        </button>
+        </Button>
       </div>
     </form>
   )

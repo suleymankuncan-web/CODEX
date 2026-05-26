@@ -1,6 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
 import {
@@ -22,13 +23,24 @@ import {
 } from '../features/store-home/daily-command-brief'
 import { getWorkflowInbox } from '../features/workflow/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import {
+  StoreInfoGrid,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSectionCard,
+  StoreStackedList,
+  StoreStackedRow,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+  type StoreSurfaceTone,
+} from './store-surface-primitives'
 
 type HomeMetric = {
   labelKey: TranslationKey
   value: string
   noteKey?: TranslationKey
   note?: string
-  tone?: 'score' | 'link'
+  tone?: StoreSurfaceTone
   href?: string
 }
 
@@ -120,115 +132,55 @@ function formatStoreScope(authSummary: AuthSessionSummary | null) {
 function buildMetrics(input: {
   checklistSummary: ChecklistHomeSummary | null
   persona: StorePersona
-  pendingValue: string
+  pendingRequestsValue: string | null
   storeScopeValue: string
 }) {
-  if (input.persona === 'regionManager') {
-    return [
-      {
-        labelKey: 'storeHome.metric.regionScore',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.sourcePending',
-        tone: 'score',
-      },
-      {
-        labelKey: 'storeHome.metric.storeScope',
-        value: input.storeScopeValue,
-        noteKey: 'storeHome.metric.authorizedStores',
-      },
-      {
-        labelKey: 'storeHome.metric.pendingRequests',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.openRequests',
-        tone: 'link',
-        href: '/store/approvals',
-      },
-      {
-        labelKey: 'storeHome.metric.checklistCoverage',
-        value: input.checklistSummary?.metricValue ?? input.pendingValue,
-        ...(input.checklistSummary
-          ? { note: input.checklistSummary.metricNote }
-          : { noteKey: 'storeHome.metric.checklistPending' }),
-        tone: 'link',
-        href: '/store/checklists',
-      },
-    ] satisfies HomeMetric[]
+  const metrics: HomeMetric[] = [
+    {
+      labelKey: 'storeHome.metric.storeScope',
+      value: input.storeScopeValue,
+      noteKey: 'storeHome.metric.authorizedStores',
+      tone: 'neutral',
+    },
+  ]
+
+  if (input.pendingRequestsValue !== null) {
+    metrics.push({
+      labelKey: 'storeHome.metric.pendingRequests',
+      value: input.pendingRequestsValue,
+      noteKey: 'storeHome.metric.openRequests',
+      tone: Number(input.pendingRequestsValue) > 0 ? 'warning' : 'calm',
+      href: '/store/approvals',
+    })
   }
 
-  if (input.persona === 'storeManager') {
-    return [
-      {
-        labelKey: 'storeHome.metric.storeScore',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.sourcePending',
-        tone: 'score',
-      },
-      {
-        labelKey: 'storeHome.metric.storeRank',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.rankingPending',
-      },
-      {
-        labelKey: 'storeHome.metric.pendingRequests',
-        value: input.pendingValue,
-        noteKey: 'storeHome.metric.openRequests',
-        tone: 'link',
-        href: '/store/approvals',
-      },
-      {
-        labelKey: 'storeHome.metric.checklistStatus',
-        value: input.checklistSummary?.metricValue ?? input.pendingValue,
-        ...(input.checklistSummary
-          ? { note: input.checklistSummary.metricNote }
-          : { noteKey: 'storeHome.metric.checklistPending' }),
-        tone: 'link',
-        href: '/store/checklists',
-      },
-    ] satisfies HomeMetric[]
+  if (input.checklistSummary) {
+    const checklistMetric: HomeMetric = {
+      labelKey:
+        input.persona === 'visualMerchandiser'
+          ? 'storeHome.metric.checklistQueue'
+          : input.persona === 'storeManager'
+            ? 'storeHome.metric.checklistStatus'
+            : 'storeHome.metric.checklistCoverage',
+      value: input.checklistSummary.metricValue,
+      note: input.checklistSummary.metricNote,
+      tone: input.checklistSummary.tone === 'attention' ? 'warning' : 'calm',
+      href: '/store/checklists',
+    }
+    metrics.push(checklistMetric)
   }
 
-  if (input.persona === 'visualMerchandiser') {
-    return [
-      {
-        labelKey: 'storeHome.metric.checklistQueue',
-        value: input.checklistSummary?.metricValue ?? input.pendingValue,
-        ...(input.checklistSummary
-          ? { note: input.checklistSummary.metricNote }
-          : { noteKey: 'storeHome.metric.checklistPending' }),
-        tone: 'score',
-        href: '/store/checklists',
-      },
-      {
-        labelKey: 'storeHome.metric.storeScope',
-        value: input.storeScopeValue,
-        noteKey: 'storeHome.metric.authorizedStores',
-      },
-    ] satisfies HomeMetric[]
+  if (input.persona === 'personnel') {
+    metrics.push({
+      labelKey: 'storeHome.nav.myPerformance',
+      value: 'KPI',
+      noteKey: 'storeHome.command.openPerformance',
+      tone: 'accent',
+      href: '/store/me',
+    })
   }
 
-  return [
-    {
-      labelKey: 'storeHome.metric.personalScore',
-      value: input.pendingValue,
-      noteKey: 'storeHome.metric.sourcePending',
-      tone: 'score',
-    },
-    {
-      labelKey: 'storeHome.metric.storeRank',
-      value: input.pendingValue,
-      noteKey: 'storeHome.metric.rankingPending',
-    },
-    {
-      labelKey: 'storeHome.metric.regionRank',
-      value: input.pendingValue,
-      noteKey: 'storeHome.metric.rankingPending',
-    },
-    {
-      labelKey: 'storeHome.metric.turkeyRank',
-      value: input.pendingValue,
-      noteKey: 'storeHome.metric.rankingPending',
-    },
-  ] satisfies HomeMetric[]
+  return metrics
 }
 
 export function StoreHomePage(input: {
@@ -273,6 +225,14 @@ export function StoreHomePage(input: {
   const heroCopy = t(config.heroCopyKey)
   const pendingValue = t('storeHome.valuePending')
   const storeScopeValue = formatStoreScope(input.authSummary)
+  const workflowItems = workflowInboxQuery.data?.items ?? []
+  const pendingWorkflowItems = workflowItems.filter((item) => item.inboxStatus === 'needs_attention')
+  const pendingRequestsValue =
+    canUseWorkflowInbox && !workflowInboxQuery.isError
+      ? workflowInboxQuery.isLoading
+        ? pendingValue
+        : String(pendingWorkflowItems.length)
+      : null
   const checklistSummary = buildChecklistHomeSummary({
     acknowledgementItems: checklistAcknowledgementsQuery.data?.items ?? [],
     isLoading: checklistAcknowledgementsQuery.isLoading || mobileChecklistQuery.isLoading,
@@ -285,7 +245,7 @@ export function StoreHomePage(input: {
   const metrics = buildMetrics({
     checklistSummary,
     persona,
-    pendingValue,
+    pendingRequestsValue,
     storeScopeValue,
   })
   const dailyBriefItems = buildDailyCommandBriefItems({
@@ -293,7 +253,7 @@ export function StoreHomePage(input: {
     canUseWorkflowInbox,
     pendingValue,
     persona,
-    workflowItems: workflowInboxQuery.data?.items ?? [],
+    workflowItems,
     workflowLoading: workflowInboxQuery.isLoading,
     workflowUnavailable: workflowInboxQuery.isError,
   })
@@ -301,10 +261,6 @@ export function StoreHomePage(input: {
     {
       labelKey: 'storeHome.summary.period',
       value: t('storeHome.summary.currentMonth'),
-    },
-    {
-      labelKey: 'storeHome.summary.latestData',
-      value: t('storeHome.valuePending'),
     },
     {
       labelKey: 'storeHome.summary.scope',
@@ -317,104 +273,86 @@ export function StoreHomePage(input: {
   ] satisfies Array<{ labelKey: TranslationKey; value: string }>
 
   return (
-    <section className="store-command-home" aria-label={t('storeHome.command.aria')}>
-      <header className="store-command-topbar">
-        <div className="store-command-title-block">
-          <h1>{title}</h1>
-          {copy ? <p>{copy}</p> : null}
-        </div>
-      </header>
+    <StoreSurfacePage ariaLabel={t('storeHome.command.aria')} className="store-command-home">
+      <StoreSurfaceHeader
+        eyebrow={t('storeHome.homeEyebrow')}
+        title={title}
+        description={copy}
+        badges={[
+          { label: t(`storeHome.persona.${persona}` as TranslationKey), tone: 'accent' },
+          { label: `${t('storeHome.summary.scope')}: ${storeScopeValue}`, tone: 'neutral' },
+        ]}
+      />
 
-      <section className="store-command-content-grid">
-        <div className="store-command-content-primary">
-          <section className="store-command-hero">
-            <div className="store-command-hero-head">
-              {heroTitle || heroCopy ? (
-                <div>
-                  {heroTitle ? <h2>{heroTitle}</h2> : null}
-                  {heroCopy ? <p>{heroCopy}</p> : null}
-                </div>
-              ) : null}
-              <div className="store-command-period-pill">
-                {t('storeHome.command.latestLoadedPeriodPending')}
-              </div>
-            </div>
+      <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+        <div className="tw:flex tw:flex-col tw:gap-4">
+          <StoreSectionCard
+            title={heroTitle}
+            description={heroCopy}
+            action={{
+              icon: <ArrowRight data-icon="inline-start" />,
+              label: t(config.focusActionKey),
+              to: config.focusHref,
+            }}
+          >
+            <StoreStackedRow tone="accent">
+              <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
+                {t(config.focusTitleKey)}
+              </strong>
+              <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                {t(config.focusCopyKey)}
+              </p>
+            </StoreStackedRow>
 
-            <article className="store-command-focus-card">
-              <div>
-                <strong>{t(config.focusTitleKey)}</strong>
-                <p>{t(config.focusCopyKey)}</p>
-              </div>
-              <Link className="store-command-focus-action" to={config.focusHref}>
-                {t(config.focusActionKey)}
-              </Link>
-            </article>
-
-            <div className="store-command-metrics">
-              {metrics.map((metric) => (
-                <MetricCard key={metric.labelKey} metric={metric} />
-              ))}
-            </div>
+            {metrics.length > 0 ? (
+              <StoreMetricGrid className="tw:mt-3 tw:xl:grid-cols-3">
+                {metrics.map((metric) => (
+                  <HomeMetricCard key={metric.labelKey} metric={metric} />
+                ))}
+              </StoreMetricGrid>
+            ) : null}
 
             {checklistSummary ? <ChecklistHomeCard summary={checklistSummary} /> : null}
-          </section>
+          </StoreSectionCard>
 
           <DailyCommandBriefPanel items={dailyBriefItems} />
 
-          <section className="store-command-panel">
-            <div className="store-command-panel-head">
-              <h3>{t(config.timelineTitleKey)}</h3>
-              <span className="store-command-status-dot">{t('storeHome.command.connected')}</span>
-            </div>
-            <p className="store-command-panel-note">{t('storeHome.command.connectedRoutesCopy')}</p>
-            <div className="store-command-timeline">
+          <StoreSectionCard
+            title={t(config.timelineTitleKey)}
+            badge={{ label: t('storeHome.command.connected'), tone: 'calm' }}
+          >
+            <StoreStackedList>
               {navigation.slice(1, 5).map((item) => (
-                <Link className="store-command-timeline-item" key={item.id} to={item.path}>
-                  <i aria-hidden="true" />
-                  <span>
-                    <strong>{t(item.labelKey)}</strong>
-                    <small>{t('storeHome.command.routeConnected')}</small>
-                  </span>
-                </Link>
+                <StoreStackedRow key={item.id}>
+                  <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+                    <strong className="tw:text-sm tw:text-foreground">{t(item.labelKey)}</strong>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={item.path}>
+                        {t('storeHome.dailyBrief.openSource')}
+                        <ArrowRight data-icon="inline-end" />
+                      </Link>
+                    </Button>
+                  </div>
+                </StoreStackedRow>
               ))}
-            </div>
-          </section>
+            </StoreStackedList>
+          </StoreSectionCard>
         </div>
 
-        <aside className="store-command-home-aside">
-          <section className="store-command-panel">
-            <div className="store-command-panel-head">
-              <h3>{t(config.summaryTitleKey)}</h3>
-              <span className="store-command-status-dot">{t('storeHome.command.ready')}</span>
-            </div>
-            <div className="store-command-mini-list">
-              {summaryRows.map((row) => (
-                <div className="store-command-mini-row" key={row.labelKey}>
-                  <span>
-                    <strong>{t(row.labelKey)}</strong>
-                  </span>
-                  <span className="store-command-mini-value">{row.value}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="store-command-panel store-command-kpi-panel">
-            <div className="store-command-panel-head">
-              <h3>{t('storeHome.command.kpiSnapshot')}</h3>
-            </div>
-            <div className="store-command-kpi-list">
-              {getKpiRowsForPersona(persona).map((row) => (
-                <div className="store-command-kpi-row" key={row}>
-                  <strong>{row}</strong>
-                  <span>{pendingValue}</span>
-                </div>
-              ))}
-            </div>
-          </section>
-        </aside>
-      </section>
-    </section>
+        <StoreSectionCard
+          title={t(config.summaryTitleKey)}
+          badge={{ label: t('storeHome.command.ready'), tone: 'calm' }}
+        >
+          <StoreInfoGrid
+            items={summaryRows.map((row) => ({
+              label: t(row.labelKey),
+              value: row.value,
+            }))}
+            className="tw:sm:grid-cols-1 tw:xl:grid-cols-1"
+          />
+        </StoreSectionCard>
+      </div>
+    </StoreSurfacePage>
   )
 }
 
@@ -422,88 +360,89 @@ function DailyCommandBriefPanel(input: { items: DailyCommandBriefItem[] }) {
   const { t } = useLocalization()
 
   return (
-    <section className="store-command-panel" aria-label={t('storeHome.dailyBrief.title')}>
-      <div className="store-command-panel-head">
-        <h3>{t('storeHome.dailyBrief.title')}</h3>
-        <span className="store-command-status-dot">{t('storeHome.dailyBrief.sourceLinked')}</span>
-      </div>
-      <p className="store-command-panel-note">{t('storeHome.dailyBrief.copy')}</p>
-      <div className="store-command-mini-list">
+    <StoreSectionCard
+      ariaLabel={t('storeHome.dailyBrief.title')}
+      title={t('storeHome.dailyBrief.title')}
+      description={t('storeHome.dailyBrief.copy')}
+      badge={{ label: t('storeHome.dailyBrief.sourceLinked'), tone: 'accent' }}
+    >
+      <StoreStackedList>
         {input.items.map((item) => (
-          <div className="store-command-mini-row" key={item.id}>
-            <span>
-              <strong>{t(item.titleKey)}</strong>
-              <small className="store-command-panel-note">{t(item.copyKey)}</small>
-            </span>
-            <Link
-              aria-label={`${t('storeHome.dailyBrief.openSource')}: ${t(item.sourceLabelKey)}`}
-              className="store-command-mini-value"
-              to={item.href}
-            >
-              {item.value}
-            </Link>
-          </div>
+          <StoreStackedRow key={item.id}>
+            <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+              <span className="tw:min-w-0">
+                <strong className="tw:block tw:text-sm tw:text-foreground">{t(item.titleKey)}</strong>
+                <small className="tw:block tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                  {t(item.copyKey)}
+                </small>
+              </span>
+              <Button asChild size="sm" variant="outline">
+                <Link aria-label={`${t('storeHome.dailyBrief.openSource')}: ${t(item.sourceLabelKey)}`} to={item.href}>
+                  {item.value}
+                  <ArrowRight data-icon="inline-end" />
+                </Link>
+              </Button>
+            </div>
+          </StoreStackedRow>
         ))}
-      </div>
-    </section>
+      </StoreStackedList>
+    </StoreSectionCard>
   )
 }
 
-function MetricCard(input: { metric: HomeMetric }) {
+function HomeMetricCard(input: { metric: HomeMetric }) {
   const { t } = useLocalization()
-  const content = (
-    <>
-      <div>
-        <span>{t(input.metric.labelKey)}</span>
-        <strong>{input.metric.value}</strong>
-        {input.metric.note ? <small>{input.metric.note}</small> : null}
-        {!input.metric.note && input.metric.noteKey ? <small>{t(input.metric.noteKey)}</small> : null}
-      </div>
-      {input.metric.tone === 'link' ? (
-        <span className="store-command-metric-link-hint" aria-hidden="true">
-          <ArrowRight size={17} />
-        </span>
-      ) : null}
-    </>
+  const note = input.metric.href
+    ? input.metric.note
+    : input.metric.note ?? (input.metric.noteKey ? t(input.metric.noteKey) : undefined)
+  const action = input.metric.href
+    ? {
+        icon: <ArrowRight data-icon="inline-start" />,
+        label: input.metric.noteKey ? t(input.metric.noteKey) : t('storeHome.dailyBrief.openSource'),
+        to: input.metric.href,
+        variant: 'outline' as const,
+      }
+    : undefined
+
+  return (
+    <StoreMetricCard
+      title={t(input.metric.labelKey)}
+      value={input.metric.value}
+      {...(input.metric.tone ? { tone: input.metric.tone } : {})}
+      {...(note ? { note } : {})}
+      {...(action ? { action } : {})}
+    />
   )
-  const className = `store-command-metric${
-    input.metric.tone === 'score' ? ' store-command-score-card' : ''
-  }${input.metric.tone === 'link' ? ' store-command-metric-link' : ''}`
-
-  if (input.metric.href) {
-    return (
-      <Link className={className} to={input.metric.href}>
-        {content}
-      </Link>
-    )
-  }
-
-  return <article className={className}>{content}</article>
 }
 
 function ChecklistHomeCard(input: { summary: ChecklistHomeSummary }) {
   return (
-    <Link
-      className={`store-command-checklist-card store-command-checklist-card-${input.summary.tone}`}
-      to="/store/checklists"
+    <StoreStackedRow
+      className="tw:mt-3"
+      testId="store-home-checklist-card"
+      tone={input.summary.tone === 'attention' ? 'warning' : 'calm'}
     >
-      <div>
-        <span>{input.summary.note}</span>
-        <strong>{input.summary.title}</strong>
-        <p>{input.summary.copy}</p>
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+        <div className="tw:min-w-0">
+          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.summary.note}</span>
+          <strong className="tw:block tw:text-sm tw:text-foreground">{input.summary.title}</strong>
+          <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.summary.copy}</p>
+        </div>
+        <div className="tw:flex tw:items-center tw:gap-3">
+          <strong className="tw:text-2xl tw:text-foreground">{input.summary.metricValue}</strong>
+          <Button asChild size="sm" variant="outline">
+            <Link
+              aria-label={`${input.summary.title} ${input.summary.actionLabel}`}
+              to="/store/checklists"
+            >
+              {input.summary.actionLabel}
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        </div>
       </div>
-      <em>
-        {input.summary.metricValue}
-        <small>{input.summary.actionLabel}</small>
-      </em>
-    </Link>
+    </StoreStackedRow>
   )
-}
-
-function getKpiRowsForPersona(persona: StorePersona) {
-  if (persona === 'personnel') return ['UPT', 'ATV', 'HG%']
-  if (persona === 'visualMerchandiser') return ['VM Checklist']
-  return ['UPT', 'ATV', 'CR', 'HG%', 'BM Checklist', 'VM Checklist']
 }
 
 function buildChecklistHomeSummary(input: {

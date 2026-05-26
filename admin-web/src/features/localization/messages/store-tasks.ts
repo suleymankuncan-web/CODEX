@@ -8,7 +8,7 @@ export const storeTasksTr = {
   'storeTasks.unavailableEyebrow': 'Mağaza işleri',
   'storeTasks.unavailableTitle': 'Ortak iş kuyruğu açılmadan önce operasyon rolü netleşmeli.',
   'storeTasks.unavailableCopy':
-    'Faz 3 kuyruğu artık kontrat tabanlı; bu oturumun onay, kabul veya rapor destekli işleri okuyabilecek bir mağaza rolüyle açılması gerekiyor.',
+    'Bu kuyruk onay, kabul veya rapor destekli işleri okuyabilecek bir mağaza rolüyle açılır.',
   'storeTasks.loadingTitle': 'İş kuyruğu yükleniyor',
   'storeTasks.loadingCopy':
     'Onay ve kabul işleri mobil kullanıma uygun tek kuyruğa alınıyor.',
@@ -71,7 +71,7 @@ export const storeTasksTr = {
     'Her satır öncelik, başlık, özet ve birincil aksiyon yolunu dar ekranda da taşır.',
 
   'storeTasks.todayQueue': 'Bugünün kuyruğu',
-  'storeTasks.queueTitle': 'Ortak kontrata bağlı aksiyonlar',
+  'storeTasks.queueTitle': 'Bugünkü aksiyonlar',
   'storeTasks.emptyTitle': 'Şu anda aksiyon gerektiren iş yok',
   'storeTasks.emptyCopy':
     'Onaylar, kabuller ve ilerideki KPI sapmaları ortak iş kuyruğuna düştüğünde burada görünür.',
@@ -110,8 +110,8 @@ export const storeTasksTr = {
   'storeTasks.actionPlansSourceId': 'Kaynak ID',
   'storeTasks.actionPlansSourceSnapshot': 'Snapshot',
   'storeTasks.actionPlansSourceKpi': 'KPI',
-  'storeTasks.actionPlansResolutionEvidence': 'Cozum kaniti',
-  'storeTasks.actionPlansCancelEvidence': 'Iptal kaniti',
+  'storeTasks.actionPlansResolutionEvidence': 'Cozum notu',
+  'storeTasks.actionPlansCancelEvidence': 'Iptal nedeni',
   'storeTasks.actionPlansNotAvailable': 'Yok',
   'storeTasks.actionPlansRange': '{start}-{end} / {total}',
   'storeTasks.actionPlansPrevious': 'Onceki',
@@ -223,7 +223,7 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.unavailableEyebrow': 'Store work',
   'storeTasks.unavailableTitle': 'Operations role must be clear before the shared work queue opens.',
   'storeTasks.unavailableCopy':
-    'The phase 3 queue is now contract-based; this session must open with a store role that can read approval, acknowledgement, or report-backed work.',
+    'This queue opens with a store role that can read approval, acknowledgement, or report-backed work.',
   'storeTasks.loadingTitle': 'Loading work queue',
   'storeTasks.loadingCopy':
     'Approval and acknowledgement work is being gathered into one mobile-ready queue.',
@@ -286,7 +286,7 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
     'Each row carries priority, title, summary, and primary action path on narrow screens too.',
 
   'storeTasks.todayQueue': "Today's queue",
-  'storeTasks.queueTitle': 'Actions tied to the shared contract',
+  'storeTasks.queueTitle': 'Today’s actions',
   'storeTasks.emptyTitle': 'No action-required work right now',
   'storeTasks.emptyCopy':
     'Approvals, acknowledgements, and future KPI deviations will appear here when they enter the shared work queue.',
@@ -325,8 +325,8 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.actionPlansSourceId': 'Source ID',
   'storeTasks.actionPlansSourceSnapshot': 'Snapshot',
   'storeTasks.actionPlansSourceKpi': 'KPI',
-  'storeTasks.actionPlansResolutionEvidence': 'Resolution evidence',
-  'storeTasks.actionPlansCancelEvidence': 'Cancel evidence',
+  'storeTasks.actionPlansResolutionEvidence': 'Resolution note',
+  'storeTasks.actionPlansCancelEvidence': 'Cancel reason',
   'storeTasks.actionPlansNotAvailable': 'Not available',
   'storeTasks.actionPlansRange': '{start}-{end} / {total}',
   'storeTasks.actionPlansPrevious': 'Previous',

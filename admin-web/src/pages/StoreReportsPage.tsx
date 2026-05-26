@@ -1,43 +1,85 @@
-import { Link } from 'react-router-dom'
+import { BarChart3, FileText } from 'lucide-react'
 import { useLocalization } from '../features/localization/useLocalization'
-import { KeyValue, StatusPill } from '../components/dashboard-primitives'
+import {
+  StoreInfoGrid,
+  StoreSectionCard,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 export function StoreReportsPage() {
   const { t } = useLocalization()
 
   return (
-    <section className="store-command-utility-page" aria-label={t('storeHome.reports.aria')}>
-      <div className="store-command-utility-hero">
-        <div>
-          <span>{t('storeHome.reports.eyebrow')}</span>
-          <h1>{t('storeHome.reports.title')}</h1>
-          <p>{t('storeHome.reports.copy')}</p>
-        </div>
-      </div>
+    <StoreSurfacePage ariaLabel={t('storeHome.reports.aria')}>
+      <StoreSurfaceHeader
+        eyebrow={t('storeHome.reports.eyebrow')}
+        title={t('storeHome.reports.surfaceTitle')}
+        description={t('storeHome.reports.surfaceCopy')}
+        action={{
+          icon: <BarChart3 data-icon="inline-start" />,
+          label: t('storeHome.reports.openAdminReports'),
+          to: '/admin/reports',
+        }}
+      />
 
-      <section className="store-command-panel" aria-label={t('storeHome.reports.workflowAria')}>
-        <div className="store-command-panel-head">
-          <h3>{t('storeHome.reports.workflowTitle')}</h3>
-          <StatusPill tone="accent">{t('storeHome.utility.statusHandoff')}</StatusPill>
-        </div>
-        <p className="store-command-panel-note">{t('storeHome.reports.workflowCopy')}</p>
-        <Link className="store-command-focus-action store-command-inline-action" to="/admin/reports">
-          {t('storeHome.reports.openAdminReports')}
-        </Link>
-      </section>
+      <StoreSectionCard
+        title={t('storeHome.reports.surfaceWorkflowTitle')}
+        description={t('storeHome.reports.surfaceWorkflowCopy')}
+        badge={{ label: t('storeHome.utility.statusPreference'), tone: 'accent' }}
+      >
+        <StoreInfoGrid
+          items={[
+            {
+              label: t('storeHome.utility.primaryAction'),
+              value: t('storeHome.reports.surfacePrimaryActionValue'),
+              tone: 'accent',
+            },
+            {
+              label: t('storeHome.reports.snapshotLabel'),
+              value: t('storeHome.reports.snapshotValue'),
+            },
+            {
+              label: t('storeHome.reports.kpiLabel'),
+              value: t('storeHome.reports.kpiValue'),
+              tone: 'calm',
+            },
+            {
+              label: t('storeHome.reports.peopleLabel'),
+              value: t('storeHome.reports.peopleValue'),
+            },
+          ]}
+        />
+      </StoreSectionCard>
 
-      <section className="store-command-panel" aria-label={t('storeHome.reports.boundaryAria')}>
-        <div className="store-command-panel-head">
-          <h3>{t('storeHome.reports.boundaryTitle')}</h3>
-          <StatusPill tone="neutral">{t('storeHome.utility.statusBoundary')}</StatusPill>
-        </div>
-        <div className="key-grid">
-          <KeyValue label={t('storeHome.utility.currentRoute')} value="/store/reports" />
-          <KeyValue label={t('storeHome.utility.primaryAction')} value={t('storeHome.reports.primaryActionValue')} />
-          <KeyValue label={t('storeHome.utility.dataBoundary')} value={t('storeHome.reports.dataBoundaryValue')} />
-          <KeyValue label={t('storeHome.utility.nextStep')} value={t('storeHome.reports.nextStepValue')} />
-        </div>
-      </section>
-    </section>
+      <StoreSectionCard
+        title={t('storeHome.reports.usageTitle')}
+        description={t('storeHome.reports.usageCopy')}
+        action={{
+          icon: <FileText data-icon="inline-start" />,
+          label: t('storeHome.reports.openAdminReports'),
+          to: '/admin/reports',
+          variant: 'outline',
+        }}
+      >
+        <StoreInfoGrid
+          items={[
+            {
+              label: t('storeHome.reports.compareLabel'),
+              value: t('storeHome.reports.compareValue'),
+            },
+            {
+              label: t('storeHome.reports.exportLabel'),
+              value: t('storeHome.reports.exportValue'),
+            },
+            {
+              label: t('storeHome.reports.followupLabel'),
+              value: t('storeHome.reports.followupValue'),
+            },
+          ]}
+          className="tw:xl:grid-cols-3"
+        />
+      </StoreSectionCard>
+    </StoreSurfacePage>
   )
 }

@@ -146,7 +146,7 @@ test('store feed renders pinned challenge posts with ranking link', async ({ pag
   await page.goto('/store/feed')
 
   await expect(page.getByRole('heading', { name: 'Görünen duyurular' })).toBeVisible()
-  const postRow = page.locator('.stacked-row').filter({ hasText: 'May UPT Challenge' })
+  const postRow = page.getByTestId('store-feed-post-row').filter({ hasText: 'May UPT Challenge' })
   await expect(postRow).toBeVisible()
   await expect(postRow.getByText('Sabit', { exact: true })).toBeVisible()
   await expect(postRow.getByText('UPT', { exact: true })).toBeVisible()
@@ -168,7 +168,7 @@ test('store feed switches to English copy and persists locale', async ({ page })
   await expect(page.getByRole('heading', { name: 'Pinned posts' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Challenge announcements' })).toBeVisible()
 
-  const postRow = page.locator('.stacked-row').filter({ hasText: 'May UPT Challenge' })
+  const postRow = page.getByTestId('store-feed-post-row').filter({ hasText: 'May UPT Challenge' })
   await expect(postRow.getByText('Pinned', { exact: true })).toBeVisible()
   await expect(postRow.getByText('Challenge', { exact: true })).toBeVisible()
   await expect(postRow.getByText('Company', { exact: true })).toBeVisible()

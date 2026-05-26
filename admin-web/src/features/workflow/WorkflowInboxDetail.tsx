@@ -1,6 +1,10 @@
-import { KeyValue, StatusPill, type Tone } from '../../components/dashboard-primitives'
 import { formatDateTime, formatState } from '../../lib/format'
 import type { AppLocale } from '../../lib/i18n'
+import {
+  StoreInfoGrid,
+  StoreStatusBadge,
+  type StoreSurfaceTone,
+} from '../../pages/store-surface-primitives'
 import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
 import { useLocalization } from '../localization/useLocalization'
 import type { WorkflowInboxItem } from './contracts'
@@ -15,7 +19,7 @@ const actorRoleTranslationKeys: Partial<Record<string, TranslationKey>> = {
 
 type InboxDetailSignal = {
   value: string
-  tone: Tone
+  tone: StoreSurfaceTone
 }
 
 type WorkflowInboxDetailModel = {
@@ -30,17 +34,19 @@ export function WorkflowInboxDetail(input: { item: WorkflowInboxItem }) {
   const detail = resolveWorkflowInboxDetail(input.item, t)
 
   return (
-    <div aria-label="Inbox item detail" className="stacked-row-detail">
-      <div className="queue-meta" aria-label="Inbox governance signals">
-        <StatusPill tone={detail.dueSignal.tone}>{detail.dueSignal.value}</StatusPill>
-        <StatusPill tone={detail.escalation.tone}>{detail.escalation.value}</StatusPill>
+    <div aria-label="Inbox item detail" className="tw:flex tw:flex-col tw:gap-3">
+      <div className="tw:flex tw:flex-wrap tw:gap-2" aria-label="Inbox governance signals">
+        <StoreStatusBadge tone={detail.dueSignal.tone}>{detail.dueSignal.value}</StoreStatusBadge>
+        <StoreStatusBadge tone={detail.escalation.tone}>{detail.escalation.value}</StoreStatusBadge>
       </div>
-      <div className="key-grid">
-        <KeyValue label={t('storeTasks.detailSummary')} value={detail.detailSummary} />
-        <KeyValue label={t('storeTasks.timeSignal')} value={resolveDueValue(input.item, locale, t)} />
-        <KeyValue label={t('storeTasks.escalation')} value={detail.escalation.value} />
-        <KeyValue label={t('storeTasks.sourceAction')} value={detail.sourceAction} />
-      </div>
+      <StoreInfoGrid
+        items={[
+          { label: t('storeTasks.detailSummary'), value: detail.detailSummary },
+          { label: t('storeTasks.timeSignal'), value: resolveDueValue(input.item, locale, t) },
+          { label: t('storeTasks.escalation'), value: detail.escalation.value },
+          { label: t('storeTasks.sourceAction'), value: detail.sourceAction },
+        ]}
+      />
     </div>
   )
 }

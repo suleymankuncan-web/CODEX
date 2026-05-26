@@ -1,15 +1,8 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Megaphone, Pin, Trophy } from 'lucide-react'
-import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
+import { ArrowRight, CalendarDays, Megaphone, Pin, Trophy } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getVisibleFeedPosts } from '../features/feed/api'
 import {
@@ -22,6 +15,20 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import {
+  StoreEmptyState,
+  StoreErrorState,
+  StoreInfoGrid,
+  StoreLoadingState,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSectionCard,
+  StoreStackedList,
+  StoreStackedRow,
+  StoreStatusBadge,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 const feedPostTypeLabelKeys: Record<FeedPostType, TranslationKey> = {
   announcement: 'storeFeed.type.announcement',
@@ -59,82 +66,73 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
     t('storeFeed.noStoreScope')
 
   if (feedQuery.isLoading) {
-    return <ScreenState title={t('storeFeed.loadingTitle')} copy={t('storeFeed.loadingCopy')} />
+    return <StoreLoadingState title={t('storeFeed.loadingTitle')} description={t('storeFeed.loadingCopy')} />
   }
 
   if (feedQuery.isError) {
     return (
-      <ScreenState
-        title={t('storeFeed.errorTitle')}
-        copy={getErrorMessage(feedQuery.error)}
-        tone="error"
-        action={
-          <button type="button" className="control-button" onClick={() => void feedQuery.refetch()}>
-            {t('storeFeed.retryAction')}
-          </button>
-        }
-      />
+      <StoreSurfacePage ariaLabel={t('storeFeed.title')}>
+        <StoreErrorState
+          title={t('storeFeed.errorTitle')}
+          description={getErrorMessage(feedQuery.error)}
+          action={{
+            label: t('storeFeed.retryAction'),
+            onClick: () => void feedQuery.refetch(),
+            variant: 'outline',
+          }}
+        />
+      </StoreSurfacePage>
     )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel store-hero-panel">
-        <div>
-          <div className="eyebrow">{t('storeFeed.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('storeFeed.title')}</h2>
-          <p className="hero-copy">{t('storeFeed.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('storeFeed.route')} value="/store/feed" />
-          <MetricAccent label={t('storeFeed.visiblePost')} value={String(posts.length)} />
-          <MetricAccent label={t('storeFeed.storeScope')} value={scopeLabel} />
-        </div>
-      </section>
+    <StoreSurfacePage ariaLabel={t('storeFeed.title')}>
+      <StoreSurfaceHeader
+        eyebrow={t('storeFeed.heroEyebrow')}
+        title={t('storeFeed.title')}
+        description={t('storeFeed.heroCopy')}
+        badges={[
+          { label: `${t('storeFeed.visiblePost')}: ${posts.length}`, tone: 'accent' },
+          { label: `${t('storeFeed.storeScope')}: ${scopeLabel}`, tone: 'neutral' },
+        ]}
+      />
 
-      <section className="metric-grid store-metric-grid">
-        <MetricCard
+      <StoreMetricGrid className="tw:xl:grid-cols-3">
+        <StoreMetricCard
           title={t('storeFeed.visiblePosts')}
           value={posts.length}
           note={t('storeFeed.visiblePostsNote')}
-          icon={<Megaphone size={18} />}
+          icon={<Megaphone data-icon="inline-start" />}
           tone="accent"
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeFeed.pinnedPosts')}
           value={pinnedPosts.length}
           note={t('storeFeed.pinnedPostsNote')}
-          icon={<Pin size={18} />}
+          icon={<Pin data-icon="inline-start" />}
           tone={pinnedPosts.length > 0 ? 'warning' : 'neutral'}
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeFeed.challengeAnnouncements')}
           value={challengePosts.length}
           note={t('storeFeed.challengeAnnouncementsNote')}
-          icon={<Trophy size={18} />}
+          icon={<Trophy data-icon="inline-start" />}
           tone="calm"
         />
-      </section>
+      </StoreMetricGrid>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeFeed.feedEyebrow')}</div>
-            <h3>{t('storeFeed.visibleAnnouncements')}</h3>
-          </div>
-        </div>
-
+      <StoreSectionCard title={t('storeFeed.visibleAnnouncements')} description={t('storeFeed.feedEyebrow')}>
         {posts.length === 0 ? (
-          <EmptyState title={t('storeFeed.emptyTitle')} copy={t('storeFeed.emptyCopy')} />
+          <StoreEmptyState title={t('storeFeed.emptyTitle')} description={t('storeFeed.emptyCopy')} />
         ) : (
-          <div className="stacked-table">
+          <StoreStackedList>
             {posts.map((post) => (
               <StoreFeedPostRow key={post.feedPostId} locale={locale} post={post} t={t} />
             ))}
-          </div>
+          </StoreStackedList>
         )}
-      </section>
-    </section>
+      </StoreSectionCard>
+    </StoreSurfacePage>
   )
 }
 
@@ -146,62 +144,68 @@ function StoreFeedPostRow(input: {
   const destination = input.post.targetRoute ?? input.post.linkUrl
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{input.post.title}</strong>
-          <p className="queue-subtitle">{input.post.body}</p>
+    <StoreStackedRow testId="store-feed-post-row">
+      <div className="tw:flex tw:flex-col tw:gap-3">
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+          <div className="tw:min-w-0">
+            <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
+              {input.post.title}
+            </strong>
+            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              {input.post.body}
+            </p>
+          </div>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <StoreStatusBadge tone={input.post.postType === 'challenge' ? 'accent' : 'neutral'}>
+              {formatFeedPostTypeLabel(input.t, input.post.postType)}
+            </StoreStatusBadge>
+            <StoreStatusBadge tone="neutral">
+              {formatFeedScopeLabel(input.t, input.post.visibilityScopeType)}
+            </StoreStatusBadge>
+            {input.post.isPinned ? (
+              <StoreStatusBadge tone="warning">{input.t('storeFeed.pinned')}</StoreStatusBadge>
+            ) : null}
+          </div>
         </div>
-        <div className="action-cluster">
-          <StatusPill tone={input.post.postType === 'challenge' ? 'accent' : 'neutral'}>
-            {formatFeedPostTypeLabel(input.t, input.post.postType)}
-          </StatusPill>
-          <StatusPill tone="neutral">
-            {formatFeedScopeLabel(input.t, input.post.visibilityScopeType)}
-          </StatusPill>
-          {input.post.isPinned ? (
-            <StatusPill tone="warning">{input.t('storeFeed.pinned')}</StatusPill>
-          ) : null}
-        </div>
-      </div>
 
-      <div className="key-grid">
-        <KeyValue
-          label={input.t('storeFeed.publish')}
-          value={
-            input.post.publishedAt
-              ? formatDateTime(input.post.publishedAt, input.locale)
-              : input.t('storeFeed.live')
-          }
+        <StoreInfoGrid
+          items={[
+            {
+              label: input.t('storeFeed.publish'),
+              value: input.post.publishedAt
+                ? formatDateTime(input.post.publishedAt, input.locale)
+                : input.t('storeFeed.live'),
+            },
+            {
+              label: input.t('storeFeed.metric'),
+              value: input.post.metricLabel ?? input.t('storeFeed.noMetric'),
+            },
+            {
+              label: input.t('storeFeed.challengeRange'),
+              value:
+                input.post.challengeStartsOn && input.post.challengeEndsOn
+                  ? `${formatDate(input.post.challengeStartsOn, input.locale)} - ${formatDate(
+                      input.post.challengeEndsOn,
+                      input.locale,
+                    )}`
+                  : input.t('storeFeed.noChallengeRange'),
+            },
+          ]}
+          className="tw:xl:grid-cols-3"
         />
-        <KeyValue
-          label={input.t('storeFeed.metric')}
-          value={input.post.metricLabel ?? input.t('storeFeed.noMetric')}
-        />
-        <KeyValue
-          label={input.t('storeFeed.challengeRange')}
-          value={
-            input.post.challengeStartsOn && input.post.challengeEndsOn
-              ? `${formatDate(input.post.challengeStartsOn, input.locale)} - ${formatDate(
-                  input.post.challengeEndsOn,
-                  input.locale,
-                )}`
-              : input.t('storeFeed.noChallengeRange')
-          }
-        />
-        <KeyValue
-          label={input.t('storeFeed.target')}
-          value={destination ?? input.t('storeFeed.noLink')}
-        />
-      </div>
 
-      {destination ? (
-        <div className="action-cluster">
-          <Link className="control-button store-shell-link" to={destination}>
-            {input.post.linkLabel ?? input.t('storeFeed.openDetail')}
-          </Link>
-        </div>
-      ) : null}
-    </article>
+        {destination ? (
+          <div>
+            <Button asChild size="sm" variant="outline">
+              <Link to={destination}>
+                <CalendarDays data-icon="inline-start" />
+                {input.post.linkLabel ?? input.t('storeFeed.openDetail')}
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+      </div>
+    </StoreStackedRow>
   )
 }

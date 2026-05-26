@@ -1,6 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useReducer } from 'react'
-import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -31,6 +30,11 @@ import {
   StoreMyPerformanceTopbar,
 } from './store-my-performance-sections'
 import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
+import {
+  StoreErrorState,
+  StoreLoadingState,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 function canUseSelfPerformance(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -243,20 +247,22 @@ export function StoreMyPerformancePage(input: {
   })
 
   if (!enabled) {
+    const unavailableTitle =
+      profileMode === 'personnel'
+        ? t('storeMe.personnelProfileUnavailableTitle')
+        : t('storeMe.unavailableTitle')
+    const unavailableCopy =
+      profileMode === 'personnel'
+        ? t('storeMe.personnelProfileUnavailableCopy')
+        : t('storeMe.unavailableCopy')
+
     return (
-      <ScreenState
-        title={
-          profileMode === 'personnel'
-            ? t('storeMe.personnelProfileUnavailableTitle')
-            : t('storeMe.unavailableTitle')
-        }
-        copy={
-          profileMode === 'personnel'
-            ? t('storeMe.personnelProfileUnavailableCopy')
-            : t('storeMe.unavailableCopy')
-        }
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={unavailableTitle}>
+        <StoreErrorState
+          title={unavailableTitle}
+          description={unavailableCopy}
+        />
+      </StoreSurfacePage>
     )
   }
 
@@ -268,9 +274,9 @@ export function StoreMyPerformancePage(input: {
     (usesClosedSnapshotMode && sourceMode === 'closed' && closedRunsQuery.isLoading)
   ) {
     return (
-      <ScreenState
+      <StoreLoadingState
         title={t('storeMe.loadingTitle')}
-        copy={t('storeMe.loadingCopy')}
+        description={t('storeMe.loadingCopy')}
       />
     )
   }
@@ -281,21 +287,23 @@ export function StoreMyPerformancePage(input: {
     (usesClosedSnapshotMode && sourceMode === 'closed' && closedRunsQuery.isError)
   ) {
     return (
-      <ScreenState
-        title={t('storeMe.errorTitle')}
-        copy={getErrorMessage(performanceQuery.error ?? configQuery.error ?? closedRunsQuery.error)}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeMe.errorTitle')}>
+        <StoreErrorState
+          title={t('storeMe.errorTitle')}
+          description={getErrorMessage(performanceQuery.error ?? configQuery.error ?? closedRunsQuery.error)}
+        />
+      </StoreSurfacePage>
     )
   }
 
   if (!performance?.employee) {
     return (
-      <ScreenState
-        title={t('storeMe.errorTitle')}
-        copy={t('storeMe.noEmployeeCopy')}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeMe.errorTitle')}>
+        <StoreErrorState
+          title={t('storeMe.errorTitle')}
+          description={t('storeMe.noEmployeeCopy')}
+        />
+      </StoreSurfacePage>
     )
   }
 

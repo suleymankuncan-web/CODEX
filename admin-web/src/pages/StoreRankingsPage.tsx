@@ -15,7 +15,8 @@ import {
   UsersRound,
   X,
 } from 'lucide-react'
-import { ScreenState } from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -30,6 +31,11 @@ import {
 import { formatDate, formatNumber as formatIntlNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import {
+  StoreErrorState,
+  StoreLoadingState,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
@@ -387,40 +393,43 @@ export function StoreRankingsPage(input: {
 
   if (!enabled) {
     return (
-      <ScreenState
-        title={t('storeRankings.unavailableTitle')}
-        copy={t('storeRankings.unavailableCopy')}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeRankings.unavailableTitle')}>
+        <StoreErrorState
+          title={t('storeRankings.unavailableTitle')}
+          description={t('storeRankings.unavailableCopy')}
+        />
+      </StoreSurfacePage>
     )
   }
 
   if (rankingsQuery.isLoading && !ranking) {
     return (
-      <ScreenState
+      <StoreLoadingState
         title={t('storeRankings.loadingTitle')}
-        copy={t('storeRankings.loadingCopy')}
+        description={t('storeRankings.loadingCopy')}
       />
     )
   }
 
   if (rankingsQuery.isError && !ranking) {
     return (
-      <ScreenState
-        title={t('storeRankings.errorTitle')}
-        copy={getErrorMessage(rankingsQuery.error)}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeRankings.errorTitle')}>
+        <StoreErrorState
+          title={t('storeRankings.errorTitle')}
+          description={getErrorMessage(rankingsQuery.error)}
+        />
+      </StoreSurfacePage>
     )
   }
 
   if (!ranking) {
     return (
-      <ScreenState
-        title={t('storeRankings.emptyTitle')}
-        copy={t('storeRankings.emptyCopy')}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeRankings.emptyTitle')}>
+        <StoreErrorState
+          title={t('storeRankings.emptyTitle')}
+          description={t('storeRankings.emptyCopy')}
+        />
+      </StoreSurfacePage>
     )
   }
 
@@ -725,7 +734,7 @@ function RankingControls(input: {
         <span>{input.t('storeRankings.search')}</span>
         <span className="rankings-plum-input-shell">
           <Search size={16} aria-hidden="true" />
-          <input
+          <Input
             value={input.search}
             onChange={(event) => input.onSearchChange(event.target.value)}
             placeholder={input.t('storeRankings.searchPlaceholder')}
@@ -802,14 +811,15 @@ function RankingControls(input: {
               ))}
             </select>
           </label>
-          <button
+          <Button
             className="rankings-plum-clear-button"
             type="button"
+            variant="outline"
             onClick={input.onClearFilters}
           >
             <X size={15} aria-hidden="true" />
             {input.t('storeRankings.clearFilters')}
-          </button>
+          </Button>
         </>
       ) : null}
 
@@ -949,28 +959,30 @@ function RankingWorkspace(input: {
           role="tablist"
           aria-label={input.t('storeRankings.listSwitchLabel')}
         >
-          <button
+          <Button
             type="button"
             className={`rankings-plum-segment${
               input.activeList === 'stores' ? ' rankings-plum-segment-active' : ''
             }`}
+            variant={input.activeList === 'stores' ? 'default' : 'outline'}
             role="tab"
             aria-selected={input.activeList === 'stores'}
             onClick={() => input.onActiveListChange('stores')}
           >
             {input.t('storeRankings.storeList')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             className={`rankings-plum-segment${
               input.activeList === 'personnel' ? ' rankings-plum-segment-active' : ''
             }`}
+            variant={input.activeList === 'personnel' ? 'default' : 'outline'}
             role="tab"
             aria-selected={input.activeList === 'personnel'}
             onClick={() => input.onActiveListChange('personnel')}
           >
             {input.t('storeRankings.personnelList')}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -1087,22 +1099,26 @@ function RankingWorkspace(input: {
           })}
         </span>
         <div>
-          <button
+          <Button
             type="button"
+            size="icon"
+            variant="outline"
             onClick={() => input.onOffsetChange(Math.max(0, input.offset - input.limit))}
             disabled={input.offset === 0}
             aria-label={input.t('storeRankings.previousPageLabel')}
           >
             <ChevronLeft size={16} aria-hidden="true" />
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            size="icon"
+            variant="outline"
             onClick={() => input.onOffsetChange(input.offset + input.limit)}
             disabled={!input.hasNextPage}
             aria-label={input.t('storeRankings.nextPageLabel')}
           >
             <ChevronRight size={16} aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </div>
     </section>
@@ -1119,15 +1135,17 @@ function SortButton(input: {
   const active = input.activeSortKey === input.sortKey
 
   return (
-    <button
+    <Button
       className={`rankings-plum-sort-button${active ? ' rankings-plum-sort-button-active' : ''}`}
       type="button"
+      size="sm"
+      variant={active ? 'default' : 'ghost'}
       onClick={() => input.onSortChange(input.sortKey)}
       aria-sort={active ? (input.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}
     >
       {input.label}
       {active ? <span>{input.sortDirection === 'desc' ? '↓' : '↑'}</span> : null}
-    </button>
+    </Button>
   )
 }
 
@@ -1243,9 +1261,9 @@ function RankingEntity(input: {
   return (
     <div className="rankings-plum-entity">
       {input.canOpen ? (
-        <button type="button" onClick={input.onOpen}>
+        <Button type="button" variant="link" className="tw:h-auto tw:p-0" onClick={input.onOpen}>
           {input.label}
-        </button>
+        </Button>
       ) : (
         <strong>{input.label}</strong>
       )}
@@ -1339,16 +1357,17 @@ function RankingDetailDrawer(input: {
       <aside className="rankings-plum-drawer" aria-label={input.t('storeRankings.detailPanel')}>
         <div className="rankings-plum-drawer-head">
           <div className="rankings-plum-drawer-actions">
-            <button type="button" onClick={input.onClose}>
+            <Button type="button" variant="outline" onClick={input.onClose}>
               {input.t('storeRankings.closeDetail')}
-            </button>
+            </Button>
             {personnelRow ? (
-              <button
+              <Button
                 type="button"
+                variant="default"
                 onClick={() => input.onOpenPersonnelProfile(personnelRow.employeeId)}
               >
                 {input.t('storeRankings.openPersonnelProfile')}
-              </button>
+              </Button>
             ) : null}
             <span>{input.t('storeRankings.inlineDetail')}</span>
           </div>

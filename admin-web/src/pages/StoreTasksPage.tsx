@@ -1,15 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, CheckCircle2, ClipboardList, ListChecks, ReceiptText, RefreshCw, TrendingUp } from 'lucide-react'
+import { Bell, ClipboardList, ListChecks, ReceiptText, RefreshCw, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getDisplayRoleCodes } from '../features/auth/display'
 import { getChecklistAcknowledgements } from '../features/checklists/api'
@@ -33,6 +26,21 @@ import {
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import {
+  StoreEmptyState,
+  StoreErrorState,
+  StoreInfoGrid,
+  StoreLoadingState,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSectionCard,
+  StoreStackedList,
+  StoreStackedRow,
+  StoreStatusBadge,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+  type StoreSurfaceTone,
+} from './store-surface-primitives'
 
 const actorRoleTranslationKeys: Partial<Record<string, TranslationKey>> = {
   REGION_APPROVER: 'storeTasks.role.REGION_APPROVER',
@@ -199,167 +207,125 @@ export function StoreTasksPage(input: {
 
   if (!inboxEnabled) {
     return (
-      <section className="page-stack">
-        <section className="hero-panel store-hero-panel">
-          <div>
-            <div className="eyebrow">{t('storeTasks.unavailableEyebrow')}</div>
-            <h2 className="hero-title">{t('storeTasks.unavailableTitle')}</h2>
-            <p className="hero-copy">{t('storeTasks.unavailableCopy')}</p>
-          </div>
-          <div className="hero-metrics">
-            <MetricAccent label={t('storeTasks.route')} value="/store/tasks" />
-            <MetricAccent label={t('storeTasks.storeScope')} value={primaryStoreId} />
-            <MetricAccent label={t('storeTasks.status')} value={t('storeTasks.preview')} />
-          </div>
-        </section>
-      </section>
+      <StoreSurfacePage ariaLabel={t('storeTasks.unavailableEyebrow')}>
+        <StoreSurfaceHeader
+          eyebrow={t('storeTasks.unavailableEyebrow')}
+          title={t('storeTasks.unavailableTitle')}
+          description={t('storeTasks.unavailableCopy')}
+          badges={[
+            { label: `${t('storeTasks.storeScope')}: ${primaryStoreId}`, tone: 'neutral' },
+            {
+              label: formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes),
+              tone: 'warning',
+            },
+          ]}
+        />
+      </StoreSurfacePage>
     )
   }
 
   if (inboxQuery.isLoading) {
-    return (
-      <ScreenState
-        title={t('storeTasks.loadingTitle')}
-        copy={t('storeTasks.loadingCopy')}
-      />
-    )
+    return <StoreLoadingState title={t('storeTasks.loadingTitle')} description={t('storeTasks.loadingCopy')} />
   }
 
   if (inboxQuery.isError) {
     return (
-      <ScreenState
-        title={t('storeTasks.errorTitle')}
-        copy={getErrorMessage(inboxQuery.error)}
-        tone="error"
-        action={
-          <button
-            type="button"
-            className="control-button"
-            disabled={inboxQuery.isFetching}
-            onClick={() => void inboxQuery.refetch()}
-          >
-            <RefreshCw size={16} />
-            {inboxQuery.isFetching ? t('storeTasks.retryingAction') : t('storeTasks.retryAction')}
-          </button>
-        }
-      />
+      <StoreSurfacePage ariaLabel={t('storeTasks.title')}>
+        <StoreErrorState
+          title={t('storeTasks.errorTitle')}
+          description={getErrorMessage(inboxQuery.error)}
+          action={{
+            disabled: inboxQuery.isFetching,
+            icon: <RefreshCw data-icon="inline-start" />,
+            label: inboxQuery.isFetching ? t('storeTasks.retryingAction') : t('storeTasks.retryAction'),
+            onClick: () => void inboxQuery.refetch(),
+            variant: 'outline',
+          }}
+        />
+      </StoreSurfacePage>
     )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel store-hero-panel">
-        <div>
-          <div className="eyebrow">{t('storeTasks.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('storeTasks.title')}</h2>
-          <p className="hero-copy">{t('storeTasks.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('storeTasks.route')} value="/store/tasks" />
-          <MetricAccent label={t('storeTasks.storeScope')} value={primaryStoreId} />
-          <MetricAccent label={t('storeTasks.queueItems')} value={String(items.length)} />
-        </div>
-      </section>
+    <StoreSurfacePage ariaLabel={t('storeTasks.title')}>
+      <StoreSurfaceHeader
+        eyebrow={t('storeTasks.heroEyebrow')}
+        title={t('storeTasks.title')}
+        description={t('storeTasks.heroCopy')}
+        badges={[
+          { label: `${t('storeTasks.storeScope')}: ${primaryStoreId}`, tone: 'neutral' },
+          { label: `${t('storeTasks.queueItems')}: ${items.length}`, tone: 'accent' },
+          {
+            label: formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes),
+            tone: 'calm',
+          },
+        ]}
+      />
 
-      <section className="metric-grid store-metric-grid">
-        <MetricCard
+      <StoreMetricGrid>
+        <StoreMetricCard
           title={t('storeTasks.pendingActions')}
           value={pendingItems.length}
           note={t('storeTasks.pendingActionsNote')}
-          icon={<Bell size={18} />}
+          icon={<Bell data-icon="inline-start" />}
           tone={pendingItems.length > 0 ? 'warning' : 'calm'}
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeTasks.highPriority')}
           value={items.filter((item) => item.urgency === 'high').length}
           note={t('storeTasks.highPriorityNote')}
-          icon={<TrendingUp size={18} />}
+          icon={<TrendingUp data-icon="inline-start" />}
           tone={items.some((item) => item.urgency === 'high') ? 'danger' : 'neutral'}
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeTasks.approvals')}
           value={approvalItems.length}
           note={t('storeTasks.approvalsNote')}
-          icon={<ReceiptText size={18} />}
+          icon={<ReceiptText data-icon="inline-start" />}
           tone={approvalItems.length > 0 ? 'accent' : 'neutral'}
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeTasks.acknowledgements')}
           value={acknowledgementItems.length}
           note={t('storeTasks.acknowledgementsNote')}
-          icon={<ClipboardList size={18} />}
+          icon={<ClipboardList data-icon="inline-start" />}
           tone={acknowledgementItems.length > 0 ? 'accent' : 'neutral'}
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeTasks.kpiFollowUps')}
           value={actionCandidates.length}
           note={t('storeTasks.kpiFollowUpsNote')}
-          icon={<TrendingUp size={18} />}
+          icon={<TrendingUp data-icon="inline-start" />}
           tone={actionCandidates.length > 0 ? 'warning' : 'neutral'}
         />
         {storeActionPlansEnabled ? (
-          <MetricCard
+          <StoreMetricCard
             title={t('storeTasks.actionPlansMetric')}
             value={storeActionPlansTotal}
             note={t('storeTasks.actionPlansMetricNote')}
-            icon={<ListChecks size={18} />}
+            icon={<ListChecks data-icon="inline-start" />}
             tone={storeActionPlansTotal > 0 ? 'warning' : 'neutral'}
           />
         ) : null}
-      </section>
+      </StoreMetricGrid>
 
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeTasks.queueContext')}</div>
-              <h3>{t('storeTasks.contextTitle')}</h3>
-            </div>
-          </div>
-          <div className="key-grid">
-            <KeyValue label={t('storeTasks.workTypes')} value={t('storeTasks.workTypesValue')} />
-            <KeyValue
-              label={t('storeTasks.kpiConnection')}
-              value={
-                actionCandidates.length > 0
-                  ? t('storeTasks.kpiActive')
-                  : t('storeTasks.kpiReady')
-              }
-            />
-            <KeyValue label={t('storeTasks.queueStatuses')} value={t('storeTasks.queueStatusesValue')} />
-            <KeyValue label={t('storeTasks.mainLayout')} value={t('storeTasks.mainLayoutValue')} />
-            <KeyValue
-              label={t('storeTasks.resolvedRoles')}
-              value={formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes)}
-            />
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeTasks.controlBoundary')}</div>
-              <h3>{t('storeTasks.boundaryTitle')}</h3>
-            </div>
-          </div>
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeTasks.noMeaningMergeTitle')}</strong>
-                <CheckCircle2 size={16} />
-              </div>
-              <p>{t('storeTasks.noMeaningMergeCopy')}</p>
-            </div>
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeTasks.noDesktopTableTitle')}</strong>
-                <CheckCircle2 size={16} />
-              </div>
-              <p>{t('storeTasks.noDesktopTableCopy')}</p>
-            </div>
-          </div>
-        </article>
-      </section>
+      <StoreSectionCard title={t('storeTasks.contextTitle')} description={t('storeTasks.queueContext')}>
+        <StoreInfoGrid
+          items={[
+            { label: t('storeTasks.workTypes'), value: t('storeTasks.workTypesValue') },
+            {
+              label: t('storeTasks.kpiConnection'),
+              value: actionCandidates.length > 0 ? t('storeTasks.kpiActive') : t('storeTasks.kpiReady'),
+              tone: actionCandidates.length > 0 ? 'warning' : 'calm',
+            },
+            { label: t('storeTasks.queueStatuses'), value: t('storeTasks.queueStatusesValue') },
+            {
+              label: t('storeTasks.resolvedRoles'),
+              value: formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes),
+            },
+          ]}
+        />
+      </StoreSectionCard>
 
       {storeActionPlansEnabled ? (
         <StoreActionPlansPanel
@@ -381,21 +347,14 @@ export function StoreTasksPage(input: {
         />
       ) : null}
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeTasks.todayQueue')}</div>
-            <h3>{t('storeTasks.queueTitle')}</h3>
-          </div>
-        </div>
-
+      <StoreSectionCard title={t('storeTasks.queueTitle')} description={t('storeTasks.todayQueue')}>
         {items.length === 0 ? (
-          <EmptyState
+          <StoreEmptyState
             title={t('storeTasks.emptyTitle')}
-            copy={t('storeTasks.emptyCopy')}
+            description={t('storeTasks.emptyCopy')}
           />
         ) : (
-          <div className="stacked-table">
+          <StoreStackedList>
             {sortedItems.map((item) => (
               <WorkflowInboxRow
                 key={`${item.sourceType}:${item.sourceId}`}
@@ -410,19 +369,19 @@ export function StoreTasksPage(input: {
                 onActionPlanCreated={() => setStoreActionPlansOffset(0)}
               />
             ))}
-          </div>
+          </StoreStackedList>
         )}
-      </section>
+      </StoreSectionCard>
 
-      <div className="action-cluster">
-        <Link className="control-button store-shell-link" to="/store/checklists">
-          {t('storeTasks.checklistsLink')}
-        </Link>
-        <Link className="control-button store-shell-link" to="/store/approvals">
-          {t('storeTasks.approvalsLink')}
-        </Link>
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button asChild variant="outline">
+          <Link to="/store/checklists">{t('storeTasks.checklistsLink')}</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link to="/store/approvals">{t('storeTasks.approvalsLink')}</Link>
+        </Button>
       </div>
-    </section>
+    </StoreSurfacePage>
   )
 }
 
@@ -434,57 +393,74 @@ function WorkflowInboxRow(input: {
   onActionPlanCreated: () => void
 }) {
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{input.item.title}</strong>
-          <p className="queue-subtitle">{input.item.summary}</p>
+    <StoreStackedRow testId="store-task-queue-row">
+      <div className="tw:flex tw:flex-col tw:gap-3">
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+          <div className="tw:min-w-0">
+            <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
+              {input.item.title}
+            </strong>
+            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              {input.item.summary}
+            </p>
+          </div>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <StoreStatusBadge tone="accent">{formatWorkflowSourceTypeLabel(input.t, input.item.sourceType)}</StoreStatusBadge>
+            <StoreStatusBadge tone={mapInboxStatusTone(input.item.inboxStatus) as StoreSurfaceTone}>
+              {formatWorkflowInboxStatusLabel(input.t, input.item.inboxStatus)}
+            </StoreStatusBadge>
+            <StoreStatusBadge tone={mapWorkflowUrgencyTone(input.item.urgency) as StoreSurfaceTone}>
+              {formatWorkflowUrgencyLabel(input.t, input.item.urgency)}
+            </StoreStatusBadge>
+          </div>
         </div>
-        <div className="action-cluster">
-          <StatusPill tone="accent">{formatWorkflowSourceTypeLabel(input.t, input.item.sourceType)}</StatusPill>
-          <StatusPill tone={mapInboxStatusTone(input.item.inboxStatus)}>
-            {formatWorkflowInboxStatusLabel(input.t, input.item.inboxStatus)}
-          </StatusPill>
-          <StatusPill tone={mapWorkflowUrgencyTone(input.item.urgency)}>
-            {formatWorkflowUrgencyLabel(input.t, input.item.urgency)}
-          </StatusPill>
-        </div>
-      </div>
 
-      <div className="key-grid">
-        <KeyValue label={input.t('storeTasks.workType')} value={formatWorkflowItemTypeLabel(input.t, input.item.itemType)} />
-        <KeyValue label={input.t('storeTasks.actorRole')} value={formatActorRoleLabel(input.t, input.item.actorRole)} />
-        <KeyValue label={input.t('storeTasks.store')} value={input.item.storeName || input.item.storeId} />
-        <KeyValue
-          label={input.t('storeTasks.actionTime')}
-          value={
-            input.item.needsAttentionAt
-              ? formatDateTime(input.item.needsAttentionAt, input.locale)
-              : input.t('storeTasks.now')
-          }
+        <StoreInfoGrid
+          items={[
+            {
+              label: input.t('storeTasks.workType'),
+              value: formatWorkflowItemTypeLabel(input.t, input.item.itemType),
+            },
+            {
+              label: input.t('storeTasks.actorRole'),
+              value: formatActorRoleLabel(input.t, input.item.actorRole),
+            },
+            {
+              label: input.t('storeTasks.store'),
+              value: input.item.storeName || input.item.storeId,
+            },
+            {
+              label: input.t('storeTasks.actionTime'),
+              value: input.item.needsAttentionAt
+                ? formatDateTime(input.item.needsAttentionAt, input.locale)
+                : input.t('storeTasks.now'),
+            },
+          ]}
         />
-      </div>
 
-      {input.item.historyPreview ? <p className="queue-subtitle">{input.item.historyPreview}</p> : null}
-
-      <WorkflowInboxDetail item={input.item} />
-
-      <div className="action-cluster">
-        <Link className="control-button store-shell-link" to={input.item.deepLink}>
-          {formatWorkflowPrimaryActionLabel(input.t, input.item)}
-        </Link>
-        {input.actionCandidate ? (
-          <StoreActionPlanCreateControl
-            candidate={input.actionCandidate}
-            t={input.t}
-            onCreated={input.onActionPlanCreated}
-          />
+        {input.item.historyPreview ? (
+          <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.item.historyPreview}</p>
         ) : null}
-        <span className="queue-subtitle">
-          {formatWorkflowSecondaryActionLabel(input.t, input.item)}
-        </span>
+
+        <WorkflowInboxDetail item={input.item} />
+
+        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+          <Button asChild size="sm">
+            <Link to={input.item.deepLink}>{formatWorkflowPrimaryActionLabel(input.t, input.item)}</Link>
+          </Button>
+          {input.actionCandidate ? (
+            <StoreActionPlanCreateControl
+              candidate={input.actionCandidate}
+              t={input.t}
+              onCreated={input.onActionPlanCreated}
+            />
+          ) : null}
+          <span className="tw:text-sm tw:text-muted-foreground">
+            {formatWorkflowSecondaryActionLabel(input.t, input.item)}
+          </span>
+        </div>
       </div>
-    </article>
+    </StoreStackedRow>
   )
 }
 

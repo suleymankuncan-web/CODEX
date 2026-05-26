@@ -93,7 +93,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/tasks',
       urlPattern: /\/store\/tasks$/,
-      heading: page.locator('.store-metric-grid'),
+      heading: page.getByRole('heading', { name: /Aksiyon gerektiren işler/i }),
     },
     {
       path: '/store/rankings',
@@ -108,17 +108,17 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/feed',
       urlPattern: /\/store\/feed$/,
-      heading: page.getByText('/store/feed', { exact: true }),
+      heading: page.getByRole('heading', { name: 'Görünen duyurular' }),
     },
     {
       path: '/store/competitions',
       urlPattern: /\/store\/competitions$/,
-      heading: page.getByText('/store/competitions'),
+      heading: page.getByRole('heading', { name: /Mağaza yarışmaları/i }),
     },
     {
       path: '/store/incentives',
       urlPattern: /\/store\/incentives$/,
-      heading: page.getByText('/store/incentives', { exact: true }),
+      heading: page.getByRole('heading', { name: /Mağaza prim görünürlüğü/i }),
     },
     {
       path: '/store/approvals',

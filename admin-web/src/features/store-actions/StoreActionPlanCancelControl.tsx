@@ -1,6 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Ban, Save, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { getErrorMessage } from '../../lib/format'
 import type { TranslateFunction } from '../localization/dictionary'
 import {
@@ -71,12 +73,12 @@ export function StoreActionPlanCancelControl(input: {
   if (!isOpen) {
     return (
       <>
-        <button type="button" className="control-button" onClick={openForm}>
-          <Ban size={16} />
+        <Button type="button" size="sm" variant="outline" onClick={openForm}>
+          <Ban data-icon="inline-start" />
           {input.t('storeTasks.actionPlansCancelAction')}
-        </button>
+        </Button>
         {cancelPlanMutation.isSuccess ? (
-          <span className="queue-subtitle">{input.t('storeTasks.actionPlansCancelSuccess')}</span>
+          <span className="tw:text-sm tw:text-muted-foreground">{input.t('storeTasks.actionPlansCancelSuccess')}</span>
         ) : null}
       </>
     )
@@ -84,15 +86,14 @@ export function StoreActionPlanCancelControl(input: {
 
   return (
     <form
-      className="stacked-row"
+      className="tw:flex tw:flex-col tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/80 tw:p-3"
       aria-label={input.t('storeTasks.actionPlansCancelFormLabel')}
       onSubmit={submitForm}
     >
-      <label className="control-select" htmlFor={cancelReasonId}>
+      <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={cancelReasonId}>
         <span>{input.t('storeTasks.actionPlansCancelReasonLabel')}</span>
-        <input
+        <Input
           id={cancelReasonId}
-          className="control-input"
           value={cancelReason}
           maxLength={500}
           required
@@ -101,27 +102,28 @@ export function StoreActionPlanCancelControl(input: {
       </label>
 
       {cancelPlanMutation.isError ? (
-        <p role="alert" className="queue-subtitle">
+        <p role="alert" className="tw:text-sm tw:text-destructive">
           {input.t('storeTasks.actionPlansCancelErrorTitle')}: {getErrorMessage(cancelPlanMutation.error)}
         </p>
       ) : null}
 
-      <div className="action-cluster">
-        <button type="submit" className="control-button" disabled={!canSubmit}>
-          <Save size={16} />
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button type="submit" size="sm" disabled={!canSubmit}>
+          <Save data-icon="inline-start" />
           {cancelPlanMutation.isPending
             ? input.t('storeTasks.actionPlansCancelSubmitting')
             : input.t('storeTasks.actionPlansCancelSubmit')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="control-button"
+          size="sm"
+          variant="outline"
           disabled={cancelPlanMutation.isPending}
           onClick={closeForm}
         >
-          <X size={16} />
+          <X data-icon="inline-start" />
           {input.t('storeTasks.actionPlansCancelDismiss')}
-        </button>
+        </Button>
       </div>
     </form>
   )

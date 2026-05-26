@@ -524,9 +524,13 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Talepler / Onaylar', exact: true })).toBeVisible()
   await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
-  const checklistCard = page.getByRole('link', { name: /Checklist kabul/i })
+  const checklistCard = page.getByTestId('store-home-checklist-card')
   await expect(checklistCard).toBeVisible()
   await expect(checklistCard).toContainText('1')
+  await expect(checklistCard.getByRole('link', { name: /Checklist kabul/i })).toHaveAttribute(
+    'href',
+    '/store/checklists',
+  )
   await expect(page.getByText('Ön izleme', { exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Prototip rol seçimi')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('STORE_PERSONNEL')
@@ -623,11 +627,12 @@ test('region manager home surfaces checklist field queue summary', async ({ page
 
   const storeNav = page.locator('.store-command-nav')
   await expect(storeNav.locator('a[href="/store/reports"]')).toBeVisible()
-  const checklistCard = page.getByRole('link', { name: /Checklist saha turu/i })
+  const checklistCard = page.getByTestId('store-home-checklist-card')
   await expect(checklistCard).toBeVisible()
   await expect(checklistCard).toContainText('2')
   await expect(checklistCard).toContainText('1')
-  await expect(checklistCard).toHaveAttribute('href', '/store/checklists')
+  const checklistLink = checklistCard.getByRole('link', { name: /Checklist saha turu/i })
+  await expect(checklistLink).toHaveAttribute('href', '/store/checklists')
   const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
   await expect(dailyBrief).toBeVisible()
   await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveText('2')
@@ -638,7 +643,7 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   const prefetchedAcknowledgementRequests = acknowledgementRequests
   const prefetchedMobileTodayRequests = mobileTodayRequests
 
-  await checklistCard.click()
+  await checklistLink.click()
 
   await expect(page).toHaveURL(/\/store\/checklists$/)
   await expect(page.getByRole('heading', { name: /saha turunda/i })).toBeVisible()
@@ -1034,20 +1039,25 @@ test('store utility pages explain handoff boundaries and stay mobile-safe', asyn
 
   await page.goto('/store/targets')
 
-  await expect(page.getByRole('heading', { name: 'Hedef yönetimi store shell içinde bağlı' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Hedef akışını aç' })).toHaveAttribute('href', '/admin/targets')
-  await expect(page.getByLabel('Hedef sayfası çalışma sınırı')).toContainText('Burada yeni store hedef yazma kontratı yok')
+  await expect(page.getByRole('heading', { name: /Hedef ak/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Hedef akışını aç' }).first()).toHaveAttribute(
+    'href',
+    '/admin/targets',
+  )
+  await expect(page.getByText('Yetkili mağaza hedefleri')).toBeVisible()
+  await expect(page.getByText('Yeni hedef veya revizyon isteği')).toBeVisible()
 
   await page.goto('/store/reports')
 
-  await expect(page.getByRole('heading', { name: 'Raporlar store shell içinde bağlı' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Raporları aç' })).toHaveAttribute('href', '/admin/reports')
-  await expect(page.getByLabel('Rapor sayfası çalışma sınırı')).toContainText('Burada yeni store rapor kontratı yok')
+  await expect(page.getByRole('heading', { name: /Rapor görün/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Raporları aç' }).first()).toHaveAttribute('href', '/admin/reports')
+  await expect(page.getByText('Kapanmış dönem sonuçları')).toBeVisible()
+  await expect(page.getByText('Aksiyon gerektiren metrikler')).toBeVisible()
 
   await page.setViewportSize({ width: 390, height: 900 })
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: 'Raporlar store shell içinde bağlı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Rapor görün/i })).toBeVisible()
   await expect.poll(
     () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
   ).toBe(true)
@@ -1073,13 +1083,13 @@ test('store utility pages explain handoff boundaries and stay mobile-safe', asyn
     }),
   ).toBe(true)
   await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-  await expect(page.getByText('Store rapor özeti ayrı ürün kontratıyla gelir')).toBeVisible()
+  await expect(page.getByText('Aksiyon gerektiren metrikler')).toBeVisible()
 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Reports are connected inside store shell' })).toBeVisible()
-  await expect(page.getByLabel('Report page operating boundary')).toContainText('No new store reporting contract here')
+  await expect(page.getByRole('heading', { name: 'Report view' })).toBeVisible()
+  await expect(page.getByText('Metrics needing action')).toBeVisible()
 })
 
 test('store route transitions show a loading layer and hide stale page content', async ({ page }) => {
@@ -2277,7 +2287,10 @@ test('store tasks prefetches approvals data before opening approval actions', as
 
   await page.goto('/store/tasks')
 
-  const approvalAction = page.locator('.stacked-row a[href="/store/approvals"]').first()
+  const approvalAction = page
+    .getByTestId('store-task-queue-row')
+    .filter({ hasText: 'Mayis hedef dagitimi' })
+    .locator('a[href="/store/approvals"]')
   await expect(approvalAction).toBeVisible()
   await expect.poll(() => targetDistributionRequests).toBeGreaterThanOrEqual(1)
   const prefetchedRequestCount = targetDistributionRequests

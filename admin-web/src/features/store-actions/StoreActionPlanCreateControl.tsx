@@ -1,6 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CirclePlus, Save, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { getErrorMessage } from '../../lib/format'
 import type { TranslateFunction } from '../localization/dictionary'
 import {
@@ -93,47 +95,49 @@ export function StoreActionPlanCreateControl(input: {
   if (!isOpen) {
     return (
       <>
-        <button type="button" className="control-button" onClick={openForm}>
-          <CirclePlus size={16} />
+        <Button type="button" size="sm" variant="outline" onClick={openForm}>
+          <CirclePlus data-icon="inline-start" />
           {input.t('storeTasks.createPlanAction')}
-        </button>
+        </Button>
         {createPlanMutation.isSuccess ? (
-          <span className="queue-subtitle">{input.t('storeTasks.createPlanSuccess')}</span>
+          <span className="tw:text-sm tw:text-muted-foreground">{input.t('storeTasks.createPlanSuccess')}</span>
         ) : null}
       </>
     )
   }
 
   return (
-    <form className="stacked-row" aria-label={input.t('storeTasks.createPlanFormLabel')} onSubmit={submitForm}>
-      <div className="key-grid">
-        <label className="control-select" htmlFor={titleId}>
+    <form
+      className="tw:flex tw:flex-col tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/80 tw:p-3"
+      aria-label={input.t('storeTasks.createPlanFormLabel')}
+      onSubmit={submitForm}
+    >
+      <div className="tw:grid tw:gap-3 tw:sm:grid-cols-2">
+        <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={titleId}>
           <span>{input.t('storeTasks.createPlanTitleLabel')}</span>
-          <input
+          <Input
             id={titleId}
-            className="control-input"
             value={form.title}
             maxLength={160}
             required
             onChange={(event) => updateField('title', event.target.value)}
           />
         </label>
-        <label className="control-select" htmlFor={dueOnId}>
+        <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={dueOnId}>
           <span>{input.t('storeTasks.createPlanDueOnLabel')}</span>
-          <input
+          <Input
             id={dueOnId}
-            className="control-input"
             type="date"
             value={form.dueOn}
             required
             onChange={(event) => updateField('dueOn', event.target.value)}
           />
         </label>
-        <label className="control-select" htmlFor={priorityId}>
+        <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={priorityId}>
           <span>{input.t('storeTasks.createPlanPriorityLabel')}</span>
           <select
             id={priorityId}
-            className="control-input"
+            className="tw:h-9 tw:rounded-md tw:border tw:border-input tw:bg-transparent tw:px-3 tw:text-sm tw:shadow-xs tw:outline-none tw:focus-visible:border-ring tw:focus-visible:ring-ring/50 tw:focus-visible:ring-[3px]"
             value={form.priority}
             onChange={(event) => updateField('priority', event.target.value as StoreActionPlanPriority)}
           >
@@ -142,11 +146,10 @@ export function StoreActionPlanCreateControl(input: {
             <option value="low">{input.t('storeTasks.actionPlanPriority.low')}</option>
           </select>
         </label>
-        <label className="control-select" htmlFor={summaryId}>
+        <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={summaryId}>
           <span>{input.t('storeTasks.createPlanSummaryLabel')}</span>
-          <input
+          <Input
             id={summaryId}
-            className="control-input"
             value={form.summary}
             maxLength={240}
             required
@@ -156,27 +159,28 @@ export function StoreActionPlanCreateControl(input: {
       </div>
 
       {createPlanMutation.isError ? (
-        <p role="alert" className="queue-subtitle">
+        <p role="alert" className="tw:text-sm tw:text-destructive">
           {input.t('storeTasks.createPlanErrorTitle')}: {getErrorMessage(createPlanMutation.error)}
         </p>
       ) : null}
 
-      <div className="action-cluster">
-        <button type="submit" className="control-button" disabled={!canSubmit}>
-          <Save size={16} />
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button type="submit" size="sm" disabled={!canSubmit}>
+          <Save data-icon="inline-start" />
           {createPlanMutation.isPending
             ? input.t('storeTasks.createPlanSubmitting')
             : input.t('storeTasks.createPlanSubmit')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="control-button"
+          size="sm"
+          variant="outline"
           disabled={createPlanMutation.isPending}
           onClick={closeForm}
         >
-          <X size={16} />
+          <X data-icon="inline-start" />
           {input.t('storeTasks.createPlanCancel')}
-        </button>
+        </Button>
       </div>
     </form>
   )
