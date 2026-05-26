@@ -1,4 +1,4 @@
-import { StatusPill } from '../components/dashboard-primitives'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type {
   StoreTargetingPerson,
@@ -21,6 +21,7 @@ import {
   type StoreApprovalsLedgerPanel,
   type StringFieldSetter,
 } from './store-approvals-model'
+import { StoreApprovalStatusBadge } from './store-approvals-atoms'
 import { OffboardingRequestForm } from './store-approvals-offboarding-form'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
 import { SellerCodeRequestForm } from './store-approvals-seller-code-form'
@@ -126,11 +127,6 @@ type StoreApprovalsWorkbenchInput = {
 }
 
 export function StoreApprovalsWorkbench(input: StoreApprovalsWorkbenchInput) {
-  const getLedgerActionButtonClass = (panel: StoreApprovalsLedgerPanel) =>
-    input.activeLedgerPanel === panel
-      ? 'store-approvals-action-tab store-approvals-action-tab-active'
-      : 'store-approvals-action-tab'
-
   return (
     <section
       className="store-approvals-ledger-inspector"
@@ -146,69 +142,71 @@ export function StoreApprovalsWorkbench(input: StoreApprovalsWorkbenchInput) {
               {input.t(ledgerActionLabelKeys[input.activeLedgerPanel])}
             </strong>
           </div>
-          <StatusPill tone="calm">
+          <StoreApprovalStatusBadge tone="calm">
             {input.t('storeApprovals.ledgerDetailStatus')}
-          </StatusPill>
+          </StoreApprovalStatusBadge>
         </div>
 
-        <div className="store-approvals-action-tabs" aria-label={input.t('storeApprovals.ledgerInspectorAria')}>
+        <ToggleGroup
+          aria-label={input.t('storeApprovals.ledgerInspectorAria')}
+          className="store-approvals-action-tabs"
+          type="single"
+          value={input.activeLedgerPanel}
+          onValueChange={(value) => {
+            if (value) input.onActivePanelChange(value as StoreApprovalsLedgerPanel)
+          }}
+        >
           {input.panels.showTargetSubmission ? (
-            <button
-              className={getLedgerActionButtonClass('targetRequest')}
-              type="button"
-              aria-pressed={input.activeLedgerPanel === 'targetRequest'}
-              onClick={() => input.onActivePanelChange('targetRequest')}
+            <ToggleGroupItem
+              className="store-approvals-action-tab"
+              value="targetRequest"
+              aria-label={input.t('storeApprovals.openTargetRequest')}
             >
               {input.t('storeApprovals.openTargetRequest')}
-            </button>
+            </ToggleGroupItem>
           ) : null}
           {input.panels.showTargetApprovalQueue ? (
-            <button
-              className={getLedgerActionButtonClass('targetApproval')}
-              type="button"
-              aria-pressed={input.activeLedgerPanel === 'targetApproval'}
-              onClick={() => input.onActivePanelChange('targetApproval')}
+            <ToggleGroupItem
+              className="store-approvals-action-tab"
+              value="targetApproval"
+              aria-label={input.t('storeApprovals.openTargetApprovalQueue')}
             >
               {input.t('storeApprovals.openTargetApprovalQueue')}
-            </button>
+            </ToggleGroupItem>
           ) : null}
-          <button
-            className={getLedgerActionButtonClass('submittedTargets')}
-            type="button"
-            aria-pressed={input.activeLedgerPanel === 'submittedTargets'}
-            onClick={() => input.onActivePanelChange('submittedTargets')}
+          <ToggleGroupItem
+            className="store-approvals-action-tab"
+            value="submittedTargets"
+            aria-label={input.t('storeApprovals.openSubmittedTargets')}
           >
             {input.t('storeApprovals.openSubmittedTargets')}
-          </button>
+          </ToggleGroupItem>
           {input.panels.showWorkforceHrQueues ? (
             <>
-              <button
-                className={getLedgerActionButtonClass('sellerCodeRequest')}
-                type="button"
-                aria-pressed={input.activeLedgerPanel === 'sellerCodeRequest'}
-                onClick={() => input.onActivePanelChange('sellerCodeRequest')}
+              <ToggleGroupItem
+                className="store-approvals-action-tab"
+                value="sellerCodeRequest"
+                aria-label={input.t('storeApprovals.openSellerCodeRequest')}
               >
                 {input.t('storeApprovals.openSellerCodeRequest')}
-              </button>
-              <button
-                className={getLedgerActionButtonClass('offboardingRequest')}
-                type="button"
-                aria-pressed={input.activeLedgerPanel === 'offboardingRequest'}
-                onClick={() => input.onActivePanelChange('offboardingRequest')}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                className="store-approvals-action-tab"
+                value="offboardingRequest"
+                aria-label={input.t('storeApprovals.openOffboardingRequest')}
               >
                 {input.t('storeApprovals.openOffboardingRequest')}
-              </button>
-              <button
-                className={getLedgerActionButtonClass('returnedRequests')}
-                type="button"
-                aria-pressed={input.activeLedgerPanel === 'returnedRequests'}
-                onClick={() => input.onActivePanelChange('returnedRequests')}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                className="store-approvals-action-tab"
+                value="returnedRequests"
+                aria-label={input.t('storeApprovals.openReturnedRequests')}
               >
                 {input.t('storeApprovals.openReturnedRequests')}
-              </button>
+              </ToggleGroupItem>
             </>
           ) : null}
-        </div>
+        </ToggleGroup>
 
         <div className="store-approvals-action-panel">
           {input.activeLedgerPanel === 'targetRequest' && input.panels.showTargetSubmission ? (

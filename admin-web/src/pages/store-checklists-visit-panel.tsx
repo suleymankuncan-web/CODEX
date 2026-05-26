@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { MobileChecklistToday } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
@@ -315,7 +316,7 @@ function StoreChecklistsVisitRow(input: {
           input.requiresCombinedVisitTemplates,
         )}
       </ChecklistBadge>
-      <button
+      <Button
         className="store-checklists-action-button"
         disabled={!canStart || (!active && input.startVisitIsPending)}
         type="button"
@@ -342,7 +343,7 @@ function StoreChecklistsVisitRow(input: {
             : actionableRow
               ? input.t('storeChecklists.startChecklist')
               : getStaticCopy(input.locale, 'Sadece oku', 'Read only')}
-      </button>
+      </Button>
     </article>
   )
 }

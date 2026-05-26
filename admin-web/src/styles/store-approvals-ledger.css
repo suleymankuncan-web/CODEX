@@ -5,7 +5,7 @@
 }
 
 .store-approvals-ledger-header,
-.store-approvals-ledger-card,
+.store-approvals-panel,
 .store-approvals-ledger-metric {
   border: 1px solid var(--store-command-line);
   background: var(--store-command-surface);
@@ -135,13 +135,13 @@
   min-width: 0;
 }
 
-.store-approvals-ledger-card {
+.store-approvals-panel {
   border-radius: 26px;
   background: rgba(255, 255, 255, 0.84);
   padding: 18px;
 }
 
-.store-approvals-ledger-card-head,
+.store-approvals-panel-head,
 .store-approvals-ledger-row-head,
 .store-approvals-ledger-actions {
   display: flex;
@@ -150,11 +150,11 @@
   gap: 12px;
 }
 
-.store-approvals-ledger-card-head {
+.store-approvals-panel-head {
   margin-bottom: 14px;
 }
 
-.store-approvals-ledger-card h3 {
+.store-approvals-panel h3 {
   margin: 4px 0 0;
   font-size: 19px;
   line-height: 1.2;
@@ -204,9 +204,8 @@
   margin-top: 12px;
 }
 
-.store-approvals-ledger-card input,
-.store-approvals-ledger-card select,
-.store-approvals-ledger-card textarea {
+.store-approvals-panel input,
+.store-approvals-panel textarea {
   width: 100%;
   border: 1px solid var(--store-command-line);
   border-radius: 14px;
@@ -216,13 +215,12 @@
   font: inherit;
 }
 
-.store-approvals-ledger-card textarea {
+.store-approvals-panel textarea {
   resize: vertical;
 }
 
-.store-approvals-ledger-card input:focus,
-.store-approvals-ledger-card select:focus,
-.store-approvals-ledger-card textarea:focus {
+.store-approvals-panel input:focus,
+.store-approvals-panel textarea:focus {
   border-color: rgba(124, 58, 237, 0.5);
   box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
   outline: none;
@@ -292,8 +290,7 @@
   gap: 8px;
 }
 
-.store-approvals-ledger-filters input,
-.store-approvals-ledger-filters select {
+.store-approvals-ledger-filters input {
   min-width: 180px;
   border: 1px solid var(--store-command-line);
   border-radius: 11px;
@@ -581,7 +578,7 @@
   transform: translateY(-1px);
 }
 
-.store-approvals-action-tab-active {
+.store-approvals-action-tab[data-state="on"] {
   border-color: transparent;
   background: linear-gradient(135deg, var(--store-command-plum), #3765ea 64%, var(--store-command-cyan));
   color: #fff;
@@ -590,13 +587,6 @@
 
 .store-approvals-action-panel {
   width: min(100%, 940px);
-}
-
-.store-approvals-action-panel > .empty-card {
-  border: 1px dashed rgba(124, 58, 237, 0.2);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.68);
-  padding: 14px;
 }
 
 .store-request-sheet {
@@ -755,7 +745,6 @@
 }
 
 .store-request-sheet input,
-.store-request-sheet select,
 .store-request-sheet textarea {
   width: 100%;
   border: 1px solid rgba(124, 58, 237, 0.16);
@@ -773,7 +762,6 @@
 }
 
 .store-request-sheet input:focus,
-.store-request-sheet select:focus,
 .store-request-sheet textarea:focus {
   border-color: rgba(124, 58, 237, 0.52);
   box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.12);
@@ -845,7 +833,7 @@
   opacity: 0.58;
 }
 
-.store-approvals-action-panel .store-approvals-ledger-card {
+.store-approvals-action-panel .store-approvals-panel {
   max-width: 940px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.86);
@@ -967,13 +955,12 @@
   }
 
   .store-approvals-ledger-filters input,
-  .store-approvals-ledger-filters select,
   .store-approvals-ledger-toolbar .store-approvals-ledger-button {
     width: 100%;
   }
 
   .store-approvals-ledger-header,
-  .store-approvals-ledger-card {
+  .store-approvals-panel {
     border-radius: 22px;
     padding: 16px;
   }

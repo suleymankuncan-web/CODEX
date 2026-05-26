@@ -220,7 +220,6 @@
 }
 
 .store-checklists-filter input,
-.store-checklists-filter select,
 .store-checklist-modal-inputs input,
 .store-checklist-modal-inputs textarea,
 .store-checklist-result-ack textarea {
@@ -235,8 +234,7 @@
   transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
 }
 
-.store-checklists-filter input,
-.store-checklists-filter select {
+.store-checklists-filter input {
   min-height: 1.45rem;
   border: 0;
   border-radius: 0;
@@ -246,7 +244,6 @@
 }
 
 .store-checklists-filter input:focus,
-.store-checklists-filter select:focus,
 .store-checklist-modal-inputs input:focus,
 .store-checklist-modal-inputs textarea:focus,
 .store-checklist-result-ack textarea:focus {
@@ -688,20 +685,6 @@
   color: #8a4d0b;
 }
 
-.store-checklist-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 90;
-  display: grid;
-  place-items: center;
-  padding: 1.15rem;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(124, 58, 237, 0.2), transparent 30%),
-    radial-gradient(circle at 80% 8%, rgba(19, 167, 179, 0.16), transparent 28%),
-    rgba(18, 16, 28, 0.52);
-  backdrop-filter: blur(16px);
-}
-
 .store-checklist-modal {
   width: min(1120px, calc(100vw - 2.3rem));
   max-height: min(90vh, 840px);
@@ -1052,12 +1035,6 @@
   .store-checklist-modal-answer-cluster,
   .store-checklist-result-section-head {
     grid-template-columns: 1fr;
-  }
-
-  .store-checklist-modal-backdrop {
-    align-items: start;
-    overflow: auto;
-    padding: 0.65rem;
   }
 
   .store-checklist-modal {

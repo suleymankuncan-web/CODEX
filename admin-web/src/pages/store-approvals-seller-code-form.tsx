@@ -1,8 +1,15 @@
-import { EmptyState, StatusPill } from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { PositionOption, SellerEmploymentType } from '../features/workforce/api'
 import { getErrorMessage } from '../lib/format'
-import { StoreRequestFeedback } from './store-approvals-atoms'
+import {
+  StoreApprovalEmptyState,
+  StoreApprovalStatusBadge,
+  StoreRequestFeedback,
+} from './store-approvals-atoms'
 import {
   formatEmploymentType,
   getStoreSellerPositionOptions,
@@ -12,6 +19,8 @@ import {
   type RequestFormSubmission,
   type StringFieldSetter,
 } from './store-approvals-model'
+
+const UNSELECTED_POSITION_VALUE = '__unselected_position__'
 
 export function SellerCodeRequestForm(input: {
   access: RequestFormAccess
@@ -56,11 +65,11 @@ export function SellerCodeRequestForm(input: {
           </div>
           <h3>{input.t('storeApprovals.sellerCodeTitle')}</h3>
         </div>
-        <StatusPill tone="calm">{input.t('storeApprovals.hrQueue')}</StatusPill>
+        <StoreApprovalStatusBadge tone="calm">{input.t('storeApprovals.hrQueue')}</StoreApprovalStatusBadge>
       </div>
 
       {!input.access.createAllowed ? (
-        <EmptyState
+        <StoreApprovalEmptyState
           title={input.t('storeApprovals.assignedActionStoreRequired')}
           copy={input.t('storeApprovals.sellerUnavailableCopy')}
         />
@@ -70,14 +79,14 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-store-id">
               {input.t('storeApprovals.storeId')}
             </label>
-            <input id="seller-store-id" value={input.storeId} readOnly />
+            <Input id="seller-store-id" value={input.storeId} readOnly />
           </div>
 
           <div className="store-request-field">
             <label className="store-request-label" htmlFor="seller-first-name">
               {input.t('storeApprovals.firstName')}
             </label>
-            <input
+            <Input
               id="seller-first-name"
               value={input.sellerFirstName}
               onChange={(event) => input.onFirstNameChange(event.target.value)}
@@ -89,7 +98,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-last-name">
               {input.t('storeApprovals.lastName')}
             </label>
-            <input
+            <Input
               id="seller-last-name"
               value={input.sellerLastName}
               onChange={(event) => input.onLastNameChange(event.target.value)}
@@ -101,19 +110,29 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-position-id">
               {input.t('storeApprovals.position')}
             </label>
-            <select
-              id="seller-position-id"
-              value={input.sellerPositionId}
+            <Select
+              value={input.sellerPositionId || UNSELECTED_POSITION_VALUE}
               disabled={input.positionOptionsQuery.isLoading || input.positionOptionsQuery.isError}
-              onChange={(event) => input.onPositionIdChange(event.target.value)}
+              onValueChange={(value) =>
+                input.onPositionIdChange(value === UNSELECTED_POSITION_VALUE ? '' : value)
+              }
             >
-              <option value="">{input.t('storeApprovals.selectPosition')}</option>
-              {sellerPositionOptions.map(({ label, position }) => (
-                <option key={position.positionId} value={position.positionId}>
-                  {label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="seller-position-id" className="tw:w-full">
+                <SelectValue placeholder={input.t('storeApprovals.selectPosition')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value={UNSELECTED_POSITION_VALUE}>
+                    {input.t('storeApprovals.selectPosition')}
+                  </SelectItem>
+                  {sellerPositionOptions.map(({ label, position }) => (
+                    <SelectItem key={position.positionId} value={position.positionId}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             {input.positionOptionsQuery.isLoading ? (
               <p className="store-request-note">
                 {input.t('storeApprovals.positionsLoading')}
@@ -135,7 +154,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-national-id">
               {input.t('storeApprovals.nationalId')}
             </label>
-            <input
+            <Input
               id="seller-national-id"
               inputMode="numeric"
               maxLength={11}
@@ -149,7 +168,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-phone-number">
               {input.t('storeApprovals.phoneNumber')}
             </label>
-            <input
+            <Input
               id="seller-phone-number"
               type="tel"
               value={input.sellerPhoneNumber}
@@ -162,7 +181,7 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-hire-date">
               {input.t('storeApprovals.hireDate')}
             </label>
-            <input
+            <Input
               id="seller-hire-date"
               type="date"
               value={input.sellerHireDate}
@@ -174,24 +193,28 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-employment-type">
               {input.t('storeApprovals.employmentType')}
             </label>
-            <select
-              id="seller-employment-type"
+            <Select
               value={input.sellerEmploymentType}
-              onChange={(event) =>
-                input.onEmploymentTypeChange(event.target.value as SellerEmploymentType)
-              }
+              onValueChange={(value) => input.onEmploymentTypeChange(value as SellerEmploymentType)}
             >
-              <option value="full_time">{formatEmploymentType('full_time', input.t)}</option>
-              <option value="part_time">{formatEmploymentType('part_time', input.t)}</option>
-              <option value="temporary">{formatEmploymentType('temporary', input.t)}</option>
-            </select>
+              <SelectTrigger id="seller-employment-type" className="tw:w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="full_time">{formatEmploymentType('full_time', input.t)}</SelectItem>
+                  <SelectItem value="part_time">{formatEmploymentType('part_time', input.t)}</SelectItem>
+                  <SelectItem value="temporary">{formatEmploymentType('temporary', input.t)}</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="store-request-field store-request-field-wide">
             <label className="store-request-label" htmlFor="seller-request-reason">
               {input.t('storeApprovals.requestReason')}
             </label>
-            <textarea
+            <Textarea
               id="seller-request-reason"
               rows={3}
               value={input.sellerRequestReason}
@@ -201,8 +224,7 @@ export function SellerCodeRequestForm(input: {
           </div>
 
           <div className="store-request-actions store-request-field-wide">
-            <button
-              className="store-request-button store-request-button-primary"
+            <Button
               type="button"
               disabled={!input.access.submitAllowed || input.submission.pending}
               onClick={input.onSubmit}
@@ -212,16 +234,16 @@ export function SellerCodeRequestForm(input: {
                 : input.editingRequestId
                   ? input.t('storeApprovals.resubmitSellerCodeRequest')
                   : input.t('storeApprovals.submitSellerCodeRequest')}
-            </button>
+            </Button>
             {input.editingRequestId ? (
-              <button
-                className="store-request-button"
+              <Button
+                variant="outline"
                 type="button"
                 disabled={input.submission.pending}
                 onClick={input.onCancelEdit}
               >
                 {input.t('storeApprovals.cancelEdit')}
-              </button>
+              </Button>
             ) : null}
           </div>
 

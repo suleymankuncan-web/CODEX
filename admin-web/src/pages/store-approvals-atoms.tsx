@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
 import type { StoreRequestFeedbackTone } from './store-approvals-model'
+import { StoreEmptyState, StoreStatusBadge } from './store-surface-primitives'
+
+type ApprovalTone = 'calm' | 'warning' | 'accent' | 'danger' | 'neutral'
 
 export function StoreRequestFeedback(input: {
   children: ReactNode
@@ -20,5 +23,29 @@ export function StoreRequestFeedback(input: {
     <p className={className} role={role} aria-live={ariaLive}>
       {input.children}
     </p>
+  )
+}
+
+export function StoreApprovalStatusBadge(input: {
+  children: ReactNode
+  tone: ApprovalTone
+}) {
+  return <StoreStatusBadge tone={input.tone}>{input.children}</StoreStatusBadge>
+}
+
+export function StoreApprovalEmptyState(input: { title?: string; copy: string }) {
+  return input.title ? (
+    <StoreEmptyState title={input.title} description={input.copy} />
+  ) : (
+    <StoreEmptyState description={input.copy} />
+  )
+}
+
+export function StoreApprovalKeyValue(input: { label: string; value: string }) {
+  return (
+    <div className="key-item">
+      <span>{input.label}</span>
+      <strong>{input.value}</strong>
+    </div>
   )
 }

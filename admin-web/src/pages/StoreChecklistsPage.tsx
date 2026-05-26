@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canAcknowledgeChecklist,
@@ -781,31 +783,28 @@ function ChecklistVisitModal(input: {
     Boolean(input.active) && !input.isCompleting && hasItems && missingResponseCount === 0
 
   return (
-    <div className="store-checklist-modal-backdrop">
-      <section
-        aria-labelledby="store-checklist-modal-title"
-        aria-modal="true"
-        className="store-checklist-modal"
-        role="dialog"
-      >
-        <div className="store-checklist-modal-head">
+    <Dialog open onOpenChange={(open) => {
+      if (!open) input.onClose()
+    }}>
+      <DialogContent className="store-checklist-modal tw:max-w-[min(1120px,calc(100vw-2rem))] tw:sm:max-w-[min(1120px,calc(100vw-2rem))]" closeLabel={input.t('storeChecklists.closeSession')}>
+        <DialogHeader className="store-checklist-modal-head">
           <div>
             <div className="store-checklists-eyebrow">{input.t('storeChecklists.sessionEyebrow')}</div>
-            <h3 id="store-checklist-modal-title">{input.session.template.templateName}</h3>
-            <p>
+            <DialogTitle id="store-checklist-modal-title">{input.session.template.templateName}</DialogTitle>
+            <DialogDescription>
               {input.t('storeChecklists.sessionCopy', {
                 store: input.session.store.storeName,
                 template: input.session.template.templateCode,
                 version: input.session.template.versionNo,
               })}
-            </p>
+            </DialogDescription>
           </div>
           <ChecklistBadge tone={input.active ? 'warning' : 'accent'}>
             {input.active
               ? formatChecklistStatus(input.t, input.active.status)
               : input.t('storeChecklists.newVisit')}
           </ChecklistBadge>
-        </div>
+        </DialogHeader>
 
         <div className="store-checklist-modal-summary">
           <ChecklistFact label={input.t('storeChecklists.store')} value={input.session.store.storeName} />
@@ -902,7 +901,7 @@ function ChecklistVisitModal(input: {
                           </div>
                           <label>
                             <span>{input.t('storeChecklists.noteInput')}</span>
-                            <textarea
+                            <Textarea
                               disabled={!input.active}
                               rows={2}
                               value={input.comments[item.templateItemId] ?? ''}
@@ -950,7 +949,7 @@ function ChecklistVisitModal(input: {
               : input.t('storeChecklists.complete')}
           </Button>
         </div>
-      </section>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,8 +1,12 @@
-import { EmptyState, KeyValue, StatusPill } from '../components/dashboard-primitives'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { TargetDistributionRequest } from '../features/targets/api'
 import { formatDate, formatDateTime } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import {
+  StoreApprovalEmptyState,
+  StoreApprovalKeyValue,
+  StoreApprovalStatusBadge,
+} from './store-approvals-atoms'
 import { formatApprovalStatus } from './store-approvals-model'
 import { TargetAllocationBreakdown } from './store-approvals-target-atoms'
 
@@ -12,8 +16,8 @@ export function SubmittedTargetRequestsPanel(input: {
   t: TranslateFunction
 }) {
   return (
-    <section className="store-approvals-ledger-card">
-      <div className="store-approvals-ledger-card-head">
+    <section className="store-approvals-panel">
+      <div className="store-approvals-panel-head">
         <div>
           <div className="store-approvals-ledger-eyebrow">
             {input.t('storeApprovals.submittedEyebrow')}
@@ -23,7 +27,7 @@ export function SubmittedTargetRequestsPanel(input: {
       </div>
 
       {input.requests.length === 0 ? (
-        <EmptyState
+        <StoreApprovalEmptyState
           title={input.t('storeApprovals.noSubmittedTitle')}
           copy={input.t('storeApprovals.noSubmittedCopy')}
         />
@@ -33,9 +37,9 @@ export function SubmittedTargetRequestsPanel(input: {
             <article className="store-approvals-ledger-row" key={item.requestId}>
               <div className="store-approvals-ledger-row-head">
                 <strong>{item.targetLabel}</strong>
-                <StatusPill tone={item.status === 'approved' ? 'calm' : 'warning'}>
+                <StoreApprovalStatusBadge tone={item.status === 'approved' ? 'calm' : 'warning'}>
                   {formatApprovalStatus(item.status, input.t)}
-                </StatusPill>
+                </StoreApprovalStatusBadge>
               </div>
               <p>
                 {input.t('storeApprovals.targetSummary', {
@@ -45,15 +49,15 @@ export function SubmittedTargetRequestsPanel(input: {
                 })}
               </p>
               <div className="store-approvals-ledger-key-grid">
-                <KeyValue
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.allocationCount')}
                   value={String(item.allocationCount)}
                 />
-                <KeyValue
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.createdAt')}
                   value={formatDateTime(item.createdAt, input.locale)}
                 />
-                <KeyValue
+                <StoreApprovalKeyValue
                   label={input.t('storeApprovals.approvedAt')}
                   value={
                     item.approvedAt
@@ -61,7 +65,7 @@ export function SubmittedTargetRequestsPanel(input: {
                       : input.t('storeApprovals.pending')
                   }
                 />
-                <KeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
+                <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
               </div>
               {item.requestReason ? (
                 <p className="store-approvals-ledger-row-note">
