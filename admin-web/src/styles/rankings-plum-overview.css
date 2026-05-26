@@ -435,18 +435,6 @@
     flex-direction: column;
   }
 
-  .store-me-performance-stage,
-  .store-me-action-panel {
-    grid-template-columns: 1fr;
-  }
-
-  .store-me-compare-card,
-  .store-me-target-card,
-  .store-me-action-buttons {
-    grid-column: auto;
-    grid-row: auto;
-  }
-
   .rankings-plum-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -515,52 +503,6 @@
   .store-shell-header .topbar-cluster {
     justify-content: flex-start;
     gap: 0.5rem;
-  }
-
-  .store-me-filter-trigger {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-
-  .store-me-filter-chips {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
-
-  .store-me-filter-caret {
-    grid-column: 3;
-    grid-row: 1;
-  }
-
-  .store-me-filter-controls {
-    align-items: stretch;
-  }
-
-  .store-me-filter-controls .control-field,
-  .store-me-filter-controls .control-field select,
-  .store-me-filter-controls .control-button {
-    width: 100%;
-  }
-
-  .store-me-rank-row {
-    grid-template-columns: 1fr;
-  }
-
-  .store-me-action-copy h3 {
-    font-size: 2rem;
-  }
-
-  .store-me-kpi-dialog {
-    max-height: calc(100vh - 1rem);
-    border-radius: 22px;
-    padding: 1rem;
-  }
-
-  .store-me-kpi-dialog-head {
-    align-items: flex-start;
-  }
-
-  .store-me-month-row {
-    min-width: 760px;
   }
 
   .search-field input {

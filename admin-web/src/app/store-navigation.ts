@@ -1,4 +1,9 @@
 import type { AuthSessionSummary } from '../features/auth/api'
+import {
+  canListTargetDistributionRequests,
+  canOpenStoreChecklists,
+  hasAnyRole,
+} from '../features/auth/authorization'
 import type { TranslationKey } from '../features/localization/dictionary'
 
 export type StorePersona = 'personnel' | 'storeManager' | 'regionManager' | 'visualMerchandiser'
@@ -226,6 +231,42 @@ export function getStoreNavigation(persona: StorePersona) {
   if (persona === 'regionManager') return regionManagerNavigation
   if (persona === 'storeManager') return managerNavigation
   return personnelNavigation
+}
+
+function isStoreNavigationItemAllowed(
+  item: StoreNavigationItem,
+  authSummary: AuthSessionSummary | null,
+) {
+  switch (item.id) {
+    case 'home':
+    case 'feed':
+      return true
+    case 'me':
+      return hasAnyRole(authSummary, ['STORE_PERSONNEL', 'STORE_MANAGER'])
+    case 'rankings':
+      return hasAnyRole(authSummary, ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN'])
+    case 'kpis':
+      return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])
+    case 'checklists':
+      return canOpenStoreChecklists(authSummary)
+    case 'approvals':
+      return canListTargetDistributionRequests(authSummary)
+    case 'tasks':
+      return hasAnyRole(authSummary, ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])
+    case 'targets':
+      return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'])
+    case 'reports':
+      return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER'])
+    default:
+      return false
+  }
+}
+
+export function getRoleAwareStoreNavigation(authSummary: AuthSessionSummary | null) {
+  const persona = resolveStorePersona(authSummary)
+  return getStoreNavigation(persona).filter((item) =>
+    isStoreNavigationItemAllowed(item, authSummary),
+  )
 }
 
 export function getStorePersonaLabelKey(persona: StorePersona): TranslationKey {

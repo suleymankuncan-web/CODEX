@@ -2,7 +2,6 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useReducer } from 'react'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { canListTargetDistributionRequests } from '../features/auth/authorization'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -15,7 +14,6 @@ import {
 import { getErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
-import { cn } from '../lib/utils'
 import {
   buildStoreMyPerformanceViewModel,
   createStoreMyPerformancePageState,
@@ -32,9 +30,7 @@ import {
   StoreMyPerformanceKpiDialog,
   StoreMyPerformanceLowerGrid,
   StoreMyPerformanceMetricGrid,
-  StoreMyPerformanceMobileDock,
   StoreMyPerformancePartialAlert,
-  StoreMyPerformanceRail,
   StoreMyPerformanceScorePanel,
   StoreMyPerformanceTopbar,
 } from './store-my-performance-sections'
@@ -70,8 +66,6 @@ type StoreMyPerformancePageExperienceProps = {
   performanceEmployeeName: string
   selectedClosedSnapshotRunId: string
   selectedLivePeriodType: LivePeriodType
-  showApprovalsLink: boolean
-  showInternalRail: boolean
   sourceMode: StorePerformanceSourceMode
   t: TranslateFunction
   usesClosedSnapshotMode: boolean
@@ -84,11 +78,9 @@ export function StoreMyPerformancePage(input: {
   initialLivePeriodStart?: string
   initialLivePeriodType?: LivePeriodType
   profileMode?: 'self' | 'personnel'
-  showInternalRail?: boolean
 }) {
   const { locale, t } = useLocalization()
   const profileMode = input.profileMode ?? 'self'
-  const showInternalRail = input.showInternalRail ?? true
   const targetEmployeeId = input.employeeId?.trim() ?? ''
   const enabled =
     profileMode === 'personnel'
@@ -346,8 +338,6 @@ export function StoreMyPerformancePage(input: {
       performanceEmployeeName={performance.employee.displayName}
       selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
       selectedLivePeriodType={selectedLivePeriodType}
-      showApprovalsLink={canListTargetDistributionRequests(input.authSummary)}
-      showInternalRail={showInternalRail}
       sourceMode={sourceMode}
       t={t}
       usesClosedSnapshotMode={usesClosedSnapshotMode}
@@ -369,8 +359,6 @@ function StoreMyPerformancePageExperience({
   performanceEmployeeName,
   selectedClosedSnapshotRunId,
   selectedLivePeriodType,
-  showApprovalsLink,
-  showInternalRail,
   sourceMode,
   t,
   usesClosedSnapshotMode,
@@ -404,6 +392,7 @@ function StoreMyPerformancePageExperience({
     targetProgressPercent,
     targetSalesLabel,
     targetStatusLabel,
+    todayActions,
     trendPoints,
     turkeyPopulationLabel,
     turkeyRankLabel,
@@ -411,16 +400,11 @@ function StoreMyPerformancePageExperience({
 
   return (
     <section
-      className={cn(
-        'tw:min-h-screen tw:bg-background tw:text-foreground',
-        showInternalRail && 'tw:md:grid tw:md:grid-cols-[5rem_minmax(0,1fr)]',
-      )}
+      className="tw:min-h-screen tw:bg-background tw:text-foreground"
       data-testid="store-me-page"
       aria-label={t('storeMe.title')}
     >
-      {showInternalRail ? <StoreMyPerformanceRail showApprovalsLink={showApprovalsLink} t={t} /> : null}
-
-      <main className="tw:min-w-0 tw:px-3 tw:py-4 tw:pb-24 tw:md:px-6 tw:md:py-6">
+      <main className="tw:min-w-0 tw:px-3 tw:py-4 tw:md:px-6 tw:md:py-6">
         <section className="tw:mx-auto tw:grid tw:max-w-7xl tw:gap-4" aria-label={t('storeMe.title')}>
           <StoreMyPerformanceTopbar
             employeeHeading={employeeHeading}
@@ -499,6 +483,7 @@ function StoreMyPerformancePageExperience({
               <StoreMyPerformanceLowerGrid
                 samePeriodScoreDelta={samePeriodScoreDelta}
                 t={t}
+                todayActions={todayActions}
                 trendPoints={trendPoints}
               />
             </section>
@@ -513,8 +498,6 @@ function StoreMyPerformancePageExperience({
         onClose={onCloseKpiDetails}
         t={t}
       />
-
-      <StoreMyPerformanceMobileDock showApprovalsLink={showApprovalsLink} t={t} />
     </section>
   )
 }

@@ -32,7 +32,8 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await expect(page.getByText('Mağaza', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Bölge', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Türkiye', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Bugünkü koçluk')).toBeVisible()
+  await expect(page.getByText('Bugün Yapılacaklar')).toBeVisible()
+  await expect(page.locator('#store-me-actions').getByText(/Ritmi koru|HG% çizgisini kapat/)).toBeVisible()
   await expect(page.getByText('Gelişim çizgisi')).toBeVisible()
   await expect(page.getByText(/Bugün tablo/i)).toBeVisible()
   await expect(page.getByText('Hedef gerçekleşme barı')).toBeVisible()
@@ -202,7 +203,8 @@ test('store self-performance switches to English copy and persists locale', asyn
   await expect(page.getByRole('heading', { name: /Store Personnel · IstinyePark Demo Store/i })).toBeVisible()
   await expect(page.getByText('Overall performance')).toBeVisible()
   await expect(page.getByText('Personal score card')).toBeVisible()
-  await expect(page.getByText("Today's coaching")).toBeVisible()
+  await expect(page.getByText("Today's Actions")).toBeVisible()
+  await expect(page.locator('#store-me-actions').getByText(/Maintain the rhythm|Close the HG% gap/)).toBeVisible()
   await expect(page.getByText('Progress line')).toBeVisible()
   await expect(page.getByText('Target achievement bar')).toBeVisible()
   await expect(page.getByText('Same-day comparison').first()).toBeVisible()
@@ -512,7 +514,7 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Talepler / Onaylar', exact: true })).toBeVisible()
-  await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
+  await expect(storeSidebar.locator('a[href="/store/settings"]')).toHaveCount(0)
   const checklistCard = page.getByRole('link', { name: /Checklist kabul/i })
   await expect(checklistCard).toBeVisible()
   await expect(checklistCard).toContainText('1')
@@ -866,7 +868,7 @@ test('store home switches to English copy and persists locale', async ({ page })
   await expect(storeNav.getByRole('link', { name: 'Store KPIs', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Rankings', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Requests / Approvals', exact: true })).toBeVisible()
-  await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
+  await expect(storeSidebar.locator('a[href="/store/settings"]')).toHaveCount(0)
   await expect(page.getByText('Mağaza alanı')).toHaveCount(0)
   await expect(page.getByText('Mağaza ana sayfa Faz 1')).toHaveCount(0)
   await expect(page.getByText('Benim performansim')).toHaveCount(0)
@@ -1006,10 +1008,6 @@ test('store sidebar transitions across visible manager pages without requiring m
     ready: page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i }),
   })
 
-  await page.locator('.store-command-sidebar a[href="/store/settings"]').click()
-
-  await expect(page).toHaveURL(/\/store\/settings$/)
-  await expect(page.getByRole('heading', { name: 'Profil ve dil tercihleri' })).toBeVisible()
   await expectHealthyStoreTransition(page)
 })
 
@@ -1040,21 +1038,29 @@ test('store utility pages explain handoff boundaries and stay mobile-safe', asyn
   await expect.poll(
     () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
   ).toBe(true)
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
   await expect.poll(() =>
     page.evaluate(() => {
       const nav = document.querySelector<HTMLElement>('.store-command-sidebar')
-      const nextStep = Array.from(document.querySelectorAll<HTMLElement>('.key-item strong')).find((node) =>
-        node.textContent?.includes('Store rapor özeti'),
-      )
-
-      if (!nav || !nextStep) {
+      if (!nav) {
         return false
       }
 
-      return nextStep.getBoundingClientRect().bottom + 12 <= nav.getBoundingClientRect().top
+      const navBox = nav.getBoundingClientRect()
+      return navBox.top >= 0 && navBox.bottom <= window.innerHeight
     }),
   ).toBe(true)
+  await expect.poll(() =>
+    page.evaluate(() => {
+      const nav = document.querySelector<HTMLElement>('.store-command-sidebar')
+      if (!nav) {
+        return false
+      }
+
+      return window.getComputedStyle(nav).position !== 'fixed'
+    }),
+  ).toBe(true)
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
+  await expect(page.getByText('Store rapor özeti ayrı ürün kontratıyla gelir')).toBeVisible()
 
   await setStoredLocale(page, 'en')
 

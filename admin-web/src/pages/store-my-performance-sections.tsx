@@ -46,8 +46,6 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { cn } from '../lib/utils'
 export {
-  StoreMyPerformanceMobileDock,
-  StoreMyPerformanceRail,
   StoreMyPerformanceTopbar,
 } from './store-my-performance-navigation'
 
@@ -161,10 +159,27 @@ type StoreMyPerformanceMetricGridProps = {
 type StoreMyPerformanceLowerGridProps = {
   samePeriodScoreDelta: string | null
   t: TranslateFunction
+  todayActions: TodayAction[]
   trendPoints: {
     area: string
     line: string
   }
+}
+
+type TodayAction = {
+  badge: string
+  copy: string
+  icon: 'data' | 'metric' | 'rhythm' | 'target'
+  id: string
+  title: string
+  variant: 'default' | 'secondary' | 'outline' | 'destructive'
+}
+
+const todayActionIconById: Record<TodayAction['icon'], typeof ListChecks> = {
+  data: ListChecks,
+  metric: ChartNoAxesColumnIncreasing,
+  rhythm: LineChart,
+  target: Target,
 }
 
 type MonthlyDetailRow = {
@@ -673,6 +688,7 @@ export function StoreMyPerformanceMetricGrid({
 export function StoreMyPerformanceLowerGrid({
   samePeriodScoreDelta,
   t,
+  todayActions,
   trendPoints,
 }: StoreMyPerformanceLowerGridProps) {
   return (
@@ -718,30 +734,25 @@ export function StoreMyPerformanceLowerGrid({
           <CardDescription>{t('storeMe.todayCoachingCopy')}</CardDescription>
         </CardHeader>
         <CardContent className="tw:grid tw:gap-2">
-          <div className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
-            <ListChecks aria-hidden="true" />
-            <div className="tw:grid tw:gap-1">
-              <strong className="tw:text-sm tw:font-medium">{t('storeMe.action.keepRhythm.title')}</strong>
-              <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.action.keepRhythm.copy')}</span>
-            </div>
-            <Badge variant="secondary">{t('storeMe.priorityOne')}</Badge>
-          </div>
-          <div className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
-            <ChartNoAxesColumnIncreasing aria-hidden="true" />
-            <div className="tw:grid tw:gap-1">
-              <strong className="tw:text-sm tw:font-medium">{t('storeMe.action.growBasket.title')}</strong>
-              <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.action.growBasket.copy')}</span>
-            </div>
-            <Badge variant="outline">{t('storeMe.opportunity')}</Badge>
-          </div>
-          <div className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)_auto] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
-            <Target aria-hidden="true" />
-            <div className="tw:grid tw:gap-1">
-              <strong className="tw:text-sm tw:font-medium">{t('storeMe.action.trackTarget.title')}</strong>
-              <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.action.trackTarget.copy')}</span>
-            </div>
-            <Badge variant="outline">{t('storeMe.follow')}</Badge>
-          </div>
+          {todayActions.map((action) => {
+            const Icon = todayActionIconById[action.icon]
+
+            return (
+              <div
+                className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3 tw:sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+                key={action.id}
+              >
+                <Icon aria-hidden="true" />
+                <div className="tw:grid tw:gap-1">
+                  <strong className="tw:text-sm tw:font-medium">{action.title}</strong>
+                  <span className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{action.copy}</span>
+                </div>
+                <Badge className="tw:col-start-2 tw:w-fit tw:sm:col-start-auto" variant={action.variant}>
+                  {action.badge}
+                </Badge>
+              </div>
+            )
+          })}
         </CardContent>
       </Card>
     </section>

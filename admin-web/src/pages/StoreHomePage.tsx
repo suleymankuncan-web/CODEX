@@ -12,7 +12,7 @@ import {
 import type { TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
-  getStoreNavigation,
+  getRoleAwareStoreNavigation,
   resolveStorePersona,
   type StorePersona,
 } from '../app/store-navigation'
@@ -266,7 +266,7 @@ export function StoreHomePage(input: {
     ...transientQueryRetryOptions,
   })
   const config = homeConfigByPersona[persona]
-  const navigation = getStoreNavigation(persona)
+  const navigation = getRoleAwareStoreNavigation(input.authSummary)
   const title = t(config.titleKey)
   const copy = t(config.copyKey)
   const heroTitle = t(config.heroTitleKey)
