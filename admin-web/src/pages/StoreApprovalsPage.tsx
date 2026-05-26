@@ -1,7 +1,6 @@
-import { useMemo, useReducer, type ReactNode } from 'react'
+import { useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Clock3, ReceiptText, ShieldCheck } from 'lucide-react'
-import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canApproveTargetDistributionRequest,
@@ -39,6 +38,14 @@ import {
   storeApprovalsPageReducer,
 } from './store-approvals-model'
 import { StoreApprovalsWorkbench } from './store-approvals-workbench'
+import {
+  StoreErrorState,
+  StoreLoadingState,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 function useStoreApprovalsPageContent(input: {
   authSummary: AuthSessionSummary | null
@@ -232,20 +239,21 @@ function useStoreApprovalsPageContent(input: {
 
   if (canListRequests && requestsQuery.isLoading && !requestsQuery.data) {
     return (
-      <ScreenState
+      <StoreLoadingState
         title={t('storeApprovals.loadingTitle')}
-        copy={t('storeApprovals.loadingCopy')}
+        description={t('storeApprovals.loadingCopy')}
       />
     )
   }
 
   if (canListRequests && requestsQuery.isError) {
     return (
-      <ScreenState
-        title={t('storeApprovals.errorTitle')}
-        copy={getErrorMessage(requestsQuery.error)}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeApprovals.ledgerTitle')}>
+        <StoreErrorState
+          title={t('storeApprovals.errorTitle')}
+          description={getErrorMessage(requestsQuery.error)}
+        />
+      </StoreSurfacePage>
     )
   }
 
@@ -383,10 +391,10 @@ function useStoreApprovalsPageContent(input: {
   }
 
   return (
-    <section
-      className="store-approvals-ledger-page"
-      aria-labelledby="store-approvals-ledger-title"
-      data-testid="store-approvals-ledger"
+    <StoreSurfacePage
+      ariaLabel={t('storeApprovals.ledgerTitle')}
+      ariaLabelledBy="store-approvals-ledger-title"
+      testId="store-approvals-ledger"
     >
       <StoreApprovalsHeader
         isRegionManagerLedger={isRegionManagerLedger}
@@ -537,7 +545,7 @@ function useStoreApprovalsPageContent(input: {
           canApproveTargetDistributionRequest(input.authSummary, request.storeId)
         }
       />
-    </section>
+    </StoreSurfacePage>
   )
 }
 export function StoreApprovalsPage(input: {
@@ -552,23 +560,18 @@ function StoreApprovalsHeader(input: {
   t: TranslateFunction
 }) {
   return (
-    <header className="store-approvals-ledger-header">
-      <div>
-        <div className="store-approvals-ledger-eyebrow">
-          {input.t('storeApprovals.ledgerEyebrow')}
-        </div>
-        <h2 id="store-approvals-ledger-title">
-          {input.t('storeApprovals.ledgerTitle')}
-        </h2>
-        <p>
-          {input.isRegionManagerLedger
-            ? input.t('storeApprovals.regionManagerSubtitle')
-            : input.isStoreManagerLedger
-              ? input.t('storeApprovals.storeManagerSubtitle')
-              : input.t('storeApprovals.readOnlySubtitle')}
-        </p>
-      </div>
-    </header>
+    <StoreSurfaceHeader
+      eyebrow={input.t('storeApprovals.ledgerEyebrow')}
+      title={input.t('storeApprovals.ledgerTitle')}
+      titleId="store-approvals-ledger-title"
+      description={
+        input.isRegionManagerLedger
+          ? input.t('storeApprovals.regionManagerSubtitle')
+          : input.isStoreManagerLedger
+            ? input.t('storeApprovals.storeManagerSubtitle')
+            : input.t('storeApprovals.readOnlySubtitle')
+      }
+    />
   )
 }
 
@@ -583,35 +586,35 @@ function StoreApprovalsMetrics(input: {
   t: TranslateFunction
 }) {
   return (
-    <section
-      className="store-approvals-ledger-metrics"
-      aria-label={input.t('storeApprovals.ledgerMetrics')}
-    >
-      <LedgerMetric
-        icon={<ReceiptText size={18} />}
-        label={input.t('storeApprovals.pendingApprovals')}
+    <StoreMetricGrid ariaLabel={input.t('storeApprovals.ledgerMetrics')}>
+      <StoreMetricCard
+        icon={<ReceiptText data-icon="inline-start" />}
+        title={input.t('storeApprovals.pendingApprovals')}
         note={input.t('storeApprovals.pendingApprovalsNote')}
         value={String(input.pendingCount)}
+        tone={input.pendingCount > 0 ? 'warning' : 'calm'}
       />
-      <LedgerMetric
-        icon={<ShieldCheck size={18} />}
-        label={input.t('storeApprovals.approvalIntent')}
+      <StoreMetricCard
+        icon={<ShieldCheck data-icon="inline-start" />}
+        title={input.t('storeApprovals.approvalIntent')}
         note={
           input.showTargetApprovalQueue
             ? input.t('storeApprovals.targetApprovalQueueTitle')
             : input.t('storeApprovals.approvalIntentNote')
         }
         value={input.showTargetSubmission || input.showTargetApprovalQueue ? '1' : '0'}
+        tone={input.showTargetSubmission || input.showTargetApprovalQueue ? 'accent' : 'neutral'}
       />
-      <LedgerMetric
-        icon={<Clock3 size={18} />}
-        label={input.t('storeApprovals.approvedRequests')}
+      <StoreMetricCard
+        icon={<Clock3 data-icon="inline-start" />}
+        title={input.t('storeApprovals.approvedRequests')}
         note={input.t('storeApprovals.approvedRequestsNote')}
         value={String(input.approvedCount)}
+        tone={input.approvedCount > 0 ? 'calm' : 'neutral'}
       />
-      <LedgerMetric
-        icon={<CheckCircle2 size={18} />}
-        label={
+      <StoreMetricCard
+        icon={<CheckCircle2 data-icon="inline-start" />}
+        title={
           input.showWorkforceHrQueues
             ? input.t('storeApprovals.ledgerReturnedCorrections')
             : input.t('storeApprovals.storePersonnel')
@@ -626,23 +629,8 @@ function StoreApprovalsMetrics(input: {
             ? String(input.returnedWorkforceCount)
             : String(input.personnelCount)
         }
+        tone={input.returnedWorkforceCount > 0 ? 'warning' : 'neutral'}
       />
-    </section>
-  )
-}
-
-function LedgerMetric(input: {
-  icon: ReactNode
-  label: string
-  note: string
-  value: string
-}) {
-  return (
-    <article className="store-approvals-ledger-metric">
-      <span className="store-approvals-ledger-metric-icon">{input.icon}</span>
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-      <small>{input.note}</small>
-    </article>
+    </StoreMetricGrid>
   )
 }

@@ -1,6 +1,8 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Save, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { getErrorMessage } from '../../lib/format'
 import type { TranslateFunction } from '../localization/dictionary'
 import {
@@ -71,12 +73,12 @@ export function StoreActionPlanCloseControl(input: {
   if (!isOpen) {
     return (
       <>
-        <button type="button" className="control-button" onClick={openForm}>
-          <CheckCircle2 size={16} />
+        <Button type="button" size="sm" variant="outline" onClick={openForm}>
+          <CheckCircle2 data-icon="inline-start" />
           {input.t('storeTasks.actionPlansCloseAction')}
-        </button>
+        </Button>
         {closePlanMutation.isSuccess ? (
-          <span className="queue-subtitle">{input.t('storeTasks.actionPlansCloseSuccess')}</span>
+          <span className="tw:text-sm tw:text-muted-foreground">{input.t('storeTasks.actionPlansCloseSuccess')}</span>
         ) : null}
       </>
     )
@@ -84,15 +86,14 @@ export function StoreActionPlanCloseControl(input: {
 
   return (
     <form
-      className="stacked-row"
+      className="tw:flex tw:flex-col tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/80 tw:p-3"
       aria-label={input.t('storeTasks.actionPlansCloseFormLabel')}
       onSubmit={submitForm}
     >
-      <label className="control-select" htmlFor={resolutionNoteId}>
+      <label className="tw:flex tw:flex-col tw:gap-1.5" htmlFor={resolutionNoteId}>
         <span>{input.t('storeTasks.actionPlansResolutionNoteLabel')}</span>
-        <input
+        <Input
           id={resolutionNoteId}
-          className="control-input"
           value={resolutionNote}
           maxLength={500}
           required
@@ -101,27 +102,28 @@ export function StoreActionPlanCloseControl(input: {
       </label>
 
       {closePlanMutation.isError ? (
-        <p role="alert" className="queue-subtitle">
+        <p role="alert" className="tw:text-sm tw:text-destructive">
           {input.t('storeTasks.actionPlansCloseErrorTitle')}: {getErrorMessage(closePlanMutation.error)}
         </p>
       ) : null}
 
-      <div className="action-cluster">
-        <button type="submit" className="control-button" disabled={!canSubmit}>
-          <Save size={16} />
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button type="submit" size="sm" disabled={!canSubmit}>
+          <Save data-icon="inline-start" />
           {closePlanMutation.isPending
             ? input.t('storeTasks.actionPlansCloseSubmitting')
             : input.t('storeTasks.actionPlansCloseSubmit')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="control-button"
+          size="sm"
+          variant="outline"
           disabled={closePlanMutation.isPending}
           onClick={closeForm}
         >
-          <X size={16} />
+          <X data-icon="inline-start" />
           {input.t('storeTasks.actionPlansCloseCancel')}
-        </button>
+        </Button>
       </div>
     </form>
   )

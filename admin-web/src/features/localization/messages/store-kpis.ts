@@ -85,7 +85,7 @@ export const storeKpisTr = {
   'storeKpis.storeScoreSources': 'Mağaza skor kaynakları',
   'storeKpis.officialRule': 'Resmi kural',
   'storeKpis.scoreSourcesCopy':
-    'Mağaza skoru girilen hedef, Türkiye ortalaması KPI sinyalleri ve tamamlanan checklist kanıtlarından okunur.',
+    'Mağaza skoru girilen hedef, Türkiye ortalaması KPI sinyalleri ve tamamlanan checklist sonuçlarından okunur.',
   'storeKpis.kpiSources': 'KPI kaynakları',
   'storeKpis.kpiSourcesValue':
     'Satış hedefi girilen hedeften; CR, ATV ve UPT Türkiye ortalamasından puanlanır.',
@@ -97,7 +97,7 @@ export const storeKpisTr = {
     'Gerçek oran %120 üzerinde olsa da skor katkısı %120 cap ile hesaplanır.',
   'storeKpis.turkeyAverage': 'Türkiye ortalaması',
   'storeKpis.turkeyAverageValue':
-    'Import edilen özet satırlar kontrol kanıtıdır; skor referansını sistem kendi kapsamından hesaplar.',
+    'Yüklenen özet satırlar karşılaştırma bilgisidir; skor referansı mağaza kapsamına göre hesaplanır.',
 
   'storeKpis.activeScopeEyebrow': 'Aktif kapsam',
   'storeKpis.activeScopeTitle': 'Bu görünüm hangi mağazayı okuyor',
@@ -343,7 +343,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.storeScoreSources': 'Store score sources',
   'storeKpis.officialRule': 'Official rule',
   'storeKpis.scoreSourcesCopy':
-    'Store score is read from entered targets, Turkey average KPI signals, and completed checklist evidence.',
+    'Store score is read from entered targets, Turkey average KPI signals, and completed checklist results.',
   'storeKpis.kpiSources': 'KPI sources',
   'storeKpis.kpiSourcesValue':
     'Sales target is scored from entered target; CR, ATV, and UPT are scored against Turkey average.',
@@ -355,7 +355,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
     'Even when actual ratio is above 120%, score contribution is calculated with the 120% cap.',
   'storeKpis.turkeyAverage': 'Turkey average',
   'storeKpis.turkeyAverageValue':
-    'Imported summary rows are control evidence; the system calculates score reference from its own scope.',
+    'Loaded summary rows provide comparison context; score reference is calculated from the store scope.',
 
   'storeKpis.activeScopeEyebrow': 'Active scope',
   'storeKpis.activeScopeTitle': 'Which store this view reads',

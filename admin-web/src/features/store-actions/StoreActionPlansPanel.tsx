@@ -1,11 +1,15 @@
 import { RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
 import {
-  EmptyState,
-  KeyValue,
-  StatusPill,
-  type Tone,
-} from '../../components/dashboard-primitives'
+  StoreEmptyState,
+  StoreInfoGrid,
+  StoreSectionCard,
+  StoreStackedList,
+  StoreStackedRow,
+  StoreStatusBadge,
+  type StoreSurfaceTone,
+} from '../../pages/store-surface-primitives'
 import { formatDate, formatDateTime, getErrorMessage } from '../../lib/format'
 import type { AppLocale } from '../../lib/i18n'
 import type { TranslateFunction } from '../localization/dictionary'
@@ -38,20 +42,17 @@ export function StoreActionPlansPanel(input: {
   const displayedCount = input.meta?.total ?? input.plans.length
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{input.t('storeTasks.actionPlansEyebrow')}</div>
-          <h3>{input.t('storeTasks.actionPlansTitle')}</h3>
-        </div>
-        <StatusPill tone={input.plans.length > 0 ? 'warning' : 'neutral'}>
-          {input.t('storeTasks.actionPlansCount', { count: displayedCount })}
-        </StatusPill>
-      </div>
-
+    <StoreSectionCard
+      title={input.t('storeTasks.actionPlansTitle')}
+      description={input.t('storeTasks.actionPlansEyebrow')}
+      badge={{
+        label: input.t('storeTasks.actionPlansCount', { count: displayedCount }),
+        tone: input.plans.length > 0 ? 'warning' : 'neutral',
+      }}
+    >
       {renderPanelBody(input)}
       {renderPagination(input)}
-    </section>
+    </StoreSectionCard>
   )
 }
 
@@ -70,53 +71,53 @@ function renderPanelBody(input: {
 }) {
   if (input.isLoading) {
     return (
-      <EmptyState
+      <StoreEmptyState
         title={input.t('storeTasks.actionPlansLoadingTitle')}
-        copy={input.t('storeTasks.actionPlansLoadingCopy')}
+        description={input.t('storeTasks.actionPlansLoadingCopy')}
       />
     )
   }
 
   if (input.isError) {
     return (
-      <div className="stacked-row">
-        <div className="stacked-row-head">
-          <strong>{input.t('storeTasks.actionPlansErrorTitle')}</strong>
-          <button
+      <StoreStackedRow tone="danger">
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+          <strong className="tw:text-sm tw:text-foreground">{input.t('storeTasks.actionPlansErrorTitle')}</strong>
+          <Button
             type="button"
-            className="control-button"
+            variant="outline"
             disabled={input.isFetching}
             onClick={input.onRetry}
           >
-            <RefreshCw size={16} />
+            <RefreshCw data-icon="inline-start" />
             {input.isFetching ? input.t('storeTasks.retryingAction') : input.t('storeTasks.retryAction')}
-          </button>
+          </Button>
         </div>
-        <p>{getErrorMessage(input.error)}</p>
-      </div>
+        <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">{getErrorMessage(input.error)}</p>
+      </StoreStackedRow>
     )
   }
 
   if (input.plans.length === 0 && (input.meta?.total ?? 0) > 0) {
     return (
-      <EmptyState
+      <StoreEmptyState
         title={input.t('storeTasks.actionPlansPageStaleTitle')}
-        copy={input.t('storeTasks.actionPlansPageStaleCopy')}
+        description={input.t('storeTasks.actionPlansPageStaleCopy')}
       />
     )
   }
 
   if (input.plans.length === 0) {
     return (
-      <EmptyState
+      <StoreEmptyState
         title={input.t('storeTasks.actionPlansEmptyTitle')}
-        copy={input.t('storeTasks.actionPlansEmptyCopy')}
+        description={input.t('storeTasks.actionPlansEmptyCopy')}
       />
     )
   }
 
   return (
-    <div className="stacked-table">
+    <StoreStackedList>
       {input.plans.map((plan) => (
         <StoreActionPlanRow
           key={plan.actionPlanId}
@@ -125,7 +126,7 @@ function renderPanelBody(input: {
           t={input.t}
         />
       ))}
-    </div>
+    </StoreStackedList>
   )
 }
 
@@ -149,7 +150,7 @@ function renderPagination(input: {
   const canGoNext = end < input.meta.total
 
   return (
-    <div className="queue-meta">
+    <div className="tw:mt-3 tw:flex tw:flex-col tw:gap-2 tw:text-sm tw:text-muted-foreground tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
       <span>
         {input.t('storeTasks.actionPlansRange', {
           start,
@@ -157,23 +158,23 @@ function renderPagination(input: {
           total: input.meta.total,
         })}
       </span>
-      <div className="action-cluster">
-        <button
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button
           type="button"
-          className="control-button"
+          variant="outline"
           disabled={!canGoPrevious || input.isFetching}
           onClick={input.onPreviousPage}
         >
           {input.t('storeTasks.actionPlansPrevious')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="control-button"
+          variant="outline"
           disabled={!canGoNext || input.isFetching}
           onClick={input.onNextPage}
         >
           {input.t('storeTasks.actionPlansNext')}
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -188,68 +189,59 @@ function StoreActionPlanRow(input: {
   const summary = input.plan.summary?.trim()
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{input.plan.title}</strong>
-          <p className="queue-subtitle">
-            {summary ? summary : input.t('storeTasks.actionPlansNoSummary')}
-          </p>
+    <StoreStackedRow>
+      <div className="tw:flex tw:flex-col tw:gap-3">
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+          <div className="tw:min-w-0">
+            <strong className="tw:block tw:text-sm tw:text-foreground">{input.plan.title}</strong>
+            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              {summary ? summary : input.t('storeTasks.actionPlansNoSummary')}
+            </p>
+          </div>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <StoreStatusBadge tone={mapStoreActionPlanStatusTone(input.plan.status)}>
+              {formatStoreActionPlanStatus(input.t, input.plan.status)}
+            </StoreStatusBadge>
+            <StoreStatusBadge tone={mapStoreActionPlanPriorityTone(input.plan.priority)}>
+              {formatStoreActionPlanPriority(input.t, input.plan.priority)}
+            </StoreStatusBadge>
+          </div>
         </div>
-        <div className="action-cluster">
-          <StatusPill tone={mapStoreActionPlanStatusTone(input.plan.status)}>
-            {formatStoreActionPlanStatus(input.t, input.plan.status)}
-          </StatusPill>
-          <StatusPill tone={mapStoreActionPlanPriorityTone(input.plan.priority)}>
-            {formatStoreActionPlanPriority(input.t, input.plan.priority)}
-          </StatusPill>
+
+        <StoreInfoGrid
+          items={[
+            { label: input.t('storeTasks.actionPlansStore'), value: input.plan.storeId },
+            {
+              label: input.t('storeTasks.actionPlansDueOn'),
+              value: formatActionPlanDate(input.plan.dueOn, input.locale),
+            },
+            {
+              label: input.t('storeTasks.actionPlansUpdatedAt'),
+              value: formatDateTime(input.plan.updatedAt, input.locale),
+            },
+            {
+              label: input.t('storeTasks.actionPlansSource'),
+              value: formatStoreActionPlanSource(input.t, input.plan.sourceType),
+            },
+          ]}
+        />
+
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
+          {safeSourceDeepLink ? (
+            <Button asChild size="sm" variant="outline">
+              <Link to={safeSourceDeepLink}>{input.t('storeTasks.actionPlansOpenSource')}</Link>
+            </Button>
+          ) : (
+            <span className="tw:text-sm tw:text-muted-foreground">{input.t('storeTasks.actionPlansNoSourceLink')}</span>
+          )}
+          <StoreActionPlanStatusControl plan={input.plan} t={input.t} />
+          <StoreActionPlanCloseControl plan={input.plan} t={input.t} />
+          <StoreActionPlanCancelControl plan={input.plan} t={input.t} />
         </div>
-      </div>
 
-      <div className="key-grid">
-        <KeyValue label={input.t('storeTasks.actionPlansStore')} value={input.plan.storeId} />
-        <KeyValue
-          label={input.t('storeTasks.actionPlansDueOn')}
-          value={formatActionPlanDate(input.plan.dueOn, input.locale)}
-        />
-        <KeyValue
-          label={input.t('storeTasks.actionPlansUpdatedAt')}
-          value={formatDateTime(input.plan.updatedAt, input.locale)}
-        />
-        <KeyValue
-          label={input.t('storeTasks.actionPlansSource')}
-          value={formatStoreActionPlanSource(input.t, input.plan.sourceType)}
-        />
+        <StoreActionPlanDetailDisclosure plan={input.plan} locale={input.locale} t={input.t} />
       </div>
-
-      <div className="action-cluster">
-        {safeSourceDeepLink ? (
-          <Link className="control-button store-shell-link" to={safeSourceDeepLink}>
-            {input.t('storeTasks.actionPlansOpenSource')}
-          </Link>
-        ) : (
-          <span className="queue-subtitle">{input.t('storeTasks.actionPlansNoSourceLink')}</span>
-        )}
-        <StoreActionPlanStatusControl
-          plan={input.plan}
-          t={input.t}
-        />
-        <StoreActionPlanCloseControl
-          plan={input.plan}
-          t={input.t}
-        />
-        <StoreActionPlanCancelControl
-          plan={input.plan}
-          t={input.t}
-        />
-      </div>
-
-      <StoreActionPlanDetailDisclosure
-        plan={input.plan}
-        locale={input.locale}
-        t={input.t}
-      />
-    </article>
+    </StoreStackedRow>
   )
 }
 
@@ -268,7 +260,7 @@ function getSafeSourceDeepLink(input: string | null) {
   return input
 }
 
-function mapStoreActionPlanStatusTone(status: StoreActionPlanStatus): Tone {
+function mapStoreActionPlanStatusTone(status: StoreActionPlanStatus): StoreSurfaceTone {
   switch (status) {
     case 'open':
       return 'warning'
@@ -285,7 +277,7 @@ function mapStoreActionPlanStatusTone(status: StoreActionPlanStatus): Tone {
   }
 }
 
-function mapStoreActionPlanPriorityTone(priority: StoreActionPlanPriority): Tone {
+function mapStoreActionPlanPriorityTone(priority: StoreActionPlanPriority): StoreSurfaceTone {
   switch (priority) {
     case 'high':
       return 'danger'

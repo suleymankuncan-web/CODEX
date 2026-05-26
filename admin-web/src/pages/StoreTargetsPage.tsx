@@ -1,43 +1,85 @@
-import { Link } from 'react-router-dom'
+import { Target, UsersRound } from 'lucide-react'
 import { useLocalization } from '../features/localization/useLocalization'
-import { KeyValue, StatusPill } from '../components/dashboard-primitives'
+import {
+  StoreInfoGrid,
+  StoreSectionCard,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 export function StoreTargetsPage() {
   const { t } = useLocalization()
 
   return (
-    <section className="store-command-utility-page" aria-label={t('storeHome.targets.aria')}>
-      <div className="store-command-utility-hero">
-        <div>
-          <span>{t('storeHome.targets.eyebrow')}</span>
-          <h1>{t('storeHome.targets.title')}</h1>
-          <p>{t('storeHome.targets.copy')}</p>
-        </div>
-      </div>
+    <StoreSurfacePage ariaLabel={t('storeHome.targets.aria')}>
+      <StoreSurfaceHeader
+        eyebrow={t('storeHome.targets.eyebrow')}
+        title={t('storeHome.targets.surfaceTitle')}
+        description={t('storeHome.targets.surfaceCopy')}
+        action={{
+          icon: <Target data-icon="inline-start" />,
+          label: t('storeHome.targets.openAdminTargets'),
+          to: '/admin/targets',
+        }}
+      />
 
-      <section className="store-command-panel" aria-label={t('storeHome.targets.workflowAria')}>
-        <div className="store-command-panel-head">
-          <h3>{t('storeHome.targets.workflowTitle')}</h3>
-          <StatusPill tone="accent">{t('storeHome.utility.statusHandoff')}</StatusPill>
-        </div>
-        <p className="store-command-panel-note">{t('storeHome.targets.workflowCopy')}</p>
-        <Link className="store-command-focus-action store-command-inline-action" to="/admin/targets">
-          {t('storeHome.targets.openAdminTargets')}
-        </Link>
-      </section>
+      <StoreSectionCard
+        title={t('storeHome.targets.surfaceWorkflowTitle')}
+        description={t('storeHome.targets.surfaceWorkflowCopy')}
+        badge={{ label: t('storeHome.utility.statusPreference'), tone: 'accent' }}
+      >
+        <StoreInfoGrid
+          items={[
+            {
+              label: t('storeHome.utility.primaryAction'),
+              value: t('storeHome.targets.surfacePrimaryActionValue'),
+              tone: 'accent',
+            },
+            {
+              label: t('storeHome.targets.storeScopeLabel'),
+              value: t('storeHome.targets.storeScopeValue'),
+            },
+            {
+              label: t('storeHome.targets.teamImpactLabel'),
+              value: t('storeHome.targets.teamImpactValue'),
+              tone: 'calm',
+            },
+            {
+              label: t('storeHome.targets.reviewLabel'),
+              value: t('storeHome.targets.reviewValue'),
+            },
+          ]}
+        />
+      </StoreSectionCard>
 
-      <section className="store-command-panel" aria-label={t('storeHome.targets.boundaryAria')}>
-        <div className="store-command-panel-head">
-          <h3>{t('storeHome.targets.boundaryTitle')}</h3>
-          <StatusPill tone="neutral">{t('storeHome.utility.statusBoundary')}</StatusPill>
-        </div>
-        <div className="key-grid">
-          <KeyValue label={t('storeHome.utility.currentRoute')} value="/store/targets" />
-          <KeyValue label={t('storeHome.utility.primaryAction')} value={t('storeHome.targets.primaryActionValue')} />
-          <KeyValue label={t('storeHome.utility.dataBoundary')} value={t('storeHome.targets.dataBoundaryValue')} />
-          <KeyValue label={t('storeHome.utility.nextStep')} value={t('storeHome.targets.nextStepValue')} />
-        </div>
-      </section>
-    </section>
+      <StoreSectionCard
+        title={t('storeHome.targets.usageTitle')}
+        description={t('storeHome.targets.usageCopy')}
+        action={{
+          icon: <UsersRound data-icon="inline-start" />,
+          label: t('storeHome.targets.openAdminTargets'),
+          to: '/admin/targets',
+          variant: 'outline',
+        }}
+      >
+        <StoreInfoGrid
+          items={[
+            {
+              label: t('storeHome.targets.requestLabel'),
+              value: t('storeHome.targets.requestValue'),
+            },
+            {
+              label: t('storeHome.targets.approvalLabel'),
+              value: t('storeHome.targets.approvalValue'),
+            },
+            {
+              label: t('storeHome.targets.visibilityLabel'),
+              value: t('storeHome.targets.visibilityValue'),
+            },
+          ]}
+          className="tw:xl:grid-cols-3"
+        />
+      </StoreSectionCard>
+    </StoreSurfacePage>
   )
 }

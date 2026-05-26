@@ -2,7 +2,8 @@ import { useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ScreenState } from '../components/dashboard-primitives'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canAcknowledgeChecklist,
@@ -71,6 +72,11 @@ import { ChecklistTabs, ChecklistToolbar } from './store-checklists-controls'
 import { StoreChecklistsHero } from './store-checklists-hero'
 import { ChecklistResultModal } from './store-checklists-result-modal'
 import { StoreChecklistsVisitPanel } from './store-checklists-visit-panel'
+import {
+  StoreErrorState,
+  StoreLoadingState,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 function useStoreChecklistsPageContent(input: {
   authSummary: AuthSessionSummary | null
@@ -467,36 +473,33 @@ function useStoreChecklistsPageContent(input: {
 
   if (isLoading) {
     return (
-      <ScreenState
+      <StoreLoadingState
         title={t('storeChecklists.loadingTitle')}
-        copy={t('storeChecklists.loadingCopy')}
+        description={t('storeChecklists.loadingCopy')}
       />
     )
   }
 
   if (isError) {
     return (
-      <ScreenState
-        title={t('storeChecklists.errorTitle')}
-        copy={errorMessage}
-        tone="error"
-        action={
-          <button
-            type="button"
-            className="control-button"
-            disabled={isRetrying}
-            onClick={retryChecklistQueries}
-          >
-            <RefreshCw size={16} />
-            {isRetrying ? t('storeChecklists.retryingAction') : t('storeChecklists.retryAction')}
-          </button>
-        }
-      />
+      <StoreSurfacePage ariaLabel={t('storeChecklists.errorTitle')}>
+        <StoreErrorState
+          title={t('storeChecklists.errorTitle')}
+          description={errorMessage}
+          action={{
+            disabled: isRetrying,
+            icon: <RefreshCw data-icon="inline-start" />,
+            label: isRetrying ? t('storeChecklists.retryingAction') : t('storeChecklists.retryAction'),
+            onClick: retryChecklistQueries,
+            variant: 'outline',
+          }}
+        />
+      </StoreSurfacePage>
     )
   }
 
   return (
-    <section className="store-checklists-command-page">
+    <StoreSurfacePage ariaLabel={t('storeChecklists.title')}>
       <StoreChecklistsHero
         canManageVisits={canManageVisits}
         heroAverageScore={heroAverageScore}
@@ -668,7 +671,7 @@ function useStoreChecklistsPageContent(input: {
           onToggleResultSort={(key) => dispatchPageState({ type: 'toggleResultSort', key })}
         />
       ) : null}
-    </section>
+    </StoreSurfacePage>
   )
 }
 export function StoreChecklistsPage(input: {
@@ -868,7 +871,7 @@ function ChecklistVisitModal(input: {
                           <div className="store-checklist-modal-score-control">
                             <label>
                               <span>{input.t('storeChecklists.scoreInput')}</span>
-                              <input
+                              <Input
                                 disabled={!input.active}
                                 max={item.maxScore}
                                 min={0}
@@ -884,19 +887,16 @@ function ChecklistVisitModal(input: {
                             </label>
                             <div className="store-checklist-modal-answer-cluster">
                               {getScoreQuickOptions(input.locale, item.maxScore).map((option) => (
-                                <button
-                                  className={
-                                    input.scores[item.templateItemId] === option.value
-                                      ? 'store-checklist-modal-answer-active'
-                                      : ''
-                                  }
+                                <Button
                                   disabled={!input.active}
                                   key={option.label}
+                                  size="sm"
                                   type="button"
+                                  variant={input.scores[item.templateItemId] === option.value ? 'default' : 'outline'}
                                   onClick={() => input.onScoreChange(item.templateItemId, option.value)}
                                 >
                                   {option.label}
-                                </button>
+                                </Button>
                               ))}
                             </div>
                           </div>
@@ -933,11 +933,10 @@ function ChecklistVisitModal(input: {
           ) : input.isSaving ? (
             <p className="store-checklists-inline-notice">{input.t('storeChecklists.autosaving')}</p>
           ) : null}
-          <button className="store-checklists-ghost-button" type="button" onClick={input.onClose}>
+          <Button type="button" variant="outline" onClick={input.onClose}>
             {input.t('storeChecklists.cancelSession')}
-          </button>
-          <button
-            className="store-checklists-action-button"
+          </Button>
+          <Button
             disabled={!canComplete}
             type="button"
             onClick={() => {
@@ -949,7 +948,7 @@ function ChecklistVisitModal(input: {
             {input.isCompleting
               ? input.t('storeChecklists.completing')
               : input.t('storeChecklists.complete')}
-          </button>
+          </Button>
         </div>
       </section>
     </div>

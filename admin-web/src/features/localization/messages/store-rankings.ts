@@ -37,7 +37,7 @@ export const storeRankingsTr = {
   'storeRankings.trustScoreNote': 'Metrik katkıları satır ve detay panelinde izlenir.',
   'storeRankings.trustSourceLabel': 'Kaynak',
   'storeRankings.trustSourceValue': 'Canlı rapor',
-  'storeRankings.trustSourceNote': 'Sıralama ve referans aynı API yüzeyinden gelir.',
+  'storeRankings.trustSourceNote': 'Sıralama ve referans aynı kapanmış dönem verisinden gelir.',
   'storeRankings.pageTitle': 'Sıralamalar',
   'storeRankings.pageSubtitle.privileged':
     'Mağaza ve personel performansını aynı filtrelerle, tam veri derinliğiyle takip et.',
@@ -190,7 +190,7 @@ export const storeRankingsEn: Record<keyof typeof storeRankingsTr, string> = {
   'storeRankings.trustScoreNote': 'Metric contributions are visible in rows and the detail panel.',
   'storeRankings.trustSourceLabel': 'Source',
   'storeRankings.trustSourceValue': 'Live report',
-  'storeRankings.trustSourceNote': 'Ranking and reference data come from the same API surface.',
+  'storeRankings.trustSourceNote': 'Ranking and reference data come from the same closed-period dataset.',
   'storeRankings.pageTitle': 'Rankings',
   'storeRankings.pageSubtitle.privileged':
     'Track store and personnel performance with the same filters and full data depth.',
