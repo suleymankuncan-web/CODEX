@@ -282,6 +282,11 @@ Admin/SaaS yuzeyleri sessiz, operasyonel, yogun ama okunabilir olmalidir.
   loading/empty/error state. Bu iskelete uymayan eski bolumler ya kaldirilir
   ya da acikca ayri kapsam olarak park edilir; park edilen parca varsa sayfa
   tamamen refactor edilmis sayilmaz.
+- Sayfa yapisi redesign kapsamindaysa `shadcn/ui` componentleri, Tailwind v4
+  utility/token yapisi ve `lucide-icons/lucide` ikonlari zorunlu stacktir.
+  Hazir olmayan yuzeylerde once bu stack icin kucuk kurulum/entegrasyon slice'i
+  planlanir; lokal ad hoc component veya ikon dili yeni standart yerine
+  gecemez.
 - Plum Glacier pilot dili kullaniliyorsa renk/token daginikligi geri
   getirilmez. Yeni pilot/refactor sayfalari eski krem/teal foundation
   gorunumuyle plum/glacier iskeleti karistirmaz.
