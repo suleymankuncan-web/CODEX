@@ -612,6 +612,8 @@ test('region manager home surfaces checklist field queue summary', async ({ page
 
   await page.goto('/store/home')
 
+  const storeNav = page.locator('.store-command-nav')
+  await expect(storeNav.locator('a[href="/store/reports"]')).toBeVisible()
   const checklistCard = page.getByRole('link', { name: /Checklist saha turu/i })
   await expect(checklistCard).toBeVisible()
   await expect(checklistCard).toContainText('2')

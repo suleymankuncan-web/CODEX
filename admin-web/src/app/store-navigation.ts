@@ -263,7 +263,7 @@ function isStoreNavigationItemAllowed(
     case 'targets':
       return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'])
     case 'reports':
-      return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER'])
+      return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER', 'REGION_MANAGER'])
     case 'settings':
       return authSummary !== null
     default:
