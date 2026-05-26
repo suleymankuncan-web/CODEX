@@ -58,9 +58,9 @@
 .store-me-kpi-card {
   display: grid;
   align-content: start;
-  gap: 16px;
-  min-height: 270px;
-  padding: 22px;
+  gap: 12px;
+  min-height: 264px;
+  padding: 20px;
 }
 
 .store-me-card-topline,
@@ -109,7 +109,7 @@
 .store-me-kpi-body,
 .store-me-target-metric-frame {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .store-me-kpi-body h2 {
@@ -122,7 +122,7 @@
 
 .store-me-kpi-body strong {
   color: var(--store-me-ink);
-  font-size: clamp(30px, 3vw, 40px);
+  font-size: clamp(30px, 2.55vw, 34px);
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1;
@@ -200,8 +200,8 @@
 
 .store-me-rank-strip {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
 }
 
 .store-me-strip-title span {
@@ -228,6 +228,7 @@
   display: grid;
   min-width: 0;
   gap: 3px;
+  line-height: 1;
 }
 
 .store-me-rank-items small,
@@ -237,6 +238,7 @@
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.02em;
+  line-height: 1.1;
 }
 
 .store-me-rank-items strong,
@@ -247,6 +249,15 @@
   color: var(--store-me-ink);
   font-size: 15px;
   font-weight: 800;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-me-rank-items em {
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -254,11 +265,7 @@
 .store-me-target-strip,
 .store-me-summary-strip,
 .store-me-score-meta {
-  padding: 12px;
-}
-
-.store-me-kpi-target .store-me-target-strip {
-  grid-template-columns: 1fr;
+  padding: 10px;
 }
 
 .store-me-kpi-target .store-me-target-strip strong {
@@ -547,8 +554,6 @@
     align-items: stretch;
   }
 
-  .store-me-rank-items,
-  .store-me-target-strip,
   .store-me-summary-strip,
   .store-me-score-meta {
     grid-template-columns: 1fr;
