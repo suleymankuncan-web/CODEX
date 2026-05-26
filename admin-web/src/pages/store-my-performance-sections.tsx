@@ -1,22 +1,7 @@
-import {
-  CalendarDays,
-  ChartNoAxesColumnIncreasing,
-  ChevronDown,
-  LineChart,
-  ListChecks,
-  Target,
-} from 'lucide-react'
+import { CalendarDays, ChevronDown } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -53,9 +38,9 @@ type StorePerformanceSourceMode = 'live' | 'closed'
 type LivePeriodType = 'monthly' | 'daily'
 
 type LiveDayPeriod = {
-  periodType: string
-  periodStart: string
   periodEnd: string
+  periodStart: string
+  periodType: string
 }
 
 type StoreMyPerformanceDateFilterProps = {
@@ -98,88 +83,11 @@ type StoreMyPerformanceDateFilterProps = {
   usesClosedSnapshotMode: boolean
 }
 
-type SamePeriodMetric = {
-  code: string
-  delta: string | null
-  label: string
-  width: string
-}
-
-type StoreMyPerformanceScorePanelProps = {
-  gradeLabel: string
-  isPartial: boolean
-  scoreConfidence: string
-  scoreDeltaLabel: string
-  scoreFocus: string
-  scoreValue: number
-  storePopulationLabel: string
-  storeRankLabel: string
-  t: TranslateFunction
-  turkeyPopulationLabel: string
-  turkeyRankLabel: string
-}
-
-type StoreMyPerformanceHeroPanelProps = {
-  actualSalesLabel: string
-  onOpenKpiDetails: () => void
-  remainingTargetLabel: string
-  samePeriodMetrics: SamePeriodMetric[]
-  samePeriodScoreDelta: string | null
-  scoreSummary: string
-  t: TranslateFunction
-  targetProgressPercent: number
-  targetSalesLabel: string
-  targetStatusLabel: string
-}
-
 type StoreMyPerformancePartialAlertProps = {
   isPartial: boolean
   missingMetricLabels: string[]
   pendingNormalizationLabels: string[]
   t: TranslateFunction
-}
-
-type MetricCard = {
-  code: string
-  displayValue: string
-  label: string
-  narrative: string
-  progressPercent: number
-  statusLabel: string
-  tone: string
-}
-
-type StoreMyPerformanceMetricGridProps = {
-  metricCards: MetricCard[]
-  storeRankLabel: string
-  t: TranslateFunction
-  turkeyRankLabel: string
-}
-
-type StoreMyPerformanceLowerGridProps = {
-  samePeriodScoreDelta: string | null
-  t: TranslateFunction
-  todayActions: TodayAction[]
-  trendPoints: {
-    area: string
-    line: string
-  }
-}
-
-type TodayAction = {
-  badge: string
-  copy: string
-  icon: 'data' | 'metric' | 'rhythm' | 'target'
-  id: string
-  title: string
-  variant: 'default' | 'secondary' | 'outline' | 'destructive'
-}
-
-const todayActionIconById: Record<TodayAction['icon'], typeof ListChecks> = {
-  data: ListChecks,
-  metric: ChartNoAxesColumnIncreasing,
-  rhythm: LineChart,
-  target: Target,
 }
 
 type MonthlyDetailRow = {
@@ -216,10 +124,6 @@ function progressFromWidth(width: string) {
   return clampProgress(Number.parseFloat(width.replace('%', '')))
 }
 
-function scoreBadgeVariant(isPartial: boolean): 'destructive' | 'secondary' {
-  return isPartial ? 'destructive' : 'secondary'
-}
-
 function PeriodCheck({
   checked,
   children,
@@ -248,42 +152,6 @@ function PeriodCheck({
       />
       <span className="tw:truncate">{children}</span>
     </label>
-  )
-}
-
-function RankCell({
-  label,
-  note,
-  value,
-}: {
-  label: string
-  note: string
-  value: string
-}) {
-  return (
-    <div className="tw:grid tw:min-w-0 tw:gap-1 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3">
-      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{label}</span>
-      <strong className="tw:truncate tw:text-base tw:font-medium">{value}</strong>
-      <small className="tw:truncate tw:text-xs tw:text-muted-foreground">{note}</small>
-    </div>
-  )
-}
-
-function MetricProgress({
-  label,
-  value,
-}: {
-  label: string
-  value: number
-}) {
-  return (
-    <div className="tw:grid tw:gap-1.5">
-      <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:text-xs tw:text-muted-foreground">
-        <span>{label}</span>
-        <span>{clampProgress(value)}%</span>
-      </div>
-      <Progress value={clampProgress(value)} className="tw:h-2" />
-    </div>
   )
 }
 
@@ -488,135 +356,6 @@ export function StoreMyPerformanceDateFilter({
   )
 }
 
-export function StoreMyPerformanceScorePanel({
-  gradeLabel,
-  isPartial,
-  scoreConfidence,
-  scoreDeltaLabel,
-  scoreFocus,
-  scoreValue,
-  storePopulationLabel,
-  storeRankLabel,
-  t,
-  turkeyPopulationLabel,
-  turkeyRankLabel,
-}: StoreMyPerformanceScorePanelProps) {
-  return (
-    <Card aria-label={t('storeMe.performanceScore')} className="tw:min-h-full">
-      <CardHeader>
-        <CardTitle>{t('storeMe.personalScoreCard')}</CardTitle>
-        <CardDescription>{t('storeMe.overallPerformance')}</CardDescription>
-        <CardAction>
-          <Badge variant={scoreBadgeVariant(isPartial)}>
-            {isPartial ? t('storeMe.incompleteData') : gradeLabel}
-          </Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="tw:grid tw:gap-5">
-        <div className="tw:grid tw:gap-3">
-          <div className="tw:flex tw:items-end tw:gap-2">
-            <strong className="tw:text-6xl tw:font-medium tw:leading-none tw:text-foreground">
-              {scoreValue}
-            </strong>
-            <span className="tw:pb-2 tw:text-sm tw:text-muted-foreground">/100</span>
-          </div>
-          <MetricProgress label={scoreDeltaLabel} value={scoreValue} />
-        </div>
-
-        <div className="tw:grid tw:gap-2">
-          <RankCell label={t('storeMe.store')} value={storeRankLabel} note={storePopulationLabel} />
-          <RankCell label={t('storeMe.region')} value={t('storeMe.noData')} note={t('storeMe.regionRankPending')} />
-          <RankCell label={t('storeMe.turkey')} value={turkeyRankLabel} note={turkeyPopulationLabel} />
-        </div>
-
-        <div className="tw:grid tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-muted/50 tw:p-3">
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.coachingMode')}</span>
-          <strong className="tw:text-sm tw:font-medium">{scoreFocus}</strong>
-          <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{scoreConfidence}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-export function StoreMyPerformanceHeroPanel({
-  actualSalesLabel,
-  onOpenKpiDetails,
-  remainingTargetLabel,
-  samePeriodMetrics,
-  samePeriodScoreDelta,
-  scoreSummary,
-  t,
-  targetProgressPercent,
-  targetSalesLabel,
-  targetStatusLabel,
-}: StoreMyPerformanceHeroPanelProps) {
-  return (
-    <Card aria-label={t('storeMe.performanceSummary')} data-testid="store-me-target-progress-card">
-      <CardHeader>
-        <CardTitle>{t('storeMe.v2HeroTitle')}</CardTitle>
-        <CardDescription>{scoreSummary}</CardDescription>
-        <CardAction>
-          <Badge variant="outline">{targetStatusLabel}</Badge>
-        </CardAction>
-      </CardHeader>
-      <CardContent className="tw:grid tw:gap-5">
-        <div className="tw:grid tw:gap-3">
-          <span className="tw:text-sm tw:font-medium">{t('storeMe.targetProgress')}</span>
-          <MetricProgress
-            label={t('storeMe.targetProgressPercent', { value: targetProgressPercent })}
-            value={targetProgressPercent}
-          />
-          <div className="tw:grid tw:gap-2 tw:md:grid-cols-3">
-            <RankCell label={t('storeMe.target')} value={targetSalesLabel} note={t('storeMe.approvedTarget')} />
-            <RankCell label={t('storeMe.actual')} value={actualSalesLabel} note={t('storeMe.currentPeriod')} />
-            <RankCell label={t('storeMe.remaining')} value={remainingTargetLabel} note={t('storeMe.follow')} />
-          </div>
-        </div>
-
-        <Separator />
-
-        <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_minmax(17rem,0.55fr)]">
-          <div className="tw:grid tw:gap-3">
-            <span className="tw:text-sm tw:font-medium">{t('storeMe.samePeriodComparison')}</span>
-            <div className="tw:grid tw:gap-2">
-              {samePeriodMetrics.map((metric) => (
-                <MetricProgress
-                  key={metric.code}
-                  label={`${metric.label}: ${metric.delta ?? t('storeMe.noData')}`}
-                  value={progressFromWidth(metric.width)}
-                />
-              ))}
-            </div>
-          </div>
-          <div className="tw:grid tw:content-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-muted/50 tw:p-3">
-            <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
-              {t('storeMe.samePeriodComparison')}
-            </span>
-            <strong className="tw:text-lg tw:font-medium">
-              {samePeriodScoreDelta
-                ? t('storeMe.samePeriodSummary', { value: samePeriodScoreDelta })
-                : t('storeMe.noTrendData')}
-            </strong>
-          </div>
-        </div>
-      </CardContent>
-      <div className="tw:flex tw:flex-wrap tw:gap-2 tw:px-4 tw:pb-4">
-        <Button asChild>
-          <a href="#store-me-actions">
-            <ListChecks data-icon="inline-start" />
-            {t('storeMe.todayFocus')}
-          </a>
-        </Button>
-        <Button type="button" variant="outline" onClick={onOpenKpiDetails}>
-          <LineChart data-icon="inline-start" />
-          {t('storeMe.kpiDetails')}
-        </Button>
-      </div>
-    </Card>
-  )
-}
-
 export function StoreMyPerformancePartialAlert({
   isPartial,
   missingMetricLabels,
@@ -645,117 +384,6 @@ export function StoreMyPerformancePartialAlert({
         ) : null}
       </AlertDescription>
     </Alert>
-  )
-}
-
-export function StoreMyPerformanceMetricGrid({
-  metricCards,
-  storeRankLabel,
-  t,
-  turkeyRankLabel,
-}: StoreMyPerformanceMetricGridProps) {
-  return (
-    <section id="metrics" className="tw:grid tw:gap-3 tw:lg:grid-cols-3" aria-label={t('storeMe.kpiDetails')}>
-      {metricCards.map((card) => (
-        <Card key={card.code} size="sm" data-testid="store-me-metric-card">
-          <CardHeader>
-            <CardTitle>{card.label}</CardTitle>
-            <CardDescription>{card.narrative}</CardDescription>
-            <CardAction>
-              <Badge variant="secondary">{card.statusLabel}</Badge>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="tw:grid tw:gap-4">
-            <div className="tw:grid tw:gap-2">
-              <strong className="tw:text-3xl tw:font-medium tw:text-foreground">{card.displayValue}</strong>
-              <MetricProgress label={t('storeMe.performanceScore')} value={card.progressPercent} />
-            </div>
-            <div className="tw:grid tw:gap-2">
-              <RankCell label={t('storeMe.store')} value={storeRankLabel} note={t('storeMe.storeRank')} />
-              <RankCell label={t('storeMe.region')} value={t('storeMe.noData')} note={t('storeMe.regionRankPending')} />
-              <RankCell label={t('storeMe.turkey')} value={turkeyRankLabel} note={t('storeMe.turkeyRank')} />
-            </div>
-            <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              {t('storeMe.metricCardCopy', { metric: card.label })}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
-    </section>
-  )
-}
-
-export function StoreMyPerformanceLowerGrid({
-  samePeriodScoreDelta,
-  t,
-  todayActions,
-  trendPoints,
-}: StoreMyPerformanceLowerGridProps) {
-  return (
-    <section className="tw:grid tw:gap-3 tw:xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
-      <Card aria-label={t('storeMe.progressLine')}>
-        <CardHeader>
-          <CardTitle>{t('storeMe.progressLine')}</CardTitle>
-          <CardDescription>{t('storeMe.progressLineCopy')}</CardDescription>
-          <CardAction>
-            <Badge variant="outline">{samePeriodScoreDelta ?? t('storeMe.noTrendData')}</Badge>
-          </CardAction>
-        </CardHeader>
-        <CardContent>
-          <div className="tw:relative tw:min-h-64 tw:overflow-hidden tw:rounded-lg tw:border tw:border-border tw:bg-muted/50 tw:p-3">
-            <svg className="tw:h-56 tw:w-full" viewBox="0 0 640 210" preserveAspectRatio="none" aria-hidden="true">
-              <defs>
-                <linearGradient id="storeMeShadcnArea" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.22" />
-                  <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polygon fill="url(#storeMeShadcnArea)" points={trendPoints.area} />
-              <polyline
-                fill="none"
-                points={trendPoints.line}
-                stroke="var(--primary)"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="5"
-              />
-            </svg>
-            <div className="tw:flex tw:flex-wrap tw:gap-2 tw:text-xs tw:text-muted-foreground">
-              <Badge variant="secondary">{t('storeMe.thisPeriod')}</Badge>
-              <Badge variant="outline">{t('storeMe.previousComparablePeriod')}</Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card id="store-me-actions" aria-label={t('storeMe.todayCoaching')}>
-        <CardHeader>
-          <CardTitle>{t('storeMe.todayCoaching')}</CardTitle>
-          <CardDescription>{t('storeMe.todayCoachingCopy')}</CardDescription>
-        </CardHeader>
-        <CardContent className="tw:grid tw:gap-2">
-          {todayActions.map((action) => {
-            const Icon = todayActionIconById[action.icon]
-
-            return (
-              <div
-                className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)] tw:items-center tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:p-3 tw:sm:grid-cols-[auto_minmax(0,1fr)_auto]"
-                key={action.id}
-              >
-                <Icon aria-hidden="true" />
-                <div className="tw:grid tw:gap-1">
-                  <strong className="tw:text-sm tw:font-medium">{action.title}</strong>
-                  <span className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{action.copy}</span>
-                </div>
-                <Badge className="tw:col-start-2 tw:w-fit tw:sm:col-start-auto" variant={action.variant}>
-                  {action.badge}
-                </Badge>
-              </div>
-            )
-          })}
-        </CardContent>
-      </Card>
-    </section>
   )
 }
 
