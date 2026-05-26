@@ -1,14 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, Medal, RefreshCw, Trophy } from 'lucide-react'
-import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
+import { CalendarDays, Eye, Medal, RefreshCw, Trophy } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   getCompetition,
@@ -29,6 +22,20 @@ import {
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import {
+  StoreEmptyState,
+  StoreErrorState,
+  StoreInfoGrid,
+  StoreLoadingState,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSectionCard,
+  StoreStackedList,
+  StoreStackedRow,
+  StoreStatusBadge,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+} from './store-surface-primitives'
 
 function canUseStoreCompetitions(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -79,224 +86,203 @@ export function StoreCompetitionsPage(input: {
 
   if (!enabled) {
     return (
-      <ScreenState
-        title={t('storeCompetitions.unavailableTitle')}
-        copy={t('storeCompetitions.unavailableCopy')}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeCompetitions.unavailableTitle')}>
+        <StoreErrorState
+          title={t('storeCompetitions.unavailableTitle')}
+          description={t('storeCompetitions.unavailableCopy')}
+        />
+      </StoreSurfacePage>
     )
   }
 
   if (competitionsQuery.isLoading) {
     return (
-      <ScreenState
+      <StoreLoadingState
         title={t('storeCompetitions.loadingTitle')}
-        copy={t('storeCompetitions.loadingCopy')}
+        description={t('storeCompetitions.loadingCopy')}
       />
     )
   }
 
   if (competitionsQuery.isError) {
     return (
-      <ScreenState
-        title={t('storeCompetitions.errorTitle')}
-        copy={getErrorMessage(competitionsQuery.error)}
-        tone="error"
-        action={
-          <button
-            type="button"
-            className="control-button"
-            disabled={competitionsQuery.isFetching}
-            onClick={() => void competitionsQuery.refetch()}
-          >
-            <RefreshCw size={16} />
-            {competitionsQuery.isFetching
+      <StoreSurfacePage ariaLabel={t('storeCompetitions.errorTitle')}>
+        <StoreErrorState
+          title={t('storeCompetitions.errorTitle')}
+          description={getErrorMessage(competitionsQuery.error)}
+          action={{
+            disabled: competitionsQuery.isFetching,
+            icon: <RefreshCw data-icon="inline-start" />,
+            label: competitionsQuery.isFetching
               ? t('storeCompetitions.retryingAction')
-              : t('storeCompetitions.retryAction')}
-          </button>
-        }
-      />
+              : t('storeCompetitions.retryAction'),
+            onClick: () => void competitionsQuery.refetch(),
+            variant: 'outline',
+          }}
+        />
+      </StoreSurfacePage>
     )
   }
 
   const contributionCount = detailQuery.data?.storeContributions.length ?? 0
+  const selectedCompetitionKey = selectedCompetition?.competitionId ?? ''
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel store-hero-panel">
-        <div>
-          <div className="eyebrow">{t('storeCompetitions.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('storeCompetitions.title')}</h2>
-          <p className="hero-copy">{t('storeCompetitions.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('storeCompetitions.route')} value="/store/competitions" />
-          <MetricAccent label={t('storeCompetitions.storeScope')} value={primaryStoreId} />
-          <MetricAccent label={t('storeCompetitions.competitions')} value={String(competitions.length)} />
-          <MetricAccent label={t('storeCompetitions.contributions')} value={String(contributionCount)} />
-        </div>
-      </section>
+    <StoreSurfacePage ariaLabel={t('storeCompetitions.title')}>
+      <StoreSurfaceHeader
+        eyebrow={t('storeCompetitions.heroEyebrow')}
+        title={t('storeCompetitions.title')}
+        description={t('storeCompetitions.heroCopy')}
+        badges={[
+          { label: `${t('storeCompetitions.storeScope')}: ${primaryStoreId}`, tone: 'accent' },
+          { label: `${t('storeCompetitions.competitions')}: ${competitions.length}`, tone: 'neutral' },
+          { label: `${t('storeCompetitions.contributions')}: ${contributionCount}`, tone: 'calm' },
+        ]}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeCompetitions.competitionList')}</div>
-            <h3>{t('storeCompetitions.visibleChallenges')}</h3>
-          </div>
-          <StatusPill tone="neutral">{t('storeCompetitions.readOnly')}</StatusPill>
-        </div>
-
+      <StoreSectionCard
+        title={t('storeCompetitions.visibleChallenges')}
+        description={t('storeCompetitions.competitionList')}
+        badge={{ label: t('storeCompetitions.readOnly'), tone: 'neutral' }}
+      >
         {competitions.length === 0 ? (
-          <EmptyState
+          <StoreEmptyState
             title={t('storeCompetitions.noVisibleTitle')}
-            copy={t('storeCompetitions.noVisibleCopy')}
+            description={t('storeCompetitions.noVisibleCopy')}
           />
         ) : (
-          <div className="stacked-table">
+          <StoreStackedList>
             {competitions.map((competition) => (
-              <article className="stacked-row" key={competition.competitionId}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{competition.competitionName}</strong>
-                    <p className="queue-subtitle">{competition.competitionCode}</p>
+              <StoreStackedRow
+                key={competition.competitionId}
+                tone={competition.competitionId === selectedCompetitionKey ? 'accent' : 'neutral'}
+              >
+                <div className="tw:flex tw:flex-col tw:gap-3">
+                  <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+                    <div className="tw:min-w-0">
+                      <h3 className="tw:text-base tw:font-semibold tw:leading-snug tw:text-foreground">
+                        {competition.competitionName}
+                      </h3>
+                      <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">
+                        {competition.competitionCode}
+                      </p>
+                    </div>
+                    <Button
+                      className="tw:w-full tw:sm:w-auto"
+                      type="button"
+                      variant={competition.competitionId === selectedCompetitionKey ? 'default' : 'outline'}
+                      onClick={() => setSelectedCompetitionId(competition.competitionId)}
+                    >
+                      <Eye data-icon="inline-start" />
+                      {t('storeCompetitions.review')}
+                    </Button>
                   </div>
-                  <button
-                    className="control-button"
-                    type="button"
-                    onClick={() => setSelectedCompetitionId(competition.competitionId)}
-                  >
-                    {t('storeCompetitions.review')}
-                  </button>
-                </div>
-                <div className="key-grid">
-                  <KeyValue label={t('storeCompetitions.type')} value={formatCompetitionType(competition.competitionType, t)} />
-                  <KeyValue
-                    label={t('storeCompetitions.state')}
-                    value={formatCompetitionLifecycleState(competition.lifecycleState, t)}
+                  <StoreInfoGrid
+                    items={[
+                      {
+                        label: t('storeCompetitions.type'),
+                        value: formatCompetitionType(competition.competitionType, t),
+                      },
+                      {
+                        label: t('storeCompetitions.state'),
+                        value: formatCompetitionLifecycleState(competition.lifecycleState, t),
+                        tone: 'accent',
+                      },
+                      {
+                        label: t('storeCompetitions.starts'),
+                        value: formatDate(competition.startsOn, locale),
+                      },
+                      {
+                        label: t('storeCompetitions.ends'),
+                        value: formatDate(competition.endsOn, locale),
+                      },
+                    ]}
                   />
-                  <KeyValue label={t('storeCompetitions.starts')} value={formatDate(competition.startsOn, locale)} />
-                  <KeyValue label={t('storeCompetitions.ends')} value={formatDate(competition.endsOn, locale)} />
                 </div>
-              </article>
+              </StoreStackedRow>
             ))}
-          </div>
+          </StoreStackedList>
         )}
-      </section>
+      </StoreSectionCard>
 
       {selectedCompetition ? (
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeCompetitions.standing')}</div>
-              <h3>{selectedCompetition.competitionName}</h3>
-            </div>
-            <StatusPill tone={detailQuery.data?.warnings.length ? 'warning' : 'calm'}>
-              {detailQuery.data?.warnings.length
+        <>
+          <StoreSectionCard
+            title={selectedCompetition.competitionName}
+            description={t('storeCompetitions.standing')}
+            ariaLabel={t('storeCompetitions.readSummaryAria')}
+            badge={{
+              label: detailQuery.data?.warnings.length
                 ? t('storeCompetitions.warningCount', { count: detailQuery.data.warnings.length })
-                : t('competition.clean')}
-            </StatusPill>
-          </div>
+                : t('competition.clean'),
+              tone: detailQuery.data?.warnings.length ? 'warning' : 'calm',
+            }}
+          >
+            {detailQuery.isLoading ? (
+              <StoreEmptyState
+                title={t('storeCompetitions.standingLoadingTitle')}
+                description={t('storeCompetitions.standingLoadingCopy')}
+              />
+            ) : null}
 
-          {detailQuery.isLoading ? (
-            <ScreenState
-              title={t('storeCompetitions.standingLoadingTitle')}
-              copy={t('storeCompetitions.standingLoadingCopy')}
-            />
-          ) : null}
-
-          {detailQuery.isError ? (
-            <ScreenState
-              title={t('storeCompetitions.standingErrorTitle')}
-              copy={getErrorMessage(detailQuery.error)}
-              tone="error"
-              action={
-                <button
-                  type="button"
-                  className="control-button"
-                  disabled={detailQuery.isFetching}
-                  onClick={() => void detailQuery.refetch()}
-                >
-                  <RefreshCw size={16} />
-                  {detailQuery.isFetching
+            {detailQuery.isError ? (
+              <StoreErrorState
+                title={t('storeCompetitions.standingErrorTitle')}
+                description={getErrorMessage(detailQuery.error)}
+                action={{
+                  disabled: detailQuery.isFetching,
+                  icon: <RefreshCw data-icon="inline-start" />,
+                  label: detailQuery.isFetching
                     ? t('storeCompetitions.retryingAction')
-                    : t('storeCompetitions.retryAction')}
-                </button>
-              }
-            />
-          ) : null}
+                    : t('storeCompetitions.retryAction'),
+                  onClick: () => void detailQuery.refetch(),
+                  variant: 'outline',
+                }}
+              />
+            ) : null}
+
+            {detailQuery.data ? (
+              <CompetitionReadSummaryPanel summary={buildCompetitionReadSummary(detailQuery.data, locale)} />
+            ) : null}
+          </StoreSectionCard>
 
           {detailQuery.data ? (
-            <div className="page-stack">
-              <CompetitionReadSummaryPanel summary={buildCompetitionReadSummary(detailQuery.data, locale)} />
-
-              <section className="metric-grid store-metric-grid">
-                <MetricCard
+            <>
+              <StoreMetricGrid ariaLabel={t('storeCompetitions.standing')}>
+                <StoreMetricCard
                   title={t('storeCompetitions.teams')}
                   value={detailQuery.data.latestScores.length}
                   note={t('storeCompetitions.teamsNote')}
-                  icon={<Trophy size={18} />}
+                  icon={<Trophy data-icon="inline-start" />}
                   tone="accent"
                 />
-                <MetricCard
+                <StoreMetricCard
                   title={t('storeCompetitions.contributionRows')}
                   value={detailQuery.data.storeContributions.length}
                   note={t('storeCompetitions.contributionRowsNote')}
-                  icon={<Medal size={18} />}
+                  icon={<Medal data-icon="inline-start" />}
                   tone={detailQuery.data.storeContributions.length > 0 ? 'calm' : 'neutral'}
                 />
-                <MetricCard
+                <StoreMetricCard
                   title={t('storeCompetitions.warnings')}
                   value={detailQuery.data.warnings.length}
                   note={t('storeCompetitions.warningsNote')}
-                  icon={<CalendarDays size={18} />}
+                  icon={<CalendarDays data-icon="inline-start" />}
                   tone={detailQuery.data.warnings.length > 0 ? 'warning' : 'neutral'}
                 />
-              </section>
+              </StoreMetricGrid>
 
-              <section className="stacked-table">
-                <div className="panel-heading">
-                  <div>
-                    <div className="eyebrow">{t('storeCompetitions.teamStanding')}</div>
-                    <h3>{t('storeCompetitions.latestScores')}</h3>
-                  </div>
-                </div>
-                {detailQuery.data.latestScores.length === 0 ? (
-                  <EmptyState copy={t('storeCompetitions.noTeamSnapshot')} />
-                ) : (
-                  detailQuery.data.latestScores.map((score) => (
-                    <article className="stacked-row" key={`${score.teamId}-${score.snapshotDate}`}>
-                      <div className="stacked-row-head">
-                        <div>
-                          <strong>{score.teamName}</strong>
-                          <p className="queue-subtitle">{formatDate(score.snapshotDate, locale)}</p>
-                        </div>
-                        <StatusPill tone="accent">
-                          {formatRank(score.rankPosition, score.rankingPopulation)}
-                        </StatusPill>
-                      </div>
-                      <div className="key-grid">
-                        <KeyValue
-                          label={t('storeCompetitions.score')}
-                          value={formatScore(score.scoreValue, t('storeCompetitions.partialScore'))}
-                        />
-                        <KeyValue
-                          label={t('storeCompetitions.coverage')}
-                          value={`${score.validStoreCount}/${score.totalStoreCount}`}
-                        />
-                        <KeyValue label={t('storeCompetitions.teamCode')} value={score.teamCode} />
-                      </div>
-                    </article>
-                  ))
-                )}
-              </section>
-
+              <TeamStandingSection
+                scores={detailQuery.data.latestScores}
+                partialScoreLabel={t('storeCompetitions.partialScore')}
+              />
               <ScopedContributionSection contributions={detailQuery.data.storeContributions} />
               <ScopedWarningsSection warnings={detailQuery.data.warnings} />
-            </div>
+            </>
           ) : null}
-        </section>
+        </>
       ) : null}
-    </section>
+    </StoreSurfacePage>
   )
 }
 
@@ -304,23 +290,91 @@ function CompetitionReadSummaryPanel(input: { summary: CompetitionReadSummary })
   const { t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label={t('storeCompetitions.readSummaryAria')}>
-      <div className="panel-heading">
+    <div className="tw:flex tw:flex-col tw:gap-3">
+      <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
         <div>
-          <div className="eyebrow">{t('competition.readScope')}</div>
-          <h3>{t('competition.readSummary')}</h3>
+          <p className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {t('competition.readScope')}
+          </p>
+          <h3 className="tw:text-base tw:font-semibold tw:text-foreground">
+            {t('competition.readSummary')}
+          </h3>
         </div>
-        <StatusPill tone={input.summary.tone}>{input.summary.attentionLabel}</StatusPill>
+        <StoreStatusBadge tone={input.summary.tone}>{input.summary.attentionLabel}</StoreStatusBadge>
       </div>
-      <article className="stacked-row">
-        <p className="queue-subtitle">{input.summary.explanation}</p>
-        <div className="key-grid">
-          <KeyValue label={t('competition.bestVisibleRank')} value={input.summary.bestRankLabel} />
-          <KeyValue label={t('competition.teamCoverage')} value={input.summary.teamCoverageLabel} />
-          <KeyValue label={t('competition.contributionCoverage')} value={input.summary.contributionCoverageLabel} />
-        </div>
-      </article>
-    </section>
+      <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.summary.explanation}</p>
+      <StoreInfoGrid
+        items={[
+          { label: t('competition.bestVisibleRank'), value: input.summary.bestRankLabel, tone: 'accent' },
+          { label: t('competition.teamCoverage'), value: input.summary.teamCoverageLabel },
+          { label: t('competition.contributionCoverage'), value: input.summary.contributionCoverageLabel },
+        ]}
+        className="tw:xl:grid-cols-3"
+      />
+    </div>
+  )
+}
+
+function TeamStandingSection(input: {
+  partialScoreLabel: string
+  scores: Array<{
+    rankPosition: number | null
+    rankingPopulation: number
+    scoreValue: number | null
+    snapshotDate: string
+    teamCode: string
+    teamId: string
+    teamName: string
+    totalStoreCount: number
+    validStoreCount: number
+  }>
+}) {
+  const { locale, t } = useLocalization()
+
+  return (
+    <StoreSectionCard
+      title={t('storeCompetitions.latestScores')}
+      description={t('storeCompetitions.teamStanding')}
+    >
+      {input.scores.length === 0 ? (
+        <StoreEmptyState description={t('storeCompetitions.noTeamSnapshot')} />
+      ) : (
+        <StoreStackedList>
+          {input.scores.map((score) => (
+            <StoreStackedRow key={`${score.teamId}-${score.snapshotDate}`}>
+              <div className="tw:flex tw:flex-col tw:gap-3">
+                <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+                  <div>
+                    <h3 className="tw:text-base tw:font-semibold tw:text-foreground">{score.teamName}</h3>
+                    <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">
+                      {formatDate(score.snapshotDate, locale)}
+                    </p>
+                  </div>
+                  <StoreStatusBadge tone="accent">
+                    {formatRank(score.rankPosition, score.rankingPopulation)}
+                  </StoreStatusBadge>
+                </div>
+                <StoreInfoGrid
+                  items={[
+                    {
+                      label: t('storeCompetitions.score'),
+                      value: formatScore(score.scoreValue, input.partialScoreLabel),
+                      tone: 'accent',
+                    },
+                    {
+                      label: t('storeCompetitions.coverage'),
+                      value: `${score.validStoreCount}/${score.totalStoreCount}`,
+                    },
+                    { label: t('storeCompetitions.teamCode'), value: score.teamCode },
+                  ]}
+                  className="tw:xl:grid-cols-3"
+                />
+              </div>
+            </StoreStackedRow>
+          ))}
+        </StoreStackedList>
+      )}
+    </StoreSectionCard>
   )
 }
 
@@ -328,53 +382,63 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
   const { locale, t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label={t('storeCompetitions.scopedContributionsAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('competition.readScope')}</div>
-          <h3>{t('competition.scopedContributions')}</h3>
-        </div>
-      </div>
+    <StoreSectionCard
+      title={t('competition.scopedContributions')}
+      description={t('competition.readScope')}
+      ariaLabel={t('storeCompetitions.scopedContributionsAria')}
+    >
       {input.contributions.length === 0 ? (
-        <EmptyState copy={t('competition.noScopedStoreContributionRowsCopy')} />
+        <StoreEmptyState description={t('competition.noScopedStoreContributionRowsCopy')} />
       ) : (
-        input.contributions.map((contribution) => {
-          const readability = describeCompetitionContribution(contribution, locale)
+        <StoreStackedList>
+          {input.contributions.map((contribution) => {
+            const readability = describeCompetitionContribution(contribution, locale)
 
-          return (
-            <article
-              className="stacked-row"
-              key={`${contribution.stageId}-${contribution.storeId}-${contribution.snapshotDate}`}
-            >
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{contribution.storeName}</strong>
-                  <p className="queue-subtitle">
-                    {contribution.teamName} / {contribution.storeCode}
-                  </p>
+            return (
+              <StoreStackedRow
+                key={`${contribution.stageId}-${contribution.storeId}-${contribution.snapshotDate}`}
+                tone={readability.tone}
+              >
+                <div className="tw:flex tw:flex-col tw:gap-3">
+                  <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+                    <div>
+                      <h3 className="tw:text-base tw:font-semibold tw:text-foreground">
+                        {contribution.storeName}
+                      </h3>
+                      <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">
+                        {contribution.teamName} / {contribution.storeCode}
+                      </p>
+                    </div>
+                    <div className="tw:flex tw:flex-wrap tw:gap-2">
+                      <StoreStatusBadge tone={contribution.hasDailyData ? 'calm' : 'warning'}>
+                        {formatScore(contribution.scoreValue, t('storeCompetitions.partialScore'))}
+                      </StoreStatusBadge>
+                      <StoreStatusBadge tone={readability.tone}>{readability.statusLabel}</StoreStatusBadge>
+                    </div>
+                  </div>
+                  <StoreInfoGrid
+                    items={[
+                      {
+                        label: t('competition.snapshot'),
+                        value: formatDate(contribution.snapshotDate, locale),
+                      },
+                      { label: t('competition.contributionHealth'), value: readability.statusLabel },
+                      { label: t('competition.coverage'), value: readability.coverageLabel },
+                      { label: t('competition.missingKpis'), value: readability.missingLabel },
+                      {
+                        label: t('competition.whyItMatters'),
+                        value: readability.explanation,
+                        tone: readability.tone,
+                      },
+                    ]}
+                  />
                 </div>
-                <div className="action-cluster">
-                  <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
-                    {formatScore(contribution.scoreValue, t('storeCompetitions.partialScore'))}
-                  </StatusPill>
-                  <StatusPill tone={readability.tone}>{readability.statusLabel}</StatusPill>
-                </div>
-              </div>
-              <div className="key-grid">
-                <KeyValue
-                  label={t('competition.snapshot')}
-                  value={formatDate(contribution.snapshotDate, locale)}
-                />
-                <KeyValue label={t('competition.contributionHealth')} value={readability.statusLabel} />
-                <KeyValue label={t('competition.coverage')} value={readability.coverageLabel} />
-                <KeyValue label={t('competition.missingKpis')} value={readability.missingLabel} />
-                <KeyValue label={t('competition.whyItMatters')} value={readability.explanation} />
-              </div>
-            </article>
-          )
-        })
+              </StoreStackedRow>
+            )
+          })}
+        </StoreStackedList>
       )}
-    </section>
+    </StoreSectionCard>
   )
 }
 
@@ -382,42 +446,55 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
   const { locale, t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label={t('storeCompetitions.scopedWarningsAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('competition.dataQuality')}</div>
-          <h3>{t('competition.scopedWarnings')}</h3>
-        </div>
-        <StatusPill tone={input.warnings.length > 0 ? 'warning' : 'calm'}>
-          {input.warnings.length > 0
-            ? t('storeCompetitions.warningCount', { count: input.warnings.length })
-            : t('competition.clean')}
-        </StatusPill>
-      </div>
+    <StoreSectionCard
+      title={t('competition.scopedWarnings')}
+      description={t('competition.dataQuality')}
+      ariaLabel={t('storeCompetitions.scopedWarningsAria')}
+      badge={{
+        label: input.warnings.length > 0
+          ? t('storeCompetitions.warningCount', { count: input.warnings.length })
+          : t('competition.clean'),
+        tone: input.warnings.length > 0 ? 'warning' : 'calm',
+      }}
+    >
       {input.warnings.length === 0 ? (
-        <EmptyState title={t('competition.noOpenWarnings')} copy={t('competition.noScopedWarningsCopy')} />
+        <StoreEmptyState
+          title={t('competition.noOpenWarnings')}
+          description={t('competition.noScopedWarningsCopy')}
+        />
       ) : (
-        input.warnings.map((warning) => {
-          const readability = describeCompetitionWarning(warning, locale)
+        <StoreStackedList>
+          {input.warnings.map((warning) => {
+            const readability = describeCompetitionWarning(warning, locale)
 
-          return (
-            <article className="stacked-row" key={warning.warningId}>
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{readability.title}</strong>
-                  <p className="queue-subtitle">{readability.explanation}</p>
+            return (
+              <StoreStackedRow key={warning.warningId} tone={readability.tone}>
+                <div className="tw:flex tw:flex-col tw:gap-3">
+                  <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+                    <div>
+                      <h3 className="tw:text-base tw:font-semibold tw:text-foreground">{readability.title}</h3>
+                      <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                        {readability.explanation}
+                      </p>
+                    </div>
+                    <StoreStatusBadge tone={readability.tone}>
+                      {formatState(warning.warningLevel)}
+                    </StoreStatusBadge>
+                  </div>
+                  <StoreInfoGrid
+                    items={[
+                      { label: t('competition.warningCode'), value: formatState(warning.warningCode) },
+                      { label: t('competition.periodStart'), value: formatDate(warning.periodStart, locale) },
+                      { label: t('competition.periodEnd'), value: formatDate(warning.periodEnd, locale) },
+                    ]}
+                    className="tw:xl:grid-cols-3"
+                  />
                 </div>
-                <StatusPill tone={readability.tone}>{formatState(warning.warningLevel)}</StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue label={t('competition.warningCode')} value={formatState(warning.warningCode)} />
-                <KeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart, locale)} />
-                <KeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd, locale)} />
-              </div>
-            </article>
-          )
-        })
+              </StoreStackedRow>
+            )
+          })}
+        </StoreStackedList>
       )}
-    </section>
+    </StoreSectionCard>
   )
 }
