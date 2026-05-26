@@ -49,6 +49,18 @@ function formatFeedScopeLabel(t: TranslateFunction, input: FeedVisibilityScopeTy
   return t(feedScopeLabelKeys[input])
 }
 
+function formatStoreScopeBadge(
+  authSummary: AuthSessionSummary | null,
+  t: TranslateFunction,
+) {
+  const scopedStoreIds = new Set([
+    ...(authSummary?.user.readScope.storeIds ?? []),
+    ...(authSummary?.user.scope.storeIds ?? []),
+  ])
+
+  return scopedStoreIds.size > 0 ? String(scopedStoreIds.size) : t('storeFeed.noStoreScope')
+}
+
 export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
   const feedQuery = useQuery({
@@ -60,10 +72,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   const posts = useMemo(() => feedQuery.data?.items ?? [], [feedQuery.data?.items])
   const pinnedPosts = posts.filter((post) => post.isPinned)
   const challengePosts = posts.filter((post) => post.postType === 'challenge')
-  const scopeLabel =
-    input.authSummary?.user.readScope.storeIds[0] ??
-    input.authSummary?.user.scope.storeIds[0] ??
-    t('storeFeed.noStoreScope')
+  const scopeLabel = formatStoreScopeBadge(input.authSummary, t)
 
   if (feedQuery.isLoading) {
     return <StoreLoadingState title={t('storeFeed.loadingTitle')} description={t('storeFeed.loadingCopy')} />

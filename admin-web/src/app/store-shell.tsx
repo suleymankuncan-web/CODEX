@@ -1,6 +1,5 @@
 import { Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canListTargetDistributionRequests,
@@ -35,6 +34,7 @@ import {
 } from './shell-state'
 import { resolveStorePersona } from './store-navigation'
 import { StoreSidebar } from './store-sidebar'
+import { StoreErrorState, StoreSurfacePage } from '../pages/store-surface-primitives'
 
 export function StoreShell(input: {
   shellState: ShellState
@@ -49,7 +49,6 @@ export function StoreShell(input: {
     canOpenStoreChecklists(input.authSummary)
   const storeTasksAllowed = storePersona !== 'personnel'
   const location = useLocation()
-  const rankingsRoute = location.pathname === '/store/rankings'
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
   const storeRoute = (element: ReactNode, options?: {
@@ -82,17 +81,18 @@ export function StoreShell(input: {
 
   if (input.shellState.mode === 'rejected') {
     return (
-      <ScreenState
-        title={t('storeHome.shellRejectedTitle')}
-        copy={input.shellState.notice ?? input.shellState.errorCopy ?? t('storeHome.shellRejectedFallback')}
-        tone="error"
-      />
+      <StoreSurfacePage ariaLabel={t('storeHome.shellRejectedTitle')} className="tw:p-4">
+        <StoreErrorState
+          title={t('storeHome.shellRejectedTitle')}
+          description={input.shellState.notice ?? input.shellState.errorCopy ?? t('storeHome.shellRejectedFallback')}
+        />
+      </StoreSurfacePage>
     )
   }
 
   return (
     <div
-      className={`store-shell store-command-app${rankingsRoute ? ' store-shell-rankings' : ''}${
+      className={`store-shell store-command-app${
         storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''
       }`}
     >

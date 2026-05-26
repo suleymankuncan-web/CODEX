@@ -8,21 +8,6 @@
     linear-gradient(135deg, #f8f5fb 0%, #ffffff 48%, #edf7f6 100%);
 }
 
-.store-shell-rankings {
-  padding: 0;
-  background: var(--bg);
-}
-
-.store-shell-rankings .store-main {
-  gap: 0;
-}
-
-.store-shell-rankings .rankings-plum-page {
-  min-height: 100vh;
-  border: 0;
-  border-radius: 0;
-}
-
 .store-shell-store-me {
   padding: 0;
   background:

@@ -39,7 +39,7 @@ test('my performance explains missing benchmark or target', async ({ page }) => 
 test('store KPI closed view explains effective BM and VM checklist weights', async ({ page }) => {
   await page.goto('/store/kpis')
 
-  await page.getByRole('button', { name: 'Kapanmış gün' }).click()
+  await page.getByRole('radio', { name: 'Kapanmış gün' }).click()
 
   await expect(page.getByText('VM checklist: bu dönem skora dahil edilmedi')).toBeVisible()
   await expect(page.getByText('VM payı KPI tarafında kaldı')).toBeVisible()
@@ -53,15 +53,18 @@ test('store KPI closed view explains effective BM and VM checklist weights', asy
 test('store KPI closed view lets users choose a closed snapshot from the list', async ({ page }) => {
   await page.goto('/store/kpis')
 
-  await page.getByRole('button', { name: 'Kapanmış gün' }).click()
+  await page.getByRole('radio', { name: 'Kapanmış gün' }).click()
+  await page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' }).click()
   await expect(
     page.getByRole('option', {
       name: '20 Nis 2026 kapanışı - Nisan aylık kapanış',
     }),
-  ).toBeAttached()
+  ).toBeVisible()
   await page
-    .getByLabel('Kapanmış KPI kaydı seçimi')
-    .selectOption('snapshot-2026-04-20')
+    .getByRole('option', {
+      name: '20 Nis 2026 kapanışı - Nisan aylık kapanış',
+    })
+    .click()
 
   await expect(page.getByText('1 VM checklist yapıldı')).toBeVisible()
   await expect(page.getByText('VM checklist katkısı 5')).toBeVisible()
