@@ -5,10 +5,6 @@
     grid-template-columns: 1fr;
   }
 
-  .store-checklists-priority-rail {
-    position: static;
-  }
-
   .store-checklist-modal-live {
     position: static;
   }
@@ -137,14 +133,9 @@
     display: block;
   }
 
-  .store-checklists-attention,
   .store-checklists-pagination {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .store-checklists-attention-action {
-    width: 100%;
   }
 
   .store-checklist-modal-head,
@@ -261,7 +252,7 @@
     font-size: 0.68rem;
   }
 
-  .store-checklist-session-draft-button {
+  .store-checklist-session-draft-state {
     min-height: 2rem;
     padding: 0 0.58rem;
     font-size: 0.75rem;

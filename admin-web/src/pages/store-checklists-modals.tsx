@@ -66,7 +66,6 @@ export function StoreChecklistsModals(input: {
   onCommentChange: (templateItemId: string, comment: string) => void
   onCompleteVisit: (checklistInstanceId: string) => void
   onNoteChange: (note: string) => void
-  onSaveSessionDraft: (checklistInstanceId: string) => void
   onScoreChange: (templateItemId: string, score: number | null) => void
 }) {
   return (
@@ -81,7 +80,6 @@ export function StoreChecklistsModals(input: {
           locale={input.locale}
           onClose={input.onCloseSession}
           onComplete={input.onCompleteVisit}
-          onSaveDraft={input.onSaveSessionDraft}
           onScoreChange={input.onScoreChange}
           onCommentChange={input.onCommentChange}
           scores={input.scores}
@@ -116,7 +114,6 @@ function ChecklistVisitModal(input: {
   onClose: () => void
   onCommentChange: (templateItemId: string, comment: string) => void
   onComplete: (checklistInstanceId: string) => void
-  onSaveDraft: (checklistInstanceId: string) => void
   onScoreChange: (templateItemId: string, score: number | null) => void
   scores: Record<string, number>
   session: ChecklistSession
@@ -215,22 +212,13 @@ function ChecklistVisitModal(input: {
                 {input.session.template.templateName}
               </DialogDescription>
             </div>
-            <Button
-              className="store-checklist-session-draft-button"
-              disabled={!input.active || input.isSaving || input.isStarting}
-              size="sm"
-              type="button"
-              variant="outline"
-              onClick={() => {
-                if (!input.active) return
-                input.onSaveDraft(input.active.checklistInstanceId)
-              }}
+            <div
+              className="store-checklist-session-draft-state"
+              aria-label={input.t('storeChecklists.draftSaved')}
             >
               <Cloud data-icon="inline-start" />
-              {input.isSaving
-                ? input.t('storeChecklists.draftSaving')
-                : input.t('storeChecklists.draftSave')}
-            </Button>
+              {input.t('storeChecklists.draftSaved')}
+            </div>
           </DialogHeader>
 
           <section className="store-checklist-session-summary" aria-label={input.t('storeChecklists.summaryAria')}>

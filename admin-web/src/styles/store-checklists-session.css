@@ -56,8 +56,24 @@
   white-space: nowrap;
 }
 
-.store-checklist-session-draft-button {
+.store-checklist-session-draft-state {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid rgba(124, 58, 237, 0.18);
+  border-radius: 0.8rem;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--checklist-plum);
+  padding: 0 0.72rem;
+  font-size: 0.8rem;
+  font-weight: 650;
   white-space: nowrap;
+}
+
+.store-checklist-session-draft-state svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .store-checklist-session-summary {

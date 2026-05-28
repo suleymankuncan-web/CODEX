@@ -85,6 +85,7 @@ export function ChecklistTemplateScore(input: {
       className={`store-checklists-template-score store-checklists-template-score-${scoreKind}`}
       aria-label={`${status}: ${value} / 100`}
     >
+      <span className="store-checklists-template-score-label">{input.label}</span>
       <b>{value}</b>
       <em>/100</em>
       <span className={`store-checklists-template-scorebar${tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''}`}>

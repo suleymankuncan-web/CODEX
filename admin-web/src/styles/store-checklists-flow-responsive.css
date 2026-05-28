@@ -25,6 +25,10 @@
   padding: 0;
 }
 
+.store-checklists-template-score-label {
+  display: none;
+}
+
 .store-checklists-template-score > b {
   color: var(--checklist-ink);
   font-size: 13px;
@@ -198,6 +202,78 @@
   font-weight: 600;
 }
 
+.store-checklists-result-table .store-checklists-table-head,
+.store-checklists-result-table .store-checklists-result-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.5fr) minmax(96px, 0.62fr) minmax(128px, 0.72fr) minmax(118px, 0.68fr) minmax(118px, 0.58fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.store-checklists-result-row {
+  min-height: 78px;
+}
+
+.store-checklists-result-row .store-checklists-row-main {
+  display: grid;
+  gap: 3px;
+}
+
+.store-checklists-result-row .store-checklists-row-main p,
+.store-checklists-result-row .store-checklists-row-main span {
+  overflow: hidden;
+  margin: 0;
+  color: #5a6683;
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-checklists-result-row .store-checklists-row-main span {
+  color: var(--checklist-plum);
+  font-weight: 620;
+}
+
+.store-checklists-result-context {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  border-top: 1px solid var(--checklist-soft-line);
+  margin-top: -2px;
+  padding-top: 10px;
+  color: #5a6683;
+  font-size: 11px;
+}
+
+.store-checklists-result-context span,
+.store-checklists-result-context em {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-checklists-result-context span {
+  min-width: 0;
+}
+
+.store-checklists-result-context b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(240, 68, 93, 0.09);
+  color: #c72340;
+  padding: 5px 8px;
+  font-weight: 650;
+}
+
+.store-checklists-result-context em {
+  min-width: 0;
+  color: #33405f;
+  font-style: normal;
+}
+
 .store-checklists-action-button {
   display: inline-flex;
   min-height: 34px;
@@ -259,116 +335,6 @@
   font-weight: 680;
 }
 
-.store-checklists-priority-rail {
-  position: sticky;
-  top: 24px;
-  min-width: 0;
-}
-
-.store-checklists-priority-card {
-  display: grid;
-  gap: 14px;
-  border: 1px solid var(--checklist-line);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 18px 46px rgba(25, 34, 70, 0.075);
-  padding: 18px;
-}
-
-.store-checklists-priority-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.store-checklists-priority-head > div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.store-checklists-priority-head strong {
-  color: var(--checklist-ink);
-  font-size: 13px;
-  font-weight: 680;
-}
-
-.store-checklists-priority-head > span {
-  display: grid;
-  min-width: 24px;
-  height: 24px;
-  place-items: center;
-  border-radius: 999px;
-  background: rgba(240, 68, 93, 0.1);
-  color: var(--checklist-danger);
-  font-size: 11px;
-  font-weight: 700;
-}
-
-.store-checklists-priority-list {
-  display: grid;
-}
-
-.store-checklists-priority-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  border-top: 1px solid var(--checklist-soft-line);
-  padding: 14px 0;
-}
-
-.store-checklists-priority-row:first-child {
-  border-top: 0;
-  padding-top: 0;
-}
-
-.store-checklists-priority-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-}
-
-.store-checklists-priority-row strong,
-.store-checklists-priority-row span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.store-checklists-priority-row strong {
-  color: var(--checklist-ink);
-  font-size: 12px;
-  font-weight: 680;
-}
-
-.store-checklists-priority-row span {
-  margin-top: 4px;
-  color: #5a6683;
-  font-size: 11px;
-}
-
-.store-checklists-priority-value {
-  border: 0;
-  border-radius: 999px;
-  padding: 7px 9px;
-  font-size: 11px;
-  font-weight: 680;
-  line-height: 1;
-}
-
-.store-checklists-priority-empty {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border-top: 1px solid var(--checklist-soft-line);
-  color: #5a6683;
-  padding-top: 12px;
-  font-size: 12px;
-}
-
 .store-checklists-empty-block,
 .store-checklists-inline-notice {
   margin: 0 22px 18px;
@@ -383,9 +349,6 @@
     grid-template-columns: 1fr;
   }
 
-  .store-checklists-priority-rail {
-    position: static;
-  }
 }
 
 @media (max-width: 920px) {
@@ -409,12 +372,17 @@
   }
 
   .store-checklists-visit-table .store-checklists-visit-row,
-  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row {
+  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row,
+  .store-checklists-result-table .store-checklists-result-row {
     grid-template-columns: minmax(0, 1fr) minmax(96px, auto);
     gap: 10px 14px;
     align-items: center;
     min-height: 0;
     padding: 14px;
+  }
+
+  .store-checklists-result-context {
+    grid-column: 1 / -1;
   }
 
   .store-checklists-store-cell {
@@ -484,16 +452,6 @@
     font-size: 24px;
   }
 
-  .store-checklists-attention {
-    display: grid;
-    min-height: 0;
-    padding: 12px;
-  }
-
-  .store-checklists-attention-action {
-    width: 100%;
-  }
-
   .store-checklists-toolbar {
     grid-template-columns: 1fr;
     gap: 10px;
@@ -543,13 +501,26 @@
   }
 
   .store-checklists-visit-table .store-checklists-visit-row,
-  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row {
+  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row,
+  .store-checklists-result-table .store-checklists-result-row {
     grid-template-columns: 1fr;
     padding: 12px;
   }
 
+  .store-checklists-result-context {
+    display: grid;
+  }
+
   .store-checklists-template-scorebar {
     width: 92px;
+  }
+
+  .store-checklists-template-score-label {
+    display: block;
+    grid-column: 1 / -1;
+    color: #65708c;
+    font-size: 10px;
+    font-weight: 620;
   }
 
   .store-checklists-action-button {
@@ -560,10 +531,6 @@
 
   .store-checklists-pagination {
     display: grid;
-  }
-
-  .store-checklists-priority-card {
-    padding: 14px;
   }
 
   .store-checklists-empty-block,

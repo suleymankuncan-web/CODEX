@@ -92,10 +92,7 @@ export function getLowScoreResponses(items: ChecklistAcknowledgementItem['respon
 }
 
 export function getResponseRatio(item: ChecklistAcknowledgementItem['responses'][number]) {
-  if (item.scoreValue === null || item.maxScore <= 0) {
-    return null
-  }
-
+  if (item.scoreValue === null || item.maxScore <= 0) return null
   return Math.round((item.scoreValue / item.maxScore) * 100)
 }
 
@@ -204,13 +201,13 @@ export function getStoreVisitPriority(row: ChecklistStoreVisitRow) {
   return Math.max(row.bm ? getCoveragePriority(row.bm) : 0, row.vm ? getCoveragePriority(row.vm) : 0)
 }
 
-export function hasOpenStoreVisitWork(row: ChecklistStoreVisitRow) {
-  const rows = [row.bm, row.vm].filter((item): item is ChecklistCoverageRow => Boolean(item))
-  if (rows.length === 0) return true
-  return rows.some((item) => {
-    const score = getCoverageScore(item)
-    return item.active || item.completedCount === 0 || (score !== null && score < 70)
-  })
+export function isIncompleteStoreVisitRow(row: ChecklistStoreVisitRow, requiresCombinedVisitTemplates: boolean) {
+  const visibleRows = [row.bm, row.vm].filter(Boolean)
+  if (visibleRows.length === 0) return true
+  if (requiresCombinedVisitTemplates) {
+    return visibleRows.some((item) => (item?.completedCount ?? 0) === 0)
+  }
+  return visibleRows.every((item) => (item?.completedCount ?? 0) === 0)
 }
 
 export function getStoreVisitScore(row: ChecklistStoreVisitRow) {
@@ -479,7 +476,11 @@ export function doesCoverageRowMatchFilters(
     ]
     const isCurrentMissingRow =
       filters.month === getCurrentMonthKey() && getCoverageStatus(row) === 'missing'
-    if (!rowMonths.includes(filters.month) && !isCurrentMissingRow) return false
+    const isCurrentLocalCompletion =
+      filters.month === getCurrentMonthKey() &&
+      getCoverageStatus(row) === 'completed' &&
+      row.completedCount > 0
+    if (!rowMonths.includes(filters.month) && !isCurrentMissingRow && !isCurrentLocalCompletion) return false
   }
   if (!doesStatusMatch(getCoverageStatus(row), filters.status)) return false
 
@@ -643,10 +644,7 @@ export function compareNumber(left: number, right: number) {
 export function compareDate(left?: string | null, right?: string | null) {
   const leftTime = left ? new Date(left).getTime() : 0
   const rightTime = right ? new Date(right).getTime() : 0
-  return compareNumber(
-    Number.isNaN(leftTime) ? 0 : leftTime,
-    Number.isNaN(rightTime) ? 0 : rightTime,
-  )
+  return compareNumber(Number.isNaN(leftTime) ? 0 : leftTime, Number.isNaN(rightTime) ? 0 : rightTime)
 }
 
 export function normalizeSearch(input: string) {

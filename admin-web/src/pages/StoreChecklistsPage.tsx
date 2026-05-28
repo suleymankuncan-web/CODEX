@@ -47,7 +47,7 @@ import {
   getMonthKey,
   getStaticCopy,
   getStoreVisitScore,
-  hasOpenStoreVisitWork,
+  isIncompleteStoreVisitRow,
   isVisualMerchandiserOnly,
   serializeChecklistResponseDraft,
   sortChecklistItems,
@@ -58,14 +58,6 @@ import { StoreChecklistsAcknowledgementPanels } from './store-checklists-acknowl
 import { ChecklistTabs, ChecklistToolbar } from './store-checklists-controls'
 import { StoreChecklistsHero } from './store-checklists-hero'
 import { StoreChecklistsModals } from './store-checklists-modals'
-import {
-  ChecklistAttentionBanner,
-  ChecklistPriorityRail,
-} from './store-checklists-priority'
-import {
-  buildChecklistPriorityActions,
-  isIncompleteStoreVisitRow,
-} from './store-checklists-priority-logic'
 import { StoreChecklistsVisitPanel } from './store-checklists-visit-panel'
 import {
   StoreErrorState,
@@ -100,6 +92,7 @@ function useStoreChecklistsPageContent(input: {
     visitSort,
     resultSort,
     localActiveInstances,
+    localCompletedRows,
     sessionDirty,
   } = pageState
   const autoSaveTimersRef = useRef<Record<string, number>>({})
@@ -208,6 +201,7 @@ function useStoreChecklistsPageContent(input: {
     mutationFn: async (variables: {
       checklistInstanceId: string
       responses: ChecklistResponseDraft[]
+      rowKey: string
     }) => {
       await savePendingSessionResponses(variables.checklistInstanceId, variables.responses)
       const result = await completeMobileChecklistInstance({
@@ -224,6 +218,7 @@ function useStoreChecklistsPageContent(input: {
       dispatchPageState({
         type: 'completeVisitSucceeded',
         checklistInstanceId: variables.checklistInstanceId,
+        rowKey: variables.rowKey,
       })
     },
     onError: (error) => {
@@ -314,7 +309,7 @@ function useStoreChecklistsPageContent(input: {
         template,
         active,
         summary,
-        completedCount: summary?.completedCount ?? 0,
+        completedCount: Math.max(summary?.completedCount ?? 0, localCompletedRows[rowKey] ?? 0),
       }
     }),
   )
@@ -380,15 +375,6 @@ function useStoreChecklistsPageContent(input: {
     isIncompleteStoreVisitRow(row, requiresCombinedVisitTemplates),
   )
   const pendingVisitStoreCount = incompleteVisitStoreRows.length
-  const priorityVisitRows = visitStoreRows.filter(hasOpenStoreVisitWork)
-  const priorityActions = buildChecklistPriorityActions({
-    canManageVisits,
-    items: filteredPendingItems,
-    locale,
-    requiresCombinedVisitTemplates,
-    rows: priorityVisitRows,
-    t,
-  })
   const heroScoreValues = (canManageVisits
     ? visitStoreRows.map(getStoreVisitScore)
     : items.map((item) => item.totalScore ?? Math.round((item.complianceRate ?? 0) * 100))
@@ -428,7 +414,7 @@ function useStoreChecklistsPageContent(input: {
             key: 'inbox' as const,
             label: t('storeChecklists.inboxEyebrow'),
             count: filteredPendingItems.length,
-            tone: filteredPendingItems.length > 0 ? 'warning' as const : 'calm' as const,
+            tone: filteredPendingItems.length > 0 ? 'accent' as const : 'calm' as const,
           },
         ]
       : []),
@@ -438,7 +424,7 @@ function useStoreChecklistsPageContent(input: {
             key: 'incomplete' as const,
             label: getStaticCopy(locale, 'Tamamlanmayanlar', 'Incomplete'),
             count: incompleteVisitStoreRows.length,
-            tone: incompleteVisitStoreRows.length > 0 ? 'warning' as const : 'calm' as const,
+            tone: incompleteVisitStoreRows.length > 0 ? 'danger' as const : 'calm' as const,
           },
         ]
       : []),
@@ -459,13 +445,6 @@ function useStoreChecklistsPageContent(input: {
 
   const selectChecklistTab = (tab: ChecklistTab) => {
     dispatchPageState({ type: 'selectTab', tab })
-    navigate(
-      {
-        pathname: location.pathname,
-        search: buildChecklistSearch(location.search, { result: null, tab }),
-      },
-      { replace: true },
-    )
   }
 
   const openChecklistResult = (item: ChecklistAcknowledgementItem) => {
@@ -549,12 +528,6 @@ function useStoreChecklistsPageContent(input: {
 
       <div className="store-checklists-flow-layout">
         <div className="store-checklists-flow-main">
-          <ChecklistAttentionBanner
-            count={priorityActions.totalCount}
-            locale={locale}
-            onClick={() => selectChecklistTab(canManageVisits ? 'visits' : 'inbox')}
-          />
-
           <ChecklistToolbar
             locale={locale}
             monthOptions={monthOptions}
@@ -638,11 +611,6 @@ function useStoreChecklistsPageContent(input: {
           ) : null}
         </div>
 
-        <ChecklistPriorityRail
-          actions={priorityActions.items}
-          locale={locale}
-          totalCount={priorityActions.totalCount}
-        />
       </div>
 
       <StoreChecklistsModals
@@ -702,6 +670,7 @@ function useStoreChecklistsPageContent(input: {
               scores,
               session: selectedSession,
             }),
+            rowKey: getCoverageRowKeyFromRow(selectedSession),
           })
         }}
         onNoteChange={(note) => {
@@ -711,24 +680,6 @@ function useStoreChecklistsPageContent(input: {
             checklistInstanceId: selectedResult.checklistInstanceId,
             note,
           })
-        }}
-        onSaveSessionDraft={(checklistInstanceId) => {
-          if (!selectedSession) return
-          const responseDrafts = buildChecklistResponseDrafts({
-            checklistInstanceId,
-            comments,
-            scores,
-            session: selectedSession,
-          })
-          void savePendingSessionResponses(checklistInstanceId, responseDrafts)
-            .then(() => {
-              dispatchPageState({ type: 'saveResponseSucceeded' })
-              void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
-              showCommandNotice(t('storeChecklists.responseSaved'))
-            })
-            .catch((error) => {
-              showCommandNotice(getErrorMessage(error))
-            })
         }}
         onScoreChange={(templateItemId, score) => {
           dispatchPageState({ type: 'setScoreDraft', templateItemId, score })
