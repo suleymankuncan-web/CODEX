@@ -252,6 +252,14 @@
   margin: 0;
   padding: 0;
 }
+.store-shell-store-checklists .store-command-main {
+  width: min(1236px, calc(100vw - 28px));
+  margin: 0 auto;
+  padding: 26px 14px 46px;
+}
+.store-shell.store-command-app.store-shell-store-checklists {
+  padding-left: 0;
+}
 .store-command-home {
   color: var(--store-command-ink);
 }
@@ -355,7 +363,8 @@
   }
 
   .store-command-main,
-  .store-shell-store-me .store-command-main {
+  .store-shell-store-me .store-command-main,
+  .store-shell-store-checklists .store-command-main {
     width: min(100%, 760px);
     margin: 0 auto;
     padding: 16px 12px calc(28px + env(safe-area-inset-bottom));

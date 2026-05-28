@@ -1,8 +1,17 @@
+import {
+  BarChart3,
+  Bell,
+  CalendarDays,
+  CheckSquare,
+  ChevronDown,
+  Clock3,
+  Store as StoreIcon,
+} from 'lucide-react'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { formatNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { getStaticCopy } from './store-checklists-logic'
-import { ChecklistBadge, ChecklistMetric } from './store-checklists-atoms'
+import { ChecklistMetric } from './store-checklists-atoms'
 
 export function StoreChecklistsHero(input: {
   canManageVisits: boolean
@@ -12,6 +21,7 @@ export function StoreChecklistsHero(input: {
   heroStoreCount: number
   heroWaitingCount: number
   locale: AppLocale
+  periodLabel: string
   t: TranslateFunction
   vmOnlyVisitScope: boolean
 }) {
@@ -19,70 +29,56 @@ export function StoreChecklistsHero(input: {
     canManageVisits,
     heroAverageScore,
     heroCompletedCount,
-    heroScopeLabel,
     heroStoreCount,
     heroWaitingCount,
     locale,
+    periodLabel,
     t,
     vmOnlyVisitScope,
   } = input
 
   return (
-    <header className="store-checklists-command-hero">
-      <div className="store-checklists-hero-copy">
-        <div className="store-checklists-hero-pills" aria-label={t('storeChecklists.summaryAria')}>
-          <ChecklistBadge tone="accent">{heroScopeLabel}</ChecklistBadge>
-          <ChecklistBadge tone={heroWaitingCount > 0 ? 'warning' : 'calm'}>
-            {getStaticCopy(
-              locale,
-              `${formatNumber(heroWaitingCount, locale)} mağaza bekliyor`,
-              `${formatNumber(heroWaitingCount, locale)} stores waiting`,
-            )}
-          </ChecklistBadge>
-          <ChecklistBadge tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}>
-            {getStaticCopy(
-              locale,
-              `${formatNumber(heroCompletedCount, locale)} kayıt tamamlandı`,
-              `${formatNumber(heroCompletedCount, locale)} records completed`,
-            )}
-          </ChecklistBadge>
-        </div>
-        <div className="store-checklists-eyebrow">{t('storeChecklists.heroEyebrow')}</div>
-        <h2>
-          {canManageVisits
-            ? getStaticCopy(
-                locale,
-                'Bugünkü saha turunda öncelik düşük checklist skorlu mağazalarda.',
-                'Today’s field route prioritizes stores with low checklist scores.',
-              )
-            : getStaticCopy(
-                locale,
-                'Mağazana yapılan kontroller tek ekranda.',
-                'Your store checklist receipts stay in one focused surface.',
-              )}
-        </h2>
-        <p>
-          {canManageVisits
-            ? vmOnlyVisitScope
+    <header className="store-checklists-flow-header">
+      <div className="store-checklists-flow-topline">
+        <div className="store-checklists-hero-copy">
+          <h1>{getStaticCopy(locale, 'Checklist Akış Sayfası', 'Checklist Flow')}</h1>
+          <p>
+            {canManageVisits
               ? getStaticCopy(
                   locale,
-                  'VM kullanıcıları yalnızca kendilerine atanmış mağazaların VM checklist akışını görür ve doldurur.',
-                  'VM users only see and complete VM checklist flows for their assigned stores.',
+                  'Bölge müdürünün mağaza checklist süreçlerini yönettiği akış ekranı.',
+                  'Flow surface for managing store checklist operations.',
                 )
               : getStaticCopy(
                   locale,
-                  'Bölge = Bölge müdürü. BM kendisine tanımlı mağazaları görür; BM Checklist ve VM Checklist puanlarını birlikte okuyabilir. VM yalnızca kendi VM Checklist kayıtlarına erişir.',
-                  'Region means region manager. BM users see assigned stores and can read BM plus VM checklist scores together. VM users only access their own VM checklist records.',
-                )
-            : getStaticCopy(
-                locale,
-                'BM ve VM sonuçlarını tarih, skor ve kabul durumuyla takip edip mağaza aksiyonunu hızla kapatabilirsin.',
-                'Track BM and VM results by date, score, and acknowledgement status so store follow-up stays tight.',
-              )}
-        </p>
+                  'Mağazana ait tamamlanan checklist sonuçları ve kabul bekleyen kayıtlar burada izlenir.',
+                  'Completed checklist results and acknowledgement records for your store are tracked here.',
+                )}
+          </p>
+        </div>
+        <div className="store-checklists-header-actions">
+          <div
+            className="store-checklists-period-pill"
+            aria-label={getStaticCopy(locale, 'Seçili dönem', 'Selected period')}
+          >
+            <CalendarDays aria-hidden="true" />
+            <span>{periodLabel}</span>
+            <ChevronDown aria-hidden="true" />
+          </div>
+          <button
+            className="store-checklists-icon-button"
+            type="button"
+            aria-label={getStaticCopy(locale, 'Bildirimler', 'Notifications')}
+          >
+            <span aria-hidden="true" />
+            <Bell aria-hidden="true" />
+          </button>
+        </div>
       </div>
+
       <div className="store-checklists-command-metrics" aria-label={t('storeChecklists.summaryAria')}>
         <ChecklistMetric
+          icon={<StoreIcon aria-hidden="true" />}
           label={
             canManageVisits
               ? getStaticCopy(locale, 'Atanmış mağaza', 'Assigned stores')
@@ -92,13 +88,14 @@ export function StoreChecklistsHero(input: {
             canManageVisits
               ? vmOnlyVisitScope
                 ? getStaticCopy(locale, 'VM kapsamı', 'VM scope')
-                : getStaticCopy(locale, 'BM kapsamı', 'Field scope')
-              : getStaticCopy(locale, 'Kabul kapsamı', 'Receipt scope')
+                : getStaticCopy(locale, 'BM kapsamı', 'BM scope')
+              : getStaticCopy(locale, 'Kabul kayıtları', 'Receipt records')
           }
           tone={heroStoreCount > 0 ? 'accent' : 'neutral'}
           value={formatNumber(heroStoreCount, locale)}
         />
         <ChecklistMetric
+          icon={<CheckSquare aria-hidden="true" />}
           label={
             canManageVisits
               ? getStaticCopy(locale, 'Checklist yapılan', 'Completed visits')
@@ -113,16 +110,18 @@ export function StoreChecklistsHero(input: {
           value={formatNumber(heroCompletedCount, locale)}
         />
         <ChecklistMetric
-          label={getStaticCopy(locale, 'Bekleyen', 'Waiting')}
+          icon={<Clock3 aria-hidden="true" />}
+          label={getStaticCopy(locale, 'Checklist Bekleyen', 'Waiting checklists')}
           note={
             canManageVisits
-              ? getStaticCopy(locale, 'Öncelik sıralı', 'Prioritized')
+              ? getStaticCopy(locale, 'Bu ay yapılmayan', 'Not completed this month')
               : t('storeChecklists.needsAcknowledgement')
           }
           tone={heroWaitingCount > 0 ? 'warning' : 'calm'}
           value={formatNumber(heroWaitingCount, locale)}
         />
         <ChecklistMetric
+          icon={<BarChart3 aria-hidden="true" />}
           label={getStaticCopy(locale, 'Ortalama skor', 'Average score')}
           note={
             canManageVisits

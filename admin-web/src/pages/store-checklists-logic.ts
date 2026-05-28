@@ -280,15 +280,15 @@ export function getChecklistHeroScopeLabel(
   canManageVisits: boolean,
 ) {
   if (!canManageVisits) {
-    return getStaticCopy(locale, 'Mağaza kabulü', 'Store acknowledgement')
+    return getStaticCopy(locale, 'Mağaza kabul kayıtları', 'Store acknowledgements')
   }
   if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
-    return getStaticCopy(locale, 'Bölge Müdürü kapsamı', 'Region manager scope')
+    return getStaticCopy(locale, 'Bölge müdürü', 'Region manager')
   }
   if (hasAnyRole(authSummary, ['VISUAL_MERCHANDISER'])) {
-    return getStaticCopy(locale, 'VM kapsamı', 'VM scope')
+    return getStaticCopy(locale, 'VM mağazaları', 'VM stores')
   }
-  return getStaticCopy(locale, 'Operasyon kapsamı', 'Operations scope')
+  return getStaticCopy(locale, 'Operasyon mağazaları', 'Operations stores')
 }
 
 export function formatChecklistCoverage(t: TranslateFunction, input: ChecklistCoverageRow) {
@@ -409,8 +409,13 @@ export function buildMonthOptions(
   coverageRows: ChecklistCoverageRow[],
   items: ChecklistAcknowledgementItem[],
   locale: AppLocale,
+  extraMonthValues: Array<string | null | undefined> = [],
 ) {
   const monthKeys = new Set<string>()
+  monthKeys.add(getCurrentMonthKey())
+  for (const value of extraMonthValues) {
+    addMonthKey(monthKeys, value)
+  }
   for (const row of coverageRows) {
     addMonthKey(monthKeys, row.summary?.monthStart)
     addMonthKey(monthKeys, row.active?.updatedAt)
@@ -444,6 +449,10 @@ export function getMonthKey(value?: string | null) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+function getCurrentMonthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 export function formatMonthKey(value: string, locale: AppLocale) {
   const [year, month] = value.split('-').map(Number)
   if (year === undefined || month === undefined) {
@@ -468,7 +477,9 @@ export function doesCoverageRowMatchFilters(
       getMonthKey(row.active?.updatedAt),
       getMonthKey(row.active?.startedAt),
     ]
-    if (!rowMonths.includes(filters.month)) return false
+    const isCurrentMissingRow =
+      filters.month === getCurrentMonthKey() && getCoverageStatus(row) === 'missing'
+    if (!rowMonths.includes(filters.month) && !isCurrentMissingRow) return false
   }
   if (!doesStatusMatch(getCoverageStatus(row), filters.status)) return false
 
