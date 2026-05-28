@@ -15,6 +15,7 @@ function requireText(text, expected) {
 
 const inventory = readText('docs/plans/environment-variable-inventory.md')
 const runbook = readText('docs/plans/deployment-runbook-skeleton.md')
+const renderStagingRunbook = readText('docs/deployment/render-supabase-vercel-staging.md')
 const backendEnvExample = readText('backend/nestjs/.env.example')
 const frontendEnvExample = readText('admin-web/.env.example')
 const appConfigService = readText('backend/nestjs/src/shared/app-config.service.ts')
@@ -173,6 +174,20 @@ test('render backend deploy runs database migrations before starting the api', (
   requireText(renderBlueprint, 'name: hr-axis-api')
   requireText(renderBlueprint, 'buildCommand: npm ci --include=dev && npm run db:migrate && npm run build')
   requireText(renderBlueprint, 'startCommand: node dist/src/main.js')
+})
+
+test('render blueprint declares a dedicated BullMQ worker service', () => {
+  requireText(renderBlueprint, 'type: worker')
+  requireText(renderBlueprint, 'name: hr-axis-worker')
+  requireText(renderBlueprint, 'plan: starter')
+  requireText(renderBlueprint, 'buildCommand: npm ci --include=dev && npm run build')
+  requireText(renderBlueprint, 'startCommand: node dist/src/workers.js')
+  requireText(renderBlueprint, 'QUEUE_BACKEND')
+  requireText(renderBlueprint, 'value: bullmq')
+  requireText(renderBlueprint, 'REDIS_URL')
+  requireText(renderStagingRunbook, 'Background Worker')
+  requireText(renderStagingRunbook, 'Start Command: node dist/src/workers.js')
+  requireText(renderStagingRunbook, 'Worker build command migration calistirmaz')
 })
 
 test('env examples expose production-relevant variables and PKCE response type', () => {

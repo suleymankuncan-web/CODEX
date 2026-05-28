@@ -37,6 +37,7 @@ const baseUrl = argValue('--base-url') ?? envValue('PILOT_SMOKE_BASE_URL', 'http
 const bearerToken = argValue('--bearer-token') ?? envValue('PILOT_SMOKE_BEARER_TOKEN', '')
 const routes = parseRoutes(argValue('--routes') ?? envValue('PILOT_SMOKE_ROUTES', defaultRoutes.join(',')))
 const routeTimeoutMs = Number(argValue('--timeout-ms') ?? envValue('PILOT_SMOKE_TIMEOUT_MS', '15000'))
+const useSystemChrome = process.env.PLAYWRIGHT_USE_SYSTEM_CHROME === '1'
 
 function envValue(name, fallback) {
   const value = process.env[name]
@@ -110,6 +111,10 @@ function assertConfig() {
   }
 
   return parsedBaseUrl
+}
+
+function chromiumLaunchOptions(options = {}) {
+  return useSystemChrome ? { ...options, channel: 'chrome' } : options
 }
 
 function normalizePath(inputUrl) {
@@ -218,7 +223,7 @@ async function smokeRoute(page, path) {
 
 async function main() {
   const parsedBaseUrl = assertConfig()
-  const browser = await chromium.launch({ headless: !headed })
+  const browser = await chromium.launch(chromiumLaunchOptions({ headless: !headed }))
   const context = await browser.newContext({ baseURL: parsedBaseUrl.toString() })
   await installBearerSession(context, bearerToken)
   const page = await context.newPage()

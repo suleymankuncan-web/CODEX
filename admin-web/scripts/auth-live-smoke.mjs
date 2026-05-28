@@ -3,6 +3,7 @@ import { chromium, request } from '@playwright/test'
 const args = process.argv.slice(2)
 const includeActionSmoke = args.includes('--include-action-smoke')
 const stagingMode = args.includes('--staging')
+const useSystemChrome = process.env.PLAYWRIGHT_USE_SYSTEM_CHROME === '1'
 const baseUrl = envValue('AUTH_SMOKE_BASE_URL', 'http://localhost:5173')
 const apiBaseUrl = envValue('AUTH_SMOKE_API_BASE_URL', `${baseUrl}/api`)
 const username = envValue('AUTH_SMOKE_USERNAME', 'store.manager')
@@ -24,6 +25,10 @@ function assert(condition, message) {
   if (!condition) {
     throw new Error(message)
   }
+}
+
+function chromiumLaunchOptions(options = {}) {
+  return useSystemChrome ? { ...options, channel: 'chrome' } : options
 }
 
 function envValue(name, fallback) {
@@ -369,7 +374,7 @@ async function main() {
   assert(bootstrap.provider?.responseType === 'code', 'bootstrap responseType is not code')
   assert(Boolean(bootstrap.provider?.tokenUrl), 'bootstrap tokenUrl is missing')
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch(chromiumLaunchOptions({ headless: true }))
   const context = await browser.newContext({ baseURL: baseUrl })
   const page = await context.newPage()
   const logoutRequests = []

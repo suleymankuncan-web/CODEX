@@ -109,7 +109,10 @@ test('pilot live smoke walks configured routes and injects bearer session withou
     const output = `${result.stdout}\n${result.stderr}`
 
     assert.equal(result.status, 0, output)
-    assert.deepEqual(visitedRoutes, ['/store', '/store/me'])
+    assert.deepEqual(
+      visitedRoutes.filter((route) => route !== '/favicon.ico'),
+      ['/store', '/store/me'],
+    )
     assert.doesNotMatch(output, new RegExp(secretToken))
 
     const evidence = JSON.parse(result.stdout)

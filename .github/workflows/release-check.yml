@@ -58,9 +58,16 @@ jobs:
         working-directory: admin-web
         run: npm ci
 
-      - name: Install Playwright Chromium
-        working-directory: admin-web
-        run: npx playwright install --with-deps chromium
+      - name: Ensure system Chrome
+        timeout-minutes: 5
+        run: |
+          if ! command -v google-chrome >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y google-chrome-stable
+          fi
+          google-chrome --version
 
       - name: Run official release gate
+        env:
+          PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
         run: npm run check:release

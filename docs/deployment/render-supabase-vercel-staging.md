@@ -9,7 +9,7 @@ Bu rota Koyeb Pro zorunlulugu goruldugu icin aktif staging rotasidir.
 ```text
 Domain/DNS: Cloudflare, hr-axis.com
 Frontend: Vercel
-Backend: Render Web Service
+Backend: Render Web Service + Background Worker
 Database: Supabase Postgres
 Authentication: Clerk
 Authorization: HR Axis DB
@@ -19,6 +19,8 @@ Authorization: HR Axis DB
 
 - Mevcut NestJS backend'i rewrite etmeden uzun sureli Node web service olarak calistirir.
 - Free web service staging kaniti icin yeterli olabilir.
+- BullMQ import/snapshot job'lari icin ayni repo ve build artifact'i ile ayri
+  background worker calistirabilir.
 - Render Postgres free DB 30 gun sonra expire oldugu icin DB icin Supabase kullanilir.
 - Repo'da `render.yaml` blueprint hazirdir; `DATABASE_URL` secret olarak Render ekraninda girilir.
 
@@ -26,6 +28,8 @@ Authorization: HR Axis DB
 
 - Render free web service 15 dakika idle kalinca spin down olabilir; ilk istek yaklasik 1 dakika gecikebilir.
 - Free web service production icin uygun degildir.
+- Render background worker icin `free` plan kullanilamaz; staging BullMQ
+  worker icin en az `starter` instance gerekir.
 - Render free service'in dis DB'ye outbound kullaniminda limit/suspend riski olabilir; staging kaniti dusuk trafikte kalmalidir.
 - Supabase free Postgres staging icin uygundur; buyuyen pilotta paid DB veya baska managed DB'ye gecilebilir.
 
@@ -85,6 +89,24 @@ Health Check Path: /api/health/live
 Auto Deploy: Off
 ```
 
+BullMQ aktif edilecekse API web service sadece job uretir. Job'lari tuketecek
+ikinci Render servisi zorunludur:
+
+```text
+New -> Background Worker
+Name: hr-axis-worker
+Runtime: Node
+Region: Frankfurt
+Plan: Starter
+Root Directory: backend/nestjs
+Build Command: npm ci --include=dev && npm run build
+Start Command: node dist/src/workers.js
+Auto Deploy: Off
+```
+
+Worker build command migration calistirmaz. Migration sadece web service build
+akisi veya kontrollu release adimi tarafindan calistirilir.
+
 Render Free plan does not support `preDeployCommand`. On the active free-plan
 staging service, keep this Build Command so migrations run before the backend
 build:
@@ -125,9 +147,30 @@ CORS_ALLOWED_ORIGINS=https://staging.hr-axis.com
 TRUST_PROXY_HOPS=1
 RATE_LIMIT_WINDOW_MS=60000
 RATE_LIMIT_MAX=120
-QUEUE_BACKEND=in-memory
+RATE_LIMIT_BACKEND=redis
+QUEUE_BACKEND=bullmq
+REDIS_URL=<Render Key Value internal URL>
+READINESS_PROFILE=controlled-pilot
 DAILY_CLOSURE_AUTOMATION_ENABLED=false
 ```
+
+Worker env kontrol listesi:
+
+```env
+NODE_ENV=production
+APP_NAME=hr-axis-staging-worker
+DATABASE_URL=<Supabase session pooler URI>
+DB_POOL_MAX=5
+DB_SSL_MODE=require
+QUEUE_BACKEND=bullmq
+REDIS_URL=<Render Key Value internal URL>
+READINESS_PROFILE=controlled-pilot
+DAILY_CLOSURE_AUTOMATION_ENABLED=false
+```
+
+Web service ve worker ayni `REDIS_URL`, `QUEUE_BACKEND`, `QUEUE_IMPORT_NAME`
+ve `QUEUE_SNAPSHOT_NAME` degerlerini kullanmalidir. Queue name env'leri
+set edilmezse iki process de kod default'larini kullanir.
 
 ## 4. Migration
 
@@ -204,6 +247,19 @@ deploy health check'i icin kullanilir. `/api/health` PostgreSQL/Redis gibi
 bagimliliklari da kontrol eder; staging smoke ve DB kaniti icin asil hazirlik
 kontrolu budur.
 
+BullMQ worker log dogrulamasi:
+
+```text
+BullMQ worker context started
+Registered 2 BullMQ workers
+job.execution.started
+import_batch.materialization.started
+import_batch.materialization.completed
+```
+
+`job.execution.started` ve `import_batch.materialization.completed` satirlari
+kucuk bir import upload testinden sonra gorulmelidir.
+
 Smoke tamamlanmadan pilot gate acilmaz.
 
 ## 8. Manual Env Verification
@@ -212,7 +268,7 @@ Before a staging deploy is approved, compare environment variable names against
 `docs/plans/environment-variable-inventory.md` and its `Production Env Contract
 Guard` table.
 
-- Render backend: verify `NODE_ENV`, `DATABASE_URL`, `DB_SSL_MODE`,
+- Render backend and worker: verify `NODE_ENV`, `DATABASE_URL`, `DB_SSL_MODE`,
   `AUTH_MODE`, `AUTH_PROVIDER_KEY`, `ALLOW_MOCK_AUTH`,
   `MIGRATIONS_HTTP_ENABLED`, `JWT_ISSUER`, `JWT_JWKS_URL`, `JWT_AUDIENCE`,
   `AUTH_AUTHORIZATION_URL`, `AUTH_CLIENT_ID`, `AUTH_SCOPE`,
