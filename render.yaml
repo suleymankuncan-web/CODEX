@@ -43,7 +43,42 @@ services:
         value: "60000"
       - key: RATE_LIMIT_MAX
         value: "120"
+      - key: RATE_LIMIT_BACKEND
+        value: redis
       - key: QUEUE_BACKEND
-        value: in-memory
+        value: bullmq
+      - key: REDIS_URL
+        sync: false
+      - key: READINESS_PROFILE
+        value: controlled-pilot
+      - key: DAILY_CLOSURE_AUTOMATION_ENABLED
+        value: "false"
+  - type: worker
+    name: hr-axis-worker
+    runtime: node
+    plan: starter
+    region: frankfurt
+    rootDir: backend/nestjs
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: node dist/src/workers.js
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: APP_NAME
+        value: hr-axis-staging-worker
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: DB_SSL_MODE
+        value: require
+      - key: QUEUE_BACKEND
+        value: bullmq
+      - key: REDIS_URL
+        sync: false
+      - key: READINESS_PROFILE
+        value: controlled-pilot
       - key: DAILY_CLOSURE_AUTOMATION_ENABLED
         value: "false"
