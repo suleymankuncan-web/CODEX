@@ -63,6 +63,21 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   ])
 })
 
+test('store manager checklist inbox keeps overdue acknowledgements visible by default', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, ['STORE_MANAGER'], {
+    acknowledgementCompletedAt: getPreviousMonthIsoDate(),
+  })
+  await page.goto('/store/checklists')
+
+  await expect(
+    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
+  ).toBeVisible()
+  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toBeVisible()
+})
+
 test('store checklist area lets managers retry after acknowledgement load fails', async ({ page }) => {
   let acknowledgementAttempts = 0
   let allowAcknowledgements = false
@@ -510,6 +525,7 @@ type ChecklistFixtureOptions = {
   templateName?: string
   includeVmTemplate?: boolean
   longCopy?: boolean
+  acknowledgementCompletedAt?: string
   omitTemplates?: boolean
   activeInstances?: ChecklistActiveInstanceFixture[]
   monthlySummaries?: ChecklistMonthlySummaryFixture[]
@@ -570,6 +586,14 @@ function createChecklistRequestLog(): ChecklistRequestLog {
     completes: [],
     acknowledgements: [],
   }
+}
+
+function getPreviousMonthIsoDate() {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 1)
+  date.setDate(12)
+  date.setHours(9, 0, 0, 0)
+  return date.toISOString()
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -908,7 +932,7 @@ function createChecklistAcknowledgementsFixture(
       storeId,
       storeName: fixtureStoreName,
       completedByUserId: 'region-user-1',
-      completedAt: '2026-05-20T09:00:00.000Z',
+      completedAt: options.acknowledgementCompletedAt ?? '2026-05-20T09:00:00.000Z',
       status: 'completed',
       totalScore: 86,
       complianceRate: 0.75,

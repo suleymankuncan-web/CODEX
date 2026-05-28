@@ -500,7 +500,7 @@ export function doesChecklistItemMatchFilters(
   },
 ) {
   if (filters.type !== 'all' && item.templateType !== filters.type) return false
-  if (filters.month !== 'all' && getMonthKey(item.completedAt) !== filters.month) return false
+  if (filters.month !== 'all' && item.acknowledgement !== null && getMonthKey(item.completedAt) !== filters.month) return false
   const itemStatus: ChecklistStatusFilter = item.acknowledgement ? 'acknowledged' : 'pending'
   if (!doesStatusMatch(itemStatus, filters.status) && !doesStatusMatch(item.status, filters.status)) {
     return false
