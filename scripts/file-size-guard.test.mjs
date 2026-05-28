@@ -39,7 +39,7 @@ const oversizedBaseline = new Map([
   ['admin-web/src/features/competitions/stage-builder-package-section.tsx', 851],
   ['backend/nestjs/src/modules/store-ops/infrastructure/snapshot-operations.repository.ts', 842],
   ['admin-web/src/pages/OperationsControlTowerPage.tsx', 945],
-  ['admin-web/src/pages/store-checklists-logic.ts', 713],
+  ['admin-web/src/pages/store-checklists-logic.ts', 711],
   ['admin-web/src/features/localization/messages/competition.ts', 603],
 ])
 

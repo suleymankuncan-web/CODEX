@@ -92,10 +92,7 @@ export function getLowScoreResponses(items: ChecklistAcknowledgementItem['respon
 }
 
 export function getResponseRatio(item: ChecklistAcknowledgementItem['responses'][number]) {
-  if (item.scoreValue === null || item.maxScore <= 0) {
-    return null
-  }
-
+  if (item.scoreValue === null || item.maxScore <= 0) return null
   return Math.round((item.scoreValue / item.maxScore) * 100)
 }
 
@@ -647,10 +644,7 @@ export function compareNumber(left: number, right: number) {
 export function compareDate(left?: string | null, right?: string | null) {
   const leftTime = left ? new Date(left).getTime() : 0
   const rightTime = right ? new Date(right).getTime() : 0
-  return compareNumber(
-    Number.isNaN(leftTime) ? 0 : leftTime,
-    Number.isNaN(rightTime) ? 0 : rightTime,
-  )
+  return compareNumber(Number.isNaN(leftTime) ? 0 : leftTime, Number.isNaN(rightTime) ? 0 : rightTime)
 }
 
 export function normalizeSearch(input: string) {
