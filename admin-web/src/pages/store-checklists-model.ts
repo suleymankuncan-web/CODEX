@@ -62,6 +62,7 @@ export type StoreChecklistsState = {
   visitSort: ChecklistSort
   resultSort: ChecklistSort
   localActiveInstances: Record<string, ChecklistActiveInstance>
+  localCompletedRows: Record<string, number>
   sessionDirty: boolean
 }
 
@@ -70,7 +71,7 @@ export type StoreChecklistsAction =
   | { type: 'acknowledgeSucceeded'; checklistInstanceId: string }
   | { type: 'startVisitSucceeded'; rowKey: string; instance: ChecklistActiveInstance }
   | { type: 'saveResponseSucceeded' }
-  | { type: 'completeVisitSucceeded'; checklistInstanceId: string }
+  | { type: 'completeVisitSucceeded'; checklistInstanceId: string; rowKey: string }
   | {
       type: 'openSession'
       rowKey: string
@@ -110,6 +111,7 @@ export function createInitialStoreChecklistsState(search: string): StoreChecklis
     visitSort: { key: 'priority', direction: 'desc' },
     resultSort: { key: 'date', direction: 'desc' },
     localActiveInstances: {},
+    localCompletedRows: {},
     sessionDirty: false,
   }
 }
@@ -148,6 +150,10 @@ export function storeChecklistsReducer(
             ([, instance]) => instance.checklistInstanceId !== action.checklistInstanceId,
           ),
         ),
+        localCompletedRows: {
+          ...state.localCompletedRows,
+          [action.rowKey]: Math.max((state.localCompletedRows[action.rowKey] ?? 0) + 1, 1),
+        },
         selectedSessionKey: null,
         sessionDirty: false,
       }

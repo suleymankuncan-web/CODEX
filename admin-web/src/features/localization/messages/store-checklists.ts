@@ -61,7 +61,7 @@ export const storeChecklistsTr = {
   'storeChecklists.sessionTitle': 'Checklist Oturumu',
   'storeChecklists.draftSave': 'Taslak kaydet',
   'storeChecklists.draftSaving': 'Taslak kaydediliyor...',
-  'storeChecklists.draftSaved': 'Taslak kaydedildi',
+  'storeChecklists.draftSaved': 'Taslak Kaydedildi',
   'storeChecklists.progress': 'İlerleme',
   'storeChecklists.liveScore': 'Canlı skor',
   'storeChecklists.responseType': 'Cevap tipi',

@@ -11,6 +11,8 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await page.goto('/store/checklists')
 
   await expect(page.locator('.store-checklists-command-page .stacked-row')).toHaveCount(0)
+  await expect(page.locator('.store-checklists-attention')).toHaveCount(0)
+  await expect(page.locator('.store-checklists-priority-rail')).toHaveCount(0)
   await expect(page.getByRole('tab', { name: /Ziyaret akışı/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByText('Devam et')).toBeVisible()
   await expect(page.locator('.store-checklists-visit-row').getByText('Taslak', { exact: true })).toBeVisible()
@@ -158,6 +160,9 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
   await expect.poll(() => handoffState.completed).toBe(true)
+  await expect(page.locator('#store-checklist-tab-incomplete small')).toHaveText('0')
+  await page.getByRole('tab', { name: /Incomplete/ }).click()
+  await expect(page.getByText('No incomplete records')).toBeVisible()
 
   roleState.current = ['STORE_MANAGER']
   await setMockSessionRoles(page, roleState.current)
@@ -470,8 +475,14 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByText('Average score', { exact: true })).toBeVisible()
   await expect(page.getByText('BM score', { exact: true })).toBeVisible()
   await expect(page.locator('.store-checklists-visit-row').getByText('Draft', { exact: true })).toBeVisible()
+  const checklistUrl = page.url()
+  await page.getByRole('tab', { name: /Checklist inbox/ }).click()
+  await expect(page).toHaveURL(checklistUrl)
+  await page.getByRole('tab', { name: /Visit flow/ }).click()
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText('Draft saved')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save draft' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Complete', exact: true })).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Cancel' }).click()

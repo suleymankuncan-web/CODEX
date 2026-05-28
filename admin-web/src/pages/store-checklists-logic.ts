@@ -204,13 +204,13 @@ export function getStoreVisitPriority(row: ChecklistStoreVisitRow) {
   return Math.max(row.bm ? getCoveragePriority(row.bm) : 0, row.vm ? getCoveragePriority(row.vm) : 0)
 }
 
-export function hasOpenStoreVisitWork(row: ChecklistStoreVisitRow) {
-  const rows = [row.bm, row.vm].filter((item): item is ChecklistCoverageRow => Boolean(item))
-  if (rows.length === 0) return true
-  return rows.some((item) => {
-    const score = getCoverageScore(item)
-    return item.active || item.completedCount === 0 || (score !== null && score < 70)
-  })
+export function isIncompleteStoreVisitRow(row: ChecklistStoreVisitRow, requiresCombinedVisitTemplates: boolean) {
+  const visibleRows = [row.bm, row.vm].filter(Boolean)
+  if (visibleRows.length === 0) return true
+  if (requiresCombinedVisitTemplates) {
+    return visibleRows.some((item) => (item?.completedCount ?? 0) === 0)
+  }
+  return visibleRows.every((item) => (item?.completedCount ?? 0) === 0)
 }
 
 export function getStoreVisitScore(row: ChecklistStoreVisitRow) {
@@ -479,7 +479,11 @@ export function doesCoverageRowMatchFilters(
     ]
     const isCurrentMissingRow =
       filters.month === getCurrentMonthKey() && getCoverageStatus(row) === 'missing'
-    if (!rowMonths.includes(filters.month) && !isCurrentMissingRow) return false
+    const isCurrentLocalCompletion =
+      filters.month === getCurrentMonthKey() &&
+      getCoverageStatus(row) === 'completed' &&
+      row.completedCount > 0
+    if (!rowMonths.includes(filters.month) && !isCurrentMissingRow && !isCurrentLocalCompletion) return false
   }
   if (!doesStatusMatch(getCoverageStatus(row), filters.status)) return false
 

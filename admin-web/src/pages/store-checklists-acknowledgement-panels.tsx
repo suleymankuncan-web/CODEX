@@ -1,15 +1,17 @@
+import { ChevronRight, Store as StoreIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ChecklistAcknowledgementItem } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
-import type { AppLocale } from '../lib/i18n'
+import { formatNumber } from '../lib/format'
+import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import type {
   ChecklistSort,
   ChecklistSortKey,
   ChecklistTab,
+  ChecklistTone,
 } from './store-checklists-model'
 import {
   formatChecklistTemplateType,
-  formatCompletedSentence,
   formatScoreValue,
   getChecklistResultDigest,
   getLowScoreResponses,
@@ -18,8 +20,6 @@ import {
 import {
   ChecklistBadge,
   ChecklistEmptyBlock,
-  ChecklistFact,
-  ChecklistScoreBar,
   SortButton,
 } from './store-checklists-atoms'
 
@@ -48,7 +48,7 @@ export function StoreChecklistsAcknowledgementPanels(input: {
               <div className="store-checklists-eyebrow">{input.t('storeChecklists.inboxEyebrow')}</div>
               <h3>{input.t('storeChecklists.inboxTitle')}</h3>
             </div>
-            <ChecklistBadge tone={input.pendingItemCount > 0 ? 'warning' : 'calm'}>
+            <ChecklistBadge tone={input.pendingItemCount > 0 ? 'accent' : 'calm'}>
               {input.pendingItemCount > 0
                 ? input.t('storeChecklists.needsAcknowledgement')
                 : input.t('storeChecklists.clear')}
@@ -169,42 +169,121 @@ function ChecklistResultRow(input: {
   t: TranslateFunction
 }) {
   const hasAcknowledgement = input.item.acknowledgement !== null
-  const lowScoreCount = getLowScoreResponses(input.item.responses).length
-  const scorePercent = input.item.totalScore ?? Math.round((input.item.complianceRate ?? 0) * 100)
+  const scorePercent = input.item.totalScore
+    ?? (typeof input.item.complianceRate === 'number' ? Math.round(input.item.complianceRate * 100) : null)
   const digest = getChecklistResultDigest(input.t, input.locale, input.item)
+  const rowTone = getResultRowTone(scorePercent, hasAcknowledgement, digest.tone)
+  const lowScoreCount = getLowScoreResponses(input.item.responses).length
+  const statusLabel = hasAcknowledgement
+    ? input.t('storeChecklists.acknowledged')
+    : input.t('storeChecklists.needsAcknowledgement')
 
   return (
-    <article className="store-checklists-history-row">
-      <div className="store-checklists-row-main">
-        <ChecklistBadge tone={input.item.templateType === 'VM_STORE_VISIT' ? 'accent' : 'neutral'}>
-          {formatChecklistTemplateType(input.t, input.item.templateType)}
-        </ChecklistBadge>
-        <strong>{input.item.templateName}</strong>
-        <p>{formatCompletedSentence(input.t, input.locale, input.item)}</p>
-        <p className="store-checklist-result-digest">
-          <span>{getStaticCopy(input.locale, 'Sonuç özeti', 'Result summary')}</span>
-          {digest.title}
-        </p>
+    <article className={`store-checklists-history-row store-checklists-result-row store-checklists-visit-row store-checklists-visit-row-${rowTone}`}>
+      <div className="store-checklists-store-cell">
+        <span className={`store-checklists-store-avatar store-checklists-tone-${rowTone}`} aria-hidden="true">
+          <StoreIcon />
+        </span>
+        <div className="store-checklists-row-main">
+          <strong>{input.item.storeName || input.item.storeId}</strong>
+          <p>{input.item.templateName}</p>
+          <span>{formatChecklistTemplateType(input.t, input.item.templateType)}</span>
+        </div>
       </div>
-      <ChecklistScoreBar
+      <ChecklistResultScore
         label={input.t('storeChecklists.score')}
-        percent={scorePercent}
-        tone={scorePercent >= 70 ? 'calm' : 'warning'}
-        value={formatScoreValue(input.t, input.item.totalScore)}
+        locale={input.locale}
+        score={input.item.totalScore}
+        scorePercent={scorePercent}
+        t={input.t}
       />
-      <ChecklistBadge tone={hasAcknowledgement ? 'calm' : 'warning'}>
-        {hasAcknowledgement ? input.t('storeChecklists.acknowledged') : input.t('storeChecklists.needsAcknowledgement')}
-      </ChecklistBadge>
-      <ChecklistFact
-        label={input.t('storeChecklists.resultLowScore')}
-        value={input.t('storeChecklists.lowScoreCount', { count: lowScoreCount })}
-      />
-      <Button className="store-checklists-action-button" type="button" onClick={input.onOpen}>
+      <ChecklistBadge tone={hasAcknowledgement ? 'calm' : 'accent'}>{statusLabel}</ChecklistBadge>
+      <ChecklistResultDateCell date={input.item.completedAt} locale={input.locale} />
+      <Button className="store-checklists-action-button store-checklists-action-button-muted" type="button" variant="outline" onClick={input.onOpen}>
         {input.t('storeChecklists.viewResultDetail')}
+        <ChevronRight data-icon="inline-end" />
       </Button>
-      {input.item.acknowledgement?.acknowledgementNote ? (
-        <p className="store-checklists-row-note">{input.item.acknowledgement.acknowledgementNote}</p>
-      ) : null}
+      <div className="store-checklists-result-context">
+        <span>
+          {getStaticCopy(input.locale, 'Sonuç özeti', 'Result summary')}: {digest.title}
+        </span>
+        {lowScoreCount > 0 ? (
+          <b>{input.t('storeChecklists.lowScoreCount', { count: lowScoreCount })}</b>
+        ) : null}
+        {input.item.acknowledgement?.acknowledgementNote ? (
+          <em>{input.item.acknowledgement.acknowledgementNote}</em>
+        ) : null}
+      </div>
     </article>
   )
+}
+
+function ChecklistResultScore(input: {
+  label: string
+  locale: AppLocale
+  score: number | null
+  scorePercent: number | null
+  t: TranslateFunction
+}) {
+  const percent = input.scorePercent ?? 0
+  const tone: ChecklistTone = input.score === null
+    ? 'neutral'
+    : percent >= 70
+      ? 'calm'
+      : 'danger'
+
+  return (
+    <div
+      className="store-checklists-template-score store-checklists-template-score-result"
+      aria-label={`${input.label}: ${formatScoreValue(input.t, input.score)} / 100`}
+    >
+      <span className="store-checklists-template-score-label">{input.label}</span>
+      <b>{input.score === null ? '-' : formatNumber(input.score, input.locale)}</b>
+      <em>/100</em>
+      <span className={`store-checklists-template-scorebar${input.score === null ? ' store-checklists-scorebar-empty' : ''}`}>
+        <i>
+          <b
+            className={`store-checklists-tone-${tone}`}
+            style={{ width: `${Math.min(Math.max(percent, 0), 100)}%` }}
+          />
+        </i>
+      </span>
+    </div>
+  )
+}
+
+function ChecklistResultDateCell(input: { date: string | null | undefined; locale: AppLocale }) {
+  if (!input.date) {
+    return <span className="store-checklists-date-cell store-checklists-date-cell-empty">-</span>
+  }
+
+  const date = new Date(input.date)
+  if (Number.isNaN(date.getTime())) {
+    return <span className="store-checklists-date-cell store-checklists-date-cell-empty">-</span>
+  }
+
+  const intlLocale = getIntlLocale(input.locale)
+  const day = new Intl.DateTimeFormat(intlLocale, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date)
+  const time = new Intl.DateTimeFormat(intlLocale, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date)
+
+  return (
+    <span className="store-checklists-date-cell">
+      <strong>{day}</strong>
+      <small>{time}</small>
+    </span>
+  )
+}
+
+function getResultRowTone(scorePercent: number | null, hasAcknowledgement: boolean, fallbackTone: ChecklistTone): ChecklistTone {
+  if (scorePercent === null) return hasAcknowledgement ? 'calm' : 'accent'
+  if (!hasAcknowledgement) return scorePercent < 70 ? 'danger' : 'accent'
+  if (scorePercent < 70) return 'danger'
+  return fallbackTone === 'warning' ? 'warning' : 'calm'
 }
