@@ -60,7 +60,8 @@ jobs:
 
       - name: Install Playwright Chromium
         working-directory: admin-web
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 5
+        run: npx playwright install --with-deps --only-shell chromium
 
       - name: Run official release gate
         run: npm run check:release
