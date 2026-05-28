@@ -15,7 +15,9 @@ the Clerk persona staging evidence runbooks, the generated system-flow map,
 and the production evidence closure joint plan plus Redis/BullMQ,
 alert-provider, Supabase restore, readiness profile reset, and Sokrates
 calibration proofs, plus the Store Me Plum Glacier redesign line through
-PR #524.
+PR #524, the active Store route refactor line through PR #532, the
+Redis/BullMQ Render worker closure through PR #536, and the Store checklist
+flow polish through PR #537.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -189,6 +191,14 @@ small PR rhythm:
 - PR #530 clarified utility Store surfaces.
 - PR #531 refreshed operational read surfaces.
 - PR #532 refreshed workflow-heavy checklists and approvals.
+- PR #537 polished the Store checklist flow page against the approved
+  prototype direction: removed the redundant priority rail/banner, kept the
+  existing checklist modal intact, aligned inbox/history rows with the visit
+  flow table rhythm, preserved monthly checklist semantics, and fixed the
+  release file-size guard baseline. It merged as
+  `13ab1bbb29bd46ba9c802dc965429fb172870e8e` after `frontend-release-check`,
+  `release-check`, `release-rehearsal`, Vercel, and Vercel Preview Comments
+  were green.
 - `/store/incentives` remains a parked exception and must not be productized or
   added to the Store toolbar until the user explicitly scopes it.
 
@@ -642,6 +652,13 @@ Store checklists follow-up after the approvals line:
 - The first targeted checklist E2E run caught mojibake in moved Turkish static
   copy; that was fixed before PR #320 was opened.
 - No checklist API/auth/state/DB/CSS behavior change was intended.
+- PR #537 later applied the approved checklist flow polish on top of this split:
+  the full page now follows the prototype structure more closely while the
+  checklist session modal remains preserved. The page intentionally does not
+  show the removed priority side rail or banner; priority/incomplete work stays
+  represented through the real checklist rows/tabs. The final release guard fix
+  lowered `store-checklists-logic.ts` to 711 lines and updated
+  `scripts/file-size-guard.test.mjs` accordingly.
 
 ## Product Position
 
@@ -1202,6 +1219,26 @@ missing item is one of these external proofs.
   non-persistent Free tier and should upgrade to a persistent Redis-compatible
   tier or record explicit written risk acceptance before relying on durable
   queue behavior.
+- 2026-05-28 Redis/BullMQ worker/import processing update:
+  PR #534 `Add Render BullMQ worker service` merged as
+  `1fa6c69b328b1915a9f182e54da2be13aa1ba79c`; PR #536
+  `Fix worker StoreOps auth dependency` merged as
+  `aff2efe6be0a343e3e05b5f27e33100de996c506`. The root cause of import
+  batches staying pending was infrastructure, not the import API: the API was
+  writing jobs into BullMQ, but Render did not yet have a separate worker
+  process consuming those jobs. Render now has the `hr-axis-worker` Background
+  Worker service running `node dist/src/workers.js`. The first worker deploy
+  crashed because `StoreOpsModule` could not resolve `AccessLifecycleRepository`
+  in the worker context; PR #536 fixed this by importing `AuthModule` into
+  `StoreOpsModule`. After merge and deploy, the worker started and processed
+  BullMQ import jobs; the confirming log signal was `job.execution.completed`.
+  The remaining observed import error was data-source validation, not queue
+  infrastructure: some KPI rows had unresolved employee references
+  (`employee reference could not be resolved`). If imports pend again, check
+  Render worker health/logs and BullMQ/Redis status before changing API/import
+  code. If jobs complete but fail on employee references, inspect the source KPI
+  employee identifiers and master-data/personnel mapping instead of the worker
+  infrastructure.
 - Alert provider delivery proof is recorded in
   `docs/evidence/readiness/2026-05-22-alert-provider-delivery-proof.md`.
   Render Notifications delivered a staging backend deploy notification to
