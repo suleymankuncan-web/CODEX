@@ -681,43 +681,27 @@ export function buildChecklistResponseDrafts(input: {
   return drafts
 }
 
-export function getChecklistResponseDraftKey(input: {
-  checklistInstanceId: string
-  templateItemId: string
-}) {
+export function getChecklistResponseDraftKey(input: { checklistInstanceId: string; templateItemId: string }) {
   return `${input.checklistInstanceId}:${input.templateItemId}`
 }
 
-export function serializeChecklistResponseDraft(input: {
-  scoreValue: number
-  commentText?: string
-}) {
-  return JSON.stringify({
-    commentText: input.commentText ?? '',
-    scoreValue: input.scoreValue,
-  })
+export function serializeChecklistResponseDraft(input: { scoreValue: number; commentText?: string }) {
+  return JSON.stringify({ commentText: input.commentText ?? '', scoreValue: input.scoreValue })
 }
 
 export function parseChecklistScoreInput(value: string, maxScore: number) {
   if (value === '') return null
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return null
-  return clamp(parsed, 0, maxScore)
+  return Number.isFinite(parsed) ? clamp(parsed, 0, maxScore) : null
 }
 
 export function getScoreQuickOptions(locale: AppLocale, maxScore: number) {
   const safeMax = Math.max(0, maxScore)
-  return [
-    { label: `${getStaticCopy(locale, 'Uygun', 'Good')} ${safeMax}`, value: safeMax },
-    {
-      label: `${getStaticCopy(locale, 'Takip', 'Watch')} ${Math.round(safeMax * 0.6)}`,
-      value: Math.round(safeMax * 0.6),
-    },
-    {
-      label: `${getStaticCopy(locale, 'Kritik', 'Critical')} ${Math.round(safeMax * 0.2)}`,
-      value: Math.round(safeMax * 0.2),
-    },
-  ]
+  const watch = Math.round(safeMax * 0.6)
+  const critical = Math.round(safeMax * 0.2)
+  const option = (tr: string, en: string, value: number) => ({ label: `${getStaticCopy(locale, tr, en)} ${value}`, value })
+
+  return [option('Uygun', 'Good', safeMax), option('Takip', 'Watch', watch), option('Kritik', 'Critical', critical)]
 }
 
 export function clamp(value: number, min: number, max: number) {
