@@ -52,6 +52,7 @@ export function StoreShell(input: {
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
   const storeChecklistRoute = location.pathname === '/store/checklists'
+  const checklistOnlyRoute = storeChecklistRoute && checklistOnly
   const storeRoute = (element: ReactNode, options?: {
     allowVm?: boolean
     allowed?: boolean
@@ -96,15 +97,15 @@ export function StoreShell(input: {
       className={`store-shell store-command-app${
         storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''
       }${
-        storeChecklistRoute ? ' store-shell-store-checklists' : ''
+        checklistOnlyRoute ? ' store-shell-store-checklists' : ''
       }`}
     >
-      {storeChecklistRoute ? null : (
+      {checklistOnlyRoute ? null : (
         <StoreSidebar
           authSummary={input.authSummary}
         />
       )}
-      {storeChecklistRoute ? null : <PilotFeedbackControl />}
+      {checklistOnlyRoute ? null : <PilotFeedbackControl />}
 
       <main className="store-main store-command-main" aria-label={t('adminShell.storeWorkspaceAria')}>
         <RouteTransitionFrame>
