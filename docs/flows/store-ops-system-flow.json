@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-28T16:47:07.997Z",
+  "generatedAt": "2026-05-28T17:19:59.707Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -59,7 +59,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 201
+        "line": 202
       }
     },
     {
@@ -687,7 +687,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 114
+        "line": 115
       }
     },
     {
@@ -704,7 +704,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 175
+        "line": 176
       }
     },
     {
@@ -722,7 +722,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 130
+        "line": 131
       }
     },
     {
@@ -739,7 +739,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 171
+        "line": 172
       }
     },
     {
@@ -757,7 +757,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 167
+        "line": 168
       }
     },
     {
@@ -772,7 +772,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 122
+        "line": 123
       }
     },
     {
@@ -789,7 +789,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 185
+        "line": 186
       }
     },
     {
@@ -806,7 +806,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 151
+        "line": 152
       }
     },
     {
@@ -823,7 +823,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 155
+        "line": 156
       }
     },
     {
@@ -840,7 +840,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 159
+        "line": 160
       }
     },
     {
@@ -857,7 +857,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 163
+        "line": 164
       }
     },
     {
@@ -874,7 +874,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 197
+        "line": 198
       }
     },
     {
@@ -892,7 +892,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 189
+        "line": 190
       }
     },
     {
@@ -909,7 +909,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 193
+        "line": 194
       }
     },
     {
@@ -926,7 +926,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 141
+        "line": 142
       }
     }
   ],
