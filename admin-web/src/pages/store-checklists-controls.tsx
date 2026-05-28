@@ -1,3 +1,11 @@
+import {
+  AlertTriangle,
+  Archive,
+  History,
+  ListChecks,
+  RefreshCw,
+  Search,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -28,17 +36,20 @@ export function ChecklistToolbar(input: {
 }) {
   return (
     <section
-      className="store-checklists-toolbar tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(240px,1.4fr)_repeat(3,minmax(160px,1fr))_auto]"
+      className="store-checklists-toolbar"
       aria-label={getStaticCopy(input.locale, 'Checklist filtreleri', 'Checklist filters')}
     >
       <label className="store-checklists-filter store-checklists-filter-search">
         <span>{getStaticCopy(input.locale, 'Arama', 'Search')}</span>
-        <Input
-          aria-label={getStaticCopy(input.locale, 'Checklist arama', 'Checklist search')}
-          placeholder={getStaticCopy(input.locale, 'Mağaza veya checklist ara', 'Search store or checklist')}
-          value={input.searchQuery}
-          onChange={(event) => input.onSearchChange(event.target.value)}
-        />
+        <div className="store-checklists-search-shell">
+          <Search aria-hidden="true" />
+          <Input
+            aria-label={getStaticCopy(input.locale, 'Checklist arama', 'Checklist search')}
+            placeholder={getStaticCopy(input.locale, 'Mağaza veya checklist ara', 'Search store or checklist')}
+            value={input.searchQuery}
+            onChange={(event) => input.onSearchChange(event.target.value)}
+          />
+        </div>
       </label>
       <label className="store-checklists-filter">
         <span>{getStaticCopy(input.locale, 'Ay', 'Month')}</span>
@@ -98,7 +109,8 @@ export function ChecklistToolbar(input: {
           </SelectContent>
         </Select>
       </label>
-      <Button className="tw:self-end" type="button" variant="outline" onClick={input.onClear}>
+      <Button className="store-checklists-reset-button" type="button" variant="outline" onClick={input.onClear}>
+        <RefreshCw data-icon="inline-start" />
         {getStaticCopy(input.locale, 'Filtreleri sıfırla', 'Reset filters')}
       </Button>
     </section>
@@ -107,56 +119,93 @@ export function ChecklistToolbar(input: {
 
 export function ChecklistTabs(input: {
   activeTab: ChecklistTab
+  locale: AppLocale
   tabs: ChecklistTabOption[]
   onChange: (tab: ChecklistTab) => void
 }) {
+  const activeTab = input.tabs.find((tab) => tab.key === input.activeTab) ?? input.tabs[0]
+  if (!activeTab) return null
+  const sectionPickerLabel = getStaticCopy(input.locale, 'Checklist bölümleri', 'Checklist sections')
+
   return (
-    <div
-      className="store-checklists-tabs"
-      aria-label="Checklist bölümleri"
-      role="tablist"
-    >
-      {input.tabs.map((tab, index) => (
-        <Button
-          aria-controls={`store-checklist-panel-${tab.key}`}
-          aria-selected={input.activeTab === tab.key}
-          className={`store-checklists-tab store-checklists-tone-${tab.tone}`}
-          id={`store-checklist-tab-${tab.key}`}
-          key={tab.key}
-          role="tab"
-          tabIndex={input.activeTab === tab.key ? 0 : -1}
-          type="button"
-          variant="ghost"
-          onClick={() => input.onChange(tab.key)}
-          onKeyDown={(event) => {
-            if (input.tabs.length === 0) return
-            const lastIndex = input.tabs.length - 1
-            const nextIndex =
-              event.key === 'ArrowRight' || event.key === 'ArrowDown'
-                ? (index + 1) % input.tabs.length
-                : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-                  ? (index - 1 + input.tabs.length) % input.tabs.length
-                  : event.key === 'Home'
-                    ? 0
-                    : event.key === 'End'
-                      ? lastIndex
-                      : index
-
-            if (nextIndex === index) return
-
-            event.preventDefault()
-            const nextTab = input.tabs[nextIndex]
-            if (!nextTab) return
-            input.onChange(nextTab.key)
-            window.requestAnimationFrame(() => {
-              document.getElementById(`store-checklist-tab-${nextTab.key}`)?.focus()
-            })
-          }}
+    <>
+      <div className="store-checklists-mobile-tab-picker">
+        <Select
+          value={activeTab?.key}
+          onValueChange={(value) => input.onChange(value as ChecklistTab)}
         >
-          <span>{tab.label}</span>
-          <small>{tab.count}</small>
-        </Button>
-      ))}
-    </div>
+          <SelectTrigger aria-label={sectionPickerLabel} className="tw:w-full">
+            <div className="store-checklists-mobile-tab-value">
+              {activeTab ? <ChecklistTabIcon tab={activeTab.key} /> : <ListChecks aria-hidden="true" />}
+              <SelectValue />
+            </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {input.tabs.map((tab) => (
+                <SelectItem key={tab.key} value={tab.key}>
+                  {tab.label} ({tab.count})
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
+      <div
+        className="store-checklists-tabs"
+        aria-label={sectionPickerLabel}
+        role="tablist"
+      >
+        {input.tabs.map((tab, index) => (
+          <Button
+            aria-controls={`store-checklist-panel-${tab.key}`}
+            aria-selected={input.activeTab === tab.key}
+            className={`store-checklists-tab store-checklists-tab-${tab.key} store-checklists-tone-${tab.tone}`}
+            id={`store-checklist-tab-${tab.key}`}
+            key={tab.key}
+            role="tab"
+            tabIndex={input.activeTab === tab.key ? 0 : -1}
+            type="button"
+            variant="ghost"
+            onClick={() => input.onChange(tab.key)}
+            onKeyDown={(event) => {
+              if (input.tabs.length === 0) return
+              const lastIndex = input.tabs.length - 1
+              const nextIndex =
+                event.key === 'ArrowRight' || event.key === 'ArrowDown'
+                  ? (index + 1) % input.tabs.length
+                  : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+                    ? (index - 1 + input.tabs.length) % input.tabs.length
+                    : event.key === 'Home'
+                      ? 0
+                      : event.key === 'End'
+                        ? lastIndex
+                        : index
+
+              if (nextIndex === index) return
+
+              event.preventDefault()
+              const nextTab = input.tabs[nextIndex]
+              if (!nextTab) return
+              input.onChange(nextTab.key)
+              window.requestAnimationFrame(() => {
+                document.getElementById(`store-checklist-tab-${nextTab.key}`)?.focus()
+              })
+            }}
+          >
+            <ChecklistTabIcon tab={tab.key} />
+            <span>{tab.label}</span>
+            <small>{tab.count}</small>
+          </Button>
+        ))}
+      </div>
+    </>
   )
+}
+
+function ChecklistTabIcon(input: { tab: ChecklistTab }) {
+  if (input.tab === 'inbox') return <Archive aria-hidden="true" />
+  if (input.tab === 'incomplete') return <AlertTriangle aria-hidden="true" />
+  if (input.tab === 'history') return <History aria-hidden="true" />
+  return <ListChecks aria-hidden="true" />
 }

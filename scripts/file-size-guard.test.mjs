@@ -25,14 +25,12 @@ const oversizedBaseline = new Map([
   ['backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts', 1282],
   ['backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts', 1279],
   ['backend/nestjs/src/modules/store-ops/application/snapshot.service.ts', 1195],
-  ['admin-web/src/styles/store-checklists-command.css', 1171],
   ['backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts', 1194],
   ['backend/nestjs/src/modules/integration/infrastructure/master-data-bootstrap.repository.ts', 1179],
   ['admin-web/src/pages/store-my-performance-model.ts', 1096],
   ['admin-web/src/pages/AdminChecklistTemplatesPage.tsx', 1006],
   ['admin-web/src/styles/store-approvals-ledger.css', 976],
   ['admin-web/src/features/auth/AuthDashboardSections.tsx', 960],
-  ['admin-web/src/pages/StoreChecklistsPage.tsx', 955],
   ['backend/nestjs/src/modules/auth/auth-admin.service.ts', 936],
   ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 899],
   ['admin-web/src/features/competitions/StageBuilderForm.tsx', 871],
@@ -41,7 +39,7 @@ const oversizedBaseline = new Map([
   ['admin-web/src/features/competitions/stage-builder-package-section.tsx', 851],
   ['backend/nestjs/src/modules/store-ops/infrastructure/snapshot-operations.repository.ts', 842],
   ['admin-web/src/pages/OperationsControlTowerPage.tsx', 945],
-  ['admin-web/src/pages/store-checklists-logic.ts', 718],
+  ['admin-web/src/pages/store-checklists-logic.ts', 713],
   ['admin-web/src/features/localization/messages/competition.ts', 603],
 ])
 

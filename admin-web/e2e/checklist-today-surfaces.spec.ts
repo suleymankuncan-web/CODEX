@@ -18,8 +18,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await page.getByRole('button', { name: 'Devam et' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
-  await page.getByLabel('Puan').fill('8')
-  await page.getByLabel('Not').fill('Raf ve vitrin uygun')
+  await answerChecklistScoreQuestion(page, '8', 'Raf ve vitrin uygun')
   await expect.poll(() => requests.saves).toContainEqual(
     {
       checklistInstanceId: '33333333-3333-4333-8333-333333333333',
@@ -30,7 +29,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
       },
     },
   )
-  await expect(page.getByRole('button', { name: 'Tamamla', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Tamamla', exact: true })).toBeEnabled()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Tamamla', exact: true }).click()
   await expect.poll(() => requests.completes).toEqual([
@@ -62,6 +61,21 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
       body: { acknowledgementNote: 'Mağaza sonucu gördü' },
     },
   ])
+})
+
+test('store manager checklist inbox keeps overdue acknowledgements visible by default', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, ['STORE_MANAGER'], {
+    acknowledgementCompletedAt: getPreviousMonthIsoDate(),
+  })
+  await page.goto('/store/checklists')
+
+  await expect(
+    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
+  ).toBeVisible()
+  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toBeVisible()
 })
 
 test('store checklist area lets managers retry after acknowledgement load fails', async ({ page }) => {
@@ -126,9 +140,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
   await expect(page.locator('.store-checklist-modal-start')).toHaveCount(0)
 
-  await expect(page.getByLabel('Score')).toBeEnabled()
-  await page.getByLabel('Score').fill('8')
-  await page.getByLabel('Note').fill('Handoff-ready visit')
+  await answerChecklistScoreQuestion(page, '8', 'Handoff-ready visit')
   await expect.poll(() => requests.saves).toContainEqual(
     {
       checklistInstanceId: '33333333-3333-4333-8333-333333333333',
@@ -214,8 +226,8 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
                 workflowStatus: 'completed',
                 inboxStatus: 'needs_attention',
                 urgency: 'medium',
-                createdAt: '2026-04-28T10:30:00.000Z',
-                needsAttentionAt: '2026-04-28T10:30:00.000Z',
+                createdAt: '2026-05-20T10:30:00.000Z',
+                needsAttentionAt: '2026-05-20T10:30:00.000Z',
                 actorRole: 'STORE_MANAGER',
                 primaryActionLabel: 'I acknowledge',
                 secondaryActionLabel: 'Open checklist result',
@@ -240,8 +252,7 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
 
   await page.getByRole('link', { name: 'Store checklists' }).click()
   await page.getByRole('button', { name: 'Start checklist' }).click()
-  await page.getByLabel('Score').fill('8')
-  await page.getByLabel('Note').fill('Task-refresh visit')
+  await answerChecklistScoreQuestion(page, '8', 'Task-refresh visit')
   await expect.poll(() => requests.saves).toContainEqual(
     {
       checklistInstanceId: '33333333-3333-4333-8333-333333333333',
@@ -256,7 +267,7 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   await page.getByRole('button', { name: 'Complete', exact: true }).click()
   await expect.poll(() => handoffState.completed).toBe(true)
 
-  await page.getByRole('link', { name: 'Tasks' }).click()
+  await page.goto('/store/tasks')
   await expect(page.getByRole('heading', { name: /Action-required work/i })).toBeVisible()
 
   await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
@@ -289,14 +300,14 @@ test('region manager visit flow reads VM score but starts BM checklist only', as
       {
         storeId,
         checklistTemplateId: templateId,
-        monthStart: '2026-04-01',
+        monthStart: '2026-05-01',
         completedCount: 1,
         averageScore: 82,
       },
       {
         storeId,
         checklistTemplateId: vmTemplateId,
-        monthStart: '2026-04-01',
+        monthStart: '2026-05-01',
         completedCount: 1,
         averageScore: 92,
       },
@@ -331,15 +342,14 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.getByText('BM + VM')).toHaveCount(0)
   await expect(page.getByText('BM skor')).toHaveCount(0)
   await expect(page.getByText('BM yapılmadı')).toHaveCount(0)
-  await expect(page.getByText('VM checklist yapılmadı')).toBeVisible()
+  await expect(page.getByLabel(/VM ziyaret yok/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Checklist yap' })).toBeVisible()
   await page.getByRole('button', { name: 'Checklist yap' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
   await expect(page.locator('.store-checklist-modal-start')).toHaveCount(0)
-  await page.getByLabel('Puan').fill('8')
-  await page.getByLabel('Not').fill('Vitrin iyi')
+  await answerChecklistScoreQuestion(page, '8', 'Vitrin iyi')
   await expect.poll(() => requests.saves).toContainEqual(
     {
       checklistInstanceId: '33333333-3333-4333-8333-333333333333',
@@ -350,8 +360,6 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
       },
     },
   )
-  await expect(page.locator('a[href="/store/checklists"]')).toBeVisible()
-  await expect(page.locator('a[href="/store/feed"]')).toBeVisible()
   await expect(page.locator('a[href="/admin/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/kpis"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/rankings"]')).toHaveCount(0)
@@ -410,13 +418,12 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
   })
   await page.goto('/store/checklists')
 
-  await expect(page.getByText('VM checklist not completed')).toBeVisible()
+  await expect(page.getByLabel(/VM no visits/)).toBeVisible()
   await page.getByRole('button', { name: 'Start checklist' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 
-  await page.getByLabel('Score').fill('8')
-  await page.getByLabel('Note').fill('VM handoff-ready visit')
+  await answerChecklistScoreQuestion(page, '8', 'VM handoff-ready visit')
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Complete', exact: true }).click()
   await expect.poll(() => requests.completes).toEqual([
@@ -454,7 +461,7 @@ test('store checklist surface switches to English copy and persists locale', asy
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(
-    page.getByRole('heading', { name: /Today.s field route prioritizes stores with low checklist scores/ }),
+    page.getByRole('heading', { name: 'Checklist Flow' }),
   ).toBeVisible()
   await expect(page.getByRole('tab', { name: /Visit flow/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
@@ -492,7 +499,7 @@ test('store checklist surface switches to English copy and persists locale', asy
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(
-    page.getByRole('heading', { name: /Today.s field route prioritizes stores with low checklist scores/ }),
+    page.getByRole('heading', { name: 'Checklist Flow' }),
   ).toBeVisible()
 })
 
@@ -501,34 +508,14 @@ test('checklist visit surface stays usable on mobile width', async ({ page }) =>
   await setupChecklistPage(page, ['REGION_MANAGER'], { longCopy: true })
   await page.goto('/store/checklists')
 
-  await expect(page.getByRole('tab', { name: /Ziyaret akışı/ })).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Checklist bölümleri' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Ziyaret akışı/ })).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
-
-  const activeBottomNavItem = page.locator('.store-command-nav-link-active').first()
-  await expect(activeBottomNavItem).toBeVisible()
-  await expect
-    .poll(async () =>
-      activeBottomNavItem.evaluate((link) => {
-        const linkStyle = window.getComputedStyle(link)
-        const icon = link.querySelector('.store-command-nav-icon')
-        const iconStyle = icon ? window.getComputedStyle(icon) : null
-        return {
-          backgroundImage: linkStyle.backgroundImage,
-          color: linkStyle.color,
-          iconColor: iconStyle?.color ?? '',
-        }
-      }),
-    )
-    .toMatchObject({
-      backgroundImage: expect.not.stringMatching(/^none$/),
-      color: 'rgb(255, 255, 255)',
-      iconColor: 'rgb(255, 255, 255)',
-    })
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByLabel('Puan')).toBeVisible()
-  await expect(page.getByLabel('Not')).toBeVisible()
+  await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog').getByRole('textbox', { name: /Not/ })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
 
@@ -538,6 +525,7 @@ type ChecklistFixtureOptions = {
   templateName?: string
   includeVmTemplate?: boolean
   longCopy?: boolean
+  acknowledgementCompletedAt?: string
   omitTemplates?: boolean
   activeInstances?: ChecklistActiveInstanceFixture[]
   monthlySummaries?: ChecklistMonthlySummaryFixture[]
@@ -600,6 +588,14 @@ function createChecklistRequestLog(): ChecklistRequestLog {
   }
 }
 
+function getPreviousMonthIsoDate() {
+  const date = new Date()
+  date.setMonth(date.getMonth() - 1)
+  date.setDate(12)
+  date.setHours(9, 0, 0, 0)
+  return date.toISOString()
+}
+
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(async () =>
@@ -607,7 +603,7 @@ async function expectNoHorizontalOverflow(page: Page) {
         const viewportWidth = document.documentElement.clientWidth
         const documentScrollWidth = document.documentElement.scrollWidth
         const offenders = Array.from(document.querySelectorAll<HTMLElement>('body *'))
-          .filter((element) => !element.closest('.store-command-nav'))
+          .filter((element) => !element.closest('.store-command-nav') && !element.closest('[role="progressbar"]'))
           .map((element) => {
             const rect = element.getBoundingClientRect()
             return {
@@ -639,6 +635,13 @@ async function expectNoHorizontalOverflow(page: Page) {
       page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1),
     )
     .toBe(true)
+}
+
+async function answerChecklistScoreQuestion(page: Page, score: string, note: string) {
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio', { name: score, exact: true }).click()
+  await expect(dialog.getByRole('radio', { name: score, exact: true })).toBeChecked()
+  await dialog.getByRole('textbox', { name: /Not|Note/ }).fill(note)
 }
 
 async function setupChecklistPage(page: Page, roleCodes: string[], options: ChecklistFixtureOptions = {}) {
@@ -711,7 +714,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
           checklistInstance: {
             checklist_instance_id: '33333333-3333-4333-8333-333333333333',
             status: 'in_progress',
-            created_at: '2026-04-28T10:00:00.000Z',
+            created_at: '2026-05-20T10:00:00.000Z',
           },
         },
       },
@@ -730,7 +733,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
         data: {
           checklistResponse: {
             response_id: '66666666-6666-4666-8666-666666666666',
-            responded_at: '2026-04-28T10:05:00.000Z',
+            responded_at: '2026-05-20T10:05:00.000Z',
           },
         },
       },
@@ -775,7 +778,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
             checklistAcknowledgementId: '77777777-7777-4777-8777-777777777777',
             acknowledgedByUserId: 'store-manager-1',
             acknowledgementNote: body.acknowledgementNote ?? 'Mağaza sonucu gördü',
-            acknowledgedAt: '2026-04-28T11:00:00.000Z',
+            acknowledgedAt: '2026-05-20T11:00:00.000Z',
           },
         },
       },
@@ -880,8 +883,8 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
           checklistTemplateId: templateId,
           storeId,
           status: 'in_progress',
-          startedAt: '2026-04-28T10:00:00.000Z',
-          updatedAt: '2026-04-28T10:00:00.000Z',
+          startedAt: '2026-05-20T10:00:00.000Z',
+          updatedAt: '2026-05-20T10:00:00.000Z',
         },
       ]
     ).map((instance) => ({ ...instance, responses: instance.responses ?? [] })),
@@ -891,7 +894,7 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
       {
         storeId,
         checklistTemplateId: templateId,
-        monthStart: '2026-04-01',
+        monthStart: '2026-05-01',
         completedCount: 2,
         averageScore: 86,
       },
@@ -916,7 +919,7 @@ function createChecklistAcknowledgementsFixture(
         checklistAcknowledgementId: '77777777-7777-4777-8777-777777777777',
         acknowledgedByUserId: 'store-manager-1',
         acknowledgementNote: handoffState.acknowledgementNote ?? null,
-        acknowledgedAt: '2026-04-28T11:00:00.000Z',
+        acknowledgedAt: '2026-05-20T11:00:00.000Z',
       }
     : null
   const items = [
@@ -929,7 +932,7 @@ function createChecklistAcknowledgementsFixture(
       storeId,
       storeName: fixtureStoreName,
       completedByUserId: 'region-user-1',
-      completedAt: '2026-04-28T09:00:00.000Z',
+      completedAt: options.acknowledgementCompletedAt ?? '2026-05-20T09:00:00.000Z',
       status: 'completed',
       totalScore: 86,
       complianceRate: 0.75,
@@ -968,7 +971,7 @@ function createChecklistAcknowledgementsFixture(
       storeId,
       storeName: fixtureStoreName,
       completedByUserId: 'vm-user-1',
-      completedAt: '2026-04-27T09:00:00.000Z',
+      completedAt: '2026-05-19T09:00:00.000Z',
       status: 'completed',
       totalScore: 92,
       complianceRate: 1,

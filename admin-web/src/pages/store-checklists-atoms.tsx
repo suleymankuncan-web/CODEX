@@ -1,16 +1,26 @@
 import { Button } from '@/components/ui/button'
+import type { ReactNode } from 'react'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { formatNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import type { ChecklistCoverageRow, ChecklistSortDirection, ChecklistTone } from './store-checklists-model'
 import { clamp, getCoverageScore, getLocalizedTemplateScoreStatus, getStaticCopy } from './store-checklists-logic'
 
-export function ChecklistMetric(input: { label: string; note?: string; tone: ChecklistTone; value: string }) {
+export function ChecklistMetric(input: {
+  icon?: ReactNode
+  label: string
+  note?: string
+  tone: ChecklistTone
+  value: string
+}) {
   return (
     <div className={`store-checklists-metric store-checklists-tone-${input.tone}`}>
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-      {input.note ? <small>{input.note}</small> : null}
+      {input.icon ? <div className="store-checklists-metric-icon">{input.icon}</div> : null}
+      <div>
+        <span>{input.label}</span>
+        <strong>{input.value}</strong>
+        {input.note ? <small>{input.note}</small> : null}
+      </div>
     </div>
   )
 }
@@ -64,14 +74,19 @@ export function ChecklistTemplateScore(input: {
   const status = input.row
     ? getLocalizedTemplateScoreStatus(input.t, input.locale, input.label, input.row)
     : getStaticCopy(input.locale, `${input.label} yapılmadı`, `${input.label} not done`)
+  const value = score === null ? '-' : formatNumber(score, input.locale)
+  const scoreKind =
+    input.row?.template.templateType === 'VM_STORE_VISIT' || input.label.toLocaleLowerCase('en-US').includes('vm')
+      ? 'vm'
+      : 'bm'
 
   return (
-    <div className="store-checklists-template-score">
-      <small>{status}</small>
-      <b>
-        {score === null ? '-' : formatNumber(score, input.locale)}
-        <em>/100</em>
-      </b>
+    <div
+      className={`store-checklists-template-score store-checklists-template-score-${scoreKind}`}
+      aria-label={`${status}: ${value} / 100`}
+    >
+      <b>{value}</b>
+      <em>/100</em>
       <span className={`store-checklists-template-scorebar${tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''}`}>
         <i>
           <b className={`store-checklists-tone-${tone}`} style={{ width: `${clamp(score ?? 0, 0, 100)}%` }} />

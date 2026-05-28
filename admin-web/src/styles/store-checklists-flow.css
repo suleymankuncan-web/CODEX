@@ -1,0 +1,609 @@
+/* Checklist flow prototype alignment. Session modal styles above remain unchanged. */
+.store-checklists-command-page {
+  --checklist-plum: #6d35f4;
+  --checklist-blue: #1f7af8;
+  --checklist-cyan: #16b8c4;
+  --checklist-mint: #10b981;
+  --checklist-amber: #f59e0b;
+  --checklist-danger: #f0445d;
+  --checklist-ink: #071432;
+  --checklist-muted: #65708c;
+  --checklist-soft: #f7f9fd;
+  --checklist-line: rgba(7, 20, 50, 0.11);
+  --checklist-soft-line: rgba(7, 20, 50, 0.075);
+  display: grid;
+  gap: 18px;
+  color: var(--checklist-ink);
+}
+
+.store-checklists-flow-header {
+  display: grid;
+  gap: 18px;
+}
+
+.store-checklists-flow-topline {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.store-checklists-hero-copy {
+  max-width: 680px;
+}
+
+.store-checklists-flow-topline h1 {
+  margin: 0;
+  color: var(--checklist-ink);
+  font-size: 32px;
+  font-weight: 680;
+  letter-spacing: 0;
+  line-height: 1.08;
+}
+
+.store-checklists-hero-copy p {
+  margin: 8px 0 0;
+  color: #4c5875;
+  font-size: 13px;
+  font-weight: 430;
+  line-height: 1.45;
+}
+
+.store-checklists-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.store-checklists-period-pill,
+.store-checklists-icon-button {
+  border: 1px solid var(--checklist-line);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--checklist-ink);
+  box-shadow: 0 10px 28px rgba(25, 34, 70, 0.06);
+}
+
+.store-checklists-period-pill {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.store-checklists-period-pill svg {
+  width: 15px;
+  height: 15px;
+  color: #24304d;
+}
+
+.store-checklists-icon-button {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.store-checklists-icon-button > span {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 7px;
+  height: 7px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--checklist-plum);
+}
+
+.store-checklists-icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.store-checklists-command-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.store-checklists-metric {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  min-height: 112px;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--checklist-line);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 18px 46px rgba(25, 34, 70, 0.075);
+  padding: 18px;
+}
+
+.store-checklists-metric-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  place-items: center;
+  border-radius: 14px;
+  color: currentColor;
+}
+
+.store-checklists-metric.store-checklists-tone-accent .store-checklists-metric-icon {
+  background: rgba(109, 53, 244, 0.13);
+  color: var(--checklist-plum);
+}
+
+.store-checklists-metric.store-checklists-tone-calm .store-checklists-metric-icon {
+  background: rgba(16, 185, 129, 0.13);
+  color: var(--checklist-mint);
+}
+
+.store-checklists-metric.store-checklists-tone-warning .store-checklists-metric-icon {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--checklist-amber);
+}
+
+.store-checklists-metric.store-checklists-tone-neutral .store-checklists-metric-icon {
+  background: rgba(31, 122, 248, 0.12);
+  color: var(--checklist-blue);
+}
+
+.store-checklists-metric-icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.store-checklists-metric > div:last-child {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.store-checklists-metric span {
+  color: var(--checklist-ink);
+  font-size: 12px;
+  font-weight: 660;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.store-checklists-metric strong {
+  color: var(--checklist-ink);
+  font-size: 30px;
+  font-weight: 680;
+  letter-spacing: 0;
+  line-height: 0.98;
+}
+
+.store-checklists-metric small {
+  color: #526080;
+  font-size: 12px;
+  font-weight: 470;
+}
+
+.store-checklists-flow-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 270px;
+  gap: 24px;
+  align-items: start;
+}
+
+.store-checklists-flow-main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.store-checklists-attention {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 66px;
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  border-radius: 12px;
+  background: linear-gradient(100deg, rgba(255, 246, 232, 0.94), rgba(255, 255, 255, 0.9));
+  box-shadow: none;
+  padding: 14px 18px;
+}
+
+.store-checklists-attention:not(.store-checklists-attention-active) {
+  border-color: rgba(16, 185, 129, 0.22);
+  background: linear-gradient(100deg, rgba(238, 253, 246, 0.9), rgba(255, 255, 255, 0.9));
+}
+
+.store-checklists-attention-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.store-checklists-attention-icon,
+.store-checklists-priority-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--checklist-amber);
+}
+
+.store-checklists-attention-icon svg,
+.store-checklists-priority-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.store-checklists-attention-copy strong {
+  display: block;
+  color: var(--checklist-ink);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.store-checklists-attention-copy p {
+  margin: 3px 0 0;
+  color: #4c5875;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.store-checklists-attention-action {
+  min-height: 36px;
+  border-radius: 10px;
+  color: var(--checklist-ink);
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.store-checklists-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1.2fr) minmax(142px, 0.62fr) minmax(152px, 0.72fr) minmax(152px, 0.72fr) 148px;
+  gap: 12px;
+  align-items: stretch;
+  border: 1px solid var(--checklist-line);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 44px rgba(25, 34, 70, 0.065);
+  padding: 12px;
+}
+
+.store-checklists-filter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  min-height: 46px;
+  border: 1px solid var(--checklist-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  padding: 8px 12px;
+}
+
+.store-checklists-filter span {
+  color: #6f7891;
+  font-size: 10px;
+  font-weight: 540;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.store-checklists-filter [data-slot="select-trigger"],
+.store-checklists-filter button {
+  min-height: 20px;
+  height: 20px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  color: var(--checklist-ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.store-checklists-filter input {
+  min-height: 22px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--checklist-ink);
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.store-checklists-search-shell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.store-checklists-search-shell svg {
+  width: 15px;
+  height: 15px;
+  color: #8190ad;
+}
+
+.store-checklists-reset-button {
+  align-self: stretch;
+  min-height: 46px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--checklist-ink);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.store-checklists-mobile-tab-picker {
+  display: none;
+}
+
+.store-checklists-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--checklist-line);
+  border-radius: 14px 14px 0 0;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: none;
+  padding: 0;
+}
+
+.store-checklists-tab {
+  position: relative;
+  display: inline-flex;
+  min-height: 62px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-right: 1px solid var(--checklist-line);
+  border-radius: 0;
+  background: transparent;
+  color: #344160;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 640;
+  letter-spacing: 0;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.store-checklists-tab:last-child {
+  border-right: 0;
+}
+
+.store-checklists-tab svg {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
+.store-checklists-tab span {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-checklists-tab small {
+  display: inline-grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(109, 53, 244, 0.11);
+  color: var(--checklist-plum);
+  font-size: 11px;
+  font-weight: 680;
+}
+
+.store-checklists-tab[aria-selected="true"] {
+  background: linear-gradient(90deg, rgba(109, 53, 244, 0.04), rgba(31, 122, 248, 0.03));
+  color: var(--checklist-plum);
+  box-shadow: none;
+}
+
+.store-checklists-tab[aria-selected="true"]::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--checklist-plum), #873cff);
+  content: "";
+}
+
+.store-checklists-tab-incomplete {
+  background: rgba(240, 68, 93, 0.055);
+  color: #b4233a;
+}
+
+.store-checklists-tab-incomplete small {
+  background: rgba(240, 68, 93, 0.12);
+  color: #c72340;
+}
+
+.store-checklists-tab-incomplete[aria-selected="true"] {
+  background: linear-gradient(90deg, rgba(240, 68, 93, 0.09), rgba(255, 255, 255, 0.55));
+  color: #c72340;
+}
+
+.store-checklists-tab-incomplete[aria-selected="true"]::after {
+  background: linear-gradient(90deg, var(--checklist-danger), #ff7085);
+}
+
+.store-checklists-command-card {
+  display: grid;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--checklist-line);
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 20px 54px rgba(25, 34, 70, 0.075);
+  padding: 0;
+}
+
+.store-checklists-section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px 22px 18px;
+}
+
+.store-checklists-section-head .store-checklists-eyebrow {
+  display: none;
+}
+
+.store-checklists-section-head h3 {
+  margin: 0;
+  color: var(--checklist-ink);
+  font-size: 18px;
+  font-weight: 680;
+  letter-spacing: 0;
+}
+
+.store-checklists-section-head p {
+  margin: 8px 0 0;
+  color: #5a6683;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.store-checklists-table {
+  display: grid;
+  gap: 0;
+  margin: 0 22px 18px;
+  overflow: hidden;
+  border: 1px solid var(--checklist-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.store-checklists-visit-table .store-checklists-table-head,
+.store-checklists-visit-row {
+  display: grid;
+  grid-template-columns: minmax(186px, 1.35fr) minmax(100px, 0.72fr) minmax(100px, 0.72fr) minmax(104px, 0.62fr) minmax(126px, 0.86fr) minmax(112px, 0.58fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-table-head,
+.store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row {
+  grid-template-columns: minmax(220px, 1.5fr) minmax(110px, 0.72fr) minmax(112px, 0.68fr) minmax(132px, 0.86fr) minmax(112px, 0.58fr);
+}
+
+.store-checklists-table-head {
+  min-height: 46px;
+  border-bottom: 1px solid var(--checklist-line);
+  background: var(--checklist-soft);
+  padding: 0 18px;
+}
+
+.store-checklists-sort-button,
+.store-checklists-table-head > span {
+  color: #5d6885;
+  font-size: 11px;
+  font-weight: 640;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.store-checklists-sort-button {
+  justify-content: flex-start;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.store-checklists-sort-button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-checklists-sort-button small {
+  color: var(--checklist-plum);
+  font-size: 11px;
+}
+
+.store-checklists-visit-row {
+  position: relative;
+  min-height: 76px;
+  border: 0;
+  border-bottom: 1px solid var(--checklist-line);
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  padding: 0 18px;
+  transition: background 160ms ease;
+}
+
+.store-checklists-visit-row:last-of-type {
+  border-bottom: 0;
+}
+
+.store-checklists-visit-row-danger {
+  background: linear-gradient(90deg, rgba(255, 236, 240, 0.82), rgba(255, 255, 255, 0.94) 48%);
+}
+
+.store-checklists-visit-row-warning {
+  background: linear-gradient(90deg, rgba(255, 247, 231, 0.86), rgba(255, 255, 255, 0.96) 48%);
+}
+
+.store-checklists-visit-row-danger::before,
+.store-checklists-visit-row-warning::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: 0;
+  content: "";
+}
+
+.store-checklists-visit-row-danger::before {
+  background: var(--checklist-danger);
+}
+
+.store-checklists-visit-row-warning::before {
+  background: var(--checklist-amber);
+}
+
+.store-checklists-visit-row:hover {
+  background: rgba(248, 250, 255, 0.9);
+  border-color: var(--checklist-line);
+  box-shadow: none;
+  transform: none;
+}
+
+.store-checklists-store-cell {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.store-checklists-store-avatar {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 10px;
+}
+
+.store-checklists-store-avatar svg {
+  width: 15px;
+  height: 15px;
+}

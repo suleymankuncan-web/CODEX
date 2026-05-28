@@ -280,15 +280,15 @@ export function getChecklistHeroScopeLabel(
   canManageVisits: boolean,
 ) {
   if (!canManageVisits) {
-    return getStaticCopy(locale, 'Mağaza kabulü', 'Store acknowledgement')
+    return getStaticCopy(locale, 'Mağaza kabul kayıtları', 'Store acknowledgements')
   }
   if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
-    return getStaticCopy(locale, 'Bölge Müdürü kapsamı', 'Region manager scope')
+    return getStaticCopy(locale, 'Bölge müdürü', 'Region manager')
   }
   if (hasAnyRole(authSummary, ['VISUAL_MERCHANDISER'])) {
-    return getStaticCopy(locale, 'VM kapsamı', 'VM scope')
+    return getStaticCopy(locale, 'VM mağazaları', 'VM stores')
   }
-  return getStaticCopy(locale, 'Operasyon kapsamı', 'Operations scope')
+  return getStaticCopy(locale, 'Operasyon mağazaları', 'Operations stores')
 }
 
 export function formatChecklistCoverage(t: TranslateFunction, input: ChecklistCoverageRow) {
@@ -409,8 +409,13 @@ export function buildMonthOptions(
   coverageRows: ChecklistCoverageRow[],
   items: ChecklistAcknowledgementItem[],
   locale: AppLocale,
+  extraMonthValues: Array<string | null | undefined> = [],
 ) {
   const monthKeys = new Set<string>()
+  monthKeys.add(getCurrentMonthKey())
+  for (const value of extraMonthValues) {
+    addMonthKey(monthKeys, value)
+  }
   for (const row of coverageRows) {
     addMonthKey(monthKeys, row.summary?.monthStart)
     addMonthKey(monthKeys, row.active?.updatedAt)
@@ -444,6 +449,10 @@ export function getMonthKey(value?: string | null) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
+function getCurrentMonthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
 export function formatMonthKey(value: string, locale: AppLocale) {
   const [year, month] = value.split('-').map(Number)
   if (year === undefined || month === undefined) {
@@ -468,7 +477,9 @@ export function doesCoverageRowMatchFilters(
       getMonthKey(row.active?.updatedAt),
       getMonthKey(row.active?.startedAt),
     ]
-    if (!rowMonths.includes(filters.month)) return false
+    const isCurrentMissingRow =
+      filters.month === getCurrentMonthKey() && getCoverageStatus(row) === 'missing'
+    if (!rowMonths.includes(filters.month) && !isCurrentMissingRow) return false
   }
   if (!doesStatusMatch(getCoverageStatus(row), filters.status)) return false
 
@@ -489,7 +500,7 @@ export function doesChecklistItemMatchFilters(
   },
 ) {
   if (filters.type !== 'all' && item.templateType !== filters.type) return false
-  if (filters.month !== 'all' && getMonthKey(item.completedAt) !== filters.month) return false
+  if (filters.month !== 'all' && item.acknowledgement !== null && getMonthKey(item.completedAt) !== filters.month) return false
   const itemStatus: ChecklistStatusFilter = item.acknowledgement ? 'acknowledged' : 'pending'
   if (!doesStatusMatch(itemStatus, filters.status) && !doesStatusMatch(item.status, filters.status)) {
     return false
@@ -670,43 +681,27 @@ export function buildChecklistResponseDrafts(input: {
   return drafts
 }
 
-export function getChecklistResponseDraftKey(input: {
-  checklistInstanceId: string
-  templateItemId: string
-}) {
+export function getChecklistResponseDraftKey(input: { checklistInstanceId: string; templateItemId: string }) {
   return `${input.checklistInstanceId}:${input.templateItemId}`
 }
 
-export function serializeChecklistResponseDraft(input: {
-  scoreValue: number
-  commentText?: string
-}) {
-  return JSON.stringify({
-    commentText: input.commentText ?? '',
-    scoreValue: input.scoreValue,
-  })
+export function serializeChecklistResponseDraft(input: { scoreValue: number; commentText?: string }) {
+  return JSON.stringify({ commentText: input.commentText ?? '', scoreValue: input.scoreValue })
 }
 
 export function parseChecklistScoreInput(value: string, maxScore: number) {
   if (value === '') return null
   const parsed = Number(value)
-  if (!Number.isFinite(parsed)) return null
-  return clamp(parsed, 0, maxScore)
+  return Number.isFinite(parsed) ? clamp(parsed, 0, maxScore) : null
 }
 
 export function getScoreQuickOptions(locale: AppLocale, maxScore: number) {
   const safeMax = Math.max(0, maxScore)
-  return [
-    { label: `${getStaticCopy(locale, 'Uygun', 'Good')} ${safeMax}`, value: safeMax },
-    {
-      label: `${getStaticCopy(locale, 'Takip', 'Watch')} ${Math.round(safeMax * 0.6)}`,
-      value: Math.round(safeMax * 0.6),
-    },
-    {
-      label: `${getStaticCopy(locale, 'Kritik', 'Critical')} ${Math.round(safeMax * 0.2)}`,
-      value: Math.round(safeMax * 0.2),
-    },
-  ]
+  const watch = Math.round(safeMax * 0.6)
+  const critical = Math.round(safeMax * 0.2)
+  const option = (tr: string, en: string, value: number) => ({ label: `${getStaticCopy(locale, tr, en)} ${value}`, value })
+
+  return [option('Uygun', 'Good', safeMax), option('Takip', 'Watch', watch), option('Kritik', 'Critical', critical)]
 }
 
 export function clamp(value: number, min: number, max: number) {

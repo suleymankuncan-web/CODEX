@@ -22,7 +22,7 @@ export type ChecklistStatusFilter = 'all' | 'missing' | 'draft' | 'completed' | 
 export type ChecklistSortKey = 'priority' | 'store' | 'score' | 'date' | 'status'
 export type ChecklistSortDirection = 'asc' | 'desc'
 export type ChecklistSort = { key: ChecklistSortKey; direction: ChecklistSortDirection }
-export type ChecklistTab = 'visits' | 'inbox' | 'history'
+export type ChecklistTab = 'visits' | 'inbox' | 'incomplete' | 'history'
 export type ChecklistActiveInstance = MobileChecklistToday['activeInstances'][number]
 export type ChecklistTabOption = {
   key: ChecklistTab
@@ -103,7 +103,7 @@ export function createInitialStoreChecklistsState(search: string): StoreChecklis
     selectedSessionKey: null,
     selectedResultId: resolveChecklistResultFromSearch(search),
     searchQuery: '',
-    selectedMonth: 'all',
+    selectedMonth: getCurrentMonthKey(),
     typeFilter: 'all',
     statusFilter: 'all',
     activeTab: resolveChecklistTabFromSearch(search),
@@ -194,7 +194,7 @@ export function storeChecklistsReducer(
       return {
         ...state,
         searchQuery: '',
-        selectedMonth: 'all',
+        selectedMonth: getCurrentMonthKey(),
         typeFilter: action.typeFilter,
         statusFilter: 'all',
       }
@@ -239,7 +239,9 @@ export function buildChecklistSearch(
 
 function resolveChecklistTabFromSearch(search: string): ChecklistTab {
   const tab = new URLSearchParams(search).get('tab')
-  return tab === 'inbox' || tab === 'history' || tab === 'visits' ? tab : 'visits'
+  return tab === 'inbox' || tab === 'history' || tab === 'incomplete' || tab === 'visits'
+    ? tab
+    : 'visits'
 }
 
 function resolveChecklistResultFromSearch(search: string) {
@@ -259,6 +261,10 @@ function takeChecklistCommandNotice() {
 export function storeChecklistCommandNotice(message: string) {
   if (typeof window === 'undefined') return
   window.sessionStorage.setItem(CHECKLIST_COMMAND_NOTICE_KEY, message)
+}
+
+function getCurrentMonthKey(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
 function toggleSort(current: ChecklistSort, key: ChecklistSortKey): ChecklistSort {
