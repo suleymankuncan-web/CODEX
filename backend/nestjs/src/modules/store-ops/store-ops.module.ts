@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { AuthModule } from "../auth/auth.module";
 import { OrgController } from "./web/org.controller";
 import { WorkforceController } from "./web/workforce.controller";
 import { ChecklistController } from "./web/checklist.controller";
@@ -48,6 +49,7 @@ import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.re
 import { PilotFeedbackRepository } from "./infrastructure/pilot-feedback.repository";
 
 @Module({
+  imports: [AuthModule],
   controllers: [
     OrgController,
     WorkforceController,
