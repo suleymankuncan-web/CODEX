@@ -70,7 +70,11 @@ export type StoreChecklistsAction =
   | { type: 'setAckNotice'; message: string | null }
   | { type: 'acknowledgeSucceeded'; checklistInstanceId: string }
   | { type: 'startVisitSucceeded'; rowKey: string; instance: ChecklistActiveInstance }
-  | { type: 'saveResponseSucceeded' }
+  | {
+      type: 'saveResponseSucceeded'
+      draft: ChecklistResponseDraft
+      updatedAt: string | null
+    }
   | { type: 'completeVisitSucceeded'; checklistInstanceId: string; rowKey: string }
   | {
       type: 'openSession'
@@ -116,6 +120,51 @@ export function createInitialStoreChecklistsState(search: string): StoreChecklis
   }
 }
 
+export function upsertChecklistActiveResponse(
+  instance: ChecklistActiveInstance,
+  draft: ChecklistResponseDraft,
+  updatedAt: string | null,
+): ChecklistActiveInstance {
+  const response = {
+    templateItemId: draft.templateItemId,
+    scoreValue: draft.scoreValue,
+    commentText: draft.commentText ?? null,
+  }
+  const existingResponse = instance.responses.some(
+    (item) => item.templateItemId === draft.templateItemId,
+  )
+
+  return {
+    ...instance,
+    updatedAt,
+    responses: existingResponse
+      ? instance.responses.map((item) =>
+          item.templateItemId === draft.templateItemId ? response : item,
+        )
+      : [...instance.responses, response],
+  }
+}
+
+export function mergeChecklistActiveInstanceOverlay(
+  queryActive: ChecklistActiveInstance | undefined,
+  localActive: ChecklistActiveInstance | undefined,
+): ChecklistActiveInstance | undefined {
+  if (!localActive) return queryActive
+  if (!queryActive) return localActive
+  if (queryActive.checklistInstanceId !== localActive.checklistInstanceId) return queryActive
+
+  const responsesByItem = new Map(queryActive.responses.map((response) => [response.templateItemId, response]))
+  for (const response of localActive.responses) {
+    responsesByItem.set(response.templateItemId, response)
+  }
+
+  return {
+    ...queryActive,
+    updatedAt: localActive.updatedAt ?? queryActive.updatedAt,
+    responses: [...responsesByItem.values()],
+  }
+}
+
 export function storeChecklistsReducer(
   state: StoreChecklistsState,
   action: StoreChecklistsAction,
@@ -140,8 +189,22 @@ export function storeChecklistsReducer(
         selectedSessionKey: action.rowKey,
         sessionDirty: false,
       }
-    case 'saveResponseSucceeded':
-      return { ...state, sessionDirty: false }
+    case 'saveResponseSucceeded': {
+      let updatedLocalInstance = false
+      const localActiveInstances = { ...state.localActiveInstances }
+
+      for (const [key, instance] of Object.entries(state.localActiveInstances)) {
+        if (instance.checklistInstanceId !== action.draft.checklistInstanceId) continue
+        localActiveInstances[key] = upsertChecklistActiveResponse(instance, action.draft, action.updatedAt)
+        updatedLocalInstance = true
+      }
+
+      return {
+        ...state,
+        ...(updatedLocalInstance ? { localActiveInstances } : {}),
+        sessionDirty: false,
+      }
+    }
     case 'completeVisitSucceeded':
       return {
         ...state,

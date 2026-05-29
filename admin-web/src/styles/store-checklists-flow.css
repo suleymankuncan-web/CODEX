@@ -459,14 +459,14 @@
 .store-checklists-visit-table .store-checklists-table-head,
 .store-checklists-visit-row {
   display: grid;
-  grid-template-columns: minmax(186px, 1.35fr) minmax(100px, 0.72fr) minmax(100px, 0.72fr) minmax(104px, 0.62fr) minmax(126px, 0.86fr) minmax(112px, 0.58fr);
+  grid-template-columns: minmax(210px, 1.5fr) minmax(104px, 0.72fr) minmax(104px, 0.72fr) minmax(118px, 0.68fr) minmax(118px, 0.58fr);
   gap: 14px;
   align-items: center;
 }
 
 .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-table-head,
 .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row {
-  grid-template-columns: minmax(220px, 1.5fr) minmax(110px, 0.72fr) minmax(112px, 0.68fr) minmax(132px, 0.86fr) minmax(112px, 0.58fr);
+  grid-template-columns: minmax(240px, 1.6fr) minmax(112px, 0.72fr) minmax(118px, 0.68fr) minmax(118px, 0.58fr);
 }
 
 .store-checklists-table-head {

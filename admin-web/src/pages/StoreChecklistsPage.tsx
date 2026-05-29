@@ -18,6 +18,7 @@ import {
   startMobileChecklistInstance,
   type ChecklistAcknowledgementItem,
   type MobileChecklistToday,
+  type MobileChecklistTodayResponse,
 } from '../features/checklists/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
@@ -31,6 +32,8 @@ import {
   type ChecklistResponseDraft,
   type ChecklistTab,
   type ChecklistTabOption,
+  mergeChecklistActiveInstanceOverlay,
+  upsertChecklistActiveResponse,
 } from './store-checklists-model'
 import {
   buildChecklistResponseDrafts,
@@ -64,6 +67,31 @@ import {
   StoreLoadingState,
   StoreSurfacePage,
 } from './store-surface-primitives'
+
+function mergeSavedResponseIntoMobileToday(
+  current: MobileChecklistTodayResponse | undefined,
+  draft: ChecklistResponseDraft,
+  updatedAt: string | null,
+) {
+  if (!current) return current
+
+  let didUpdate = false
+  const activeInstances = current.data.activeInstances.map((instance) => {
+    if (instance.checklistInstanceId !== draft.checklistInstanceId) return instance
+    didUpdate = true
+    return upsertChecklistActiveResponse(instance, draft, updatedAt)
+  })
+
+  if (!didUpdate) return current
+
+  return {
+    ...current,
+    data: {
+      ...current.data,
+      activeInstances,
+    },
+  }
+}
 
 function useStoreChecklistsPageContent(input: {
   authSummary: AuthSessionSummary | null
@@ -166,11 +194,23 @@ function useStoreChecklistsPageContent(input: {
   })
   const saveResponseMutation = useMutation({
     mutationFn: saveMobileChecklistResponse,
-    onSuccess: (_result, variables) => {
+    onMutate: async () => {
+      // Prevent an older activeInstances refetch from replacing the saved draft snapshot.
+      await queryClient.cancelQueries({ queryKey: ['mobile-checklists-today'] })
+    },
+    onSuccess: (result, variables) => {
+      const updatedAt = result.data.checklistResponse.responded_at
       savedResponseDraftsRef.current[getChecklistResponseDraftKey(variables)] =
         serializeChecklistResponseDraft(variables)
-      void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
-      dispatchPageState({ type: 'saveResponseSucceeded' })
+      queryClient.setQueryData<MobileChecklistTodayResponse>(
+        ['mobile-checklists-today'],
+        (current) => mergeSavedResponseIntoMobileToday(current, variables, updatedAt),
+      )
+      dispatchPageState({
+        type: 'saveResponseSucceeded',
+        draft: variables,
+        updatedAt,
+      })
     },
   })
   const savePendingSessionResponses = async (
@@ -289,11 +329,12 @@ function useStoreChecklistsPageContent(input: {
   const coverageRows: ChecklistCoverageRow[] = (mobileToday?.stores ?? []).flatMap((store) =>
     (mobileToday?.templates ?? []).map((template) => {
       const rowKey = getCoverageRowKey(store.storeId, template.checklistTemplateId)
-      const active = mobileToday?.activeInstances.find(
+      const queryActive = mobileToday?.activeInstances.find(
         (item) =>
           item.storeId === store.storeId &&
           item.checklistTemplateId === template.checklistTemplateId,
-      ) ?? localActiveInstances[rowKey]
+      )
+      const active = mergeChecklistActiveInstanceOverlay(queryActive, localActiveInstances[rowKey])
       const matchingSummaries = (mobileToday?.monthlySummaries ?? []).filter(
         (item) =>
           item.storeId === store.storeId &&

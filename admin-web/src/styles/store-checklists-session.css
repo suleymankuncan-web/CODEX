@@ -142,7 +142,7 @@
 .store-checklist-session-score span,
 .store-checklist-session-progress span,
 .store-checklist-session-answer-heading span,
-.store-checklist-session-note-field > span,
+.store-checklist-session-note-field > label,
 .store-checklist-session-photo-panel > div:first-child span {
   color: var(--checklist-muted);
   font-size: 0.7rem;
