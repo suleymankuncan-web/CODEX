@@ -16,7 +16,8 @@
 - `discipline.md` requires small reversible PRs, no mixed-risk batches, and explicit verification.
 - `sokrates.md` requires evidence-first architectural decisions and forbids broad changes without a concrete trigger.
 - `origin/main` currently includes PR #541: `feat: implement store targets workflow surface`.
-- Root `CONTRIBUTING.md` does not exist.
+- Before PR 1, root `CONTRIBUTING.md` did not exist; PR 1 creates and
+  guards it.
 - Store Ops currently has a single broad Nest module:
   - `backend/nestjs/src/modules/store-ops/store-ops.module.ts`
 - Current known high-risk code shapes:
