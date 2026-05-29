@@ -70,7 +70,13 @@ export type StoreChecklistsAction =
   | { type: 'setAckNotice'; message: string | null }
   | { type: 'acknowledgeSucceeded'; checklistInstanceId: string }
   | { type: 'startVisitSucceeded'; rowKey: string; instance: ChecklistActiveInstance }
-  | { type: 'saveResponseSucceeded'; draft: ChecklistResponseDraft; updatedAt: string | null }
+  | {
+      type: 'saveResponseSucceeded'
+      draft: ChecklistResponseDraft
+      updatedAt: string | null
+      activeInstance?: ChecklistActiveInstance
+      rowKey?: string
+    }
   | { type: 'completeVisitSucceeded'; checklistInstanceId: string; rowKey: string }
   | {
       type: 'openSession'
@@ -187,15 +193,22 @@ export function storeChecklistsReducer(
       }
     case 'saveResponseSucceeded': {
       let updatedLocalInstance = false
-      const localActiveInstances = Object.fromEntries(
-        Object.entries(state.localActiveInstances).map(([key, instance]) => {
-          if (instance.checklistInstanceId !== action.draft.checklistInstanceId) {
-            return [key, instance]
-          }
-          updatedLocalInstance = true
-          return [key, upsertChecklistActiveResponse(instance, action.draft, action.updatedAt)]
-        }),
-      )
+      const localActiveInstances = { ...state.localActiveInstances }
+
+      for (const [key, instance] of Object.entries(state.localActiveInstances)) {
+        if (instance.checklistInstanceId !== action.draft.checklistInstanceId) continue
+        localActiveInstances[key] = upsertChecklistActiveResponse(instance, action.draft, action.updatedAt)
+        updatedLocalInstance = true
+      }
+
+      if (!updatedLocalInstance && action.activeInstance && action.rowKey) {
+        localActiveInstances[action.rowKey] = upsertChecklistActiveResponse(
+          action.activeInstance,
+          action.draft,
+          action.updatedAt,
+        )
+        updatedLocalInstance = true
+      }
 
       return {
         ...state,
