@@ -840,6 +840,27 @@ describe("ReportingService personnel performance profile access", () => {
     expect(result.employee?.displayName).toBe("Ada Lovelace");
   });
 
+  it("blocks region managers from opening profiles outside their region", async () => {
+    const repository = createRepositoryMock({ targetRegionId: "region-2" });
+    const service = createService(repository);
+
+    await expect(
+      service.getPersonnelPerformance({
+        userId: "region-manager-1",
+        employeeId: "region-manager-employee",
+        targetEmployeeId,
+        roleCodes: ["REGION_MANAGER"],
+        companyIds: [],
+        regionIds: ["region-1"],
+        storeIds: [],
+        assignedStoreIds: [],
+        periodType: "monthly",
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(repository.getEmployeePerformanceRows).not.toHaveBeenCalled();
+  });
+
   it("keeps the selected personnel identity when the requested live period has no KPI rows", async () => {
     const repository = createRepositoryMock({
       targetRegionId: "region-1",

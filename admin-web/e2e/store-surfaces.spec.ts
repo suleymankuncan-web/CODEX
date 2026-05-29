@@ -1261,6 +1261,95 @@ test('store rankings personnel detail opens the selected personnel performance p
     .toBe(true)
 })
 
+test('region manager rankings opens only in-region personnel profile actions', async ({ page }) => {
+  const personnelPerformanceRequests: URL[] = []
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          employeeId: '00000000-0000-0000-0000-000000000301',
+          roleCodes: ['REGION_MANAGER'],
+          scope: {
+            companyIds: ['company-1'],
+            regionIds: ['region-1'],
+            storeIds: [],
+          },
+          readScope: {
+            companyIds: ['company-1'],
+            regionIds: ['region-1'],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: ['store-in-region'],
+          },
+          assignedStoreIds: ['store-in-region'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsPrivilegedDetailFixture,
+        personnelLeaderboard: {
+          items: [regionManagerInScopePersonnelRow, regionManagerOutOfScopePersonnelRow],
+          currentEmployee: null,
+          managedStorePersonnel: [],
+          meta: {
+            total: 2,
+            limit: 100,
+            offset: 0,
+          },
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    personnelPerformanceRequests.push(requestUrl)
+    await route.fulfill({
+      json: {
+        ...myPerformanceFixture,
+        employee: {
+          ...myPerformanceFixture.employee,
+          employeeId: demoEmployeeId,
+          displayName: 'BM Region Personnel',
+          storeName: 'BM Region Store',
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/rankings')
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+
+  await page.getByRole('button', { name: 'BM Region Personnel' }).click()
+  await expect(page.locator('.store-rankings-drawer')).toBeVisible()
+  await page.locator('.store-rankings-drawer').getByRole('button', { name: 'Detaya git' }).click()
+  await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}\\?`))
+  await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
+  const inScopeRequestCount = personnelPerformanceRequests.length
+  expect(inScopeRequestCount).toBeGreaterThan(0)
+
+  await page.goto('/store/rankings')
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+  await page.getByRole('button', { name: /Other Region Personnel/ }).click()
+  const outOfScopeDrawer = page.locator('.store-rankings-drawer')
+  await expect(outOfScopeDrawer).toBeVisible()
+  await expect(outOfScopeDrawer.getByText('Other Region Personnel')).toBeVisible()
+  await expect(outOfScopeDrawer.getByRole('button', { name: 'Detaya git' })).toHaveCount(0)
+  await expect.poll(() => personnelPerformanceRequests.length).toBe(inScopeRequestCount)
+})
+
 test('store personnel profile falls back when ranking period has no personnel data', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const aprilOnlyPeriods = [
@@ -3994,6 +4083,7 @@ const personnelRankingSummaryRow = {
   storeRank: 1,
   storePopulation: 4,
   scoreValue: 96.4,
+  canOpenProfile: true,
   visibility: 'summary',
 }
 
@@ -4023,6 +4113,32 @@ const personnelRankingDetailRow = {
       contributionValue: 39.2,
     },
   ],
+}
+
+const regionManagerInScopePersonnelRow = {
+  ...personnelRankingDetailRow,
+  employeeId: demoEmployeeId,
+  displayName: 'BM Region Personnel',
+  storeId: 'store-in-region',
+  storeName: 'BM Region Store',
+  regionId: 'region-1',
+  regionName: 'BM Region',
+  regionManagerUserId: 'region-ranking-user',
+  regionManagerName: 'Region Manager',
+  canOpenProfile: true,
+}
+
+const regionManagerOutOfScopePersonnelRow = {
+  ...personnelRankingDetailRow,
+  employeeId: '99999999-9999-4999-8999-999999999999',
+  displayName: 'Other Region Personnel',
+  storeId: 'store-out-region',
+  storeName: 'Other Region Store',
+  regionId: 'region-2',
+  regionName: 'Other Region',
+  regionManagerUserId: 'other-region-manager',
+  regionManagerName: 'Other Region Manager',
+  canOpenProfile: false,
 }
 
 const rankingsPrivilegedDetailStoreRow = {

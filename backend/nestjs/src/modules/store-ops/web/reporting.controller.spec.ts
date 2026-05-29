@@ -6,6 +6,7 @@ describe("ReportingController", () => {
     const reportingService = {
       getStoreKpiHighlights: jest.fn(async () => ({ ok: true })),
       getStoreMonthlyScoreBreakdown: jest.fn(async () => ({ ok: true })),
+      getPersonnelPerformance: jest.fn(async () => ({ ok: true })),
     };
     const rankingService = {};
 
@@ -78,6 +79,46 @@ describe("ReportingController", () => {
       storeId: "store-1",
       storeIds: ["store-1"],
     });
+  });
+
+  it("preserves region scope for region manager personnel profile reads", async () => {
+    const { controller, reportingService } = createController();
+
+    await controller.getPersonnelPerformance(
+      {
+        user: {
+          userId: "region-manager-user",
+          employeeId: "manager-employee",
+          roleCodes: ["REGION_MANAGER"],
+          scope: {
+            companyIds: ["company-1"],
+            regionIds: ["region-1"],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: ["store-1"],
+          },
+        },
+      },
+      "employee-in-region",
+      {
+        mode: "live",
+        periodType: "monthly",
+        periodStart: "2026-05-01",
+      },
+    );
+
+    expect(reportingService.getPersonnelPerformance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roleCodes: ["REGION_MANAGER"],
+        identityCompanyIds: ["company-1"],
+        companyIds: [],
+        regionIds: ["region-1"],
+        storeIds: [],
+        assignedStoreIds: ["store-1"],
+        targetEmployeeId: "employee-in-region",
+      }),
+    );
   });
 
   it("allows ranking detail roles to load closed day snapshot options", () => {

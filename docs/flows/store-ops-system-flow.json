@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-28T17:19:59.707Z",
+  "generatedAt": "2026-05-29T13:57:28.456Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -4667,7 +4667,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 417
+        "line": 416
       }
     },
     {
@@ -4765,7 +4765,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 379
+        "line": 378
       }
     },
     {
@@ -4807,7 +4807,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 336
+        "line": 335
       }
     },
     {
@@ -4835,7 +4835,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 262
+        "line": 261
       }
     },
     {
@@ -4849,7 +4849,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 298
+        "line": 297
       }
     },
     {
@@ -4877,7 +4877,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 445
+        "line": 444
       }
     },
     {

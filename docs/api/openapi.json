@@ -11723,6 +11723,7 @@
                     "storeRank",
                     "storePopulation",
                     "scoreValue",
+                    "canOpenProfile",
                     "visibility"
                   ],
                   "properties": {
@@ -11780,6 +11781,9 @@
                     },
                     "scoreValue": {
                       "type": "number"
+                    },
+                    "canOpenProfile": {
+                      "type": "boolean"
                     },
                     "visibility": {
                       "type": "string",
@@ -11843,6 +11847,7 @@
                   "storeRank",
                   "storePopulation",
                   "scoreValue",
+                  "canOpenProfile",
                   "visibility"
                 ],
                 "properties": {
@@ -11900,6 +11905,9 @@
                   },
                   "scoreValue": {
                     "type": "number"
+                  },
+                  "canOpenProfile": {
+                    "type": "boolean"
                   },
                   "visibility": {
                     "type": "string",
@@ -11965,6 +11973,7 @@
                     "storeRank",
                     "storePopulation",
                     "scoreValue",
+                    "canOpenProfile",
                     "visibility"
                   ],
                   "properties": {
@@ -12022,6 +12031,9 @@
                     },
                     "scoreValue": {
                       "type": "number"
+                    },
+                    "canOpenProfile": {
+                      "type": "boolean"
                     },
                     "visibility": {
                       "type": "string",

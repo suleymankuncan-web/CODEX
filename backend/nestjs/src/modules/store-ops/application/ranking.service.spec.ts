@@ -67,8 +67,39 @@ describe("RankingService", () => {
     storeBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
     personnelBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
   }) {
+    const resolveActiveAssignment = (employeeId: string) => {
+      const match = /^employee-(\d+)$/.exec(employeeId);
+      if (!match) {
+        return null;
+      }
+
+      const ordinal = Number(match[1]);
+      const regionId = ordinal % 2 === 0 ? "region-2" : "region-1";
+      const ownStoreOrdinal = ordinal <= 5 ? 1 : ordinal;
+
+      return {
+        employee_id: employeeId,
+        external_employee_ref: null,
+        first_name: `Personel${String(ordinal).padStart(3, "0")}`,
+        last_name: "Test",
+        company_id: "company-1",
+        region_id: regionId,
+        region_name: regionId === "region-2" ? "Region 2" : "Region 1",
+        store_id: `store-${String(ownStoreOrdinal).padStart(3, "0")}`,
+        store_name: `Store ${String(ownStoreOrdinal).padStart(3, "0")}`,
+      };
+    };
+
     return {
       resolveEmployeeIdForAuthIdentity: jest.fn(async () => "employee-105"),
+      getActiveEmployeeAssignmentScope: jest.fn(async (employeeId: string) =>
+        resolveActiveAssignment(employeeId),
+      ),
+      getActiveEmployeeAssignmentScopes: jest.fn(async (employeeIds: string[]) =>
+        employeeIds
+          .map((employeeId) => resolveActiveAssignment(employeeId))
+          .filter((assignment) => assignment !== null),
+      ),
       getLatestMonthlyRankingPeriod: jest.fn(async () => period),
       listRankingAvailablePeriods: jest.fn(async () => [period]),
       listRankingStoreKpiRows: jest.fn(async () => input?.storeRows ?? createStoreRows(105)),
@@ -329,6 +360,75 @@ describe("RankingService", () => {
       }),
     );
     expect(result.personnelLeaderboard.items[0]).toHaveProperty("metrics");
+  });
+
+  it("marks personnel profile navigation from active assignment scope, not ranking period region", async () => {
+    const repository = createRepositoryMock({
+      personnelRows: [
+        {
+          ...createPersonnelRows(1)[0],
+          employee_id: "employee-001",
+          region_id: "region-1",
+          store_id: "store-001",
+        },
+        {
+          ...createPersonnelRows(1)[0],
+          employee_id: "employee-002",
+          region_id: "region-2",
+          store_id: "store-002",
+        },
+      ],
+    });
+    repository.getActiveEmployeeAssignmentScopes.mockImplementation(
+      async (employeeIds: string[]) => employeeIds.map((employeeId) => ({
+        employee_id: employeeId,
+        external_employee_ref: null,
+        first_name: "Personel",
+        last_name: "Test",
+        company_id: "company-1",
+        region_id: employeeId === "employee-001" ? "region-2" : "region-1",
+        region_name: employeeId === "employee-001" ? "Region 2" : "Region 1",
+        store_id: employeeId === "employee-001" ? "store-002" : "store-001",
+        store_name: employeeId === "employee-001" ? "Store 002" : "Store 001",
+      })),
+    );
+    const service = new RankingService(
+      repository as never,
+      createKpiConfigRepositoryMock() as never,
+    );
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: ["company-1"],
+      regionIds: ["region-1"],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+    });
+
+    expect(
+      result.personnelLeaderboard.items.find((row) => row.employeeId === "employee-001"),
+    ).toEqual(
+      expect.objectContaining({
+        regionId: "region-1",
+        canOpenProfile: false,
+      }),
+    );
+    expect(
+      result.personnelLeaderboard.items.find((row) => row.employeeId === "employee-002"),
+    ).toEqual(
+      expect.objectContaining({
+        regionId: "region-2",
+        canOpenProfile: true,
+      }),
+    );
+    expect(repository.getActiveEmployeeAssignmentScopes).toHaveBeenCalledTimes(1);
+    expect(repository.getActiveEmployeeAssignmentScopes).toHaveBeenCalledWith([
+      "employee-001",
+      "employee-002",
+    ]);
+    expect(repository.getActiveEmployeeAssignmentScope).not.toHaveBeenCalled();
   });
 
   it("sorts privileged rankings across the full filtered population before pagination", async () => {

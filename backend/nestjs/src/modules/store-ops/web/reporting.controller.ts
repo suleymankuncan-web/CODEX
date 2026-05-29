@@ -235,11 +235,10 @@ export class ReportingController {
     @Param("employeeId") employeeId: string,
     @Query() query: GetMyPerformanceQueryDto,
   ) {
-    const storeReadScope = this.resolveStoreReadScope({
+    const personnelProfileReadScope = this.resolvePersonnelProfileReadScope({
       actorRoleCodes: request.user.roleCodes,
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
-      broadReadRoles: ["REGION_MANAGER", "SUPER_ADMIN"],
     });
 
     return this.reportingService.getPersonnelPerformance({
@@ -248,9 +247,9 @@ export class ReportingController {
       targetEmployeeId: employeeId,
       roleCodes: request.user.roleCodes,
       identityCompanyIds: request.user.scope.companyIds,
-      companyIds: storeReadScope.companyIds,
-      regionIds: storeReadScope.regionIds,
-      storeIds: storeReadScope.storeIds,
+      companyIds: personnelProfileReadScope.companyIds,
+      regionIds: personnelProfileReadScope.regionIds,
+      storeIds: personnelProfileReadScope.storeIds,
       assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
       mode: query.mode,
       snapshotDate: query.snapshotDate,
@@ -470,6 +469,60 @@ export class ReportingController {
       limit: query.limit,
       offset: query.offset,
     });
+  }
+
+  private resolvePersonnelProfileReadScope(input: {
+    actorRoleCodes: string[];
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+  }) {
+    const storeIds = input.actorActionScope?.assignedStoreIds.length
+      ? input.actorActionScope.assignedStoreIds
+      : input.actorScope.storeIds;
+
+    if (input.actorRoleCodes.includes("SUPER_ADMIN")) {
+      if (input.actorScope.companyIds.length > 0) {
+        return {
+          companyIds: input.actorScope.companyIds,
+          regionIds: [],
+          storeIds: [],
+        };
+      }
+
+      if (input.actorScope.regionIds.length > 0) {
+        return {
+          companyIds: [],
+          regionIds: input.actorScope.regionIds,
+          storeIds: [],
+        };
+      }
+
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds,
+      };
+    }
+
+    if (input.actorRoleCodes.includes("REGION_MANAGER")) {
+      return {
+        companyIds: [],
+        regionIds: input.actorScope.regionIds,
+        storeIds: [],
+      };
+    }
+
+    return {
+      companyIds: [],
+      regionIds: [],
+      storeIds,
+    };
   }
 
   private resolveStoreReadScope(input: {
