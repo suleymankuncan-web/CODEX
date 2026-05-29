@@ -32,6 +32,12 @@ test('region manager checklist surface shows assigned store visit workflow', asy
       },
     },
   )
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('dialog').getByRole('button', { name: 'Kapat' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
+  await expect(page.getByRole('dialog').getByRole('textbox', { name: /Not/ })).toHaveValue('Raf ve vitrin uygun')
   await expect(page.getByRole('button', { name: 'Tamamla', exact: true })).toBeEnabled()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Tamamla', exact: true }).click()

@@ -70,7 +70,7 @@ export type StoreChecklistsAction =
   | { type: 'setAckNotice'; message: string | null }
   | { type: 'acknowledgeSucceeded'; checklistInstanceId: string }
   | { type: 'startVisitSucceeded'; rowKey: string; instance: ChecklistActiveInstance }
-  | { type: 'saveResponseSucceeded' }
+  | { type: 'saveResponseSucceeded'; draft: ChecklistResponseDraft; updatedAt: string | null }
   | { type: 'completeVisitSucceeded'; checklistInstanceId: string; rowKey: string }
   | {
       type: 'openSession'
@@ -116,6 +116,31 @@ export function createInitialStoreChecklistsState(search: string): StoreChecklis
   }
 }
 
+export function upsertChecklistActiveResponse(
+  instance: ChecklistActiveInstance,
+  draft: ChecklistResponseDraft,
+  updatedAt: string | null,
+): ChecklistActiveInstance {
+  const response = {
+    templateItemId: draft.templateItemId,
+    scoreValue: draft.scoreValue,
+    commentText: draft.commentText ?? null,
+  }
+  const existingResponse = instance.responses.some(
+    (item) => item.templateItemId === draft.templateItemId,
+  )
+
+  return {
+    ...instance,
+    updatedAt,
+    responses: existingResponse
+      ? instance.responses.map((item) =>
+          item.templateItemId === draft.templateItemId ? response : item,
+        )
+      : [...instance.responses, response],
+  }
+}
+
 export function storeChecklistsReducer(
   state: StoreChecklistsState,
   action: StoreChecklistsAction,
@@ -140,8 +165,24 @@ export function storeChecklistsReducer(
         selectedSessionKey: action.rowKey,
         sessionDirty: false,
       }
-    case 'saveResponseSucceeded':
-      return { ...state, sessionDirty: false }
+    case 'saveResponseSucceeded': {
+      let updatedLocalInstance = false
+      const localActiveInstances = Object.fromEntries(
+        Object.entries(state.localActiveInstances).map(([key, instance]) => {
+          if (instance.checklistInstanceId !== action.draft.checklistInstanceId) {
+            return [key, instance]
+          }
+          updatedLocalInstance = true
+          return [key, upsertChecklistActiveResponse(instance, action.draft, action.updatedAt)]
+        }),
+      )
+
+      return {
+        ...state,
+        ...(updatedLocalInstance ? { localActiveInstances } : {}),
+        sessionDirty: false,
+      }
+    }
     case 'completeVisitSucceeded':
       return {
         ...state,

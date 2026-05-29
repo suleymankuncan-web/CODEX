@@ -18,6 +18,7 @@ import {
   startMobileChecklistInstance,
   type ChecklistAcknowledgementItem,
   type MobileChecklistToday,
+  type MobileChecklistTodayResponse,
 } from '../features/checklists/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
@@ -31,6 +32,7 @@ import {
   type ChecklistResponseDraft,
   type ChecklistTab,
   type ChecklistTabOption,
+  upsertChecklistActiveResponse,
 } from './store-checklists-model'
 import {
   buildChecklistResponseDrafts,
@@ -64,6 +66,31 @@ import {
   StoreLoadingState,
   StoreSurfacePage,
 } from './store-surface-primitives'
+
+function mergeSavedResponseIntoMobileToday(
+  current: MobileChecklistTodayResponse | undefined,
+  draft: ChecklistResponseDraft,
+  updatedAt: string | null,
+) {
+  if (!current) return current
+
+  let didUpdate = false
+  const activeInstances = current.data.activeInstances.map((instance) => {
+    if (instance.checklistInstanceId !== draft.checklistInstanceId) return instance
+    didUpdate = true
+    return upsertChecklistActiveResponse(instance, draft, updatedAt)
+  })
+
+  if (!didUpdate) return current
+
+  return {
+    ...current,
+    data: {
+      ...current.data,
+      activeInstances,
+    },
+  }
+}
 
 function useStoreChecklistsPageContent(input: {
   authSummary: AuthSessionSummary | null
@@ -166,10 +193,15 @@ function useStoreChecklistsPageContent(input: {
   })
   const saveResponseMutation = useMutation({
     mutationFn: saveMobileChecklistResponse,
-    onSuccess: (_result, variables) => {
+    onSuccess: (result, variables) => {
+      const updatedAt = result.data.checklistResponse.responded_at
       savedResponseDraftsRef.current[getChecklistResponseDraftKey(variables)] =
         serializeChecklistResponseDraft(variables)
-      dispatchPageState({ type: 'saveResponseSucceeded' })
+      queryClient.setQueryData<MobileChecklistTodayResponse>(
+        ['mobile-checklists-today'],
+        (current) => mergeSavedResponseIntoMobileToday(current, variables, updatedAt),
+      )
+      dispatchPageState({ type: 'saveResponseSucceeded', draft: variables, updatedAt })
     },
   })
   const savePendingSessionResponses = async (
