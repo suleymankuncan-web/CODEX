@@ -209,6 +209,10 @@ function useStoreChecklistsPageContent(input: {
   })
   const saveResponseMutation = useMutation({
     mutationFn: saveMobileChecklistResponse,
+    onMutate: async () => {
+      // Prevent an older activeInstances refetch from replacing the saved draft snapshot.
+      await queryClient.cancelQueries({ queryKey: ['mobile-checklists-today'] })
+    },
     onSuccess: (result, variables) => {
       const updatedAt = result.data.checklistResponse.responded_at
       const activeInstance = findActiveChecklistInstance({
