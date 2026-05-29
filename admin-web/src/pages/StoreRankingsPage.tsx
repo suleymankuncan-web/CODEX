@@ -1,16 +1,7 @@
 import { useMemo, useReducer } from 'react'
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import {
-  ArrowUpDown,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Store,
-  Trophy,
-  UsersRound,
-  X,
-} from 'lucide-react'
+import { ArrowUpDown, ChevronLeft, ChevronRight, Search, Store, Trophy, UsersRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
@@ -31,6 +22,7 @@ import {
 import { formatDate, formatNumber as formatIntlNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import { canOpenPersonnelProfileFromRanking } from './store-rankings-scope'
 import {
   StoreErrorState,
   StoreEmptyState,
@@ -401,6 +393,8 @@ export function StoreRankingsPage(input: {
   )
   const storeRows = ranking?.storeLeaderboard.items ?? []
   const personnelRows = ranking?.personnelLeaderboard.items ?? []
+  const canOpenPersonnelProfile = (row: PersonnelRankingRow) =>
+    canOpenPersonnelProfileFromRanking(input.authSummary, row)
 
   if (!enabled) {
     return (
@@ -528,6 +522,7 @@ export function StoreRankingsPage(input: {
         storeRows={storeRows}
         personnelRows={personnelRows}
         canSeeDetails={canSeeGlobalDetails}
+        canOpenPersonnelProfile={canOpenPersonnelProfile}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onSortChange={updateSort}
@@ -548,6 +543,7 @@ export function StoreRankingsPage(input: {
         locale={locale}
         t={t}
         onClose={() => dispatchPageState({ type: 'setSelectedDetail', value: null })}
+        canOpenPersonnelProfile={canOpenPersonnelProfile}
         onOpenPersonnelProfile={(employeeId) => {
           const path = `/store/personnel/${encodeURIComponent(employeeId)}`
           const params = new URLSearchParams()
@@ -907,6 +903,7 @@ function RankingWorkspace(input: {
   storeRows: StoreRankingRow[]
   personnelRows: PersonnelRankingRow[]
   canSeeDetails: boolean
+  canOpenPersonnelProfile: (row: PersonnelRankingRow) => boolean
   sortKey: RankingSortKey
   sortDirection: RankingSortDirection
   onSortChange: (value: RankingSortKey) => void
@@ -1321,6 +1318,7 @@ function RankingDetailDrawer(input: {
   locale: AppLocale
   t: TranslateFunction
   onClose: () => void
+  canOpenPersonnelProfile: (row: PersonnelRankingRow) => boolean
   onOpenPersonnelProfile: (employeeId: string) => void
 }) {
   if (!input.selection) {
@@ -1355,7 +1353,7 @@ function RankingDetailDrawer(input: {
             <Button type="button" variant="outline" onClick={input.onClose}>
               {input.t('storeRankings.closeDetail')}
             </Button>
-            {personnelRow ? (
+            {personnelRow && input.canOpenPersonnelProfile(personnelRow) ? (
               <Button
                 type="button"
                 variant="default"

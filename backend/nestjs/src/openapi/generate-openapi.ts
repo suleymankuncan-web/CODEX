@@ -3241,6 +3241,7 @@ const reportingPersonnelRankingRowSchema = {
     "storeRank",
     "storePopulation",
     "scoreValue",
+    "canOpenProfile",
     "visibility",
   ],
   properties: {
@@ -3258,6 +3259,7 @@ const reportingPersonnelRankingRowSchema = {
     storeRank: { type: "integer", nullable: true },
     storePopulation: { type: "integer", minimum: 0 },
     scoreValue: { type: "number" },
+    canOpenProfile: { type: "boolean" },
     visibility: { type: "string", enum: ["summary", "detail"] },
     metrics: {
       type: "array",

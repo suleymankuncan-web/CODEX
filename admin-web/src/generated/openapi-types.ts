@@ -1834,6 +1834,7 @@ export type components = {
             "storeRank": number | null
             "storePopulation": number
             "scoreValue": number
+            "canOpenProfile": boolean
             "visibility": "summary" | "detail"
             "metrics"?: Array<{
                 "code": string
@@ -1859,6 +1860,7 @@ export type components = {
           "storeRank": number | null
           "storePopulation": number
           "scoreValue": number
+          "canOpenProfile": boolean
           "visibility": "summary" | "detail"
           "metrics"?: Array<{
               "code": string
@@ -1884,6 +1886,7 @@ export type components = {
             "storeRank": number | null
             "storePopulation": number
             "scoreValue": number
+            "canOpenProfile": boolean
             "visibility": "summary" | "detail"
             "metrics"?: Array<{
                 "code": string

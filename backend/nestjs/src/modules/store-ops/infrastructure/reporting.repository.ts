@@ -1,6 +1,18 @@
 import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
 
+type ActiveEmployeeAssignmentScopeRow = {
+  employee_id: string;
+  external_employee_ref: string | null;
+  first_name: string;
+  last_name: string;
+  company_id: string | null;
+  region_id: string | null;
+  region_name: string | null;
+  store_id: string | null;
+  store_name: string | null;
+};
+
 @Injectable()
 export class ReportingRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -61,18 +73,22 @@ export class ReportingRepository {
     return this.getEmployeeIdForUser(input.userId);
   }
 
-  async getActiveEmployeeAssignmentScope(employeeId: string) {
-    const result = await this.databaseService.query<{
-      employee_id: string;
-      external_employee_ref: string | null;
-      first_name: string;
-      last_name: string;
-      company_id: string | null;
-      region_id: string | null;
-      region_name: string | null;
-      store_id: string | null;
-      store_name: string | null;
-    }>(
+  async getActiveEmployeeAssignmentScope(
+    employeeId: string,
+  ): Promise<ActiveEmployeeAssignmentScopeRow | null> {
+    const rows = await this.getActiveEmployeeAssignmentScopes([employeeId]);
+
+    return rows[0] ?? null;
+  }
+
+  async getActiveEmployeeAssignmentScopes(
+    employeeIds: string[],
+  ): Promise<ActiveEmployeeAssignmentScopeRow[]> {
+    if (employeeIds.length === 0) {
+      return [];
+    }
+
+    const result = await this.databaseService.query<ActiveEmployeeAssignmentScopeRow>(
       `
         SELECT
           e.employee_id,
@@ -97,13 +113,13 @@ export class ReportingRepository {
           ON store.store_id = assignment.store_id
         LEFT JOIN ops.region region
           ON region.region_id = store.region_id
-        WHERE e.employee_id = $1::uuid
-        LIMIT 1
+        WHERE e.employee_id = ANY($1::uuid[])
+        ORDER BY e.employee_id ASC
       `,
-      [employeeId],
+      [employeeIds],
     );
 
-    return result.rows[0] ?? null;
+    return result.rows;
   }
 
   async getEmployeeIdByExternalRef(input: {

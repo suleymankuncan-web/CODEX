@@ -8,7 +8,7 @@ const trackedExtensions = new Set(['.css', '.js', '.jsx', '.mjs', '.ts', '.tsx']
 const generatedPrefixes = ['admin-web/src/generated/']
 
 const oversizedBaseline = new Map([
-  ['backend/nestjs/src/openapi/generate-openapi.ts', 5254],
+  ['backend/nestjs/src/openapi/generate-openapi.ts', 5256],
   ['admin-web/src/pages/MasterDataBootstrapPage.tsx', 1774],
   ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1613],
   ['admin-web/src/pages/StoreKpiHighlightsPage.tsx', 1396],
@@ -18,7 +18,7 @@ const oversizedBaseline = new Map([
   ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1432],
   ['admin-web/src/pages/IntegrationDashboardPage.tsx', 1427],
   ['admin-web/src/pages/ImportBatchDetailPage.tsx', 1426],
-  ['admin-web/src/pages/StoreRankingsPage.tsx', 1441],
+  ['admin-web/src/pages/StoreRankingsPage.tsx', 1439],
   ['admin-web/src/pages/AdminKpiConfigPage.tsx', 1421],
   ['backend/nestjs/src/modules/auth/auth-admin.repository.ts', 1356],
   ['backend/nestjs/src/shared/openapi-baseline.contract.spec.ts', 1330],

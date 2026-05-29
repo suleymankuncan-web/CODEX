@@ -118,6 +118,34 @@ describe("ReportingRepository access scope contract", () => {
 
     expect(query).not.toHaveBeenCalled();
   });
+
+  it("looks up active employee assignment scopes in one batched query", async () => {
+    const { query, repository } = createRepository();
+
+    await expect(
+      repository.getActiveEmployeeAssignmentScopes([
+        "00000000-0000-4000-8000-000000000010",
+        "00000000-0000-4000-8000-000000000011",
+      ]),
+    ).resolves.toEqual([]);
+
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(String(query.mock.calls[0][0])).toContain("e.employee_id = ANY($1::uuid[])");
+    expect(query.mock.calls[0][1]).toEqual([
+      [
+        "00000000-0000-4000-8000-000000000010",
+        "00000000-0000-4000-8000-000000000011",
+      ],
+    ]);
+  });
+
+  it("skips active employee assignment scope lookup when the batch is empty", async () => {
+    const { query, repository } = createRepository();
+
+    await expect(repository.getActiveEmployeeAssignmentScopes([])).resolves.toEqual([]);
+
+    expect(query).not.toHaveBeenCalled();
+  });
 });
 
 describe("ReportingRepository benchmark queries", () => {

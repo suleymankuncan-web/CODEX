@@ -50,6 +50,7 @@ export type PersonnelRankingRow = {
   storeRank: number | null;
   storePopulation: number;
   scoreValue: number;
+  canOpenProfile: boolean;
   visibility: RankingVisibility;
   metrics?: RankingMetricValue[];
 };

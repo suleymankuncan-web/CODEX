@@ -12,6 +12,7 @@ import {
 } from "./kpi-config.contract";
 import {
   RankingMetricValue,
+  PersonnelRankingRow,
   RankingPeriodType,
   RankingReferenceGroup,
   RankingResponse,
@@ -69,6 +70,10 @@ type RawPersonnelRankingKpiRow = {
   actual_value: string | null;
   target_value: string | null;
 };
+
+type ActivePersonnelAssignmentScope = Awaited<
+  ReturnType<ReportingRepository["getActiveEmployeeAssignmentScope"]>
+>;
 
 const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
 
@@ -237,12 +242,7 @@ export class RankingService {
       effectiveSortDirection,
       (row) => row.employeeId,
     );
-    const storeItems = selectGlobalRows(sortedStoreRows, access).map((row) =>
-      maskStoreRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
-    );
-    const personnelItems = selectGlobalRows(sortedPersonnelRows, access).map((row) =>
-      maskPersonnelRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
-    );
+    const selectedPersonnelRows = selectGlobalRows(sortedPersonnelRows, access);
     const currentEmployee =
       employeeId !== null
         ? personnelRows.find((row) => row.employeeId === employeeId) ?? null
@@ -253,11 +253,41 @@ export class RankingService {
         ? storeRows.find((row) => row.storeId === currentStoreId) ?? null
         : null;
     const managedStoreIds = uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
+    const managedStorePersonnelRows =
+      access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
+        ? personnelRows.filter(
+            (row) => row.storeId !== null && managedStoreIds.includes(row.storeId),
+          )
+        : [];
+    const personnelProfileAccess = await this.resolvePersonnelProfileAccess({
+      rows: [
+        ...selectedPersonnelRows,
+        ...(currentEmployee ? [currentEmployee] : []),
+        ...managedStorePersonnelRows,
+      ],
+      currentEmployeeId: employeeId,
+      roleCodes: input.roleCodes,
+      companyIds: input.companyIds,
+      regionIds: input.regionIds,
+      storeIds: input.storeIds,
+      assignedStoreIds: input.assignedStoreIds,
+    });
+    const withProfileAccess = (
+      row: PersonnelRankingRow & { metrics?: RankingMetricValue[] },
+    ) => ({
+      ...row,
+      canOpenProfile: personnelProfileAccess.get(row.employeeId) ?? false,
+    });
+
+    const storeItems = selectGlobalRows(sortedStoreRows, access).map((row) =>
+      maskStoreRow(row, access.canSeeGlobalDetails ? "detail" : "summary"),
+    );
+    const personnelItems = selectedPersonnelRows.map((row) =>
+      maskPersonnelRow(withProfileAccess(row), access.canSeeGlobalDetails ? "detail" : "summary"),
+    );
     const managedStorePersonnel =
       access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
-        ? personnelRows
-            .filter((row) => row.storeId !== null && managedStoreIds.includes(row.storeId))
-            .map((row) => maskPersonnelRow(row, "detail"))
+        ? managedStorePersonnelRows.map((row) => maskPersonnelRow(withProfileAccess(row), "detail"))
         : [];
 
     return {
@@ -289,7 +319,7 @@ export class RankingService {
         items: personnelItems,
         currentEmployee: currentEmployee
           ? maskPersonnelRow(
-              currentEmployee,
+              withProfileAccess(currentEmployee),
               access.canSeeGlobalDetails ? "detail" : "summary",
             )
           : null,
@@ -318,6 +348,102 @@ export class RankingService {
         ? normalizeKpiScoreProfile(personnelProfile)
         : normalizeKpiScoreProfile(personnelKpiScoreProfile),
     };
+  }
+
+  private async resolvePersonnelProfileAccess(input: {
+    rows: Array<PersonnelRankingRow & { metrics?: RankingMetricValue[] }>;
+    currentEmployeeId: string | null;
+    roleCodes: string[];
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    assignedStoreIds: string[];
+  }) {
+    const employeeIds = uniqueIds(input.rows.map((row) => row.employeeId));
+    const result = new Map<string, boolean>();
+    const managerStoreIds = input.assignedStoreIds.length > 0
+      ? input.assignedStoreIds
+      : input.storeIds;
+    const scopedEmployeeIds = employeeIds.filter((employeeId) => {
+      if (input.currentEmployeeId && input.currentEmployeeId === employeeId) {
+        result.set(employeeId, true);
+        return false;
+      }
+
+      return true;
+    });
+    const assignments =
+      await this.reportingRepository.getActiveEmployeeAssignmentScopes(scopedEmployeeIds);
+    const assignmentByEmployeeId = new Map(
+      assignments.map((assignment) => [assignment.employee_id, assignment]),
+    );
+
+    for (const employeeId of scopedEmployeeIds) {
+      result.set(
+        employeeId,
+        this.canReadPersonnelProfileFromActiveAssignment({
+          roleCodes: input.roleCodes,
+          companyIds: input.companyIds,
+          regionIds: input.regionIds,
+          storeIds: managerStoreIds,
+          assignment: assignmentByEmployeeId.get(employeeId) ?? null,
+        }),
+      );
+    }
+
+    return result;
+  }
+
+  private canReadPersonnelProfileFromActiveAssignment(input: {
+    roleCodes: string[];
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    assignment: ActivePersonnelAssignmentScope;
+  }) {
+    if (!input.assignment) {
+      return false;
+    }
+
+    if (input.roleCodes.includes("SUPER_ADMIN")) {
+      return (
+        !this.hasPersonnelReadScope(input) ||
+        (input.assignment.company_id !== null &&
+          input.companyIds.includes(input.assignment.company_id)) ||
+        (input.assignment.region_id !== null &&
+          input.regionIds.includes(input.assignment.region_id)) ||
+        (input.assignment.store_id !== null &&
+          input.storeIds.includes(input.assignment.store_id))
+      );
+    }
+
+    if (input.roleCodes.includes("REGION_MANAGER")) {
+      return (
+        input.assignment.region_id !== null &&
+        input.regionIds.includes(input.assignment.region_id)
+      );
+    }
+
+    if (input.roleCodes.includes("STORE_MANAGER")) {
+      return (
+        input.assignment.store_id !== null &&
+        input.storeIds.includes(input.assignment.store_id)
+      );
+    }
+
+    return false;
+  }
+
+  private hasPersonnelReadScope(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }) {
+    return (
+      input.companyIds.length > 0 ||
+      input.regionIds.length > 0 ||
+      input.storeIds.length > 0
+    );
   }
 
   private isScoreProfile(
@@ -529,6 +655,7 @@ export class RankingService {
           regionManagerUserId: value.regionManagerUserId,
           regionManagerName: value.regionManagerName,
           scoreValue: scoring.scoreValue,
+          canOpenProfile: false,
           metrics: scoring.metrics,
         };
       })
