@@ -169,7 +169,6 @@ function useStoreChecklistsPageContent(input: {
     onSuccess: (_result, variables) => {
       savedResponseDraftsRef.current[getChecklistResponseDraftKey(variables)] =
         serializeChecklistResponseDraft(variables)
-      void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       dispatchPageState({ type: 'saveResponseSucceeded' })
     },
   })

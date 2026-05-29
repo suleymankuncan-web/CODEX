@@ -322,13 +322,14 @@ function ChecklistVisitModal(input: {
                     onScoreChange={input.onScoreChange}
                   />
 
-                  <label className="store-checklist-session-note-field">
-                    <span>
+                  <div className="store-checklist-session-note-field">
+                    <label htmlFor={`checklist-session-note-${activeEntry.item.templateItemId}`}>
                       {input.t('storeChecklists.noteInput')}{' '}
                       <small>{getStaticCopy(input.locale, '(opsiyonel)', '(optional)')}</small>
-                    </span>
+                    </label>
                     <Textarea
                       disabled={!input.active}
+                      id={`checklist-session-note-${activeEntry.item.templateItemId}`}
                       maxLength={500}
                       rows={3}
                       value={input.comments[activeEntry.item.templateItemId] ?? ''}
@@ -336,7 +337,7 @@ function ChecklistVisitModal(input: {
                         input.onCommentChange(activeEntry.item.templateItemId, event.target.value)
                       }
                     />
-                  </label>
+                  </div>
 
                   <ChecklistSessionPhotoPanel active={Boolean(input.active)} locale={input.locale} t={input.t} />
 

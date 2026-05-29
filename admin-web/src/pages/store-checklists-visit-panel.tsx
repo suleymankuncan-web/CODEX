@@ -24,7 +24,6 @@ import {
   getCoverageRowKeyFromRow,
   getStaticCopy,
   getStoreVisitDate,
-  getStoreVisitRiskLabel,
   getStoreVisitRiskTone,
   getStoreVisitRowKey,
 } from './store-checklists-logic'
@@ -265,13 +264,6 @@ function StoreChecklistsVisitTable(input: {
         >
           {getStaticCopy(input.locale, 'Son ziyaret', 'Last visit')}
         </SortButton>
-        <SortButton
-          active={input.visitSort.key === 'priority'}
-          direction={input.visitSort.direction}
-          onClick={() => input.onToggleVisitSort('priority')}
-        >
-          {getStaticCopy(input.locale, 'Durum', 'Status')}
-        </SortButton>
         <span>{getStaticCopy(input.locale, 'Aksiyon', 'Action')}</span>
       </div>
 
@@ -355,12 +347,6 @@ function StoreChecklistsVisitRow(input: {
     (Boolean(active) || input.assignedStoreIds.includes(input.storeRow.store.storeId))
   const rowKey = getCoverageRowKeyFromRow(row)
   const riskTone = getStoreVisitRiskTone(input.storeRow, input.requiresCombinedVisitTemplates)
-  const riskLabel = getStoreVisitRiskLabel(
-    input.t,
-    input.locale,
-    input.storeRow,
-    input.requiresCombinedVisitTemplates,
-  )
   const actionIsPrimary = Boolean(active) || riskTone === 'danger'
   const visitDate = getStoreVisitDate(input.storeRow)
   const isStartingRow =
@@ -395,7 +381,6 @@ function StoreChecklistsVisitRow(input: {
         />
       ) : null}
       <ChecklistVisitDateCell date={visitDate} locale={input.locale} />
-      <ChecklistBadge tone={riskTone}>{riskLabel}</ChecklistBadge>
       <Button
         className={`store-checklists-action-button${
           actionIsPrimary ? ' store-checklists-action-button-primary' : ' store-checklists-action-button-muted'

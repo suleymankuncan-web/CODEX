@@ -23,7 +23,7 @@
 
 .store-me-plum-page header h1 {
   color: var(--store-me-ink);
-  font-weight: 800;
+  font-weight: 650;
   letter-spacing: 0;
 }
 
@@ -116,14 +116,14 @@
   margin: 0;
   color: var(--store-me-ink);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 640;
   letter-spacing: 0;
 }
 
 .store-me-kpi-body strong {
   color: var(--store-me-ink);
   font-size: clamp(30px, 2.55vw, 34px);
-  font-weight: 800;
+  font-weight: 680;
   letter-spacing: 0;
   line-height: 1;
 }
@@ -148,7 +148,7 @@
   padding: 3px 8px;
   color: var(--store-me-purple);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 620;
 }
 
 .store-me-kpi-status {
@@ -158,7 +158,7 @@
   padding: 3px 8px;
   color: var(--store-me-green);
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 620;
 }
 
 .store-me-kpi-progress {
@@ -186,7 +186,7 @@
 .store-me-kpi-progress strong {
   color: var(--store-me-ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .store-me-rank-strip,
@@ -207,7 +207,7 @@
 .store-me-strip-title span {
   color: #5c5674;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 620;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -236,7 +236,7 @@
 .store-me-score-meta small {
   color: #7c7690;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 620;
   letter-spacing: 0.02em;
   line-height: 1.1;
 }
@@ -248,7 +248,7 @@
   overflow: hidden;
   color: var(--store-me-ink);
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 650;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -290,7 +290,7 @@
   margin: 0;
   color: var(--store-me-ink);
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 650;
   letter-spacing: 0;
 }
 
@@ -328,14 +328,14 @@
 .store-me-line-chart text {
   fill: var(--store-me-muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 520;
   text-anchor: middle;
 }
 
 .store-me-line-chart .checkpoint-value {
   fill: var(--store-me-ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 620;
 }
 
 .store-me-summary-strip {
@@ -375,7 +375,7 @@
   display: block;
   color: var(--store-me-ink);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .store-me-bottom-grid {
@@ -409,7 +409,7 @@
 .store-me-donut strong {
   color: var(--store-me-ink);
   font-size: 28px;
-  font-weight: 800;
+  font-weight: 680;
 }
 
 .store-me-donut small {
@@ -448,7 +448,7 @@
 .store-me-contribution-row span {
   color: var(--store-me-ink);
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 650;
 }
 
 .store-me-contribution-track {
