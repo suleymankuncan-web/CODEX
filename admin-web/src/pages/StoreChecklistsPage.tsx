@@ -93,21 +93,6 @@ function mergeSavedResponseIntoMobileToday(
   }
 }
 
-function findActiveChecklistInstance(input: {
-  checklistInstanceId: string
-  localActiveInstances: Record<string, MobileChecklistToday['activeInstances'][number]>
-  mobileToday: MobileChecklistToday | undefined
-}) {
-  return (
-    Object.values(input.localActiveInstances).find(
-      (instance) => instance.checklistInstanceId === input.checklistInstanceId,
-    ) ??
-    input.mobileToday?.activeInstances.find(
-      (instance) => instance.checklistInstanceId === input.checklistInstanceId,
-    )
-  )
-}
-
 function useStoreChecklistsPageContent(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -215,14 +200,6 @@ function useStoreChecklistsPageContent(input: {
     },
     onSuccess: (result, variables) => {
       const updatedAt = result.data.checklistResponse.responded_at
-      const activeInstance = findActiveChecklistInstance({
-        checklistInstanceId: variables.checklistInstanceId,
-        localActiveInstances,
-        mobileToday,
-      })
-      const rowKey = activeInstance
-        ? getCoverageRowKey(activeInstance.storeId, activeInstance.checklistTemplateId)
-        : undefined
       savedResponseDraftsRef.current[getChecklistResponseDraftKey(variables)] =
         serializeChecklistResponseDraft(variables)
       queryClient.setQueryData<MobileChecklistTodayResponse>(
@@ -233,7 +210,6 @@ function useStoreChecklistsPageContent(input: {
         type: 'saveResponseSucceeded',
         draft: variables,
         updatedAt,
-        ...(activeInstance && rowKey ? { activeInstance, rowKey } : {}),
       })
     },
   })

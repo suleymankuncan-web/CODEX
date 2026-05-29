@@ -74,8 +74,6 @@ export type StoreChecklistsAction =
       type: 'saveResponseSucceeded'
       draft: ChecklistResponseDraft
       updatedAt: string | null
-      activeInstance?: ChecklistActiveInstance
-      rowKey?: string
     }
   | { type: 'completeVisitSucceeded'; checklistInstanceId: string; rowKey: string }
   | {
@@ -198,15 +196,6 @@ export function storeChecklistsReducer(
       for (const [key, instance] of Object.entries(state.localActiveInstances)) {
         if (instance.checklistInstanceId !== action.draft.checklistInstanceId) continue
         localActiveInstances[key] = upsertChecklistActiveResponse(instance, action.draft, action.updatedAt)
-        updatedLocalInstance = true
-      }
-
-      if (!updatedLocalInstance && action.activeInstance && action.rowKey) {
-        localActiveInstances[action.rowKey] = upsertChecklistActiveResponse(
-          action.activeInstance,
-          action.draft,
-          action.updatedAt,
-        )
         updatedLocalInstance = true
       }
 
