@@ -14,8 +14,8 @@ import { useLocalization } from '../features/localization/useLocalization'
 import {
   approveTargetDistributionRequest,
   createTargetDistributionRequest,
+  getAllTargetDistributionRequests,
   getStoreTargetingPersonnel,
-  getTargetDistributionRequests,
   type TargetDistributionAllocation,
   type TargetDistributionRequest,
 } from '../features/targets/api'
@@ -117,7 +117,7 @@ function useStoreApprovalsPageContent(input: {
   ].join(':')
   const requestsQuery = useQuery({
     queryKey: ['target-distribution-requests', 'store-approvals-ledger', scopeKey],
-    queryFn: () => getTargetDistributionRequests(),
+    queryFn: () => getAllTargetDistributionRequests(),
     enabled: canListRequests && persona !== 'readOnly',
   })
   const personnelQuery = useQuery({

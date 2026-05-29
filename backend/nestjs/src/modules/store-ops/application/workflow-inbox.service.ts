@@ -48,7 +48,7 @@ export class WorkflowInboxService {
 
     if (canSeeApprovals) {
       try {
-        const approvals = await this.targetDistributionRepository.listRequests({
+        const approvalsPage = await this.targetDistributionRepository.listRequests({
           companyIds: input.actorScope.companyIds,
           regionIds: input.actorScope.regionIds,
           storeIds:
@@ -57,7 +57,7 @@ export class WorkflowInboxService {
               : input.actorScope.storeIds,
           statuses: ["pending_region_approval"],
         });
-        items.push(...approvals.map((item) => toTargetApprovalInboxItem(item)));
+        items.push(...approvalsPage.items.map((item) => toTargetApprovalInboxItem(item)));
       } catch (error) {
         this.logger.warn(
           `Shared inbox skipped approval items: ${this.safeErrorMessage(error)}`,

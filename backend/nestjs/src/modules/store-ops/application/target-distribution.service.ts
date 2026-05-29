@@ -73,19 +73,27 @@ export class TargetDistributionService {
     };
     actorRoleCodes: string[];
     statuses?: string[];
+    requestMonth?: string;
+    storeId?: string;
+    limit?: number;
+    offset?: number;
   }) {
     const listScope = this.resolveTargetReadScope(input);
-    const items = await this.targetDistributionRepository.listRequests({
+    const page = await this.targetDistributionRepository.listRequests({
       companyIds: listScope.companyIds,
       regionIds: listScope.regionIds,
       storeIds: listScope.storeIds,
       statuses: input.statuses,
+      requestMonth: input.requestMonth,
+      storeId: input.storeId,
+      limit: input.limit,
+      offset: input.offset,
     });
 
-    return buildListResponse(items, {
-      total: items.length,
-      limit: 50,
-      offset: 0,
+    return buildListResponse(page.items, {
+      total: page.total,
+      limit: page.limit,
+      offset: page.offset,
     });
   }
 

@@ -48,6 +48,7 @@ export function StoreShell(input: {
     storePersona !== 'personnel' &&
     canOpenStoreChecklists(input.authSummary)
   const storeTasksAllowed = storePersona !== 'personnel'
+  const storeTargetsAllowed = canListTargetDistributionRequests(input.authSummary)
   const location = useLocation()
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
@@ -191,9 +192,14 @@ export function StoreShell(input: {
               path="/store/settings"
               element={storeRoute(<StoreSettingsPage />, { allowVm: true })}
             />
-            <Route
-              path="/store/targets"
-              element={storeRoute(<StoreTargetsPage />)}
+            <Route path="/store/targets"
+              element={storeRoute(
+                <StoreTargetsPage authSummary={input.authSummary} />,
+                {
+                  allowed: storeTargetsAllowed,
+                  firstAllowedPath: input.firstAllowedPath,
+                },
+              )}
             />
             <Route
               path="/store/reports"

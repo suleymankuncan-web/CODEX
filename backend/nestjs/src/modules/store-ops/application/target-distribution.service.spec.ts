@@ -3,7 +3,12 @@ import { TargetDistributionService } from "./target-distribution.service";
 describe("TargetDistributionService", () => {
   it("keeps store manager request lists limited to assigned stores even when company scope is present", async () => {
     const targetDistributionRepository = {
-      listRequests: jest.fn(async () => []),
+      listRequests: jest.fn(async () => ({
+        items: [],
+        total: 0,
+        limit: 50,
+        offset: 0,
+      })),
     };
     const service = new TargetDistributionService(
       targetDistributionRepository as never,
@@ -21,6 +26,10 @@ describe("TargetDistributionService", () => {
       },
       actorRoleCodes: ["STORE_MANAGER"],
       statuses: ["pending_region_approval"],
+      requestMonth: "2026-03-01",
+      storeId: "00000000-0000-4000-8000-000000000201",
+      limit: 200,
+      offset: 0,
     });
 
     expect(targetDistributionRepository.listRequests).toHaveBeenCalledWith({
@@ -28,6 +37,10 @@ describe("TargetDistributionService", () => {
       regionIds: [],
       storeIds: ["00000000-0000-4000-8000-000000000201"],
       statuses: ["pending_region_approval"],
+      requestMonth: "2026-03-01",
+      storeId: "00000000-0000-4000-8000-000000000201",
+      limit: 200,
+      offset: 0,
     });
   });
 

@@ -8,8 +8,8 @@ import {
   hasAnyRole,
 } from '../auth/authorization'
 import {
+  getAllTargetDistributionRequests,
   getStoreTargetingPersonnel,
-  getTargetDistributionRequests,
 } from '../targets/api'
 import {
   getOffboardingRequests,
@@ -50,7 +50,7 @@ export function getStoreApprovalsPrefetchTasks(
   return [
     {
       queryKey: ['target-distribution-requests', 'store-approvals-ledger', scopeKey],
-      queryFn: () => getTargetDistributionRequests(),
+      queryFn: () => getAllTargetDistributionRequests(),
       enabled: canListRequests && persona !== 'readOnly',
     },
     {

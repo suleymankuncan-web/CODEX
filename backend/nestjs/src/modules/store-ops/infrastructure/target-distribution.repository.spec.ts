@@ -41,6 +41,93 @@ describe("TargetDistributionRepository", () => {
     );
   });
 
+  it("applies request month, store, and pagination filters before listing target requests", async () => {
+    const query = jest.fn().mockResolvedValue({
+      rows: [
+        {
+          target_distribution_request_id: "00000000-0000-0000-0000-000000000701",
+          company_id: "00000000-0000-0000-0000-000000000001",
+          region_id: "00000000-0000-0000-0000-000000000010",
+          store_id: "00000000-0000-0000-0000-000000000100",
+          store_name: "Marmara Park",
+          request_month: "2026-05-01",
+          target_label: "Mayis hedefi",
+          total_target_value: "100000",
+          allocation_count: 1,
+          request_status: "approved",
+          request_reason: null,
+          allocation_json: [],
+          submitted_by_user_id: "store-manager-user",
+          approved_by_user_id: "region-manager-user",
+          approved_at: "2026-05-02T09:00:00.000Z",
+          approval_note: null,
+          created_at: "2026-05-01T09:00:00.000Z",
+          updated_at: "2026-05-02T09:00:00.000Z",
+          total_count: "123",
+        },
+      ],
+    });
+    const repository = new TargetDistributionRepository({ query } as never);
+
+    const result = await repository.listRequests({
+      companyIds: [],
+      regionIds: ["00000000-0000-0000-0000-000000000010"],
+      storeIds: [],
+      statuses: ["approved"],
+      requestMonth: "2026-05-01",
+      storeId: "00000000-0000-0000-0000-000000000100",
+      limit: 200,
+      offset: 400,
+    });
+
+    const countSql = String(query.mock.calls[0][0]);
+    const sql = String(query.mock.calls[1][0]);
+    expect(countSql).toContain("SELECT COUNT(*)::text AS total_count");
+    expect(sql).toContain("tdr.region_id = ANY($1::uuid[])");
+    expect(sql).toContain("tdr.request_status = ANY($2::text[])");
+    expect(sql).toContain("tdr.request_month = $3::date");
+    expect(sql).toContain("tdr.store_id = $4::uuid");
+    expect(query).toHaveBeenNthCalledWith(1, expect.any(String), [
+      ["00000000-0000-0000-0000-000000000010"],
+      ["approved"],
+      "2026-05-01",
+      "00000000-0000-0000-0000-000000000100",
+    ]);
+    expect(query).toHaveBeenNthCalledWith(2, expect.any(String), [
+      ["00000000-0000-0000-0000-000000000010"],
+      ["approved"],
+      "2026-05-01",
+      "00000000-0000-0000-0000-000000000100",
+      200,
+      400,
+    ]);
+    expect(result.total).toBe(123);
+    expect(result.limit).toBe(200);
+    expect(result.offset).toBe(400);
+  });
+
+  it("preserves the filtered total when a target request page is empty", async () => {
+    const query = jest
+      .fn()
+      .mockResolvedValueOnce({ rows: [{ total_count: "7" }] })
+      .mockResolvedValueOnce({ rows: [] });
+    const repository = new TargetDistributionRepository({ query } as never);
+
+    const result = await repository.listRequests({
+      companyIds: ["00000000-0000-0000-0000-000000000001"],
+      regionIds: [],
+      storeIds: [],
+      requestMonth: "2026-05-01",
+      limit: 50,
+      offset: 100,
+    });
+
+    expect(result.items).toEqual([]);
+    expect(result.total).toBe(7);
+    expect(result.limit).toBe(50);
+    expect(result.offset).toBe(100);
+  });
+
   it("lists target coverage from active personnel and approved target references", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const repository = new TargetDistributionRepository({ query } as never);

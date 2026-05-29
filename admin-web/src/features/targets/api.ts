@@ -35,14 +35,73 @@ export async function getTargetCoverage(input: { requestMonth: string; storeId?:
   return fetchOpenApiJson('/api/target-distributions/coverage', { query: params })
 }
 
-export async function getTargetDistributionRequests(input?: { status?: string }) {
+export async function getTargetDistributionRequests(input?: {
+  limit?: number
+  offset?: number
+  requestMonth?: string
+  status?: string
+  storeId?: string
+}) {
   const params = new URLSearchParams()
 
   if (input?.status) {
     params.set('status', input.status)
   }
 
+  if (input?.requestMonth) {
+    params.set('requestMonth', input.requestMonth)
+  }
+
+  if (input?.storeId) {
+    params.set('storeId', input.storeId)
+  }
+
+  if (input?.limit !== undefined) {
+    params.set('limit', String(input.limit))
+  }
+
+  if (input?.offset !== undefined) {
+    params.set('offset', String(input.offset))
+  }
+
   return fetchOpenApiJson('/api/target-distributions/requests', { query: params })
+}
+
+export async function getAllTargetDistributionRequests(input?: {
+  requestMonth?: string
+  status?: string
+  storeId?: string
+}) {
+  const limit = 200
+  let offset = 0
+  const items: TargetDistributionRequests['items'] = []
+  let total = 0
+
+  do {
+    const page = await getTargetDistributionRequests({
+      ...input,
+      limit,
+      offset,
+    })
+
+    items.push(...page.items)
+    total = page.meta.total
+    offset += page.meta.count
+
+    if (page.meta.count === 0) {
+      break
+    }
+  } while (offset < total)
+
+  return {
+    items,
+    meta: {
+      count: items.length,
+      total,
+      limit,
+      offset: 0,
+    },
+  }
 }
 
 export async function createTargetDistributionRequest(input: {
