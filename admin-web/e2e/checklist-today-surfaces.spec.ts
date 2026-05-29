@@ -139,6 +139,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
     monthlySummaries: [],
     requests,
     roleState,
+    showStartedInstanceOnRefetch: true,
   })
   await page.goto('/store/checklists')
 
@@ -160,6 +161,12 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
       },
     },
   )
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
+  await expect(page.getByRole('dialog').getByRole('textbox', { name: /Note/ })).toHaveValue('Handoff-ready visit')
 
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Complete', exact: true }).click()
@@ -560,6 +567,7 @@ type ChecklistFixtureOptions = {
   handoffState?: ChecklistHandoffState
   handoffTemplateName?: string
   handoffTemplateType?: string
+  showStartedInstanceOnRefetch?: boolean
 }
 
 type ChecklistActiveInstanceFixture = {
@@ -702,12 +710,33 @@ async function setMockSessionRoles(page: Page, roleCodes: string[]) {
 }
 
 async function routeChecklistApi(page: Page, roleCodes: string[], options: ChecklistFixtureOptions) {
+  let startedInstanceVisible = false
+
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: createAuthSessionFixture(options.roleState?.current ?? roleCodes) })
   })
 
   await page.route('**/api/mobile/checklists/today', async (route) => {
-    await route.fulfill({ json: createMobileChecklistTodayFixture(options) })
+    await route.fulfill({
+      json: createMobileChecklistTodayFixture(
+        options.showStartedInstanceOnRefetch && startedInstanceVisible
+          ? {
+              ...options,
+              activeInstances: [
+                {
+                  checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+                  checklistTemplateId: templateId,
+                  storeId,
+                  status: 'in_progress',
+                  startedAt: '2026-05-20T10:00:00.000Z',
+                  updatedAt: '2026-05-20T10:00:00.000Z',
+                  responses: [],
+                },
+              ],
+            }
+          : options,
+      ),
+    })
   })
 
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
@@ -732,6 +761,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
 
   await page.route('**/api/mobile/checklists/instances', async (route) => {
     options.requests?.starts.push(await route.request().postDataJSON())
+    startedInstanceVisible = true
     await route.fulfill({
       status: 201,
       json: {

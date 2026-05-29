@@ -141,6 +141,26 @@ export function upsertChecklistActiveResponse(
   }
 }
 
+export function mergeChecklistActiveInstanceOverlay(
+  queryActive: ChecklistActiveInstance | undefined,
+  localActive: ChecklistActiveInstance | undefined,
+): ChecklistActiveInstance | undefined {
+  if (!localActive) return queryActive
+  if (!queryActive) return localActive
+  if (queryActive.checklistInstanceId !== localActive.checklistInstanceId) return queryActive
+
+  const responsesByItem = new Map(queryActive.responses.map((response) => [response.templateItemId, response]))
+  for (const response of localActive.responses) {
+    responsesByItem.set(response.templateItemId, response)
+  }
+
+  return {
+    ...queryActive,
+    updatedAt: localActive.updatedAt ?? queryActive.updatedAt,
+    responses: [...responsesByItem.values()],
+  }
+}
+
 export function storeChecklistsReducer(
   state: StoreChecklistsState,
   action: StoreChecklistsAction,

@@ -32,6 +32,7 @@ import {
   type ChecklistResponseDraft,
   type ChecklistTab,
   type ChecklistTabOption,
+  mergeChecklistActiveInstanceOverlay,
   upsertChecklistActiveResponse,
 } from './store-checklists-model'
 import {
@@ -320,11 +321,12 @@ function useStoreChecklistsPageContent(input: {
   const coverageRows: ChecklistCoverageRow[] = (mobileToday?.stores ?? []).flatMap((store) =>
     (mobileToday?.templates ?? []).map((template) => {
       const rowKey = getCoverageRowKey(store.storeId, template.checklistTemplateId)
-      const active = mobileToday?.activeInstances.find(
+      const queryActive = mobileToday?.activeInstances.find(
         (item) =>
           item.storeId === store.storeId &&
           item.checklistTemplateId === template.checklistTemplateId,
-      ) ?? localActiveInstances[rowKey]
+      )
+      const active = mergeChecklistActiveInstanceOverlay(queryActive, localActiveInstances[rowKey])
       const matchingSummaries = (mobileToday?.monthlySummaries ?? []).filter(
         (item) =>
           item.storeId === store.storeId &&
