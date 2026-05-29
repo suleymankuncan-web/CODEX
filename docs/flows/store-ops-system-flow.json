@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-29T13:57:28.456Z",
+  "generatedAt": "2026-05-29T22:58:01.301Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,8 +12,8 @@
     "frontendRouteCount": 53,
     "matchedFrontendApiCallCount": 139,
     "openApiEndpointCount": 173,
-    "routeApiEdgeCount": 211,
-    "routesWithoutApiCallCount": 4,
+    "routeApiEdgeCount": 212,
+    "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0
   },
   "frontendRoutes": [
@@ -59,7 +59,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 202
+        "line": 208
       }
     },
     {
@@ -687,7 +687,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 115
+        "line": 116
       }
     },
     {
@@ -704,7 +704,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 176
+        "line": 177
       }
     },
     {
@@ -722,7 +722,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 131
+        "line": 132
       }
     },
     {
@@ -739,7 +739,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 172
+        "line": 173
       }
     },
     {
@@ -757,7 +757,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 168
+        "line": 169
       }
     },
     {
@@ -772,7 +772,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 123
+        "line": 124
       }
     },
     {
@@ -789,7 +789,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 186
+        "line": 187
       }
     },
     {
@@ -806,7 +806,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 152
+        "line": 153
       }
     },
     {
@@ -823,7 +823,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 156
+        "line": 157
       }
     },
     {
@@ -840,7 +840,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 160
+        "line": 161
       }
     },
     {
@@ -857,7 +857,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 164
+        "line": 165
       }
     },
     {
@@ -874,7 +874,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 198
+        "line": 204
       }
     },
     {
@@ -892,7 +892,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 190
+        "line": 191
       }
     },
     {
@@ -909,7 +909,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 194
+        "line": 195
       }
     },
     {
@@ -926,7 +926,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 142
+        "line": 143
       }
     }
   ],
@@ -2773,7 +2773,7 @@
       "exportedFunction": "getTargetDistributionRequests",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 45
+        "line": 67
       }
     },
     {
@@ -2788,7 +2788,7 @@
       "exportedFunction": "createTargetDistributionRequest",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 56
+        "line": 115
       }
     },
     {
@@ -2803,7 +2803,7 @@
       "exportedFunction": "approveTargetDistributionRequest",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 69
+        "line": 128
       }
     },
     {
@@ -5171,7 +5171,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 67
+        "line": 71
       }
     },
     {
@@ -5199,7 +5199,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 95
+        "line": 99
       }
     },
     {
@@ -5213,7 +5213,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 123
+        "line": 127
       }
     },
     {
@@ -7239,11 +7239,6 @@
         "apiCallId": "api:122"
       },
       {
-        "id": "edge:route:admin:/admin/targets:api:123",
-        "routeId": "route:admin:/admin/targets",
-        "apiCallId": "api:123"
-      },
-      {
         "id": "edge:route:admin:/admin/targets:api:125",
         "routeId": "route:admin:/admin/targets",
         "apiCallId": "api:125"
@@ -7282,11 +7277,6 @@
         "id": "edge:route:store:/store/approvals:api:121",
         "routeId": "route:store:/store/approvals",
         "apiCallId": "api:121"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:123",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:123"
       },
       {
         "id": "edge:route:store:/store/approvals:api:124",
@@ -7469,6 +7459,26 @@
         "apiCallId": "api:103"
       },
       {
+        "id": "edge:route:store:/store/targets:api:121",
+        "routeId": "route:store:/store/targets",
+        "apiCallId": "api:121"
+      },
+      {
+        "id": "edge:route:store:/store/targets:api:122",
+        "routeId": "route:store:/store/targets",
+        "apiCallId": "api:122"
+      },
+      {
+        "id": "edge:route:store:/store/targets:api:124",
+        "routeId": "route:store:/store/targets",
+        "apiCallId": "api:124"
+      },
+      {
+        "id": "edge:route:store:/store/targets:api:125",
+        "routeId": "route:store:/store/targets",
+        "apiCallId": "api:125"
+      },
+      {
         "id": "edge:route:store:/store/tasks:api:115",
         "routeId": "route:store:/store/tasks",
         "apiCallId": "api:115"
@@ -7502,11 +7512,6 @@
         "id": "edge:route:store:/store/tasks:api:121",
         "routeId": "route:store:/store/tasks",
         "apiCallId": "api:121"
-      },
-      {
-        "id": "edge:route:store:/store/tasks:api:123",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:123"
       },
       {
         "id": "edge:route:store:/store/tasks:api:126",
@@ -8583,8 +8588,7 @@
     "routesWithoutApiCalls": [
       "route:store:/store/incentives",
       "route:store:/store/reports",
-      "route:store:/store/settings",
-      "route:store:/store/targets"
+      "route:store:/store/settings"
     ],
     "unmatchedApiCalls": []
   }

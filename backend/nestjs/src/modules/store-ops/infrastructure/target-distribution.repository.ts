@@ -21,6 +21,7 @@ type TargetDistributionRow = {
   approval_note: string | null;
   created_at: string;
   updated_at: string;
+  total_count?: string | number;
 };
 
 type TargetDistributionAllocation = {
@@ -259,6 +260,8 @@ export class TargetDistributionRepository {
     regionIds: string[];
     storeIds: string[];
     statuses?: string[];
+    requestMonth?: string;
+    storeId?: string;
     limit?: number;
     offset?: number;
   }) {
@@ -283,9 +286,30 @@ export class TargetDistributionRepository {
       clauses.push(`tdr.request_status = ANY($${params.length}::text[])`);
     }
 
+    if (input.requestMonth) {
+      params.push(input.requestMonth);
+      clauses.push(`tdr.request_month = $${params.length}::date`);
+    }
+
+    if (input.storeId) {
+      params.push(input.storeId);
+      clauses.push(`tdr.store_id = $${params.length}::uuid`);
+    }
+
     const whereClause = `WHERE ${clauses.join(" AND ")}`;
     const limit = input.limit ?? 50;
     const offset = input.offset ?? 0;
+    const countResult = await this.databaseService.query<{ total_count: string }>(
+      `
+        SELECT COUNT(*)::text AS total_count
+        FROM ops.target_distribution_request tdr
+        INNER JOIN ops.store s
+          ON s.store_id = tdr.store_id
+        ${whereClause}
+      `,
+      [...params],
+    );
+
     params.push(limit);
     params.push(offset);
 
@@ -321,7 +345,12 @@ export class TargetDistributionRepository {
       params,
     );
 
-    return result.rows.map((row) => this.mapRequest(row));
+    return {
+      items: result.rows.map((row) => this.mapRequest(row)),
+      total: Number(countResult.rows[0]?.total_count ?? 0),
+      limit,
+      offset,
+    };
   }
 
   async listTargetCoverage(input: {

@@ -61,6 +61,10 @@ export class TargetDistributionController {
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
       statuses: query.status ? [query.status] : undefined,
+      requestMonth: query.requestMonth,
+      storeId: query.storeId,
+      limit: query.limit,
+      offset: query.offset,
     });
   }
 

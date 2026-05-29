@@ -1,8 +1,10 @@
 import type { QueryClient, QueryKey } from '@tanstack/react-query'
 import { getAuthLookups, type AuthSessionSummary } from '../features/auth/api'
 import {
+  canCreateTargetDistributionRequest,
   canListTargetDistributionRequests,
   canReadChecklistResults,
+  getAssignedStoreIds,
   hasAnyRole,
 } from '../features/auth/authorization'
 import {
@@ -28,8 +30,9 @@ import { getOperationsHealth } from '../features/operations/api'
 import { getSnapshotNeedsAction, getSnapshotOverview } from '../features/snapshots/api'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import {
+  getAllTargetDistributionRequests,
+  getStoreTargetingPersonnel,
   getTargetCoverage,
-  getTargetDistributionRequests,
 } from '../features/targets/api'
 import {
   getOffboardingRequests,
@@ -129,6 +132,10 @@ function resolveRoutePrefetchTasks(
     }
 
     return getStoreApprovalsPrefetchTasks(authSummary)
+  }
+
+  if (pathname === '/store/targets') {
+    return getStoreTargetsPrefetchTasks(authSummary)
   }
 
   if (pathname === '/admin/integrations') {
@@ -280,6 +287,39 @@ function getStoreChecklistsPrefetchTasks(authSummary: AuthSessionSummary | null)
       queryKey: ['mobile-checklists-today'],
       queryFn: getMobileChecklistToday,
       enabled: canManageChecklistVisits,
+    },
+  ]
+}
+
+function getStoreTargetsPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const enabled = canListTargetDistributionRequests(authSummary)
+  const currentRequestMonth = getCurrentRequestMonth()
+  const assignedStoreId = getAssignedStoreIds(authSummary)[0] ?? ''
+
+  return [
+    {
+      queryKey: [
+        'target-distribution-requests',
+        'store-targets',
+        currentRequestMonth,
+        assignedStoreId || 'all',
+      ],
+      queryFn: () =>
+        getAllTargetDistributionRequests({
+          requestMonth: currentRequestMonth,
+          ...(assignedStoreId ? { storeId: assignedStoreId } : {}),
+        }),
+      enabled,
+    },
+    {
+      queryKey: ['target-distribution-coverage', 'store-targets', currentRequestMonth, 'all'],
+      queryFn: () => getTargetCoverage({ requestMonth: currentRequestMonth }),
+      enabled,
+    },
+    {
+      queryKey: ['store-targeting-personnel', 'store-targets', assignedStoreId],
+      queryFn: () => getStoreTargetingPersonnel(assignedStoreId),
+      enabled: canCreateTargetDistributionRequest(authSummary, assignedStoreId || null),
     },
   ]
 }
@@ -453,7 +493,7 @@ function getAdminTargetsPrefetchTasks(authSummary: AuthSessionSummary | null): P
   return [
     {
       queryKey: ['target-distribution-requests', 'approval-queue'],
-      queryFn: () => getTargetDistributionRequests(),
+      queryFn: () => getAllTargetDistributionRequests(),
       enabled,
     },
     {

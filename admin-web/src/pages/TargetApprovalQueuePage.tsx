@@ -17,8 +17,8 @@ import {
 } from '../features/auth/authorization'
 import {
   approveTargetDistributionRequest,
+  getAllTargetDistributionRequests,
   getTargetCoverage,
-  getTargetDistributionRequests,
   type TargetCoverageRow,
   type TargetDistributionRequest,
 } from '../features/targets/api'
@@ -42,7 +42,7 @@ export function TargetApprovalQueuePage(input: {
   const currentRequestMonth = getCurrentRequestMonth()
   const approvalsQuery = useQuery({
     queryKey: ['target-distribution-requests', 'approval-queue'],
-    queryFn: () => getTargetDistributionRequests(),
+    queryFn: () => getAllTargetDistributionRequests(),
     staleTime: 30_000,
   })
   const coverageQuery = useQuery({

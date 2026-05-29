@@ -234,7 +234,7 @@ const storePreviewRows: RolePermissionPreviewRow[] = [
     route: '/store/targets',
     labelKey: 'storeHome.nav.targets',
     shell: 'store',
-    allowedRoles: nonVisualMerchandiserStoreRouteRoles,
+    allowedRoles: targetRequestListRoleCodes,
     scopeNoteKey: 'authAdmin.previewScopeTarget',
     actionNoteKey: 'authAdmin.previewActionTargetBoundary',
   },

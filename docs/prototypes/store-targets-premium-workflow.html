@@ -1,0 +1,2509 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Store Hedefler Premium Akış Prototipi</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      :root {
+        --bg: #f6f7fb;
+        --panel: rgba(255, 255, 255, 0.84);
+        --panel-strong: #ffffff;
+        --ink: #0f1633;
+        --muted: #67708c;
+        --soft: #9aa4bd;
+        --line: rgba(28, 36, 72, 0.12);
+        --line-strong: rgba(28, 36, 72, 0.18);
+        --plum: #6d4cff;
+        --plum-deep: #4631bd;
+        --plum-soft: rgba(109, 76, 255, 0.12);
+        --cyan: #18b8c7;
+        --cyan-soft: rgba(24, 184, 199, 0.13);
+        --blue: #2f6df6;
+        --blue-soft: rgba(47, 109, 246, 0.12);
+        --green: #10b981;
+        --green-soft: rgba(16, 185, 129, 0.12);
+        --amber: #f59e0b;
+        --amber-soft: rgba(245, 158, 11, 0.14);
+        --rose: #f04461;
+        --rose-soft: rgba(240, 68, 97, 0.12);
+        --shadow: 0 20px 52px rgba(23, 30, 58, 0.08);
+        --shadow-strong: 0 24px 72px rgba(23, 30, 58, 0.14);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background:
+          radial-gradient(circle at 84% -8%, rgba(24, 184, 199, 0.25), transparent 32%),
+          radial-gradient(circle at 12% 0%, rgba(109, 76, 255, 0.16), transparent 30%),
+          linear-gradient(135deg, #fbfbff 0%, #f4f5fb 46%, #edf8fa 100%);
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 224px minmax(0, 1fr);
+        gap: 18px;
+        min-height: 100vh;
+        padding: 18px;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 18px;
+        height: calc(100vh - 36px);
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(22px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 18px 16px 14px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 8px;
+        color: white;
+        background: linear-gradient(135deg, var(--plum), var(--cyan));
+        box-shadow: 0 12px 30px rgba(109, 76, 255, 0.25);
+      }
+
+      .nav {
+        display: grid;
+        gap: 6px;
+        padding: 8px 12px;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 40px;
+        border-radius: 8px;
+        padding: 0 12px;
+        color: #687191;
+        font-size: 13px;
+        font-weight: 560;
+        text-decoration: none;
+      }
+
+      .nav-link.active {
+        color: var(--plum-deep);
+        background: linear-gradient(135deg, rgba(109, 76, 255, 0.13), rgba(24, 184, 199, 0.11));
+      }
+
+      .sidebar-footer {
+        margin-top: auto;
+        padding: 12px;
+      }
+
+      .user-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: rgba(246, 247, 251, 0.72);
+      }
+
+      .avatar {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 999px;
+        color: var(--plum-deep);
+        background: var(--plum-soft);
+        font-size: 12px;
+        font-weight: 640;
+      }
+
+      .main {
+        min-width: 0;
+        width: 100%;
+        max-width: 1360px;
+        margin: 0 auto;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .toolbar-group {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .ghost-button,
+      .primary-button,
+      .plain-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 38px;
+        border-radius: 8px;
+        padding: 0 13px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 620;
+        box-shadow: 0 8px 22px rgba(23, 30, 58, 0.04);
+      }
+
+      .primary-button {
+        border-color: transparent;
+        color: white;
+        background: linear-gradient(135deg, var(--plum), var(--blue));
+        box-shadow: 0 14px 30px rgba(109, 76, 255, 0.26);
+      }
+
+      .review-button {
+        color: #9a5b00;
+        border-color: rgba(245, 158, 11, 0.28);
+        background: var(--amber-soft);
+        box-shadow: none;
+      }
+
+      .plain-button {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+      }
+
+      .hero {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 22px;
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.68)),
+          linear-gradient(135deg, rgba(109, 76, 255, 0.12), rgba(24, 184, 199, 0.15));
+        box-shadow: var(--shadow-strong);
+        backdrop-filter: blur(24px);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: start;
+      }
+
+      .eyebrow {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 26px;
+        border-radius: 999px;
+        padding: 0 10px;
+        border: 1px solid transparent;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.76);
+        font-size: 12px;
+        font-weight: 620;
+      }
+
+      .chip.plum {
+        color: var(--plum-deep);
+        background: var(--plum-soft);
+      }
+
+      .chip.cyan {
+        color: #077e8a;
+        background: var(--cyan-soft);
+      }
+
+      .chip.amber {
+        color: #9a5b00;
+        background: var(--amber-soft);
+      }
+
+      .chip.rose {
+        color: #b4233f;
+        background: var(--rose-soft);
+      }
+
+      h1 {
+        margin: 0;
+        max-width: 760px;
+        font-size: clamp(30px, 4vw, 52px);
+        line-height: 0.96;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        max-width: 720px;
+        margin: 12px 0 0;
+        color: #505a78;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .role-switch {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        width: min(100%, 456px);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 4px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .role-tab {
+        min-height: 36px;
+        border: 0;
+        border-radius: 6px;
+        color: var(--muted);
+        background: transparent;
+        font-size: 12px;
+        font-weight: 620;
+      }
+
+      .role-tab.active {
+        color: white;
+        background: linear-gradient(135deg, var(--plum), var(--cyan));
+        box-shadow: 0 10px 24px rgba(109, 76, 255, 0.22);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .metric-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 128px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.84);
+        box-shadow: 0 14px 38px rgba(23, 30, 58, 0.06);
+      }
+
+      .metric-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .icon-box {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 8px;
+      }
+
+      .icon-box.plum {
+        color: var(--plum);
+        background: var(--plum-soft);
+      }
+
+      .icon-box.cyan {
+        color: #0794a1;
+        background: var(--cyan-soft);
+      }
+
+      .icon-box.amber {
+        color: var(--amber);
+        background: var(--amber-soft);
+      }
+
+      .icon-box.rose {
+        color: var(--rose);
+        background: var(--rose-soft);
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 620;
+      }
+
+      .metric-value {
+        margin-top: 12px;
+        font-size: 30px;
+        line-height: 1;
+        font-weight: 660;
+      }
+
+      .metric-note {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .bar {
+        overflow: hidden;
+        height: 7px;
+        margin-top: 14px;
+        border-radius: 999px;
+        background: #e8ebf4;
+      }
+
+      .bar > span {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--plum), var(--cyan));
+      }
+
+      .filter-row {
+        display: grid;
+        grid-template-columns: minmax(260px, 420px) repeat(3, 180px) auto;
+        justify-content: start;
+        gap: 10px;
+        margin: 16px 0;
+      }
+
+      .field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 12px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: 0 10px 28px rgba(23, 30, 58, 0.04);
+      }
+
+      .field input,
+      .field select {
+        width: 100%;
+        border: 0;
+        outline: 0;
+        color: var(--ink);
+        background: transparent;
+        font-size: 13px;
+        font-weight: 560;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+        max-width: 820px;
+      }
+
+      .panel {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(20px);
+      }
+
+      .workflow-panel {
+        width: min(100%, 700px);
+        justify-self: start;
+      }
+
+      .panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 18px;
+        line-height: 1.2;
+      }
+
+      .panel-copy {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      .queue-list {
+        display: grid;
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .queue-list > .request-card {
+        display: none;
+      }
+
+      .store-accordion-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .store-accordion {
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 8px 24px rgba(23, 30, 58, 0.035);
+      }
+
+      .store-accordion.priority {
+        border-color: var(--line);
+        background:
+          linear-gradient(90deg, rgba(240, 68, 97, 0.055), transparent 28%),
+          rgba(255, 255, 255, 0.88);
+        box-shadow:
+          inset 3px 0 0 rgba(240, 68, 97, 0.42),
+          0 8px 24px rgba(23, 30, 58, 0.035);
+      }
+
+      .store-accordion.success {
+        border-color: rgba(24, 184, 199, 0.34);
+        background:
+          linear-gradient(90deg, rgba(24, 184, 199, 0.065), transparent 30%),
+          rgba(255, 255, 255, 0.9);
+        box-shadow:
+          inset 3px 0 0 rgba(24, 184, 199, 0.58),
+          0 8px 24px rgba(23, 30, 58, 0.035);
+      }
+
+      .store-accordion.approved .store-actions {
+        display: none;
+      }
+
+      .store-trigger {
+        width: fit-content;
+        max-width: 100%;
+        display: grid;
+        grid-template-columns: 30px minmax(230px, 300px) auto 22px;
+        justify-content: start;
+        gap: 9px;
+        align-items: center;
+        min-height: 46px;
+        border: 0;
+        padding: 7px 9px;
+        text-align: left;
+        color: var(--ink);
+        background: transparent;
+      }
+
+      .store-trigger .person-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 7px;
+      }
+
+      .store-trigger .chip {
+        min-height: 22px;
+        padding: 0 8px;
+        font-size: 11px;
+        font-weight: 520;
+      }
+
+      .store-trigger-main {
+        min-width: 0;
+      }
+
+      .store-trigger-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        font-weight: 540;
+      }
+
+      .store-trigger-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 430;
+      }
+
+      .store-trigger-summary {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .store-trigger-summary .kv {
+        min-width: 72px;
+        min-height: 30px;
+        padding: 5px 7px;
+        background: rgba(246, 247, 251, 0.66);
+      }
+
+      .store-trigger-summary .kv span {
+        font-size: 10px;
+      }
+
+      .store-trigger-summary .kv strong {
+        margin-top: 3px;
+        font-size: 11.5px;
+        font-weight: 540;
+      }
+
+      .chevron {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        place-items: center;
+        border-radius: 999px;
+        color: var(--plum-deep);
+        background: var(--plum-soft);
+        transition: transform 0.18s ease;
+      }
+
+      .store-accordion.open .chevron {
+        transform: rotate(180deg);
+      }
+
+      .store-detail {
+        display: none;
+        border-top: 1px solid var(--line);
+        padding: 0 10px 10px;
+      }
+
+      .store-accordion.open .store-detail {
+        display: block;
+      }
+
+      .allocation-detail {
+        overflow: hidden;
+        width: fit-content;
+        max-width: 100%;
+        margin-top: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .allocation-detail-row {
+        display: grid;
+        grid-template-columns: minmax(210px, 320px) 92px 70px 96px;
+        justify-content: start;
+        gap: 8px;
+        align-items: center;
+        min-height: 34px;
+        padding: 6px 8px;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .allocation-detail-row:first-child {
+        border-top: 0;
+        color: var(--muted);
+        background: rgba(246, 247, 251, 0.82);
+        font-size: 11px;
+        font-weight: 520;
+        text-transform: uppercase;
+      }
+
+      .allocation-detail-row.warning {
+        background: linear-gradient(90deg, rgba(245, 158, 11, 0.09), rgba(255, 255, 255, 0.82));
+      }
+
+      .allocation-detail-row strong {
+        font-weight: 520;
+      }
+
+      .allocation-detail-row .amount {
+        font-weight: 520;
+      }
+
+      .allocation-detail-row .chip {
+        width: fit-content;
+        min-width: 72px;
+        justify-content: center;
+      }
+
+      .store-actions {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 8px;
+        margin-top: 8px;
+        align-items: center;
+      }
+
+      .store-actions .note-box {
+        height: 34px;
+        min-height: 34px;
+        resize: none;
+      }
+
+      .request-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px;
+        background: rgba(255, 255, 255, 0.84);
+      }
+
+      .request-card.compact {
+        padding: 12px;
+      }
+
+      .request-card.compact .kv-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .request-card.compact .decision-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+      }
+
+      .request-card.urgent {
+        border-color: rgba(240, 68, 97, 0.28);
+        background:
+          linear-gradient(90deg, rgba(240, 68, 97, 0.08), transparent 28%),
+          rgba(255, 255, 255, 0.88);
+      }
+
+      .request-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .request-title {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.3;
+      }
+
+      .request-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .kv-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .kv {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 9px;
+        background: rgba(246, 247, 251, 0.68);
+      }
+
+      .kv span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 540;
+      }
+
+      .kv strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 13px;
+      }
+
+      .decision-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 10px;
+        margin-top: 12px;
+        align-items: end;
+      }
+
+      .note-box {
+        min-height: 40px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        outline: 0;
+        resize: vertical;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.72);
+        font-size: 13px;
+      }
+
+      .coverage-list {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .approved-empty {
+        border: 1px dashed var(--line-strong);
+        border-radius: 8px;
+        padding: 18px;
+        color: var(--muted);
+        background: rgba(246, 247, 251, 0.58);
+        font-size: 13px;
+      }
+
+      .approved-empty[hidden] {
+        display: none;
+      }
+
+      .person-row {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .person-row.risk {
+        background: linear-gradient(90deg, rgba(240, 68, 97, 0.08), rgba(255, 255, 255, 0.88));
+      }
+
+      .person-row.pending {
+        background: linear-gradient(90deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 0.88));
+      }
+
+      .person-icon {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 8px;
+        color: var(--plum);
+        background: var(--plum-soft);
+      }
+
+      .person-name {
+        font-size: 13px;
+        font-weight: 620;
+      }
+
+      .person-sub {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      .amount {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 540;
+      }
+
+      .amount span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 520;
+      }
+
+      .flow-tabs {
+        display: flex;
+        gap: 8px;
+        margin: 16px 0 10px;
+      }
+
+      .flow-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 36px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 12px;
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.76);
+        font-size: 12px;
+        font-weight: 620;
+      }
+
+      .flow-tab.active {
+        color: var(--plum-deep);
+        border-color: rgba(109, 76, 255, 0.24);
+        background: var(--plum-soft);
+      }
+
+      .flow-tab svg {
+        display: block;
+        flex: 0 0 auto;
+      }
+
+      .role-view {
+        display: none;
+      }
+
+      .role-view.active {
+        display: block;
+      }
+
+      .manager-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.82fr) minmax(320px, 0.48fr);
+        gap: 16px;
+      }
+
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .form-control {
+        display: grid;
+        gap: 6px;
+      }
+
+      .form-control label {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 620;
+      }
+
+      .form-control input,
+      .form-control textarea,
+      .form-control select {
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 11px;
+        outline: 0;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 13px;
+        font-weight: 540;
+      }
+
+      .form-control textarea {
+        min-height: 86px;
+        padding-top: 10px;
+        resize: vertical;
+      }
+
+      .approved-target-card {
+        display: grid;
+        gap: 12px;
+        margin: 14px;
+        border: 1px solid rgba(16, 185, 129, 0.18);
+        border-radius: 8px;
+        padding: 12px;
+        background:
+          linear-gradient(135deg, rgba(16, 185, 129, 0.075), rgba(255, 255, 255, 0.78)),
+          rgba(255, 255, 255, 0.82);
+      }
+
+      .approved-target-card.archived {
+        border-color: var(--line);
+        background: rgba(255, 255, 255, 0.74);
+      }
+
+      .approved-target-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .approved-target-title {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 560;
+      }
+
+      .approved-target-meta {
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .approved-target-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .approved-target-grid .kv {
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.68);
+      }
+
+      .approved-person-list {
+        width: fit-content;
+        max-width: 100%;
+        display: grid;
+        gap: 6px;
+      }
+
+      .approved-person {
+        display: grid;
+        grid-template-columns: minmax(180px, 240px) 112px;
+        justify-content: start;
+        gap: 10px;
+        align-items: center;
+        border-top: 1px solid var(--line);
+        padding-top: 6px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .approved-person strong {
+        color: var(--ink);
+        font-weight: 520;
+      }
+
+      .approved-person input {
+        width: 112px;
+        min-height: 30px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 8px;
+        outline: 0;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.82);
+        font-size: 12px;
+        font-weight: 520;
+      }
+
+      .approved-person input[disabled] {
+        border-color: transparent;
+        padding: 0;
+        text-align: right;
+        background: transparent;
+        opacity: 1;
+      }
+
+      .revision-box .submit-row {
+        padding-bottom: 0;
+      }
+
+      .revision-box {
+        display: grid;
+        gap: 8px;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+      }
+
+      .revision-box[hidden] {
+        display: none;
+      }
+
+      .revision-box textarea {
+        width: 100%;
+        min-height: 72px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 12px;
+        resize: vertical;
+        outline: 0;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.8);
+        font-size: 13px;
+      }
+
+      .primary-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.52;
+        box-shadow: none;
+      }
+
+      .allocation-table {
+        margin: 0 14px 14px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .allocation-row {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) 142px 92px 142px;
+        gap: 10px;
+        align-items: center;
+        min-height: 58px;
+        padding: 10px 12px;
+        border-top: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .allocation-row.is-empty {
+        background: linear-gradient(90deg, rgba(240, 68, 97, 0.07), rgba(255, 255, 255, 0.76));
+      }
+
+      .allocation-row strong {
+        font-weight: 500;
+      }
+
+      .allocation-row:first-child {
+        border-top: 0;
+        color: var(--muted);
+        background: rgba(246, 247, 251, 0.82);
+        font-size: 11px;
+        font-weight: 620;
+        text-transform: uppercase;
+      }
+
+      .allocation-money-input {
+        width: 126px;
+        min-height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0 9px;
+        outline: 0;
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.82);
+        font-size: 13px;
+        font-weight: 520;
+      }
+
+      .submit-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 14px 14px;
+      }
+
+      .form-feedback {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .summary-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0 14px 14px;
+      }
+
+      .mini-stat {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 11px;
+        background: rgba(246, 247, 251, 0.72);
+      }
+
+      .mini-stat span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 560;
+      }
+
+      .mini-stat strong {
+        display: block;
+        margin-top: 5px;
+        font-size: 15px;
+      }
+
+      .right-stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .timeline {
+        display: grid;
+        gap: 11px;
+        padding: 14px;
+      }
+
+      .timeline-item {
+        display: grid;
+        grid-template-columns: 30px minmax(0, 1fr);
+        gap: 10px;
+      }
+
+      .dot {
+        display: grid;
+        width: 30px;
+        height: 30px;
+        place-items: center;
+        border-radius: 999px;
+        color: var(--plum);
+        background: var(--plum-soft);
+      }
+
+      .timeline-item strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .timeline-item span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+      }
+
+      @media (max-width: 1180px) {
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .workspace,
+        .manager-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .filter-row {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 820px) {
+        .shell {
+          display: block;
+          padding: 12px;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          margin-bottom: 12px;
+        }
+
+        .nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .sidebar-footer {
+          display: none;
+        }
+
+        .topbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .toolbar-group {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .hero {
+          padding: 16px;
+        }
+
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 34px;
+        }
+
+        .role-switch {
+          grid-template-columns: 1fr;
+          width: 100%;
+        }
+
+        .metrics,
+        .filter-row,
+        .form-grid,
+        .summary-strip,
+        .kv-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .metric-card {
+          min-height: 112px;
+        }
+
+        .allocation-row {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+
+        .allocation-row:first-child {
+          display: none;
+        }
+
+        .decision-row,
+        .store-actions {
+          grid-template-columns: 1fr;
+        }
+
+        .store-trigger {
+          grid-template-columns: 30px minmax(0, 1fr) 22px;
+        }
+
+        .store-trigger-summary {
+          grid-column: 1 / -1;
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          min-width: 0;
+        }
+
+        .allocation-detail-row {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+
+        .allocation-detail-row:first-child {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Store navigasyonu">
+        <div class="brand">
+          <div class="brand-mark"><i data-lucide="target"></i></div>
+          <div>
+            <div class="text-[14px] font-semibold tracking-[0]">LUFIAN</div>
+            <div class="text-[10px] font-medium uppercase text-[#7c849d]">Store Home</div>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <a class="nav-link" href="#"><i data-lucide="home"></i>Ana Sayfa</a>
+          <a class="nav-link" href="#"><i data-lucide="bar-chart-3"></i>KPI Özetleri</a>
+          <a class="nav-link" href="#"><i data-lucide="trophy"></i>Rankings</a>
+          <a class="nav-link" href="#"><i data-lucide="clipboard-check"></i>Checklist</a>
+          <a class="nav-link" href="#"><i data-lucide="inbox"></i>Talepler</a>
+          <a class="nav-link active" href="#"><i data-lucide="target"></i>Hedefler</a>
+          <a class="nav-link" href="#"><i data-lucide="file-text"></i>Raporlar</a>
+          <a class="nav-link" href="#"><i data-lucide="settings"></i>Ayarlar</a>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="user-card">
+            <div class="avatar">BM</div>
+            <div class="min-w-0">
+              <div class="truncate text-[12px] font-semibold">Bölge Müdürü</div>
+              <div class="truncate text-[11px] font-medium text-[#7c849d]">Marmara Bölgesi</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="topbar">
+          <div class="toolbar-group">
+            <button class="ghost-button"><i data-lucide="calendar-days"></i>Mayıs 2026</button>
+            <button class="ghost-button"><i data-lucide="map-pin"></i>Marmara Bölgesi</button>
+          </div>
+          <div class="toolbar-group">
+            <button class="ghost-button" aria-label="Bildirimler"><i data-lucide="bell"></i></button>
+            <button class="ghost-button"><i data-lucide="user-round"></i>Süleyman K.</button>
+          </div>
+        </div>
+
+        <section class="hero">
+          <div class="hero-grid">
+            <div>
+              <div class="eyebrow">
+                <span class="chip plum"><i data-lucide="sparkles"></i>Hedefler</span>
+                <span class="chip cyan">Mayıs dönemi</span>
+                <span class="chip amber">6 mağaza bekliyor</span>
+              </div>
+              <h1>Hedef kontrol masası</h1>
+              <p class="lead">
+                Mağaza hedef dağıtımı, onay bekleyen talepler ve personel hedef kapsamı aynı ritimde okunur.
+                Rolün aksiyonu net kalır; eksik hedef için tahmin üretilmez.
+              </p>
+            </div>
+
+            <div class="role-switch" aria-label="Rol görünümü">
+              <button class="role-tab active" data-role="region">Bölge müdürü</button>
+              <button class="role-tab" data-role="manager">Mağaza müdürü</button>
+              <button class="role-tab" data-role="viewer">Rapor izleme</button>
+            </div>
+          </div>
+
+          <div class="metrics">
+            <article class="metric-card">
+              <div class="metric-top">
+                <div class="icon-box plum"><i data-lucide="pie-chart"></i></div>
+                <span class="chip plum">Personel</span>
+              </div>
+              <div class="metric-value">73%</div>
+              <div class="metric-note">11 / 15 personel hedefli</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-top">
+                <div class="icon-box cyan"><i data-lucide="store"></i></div>
+                <span class="chip cyan">Mağaza</span>
+              </div>
+              <div class="metric-value">47%</div>
+              <div class="metric-note">15 / 32 mağaza hedefli</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-top">
+                <div class="icon-box amber"><i data-lucide="clock-3"></i></div>
+                <span class="chip amber">Karar</span>
+              </div>
+              <div class="metric-value">6</div>
+              <div class="metric-note">Onay bekleyen mağaza</div>
+            </article>
+
+            <article class="metric-card">
+              <div class="metric-top">
+                <div class="icon-box rose"><i data-lucide="triangle-alert"></i></div>
+                <span class="chip rose">Talep yok</span>
+              </div>
+              <div class="metric-value">4</div>
+              <div class="metric-note">Henüz talep göndermeyen mağaza</div>
+            </article>
+          </div>
+        </section>
+
+        <section class="filter-row" aria-label="Hedef filtreleri">
+          <label class="field">
+            <i data-lucide="search"></i>
+            <input value="IstinyePark" aria-label="Mağaza veya personel ara" />
+          </label>
+          <label class="field">
+            <i data-lucide="calendar"></i>
+            <select aria-label="Dönem">
+              <option>Mayıs 2026</option>
+              <option>Nisan 2026</option>
+            </select>
+          </label>
+          <label class="field">
+            <i data-lucide="store"></i>
+            <select aria-label="Mağaza">
+              <option>Tüm mağazalar</option>
+              <option>IstinyePark Demo Store</option>
+            </select>
+          </label>
+          <label class="field">
+            <i data-lucide="sliders-horizontal"></i>
+            <select aria-label="Durum">
+              <option>Tüm durumlar</option>
+              <option>Onay bekliyor</option>
+              <option>Eksik hedef</option>
+              <option>Onaylı</option>
+            </select>
+          </label>
+          <button class="ghost-button"><i data-lucide="rotate-ccw"></i>Sıfırla</button>
+        </section>
+
+        <div class="flow-tabs">
+          <button class="flow-tab active" data-jump="region-view"><i data-lucide="badge-check"></i>Onay akışı</button>
+          <button class="flow-tab" data-jump="manager-view"><i data-lucide="send"></i>Dağıtım talebi</button>
+          <button class="flow-tab" data-jump="revision-view"><i data-lucide="file-pen-line"></i>Revize Talebi</button>
+          <button class="flow-tab" data-jump="viewer-view"><i data-lucide="check-check"></i>Onaylananlar</button>
+        </div>
+
+        <section id="region-view" class="role-view active">
+          <div class="workspace">
+            <section class="panel workflow-panel">
+              <div class="panel-head">
+                <div>
+                  <h2 class="panel-title">Onay akışı</h2>
+                  <p class="panel-copy">Karar bekleyen mağaza hedef dağıtımları öncelik ve kapsam durumuyla birlikte görünür.</p>
+                </div>
+                <span class="chip amber" data-pending-count>6 mağaza</span>
+              </div>
+
+              <div class="queue-list">
+                <div class="store-accordion-list">
+                  <article class="store-accordion priority open">
+                    <button class="store-trigger" type="button" aria-expanded="true">
+                      <div class="person-icon"><i data-lucide="store"></i></div>
+                      <div class="store-trigger-main">
+                        <div class="store-trigger-title">
+                          IstinyePark Demo Store
+                          <span class="chip rose">Talep kontrolü gerekli</span>
+                        </div>
+                        <div class="store-trigger-meta">
+                          <span>10 Mayıs 2026</span>
+                          <span>Mayıs hedef dağıtımı</span>
+                          <span>Mağaza hedef dağıtımı</span>
+                        </div>
+                      </div>
+                      <div class="store-trigger-summary">
+                        <div class="kv"><span>Toplam</span><strong>₺145.000</strong></div>
+                        <div class="kv"><span>Personel</span><strong>1 kişi</strong></div>
+                        <div class="kv"><span>Kapsam</span><strong>0%</strong></div>
+                      </div>
+                      <span class="chevron"><i data-lucide="chevron-down"></i></span>
+                    </button>
+                    <div class="store-detail">
+                      <div class="allocation-detail">
+                        <div class="allocation-detail-row">
+                          <div>Personel</div>
+                          <div>Hedef</div>
+                          <div>Pay</div>
+                          <div>Durum</div>
+                        </div>
+                        <div class="allocation-detail-row warning">
+                          <div><strong>Store Personnel</strong><div class="person-sub">FM8001</div></div>
+                          <div class="amount" style="text-align: left">₺145.000</div>
+                          <span class="chip cyan">100%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                      </div>
+                      <div class="store-actions">
+                        <textarea class="note-box" aria-label="IstinyePark karar notu">Bölge onayı</textarea>
+                        <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                        <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="store-accordion priority">
+                    <button class="store-trigger" type="button" aria-expanded="false">
+                      <div class="person-icon"><i data-lucide="store"></i></div>
+                      <div class="store-trigger-main">
+                        <div class="store-trigger-title">
+                          Marmara Park
+                          <span class="chip rose">2 eksik hedef</span>
+                        </div>
+                        <div class="store-trigger-meta">
+                          <span>11 Mayıs 2026</span>
+                          <span>Mayıs hedef dağıtımı</span>
+                          <span>Öncelik yüksek</span>
+                        </div>
+                      </div>
+                      <div class="store-trigger-summary">
+                        <div class="kv"><span>Toplam</span><strong>₺210.000</strong></div>
+                        <div class="kv"><span>Personel</span><strong>4 kişi</strong></div>
+                        <div class="kv"><span>Kapsam</span><strong>50%</strong></div>
+                      </div>
+                      <span class="chevron"><i data-lucide="chevron-down"></i></span>
+                    </button>
+                    <div class="store-detail">
+                      <div class="allocation-detail">
+                        <div class="allocation-detail-row">
+                          <div>Personel</div>
+                          <div>Hedef</div>
+                          <div>Pay</div>
+                          <div>Durum</div>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Ayşe Yılmaz</strong><div class="person-sub">FM8101</div></div>
+                          <div class="amount" style="text-align: left">₺70.000</div>
+                          <span class="chip cyan">33%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Deniz Arslan</strong><div class="person-sub">FM8102</div></div>
+                          <div class="amount" style="text-align: left">₺60.000</div>
+                          <span class="chip cyan">29%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row warning">
+                          <div><strong>Ece Demir</strong><div class="person-sub">FM8103</div></div>
+                          <div class="amount" style="text-align: left">₺45.000</div>
+                          <span class="chip cyan">21%</span>
+                          <span class="chip rose">Hedef Girilmedi</span>
+                        </div>
+                        <div class="allocation-detail-row warning">
+                          <div><strong>Mert Kaya</strong><div class="person-sub">FM8104</div></div>
+                          <div class="amount" style="text-align: left">₺35.000</div>
+                          <span class="chip cyan">17%</span>
+                          <span class="chip rose">Hedef Girilmedi</span>
+                        </div>
+                      </div>
+                      <div class="store-actions">
+                        <textarea class="note-box" aria-label="Marmara Park karar notu" placeholder="Karar notu"></textarea>
+                        <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                        <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="store-accordion success">
+                    <button class="store-trigger" type="button" aria-expanded="false">
+                      <div class="person-icon"><i data-lucide="store"></i></div>
+                      <div class="store-trigger-main">
+                        <div class="store-trigger-title">
+                          Ankara Forum
+                          <span class="chip cyan">Toplam eşleşti</span>
+                        </div>
+                        <div class="store-trigger-meta">
+                          <span>12 Mayıs 2026</span>
+                          <span>Mayıs hedef dağıtımı</span>
+                          <span>Öncelik normal</span>
+                        </div>
+                      </div>
+                      <div class="store-trigger-summary">
+                        <div class="kv"><span>Toplam</span><strong>₺168.000</strong></div>
+                        <div class="kv"><span>Personel</span><strong>3 kişi</strong></div>
+                        <div class="kv"><span>Kapsam</span><strong>100%</strong></div>
+                      </div>
+                      <span class="chevron"><i data-lucide="chevron-down"></i></span>
+                    </button>
+                    <div class="store-detail">
+                      <div class="allocation-detail">
+                        <div class="allocation-detail-row">
+                          <div>Personel</div>
+                          <div>Hedef</div>
+                          <div>Pay</div>
+                          <div>Durum</div>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Selin Yurt</strong><div class="person-sub">FM8201</div></div>
+                          <div class="amount" style="text-align: left">₺64.000</div>
+                          <span class="chip cyan">38%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Can Özkan</strong><div class="person-sub">FM8202</div></div>
+                          <div class="amount" style="text-align: left">₺56.000</div>
+                          <span class="chip cyan">33%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Burcu Kaya</strong><div class="person-sub">FM8203</div></div>
+                          <div class="amount" style="text-align: left">₺48.000</div>
+                          <span class="chip cyan">29%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                      </div>
+                      <div class="store-actions">
+                        <textarea class="note-box" aria-label="Ankara Forum karar notu" placeholder="Karar notu"></textarea>
+                        <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                        <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="store-accordion priority">
+                    <button class="store-trigger" type="button" aria-expanded="false">
+                      <div class="person-icon"><i data-lucide="store"></i></div>
+                      <div class="store-trigger-main">
+                        <div class="store-trigger-title">
+                          İzmir İstinye
+                          <span class="chip rose">Kapsam düşük</span>
+                        </div>
+                        <div class="store-trigger-meta">
+                          <span>13 Mayıs 2026</span>
+                          <span>Mayıs hedef dağıtımı</span>
+                          <span>Öncelik yüksek</span>
+                        </div>
+                      </div>
+                      <div class="store-trigger-summary">
+                        <div class="kv"><span>Toplam</span><strong>₺132.000</strong></div>
+                        <div class="kv"><span>Personel</span><strong>2 kişi</strong></div>
+                        <div class="kv"><span>Kapsam</span><strong>50%</strong></div>
+                      </div>
+                      <span class="chevron"><i data-lucide="chevron-down"></i></span>
+                    </button>
+                    <div class="store-detail">
+                      <div class="allocation-detail">
+                        <div class="allocation-detail-row">
+                          <div>Personel</div>
+                          <div>Hedef</div>
+                          <div>Pay</div>
+                          <div>Durum</div>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>İrem Aksoy</strong><div class="person-sub">FM8301</div></div>
+                          <div class="amount" style="text-align: left">₺82.000</div>
+                          <span class="chip cyan">62%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row warning">
+                          <div><strong>Ozan Ergin</strong><div class="person-sub">FM8302</div></div>
+                          <div class="amount" style="text-align: left">₺50.000</div>
+                          <span class="chip cyan">38%</span>
+                          <span class="chip rose">Hedef Girilmedi</span>
+                        </div>
+                      </div>
+                      <div class="store-actions">
+                        <textarea class="note-box" aria-label="İzmir İstinye karar notu" placeholder="Karar notu"></textarea>
+                        <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                        <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="store-accordion success">
+                    <button class="store-trigger" type="button" aria-expanded="false">
+                      <div class="person-icon"><i data-lucide="store"></i></div>
+                      <div class="store-trigger-main">
+                        <div class="store-trigger-title">
+                          Antalya TerraCity
+                          <span class="chip cyan">Kontrol hazır</span>
+                        </div>
+                        <div class="store-trigger-meta">
+                          <span>14 Mayıs 2026</span>
+                          <span>Mayıs hedef dağıtımı</span>
+                          <span>Öncelik normal</span>
+                        </div>
+                      </div>
+                      <div class="store-trigger-summary">
+                        <div class="kv"><span>Toplam</span><strong>₺186.000</strong></div>
+                        <div class="kv"><span>Personel</span><strong>3 kişi</strong></div>
+                        <div class="kv"><span>Kapsam</span><strong>100%</strong></div>
+                      </div>
+                      <span class="chevron"><i data-lucide="chevron-down"></i></span>
+                    </button>
+                    <div class="store-detail">
+                      <div class="allocation-detail">
+                        <div class="allocation-detail-row">
+                          <div>Personel</div>
+                          <div>Hedef</div>
+                          <div>Pay</div>
+                          <div>Durum</div>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Elif Deniz</strong><div class="person-sub">FM8401</div></div>
+                          <div class="amount" style="text-align: left">₺74.000</div>
+                          <span class="chip cyan">40%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Kaan Tekin</strong><div class="person-sub">FM8402</div></div>
+                          <div class="amount" style="text-align: left">₺62.000</div>
+                          <span class="chip cyan">33%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Zeynep Kurt</strong><div class="person-sub">FM8403</div></div>
+                          <div class="amount" style="text-align: left">₺50.000</div>
+                          <span class="chip cyan">27%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                      </div>
+                      <div class="store-actions">
+                        <textarea class="note-box" aria-label="Antalya TerraCity karar notu" placeholder="Karar notu"></textarea>
+                        <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                        <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                      </div>
+                    </div>
+                  </article>
+
+                  <article class="store-accordion priority">
+                    <button class="store-trigger" type="button" aria-expanded="false">
+                      <div class="person-icon"><i data-lucide="store"></i></div>
+                      <div class="store-trigger-main">
+                        <div class="store-trigger-title">
+                          Kocaeli 41 Burda
+                          <span class="chip rose">Güncel talep gerekli</span>
+                        </div>
+                        <div class="store-trigger-meta">
+                          <span>15 Mayıs 2026</span>
+                          <span>Mayıs hedef dağıtımı</span>
+                          <span>Öncelik orta</span>
+                        </div>
+                      </div>
+                      <div class="store-trigger-summary">
+                        <div class="kv"><span>Toplam</span><strong>₺118.000</strong></div>
+                        <div class="kv"><span>Personel</span><strong>2 kişi</strong></div>
+                        <div class="kv"><span>Kapsam</span><strong>50%</strong></div>
+                      </div>
+                      <span class="chevron"><i data-lucide="chevron-down"></i></span>
+                    </button>
+                    <div class="store-detail">
+                      <div class="allocation-detail">
+                        <div class="allocation-detail-row">
+                          <div>Personel</div>
+                          <div>Hedef</div>
+                          <div>Pay</div>
+                          <div>Durum</div>
+                        </div>
+                        <div class="allocation-detail-row">
+                          <div><strong>Melis Acar</strong><div class="person-sub">FM8501</div></div>
+                          <div class="amount" style="text-align: left">₺68.000</div>
+                          <span class="chip cyan">58%</span>
+                          <span class="chip amber">Bekleyen</span>
+                        </div>
+                        <div class="allocation-detail-row warning">
+                          <div><strong>Kerem Şahin</strong><div class="person-sub">FM8502</div></div>
+                          <div class="amount" style="text-align: left">₺50.000</div>
+                          <span class="chip cyan">42%</span>
+                          <span class="chip rose">Güncel hedef yok</span>
+                        </div>
+                      </div>
+                      <div class="store-actions">
+                        <textarea class="note-box" aria-label="Kocaeli 41 Burda karar notu" placeholder="Karar notu"></textarea>
+                        <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                        <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                      </div>
+                    </div>
+                  </article>
+                </div>
+                <article class="request-card urgent">
+                  <div class="request-header">
+                    <div>
+                      <h3 class="request-title">Mayıs hedef dağıtımı</h3>
+                      <div class="request-meta">
+                        <span class="chip plum"><i data-lucide="store"></i>IstinyePark Demo Store</span>
+                        <span class="chip amber"><i data-lucide="clock"></i>10 Mayıs 2026</span>
+                        <span class="chip rose">Talep kontrolü gerekli</span>
+                      </div>
+                    </div>
+                    <span class="chip amber">Onay bekliyor</span>
+                  </div>
+
+                  <div class="kv-grid">
+                    <div class="kv"><span>Toplam hedef</span><strong>₺145.000</strong></div>
+                    <div class="kv"><span>Personel</span><strong>1 kişi</strong></div>
+                    <div class="kv"><span>Not</span><strong>Mağaza hedef dağıtımı</strong></div>
+                  </div>
+
+                  <div class="decision-row">
+                    <textarea class="note-box" aria-label="Karar notu">Bölge onayı</textarea>
+                    <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                    <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                  </div>
+                </article>
+
+                <article class="request-card compact urgent">
+                  <div class="request-header">
+                    <div>
+                      <h3 class="request-title">Marmara Park hedef dağıtımı</h3>
+                      <div class="request-meta">
+                        <span class="chip plum"><i data-lucide="store"></i>Marmara Park</span>
+                        <span class="chip amber"><i data-lucide="clock"></i>11 Mayıs 2026</span>
+                        <span class="chip rose">2 eksik hedef</span>
+                      </div>
+                    </div>
+                    <span class="chip amber">Onay bekliyor</span>
+                  </div>
+                  <div class="kv-grid">
+                    <div class="kv"><span>Toplam</span><strong>₺210.000</strong></div>
+                    <div class="kv"><span>Personel</span><strong>4 kişi</strong></div>
+                    <div class="kv"><span>Kapsam</span><strong>50%</strong></div>
+                    <div class="kv"><span>Öncelik</span><strong>Yüksek</strong></div>
+                  </div>
+                  <div class="decision-row">
+                    <textarea class="note-box" aria-label="Marmara Park karar notu" placeholder="Karar notu"></textarea>
+                    <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                    <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                  </div>
+                </article>
+
+                <article class="request-card compact">
+                  <div class="request-header">
+                    <div>
+                      <h3 class="request-title">Ankara Forum hedef dağıtımı</h3>
+                      <div class="request-meta">
+                        <span class="chip plum"><i data-lucide="store"></i>Ankara Forum</span>
+                        <span class="chip amber"><i data-lucide="clock"></i>12 Mayıs 2026</span>
+                        <span class="chip cyan">Toplam eşleşti</span>
+                      </div>
+                    </div>
+                    <span class="chip amber">Onay bekliyor</span>
+                  </div>
+                  <div class="kv-grid">
+                    <div class="kv"><span>Toplam</span><strong>₺168.000</strong></div>
+                    <div class="kv"><span>Personel</span><strong>3 kişi</strong></div>
+                    <div class="kv"><span>Kapsam</span><strong>100%</strong></div>
+                    <div class="kv"><span>Öncelik</span><strong>Normal</strong></div>
+                  </div>
+                  <div class="decision-row">
+                    <textarea class="note-box" aria-label="Ankara Forum karar notu" placeholder="Karar notu"></textarea>
+                    <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                    <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                  </div>
+                </article>
+
+                <article class="request-card compact urgent">
+                  <div class="request-header">
+                    <div>
+                      <h3 class="request-title">İzmir İstinye hedef dağıtımı</h3>
+                      <div class="request-meta">
+                        <span class="chip plum"><i data-lucide="store"></i>İzmir İstinye</span>
+                        <span class="chip amber"><i data-lucide="clock"></i>13 Mayıs 2026</span>
+                        <span class="chip rose">Kapsam düşük</span>
+                      </div>
+                    </div>
+                    <span class="chip amber">Onay bekliyor</span>
+                  </div>
+                  <div class="kv-grid">
+                    <div class="kv"><span>Toplam</span><strong>₺132.000</strong></div>
+                    <div class="kv"><span>Personel</span><strong>2 kişi</strong></div>
+                    <div class="kv"><span>Kapsam</span><strong>50%</strong></div>
+                    <div class="kv"><span>Öncelik</span><strong>Yüksek</strong></div>
+                  </div>
+                  <div class="decision-row">
+                    <textarea class="note-box" aria-label="İzmir İstinye karar notu" placeholder="Karar notu"></textarea>
+                    <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                    <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                  </div>
+                </article>
+
+                <article class="request-card compact">
+                  <div class="request-header">
+                    <div>
+                      <h3 class="request-title">Antalya TerraCity hedef dağıtımı</h3>
+                      <div class="request-meta">
+                        <span class="chip plum"><i data-lucide="store"></i>Antalya TerraCity</span>
+                        <span class="chip amber"><i data-lucide="clock"></i>14 Mayıs 2026</span>
+                        <span class="chip cyan">Kontrol hazır</span>
+                      </div>
+                    </div>
+                    <span class="chip amber">Onay bekliyor</span>
+                  </div>
+                  <div class="kv-grid">
+                    <div class="kv"><span>Toplam</span><strong>₺186.000</strong></div>
+                    <div class="kv"><span>Personel</span><strong>3 kişi</strong></div>
+                    <div class="kv"><span>Kapsam</span><strong>100%</strong></div>
+                    <div class="kv"><span>Öncelik</span><strong>Normal</strong></div>
+                  </div>
+                  <div class="decision-row">
+                    <textarea class="note-box" aria-label="Antalya TerraCity karar notu" placeholder="Karar notu"></textarea>
+                    <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                    <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                  </div>
+                </article>
+
+                <article class="request-card compact urgent">
+                  <div class="request-header">
+                    <div>
+                      <h3 class="request-title">Kocaeli 41 Burda hedef dağıtımı</h3>
+                      <div class="request-meta">
+                        <span class="chip plum"><i data-lucide="store"></i>Kocaeli 41 Burda</span>
+                        <span class="chip amber"><i data-lucide="clock"></i>15 Mayıs 2026</span>
+                        <span class="chip rose">Güncel talep gerekli</span>
+                      </div>
+                    </div>
+                    <span class="chip amber">Onay bekliyor</span>
+                  </div>
+                  <div class="kv-grid">
+                    <div class="kv"><span>Toplam</span><strong>₺118.000</strong></div>
+                    <div class="kv"><span>Personel</span><strong>2 kişi</strong></div>
+                    <div class="kv"><span>Kapsam</span><strong>50%</strong></div>
+                    <div class="kv"><span>Öncelik</span><strong>Orta</strong></div>
+                  </div>
+                  <div class="decision-row">
+                    <textarea class="note-box" aria-label="Kocaeli 41 Burda karar notu" placeholder="Karar notu"></textarea>
+                    <button class="ghost-button review-button"><i data-lucide="message-square-warning"></i>Revize iste</button>
+                    <button class="primary-button"><i data-lucide="badge-check"></i>Onayla</button>
+                  </div>
+                </article>
+
+                <article class="request-card">
+                  <div class="request-header">
+                    <div>
+                      <h3 class="request-title">Nisan kapanış hedefi</h3>
+                      <div class="request-meta">
+                        <span class="chip plum"><i data-lucide="store"></i>Cadde Store</span>
+                        <span class="chip cyan">Onaylı</span>
+                      </div>
+                    </div>
+                    <span class="chip cyan">Tamamlandı</span>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+          </div>
+        </section>
+
+        <section id="manager-view" class="role-view">
+          <div class="manager-grid">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2 class="panel-title">Personel hedef dağıtımı</h2>
+                  <p class="panel-copy">Mağaza hedefi aktif personele dağıtılır; toplam eşleşmeden talep gönderilmez.</p>
+                </div>
+                <span class="chip plum">Yazma akışı</span>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-control">
+                  <label>Hedef adı</label>
+                  <input value="Aylık personel hedef dağıtımı" />
+                </div>
+                <div class="form-control">
+                  <label>Toplam hedef</label>
+                  <input value="145.000 TL" inputmode="numeric" data-currency-input data-total-target />
+                </div>
+                <div class="form-control">
+                  <label>Talep notu</label>
+                  <input value="Mağaza hedef dağıtımı" />
+                </div>
+              </div>
+
+              <div class="allocation-table" data-target-distribution>
+                <div class="allocation-row">
+                  <div>Personel</div>
+                  <div>Hedef</div>
+                  <div>Pay</div>
+                  <div>Durum</div>
+                </div>
+                <div class="allocation-row" data-allocation-row>
+                  <div>
+                    <strong>Store Personnel</strong>
+                    <div class="person-sub">FM8001 · Aktif personel</div>
+                  </div>
+                  <input class="allocation-money-input" value="45.000 TL" inputmode="numeric" data-currency-input data-person-target aria-label="Store Personnel hedefi" />
+                  <span class="chip cyan" data-share>31%</span>
+                  <span class="chip plum" data-target-status>Hedef Girildi</span>
+                </div>
+                <div class="allocation-row" data-allocation-row>
+                  <div>
+                    <strong>Store Personnel Covered</strong>
+                    <div class="person-sub">FM8002 · Aktif personel</div>
+                  </div>
+                  <input class="allocation-money-input" value="35.000 TL" inputmode="numeric" data-currency-input data-person-target aria-label="Store Personnel Covered hedefi" />
+                  <span class="chip cyan" data-share>24%</span>
+                  <span class="chip plum" data-target-status>Hedef Girildi</span>
+                </div>
+                <div class="allocation-row" data-allocation-row>
+                  <div>
+                    <strong>Ayşe Yılmaz</strong>
+                    <div class="person-sub">FM8101 · Aktif personel</div>
+                  </div>
+                  <input class="allocation-money-input" value="25.000 TL" inputmode="numeric" data-currency-input data-person-target aria-label="Ayşe Yılmaz hedefi" />
+                  <span class="chip cyan" data-share>17%</span>
+                  <span class="chip plum" data-target-status>Hedef Girildi</span>
+                </div>
+                <div class="allocation-row" data-allocation-row>
+                  <div>
+                    <strong>Deniz Arslan</strong>
+                    <div class="person-sub">FM8102 · Aktif personel</div>
+                  </div>
+                  <input class="allocation-money-input" value="20.000 TL" inputmode="numeric" data-currency-input data-person-target aria-label="Deniz Arslan hedefi" />
+                  <span class="chip cyan" data-share>14%</span>
+                  <span class="chip plum" data-target-status>Hedef Girildi</span>
+                </div>
+                <div class="allocation-row" data-allocation-row>
+                  <div>
+                    <strong>Ece Demir</strong>
+                    <div class="person-sub">FM8103 · Aktif personel</div>
+                  </div>
+                  <input class="allocation-money-input" value="20.000 TL" inputmode="numeric" data-currency-input data-person-target aria-label="Ece Demir hedefi" />
+                  <span class="chip cyan" data-share>14%</span>
+                  <span class="chip plum" data-target-status>Hedef Girildi</span>
+                </div>
+              </div>
+
+              <div class="summary-strip">
+                <div class="mini-stat"><span>Dağıtılan toplam</span><strong data-allocated-total>₺145.000</strong></div>
+                <div class="mini-stat"><span>Kalan hedef</span><strong data-remaining-total>₺0</strong></div>
+                <div class="mini-stat"><span>Personel sayısı</span><strong data-person-count>5</strong></div>
+              </div>
+
+              <div class="submit-row">
+                <p class="form-feedback" data-submit-feedback>Dağıtım toplam hedefle eşleşti; onaya gönderilebilir.</p>
+                <button class="primary-button" data-send-target-request><i data-lucide="send"></i>Onaya gönder</button>
+              </div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2 class="panel-title">Talep ön kontrolü</h2>
+                  <p class="panel-copy">Talep gönderilmeden önce toplam ve personel dağılımı aynı çizgide kalır.</p>
+                </div>
+              </div>
+              <div class="timeline">
+                <div class="timeline-item">
+                  <div class="dot"><i data-lucide="check"></i></div>
+                  <div><strong data-balance-title>Toplam eşleşti</strong><span data-balance-copy>Dağıtım toplam hedefle aynı</span></div>
+                </div>
+                <div class="timeline-item">
+                  <div class="dot"><i data-lucide="users"></i></div>
+                  <div><strong>Aktif personel seçildi</strong><span data-person-copy>5 personel hedef alıyor</span></div>
+                </div>
+                <div class="timeline-item">
+                  <div class="dot"><i data-lucide="clock"></i></div>
+                  <div><strong data-next-title>Sonraki adım</strong><span data-next-copy>Bölge onayı bekleyecek</span></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="revision-view" class="role-view">
+          <div class="workspace">
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2 class="panel-title">Revize talebi</h2>
+                  <p class="panel-copy">Onaylanmış aylık hedef snapshotları burada görünür; revize talebi aynı snapshot üzerinden notla tekrar onaya gönderilir.</p>
+                </div>
+                <span class="chip cyan">Onaylı hedefler</span>
+              </div>
+
+              <div class="approved-target-card">
+                <div class="approved-target-head">
+                  <div>
+                    <h3 class="approved-target-title">Mayıs 2026 onaylanan hedefi</h3>
+                    <div class="approved-target-meta">20 Mayıs 2026 tarihinde bölge müdürü tarafından onaylandı. Revize yanıtı gelene kadar bu hedef aktif kalır.</div>
+                  </div>
+                  <span class="chip cyan">Aktif</span>
+                </div>
+                <div class="approved-target-grid">
+                  <div class="kv"><span>Onaylı toplam</span><strong data-approved-total>₺145.000</strong></div>
+                  <div class="kv"><span>Revize toplam</span><strong data-revision-total>₺145.000</strong></div>
+                  <div class="kv"><span>Fark</span><strong data-revision-delta>₺0</strong></div>
+                </div>
+                <div class="approved-person-list" aria-label="Onaylanan personel hedefleri">
+                  <div class="approved-person"><span>Store Personnel</span><input value="45.000 TL" inputmode="numeric" disabled data-currency-input data-revision-target data-original="45000" aria-label="Store Personnel revize hedefi" /></div>
+                  <div class="approved-person"><span>Store Personnel Covered</span><input value="35.000 TL" inputmode="numeric" disabled data-currency-input data-revision-target data-original="35000" aria-label="Store Personnel Covered revize hedefi" /></div>
+                  <div class="approved-person"><span>Ayşe Yılmaz</span><input value="25.000 TL" inputmode="numeric" disabled data-currency-input data-revision-target data-original="25000" aria-label="Ayşe Yılmaz revize hedefi" /></div>
+                  <div class="approved-person"><span>Deniz Arslan</span><input value="20.000 TL" inputmode="numeric" disabled data-currency-input data-revision-target data-original="20000" aria-label="Deniz Arslan revize hedefi" /></div>
+                  <div class="approved-person"><span>Ece Demir</span><input value="20.000 TL" inputmode="numeric" disabled data-currency-input data-revision-target data-original="20000" aria-label="Ece Demir revize hedefi" /></div>
+                </div>
+                <div class="submit-row p-0">
+                  <p class="form-feedback" data-revision-feedback>Ay içi değişiklik gerekiyorsa onaylı snapshot üzerinden revize talebi açılır.</p>
+                  <button class="ghost-button review-button" type="button" data-start-revision><i data-lucide="file-pen-line"></i>Revize oluştur</button>
+                </div>
+                <div class="revision-box" hidden data-revision-box>
+                  <textarea data-revision-note aria-label="Revize talebi notu" placeholder="Revize gerekçesi yazın. Örn: personel değişikliği, hedef güncellemesi, mağaza içi dağılım değişikliği"></textarea>
+                  <div class="submit-row p-0">
+                    <p class="form-feedback" data-revision-note-feedback>Revize talebi için kısa bir gerekçe gerekli.</p>
+                    <button class="primary-button" type="button" disabled data-send-revision><i data-lucide="send"></i>Revize talebi gönder</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="approved-target-card archived">
+                <div class="approved-target-head">
+                  <div>
+                    <h3 class="approved-target-title">Nisan 2026 onaylanan hedefi</h3>
+                    <div class="approved-target-meta">30 Nisan 2026 kapanış snapshotı. Geçmiş dönem olduğu için sadece okunur.</div>
+                  </div>
+                  <span class="chip">Kapandı</span>
+                </div>
+                <div class="approved-target-grid">
+                  <div class="kv"><span>Onaylı toplam</span><strong>₺132.000</strong></div>
+                  <div class="kv"><span>Personel</span><strong>5 kişi</strong></div>
+                  <div class="kv"><span>Son durum</span><strong>Kapanış</strong></div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section id="viewer-view" class="role-view">
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <h2 class="panel-title">Onaylananlar</h2>
+                <p class="panel-copy">Onay akışında kabul edilen mağaza hedefleri burada izlenir; aktif hedef snapshotı korunur.</p>
+              </div>
+              <span class="chip cyan" data-approved-count>0 mağaza</span>
+            </div>
+
+            <div class="queue-list">
+              <div class="approved-empty" data-approved-empty>Henüz onaylanan mağaza yok. Onay akışında `Onayla` ile kabul edilen mağazalar burada listelenir.</div>
+              <div class="store-accordion-list" data-approved-list></div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      const roleTabs = document.querySelectorAll("[data-role]")
+      const flowTabs = document.querySelectorAll("[data-jump]")
+      const views = document.querySelectorAll(".role-view")
+      const storeTriggers = document.querySelectorAll(".store-trigger")
+      const currencyInputs = document.querySelectorAll("[data-currency-input]")
+      const currencyFormatter = new Intl.NumberFormat("tr-TR")
+      const percentFormatter = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1 })
+      const totalTargetInput = document.querySelector("[data-total-target]")
+      const personTargetInputs = document.querySelectorAll("[data-person-target]")
+      const allocatedTotal = document.querySelector("[data-allocated-total]")
+      const remainingTotal = document.querySelector("[data-remaining-total]")
+      const personCount = document.querySelector("[data-person-count]")
+      const balanceTitle = document.querySelector("[data-balance-title]")
+      const balanceCopy = document.querySelector("[data-balance-copy]")
+      const personCopy = document.querySelector("[data-person-copy]")
+      const nextTitle = document.querySelector("[data-next-title]")
+      const nextCopy = document.querySelector("[data-next-copy]")
+      const submitFeedback = document.querySelector("[data-submit-feedback]")
+      const sendTargetRequest = document.querySelector("[data-send-target-request]")
+      const startRevision = document.querySelector("[data-start-revision]")
+      const revisionBox = document.querySelector("[data-revision-box]")
+      const revisionNote = document.querySelector("[data-revision-note]")
+      const revisionFeedback = document.querySelector("[data-revision-feedback]")
+      const revisionNoteFeedback = document.querySelector("[data-revision-note-feedback]")
+      const sendRevision = document.querySelector("[data-send-revision]")
+      const revisionTargetInputs = document.querySelectorAll("[data-revision-target]")
+      const approvedTotal = document.querySelector("[data-approved-total]")
+      const revisionTotal = document.querySelector("[data-revision-total]")
+      const revisionDelta = document.querySelector("[data-revision-delta]")
+      const approvedList = document.querySelector("[data-approved-list]")
+      const approvedEmpty = document.querySelector("[data-approved-empty]")
+      const approvedCount = document.querySelector("[data-approved-count]")
+      const pendingCount = document.querySelector("[data-pending-count]")
+
+      function parseCurrencyValue(rawValue) {
+        return Number(rawValue.replace(/\D/g, "")) || 0
+      }
+
+      function formatMoney(value) {
+        return `₺${currencyFormatter.format(Math.abs(value))}`
+      }
+
+      function formatCurrencyInput(rawValue) {
+        const digits = rawValue.replace(/\D/g, "")
+
+        if (!digits) {
+          return ""
+        }
+
+        return `${currencyFormatter.format(Number(digits))} TL`
+      }
+
+      function moveCaretBeforeCurrencySuffix(input) {
+        const suffixIndex = input.value.indexOf(" TL")
+        const position = suffixIndex === -1 ? input.value.length : suffixIndex
+
+        input.setSelectionRange(position, position)
+      }
+
+      function selectCurrencyValue(input) {
+        const suffixIndex = input.value.indexOf(" TL")
+        const position = suffixIndex === -1 ? input.value.length : suffixIndex
+
+        input.setSelectionRange(0, position)
+      }
+
+      function updateTargetDistribution() {
+        if (!totalTargetInput) {
+          return
+        }
+
+        const total = parseCurrencyValue(totalTargetInput.value)
+        let allocated = 0
+        let activePeople = 0
+
+        personTargetInputs.forEach((input) => {
+          const amount = parseCurrencyValue(input.value)
+          const row = input.closest("[data-allocation-row]")
+          const share = row?.querySelector("[data-share]")
+          const status = row?.querySelector("[data-target-status]")
+
+          allocated += amount
+
+          if (amount > 0) {
+            activePeople += 1
+            row?.classList.remove("is-empty")
+            if (share) {
+              share.textContent = total > 0 ? `${percentFormatter.format((amount / total) * 100)}%` : "0%"
+            }
+            if (status) {
+              status.className = "chip plum"
+              status.textContent = "Hedef Girildi"
+            }
+          } else {
+            row?.classList.add("is-empty")
+            if (share) {
+              share.textContent = "0%"
+            }
+            if (status) {
+              status.className = "chip rose"
+              status.textContent = "Hedef Girilmedi"
+            }
+          }
+        })
+
+        const remaining = total - allocated
+        const isBalanced = total > 0 && remaining === 0 && activePeople > 0
+
+        if (allocatedTotal) {
+          allocatedTotal.textContent = formatMoney(allocated)
+        }
+        if (remainingTotal) {
+          remainingTotal.textContent = remaining < 0 ? `-${formatMoney(remaining)}` : formatMoney(remaining)
+        }
+        if (personCount) {
+          personCount.textContent = String(activePeople)
+        }
+        if (personCopy) {
+          personCopy.textContent = `${activePeople} personel hedef alıyor`
+        }
+
+        if (balanceTitle && balanceCopy) {
+          if (total <= 0) {
+            balanceTitle.textContent = "Toplam hedef bekleniyor"
+            balanceCopy.textContent = "Onaya göndermek için toplam hedef girilmeli"
+          } else if (remaining === 0) {
+            balanceTitle.textContent = "Toplam eşleşti"
+            balanceCopy.textContent = "Dağıtım toplam hedefle aynı"
+          } else if (remaining > 0) {
+            balanceTitle.textContent = "Dağıtım eksik"
+            balanceCopy.textContent = `${formatMoney(remaining)} henüz dağıtılmadı`
+          } else {
+            balanceTitle.textContent = "Dağıtım fazla"
+            balanceCopy.textContent = `${formatMoney(remaining)} toplam hedefin üstünde`
+          }
+        }
+
+        if (nextTitle && nextCopy) {
+          nextTitle.textContent = isBalanced ? "Sonraki adım" : "Aksiyon gerekli"
+          nextCopy.textContent = isBalanced ? "Bölge onayı bekleyecek" : "Toplam hedef ve dağıtım eşleşmeli"
+        }
+
+        if (submitFeedback) {
+          submitFeedback.textContent = isBalanced
+            ? "Dağıtım toplam hedefle eşleşti; onaya gönderilebilir."
+            : "Onaya göndermeden önce toplam hedef ve personel dağıtımı eşleşmeli."
+        }
+
+        if (sendTargetRequest) {
+          sendTargetRequest.disabled = !isBalanced
+          sendTargetRequest.dataset.remaining = String(remaining)
+        }
+      }
+
+      function updateRevisionRequest() {
+        if (!revisionTargetInputs.length) {
+          return
+        }
+
+        const inputs = Array.from(revisionTargetInputs)
+        const approved = inputs.reduce((sum, input) => sum + Number(input.dataset.original || 0), 0)
+        const revised = inputs.reduce((sum, input) => sum + parseCurrencyValue(input.value), 0)
+        const changed = inputs.some((input) => parseCurrencyValue(input.value) !== Number(input.dataset.original || 0))
+        const hasEmptyTarget = inputs.some((input) => parseCurrencyValue(input.value) <= 0)
+        const hasNote = Boolean(revisionNote?.value.trim())
+        const revisionOpen = Boolean(revisionBox && !revisionBox.hidden)
+        const delta = revised - approved
+        const canSend = revisionOpen && changed && hasNote && !hasEmptyTarget && revised > 0 && delta === 0
+
+        if (approvedTotal) {
+          approvedTotal.textContent = formatMoney(approved)
+        }
+        if (revisionTotal) {
+          revisionTotal.textContent = formatMoney(revised)
+        }
+        if (revisionDelta) {
+          revisionDelta.textContent = delta < 0 ? `-${formatMoney(delta)}` : formatMoney(delta)
+        }
+        if (sendRevision) {
+          sendRevision.disabled = !canSend
+        }
+
+        if (!revisionOpen || !revisionNoteFeedback) {
+          return
+        }
+
+        if (hasEmptyTarget) {
+          revisionNoteFeedback.textContent = "Tüm aktif personeller için revize hedef girilmeli."
+        } else if (!changed) {
+          revisionNoteFeedback.textContent = "Gönderim için en az bir hedef tutarı değişmeli."
+        } else if (delta !== 0) {
+          revisionNoteFeedback.textContent = `Revize toplam onaylı toplamla eşleşmeli. Fark: ${delta < 0 ? "-" : ""}${formatMoney(delta)}.`
+        } else if (!hasNote) {
+          revisionNoteFeedback.textContent = "Revize talebi için kısa bir gerekçe gerekli."
+        } else {
+          revisionNoteFeedback.textContent = "Dağılım değişti; toplam hedef aynı kaldı."
+        }
+      }
+
+      function activateView(viewId) {
+        views.forEach((view) => view.classList.toggle("active", view.id === viewId))
+        flowTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.jump === viewId))
+      }
+
+      function updateApprovalCounts() {
+        const pendingStores = document.querySelectorAll("#region-view .store-accordion-list > .store-accordion").length
+        const approvedStores = approvedList?.querySelectorAll(".store-accordion").length ?? 0
+
+        if (pendingCount) {
+          pendingCount.textContent = `${pendingStores} mağaza`
+        }
+        if (approvedCount) {
+          approvedCount.textContent = `${approvedStores} mağaza`
+        }
+        if (approvedEmpty) {
+          approvedEmpty.hidden = approvedStores > 0
+        }
+      }
+
+      function approveStore(button) {
+        const storeCard = button.closest(".store-accordion")
+
+        if (!storeCard || !approvedList) {
+          return
+        }
+
+        storeCard.classList.remove("priority", "open")
+        storeCard.classList.add("success", "approved")
+
+        const trigger = storeCard.querySelector(".store-trigger")
+        trigger?.setAttribute("aria-expanded", "false")
+
+        const titleChip = storeCard.querySelector(".store-trigger-title .chip")
+        if (titleChip) {
+          titleChip.className = "chip cyan"
+          titleChip.textContent = "Onaylandı"
+        }
+
+        storeCard.querySelectorAll(".store-detail .chip.amber, .store-detail .chip.rose").forEach((chip) => {
+          chip.className = "chip cyan"
+          chip.textContent = "Onaylandı"
+        })
+
+        approvedList.prepend(storeCard)
+        updateApprovalCounts()
+      }
+
+      roleTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          roleTabs.forEach((item) => item.classList.remove("active"))
+          tab.classList.add("active")
+          const viewId =
+            tab.dataset.role === "manager"
+              ? "manager-view"
+              : tab.dataset.role === "viewer"
+                ? "viewer-view"
+                : "region-view"
+          activateView(viewId)
+        })
+      })
+
+      flowTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          activateView(tab.dataset.jump)
+          const roleName =
+            tab.dataset.jump === "manager-view" || tab.dataset.jump === "revision-view"
+              ? "manager"
+              : tab.dataset.jump === "viewer-view"
+                ? "viewer"
+                : "region"
+          roleTabs.forEach((item) => item.classList.toggle("active", item.dataset.role === roleName))
+        })
+      })
+
+      storeTriggers.forEach((trigger) => {
+        trigger.addEventListener("click", () => {
+          const storeCard = trigger.closest(".store-accordion")
+          const isOpen = storeCard.classList.contains("open")
+
+          storeCard.classList.toggle("open", !isOpen)
+          trigger.setAttribute("aria-expanded", String(!isOpen))
+        })
+      })
+
+      document.querySelectorAll("#region-view .store-actions .primary-button").forEach((button) => {
+        button.addEventListener("click", () => approveStore(button))
+      })
+
+      currencyInputs.forEach((input) => {
+        input.value = formatCurrencyInput(input.value)
+
+        input.addEventListener("input", () => {
+          input.value = formatCurrencyInput(input.value)
+          updateTargetDistribution()
+          updateRevisionRequest()
+
+          requestAnimationFrame(() => moveCaretBeforeCurrencySuffix(input))
+        })
+
+        input.addEventListener("focus", () => selectCurrencyValue(input))
+      })
+
+      sendTargetRequest?.addEventListener("click", () => {
+        updateTargetDistribution()
+
+        if (submitFeedback && !sendTargetRequest.disabled) {
+          submitFeedback.textContent = "Talep onay akışına hazırlandı."
+        }
+      })
+
+      startRevision?.addEventListener("click", () => {
+        if (!revisionBox || !revisionNote) {
+          return
+        }
+
+        revisionBox.hidden = false
+        startRevision.textContent = "Revize açık"
+        revisionTargetInputs.forEach((input) => {
+          input.disabled = false
+        })
+        updateRevisionRequest()
+        revisionNote.focus()
+
+        if (revisionFeedback) {
+          revisionFeedback.textContent = "Revize tutarlarını düzenleyip not ekleyince talep bölge müdürü onayına gönderilebilir."
+        }
+      })
+
+      revisionNote?.addEventListener("input", () => {
+        updateRevisionRequest()
+      })
+
+      sendRevision?.addEventListener("click", () => {
+        if (sendRevision.disabled) {
+          return
+        }
+
+        sendRevision.textContent = "Revize talebi gönderildi"
+        sendRevision.disabled = true
+
+        if (revisionFeedback) {
+          revisionFeedback.textContent = "Revize talebi bölge müdürü onay akışına gönderildi."
+        }
+        if (revisionNoteFeedback) {
+          revisionNoteFeedback.textContent = "Bölge müdürü yanıtı gelene kadar onaylı hedef aktif kalır."
+        }
+      })
+
+      updateTargetDistribution()
+      updateRevisionRequest()
+      updateApprovalCounts()
+
+      lucide.createIcons({
+        attrs: {
+          width: 17,
+          height: 17,
+          "stroke-width": 2.2,
+        },
+      })
+    </script>
+  </body>
+</html>
