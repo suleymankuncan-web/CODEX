@@ -70,7 +70,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `admin-web/src/pages/ImportBatchDetailPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete import operator bug. |
 | `admin-web/src/pages/AdminKpiConfigPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete governance/action UX bug. |
 | `admin-web/src/pages/StoreRankingsPage.tsx` | 1330 | redesign-sensitive UI page | Park until redesign or concrete ranking trust bug. |
-| `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 1328 | data materialization/write path | Park; high data behavior risk without an invariant/test decision. |
+| `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 1048 | data materialization/write path | PR6 extracted KPI materialization into `KpiMaterializationService`; remaining employee/store/assignment/position/company/region paths stay parked. |
 | `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1325 | stage/package/scoring repository facade | Park remaining writes/finalization until a separate invariant/test decision. |
 | `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 1278 | auth/security write repository facade | Park write boundaries unless a concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |

@@ -3,13 +3,11 @@ import { randomUUID } from "node:crypto";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
+import {
+  KpiMaterializationService,
+  type MaterializationStats,
+} from "./kpi-materialization.service";
 import { logStructuredError, logStructuredMessage, redactSensitiveLogValue } from "../../../shared/structured-log";
-
-type MaterializationStats = {
-  processedCount: number;
-  errorCount: number;
-  hasRetryableFailure: boolean;
-};
 
 @Injectable()
 export class MaterializationService {
@@ -18,6 +16,7 @@ export class MaterializationService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly externalIdMappingService: ExternalIdMappingService,
+    private readonly kpiMaterializationService: KpiMaterializationService,
   ) {}
 
   async materializeBatch(batchId: string): Promise<void> {
@@ -78,10 +77,14 @@ export class MaterializationService {
     }
 
     if (batch.entity_type === "kpi") {
-      stats = await this.materializeKpis(batch.import_batch_id, batch.integration_source_id, {
-        sourceBatchId: batch.source_batch_id,
-        sourcePayloadHash: batch.source_payload_hash,
-        sourceCapturedAt: batch.source_captured_at,
+      stats = await this.kpiMaterializationService.materializeKpis({
+        batchId: batch.import_batch_id,
+        integrationSourceId: batch.integration_source_id,
+        batchEnvelope: {
+          sourceBatchId: batch.source_batch_id,
+          sourcePayloadHash: batch.source_payload_hash,
+          sourceCapturedAt: batch.source_captured_at,
+        },
       });
     }
 
@@ -358,326 +361,6 @@ export class MaterializationService {
           "stg.store_raw",
           "stg_store_raw_id",
           row.stg_store_raw_id,
-          error,
-        );
-      }
-    }
-
-    return stats;
-  }
-
-  private async materializeKpis(
-    batchId: string,
-    integrationSourceId: string,
-    batchEnvelope: {
-      sourceBatchId: string | null;
-      sourcePayloadHash: string | null;
-      sourceCapturedAt: string | null;
-    },
-  ): Promise<MaterializationStats> {
-    const rows = await this.databaseService.query<{
-      stg_kpi_raw_id: string;
-      payload_json: Record<string, unknown>;
-    }>(
-      `
-        SELECT stg_kpi_raw_id, payload_json
-        FROM stg.kpi_raw
-        WHERE import_batch_id = $1::uuid
-          AND processed_flag = FALSE
-      `,
-      [batchId],
-    );
-
-    const stats: MaterializationStats = {
-      processedCount: 0,
-      errorCount: 0,
-      hasRetryableFailure: false,
-    };
-    const storeOrgScopeCache = new Map<
-      string,
-      { companyId: string | null; regionId: string | null }
-    >();
-
-    for (const row of rows.rows) {
-      const payload = row.payload_json;
-      const validationError = this.validateKpiPayload(payload);
-      if (validationError) {
-        stats.errorCount += 1;
-        await this.markRawRowValidationFailed(
-          "stg.kpi_raw",
-          "stg_kpi_raw_id",
-          row.stg_kpi_raw_id,
-          validationError,
-        );
-        continue;
-      }
-
-      try {
-        const kpiId = await this.resolveKpiDefinitionId(payload);
-        const companyId = await this.externalIdMappingService.resolveOptionalInternalId({
-          payload,
-          integrationSourceId,
-          entityType: "company",
-          directKeys: ["companyId", "internalCompanyId"],
-          externalKeys: ["sourceCompanyId", "companyExternalRef"],
-        });
-        const regionId = await this.externalIdMappingService.resolveOptionalInternalId({
-          payload,
-          integrationSourceId,
-          entityType: "region",
-          directKeys: ["regionId", "internalRegionId"],
-          externalKeys: ["sourceRegionId", "regionExternalRef"],
-        });
-        const storeId = await this.externalIdMappingService.resolveOptionalInternalId({
-          payload,
-          integrationSourceId,
-          entityType: "store",
-          directKeys: ["storeId", "internalStoreId"],
-          externalKeys: ["sourceStoreId", "storeExternalRef"],
-        });
-        const employeeId = await this.externalIdMappingService.resolveOptionalInternalId({
-          payload,
-          integrationSourceId,
-          entityType: "employee",
-          directKeys: ["employeeId", "internalEmployeeId"],
-          externalKeys: ["employeeExternalRef", "sourceEmployeeId"],
-        });
-        const scopeType = String(payload["scopeType"] ?? (employeeId ? "employee" : "store"));
-
-        if (scopeType === "store" && !storeId) {
-          throw new Error("store reference could not be resolved");
-        }
-
-        if (scopeType === "employee" && !employeeId) {
-          throw new Error("employee reference could not be resolved");
-        }
-        const periodType = String(payload["periodType"] ?? "monthly");
-        const periodStart = String(payload["periodStart"]);
-        const periodEnd = String(payload["periodEnd"]);
-        const actualValue = Number(payload["actualValue"] ?? 0);
-        const employeeIdToPersist = scopeType === "employee" ? employeeId : null;
-        const storeOrgScope = storeId
-          ? await this.resolveStoreOrgScope(storeId, storeOrgScopeCache)
-          : { companyId: null, regionId: null };
-        const companyIdToPersist = companyId ?? storeOrgScope.companyId;
-        const regionIdToPersist = regionId ?? storeOrgScope.regionId;
-        const targetValue =
-          payload["targetValue"] === null || payload["targetValue"] === undefined
-            ? null
-            : Number(payload["targetValue"]);
-
-        if (scopeType === "store") {
-          await this.databaseService.query(
-            `
-              INSERT INTO ops.kpi_actual (
-                kpi_actual_id,
-                kpi_id,
-                scope_type,
-                company_id,
-                region_id,
-                store_id,
-                employee_id,
-                period_type,
-                period_start,
-                period_end,
-                actual_value,
-                calculated_at,
-                source_batch_id,
-                source_payload_hash,
-                last_synced_at,
-                source_type
-              )
-              VALUES (
-                gen_random_uuid(),
-                $1::uuid,
-                'store',
-                $2::uuid,
-                $3::uuid,
-                $4::uuid,
-                NULL,
-                $5,
-                $6::date,
-                $7::date,
-                $8::numeric,
-                NOW(),
-                $9,
-                $10,
-                COALESCE($11::timestamptz, NOW()),
-                'integration'
-              )
-              ON CONFLICT (kpi_id, store_id, period_type, period_start, period_end)
-              WHERE scope_type = 'store' AND store_id IS NOT NULL
-              DO UPDATE SET
-                company_id = EXCLUDED.company_id,
-                region_id = EXCLUDED.region_id,
-                actual_value = EXCLUDED.actual_value,
-                calculated_at = NOW(),
-                source_batch_id = EXCLUDED.source_batch_id,
-                source_payload_hash = EXCLUDED.source_payload_hash,
-                last_synced_at = EXCLUDED.last_synced_at,
-                source_type = EXCLUDED.source_type
-            `,
-            [
-              kpiId,
-              companyIdToPersist,
-              regionIdToPersist,
-              storeId,
-              periodType,
-              periodStart,
-              periodEnd,
-              actualValue,
-              batchEnvelope.sourceBatchId,
-              batchEnvelope.sourcePayloadHash,
-              batchEnvelope.sourceCapturedAt,
-            ],
-          );
-
-          if (targetValue !== null && Number.isFinite(targetValue) && targetValue > 0) {
-            const thresholdGreen = targetValue;
-            const thresholdYellow = Number((targetValue * 0.85).toFixed(4));
-            const thresholdRed = Number((targetValue * 0.75).toFixed(4));
-
-            await this.databaseService.query(
-              `
-                DELETE FROM ops.kpi_target
-                WHERE kpi_id = $1::uuid
-                  AND scope_type = 'store'
-                  AND store_id = $2::uuid
-                  AND period_type = $3
-                  AND period_start = $4::date
-                  AND period_end = $5::date
-              `,
-              [kpiId, storeId, periodType, periodStart, periodEnd],
-            );
-
-            await this.databaseService.query(
-              `
-                INSERT INTO ops.kpi_target (
-                  kpi_target_id,
-                  kpi_id,
-                  scope_type,
-                  company_id,
-                  region_id,
-                  store_id,
-                  position_id,
-                  period_type,
-                  period_start,
-                  period_end,
-                  target_value,
-                  threshold_green,
-                  threshold_yellow,
-                  threshold_red
-                )
-                VALUES (
-                  gen_random_uuid(),
-                  $1::uuid,
-                  'store',
-                  $2::uuid,
-                  $3::uuid,
-                  $4::uuid,
-                  NULL,
-                  $5,
-                  $6::date,
-                  $7::date,
-                  $8::numeric,
-                  $9::numeric,
-                  $10::numeric,
-                  $11::numeric
-                )
-              `,
-              [
-                kpiId,
-                companyIdToPersist,
-                regionIdToPersist,
-                storeId,
-                periodType,
-                periodStart,
-                periodEnd,
-                targetValue,
-                thresholdGreen,
-                thresholdYellow,
-                thresholdRed,
-              ],
-            );
-          }
-        } else {
-          await this.databaseService.query(
-            `
-              INSERT INTO ops.kpi_actual (
-                kpi_actual_id,
-                kpi_id,
-                scope_type,
-                company_id,
-                region_id,
-                store_id,
-                employee_id,
-                period_type,
-                period_start,
-                period_end,
-                actual_value,
-                calculated_at,
-                source_batch_id,
-                source_payload_hash,
-                last_synced_at,
-                source_type
-              )
-              VALUES (
-                gen_random_uuid(),
-                $1::uuid,
-                'employee',
-                $2::uuid,
-                $3::uuid,
-                $4::uuid,
-                $5::uuid,
-                $6,
-                $7::date,
-                $8::date,
-                $9::numeric,
-                NOW(),
-                $10,
-                $11,
-                COALESCE($12::timestamptz, NOW()),
-                'integration'
-              )
-              ON CONFLICT (kpi_id, employee_id, period_type, period_start, period_end)
-              WHERE scope_type = 'employee' AND employee_id IS NOT NULL
-              DO UPDATE SET
-                company_id = EXCLUDED.company_id,
-                region_id = EXCLUDED.region_id,
-                store_id = EXCLUDED.store_id,
-                actual_value = EXCLUDED.actual_value,
-                calculated_at = NOW(),
-                source_batch_id = EXCLUDED.source_batch_id,
-                source_payload_hash = EXCLUDED.source_payload_hash,
-                last_synced_at = EXCLUDED.last_synced_at,
-                source_type = EXCLUDED.source_type
-            `,
-            [
-              kpiId,
-              companyIdToPersist,
-              regionIdToPersist,
-              storeId,
-              employeeIdToPersist,
-              periodType,
-              periodStart,
-              periodEnd,
-              actualValue,
-              batchEnvelope.sourceBatchId,
-              batchEnvelope.sourcePayloadHash,
-              batchEnvelope.sourceCapturedAt,
-            ],
-          );
-        }
-
-        await this.markRawRowProcessed("stg.kpi_raw", "stg_kpi_raw_id", row.stg_kpi_raw_id);
-        stats.processedCount += 1;
-      } catch (error) {
-        stats.errorCount += 1;
-        stats.hasRetryableFailure = true;
-        await this.markRawRowRetryableError(
-          "stg.kpi_raw",
-          "stg_kpi_raw_id",
-          row.stg_kpi_raw_id,
           error,
         );
       }
@@ -1165,50 +848,6 @@ export class MaterializationService {
     return null;
   }
 
-  private validateKpiPayload(payload: Record<string, unknown>): string | null {
-    if (!payload["kpiId"] && !payload["kpiCode"] && !payload["sourceMetricId"]) {
-      return "kpiId, kpiCode, or sourceMetricId is required";
-    }
-
-    if (!payload["periodStart"]) {
-      return "periodStart is required";
-    }
-
-    if (!payload["periodEnd"]) {
-      return "periodEnd is required";
-    }
-
-    return null;
-  }
-
-  private async resolveKpiDefinitionId(payload: Record<string, unknown>): Promise<string> {
-    if (payload["kpiId"]) {
-      return String(payload["kpiId"]);
-    }
-
-    const kpiCode = payload["kpiCode"] ?? payload["sourceMetricId"];
-    if (!kpiCode) {
-      throw new Error("kpi definition could not be resolved");
-    }
-
-    const result = await this.databaseService.query<{ kpi_id: string }>(
-      `
-        SELECT kpi_id
-        FROM ops.kpi_definition
-        WHERE kpi_code = $1
-          AND is_active = TRUE
-        LIMIT 1
-      `,
-      [String(kpiCode)],
-    );
-
-    if (result.rowCount === 0) {
-      throw new Error(`kpi definition could not be resolved for code: ${String(kpiCode)}`);
-    }
-
-    return result.rows[0].kpi_id;
-  }
-
   private validateAssignmentPayload(payload: Record<string, unknown>): string | null {
     if (!this.hasAnyValue(payload, ["employeeId", "internalEmployeeId", "sourceEmployeeId"])) {
       return "employee reference is required";
@@ -1286,46 +925,10 @@ export class MaterializationService {
     return result.rows[0].region_id;
   }
 
-  private async resolveStoreOrgScope(
-    storeId: string,
-    cache: Map<string, { companyId: string | null; regionId: string | null }>,
-  ): Promise<{ companyId: string | null; regionId: string | null }> {
-    const cached = cache.get(storeId);
-    if (cached) {
-      return cached;
-    }
-
-    const result = await this.databaseService.query<{
-      company_id: string | null;
-      region_id: string | null;
-    }>(
-      `
-        SELECT company_id, region_id
-        FROM ops.store
-        WHERE store_id = $1::uuid
-        LIMIT 1
-      `,
-      [storeId],
-    );
-
-    if (result.rowCount === 0) {
-      throw new Error("store organization scope could not be resolved");
-    }
-
-    const scope = {
-      companyId: result.rows[0].company_id,
-      regionId: result.rows[0].region_id,
-    };
-    cache.set(storeId, scope);
-
-    return scope;
-  }
-
   private async markRawRowProcessed(
     tableName:
       | "stg.employee_raw"
       | "stg.store_raw"
-      | "stg.kpi_raw"
       | "stg.assignment_raw"
       | "stg.position_raw"
       | "stg.company_raw"
@@ -1333,7 +936,6 @@ export class MaterializationService {
     idColumn:
       | "stg_employee_raw_id"
       | "stg_store_raw_id"
-      | "stg_kpi_raw_id"
       | "stg_assignment_raw_id"
       | "stg_position_raw_id"
       | "stg_company_raw_id"
@@ -1358,7 +960,6 @@ export class MaterializationService {
     tableName:
       | "stg.employee_raw"
       | "stg.store_raw"
-      | "stg.kpi_raw"
       | "stg.assignment_raw"
       | "stg.position_raw"
       | "stg.company_raw"
@@ -1366,7 +967,6 @@ export class MaterializationService {
     idColumn:
       | "stg_employee_raw_id"
       | "stg_store_raw_id"
-      | "stg_kpi_raw_id"
       | "stg_assignment_raw_id"
       | "stg_position_raw_id"
       | "stg_company_raw_id"
@@ -1388,7 +988,6 @@ export class MaterializationService {
     tableName:
       | "stg.employee_raw"
       | "stg.store_raw"
-      | "stg.kpi_raw"
       | "stg.assignment_raw"
       | "stg.position_raw"
       | "stg.company_raw"
@@ -1396,7 +995,6 @@ export class MaterializationService {
     idColumn:
       | "stg_employee_raw_id"
       | "stg_store_raw_id"
-      | "stg_kpi_raw_id"
       | "stg_assignment_raw_id"
       | "stg_position_raw_id"
       | "stg_company_raw_id"
