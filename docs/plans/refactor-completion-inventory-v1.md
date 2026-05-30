@@ -88,7 +88,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 512 | auth/security repository facade | Architecture Hardening V3 extracted user-account, pilot-binding, action-store, role-assignment, and role-permission write commands. Park further auth-admin movement unless concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
-| `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 1160 | workforce request SQL persistence facade | Architecture Hardening V2 extracted seller-code/offboarding transition policy; park broader SQL/transaction persistence splits unless a concrete workflow or reviewability trigger appears. |
+| `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 910 | workforce request command persistence facade | Architecture Hardening V4 PR-3 moved audit insert persistence and repeated write-return SQL projections behind focused helpers while keeping transaction ownership in the facade. Park deeper seller-code/offboarding command splits unless a future parity test can prove transaction grouping. |
 | `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 666 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
 | `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 740 | ranking read/scoring application service | PR3 removed broad repository casts and previous helper extraction remains in place. Park further extraction unless a ranking trust/reviewability trigger appears. |
 
@@ -105,8 +105,11 @@ Active V4 sequence:
    `master-data-bootstrap-promotion.helpers.ts` after strengthening exact
    promotion command response parity assertions. `master-data-bootstrap.service.ts`
    is now roughly 906 lines.
-2. `WorkforceRequestRepository` command persistence boundary. Before refactor,
-   confirm or add return-shape/transaction parity.
+2. Done: `WorkforceRequestRepository` command persistence boundary. PR-3 kept
+   `withTransaction` ownership in the facade, moved audit event insertion into
+   `workforce-request-audit.repository.ts`, moved repeated seller-code and
+   offboarding write-return projections into `workforce-request-write-sql.ts`,
+   and removed the repository from the oversized file allowlist.
 3. `CompetitionRepository` selected stage-package-plan review command
    persistence boundary. Do not mix scoring, finalization, or stage execution.
 4. `backend/nestjs/src/openapi/generate-openapi.ts` helper split with exact

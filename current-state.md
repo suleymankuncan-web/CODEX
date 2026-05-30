@@ -19,8 +19,8 @@ PR #524, the active Store route refactor line through PR #532, the
 Redis/BullMQ Render worker closure through PR #536, the Store checklist flow
 polish through PR #537, the first architecture hardening line through PR #552,
 Architecture Hardening V2 through PR #566, Architecture Hardening V3
-through PR #570, and the Architecture Hardening V4 planning baseline through
-PR #571.
+through PR #570, and the Architecture Hardening V4 line through the PR-3
+workforce request persistence boundary.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -85,6 +85,15 @@ Current maintenance baseline:
   file-size guard baseline for `master-data-bootstrap.service.ts` from 1194 to
   906 lines. API shape, DB schema, auth, import lifecycle, queue behavior, and
   promotion persistence behavior remained unchanged.
+- Architecture Hardening V4 PR-3 split workforce request write persistence
+  support without moving transaction ownership: audit event inserts now live in
+  `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request-audit.repository.ts`,
+  repeated seller-code/offboarding write-return projections live in
+  `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request-write-sql.ts`,
+  and `workforce-request.repository.ts` is below the standard 1000-line source
+  budget. Seller-code/offboarding API shape, status transitions, audit event
+  names, permission/scope behavior, access closure behavior, DB schema, and
+  transaction ownership remained unchanged.
 
 Latest route/scope guard merge:
 

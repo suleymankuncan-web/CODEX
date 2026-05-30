@@ -1,9 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import type { PoolClient } from "pg";
-import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
 import { WorkforceLookupReadRepository } from "./workforce-lookup-read.repository";
+import { WorkforceRequestAuditRepository } from "./workforce-request-audit.repository";
+import {
+  offboardingRequestReturnProjection,
+  sellerCodeRequestReturnProjection,
+} from "./workforce-request-write-sql";
 import {
   WorkforceOffboardingReadRepository,
   type EmployeeOffboardingRequestRow,
@@ -25,21 +28,9 @@ type OffboardingAccessClosure = {
   revokedMobileSessions: number;
 };
 
-type WorkforceAuditClient = Pick<PoolClient, "query">;
-
-type WorkforceAuditEventInput = {
-  actorUserId: string;
-  eventType: string;
-  entityName: string;
-  entityId: string;
-  companyId: string;
-  regionId: string;
-  storeId: string;
-  metadata: Record<string, unknown>;
-};
-
 @Injectable()
 export class WorkforceRequestRepository {
+  private readonly auditRepository = new WorkforceRequestAuditRepository();
   private readonly lookupReadRepository: WorkforceLookupReadRepository;
   private readonly offboardingReadRepository: WorkforceOffboardingReadRepository;
   private readonly sellerCodeReadRepository: WorkforceSellerCodeReadRepository;
@@ -147,35 +138,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            inserted.seller_code_request_id,
-            inserted.company_id,
-            inserted.region_id,
-            inserted.store_id,
-            s.store_code,
-            s.store_name,
-            inserted.store_type,
-            inserted.request_type,
-            inserted.request_status,
-            inserted.first_name,
-            inserted.last_name,
-            inserted.national_id_hash,
-            inserted.national_id_last4,
-            inserted.phone_number,
-            inserted.requested_hire_date,
-            inserted.requested_position_id,
-            p.position_code,
-            p.position_name,
-            inserted.employment_type,
-            inserted.requested_seller_code,
-            inserted.approved_seller_code,
-            inserted.last_reference_seller_code,
-            inserted.submitted_by_user_id,
-            inserted.reviewed_by_user_id,
-            inserted.reviewed_at,
-            inserted.review_note,
-            inserted.employee_id,
-            inserted.created_at,
-            inserted.updated_at
+            ${sellerCodeRequestReturnProjection("inserted")}
           FROM inserted
           INNER JOIN ops.store s
             ON s.store_id = inserted.store_id
@@ -205,7 +168,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.submittedByUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -330,35 +293,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            updated.seller_code_request_id,
-            updated.company_id,
-            updated.region_id,
-            updated.store_id,
-            s.store_code,
-            s.store_name,
-            updated.store_type,
-            updated.request_type,
-            updated.request_status,
-            updated.first_name,
-            updated.last_name,
-            updated.national_id_hash,
-            updated.national_id_last4,
-            updated.phone_number,
-            updated.requested_hire_date,
-            updated.requested_position_id,
-            p.position_code,
-            p.position_name,
-            updated.employment_type,
-            updated.requested_seller_code,
-            updated.approved_seller_code,
-            updated.last_reference_seller_code,
-            updated.submitted_by_user_id,
-            updated.reviewed_by_user_id,
-            updated.reviewed_at,
-            updated.review_note,
-            updated.employee_id,
-            updated.created_at,
-            updated.updated_at
+            ${sellerCodeRequestReturnProjection("updated")}
           FROM updated
           INNER JOIN ops.store s
             ON s.store_id = updated.store_id
@@ -377,7 +312,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.actorUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -418,35 +353,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            updated.seller_code_request_id,
-            updated.company_id,
-            updated.region_id,
-            updated.store_id,
-            s.store_code,
-            s.store_name,
-            updated.store_type,
-            updated.request_type,
-            updated.request_status,
-            updated.first_name,
-            updated.last_name,
-            updated.national_id_hash,
-            updated.national_id_last4,
-            updated.phone_number,
-            updated.requested_hire_date,
-            updated.requested_position_id,
-            p.position_code,
-            p.position_name,
-            updated.employment_type,
-            updated.requested_seller_code,
-            updated.approved_seller_code,
-            updated.last_reference_seller_code,
-            updated.submitted_by_user_id,
-            updated.reviewed_by_user_id,
-            updated.reviewed_at,
-            updated.review_note,
-            updated.employee_id,
-            updated.created_at,
-            updated.updated_at
+            ${sellerCodeRequestReturnProjection("updated")}
           FROM updated
           INNER JOIN ops.store s
             ON s.store_id = updated.store_id
@@ -463,7 +370,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.actorUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -525,35 +432,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            updated.seller_code_request_id,
-            updated.company_id,
-            updated.region_id,
-            updated.store_id,
-            s.store_code,
-            s.store_name,
-            updated.store_type,
-            updated.request_type,
-            updated.request_status,
-            updated.first_name,
-            updated.last_name,
-            updated.national_id_hash,
-            updated.national_id_last4,
-            updated.phone_number,
-            updated.requested_hire_date,
-            updated.requested_position_id,
-            p.position_code,
-            p.position_name,
-            updated.employment_type,
-            updated.requested_seller_code,
-            updated.approved_seller_code,
-            updated.last_reference_seller_code,
-            updated.submitted_by_user_id,
-            updated.reviewed_by_user_id,
-            updated.reviewed_at,
-            updated.review_note,
-            updated.employee_id,
-            updated.created_at,
-            updated.updated_at
+            ${sellerCodeRequestReturnProjection("updated")}
           FROM updated
           INNER JOIN ops.store s
             ON s.store_id = updated.store_id
@@ -579,7 +458,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.actorUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -636,28 +515,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            inserted.offboarding_request_id,
-            inserted.company_id,
-            inserted.region_id,
-            inserted.store_id,
-            s.store_code,
-            s.store_name,
-            inserted.employee_id,
-            e.external_employee_ref,
-            e.first_name,
-            e.last_name,
-            p.position_code,
-            p.position_name,
-            inserted.request_status,
-            inserted.requested_termination_date,
-            inserted.termination_reason,
-            inserted.request_reason,
-            inserted.submitted_by_user_id,
-            inserted.reviewed_by_user_id,
-            inserted.reviewed_at,
-            inserted.review_note,
-            inserted.created_at,
-            inserted.updated_at
+            ${offboardingRequestReturnProjection("inserted")}
           FROM inserted
           INNER JOIN ops.store s
             ON s.store_id = inserted.store_id
@@ -690,7 +548,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.submittedByUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -839,28 +697,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            updated.offboarding_request_id,
-            updated.company_id,
-            updated.region_id,
-            updated.store_id,
-            s.store_code,
-            s.store_name,
-            updated.employee_id,
-            e.external_employee_ref,
-            e.first_name,
-            e.last_name,
-            p.position_code,
-            p.position_name,
-            updated.request_status,
-            updated.requested_termination_date,
-            updated.termination_reason,
-            updated.request_reason,
-            updated.submitted_by_user_id,
-            updated.reviewed_by_user_id,
-            updated.reviewed_at,
-            updated.review_note,
-            updated.created_at,
-            updated.updated_at
+            ${offboardingRequestReturnProjection("updated")}
           FROM updated
           INNER JOIN ops.store s
             ON s.store_id = updated.store_id
@@ -887,7 +724,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.actorUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -932,28 +769,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            updated.offboarding_request_id,
-            updated.company_id,
-            updated.region_id,
-            updated.store_id,
-            s.store_code,
-            s.store_name,
-            updated.employee_id,
-            e.external_employee_ref,
-            e.first_name,
-            e.last_name,
-            p.position_code,
-            p.position_name,
-            updated.request_status,
-            updated.requested_termination_date,
-            updated.termination_reason,
-            updated.request_reason,
-            updated.submitted_by_user_id,
-            updated.reviewed_by_user_id,
-            updated.reviewed_at,
-            updated.review_note,
-            updated.created_at,
-            updated.updated_at
+            ${offboardingRequestReturnProjection("updated")}
           FROM updated
           INNER JOIN ops.store s
             ON s.store_id = updated.store_id
@@ -982,7 +798,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.actorUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -1036,28 +852,7 @@ export class WorkforceRequestRepository {
             RETURNING *
           )
           SELECT
-            updated.offboarding_request_id,
-            updated.company_id,
-            updated.region_id,
-            updated.store_id,
-            s.store_code,
-            s.store_name,
-            updated.employee_id,
-            e.external_employee_ref,
-            e.first_name,
-            e.last_name,
-            p.position_code,
-            p.position_name,
-            updated.request_status,
-            updated.requested_termination_date,
-            updated.termination_reason,
-            updated.request_reason,
-            updated.submitted_by_user_id,
-            updated.reviewed_by_user_id,
-            updated.reviewed_at,
-            updated.review_note,
-            updated.created_at,
-            updated.updated_at
+            ${offboardingRequestReturnProjection("updated")}
           FROM updated
           INNER JOIN ops.store s
             ON s.store_id = updated.store_id
@@ -1092,7 +887,7 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await this.insertWorkforceAuditEvent(client, {
+      await this.auditRepository.insertWorkforceAuditEvent(client, {
         actorUserId: input.actorUserId,
         eventType: transition.auditEventType,
         entityName: transition.entityName,
@@ -1112,49 +907,4 @@ export class WorkforceRequestRepository {
     });
   }
 
-  private async insertWorkforceAuditEvent(
-    client: WorkforceAuditClient,
-    input: WorkforceAuditEventInput,
-  ) {
-    await client.query(
-      `
-        INSERT INTO audit.event_log (
-          actor_user_id,
-          event_type,
-          entity_name,
-          entity_id,
-          scope_type,
-          company_id,
-          region_id,
-          store_id,
-          metadata_json
-        )
-        VALUES (
-          $1::uuid,
-          $2,
-          $3,
-          $4::uuid,
-          'store',
-          $5::uuid,
-          $6::uuid,
-          $7::uuid,
-          $8::jsonb
-        )
-      `,
-      [
-        input.actorUserId,
-        input.eventType,
-        input.entityName,
-        input.entityId,
-        input.companyId,
-        input.regionId,
-        input.storeId,
-        JSON.stringify({
-          correlationId: RequestContextStore.getCorrelationId(),
-          actorUserId: input.actorUserId,
-          ...input.metadata,
-        }),
-      ],
-    );
-  }
 }
