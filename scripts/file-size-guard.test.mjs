@@ -19,7 +19,7 @@ const oversizedBaseline = new Map([
   ['admin-web/src/pages/AdminKpiConfigPage.tsx', 1421],
   ['backend/nestjs/src/modules/auth/auth-admin.repository.ts', 1163],
   ['backend/nestjs/src/shared/openapi-baseline.contract.spec.ts', 1330],
-  ['backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts', 1282],
+  ['backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts', 1160],
   ['backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts', 1194],
   ['backend/nestjs/src/modules/integration/infrastructure/master-data-bootstrap.repository.ts', 1179],
   ['admin-web/src/pages/store-my-performance-model.ts', 1096],

@@ -227,10 +227,6 @@ const largeTrackedSourceAllowlist = new Map([
     'backend/nestjs/src/shared/openapi-baseline.contract.spec.ts',
     'Existing OpenAPI baseline contract spec; size follows API contract breadth.',
   ],
-  [
-    'backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts',
-    'Existing workforce write repository hotspot; V2 extracts transition policy before new workforce growth.',
-  ],
 ])
 
 const storeOpsModuleGraphLimits = new Map([

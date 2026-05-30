@@ -1,6 +1,22 @@
 import * as request from "supertest";
 import { createIntegrationApp } from "./test-app";
 
+function expectAuditEvent(
+  query: jest.Mock,
+  eventType: string,
+  entityName: string,
+) {
+  expect(
+    query.mock.calls.some(([sql, params]) =>
+      typeof sql === "string" &&
+      sql.includes("INSERT INTO audit.event_log") &&
+      Array.isArray(params) &&
+      params.includes(eventType) &&
+      params.includes(entityName),
+    ),
+  ).toBe(true);
+}
+
 describe("Workforce offboarding requests", () => {
   const companyId = "00000000-0000-0000-0000-000000000001";
   const otherCompanyId = "00000000-0000-0000-0000-000000000002";
@@ -184,14 +200,11 @@ describe("Workforce offboarding requests", () => {
       terminationDate,
       terminationReason: "resignation",
     });
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("employee_offboarding_request.created") &&
-          call[0].includes("ops.employee_offboarding_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(
+      query,
+      "employee_offboarding_request.created",
+      "ops.employee_offboarding_request",
+    );
 
     await app.close();
   });
@@ -437,14 +450,11 @@ describe("Workforce offboarding requests", () => {
       "close-action-stores",
       "revoke-mobile-sessions",
     ]);
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("employee_offboarding_request.approved") &&
-          call[0].includes("ops.employee_offboarding_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(
+      query,
+      "employee_offboarding_request.approved",
+      "ops.employee_offboarding_request",
+    );
 
     await app.close();
   });
@@ -463,7 +473,12 @@ describe("Workforce offboarding requests", () => {
       }
 
       if (sql.includes("UPDATE ops.employee_offboarding_request")) {
-        expect(params).toEqual([requestId, actorUserId, "Cikis tarihi tekrar kontrol edilmeli"]);
+        expect(params).toEqual([
+          requestId,
+          "rejected",
+          actorUserId,
+          "Cikis tarihi tekrar kontrol edilmeli",
+        ]);
         return {
           rowCount: 1,
           rows: [
@@ -521,14 +536,11 @@ describe("Workforce offboarding requests", () => {
           (call[0].includes("UPDATE ops.employee\n") || call[0].includes("INSERT INTO ops.turnover_event")),
       ),
     ).toBe(false);
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("employee_offboarding_request.rejected") &&
-          call[0].includes("ops.employee_offboarding_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(
+      query,
+      "employee_offboarding_request.rejected",
+      "ops.employee_offboarding_request",
+    );
 
     await app.close();
   });
@@ -627,6 +639,7 @@ describe("Workforce offboarding requests", () => {
       if (sql.includes("UPDATE ops.employee_offboarding_request")) {
         expect(params).toEqual([
           requestId,
+          "pending_hr_approval",
           companyId,
           regionId,
           storeId,
@@ -703,14 +716,11 @@ describe("Workforce offboarding requests", () => {
           (call[0].includes("UPDATE ops.employee\n") || call[0].includes("INSERT INTO ops.turnover_event")),
       ),
     ).toBe(false);
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("employee_offboarding_request.resubmitted") &&
-          call[0].includes("ops.employee_offboarding_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(
+      query,
+      "employee_offboarding_request.resubmitted",
+      "ops.employee_offboarding_request",
+    );
 
     await app.close();
   });

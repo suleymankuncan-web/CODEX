@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { PoolClient } from "pg";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { AccessLifecycleRepository } from "../../auth/access-lifecycle.repository";
@@ -11,6 +12,10 @@ import {
   WorkforceSellerCodeReadRepository,
   type SellerCodeRequestRow,
 } from "./workforce-seller-code-read.repository";
+import {
+  WORKFORCE_OFFBOARDING_TRANSITIONS,
+  WORKFORCE_SELLER_CODE_TRANSITIONS,
+} from "../application/workforce-request-transition.policy";
 
 type OffboardingAccessClosure = {
   userAccessClosed: boolean;
@@ -18,6 +23,19 @@ type OffboardingAccessClosure = {
   closedRoleAssignments: number;
   closedActionStoreAssignments: number;
   revokedMobileSessions: number;
+};
+
+type WorkforceAuditClient = Pick<PoolClient, "query">;
+
+type WorkforceAuditEventInput = {
+  actorUserId: string;
+  eventType: string;
+  entityName: string;
+  entityId: string;
+  companyId: string;
+  regionId: string;
+  storeId: string;
+  metadata: Record<string, unknown>;
 };
 
 @Injectable()
@@ -82,6 +100,8 @@ export class WorkforceRequestRepository {
     requestReason?: string;
     submittedByUserId: string;
   }) {
+    const transition = WORKFORCE_SELLER_CODE_TRANSITIONS.create;
+
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<SellerCodeRequestRow>(
         `
@@ -185,47 +205,21 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'seller_code_request.created',
-            'ops.seller_code_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.submittedByUserId,
-          request.seller_code_request_id,
-          input.companyId,
-          input.regionId,
-          input.storeId,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.submittedByUserId,
-            requestType: input.requestType,
-            storeType: input.storeType,
-            requestedSellerCode: input.requestedSellerCode ?? null,
-            lastReferenceSellerCode: input.lastReferenceSellerCode,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.submittedByUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.seller_code_request_id,
+        companyId: input.companyId,
+        regionId: input.regionId,
+        storeId: input.storeId,
+        metadata: {
+          requestType: input.requestType,
+          storeType: input.storeType,
+          requestedSellerCode: input.requestedSellerCode ?? null,
+          lastReferenceSellerCode: input.lastReferenceSellerCode,
+        },
+      });
 
       return request;
     });
@@ -268,6 +262,8 @@ export class WorkforceRequestRepository {
     actorUserId: string;
     reviewNote?: string;
   }) {
+    const transition = WORKFORCE_SELLER_CODE_TRANSITIONS.approve;
+
     return this.databaseService.withTransaction(async (client) => {
       const employeeResult = await client.query<{ employee_id: string }>(
         `
@@ -323,12 +319,12 @@ export class WorkforceRequestRepository {
           WITH updated AS (
             UPDATE ops.seller_code_request
             SET
-              request_status = 'approved',
-              approved_seller_code = $2,
-              employee_id = $3::uuid,
-              reviewed_by_user_id = $4,
+              request_status = $2,
+              approved_seller_code = $3,
+              employee_id = $4::uuid,
+              reviewed_by_user_id = $5,
               reviewed_at = NOW(),
-              review_note = $5,
+              review_note = $6,
               updated_at = NOW()
             WHERE seller_code_request_id = $1::uuid
             RETURNING *
@@ -371,6 +367,7 @@ export class WorkforceRequestRepository {
         `,
         [
           input.request.seller_code_request_id,
+          transition.targetStatus,
           input.sellerCode,
           employeeId,
           input.actorUserId,
@@ -380,46 +377,20 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'seller_code_request.approved',
-            'ops.seller_code_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          request.seller_code_request_id,
-          request.company_id,
-          request.region_id,
-          request.store_id,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.actorUserId,
-            employeeId,
-            sellerCode: input.sellerCode,
-            reviewNote: input.reviewNote ?? null,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.actorUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.seller_code_request_id,
+        companyId: request.company_id,
+        regionId: request.region_id,
+        storeId: request.store_id,
+        metadata: {
+          employeeId,
+          sellerCode: input.sellerCode,
+          reviewNote: input.reviewNote ?? null,
+        },
+      });
 
       return request;
     });
@@ -430,16 +401,18 @@ export class WorkforceRequestRepository {
     actorUserId: string;
     reviewNote: string;
   }) {
+    const transition = WORKFORCE_SELLER_CODE_TRANSITIONS.reject;
+
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<SellerCodeRequestRow>(
         `
           WITH updated AS (
             UPDATE ops.seller_code_request
             SET
-              request_status = 'rejected',
-              reviewed_by_user_id = $2,
+              request_status = $2,
+              reviewed_by_user_id = $3,
               reviewed_at = NOW(),
-              review_note = $3,
+              review_note = $4,
               updated_at = NOW()
             WHERE seller_code_request_id = $1::uuid
             RETURNING *
@@ -482,6 +455,7 @@ export class WorkforceRequestRepository {
         `,
         [
           input.request.seller_code_request_id,
+          transition.targetStatus,
           input.actorUserId,
           input.reviewNote,
         ],
@@ -489,44 +463,18 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'seller_code_request.rejected',
-            'ops.seller_code_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          request.seller_code_request_id,
-          request.company_id,
-          request.region_id,
-          request.store_id,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.actorUserId,
-            reviewNote: input.reviewNote,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.actorUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.seller_code_request_id,
+        companyId: request.company_id,
+        regionId: request.region_id,
+        storeId: request.store_id,
+        metadata: {
+          reviewNote: input.reviewNote,
+        },
+      });
 
       return request;
     });
@@ -546,26 +494,28 @@ export class WorkforceRequestRepository {
     lastReferenceSellerCode: string | null;
     actorUserId: string;
   }) {
+    const transition = WORKFORCE_SELLER_CODE_TRANSITIONS.resubmit;
+
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<SellerCodeRequestRow>(
         `
           WITH updated AS (
             UPDATE ops.seller_code_request
             SET
-              request_status = 'pending_hr_approval',
-              first_name = $2,
-              last_name = $3,
-              national_id_hash = $4,
-              national_id_last4 = $5,
-              phone_number = $6,
-              requested_hire_date = $7::date,
-              requested_position_id = $8::uuid,
-              employment_type = $9,
-              request_reason = $10,
+              request_status = $2,
+              first_name = $3,
+              last_name = $4,
+              national_id_hash = $5,
+              national_id_last4 = $6,
+              phone_number = $7,
+              requested_hire_date = $8::date,
+              requested_position_id = $9::uuid,
+              employment_type = $10,
+              request_reason = $11,
               requested_seller_code = NULL,
               approved_seller_code = NULL,
-              last_reference_seller_code = $11,
-              submitted_by_user_id = $12,
+              last_reference_seller_code = $12,
+              submitted_by_user_id = $13,
               reviewed_by_user_id = NULL,
               reviewed_at = NULL,
               review_note = NULL,
@@ -612,6 +562,7 @@ export class WorkforceRequestRepository {
         `,
         [
           input.request.seller_code_request_id,
+          transition.targetStatus,
           input.firstName,
           input.lastName,
           input.nationalIdHash,
@@ -628,45 +579,19 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'seller_code_request.resubmitted',
-            'ops.seller_code_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          request.seller_code_request_id,
-          request.company_id,
-          request.region_id,
-          request.store_id,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.actorUserId,
-            previousReviewNote: input.request.review_note,
-            lastReferenceSellerCode: input.lastReferenceSellerCode,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.actorUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.seller_code_request_id,
+        companyId: request.company_id,
+        regionId: request.region_id,
+        storeId: request.store_id,
+        metadata: {
+          previousReviewNote: input.request.review_note,
+          lastReferenceSellerCode: input.lastReferenceSellerCode,
+        },
+      });
 
       return request;
     });
@@ -682,6 +607,8 @@ export class WorkforceRequestRepository {
     requestReason: string;
     submittedByUserId: string;
   }) {
+    const transition = WORKFORCE_OFFBOARDING_TRANSITIONS.create;
+
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<EmployeeOffboardingRequestRow>(
         `
@@ -763,46 +690,20 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'employee_offboarding_request.created',
-            'ops.employee_offboarding_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.submittedByUserId,
-          request.offboarding_request_id,
-          input.companyId,
-          input.regionId,
-          input.storeId,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.submittedByUserId,
-            employeeId: input.employeeId,
-            terminationDate: input.terminationDate,
-            terminationReason: input.terminationReason,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.submittedByUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.offboarding_request_id,
+        companyId: input.companyId,
+        regionId: input.regionId,
+        storeId: input.storeId,
+        metadata: {
+          employeeId: input.employeeId,
+          terminationDate: input.terminationDate,
+          terminationReason: input.terminationReason,
+        },
+      });
 
       return request;
     });
@@ -826,6 +727,8 @@ export class WorkforceRequestRepository {
     actorUserId: string;
     reviewNote?: string;
   }) {
+    const transition = WORKFORCE_OFFBOARDING_TRANSITIONS.approve;
+
     return this.databaseService.withTransaction(async (client) => {
       await client.query(
         `
@@ -927,10 +830,10 @@ export class WorkforceRequestRepository {
           WITH updated AS (
             UPDATE ops.employee_offboarding_request
             SET
-              request_status = 'approved',
-              reviewed_by_user_id = $2,
+              request_status = $2,
+              reviewed_by_user_id = $3,
               reviewed_at = NOW(),
-              review_note = $3,
+              review_note = $4,
               updated_at = NOW()
             WHERE offboarding_request_id = $1::uuid
             RETURNING *
@@ -976,6 +879,7 @@ export class WorkforceRequestRepository {
         `,
         [
           input.request.offboarding_request_id,
+          transition.targetStatus,
           input.actorUserId,
           input.reviewNote ?? null,
         ],
@@ -983,47 +887,21 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'employee_offboarding_request.approved',
-            'ops.employee_offboarding_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          request.offboarding_request_id,
-          request.company_id,
-          request.region_id,
-          request.store_id,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.actorUserId,
-            employeeId: input.request.employee_id,
-            terminationDate: input.request.requested_termination_date,
-            terminationReason: input.request.termination_reason,
-            assignmentId,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.actorUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.offboarding_request_id,
+        companyId: request.company_id,
+        regionId: request.region_id,
+        storeId: request.store_id,
+        metadata: {
+          employeeId: input.request.employee_id,
+          terminationDate: input.request.requested_termination_date,
+          terminationReason: input.request.termination_reason,
+          assignmentId,
+        },
+      });
 
       return {
         request,
@@ -1037,16 +915,18 @@ export class WorkforceRequestRepository {
     actorUserId: string;
     reviewNote: string;
   }) {
+    const transition = WORKFORCE_OFFBOARDING_TRANSITIONS.reject;
+
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<EmployeeOffboardingRequestRow>(
         `
           WITH updated AS (
             UPDATE ops.employee_offboarding_request
             SET
-              request_status = 'rejected',
-              reviewed_by_user_id = $2,
+              request_status = $2,
+              reviewed_by_user_id = $3,
               reviewed_at = NOW(),
-              review_note = $3,
+              review_note = $4,
               updated_at = NOW()
             WHERE offboarding_request_id = $1::uuid
             RETURNING *
@@ -1094,6 +974,7 @@ export class WorkforceRequestRepository {
         `,
         [
           input.request.offboarding_request_id,
+          transition.targetStatus,
           input.actorUserId,
           input.reviewNote,
         ],
@@ -1101,45 +982,19 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'employee_offboarding_request.rejected',
-            'ops.employee_offboarding_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          request.offboarding_request_id,
-          request.company_id,
-          request.region_id,
-          request.store_id,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.actorUserId,
-            employeeId: input.request.employee_id,
-            reviewNote: input.reviewNote,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.actorUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.offboarding_request_id,
+        companyId: request.company_id,
+        regionId: request.region_id,
+        storeId: request.store_id,
+        metadata: {
+          employeeId: input.request.employee_id,
+          reviewNote: input.reviewNote,
+        },
+      });
 
       return request;
     });
@@ -1156,21 +1011,23 @@ export class WorkforceRequestRepository {
     requestReason: string;
     actorUserId: string;
   }) {
+    const transition = WORKFORCE_OFFBOARDING_TRANSITIONS.resubmit;
+
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<EmployeeOffboardingRequestRow>(
         `
           WITH updated AS (
             UPDATE ops.employee_offboarding_request
             SET
-              request_status = 'pending_hr_approval',
-              company_id = $2::uuid,
-              region_id = $3::uuid,
-              store_id = $4::uuid,
-              employee_id = $5::uuid,
-              requested_termination_date = $6::date,
-              termination_reason = $7,
-              request_reason = $8,
-              submitted_by_user_id = $9,
+              request_status = $2,
+              company_id = $3::uuid,
+              region_id = $4::uuid,
+              store_id = $5::uuid,
+              employee_id = $6::uuid,
+              requested_termination_date = $7::date,
+              termination_reason = $8,
+              request_reason = $9,
+              submitted_by_user_id = $10,
               reviewed_by_user_id = NULL,
               reviewed_at = NULL,
               review_note = NULL,
@@ -1221,6 +1078,7 @@ export class WorkforceRequestRepository {
         `,
         [
           input.request.offboarding_request_id,
+          transition.targetStatus,
           input.companyId,
           input.regionId,
           input.storeId,
@@ -1234,49 +1092,69 @@ export class WorkforceRequestRepository {
 
       const request = result.rows[0];
 
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'employee_offboarding_request.resubmitted',
-            'ops.employee_offboarding_request',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          request.offboarding_request_id,
-          request.company_id,
-          request.region_id,
-          request.store_id,
-          JSON.stringify({
-            correlationId: RequestContextStore.getCorrelationId(),
-            actorUserId: input.actorUserId,
-            employeeId: input.employeeId,
-            previousReviewNote: input.request.review_note,
-            terminationDate: input.terminationDate,
-            terminationReason: input.terminationReason,
-          }),
-        ],
-      );
+      await this.insertWorkforceAuditEvent(client, {
+        actorUserId: input.actorUserId,
+        eventType: transition.auditEventType,
+        entityName: transition.entityName,
+        entityId: request.offboarding_request_id,
+        companyId: request.company_id,
+        regionId: request.region_id,
+        storeId: request.store_id,
+        metadata: {
+          employeeId: input.employeeId,
+          previousReviewNote: input.request.review_note,
+          terminationDate: input.terminationDate,
+          terminationReason: input.terminationReason,
+        },
+      });
 
       return request;
     });
+  }
+
+  private async insertWorkforceAuditEvent(
+    client: WorkforceAuditClient,
+    input: WorkforceAuditEventInput,
+  ) {
+    await client.query(
+      `
+        INSERT INTO audit.event_log (
+          actor_user_id,
+          event_type,
+          entity_name,
+          entity_id,
+          scope_type,
+          company_id,
+          region_id,
+          store_id,
+          metadata_json
+        )
+        VALUES (
+          $1::uuid,
+          $2,
+          $3,
+          $4::uuid,
+          'store',
+          $5::uuid,
+          $6::uuid,
+          $7::uuid,
+          $8::jsonb
+        )
+      `,
+      [
+        input.actorUserId,
+        input.eventType,
+        input.entityName,
+        input.entityId,
+        input.companyId,
+        input.regionId,
+        input.storeId,
+        JSON.stringify({
+          correlationId: RequestContextStore.getCorrelationId(),
+          actorUserId: input.actorUserId,
+          ...input.metadata,
+        }),
+      ],
+    );
   }
 }
