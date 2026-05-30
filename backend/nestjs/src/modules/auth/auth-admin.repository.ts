@@ -1,11 +1,13 @@
 import { Injectable } from "@nestjs/common";
-import { buildRequestAuditMetadata } from "../../shared/audit/audit-metadata.factory";
 import { DatabaseService } from "../../shared/database/database.service";
+import { AuthActionStoreAssignmentCommandRepository } from "./auth-action-store-assignment-command.repository";
 import {
   AuthRoleAssignmentCommandRepository,
   type CreateRoleAssignmentCommandInput,
   type DeactivateRoleAssignmentCommandInput,
 } from "./auth-role-assignment-command.repository";
+import { AuthRolePermissionCommandRepository } from "./auth-role-permission-command.repository";
+import { AuthUserAccountCommandRepository } from "./auth-user-account-command.repository";
 
 type RoleAssignmentRow = {
   user_role_assignment_id: string;
@@ -76,26 +78,14 @@ type UserAccountRow = {
   employee_status?: string | null;
 };
 
-type RolePermissionRow = {
-  role_id: string;
-  permission_id: string;
-  role_code: string;
-  permission_code: string;
-  granted_at?: string;
-};
-
-type PilotUserBindingRow = {
-  user: UserAccountRow;
-  roleAssignments: RoleAssignmentRow[];
-  actionStoreAssignments: ActionStoreAssignmentRow[];
-  employee: ActiveEmployeeAccessContextRow;
-};
-
 @Injectable()
 export class AuthAdminRepository {
   constructor(
     private readonly databaseService: DatabaseService,
+    private readonly actionStoreAssignmentCommandRepository: AuthActionStoreAssignmentCommandRepository,
     private readonly roleAssignmentCommandRepository: AuthRoleAssignmentCommandRepository,
+    private readonly rolePermissionCommandRepository: AuthRolePermissionCommandRepository,
+    private readonly userAccountCommandRepository: AuthUserAccountCommandRepository,
   ) {}
 
   async getUserAccountByProviderSubject(input: {
@@ -346,21 +336,7 @@ export class AuthAdminRepository {
   }
 
   async countActiveActionStoreAssignments(input: { userId: string; storeId: string }) {
-    const result = await this.databaseService.query<{
-      active_action_store_assignment_count: string;
-    }>(
-      `
-        SELECT COUNT(*)::text AS active_action_store_assignment_count
-        FROM ops.user_action_store_assignment uasa
-        WHERE uasa.user_id = $1::uuid
-          AND uasa.store_id = $2::uuid
-          AND uasa.start_at <= NOW()
-          AND (uasa.end_at IS NULL OR uasa.end_at > NOW())
-      `,
-      [input.userId, input.storeId],
-    );
-
-    return Number(result.rows[0]?.active_action_store_assignment_count ?? "0");
+    return this.actionStoreAssignmentCommandRepository.countActiveActionStoreAssignments(input);
   }
 
   async createActionStoreAssignment(input: {
@@ -370,110 +346,7 @@ export class AuthAdminRepository {
     effectiveTo?: string | null;
     actorUserId: string;
   }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<ActionStoreAssignmentRow>(
-        `
-          WITH inserted AS (
-            INSERT INTO ops.user_action_store_assignment (
-              user_id,
-              store_id,
-              start_at,
-              end_at
-            )
-            VALUES (
-              $1::uuid,
-              $2::uuid,
-              COALESCE($3::timestamptz, NOW()),
-              $4::timestamptz
-            )
-            RETURNING
-              user_action_store_assignment_id,
-              user_id,
-              store_id,
-              start_at,
-              end_at,
-              created_at
-          )
-          SELECT
-            inserted.user_action_store_assignment_id,
-            inserted.user_id,
-            ua.username,
-            ua.email,
-            inserted.store_id,
-            s.store_code,
-            s.store_name,
-            s.company_id,
-            s.region_id,
-            r.region_name,
-            inserted.start_at,
-            inserted.end_at,
-            inserted.created_at
-          FROM inserted
-          INNER JOIN ops.user_account ua ON ua.user_id = inserted.user_id
-          INNER JOIN ops.store s ON s.store_id = inserted.store_id
-          INNER JOIN ops.region r ON r.region_id = s.region_id
-        `,
-        [
-          input.userId,
-          input.storeId,
-          input.effectiveFrom ?? null,
-          input.effectiveTo ?? null,
-        ],
-      );
-
-      const assignment = result.rows[0];
-
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'user_action_store_assignment.created',
-            'ops.user_action_store_assignment',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          assignment.user_action_store_assignment_id,
-          assignment.company_id,
-          assignment.region_id,
-          assignment.store_id,
-          JSON.stringify({
-            ...buildRequestAuditMetadata({
-              sourceContext: {
-                module: "auth-admin",
-                operation: "create-action-store-assignment",
-              },
-              changedFields: ["userId", "storeId", "effectiveFrom", "effectiveTo"],
-              details: {
-                userId: input.userId,
-                storeId: input.storeId,
-                effectiveFrom: input.effectiveFrom ?? null,
-                effectiveTo: input.effectiveTo ?? null,
-              },
-            }),
-          }),
-        ],
-      );
-
-      return assignment;
-    });
+    return this.actionStoreAssignmentCommandRepository.createActionStoreAssignment(input);
   }
 
   async listActionStoreAssignments(input: {
@@ -584,98 +457,7 @@ export class AuthAdminRepository {
   }
 
   async deactivateActionStoreAssignment(input: { assignmentId: string; actorUserId: string }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<ActionStoreAssignmentRow>(
-        `
-          WITH updated AS (
-            UPDATE ops.user_action_store_assignment
-            SET end_at = NOW()
-            WHERE user_action_store_assignment_id = $1::uuid
-              AND (end_at IS NULL OR end_at > NOW())
-            RETURNING
-              user_action_store_assignment_id,
-              user_id,
-              store_id,
-              start_at,
-              end_at,
-              created_at
-          )
-          SELECT
-            updated.user_action_store_assignment_id,
-            updated.user_id,
-            ua.username,
-            ua.email,
-            updated.store_id,
-            s.store_code,
-            s.store_name,
-            s.company_id,
-            s.region_id,
-            r.region_name,
-            updated.start_at,
-            updated.end_at,
-            updated.created_at
-          FROM updated
-          INNER JOIN ops.user_account ua ON ua.user_id = updated.user_id
-          INNER JOIN ops.store s ON s.store_id = updated.store_id
-          INNER JOIN ops.region r ON r.region_id = s.region_id
-        `,
-        [input.assignmentId],
-      );
-
-      const assignment = result.rows[0] ?? null;
-
-      if (assignment) {
-        await client.query(
-          `
-            INSERT INTO audit.event_log (
-              actor_user_id,
-              event_type,
-              entity_name,
-              entity_id,
-              scope_type,
-              company_id,
-              region_id,
-              store_id,
-              metadata_json
-            )
-            VALUES (
-              $1::uuid,
-              'user_action_store_assignment.deactivated',
-              'ops.user_action_store_assignment',
-              $2::uuid,
-              'store',
-              $3::uuid,
-              $4::uuid,
-              $5::uuid,
-              $6::jsonb
-            )
-          `,
-          [
-            input.actorUserId,
-            assignment.user_action_store_assignment_id,
-            assignment.company_id,
-            assignment.region_id,
-            assignment.store_id,
-            JSON.stringify({
-              ...buildRequestAuditMetadata({
-                sourceContext: {
-                  module: "auth-admin",
-                  operation: "deactivate-action-store-assignment",
-                },
-                changedFields: ["endAt"],
-                details: {
-                  userId: assignment.user_id,
-                  storeId: assignment.store_id,
-                  endAt: assignment.end_at,
-                },
-              }),
-            }),
-          ],
-        );
-      }
-
-      return assignment;
-    });
+    return this.actionStoreAssignmentCommandRepository.deactivateActionStoreAssignment(input);
   }
 
   async createUserAccount(input: {
@@ -686,83 +468,7 @@ export class AuthAdminRepository {
     providerSubject?: string | null;
     actorUserId: string;
   }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<UserAccountRow>(
-        `
-          INSERT INTO ops.user_account (
-            employee_id,
-            username,
-            email,
-            auth_provider,
-            provider_subject
-          )
-          VALUES ($1::uuid, $2, $3, $4, $5)
-          RETURNING
-            user_id,
-            employee_id,
-            username,
-            email,
-            auth_provider,
-            provider_subject,
-            is_active,
-            last_login_at,
-            created_at
-        `,
-        [
-          input.employeeId ?? null,
-          input.username,
-          input.email,
-          input.authProvider,
-          input.providerSubject ?? null,
-        ],
-      );
-
-      const user = result.rows[0];
-
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            metadata_json
-          )
-          VALUES ($1::uuid, 'user_account.created', 'ops.user_account', $2::uuid, 'company', $3::jsonb)
-        `,
-        [
-          input.actorUserId,
-          user.user_id,
-          JSON.stringify({
-            ...buildRequestAuditMetadata({
-              sourceContext: {
-                module: "auth-admin",
-                operation: "create-user-account",
-              },
-              changedFields: [
-                "employeeId",
-                "username",
-                "email",
-                "authProvider",
-                "providerSubject",
-                "isActive",
-              ],
-              details: {
-                employeeId: user.employee_id,
-                username: user.username,
-                email: user.email,
-                authProvider: user.auth_provider,
-                providerSubject: user.provider_subject,
-                isActive: user.is_active,
-              },
-            }),
-          }),
-        ],
-      );
-
-      return user;
-    });
+    return this.userAccountCommandRepository.createUserAccount(input);
   }
 
   async createPilotUserBinding(input: {
@@ -780,263 +486,12 @@ export class AuthAdminRepository {
     stores: StoreLookupRow[];
     employee: ActiveEmployeeAccessContextRow;
     actorUserId: string;
-  }): Promise<PilotUserBindingRow> {
-    return this.databaseService.withTransaction(async (client) => {
-      const userResult = await client.query<UserAccountRow>(
-        `
-          INSERT INTO ops.user_account (
-            employee_id,
-            username,
-            email,
-            auth_provider,
-            provider_subject
-          )
-          VALUES ($1::uuid, $2, $3, $4, $5)
-          RETURNING
-            user_id,
-            employee_id,
-            username,
-            email,
-            auth_provider,
-            provider_subject,
-            is_active,
-            last_login_at,
-            created_at
-        `,
-        [
-          input.employeeId,
-          input.username,
-          input.email,
-          input.authProvider,
-          input.providerSubject,
-        ],
-      );
-
-      const user = userResult.rows[0];
-      const roleAssignments: RoleAssignmentRow[] = [];
-      const actionStoreAssignments: ActionStoreAssignmentRow[] = [];
-
-      for (const store of input.stores) {
-        const roleAssignmentResult = await client.query<RoleAssignmentRow>(
-          `
-            INSERT INTO ops.user_role_assignment (
-              user_id,
-              role_id,
-              scope_type,
-              company_id,
-              region_id,
-              store_id,
-              start_at
-            )
-            VALUES (
-              $1::uuid,
-              $2::uuid,
-              'store',
-              $3::uuid,
-              $4::uuid,
-              $5::uuid,
-              NOW()
-            )
-            RETURNING
-              user_role_assignment_id,
-              user_id,
-              $6::text AS role_code,
-              scope_type,
-              company_id,
-              region_id,
-              store_id,
-              start_at,
-              end_at,
-              created_at
-          `,
-          [
-            user.user_id,
-            input.role.role_id,
-            store.company_id,
-            store.region_id,
-            store.store_id,
-            input.role.role_code,
-          ],
-        );
-        roleAssignments.push(roleAssignmentResult.rows[0]);
-
-        const actionStoreAssignmentResult = await client.query<ActionStoreAssignmentRow>(
-          `
-            WITH inserted AS (
-              INSERT INTO ops.user_action_store_assignment (
-                user_id,
-                store_id,
-                start_at
-              )
-              VALUES ($1::uuid, $2::uuid, NOW())
-              RETURNING
-                user_action_store_assignment_id,
-                user_id,
-                store_id,
-                start_at,
-                end_at,
-                created_at
-            )
-            SELECT
-              inserted.user_action_store_assignment_id,
-              inserted.user_id,
-              ua.username,
-              ua.email,
-              inserted.store_id,
-              s.store_code,
-              s.store_name,
-              s.company_id,
-              s.region_id,
-              r.region_name,
-              inserted.start_at,
-              inserted.end_at,
-              inserted.created_at
-            FROM inserted
-            INNER JOIN ops.user_account ua
-              ON ua.user_id = inserted.user_id
-            INNER JOIN ops.store s
-              ON s.store_id = inserted.store_id
-            INNER JOIN ops.region r
-              ON r.region_id = s.region_id
-          `,
-          [user.user_id, store.store_id],
-        );
-        actionStoreAssignments.push(actionStoreAssignmentResult.rows[0]);
-      }
-
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            company_id,
-            region_id,
-            store_id,
-            metadata_json
-          )
-          VALUES (
-            $1::uuid,
-            'pilot_user_binding.created',
-            'ops.user_account',
-            $2::uuid,
-            'store',
-            $3::uuid,
-            $4::uuid,
-            $5::uuid,
-            $6::jsonb
-          )
-        `,
-        [
-          input.actorUserId,
-          user.user_id,
-          input.stores[0]?.company_id ?? null,
-          input.stores[0]?.region_id ?? null,
-          input.stores[0]?.store_id ?? null,
-          JSON.stringify({
-            ...buildRequestAuditMetadata({
-              sourceContext: {
-                module: "auth-admin",
-                operation: "create-pilot-user-binding",
-              },
-              changedFields: [
-                "employeeId",
-                "username",
-                "email",
-                "authProvider",
-                "providerSubject",
-                "roleCode",
-                "storeIds",
-              ],
-              details: {
-                employeeId: input.employeeId,
-                username: input.username,
-                email: input.email,
-                authProvider: input.authProvider,
-                providerSubject: input.providerSubject,
-                roleCode: input.role.role_code,
-                storeIds: input.stores.map((store) => store.store_id),
-              },
-            }),
-          }),
-        ],
-      );
-
-      return {
-        user,
-        roleAssignments,
-        actionStoreAssignments,
-        employee: input.employee,
-      };
-    });
+  }) {
+    return this.userAccountCommandRepository.createPilotUserBinding(input);
   }
 
   async reactivateUserAccount(input: { userId: string; actorUserId: string }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<UserAccountRow>(
-        `
-          UPDATE ops.user_account
-          SET is_active = TRUE,
-              updated_at = NOW(),
-              deactivated_at = NULL,
-              deactivation_reason = NULL,
-              deactivated_by_user_id = NULL
-          WHERE user_id = $1::uuid
-            AND is_active = FALSE
-          RETURNING
-            user_id,
-            employee_id,
-            username,
-            email,
-            auth_provider,
-            provider_subject,
-            is_active,
-            last_login_at,
-            created_at
-        `,
-        [input.userId],
-      );
-
-      const user = result.rows[0] ?? null;
-
-      if (user) {
-        await client.query(
-          `
-            INSERT INTO audit.event_log (
-              actor_user_id,
-              event_type,
-              entity_name,
-              entity_id,
-              scope_type,
-              metadata_json
-            )
-            VALUES ($1::uuid, 'user_account.reactivated', 'ops.user_account', $2::uuid, 'company', $3::jsonb)
-          `,
-          [
-            input.actorUserId,
-            input.userId,
-            JSON.stringify({
-              ...buildRequestAuditMetadata({
-                sourceContext: {
-                  module: "auth-admin",
-                  operation: "reactivate-user-account",
-                },
-                changedFields: ["isActive"],
-                details: {
-                  username: user.username,
-                  email: user.email,
-                  isActive: user.is_active,
-                },
-              }),
-            }),
-          ],
-        );
-      }
-
-      return user;
-    });
+    return this.userAccountCommandRepository.reactivateUserAccount(input);
   }
 
   async grantRolePermission(input: {
@@ -1044,59 +499,7 @@ export class AuthAdminRepository {
     permissionId: string;
     actorUserId: string;
   }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<RolePermissionRow>(
-        `
-          INSERT INTO ops.role_permission (
-            role_id,
-            permission_id
-          )
-          VALUES ($1::uuid, $2::uuid)
-          RETURNING
-            role_id,
-            permission_id,
-            (SELECT role_code FROM ops.role WHERE role_id = $1::uuid) AS role_code,
-            (SELECT permission_code FROM ops.permission WHERE permission_id = $2::uuid) AS permission_code,
-            granted_at
-        `,
-        [input.roleId, input.permissionId],
-      );
-
-      const rolePermission = result.rows[0];
-
-      await client.query(
-        `
-          INSERT INTO audit.event_log (
-            actor_user_id,
-            event_type,
-            entity_name,
-            entity_id,
-            scope_type,
-            metadata_json
-          )
-          VALUES ($1::uuid, 'role_permission.granted', 'ops.role', $2::uuid, 'company', $3::jsonb)
-        `,
-        [
-          input.actorUserId,
-          input.roleId,
-          JSON.stringify({
-            ...buildRequestAuditMetadata({
-              sourceContext: {
-                module: "auth-admin",
-                operation: "grant-role-permission",
-              },
-              changedFields: ["permissionId"],
-              details: {
-                permissionId: input.permissionId,
-                permissionCode: rolePermission.permission_code,
-              },
-            }),
-          }),
-        ],
-      );
-
-      return rolePermission;
-    });
+    return this.rolePermissionCommandRepository.grantRolePermission(input);
   }
 
   async revokeRolePermission(input: {
@@ -1104,60 +507,6 @@ export class AuthAdminRepository {
     permissionCode: string;
     actorUserId: string;
   }) {
-    return this.databaseService.withTransaction(async (client) => {
-      const result = await client.query<RolePermissionRow>(
-        `
-          DELETE FROM ops.role_permission rp
-          USING ops.permission p, ops.role r
-          WHERE rp.permission_id = p.permission_id
-            AND rp.role_id = r.role_id
-            AND rp.role_id = $1::uuid
-            AND p.permission_code = $2
-          RETURNING
-            rp.role_id,
-            rp.permission_id,
-            r.role_code,
-            p.permission_code
-        `,
-        [input.roleId, input.permissionCode],
-      );
-
-      const rolePermission = result.rows[0] ?? null;
-
-      if (rolePermission) {
-        await client.query(
-          `
-            INSERT INTO audit.event_log (
-              actor_user_id,
-              event_type,
-              entity_name,
-              entity_id,
-              scope_type,
-              metadata_json
-            )
-            VALUES ($1::uuid, 'role_permission.revoked', 'ops.role', $2::uuid, 'company', $3::jsonb)
-          `,
-          [
-            input.actorUserId,
-            input.roleId,
-            JSON.stringify({
-              ...buildRequestAuditMetadata({
-                sourceContext: {
-                  module: "auth-admin",
-                  operation: "revoke-role-permission",
-                },
-                changedFields: ["permissionId"],
-                details: {
-                  permissionId: rolePermission.permission_id,
-                  permissionCode: rolePermission.permission_code,
-                },
-              }),
-            }),
-          ],
-        );
-      }
-
-      return rolePermission;
-    });
+    return this.rolePermissionCommandRepository.revokeRolePermission(input);
   }
 }

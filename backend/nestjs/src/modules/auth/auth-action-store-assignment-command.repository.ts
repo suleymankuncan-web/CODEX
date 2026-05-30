@@ -1,0 +1,257 @@
+import { Injectable } from "@nestjs/common";
+import { buildRequestAuditMetadata } from "../../shared/audit/audit-metadata.factory";
+import { DatabaseService } from "../../shared/database/database.service";
+
+type ActionStoreAssignmentCommandRow = {
+  user_action_store_assignment_id: string;
+  user_id: string;
+  username?: string;
+  email?: string;
+  store_id: string;
+  store_code: string;
+  store_name: string;
+  company_id: string;
+  region_id: string;
+  region_name: string;
+  start_at: string;
+  end_at: string | null;
+  created_at: string;
+};
+
+export type CreateActionStoreAssignmentCommandInput = {
+  userId: string;
+  storeId: string;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
+  actorUserId: string;
+};
+
+export type DeactivateActionStoreAssignmentCommandInput = {
+  assignmentId: string;
+  actorUserId: string;
+};
+
+@Injectable()
+export class AuthActionStoreAssignmentCommandRepository {
+  constructor(private readonly databaseService: DatabaseService) {}
+
+  async countActiveActionStoreAssignments(input: { userId: string; storeId: string }) {
+    const result = await this.databaseService.query<{
+      active_action_store_assignment_count: string;
+    }>(
+      `
+        SELECT COUNT(*)::text AS active_action_store_assignment_count
+        FROM ops.user_action_store_assignment uasa
+        WHERE uasa.user_id = $1::uuid
+          AND uasa.store_id = $2::uuid
+          AND uasa.start_at <= NOW()
+          AND (uasa.end_at IS NULL OR uasa.end_at > NOW())
+      `,
+      [input.userId, input.storeId],
+    );
+
+    return Number(result.rows[0]?.active_action_store_assignment_count ?? "0");
+  }
+
+  async createActionStoreAssignment(input: CreateActionStoreAssignmentCommandInput) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<ActionStoreAssignmentCommandRow>(
+        `
+          WITH inserted AS (
+            INSERT INTO ops.user_action_store_assignment (
+              user_id,
+              store_id,
+              start_at,
+              end_at
+            )
+            VALUES (
+              $1::uuid,
+              $2::uuid,
+              COALESCE($3::timestamptz, NOW()),
+              $4::timestamptz
+            )
+            RETURNING
+              user_action_store_assignment_id,
+              user_id,
+              store_id,
+              start_at,
+              end_at,
+              created_at
+          )
+          SELECT
+            inserted.user_action_store_assignment_id,
+            inserted.user_id,
+            ua.username,
+            ua.email,
+            inserted.store_id,
+            s.store_code,
+            s.store_name,
+            s.company_id,
+            s.region_id,
+            r.region_name,
+            inserted.start_at,
+            inserted.end_at,
+            inserted.created_at
+          FROM inserted
+          INNER JOIN ops.user_account ua ON ua.user_id = inserted.user_id
+          INNER JOIN ops.store s ON s.store_id = inserted.store_id
+          INNER JOIN ops.region r ON r.region_id = s.region_id
+        `,
+        [
+          input.userId,
+          input.storeId,
+          input.effectiveFrom ?? null,
+          input.effectiveTo ?? null,
+        ],
+      );
+
+      const assignment = result.rows[0];
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            company_id,
+            region_id,
+            store_id,
+            metadata_json
+          )
+          VALUES (
+            $1::uuid,
+            'user_action_store_assignment.created',
+            'ops.user_action_store_assignment',
+            $2::uuid,
+            'store',
+            $3::uuid,
+            $4::uuid,
+            $5::uuid,
+            $6::jsonb
+          )
+        `,
+        [
+          input.actorUserId,
+          assignment.user_action_store_assignment_id,
+          assignment.company_id,
+          assignment.region_id,
+          assignment.store_id,
+          JSON.stringify({
+            ...buildRequestAuditMetadata({
+              sourceContext: {
+                module: "auth-admin",
+                operation: "create-action-store-assignment",
+              },
+              changedFields: ["userId", "storeId", "effectiveFrom", "effectiveTo"],
+              details: {
+                userId: input.userId,
+                storeId: input.storeId,
+                effectiveFrom: input.effectiveFrom ?? null,
+                effectiveTo: input.effectiveTo ?? null,
+              },
+            }),
+          }),
+        ],
+      );
+
+      return assignment;
+    });
+  }
+
+  async deactivateActionStoreAssignment(input: DeactivateActionStoreAssignmentCommandInput) {
+    return this.databaseService.withTransaction(async (client) => {
+      const result = await client.query<ActionStoreAssignmentCommandRow>(
+        `
+          WITH updated AS (
+            UPDATE ops.user_action_store_assignment
+            SET end_at = NOW()
+            WHERE user_action_store_assignment_id = $1::uuid
+              AND (end_at IS NULL OR end_at > NOW())
+            RETURNING
+              user_action_store_assignment_id,
+              user_id,
+              store_id,
+              start_at,
+              end_at,
+              created_at
+          )
+          SELECT
+            updated.user_action_store_assignment_id,
+            updated.user_id,
+            ua.username,
+            ua.email,
+            updated.store_id,
+            s.store_code,
+            s.store_name,
+            s.company_id,
+            s.region_id,
+            r.region_name,
+            updated.start_at,
+            updated.end_at,
+            updated.created_at
+          FROM updated
+          INNER JOIN ops.user_account ua ON ua.user_id = updated.user_id
+          INNER JOIN ops.store s ON s.store_id = updated.store_id
+          INNER JOIN ops.region r ON r.region_id = s.region_id
+        `,
+        [input.assignmentId],
+      );
+
+      const assignment = result.rows[0] ?? null;
+
+      if (assignment) {
+        await client.query(
+          `
+            INSERT INTO audit.event_log (
+              actor_user_id,
+              event_type,
+              entity_name,
+              entity_id,
+              scope_type,
+              company_id,
+              region_id,
+              store_id,
+              metadata_json
+            )
+            VALUES (
+              $1::uuid,
+              'user_action_store_assignment.deactivated',
+              'ops.user_action_store_assignment',
+              $2::uuid,
+              'store',
+              $3::uuid,
+              $4::uuid,
+              $5::uuid,
+              $6::jsonb
+            )
+          `,
+          [
+            input.actorUserId,
+            assignment.user_action_store_assignment_id,
+            assignment.company_id,
+            assignment.region_id,
+            assignment.store_id,
+            JSON.stringify({
+              ...buildRequestAuditMetadata({
+                sourceContext: {
+                  module: "auth-admin",
+                  operation: "deactivate-action-store-assignment",
+                },
+                changedFields: ["endAt"],
+                details: {
+                  userId: assignment.user_id,
+                  storeId: assignment.store_id,
+                  endAt: assignment.end_at,
+                },
+              }),
+            }),
+          ],
+        );
+      }
+
+      return assignment;
+    });
+  }
+}
