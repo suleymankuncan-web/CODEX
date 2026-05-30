@@ -1,6 +1,8 @@
 import { MaterializationService } from "./materialization.service";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
+import { KpiMaterializationService } from "./kpi-materialization.service";
 import { ExternalIdMappingCommandRepository } from "../infrastructure/external-id-mapping-command.repository";
+import { KpiMaterializationRepository } from "../infrastructure/kpi-materialization.repository";
 import { muteNestLogger } from "../../../../test/jest/mute-nest-logger";
 
 type QueryResponse<T> = {
@@ -38,10 +40,21 @@ describe("MaterializationService", () => {
       databaseService as never,
     );
     const mappingService = new ExternalIdMappingService(mappingRepository);
+    const kpiMaterializationRepository = new KpiMaterializationRepository(
+      databaseService as never,
+    );
+    const kpiMaterializationService = new KpiMaterializationService(
+      kpiMaterializationRepository,
+      mappingService,
+    );
 
     return {
       databaseService,
-      service: new MaterializationService(databaseService as never, mappingService),
+      service: new MaterializationService(
+        databaseService as never,
+        mappingService,
+        kpiMaterializationService,
+      ),
     };
   }
 
