@@ -203,7 +203,8 @@ describe("CompetitionRepository stage package plans", () => {
   });
 
   it("updates a draft stage package plan and writes audit metadata", async () => {
-    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+    const { repository, client, executedSql, executedParams } =
+      createRepositoryHarness();
     const updatedStages = validStagePackageStages.map((stage) =>
       stage.stageOrder === 2
         ? { ...stage, stageName: "Revised Final Showdown" }
@@ -492,7 +493,8 @@ describe("CompetitionRepository stage package plans", () => {
   });
 
   it("approves a submitted stage package plan and writes audit metadata", async () => {
-    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+    const { repository, databaseService, client, executedSql, executedParams } =
+      createRepositoryHarness();
 
     client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
       executedSql.push(sql);
@@ -564,6 +566,16 @@ describe("CompetitionRepository stage package plans", () => {
 
     const sql = executedSql.join("\n");
     const serializedParams = JSON.stringify(executedParams);
+    expect(databaseService.withTransaction).toHaveBeenCalledTimes(1);
+    expect(executedSql[0]).toContain("FOR UPDATE");
+    expect(executedSql[1]).toContain("UPDATE ops.competition_stage_package_plan");
+    expect(executedSql[2]).toContain("INSERT INTO audit.event_log");
+    expect(executedParams[1]).toEqual([
+      "55555555-5555-4555-8555-555555555555",
+      "approved",
+      "22222222-2222-4222-8222-222222222222",
+      "Reviewed in planning meeting.",
+    ]);
     expect(sql).toContain("plan_status = $2");
     expect(sql).toContain("reviewed_by_user_id = $3");
     expect(sql).toContain("review_note = $4");
@@ -579,7 +591,8 @@ describe("CompetitionRepository stage package plans", () => {
   });
 
   it("rejects a submitted stage package plan and writes audit metadata", async () => {
-    const { repository, client, executedSql, executedParams } = createRepositoryHarness();
+    const { repository, databaseService, client, executedSql, executedParams } =
+      createRepositoryHarness();
 
     client.query.mockImplementation(async (sql: string, params: unknown[] = []) => {
       executedSql.push(sql);
@@ -644,6 +657,16 @@ describe("CompetitionRepository stage package plans", () => {
 
     const sql = executedSql.join("\n");
     const serializedParams = JSON.stringify(executedParams);
+    expect(databaseService.withTransaction).toHaveBeenCalledTimes(1);
+    expect(executedSql[0]).toContain("FOR UPDATE");
+    expect(executedSql[1]).toContain("UPDATE ops.competition_stage_package_plan");
+    expect(executedSql[2]).toContain("INSERT INTO audit.event_log");
+    expect(executedParams[1]).toEqual([
+      "55555555-5555-4555-8555-555555555555",
+      "rejected",
+      "22222222-2222-4222-8222-222222222222",
+      "Dates need another pass.",
+    ]);
     expect(sql).toContain("plan_status = $2");
     expect(sql).toContain("INSERT INTO audit.event_log");
     expect(serializedParams).toContain("rejected");

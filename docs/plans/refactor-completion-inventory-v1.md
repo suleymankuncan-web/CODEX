@@ -84,7 +84,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `admin-web/src/pages/AdminKpiConfigPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete governance/action UX bug. |
 | `admin-web/src/pages/StoreRankingsPage.tsx` | 599 | Store rankings page container | PR8 architecture hardening split moved model, table, and detail panel concerns out of the page. Park further visual redesign until a concrete product/UI trigger appears. |
 | `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 188 | data materialization orchestration | Architecture Hardening V2 split row status, employee, store, assignment, position, company, region, and batch persistence out of this service; do not reopen unless import routing behavior changes. |
-| `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1360 | stage/package/scoring repository facade | Architecture Hardening V2 extracted stage package plan transition policy; park scoring, finalization, and broader persistence splits until a separate invariant/test decision. |
+| `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1295 | stage/package/scoring repository facade | Architecture Hardening V4 PR-4 extracted the selected stage package plan review command UPDATE/audit persistence while keeping transaction and transition ownership in the facade. Park scoring, finalization, execution, and broader persistence splits until separate invariant/test decisions. |
 | `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 512 | auth/security repository facade | Architecture Hardening V3 extracted user-account, pilot-binding, action-store, role-assignment, and role-permission write commands. Park further auth-admin movement unless concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
@@ -110,8 +110,11 @@ Active V4 sequence:
    `workforce-request-audit.repository.ts`, moved repeated seller-code and
    offboarding write-return projections into `workforce-request-write-sql.ts`,
    and removed the repository from the oversized file allowlist.
-3. `CompetitionRepository` selected stage-package-plan review command
-   persistence boundary. Do not mix scoring, finalization, or stage execution.
+3. Done: `CompetitionRepository` selected stage-package-plan review command
+   persistence boundary. PR-4 extracted approve/reject review command UPDATE
+   and audit persistence into
+   `competition-stage-package-plan-review-command.repository.ts`; scoring,
+   finalization, and stage execution stayed untouched.
 4. `backend/nestjs/src/openapi/generate-openapi.ts` helper split with exact
    `docs/api/openapi.json` output parity and frontend API check.
 5. Store targets E2E split from `admin-web/e2e/store-surfaces.spec.ts` into a

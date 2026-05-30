@@ -12,7 +12,7 @@ const oversizedBaseline = new Map([
   ['admin-web/src/pages/MasterDataBootstrapPage.tsx', 1774],
   ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1608],
   ['scripts/generate-system-flow.mjs', 1438],
-  ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1360],
+  ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1295],
   ['admin-web/src/pages/IntegrationDashboardPage.tsx', 1427],
   ['admin-web/src/pages/ImportBatchDetailPage.tsx', 1426],
   ['admin-web/src/pages/AdminKpiConfigPage.tsx', 1421],

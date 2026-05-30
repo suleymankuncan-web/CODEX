@@ -94,6 +94,13 @@ Current maintenance baseline:
   budget. Seller-code/offboarding API shape, status transitions, audit event
   names, permission/scope behavior, access closure behavior, DB schema, and
   transaction ownership remained unchanged.
+- Architecture Hardening V4 PR-4 split the selected competition stage package
+  plan review command boundary: approve/reject review UPDATE plus audit write
+  persistence now lives in
+  `backend/nestjs/src/modules/store-ops/infrastructure/competition-stage-package-plan-review-command.repository.ts`,
+  while `CompetitionRepository` still owns the transaction and transition
+  guard. Scoring, finalization, stage execution, API shape, DB schema, auth,
+  and workflow behavior remained unchanged.
 
 Latest route/scope guard merge:
 
