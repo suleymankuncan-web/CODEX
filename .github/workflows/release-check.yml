@@ -36,6 +36,7 @@ jobs:
     timeout-minutes: 35
     permissions:
       contents: read
+      pull-requests: read
 
     steps:
       - name: Checkout
@@ -69,5 +70,6 @@ jobs:
 
       - name: Run official release gate
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
         run: npm run check:release

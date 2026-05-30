@@ -17,8 +17,9 @@ npm.cmd run check:release
 The root gate runs:
 
 1. Root script contract tests
-2. Backend `npm run check:release`
-3. Frontend `npm run check:release`
+2. Migration change warning helper
+3. Backend `npm run check:release`
+4. Frontend `npm run check:release`
 
 Backend currently owns:
 
@@ -77,6 +78,30 @@ The required evidence is sanitized command output showing:
 - core schema table counts for `audit`, `ops`, `rpt`, and `stg`.
 
 If Docker/local PostgreSQL is unavailable, record a written Conditional Go with owner/date instead of pretending the smoke ran.
+
+## Migration Change Warning
+
+The root release gate runs `scripts/migration-change-warning.mjs` before backend
+and frontend checks. The helper is non-blocking: it does not make the
+Docker-dependent fresh DB smoke mandatory in CI.
+
+When the changed-file set includes migration-sensitive files, the helper prints
+a visible warning and requires the PR/release notes to make one of these
+decisions explicit:
+
+- run `npm.cmd run smoke:migration:fresh-db` and record sanitized evidence, or
+- record a Conditional Go with owner, date, reason, and the follow-up point for
+  fresh DB smoke evidence.
+
+Migration-sensitive files include:
+
+- `db/schema.sql`
+- `db/migrations/*.sql`
+- `backend/nestjs/scripts/run-migrations.ts`
+- `backend/nestjs/src/shared/database/database.module.ts`
+- backend migration service/controller files under
+  `backend/nestjs/src/shared/database/`
+- `scripts/migration-fresh-db-smoke.mjs`
 
 ## Rule
 
