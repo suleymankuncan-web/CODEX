@@ -160,10 +160,6 @@ const directDatabaseServiceAllowlist = new Map([
     ['import { DatabaseService } from "../../../shared/database/database.service"'],
   ],
   [
-    'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
-    ['import { DatabaseService } from "../../../shared/database/database.service"'],
-  ],
-  [
     'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
     ['import { DatabaseService } from "../../../shared/database/database.service"'],
   ],
@@ -398,7 +394,7 @@ test('guard rejects a fake new application DatabaseService import', () => {
 test('guard rejects missing or duplicate allowlisted direct DatabaseService imports', () => {
   const violations = findDirectDatabaseServiceViolations([
     {
-      path: 'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
+      path: 'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
       content: `
         import { Injectable } from "@nestjs/common";
       `,
@@ -419,7 +415,7 @@ test('guard rejects missing or duplicate allowlisted direct DatabaseService impo
 test('guard ignores commented allowlisted direct DatabaseService imports', () => {
   const violations = findDirectDatabaseServiceViolations([
     {
-      path: 'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
+      path: 'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
       content: `
         // import { DatabaseService } from "../../../shared/database/database.service";
         /*

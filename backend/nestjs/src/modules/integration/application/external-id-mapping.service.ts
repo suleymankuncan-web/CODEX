@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { DatabaseService } from "../../../shared/database/database.service";
+import { ExternalIdMappingCommandRepository } from "../infrastructure/external-id-mapping-command.repository";
 
 @Injectable()
 export class ExternalIdMappingService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly externalIdMappingCommandRepository: ExternalIdMappingCommandRepository,
+  ) {}
 
   async resolveRequiredInternalId(input: {
     payload: Record<string, unknown>;
@@ -78,22 +80,13 @@ export class ExternalIdMappingService {
     entityType: string,
     externalId: string,
   ): Promise<string | null> {
-    const result = await this.databaseService.query<{ internal_id: string }>(
-      `
-        SELECT internal_id
-        FROM stg.external_id_map
-        WHERE integration_source_id = $1::uuid
-          AND entity_type = $2
-          AND external_id = $3
-          AND is_active = TRUE
-        LIMIT 1
-      `,
-      [integrationSourceId, entityType, externalId],
-    );
-
-    const exactMatch = result.rows[0]?.internal_id;
+    const exactMatch = await this.externalIdMappingCommandRepository.findActiveMapping({
+      integrationSourceId,
+      entityType,
+      externalId,
+    });
     if (exactMatch) {
-      return exactMatch;
+      return exactMatch.internalId;
     }
 
     const normalizedExternalId = normalizeExternalMappingKey(externalId);
@@ -101,28 +94,20 @@ export class ExternalIdMappingService {
       return null;
     }
 
-    const normalizedResult = await this.databaseService.query<{
-      internal_id: string;
-    }>(
-      `
-        SELECT DISTINCT internal_id
-        FROM stg.external_id_map
-        WHERE integration_source_id = $1::uuid
-          AND entity_type = $2
-          AND UPPER(REGEXP_REPLACE(COALESCE(external_id, ''), '[\\s-]', '', 'g')) = $3
-          AND is_active = TRUE
-        LIMIT 2
-      `,
-      [integrationSourceId, entityType, normalizedExternalId],
-    );
+    const normalizedMatches =
+      await this.externalIdMappingCommandRepository.findActiveMappingsByNormalizedExternalId({
+        integrationSourceId,
+        entityType,
+        normalizedExternalId,
+      });
 
-    if (normalizedResult.rows.length > 1) {
+    if (normalizedMatches.length > 1) {
       throw new Error(
         `Ambiguous external id mapping for ${entityType}: ${externalId}`,
       );
     }
 
-    return normalizedResult.rows[0]?.internal_id ?? null;
+    return normalizedMatches[0]?.internalId ?? null;
   }
 
   async upsertMapping(input: {
@@ -132,31 +117,7 @@ export class ExternalIdMappingService {
     internalId: string;
     internalTableName: string;
   }): Promise<void> {
-    await this.databaseService.query(
-      `
-        INSERT INTO stg.external_id_map (
-          integration_source_id,
-          entity_type,
-          external_id,
-          internal_id,
-          internal_table_name,
-          is_active
-        )
-        VALUES ($1::uuid, $2, $3, $4::uuid, $5, TRUE)
-        ON CONFLICT (integration_source_id, entity_type, external_id) DO UPDATE
-        SET
-          internal_id = EXCLUDED.internal_id,
-          internal_table_name = EXCLUDED.internal_table_name,
-          is_active = TRUE
-      `,
-      [
-        input.integrationSourceId,
-        input.entityType,
-        input.externalId,
-        input.internalId,
-        input.internalTableName,
-      ],
-    );
+    await this.externalIdMappingCommandRepository.upsertMapping(input);
   }
 }
 

@@ -1,5 +1,6 @@
 import { MaterializationService } from "./materialization.service";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
+import { ExternalIdMappingCommandRepository } from "../infrastructure/external-id-mapping-command.repository";
 import { muteNestLogger } from "../../../../test/jest/mute-nest-logger";
 
 type QueryResponse<T> = {
@@ -33,7 +34,10 @@ describe("MaterializationService", () => {
     handler: (sql: string, params: unknown[]) => Promise<QueryResponse<unknown>>,
   ) {
     const databaseService = createDatabaseServiceMock(handler);
-    const mappingService = new ExternalIdMappingService(databaseService as never);
+    const mappingRepository = new ExternalIdMappingCommandRepository(
+      databaseService as never,
+    );
+    const mappingService = new ExternalIdMappingService(mappingRepository);
 
     return {
       databaseService,
