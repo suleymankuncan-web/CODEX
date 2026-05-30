@@ -31,8 +31,17 @@ function lineNumberAt(content, index) {
 function importsIn(content) {
   const imports = []
   const importPattern = /import\s+(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g
+  const exportPattern = /export\s+(?:type\s+)?(?:\*|{[\s\S]*?})\s+from\s+['"]([^'"]+)['"]/g
 
   for (const match of content.matchAll(importPattern)) {
+    imports.push({
+      statement: match[0],
+      source: match[1],
+      index: match.index ?? 0,
+    })
+  }
+
+  for (const match of content.matchAll(exportPattern)) {
     imports.push({
       statement: match[0],
       source: match[1],
@@ -294,6 +303,22 @@ test('guard rejects a fake new web-to-infrastructure import', () => {
 
   assert.match(violations.join('\n'), /new-report\.controller\.ts/)
   assert.match(violations.join('\n'), /infrastructure/)
+})
+
+test('guard rejects fake application re-exports from web/controller code', () => {
+  const violations = findApplicationWebImportViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/application/new-report.service.ts',
+      content: `
+        export type { NewReportDto } from "../web/dto/new-report.dto";
+        export * from "../web/new-report.controller";
+      `,
+    },
+  ])
+
+  assert.equal(violations.length, 2)
+  assert.match(violations.join('\n'), /new-report\.service\.ts/)
+  assert.match(violations.join('\n'), /web/)
 })
 
 test('guard rejects a fake extra broad repository cast in an allowlisted file', () => {
