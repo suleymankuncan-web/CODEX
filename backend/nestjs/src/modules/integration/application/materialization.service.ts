@@ -8,6 +8,10 @@ import {
   type MaterializationStats,
 } from "./kpi-materialization.service";
 import { logStructuredError, logStructuredMessage, redactSensitiveLogValue } from "../../../shared/structured-log";
+import {
+  MaterializationRowStatusRepository,
+  type MaterializationRawEntity,
+} from "../infrastructure/materialization-row-status.repository";
 
 @Injectable()
 export class MaterializationService {
@@ -17,6 +21,7 @@ export class MaterializationService {
     private readonly databaseService: DatabaseService,
     private readonly externalIdMappingService: ExternalIdMappingService,
     private readonly kpiMaterializationService: KpiMaterializationService,
+    private readonly rowStatusRepository: MaterializationRowStatusRepository,
   ) {}
 
   async materializeBatch(batchId: string): Promise<void> {
@@ -169,8 +174,7 @@ export class MaterializationService {
       if (validationError) {
         stats.errorCount += 1;
         await this.markRawRowValidationFailed(
-          "stg.employee_raw",
-          "stg_employee_raw_id",
+          "employee",
           row.stg_employee_raw_id,
           validationError,
         );
@@ -233,8 +237,7 @@ export class MaterializationService {
         });
 
         await this.markRawRowProcessed(
-          "stg.employee_raw",
-          "stg_employee_raw_id",
+          "employee",
           row.stg_employee_raw_id,
         );
         stats.processedCount += 1;
@@ -242,8 +245,7 @@ export class MaterializationService {
         stats.errorCount += 1;
         stats.hasRetryableFailure = true;
         await this.markRawRowRetryableError(
-          "stg.employee_raw",
-          "stg_employee_raw_id",
+          "employee",
           row.stg_employee_raw_id,
           error,
         );
@@ -282,8 +284,7 @@ export class MaterializationService {
       if (validationError) {
         stats.errorCount += 1;
         await this.markRawRowValidationFailed(
-          "stg.store_raw",
-          "stg_store_raw_id",
+          "store",
           row.stg_store_raw_id,
           validationError,
         );
@@ -352,14 +353,13 @@ export class MaterializationService {
           internalTableName: "ops.store",
         });
 
-        await this.markRawRowProcessed("stg.store_raw", "stg_store_raw_id", row.stg_store_raw_id);
+        await this.markRawRowProcessed("store", row.stg_store_raw_id);
         stats.processedCount += 1;
       } catch (error) {
         stats.errorCount += 1;
         stats.hasRetryableFailure = true;
         await this.markRawRowRetryableError(
-          "stg.store_raw",
-          "stg_store_raw_id",
+          "store",
           row.stg_store_raw_id,
           error,
         );
@@ -399,8 +399,7 @@ export class MaterializationService {
       if (validationError) {
         stats.errorCount += 1;
         await this.markRawRowValidationFailed(
-          "stg.assignment_raw",
-          "stg_assignment_raw_id",
+          "assignment",
           row.stg_assignment_raw_id,
           validationError,
         );
@@ -508,8 +507,7 @@ export class MaterializationService {
         }
 
         await this.markRawRowProcessed(
-          "stg.assignment_raw",
-          "stg_assignment_raw_id",
+          "assignment",
           row.stg_assignment_raw_id,
         );
         stats.processedCount += 1;
@@ -517,8 +515,7 @@ export class MaterializationService {
         stats.errorCount += 1;
         stats.hasRetryableFailure = true;
         await this.markRawRowRetryableError(
-          "stg.assignment_raw",
-          "stg_assignment_raw_id",
+          "assignment",
           row.stg_assignment_raw_id,
           error,
         );
@@ -558,8 +555,7 @@ export class MaterializationService {
       if (validationError) {
         stats.errorCount += 1;
         await this.markRawRowValidationFailed(
-          "stg.position_raw",
-          "stg_position_raw_id",
+          "position",
           row.stg_position_raw_id,
           validationError,
         );
@@ -619,14 +615,13 @@ export class MaterializationService {
           });
         }
 
-        await this.markRawRowProcessed("stg.position_raw", "stg_position_raw_id", row.stg_position_raw_id);
+        await this.markRawRowProcessed("position", row.stg_position_raw_id);
         stats.processedCount += 1;
       } catch (error) {
         stats.errorCount += 1;
         stats.hasRetryableFailure = true;
         await this.markRawRowRetryableError(
-          "stg.position_raw",
-          "stg_position_raw_id",
+          "position",
           row.stg_position_raw_id,
           error,
         );
@@ -666,8 +661,7 @@ export class MaterializationService {
       if (validationError) {
         stats.errorCount += 1;
         await this.markRawRowValidationFailed(
-          "stg.company_raw",
-          "stg_company_raw_id",
+          "company",
           row.stg_company_raw_id,
           validationError,
         );
@@ -709,14 +703,13 @@ export class MaterializationService {
           });
         }
 
-        await this.markRawRowProcessed("stg.company_raw", "stg_company_raw_id", row.stg_company_raw_id);
+        await this.markRawRowProcessed("company", row.stg_company_raw_id);
         stats.processedCount += 1;
       } catch (error) {
         stats.errorCount += 1;
         stats.hasRetryableFailure = true;
         await this.markRawRowRetryableError(
-          "stg.company_raw",
-          "stg_company_raw_id",
+          "company",
           row.stg_company_raw_id,
           error,
         );
@@ -756,8 +749,7 @@ export class MaterializationService {
       if (validationError) {
         stats.errorCount += 1;
         await this.markRawRowValidationFailed(
-          "stg.region_raw",
-          "stg_region_raw_id",
+          "region",
           row.stg_region_raw_id,
           validationError,
         );
@@ -811,14 +803,13 @@ export class MaterializationService {
           });
         }
 
-        await this.markRawRowProcessed("stg.region_raw", "stg_region_raw_id", row.stg_region_raw_id);
+        await this.markRawRowProcessed("region", row.stg_region_raw_id);
         stats.processedCount += 1;
       } catch (error) {
         stats.errorCount += 1;
         stats.hasRetryableFailure = true;
         await this.markRawRowRetryableError(
-          "stg.region_raw",
-          "stg_region_raw_id",
+          "region",
           row.stg_region_raw_id,
           error,
         );
@@ -926,96 +917,32 @@ export class MaterializationService {
   }
 
   private async markRawRowProcessed(
-    tableName:
-      | "stg.employee_raw"
-      | "stg.store_raw"
-      | "stg.assignment_raw"
-      | "stg.position_raw"
-      | "stg.company_raw"
-      | "stg.region_raw",
-    idColumn:
-      | "stg_employee_raw_id"
-      | "stg_store_raw_id"
-      | "stg_assignment_raw_id"
-      | "stg_position_raw_id"
-      | "stg_company_raw_id"
-      | "stg_region_raw_id",
+    entity: MaterializationRawEntity,
     rowId: string,
   ): Promise<void> {
-    await this.databaseService.query(
-      `
-        UPDATE ${tableName}
-        SET
-          processed_flag = TRUE,
-          processed_at = NOW(),
-          normalized_status = 'processed',
-          validation_error = NULL
-        WHERE ${idColumn} = $1::uuid
-      `,
-      [rowId],
-    );
+    await this.rowStatusRepository.markRawRowProcessed(entity, rowId);
   }
 
   private async markRawRowValidationFailed(
-    tableName:
-      | "stg.employee_raw"
-      | "stg.store_raw"
-      | "stg.assignment_raw"
-      | "stg.position_raw"
-      | "stg.company_raw"
-      | "stg.region_raw",
-    idColumn:
-      | "stg_employee_raw_id"
-      | "stg_store_raw_id"
-      | "stg_assignment_raw_id"
-      | "stg_position_raw_id"
-      | "stg_company_raw_id"
-      | "stg_region_raw_id",
+    entity: MaterializationRawEntity,
     rowId: string,
     errorMessage: string,
   ): Promise<void> {
-    await this.databaseService.query(
-      `
-        UPDATE ${tableName}
-        SET processed_flag = TRUE, processed_at = NOW(), normalized_status = 'validation_failed', validation_error = $1
-        WHERE ${idColumn} = $2::uuid
-      `,
-      [errorMessage, rowId],
-    );
+    await this.rowStatusRepository.markRawRowValidationFailed(entity, rowId, errorMessage);
   }
 
   private async markRawRowRetryableError(
-    tableName:
-      | "stg.employee_raw"
-      | "stg.store_raw"
-      | "stg.assignment_raw"
-      | "stg.position_raw"
-      | "stg.company_raw"
-      | "stg.region_raw",
-    idColumn:
-      | "stg_employee_raw_id"
-      | "stg_store_raw_id"
-      | "stg_assignment_raw_id"
-      | "stg_position_raw_id"
-      | "stg_company_raw_id"
-      | "stg_region_raw_id",
+    entity: MaterializationRawEntity,
     rowId: string,
     error: unknown,
   ): Promise<void> {
     const errorMessage = String(redactSensitiveLogValue(error instanceof Error ? error.message : String(error)));
     logStructuredError(this.logger, "import_batch.row.retryable_error", error, {
-      tableName,
+      tableName: this.rowStatusRepository.getRawTableName(entity),
       rowId,
     });
 
-    await this.databaseService.query(
-      `
-        UPDATE ${tableName}
-        SET processed_flag = FALSE, normalized_status = 'retryable_error', validation_error = $1, processed_at = NULL
-        WHERE ${idColumn} = $2::uuid
-      `,
-      [errorMessage, rowId],
-    );
+    await this.rowStatusRepository.markRawRowRetryableError(entity, rowId, errorMessage);
   }
 
   private async recordImportBatchAuditEvent(

@@ -12,6 +12,7 @@ import { PersonnelMasterReadRepository } from "./infrastructure/personnel-master
 import { IntegrationSourceRepository } from "./infrastructure/integration-source.repository";
 import { MaterializationService } from "./application/materialization.service";
 import { KpiMaterializationService } from "./application/kpi-materialization.service";
+import { MaterializationRowStatusRepository } from "./infrastructure/materialization-row-status.repository";
 import { ExternalIdMappingService } from "./application/external-id-mapping.service";
 import { KpiImportNormalizationService } from "./application/kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./application/integration-scheduler.service";
@@ -34,6 +35,7 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     IntegrationSourceRepository,
     MaterializationService,
     KpiMaterializationService,
+    MaterializationRowStatusRepository,
     ExternalIdMappingService,
     KpiImportNormalizationService,
     IntegrationSchedulerService,
