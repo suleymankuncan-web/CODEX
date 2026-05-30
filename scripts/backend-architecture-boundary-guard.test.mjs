@@ -165,12 +165,7 @@ function isWebOrControllerFile(path) {
   return path.includes('/web/') || path.endsWith('.controller.ts')
 }
 
-const directDatabaseServiceAllowlist = new Map([
-  [
-    'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
-    ['import { DatabaseService } from "../../../shared/database/database.service"'],
-  ],
-])
+const directDatabaseServiceAllowlist = new Map()
 
 const storeOpsRepositoryCastAllowlist = new Map()
 
@@ -227,10 +222,6 @@ const largeTrackedSourceAllowlist = new Map([
   [
     'backend/nestjs/src/modules/integration/application/integration.service.ts',
     'Existing integration orchestration hotspot; parked by refactor inventory unless product or reviewability trigger appears.',
-  ],
-  [
-    'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
-    'Existing Power BI upload hotspot; V2 extracts parser, normalizer, and reconciliation boundaries before new import growth.',
   ],
   [
     'backend/nestjs/src/modules/auth/auth-admin.repository.ts',
@@ -867,14 +858,8 @@ test('guard rejects a fake new application DatabaseService import', () => {
   assert.match(violations.join('\n'), /DatabaseService/)
 })
 
-test('guard rejects missing or duplicate allowlisted direct DatabaseService imports', () => {
+test('guard rejects duplicate direct DatabaseService imports outside the allowlist', () => {
   const violations = findDirectDatabaseServiceViolations([
-    {
-      path: 'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
-      content: `
-        import { Injectable } from "@nestjs/common";
-      `,
-    },
     {
       path: 'backend/nestjs/src/modules/store-ops/application/new-report.service.ts',
       content: `
@@ -884,11 +869,10 @@ test('guard rejects missing or duplicate allowlisted direct DatabaseService impo
     },
   ])
 
-  assert.match(violations.join('\n'), /expected 1 allowlisted direct DatabaseService import occurrence/)
   assert.match(violations.join('\n'), /unallowlisted direct DatabaseService import/)
 })
 
-test('guard ignores commented allowlisted direct DatabaseService imports', () => {
+test('guard ignores commented direct DatabaseService imports', () => {
   const violations = findDirectDatabaseServiceViolations([
     {
       path: 'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
@@ -902,8 +886,7 @@ test('guard ignores commented allowlisted direct DatabaseService imports', () =>
     },
   ])
 
-  assert.match(violations.join('\n'), /expected 1 allowlisted direct DatabaseService import occurrence/)
-  assert.doesNotMatch(violations.join('\n'), /unallowlisted direct DatabaseService import/)
+  assert.deepEqual(violations, [])
 })
 
 test('guard rejects namespace imports from the direct DatabaseService source', () => {
