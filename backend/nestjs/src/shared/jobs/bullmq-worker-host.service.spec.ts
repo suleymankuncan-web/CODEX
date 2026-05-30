@@ -22,6 +22,14 @@ jest.mock("ioredis", () => ({
 }));
 
 import { BullMqWorkerHostService } from "./bullmq-worker-host.service";
+import { Test } from "@nestjs/testing";
+import { MODULE_METADATA } from "@nestjs/common/constants";
+import { WorkerModule } from "../../worker.module";
+import { WorkerJobsModule } from "../../worker-jobs.module";
+import { AppConfigService } from "../app-config.service";
+import { PG_POOL } from "../database/database.constants";
+import { IntegrationModule } from "../../modules/integration/integration.module";
+import { StoreOpsModule } from "../../modules/store-ops/store-ops.module";
 
 describe("BullMqWorkerHostService", () => {
   beforeEach(() => {
@@ -126,5 +134,44 @@ describe("BullMqWorkerHostService", () => {
 
     expect(workerCloseMock).toHaveBeenCalledTimes(2);
     expect(redisQuitMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("wires worker jobs through the focused worker module instead of broad feature modules", () => {
+    const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, WorkerModule) ?? [];
+
+    expect(imports).toContain(WorkerJobsModule);
+    expect(imports).not.toContain(IntegrationModule);
+    expect(imports).not.toContain(StoreOpsModule);
+  });
+
+  it("compiles the worker context with BullMQ disabled", async () => {
+    const pool = { end: jest.fn() };
+    const moduleRef = await Test.createTestingModule({
+      imports: [WorkerModule],
+    })
+      .overrideProvider(AppConfigService)
+      .useValue({
+        queueBackend: "in-memory",
+        redisUrl: "redis://localhost:6379",
+        importQueueName: "imports",
+        snapshotQueueName: "snapshots",
+        databaseUrl: "postgres://user:pass@localhost:5432/store_ops",
+        dbPoolMax: 1,
+        dbSslMode: "disable",
+      })
+      .overrideProvider(PG_POOL)
+      .useValue(pool)
+      .compile();
+
+    await moduleRef.init();
+
+    expect(moduleRef.get(BullMqWorkerHostService)).toBeInstanceOf(
+      BullMqWorkerHostService,
+    );
+    expect(redisConstructorMock).not.toHaveBeenCalled();
+    expect(workerConstructorMock).not.toHaveBeenCalled();
+
+    await moduleRef.close();
+    expect(pool.end).toHaveBeenCalledTimes(1);
   });
 });
