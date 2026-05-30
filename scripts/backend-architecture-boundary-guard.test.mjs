@@ -156,10 +156,6 @@ function isWebOrControllerFile(path) {
 
 const directDatabaseServiceAllowlist = new Map([
   [
-    'backend/nestjs/src/modules/store-ops/application/snapshot.service.ts',
-    ['import { DatabaseService } from "../../../shared/database/database.service"'],
-  ],
-  [
     'backend/nestjs/src/modules/integration/application/materialization.service.ts',
     ['import { DatabaseService } from "../../../shared/database/database.service"'],
   ],
@@ -408,7 +404,7 @@ test('guard rejects missing or duplicate allowlisted direct DatabaseService impo
       `,
     },
     {
-      path: 'backend/nestjs/src/modules/store-ops/application/snapshot.service.ts',
+      path: 'backend/nestjs/src/modules/integration/application/materialization.service.ts',
       content: `
         import { DatabaseService } from "../../../shared/database/database.service";
         import { DatabaseService } from "../../../shared/database/database.service";

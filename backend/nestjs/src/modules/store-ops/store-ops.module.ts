@@ -37,6 +37,7 @@ import { StoreScoreReportingReadRepository } from "./infrastructure/store-score-
 import { SnapshotReportingReadRepository } from "./infrastructure/snapshot-reporting-read.repository";
 import { StorePerformanceReportingReadRepository } from "./infrastructure/store-performance-reporting-read.repository";
 import { SnapshotOperationsRepository } from "./infrastructure/snapshot-operations.repository";
+import { SnapshotRunCommandRepository } from "./infrastructure/snapshot-run-command.repository";
 import { TargetDistributionRepository } from "./infrastructure/target-distribution.repository";
 import { ChecklistAcknowledgementRepository } from "./infrastructure/checklist-acknowledgement.repository";
 import { KpiConfigRepository } from "./infrastructure/kpi-config.repository";
@@ -92,6 +93,7 @@ import { PilotFeedbackRepository } from "./infrastructure/pilot-feedback.reposit
     SnapshotReportingReadRepository,
     StorePerformanceReportingReadRepository,
     SnapshotOperationsRepository,
+    SnapshotRunCommandRepository,
     TargetDistributionRepository,
     CompetitionReadRepository,
     CompetitionStagePackagePlanReadRepository,
@@ -128,6 +130,7 @@ import { PilotFeedbackRepository } from "./infrastructure/pilot-feedback.reposit
     SnapshotReportingReadRepository,
     StorePerformanceReportingReadRepository,
     SnapshotOperationsRepository,
+    SnapshotRunCommandRepository,
     TargetDistributionRepository,
     CompetitionReadRepository,
     CompetitionStagePackagePlanReadRepository,

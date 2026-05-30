@@ -76,7 +76,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
 | `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 1226 | workforce command/write lifecycle facade | Park remaining command/status/audit/access lifecycle work. |
-| `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 1101 | mixed read/rerun/materialization service | Park unless snapshot readiness/product risk creates a scoped trigger. |
+| `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 732 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
 | `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 970 | ranking read/scoring application service | Active first code candidate: pure helper extraction with existing tests. |
 
 ## Completed Or No Longer Active
