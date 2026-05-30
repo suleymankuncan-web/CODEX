@@ -1,6 +1,6 @@
 # Refactor Completion Inventory V1
 
-Status: Active decision as of 2026-05-22
+Status: Active decision refreshed after Architecture Hardening V2 on 2026-05-30
 
 This inventory closes the recurring "large file means keep refactoring" loop.
 The project still has large files, but they are no longer all active refactor
@@ -24,6 +24,11 @@ Repository evidence:
   passes and are below the earlier danger zone.
 - Reporting, integration, auth-admin, competition, and workforce repositories
   already have boundary inventories or completed safe read-boundary passes.
+- Architecture Hardening V2 closed the remaining planned application-layer
+  direct DB allowlist entries, split materialization and Power BI import
+  hotspots, made selected auth/workforce/competition transition decisions
+  explicit, and added stronger guard pressure for large files and module graph
+  growth.
 - The user has said major page/content/design changes are coming, so broad UI
   polish or page-component splits are likely to be throwaway work right now.
 
@@ -38,8 +43,9 @@ Decision:
 - Close broad refactor as an open-ended theme.
 - Keep only a few behavior-preserving, UI-independent, test-covered candidates
   active.
-- Park write-heavy, auth-sensitive, DB/state-machine, generated-script, and
-  redesign-sensitive UI refactors until a concrete trigger appears.
+- Park remaining write-heavy, auth-sensitive, DB/state-machine,
+  generated-script, and redesign-sensitive UI refactors until a concrete
+  trigger appears.
 
 Risk:
 
@@ -70,12 +76,12 @@ This snapshot is a triage input, not a mandate to split every file.
 | `admin-web/src/pages/ImportBatchDetailPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete import operator bug. |
 | `admin-web/src/pages/AdminKpiConfigPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete governance/action UX bug. |
 | `admin-web/src/pages/StoreRankingsPage.tsx` | 599 | Store rankings page container | PR8 architecture hardening split moved model, table, and detail panel concerns out of the page. Park further visual redesign until a concrete product/UI trigger appears. |
-| `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 953 | data materialization/write path | PR6 extracted KPI materialization into `KpiMaterializationService` and `KpiMaterializationRepository`; remaining employee/store/assignment/position/company/region paths stay parked. |
-| `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1325 | stage/package/scoring repository facade | Park remaining writes/finalization until a separate invariant/test decision. |
-| `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 1278 | auth/security write repository facade | Park write boundaries unless a concrete auth/security/product trigger appears. |
+| `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 188 | data materialization orchestration | Architecture Hardening V2 split row status, employee, store, assignment, position, company, region, and batch persistence out of this service; do not reopen unless import routing behavior changes. |
+| `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1360 | stage/package/scoring repository facade | Architecture Hardening V2 extracted stage package plan transition policy; park scoring, finalization, and broader persistence splits until a separate invariant/test decision. |
+| `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 1163 | auth/security write repository facade | Architecture Hardening V2 extracted role-assignment create/deactivate commands; park remaining user-account, action-store, pilot-binding, and role-permission writes unless a concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
-| `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 1226 | workforce command/write lifecycle facade | Park remaining command/status/audit/access lifecycle work. |
+| `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 1160 | workforce request SQL persistence facade | Architecture Hardening V2 extracted seller-code/offboarding transition policy; park broader SQL/transaction persistence splits unless a concrete workflow or reviewability trigger appears. |
 | `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 666 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
 | `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 740 | ranking read/scoring application service | PR3 removed broad repository casts and previous helper extraction remains in place. Park further extraction unless a ranking trust/reviewability trigger appears. |
 
@@ -94,6 +100,14 @@ These areas should not keep resurfacing as generic refactor prompts:
 - Workforce seller-code, offboarding, and lookup read-boundary lines.
 - Store approvals first structural pass.
 - Store checklists first structural pass.
+- Architecture Hardening V2 materialization entity and row-status extraction.
+- Architecture Hardening V2 Power BI parser, normalizer, and reconciliation
+  extraction.
+- Architecture Hardening V2 StoreOps module graph split.
+- Architecture Hardening V2 auth role-assignment command extraction.
+- Architecture Hardening V2 workforce request transition policy extraction.
+- Architecture Hardening V2 competition stage package plan transition policy
+  extraction.
 
 If one of these areas is reopened, the trigger must be a concrete bug, product
 change, failing gate, reviewability blocker, or explicit user decision.
@@ -258,10 +272,20 @@ Do not refactor these only because of line count:
 
 - Redesign-sensitive frontend pages and competition/store surfaces.
 - Auth admin write/security boundaries.
+  Narrowed after Architecture Hardening V2 to areas outside the extracted
+  role-assignment command path.
 - Workforce request command/write/status/audit/access lifecycle boundaries.
+  Narrowed after Architecture Hardening V2 to SQL persistence and workflow
+  boundaries outside the extracted transition policy.
 - Competition stage creation, package execution, score recalculation, and
   finalization boundaries.
+  Narrowed after Architecture Hardening V2 to scoring, finalization, stage
+  execution, and broad persistence outside the extracted stage package plan
+  transition policy.
 - Integration materialization and raw import write paths.
+  Narrowed after Architecture Hardening V2 to import lifecycle, source
+  governance, retry, approval, and raw staging paths outside the completed
+  materialization split.
 - Snapshot rerun/materialization paths.
 - OpenAPI and system-flow generator scripts.
 

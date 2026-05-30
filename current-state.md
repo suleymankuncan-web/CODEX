@@ -17,7 +17,8 @@ alert-provider, Supabase restore, readiness profile reset, and Sokrates
 calibration proofs, plus the Store Me Plum Glacier redesign line through
 PR #524, the active Store route refactor line through PR #532, the
 Redis/BullMQ Render worker closure through PR #536, the Store checklist flow
-polish through PR #537, and the architecture hardening line through PR #552.
+polish through PR #537, the first architecture hardening line through PR #552,
+and Architecture Hardening V2 through PR #566.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -731,26 +732,40 @@ Latest technical assessment decision:
   materialization split, worker context slimming, Store page container splits,
   repository test strategy cleanup, StoreOps internal module split, and final
   evidence closeout.
-- Architecture hardening is now closed through PR #552. Final evidence is
-  recorded at `docs/evidence/architecture-hardening-progress-2026-05.md`.
-  PR #542 added the root `CONTRIBUTING.md` contract and guard, PR #543 added
-  `scripts/backend-architecture-boundary-guard.test.mjs`, PR #544 removed the
-  highest-risk Store Ops reporting/ranking/workflow repository casts, PR #545
-  moved snapshot command persistence behind `SnapshotRunCommandRepository`,
-  PR #546 moved external ID mapping SQL behind
-  `ExternalIdMappingCommandRepository`, PR #547 split KPI materialization
-  behind `KpiMaterializationService`/`KpiMaterializationRepository`, PR #548
-  slimmed the worker job context behind `WorkerJobsModule`, PR #549 split the
-  Store rankings page container, PR #550 split the Store KPI highlights page,
-  PR #551 added the repository test helper pilot, and PR #552 split
-  `StoreOpsModule` into internal reporting, checklist, targets, and competition
-  modules while keeping the public module as a compatibility facade.
-- Current backend architecture boundary state: `snapshot.service.ts` and
-  `external-id-mapping.service.ts` no longer directly inject `DatabaseService`;
-  the Store Ops broad repository cast allowlist is empty. Remaining direct
-  `DatabaseService` allowlist entries are
-  `integration/application/materialization.service.ts` and
-  `integration/application/power-bi-export-upload.service.ts`.
+- Architecture hardening V1 is closed through PR #552. Evidence is recorded at
+  `docs/evidence/architecture-hardening-progress-2026-05.md`. PR #542 through
+  PR #552 added the root contribution contract, backend boundary guard, Store
+  Ops repository-cast cleanup, snapshot and external-id persistence
+  repositories, KPI materialization split, worker job context slimming, Store
+  rankings/KPI page container splits, repository test helper pilot, and the
+  first StoreOps internal module split.
+- Architecture Hardening V2 is closed through PR #566. Evidence is recorded at
+  `docs/evidence/architecture-hardening-v2-closeout-2026-05-30.md`. PR #554
+  expanded guard coverage and captured the V2 plan, PR #555 moved
+  materialization row status writes behind `MaterializationRowStatusRepository`,
+  PR #556 split employee/store materializers, PR #557 split
+  assignment/position/company/region materializers and removed
+  `MaterializationService` from the direct DB allowlist, PR #558 extracted the
+  Power BI parser/normalizer and removed `PowerBiExportUploadService` from the
+  direct DB allowlist, PR #559 extracted Power BI reconciliation, PR #560 added
+  the shared performance score evaluator, PR #561 improved snapshot scoring
+  assertions, PR #562 split the StoreOps reporting module graph further,
+  PR #563 extracted auth role assignment commands, PR #564 extracted workforce
+  transition policy, PR #565 extracted competition stage package plan
+  transition policy, and PR #566 added the migration-change release warning.
+- Current backend architecture boundary state: the application-layer direct
+  `DatabaseService` allowlist in
+  `scripts/backend-architecture-boundary-guard.test.mjs` is empty, and the
+  Store Ops broad repository cast allowlist is empty. Guard coverage also
+  blocks new oversized TS/TSX source files without reasoned allowlist entries,
+  Store Ops module graph growth, worker job graph growth, application-to-web
+  imports, and web-to-infrastructure repository imports.
+- Current estimated architecture health after Architecture Hardening V2 is
+  `84/100`. The project is safer for feature growth but not debt-free:
+  integration import orchestration, master-data promotion, remaining auth admin
+  writes, workforce SQL persistence, competition scoring/finalization,
+  generator scripts, broad E2E specs, and Store UI redesign-sensitive pages
+  remain intentional parked risks until a concrete trigger appears.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
