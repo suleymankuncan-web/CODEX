@@ -249,7 +249,27 @@ const storeOpsModuleGraphLimits = new Map([
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-reporting.module.ts',
-    { controllers: 4, providers: 18, exports: 8 },
+    { controllers: 0, providers: 0, exports: 5 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-org.module.ts',
+    { controllers: 1, providers: 2, exports: 1 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-workforce.module.ts',
+    { controllers: 1, providers: 3, exports: 1 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-snapshot.module.ts',
+    { controllers: 1, providers: 4, exports: 2 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-ranking.module.ts',
+    { controllers: 0, providers: 8, exports: 3 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-reporting-read.module.ts',
+    { controllers: 1, providers: 8, exports: 1 },
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-targets.module.ts',
@@ -1035,21 +1055,21 @@ test('guard rejects fake Store Ops internal module provider growth', () => {
 test('guard rejects an ungoverned fake Store Ops internal module', () => {
   const violations = findStoreOpsModuleGraphViolations([
     {
-      path: 'backend/nestjs/src/modules/store-ops/store-ops-org.module.ts',
+      path: 'backend/nestjs/src/modules/store-ops/store-ops-unplanned.module.ts',
       content: `
         import { Module } from "@nestjs/common";
 
         @Module({
-          controllers: [OrgController],
-          providers: [OrgService],
-          exports: [OrgService],
+          controllers: [NewController],
+          providers: [NewService],
+          exports: [NewService],
         })
-        export class StoreOpsOrgModule {}
+        export class StoreOpsUnplannedModule {}
       `,
     },
   ])
 
-  assert.match(violations.join('\n'), /store-ops-org\.module\.ts/)
+  assert.match(violations.join('\n'), /store-ops-unplanned\.module\.ts/)
   assert.match(violations.join('\n'), /not covered by module graph limits/)
 })
 
