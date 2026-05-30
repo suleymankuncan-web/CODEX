@@ -62,10 +62,28 @@ const directDatabaseServiceAllowlist = new Set([
   'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
 ])
 
-const storeOpsRepositoryCastAllowlist = new Set([
-  'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
-  'backend/nestjs/src/modules/store-ops/application/ranking.service.ts',
-  'backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.ts',
+const storeOpsRepositoryCastAllowlist = new Map([
+  [
+    'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
+    new Set([
+      'reportingRepository as unknown as StoreScoreReportingReadRepository',
+      'reportingRepository as unknown as ClosedRankingRepository',
+      'reportingRepository as unknown as SnapshotReportingReadRepository',
+      'reportingRepository as unknown as StorePerformanceReportingReadRepository',
+      'reportingRepository as unknown as RankingReportingReadRepository',
+    ]),
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/application/ranking.service.ts',
+    new Set([
+      'reportingRepository as unknown as StorePerformanceReportingReadRepository',
+      'reportingRepository as unknown as RankingReportingReadRepository',
+    ]),
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.ts',
+    new Set(['reportingRepository as unknown as SnapshotReportingReadRepository']),
+  ],
 ])
 
 function hasDirectDatabaseServiceImport(importEntry) {
@@ -92,6 +110,18 @@ function describeViolation(file, index, message) {
   return `${file.path}:${lineNumberAt(file.content, index)} ${message}`
 }
 
+function castLineSignature(content, index) {
+  const lineStart = Math.max(content.lastIndexOf('\n', index - 1) + 1, 0)
+  const lineEndIndex = content.indexOf('\n', index)
+  const lineEnd = lineEndIndex === -1 ? content.length : lineEndIndex
+
+  return content
+    .slice(lineStart, lineEnd)
+    .trim()
+    .replace(/,$/, '')
+    .replace(/\s+/g, ' ')
+}
+
 function findDirectDatabaseServiceViolations(files) {
   const violations = []
 
@@ -114,13 +144,32 @@ function findStoreOpsRepositoryCastViolations(files) {
   const violations = []
 
   for (const file of files) {
-    if (!isStoreOpsApplicationFile(file.path) || storeOpsRepositoryCastAllowlist.has(file.path)) {
+    if (!isStoreOpsApplicationFile(file.path)) {
       continue
     }
 
+    const allowedSignatures = storeOpsRepositoryCastAllowlist.get(file.path) ?? new Set()
+    const observedAllowedSignatures = new Set()
     const castPattern = /\bas\s+unknown\s+as\b/g
+
     for (const match of file.content.matchAll(castPattern)) {
-      violations.push(describeViolation(file, match.index ?? 0, 'uses broad as unknown as repository cast'))
+      const index = match.index ?? 0
+      const signature = castLineSignature(file.content, index)
+
+      if (allowedSignatures.has(signature)) {
+        observedAllowedSignatures.add(signature)
+        continue
+      }
+
+      violations.push(
+        describeViolation(file, index, `uses unallowlisted broad repository cast: ${signature}`),
+      )
+    }
+
+    for (const expectedSignature of allowedSignatures) {
+      if (!observedAllowedSignatures.has(expectedSignature)) {
+        violations.push(`${file.path}:1 missing allowlisted broad repository cast: ${expectedSignature}`)
+      }
     }
   }
 
@@ -173,7 +222,7 @@ test('backend architecture direct DatabaseService allowlist points to tracked fi
 })
 
 test('backend architecture repository cast allowlist points to tracked files', () => {
-  for (const path of storeOpsRepositoryCastAllowlist) {
+  for (const path of storeOpsRepositoryCastAllowlist.keys()) {
     assert.equal(trackedBackendPaths.has(path), true, `${path} must remain tracked or be removed from the allowlist`)
   }
 })
@@ -228,4 +277,23 @@ test('guard rejects a fake new web-to-infrastructure import', () => {
 
   assert.match(violations.join('\n'), /new-report\.controller\.ts/)
   assert.match(violations.join('\n'), /infrastructure/)
+})
+
+test('guard rejects a fake extra broad repository cast in an allowlisted file', () => {
+  const violations = findStoreOpsRepositoryCastViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
+      content: `
+        reportingRepository as unknown as StoreScoreReportingReadRepository,
+        reportingRepository as unknown as ClosedRankingRepository,
+        reportingRepository as unknown as SnapshotReportingReadRepository,
+        reportingRepository as unknown as StorePerformanceReportingReadRepository,
+        reportingRepository as unknown as RankingReportingReadRepository,
+        reportingRepository as unknown as NewLeakyReadRepository,
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /NewLeakyReadRepository/)
+  assert.doesNotMatch(violations.join('\n'), /missing allowlisted broad repository cast/)
 })
