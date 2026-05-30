@@ -87,33 +87,41 @@ async function changedFilesFromGitHubApi() {
   }
 
   const files = []
-  for (let page = 1; page <= 10; page += 1) {
-    const response = await fetch(
-      `https://api.github.com/repos/${repo}/pulls/${pullNumber}/files?per_page=100&page=${page}`,
-      {
-        headers: {
-          accept: 'application/vnd.github+json',
-          authorization: `Bearer ${token}`,
-          'user-agent': 'hr-axis-migration-change-warning',
+  try {
+    for (let page = 1; ; page += 1) {
+      const response = await fetch(
+        `https://api.github.com/repos/${repo}/pulls/${pullNumber}/files?per_page=100&page=${page}`,
+        {
+          headers: {
+            accept: 'application/vnd.github+json',
+            authorization: `Bearer ${token}`,
+            'user-agent': 'hr-axis-migration-change-warning',
+          },
         },
-      },
-    )
+      )
 
-    if (!response.ok) {
-      return []
-    }
+      if (!response.ok) {
+        return []
+      }
 
-    const pageFiles = await response.json()
-    for (const file of pageFiles) {
-      files.push(file.filename, file.previous_filename)
-    }
+      const pageFiles = await response.json()
+      for (const file of pageFiles) {
+        files.push(file.filename, file.previous_filename)
+      }
 
-    if (pageFiles.length < 100) {
-      break
+      if (pageFiles.length < 100) {
+        break
+      }
     }
+  } catch {
+    return []
   }
 
   return unique(files.filter(Boolean).map(normalizePath))
+}
+
+function isZeroSha(sha) {
+  return /^0+$/.test(sha)
 }
 
 function changedFilesFromGitHubEvent() {
@@ -131,6 +139,19 @@ function changedFilesFromGitHubEvent() {
   }
 
   return parseGitNameStatusFiles(git(['diff', '--name-status', mergeBase, headSha]))
+}
+
+function changedFilesFromGitHubPushEvent() {
+  const event = readGitHubEvent()
+  const beforeSha = event?.before
+  const afterSha = event?.after
+
+  if (!beforeSha || !afterSha || isZeroSha(beforeSha) || isZeroSha(afterSha)) {
+    return []
+  }
+
+  fetchGitHubRefs(beforeSha, afterSha)
+  return parseGitNameStatusFiles(git(['diff', '--name-status', beforeSha, afterSha]))
 }
 
 function changedFilesFromGit() {
@@ -168,7 +189,11 @@ async function changedFiles() {
     return apiFiles
   }
 
-  return unique([...changedFilesFromGitHubEvent(), ...changedFilesFromGit()])
+  return unique([
+    ...changedFilesFromGitHubEvent(),
+    ...changedFilesFromGitHubPushEvent(),
+    ...changedFilesFromGit(),
+  ])
 }
 
 function isMigrationSensitive(path) {
