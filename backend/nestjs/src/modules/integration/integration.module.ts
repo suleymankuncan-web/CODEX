@@ -12,11 +12,20 @@ import { PersonnelMasterReadRepository } from "./infrastructure/personnel-master
 import { IntegrationSourceRepository } from "./infrastructure/integration-source.repository";
 import { MaterializationService } from "./application/materialization.service";
 import { KpiMaterializationService } from "./application/kpi-materialization.service";
+import { MaterializationBatchRepository } from "./infrastructure/materialization-batch.repository";
 import { MaterializationRowStatusRepository } from "./infrastructure/materialization-row-status.repository";
 import { EmployeeMaterializationService } from "./application/employee-materialization.service";
 import { StoreMaterializationService } from "./application/store-materialization.service";
+import { AssignmentMaterializationService } from "./application/assignment-materialization.service";
+import { PositionMaterializationService } from "./application/position-materialization.service";
+import { CompanyMaterializationService } from "./application/company-materialization.service";
+import { RegionMaterializationService } from "./application/region-materialization.service";
 import { EmployeeMaterializationRepository } from "./infrastructure/employee-materialization.repository";
 import { StoreMaterializationRepository } from "./infrastructure/store-materialization.repository";
+import { AssignmentMaterializationRepository } from "./infrastructure/assignment-materialization.repository";
+import { PositionMaterializationRepository } from "./infrastructure/position-materialization.repository";
+import { CompanyMaterializationRepository } from "./infrastructure/company-materialization.repository";
+import { RegionMaterializationRepository } from "./infrastructure/region-materialization.repository";
 import { ExternalIdMappingService } from "./application/external-id-mapping.service";
 import { KpiImportNormalizationService } from "./application/kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./application/integration-scheduler.service";
@@ -39,11 +48,20 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     IntegrationSourceRepository,
     MaterializationService,
     KpiMaterializationService,
+    MaterializationBatchRepository,
     MaterializationRowStatusRepository,
     EmployeeMaterializationService,
     StoreMaterializationService,
+    AssignmentMaterializationService,
+    PositionMaterializationService,
+    CompanyMaterializationService,
+    RegionMaterializationService,
     EmployeeMaterializationRepository,
     StoreMaterializationRepository,
+    AssignmentMaterializationRepository,
+    PositionMaterializationRepository,
+    CompanyMaterializationRepository,
+    RegionMaterializationRepository,
     ExternalIdMappingService,
     KpiImportNormalizationService,
     IntegrationSchedulerService,

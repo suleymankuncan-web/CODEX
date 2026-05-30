@@ -3,11 +3,20 @@ import { ExternalIdMappingService } from "./external-id-mapping.service";
 import { KpiMaterializationService } from "./kpi-materialization.service";
 import { EmployeeMaterializationService } from "./employee-materialization.service";
 import { StoreMaterializationService } from "./store-materialization.service";
+import { AssignmentMaterializationService } from "./assignment-materialization.service";
+import { PositionMaterializationService } from "./position-materialization.service";
+import { CompanyMaterializationService } from "./company-materialization.service";
+import { RegionMaterializationService } from "./region-materialization.service";
 import { ExternalIdMappingCommandRepository } from "../infrastructure/external-id-mapping-command.repository";
 import { KpiMaterializationRepository } from "../infrastructure/kpi-materialization.repository";
+import { MaterializationBatchRepository } from "../infrastructure/materialization-batch.repository";
 import { MaterializationRowStatusRepository } from "../infrastructure/materialization-row-status.repository";
 import { EmployeeMaterializationRepository } from "../infrastructure/employee-materialization.repository";
 import { StoreMaterializationRepository } from "../infrastructure/store-materialization.repository";
+import { AssignmentMaterializationRepository } from "../infrastructure/assignment-materialization.repository";
+import { PositionMaterializationRepository } from "../infrastructure/position-materialization.repository";
+import { CompanyMaterializationRepository } from "../infrastructure/company-materialization.repository";
+import { RegionMaterializationRepository } from "../infrastructure/region-materialization.repository";
 import { muteNestLogger } from "../../../../test/jest/mute-nest-logger";
 
 type QueryResponse<T> = {
@@ -52,6 +61,9 @@ describe("MaterializationService", () => {
       kpiMaterializationRepository,
       mappingService,
     );
+    const materializationBatchRepository = new MaterializationBatchRepository(
+      databaseService as never,
+    );
     const rowStatusRepository = new MaterializationRowStatusRepository(
       databaseService as never,
     );
@@ -59,6 +71,18 @@ describe("MaterializationService", () => {
       databaseService as never,
     );
     const storeMaterializationRepository = new StoreMaterializationRepository(
+      databaseService as never,
+    );
+    const assignmentMaterializationRepository = new AssignmentMaterializationRepository(
+      databaseService as never,
+    );
+    const positionMaterializationRepository = new PositionMaterializationRepository(
+      databaseService as never,
+    );
+    const companyMaterializationRepository = new CompanyMaterializationRepository(
+      databaseService as never,
+    );
+    const regionMaterializationRepository = new RegionMaterializationRepository(
       databaseService as never,
     );
     const employeeMaterializationService = new EmployeeMaterializationService(
@@ -71,16 +95,38 @@ describe("MaterializationService", () => {
       mappingService,
       rowStatusRepository,
     );
+    const assignmentMaterializationService = new AssignmentMaterializationService(
+      assignmentMaterializationRepository,
+      mappingService,
+      rowStatusRepository,
+    );
+    const positionMaterializationService = new PositionMaterializationService(
+      positionMaterializationRepository,
+      mappingService,
+      rowStatusRepository,
+    );
+    const companyMaterializationService = new CompanyMaterializationService(
+      companyMaterializationRepository,
+      mappingService,
+      rowStatusRepository,
+    );
+    const regionMaterializationService = new RegionMaterializationService(
+      regionMaterializationRepository,
+      mappingService,
+      rowStatusRepository,
+    );
 
     return {
       databaseService,
       service: new MaterializationService(
-        databaseService as never,
-        mappingService,
+        materializationBatchRepository,
         kpiMaterializationService,
-        rowStatusRepository,
         employeeMaterializationService,
         storeMaterializationService,
+        assignmentMaterializationService,
+        positionMaterializationService,
+        companyMaterializationService,
+        regionMaterializationService,
       ),
     };
   }
