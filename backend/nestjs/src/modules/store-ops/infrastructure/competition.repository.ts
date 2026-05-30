@@ -34,7 +34,9 @@ import {
 import { writeCompetitionAudit } from "./competition.repository.audit";
 import { type Queryable } from "./competition.repository.db";
 import { CompetitionReadRepository } from "./competition-read.repository";
+import { CompetitionStagePackagePlanReviewCommandRepository } from "./competition-stage-package-plan-review-command.repository";
 import { CompetitionStagePackagePlanReadRepository } from "./competition-stage-package-plan-read.repository";
+import { stagePackagePlanReturningClause } from "./competition-stage-package-plan-write-sql";
 import { CompetitionTeamTemplateCommandRepository } from "./competition-team-template-command.repository";
 import { CompetitionTeamTemplateReadRepository } from "./competition-team-template-read.repository";
 import {
@@ -53,28 +55,11 @@ import {
   type StoreAccessContext,
 } from "./competition.repository.mapper";
 
-const stagePackagePlanReturningClause = `
-  RETURNING
-    competition_stage_package_plan_id,
-    competition_id,
-    package_code,
-    plan_name,
-    plan_status,
-    stage_drafts_json,
-    created_stage_ids,
-    submitted_by_user_id,
-    submitted_at,
-    reviewed_by_user_id,
-    reviewed_at,
-    review_note,
-    created_at,
-    updated_at,
-    executed_at
-`;
-
 @Injectable()
 export class CompetitionRepository {
   private readonly competitionReadRepository: CompetitionReadRepository;
+  private readonly stagePackagePlanReviewCommandRepository =
+    new CompetitionStagePackagePlanReviewCommandRepository();
   private readonly stagePackagePlanReadRepository: CompetitionStagePackagePlanReadRepository;
   private readonly teamTemplateReadRepository: CompetitionTeamTemplateReadRepository;
   private readonly teamTemplateCommandRepository: CompetitionTeamTemplateCommandRepository;
@@ -580,38 +565,13 @@ export class CompetitionRepository {
         "Stage package plan is not reviewable",
       );
 
-      const reviewNote = input.reviewNote?.trim() || null;
-      const result = await client.query<CompetitionStagePackagePlanRow>(
-        `
-          UPDATE ops.competition_stage_package_plan
-          SET
-            plan_status = $2,
-            reviewed_by_user_id = $3,
-            review_note = $4,
-            reviewed_at = NOW(),
-            updated_by_user_id = $3,
-            updated_at = NOW()
-          WHERE competition_stage_package_plan_id = $1::uuid
-          ${stagePackagePlanReturningClause}
-        `,
-        [input.planId, transition.targetStatus, input.actorUserId, reviewNote],
-      );
-
-      const plan = mapStagePackagePlan(result.rows[0]);
-
-      await this.writeStagePackagePlanAudit(client, {
+      return this.stagePackagePlanReviewCommandRepository.reviewStagePackagePlan({
+        client,
+        planId: input.planId,
         actorUserId: input.actorUserId,
+        reviewNote: input.reviewNote,
         transition,
-        entityId: input.planId,
-        metadata: {
-          competitionId: plan.competitionId,
-          packageCode: plan.packageCode,
-          planName: plan.planName,
-          reviewNote,
-        },
       });
-
-      return plan;
     });
   }
 
@@ -629,38 +589,13 @@ export class CompetitionRepository {
         "Stage package plan is not reviewable",
       );
 
-      const reviewNote = input.reviewNote?.trim() || null;
-      const result = await client.query<CompetitionStagePackagePlanRow>(
-        `
-          UPDATE ops.competition_stage_package_plan
-          SET
-            plan_status = $2,
-            reviewed_by_user_id = $3,
-            review_note = $4,
-            reviewed_at = NOW(),
-            updated_by_user_id = $3,
-            updated_at = NOW()
-          WHERE competition_stage_package_plan_id = $1::uuid
-          ${stagePackagePlanReturningClause}
-        `,
-        [input.planId, transition.targetStatus, input.actorUserId, reviewNote],
-      );
-
-      const plan = mapStagePackagePlan(result.rows[0]);
-
-      await this.writeStagePackagePlanAudit(client, {
+      return this.stagePackagePlanReviewCommandRepository.reviewStagePackagePlan({
+        client,
+        planId: input.planId,
         actorUserId: input.actorUserId,
+        reviewNote: input.reviewNote,
         transition,
-        entityId: input.planId,
-        metadata: {
-          competitionId: plan.competitionId,
-          packageCode: plan.packageCode,
-          planName: plan.planName,
-          reviewNote,
-        },
       });
-
-      return plan;
     });
   }
 

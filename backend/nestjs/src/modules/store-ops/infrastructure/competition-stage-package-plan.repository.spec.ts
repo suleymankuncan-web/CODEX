@@ -203,7 +203,7 @@ describe("CompetitionRepository stage package plans", () => {
   });
 
   it("updates a draft stage package plan and writes audit metadata", async () => {
-    const { repository, databaseService, client, executedSql, executedParams } =
+    const { repository, client, executedSql, executedParams } =
       createRepositoryHarness();
     const updatedStages = validStagePackageStages.map((stage) =>
       stage.stageOrder === 2
