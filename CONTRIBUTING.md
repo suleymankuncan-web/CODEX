@@ -22,6 +22,7 @@ and record the conflict in the PR.
 - Use a `codex/` branch prefix for agent-authored work.
 - Keep each PR to one review story and one rollback story.
 - Do not batch unrelated domains because the changes are small.
+- Before opening a PR, run the local pre-PR review pass described below.
 - Merge only after local verification, GitHub checks, Vercel checks when
   applicable, and Codex review are clean.
 - After merge, verify `origin/main`, update `current-state.md` when the handoff
@@ -42,6 +43,26 @@ Never mix UI polish or docs cleanup with these high-risk changes:
 
 If a feature requires one of these changes, make it the only PR objective and
 define the verification ladder before editing code.
+
+## Pre-PR Local Review Pass
+
+GitHub Codex review is a remote backstop, not the first place obvious problems
+should be found. Before opening a PR, and before every new push that requests
+review, run a local adversarial review pass:
+
+- Inspect `git diff --stat` and confirm the diff still has one review story.
+- Run `git diff --check`.
+- Read the changed files for scope creep, behavior drift, fake data, layer
+  leaks, broad casts, oversized additions, and stale copy.
+- For backend changes, search for new direct `DatabaseService` imports,
+  application-to-web imports, web-to-infrastructure imports, broad
+  `as unknown as` repository casts, and allowlist growth.
+- For frontend changes, search for fake metrics, role-out-of-scope UI, legacy
+  Store UI classes, debug/handoff copy, and mobile/desktop break risk.
+- Run the targeted verification commands for the PR slice before writing the
+  PR description.
+- List the likely P1/P2 comments GitHub Codex would make and fix actionable
+  issues before opening the PR.
 
 ## Backend Boundaries
 

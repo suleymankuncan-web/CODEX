@@ -8,7 +8,8 @@ function git(args) {
 }
 
 function trackedFiles(prefix = 'backend/nestjs/src/modules') {
-  return git(['ls-files', '-z', prefix]).split('\0').filter(Boolean)
+  const prefixes = Array.isArray(prefix) ? prefix : [prefix]
+  return git(['ls-files', '-z', ...prefixes]).split('\0').filter(Boolean)
 }
 
 function normalizePath(path) {
@@ -21,6 +22,16 @@ function readBackendSourceFiles() {
     .filter((path) => path.endsWith('.ts'))
     .filter((path) => !path.includes('.spec.'))
     .filter((path) => !path.includes('.test.'))
+    .map((path) => ({ path, content: readFileSync(path, 'utf8') }))
+}
+
+function readTrackedSourceFiles(prefixes, extensions, options = {}) {
+  const includeTests = options.includeTests ?? true
+
+  return trackedFiles(prefixes)
+    .map(normalizePath)
+    .filter((path) => extensions.some((extension) => path.endsWith(extension)))
+    .filter((path) => includeTests || (!path.includes('.spec.') && !path.includes('.test.')))
     .map((path) => ({ path, content: readFileSync(path, 'utf8') }))
 }
 
@@ -167,6 +178,104 @@ const directDatabaseServiceAllowlist = new Map([
 
 const storeOpsRepositoryCastAllowlist = new Map()
 
+const largeTrackedSourceLineLimit = 1200
+const largeTrackedSourceAllowlist = new Map([
+  [
+    'backend/nestjs/src/openapi/generate-openapi.ts',
+    'Existing generated OpenAPI writer entrypoint; parked until a concrete generation bug or reviewability blocker appears.',
+  ],
+  [
+    'admin-web/e2e/store-surfaces.spec.ts',
+    'Existing broad Store surface regression spec; parked until a concrete flake, runtime issue, or reviewability blocker appears.',
+  ],
+  [
+    'admin-web/src/generated/openapi-types.ts',
+    'Generated OpenAPI client types; size is controlled by backend API contract breadth.',
+  ],
+  [
+    'admin-web/src/pages/MasterDataBootstrapPage.tsx',
+    'Existing master data admin page hotspot; parked by refactor inventory until concrete product or reviewability trigger.',
+  ],
+  [
+    'admin-web/e2e/competition-surfaces.spec.ts',
+    'Existing competition regression spec; parked until concrete flake, runtime issue, or reviewability blocker.',
+  ],
+  [
+    'admin-web/e2e/pilot-smoke.spec.ts',
+    'Existing pilot smoke regression spec; parked until concrete flake, runtime issue, or reviewability blocker.',
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
+    'Existing Store Ops reporting application hotspot; V2 splits surrounding module graph before further behavior-preserving extraction.',
+  ],
+  [
+    'admin-web/src/pages/IntegrationDashboardPage.tsx',
+    'Existing integration dashboard hotspot; parked until concrete product or reviewability trigger.',
+  ],
+  [
+    'backend/nestjs/test/integration/import-batch-evidence.e2e-spec.ts',
+    'Existing import-batch evidence E2E spec; parked until concrete flake, runtime issue, or reviewability blocker.',
+  ],
+  [
+    'admin-web/src/pages/AdminKpiConfigPage.tsx',
+    'Existing KPI config admin page hotspot; parked until concrete product or reviewability trigger.',
+  ],
+  [
+    'admin-web/src/pages/ImportBatchDetailPage.tsx',
+    'Existing import batch detail page hotspot; parked until concrete product or reviewability trigger.',
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts',
+    'Existing competition write repository hotspot; V2 extracts transition policy before new competition growth.',
+  ],
+  [
+    'backend/nestjs/src/modules/integration/application/integration.service.ts',
+    'Existing integration orchestration hotspot; parked by refactor inventory unless product or reviewability trigger appears.',
+  ],
+  [
+    'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
+    'Existing Power BI upload hotspot; V2 extracts parser, normalizer, and reconciliation boundaries before new import growth.',
+  ],
+  [
+    'backend/nestjs/src/modules/auth/auth-admin.repository.ts',
+    'Existing auth-admin write hotspot; V2 extracts role assignment command boundary before new auth growth.',
+  ],
+  [
+    'backend/nestjs/src/shared/openapi-baseline.contract.spec.ts',
+    'Existing OpenAPI baseline contract spec; size follows API contract breadth.',
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts',
+    'Existing workforce write repository hotspot; V2 extracts transition policy before new workforce growth.',
+  ],
+])
+
+const storeOpsModuleGraphLimits = new Map([
+  ['backend/nestjs/src/modules/store-ops/store-ops.module.ts', { controllers: 0, providers: 0, exports: 4 }],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-checklist.module.ts',
+    { controllers: 3, providers: 4, exports: 1 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-competition.module.ts',
+    { controllers: 1, providers: 6, exports: 1 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-reporting.module.ts',
+    { controllers: 4, providers: 18, exports: 8 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-targets.module.ts',
+    { controllers: 5, providers: 12, exports: 5 },
+  ],
+])
+
+const workerJobsModuleGraphLimit = {
+  path: 'backend/nestjs/src/worker-jobs.module.ts',
+  providers: 9,
+  exports: 2,
+}
+
 function hasDirectDatabaseServiceImport(importEntry) {
   return /(?:^|\/)shared\/database\/database\.service$|database\.service$/.test(importEntry.source)
 }
@@ -212,6 +321,243 @@ function countByValue(values) {
   }
 
   return counts
+}
+
+function lineCount(content) {
+  const lines = content.split(/\r\n|\r|\n/)
+
+  if (lines.at(-1) === '') {
+    lines.pop()
+  }
+
+  return lines.length
+}
+
+function extractBalancedLiteralAt(content, startIndex, openChar, closeChar) {
+  const stripped = stripCommentsPreservingLines(content)
+  let depth = 0
+  let quote = null
+  let i = startIndex
+
+  while (i < stripped.length) {
+    const char = stripped[i]
+
+    if (quote) {
+      if (char === '\\') {
+        i += 2
+        continue
+      }
+
+      if (char === quote) {
+        quote = null
+      }
+
+      i += 1
+      continue
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      i += 1
+      continue
+    }
+
+    if (char === openChar) {
+      depth += 1
+    }
+
+    if (char === closeChar) {
+      depth -= 1
+
+      if (depth === 0) {
+        return stripped.slice(startIndex + 1, i)
+      }
+    }
+
+    i += 1
+  }
+
+  return null
+}
+
+function extractArrayLiteralAt(content, bracketIndex) {
+  return extractBalancedLiteralAt(content, bracketIndex, '[', ']')
+}
+
+function extractModuleMetadataObject(content) {
+  const moduleDecoratorIndex = content.indexOf('@Module')
+
+  if (moduleDecoratorIndex === -1) {
+    return null
+  }
+
+  const moduleCallIndex = content.indexOf('(', moduleDecoratorIndex)
+
+  if (moduleCallIndex === -1) {
+    return null
+  }
+
+  const objectStartIndex = content.indexOf('{', moduleCallIndex)
+
+  if (objectStartIndex === -1) {
+    return null
+  }
+
+  return extractBalancedLiteralAt(content, objectStartIndex, '{', '}')
+}
+
+function topLevelArrayElements(arrayContent) {
+  if (arrayContent === null) {
+    return null
+  }
+
+  const stripped = stripCommentsPreservingLines(arrayContent)
+  const elements = []
+  let current = ''
+  let quote = null
+  let bracketDepth = 0
+  let braceDepth = 0
+  let parenDepth = 0
+
+  for (let i = 0; i < stripped.length; i += 1) {
+    const char = stripped[i]
+
+    if (quote) {
+      current += char
+
+      if (char === '\\') {
+        if (i + 1 < stripped.length) {
+          current += stripped[i + 1]
+          i += 1
+        }
+        continue
+      }
+
+      if (char === quote) {
+        quote = null
+      }
+
+      continue
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      current += char
+      continue
+    }
+
+    if (char === '[') {
+      bracketDepth += 1
+      current += char
+      continue
+    }
+
+    if (char === ']') {
+      bracketDepth -= 1
+      current += char
+      continue
+    }
+
+    if (char === '{') {
+      braceDepth += 1
+      current += char
+      continue
+    }
+
+    if (char === '}') {
+      braceDepth -= 1
+      current += char
+      continue
+    }
+
+    if (char === '(') {
+      parenDepth += 1
+      current += char
+      continue
+    }
+
+    if (char === ')') {
+      parenDepth -= 1
+      current += char
+      continue
+    }
+
+    if (char === ',' && bracketDepth === 0 && braceDepth === 0 && parenDepth === 0) {
+      elements.push(current)
+      current = ''
+      continue
+    }
+
+    current += char
+  }
+
+  elements.push(current)
+
+  return elements.map((part) => part.trim()).filter(Boolean)
+}
+
+function arrayElementsAfterPattern(content, pattern) {
+  const match = pattern.exec(content)
+
+  if (!match) {
+    return null
+  }
+
+  const bracketIndex = content.indexOf('[', match.index)
+
+  if (bracketIndex === -1) {
+    return null
+  }
+
+  return topLevelArrayElements(extractArrayLiteralAt(content, bracketIndex))
+}
+
+function moduleMetadataPropertyValue(moduleMetadata, propertyName) {
+  const entries = topLevelArrayElements(moduleMetadata)
+  const propertyPattern = new RegExp(`^${propertyName}\\s*:`)
+  const propertyEntry = entries.find((entry) => propertyPattern.test(entry))
+
+  if (!propertyEntry) {
+    return null
+  }
+
+  return propertyEntry.replace(propertyPattern, '').trim()
+}
+
+function moduleArrayElements(content, propertyName) {
+  const moduleMetadata = extractModuleMetadataObject(content)
+
+  if (moduleMetadata === null) {
+    return null
+  }
+
+  const propertyValue = moduleMetadataPropertyValue(moduleMetadata, propertyName)
+
+  if (propertyValue === null) {
+    return null
+  }
+
+  if (propertyValue.startsWith('[')) {
+    if (!propertyValue.endsWith(']')) {
+      return null
+    }
+
+    return topLevelArrayElements(extractArrayLiteralAt(propertyValue, 0))
+  }
+
+  const referenceMatch = /^([A-Za-z_$][A-Za-z0-9_$]*)$/.exec(propertyValue)
+
+  if (!referenceMatch) {
+    return null
+  }
+
+  const referencedName = referenceMatch[1]
+  return arrayElementsAfterPattern(content, new RegExp(`const\\s+${referencedName}\\s*=\\s*\\[`))
+}
+
+function countModuleArrayProperty(content, propertyName) {
+  const elements = moduleArrayElements(content, propertyName)
+  return elements === null ? null : elements.length
 }
 
 function findDirectDatabaseServiceViolations(files) {
@@ -342,8 +688,130 @@ function findWebInfrastructureImportViolations(files) {
   return violations
 }
 
+function findLargeTrackedSourceViolations(files) {
+  const violations = []
+  const fileByPath = new Map(files.map((file) => [file.path, file]))
+
+  for (const file of files) {
+    const lines = lineCount(file.content)
+
+    if (lines < largeTrackedSourceLineLimit) {
+      continue
+    }
+
+    const reason = largeTrackedSourceAllowlist.get(file.path)
+
+    if (!reason || reason.trim().length === 0) {
+      violations.push(
+        `${file.path}:1 has ${lines} lines and must not exceed ${largeTrackedSourceLineLimit - 1} lines without a reasoned allowlist entry`,
+      )
+    }
+  }
+
+  for (const [path, reason] of largeTrackedSourceAllowlist) {
+    const file = fileByPath.get(path)
+
+    if (!file) {
+      violations.push(`${path}:1 large-source allowlist entry points to a missing tracked file`)
+      continue
+    }
+
+    if (!reason || reason.trim().length < 20) {
+      violations.push(`${path}:1 large-source allowlist entry must include a concrete reason`)
+    }
+
+    const lines = lineCount(file.content)
+
+    if (lines < largeTrackedSourceLineLimit) {
+      violations.push(`${path}:1 has ${lines} lines and no longer needs the large-source allowlist`)
+    }
+  }
+
+  return violations
+}
+
+function findModuleGraphLimitViolations(files, limitsByPath) {
+  const violations = []
+  const fileByPath = new Map(files.map((file) => [file.path, file]))
+
+  for (const file of files) {
+    const limits = limitsByPath.get(file.path)
+
+    if (!limits) {
+      violations.push(`${file.path}:1 module graph file is not covered by module graph limits`)
+      continue
+    }
+
+    for (const [propertyName, maxCount] of Object.entries(limits)) {
+      const observedElements = moduleArrayElements(file.content, propertyName)
+      const observedCount = observedElements === null ? null : observedElements.length
+
+      if (observedCount === null) {
+        if (maxCount === 0) {
+          continue
+        }
+
+        violations.push(`${file.path}:1 could not read @Module ${propertyName} graph`)
+        continue
+      }
+
+      const spreadEntry = observedElements.find((element) => element.startsWith('...'))
+
+      if (spreadEntry) {
+        violations.push(
+          `${file.path}:1 @Module ${propertyName} graph uses spread entry ${spreadEntry}; inline explicit entries before counting graph size`,
+        )
+      }
+
+      if (observedCount > maxCount) {
+        violations.push(
+          `${file.path}:1 @Module ${propertyName} graph has ${observedCount} entries; split ownership instead of exceeding ${maxCount}`,
+        )
+      }
+    }
+  }
+
+  for (const path of limitsByPath.keys()) {
+    if (!fileByPath.has(path)) {
+      violations.push(`${path}:1 module graph limit points to a missing tracked file`)
+    }
+  }
+
+  return violations
+}
+
+function findStoreOpsModuleGraphViolations(files) {
+  const governedModuleFiles = files.filter((file) => /\/store-ops(?:-[^/]+)?\.module\.ts$/.test(file.path))
+  return findModuleGraphLimitViolations(governedModuleFiles, storeOpsModuleGraphLimits)
+}
+
+function findWorkerJobsModuleGraphViolations(files) {
+  const workerModuleFiles = files.filter((file) => file.path === 'backend/nestjs/src/worker-jobs.module.ts')
+
+  return findModuleGraphLimitViolations(
+    workerModuleFiles,
+    new Map([
+      [
+        workerJobsModuleGraphLimit.path,
+        {
+          providers: workerJobsModuleGraphLimit.providers,
+          exports: workerJobsModuleGraphLimit.exports,
+        },
+      ],
+    ]),
+  )
+}
+
 const trackedBackendFiles = readBackendSourceFiles()
 const trackedBackendPaths = new Set(trackedBackendFiles.map((file) => file.path))
+const trackedArchitectureSourceFiles = readTrackedSourceFiles(
+  ['backend/nestjs/src', 'backend/nestjs/test', 'admin-web/src', 'admin-web/e2e'],
+  ['.ts', '.tsx'],
+)
+const trackedStoreOpsModuleFiles = readTrackedSourceFiles(['backend/nestjs/src/modules/store-ops'], ['.ts'], {
+  includeTests: false,
+})
+const trackedWorkerModuleFiles = readTrackedSourceFiles(['backend/nestjs/src'], ['.ts'], { includeTests: false })
 
 test('backend architecture direct DatabaseService allowlist points to tracked files', () => {
   for (const path of directDatabaseServiceAllowlist.keys()) {
@@ -371,6 +839,18 @@ test('application code does not import web/controller DTOs or controller layer c
 
 test('web/controller code does not import infrastructure repositories directly', () => {
   assert.deepEqual(findWebInfrastructureImportViolations(trackedBackendFiles), [])
+})
+
+test('tracked TS and TSX files add no new unallowlisted oversized source files', () => {
+  assert.deepEqual(findLargeTrackedSourceViolations(trackedArchitectureSourceFiles), [])
+})
+
+test('Store Ops internal modules do not silently grow provider or export graphs', () => {
+  assert.deepEqual(findStoreOpsModuleGraphViolations(trackedStoreOpsModuleFiles), [])
+})
+
+test('worker job module does not silently grow its job dependency graph', () => {
+  assert.deepEqual(findWorkerJobsModuleGraphViolations(trackedWorkerModuleFiles), [])
 })
 
 test('guard rejects a fake new application DatabaseService import', () => {
@@ -516,4 +996,202 @@ test('guard rejects a fake broad repository cast in Store Ops application code',
 
   assert.match(violations.join('\n'), /NewLeakyReadRepository/)
   assert.doesNotMatch(violations.join('\n'), /missing allowlisted broad repository cast/)
+})
+
+test('guard rejects a fake new oversized tracked source file without a reasoned allowlist', () => {
+  const oversizedFile = {
+    path: 'backend/nestjs/src/modules/store-ops/application/new-large-report.service.ts',
+    content: Array.from({ length: largeTrackedSourceLineLimit }, (_item, index) => `const line${index} = ${index}`).join('\n'),
+  }
+  const violations = findLargeTrackedSourceViolations([oversizedFile])
+  assert.match(violations.join('\n'), /new-large-report\.service\.ts/)
+  assert.match(violations.join('\n'), /must not exceed/)
+})
+
+test('guard line counts ignore a trailing newline at the source size boundary', () => {
+  const source = `${Array.from(
+    { length: largeTrackedSourceLineLimit - 1 },
+    (_item, index) => `const line${index} = ${index}`,
+  ).join('\n')}\n`
+  assert.equal(lineCount(source), largeTrackedSourceLineLimit - 1)
+})
+
+const targetStoreOpsModulePath = 'backend/nestjs/src/modules/store-ops/store-ops-targets.module.ts'
+const targetStoreOpsModuleLimit = new Map([[targetStoreOpsModulePath, storeOpsModuleGraphLimits.get(targetStoreOpsModulePath)]])
+
+function findTargetModuleGraphViolations(content) {
+  return findModuleGraphLimitViolations([{ path: targetStoreOpsModulePath, content }], targetStoreOpsModuleLimit)
+}
+
+test('guard rejects fake Store Ops internal module provider growth', () => {
+  const violations = findTargetModuleGraphViolations(`
+          import { Module } from "@nestjs/common";
+
+          @Module({
+            controllers: [A, B, C, D, E],
+            providers: [
+              A,
+              B,
+              C,
+              D,
+              E,
+              F,
+              G,
+              H,
+              I,
+              J,
+              K,
+              L,
+              NewProvider,
+            ],
+            exports: [A, B, C, D, E],
+          })
+          export class StoreOpsTargetsModule {}
+        `)
+
+  assert.match(violations.join('\n'), /store-ops-targets\.module\.ts/)
+  assert.match(violations.join('\n'), /providers graph has 13 entries/)
+})
+
+test('guard rejects an ungoverned fake Store Ops internal module', () => {
+  const violations = findStoreOpsModuleGraphViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/store-ops-org.module.ts',
+      content: `
+        import { Module } from "@nestjs/common";
+
+        @Module({
+          controllers: [OrgController],
+          providers: [OrgService],
+          exports: [OrgService],
+        })
+        export class StoreOpsOrgModule {}
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /store-ops-org\.module\.ts/)
+  assert.match(violations.join('\n'), /not covered by module graph limits/)
+})
+
+test('guard rejects provider growth on the Store Ops facade module', () => {
+  const violations = findStoreOpsModuleGraphViolations([
+    { path: 'backend/nestjs/src/modules/store-ops/store-ops.module.ts', content: 'import { Module } from "@nestjs/common"; const storeOpsInternalModules = [A, B, C, D]; @Module({ imports: [A], providers: [NewProvider], exports: storeOpsInternalModules }) export class StoreOpsModule {}' },
+  ])
+
+  assert.match(violations.join('\n'), /store-ops\.module\.ts/)
+  assert.match(violations.join('\n'), /providers graph has 1 entries/)
+})
+
+test('guard rejects fake worker job module provider growth', () => {
+  const violations = findWorkerJobsModuleGraphViolations([
+    {
+      path: 'backend/nestjs/src/worker-jobs.module.ts',
+      content: `
+        import { Module } from "@nestjs/common";
+
+        @Module({
+          providers: [A, B, C, D, E, F, G, H, I, NewJobHandler],
+          exports: [A, B],
+        })
+        export class WorkerJobsModule {}
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /worker-jobs\.module\.ts/)
+  assert.match(violations.join('\n'), /providers graph has 10 entries/)
+})
+
+test('guard rejects module graph spread entries before counting size', () => {
+  const violations = findTargetModuleGraphViolations(`
+          import { Module } from "@nestjs/common";
+
+          const baseProviders = [A, B, C, D, E, F, G, H, I, J, K, L];
+
+          @Module({
+            controllers: [A, B, C, D, E],
+            providers: [...baseProviders, NewProvider],
+            exports: [A, B, C, D, E],
+          })
+          export class StoreOpsTargetsModule {}
+        `)
+
+  assert.match(violations.join('\n'), /uses spread entry/)
+  assert.match(violations.join('\n'), /baseProviders/)
+})
+
+test('guard counts custom provider objects as one module entry', () => {
+  const observedCount = countModuleArrayProperty(
+    `
+      import { Module } from "@nestjs/common";
+
+      @Module({
+        providers: [
+          A,
+          { provide: APP_GUARD, useClass: Guard },
+          {
+            provide: TOKEN,
+            useFactory: () => ({ left: 1, right: 2 }),
+          },
+        ],
+      })
+      export class CustomProviderModule {}
+    `,
+    'providers',
+  )
+
+  assert.equal(observedCount, 3)
+})
+
+test('guard counts module graph entries from @Module metadata only', () => {
+  const violations = findTargetModuleGraphViolations(`
+          import { Module } from "@nestjs/common";
+
+          const helperMetadata = { providers: [A] };
+
+          @Module({
+            controllers: [A],
+            providers: [A, B, C, D, E, F, G, H, I, J, K, L, M],
+            exports: [A],
+          })
+          export class StoreOpsTargetsModule {}
+        `)
+
+  assert.match(violations.join('\n'), /providers graph has 13 entries/)
+})
+
+test('guard ignores comment delimiters while counting module graph entries', () => {
+  const violations = findTargetModuleGraphViolations(`
+          import { Module } from "@nestjs/common";
+
+          @Module({
+            controllers: [A],
+            providers: [
+              A, // ] comment must not close the array
+              B, C, D, E, F, G, H, I, J, K, L, M,
+            ],
+            exports: [A],
+          })
+          export class StoreOpsTargetsModule {}
+        `)
+
+  assert.match(violations.join('\n'), /providers graph has 13 entries/)
+})
+
+test('guard rejects non-literal module graph expressions instead of partially counting them', () => {
+  const violations = findTargetModuleGraphViolations(`
+          import { Module } from "@nestjs/common";
+
+          const baseProviders = [A, B, C];
+
+          @Module({
+            controllers: [A],
+            providers: baseProviders.concat([NewProvider]),
+            exports: [A],
+          })
+          export class StoreOpsTargetsModule {}
+        `)
+
+  assert.match(violations.join('\n'), /could not read @Module providers graph/)
 })
