@@ -30,10 +30,19 @@ function lineNumberAt(content, index) {
 
 function importsIn(content) {
   const imports = []
-  const importPattern = /import\s+(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g
+  const importPattern = /import\s+(?!['"])(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g
+  const sideEffectImportPattern = /import\s+['"]([^'"]+)['"];?/g
   const exportPattern = /export\s+(?:type\s+)?(?:\*|{[\s\S]*?})\s+from\s+['"]([^'"]+)['"]/g
 
   for (const match of content.matchAll(importPattern)) {
+    imports.push({
+      statement: match[0],
+      source: match[1],
+      index: match.index ?? 0,
+    })
+  }
+
+  for (const match of content.matchAll(sideEffectImportPattern)) {
     imports.push({
       statement: match[0],
       source: match[1],
@@ -64,11 +73,23 @@ function isWebOrControllerFile(path) {
   return path.includes('/web/') || path.endsWith('.controller.ts')
 }
 
-const directDatabaseServiceAllowlist = new Set([
-  'backend/nestjs/src/modules/store-ops/application/snapshot.service.ts',
-  'backend/nestjs/src/modules/integration/application/materialization.service.ts',
-  'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
-  'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
+const directDatabaseServiceAllowlist = new Map([
+  [
+    'backend/nestjs/src/modules/store-ops/application/snapshot.service.ts',
+    ['import { DatabaseService } from "../../../shared/database/database.service"'],
+  ],
+  [
+    'backend/nestjs/src/modules/integration/application/materialization.service.ts',
+    ['import { DatabaseService } from "../../../shared/database/database.service"'],
+  ],
+  [
+    'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
+    ['import { DatabaseService } from "../../../shared/database/database.service"'],
+  ],
+  [
+    'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
+    ['import { DatabaseService } from "../../../shared/database/database.service"'],
+  ],
 ])
 
 const storeOpsRepositoryCastAllowlist = new Map([
@@ -119,6 +140,10 @@ function describeViolation(file, index, message) {
   return `${file.path}:${lineNumberAt(file.content, index)} ${message}`
 }
 
+function normalizedStatement(statement) {
+  return statement.trim().replace(/;$/, '').replace(/\s+/g, ' ')
+}
+
 function castLineSignature(content, index) {
   const lineStart = Math.max(content.lastIndexOf('\n', index - 1) + 1, 0)
   const lineEndIndex = content.indexOf('\n', index)
@@ -145,13 +170,40 @@ function findDirectDatabaseServiceViolations(files) {
   const violations = []
 
   for (const file of files) {
-    if (!isApplicationFile(file.path) || directDatabaseServiceAllowlist.has(file.path)) {
+    if (!isApplicationFile(file.path)) {
       continue
     }
 
+    const allowedCounts = countByValue(directDatabaseServiceAllowlist.get(file.path) ?? [])
+    const observedAllowedCounts = new Map()
+
     for (const importEntry of importsIn(file.content)) {
-      if (hasDirectDatabaseServiceImport(importEntry)) {
-        violations.push(describeViolation(file, importEntry.index, 'imports DatabaseService in application code'))
+      if (!hasDirectDatabaseServiceImport(importEntry)) {
+        continue
+      }
+
+      const signature = normalizedStatement(importEntry.statement)
+      const allowedCount = allowedCounts.get(signature) ?? 0
+      const observedCount = observedAllowedCounts.get(signature) ?? 0
+
+      if (observedCount < allowedCount) {
+        observedAllowedCounts.set(signature, observedCount + 1)
+        continue
+      }
+
+      violations.push(
+        describeViolation(file, importEntry.index, `uses unallowlisted direct DatabaseService import: ${signature}`),
+      )
+    }
+
+    for (const [expectedSignature, expectedCount] of allowedCounts) {
+      const observedCount = observedAllowedCounts.get(expectedSignature) ?? 0
+
+      if (observedCount !== expectedCount) {
+        violations.push(
+          `${file.path}:1 expected ${expectedCount} allowlisted direct DatabaseService import occurrence(s), ` +
+            `observed ${observedCount}: ${expectedSignature}`,
+        )
       }
     }
   }
@@ -212,7 +264,9 @@ function findApplicationWebImportViolations(files) {
 
     for (const importEntry of importsIn(file.content)) {
       if (isWebLayerImport(importEntry)) {
-        violations.push(describeViolation(file, importEntry.index, 'imports web/controller layer from application code'))
+        violations.push(
+          describeViolation(file, importEntry.index, `imports web/controller layer from application code: ${importEntry.source}`),
+        )
       }
     }
   }
@@ -230,7 +284,9 @@ function findWebInfrastructureImportViolations(files) {
 
     for (const importEntry of importsIn(file.content)) {
       if (isInfrastructureImport(importEntry)) {
-        violations.push(describeViolation(file, importEntry.index, 'imports infrastructure directly from web/controller code'))
+        violations.push(
+          describeViolation(file, importEntry.index, `imports infrastructure directly from web/controller code: ${importEntry.source}`),
+        )
       }
     }
   }
@@ -242,7 +298,7 @@ const trackedBackendFiles = readBackendSourceFiles()
 const trackedBackendPaths = new Set(trackedBackendFiles.map((file) => file.path))
 
 test('backend architecture direct DatabaseService allowlist points to tracked files', () => {
-  for (const path of directDatabaseServiceAllowlist) {
+  for (const path of directDatabaseServiceAllowlist.keys()) {
     assert.equal(trackedBackendPaths.has(path), true, `${path} must remain tracked or be removed from the allowlist`)
   }
 })
@@ -287,6 +343,27 @@ test('guard rejects a fake new application DatabaseService import', () => {
   assert.match(violations.join('\n'), /DatabaseService/)
 })
 
+test('guard rejects missing or duplicate allowlisted direct DatabaseService imports', () => {
+  const violations = findDirectDatabaseServiceViolations([
+    {
+      path: 'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
+      content: `
+        import { Injectable } from "@nestjs/common";
+      `,
+    },
+    {
+      path: 'backend/nestjs/src/modules/store-ops/application/snapshot.service.ts',
+      content: `
+        import { DatabaseService } from "../../../shared/database/database.service";
+        import { DatabaseService } from "../../../shared/database/database.service";
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /expected 1 allowlisted direct DatabaseService import occurrence/)
+  assert.match(violations.join('\n'), /unallowlisted direct DatabaseService import/)
+})
+
 test('guard rejects a fake new web-to-infrastructure import', () => {
   const violations = findWebInfrastructureImportViolations([
     {
@@ -319,6 +396,28 @@ test('guard rejects fake application re-exports from web/controller code', () =>
   assert.equal(violations.length, 2)
   assert.match(violations.join('\n'), /new-report\.service\.ts/)
   assert.match(violations.join('\n'), /web/)
+})
+
+test('guard rejects fake side-effect imports across forbidden layers', () => {
+  const applicationViolations = findApplicationWebImportViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/application/new-report.service.ts',
+      content: `
+        import "../web/new-report.controller";
+      `,
+    },
+  ])
+  const webViolations = findWebInfrastructureImportViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/web/new-report.controller.ts',
+      content: `
+        import "../infrastructure/reporting.repository";
+      `,
+    },
+  ])
+
+  assert.match(applicationViolations.join('\n'), /web\/new-report\.controller/)
+  assert.match(webViolations.join('\n'), /infrastructure/)
 })
 
 test('guard rejects a fake extra broad repository cast in an allowlisted file', () => {
