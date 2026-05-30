@@ -64,20 +64,20 @@ This snapshot is a triage input, not a mandate to split every file.
 | `admin-web/e2e/competition-surfaces.spec.ts` | 1557 | broad competition E2E | Park unless gate time/flakiness or helper extraction evidence appears. |
 | `backend/nestjs/src/modules/integration/application/integration.service.ts` | 1439 | mixed read/write orchestration | S04 read-model helper extraction is done; park command/import lifecycle behavior unless concrete trigger appears. |
 | `admin-web/src/pages/IntegrationDashboardPage.tsx` | 1354 | redesign-sensitive UI page | Park until redesign or concrete data-risk UX evidence. |
-| `admin-web/src/pages/StoreKpiHighlightsPage.tsx` | 1351 | redesign-sensitive UI page | Park until redesign or concrete KPI trust/overflow bug. |
+| `admin-web/src/pages/StoreKpiHighlightsPage.tsx` | 155 | Store KPI page container | PR9 architecture hardening split moved model, summary, metric list, and formatter concerns out of the page. Park further visual redesign until a concrete product/UI trigger appears. |
 | `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts` | 1194 | validation/promotion orchestration | S02 normalization helper extraction is done; park remaining promotion/write boundary unless concrete trigger appears. |
 | `backend/nestjs/test/integration/import-batch-evidence.e2e-spec.ts` | 1340 | evidence-heavy E2E | Park unless gate time/flakiness proves test helper extraction value. |
 | `admin-web/src/pages/ImportBatchDetailPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete import operator bug. |
 | `admin-web/src/pages/AdminKpiConfigPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete governance/action UX bug. |
-| `admin-web/src/pages/StoreRankingsPage.tsx` | 1330 | redesign-sensitive UI page | Park until redesign or concrete ranking trust bug. |
-| `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 1048 | data materialization/write path | PR6 extracted KPI materialization into `KpiMaterializationService`; remaining employee/store/assignment/position/company/region paths stay parked. |
+| `admin-web/src/pages/StoreRankingsPage.tsx` | 599 | Store rankings page container | PR8 architecture hardening split moved model, table, and detail panel concerns out of the page. Park further visual redesign until a concrete product/UI trigger appears. |
+| `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 953 | data materialization/write path | PR6 extracted KPI materialization into `KpiMaterializationService` and `KpiMaterializationRepository`; remaining employee/store/assignment/position/company/region paths stay parked. |
 | `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1325 | stage/package/scoring repository facade | Park remaining writes/finalization until a separate invariant/test decision. |
 | `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 1278 | auth/security write repository facade | Park write boundaries unless a concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
 | `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 1226 | workforce command/write lifecycle facade | Park remaining command/status/audit/access lifecycle work. |
-| `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 732 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
-| `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 970 | ranking read/scoring application service | Active first code candidate: pure helper extraction with existing tests. |
+| `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 666 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
+| `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 740 | ranking read/scoring application service | PR3 removed broad repository casts and previous helper extraction remains in place. Park further extraction unless a ranking trust/reviewability trigger appears. |
 
 ## Completed Or No Longer Active
 
@@ -137,8 +137,10 @@ Result:
   orchestration, and response assembly.
 - Ranking score math, sort semantics, masking rules, API response shape, auth,
   DB, and frontend behavior are unchanged.
-- Current line-count shape after the slice: `ranking.service.ts` roughly 627
-  lines and `ranking-list.helpers.ts` roughly 375 lines.
+- Current line-count shape after the later architecture hardening line:
+  `ranking.service.ts` roughly 740 lines and `ranking-list.helpers.ts`
+  roughly 375 lines. The increase came from explicit read-repository
+  injection wiring, not a scoring or ranking behavior change.
 
 ### S02: MasterDataBootstrapService Validation Boundary
 
