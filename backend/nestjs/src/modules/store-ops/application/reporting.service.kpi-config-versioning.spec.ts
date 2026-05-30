@@ -57,8 +57,9 @@ const validGradingBands = [
 ];
 
 function createService(repositoryOverrides: Record<string, unknown>) {
+  const reportingRepository = {};
   return new ReportingService(
-    {} as never,
+    reportingRepository as never,
     {
       getKpiConfigRows: jest.fn(async () => [
         { config_key: "store_profile", config_payload: validStoreProfile },
@@ -74,6 +75,11 @@ function createService(repositoryOverrides: Record<string, unknown>) {
     } as never,
     {} as never,
     {} as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
   );
 }
 

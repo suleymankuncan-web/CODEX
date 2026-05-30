@@ -173,29 +173,7 @@ const directDatabaseServiceAllowlist = new Map([
   ],
 ])
 
-const storeOpsRepositoryCastAllowlist = new Map([
-  [
-    'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
-    [
-      'reportingRepository as unknown as StoreScoreReportingReadRepository',
-      'reportingRepository as unknown as ClosedRankingRepository',
-      'reportingRepository as unknown as SnapshotReportingReadRepository',
-      'reportingRepository as unknown as StorePerformanceReportingReadRepository',
-      'reportingRepository as unknown as RankingReportingReadRepository',
-    ],
-  ],
-  [
-    'backend/nestjs/src/modules/store-ops/application/ranking.service.ts',
-    [
-      'reportingRepository as unknown as StorePerformanceReportingReadRepository',
-      'reportingRepository as unknown as RankingReportingReadRepository',
-    ],
-  ],
-  [
-    'backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.ts',
-    ['reportingRepository as unknown as SnapshotReportingReadRepository'],
-  ],
-])
+const storeOpsRepositoryCastAllowlist = new Map()
 
 function hasDirectDatabaseServiceImport(importEntry) {
   return /(?:^|\/)shared\/database\/database\.service$|database\.service$/.test(importEntry.source)
@@ -534,16 +512,11 @@ test('guard rejects fake side-effect imports across forbidden layers', () => {
   assert.match(webViolations.join('\n'), /infrastructure/)
 })
 
-test('guard rejects a fake extra broad repository cast in an allowlisted file', () => {
+test('guard rejects a fake broad repository cast in Store Ops application code', () => {
   const violations = findStoreOpsRepositoryCastViolations([
     {
-      path: 'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
+      path: 'backend/nestjs/src/modules/store-ops/application/new-reporting.service.ts',
       content: `
-        reportingRepository as unknown as StoreScoreReportingReadRepository,
-        reportingRepository as unknown as ClosedRankingRepository,
-        reportingRepository as unknown as SnapshotReportingReadRepository,
-        reportingRepository as unknown as StorePerformanceReportingReadRepository,
-        reportingRepository as unknown as RankingReportingReadRepository,
         reportingRepository as unknown as NewLeakyReadRepository,
       `,
     },
@@ -551,20 +524,4 @@ test('guard rejects a fake extra broad repository cast in an allowlisted file', 
 
   assert.match(violations.join('\n'), /NewLeakyReadRepository/)
   assert.doesNotMatch(violations.join('\n'), /missing allowlisted broad repository cast/)
-})
-
-test('guard rejects a fake duplicate allowlisted broad repository cast', () => {
-  const violations = findStoreOpsRepositoryCastViolations([
-    {
-      path: 'backend/nestjs/src/modules/store-ops/application/ranking.service.ts',
-      content: `
-        reportingRepository as unknown as StorePerformanceReportingReadRepository,
-        reportingRepository as unknown as RankingReportingReadRepository,
-        reportingRepository as unknown as RankingReportingReadRepository,
-      `,
-    },
-  ])
-
-  assert.match(violations.join('\n'), /RankingReportingReadRepository/)
-  assert.match(violations.join('\n'), /unallowlisted broad repository cast/)
 })

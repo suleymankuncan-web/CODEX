@@ -10,7 +10,6 @@ import {
 } from "./workflow-inbox.contract";
 import { ChecklistAcknowledgementRepository } from "../infrastructure/checklist-acknowledgement.repository";
 import { TargetDistributionRepository } from "../infrastructure/target-distribution.repository";
-import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 import { StoreActionPlanRepository } from "../infrastructure/store-action-plan.repository";
 
@@ -23,9 +22,7 @@ export class WorkflowInboxService {
   constructor(
     private readonly targetDistributionRepository: TargetDistributionRepository,
     private readonly checklistAcknowledgementRepository: ChecklistAcknowledgementRepository,
-    private readonly reportingRepository: ReportingRepository,
-    private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository =
-      reportingRepository as unknown as SnapshotReportingReadRepository,
+    private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository,
     private readonly storeActionPlanRepository: StoreActionPlanRepository,
   ) {}
 

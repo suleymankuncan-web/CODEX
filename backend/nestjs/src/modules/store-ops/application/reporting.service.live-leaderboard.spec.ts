@@ -1,6 +1,23 @@
 import { ReportingService } from "./reporting.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 
+function createReportingService(
+  reportingRepository: Record<string, unknown>,
+  closedRankingService: Record<string, unknown>,
+) {
+  return new ReportingService(
+    reportingRepository as never,
+    { getKpiConfigRows: jest.fn(async () => []) } as never,
+    closedRankingService as never,
+    new LiveMonthlyLeaderboardService(reportingRepository as never),
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+  );
+}
+
 describe("ReportingService live leaderboard fallback", () => {
   it("rejects explicit live fallback store filters outside the caller scope", async () => {
     const closedRankingService = {
@@ -36,12 +53,7 @@ describe("ReportingService live leaderboard fallback", () => {
       getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
       getPeerEmployeePerformanceRows: jest.fn(async () => []),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      closedRankingService as never,
-      new LiveMonthlyLeaderboardService(reportingRepository as never),
-    );
+    const service = createReportingService(reportingRepository, closedRankingService);
 
     await expect(
       service.getClosedLeaderboard({
@@ -207,12 +219,7 @@ describe("ReportingService live leaderboard fallback", () => {
         },
       ]),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      closedRankingService as never,
-      new LiveMonthlyLeaderboardService(reportingRepository as never),
-    );
+    const service = createReportingService(reportingRepository, closedRankingService);
 
     const result = await service.getClosedLeaderboard({
       userId: "user-1",
