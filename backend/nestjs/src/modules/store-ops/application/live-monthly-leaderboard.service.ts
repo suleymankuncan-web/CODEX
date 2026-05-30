@@ -6,7 +6,7 @@ import type {
   ClosedRankingMetricRank,
   ClosedRankingSummary,
 } from "./closed-ranking.contract";
-import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
+import { PerformanceScoreEvaluator } from "./performance-score-evaluator.service";
 
 type LiveEmployeePerformanceRow = {
   employee_id: string;
@@ -31,7 +31,7 @@ type LiveEmployeeScoreRow = {
 
 @Injectable()
 export class LiveMonthlyLeaderboardService {
-  private readonly kpiBenchmarkScoringService = new KpiBenchmarkScoringService();
+  private readonly performanceScoreEvaluator = new PerformanceScoreEvaluator();
 
   constructor(private readonly reportingRepository: ReportingRepository) {}
 
@@ -201,7 +201,14 @@ export class LiveMonthlyLeaderboardService {
         lastName: string;
         storeId: string | null;
         storeName: string | null;
-        values: Record<string, { actualValue: number; targetValue: number | null }>;
+        values: Map<
+          string,
+          {
+            label: string;
+            actualValue: number;
+            targetValue: number | null;
+          }
+        >;
       }
     >();
 
@@ -217,46 +224,25 @@ export class LiveMonthlyLeaderboardService {
         lastName: row.last_name ?? "",
         storeId: row.store_id,
         storeName: row.store_name ?? null,
-        values: {},
+        values: new Map(),
       };
-      current.values[row.kpi_code] = {
+      current.values.set(row.kpi_code, {
+        label: row.kpi_name ?? row.kpi_code,
         actualValue,
         targetValue: row.target_value !== null ? Number(row.target_value) : null,
-      };
+      });
       byEmployee.set(row.employee_id, current);
     });
 
     return [...byEmployee.entries()]
       .map(([employeeId, value]) => {
-        const scoreValue = input.profile.metrics.reduce((sum, metric) => {
-          const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
-          const matchedCode = matchingCodes.find((code) => value.values[code]);
-          const matchedMetric = matchedCode ? value.values[matchedCode] : null;
-
-          if (!matchedMetric) {
-            return sum;
-          }
-
-          const benchmarkSource =
-            metric.benchmarkSource ??
-            (matchedMetric.targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
-          const benchmarkValue =
-            benchmarkSource === "TURKEY_AVERAGE" && matchedCode
-              ? input.benchmarkLookup.get(matchedCode) ?? null
-              : null;
-          const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
-            metricCode: metric.code,
-            actualValue: matchedMetric.actualValue,
-            benchmarkValue,
-            targetValue: matchedMetric.targetValue,
-            weightPercent: metric.weightPercent,
-            direction: metric.direction ?? "HIGHER_IS_BETTER",
-            benchmarkSource,
-            capRatio: metric.capRatio ?? 1.2,
-          });
-
-          return sum + (metricScore.scoreContribution ?? 0);
-        }, 0);
+        const scoring = this.performanceScoreEvaluator.evaluate({
+          values: value.values,
+          profile: input.profile,
+          benchmarkLookup: input.benchmarkLookup,
+          benchmarkFallback: "matched-only",
+          useStoreChecklistFallback: false,
+        });
 
         return {
           employeeId,
@@ -264,7 +250,7 @@ export class LiveMonthlyLeaderboardService {
           lastName: value.lastName,
           storeId: value.storeId,
           storeName: value.storeName,
-          scoreValue: Number(scoreValue.toFixed(2)),
+          scoreValue: scoring.scoreValue,
         };
       })
       .sort(

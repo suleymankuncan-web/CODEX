@@ -3,13 +3,13 @@ import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { StorePerformanceReportingReadRepository } from "../infrastructure/store-performance-reporting-read.repository";
-import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import {
   KpiScoreProfile,
   normalizeKpiScoreProfile,
   personnelKpiScoreProfile,
   storeKpiScoreProfile,
 } from "./kpi-config.contract";
+import { PerformanceScoreEvaluator } from "./performance-score-evaluator.service";
 import {
   RankingMetricValue,
   PersonnelRankingRow,
@@ -75,8 +75,6 @@ type ActivePersonnelAssignmentScope = Awaited<
   ReturnType<ReportingRepository["getActiveEmployeeAssignmentScope"]>
 >;
 
-const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
-
 export type GetRankingsInput = RankingFilters & {
   userId: string;
   employeeId?: string;
@@ -95,7 +93,7 @@ export type GetRankingsInput = RankingFilters & {
 
 @Injectable()
 export class RankingService {
-  private readonly kpiBenchmarkScoringService = new KpiBenchmarkScoringService();
+  private readonly performanceScoreEvaluator = new PerformanceScoreEvaluator();
 
   constructor(
     private readonly reportingRepository: ReportingRepository,
@@ -672,99 +670,13 @@ export class RankingService {
     profile: KpiScoreProfile;
     benchmarkLookup: Map<string, number | null>;
   }) {
-    const metrics = input.profile.metrics.map((metric) => {
-      const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
-      const matchedCode = matchingCodes.find((code) => input.values.has(code));
-      const matchedMetric = matchedCode ? input.values.get(matchedCode) : undefined;
-      const actualValue = matchedMetric?.actualValue ?? null;
-      const targetValue = matchedMetric?.targetValue ?? null;
-      const benchmarkSource =
-        metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
-      const benchmarkValue =
-        benchmarkSource === "TURKEY_AVERAGE" && matchedCode
-          ? input.benchmarkLookup.get(matchedCode) ??
-            input.benchmarkLookup.get(metric.code) ??
-            null
-          : null;
-      const score = storeChecklistMetricCodes.has(metric.code)
-        ? {
-            scoreContribution:
-              actualValue !== null && Number.isFinite(actualValue)
-                ? Number(((actualValue * metric.weightPercent) / 100).toFixed(4))
-                : null,
-          }
-        : this.kpiBenchmarkScoringService.scoreMetric({
-            metricCode: metric.code,
-            actualValue,
-            benchmarkValue,
-            targetValue,
-            weightPercent: metric.weightPercent,
-            direction: metric.direction ?? "HIGHER_IS_BETTER",
-            benchmarkSource,
-            capRatio: metric.capRatio ?? 1.2,
-          });
-
-      return {
-        code: metric.code,
-        label: matchedMetric?.label ?? metric.label,
-        actualValue,
-        targetValue,
-        benchmarkValue,
-        contributionValue: score.scoreContribution,
-      };
+    return this.performanceScoreEvaluator.evaluate({
+      values: input.values,
+      profile: input.profile,
+      benchmarkLookup: input.benchmarkLookup,
+      benchmarkFallback: "matched-or-canonical",
+      useStoreChecklistFallback: true,
     });
-
-    const scoreValue =
-      input.profile.profileCode === "store"
-        ? this.scoreStoreProfileWithChecklistFallback({
-            metrics,
-            profile: input.profile,
-          })
-        : metrics.reduce((sum, metric) => sum + (metric.contributionValue ?? 0), 0);
-
-    return {
-      scoreValue: Number(scoreValue.toFixed(2)),
-      metrics,
-    };
-  }
-
-  private scoreStoreProfileWithChecklistFallback(input: {
-    metrics: Array<{ code: string; contributionValue: number | null | undefined }>;
-    profile: KpiScoreProfile;
-  }) {
-    const metricByCode = new Map(input.metrics.map((metric) => [metric.code, metric]));
-    const kpiConfiguredWeight = input.profile.metrics
-      .filter((metric) => !storeChecklistMetricCodes.has(metric.code))
-      .reduce((sum, metric) => sum + metric.weightPercent, 0);
-    const kpiContribution = input.profile.metrics
-      .filter((metric) => !storeChecklistMetricCodes.has(metric.code))
-      .reduce((sum, metric) => {
-        const contribution = metricByCode.get(metric.code)?.contributionValue;
-        return sum + (contribution ?? 0);
-      }, 0);
-    const checklistMetrics = input.profile.metrics.filter((metric) =>
-      storeChecklistMetricCodes.has(metric.code),
-    );
-    const checklistContribution = checklistMetrics.reduce((sum, metric) => {
-      const contribution = metricByCode.get(metric.code)?.contributionValue;
-      return sum + (contribution ?? 0);
-    }, 0);
-    const missingChecklistWeight = checklistMetrics.reduce((sum, metric) => {
-      const contribution = metricByCode.get(metric.code)?.contributionValue;
-      return contribution === null || contribution === undefined
-        ? sum + metric.weightPercent
-        : sum;
-    }, 0);
-
-    if (kpiConfiguredWeight <= 0) {
-      return checklistContribution;
-    }
-
-    return (
-      (kpiContribution / kpiConfiguredWeight) *
-        (kpiConfiguredWeight + missingChecklistWeight) +
-      checklistContribution
-    );
   }
 
   private buildReferenceGroup(input: {
