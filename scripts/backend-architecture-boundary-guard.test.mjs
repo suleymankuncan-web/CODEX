@@ -220,10 +220,6 @@ const largeTrackedSourceAllowlist = new Map([
     'Existing competition write repository hotspot; V2 extracts transition policy before new competition growth.',
   ],
   [
-    'backend/nestjs/src/modules/integration/application/integration.service.ts',
-    'Existing integration orchestration hotspot; parked by refactor inventory unless product or reviewability trigger appears.',
-  ],
-  [
     'backend/nestjs/src/shared/openapi-baseline.contract.spec.ts',
     'Existing OpenAPI baseline contract spec; size follows API contract breadth.',
   ],

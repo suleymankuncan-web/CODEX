@@ -1,6 +1,6 @@
 # Refactor Completion Inventory V1
 
-Status: Active decision refreshed after Architecture Hardening V2 on 2026-05-30
+Status: Active decision refreshed after Architecture Hardening V3 on 2026-05-30
 
 This inventory closes the recurring "large file means keep refactoring" loop.
 The project still has large files, but they are no longer all active refactor
@@ -29,6 +29,9 @@ Repository evidence:
   hotspots, made selected auth/workforce/competition transition decisions
   explicit, and added stronger guard pressure for large files and module graph
   growth.
+- Architecture Hardening V3 extracted integration import command lifecycle
+  orchestration and auth-admin write persistence, then removed
+  `IntegrationService` and `AuthAdminRepository` from oversized-source debt.
 - The user has said major page/content/design changes are coming, so broad UI
   polish or page-component splits are likely to be throwaway work right now.
 
@@ -68,7 +71,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/modules/store-ops/application/reporting.service.ts` | 1608 | backend application orchestration | PR3 architecture hardening removed broad read-repository constructor casts; park further reporting movement unless a concrete scoring/reporting trigger appears. |
 | `admin-web/src/pages/MasterDataBootstrapPage.tsx` | 1690 | redesign-sensitive UI page | Park until the upcoming page/content redesign touches it or a blocking UX bug appears. |
 | `admin-web/e2e/competition-surfaces.spec.ts` | 1557 | broad competition E2E | Park unless gate time/flakiness or helper extraction evidence appears. |
-| `backend/nestjs/src/modules/integration/application/integration.service.ts` | 1439 | mixed read/write orchestration | S04 read-model helper extraction is done; park command/import lifecycle behavior unless concrete trigger appears. |
+| `backend/nestjs/src/modules/integration/application/integration.service.ts` | 842 | integration application facade | V3 extracted import command lifecycle and pure response/model helpers; below standard service budget. Park further source/master-data command movement unless concrete trigger appears. |
 | `admin-web/src/pages/IntegrationDashboardPage.tsx` | 1354 | redesign-sensitive UI page | Park until redesign or concrete data-risk UX evidence. |
 | `admin-web/src/pages/StoreKpiHighlightsPage.tsx` | 155 | Store KPI page container | PR9 architecture hardening split moved model, summary, metric list, and formatter concerns out of the page. Park further visual redesign until a concrete product/UI trigger appears. |
 | `backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts` | 1194 | validation/promotion orchestration | S02 normalization helper extraction is done; park remaining promotion/write boundary unless concrete trigger appears. |
@@ -78,7 +81,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `admin-web/src/pages/StoreRankingsPage.tsx` | 599 | Store rankings page container | PR8 architecture hardening split moved model, table, and detail panel concerns out of the page. Park further visual redesign until a concrete product/UI trigger appears. |
 | `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 188 | data materialization orchestration | Architecture Hardening V2 split row status, employee, store, assignment, position, company, region, and batch persistence out of this service; do not reopen unless import routing behavior changes. |
 | `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1360 | stage/package/scoring repository facade | Architecture Hardening V2 extracted stage package plan transition policy; park scoring, finalization, and broader persistence splits until a separate invariant/test decision. |
-| `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 1163 | auth/security write repository facade | Architecture Hardening V2 extracted role-assignment create/deactivate commands; park remaining user-account, action-store, pilot-binding, and role-permission writes unless a concrete auth/security/product trigger appears. |
+| `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 512 | auth/security repository facade | Architecture Hardening V3 extracted user-account, pilot-binding, action-store, role-assignment, and role-permission write commands. Park further auth-admin movement unless concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
 | `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 1160 | workforce request SQL persistence facade | Architecture Hardening V2 extracted seller-code/offboarding transition policy; park broader SQL/transaction persistence splits unless a concrete workflow or reviewability trigger appears. |
@@ -108,6 +111,8 @@ These areas should not keep resurfacing as generic refactor prompts:
 - Architecture Hardening V2 workforce request transition policy extraction.
 - Architecture Hardening V2 competition stage package plan transition policy
   extraction.
+- Architecture Hardening V3 integration import command lifecycle extraction.
+- Architecture Hardening V3 auth-admin write command extraction.
 
 If one of these areas is reopened, the trigger must be a concrete bug, product
 change, failing gate, reviewability blocker, or explicit user decision.
@@ -235,7 +240,7 @@ Result:
 
 Risk: MEDIUM
 
-Status: Done by the read-model helper extraction slice.
+Status: Done by the read-model helper extraction and V3 closeout helper slices.
 
 Allowed only when:
 
@@ -246,13 +251,19 @@ Result:
 
 - Integration source, store master, personnel master, and supported lookup-list
   read-model helpers now live in `integration-read-model.helpers.ts`.
-- `IntegrationService` still owns import creation, source governance,
-  materialization dispatch, retry, approval, reconciliation, and repository
-  orchestration.
+- Import payload templates now live in `integration-payload-template.helpers.ts`.
+- Import batch detail, reconciliation, error-item, mapping-candidate, and
+  quality-summary response helpers now live in `import-batch-detail.helpers.ts`.
+- Import creation, retry, and external-id approval orchestration now live in
+  `integration-import-command.service.ts`.
+- `IntegrationService` still owns integration source and master-data command
+  orchestration plus read coordination.
 - Import lifecycle, retry, source governance, approval, queue, raw staging
   writes, API response shape, auth, DB, and frontend behavior are unchanged.
 - Current line-count shape after the slice: `integration.service.ts` roughly
-  1439 lines and `integration-read-model.helpers.ts` roughly 109 lines.
+  842 lines, `integration-read-model.helpers.ts` roughly 177 lines,
+  `integration-payload-template.helpers.ts` roughly 145 lines, and
+  `import-batch-detail.helpers.ts` roughly 332 lines.
 
 ### S05: Test Suite Helper Extraction
 
@@ -272,8 +283,8 @@ Do not refactor these only because of line count:
 
 - Redesign-sensitive frontend pages and competition/store surfaces.
 - Auth admin write/security boundaries.
-  Narrowed after Architecture Hardening V2 to areas outside the extracted
-  role-assignment command path.
+  Narrowed after Architecture Hardening V3 to focused command repositories;
+  reopen only for concrete auth/security product changes.
 - Workforce request command/write/status/audit/access lifecycle boundaries.
   Narrowed after Architecture Hardening V2 to SQL persistence and workflow
   boundaries outside the extracted transition policy.
@@ -283,9 +294,9 @@ Do not refactor these only because of line count:
   execution, and broad persistence outside the extracted stage package plan
   transition policy.
 - Integration materialization and raw import write paths.
-  Narrowed after Architecture Hardening V2 to import lifecycle, source
-  governance, retry, approval, and raw staging paths outside the completed
-  materialization split.
+  Narrowed after Architecture Hardening V3 to source/master-data command
+  orchestration and raw staging paths outside the completed materialization and
+  import lifecycle splits.
 - Snapshot rerun/materialization paths.
 - OpenAPI and system-flow generator scripts.
 

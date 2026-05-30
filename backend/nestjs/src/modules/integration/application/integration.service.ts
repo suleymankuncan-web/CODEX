@@ -18,28 +18,16 @@ import {
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
 import { logStructuredMessage } from "../../../shared/structured-log";
 import {
-  type ImportDataQualityIssue,
-  type ImportDataQualityIssueCode,
-  classifyImportDataQualityIssue,
-  getImportDataQualityIssue,
-  IMPORT_DATA_QUALITY_ISSUES,
-} from "./import-data-quality";
-import {
-  mapImportBatchDetailBatch,
   mapImportBatchListItem,
   mapImportBatchNeedsActionItem,
 } from "./import-batch-read-model.mapper";
 import {
   getBlockedByEntityTypes,
-  getDetailHealthState,
   getImportStuckBeforeIso,
   getListHealthState,
-  getRecommendedImportOrder,
 } from "./import-batch-health";
 import {
-  getSupportedEntityTypes,
-  getSupportedSourceSystems,
-  getSupportedStateModels,
+  buildIntegrationLookups,
   mapIntegrationSource,
   mapPersonnelMaster,
   mapStoreMaster,
@@ -50,22 +38,21 @@ import {
 } from "./integration-company-scope";
 import { getExternalIdInternalTableName } from "./external-id-mapping.helpers";
 import {
+  buildImportBatchDetailModel,
+  buildImportBatchErrorItem,
+  buildImportBatchReconciliationModel,
+} from "./import-batch-detail.helpers";
+import {
+  buildImportPayloadTemplate,
+  type SupportedEntityType,
+  type SupportedSourceSystem,
+} from "./integration-payload-template.helpers";
+import {
   type ApproveExternalIdMappingInput,
   type CreateIntegrationImportBatchInput,
   IntegrationImportCommandService,
   type RetryImportBatchInput,
 } from "./integration-import-command.service";
-
-type SupportedEntityType =
-  | "employee"
-  | "store"
-  | "kpi"
-  | "assignment"
-  | "position"
-  | "company"
-  | "region";
-
-type SupportedSourceSystem = "nebim_v3" | "power_bi" | "manual" | "other";
 
 @Injectable()
 export class IntegrationService {
@@ -93,7 +80,8 @@ export class IntegrationService {
     sourceSystem?: string;
     isActive?: boolean;
   }) {
-    const result = await this.integrationSourceRepository.listIntegrationSources(input);
+    const result =
+      await this.integrationSourceRepository.listIntegrationSources(input);
 
     return buildListResponse(
       result.rows.map((item) => mapIntegrationSource(item)),
@@ -121,17 +109,19 @@ export class IntegrationService {
     pollTimezone?: string;
     actorUserId: string;
   }) {
-    const existing = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
-      input.sourceCode,
-      input.entityType,
-    );
+    const existing =
+      await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
+        input.sourceCode,
+        input.entityType,
+      );
     if (existing) {
       throw new ConflictException(
         `Integration source already exists for ${input.sourceCode}/${input.entityType}`,
       );
     }
 
-    const source = await this.integrationSourceRepository.createIntegrationSource(input);
+    const source =
+      await this.integrationSourceRepository.createIntegrationSource(input);
 
     return buildCommandResponse({
       status: "created",
@@ -143,20 +133,24 @@ export class IntegrationService {
   }
 
   async deactivateIntegrationSource(sourceId: string, actorUserId: string) {
-    const activeBatchCount = await this.integrationSourceRepository.countActiveImportBatchesForSource(
-      sourceId,
-    );
+    const activeBatchCount =
+      await this.integrationSourceRepository.countActiveImportBatchesForSource(
+        sourceId,
+      );
     if (activeBatchCount > 0) {
       throw new ConflictException(
         `Integration source ${sourceId} cannot be deactivated while active import batches exist`,
       );
     }
 
-    const source = await this.integrationSourceRepository.updateIntegrationSourceActiveState({
-      sourceId,
-      isActive: false,
-      actorUserId,
-    });
+    const source =
+      await this.integrationSourceRepository.updateIntegrationSourceActiveState(
+        {
+          sourceId,
+          isActive: false,
+          actorUserId,
+        },
+      );
 
     if (!source) {
       throw new NotFoundException(`Integration source not found: ${sourceId}`);
@@ -172,11 +166,14 @@ export class IntegrationService {
   }
 
   async reactivateIntegrationSource(sourceId: string, actorUserId: string) {
-    const source = await this.integrationSourceRepository.updateIntegrationSourceActiveState({
-      sourceId,
-      isActive: true,
-      actorUserId,
-    });
+    const source =
+      await this.integrationSourceRepository.updateIntegrationSourceActiveState(
+        {
+          sourceId,
+          isActive: true,
+          actorUserId,
+        },
+      );
 
     if (!source) {
       throw new NotFoundException(`Integration source not found: ${sourceId}`);
@@ -202,11 +199,12 @@ export class IntegrationService {
     },
     actorUserId: string,
   ) {
-    const source = await this.integrationSourceRepository.updateIntegrationSourceSchedule({
-      sourceId,
-      ...input,
-      actorUserId,
-    });
+    const source =
+      await this.integrationSourceRepository.updateIntegrationSourceSchedule({
+        sourceId,
+        ...input,
+        actorUserId,
+      });
 
     if (!source) {
       throw new NotFoundException(`Integration source not found: ${sourceId}`);
@@ -222,7 +220,8 @@ export class IntegrationService {
   }
 
   async listDueIntegrationSources(referenceAt?: string) {
-    const rows = await this.integrationSchedulerService.listDueSources(referenceAt);
+    const rows =
+      await this.integrationSchedulerService.listDueSources(referenceAt);
     return buildListResponse(rows, { total: rows.length });
   }
 
@@ -230,189 +229,13 @@ export class IntegrationService {
     entityType?: SupportedEntityType;
     sourceSystem?: SupportedSourceSystem;
   }) {
-    const entityType = input?.entityType ?? "kpi";
-    const sourceSystem = input?.sourceSystem ?? "nebim_v3";
-
-    if (entityType !== "kpi") {
-      return {
-        entityType,
-        sourceSystem,
-        canonicalContract: this.getCanonicalKpiContract(),
-        note: "Sample payload templates are currently productized for KPI imports first.",
-        requestBody: {
-          sourceCode: `${sourceSystem}-${entityType}`,
-          entityType,
-          fileReference: `${sourceSystem}-${entityType}-sample.json`,
-          sourceBatchId: `${sourceSystem}-${entityType}-2026-04-22T10:30`,
-          sourceCapturedAt: "2026-04-22T10:30:00.000Z",
-          sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
-          sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
-          rows: [],
-        },
-      };
-    }
-
-    const requestBody =
-      sourceSystem === "power_bi"
-        ? {
-            sourceCode: "power-bi-kpi",
-            entityType: "kpi",
-            fileReference: "power-bi-kpi-sample.json",
-            sourceBatchId: "power-bi-kpi-2026-04-22T10:30",
-            sourceCapturedAt: "2026-04-22T10:30:00.000Z",
-            sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
-            sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
-            rows: [
-              {
-                sellerCode: "S-100",
-                storeCode: "M-10",
-                atv: 5200,
-                upt: 3.2,
-                netSales: 25000,
-              },
-              {
-                storeCode: "M-10",
-                conversionRate: 0.15,
-              },
-            ],
-          }
-        : {
-            sourceCode: "nebim-kpi",
-            entityType: "kpi",
-            fileReference: "nebim-kpi-sample.json",
-            sourceBatchId: "nebim-kpi-2026-04-22T10:30",
-            sourceCapturedAt: "2026-04-22T10:30:00.000Z",
-            sourceWindowStartedAt: "2026-04-22T10:00:00.000Z",
-            sourceWindowEndedAt: "2026-04-22T10:30:00.000Z",
-            rows: [
-              {
-                saticiKodu: "S-100",
-                magazaKodu: "M-10",
-                atv: 5200,
-                upt: 3.2,
-                netTutar: 25000,
-              },
-              {
-                magazaKodu: "M-10",
-                cr: 0.15,
-              },
-            ],
-          };
-
-    return {
-      entityType,
-      sourceSystem,
-      canonicalContract: this.getCanonicalKpiContract(),
-      normalizedBehavior: [
-        "ATV, UPT, NET_SALES employee scope olarak normalize edilir.",
-        "CR store scope olarak normalize edilir.",
-        "sourceBatchId aynı gelirse batch reuse edilir.",
-        "Yeni veri aynı KPI/scope/donem icin gelirse live state overwrite edilir.",
-      ],
-      requestBody,
-    };
-  }
-
-  private getCanonicalKpiContract() {
-    return {
-      envelopeFields: [
-        "sourceCode",
-        "entityType",
-        "fileReference",
-        "idempotencyKey",
-        "sourceBatchId",
-        "sourcePayloadHash",
-        "sourceCapturedAt",
-        "sourceWindowStartedAt",
-        "sourceWindowEndedAt",
-      ],
-      canonicalKpiRowFields: [
-        "kpiCode",
-        "sourceMetricId",
-        "scopeType",
-        "storeExternalRef",
-        "employeeExternalRef",
-        "actualValue",
-        "targetValue",
-        "periodType",
-        "periodStart",
-        "periodEnd",
-        "sourceCapturedAt",
-        "rowHash",
-        "rawRowReference",
-        "sourceRow",
-      ],
-      importedMetricCodes: ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT", "FF", "UPT", "ATV", "CR"],
-      derivedMetricCodes: ["TARGET_ACHIEVEMENT", "WEIGHTED_PERSONNEL_SCORE", "WEIGHTED_STORE_SCORE"],
-      checklistMetricCodes: ["BM_CHECKLIST", "VM_CHECKLIST"],
-      dataQualityIssueCodes: IMPORT_DATA_QUALITY_ISSUES.map((issue) => issue.code),
-      rules: [
-        "employeeExternalRef can be empty only for store-scoped metrics",
-        "source adapters map external fields into canonical rows before scoring",
-        "rowHash is generated from the stable source row payload when the adapter does not provide one",
-        "rawRowReference is a readable sourceSystem/metric/period/store/personnel trace key",
-      ],
-    };
+    return buildImportPayloadTemplate(input);
   }
 
   async getIntegrationLookups() {
-    const activeSources = await this.integrationSourceRepository.listActiveIntegrationSources();
-    const entityTypes = getSupportedEntityTypes();
-    const activeSourceOptions = activeSources.map((item) => ({
-      sourceId: item.integration_source_id,
-      sourceCode: item.source_code,
-      sourceName: item.source_name,
-      entityType: item.entity_type,
-      sourceSystem: item.source_system,
-      stateModel: item.state_model,
-    }));
-    const sourcesByEntityType = activeSources.reduce<
-      Record<string, Array<{ sourceId: string; sourceCode: string; sourceName: string }>>
-    >((acc, item) => {
-      if (!acc[item.entity_type]) {
-        acc[item.entity_type] = [];
-      }
-
-      acc[item.entity_type].push({
-        sourceId: item.integration_source_id,
-        sourceCode: item.source_code,
-        sourceName: item.source_name,
-      });
-
-      return acc;
-    }, {});
-
-    return {
-      entityTypes,
-      sourceStats: {
-        totalActiveSources: activeSources.length,
-      },
-      activeSources: activeSourceOptions,
-      sourcesByEntityType,
-      optionGroups: {
-        entityTypes: entityTypes.map((entityType) => ({ value: entityType, label: entityType })),
-        sources: activeSourceOptions.map((item) => ({
-          value: item.sourceId,
-          label: `${item.sourceCode} - ${item.sourceName}`,
-          entityType: item.entityType,
-          sourceCode: item.sourceCode,
-          sourceSystem: item.sourceSystem,
-          stateModel: item.stateModel,
-        })),
-        sourceSystems: getSupportedSourceSystems().map((sourceSystem) => ({
-          value: sourceSystem,
-          label: sourceSystem,
-        })),
-        stateModels: getSupportedStateModels().map((stateModel) => ({
-          value: stateModel,
-          label: stateModel,
-        })),
-      },
-      meta: {
-        totalEntityTypes: entityTypes.length,
-        totalActiveSources: activeSourceOptions.length,
-      },
-    };
+    const activeSources =
+      await this.integrationSourceRepository.listActiveIntegrationSources();
+    return buildIntegrationLookups(activeSources);
   }
 
   async listExternalIdMapCandidates(input: {
@@ -423,13 +246,16 @@ export class IntegrationService {
   }) {
     this.assertCompanyScope(input.actorCompanyIds);
     const limit = input.limit ?? 10;
-    const result = await this.externalIdMappingReadRepository.listExternalIdMapCandidates({
-      actorCompanyIds: input.actorCompanyIds,
-      entityType: input.entityType,
-      q: input.q,
-      limit,
-    });
-    const internalTableName = this.getExternalIdInternalTableName(input.entityType);
+    const result =
+      await this.externalIdMappingReadRepository.listExternalIdMapCandidates({
+        actorCompanyIds: input.actorCompanyIds,
+        entityType: input.entityType,
+        q: input.q,
+        limit,
+      });
+    const internalTableName = this.getExternalIdInternalTableName(
+      input.entityType,
+    );
 
     return buildListResponse(
       result.map((item) => ({
@@ -451,7 +277,8 @@ export class IntegrationService {
     limit?: number;
     offset?: number;
   }) {
-    const result = await this.kpiImportStoreReadRepository.listKpiImportStoreScope(input);
+    const result =
+      await this.kpiImportStoreReadRepository.listKpiImportStoreScope(input);
 
     return buildListResponse(
       result.rows.map((item) => mapStoreMaster(item)),
@@ -460,9 +287,10 @@ export class IntegrationService {
   }
 
   async getStoreMasterLookups(input: { actorCompanyIds: string[] }) {
-    const regions = await this.kpiImportStoreReadRepository.listStoreMasterRegions({
-      actorCompanyIds: input.actorCompanyIds,
-    });
+    const regions =
+      await this.kpiImportStoreReadRepository.listStoreMasterRegions({
+        actorCompanyIds: input.actorCompanyIds,
+      });
 
     return {
       storeTypes: [
@@ -492,10 +320,13 @@ export class IntegrationService {
     kpiImportEnabled: boolean;
     actorUserId: string;
   }) {
-    const storeScope = await this.integrationRepository.updateKpiImportStoreScope(input);
+    const storeScope =
+      await this.integrationRepository.updateKpiImportStoreScope(input);
 
     if (!storeScope) {
-      throw new NotFoundException(`Store or region not found: ${input.storeId}`);
+      throw new NotFoundException(
+        `Store or region not found: ${input.storeId}`,
+      );
     }
 
     logStructuredMessage(this.logger, "store_master_data.updated", {
@@ -526,10 +357,12 @@ export class IntegrationService {
   }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
-    const result = await this.personnelMasterReadRepository.listPersonnelMaster({
-      ...input,
-      actorCompanyIds,
-    });
+    const result = await this.personnelMasterReadRepository.listPersonnelMaster(
+      {
+        ...input,
+        actorCompanyIds,
+      },
+    );
 
     return buildListResponse(
       result.rows.map((item) => mapPersonnelMaster(item)),
@@ -540,9 +373,10 @@ export class IntegrationService {
   async getPersonnelMasterLookups(input: { actorCompanyIds: string[] }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
-    const lookups = await this.personnelMasterReadRepository.listPersonnelMasterLookups({
-      actorCompanyIds,
-    });
+    const lookups =
+      await this.personnelMasterReadRepository.listPersonnelMasterLookups({
+        actorCompanyIds,
+      });
 
     return {
       stores: lookups.stores.map((item) => ({
@@ -598,7 +432,9 @@ export class IntegrationService {
     });
 
     if (!personnel) {
-      throw new NotFoundException(`Personnel master record not found: ${input.employeeId}`);
+      throw new NotFoundException(
+        `Personnel master record not found: ${input.employeeId}`,
+      );
     }
 
     logStructuredMessage(this.logger, "personnel_master_data.updated", {
@@ -619,13 +455,17 @@ export class IntegrationService {
   }
 
   async getIntegrationSourceAudit(sourceId: string) {
-    const source = await this.integrationSourceRepository.getIntegrationSourceById(sourceId);
+    const source =
+      await this.integrationSourceRepository.getIntegrationSourceById(sourceId);
 
     if (!source) {
       throw new NotFoundException(`Integration source not found: ${sourceId}`);
     }
 
-    const events = await this.integrationSourceRepository.getIntegrationSourceAudit(sourceId);
+    const events =
+      await this.integrationSourceRepository.getIntegrationSourceAudit(
+        sourceId,
+      );
 
     return buildListResponse(
       events.map((event) => mapAuditEvent(event)),
@@ -687,21 +527,23 @@ export class IntegrationService {
       actorCompanyIds,
     };
 
-    const summary = await this.importBatchReadRepository.getImportBatchSummary(scopedInput);
-    const [completedBatchId, failedBatchId, inProgressBatchId] = await Promise.all([
-      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
-        ...scopedInput,
-        status: "completed",
-      }),
-      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
-        ...scopedInput,
-        status: "failed",
-      }),
-      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
-        ...scopedInput,
-        status: "processing",
-      }),
-    ]);
+    const summary =
+      await this.importBatchReadRepository.getImportBatchSummary(scopedInput);
+    const [completedBatchId, failedBatchId, inProgressBatchId] =
+      await Promise.all([
+        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
+          ...scopedInput,
+          status: "completed",
+        }),
+        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
+          ...scopedInput,
+          status: "failed",
+        }),
+        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
+          ...scopedInput,
+          status: "processing",
+        }),
+      ]);
 
     return {
       totals: {
@@ -743,30 +585,36 @@ export class IntegrationService {
       actorCompanyIds,
     };
     const stuckBefore = getImportStuckBeforeIso();
-    const [summary, actionCounts, completedBatchId, failedBatchId, inProgressBatchId, stuckBatchId] =
-      await Promise.all([
-        this.importBatchReadRepository.getImportBatchSummary(scopedInput),
-        this.importBatchReadRepository.getImportBatchActionCounts({
-          ...scopedInput,
-          stuckBefore,
-        }),
-        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
-          ...scopedInput,
-          status: "completed",
-        }),
-        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
-          ...scopedInput,
-          status: "failed",
-        }),
-        this.importBatchReadRepository.getLatestImportBatchIdByStatus({
-          ...scopedInput,
-          status: "processing",
-        }),
-        this.importBatchReadRepository.getLatestStuckImportBatchId({
-          ...scopedInput,
-          stuckBefore,
-        }),
-      ]);
+    const [
+      summary,
+      actionCounts,
+      completedBatchId,
+      failedBatchId,
+      inProgressBatchId,
+      stuckBatchId,
+    ] = await Promise.all([
+      this.importBatchReadRepository.getImportBatchSummary(scopedInput),
+      this.importBatchReadRepository.getImportBatchActionCounts({
+        ...scopedInput,
+        stuckBefore,
+      }),
+      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
+        ...scopedInput,
+        status: "completed",
+      }),
+      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
+        ...scopedInput,
+        status: "failed",
+      }),
+      this.importBatchReadRepository.getLatestImportBatchIdByStatus({
+        ...scopedInput,
+        status: "processing",
+      }),
+      this.importBatchReadRepository.getLatestStuckImportBatchId({
+        ...scopedInput,
+        stuckBefore,
+      }),
+    ]);
 
     return {
       totals: {
@@ -780,7 +628,13 @@ export class IntegrationService {
       },
       healthTotals: {
         healthy: summary.completed,
-        inProgress: Math.max(summary.pending + summary.queued + summary.processing - actionCounts.stuck, 0),
+        inProgress: Math.max(
+          summary.pending +
+            summary.queued +
+            summary.processing -
+            actionCounts.stuck,
+          0,
+        ),
         blocked: actionCounts.blocked,
         retryReady: actionCounts.retryReady,
         needsAction: actionCounts.needsAction,
@@ -809,11 +663,12 @@ export class IntegrationService {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
 
-    const result = await this.importBatchReadRepository.listImportBatchesNeedingAction({
-      ...input,
-      actorCompanyIds,
-      stuckBefore: getImportStuckBeforeIso(),
-    });
+    const result =
+      await this.importBatchReadRepository.listImportBatchesNeedingAction({
+        ...input,
+        actorCompanyIds,
+        stuckBefore: getImportStuckBeforeIso(),
+      });
 
     const items = await Promise.all(
       result.rows.map(async (batch) => {
@@ -866,10 +721,11 @@ export class IntegrationService {
       throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
-    const summaryRows = await this.importBatchReadRepository.getImportBatchRowStatusSummary(
-      batch.import_batch_id,
-      batch.entity_type,
-    );
+    const summaryRows =
+      await this.importBatchReadRepository.getImportBatchRowStatusSummary(
+        batch.import_batch_id,
+        batch.entity_type,
+      );
     const dependencySummaryRow =
       await this.importBatchReadRepository.getImportBatchDependencySummary(
         batch.import_batch_id,
@@ -877,113 +733,31 @@ export class IntegrationService {
       );
     const lineageSummaryRow =
       batch.entity_type === "kpi"
-        ? await this.importBatchReadRepository.getImportBatchLineageSummary(batch.import_batch_id)
+        ? await this.importBatchReadRepository.getImportBatchLineageSummary(
+            batch.import_batch_id,
+          )
         : null;
-    const qualityIssueRows = await this.importBatchReadRepository.getImportBatchQualityIssueRows(
-      batch.import_batch_id,
-      batch.entity_type,
-    );
+    const qualityIssueRows =
+      await this.importBatchReadRepository.getImportBatchQualityIssueRows(
+        batch.import_batch_id,
+        batch.entity_type,
+      );
 
-    const rowStatusSummary = {
-      processed: 0,
-      validationFailed: 0,
-      retryableError: 0,
-      pending: 0,
-    };
-
-    for (const row of summaryRows) {
-      if (row.normalized_status === "processed") rowStatusSummary.processed = Number(row.row_count);
-      if (row.normalized_status === "validation_failed") {
-        rowStatusSummary.validationFailed = Number(row.row_count);
-      }
-      if (row.normalized_status === "retryable_error") {
-        rowStatusSummary.retryableError = Number(row.row_count);
-      }
-      if (row.normalized_status === "pending") rowStatusSummary.pending = Number(row.row_count);
-    }
-
-    const dependencySummary = {
-      employee: Number(dependencySummaryRow?.employee_count ?? 0),
-      store: Number(dependencySummaryRow?.store_count ?? 0),
-      position: Number(dependencySummaryRow?.position_count ?? 0),
-      region: Number(dependencySummaryRow?.region_count ?? 0),
-      company: Number(dependencySummaryRow?.company_count ?? 0),
-      manager: Number(dependencySummaryRow?.manager_count ?? 0),
-    };
-    const blockedByEntityTypes = getBlockedByEntityTypes(dependencySummary);
-    const recommendedImportOrder = getRecommendedImportOrder();
-    const recommendedNextEntityType = blockedByEntityTypes[0] ?? null;
-    const canRetryNow = blockedByEntityTypes.length === 0;
-    const healthState = getDetailHealthState({
-      status: batch.status,
-      rowStatusSummary,
-      blockedByEntityTypes,
-      canRetryNow,
+    return buildImportBatchDetailModel({
+      batch,
+      summaryRows,
+      dependencySummaryRow,
+      lineageSummaryRow,
+      qualityIssueRows,
     });
-
-    return {
-      batch: mapImportBatchDetailBatch(batch, healthState),
-      rowStatusSummary,
-      dependencySummary,
-      blockedByEntityTypes,
-      recommendedImportOrder,
-      recommendedNextEntityType,
-      canRetryNow,
-      healthState,
-      qualityIssueSummary: this.getQualityIssueSummary(qualityIssueRows),
-      lineageSummary: {
-        supported: batch.entity_type === "kpi",
-        rowHashCount: Number(lineageSummaryRow?.row_hash_count ?? 0),
-        rawRowReferenceCount: Number(lineageSummaryRow?.raw_row_reference_count ?? 0),
-        sampleRowHash: lineageSummaryRow?.sample_row_hash ?? null,
-        sampleRawRowReference: lineageSummaryRow?.sample_raw_row_reference ?? null,
-      },
-    };
   }
 
-  async getImportBatchReconciliation(input: { actorCompanyIds: string[]; batchId: string }) {
+  async getImportBatchReconciliation(input: {
+    actorCompanyIds: string[];
+    batchId: string;
+  }) {
     const detail = await this.getImportBatch(input);
-    const totalRows =
-      detail.rowStatusSummary.processed +
-      detail.rowStatusSummary.validationFailed +
-      detail.rowStatusSummary.retryableError +
-      detail.rowStatusSummary.pending;
-    const unaccountedRows = Math.max(detail.batch.recordCount - totalRows, 0);
-    const safeDivide = (value: number, total: number) => (total > 0 ? value / total : 0);
-
-    return {
-      batch: detail.batch,
-      totals: {
-        recordCount: detail.batch.recordCount,
-        accountedRows: totalRows,
-        unaccountedRows,
-        countsMatchRecordCount: totalRows === detail.batch.recordCount,
-      },
-      rowStatusSummary: detail.rowStatusSummary,
-      rates: {
-        processedRate: safeDivide(detail.rowStatusSummary.processed, detail.batch.recordCount),
-        validationFailureRate: safeDivide(
-          detail.rowStatusSummary.validationFailed,
-          detail.batch.recordCount,
-        ),
-        retryableErrorRate: safeDivide(
-          detail.rowStatusSummary.retryableError,
-          detail.batch.recordCount,
-        ),
-        pendingRate: safeDivide(detail.rowStatusSummary.pending, detail.batch.recordCount),
-        accountedRate: safeDivide(totalRows, detail.batch.recordCount),
-      },
-      reconciliation: {
-        hasFailures:
-          detail.rowStatusSummary.validationFailed > 0 ||
-          detail.rowStatusSummary.retryableError > 0,
-        hasPendingRows: detail.rowStatusSummary.pending > 0,
-        hasUnaccountedRows: unaccountedRows > 0,
-        canRetryNow: detail.canRetryNow,
-        blockedByEntityTypes: detail.blockedByEntityTypes,
-        recommendedNextEntityType: detail.recommendedNextEntityType,
-      },
-    };
+    return buildImportBatchReconciliationModel(detail);
   }
 
   async getImportBatchErrors(input: {
@@ -1011,36 +785,12 @@ export class IntegrationService {
     });
 
     return buildListResponse(
-      result.rows.map((row) => {
-        const qualityIssueCode = classifyImportDataQualityIssue({
-          normalizedStatus: row.normalized_status,
-          validationError: row.validation_error,
-        });
-        const lineage =
-          row.row_hash || row.raw_row_reference
-            ? {
-                rowHash: row.row_hash ?? null,
-                rawRowReference: row.raw_row_reference ?? null,
-              }
-            : {};
-        const mappingCandidate = this.getMappingCandidate({
+      result.rows.map((row) =>
+        buildImportBatchErrorItem({
           integrationSourceId: batch.integration_source_id,
-          qualityIssueCode,
           row,
-        });
-
-        return {
-          rowId: row.row_id,
-          sourceRef: row.source_ref,
-          ...lineage,
-          normalizedStatus: row.normalized_status,
-          errorCategory: this.classifyErrorCategory(row.normalized_status, row.validation_error),
-          qualityIssueCode,
-          ...(mappingCandidate ? { mappingCandidate } : {}),
-          validationError: row.validation_error,
-          processedAt: row.processed_at,
-        };
-      }),
+        }),
+      ),
       { total: result.total, limit: input.limit, offset: input.offset },
     );
   }
@@ -1049,7 +799,10 @@ export class IntegrationService {
     return this.importCommandService.approveExternalIdMapping(input);
   }
 
-  async getImportBatchAudit(input: { actorCompanyIds: string[]; batchId: string }) {
+  async getImportBatchAudit(input: {
+    actorCompanyIds: string[];
+    batchId: string;
+  }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
     const batch = await this.importBatchReadRepository.getImportBatch({
@@ -1061,7 +814,9 @@ export class IntegrationService {
       throw new NotFoundException(`Import batch not found: ${input.batchId}`);
     }
 
-    const events = await this.importBatchReadRepository.getImportBatchAudit(input.batchId);
+    const events = await this.importBatchReadRepository.getImportBatchAudit(
+      input.batchId,
+    );
 
     return buildListResponse(
       events.map((event) => mapAuditEvent(event)),
@@ -1071,72 +826,6 @@ export class IntegrationService {
 
   async retryImportBatch(input: RetryImportBatchInput) {
     return this.importCommandService.retryImportBatch(input);
-  }
-
-  private classifyErrorCategory(
-    normalizedStatus: string,
-    validationError: string | null,
-  ): "validation" | "missing_dependency" | "write_failure" {
-    if (normalizedStatus === "validation_failed") {
-      return "validation";
-    }
-
-    const errorMessage = (validationError ?? "").toLowerCase();
-    if (
-      errorMessage.includes("could not be resolved") ||
-      errorMessage.includes("missing dependency")
-    ) {
-      return "missing_dependency";
-    }
-
-    return "write_failure";
-  }
-
-  private getMappingCandidate(input: {
-    integrationSourceId: string;
-    qualityIssueCode: ImportDataQualityIssueCode;
-    row: {
-      store_external_ref: string | null;
-      employee_external_ref: string | null;
-      payload_json: Record<string, unknown> | null;
-    };
-  }) {
-    const payload = input.row.payload_json ?? {};
-    if (input.qualityIssueCode === "unmapped_store") {
-      const externalId = this.firstNonEmptyString([
-        input.row.store_external_ref,
-        payload["storeExternalRef"],
-        payload["sourceStoreId"],
-      ]);
-
-      return externalId
-        ? {
-            integrationSourceId: input.integrationSourceId,
-            entityType: "store" as const,
-            externalId,
-            internalTableName: this.getExternalIdInternalTableName("store"),
-          }
-        : null;
-    }
-
-    if (input.qualityIssueCode === "unmapped_employee") {
-      const externalId = this.firstNonEmptyString([
-        input.row.employee_external_ref,
-        payload["employeeExternalRef"],
-        payload["sourceEmployeeId"],
-      ]);
-
-      return externalId
-        ? {
-            integrationSourceId: input.integrationSourceId,
-            entityType: "employee" as const,
-            externalId,
-            internalTableName: this.getExternalIdInternalTableName("employee"),
-          }
-        : null;
-    }
-
-    return null;
   }
 
   private getExternalIdInternalTableName(entityType: "employee" | "store") {
@@ -1150,67 +839,4 @@ export class IntegrationService {
   private assertCompanyScope(companyIds: string[]) {
     assertCompanyScope(companyIds);
   }
-
-  private firstNonEmptyString(values: unknown[]) {
-    for (const value of values) {
-      if (typeof value === "string" && value.trim().length > 0) {
-        return value;
-      }
-    }
-
-    return null;
-  }
-
-  private getQualityIssueSummary(
-    rows: Array<{
-      normalized_status: string;
-      validation_error: string | null;
-      row_count: string;
-    }>,
-  ) {
-    const issueCounts = new Map<ImportDataQualityIssueCode, number>();
-
-    for (const row of rows) {
-      const code = classifyImportDataQualityIssue({
-        normalizedStatus: row.normalized_status,
-        validationError: row.validation_error,
-      });
-      const count = Number(row.row_count ?? 0);
-      issueCounts.set(code, (issueCounts.get(code) ?? 0) + count);
-    }
-
-    const items = Array.from(issueCounts.entries())
-      .map(([code, count]) => {
-        const issue = getImportDataQualityIssue(code) ?? getImportDataQualityIssue("unknown_quality_issue");
-        return {
-          code,
-          label: issue?.label ?? "Unknown quality issue",
-          owner: issue?.owner ?? "system",
-          severity: issue?.severity ?? "low",
-          description: issue?.description ?? "The row failed without a recognized data quality issue pattern.",
-          count,
-        };
-      })
-      .sort((left, right) => {
-        const severityDelta = this.getSeverityRank(left) - this.getSeverityRank(right);
-        if (severityDelta !== 0) return severityDelta;
-        if (right.count !== left.count) return right.count - left.count;
-        return left.code.localeCompare(right.code);
-      });
-
-    return {
-      totalIssueRows: items.reduce((sum, item) => sum + item.count, 0),
-      highSeverityRows: items
-        .filter((item) => item.severity === "high")
-        .reduce((sum, item) => sum + item.count, 0),
-      items,
-    };
-  }
-
-  private getSeverityRank(issue: Pick<ImportDataQualityIssue, "severity">) {
-    if (issue.severity === "high") return 0;
-    if (issue.severity === "medium") return 1;
-    return 2;
-  }
-
 }

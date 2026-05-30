@@ -18,7 +18,8 @@ calibration proofs, plus the Store Me Plum Glacier redesign line through
 PR #524, the active Store route refactor line through PR #532, the
 Redis/BullMQ Render worker closure through PR #536, the Store checklist flow
 polish through PR #537, the first architecture hardening line through PR #552,
-and Architecture Hardening V2 through PR #566.
+Architecture Hardening V2 through PR #566, and Architecture Hardening V3
+through PR #569 plus the V3 closeout slice.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -753,6 +754,17 @@ Latest technical assessment decision:
   PR #563 extracted auth role assignment commands, PR #564 extracted workforce
   transition policy, PR #565 extracted competition stage package plan
   transition policy, and PR #566 added the migration-change release warning.
+- Architecture Hardening V3 is closed through PR #568, PR #569, and the V3
+  closeout slice. Evidence is recorded at
+  `docs/evidence/architecture-hardening-v3-closeout-2026-05-30.md`. PR #568
+  extracted integration import command lifecycle orchestration into
+  `IntegrationImportCommandService`; PR #569 moved auth-admin user-account,
+  pilot-binding, action-store assignment, and role-permission write persistence
+  behind focused command repositories. The closeout slice moved pure
+  integration payload-template, lookup, import-batch detail, reconciliation,
+  error-item, and quality-summary helpers out of `IntegrationService`, then
+  removed `IntegrationService` from the file-size baseline and architecture
+  large-source allowlist.
 - Current backend architecture boundary state: the application-layer direct
   `DatabaseService` allowlist in
   `scripts/backend-architecture-boundary-guard.test.mjs` is empty, and the
@@ -760,12 +772,12 @@ Latest technical assessment decision:
   blocks new oversized TS/TSX source files without reasoned allowlist entries,
   Store Ops module graph growth, worker job graph growth, application-to-web
   imports, and web-to-infrastructure repository imports.
-- Current estimated architecture health after Architecture Hardening V2 is
-  `84/100`. The project is safer for feature growth but not debt-free:
-  integration import orchestration, master-data promotion, remaining auth admin
-  writes, workforce SQL persistence, competition scoring/finalization,
-  generator scripts, broad E2E specs, and Store UI redesign-sensitive pages
-  remain intentional parked risks until a concrete trigger appears.
+- Current estimated architecture health after Architecture Hardening V3 is
+  `88/100`. The project is safer for feature growth but not debt-free:
+  master-data promotion, workforce SQL persistence, competition
+  scoring/finalization, generator scripts, broad E2E specs, and Store UI
+  redesign-sensitive pages remain intentional parked risks until a concrete
+  trigger appears.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
@@ -795,10 +807,10 @@ Latest technical assessment decision:
   lines on `origin/main` and mostly holds command/write flows: import batch
   creation/raw staging, store/personnel master updates, retry/status writes,
   and external mapping approval audit.
-- Do not continue splitting integration retry/status/raw-staging writes unless
-  a concrete product/risk change needs them. The next safer technical-debt
-  hotspot is the auth admin repository, but auth work must begin with a fresh
-  inventory/test map because it is security-sensitive.
+- `IntegrationService` is now roughly 842 lines after Architecture Hardening V3
+  moved import command lifecycle orchestration and pure response/model helpers
+  out of the service. Do not continue splitting integration source/master-data
+  command orchestration unless a concrete product/risk change needs it.
 - Auth admin repository boundary work is complete through the safe read split
   line:
   - PR #351 recorded the auth admin boundary inventory and test map.
@@ -806,27 +818,21 @@ Latest technical assessment decision:
     `AuthAdminLookupRepository`.
   - PR #353 split role assignment, action-store assignment, and user account
     audit reads into `AuthAdminAuditRepository`.
-- `AuthAdminRepository` is now roughly 1449 physical lines / 1361 non-empty
-  lines on `origin/main`. It still owns high-risk command/write flows:
-  role assignment persistence, action-store assignment persistence, user
-  account create/reactivate, pilot binding, and role permission mutation.
-- Do not continue into auth admin write-boundary extraction without first
-  choosing the exact invariant/test strategy. In particular, user-account
-  boundary work needs an explicit decision on whether one active account per
-  employee is a product invariant, and role/action-store writes need negative
-  permission/scope coverage selected before code movement.
+- `AuthAdminRepository` is now roughly 512 lines after Architecture Hardening
+  V3. Auth-admin write persistence is split across focused role-assignment,
+  user-account, action-store-assignment, and role-permission command
+  repositories. Do not continue auth-admin movement unless a concrete
+  auth/security product change needs it.
 - The user-account boundary decision is now recorded at
   `docs/plans/auth-admin-user-account-boundary-decision-v1.md`. It allows only
   a narrow read-only extraction of `listUserAccounts` and `getUserAccountById`
   as the next auth code slice. Provider-subject lookup, active employee/store
   validation, create/reactivate writes, and pilot binding stay parked until the
   employee-account invariant and negative-test strategy are stronger.
-- The user-account read-only extraction has now moved `listUserAccounts` and
-  `getUserAccountById` into `AuthAdminUserAccountReadRepository`.
-  `AuthAdminRepository` is now roughly 1356 physical lines / 1278 non-empty
-  lines. Remaining auth admin work is write-heavy and should stay parked unless
-  a concrete auth/security risk or product change requires the next invariant
-  decision.
+- The user-account read-only extraction has moved `listUserAccounts` and
+  `getUserAccountById` into `AuthAdminUserAccountReadRepository`; later V3
+  command extraction moved the remaining high-risk write persistence out of
+  `AuthAdminRepository`.
 - Stage builder frontend decomposition has started with the safest model slice:
   validation helpers and stage package plan update-payload construction moved
   from `StageBuilderForm.tsx` into `stage-builder-model.ts`. The form remains
