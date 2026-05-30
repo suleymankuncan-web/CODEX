@@ -272,7 +272,7 @@ const storeOpsModuleGraphLimits = new Map([
 
 const workerJobsModuleGraphLimit = {
   path: 'backend/nestjs/src/worker-jobs.module.ts',
-  providers: 10,
+  providers: 14,
   exports: 2,
 }
 
@@ -1091,7 +1091,7 @@ test('guard rejects fake worker job module provider growth', () => {
         import { Module } from "@nestjs/common";
 
         @Module({
-          providers: [A, B, C, D, E, F, G, H, I, J, NewJobHandler],
+          providers: [A, B, C, D, E, F, G, H, I, J, K, L, M, N, NewJobHandler],
           exports: [A, B],
         })
         export class WorkerJobsModule {}
@@ -1100,7 +1100,7 @@ test('guard rejects fake worker job module provider growth', () => {
   ])
 
   assert.match(violations.join('\n'), /worker-jobs\.module\.ts/)
-  assert.match(violations.join('\n'), /providers graph has 11 entries/)
+  assert.match(violations.join('\n'), /providers graph has 15 entries/)
 })
 
 test('guard rejects module graph spread entries before counting size', () => {

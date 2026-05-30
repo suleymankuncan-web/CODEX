@@ -1,9 +1,13 @@
 import { MaterializationService } from "./materialization.service";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
 import { KpiMaterializationService } from "./kpi-materialization.service";
+import { EmployeeMaterializationService } from "./employee-materialization.service";
+import { StoreMaterializationService } from "./store-materialization.service";
 import { ExternalIdMappingCommandRepository } from "../infrastructure/external-id-mapping-command.repository";
 import { KpiMaterializationRepository } from "../infrastructure/kpi-materialization.repository";
 import { MaterializationRowStatusRepository } from "../infrastructure/materialization-row-status.repository";
+import { EmployeeMaterializationRepository } from "../infrastructure/employee-materialization.repository";
+import { StoreMaterializationRepository } from "../infrastructure/store-materialization.repository";
 import { muteNestLogger } from "../../../../test/jest/mute-nest-logger";
 
 type QueryResponse<T> = {
@@ -51,6 +55,22 @@ describe("MaterializationService", () => {
     const rowStatusRepository = new MaterializationRowStatusRepository(
       databaseService as never,
     );
+    const employeeMaterializationRepository = new EmployeeMaterializationRepository(
+      databaseService as never,
+    );
+    const storeMaterializationRepository = new StoreMaterializationRepository(
+      databaseService as never,
+    );
+    const employeeMaterializationService = new EmployeeMaterializationService(
+      employeeMaterializationRepository,
+      mappingService,
+      rowStatusRepository,
+    );
+    const storeMaterializationService = new StoreMaterializationService(
+      storeMaterializationRepository,
+      mappingService,
+      rowStatusRepository,
+    );
 
     return {
       databaseService,
@@ -59,6 +79,8 @@ describe("MaterializationService", () => {
         mappingService,
         kpiMaterializationService,
         rowStatusRepository,
+        employeeMaterializationService,
+        storeMaterializationService,
       ),
     };
   }
