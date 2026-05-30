@@ -16,6 +16,22 @@ const checks = [
   },
 ]
 
+function runMigrationChangeWarning() {
+  const result = spawnSync(process.execPath, ['scripts/migration-change-warning.mjs'], {
+    cwd: workspaceRoot,
+    stdio: 'inherit',
+  })
+
+  if (result.error) {
+    console.error(`Failed to start migration change warning: ${result.error.message}`)
+    process.exit(1)
+  }
+
+  if (result.status !== 0) {
+    process.exit(result.status ?? 1)
+  }
+}
+
 function npmRun(args) {
   if (process.platform === 'win32') {
     return {
@@ -29,6 +45,8 @@ function npmRun(args) {
     args,
   }
 }
+
+runMigrationChangeWarning()
 
 for (const check of checks) {
   console.log(`\n==> ${check.label}`)

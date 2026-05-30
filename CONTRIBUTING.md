@@ -110,6 +110,23 @@ gate when the blast radius requires it.
   `npm.cmd --prefix backend/nestjs run check:release`.
 - Cross-domain or release-impacting changes: root `npm.cmd run check:release`.
 
+## Migration Change Decision
+
+The root release gate prints a migration-change warning when the changed files
+touch `db/schema.sql`, `db/migrations/*.sql`, migration runner code, backend
+migration tracking code, or `scripts/migration-fresh-db-smoke.mjs`.
+
+That warning is not a CI failure and does not make Docker-dependent fresh DB
+smoke mandatory in the root gate. It does make the PR decision explicit:
+
+- Preferred: run `npm.cmd run smoke:migration:fresh-db` and record sanitized
+  evidence.
+- If Docker/local PostgreSQL is unavailable: record a Conditional Go with owner,
+  date, reason, and follow-up point.
+
+Do not claim release readiness for a migration-sensitive PR without one of
+those two decisions.
+
 If a verification fails, inspect the failing log and fix the cause. Do not hide
 the failure by weakening the guard unless the PR explicitly changes that guard's
 contract.

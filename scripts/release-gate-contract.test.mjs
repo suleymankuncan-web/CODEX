@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -27,11 +28,14 @@ test('root package exposes the official release gate', () => {
 test('official release gate runs backend before frontend', () => {
   const script = readText('scripts/check-release.mjs')
 
+  const migrationWarningIndex = script.indexOf('migration-change-warning.mjs')
   const backendIndex = script.indexOf("backend/nestjs")
   const frontendIndex = script.indexOf("admin-web")
 
+  assert.notEqual(migrationWarningIndex, -1)
   assert.notEqual(backendIndex, -1)
   assert.notEqual(frontendIndex, -1)
+  assert.match(script, /runMigrationChangeWarning\(\)\s*\n\s*for \(const check of checks\)/)
   assert.ok(backendIndex < frontendIndex)
   assert.match(script, /args:\s*\['run', 'check:release'\]/)
 })
@@ -84,4 +88,39 @@ test('fresh migration db smoke is a manual release preflight, not a docker-depen
   assert.match(releaseGate, /DB schema or migration files changed/)
   assert.match(productionReadiness, /DB schema or migration files changed/)
   assert.match(productionReadiness, /npm\.cmd run smoke:migration:fresh-db/)
+})
+
+test('migration change warning surfaces smoke evidence decision without failing the gate', () => {
+  const result = spawnSync(process.execPath, ['scripts/migration-change-warning.mjs'], {
+    cwd: workspaceRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HR_AXIS_CHANGED_FILES: [
+        'db/migrations/999_example.sql',
+        'backend/nestjs/src/shared/database/migration.service.ts',
+      ].join('\n'),
+    },
+  })
+
+  assert.equal(result.status, 0)
+  assert.match(result.stderr, /DB schema or migration-sensitive changes detected/)
+  assert.match(result.stderr, /db\/migrations\/999_example\.sql/)
+  assert.match(result.stderr, /npm\.cmd run smoke:migration:fresh-db/)
+  assert.match(result.stderr, /Conditional Go/)
+})
+
+test('migration change warning stays quiet for non-migration changes', () => {
+  const result = spawnSync(process.execPath, ['scripts/migration-change-warning.mjs'], {
+    cwd: workspaceRoot,
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HR_AXIS_CHANGED_FILES: 'backend/nestjs/src/modules/store-ops/application/feed.service.ts',
+    },
+  })
+
+  assert.equal(result.status, 0)
+  assert.match(result.stdout, /No DB schema or migration-sensitive changes detected/)
+  assert.equal(result.stderr, '')
 })
