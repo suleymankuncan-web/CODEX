@@ -2,6 +2,22 @@ import * as request from "supertest";
 import { createHash } from "node:crypto";
 import { createIntegrationApp } from "./test-app";
 
+function expectAuditEvent(
+  query: jest.Mock,
+  eventType: string,
+  entityName: string,
+) {
+  expect(
+    query.mock.calls.some(([sql, params]) =>
+      typeof sql === "string" &&
+      sql.includes("INSERT INTO audit.event_log") &&
+      Array.isArray(params) &&
+      params.includes(eventType) &&
+      params.includes(entityName),
+    ),
+  ).toBe(true);
+}
+
 describe("Workforce seller code requests", () => {
   const companyId = "00000000-0000-0000-0000-000000000001";
   const otherCompanyId = "00000000-0000-0000-0000-000000000002";
@@ -175,14 +191,7 @@ describe("Workforce seller code requests", () => {
       requestedSellerCode: null,
       lastReferenceSellerCode: "FM8375",
     });
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("seller_code_request.created") &&
-          call[0].includes("ops.seller_code_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(query, "seller_code_request.created", "ops.seller_code_request");
 
     await app.close();
   });
@@ -601,14 +610,7 @@ describe("Workforce seller code requests", () => {
       positionCode,
       positionName,
     });
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("seller_code_request.approved") &&
-          call[0].includes("ops.seller_code_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(query, "seller_code_request.approved", "ops.seller_code_request");
 
     await app.close();
   });
@@ -656,7 +658,12 @@ describe("Workforce seller code requests", () => {
       }
 
       if (sql.includes("UPDATE ops.seller_code_request")) {
-        expect(params).toEqual([requestId, actorUserId, "TC numarasi tekrar kontrol edilmeli"]);
+        expect(params).toEqual([
+          requestId,
+          "rejected",
+          actorUserId,
+          "TC numarasi tekrar kontrol edilmeli",
+        ]);
         return {
           rowCount: 1,
           rows: [
@@ -735,14 +742,7 @@ describe("Workforce seller code requests", () => {
         (call) => typeof call[0] === "string" && call[0].includes("INSERT INTO ops.employee"),
       ),
     ).toBe(false);
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("seller_code_request.rejected") &&
-          call[0].includes("ops.seller_code_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(query, "seller_code_request.rejected", "ops.seller_code_request");
 
     await app.close();
   });
@@ -876,6 +876,7 @@ describe("Workforce seller code requests", () => {
       if (sql.includes("UPDATE ops.seller_code_request")) {
         expect(params).toEqual([
           requestId,
+          "pending_hr_approval",
           "Ayse",
           "Yilmaz",
           correctedNationalIdHash,
@@ -976,14 +977,7 @@ describe("Workforce seller code requests", () => {
         (call) => typeof call[0] === "string" && call[0].includes("INSERT INTO ops.employee"),
       ),
     ).toBe(false);
-    expect(
-      query.mock.calls.some(
-        (call) =>
-          typeof call[0] === "string" &&
-          call[0].includes("seller_code_request.resubmitted") &&
-          call[0].includes("ops.seller_code_request"),
-      ),
-    ).toBe(true);
+    expectAuditEvent(query, "seller_code_request.resubmitted", "ops.seller_code_request");
 
     await app.close();
   });

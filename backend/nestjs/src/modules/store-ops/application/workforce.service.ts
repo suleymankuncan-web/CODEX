@@ -3,6 +3,12 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
 import { WorkforceRequestRepository } from "../infrastructure/workforce-request.repository";
+import {
+  WORKFORCE_OFFBOARDING_TRANSITIONS,
+  WORKFORCE_SELLER_CODE_TRANSITIONS,
+  canApplyWorkforceRequestTransition,
+  type WorkforceRequestStatus,
+} from "./workforce-request-transition.policy";
 
 @Injectable()
 export class WorkforceService {
@@ -40,7 +46,7 @@ export class WorkforceService {
       assignedStoreIds: string[];
     };
     actorRoleCodes: string[];
-    status?: "pending_hr_approval" | "approved" | "rejected";
+    status?: WorkforceRequestStatus;
   }) {
     const listScope = this.resolveWorkforceRequestListScope(input);
     const rows = await this.workforceRequestRepository.listSellerCodeRequests({
@@ -211,7 +217,12 @@ export class WorkforceService {
       throw new NotFoundException(`Seller code request not found: ${input.requestId}`);
     }
 
-    if (existing.request_status !== "pending_hr_approval") {
+    if (
+      !canApplyWorkforceRequestTransition(
+        existing.request_status,
+        WORKFORCE_SELLER_CODE_TRANSITIONS.approve,
+      )
+    ) {
       throw new BadRequestException("Seller code request is not pending HR approval");
     }
 
@@ -259,7 +270,12 @@ export class WorkforceService {
       throw new NotFoundException(`Seller code request not found: ${input.requestId}`);
     }
 
-    if (existing.request_status !== "pending_hr_approval") {
+    if (
+      !canApplyWorkforceRequestTransition(
+        existing.request_status,
+        WORKFORCE_SELLER_CODE_TRANSITIONS.reject,
+      )
+    ) {
       throw new BadRequestException("Seller code request is not pending HR approval");
     }
 
@@ -310,7 +326,12 @@ export class WorkforceService {
       throw new NotFoundException(`Seller code request not found: ${input.requestId}`);
     }
 
-    if (existing.request_status !== "rejected") {
+    if (
+      !canApplyWorkforceRequestTransition(
+        existing.request_status,
+        WORKFORCE_SELLER_CODE_TRANSITIONS.resubmit,
+      )
+    ) {
       throw new BadRequestException("Only rejected seller code requests can be resubmitted");
     }
 
@@ -357,7 +378,7 @@ export class WorkforceService {
       assignedStoreIds: string[];
     };
     actorRoleCodes: string[];
-    status?: "pending_hr_approval" | "approved" | "rejected";
+    status?: WorkforceRequestStatus;
   }) {
     const listScope = this.resolveWorkforceRequestListScope(input);
     const rows = await this.workforceRequestRepository.listOffboardingRequests({
@@ -441,7 +462,12 @@ export class WorkforceService {
       throw new NotFoundException(`Offboarding request not found: ${input.requestId}`);
     }
 
-    if (existing.request_status !== "pending_hr_approval") {
+    if (
+      !canApplyWorkforceRequestTransition(
+        existing.request_status,
+        WORKFORCE_OFFBOARDING_TRANSITIONS.approve,
+      )
+    ) {
       throw new BadRequestException("Offboarding request is not pending HR approval");
     }
 
@@ -479,7 +505,12 @@ export class WorkforceService {
       throw new NotFoundException(`Offboarding request not found: ${input.requestId}`);
     }
 
-    if (existing.request_status !== "pending_hr_approval") {
+    if (
+      !canApplyWorkforceRequestTransition(
+        existing.request_status,
+        WORKFORCE_OFFBOARDING_TRANSITIONS.reject,
+      )
+    ) {
       throw new BadRequestException("Offboarding request is not pending HR approval");
     }
 
@@ -526,7 +557,12 @@ export class WorkforceService {
       throw new NotFoundException(`Offboarding request not found: ${input.requestId}`);
     }
 
-    if (existing.request_status !== "rejected") {
+    if (
+      !canApplyWorkforceRequestTransition(
+        existing.request_status,
+        WORKFORCE_OFFBOARDING_TRANSITIONS.resubmit,
+      )
+    ) {
       throw new BadRequestException("Only rejected offboarding requests can be resubmitted");
     }
 
