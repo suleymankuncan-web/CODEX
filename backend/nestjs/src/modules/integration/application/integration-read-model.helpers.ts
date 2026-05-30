@@ -1,5 +1,13 @@
 export function getSupportedEntityTypes() {
-  return ["employee", "store", "kpi", "assignment", "position", "company", "region"];
+  return [
+    "employee",
+    "store",
+    "kpi",
+    "assignment",
+    "position",
+    "company",
+    "region",
+  ];
 }
 
 export function getSupportedSourceSystems() {
@@ -8,6 +16,80 @@ export function getSupportedSourceSystems() {
 
 export function getSupportedStateModels() {
   return ["latest_state", "closed_period"];
+}
+
+export function buildIntegrationLookups(
+  activeSources: Array<{
+    integration_source_id: string;
+    source_code: string;
+    source_name: string;
+    entity_type: string;
+    source_system: string;
+    state_model: string;
+  }>,
+) {
+  const entityTypes = getSupportedEntityTypes();
+  const activeSourceOptions = activeSources.map((item) => ({
+    sourceId: item.integration_source_id,
+    sourceCode: item.source_code,
+    sourceName: item.source_name,
+    entityType: item.entity_type,
+    sourceSystem: item.source_system,
+    stateModel: item.state_model,
+  }));
+  const sourcesByEntityType = activeSources.reduce<
+    Record<
+      string,
+      Array<{ sourceId: string; sourceCode: string; sourceName: string }>
+    >
+  >((acc, item) => {
+    if (!acc[item.entity_type]) {
+      acc[item.entity_type] = [];
+    }
+
+    acc[item.entity_type].push({
+      sourceId: item.integration_source_id,
+      sourceCode: item.source_code,
+      sourceName: item.source_name,
+    });
+
+    return acc;
+  }, {});
+
+  return {
+    entityTypes,
+    sourceStats: {
+      totalActiveSources: activeSources.length,
+    },
+    activeSources: activeSourceOptions,
+    sourcesByEntityType,
+    optionGroups: {
+      entityTypes: entityTypes.map((entityType) => ({
+        value: entityType,
+        label: entityType,
+      })),
+      sources: activeSourceOptions.map((item) => ({
+        value: item.sourceId,
+        label: `${item.sourceCode} - ${item.sourceName}`,
+        entityType: item.entityType,
+        sourceCode: item.sourceCode,
+        sourceSystem: item.sourceSystem,
+        stateModel: item.stateModel,
+      })),
+      sourceSystems: getSupportedSourceSystems().map((sourceSystem) => ({
+        value: sourceSystem,
+        label: sourceSystem,
+      })),
+      stateModels: getSupportedStateModels().map((stateModel) => ({
+        value: stateModel,
+        label: stateModel,
+      })),
+    },
+    meta: {
+      totalEntityTypes: entityTypes.length,
+      totalActiveSources: activeSourceOptions.length,
+    },
+  };
 }
 
 export function mapIntegrationSource(item: {
