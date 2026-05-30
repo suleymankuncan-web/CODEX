@@ -133,9 +133,12 @@ test('migration change warning avoids merge-base-dependent triple-dot diffs', ()
   assert.doesNotMatch(helper, /baseSha\}\.\.\./)
   assert.doesNotMatch(helper, /origin\/\$\{baseRef\}\.\.\./)
   assert.doesNotMatch(helper, /origin\/main\.\.\./)
+  assert.doesNotMatch(helper, /diff', '--name-only'/)
   assert.match(helper, /pulls\/\$\{pullNumber\}\/files/)
+  assert.match(helper, /previous_filename/)
+  assert.match(helper, /--name-status/)
   assert.match(helper, /git\(\['merge-base', baseSha, headSha\]\)/)
   assert.ok(
-    helper.includes("baseRefMergeBase ? ['diff', '--name-only', baseRefMergeBase, 'HEAD'] : null"),
+    helper.includes("baseRefMergeBase ? ['diff', '--name-status', baseRefMergeBase, 'HEAD'] : null"),
   )
 })

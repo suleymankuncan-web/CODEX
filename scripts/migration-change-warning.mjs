@@ -24,6 +24,24 @@ function parseChangedFiles(text) {
   return unique(text.split(/[\r\n,]+/).map(normalizePath))
 }
 
+function parseGitNameStatusFiles(text) {
+  const files = []
+
+  for (const line of text.split(/\r?\n/)) {
+    const parts = line.split('\t').filter(Boolean)
+    const status = parts[0] ?? ''
+
+    if (status.startsWith('R') || status.startsWith('C')) {
+      files.push(parts[1], parts[2])
+      continue
+    }
+
+    files.push(parts[1])
+  }
+
+  return unique(files.filter(Boolean).map(normalizePath))
+}
+
 function git(args) {
   try {
     return execFileSync('git', args, {
@@ -86,14 +104,16 @@ async function changedFilesFromGitHubApi() {
     }
 
     const pageFiles = await response.json()
-    files.push(...pageFiles.map((file) => normalizePath(file.filename)))
+    for (const file of pageFiles) {
+      files.push(file.filename, file.previous_filename)
+    }
 
     if (pageFiles.length < 100) {
       break
     }
   }
 
-  return unique(files)
+  return unique(files.filter(Boolean).map(normalizePath))
 }
 
 function changedFilesFromGitHubEvent() {
@@ -110,7 +130,7 @@ function changedFilesFromGitHubEvent() {
     return []
   }
 
-  return parseChangedFiles(git(['diff', '--name-only', mergeBase, headSha]))
+  return parseGitNameStatusFiles(git(['diff', '--name-status', mergeBase, headSha]))
 }
 
 function changedFilesFromGit() {
@@ -122,16 +142,16 @@ function changedFilesFromGit() {
   const mainMergeBase = git(['merge-base', 'origin/main', 'HEAD']).trim()
 
   const candidates = [
-    ['diff', '--name-only'],
-    ['diff', '--name-only', '--cached'],
-    baseRefMergeBase ? ['diff', '--name-only', baseRefMergeBase, 'HEAD'] : null,
-    mainMergeBase ? ['diff', '--name-only', mainMergeBase, 'HEAD'] : null,
-    ['diff', '--name-only', 'HEAD~1..HEAD'],
-    ['diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD'],
+    ['diff', '--name-status'],
+    ['diff', '--name-status', '--cached'],
+    baseRefMergeBase ? ['diff', '--name-status', baseRefMergeBase, 'HEAD'] : null,
+    mainMergeBase ? ['diff', '--name-status', mainMergeBase, 'HEAD'] : null,
+    ['diff', '--name-status', 'HEAD~1..HEAD'],
+    ['diff-tree', '--no-commit-id', '--name-status', '-r', 'HEAD'],
   ].filter(Boolean)
 
   for (const args of candidates) {
-    const files = parseChangedFiles(git(args))
+    const files = parseGitNameStatusFiles(git(args))
     if (files.length > 0) {
       return files
     }
