@@ -16,8 +16,8 @@ and the production evidence closure joint plan plus Redis/BullMQ,
 alert-provider, Supabase restore, readiness profile reset, and Sokrates
 calibration proofs, plus the Store Me Plum Glacier redesign line through
 PR #524, the active Store route refactor line through PR #532, the
-Redis/BullMQ Render worker closure through PR #536, and the Store checklist
-flow polish through PR #537.
+Redis/BullMQ Render worker closure through PR #536, the Store checklist flow
+polish through PR #537, and the architecture hardening line through PR #552.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -710,13 +710,14 @@ Latest technical assessment decision:
   KPI config resolve/default/metadata/validation helpers out of
   `ReportingService` into `reporting-kpi-config.helpers.ts`. The S04 slice moved
   IntegrationService read-model mappers and supported lookup lists into
-  `integration-read-model.helpers.ts`. There is no normal active refactor
-  candidate left. Test-suite helper extraction remains
-  conditional on real gate pain/flakiness. UI page splits are parked while the
-  user prepares a larger
-  page/content redesign. Auth-admin writes, workforce command lifecycles,
-  competition scoring/finalization, materialization, snapshots, and generator
-  scripts remain parked until a concrete trigger and verification ladder exist.
+  `integration-read-model.helpers.ts`. The architecture hardening line later
+  completed targeted Store rankings/KPI page container splits and a repository
+  test helper pilot. Further test-suite helper extraction remains conditional
+  on real gate pain/flakiness. Broad redesign-sensitive UI splits are parked
+  unless a concrete page refactor or reviewability blocker appears. Auth-admin
+  writes, workforce command lifecycles, competition scoring/finalization,
+  remaining materialization writes, and generator scripts remain parked until a
+  concrete trigger and verification ladder exist.
 - File Size Guard V1 prevents the same refactor debt from silently returning:
   `scripts/file-size-guard.test.mjs` runs through `npm.cmd run test:scripts`.
   New active source files must stay within standard budgets, and existing
@@ -730,19 +731,26 @@ Latest technical assessment decision:
   materialization split, worker context slimming, Store page container splits,
   repository test strategy cleanup, StoreOps internal module split, and final
   evidence closeout.
-- Architecture hardening has progressed through the first six merged slices:
+- Architecture hardening is now closed through PR #552. Final evidence is
+  recorded at `docs/evidence/architecture-hardening-progress-2026-05.md`.
   PR #542 added the root `CONTRIBUTING.md` contract and guard, PR #543 added
   `scripts/backend-architecture-boundary-guard.test.mjs`, PR #544 removed the
   highest-risk Store Ops reporting/ranking/workflow repository casts, PR #545
   moved snapshot command persistence behind `SnapshotRunCommandRepository`,
   PR #546 moved external ID mapping SQL behind
-  `ExternalIdMappingCommandRepository`, and PR #547 split KPI materialization
-  behind `KpiMaterializationService`/`KpiMaterializationRepository`.
-- The worker context slimming slice now narrows `WorkerModule` to app config,
-  database, observability, and a focused `WorkerJobsModule` for import and
-  snapshot job handlers. It keeps the Render worker command
-  `node dist/src/workers.js` and BullMQ queue behavior unchanged while removing
-  broad `IntegrationModule`/`StoreOpsModule` imports from the worker context.
+  `ExternalIdMappingCommandRepository`, PR #547 split KPI materialization
+  behind `KpiMaterializationService`/`KpiMaterializationRepository`, PR #548
+  slimmed the worker job context behind `WorkerJobsModule`, PR #549 split the
+  Store rankings page container, PR #550 split the Store KPI highlights page,
+  PR #551 added the repository test helper pilot, and PR #552 split
+  `StoreOpsModule` into internal reporting, checklist, targets, and competition
+  modules while keeping the public module as a compatibility facade.
+- Current backend architecture boundary state: `snapshot.service.ts` and
+  `external-id-mapping.service.ts` no longer directly inject `DatabaseService`;
+  the Store Ops broad repository cast allowlist is empty. Remaining direct
+  `DatabaseService` allowlist entries are
+  `integration/application/materialization.service.ts` and
+  `integration/application/power-bi-export-upload.service.ts`.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
