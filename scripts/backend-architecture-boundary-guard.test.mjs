@@ -1,0 +1,231 @@
+import assert from 'node:assert/strict'
+import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import test from 'node:test'
+
+function git(args) {
+  return execFileSync('git', args, { encoding: 'utf8' })
+}
+
+function trackedFiles(prefix = 'backend/nestjs/src/modules') {
+  return git(['ls-files', '-z', prefix]).split('\0').filter(Boolean)
+}
+
+function normalizePath(path) {
+  return path.replaceAll('\\', '/')
+}
+
+function readBackendSourceFiles() {
+  return trackedFiles()
+    .map(normalizePath)
+    .filter((path) => path.endsWith('.ts'))
+    .filter((path) => !path.includes('.spec.'))
+    .filter((path) => !path.includes('.test.'))
+    .map((path) => ({ path, content: readFileSync(path, 'utf8') }))
+}
+
+function lineNumberAt(content, index) {
+  return content.slice(0, index).split(/\r\n|\r|\n/).length
+}
+
+function importsIn(content) {
+  const imports = []
+  const importPattern = /import\s+(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g
+
+  for (const match of content.matchAll(importPattern)) {
+    imports.push({
+      statement: match[0],
+      source: match[1],
+      index: match.index ?? 0,
+    })
+  }
+
+  return imports
+}
+
+function isApplicationFile(path) {
+  return path.startsWith('backend/nestjs/src/modules/') && path.includes('/application/')
+}
+
+function isStoreOpsApplicationFile(path) {
+  return path.startsWith('backend/nestjs/src/modules/store-ops/application/')
+}
+
+function isWebOrControllerFile(path) {
+  return path.includes('/web/') || path.endsWith('.controller.ts')
+}
+
+const directDatabaseServiceAllowlist = new Set([
+  'backend/nestjs/src/modules/store-ops/application/snapshot.service.ts',
+  'backend/nestjs/src/modules/integration/application/materialization.service.ts',
+  'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
+  'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
+])
+
+const storeOpsRepositoryCastAllowlist = new Set([
+  'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
+  'backend/nestjs/src/modules/store-ops/application/ranking.service.ts',
+  'backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.ts',
+])
+
+function hasDirectDatabaseServiceImport(importEntry) {
+  return (
+    /\bDatabaseService\b/.test(importEntry.statement) &&
+    /(?:^|\/)shared\/database\/database\.service$|database\.service$/.test(importEntry.source)
+  )
+}
+
+function isWebLayerImport(importEntry) {
+  return (
+    /(?:^|\/)\.{0,2}\/?web(?:\/|$)/.test(importEntry.source) ||
+    importEntry.source.includes('/web/') ||
+    /\.controller$/.test(importEntry.source) ||
+    /\.controller\./.test(importEntry.source)
+  )
+}
+
+function isInfrastructureImport(importEntry) {
+  return importEntry.source.includes('/infrastructure/') || /(?:^|\/)\.\.\/infrastructure\//.test(importEntry.source)
+}
+
+function describeViolation(file, index, message) {
+  return `${file.path}:${lineNumberAt(file.content, index)} ${message}`
+}
+
+function findDirectDatabaseServiceViolations(files) {
+  const violations = []
+
+  for (const file of files) {
+    if (!isApplicationFile(file.path) || directDatabaseServiceAllowlist.has(file.path)) {
+      continue
+    }
+
+    for (const importEntry of importsIn(file.content)) {
+      if (hasDirectDatabaseServiceImport(importEntry)) {
+        violations.push(describeViolation(file, importEntry.index, 'imports DatabaseService in application code'))
+      }
+    }
+  }
+
+  return violations
+}
+
+function findStoreOpsRepositoryCastViolations(files) {
+  const violations = []
+
+  for (const file of files) {
+    if (!isStoreOpsApplicationFile(file.path) || storeOpsRepositoryCastAllowlist.has(file.path)) {
+      continue
+    }
+
+    const castPattern = /\bas\s+unknown\s+as\b/g
+    for (const match of file.content.matchAll(castPattern)) {
+      violations.push(describeViolation(file, match.index ?? 0, 'uses broad as unknown as repository cast'))
+    }
+  }
+
+  return violations
+}
+
+function findApplicationWebImportViolations(files) {
+  const violations = []
+
+  for (const file of files) {
+    if (!isApplicationFile(file.path)) {
+      continue
+    }
+
+    for (const importEntry of importsIn(file.content)) {
+      if (isWebLayerImport(importEntry)) {
+        violations.push(describeViolation(file, importEntry.index, 'imports web/controller layer from application code'))
+      }
+    }
+  }
+
+  return violations
+}
+
+function findWebInfrastructureImportViolations(files) {
+  const violations = []
+
+  for (const file of files) {
+    if (!isWebOrControllerFile(file.path)) {
+      continue
+    }
+
+    for (const importEntry of importsIn(file.content)) {
+      if (isInfrastructureImport(importEntry)) {
+        violations.push(describeViolation(file, importEntry.index, 'imports infrastructure directly from web/controller code'))
+      }
+    }
+  }
+
+  return violations
+}
+
+const trackedBackendFiles = readBackendSourceFiles()
+const trackedBackendPaths = new Set(trackedBackendFiles.map((file) => file.path))
+
+test('backend architecture direct DatabaseService allowlist points to tracked files', () => {
+  for (const path of directDatabaseServiceAllowlist) {
+    assert.equal(trackedBackendPaths.has(path), true, `${path} must remain tracked or be removed from the allowlist`)
+  }
+})
+
+test('backend architecture repository cast allowlist points to tracked files', () => {
+  for (const path of storeOpsRepositoryCastAllowlist) {
+    assert.equal(trackedBackendPaths.has(path), true, `${path} must remain tracked or be removed from the allowlist`)
+  }
+})
+
+test('application code adds no new direct DatabaseService imports outside the allowlist', () => {
+  assert.deepEqual(findDirectDatabaseServiceViolations(trackedBackendFiles), [])
+})
+
+test('Store Ops application code adds no new broad repository casts outside the allowlist', () => {
+  assert.deepEqual(findStoreOpsRepositoryCastViolations(trackedBackendFiles), [])
+})
+
+test('application code does not import web/controller DTOs or controller layer code', () => {
+  assert.deepEqual(findApplicationWebImportViolations(trackedBackendFiles), [])
+})
+
+test('web/controller code does not import infrastructure repositories directly', () => {
+  assert.deepEqual(findWebInfrastructureImportViolations(trackedBackendFiles), [])
+})
+
+test('guard rejects a fake new application DatabaseService import', () => {
+  const violations = findDirectDatabaseServiceViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/application/new-report.service.ts',
+      content: `
+        import { DatabaseService } from "../../../shared/database/database.service";
+
+        export class NewReportService {
+          constructor(private readonly databaseService: DatabaseService) {}
+        }
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /new-report\.service\.ts/)
+  assert.match(violations.join('\n'), /DatabaseService/)
+})
+
+test('guard rejects a fake new web-to-infrastructure import', () => {
+  const violations = findWebInfrastructureImportViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/web/new-report.controller.ts',
+      content: `
+        import { ReportingRepository } from "../infrastructure/reporting.repository";
+
+        export class NewReportController {
+          constructor(private readonly reportingRepository: ReportingRepository) {}
+        }
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /new-report\.controller\.ts/)
+  assert.match(violations.join('\n'), /infrastructure/)
+})
