@@ -194,6 +194,18 @@ describe("RankingService", () => {
     };
   }
 
+  function createService(
+    repository: ReturnType<typeof createRepositoryMock>,
+    kpiConfigRepository: Record<string, unknown>,
+  ) {
+    return new RankingService(
+      repository as never,
+      kpiConfigRepository as never,
+      repository as never,
+      repository as never,
+    );
+  }
+
   function createStoreKpiRows(input: {
     storeId: string;
     storeName: string;
@@ -248,10 +260,7 @@ describe("RankingService", () => {
 
   it("caps store personnel to Turkey Top 100 summary rows and includes own position outside the top list", async () => {
     const repository = createRepositoryMock();
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "user-1",
@@ -287,10 +296,7 @@ describe("RankingService", () => {
 
   it("keeps store manager global rankings summary-only while exposing own-store personnel details", async () => {
     const repository = createRepositoryMock();
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "manager-1",
@@ -322,10 +328,7 @@ describe("RankingService", () => {
 
   it("lets privileged roles page through full Turkey rankings with detail metrics", async () => {
     const repository = createRepositoryMock();
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "regional-1",
@@ -392,10 +395,7 @@ describe("RankingService", () => {
         store_name: employeeId === "employee-001" ? "Store 002" : "Store 001",
       })),
     );
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "regional-1",
@@ -473,10 +473,7 @@ describe("RankingService", () => {
       },
     ];
     const repository = createRepositoryMock({ storeRows, personnelRows });
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "regional-1",
@@ -510,10 +507,7 @@ describe("RankingService", () => {
 
   it("returns Turkey reference metrics even when low roles receive summary-only ranking rows", async () => {
     const repository = createRepositoryMock();
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "personnel-1",
@@ -580,10 +574,7 @@ describe("RankingService", () => {
         { kpi_code: "UPT", benchmark_value: "4" },
       ],
     });
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "regional-1",
@@ -661,10 +652,7 @@ describe("RankingService", () => {
         { kpi_code: "UPT", benchmark_value: "4" },
       ],
     });
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "regional-1",
@@ -725,10 +713,7 @@ describe("RankingService", () => {
       personnelRows: [],
       storeBenchmarkRows: benchmarkRows,
     });
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "regional-1",
@@ -773,8 +758,8 @@ describe("RankingService", () => {
       personnelRows: [],
       storeBenchmarkRows: benchmarkRows,
     });
-    const service = new RankingService(
-      repository as never,
+    const service = createService(
+      repository,
       createKpiConfigRepositoryMockWithStoreProfile([
         {
           code: "TARGET_ACHIEVEMENT",
@@ -786,7 +771,7 @@ describe("RankingService", () => {
         { code: "CR", label: "CR", weightPercent: 40, benchmarkSource: "TURKEY_AVERAGE" },
         { code: "ATV", label: "ATV", weightPercent: 25, benchmarkSource: "TURKEY_AVERAGE" },
         { code: "UPT", label: "UPT", weightPercent: 15, benchmarkSource: "TURKEY_AVERAGE" },
-      ]) as never,
+      ]),
     );
 
     const result = await service.getRankings({
@@ -820,8 +805,8 @@ describe("RankingService", () => {
       },
     ];
     const repository = createRepositoryMock({ personnelRows, storeRows: [] });
-    const service = new RankingService(
-      repository as never,
+    const service = createService(
+      repository,
       createKpiConfigRepositoryMockWithPersonnelProfile([
         {
           code: "TARGET_ACHIEVEMENT",
@@ -830,7 +815,7 @@ describe("RankingService", () => {
           benchmarkSource: "TARGET",
           aliases: ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
         },
-      ]) as never,
+      ]),
     );
 
     const result = await service.getRankings({
@@ -864,10 +849,7 @@ describe("RankingService", () => {
 
   it("applies privileged filters without recomputing Turkey ranks", async () => {
     const repository = createRepositoryMock();
-    const service = new RankingService(
-      repository as never,
-      createKpiConfigRepositoryMock() as never,
-    );
+    const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
       userId: "super-admin-1",

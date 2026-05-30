@@ -25,7 +25,6 @@ describe("WorkflowInboxService", () => {
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      {} as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
     );
@@ -83,7 +82,6 @@ describe("WorkflowInboxService", () => {
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      {} as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
     );
@@ -160,7 +158,6 @@ describe("WorkflowInboxService", () => {
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      {} as never,
       snapshotReportingReadRepository as never,
       storeActionPlanRepository as never,
     );
@@ -223,7 +220,6 @@ describe("WorkflowInboxService", () => {
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      {} as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
     );
@@ -265,7 +261,6 @@ describe("WorkflowInboxService", () => {
     const service = new WorkflowInboxService(
       targetDistributionRepository as never,
       checklistAcknowledgementRepository as never,
-      {} as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
     );

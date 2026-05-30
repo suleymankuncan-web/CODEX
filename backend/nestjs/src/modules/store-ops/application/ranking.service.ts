@@ -100,10 +100,8 @@ export class RankingService {
   constructor(
     private readonly reportingRepository: ReportingRepository,
     private readonly kpiConfigRepository: KpiConfigRepository,
-    private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository =
-      reportingRepository as unknown as StorePerformanceReportingReadRepository,
-    private readonly rankingReportingReadRepository: RankingReportingReadRepository =
-      reportingRepository as unknown as RankingReportingReadRepository,
+    private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository,
+    private readonly rankingReportingReadRepository: RankingReportingReadRepository,
   ) {}
 
   async getRankings(input: GetRankingsInput): Promise<RankingResponse> {

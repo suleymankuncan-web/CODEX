@@ -31,16 +31,11 @@ export class ReportingService {
     private readonly kpiConfigRepository: KpiConfigRepository,
     private readonly closedRankingService: ClosedRankingService,
     private readonly liveMonthlyLeaderboardService: LiveMonthlyLeaderboardService,
-    private readonly storeScoreReportingReadRepository: StoreScoreReportingReadRepository =
-      reportingRepository as unknown as StoreScoreReportingReadRepository,
-    private readonly closedRankingRepository: ClosedRankingRepository =
-      reportingRepository as unknown as ClosedRankingRepository,
-    private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository =
-      reportingRepository as unknown as SnapshotReportingReadRepository,
-    private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository =
-      reportingRepository as unknown as StorePerformanceReportingReadRepository,
-    private readonly rankingReportingReadRepository: RankingReportingReadRepository =
-      reportingRepository as unknown as RankingReportingReadRepository,
+    private readonly storeScoreReportingReadRepository: StoreScoreReportingReadRepository,
+    private readonly closedRankingRepository: ClosedRankingRepository,
+    private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository,
+    private readonly storePerformanceReportingReadRepository: StorePerformanceReportingReadRepository,
+    private readonly rankingReportingReadRepository: RankingReportingReadRepository,
   ) {}
 
   private mapSnapshotRun(item: {

@@ -1,6 +1,27 @@
 import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { ReportingService } from "./reporting.service";
 
+function createReportingService(
+  reportingRepository: Record<string, unknown>,
+  kpiConfigRepository: Record<string, unknown> = {
+    getKpiConfigRows: jest.fn(async () => []),
+  },
+  closedRankingService: Record<string, unknown> = {},
+  liveMonthlyLeaderboardService: Record<string, unknown> = {},
+) {
+  return new ReportingService(
+    reportingRepository as never,
+    kpiConfigRepository as never,
+    closedRankingService as never,
+    liveMonthlyLeaderboardService as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+    reportingRepository as never,
+  );
+}
+
 describe("ReportingService KPI benchmark scoring", () => {
   it("returns capped benchmark metadata for store live KPI highlights", async () => {
     const reportingRepository = {
@@ -32,12 +53,7 @@ describe("ReportingService KPI benchmark scoring", () => {
         { kpi_code: "UPT", benchmark_value: "3" },
       ]),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getStoreKpiHighlights({
       companyIds: [],
@@ -106,12 +122,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       getPeerStorePerformanceRows: jest.fn(async () => []),
       getStoreTurkeyBenchmarkValues: jest.fn(async () => []),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getStoreKpiHighlights({
       companyIds: ["company-1"],
@@ -177,12 +188,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       getPeerEmployeePerformanceRows: jest.fn(async () => []),
       getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getMyPerformance({
       userId: "user-1",
@@ -234,12 +240,7 @@ describe("ReportingService KPI benchmark scoring", () => {
         { kpi_code: "ATV", benchmark_value: "1000" },
       ]),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getMyPerformance({
       userId: "user-1",
@@ -314,12 +315,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       getPeerEmployeePerformanceRows: jest.fn(async () => []),
       getEmployeeTurkeyBenchmarkValues,
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getMyPerformance({
       userId: "user-1",
@@ -378,12 +374,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       getPeerEmployeePerformanceRows: jest.fn(async () => []),
       getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getMyPerformance({
       userId: "user-1",
@@ -449,8 +440,8 @@ describe("ReportingService KPI benchmark scoring", () => {
       getPeerEmployeePerformanceRows: jest.fn(async () => []),
       getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
+    const service = createReportingService(
+      reportingRepository,
       {
         getKpiConfigRows: jest.fn(async () => [
           {
@@ -489,9 +480,7 @@ describe("ReportingService KPI benchmark scoring", () => {
           { config_key: "grading_bands", config_payload: [] },
         ]),
         getLatestPublishedKpiConfigVersion: jest.fn(async () => null),
-      } as never,
-      {} as never,
-      {} as never,
+      },
     );
 
     const result = await service.getMyPerformance({
@@ -577,12 +566,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       getPeerEmployeePerformanceRows: jest.fn(async () => []),
       getEmployeeTurkeyBenchmarkValues,
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getPersonnelPerformance({
       userId: "region-manager-1",
@@ -650,12 +634,7 @@ describe("ReportingService KPI benchmark scoring", () => {
         store_name: "Marmara Park",
       })),
     };
-    const service = new ReportingService(
-      reportingRepository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    const service = createReportingService(reportingRepository);
 
     const result = await service.getMyPerformance({
       userId: "user-1",
@@ -770,12 +749,7 @@ describe("ReportingService personnel performance profile access", () => {
   }
 
   function createService(repository: ReturnType<typeof createRepositoryMock>) {
-    return new ReportingService(
-      repository as never,
-      { getKpiConfigRows: jest.fn(async () => []) } as never,
-      {} as never,
-      {} as never,
-    );
+    return createReportingService(repository);
   }
 
   it("blocks store personnel from opening another employee profile", async () => {

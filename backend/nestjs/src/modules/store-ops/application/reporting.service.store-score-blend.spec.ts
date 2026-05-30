@@ -10,6 +10,11 @@ describe("ReportingService store monthly score breakdown", () => {
       } as never,
       {} as never,
       {} as never,
+      reportingRepository as never,
+      reportingRepository as never,
+      reportingRepository as never,
+      reportingRepository as never,
+      reportingRepository as never,
     );
 
   it("returns KPI plus BM and VM checklist contribution for a monthly snapshot", async () => {
