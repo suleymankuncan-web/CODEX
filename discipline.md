@@ -171,6 +171,8 @@ Guard ve mimari script PR'larinda minimum negatif test matrisi:
 - allowlist icinde duplicate ihlal,
 - type-only import/re-export edge'i,
 - side-effect static import edge'i,
+- namespace import edge'i,
+- yorum veya string icindeki sahte import ile allowlist kandirma denemesi,
 - barrel `export * from` edge'i,
 - ayni dosyada mevcut exception korunurken yeni exception ekleme girisimi.
 

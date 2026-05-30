@@ -28,33 +28,114 @@ function lineNumberAt(content, index) {
   return content.slice(0, index).split(/\r\n|\r|\n/).length
 }
 
+function stripCommentsPreservingLines(content) {
+  let output = ''
+  let i = 0
+  let quote = null
+  let inLineComment = false
+  let inBlockComment = false
+
+  while (i < content.length) {
+    const char = content[i]
+    const next = content[i + 1]
+
+    if (inLineComment) {
+      if (char === '\r' || char === '\n') {
+        inLineComment = false
+        output += char
+      } else {
+        output += ' '
+      }
+      i += 1
+      continue
+    }
+
+    if (inBlockComment) {
+      if (char === '*' && next === '/') {
+        output += '  '
+        i += 2
+        inBlockComment = false
+        continue
+      }
+
+      output += char === '\r' || char === '\n' ? char : ' '
+      i += 1
+      continue
+    }
+
+    if (quote) {
+      output += char
+
+      if (char === '\\') {
+        if (i + 1 < content.length) {
+          output += content[i + 1]
+          i += 2
+          continue
+        }
+      } else if (char === quote) {
+        quote = null
+      }
+
+      i += 1
+      continue
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char
+      output += char
+      i += 1
+      continue
+    }
+
+    if (char === '/' && next === '/') {
+      output += '  '
+      i += 2
+      inLineComment = true
+      continue
+    }
+
+    if (char === '/' && next === '*') {
+      output += '  '
+      i += 2
+      inBlockComment = true
+      continue
+    }
+
+    output += char
+    i += 1
+  }
+
+  return output
+}
+
 function importsIn(content) {
   const imports = []
-  const importPattern = /import\s+(?!['"])(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"]/g
-  const sideEffectImportPattern = /import\s+['"]([^'"]+)['"];?/g
-  const exportPattern = /export\s+(?:type\s+)?(?:\*|{[\s\S]*?})\s+from\s+['"]([^'"]+)['"]/g
+  const importSource = stripCommentsPreservingLines(content)
+  const importPattern = /(^|[\r\n])(\s*import\s+(?!['"])(?:type\s+)?[\s\S]*?\s+from\s+['"]([^'"]+)['"])/g
+  const sideEffectImportPattern = /(^|[\r\n])(\s*import\s+['"]([^'"]+)['"];?)/g
+  const exportPattern = /(^|[\r\n])(\s*export\s+(?:type\s+)?(?:\*|{[\s\S]*?})\s+from\s+['"]([^'"]+)['"])/g
 
-  for (const match of content.matchAll(importPattern)) {
+  for (const match of importSource.matchAll(importPattern)) {
     imports.push({
-      statement: match[0],
-      source: match[1],
-      index: match.index ?? 0,
+      statement: match[2],
+      source: match[3],
+      index: (match.index ?? 0) + match[1].length,
     })
   }
 
-  for (const match of content.matchAll(sideEffectImportPattern)) {
+  for (const match of importSource.matchAll(sideEffectImportPattern)) {
     imports.push({
-      statement: match[0],
-      source: match[1],
-      index: match.index ?? 0,
+      statement: match[2],
+      source: match[3],
+      index: (match.index ?? 0) + match[1].length,
     })
   }
 
-  for (const match of content.matchAll(exportPattern)) {
+  for (const match of importSource.matchAll(exportPattern)) {
     imports.push({
-      statement: match[0],
-      source: match[1],
-      index: match.index ?? 0,
+      statement: match[2],
+      source: match[3],
+      index: (match.index ?? 0) + match[1].length,
     })
   }
 
@@ -117,10 +198,7 @@ const storeOpsRepositoryCastAllowlist = new Map([
 ])
 
 function hasDirectDatabaseServiceImport(importEntry) {
-  return (
-    /\bDatabaseService\b/.test(importEntry.statement) &&
-    /(?:^|\/)shared\/database\/database\.service$|database\.service$/.test(importEntry.source)
-  )
+  return /(?:^|\/)shared\/database\/database\.service$|database\.service$/.test(importEntry.source)
 }
 
 function isWebLayerImport(importEntry) {
@@ -362,6 +440,42 @@ test('guard rejects missing or duplicate allowlisted direct DatabaseService impo
 
   assert.match(violations.join('\n'), /expected 1 allowlisted direct DatabaseService import occurrence/)
   assert.match(violations.join('\n'), /unallowlisted direct DatabaseService import/)
+})
+
+test('guard ignores commented allowlisted direct DatabaseService imports', () => {
+  const violations = findDirectDatabaseServiceViolations([
+    {
+      path: 'backend/nestjs/src/modules/integration/application/external-id-mapping.service.ts',
+      content: `
+        // import { DatabaseService } from "../../../shared/database/database.service";
+        /*
+          import { DatabaseService } from "../../../shared/database/database.service";
+        */
+        const text = "import { DatabaseService } from '../../../shared/database/database.service'";
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /expected 1 allowlisted direct DatabaseService import occurrence/)
+  assert.doesNotMatch(violations.join('\n'), /unallowlisted direct DatabaseService import/)
+})
+
+test('guard rejects namespace imports from the direct DatabaseService source', () => {
+  const violations = findDirectDatabaseServiceViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/application/new-report.service.ts',
+      content: `
+        import * as database from "../../../shared/database/database.service";
+
+        export class NewReportService {
+          private readonly serviceType = database.DatabaseService;
+        }
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /new-report\.service\.ts/)
+  assert.match(violations.join('\n'), /database\.service/)
 })
 
 test('guard rejects a fake new web-to-infrastructure import', () => {
