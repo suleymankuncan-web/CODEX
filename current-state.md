@@ -101,6 +101,12 @@ Current maintenance baseline:
   while `CompetitionRepository` still owns the transaction and transition
   guard. Scoring, finalization, stage execution, API shape, DB schema, auth,
   and workflow behavior remained unchanged.
+- Architecture Hardening V4 PR-5 is stopped before code changes. The
+  pre-refactor OpenAPI parity gate fails because
+  `npm.cmd --prefix backend/nestjs run openapi:generate` rewrites
+  `docs/api/openapi.json` from clean `origin/main`, and the generated DTO schema
+  metadata loses validation-derived properties. Evidence is recorded in
+  `docs/evidence/architecture-hardening-v4-pr5-openapi-generator-blocker-2026-05-31.md`.
 
 Latest route/scope guard merge:
 
