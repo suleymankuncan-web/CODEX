@@ -1,24 +1,16 @@
 import {
   ConflictException,
-  ForbiddenException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { JobDispatcher } from "../../../shared/jobs/job-dispatcher.interface";
-import { ImportBatchJobPayload } from "../../../shared/jobs/job-payloads";
-import { JOB_DISPATCHER } from "../../../shared/jobs/jobs.constants";
-import { MaterializationService } from "./materialization.service";
 import { IntegrationRepository } from "../infrastructure/integration.repository";
 import { ImportBatchReadRepository } from "../infrastructure/import-batch-read.repository";
 import { ExternalIdMappingReadRepository } from "../infrastructure/external-id-mapping-read.repository";
 import { KpiImportStoreReadRepository } from "../infrastructure/kpi-import-store-read.repository";
 import { PersonnelMasterReadRepository } from "../infrastructure/personnel-master-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
-import { KpiImportNormalizationService } from "./kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./integration-scheduler.service";
-import { ExternalIdMappingService } from "./external-id-mapping.service";
 import {
   buildCommandResponse,
   buildListResponse,
@@ -52,6 +44,17 @@ import {
   mapPersonnelMaster,
   mapStoreMaster,
 } from "./integration-read-model.helpers";
+import {
+  assertCompanyScope,
+  normalizeCompanyScope,
+} from "./integration-company-scope";
+import { getExternalIdInternalTableName } from "./external-id-mapping.helpers";
+import {
+  type ApproveExternalIdMappingInput,
+  type CreateIntegrationImportBatchInput,
+  IntegrationImportCommandService,
+  type RetryImportBatchInput,
+} from "./integration-import-command.service";
 
 type SupportedEntityType =
   | "employee"
@@ -75,100 +78,12 @@ export class IntegrationService {
     private readonly kpiImportStoreReadRepository: KpiImportStoreReadRepository,
     private readonly personnelMasterReadRepository: PersonnelMasterReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
-    private readonly materializationService: MaterializationService,
-    private readonly kpiImportNormalizationService: KpiImportNormalizationService,
     private readonly integrationSchedulerService: IntegrationSchedulerService,
-    private readonly externalIdMappingService: ExternalIdMappingService,
-    @Inject(JOB_DISPATCHER)
-    private readonly jobDispatcher: JobDispatcher,
+    private readonly importCommandService: IntegrationImportCommandService,
   ) {}
 
-  async createImportBatch(input: {
-    actorCompanyIds: string[];
-    sourceCode: string;
-    entityType:
-      | "employee"
-      | "store"
-      | "kpi"
-      | "assignment"
-      | "position"
-      | "company"
-      | "region";
-    fileReference: string;
-    actorUserId: string;
-    idempotencyKey?: string;
-    sourceBatchId?: string;
-    sourcePayloadHash?: string;
-    sourceCapturedAt?: string;
-    sourceWindowStartedAt?: string;
-    sourceWindowEndedAt?: string;
-    rows?: Record<string, unknown>[];
-  }) {
-    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
-    this.assertCompanyScope(actorCompanyIds);
-
-    let rows = input.rows;
-    if (input.entityType === "kpi" && input.rows?.length) {
-      const source = await this.integrationSourceRepository.getIntegrationSourceByCodeAndEntity(
-        input.sourceCode,
-        input.entityType,
-      );
-
-      if (source) {
-        rows = this.kpiImportNormalizationService.normalize({
-          sourceSystem: source.source_system as "nebim_v3" | "power_bi" | "manual" | "other",
-          sourceCapturedAt: input.sourceCapturedAt,
-          sourceWindowStartedAt: input.sourceWindowStartedAt,
-          sourceWindowEndedAt: input.sourceWindowEndedAt,
-          rows: input.rows,
-        });
-      }
-    }
-
-    const batch = await this.integrationRepository.createImportBatch({
-      ...input,
-      actorCompanyIds,
-      rows,
-    });
-
-    const job = batch.reused
-      ? { status: "queued" as const, jobType: "import-batch" as const, backend: "reused" }
-      : await this.jobDispatcher.dispatch(
-          "import-batch",
-          { batchId: batch.batchId } satisfies ImportBatchJobPayload,
-          async ({ batchId }: ImportBatchJobPayload) => {
-            await this.materializationService.materializeBatch(batchId);
-          },
-        );
-
-    logStructuredMessage(this.logger, "import_batch.command.accepted", {
-      actorUserId: input.actorUserId,
-      batchId: batch.batchId,
-      jobId: job.jobId ?? null,
-      sourceCode: input.sourceCode,
-      entityType: input.entityType,
-      sourceBatchId: input.sourceBatchId ?? null,
-      sourceCapturedAt: input.sourceCapturedAt ?? null,
-      queueBackend: job.backend,
-      queueName: job.queueName ?? null,
-      reused: batch.reused,
-    });
-
-    return buildCommandResponse({
-      status: job.status,
-      message: batch.reused
-        ? "Existing import batch reused via idempotency key"
-        : "Import batch accepted for async processing",
-      data: {
-        batch,
-      },
-      job: {
-        jobType: job.jobType,
-        backend: job.backend,
-        jobId: job.jobId ?? null,
-        queueName: job.queueName ?? null,
-      },
-    });
+  async createImportBatch(input: CreateIntegrationImportBatchInput) {
+    return this.importCommandService.createImportBatch(input);
   }
 
   async listIntegrationSources(input: {
@@ -1130,77 +1045,8 @@ export class IntegrationService {
     );
   }
 
-  async approveExternalIdMapping(input: {
-    actorCompanyIds: string[];
-    integrationSourceId: string;
-    entityType: "employee" | "store";
-    externalId: string;
-    internalId: string;
-    actorUserId: string;
-  }) {
-    this.assertCompanyScope(input.actorCompanyIds);
-    const source = await this.integrationSourceRepository.getIntegrationSourceById(input.integrationSourceId);
-
-    if (!source) {
-      throw new NotFoundException(`Integration source not found: ${input.integrationSourceId}`);
-    }
-
-    if (!source.is_active) {
-      throw new ConflictException(`Integration source ${input.integrationSourceId} is inactive`);
-    }
-
-    const internalTableName = this.getExternalIdInternalTableName(input.entityType);
-    const mappingTarget = await this.externalIdMappingReadRepository.getScopedExternalIdMappingTarget({
-      actorCompanyIds: input.actorCompanyIds,
-      entityType: input.entityType,
-      internalId: input.internalId,
-    });
-
-    if (!mappingTarget) {
-      throw new NotFoundException(
-        `External ID mapping target not found in actor company scope: ${input.internalId}`,
-      );
-    }
-
-    await this.externalIdMappingService.upsertMapping({
-      integrationSourceId: input.integrationSourceId,
-      entityType: input.entityType,
-      externalId: input.externalId,
-      internalId: input.internalId,
-      internalTableName,
-    });
-    await this.integrationRepository.recordExternalIdMappingApproved({
-      actorUserId: input.actorUserId,
-      integrationSourceId: input.integrationSourceId,
-      entityType: input.entityType,
-      externalId: input.externalId,
-      internalId: input.internalId,
-      internalTableName,
-    });
-
-    logStructuredMessage(this.logger, "external_id_mapping.approved", {
-      actorUserId: input.actorUserId,
-      integrationSourceId: input.integrationSourceId,
-      sourceCode: source.source_code,
-      entityType: input.entityType,
-      externalId: input.externalId,
-      internalId: input.internalId,
-      internalTableName,
-    });
-
-    return buildCommandResponse({
-      status: "updated",
-      message: "External ID mapping approved",
-      data: {
-        mapping: {
-          integrationSourceId: input.integrationSourceId,
-          entityType: input.entityType,
-          externalId: input.externalId,
-          internalId: input.internalId,
-          internalTableName,
-        },
-      },
-    });
+  async approveExternalIdMapping(input: ApproveExternalIdMappingInput) {
+    return this.importCommandService.approveExternalIdMapping(input);
   }
 
   async getImportBatchAudit(input: { actorCompanyIds: string[]; batchId: string }) {
@@ -1223,75 +1069,8 @@ export class IntegrationService {
     );
   }
 
-  async retryImportBatch(input: {
-    actorCompanyIds: string[];
-    actorUserId: string;
-    batchId: string;
-  }) {
-    const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
-    this.assertCompanyScope(actorCompanyIds);
-    const detail = await this.getImportBatch({
-      actorCompanyIds,
-      batchId: input.batchId,
-    });
-
-    if (!["failed", "completed_with_errors"].includes(detail.batch.status)) {
-      throw new ConflictException(`Import batch ${input.batchId} is not in a retryable status`);
-    }
-
-    if (detail.rowStatusSummary.retryableError === 0) {
-      throw new ConflictException(`Import batch ${input.batchId} has no retryable rows`);
-    }
-
-    if (!detail.canRetryNow) {
-      throw new ConflictException(`Import batch ${input.batchId} still has unresolved dependencies`);
-    }
-
-    await this.integrationRepository.markImportBatchPending({
-      actorCompanyIds,
-      batchId: input.batchId,
-    });
-    await this.integrationRepository.recordImportBatchRetried({
-      batchId: input.batchId,
-      actorUserId: input.actorUserId,
-      entityType: detail.batch.entityType,
-      retryCount: detail.batch.retryCount + 1,
-    });
-
-    const job = await this.jobDispatcher.dispatch(
-      "import-batch",
-      { batchId: input.batchId } satisfies ImportBatchJobPayload,
-      async ({ batchId: queuedBatchId }: ImportBatchJobPayload) => {
-        await this.materializationService.materializeBatch(queuedBatchId);
-      },
-    );
-
-    logStructuredMessage(this.logger, "import_batch.retry.accepted", {
-      actorUserId: input.actorUserId,
-      batchId: input.batchId,
-      jobId: job.jobId ?? null,
-      queueBackend: job.backend,
-      queueName: job.queueName ?? null,
-      retryCount: detail.batch.retryCount + 1,
-    });
-
-    return buildCommandResponse({
-      status: job.status,
-      message: "Import batch requeued for retry",
-      data: {
-        batch: {
-          ...detail.batch,
-          retryCount: detail.batch.retryCount + 1,
-          lastRetriedAt: null,
-        },
-      },
-      job: {
-        jobType: job.jobType,
-        backend: job.backend,
-        jobId: job.jobId ?? null,
-        queueName: job.queueName ?? null,
-      },
-    });
+  async retryImportBatch(input: RetryImportBatchInput) {
+    return this.importCommandService.retryImportBatch(input);
   }
 
   private classifyErrorCategory(
@@ -1361,17 +1140,15 @@ export class IntegrationService {
   }
 
   private getExternalIdInternalTableName(entityType: "employee" | "store") {
-    return entityType === "employee" ? "ops.employee" : "ops.store";
+    return getExternalIdInternalTableName(entityType);
   }
 
   private normalizeCompanyScope(companyIds: string[]) {
-    return [...new Set(companyIds.filter((companyId) => companyId.trim().length > 0))].sort();
+    return normalizeCompanyScope(companyIds);
   }
 
   private assertCompanyScope(companyIds: string[]) {
-    if (companyIds.length === 0) {
-      throw new ForbiddenException("Integration operation requires company scope");
-    }
+    assertCompanyScope(companyIds);
   }
 
   private firstNonEmptyString(values: unknown[]) {

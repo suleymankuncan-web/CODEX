@@ -29,6 +29,7 @@ import { RegionMaterializationRepository } from "./infrastructure/region-materia
 import { ExternalIdMappingService } from "./application/external-id-mapping.service";
 import { KpiImportNormalizationService } from "./application/kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./application/integration-scheduler.service";
+import { IntegrationImportCommandService } from "./application/integration-import-command.service";
 import { PowerBiExportUploadService } from "./application/power-bi-export-upload.service";
 import { PowerBiExportParserService } from "./application/power-bi-export-parser.service";
 import { PowerBiExportNormalizerService } from "./application/power-bi-export-normalizer.service";
@@ -88,6 +89,7 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     ExternalIdMappingService,
     KpiImportNormalizationService,
     IntegrationSchedulerService,
+    IntegrationImportCommandService,
     PowerBiExportUploadService,
     PowerBiExportParserService,
     PowerBiExportNormalizerService,
