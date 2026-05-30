@@ -1,5 +1,31 @@
 import { SnapshotRunCommandRepository } from "./snapshot-run-command.repository";
 
+type QueryCall = [string, unknown[]?];
+
+function getInsertRows(
+  query: jest.Mock,
+  tableName: string,
+): Array<Record<string, unknown>> {
+  return (query.mock.calls as QueryCall[])
+    .filter(([sql]) => String(sql).includes(`INSERT INTO ${tableName}`))
+    .map(([sql, params]) => mapInsertParamsByColumn(String(sql), params ?? []));
+}
+
+function mapInsertParamsByColumn(sql: string, params: unknown[]) {
+  const match = /INSERT INTO\s+[\w.]+\s*\(([\s\S]*?)\)\s*VALUES/i.exec(sql);
+  if (!match) {
+    throw new Error("Insert statement column list could not be parsed");
+  }
+
+  return Object.fromEntries(
+    match[1]
+      .split(",")
+      .map((column) => column.trim())
+      .filter(Boolean)
+      .map((column, index) => [column, params[index] ?? null]),
+  );
+}
+
 function createRepository(input?: {
   query?: jest.Mock;
   createSnapshotRun?: jest.Mock;
@@ -209,8 +235,7 @@ describe("SnapshotRunCommandRepository", () => {
   });
 
   it("uses capped benchmark ratios for employee performance snapshots", async () => {
-    const performanceInserts: unknown[][] = [];
-    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+    const query = jest.fn(async (sql: string) => {
       if (sql.includes("SELECT rpt.generate_")) {
         return { rowCount: 1, rows: [] };
       }
@@ -241,10 +266,6 @@ describe("SnapshotRunCommandRepository", () => {
         };
       }
 
-      if (sql.includes("INSERT INTO rpt.employee_performance_snapshot")) {
-        performanceInserts.push(params ?? []);
-      }
-
       return { rowCount: 1, rows: [] };
     });
     const { repository } = createRepository({ query });
@@ -273,15 +294,21 @@ describe("SnapshotRunCommandRepository", () => {
       },
     });
 
-    expect(performanceInserts).toHaveLength(1);
-    expect(performanceInserts[0][5]).toBe(36);
-    expect(performanceInserts[0][6]).toBe(1);
+    const performanceRows = getInsertRows(
+      query,
+      "rpt.employee_performance_snapshot",
+    );
+    expect(performanceRows).toHaveLength(1);
+    expect(performanceRows[0]).toEqual(
+      expect.objectContaining({
+        score_value: 36,
+        matched_metrics: 1,
+      }),
+    );
   });
 
   it("scores employee target achievement from approved target references in snapshots", async () => {
-    const kpiInserts: unknown[][] = [];
-    const performanceInserts: unknown[][] = [];
-    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+    const query = jest.fn(async (sql: string) => {
       if (sql.includes("SELECT rpt.generate_")) {
         return { rowCount: 1, rows: [] };
       }
@@ -309,14 +336,6 @@ describe("SnapshotRunCommandRepository", () => {
             },
           ],
         };
-      }
-
-      if (sql.includes("INSERT INTO rpt.employee_kpi_snapshot")) {
-        kpiInserts.push(params ?? []);
-      }
-
-      if (sql.includes("INSERT INTO rpt.employee_performance_snapshot")) {
-        performanceInserts.push(params ?? []);
       }
 
       return { rowCount: 1, rows: [] };
@@ -347,10 +366,24 @@ describe("SnapshotRunCommandRepository", () => {
       },
     });
 
-    expect(kpiInserts).toHaveLength(1);
-    expect(kpiInserts[0]).toContain("00000000-0000-4000-8000-000000000901");
-    expect(performanceInserts).toHaveLength(1);
-    expect(performanceInserts[0][5]).toBe(44);
-    expect(performanceInserts[0][6]).toBe(1);
+    const kpiRows = getInsertRows(query, "rpt.employee_kpi_snapshot");
+    const performanceRows = getInsertRows(
+      query,
+      "rpt.employee_performance_snapshot",
+    );
+
+    expect(kpiRows).toHaveLength(1);
+    expect(kpiRows[0]).toEqual(
+      expect.objectContaining({
+        personnel_target_reference_id: "00000000-0000-4000-8000-000000000901",
+      }),
+    );
+    expect(performanceRows).toHaveLength(1);
+    expect(performanceRows[0]).toEqual(
+      expect.objectContaining({
+        score_value: 44,
+        matched_metrics: 1,
+      }),
+    );
   });
 });
