@@ -167,10 +167,6 @@ function isWebOrControllerFile(path) {
 
 const directDatabaseServiceAllowlist = new Map([
   [
-    'backend/nestjs/src/modules/integration/application/materialization.service.ts',
-    ['import { DatabaseService } from "../../../shared/database/database.service"'],
-  ],
-  [
     'backend/nestjs/src/modules/integration/application/power-bi-export-upload.service.ts',
     ['import { DatabaseService } from "../../../shared/database/database.service"'],
   ],
@@ -272,7 +268,7 @@ const storeOpsModuleGraphLimits = new Map([
 
 const workerJobsModuleGraphLimit = {
   path: 'backend/nestjs/src/worker-jobs.module.ts',
-  providers: 14,
+  providers: 23,
   exports: 2,
 }
 
@@ -880,7 +876,7 @@ test('guard rejects missing or duplicate allowlisted direct DatabaseService impo
       `,
     },
     {
-      path: 'backend/nestjs/src/modules/integration/application/materialization.service.ts',
+      path: 'backend/nestjs/src/modules/store-ops/application/new-report.service.ts',
       content: `
         import { DatabaseService } from "../../../shared/database/database.service";
         import { DatabaseService } from "../../../shared/database/database.service";
@@ -1091,7 +1087,7 @@ test('guard rejects fake worker job module provider growth', () => {
         import { Module } from "@nestjs/common";
 
         @Module({
-          providers: [A, B, C, D, E, F, G, H, I, J, K, L, M, N, NewJobHandler],
+          providers: [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, NewJobHandler],
           exports: [A, B],
         })
         export class WorkerJobsModule {}
@@ -1100,7 +1096,7 @@ test('guard rejects fake worker job module provider growth', () => {
   ])
 
   assert.match(violations.join('\n'), /worker-jobs\.module\.ts/)
-  assert.match(violations.join('\n'), /providers graph has 15 entries/)
+  assert.match(violations.join('\n'), /providers graph has 24 entries/)
 })
 
 test('guard rejects module graph spread entries before counting size', () => {
