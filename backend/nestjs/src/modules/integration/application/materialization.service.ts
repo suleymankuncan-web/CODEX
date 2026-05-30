@@ -12,6 +12,8 @@ import {
   MaterializationRowStatusRepository,
   type MaterializationRawEntity,
 } from "../infrastructure/materialization-row-status.repository";
+import { EmployeeMaterializationService } from "./employee-materialization.service";
+import { StoreMaterializationService } from "./store-materialization.service";
 
 @Injectable()
 export class MaterializationService {
@@ -22,6 +24,8 @@ export class MaterializationService {
     private readonly externalIdMappingService: ExternalIdMappingService,
     private readonly kpiMaterializationService: KpiMaterializationService,
     private readonly rowStatusRepository: MaterializationRowStatusRepository,
+    private readonly employeeMaterializationService: EmployeeMaterializationService,
+    private readonly storeMaterializationService: StoreMaterializationService,
   ) {}
 
   async materializeBatch(batchId: string): Promise<void> {
@@ -148,225 +152,20 @@ export class MaterializationService {
     batchId: string,
     integrationSourceId: string,
   ): Promise<MaterializationStats> {
-    const rows = await this.databaseService.query<{
-      stg_employee_raw_id: string;
-      payload_json: Record<string, unknown>;
-    }>(
-      `
-        SELECT stg_employee_raw_id, payload_json
-        FROM stg.employee_raw
-        WHERE import_batch_id = $1::uuid
-          AND processed_flag = FALSE
-      `,
-      [batchId],
-    );
-
-    const stats: MaterializationStats = {
-      processedCount: 0,
-      errorCount: 0,
-      hasRetryableFailure: false,
-    };
-
-    for (const row of rows.rows) {
-      const payload = row.payload_json;
-      const validationError = this.validateEmployeePayload(payload);
-
-      if (validationError) {
-        stats.errorCount += 1;
-        await this.markRawRowValidationFailed(
-          "employee",
-          row.stg_employee_raw_id,
-          validationError,
-        );
-        continue;
-      }
-
-      try {
-        const employeeId = String(
-          payload["employeeId"] ?? payload["internalEmployeeId"] ?? randomUUID(),
-        );
-        const companyId = await this.externalIdMappingService.resolveRequiredInternalId({
-          payload,
-          integrationSourceId,
-          entityType: "company",
-          directKeys: ["companyId", "internalCompanyId"],
-          externalKeys: ["sourceCompanyId", "companyExternalRef"],
-          missingMessage: "company reference is required",
-          unresolvedMessage: "company reference could not be resolved",
-        });
-
-        await this.databaseService.query(
-          `
-            INSERT INTO ops.employee (
-              employee_id,
-              company_id,
-              external_employee_ref,
-              first_name,
-              last_name,
-              hire_date,
-              employment_status,
-              employment_type
-            )
-            VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6::date, $7, $8)
-            ON CONFLICT (employee_id) DO UPDATE
-            SET
-              external_employee_ref = EXCLUDED.external_employee_ref,
-              first_name = EXCLUDED.first_name,
-              last_name = EXCLUDED.last_name,
-              employment_status = EXCLUDED.employment_status,
-              employment_type = EXCLUDED.employment_type
-          `,
-          [
-            employeeId,
-            companyId,
-            String(payload["sourceEmployeeId"] ?? payload["employeeNumber"] ?? employeeId),
-            String(payload["firstName"] ?? "Unknown"),
-            String(payload["lastName"] ?? "Unknown"),
-            String(payload["hireDate"] ?? new Date().toISOString().slice(0, 10)),
-            String(payload["employmentStatus"] ?? "active"),
-            String(payload["employmentType"] ?? "full_time"),
-          ],
-        );
-
-        await this.externalIdMappingService.upsertMapping({
-          integrationSourceId,
-          entityType: "employee",
-          externalId: String(payload["sourceEmployeeId"] ?? payload["employeeNumber"] ?? employeeId),
-          internalId: employeeId,
-          internalTableName: "ops.employee",
-        });
-
-        await this.markRawRowProcessed(
-          "employee",
-          row.stg_employee_raw_id,
-        );
-        stats.processedCount += 1;
-      } catch (error) {
-        stats.errorCount += 1;
-        stats.hasRetryableFailure = true;
-        await this.markRawRowRetryableError(
-          "employee",
-          row.stg_employee_raw_id,
-          error,
-        );
-      }
-    }
-
-    return stats;
+    return this.employeeMaterializationService.materializeEmployees({
+      batchId,
+      integrationSourceId,
+    });
   }
 
   private async materializeStores(
     batchId: string,
     integrationSourceId: string,
   ): Promise<MaterializationStats> {
-    const rows = await this.databaseService.query<{
-      stg_store_raw_id: string;
-      payload_json: Record<string, unknown>;
-    }>(
-      `
-        SELECT stg_store_raw_id, payload_json
-        FROM stg.store_raw
-        WHERE import_batch_id = $1::uuid
-          AND processed_flag = FALSE
-      `,
-      [batchId],
-    );
-
-    const stats: MaterializationStats = {
-      processedCount: 0,
-      errorCount: 0,
-      hasRetryableFailure: false,
-    };
-
-    for (const row of rows.rows) {
-      const payload = row.payload_json;
-      const validationError = this.validateStorePayload(payload);
-      if (validationError) {
-        stats.errorCount += 1;
-        await this.markRawRowValidationFailed(
-          "store",
-          row.stg_store_raw_id,
-          validationError,
-        );
-        continue;
-      }
-
-      try {
-        const companyId = await this.externalIdMappingService.resolveRequiredInternalId({
-          payload,
-          integrationSourceId,
-          entityType: "company",
-          directKeys: ["companyId", "internalCompanyId"],
-          externalKeys: ["sourceCompanyId", "companyExternalRef"],
-          missingMessage: "company reference is required",
-          unresolvedMessage: "company reference could not be resolved",
-        });
-        const regionId = await this.externalIdMappingService.resolveRequiredInternalId({
-          payload,
-          integrationSourceId,
-          entityType: "region",
-          directKeys: ["regionId", "internalRegionId"],
-          externalKeys: ["sourceRegionId", "regionExternalRef"],
-          missingMessage: "region reference is required",
-          unresolvedMessage: "region reference could not be resolved",
-        });
-        const storeId =
-          String(payload["storeId"] ?? payload["internalStoreId"] ?? randomUUID());
-
-        await this.databaseService.query(
-          `
-            INSERT INTO ops.store (
-              store_id,
-              company_id,
-              region_id,
-              store_code,
-              store_name,
-              store_type,
-              status,
-              timezone
-            )
-            VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8)
-            ON CONFLICT (store_code) DO UPDATE
-            SET
-              store_name = EXCLUDED.store_name,
-              store_type = EXCLUDED.store_type,
-              status = EXCLUDED.status,
-              timezone = EXCLUDED.timezone
-          `,
-          [
-            storeId,
-            companyId,
-            regionId,
-            String(payload["sourceStoreId"] ?? payload["storeCode"] ?? storeId),
-            String(payload["storeName"] ?? "Unknown Store"),
-            String(payload["storeType"] ?? "standard"),
-            String(payload["status"] ?? "active"),
-            String(payload["timezone"] ?? "Europe/Istanbul"),
-          ],
-        );
-
-        await this.externalIdMappingService.upsertMapping({
-          integrationSourceId,
-          entityType: "store",
-          externalId: String(payload["sourceStoreId"] ?? payload["storeCode"] ?? storeId),
-          internalId: storeId,
-          internalTableName: "ops.store",
-        });
-
-        await this.markRawRowProcessed("store", row.stg_store_raw_id);
-        stats.processedCount += 1;
-      } catch (error) {
-        stats.errorCount += 1;
-        stats.hasRetryableFailure = true;
-        await this.markRawRowRetryableError(
-          "store",
-          row.stg_store_raw_id,
-          error,
-        );
-      }
-    }
-
-    return stats;
+    return this.storeMaterializationService.materializeStores({
+      batchId,
+      integrationSourceId,
+    });
   }
 
   private async materializeAssignments(
@@ -817,26 +616,6 @@ export class MaterializationService {
     }
 
     return stats;
-  }
-
-  private validateEmployeePayload(payload: Record<string, unknown>): string | null {
-    if (!this.hasAnyValue(payload, ["companyId", "internalCompanyId", "sourceCompanyId"])) {
-      return "company reference is required";
-    }
-
-    return null;
-  }
-
-  private validateStorePayload(payload: Record<string, unknown>): string | null {
-    if (!this.hasAnyValue(payload, ["companyId", "internalCompanyId", "sourceCompanyId"])) {
-      return "company reference is required";
-    }
-
-    if (!this.hasAnyValue(payload, ["regionId", "internalRegionId", "sourceRegionId"])) {
-      return "region reference is required";
-    }
-
-    return null;
   }
 
   private validateAssignmentPayload(payload: Record<string, unknown>): string | null {
