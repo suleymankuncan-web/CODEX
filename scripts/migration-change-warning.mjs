@@ -45,36 +45,87 @@ function fetchGitHubRefs(...refs) {
   }
 }
 
-function changedFilesFromGitHubEvent() {
+function readGitHubEvent() {
   const eventPath = process.env.GITHUB_EVENT_PATH
   if (!eventPath || !existsSync(eventPath)) {
-    return []
+    return null
   }
 
   try {
-    const event = JSON.parse(readFileSync(eventPath, 'utf8'))
-    const baseSha = event.pull_request?.base?.sha
-    const headSha = event.pull_request?.head?.sha
-    if (!baseSha || !headSha) {
+    return JSON.parse(readFileSync(eventPath, 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+async function changedFilesFromGitHubApi() {
+  const event = readGitHubEvent()
+  const token = process.env.GITHUB_TOKEN
+  const repo = process.env.GITHUB_REPOSITORY
+  const pullNumber = event?.pull_request?.number
+
+  if (!process.env.GITHUB_ACTIONS || !token || !repo || !pullNumber) {
+    return []
+  }
+
+  const files = []
+  for (let page = 1; page <= 10; page += 1) {
+    const response = await fetch(
+      `https://api.github.com/repos/${repo}/pulls/${pullNumber}/files?per_page=100&page=${page}`,
+      {
+        headers: {
+          accept: 'application/vnd.github+json',
+          authorization: `Bearer ${token}`,
+          'user-agent': 'hr-axis-migration-change-warning',
+        },
+      },
+    )
+
+    if (!response.ok) {
       return []
     }
 
-    fetchGitHubRefs(baseSha, headSha)
-    return parseChangedFiles(git(['diff', '--name-only', baseSha, headSha]))
-  } catch {
+    const pageFiles = await response.json()
+    files.push(...pageFiles.map((file) => normalizePath(file.filename)))
+
+    if (pageFiles.length < 100) {
+      break
+    }
+  }
+
+  return unique(files)
+}
+
+function changedFilesFromGitHubEvent() {
+  const event = readGitHubEvent()
+  const baseSha = event?.pull_request?.base?.sha
+  const headSha = event?.pull_request?.head?.sha
+  if (!baseSha || !headSha) {
     return []
   }
+
+  fetchGitHubRefs(baseSha, headSha)
+  const mergeBase = git(['merge-base', baseSha, headSha]).trim()
+  if (!mergeBase) {
+    return []
+  }
+
+  return parseChangedFiles(git(['diff', '--name-only', mergeBase, headSha]))
 }
 
 function changedFilesFromGit() {
   const baseRef = process.env.GITHUB_BASE_REF
   fetchGitHubRefs(baseRef)
+  const baseRefMergeBase = baseRef
+    ? git(['merge-base', `origin/${baseRef}`, 'HEAD']).trim()
+    : ''
+  const mainMergeBase = git(['merge-base', 'origin/main', 'HEAD']).trim()
 
   const candidates = [
     ['diff', '--name-only'],
     ['diff', '--name-only', '--cached'],
-    baseRef ? ['diff', '--name-only', `origin/${baseRef}`, 'HEAD'] : null,
-    ['diff', '--name-only', 'origin/main', 'HEAD'],
+    baseRefMergeBase ? ['diff', '--name-only', baseRefMergeBase, 'HEAD'] : null,
+    mainMergeBase ? ['diff', '--name-only', mainMergeBase, 'HEAD'] : null,
     ['diff', '--name-only', 'HEAD~1..HEAD'],
     ['diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD'],
   ].filter(Boolean)
@@ -89,9 +140,14 @@ function changedFilesFromGit() {
   return []
 }
 
-function changedFiles() {
+async function changedFiles() {
   if (envChangedFiles) {
     return parseChangedFiles(envChangedFiles)
+  }
+
+  const apiFiles = await changedFilesFromGitHubApi()
+  if (apiFiles.length > 0) {
+    return apiFiles
   }
 
   return unique([...changedFilesFromGitHubEvent(), ...changedFilesFromGit()])
@@ -101,7 +157,7 @@ function isMigrationSensitive(path) {
   return migrationSensitivePatterns.some((pattern) => pattern.test(path))
 }
 
-const sensitiveFiles = changedFiles().filter(isMigrationSensitive)
+const sensitiveFiles = (await changedFiles()).filter(isMigrationSensitive)
 
 if (sensitiveFiles.length === 0) {
   console.log('[migration-change-warning] No DB schema or migration-sensitive changes detected.')
