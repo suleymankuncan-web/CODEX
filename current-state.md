@@ -722,6 +722,16 @@ Latest technical assessment decision:
   New active source files must stay within standard budgets, and existing
   oversized source files are frozen at their current baseline instead of being
   allowed to grow.
+- Architecture Hardening Progress Plan V1 is recorded at
+  `docs/superpowers/plans/2026-05-30-architecture-hardening-progress-plan.md`.
+  It turns the latest architecture health audit into a PR-by-PR hardening line:
+  root contribution contract, backend boundary guard, reporting/ranking
+  dependency cleanup, snapshot and external-id persistence extraction,
+  materialization split, worker context slimming, Store page container splits,
+  repository test strategy cleanup, StoreOps internal module split, and final
+  evidence closeout. PR #1 in that line starts with the root `CONTRIBUTING.md`
+  contract and its script guard; it is docs/script-only and changes no runtime
+  behavior.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
