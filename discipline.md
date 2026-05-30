@@ -5,6 +5,24 @@ disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
 gundelik is akisini, PR ritmini, dogrulama disiplinini ve durma kurallarini
 tek yerde toplar.
 
+## Bu Dosya Nasil Okunur
+
+Bu dosya tek parca kalir; alt process dosyalarina bolunmedigi surece baglayici
+isletim sistemi buradadir. Hizli navigasyon icin:
+
+- Genel calisma: `Baslangic Ritueli`, `Ana Ilke`, `Calisma Ritmi`.
+- Kodlama freni ve scope: `Istisare ve Kodlama Freni`, `Slice Disiplini`,
+  `PR Risk Class`, `Feature Intake`.
+- PR ve merge: `PR Disiplini`, `PR Oncesi Adversarial Review`,
+  `Repo-Native Subagent Review Model`, `Merge Disiplini`.
+- Verification: `Verification Ladder`, `External Evidence Disiplini`.
+- UI refactor: `UI/UX Disiplini`, `Prototype to Product`, Store Me
+  refactorundan cikan tekrar kullanilabilir sayfa kurallari.
+- Mimari/refactor: `Hard Boundaries`, `Refactor Disiplini`,
+  `Dosya Satir Prensipleri`.
+- Risk ve durma: `Regression Trap Register`, `Stop Rules`,
+  `Done Definition`.
+
 ## Baslangic Ritueli
 
 Her yeni oturumda veya context kaybi sonrasi:
@@ -41,6 +59,15 @@ Varsayilan ritim:
 
 Kodlamaya gecmeden once is gercekten kod istiyor mu diye sorulur. Bazi isler
 docs-only, inventory, evidence veya park karari olarak daha dogrudur.
+
+Karpathy prensibi bu ritmin icinde gecerlidir: once dusun, basit tut, cerrahi
+degisiklik yap ve basari kriterini dogrulanabilir yaz. Her degisen satir
+kullanici istegine, repo kanitina veya gerekli verification/cleanup sonucuna
+baglanabilmelidir. Baglanamiyorsa o satir scope creep'tir.
+
+Zayif basari kriteri ile kodlamaya baslanmaz. "Calissin", "daha iyi olsun" veya
+"modernlestir" gibi hedefler once test, screenshot, role matrix, API contract,
+guard veya PR closeout kriterine cevrilir.
 
 ## Istisare ve Kodlama Freni
 
@@ -130,6 +157,58 @@ Asla ayni PR icinde karistirma:
 - farkli domainlere ait bagimsiz riskler,
 - review edilemeyecek kadar buyuk diff.
 
+### PR Risk Class
+
+Her PR acilmadan once PR body veya plan notunda risk sinifi secilir. Risk
+sinifi verification ladder'i ve review derinligini belirler.
+
+- `R0 docs/process`: Kod yok. Gate: `git diff --check`; gerekirse
+  `npm.cmd run test:scripts`.
+- `R1 UI-only`: Veri contract'i ve workflow degismez. Gate: frontend lint,
+  build, ilgili visual/mobile kontrol.
+- `R2 frontend data binding`: Mevcut API/model verisi ekrana farkli baglanir.
+  Gate: frontend lint/build, targeted Playwright veya component/e2e coverage.
+- `R3 backend read/API`: Read model, DTO veya API response riski vardir. Gate:
+  targeted backend test, build, API contract gerekiyorsa generate/check.
+- `R4 backend write/workflow`: Komut, state transition, persistence veya audit
+  yolu vardir. Gate: targeted unit/e2e, backend build, gerekirse release gate.
+- `R5 auth/DB/scoring/queue`: Auth, permission, migration, KPI/ranking,
+  snapshot, BullMQ/import lifecycle veya provider davranisi vardir. Gate:
+  explicit plan, negative tests, full relevant release/check path ve
+  PR'da `Contract Impact` basligi.
+
+PR sinifi yanlis secilirse merge edilmez; once sinif ve verification duzeltilir.
+
+### Feature Intake
+
+Yeni feature veya ekran baslamadan once, uygulanabilir oldugu kadar kisa intake
+yapilir:
+
+- Kullanici/persona kim?
+- Ana is akisi ve tek primary action ne?
+- Hangi gercek API/query/model/config verisi kullanilacak?
+- Role/scope/permission etkisi var mi?
+- API response shape, DB, auth, scoring, queue veya workflow degisiyor mu?
+- Loading, empty, error ve access state ne?
+- Basari nasil dogrulanacak: test, screenshot, smoke, guard veya PR check?
+- Neyi bilincli olarak yapmiyoruz?
+
+Bu sorular repo'dan cevaplanabiliyorsa kullaniciya sorulmaz; sadece urun
+karari gerektiren boslukta durulur.
+
+### No Silent Contract Change
+
+API response shape, auth/permission, DB schema/migration, scoring, ranking,
+snapshot interpretation, checklist weight, queue/import lifecycle veya
+user-facing workflow davranisi degisiyorsa PR'da acik `Contract Impact` notu
+zorunludur:
+
+- `Contract Impact: none`
+- `Contract Impact: intentionally unchanged`
+- `Contract Impact: changed` ve degisen contract listesi
+
+Bu baslik olmadan riskli PR merge edilmez.
+
 ## PR Disiplini
 
 PR acmak icin minimum bar:
@@ -200,6 +279,46 @@ Bu preflight temiz degilse PR acilmaz; PR acildiysa yeni push yapmadan once
 duzeltilir. GitHub Codex yine actionable yorum bulursa normal merge disiplini
 gecerlidir: yorum duzeltilir, ilgili local gate yeniden kosulur ve review tekrar
 beklenir.
+
+### Repo-Native Subagent Review Model
+
+Dis arac veya yeni runtime bagimliligi eklemeden, buyuk veya riskli islerde
+subagent benzeri coklu bakis modeli uygulanir. Bu model Pi subagent tarzindaki
+scout/planner/worker/reviewer ayrimini surec prensibi olarak kullanir; projeye
+paket, extension veya runtime dependency eklemek anlamina gelmez.
+
+Roller:
+
+- `Scout`: Kod yazmadan once repo kanitini toplar. Ilgili dosya, test, guard,
+  docs, auth/helper, API client ve onceki PR kararlarini bulur. Varsayimla
+  bosluk doldurmaz.
+- `Planner`: Scout kanitindan kucuk, geri alinabilir slice plani cikarir.
+  Scope, risk, rollback ve verification ladder'i netlestirir.
+- `Worker`: Sadece onaylanan slice'i uygular. Business workflow, auth, API,
+  DB, scoring, queue veya provider davranisini gizlice degistirmez.
+- `Reviewer`: Worker diff'ini yeni gozle okur. P1/P2 sinifi muhtemel Codex
+  yorumlarini, guard bypass'larini, test bosluklarini, fake veri riskini ve
+  scope creep'i PR acilmadan yakalamaya calisir.
+- `Closer`: PR acma, GitHub/Vercel checks, Codex review kanallari, merge ve
+  merge sonrasi `origin/main` dogrulamasini yurutur.
+
+Kullanim kurali:
+
+- Dusuk riskli docs-only veya tek satirlik net duzeltmelerde bu roller zihinsel
+  checklist olarak uygulanir; ayri seremoniye donusturulmez.
+- Mimari hardening, auth/permission, import lifecycle, KPI/ranking/snapshot,
+  workflow-heavy Store sayfalari, guard/script degisiklikleri ve buyuk UI
+  refactorlerinde roller acikca ayrilir.
+- Reviewer pass, Worker'in kendi diff'ine bagli kalmaz; mumkunse once git
+  diff okunur, sonra test/guard edge'leri dusunulur, sonra PR metni yazilir.
+- Reviewer "bunu Codex soyler mi?" sorusunu pratik olarak sorar. Cevap evetse
+  PR acmadan once duzeltme yapilir.
+- Her rol repo kanitina dayanir. Gercek veri/API/model yoksa uydurma metrik,
+  fake workflow, sahte skor veya temsili business sonucu eklenmez.
+
+Bu model `PR Oncesi Adversarial Review` kuralini genisletir. GitHub Codex
+review'u yine zorunlu dis denetim olarak kalir; lokal subagent modeli sadece
+round-trip kaybini azaltmak ve PR kalitesini yukseltmek icindir.
 
 ## Merge Disiplini
 
@@ -297,6 +416,32 @@ Asagidakiler ancak acik kapsam ve guclu verification ile degisir:
 
 Bu alanlarda suphe varsa dur, plani daralt veya once docs/inventory yap.
 
+## Regression Trap Register
+
+Gecmiste pahali zaman kaybettiren hatalar yeni PR'larda aktif kontrol
+listesidir. Benzer alana dokunuldugunda PR oncesi Reviewer pass bu listeyi
+okur.
+
+- Render'da API BullMQ'ya job yazabilir ama ayri worker process yoksa importlar
+  pending kalir. Worker provider/module context'i release sonrasi logla
+  dogrulanmadan altyapi kapandi sayilmaz.
+- Store ranking/personnel detayinda BM/region scope yanlis okunursa 403 veya
+  scope disi profil riski dogar. Ranking aksiyonlari sadece kullanicinin
+  gorebildigi personel/store scope'una baglanir.
+- Store UI'da fake KPI, fake coaching, sahte todo, temsili skor veya gercek
+  veriye dayanmayan motivasyonel metin kullanilmaz.
+- Monthly/daily period ayrimi karisirse ranking, Store Me ve KPI trendleri
+  yanlis okunur. Period type, period start/end ve snapshot/live ayrimi
+  gorunur logic'te net kalir.
+- Target distribution veya revision toplam esitligi bozulursa request
+  gonderilmemelidir. UI buna izin veriyorsa regression sayilir.
+- Checklist sayfasinda "dusuk alan", "bekleyen", "tamamlanmayan" gibi
+  ozetler admin template/config ve gercek checklist kayitlarina dayanmalidir;
+  statik liste veya tahmini metin kabul edilmez.
+
+Yeni regression trap ortaya cikarsa current-state/evidence yerine once burada
+kisa, operasyonel ve tekrar kontrol edilebilir sekilde kaydedilir.
+
 ## External Evidence Disiplini
 
 Gercek token, provider secret, restore target, Redis URL, alert destination,
@@ -381,6 +526,27 @@ Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
 - Parked Store route'lari sessizce yeni urun UI'ina alinmaz. Ornek:
   `/store/incentives` kullanici tarafindan yeniden kapsamlanana kadar toolbar'a
   eklenmez ve Store Me kalitesinde productize edilmis sayilmaz.
+
+### Prototype to Product
+
+HTML/prototype begenilmis olsa bile product implementation sayilmaz. Product'a
+tasinmadan once su pass zorunludur:
+
+- Gercek veri mapping'i: her gorunen metrik, liste, status ve aksiyon hangi
+  API/query/model/config alanindan geliyor?
+- Role matrix: hangi rol hangi sekme, toolbar item, route ve aksiyonu gorecek?
+- Contract check: yeni API shape gerekiyor mu, yoksa mevcut contract yeterli mi?
+- State modeli: loading, empty, error, access denied ve partial-data durumlari
+  nasil gorunecek?
+- Responsive QA: desktop ve mobile viewportta text overflow, yatay kayma,
+  buton/toolbar tasmasi ve modal kullanilabilirligi kontrol edildi mi?
+- Eski UI cleanup: eski class, copy, loading/empty state, debug/handoff metni ve
+  role disi navigation temizlendi mi?
+- Verification: targeted Playwright/component/backend test veya bilincli
+  docs-only karar PR'da yazildi mi?
+
+Bu pass tamamlanmadan prototype tasarimi "bitti" sayilmaz; sadece taslak veya
+visual direction sayilir.
 
 UI iyilestirmesi business workflow degistirmez.
 
