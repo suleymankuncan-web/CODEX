@@ -150,14 +150,12 @@ function changedFilesFromGit() {
     ['diff-tree', '--no-commit-id', '--name-status', '-r', 'HEAD'],
   ].filter(Boolean)
 
+  const files = []
   for (const args of candidates) {
-    const files = parseGitNameStatusFiles(git(args))
-    if (files.length > 0) {
-      return files
-    }
+    files.push(...parseGitNameStatusFiles(git(args)))
   }
 
-  return []
+  return unique(files)
 }
 
 async function changedFiles() {
