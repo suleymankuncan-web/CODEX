@@ -179,7 +179,7 @@ Scope:
 Verification:
 
 ```powershell
-npm.cmd --prefix backend/nestjs test -- --runInBand src/modules/integration/application/master-data-bootstrap.service.spec.ts src/modules/integration/application/master-data-bootstrap-validation.service.spec.ts src/modules/integration/application/master-data-bootstrap-promotion.service.spec.ts
+npm.cmd --prefix backend/nestjs test -- --runInBand src/modules/integration/application/master-data-bootstrap-promotion.service.spec.ts src/modules/integration/application/master-data-bootstrap-read-models.service.spec.ts src/modules/integration/application/master-data-bootstrap-staging.service.spec.ts src/modules/integration/application/master-data-bootstrap-validation.service.spec.ts
 npm.cmd --prefix backend/nestjs run build
 npm.cmd --prefix backend/nestjs run check:release
 npm.cmd run test:scripts
