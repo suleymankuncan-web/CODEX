@@ -151,6 +151,26 @@ GitHub Codex review'u merge oncesi son dis denetimdir; PR acmadan once ayni
 sinif hatalari lokal olarak yakalamak zorunludur. Amac Codex'in yerine gecmek
 degil, basit bypass ve test bosluklarini GitHub round-trip'ine birakmamaktir.
 
+Bu kural proje geneli calisma prensibidir; sadece hardening, guard veya mimari
+PR'lar icin degildir. Her PR acilmadan once ve review isteyen her yeni push
+oncesinde lokal Codex-review simulasyonu yapilir.
+
+Zorunlu lokal review pass:
+
+1. `git diff --stat` ile diff'in tek review hikayesi tasidigini dogrula.
+2. `git diff --check` calistir.
+3. Degisen dosyalari tek tek oku; scope creep, behavior drift, fake data,
+   layer leak, broad cast ve buyuk dosya buyumesi ara.
+4. Backend degisikliklerinde yeni direct `DatabaseService` importu,
+   application-to-web importu, web-to-infrastructure importu, yeni broad
+   `as unknown as` repository cast'i ve allowlist genislemesi ara.
+5. Frontend degisikliklerinde role-disinda UI, fake metric/copy, eski Store UI
+   class'lari, debug/handoff copy ve mobile/desktop kirilma riski ara.
+6. PR slice'ina uygun targeted verification'i PR description yazmadan once
+   calistir.
+7. GitHub Codex'in yazmasi muhtemel P1/P2 yorumlari kendin listele; actionable
+   olanlari PR acmadan once duzelt.
+
 Her PR acilmadan veya review isteyen yeni push'tan once diff'e su gozle bak:
 
 - Degisiklik nasil delinebilir?
