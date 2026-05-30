@@ -1,6 +1,6 @@
 # Refactor Completion Inventory V1
 
-Status: Active decision refreshed after Architecture Hardening V3 on 2026-05-30
+Status: Active decision refreshed after Architecture Hardening V4 PR-1 on 2026-05-31
 
 This inventory closes the recurring "large file means keep refactoring" loop.
 The project still has large files, but they are no longer all active refactor
@@ -32,6 +32,10 @@ Repository evidence:
 - Architecture Hardening V3 extracted integration import command lifecycle
   orchestration and auth-admin write persistence, then removed
   `IntegrationService` and `AuthAdminRepository` from oversized-source debt.
+- Architecture Hardening V4 PR-1 froze the next behavior-preserving hardening
+  targets in
+  `docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md`
+  before runtime refactors continue.
 - The user has said major page/content/design changes are coming, so broad UI
   polish or page-component splits are likely to be throwaway work right now.
 
@@ -87,6 +91,31 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 1160 | workforce request SQL persistence facade | Architecture Hardening V2 extracted seller-code/offboarding transition policy; park broader SQL/transaction persistence splits unless a concrete workflow or reviewability trigger appears. |
 | `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 666 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
 | `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 740 | ranking read/scoring application service | PR3 removed broad repository casts and previous helper extraction remains in place. Park further extraction unless a ranking trust/reviewability trigger appears. |
+
+## Architecture Hardening V4 Active Line
+
+V4 is intentionally narrower than a generic large-file cleanup. It can only
+move runtime code after the PR-1 behavior freeze evidence is satisfied.
+
+Active V4 sequence:
+
+1. `MasterDataBootstrapService` promotion boundary. Before refactor, confirm or
+   add promotion response/audit parity.
+2. `WorkforceRequestRepository` command persistence boundary. Before refactor,
+   confirm or add return-shape/transaction parity.
+3. `CompetitionRepository` selected stage-package-plan review command
+   persistence boundary. Do not mix scoring, finalization, or stage execution.
+4. `backend/nestjs/src/openapi/generate-openapi.ts` helper split with exact
+   `docs/api/openapi.json` output parity and frontend API check.
+5. Store targets E2E split from `admin-web/e2e/store-surfaces.spec.ts` into a
+   focused Store targets spec without dropping user-visible assertions.
+6. Store UI refactor guard foundation. No Store screen redesign in V4.
+
+The authoritative V4 contract-freeze evidence is:
+
+```text
+docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md
+```
 
 ## Completed Or No Longer Active
 

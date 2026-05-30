@@ -18,8 +18,9 @@ calibration proofs, plus the Store Me Plum Glacier redesign line through
 PR #524, the active Store route refactor line through PR #532, the
 Redis/BullMQ Render worker closure through PR #536, the Store checklist flow
 polish through PR #537, the first architecture hardening line through PR #552,
-Architecture Hardening V2 through PR #566, and Architecture Hardening V3
-through PR #569 plus the V3 closeout slice.
+Architecture Hardening V2 through PR #566, Architecture Hardening V3
+through PR #570, and the Architecture Hardening V4 planning baseline through
+PR #571.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -73,6 +74,10 @@ Current maintenance baseline:
   `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
   `docs/plans/project-growth-execution-roadmap-v1.md`, and
   `docs/domains/readiness-ops.md` as reference.
+- Architecture Hardening V4 is the active architecture line. Its execution plan
+  is `docs/plans/architecture-hardening-v4-plan.md`; the PR-1 behavior freeze
+  evidence is
+  `docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md`.
 
 Latest route/scope guard merge:
 
