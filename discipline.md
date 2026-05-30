@@ -137,12 +137,46 @@ PR acmak icin minimum bar:
 - Branch temiz ve `origin/main` uzerinden guncel.
 - Diff beklenen dosyalardan olusuyor.
 - Local gate gecmis.
+- PR oncesi adversarial local review yapilmis.
 - PR tek review hikayesi tasiyor.
 - PR revert edilebilir.
 - PR acikca neyi degistirmedigini soyluyor.
 
 PR cok kucukse ve ayni hikayenin parcasiysa bekletilebilir. PR cok buyukse veya
 birden fazla risk tasiyorsa bolunur.
+
+### PR Oncesi Adversarial Review
+
+GitHub Codex review'u merge oncesi son dis denetimdir; PR acmadan once ayni
+sinif hatalari lokal olarak yakalamak zorunludur. Amac Codex'in yerine gecmek
+degil, basit bypass ve test bosluklarini GitHub round-trip'ine birakmamaktir.
+
+Her PR acilmadan veya review isteyen yeni push'tan once diff'e su gozle bak:
+
+- Degisiklik nasil delinebilir?
+- Allowlist, guard veya validation duplicate, path varyasyonu, type-only import,
+  barrel/re-export ya da ayni signature tekrariyla atlatilabilir mi?
+- Negatif test sadece happy-path'i mi donduruyor, yoksa gercek bypass
+  senaryosunu fail ettiriyor mu?
+- Yeni script/guard mevcut exception'i donduruyor mu, yoksa butun dosyayi veya
+  genis domaini sessizce muaf mi birakiyor?
+- UI PR'inda prototype, role/scope matrix, mobile/desktop durumlari ve eski UI
+  kalintisi taramasi PR oncesi yapildi mi?
+- Docs/process PR'inda yeni kuralin enforcement noktasi veya en azindan
+  verification beklentisi acik mi?
+
+Guard ve mimari script PR'larinda minimum negatif test matrisi:
+
+- allowlist disi yeni ihlal,
+- allowlist icinde duplicate ihlal,
+- type-only import/re-export edge'i,
+- barrel `export * from` edge'i,
+- ayni dosyada mevcut exception korunurken yeni exception ekleme girisimi.
+
+Bu preflight temiz degilse PR acilmaz; PR acildiysa yeni push yapmadan once
+duzeltilir. GitHub Codex yine actionable yorum bulursa normal merge disiplini
+gecerlidir: yorum duzeltilir, ilgili local gate yeniden kosulur ve review tekrar
+beklenir.
 
 ## Merge Disiplini
 
