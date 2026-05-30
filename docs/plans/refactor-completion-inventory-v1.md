@@ -115,8 +115,13 @@ Active V4 sequence:
    and audit persistence into
    `competition-stage-package-plan-review-command.repository.ts`; scoring,
    finalization, and stage execution stayed untouched.
-4. `backend/nestjs/src/openapi/generate-openapi.ts` helper split with exact
-   `docs/api/openapi.json` output parity and frontend API check.
+4. Stopped: `backend/nestjs/src/openapi/generate-openapi.ts` helper split.
+   PR-5 pre-refactor parity failed because `openapi:generate` rewrites
+   `docs/api/openapi.json` from clean `origin/main` before any helper changes.
+   Evidence:
+   `docs/evidence/architecture-hardening-v4-pr5-openapi-generator-blocker-2026-05-31.md`.
+   Do not refactor the generator until the OpenAPI metadata/baseline drift is
+   resolved or a separate `Contract Impact: changed` PR is approved.
 5. Store targets E2E split from `admin-web/e2e/store-surfaces.spec.ts` into a
    focused Store targets spec without dropping user-visible assertions.
 6. Store UI refactor guard foundation. No Store screen redesign in V4.
