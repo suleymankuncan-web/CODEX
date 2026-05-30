@@ -1,34 +1,30 @@
 import {
   BadRequestException,
-  HttpException,
-  HttpStatus,
   Injectable,
   Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { createHash } from "node:crypto";
-import { Worker } from "node:worker_threads";
-import { AppConfigService } from "../../../shared/app-config.service";
-import { DatabaseService } from "../../../shared/database/database.service";
 import { buildCommandResponse } from "../../../shared/http/response-builders";
-import {
-  logStructuredError,
-  logStructuredMessage,
-} from "../../../shared/structured-log";
+import { logStructuredError } from "../../../shared/structured-log";
 import { KpiImportStoreReadRepository } from "../infrastructure/kpi-import-store-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { IntegrationService } from "./integration.service";
+import {
+  PowerBiExportParserService,
+  type ExportRow,
+  type UploadFile,
+} from "./power-bi-export-parser.service";
+import { PowerBiExportNormalizerService } from "./power-bi-export-normalizer.service";
 
-type UploadFile = {
-  originalname: string;
-  buffer: Buffer;
-};
+export {
+  POWER_BI_EXPORT_MAX_FILE_BYTES,
+  POWER_BI_EXPORT_MAX_SHEET_COLUMNS,
+  POWER_BI_EXPORT_MAX_SHEET_ROWS,
+  POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
+  isSupportedPowerBiExportFileName,
+} from "./power-bi-export-parser.service";
 
-type ExportRow = Record<string, unknown>;
-const PARSE_SLOT_CLEANUP_PROMISE = Symbol("parseSlotCleanupPromise");
-type ParseSlotCleanupCarrier = {
-  [PARSE_SLOT_CLEANUP_PROMISE]?: Promise<void>;
-};
 type PeriodType = "daily" | "weekly" | "monthly" | "custom";
 
 type PeriodBounds = {
@@ -83,92 +79,16 @@ type KpiImportStoreScope = {
   externalRefKeys: Set<string>;
 };
 
-export const POWER_BI_EXPORT_MAX_FILE_BYTES = 8 * 1024 * 1024;
-export const POWER_BI_EXPORT_MAX_SHEET_ROWS = 20_000;
-export const POWER_BI_EXPORT_MAX_SHEET_COLUMNS = 80;
-export const POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS = 5;
-
-const POWER_BI_EXPORT_ALLOWED_FILE_EXTENSIONS = [".xlsx", ".xls", ".csv"];
-const POWER_BI_EXPORT_PARSE_WORKER_SCRIPT = `
-const { parentPort, workerData } = require("node:worker_threads");
-const XLSX = require("@e965/xlsx");
-
-function postFailure(message) {
-  parentPort.postMessage({ ok: false, message });
-}
-
-function run() {
-  try {
-    const fileName = workerData.fileName || "unknown-file";
-    const workbook = XLSX.read(Buffer.from(workerData.buffer), { type: "buffer" });
-    const firstSheetName = workbook.SheetNames[0];
-
-    if (!firstSheetName) {
-      parentPort.postMessage({ ok: true, rows: [] });
-      return;
-    }
-
-    const sheet = workbook.Sheets[firstSheetName];
-    const rangeRef = sheet["!ref"];
-
-    if (rangeRef) {
-      let range;
-      try {
-        range = XLSX.utils.decode_range(rangeRef);
-      } catch {
-        postFailure("Power BI export calisma sayfasi okunamadi: " + fileName);
-        return;
-      }
-
-      const rowCount = range.e.r - range.s.r + 1;
-      const columnCount = range.e.c - range.s.c + 1;
-
-      if (rowCount > workerData.maxRows) {
-        postFailure("Power BI export dosyasi en fazla " + workerData.maxRows + " satir olabilir");
-        return;
-      }
-
-      if (columnCount > workerData.maxColumns) {
-        postFailure("Power BI export dosyasi en fazla " + workerData.maxColumns + " kolon olabilir");
-        return;
-      }
-    }
-
-    const rows = XLSX.utils.sheet_to_json(sheet, {
-      raw: true,
-      defval: "",
-    });
-    parentPort.postMessage({ ok: true, rows });
-  } catch {
-    postFailure("Power BI export calisma sayfasi okunamadi: " + (workerData.fileName || "unknown-file"));
-  }
-}
-
-run();
-`;
-
-type ParseWorkerMessage =
-  | { ok: true; rows: ExportRow[] }
-  | { ok: false; message: string };
-
-export function isSupportedPowerBiExportFileName(fileName: string) {
-  const normalized = fileName.trim().toLowerCase();
-  return POWER_BI_EXPORT_ALLOWED_FILE_EXTENSIONS.some((extension) =>
-    normalized.endsWith(extension),
-  );
-}
-
 @Injectable()
 export class PowerBiExportUploadService {
   private readonly logger = new Logger(PowerBiExportUploadService.name);
-  private activeParseSlots = 0;
 
   constructor(
-    _databaseService: DatabaseService,
+    private readonly powerBiExportParserService: PowerBiExportParserService,
     private readonly kpiImportStoreReadRepository: KpiImportStoreReadRepository,
     private readonly integrationSourceRepository: IntegrationSourceRepository,
     private readonly integrationService: IntegrationService,
-    private readonly appConfigService: AppConfigService,
+    private readonly powerBiExportNormalizerService: PowerBiExportNormalizerService,
   ) {}
 
   async upload(input: {
@@ -207,7 +127,8 @@ export class PowerBiExportUploadService {
       const periodBounds = this.resolvePeriodBounds(input);
       const sourceCapturedAt = new Date().toISOString();
 
-      const { personnelRows, storeRows } = await this.readUploadedRows(input);
+      const { personnelRows, storeRows } =
+        await this.powerBiExportParserService.readUploadedRows(input);
       const scopedStoreRefs = await this.kpiImportStoreReadRepository.listKpiImportStoreExternalRefs({
         actorCompanyIds: input.actorCompanyIds ?? [],
         integrationSourceId: source.integration_source_id,
@@ -303,275 +224,6 @@ export class PowerBiExportUploadService {
     }
   }
 
-  private async readUploadedRows(input: {
-    sourceCode: string;
-    personnelFile?: UploadFile | null;
-    storeFile?: UploadFile | null;
-  }): Promise<{ personnelRows: ExportRow[]; storeRows: ExportRow[] }> {
-    return this.withParseSlot(async (signal) => {
-      const personnelRows = input.personnelFile
-        ? await this.readSheetRows(input.personnelFile, {
-            fileRole: "personnel",
-            sourceCode: input.sourceCode,
-          }, signal)
-        : [];
-      const storeRows = input.storeFile
-        ? await this.readSheetRows(input.storeFile, {
-            fileRole: "store",
-            sourceCode: input.sourceCode,
-          }, signal)
-        : [];
-
-      return { personnelRows, storeRows };
-    });
-  }
-
-  private async withParseSlot<T>(
-    operation: (signal: AbortSignal) => Promise<T>,
-  ): Promise<T> {
-    const maxConcurrency = this.appConfigService.uploadParseMaxConcurrency;
-
-    if (this.activeParseSlots >= maxConcurrency) {
-      throw this.buildRetryableParseException(
-        "Power BI export isleme kapasitesi dolu; lutfen kisa sure sonra tekrar deneyin",
-      );
-    }
-
-    this.activeParseSlots += 1;
-    let releaseSlotImmediately = true;
-    try {
-      return await this.withParseTimeout(operation);
-    } catch (error) {
-      const cleanupPromise = this.getParseSlotCleanupPromise(error);
-      if (cleanupPromise) {
-        releaseSlotImmediately = false;
-        void cleanupPromise.finally(() => {
-          this.releaseParseSlot();
-        });
-      }
-      throw error;
-    } finally {
-      if (releaseSlotImmediately) {
-        this.releaseParseSlot();
-      }
-    }
-  }
-
-  private async withParseTimeout<T>(
-    operation: (signal: AbortSignal) => Promise<T>,
-  ): Promise<T> {
-    const timeoutMs = this.appConfigService.uploadParseTimeoutMs;
-    const abortController = new AbortController();
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    let settled = false;
-
-    try {
-      return await new Promise<T>((resolve, reject) => {
-        const operationPromise = Promise.resolve().then(() =>
-          operation(abortController.signal),
-        );
-
-        timeout = setTimeout(() => {
-          if (settled) {
-            return;
-          }
-
-          settled = true;
-          abortController.abort();
-          const timeoutError = this.buildRetryableParseException(
-            "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
-          );
-          reject(
-            this.withParseSlotCleanup(
-              timeoutError,
-              operationPromise.then(
-                () => undefined,
-                () => undefined,
-              ),
-            ),
-          );
-        }, timeoutMs);
-
-        operationPromise.then(
-          (result) => {
-            if (settled) {
-              return;
-            }
-
-            settled = true;
-            resolve(result);
-          },
-          (error) => {
-            if (settled) {
-              return;
-            }
-
-            settled = true;
-            reject(error);
-          },
-        );
-      });
-    } finally {
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-    }
-  }
-
-  private buildRetryableParseException(message: string): HttpException {
-    return new HttpException(
-      {
-        message,
-        retryAfterSeconds: POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
-      },
-      HttpStatus.SERVICE_UNAVAILABLE,
-    );
-  }
-
-  private releaseParseSlot(): void {
-    this.activeParseSlots = Math.max(0, this.activeParseSlots - 1);
-  }
-
-  private withParseSlotCleanup(
-    error: HttpException,
-    cleanupPromise: Promise<void>,
-  ): HttpException {
-    Object.defineProperty(error, PARSE_SLOT_CLEANUP_PROMISE, {
-      enumerable: false,
-      value: cleanupPromise,
-    });
-    return error;
-  }
-
-  private getParseSlotCleanupPromise(error: unknown): Promise<void> | undefined {
-    if (typeof error !== "object" || error === null) {
-      return undefined;
-    }
-
-    return (error as ParseSlotCleanupCarrier)[PARSE_SLOT_CLEANUP_PROMISE];
-  }
-
-  private async readSheetRows(
-    file: UploadFile,
-    context: { fileRole: "personnel" | "store"; sourceCode: string },
-    signal: AbortSignal,
-  ): Promise<ExportRow[]> {
-    const startedAt = Date.now();
-    const rows = await this.parseSheetRows(file, signal);
-
-    logStructuredMessage(this.logger, "power_bi_export_upload.parse.completed", {
-      fileRole: context.fileRole,
-      fileType: this.safeFileExtension(file.originalname),
-      fileSizeBytes: file.buffer.length,
-      parseDurationMs: Date.now() - startedAt,
-      rowCount: rows.length,
-      sourceCode: context.sourceCode,
-    });
-
-    return rows;
-  }
-
-  private parseSheetRows(file: UploadFile, signal: AbortSignal): Promise<ExportRow[]> {
-    if (!file.buffer || file.buffer.length === 0) {
-      throw new BadRequestException(
-        `Dosya okunamadi: ${file.originalname || "unknown-file"}`,
-      );
-    }
-
-    if (file.buffer.length > POWER_BI_EXPORT_MAX_FILE_BYTES) {
-      throw new BadRequestException("Power BI export dosyasi en fazla 8 MB olabilir");
-    }
-
-    if (!isSupportedPowerBiExportFileName(file.originalname || "")) {
-      throw new BadRequestException("Power BI export dosyasi xlsx, xls veya csv olmali");
-    }
-
-    if (signal.aborted) {
-      return Promise.reject(
-        this.buildRetryableParseException(
-          "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
-        ),
-      );
-    }
-
-    return new Promise<ExportRow[]>((resolve, reject) => {
-      let settled = false;
-      const worker = new Worker(POWER_BI_EXPORT_PARSE_WORKER_SCRIPT, {
-        eval: true,
-        workerData: {
-          buffer: file.buffer,
-          fileName: file.originalname || "unknown-file",
-          maxColumns: POWER_BI_EXPORT_MAX_SHEET_COLUMNS,
-          maxRows: POWER_BI_EXPORT_MAX_SHEET_ROWS,
-        },
-      });
-
-      const settle = (callback: () => void) => {
-        if (settled) {
-          return;
-        }
-
-        settled = true;
-        signal.removeEventListener("abort", abortHandler);
-        callback();
-      };
-
-      const abortHandler = () => {
-        if (settled) {
-          return;
-        }
-
-        settled = true;
-        signal.removeEventListener("abort", abortHandler);
-        const timeoutError = this.buildRetryableParseException(
-          "Power BI export dosyasi isleme suresi asildi; lutfen daha kucuk dosya yukleyin veya tekrar deneyin",
-        );
-        void worker.terminate().then(
-          () => reject(timeoutError),
-          () => reject(timeoutError),
-        );
-      };
-
-      signal.addEventListener("abort", abortHandler, { once: true });
-
-      worker.once("message", (message: ParseWorkerMessage) => {
-        settle(() => {
-          if (message.ok) {
-            resolve(message.rows);
-            return;
-          }
-
-          reject(new BadRequestException(message.message));
-        });
-      });
-
-      worker.once("error", (error) => {
-        settle(() => reject(error));
-      });
-
-      worker.once("exit", (code) => {
-        if (code === 0 || settled) {
-          return;
-        }
-
-        settle(() =>
-          reject(
-            new BadRequestException(
-              `Power BI export calisma sayfasi okunamadi: ${
-                file.originalname || "unknown-file"
-              }`,
-            ),
-          ),
-        );
-      });
-    });
-  }
-
-  private safeFileExtension(fileName: string): string {
-    const match = /\.[a-z0-9]+$/i.exec(fileName.trim());
-    return match ? match[0].slice(1).toLowerCase() : "unknown";
-  }
-
   private mapPersonnelRows(
     rows: ExportRow[],
     period: PeriodBounds,
@@ -589,7 +241,7 @@ export class PowerBiExportUploadService {
         !personName ||
         !storeName ||
         this.isSummaryText(personName) ||
-        this.normalizeKey(personName) === "estore" ||
+        this.powerBiExportNormalizerService.normalizeKey(personName) === "estore" ||
         !this.isStoreInKpiImportScope(storeName, storeScope) ||
         grossSales === null ||
         grossSales <= 0
@@ -647,7 +299,7 @@ export class PowerBiExportUploadService {
         this.buildEmployeeMetricRow(
           "TICKET_COUNT",
           aggregate.derivedTicketCount > 0
-            ? this.roundMetric(aggregate.derivedTicketCount)
+            ? this.powerBiExportNormalizerService.roundMetric(aggregate.derivedTicketCount)
             : null,
           aggregate.personName,
           aggregate.primaryStoreName,
@@ -657,7 +309,7 @@ export class PowerBiExportUploadService {
         ),
         this.buildEmployeeMetricRow(
           "ATV",
-          this.divideMetric(aggregate.grossSales, aggregate.derivedTicketCount),
+          this.powerBiExportNormalizerService.divideMetric(aggregate.grossSales, aggregate.derivedTicketCount),
           aggregate.personName,
           aggregate.primaryStoreName,
           period,
@@ -666,7 +318,7 @@ export class PowerBiExportUploadService {
         ),
         this.buildEmployeeMetricRow(
           "UPT",
-          this.divideMetric(aggregate.itemCount, aggregate.derivedTicketCount),
+          this.powerBiExportNormalizerService.divideMetric(aggregate.itemCount, aggregate.derivedTicketCount),
           aggregate.personName,
           aggregate.primaryStoreName,
           period,
@@ -697,7 +349,7 @@ export class PowerBiExportUploadService {
         continue;
       }
 
-      const aggregateKey = this.normalizeKey(storeName);
+      const aggregateKey = this.powerBiExportNormalizerService.normalizeKey(storeName);
       const aggregate =
         aggregates.get(aggregateKey) ??
         {
@@ -721,15 +373,15 @@ export class PowerBiExportUploadService {
 
     return [...aggregates.values()].flatMap((aggregate) => {
       const sourceRow = this.buildStoreSourceRow(aggregate);
-      const atv = this.divideMetric(aggregate.netSales, aggregate.ticketCount);
-      const upt = this.divideMetric(aggregate.itemCount, aggregate.ticketCount);
-      const cr = this.divideMetric(aggregate.ticketCount, aggregate.footfall);
+      const atv = this.powerBiExportNormalizerService.divideMetric(aggregate.netSales, aggregate.ticketCount);
+      const upt = this.powerBiExportNormalizerService.divideMetric(aggregate.itemCount, aggregate.ticketCount);
+      const cr = this.powerBiExportNormalizerService.divideMetric(aggregate.ticketCount, aggregate.footfall);
 
       return [
         this.buildStoreMetricRow(
           "TARGET_ACHIEVEMENT",
-          aggregate.netSales > 0 ? this.roundMetric(aggregate.netSales) : null,
-          aggregate.targetValue > 0 ? this.roundMetric(aggregate.targetValue) : null,
+          aggregate.netSales > 0 ? this.powerBiExportNormalizerService.roundMetric(aggregate.netSales) : null,
+          aggregate.targetValue > 0 ? this.powerBiExportNormalizerService.roundMetric(aggregate.targetValue) : null,
           aggregate.storeName,
           period,
           sourceCapturedAt,
@@ -737,7 +389,7 @@ export class PowerBiExportUploadService {
         ),
         this.buildStoreMetricRow(
           "NET_SALES",
-          aggregate.netSales > 0 ? this.roundMetric(aggregate.netSales) : null,
+          aggregate.netSales > 0 ? this.powerBiExportNormalizerService.roundMetric(aggregate.netSales) : null,
           null,
           aggregate.storeName,
           period,
@@ -746,7 +398,7 @@ export class PowerBiExportUploadService {
         ),
         this.buildStoreMetricRow(
           "ITEM_COUNT",
-          aggregate.itemCount > 0 ? this.roundMetric(aggregate.itemCount) : null,
+          aggregate.itemCount > 0 ? this.powerBiExportNormalizerService.roundMetric(aggregate.itemCount) : null,
           null,
           aggregate.storeName,
           period,
@@ -755,7 +407,7 @@ export class PowerBiExportUploadService {
         ),
         this.buildStoreMetricRow(
           "TICKET_COUNT",
-          aggregate.ticketCount > 0 ? this.roundMetric(aggregate.ticketCount) : null,
+          aggregate.ticketCount > 0 ? this.powerBiExportNormalizerService.roundMetric(aggregate.ticketCount) : null,
           null,
           aggregate.storeName,
           period,
@@ -764,7 +416,7 @@ export class PowerBiExportUploadService {
         ),
         this.buildStoreMetricRow(
           "FF",
-          aggregate.footfall > 0 ? this.roundMetric(aggregate.footfall) : null,
+          aggregate.footfall > 0 ? this.powerBiExportNormalizerService.roundMetric(aggregate.footfall) : null,
           null,
           aggregate.storeName,
           period,
@@ -866,31 +518,31 @@ export class PowerBiExportUploadService {
       personName: aggregate.personName,
       primaryStoreName: aggregate.primaryStoreName,
       positiveRowCount: aggregate.rows.length,
-      personnelGrossSales: this.roundMetric(aggregate.grossSales),
-      personnelPositiveItemCount: this.roundMetric(aggregate.itemCount),
-      personnelDerivedTicketCount: this.roundMetric(aggregate.derivedTicketCount),
+      personnelGrossSales: this.powerBiExportNormalizerService.roundMetric(aggregate.grossSales),
+      personnelPositiveItemCount: this.powerBiExportNormalizerService.roundMetric(aggregate.itemCount),
+      personnelDerivedTicketCount: this.powerBiExportNormalizerService.roundMetric(aggregate.derivedTicketCount),
       denominatorConflictCount: aggregate.denominatorConflictCount,
       sourceRows: aggregate.rows,
     };
   }
 
   private buildStoreSourceRow(aggregate: StoreAggregate): Record<string, unknown> {
-    const recomputedCr = this.divideMetric(aggregate.ticketCount, aggregate.footfall);
+    const recomputedCr = this.powerBiExportNormalizerService.divideMetric(aggregate.ticketCount, aggregate.footfall);
 
     return {
       sourceKind: "store_net_sales",
       storeName: aggregate.storeName,
       sourceRowCount: aggregate.rows.length,
-      storeNetSales: this.roundMetric(aggregate.netSales),
-      storeTargetValue: this.roundMetric(aggregate.targetValue),
-      storeItemCount: this.roundMetric(aggregate.itemCount),
-      storeTicketCount: this.roundMetric(aggregate.ticketCount),
-      storeFootfall: this.roundMetric(aggregate.footfall),
-      recomputedAtv: this.divideMetric(aggregate.netSales, aggregate.ticketCount),
-      recomputedUpt: this.divideMetric(aggregate.itemCount, aggregate.ticketCount),
+      storeNetSales: this.powerBiExportNormalizerService.roundMetric(aggregate.netSales),
+      storeTargetValue: this.powerBiExportNormalizerService.roundMetric(aggregate.targetValue),
+      storeItemCount: this.powerBiExportNormalizerService.roundMetric(aggregate.itemCount),
+      storeTicketCount: this.powerBiExportNormalizerService.roundMetric(aggregate.ticketCount),
+      storeFootfall: this.powerBiExportNormalizerService.roundMetric(aggregate.footfall),
+      recomputedAtv: this.powerBiExportNormalizerService.divideMetric(aggregate.netSales, aggregate.ticketCount),
+      recomputedUpt: this.powerBiExportNormalizerService.divideMetric(aggregate.itemCount, aggregate.ticketCount),
       recomputedCr,
       recomputedCrDisplayPercent:
-        recomputedCr === null ? null : this.roundMetric(recomputedCr * 100),
+        recomputedCr === null ? null : this.powerBiExportNormalizerService.roundMetric(recomputedCr * 100),
       sourceRows: aggregate.rows,
     };
   }
@@ -954,7 +606,7 @@ export class PowerBiExportUploadService {
         Boolean(personName) &&
         Boolean(storeName) &&
         !this.isSummaryText(personName) &&
-        this.normalizeKey(personName ?? "") !== "estore" &&
+        this.powerBiExportNormalizerService.normalizeKey(personName ?? "") !== "estore" &&
         this.isStoreInKpiImportScope(storeName ?? "", storeScope) &&
         salesAmount !== null &&
         salesAmount > 0
@@ -996,7 +648,7 @@ export class PowerBiExportUploadService {
         Boolean(personName) &&
         Boolean(storeName) &&
         !this.isSummaryText(personName) &&
-        this.normalizeKey(personName ?? "") !== "estore" &&
+        this.powerBiExportNormalizerService.normalizeKey(personName ?? "") !== "estore" &&
         salesAmount !== null &&
         salesAmount > 0 &&
         !this.isStoreInKpiImportScope(storeName ?? "", storeScope)
@@ -1033,7 +685,7 @@ export class PowerBiExportUploadService {
         continue;
       }
 
-      const key = this.normalizeKey(storeName);
+      const key = this.powerBiExportNormalizerService.normalizeKey(storeName);
       const existing = storeNetSalesByKey.get(key) ?? { storeName, storeNetSales: 0 };
       existing.storeNetSales += this.getStoreNetSales(row) ?? 0;
       storeNetSalesByKey.set(key, existing);
@@ -1054,7 +706,7 @@ export class PowerBiExportUploadService {
         continue;
       }
 
-      const key = this.normalizeKey(storeName);
+      const key = this.powerBiExportNormalizerService.normalizeKey(storeName);
       const movement =
         personnelMovementByKey.get(key) ??
         {
@@ -1063,7 +715,7 @@ export class PowerBiExportUploadService {
           personnelNegativeMovements: 0,
         };
 
-      if (salesAmount > 0 && this.normalizeKey(personName) !== "estore") {
+      if (salesAmount > 0 && this.powerBiExportNormalizerService.normalizeKey(personName) !== "estore") {
         movement.personnelPositiveSales += salesAmount;
       }
       if (salesAmount < 0) {
@@ -1078,15 +730,15 @@ export class PowerBiExportUploadService {
         return [];
       }
 
-      const personnelPositiveSales = this.roundMetric(movement.personnelPositiveSales);
-      const personnelNegativeMovements = this.roundMetric(
+      const personnelPositiveSales = this.powerBiExportNormalizerService.roundMetric(movement.personnelPositiveSales);
+      const personnelNegativeMovements = this.powerBiExportNormalizerService.roundMetric(
         movement.personnelNegativeMovements,
       );
-      const personnelNetMovement = this.roundMetric(
+      const personnelNetMovement = this.powerBiExportNormalizerService.roundMetric(
         personnelPositiveSales + personnelNegativeMovements,
       );
-      const storeNetSales = this.roundMetric(store.storeNetSales);
-      const reconciliationDelta = this.roundMetric(storeNetSales - personnelNetMovement);
+      const storeNetSales = this.powerBiExportNormalizerService.roundMetric(store.storeNetSales);
+      const reconciliationDelta = this.powerBiExportNormalizerService.roundMetric(storeNetSales - personnelNetMovement);
       const status = Math.abs(reconciliationDelta) <= 0.01 ? "balanced" : "warning";
 
       return [
@@ -1111,46 +763,46 @@ export class PowerBiExportUploadService {
   }
 
   private getPersonName(row: ExportRow) {
-    return this.getText(row, ["Adi", "Adı"]);
+    return this.powerBiExportNormalizerService.getText(row, ["Adi", "Adı"]);
   }
 
   private getStoreName(row: ExportRow) {
-    return this.getText(row, ["MagazaAdi", "Magaza Adi", "Mağaza Adı"]);
+    return this.powerBiExportNormalizerService.getText(row, ["MagazaAdi", "Magaza Adi", "Mağaza Adı"]);
   }
 
   private getStoreNetSales(row: ExportRow) {
-    return this.getNumber(row, ["Ciro"]);
+    return this.powerBiExportNormalizerService.getNumber(row, ["Ciro"]);
   }
 
   private getStoreTarget(row: ExportRow) {
-    return this.getNumber(row, ["Hedef"]);
+    return this.powerBiExportNormalizerService.getNumber(row, ["Hedef"]);
   }
 
   private getStoreItemCount(row: ExportRow) {
-    return this.getNumber(row, ["SatisAdedi", "Satis Adedi", "Satış Adedi"]);
+    return this.powerBiExportNormalizerService.getNumber(row, ["SatisAdedi", "Satis Adedi", "Satış Adedi"]);
   }
 
   private getStoreTicketCount(row: ExportRow) {
-    return this.getNumber(row, ["FaturaSayisi", "Fatura Sayisi", "Fatura Sayısı"]);
+    return this.powerBiExportNormalizerService.getNumber(row, ["FaturaSayisi", "Fatura Sayisi", "Fatura Sayısı"]);
   }
 
   private getStoreFootfall(row: ExportRow) {
-    return this.getNumber(row, ["FF", "Footfall"]);
+    return this.powerBiExportNormalizerService.getNumber(row, ["FF", "Footfall"]);
   }
 
   private getPersonnelSalesAmount(row: ExportRow) {
-    return this.getNumber(row, ["SatisTutari", "Satış Tutarı"]);
+    return this.powerBiExportNormalizerService.getNumber(row, ["SatisTutari", "Satış Tutarı"]);
   }
 
   private getPersonnelItemCount(row: ExportRow) {
-    return this.getNumber(row, ["PSatisAdeti", "P. Satis Adeti", "P. Satış Adeti"]);
+    return this.powerBiExportNormalizerService.getNumber(row, ["PSatisAdeti", "P. Satis Adeti", "P. Satış Adeti"]);
   }
 
   private derivePersonnelTicketCount(row: ExportRow) {
     const salesAmount = this.getPersonnelSalesAmount(row);
     const itemCount = this.getPersonnelItemCount(row);
-    const reportedAtv = this.getNumber(row, ["PATV", "P.ATV"]);
-    const reportedUpt = this.getNumber(row, ["PUPT", "P.UPT"]);
+    const reportedAtv = this.powerBiExportNormalizerService.getNumber(row, ["PATV", "P.ATV"]);
+    const reportedUpt = this.powerBiExportNormalizerService.getNumber(row, ["PUPT", "P.UPT"]);
 
     const fromAtv =
       salesAmount !== null && reportedAtv !== null && reportedAtv > 0
@@ -1171,7 +823,7 @@ export class PowerBiExportUploadService {
 
     const ticketCount = fromAtv ?? fromUpt;
     return {
-      ticketCount: ticketCount === null ? null : this.roundMetric(ticketCount),
+      ticketCount: ticketCount === null ? null : this.powerBiExportNormalizerService.roundMetric(ticketCount),
       hasConflict: false,
     };
   }
@@ -1185,7 +837,7 @@ export class PowerBiExportUploadService {
       return false;
     }
 
-    const normalized = this.normalizeKey(value);
+    const normalized = this.powerBiExportNormalizerService.normalizeKey(value);
     return normalized === "total" || normalized.startsWith("uygulananfiltreler");
   }
 
@@ -1197,71 +849,13 @@ export class PowerBiExportUploadService {
         refs
           .map((item) => item.external_ref)
           .filter((value): value is string => Boolean(value?.trim()))
-          .map((value) => this.normalizeKey(value)),
+          .map((value) => this.powerBiExportNormalizerService.normalizeKey(value)),
       ),
     };
   }
 
   private isStoreInKpiImportScope(storeName: string, storeScope: KpiImportStoreScope) {
-    return storeScope.externalRefKeys.has(this.normalizeKey(storeName));
-  }
-
-  private getText(row: ExportRow, aliases: string[]) {
-    const value = this.getValue(row, aliases);
-    const text = String(value ?? "").trim();
-    return text.length > 0 ? text : null;
-  }
-
-  private getNumber(row: ExportRow, aliases: string[]) {
-    const value = this.getValue(row, aliases);
-    if (value === null || value === undefined || String(value).trim() === "") {
-      return null;
-    }
-
-    if (typeof value === "number") {
-      return Number.isFinite(value) ? value : null;
-    }
-
-    const normalized = String(value)
-      .replace(/\s+/g, "")
-      .replace(/\.(?=\d{3}(?:\D|$))/g, "")
-      .replace(",", ".");
-    const parsed = Number(normalized);
-    return Number.isFinite(parsed) ? parsed : null;
-  }
-
-  private roundMetric(value: number) {
-    return Number(value.toFixed(4));
-  }
-
-  private divideMetric(numerator: number, denominator: number) {
-    if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
-      return null;
-    }
-
-    return this.roundMetric(numerator / denominator);
-  }
-
-  private getValue(row: ExportRow, aliases: string[]) {
-    const aliasSet = new Set(aliases.map((alias) => this.normalizeKey(alias)));
-
-    for (const [key, value] of Object.entries(row)) {
-      if (aliasSet.has(this.normalizeKey(key))) {
-        return value;
-      }
-    }
-
-    return null;
-  }
-
-  private normalizeKey(value: string) {
-    return value
-      .replace(/ı/g, "i")
-      .replace(/İ/g, "I")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .toLowerCase();
+    return storeScope.externalRefKeys.has(this.powerBiExportNormalizerService.normalizeKey(storeName));
   }
 
   private toDateOnly(value: string, fieldName: string) {

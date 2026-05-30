@@ -6,9 +6,14 @@ import {
   POWER_BI_EXPORT_PARSE_RETRY_AFTER_SECONDS,
   PowerBiExportUploadService,
 } from "./power-bi-export-upload.service";
+import { PowerBiExportParserService } from "./power-bi-export-parser.service";
+import { PowerBiExportNormalizerService } from "./power-bi-export-normalizer.service";
 
-type PowerBiExportUploadServiceTestHooks = {
-  readSheetRows: jest.Mock<Promise<Array<Record<string, unknown>>>, []>;
+type PowerBiExportParserServiceTestHooks = {
+  readSheetRows: jest.Mock<
+    Promise<Array<Record<string, unknown>>>,
+    [unknown, unknown, AbortSignal]
+  >;
 };
 
 function createWorkbookBuffer(rows: Array<Record<string, unknown>>): Buffer {
@@ -21,23 +26,6 @@ function createWorkbookBuffer(rows: Array<Record<string, unknown>>): Buffer {
 function createService(
   config: { uploadParseMaxConcurrency?: number; uploadParseTimeoutMs?: number } = {},
 ) {
-  const databaseService = {
-    query: jest.fn(async (sql: string) => {
-      if (sql.includes("FROM ops.company c")) {
-        return {
-          rowCount: 1,
-          rows: [
-            {
-              company_id: "00000000-0000-0000-0000-000000000001",
-              region_id: "00000000-0000-0000-0000-000000000002",
-            },
-          ],
-        };
-      }
-
-      return { rowCount: 0, rows: [] };
-    }),
-  };
   const kpiImportStoreReadRepository = {
     listKpiImportStoreExternalRefs: jest.fn().mockResolvedValue([
       { external_ref: "Kadikoy" },
@@ -62,17 +50,19 @@ function createService(
     uploadParseMaxConcurrency: config.uploadParseMaxConcurrency ?? 1,
     uploadParseTimeoutMs: config.uploadParseTimeoutMs ?? 15000,
   };
+  const parserService = new PowerBiExportParserService(appConfigService as never);
+  const normalizerService = new PowerBiExportNormalizerService();
   const service = new PowerBiExportUploadService(
-    databaseService as never,
+    parserService,
     kpiImportStoreReadRepository as never,
     integrationSourceRepository as never,
     integrationService as never,
-    appConfigService as never,
+    normalizerService,
   );
 
   return {
     appConfigService,
-    databaseService,
+    parserService,
     kpiImportStoreReadRepository,
     integrationSourceRepository,
     integrationService,
@@ -98,15 +88,31 @@ describe("PowerBiExportUploadService", () => {
     loggerErrorSpy.mockRestore();
   });
 
+  it("normalizes Turkish dotted and dotless characters for scope matching", () => {
+    const normalizerService = new PowerBiExportNormalizerService();
+
+    expect(normalizerService.normalizeKey("Diyarbakır İstinye")).toBe(
+      "diyarbakiristinye",
+    );
+    expect(
+      normalizerService.getText(
+        {
+          "Mağaza Adı": "Diyarbakır İstinye",
+        },
+        ["Magaza Adi"],
+      ),
+    ).toBe("Diyarbakır İstinye");
+  });
+
   it("rejects concurrent Power BI parses with a retryable 503", async () => {
-    const { service } = createService({
+    const { parserService, service } = createService({
       uploadParseMaxConcurrency: 1,
       uploadParseTimeoutMs: 1000,
     });
     let releaseParse: (() => void) | undefined;
     const parseStarted = new Promise<void>((resolve) => {
-      (service as unknown as PowerBiExportUploadServiceTestHooks).readSheetRows = jest.fn(
-        async () => {
+      (parserService as unknown as PowerBiExportParserServiceTestHooks).readSheetRows = jest.fn(
+        async (_file, _context, _signal) => {
           resolve();
           await new Promise<void>((release) => {
             releaseParse = release;
@@ -155,12 +161,12 @@ describe("PowerBiExportUploadService", () => {
   });
 
   it("times out slow Power BI parsing with a retryable 503", async () => {
-    const { service } = createService({
+    const { parserService, service } = createService({
       uploadParseMaxConcurrency: 1,
       uploadParseTimeoutMs: 5,
     });
-    (service as unknown as PowerBiExportUploadServiceTestHooks).readSheetRows = jest.fn(
-      async () =>
+    (parserService as unknown as PowerBiExportParserServiceTestHooks).readSheetRows = jest.fn(
+      async (_file, _context, _signal) =>
         new Promise<Array<Record<string, unknown>>>((resolve) => {
           setTimeout(() => resolve([{ MagazaAdi: "Kadikoy", Ciro: 150000 }]), 30);
         }),
@@ -191,14 +197,14 @@ describe("PowerBiExportUploadService", () => {
   });
 
   it("keeps the parse slot occupied until timed-out parsing cleanup finishes", async () => {
-    const { service } = createService({
+    const { parserService, service } = createService({
       uploadParseMaxConcurrency: 1,
       uploadParseTimeoutMs: 5,
     });
     let releaseCleanup: (() => void) | undefined;
     const parseStarted = new Promise<void>((resolve) => {
-      (service as unknown as PowerBiExportUploadServiceTestHooks).readSheetRows = jest.fn(
-        async () => {
+      (parserService as unknown as PowerBiExportParserServiceTestHooks).readSheetRows = jest.fn(
+        async (_file, _context, _signal) => {
           resolve();
           await new Promise<void>((release) => {
             releaseCleanup = release;

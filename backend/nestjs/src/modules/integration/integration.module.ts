@@ -30,6 +30,8 @@ import { ExternalIdMappingService } from "./application/external-id-mapping.serv
 import { KpiImportNormalizationService } from "./application/kpi-import-normalization.service";
 import { IntegrationSchedulerService } from "./application/integration-scheduler.service";
 import { PowerBiExportUploadService } from "./application/power-bi-export-upload.service";
+import { PowerBiExportParserService } from "./application/power-bi-export-parser.service";
+import { PowerBiExportNormalizerService } from "./application/power-bi-export-normalizer.service";
 import { MasterDataBootstrapService } from "./application/master-data-bootstrap.service";
 import { MasterDataBootstrapRepository } from "./infrastructure/master-data-bootstrap.repository";
 
@@ -66,6 +68,8 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     KpiImportNormalizationService,
     IntegrationSchedulerService,
     PowerBiExportUploadService,
+    PowerBiExportParserService,
+    PowerBiExportNormalizerService,
     MasterDataBootstrapService,
     MasterDataBootstrapRepository,
   ],
@@ -85,6 +89,8 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     KpiImportNormalizationService,
     IntegrationSchedulerService,
     PowerBiExportUploadService,
+    PowerBiExportParserService,
+    PowerBiExportNormalizerService,
     MasterDataBootstrapService,
     MasterDataBootstrapRepository,
   ],
