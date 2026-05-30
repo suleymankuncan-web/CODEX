@@ -732,6 +732,11 @@ Latest technical assessment decision:
   evidence closeout. PR #1 in that line starts with the root `CONTRIBUTING.md`
   contract and its script guard; it is docs/script-only and changes no runtime
   behavior.
+- PR #2 in that line adds `scripts/backend-architecture-boundary-guard.test.mjs`
+  as a script-only backend guard. It freezes the current direct
+  `DatabaseService` and broad repository-cast exceptions, blocks new
+  application-to-web and web-to-infrastructure leaks, and changes no runtime
+  API, DB, auth, scoring, ranking, checklist, import, or queue behavior.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript
