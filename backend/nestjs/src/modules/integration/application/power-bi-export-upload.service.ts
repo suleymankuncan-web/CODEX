@@ -10,6 +10,7 @@ import { logStructuredError } from "../../../shared/structured-log";
 import { KpiImportStoreReadRepository } from "../infrastructure/kpi-import-store-read.repository";
 import { IntegrationSourceRepository } from "../infrastructure/integration-source.repository";
 import { IntegrationService } from "./integration.service";
+import { buildPowerBiReconciliationSummary } from "./power-bi-reconciliation.builder";
 import {
   PowerBiExportParserService,
   type ExportRow,
@@ -67,12 +68,6 @@ type StoreAggregate = {
   itemCount: number;
   ticketCount: number;
   footfall: number;
-};
-
-type ReconciliationMovement = {
-  storeName: string;
-  personnelPositiveSales: number;
-  personnelNegativeMovements: number;
 };
 
 type KpiImportStoreScope = {
@@ -201,11 +196,12 @@ export class PowerBiExportUploadService {
               storeScope,
             ),
             scopeExcludedStoreRows: this.countScopeExcludedStoreRows(storeRows, storeScope),
-            reconciliation: this.buildReconciliationSummary(
+            reconciliation: buildPowerBiReconciliationSummary({
               storeRows,
               personnelRows,
               storeScope,
-            ),
+              normalizer: this.powerBiExportNormalizerService,
+            }),
             mappingMode: "strict_external_id_map",
           },
         },
@@ -665,101 +661,6 @@ export class PowerBiExportUploadService {
         !this.isStoreInKpiImportScope(storeName ?? "", storeScope)
       );
     }).length;
-  }
-
-  private buildReconciliationSummary(
-    storeRows: ExportRow[],
-    personnelRows: ExportRow[],
-    storeScope: KpiImportStoreScope,
-  ) {
-    const storeNetSalesByKey = new Map<string, { storeName: string; storeNetSales: number }>();
-    const personnelMovementByKey = new Map<string, ReconciliationMovement>();
-
-    for (const row of storeRows) {
-      const storeName = this.getStoreName(row);
-      if (
-        !storeName ||
-        this.isSummaryText(storeName) ||
-        !this.isStoreInKpiImportScope(storeName, storeScope)
-      ) {
-        continue;
-      }
-
-      const key = this.powerBiExportNormalizerService.normalizeKey(storeName);
-      const existing = storeNetSalesByKey.get(key) ?? { storeName, storeNetSales: 0 };
-      existing.storeNetSales += this.getStoreNetSales(row) ?? 0;
-      storeNetSalesByKey.set(key, existing);
-    }
-
-    for (const row of personnelRows) {
-      const personName = this.getPersonName(row);
-      const storeName = this.getStoreName(row);
-      const salesAmount = this.getPersonnelSalesAmount(row);
-      if (
-        !personName ||
-        !storeName ||
-        this.isSummaryText(personName) ||
-        !this.isStoreInKpiImportScope(storeName, storeScope) ||
-        salesAmount === null ||
-        salesAmount === 0
-      ) {
-        continue;
-      }
-
-      const key = this.powerBiExportNormalizerService.normalizeKey(storeName);
-      const movement =
-        personnelMovementByKey.get(key) ??
-        {
-          storeName,
-          personnelPositiveSales: 0,
-          personnelNegativeMovements: 0,
-        };
-
-      if (salesAmount > 0 && this.powerBiExportNormalizerService.normalizeKey(personName) !== "estore") {
-        movement.personnelPositiveSales += salesAmount;
-      }
-      if (salesAmount < 0) {
-        movement.personnelNegativeMovements += salesAmount;
-      }
-      personnelMovementByKey.set(key, movement);
-    }
-
-    const items = [...storeNetSalesByKey.entries()].flatMap(([key, store]) => {
-      const movement = personnelMovementByKey.get(key);
-      if (!movement) {
-        return [];
-      }
-
-      const personnelPositiveSales = this.powerBiExportNormalizerService.roundMetric(movement.personnelPositiveSales);
-      const personnelNegativeMovements = this.powerBiExportNormalizerService.roundMetric(
-        movement.personnelNegativeMovements,
-      );
-      const personnelNetMovement = this.powerBiExportNormalizerService.roundMetric(
-        personnelPositiveSales + personnelNegativeMovements,
-      );
-      const storeNetSales = this.powerBiExportNormalizerService.roundMetric(store.storeNetSales);
-      const reconciliationDelta = this.powerBiExportNormalizerService.roundMetric(storeNetSales - personnelNetMovement);
-      const status = Math.abs(reconciliationDelta) <= 0.01 ? "balanced" : "warning";
-
-      return [
-        {
-          storeExternalRef: store.storeName,
-          storeNetSales,
-          personnelPositiveSales,
-          personnelNegativeMovements,
-          personnelNetMovement,
-          reconciliationDelta,
-          status,
-        },
-      ];
-    });
-
-    return {
-      comparedStoreCount: items.length,
-      balancedStoreCount: items.filter((item) => item.status === "balanced").length,
-      warningStoreCount: items.filter((item) => item.status === "warning").length,
-      items,
-    };
   }
 
   private getPersonName(row: ExportRow) {
