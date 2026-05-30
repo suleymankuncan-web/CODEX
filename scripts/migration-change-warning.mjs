@@ -60,7 +60,7 @@ function changedFilesFromGitHubEvent() {
     }
 
     fetchGitHubRefs(baseSha, headSha)
-    return parseChangedFiles(git(['diff', '--name-only', `${baseSha}...${headSha}`]))
+    return parseChangedFiles(git(['diff', '--name-only', baseSha, headSha]))
   } catch {
     return []
   }
@@ -73,8 +73,8 @@ function changedFilesFromGit() {
   const candidates = [
     ['diff', '--name-only'],
     ['diff', '--name-only', '--cached'],
-    baseRef ? ['diff', '--name-only', `origin/${baseRef}...HEAD`] : null,
-    ['diff', '--name-only', 'origin/main...HEAD'],
+    baseRef ? ['diff', '--name-only', `origin/${baseRef}`, 'HEAD'] : null,
+    ['diff', '--name-only', 'origin/main', 'HEAD'],
     ['diff', '--name-only', 'HEAD~1..HEAD'],
     ['diff-tree', '--no-commit-id', '--name-only', '-r', 'HEAD'],
   ].filter(Boolean)

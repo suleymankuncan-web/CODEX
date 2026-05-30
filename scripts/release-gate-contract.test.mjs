@@ -124,3 +124,15 @@ test('migration change warning stays quiet for non-migration changes', () => {
   assert.match(result.stdout, /No DB schema or migration-sensitive changes detected/)
   assert.equal(result.stderr, '')
 })
+
+test('migration change warning avoids merge-base-dependent triple-dot diffs', () => {
+  const helper = readText('scripts/migration-change-warning.mjs')
+
+  assert.doesNotMatch(helper, /baseSha\}\.\.\./)
+  assert.doesNotMatch(helper, /origin\/\$\{baseRef\}\.\.\./)
+  assert.doesNotMatch(helper, /origin\/main\.\.\./)
+  assert.match(helper, /git\(\['diff', '--name-only', baseSha, headSha\]\)/)
+  assert.ok(
+    helper.includes("baseRef ? ['diff', '--name-only', `origin/${baseRef}`, 'HEAD'] : null"),
+  )
+})
