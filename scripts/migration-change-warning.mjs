@@ -7,6 +7,7 @@ const migrationSensitivePatterns = [
   /^db\/schema\.sql$/,
   /^db\/migrations\/.+\.sql$/,
   /^backend\/nestjs\/scripts\/run-migrations\.ts$/,
+  /^backend\/nestjs\/src\/shared\/database\/database\.module\.ts$/,
   /^backend\/nestjs\/src\/shared\/database\/migration[^/]*\.ts$/,
   /^backend\/nestjs\/src\/shared\/database\/migrations\.controller\.ts$/,
   /^scripts\/migration-fresh-db-smoke\.mjs$/,

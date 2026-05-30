@@ -100,6 +100,7 @@ test('migration change warning surfaces smoke evidence decision without failing 
       ...process.env,
       HR_AXIS_CHANGED_FILES: [
         'db/migrations/999_example.sql',
+        'backend/nestjs/src/shared/database/database.module.ts',
         'backend/nestjs/src/shared/database/migration.service.ts',
       ].join('\n'),
     },
@@ -108,6 +109,7 @@ test('migration change warning surfaces smoke evidence decision without failing 
   assert.equal(result.status, 0)
   assert.match(result.stderr, /DB schema or migration-sensitive changes detected/)
   assert.match(result.stderr, /db\/migrations\/999_example\.sql/)
+  assert.match(result.stderr, /backend\/nestjs\/src\/shared\/database\/database\.module\.ts/)
   assert.match(result.stderr, /npm\.cmd run smoke:migration:fresh-db/)
   assert.match(result.stderr, /Conditional Go/)
 })

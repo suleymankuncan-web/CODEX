@@ -98,6 +98,7 @@ Migration-sensitive files include:
 - `db/schema.sql`
 - `db/migrations/*.sql`
 - `backend/nestjs/scripts/run-migrations.ts`
+- `backend/nestjs/src/shared/database/database.module.ts`
 - backend migration service/controller files under
   `backend/nestjs/src/shared/database/`
 - `scripts/migration-fresh-db-smoke.mjs`

@@ -114,7 +114,7 @@ gate when the blast radius requires it.
 
 The root release gate prints a migration-change warning when the changed files
 touch `db/schema.sql`, `db/migrations/*.sql`, migration runner code, backend
-migration tracking code, or `scripts/migration-fresh-db-smoke.mjs`.
+database module/migration tracking code, or `scripts/migration-fresh-db-smoke.mjs`.
 
 That warning is not a CI failure and does not make Docker-dependent fresh DB
 smoke mandatory in the root gate. It does make the PR decision explicit:
