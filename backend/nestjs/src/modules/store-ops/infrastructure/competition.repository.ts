@@ -26,6 +26,11 @@ import {
   UpdateCompetitionStagePackagePlanInput,
   UpdateCompetitionTeamTemplateInput,
 } from "../application/competition.contract";
+import {
+  COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS,
+  canApplyCompetitionStagePackagePlanTransition,
+  type CompetitionStagePackagePlanTransitionPolicy,
+} from "../application/competition-stage-package-plan-transition.policy";
 import { writeCompetitionAudit } from "./competition.repository.audit";
 import { type Queryable } from "./competition.repository.db";
 import { CompetitionReadRepository } from "./competition-read.repository";
@@ -47,6 +52,25 @@ import {
   type CompetitionWarningRow,
   type StoreAccessContext,
 } from "./competition.repository.mapper";
+
+const stagePackagePlanReturningClause = `
+  RETURNING
+    competition_stage_package_plan_id,
+    competition_id,
+    package_code,
+    plan_name,
+    plan_status,
+    stage_drafts_json,
+    created_stage_ids,
+    submitted_by_user_id,
+    submitted_at,
+    reviewed_by_user_id,
+    reviewed_at,
+    review_note,
+    created_at,
+    updated_at,
+    executed_at
+`;
 
 @Injectable()
 export class CompetitionRepository {
@@ -394,6 +418,8 @@ export class CompetitionRepository {
   async createStagePackagePlan(
     input: CreateCompetitionStagePackagePlanInput,
   ): Promise<CompetitionStagePackagePlan> {
+    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.saveDraft;
+
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<CompetitionStagePackagePlanRow>(
         `
@@ -406,28 +432,14 @@ export class CompetitionRepository {
             created_by_user_id,
             updated_by_user_id
           )
-          VALUES ($1::uuid, $2, $3, 'draft', $4::jsonb, $5, $5)
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6, $6)
+          ${stagePackagePlanReturningClause}
         `,
         [
           input.competitionId,
           input.packageCode,
           input.planName,
+          transition.targetStatus,
           JSON.stringify(input.stages),
           input.actorUserId,
         ],
@@ -435,10 +447,9 @@ export class CompetitionRepository {
 
       const row = result.rows[0];
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.saved",
-        entityName: "ops.competition_stage_package_plan",
+        transition,
         entityId: row.competition_stage_package_plan_id,
         metadata: {
           competitionId: input.competitionId,
@@ -456,12 +467,16 @@ export class CompetitionRepository {
   async updateStagePackagePlan(
     input: UpdateCompetitionStagePackagePlanInput,
   ): Promise<CompetitionStagePackagePlan> {
+    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.updateDraft;
+
     return this.databaseService.withTransaction(async (client) => {
       const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
 
-      if (planRow.plan_status !== "draft") {
-        throw new BadRequestException("Stage package plan is not editable");
-      }
+      this.assertStagePackagePlanTransition(
+        planRow,
+        transition,
+        "Stage package plan is not editable",
+      );
 
       const result = await client.query<CompetitionStagePackagePlanRow>(
         `
@@ -473,22 +488,7 @@ export class CompetitionRepository {
             updated_by_user_id = $5,
             updated_at = NOW()
           WHERE competition_stage_package_plan_id = $1::uuid
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          ${stagePackagePlanReturningClause}
         `,
         [
           input.planId,
@@ -501,10 +501,9 @@ export class CompetitionRepository {
 
       const plan = mapStagePackagePlan(result.rows[0]);
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.updated",
-        entityName: "ops.competition_stage_package_plan",
+        transition,
         entityId: input.planId,
         metadata: {
           competitionId: plan.competitionId,
@@ -524,49 +523,37 @@ export class CompetitionRepository {
   async submitStagePackagePlan(
     input: SubmitCompetitionStagePackagePlanInput,
   ): Promise<CompetitionStagePackagePlan> {
+    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.submit;
+
     return this.databaseService.withTransaction(async (client) => {
       const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
 
-      if (planRow.plan_status !== "draft") {
-        throw new BadRequestException("Stage package plan is not submittable");
-      }
+      this.assertStagePackagePlanTransition(
+        planRow,
+        transition,
+        "Stage package plan is not submittable",
+      );
 
       const result = await client.query<CompetitionStagePackagePlanRow>(
         `
           UPDATE ops.competition_stage_package_plan
           SET
-            plan_status = 'submitted',
-            submitted_by_user_id = $2,
+            plan_status = $2,
+            submitted_by_user_id = $3,
             submitted_at = NOW(),
-            updated_by_user_id = $2,
+            updated_by_user_id = $3,
             updated_at = NOW()
           WHERE competition_stage_package_plan_id = $1::uuid
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          ${stagePackagePlanReturningClause}
         `,
-        [input.planId, input.actorUserId],
+        [input.planId, transition.targetStatus, input.actorUserId],
       );
 
       const plan = mapStagePackagePlan(result.rows[0]);
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.submitted",
-        entityName: "ops.competition_stage_package_plan",
+        transition,
         entityId: input.planId,
         metadata: {
           competitionId: plan.competitionId,
@@ -582,51 +569,39 @@ export class CompetitionRepository {
   async approveStagePackagePlan(
     input: ApproveCompetitionStagePackagePlanInput,
   ): Promise<CompetitionStagePackagePlan> {
+    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.approve;
+
     return this.databaseService.withTransaction(async (client) => {
       const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
 
-      if (planRow.plan_status !== "submitted") {
-        throw new BadRequestException("Stage package plan is not reviewable");
-      }
+      this.assertStagePackagePlanTransition(
+        planRow,
+        transition,
+        "Stage package plan is not reviewable",
+      );
 
       const reviewNote = input.reviewNote?.trim() || null;
       const result = await client.query<CompetitionStagePackagePlanRow>(
         `
           UPDATE ops.competition_stage_package_plan
           SET
-            plan_status = 'approved',
-            reviewed_by_user_id = $2,
-            review_note = $3,
+            plan_status = $2,
+            reviewed_by_user_id = $3,
+            review_note = $4,
             reviewed_at = NOW(),
-            updated_by_user_id = $2,
+            updated_by_user_id = $3,
             updated_at = NOW()
           WHERE competition_stage_package_plan_id = $1::uuid
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          ${stagePackagePlanReturningClause}
         `,
-        [input.planId, input.actorUserId, reviewNote],
+        [input.planId, transition.targetStatus, input.actorUserId, reviewNote],
       );
 
       const plan = mapStagePackagePlan(result.rows[0]);
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.approved",
-        entityName: "ops.competition_stage_package_plan",
+        transition,
         entityId: input.planId,
         metadata: {
           competitionId: plan.competitionId,
@@ -643,51 +618,39 @@ export class CompetitionRepository {
   async rejectStagePackagePlan(
     input: RejectCompetitionStagePackagePlanInput,
   ): Promise<CompetitionStagePackagePlan> {
+    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.reject;
+
     return this.databaseService.withTransaction(async (client) => {
       const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
 
-      if (planRow.plan_status !== "submitted") {
-        throw new BadRequestException("Stage package plan is not reviewable");
-      }
+      this.assertStagePackagePlanTransition(
+        planRow,
+        transition,
+        "Stage package plan is not reviewable",
+      );
 
       const reviewNote = input.reviewNote?.trim() || null;
       const result = await client.query<CompetitionStagePackagePlanRow>(
         `
           UPDATE ops.competition_stage_package_plan
           SET
-            plan_status = 'rejected',
-            reviewed_by_user_id = $2,
-            review_note = $3,
+            plan_status = $2,
+            reviewed_by_user_id = $3,
+            review_note = $4,
             reviewed_at = NOW(),
-            updated_by_user_id = $2,
+            updated_by_user_id = $3,
             updated_at = NOW()
           WHERE competition_stage_package_plan_id = $1::uuid
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          ${stagePackagePlanReturningClause}
         `,
-        [input.planId, input.actorUserId, reviewNote],
+        [input.planId, transition.targetStatus, input.actorUserId, reviewNote],
       );
 
       const plan = mapStagePackagePlan(result.rows[0]);
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.rejected",
-        entityName: "ops.competition_stage_package_plan",
+        transition,
         entityId: input.planId,
         metadata: {
           competitionId: plan.competitionId,
@@ -704,15 +667,22 @@ export class CompetitionRepository {
   async cloneStagePackagePlan(
     input: CloneCompetitionStagePackagePlanInput,
   ): Promise<CompetitionStagePackagePlan> {
+    const sourceTransition =
+      COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.cloneSourceToDraft;
+    const draftTransition =
+      COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.cloneDraftFromReturned;
+
     return this.databaseService.withTransaction(async (client) => {
       const sourceRow = await this.getStagePackagePlanForUpdate(
         client,
         input.sourcePlanId,
       );
 
-      if (sourceRow.plan_status !== "rejected") {
-        throw new BadRequestException("Stage package plan is not cloneable");
-      }
+      this.assertStagePackagePlanTransition(
+        sourceRow,
+        sourceTransition,
+        "Stage package plan is not cloneable",
+      );
 
       const sourcePlan = mapStagePackagePlan(sourceRow);
       const clonedPlanName = `${sourcePlan.planName} revision`;
@@ -727,28 +697,14 @@ export class CompetitionRepository {
             created_by_user_id,
             updated_by_user_id
           )
-          VALUES ($1::uuid, $2, $3, 'draft', $4::jsonb, $5, $5)
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          VALUES ($1::uuid, $2, $3, $4, $5::jsonb, $6, $6)
+          ${stagePackagePlanReturningClause}
         `,
         [
           sourcePlan.competitionId,
           sourcePlan.packageCode,
           clonedPlanName,
+          draftTransition.targetStatus,
           JSON.stringify(sourcePlan.stageDrafts),
           input.actorUserId,
         ],
@@ -756,10 +712,9 @@ export class CompetitionRepository {
 
       const clonedPlan = mapStagePackagePlan(result.rows[0]);
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.cloned_to_draft",
-        entityName: "ops.competition_stage_package_plan",
+        transition: sourceTransition,
         entityId: sourcePlan.planId,
         metadata: {
           competitionId: sourcePlan.competitionId,
@@ -770,10 +725,9 @@ export class CompetitionRepository {
         },
       });
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.cloned_from_returned",
-        entityName: "ops.competition_stage_package_plan",
+        transition: draftTransition,
         entityId: clonedPlan.planId,
         metadata: {
           sourcePlanId: sourcePlan.planId,
@@ -793,40 +747,15 @@ export class CompetitionRepository {
   async executeStagePackagePlan(
     input: ExecuteCompetitionStagePackagePlanInput,
   ): Promise<{ plan: CompetitionStagePackagePlan; stages: CompetitionStage[] }> {
+    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.execute;
+
     return this.databaseService.withTransaction(async (client) => {
-      const planResult = await client.query<CompetitionStagePackagePlanRow>(
-        `
-          SELECT
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
-          FROM ops.competition_stage_package_plan
-          WHERE competition_stage_package_plan_id = $1::uuid
-          FOR UPDATE
-        `,
-        [input.planId],
+      const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
+      this.assertStagePackagePlanTransition(
+        planRow,
+        transition,
+        "Stage package plan is not executable",
       );
-
-      const planRow = planResult.rows[0];
-      if (!planRow) {
-        throw new BadRequestException("Stage package plan not found");
-      }
-
-      if (planRow.plan_status !== "approved") {
-        throw new BadRequestException("Stage package plan is not executable");
-      }
 
       const stageDrafts = mapStagePackagePlan(planRow).stageDrafts;
       const stages: CompetitionStage[] = [];
@@ -846,39 +775,23 @@ export class CompetitionRepository {
         `
           UPDATE ops.competition_stage_package_plan
           SET
-            plan_status = 'executed',
-            executed_by_user_id = $2,
+            plan_status = $2,
+            executed_by_user_id = $3,
             executed_at = NOW(),
-            updated_by_user_id = $2,
+            updated_by_user_id = $3,
             updated_at = NOW(),
-            created_stage_ids = $3::uuid[]
+            created_stage_ids = $4::uuid[]
           WHERE competition_stage_package_plan_id = $1::uuid
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          ${stagePackagePlanReturningClause}
         `,
-        [input.planId, input.actorUserId, createdStageIds],
+        [input.planId, transition.targetStatus, input.actorUserId, createdStageIds],
       );
 
       const executedPlan = mapStagePackagePlan(executedPlanResult.rows[0]);
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.executed",
-        entityName: "ops.competition_stage_package_plan",
+        transition,
         entityId: input.planId,
         metadata: {
           competitionId: executedPlan.competitionId,
@@ -896,47 +809,34 @@ export class CompetitionRepository {
   async cancelStagePackagePlan(
     input: CancelCompetitionStagePackagePlanInput,
   ): Promise<CompetitionStagePackagePlan> {
+    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.cancel;
+
     return this.databaseService.withTransaction(async (client) => {
       const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
-
-      if (planRow.plan_status !== "draft") {
-        throw new BadRequestException("Stage package plan is not cancellable");
-      }
+      this.assertStagePackagePlanTransition(
+        planRow,
+        transition,
+        "Stage package plan is not cancellable",
+      );
 
       const result = await client.query<CompetitionStagePackagePlanRow>(
         `
           UPDATE ops.competition_stage_package_plan
           SET
-            plan_status = 'cancelled',
-            updated_by_user_id = $2,
+            plan_status = $2,
+            updated_by_user_id = $3,
             updated_at = NOW()
           WHERE competition_stage_package_plan_id = $1::uuid
-          RETURNING
-            competition_stage_package_plan_id,
-            competition_id,
-            package_code,
-            plan_name,
-            plan_status,
-            stage_drafts_json,
-            created_stage_ids,
-            submitted_by_user_id,
-            submitted_at,
-            reviewed_by_user_id,
-            reviewed_at,
-            review_note,
-            created_at,
-            updated_at,
-            executed_at
+          ${stagePackagePlanReturningClause}
         `,
-        [input.planId, input.actorUserId],
+        [input.planId, transition.targetStatus, input.actorUserId],
       );
 
       const plan = mapStagePackagePlan(result.rows[0]);
 
-      await writeCompetitionAudit(client, {
+      await this.writeStagePackagePlanAudit(client, {
         actorUserId: input.actorUserId,
-        eventType: "competition_stage_package_plan.cancelled",
-        entityName: "ops.competition_stage_package_plan",
+        transition,
         entityId: input.planId,
         metadata: {
           competitionId: plan.competitionId,
@@ -953,6 +853,34 @@ export class CompetitionRepository {
     planId: string;
   }): Promise<CompetitionStagePackagePlanAuditEvent[]> {
     return this.stagePackagePlanReadRepository.listStagePackagePlanAudit(input);
+  }
+
+  private assertStagePackagePlanTransition(
+    planRow: CompetitionStagePackagePlanRow,
+    transition: CompetitionStagePackagePlanTransitionPolicy,
+    message: string,
+  ) {
+    if (!canApplyCompetitionStagePackagePlanTransition(planRow.plan_status, transition)) {
+      throw new BadRequestException(message);
+    }
+  }
+
+  private async writeStagePackagePlanAudit(
+    client: Queryable,
+    input: {
+      actorUserId: string;
+      transition: CompetitionStagePackagePlanTransitionPolicy;
+      entityId: string;
+      metadata: Record<string, unknown>;
+    },
+  ) {
+    await writeCompetitionAudit(client, {
+      actorUserId: input.actorUserId,
+      eventType: input.transition.auditEventType,
+      entityName: input.transition.entityName,
+      entityId: input.entityId,
+      metadata: input.metadata,
+    });
   }
 
   private async getStagePackagePlanForUpdate(

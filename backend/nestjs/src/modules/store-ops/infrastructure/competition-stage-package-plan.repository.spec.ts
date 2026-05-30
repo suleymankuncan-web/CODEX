@@ -398,8 +398,9 @@ describe("CompetitionRepository stage package plans", () => {
     const sql = executedSql.join("\n");
     const serializedParams = JSON.stringify(executedParams);
     expect(sql).toContain("FOR UPDATE");
-    expect(sql).toContain("plan_status = 'cancelled'");
+    expect(sql).toContain("plan_status = $2");
     expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(serializedParams).toContain("cancelled");
     expect(serializedParams).toContain("competition_stage_package_plan.cancelled");
     expect(plan).toEqual(
       expect.objectContaining({
@@ -477,9 +478,10 @@ describe("CompetitionRepository stage package plans", () => {
     const sql = executedSql.join("\n");
     const serializedParams = JSON.stringify(executedParams);
     expect(sql).toContain("FOR UPDATE");
-    expect(sql).toContain("plan_status = 'submitted'");
-    expect(sql).toContain("submitted_by_user_id = $2");
+    expect(sql).toContain("plan_status = $2");
+    expect(sql).toContain("submitted_by_user_id = $3");
     expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(serializedParams).toContain("submitted");
     expect(serializedParams).toContain("competition_stage_package_plan.submitted");
     expect(plan).toEqual(
       expect.objectContaining({
@@ -562,9 +564,10 @@ describe("CompetitionRepository stage package plans", () => {
 
     const sql = executedSql.join("\n");
     const serializedParams = JSON.stringify(executedParams);
-    expect(sql).toContain("plan_status = 'approved'");
-    expect(sql).toContain("reviewed_by_user_id = $2");
-    expect(sql).toContain("review_note = $3");
+    expect(sql).toContain("plan_status = $2");
+    expect(sql).toContain("reviewed_by_user_id = $3");
+    expect(sql).toContain("review_note = $4");
+    expect(serializedParams).toContain("approved");
     expect(serializedParams).toContain("competition_stage_package_plan.approved");
     expect(plan).toEqual(
       expect.objectContaining({
@@ -641,8 +644,9 @@ describe("CompetitionRepository stage package plans", () => {
 
     const sql = executedSql.join("\n");
     const serializedParams = JSON.stringify(executedParams);
-    expect(sql).toContain("plan_status = 'rejected'");
+    expect(sql).toContain("plan_status = $2");
     expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(serializedParams).toContain("rejected");
     expect(serializedParams).toContain("competition_stage_package_plan.rejected");
     expect(plan).toEqual(
       expect.objectContaining({
