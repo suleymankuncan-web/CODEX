@@ -224,10 +224,6 @@ const largeTrackedSourceAllowlist = new Map([
     'Existing integration orchestration hotspot; parked by refactor inventory unless product or reviewability trigger appears.',
   ],
   [
-    'backend/nestjs/src/modules/auth/auth-admin.repository.ts',
-    'Existing auth-admin write hotspot; V2 extracts role assignment command boundary before new auth growth.',
-  ],
-  [
     'backend/nestjs/src/shared/openapi-baseline.contract.spec.ts',
     'Existing OpenAPI baseline contract spec; size follows API contract breadth.',
   ],
