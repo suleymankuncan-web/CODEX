@@ -65,24 +65,24 @@ const directDatabaseServiceAllowlist = new Set([
 const storeOpsRepositoryCastAllowlist = new Map([
   [
     'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
-    new Set([
+    [
       'reportingRepository as unknown as StoreScoreReportingReadRepository',
       'reportingRepository as unknown as ClosedRankingRepository',
       'reportingRepository as unknown as SnapshotReportingReadRepository',
       'reportingRepository as unknown as StorePerformanceReportingReadRepository',
       'reportingRepository as unknown as RankingReportingReadRepository',
-    ]),
+    ],
   ],
   [
     'backend/nestjs/src/modules/store-ops/application/ranking.service.ts',
-    new Set([
+    [
       'reportingRepository as unknown as StorePerformanceReportingReadRepository',
       'reportingRepository as unknown as RankingReportingReadRepository',
-    ]),
+    ],
   ],
   [
     'backend/nestjs/src/modules/store-ops/application/workflow-inbox.service.ts',
-    new Set(['reportingRepository as unknown as SnapshotReportingReadRepository']),
+    ['reportingRepository as unknown as SnapshotReportingReadRepository'],
   ],
 ])
 
@@ -122,6 +122,16 @@ function castLineSignature(content, index) {
     .replace(/\s+/g, ' ')
 }
 
+function countByValue(values) {
+  const counts = new Map()
+
+  for (const value of values) {
+    counts.set(value, (counts.get(value) ?? 0) + 1)
+  }
+
+  return counts
+}
+
 function findDirectDatabaseServiceViolations(files) {
   const violations = []
 
@@ -148,16 +158,18 @@ function findStoreOpsRepositoryCastViolations(files) {
       continue
     }
 
-    const allowedSignatures = storeOpsRepositoryCastAllowlist.get(file.path) ?? new Set()
-    const observedAllowedSignatures = new Set()
+    const allowedCounts = countByValue(storeOpsRepositoryCastAllowlist.get(file.path) ?? [])
+    const observedAllowedCounts = new Map()
     const castPattern = /\bas\s+unknown\s+as\b/g
 
     for (const match of file.content.matchAll(castPattern)) {
       const index = match.index ?? 0
       const signature = castLineSignature(file.content, index)
+      const allowedCount = allowedCounts.get(signature) ?? 0
+      const observedCount = observedAllowedCounts.get(signature) ?? 0
 
-      if (allowedSignatures.has(signature)) {
-        observedAllowedSignatures.add(signature)
+      if (observedCount < allowedCount) {
+        observedAllowedCounts.set(signature, observedCount + 1)
         continue
       }
 
@@ -166,9 +178,14 @@ function findStoreOpsRepositoryCastViolations(files) {
       )
     }
 
-    for (const expectedSignature of allowedSignatures) {
-      if (!observedAllowedSignatures.has(expectedSignature)) {
-        violations.push(`${file.path}:1 missing allowlisted broad repository cast: ${expectedSignature}`)
+    for (const [expectedSignature, expectedCount] of allowedCounts) {
+      const observedCount = observedAllowedCounts.get(expectedSignature) ?? 0
+
+      if (observedCount !== expectedCount) {
+        violations.push(
+          `${file.path}:1 expected ${expectedCount} allowlisted broad repository cast occurrence(s), ` +
+            `observed ${observedCount}: ${expectedSignature}`,
+        )
       }
     }
   }
@@ -296,4 +313,20 @@ test('guard rejects a fake extra broad repository cast in an allowlisted file', 
 
   assert.match(violations.join('\n'), /NewLeakyReadRepository/)
   assert.doesNotMatch(violations.join('\n'), /missing allowlisted broad repository cast/)
+})
+
+test('guard rejects a fake duplicate allowlisted broad repository cast', () => {
+  const violations = findStoreOpsRepositoryCastViolations([
+    {
+      path: 'backend/nestjs/src/modules/store-ops/application/ranking.service.ts',
+      content: `
+        reportingRepository as unknown as StorePerformanceReportingReadRepository,
+        reportingRepository as unknown as RankingReportingReadRepository,
+        reportingRepository as unknown as RankingReportingReadRepository,
+      `,
+    },
+  ])
+
+  assert.match(violations.join('\n'), /RankingReportingReadRepository/)
+  assert.match(violations.join('\n'), /unallowlisted broad repository cast/)
 })
