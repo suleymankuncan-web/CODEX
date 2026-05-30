@@ -78,6 +78,13 @@ Current maintenance baseline:
   is `docs/plans/architecture-hardening-v4-plan.md`; the PR-1 behavior freeze
   evidence is
   `docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md`.
+- Architecture Hardening V4 PR-2 extracted master-data bootstrap promotion
+  helper logic into
+  `backend/nestjs/src/modules/integration/application/master-data-bootstrap-promotion.helpers.ts`,
+  strengthened exact promotion response parity assertions, and tightened the
+  file-size guard baseline for `master-data-bootstrap.service.ts` from 1194 to
+  906 lines. API shape, DB schema, auth, import lifecycle, queue behavior, and
+  promotion persistence behavior remained unchanged.
 
 Latest route/scope guard merge:
 

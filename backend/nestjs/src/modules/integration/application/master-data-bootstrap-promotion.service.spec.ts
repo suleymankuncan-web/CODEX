@@ -131,14 +131,35 @@ describe("MasterDataBootstrapService promotion", () => {
         },
       ],
     });
-    expect(result.command.status).toBe("promoted");
-    expect(result.data.batch.promotedCount).toBe(2);
-    expect(result.data.promotedRows).toEqual([
-      {
-        rowId: "row-ready-store",
-        promotedEntityId: "00000000-0000-4000-8000-000000000140",
+    expect(result).toEqual({
+      command: {
+        status: "promoted",
+        message: "Store bootstrap rows promoted",
       },
-    ]);
+      data: {
+        batch: {
+          batchId: "batch-store",
+          batchStatus: "promoted",
+          rowCount: 2,
+          validCount: 0,
+          needsReviewCount: 0,
+          invalidCount: 0,
+          promotedCount: 2,
+          promotedRows: [
+            {
+              rowId: "row-ready-store",
+              promotedEntityId: "00000000-0000-4000-8000-000000000140",
+            },
+          ],
+        },
+        promotedRows: [
+          {
+            rowId: "row-ready-store",
+            promotedEntityId: "00000000-0000-4000-8000-000000000140",
+          },
+        ],
+      },
+    });
   });
 
   it("rejects stale store promotion when any non-promoted row is not ready", async () => {
@@ -333,15 +354,37 @@ describe("MasterDataBootstrapService promotion", () => {
         },
       ],
     });
-    expect(result.command.status).toBe("promoted");
-    expect(result.data.batch.promotedCount).toBe(2);
-    expect(result.data.promotedRows).toEqual([
-      {
-        rowId: "row-ready-personnel",
-        promotedEntityId: "00000000-0000-4000-8000-000000008375",
-        assignmentId: "00000000-0000-4000-8000-000000009375",
+    expect(result).toEqual({
+      command: {
+        status: "promoted",
+        message: "Personnel bootstrap rows promoted",
       },
-    ]);
+      data: {
+        batch: {
+          batchId: "batch-personnel",
+          batchStatus: "promoted",
+          rowCount: 2,
+          validCount: 0,
+          needsReviewCount: 0,
+          invalidCount: 0,
+          promotedCount: 2,
+          promotedRows: [
+            {
+              rowId: "row-ready-personnel",
+              promotedEntityId: "00000000-0000-4000-8000-000000008375",
+              assignmentId: "00000000-0000-4000-8000-000000009375",
+            },
+          ],
+        },
+        promotedRows: [
+          {
+            rowId: "row-ready-personnel",
+            promotedEntityId: "00000000-0000-4000-8000-000000008375",
+            assignmentId: "00000000-0000-4000-8000-000000009375",
+          },
+        ],
+      },
+    });
   });
 
   it("rejects stale personnel promotion when any non-promoted row is not ready", async () => {

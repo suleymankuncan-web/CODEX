@@ -99,8 +99,12 @@ move runtime code after the PR-1 behavior freeze evidence is satisfied.
 
 Active V4 sequence:
 
-1. `MasterDataBootstrapService` promotion boundary. Before refactor, confirm or
-   add promotion response/audit parity.
+1. Done: `MasterDataBootstrapService` promotion boundary. PR-2 extracted
+   promotion readiness, promotable-row assertion, promotion-row builders, and
+   promotion readiness summary helpers into
+   `master-data-bootstrap-promotion.helpers.ts` after strengthening exact
+   promotion command response parity assertions. `master-data-bootstrap.service.ts`
+   is now roughly 906 lines.
 2. `WorkforceRequestRepository` command persistence boundary. Before refactor,
    confirm or add return-shape/transaction parity.
 3. `CompetitionRepository` selected stage-package-plan review command
