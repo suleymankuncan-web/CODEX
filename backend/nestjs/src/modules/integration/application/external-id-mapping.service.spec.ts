@@ -1,17 +1,26 @@
 import { ExternalIdMappingService } from "./external-id-mapping.service";
 
 describe("ExternalIdMappingService", () => {
-  it("resolves external ids through normalized fallback when exact mapping is missing", async () => {
-    const databaseService = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rowCount: 0, rows: [] })
-        .mockResolvedValueOnce({
-          rowCount: 1,
-          rows: [{ internal_id: "00000000-0000-4000-8000-000000000140" }],
-        }),
+  function createRepositoryMock(input?: {
+    findActiveMapping?: jest.Mock;
+    findActiveMappingsByNormalizedExternalId?: jest.Mock;
+    upsertMapping?: jest.Mock;
+  }) {
+    return {
+      findActiveMapping: input?.findActiveMapping ?? jest.fn(async () => null),
+      findActiveMappingsByNormalizedExternalId:
+        input?.findActiveMappingsByNormalizedExternalId ?? jest.fn(async () => []),
+      upsertMapping: input?.upsertMapping ?? jest.fn(async () => undefined),
     };
-    const service = new ExternalIdMappingService(databaseService as never);
+  }
+
+  it("resolves external ids through normalized fallback when exact mapping is missing", async () => {
+    const repository = createRepositoryMock({
+      findActiveMappingsByNormalizedExternalId: jest.fn(async () => [
+        { internalId: "00000000-0000-4000-8000-000000000140" },
+      ]),
+    });
+    const service = new ExternalIdMappingService(repository as never);
 
     const result = await service.resolveMappedInternalId(
       "00000000-0000-4000-8000-000000000001",
@@ -20,28 +29,26 @@ describe("ExternalIdMappingService", () => {
     );
 
     expect(result).toBe("00000000-0000-4000-8000-000000000140");
-    expect(databaseService.query).toHaveBeenCalledTimes(2);
-    expect(databaseService.query.mock.calls[1][1]).toEqual([
-      "00000000-0000-4000-8000-000000000001",
-      "store",
-      "SM140",
-    ]);
+    expect(repository.findActiveMapping).toHaveBeenCalledWith({
+      integrationSourceId: "00000000-0000-4000-8000-000000000001",
+      entityType: "store",
+      externalId: "SM-140",
+    });
+    expect(repository.findActiveMappingsByNormalizedExternalId).toHaveBeenCalledWith({
+      integrationSourceId: "00000000-0000-4000-8000-000000000001",
+      entityType: "store",
+      normalizedExternalId: "SM140",
+    });
   });
 
   it("rejects ambiguous normalized external id mappings", async () => {
-    const databaseService = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rowCount: 0, rows: [] })
-        .mockResolvedValueOnce({
-          rowCount: 2,
-          rows: [
-            { internal_id: "00000000-0000-4000-8000-000000000140" },
-            { internal_id: "00000000-0000-4000-8000-000000000141" },
-          ],
-        }),
-    };
-    const service = new ExternalIdMappingService(databaseService as never);
+    const repository = createRepositoryMock({
+      findActiveMappingsByNormalizedExternalId: jest.fn(async () => [
+        { internalId: "00000000-0000-4000-8000-000000000140" },
+        { internalId: "00000000-0000-4000-8000-000000000141" },
+      ]),
+    });
+    const service = new ExternalIdMappingService(repository as never);
 
     await expect(
       service.resolveMappedInternalId(
@@ -53,13 +60,12 @@ describe("ExternalIdMappingService", () => {
   });
 
   it("keeps exact external id mapping precedence over normalized fallback", async () => {
-    const databaseService = {
-      query: jest.fn().mockResolvedValueOnce({
-        rowCount: 1,
-        rows: [{ internal_id: "00000000-0000-4000-8000-000000000999" }],
-      }),
-    };
-    const service = new ExternalIdMappingService(databaseService as never);
+    const repository = createRepositoryMock({
+      findActiveMapping: jest.fn(async () => ({
+        internalId: "00000000-0000-4000-8000-000000000999",
+      })),
+    });
+    const service = new ExternalIdMappingService(repository as never);
 
     const result = await service.resolveMappedInternalId(
       "00000000-0000-4000-8000-000000000001",
@@ -68,7 +74,24 @@ describe("ExternalIdMappingService", () => {
     );
 
     expect(result).toBe("00000000-0000-4000-8000-000000000999");
-    expect(databaseService.query).toHaveBeenCalledTimes(1);
+    expect(repository.findActiveMappingsByNormalizedExternalId).not.toHaveBeenCalled();
+  });
+
+  it("delegates mapping upserts to the command repository", async () => {
+    const repository = createRepositoryMock();
+    const service = new ExternalIdMappingService(repository as never);
+
+    const input = {
+      integrationSourceId: "00000000-0000-4000-8000-000000000001",
+      entityType: "store",
+      externalId: "SM-140",
+      internalId: "00000000-0000-4000-8000-000000000140",
+      internalTableName: "ops.store",
+    };
+
+    await service.upsertMapping(input);
+
+    expect(repository.upsertMapping).toHaveBeenCalledWith(input);
   });
 });
 
