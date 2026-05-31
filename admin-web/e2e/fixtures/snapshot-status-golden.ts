@@ -1,0 +1,48 @@
+export const snapshotStatusGolden = [
+  {
+    snapshotRunId: 'snapshot-failed-rerun',
+    runStatus: 'failed',
+    runStatusLabel: 'failed',
+    healthState: 'retry_ready',
+    healthLabel: 'retry ready',
+    healthTone: 'accent',
+    canRerun: true,
+    detailHref: '/admin/snapshots/snapshot-failed-rerun',
+    detailVisible: true,
+  },
+  {
+    snapshotRunId: 'snapshot-stuck-no-rerun',
+    runStatus: 'failed',
+    runStatusLabel: 'failed',
+    healthState: 'stuck',
+    healthLabel: 'stuck',
+    healthTone: 'danger',
+    canRerun: false,
+    detailHref: '/admin/snapshots/snapshot-stuck-no-rerun',
+    detailVisible: true,
+  },
+  {
+    snapshotRunId: 'snapshot-running',
+    runStatus: 'running',
+    runStatusLabel: 'running',
+    healthState: 'in_progress',
+    healthLabel: 'in progress',
+    healthTone: 'neutral',
+    canRerun: false,
+    detailHref: '/admin/snapshots/snapshot-running',
+    detailVisible: true,
+  },
+  {
+    snapshotRunId: 'snapshot-completed-reused',
+    runStatus: 'completed',
+    runStatusLabel: 'completed',
+    healthState: 'reused',
+    healthLabel: 'reused',
+    healthTone: 'neutral',
+    canRerun: false,
+    detailHref: '/admin/snapshots/snapshot-completed-reused',
+    detailVisible: true,
+  },
+] as const
+
+export type SnapshotStatusGoldenEntry = (typeof snapshotStatusGolden)[number]

@@ -3,17 +3,23 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowRight,
   Building2,
-  CheckCircle2,
   DatabaseZap,
   History,
-  ListChecks,
   Save,
   Search,
-  ShieldCheck,
   UserRound,
 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import { EmptyState, ScreenState } from '../components/dashboard-primitives'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import {
   getMasterDataBootstrapBatches,
   getMasterDataBootstrapBatchDetail,
@@ -45,6 +51,18 @@ import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 import {
+  AdminActionRow,
+  AdminFilterBar,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
+import {
   PAGE_SIZE,
   dateInputValue,
   formatMasterDataEntity,
@@ -52,9 +70,7 @@ import {
   formatNumber,
   getBatchDisplayTimestamp,
   initialMasterDataPageState,
-  mapPromotionReadinessTone,
   mapReadinessTone,
-  mapValidationTone,
   masterDataPageReducer,
   mergePersonnelPatch,
   mergeStoreMasterPatch,
@@ -62,8 +78,6 @@ import {
   normalizePersonnelStatus,
   normalizeStoreStatus,
   normalizeStoreType,
-  resolveDryRunRowLabel,
-  resolveRowName,
   type EffectivePersonnelMasterItem,
   type MasterDataBootstrapEntityFilter,
   type MasterDataBootstrapReadinessFilter,
@@ -75,6 +89,7 @@ import {
   type StoreMasterPatch,
   type StoreMasterStatusFilter,
 } from './master-data-bootstrap-model'
+import { BatchDetailPanel } from './master-data-bootstrap-batch-detail-panel'
 
 function useMasterDataBootstrapQueries(input: {
   activeTab: MasterDataTab
@@ -372,16 +387,26 @@ export function MasterDataBootstrapPage() {
   }
 
   if (batchesQuery.isLoading) {
-    return <ScreenState title={t('adminMasterData.loadingTitle')} copy={t('adminMasterData.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          isLoading
+          title={t('adminMasterData.loadingTitle')}
+          description={t('adminMasterData.loadingCopy')}
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (batchesQuery.isError) {
     return (
-      <ScreenState
-        title={t('adminMasterData.errorTitle')}
-        copy={getErrorMessage(batchesQuery.error)}
-        tone="error"
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminMasterData.errorTitle')}
+          description={getErrorMessage(batchesQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
@@ -411,7 +436,7 @@ export function MasterDataBootstrapPage() {
       : promotionResult?.batch.promotedRows ?? []
 
   return (
-    <section className="master-data-command-page">
+    <AdminSurfacePage ariaLabel={t('adminMasterData.title')}>
       <MasterDataCommandHero t={t} />
 
       <MasterDataCommandMetrics
@@ -528,7 +553,7 @@ export function MasterDataBootstrapPage() {
       ) : null}
 
       {activeTab === 'history' ? <MasterDataHistoryPanel t={t} /> : null}
-    </section>
+    </AdminSurfacePage>
   )
 }
 
@@ -536,20 +561,24 @@ function MasterDataCommandHero(input: { t: TranslateFunction }) {
   const { t } = input
 
   return (
-    <header className="master-data-command-hero">
-      <div>
-        <div className="eyebrow">{t('adminMasterData.heroEyebrow')}</div>
-        <h2 className="master-data-command-title">{t('adminMasterData.title')}</h2>
-        <p className="master-data-command-copy">{t('adminMasterData.heroCopy')}</p>
-      </div>
-      <div className="master-data-command-hero-actions">
-        <span className="master-data-command-chip">{t('adminMasterData.liveMaster')}</span>
-        <span className="master-data-command-chip">{t('adminMasterData.backendControlled')}</span>
-        <button className="control-button master-data-command-primary-button" type="button">
+    <AdminSurfaceHeader
+      eyebrow={t('adminMasterData.heroEyebrow')}
+      title={t('adminMasterData.title')}
+      description={t('adminMasterData.heroCopy')}
+      icon={<DatabaseZap size={18} />}
+      meta={
+        <>
+          <AdminSurfaceBadge tone="success">{t('adminMasterData.liveMaster')}</AdminSurfaceBadge>
+          <AdminSurfaceBadge tone="cyan">{t('adminMasterData.backendControlled')}</AdminSurfaceBadge>
+        </>
+      }
+      actions={
+        <Button type="button">
+          <DatabaseZap aria-hidden="true" />
           {t('adminMasterData.newBatch')}
-        </button>
-      </div>
-    </header>
+        </Button>
+      }
+    />
   )
 }
 
@@ -562,43 +591,52 @@ function MasterDataCommandMetrics(input: {
   const { t } = input
 
   return (
-    <section className="master-data-command-metrics" aria-label={t('adminMasterData.summaryAria')}>
-      <MasterDataMetric
-        icon={<DatabaseZap size={18} />}
-        title={t('adminMasterData.batchMetric')}
-        value={formatNumber(input.batchTotal)}
-        note={t('adminMasterData.batchMetricNote')}
-        tone="primary"
-      />
-      <MasterDataMetric
-        icon={<Building2 size={18} />}
-        title={t('adminMasterData.storeMetric')}
-        value={input.storeTotal === undefined ? '—' : formatNumber(input.storeTotal)}
-        note={
-          input.storeTotal === undefined
-            ? t('adminMasterData.openTabForCount')
-            : t('adminMasterData.storeMetricNote')
-        }
-      />
-      <MasterDataMetric
-        icon={<UserRound size={18} />}
-        title={t('adminMasterData.personnelMetric')}
-        value={input.personnelTotal === undefined ? '—' : formatNumber(input.personnelTotal)}
-        note={
-          input.personnelTotal === undefined
-            ? t('adminMasterData.openTabForCount')
-            : t('adminMasterData.personnelMetricNote')
-        }
-      />
-      <MasterDataMetric
-        icon={<History size={18} />}
-        title={t('adminMasterData.auditMetric')}
-        value="Audit"
-        note={t('adminMasterData.auditMetricNote')}
-      />
-    </section>
+    <AdminMetricStrip
+      className="tw:xl:grid-cols-4"
+      items={[
+        {
+          id: 'batches',
+          icon: <DatabaseZap size={18} />,
+          label: t('adminMasterData.batchMetric'),
+          value: formatNumber(input.batchTotal),
+          description: t('adminMasterData.batchMetricNote'),
+          tone: 'accent',
+        },
+        {
+          id: 'stores',
+          icon: <Building2 size={18} />,
+          label: t('adminMasterData.storeMetric'),
+          value: input.storeTotal === undefined ? '-' : formatNumber(input.storeTotal),
+          description:
+            input.storeTotal === undefined
+              ? t('adminMasterData.openTabForCount')
+              : t('adminMasterData.storeMetricNote'),
+          tone: 'cyan',
+        },
+        {
+          id: 'personnel',
+          icon: <UserRound size={18} />,
+          label: t('adminMasterData.personnelMetric'),
+          value: input.personnelTotal === undefined ? '-' : formatNumber(input.personnelTotal),
+          description:
+            input.personnelTotal === undefined
+              ? t('adminMasterData.openTabForCount')
+              : t('adminMasterData.personnelMetricNote'),
+          tone: 'success',
+        },
+        {
+          id: 'audit',
+          icon: <History size={18} />,
+          label: t('adminMasterData.auditMetric'),
+          value: 'Audit',
+          description: t('adminMasterData.auditMetricNote'),
+          tone: 'neutral',
+        },
+      ]}
+    />
   )
 }
+
 
 function MasterDataPromotionFeedback(input: {
   feedback: string | null
@@ -610,24 +648,24 @@ function MasterDataPromotionFeedback(input: {
   }
 
   return (
-    <section className="master-data-command-feedback">
-      <div className="inline-state inline-state-accent">{input.feedback}</div>
+    <AdminStatePanel title={input.feedback} tone="accent">
       {input.promotedRows.length ? (
         <div
-          className="master-data-command-evidence-meta"
+          className="tw:mt-2 tw:flex tw:flex-wrap tw:gap-2"
           aria-label={input.t('adminMasterData.promotionCommandResultAria')}
         >
           {input.promotedRows.map((row) => (
-            <span className="master-data-command-chip" key={row.rowId}>
+            <AdminSurfaceBadge tone="accent" key={row.rowId}>
               {input.t('adminMasterData.promotedRow')}: {row.rowId} / {row.promotedEntityId}
-              {row.assignmentId ? ` / ${row.assignmentId}` : ''}
-            </span>
+              {row.assignmentId ? ' / ' + row.assignmentId : ''}
+            </AdminSurfaceBadge>
           ))}
         </div>
       ) : null}
-    </section>
+    </AdminStatePanel>
   )
 }
+
 
 function MasterDataCommandTabs(input: {
   activeTab: MasterDataTab
@@ -636,21 +674,26 @@ function MasterDataCommandTabs(input: {
   onSelectTab: (tab: MasterDataTab) => void
 }) {
   return (
-    <nav className="master-data-command-tabs" aria-label={input.t('adminMasterData.tabsAria')}>
+    <nav
+      className="tw:grid tw:grid-cols-1 tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-2 tw:shadow-sm tw:sm:grid-cols-2 tw:xl:grid-cols-4"
+      aria-label={input.t('adminMasterData.tabsAria')}
+    >
       {input.tabs.map((tab) => (
-        <button
-          className={`master-data-command-tab${input.activeTab === tab.id ? ' master-data-command-tab-active' : ''}`}
+        <Button
+          className="tw:h-auto tw:justify-between tw:py-3"
           key={tab.id}
           type="button"
+          variant={input.activeTab === tab.id ? 'default' : 'outline'}
           onClick={() => input.onSelectTab(tab.id)}
         >
-          <strong>{tab.label}</strong>
-          {tab.count !== undefined ? <span>{formatNumber(tab.count)}</span> : null}
-        </button>
+          <span>{tab.label}</span>
+          {tab.count !== undefined ? <AdminSurfaceBadge tone="neutral">{formatNumber(tab.count)}</AdminSurfaceBadge> : null}
+        </Button>
       ))}
     </nav>
   )
 }
+
 
 function MasterDataBootstrapBatchesPanel(input: {
   batchId: string | null
@@ -681,26 +724,26 @@ function MasterDataBootstrapBatchesPanel(input: {
   const { t } = input
 
   return (
-    <section className="master-data-command-panel" aria-label={t('adminMasterData.batchesTabAria')}>
-      <div className="master-data-command-panel-head">
-        <div>
-          <div className="eyebrow">{t('adminMasterData.reviewQueue')}</div>
-          <h3>{t('adminMasterData.bootstrapBatches')}</h3>
-          <p className="master-data-command-panel-copy">{t('adminMasterData.reviewQueueCopy')}</p>
-        </div>
-        <div className="master-data-command-toolbar">
-          <label className="search-field master-data-command-search">
-            <Search size={16} />
+    <AdminSurfaceSection
+      ariaLabel={t('adminMasterData.batchesTabAria')}
+      eyebrow={t('adminMasterData.reviewQueue')}
+      title={t('adminMasterData.bootstrapBatches')}
+      description={t('adminMasterData.reviewQueueCopy')}
+      actions={
+        <AdminFilterBar className="tw:w-full tw:md:w-auto">
+          <label className="tw:flex tw:min-w-56 tw:flex-1 tw:items-center tw:gap-2">
+            <Search aria-hidden="true" />
             <span className="sr-only">{t('adminMasterData.searchBatches')}</span>
-            <input
+            <Input
               value={input.search}
               onChange={(event) => input.onSearchChange(event.target.value)}
               placeholder={t('adminMasterData.searchPlaceholder')}
             />
           </label>
-          <label className="control-select">
+          <label className="tw:grid tw:gap-1">
             <span className="sr-only">{t('adminMasterData.entityFilter')}</span>
             <select
+              className={nativeSelectClass()}
               value={input.entityFilter}
               onChange={(event) =>
                 input.onEntityFilterChange(event.target.value as MasterDataBootstrapEntityFilter)
@@ -711,9 +754,10 @@ function MasterDataBootstrapBatchesPanel(input: {
               <option value="personnel">{t('adminMasterData.personnel')}</option>
             </select>
           </label>
-          <label className="control-select">
+          <label className="tw:grid tw:gap-1">
             <span className="sr-only">{t('adminMasterData.readinessFilter')}</span>
             <select
+              className={nativeSelectClass()}
               value={input.readinessFilter}
               onChange={(event) =>
                 input.onReadinessFilterChange(event.target.value as MasterDataBootstrapReadinessFilter)
@@ -726,32 +770,55 @@ function MasterDataBootstrapBatchesPanel(input: {
               <option value="closed">{t('adminMasterData.closed')}</option>
             </select>
           </label>
-        </div>
-      </div>
-
+        </AdminFilterBar>
+      }
+    >
       {input.batches.length === 0 ? (
-        <EmptyState title={t('adminMasterData.emptyBatchesTitle')} copy={t('adminMasterData.emptyBatchesCopy')} />
+        <AdminSurfaceEmpty title={t('adminMasterData.emptyBatchesTitle')} copy={t('adminMasterData.emptyBatchesCopy')} />
       ) : (
-        <div className="master-data-command-list">
-          {input.batches.map((batch) => (
-            <Link className="master-data-command-row-link" key={batch.batchId} to={`/admin/master-data/${batch.batchId}`}>
-              <div>
-                <strong>{batch.sourceLabel}</strong>
-                <small>{batch.batchId}</small>
-              </div>
-              <span>{formatMasterDataEntity(batch.bootstrapEntity, t)}</span>
-              <span>{t('adminMasterData.rowsSuffix', { count: batch.rowCount })}</span>
-              <MasterDataPill tone={mapReadinessTone(batch.readiness ?? batch.batchStatus)}>
-                {formatMasterDataState(batch.readiness ?? batch.batchStatus, t)}
-              </MasterDataPill>
-              <span>{batch.fileReference ?? t('adminMasterData.noFileReference')}</span>
-              <span>{formatDateTime(getBatchDisplayTimestamp(batch), input.locale)}</span>
-              <span className="master-data-command-row-action">
-                {t('adminMasterData.openEvidence')} <ArrowRight size={15} />
-              </span>
-            </Link>
-          ))}
-        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t('adminMasterData.bootstrapBatches')}</TableHead>
+              <TableHead>{t('adminMasterData.entity')}</TableHead>
+              <TableHead>{t('adminMasterData.rows')}</TableHead>
+              <TableHead>{t('adminMasterData.readiness')}</TableHead>
+              <TableHead>{t('adminMasterData.file')}</TableHead>
+              <TableHead className="tw:text-right">{t('adminMasterData.openEvidence')}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {input.batches.map((batch) => (
+              <TableRow key={batch.batchId}>
+                <TableCell>
+                  <div className="tw:grid tw:gap-1">
+                    <strong className="tw:text-sm tw:font-medium">{batch.sourceLabel}</strong>
+                    <span className="tw:max-w-72 tw:truncate tw:text-xs tw:text-muted-foreground">{batch.batchId}</span>
+                    <span className="tw:text-xs tw:text-muted-foreground">{formatDateTime(getBatchDisplayTimestamp(batch), input.locale)}</span>
+                  </div>
+                </TableCell>
+                <TableCell>{formatMasterDataEntity(batch.bootstrapEntity, t)}</TableCell>
+                <TableCell>{t('adminMasterData.rowsSuffix', { count: batch.rowCount })}</TableCell>
+                <TableCell>
+                  <MasterDataPill tone={mapReadinessTone(batch.readiness ?? batch.batchStatus)}>
+                    {formatMasterDataState(batch.readiness ?? batch.batchStatus, t)}
+                  </MasterDataPill>
+                </TableCell>
+                <TableCell className="tw:max-w-64 tw:truncate">{batch.fileReference ?? t('adminMasterData.noFileReference')}</TableCell>
+                <TableCell>
+                  <div className="tw:flex tw:justify-end">
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={'/admin/master-data/' + batch.batchId}>
+                        {t('adminMasterData.openEvidence')}
+                        <ArrowRight aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
 
       {input.batchId ? (
@@ -773,9 +840,10 @@ function MasterDataBootstrapBatchesPanel(input: {
           onPromote={input.onPromote}
         />
       ) : null}
-    </section>
+    </AdminSurfaceSection>
   )
 }
+
 
 async function submitStoreMasterDrafts(input: {
   drafts: Record<string, StoreMasterPatch>
@@ -969,56 +1037,53 @@ function StoreMasterPanel(input: {
   const { t } = input
 
   return (
-    <section className="master-data-command-panel" aria-label={t('adminMasterData.storeTabAria')}>
-      <div className="master-data-command-panel-head">
-        <div>
-          <div className="eyebrow">{t('adminMasterData.tabStores')}</div>
-          <h3>{t('adminMasterData.storePanelTitle')}</h3>
-          <p className="master-data-command-panel-copy">{t('adminMasterData.storePanelCopy')}</p>
-        </div>
-        <div className="master-data-command-toolbar">
-          <label className="search-field master-data-command-search">
-            <Search size={16} />
+    <AdminSurfaceSection
+      ariaLabel={t('adminMasterData.storeTabAria')}
+      eyebrow={t('adminMasterData.tabStores')}
+      title={t('adminMasterData.storePanelTitle')}
+      description={t('adminMasterData.storePanelCopy')}
+      actions={
+        <AdminFilterBar className="tw:w-full tw:md:w-auto">
+          <label className="tw:flex tw:min-w-56 tw:flex-1 tw:items-center tw:gap-2">
+            <Search aria-hidden="true" />
             <span className="sr-only">{t('adminMasterData.searchStores')}</span>
-            <input
+            <Input
               value={input.search}
               onChange={(event) => input.onSearchChange(event.target.value)}
               placeholder={t('adminMasterData.searchStoreOrManager')}
             />
           </label>
-          <label className="control-select">
-            <span className="sr-only">{t('adminMasterData.filterStoreImportScope')}</span>
-            <select
-              value={input.enabledFilter}
-              onChange={(event) => input.onEnabledFilterChange(event.target.value as StoreMasterEnabledFilter)}
-            >
-              <option value="all">{t('adminMasterData.allStores')}</option>
-              <option value="enabled">{t('adminMasterData.included')}</option>
-              <option value="disabled">{t('adminMasterData.excluded')}</option>
-            </select>
-          </label>
-          <label className="control-select">
-            <span className="sr-only">{t('adminMasterData.filterStoreStatus')}</span>
-            <select
-              value={input.statusFilter}
-              onChange={(event) => input.onStatusFilterChange(event.target.value as StoreMasterStatusFilter)}
-            >
-              <option value="all">{t('adminMasterData.allStatuses')}</option>
-              <option value="active">{t('adminMasterData.storeStatus.active')}</option>
-              <option value="inactive">{t('adminMasterData.storeStatus.inactive')}</option>
-              <option value="closed">{t('adminMasterData.storeStatus.closed')}</option>
-            </select>
-          </label>
-        </div>
-      </div>
-
-      {input.feedback ? <div className="master-data-command-feedback">{input.feedback}</div> : null}
+          <select
+            aria-label={t('adminMasterData.filterStoreImportScope')}
+            className={nativeSelectClass()}
+            value={input.enabledFilter}
+            onChange={(event) => input.onEnabledFilterChange(event.target.value as StoreMasterEnabledFilter)}
+          >
+            <option value="all">{t('adminMasterData.allStores')}</option>
+            <option value="enabled">{t('adminMasterData.included')}</option>
+            <option value="disabled">{t('adminMasterData.excluded')}</option>
+          </select>
+          <select
+            aria-label={t('adminMasterData.filterStoreStatus')}
+            className={nativeSelectClass()}
+            value={input.statusFilter}
+            onChange={(event) => input.onStatusFilterChange(event.target.value as StoreMasterStatusFilter)}
+          >
+            <option value="all">{t('adminMasterData.allStatuses')}</option>
+            <option value="active">{t('adminMasterData.storeStatus.active')}</option>
+            <option value="inactive">{t('adminMasterData.storeStatus.inactive')}</option>
+            <option value="closed">{t('adminMasterData.storeStatus.closed')}</option>
+          </select>
+        </AdminFilterBar>
+      }
+    >
+      {input.feedback ? <AdminStatePanel title={input.feedback} tone="accent" /> : null}
       {input.isLoading ? (
-        <div className="inline-state inline-state-neutral">{t('adminMasterData.loadingStoreMaster')}</div>
+        <AdminStatePanel isLoading title={t('adminMasterData.loadingStoreMaster')} />
       ) : input.isError ? (
-        <ScreenState title={t('adminMasterData.errorTitle')} copy={getErrorMessage(input.error)} tone="error" />
+        <AdminStatePanel title={t('adminMasterData.errorTitle')} description={getErrorMessage(input.error)} tone="danger" />
       ) : input.items.length === 0 ? (
-        <EmptyState title={t('adminMasterData.noStoresTitle')} copy={t('adminMasterData.noStoresCopy')} />
+        <AdminSurfaceEmpty title={t('adminMasterData.noStoresTitle')} copy={t('adminMasterData.noStoresCopy')} />
       ) : (
         <>
           <MasterDataBulkSaveBar
@@ -1028,102 +1093,102 @@ function StoreMasterPanel(input: {
             t={t}
             onSave={input.onSave}
           />
-          <div className="master-data-command-table-wrap">
-            <table className="master-data-command-table">
-              <thead>
-                <tr>
-                  <th>{t('adminMasterData.store')}</th>
-                  <th>{t('adminMasterData.type')}</th>
-                  <th>{t('adminMasterData.regionalManager')}</th>
-                  <th>{t('adminMasterData.status')}</th>
-                  <th>{t('adminMasterData.kpiImport')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {input.items.map((store) => {
-                  const effectiveStore = input.getEffectiveStore(store)
-                  const saving = input.savingStoreIds.has(store.storeId)
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('adminMasterData.store')}</TableHead>
+                <TableHead>{t('adminMasterData.type')}</TableHead>
+                <TableHead>{t('adminMasterData.regionalManager')}</TableHead>
+                <TableHead>{t('adminMasterData.status')}</TableHead>
+                <TableHead>{t('adminMasterData.kpiImport')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {input.items.map((store) => {
+                const effectiveStore = input.getEffectiveStore(store)
+                const saving = input.savingStoreIds.has(store.storeId)
 
-                  return (
-                    <tr key={store.storeId}>
-                      <td>
-                        <strong>{store.storeName}</strong>
-                        <small>{store.storeCode}</small>
-                      </td>
-                      <td>
-                        <select
-                          aria-label={t('adminMasterData.storeTypeAria', { storeName: store.storeName })}
-                          className="master-data-command-row-control"
+                return (
+                  <TableRow key={store.storeId}>
+                    <TableCell>
+                      <div className="tw:grid tw:gap-1">
+                        <strong className="tw:text-sm tw:font-medium">{store.storeName}</strong>
+                        <span className="tw:text-xs tw:text-muted-foreground">{store.storeCode}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <select
+                        aria-label={t('adminMasterData.storeTypeAria', { storeName: store.storeName })}
+                        className={nativeSelectClass()}
+                        disabled={saving}
+                        value={normalizeStoreType(effectiveStore.storeType)}
+                        onChange={(event) =>
+                          input.onUpdateDraft(store.storeId, { storeType: normalizeStoreType(event.target.value) })
+                        }
+                      >
+                        <option value="company">{t('adminMasterData.storeType.company')}</option>
+                        <option value="franchise">{t('adminMasterData.storeType.franchise')}</option>
+                        <option value="operator">{t('adminMasterData.storeType.operator')}</option>
+                      </select>
+                    </TableCell>
+                    <TableCell>
+                      <select
+                        aria-label={t('adminMasterData.storeRegionalManagerAria', { storeName: store.storeName })}
+                        className={nativeSelectClass()}
+                        disabled={saving}
+                        value={effectiveStore.regionId ?? ''}
+                        onChange={(event) => input.onUpdateDraft(store.storeId, { regionId: event.target.value })}
+                      >
+                        {input.lookups?.regions.length === 0 ? (
+                          <option value="">{t('adminMasterData.noActiveRegionalManagers')}</option>
+                        ) : null}
+                        {input.lookups?.regions.map((region) => (
+                          <option key={region.regionId} value={region.regionId}>
+                            {region.regionName}
+                          </option>
+                        ))}
+                      </select>
+                    </TableCell>
+                    <TableCell>
+                      <select
+                        aria-label={t('adminMasterData.storeStatusAria', { storeName: store.storeName })}
+                        className={nativeSelectClass()}
+                        disabled={saving}
+                        value={normalizeStoreStatus(effectiveStore.status)}
+                        onChange={(event) =>
+                          input.onUpdateDraft(store.storeId, { status: normalizeStoreStatus(event.target.value) })
+                        }
+                      >
+                        <option value="active">{t('adminMasterData.storeStatus.active')}</option>
+                        <option value="inactive">{t('adminMasterData.storeStatus.inactive')}</option>
+                        <option value="closed">{t('adminMasterData.storeStatus.closed')}</option>
+                      </select>
+                    </TableCell>
+                    <TableCell>
+                      <label className="tw:flex tw:items-center tw:gap-2 tw:text-sm">
+                        <input
+                          aria-label={t('adminMasterData.storeKpiImportEnabledAria', { storeName: store.storeName })}
+                          checked={effectiveStore.kpiImportEnabled}
                           disabled={saving}
-                          value={normalizeStoreType(effectiveStore.storeType)}
+                          type="checkbox"
                           onChange={(event) =>
-                            input.onUpdateDraft(store.storeId, { storeType: normalizeStoreType(event.target.value) })
+                            input.onUpdateDraft(store.storeId, {
+                              kpiImportEnabled: event.target.checked,
+                            })
                           }
-                        >
-                          <option value="company">{t('adminMasterData.storeType.company')}</option>
-                          <option value="franchise">{t('adminMasterData.storeType.franchise')}</option>
-                          <option value="operator">{t('adminMasterData.storeType.operator')}</option>
-                        </select>
-                      </td>
-                      <td>
-                        <select
-                          aria-label={t('adminMasterData.storeRegionalManagerAria', { storeName: store.storeName })}
-                          className="master-data-command-row-control"
-                          disabled={saving}
-                          value={effectiveStore.regionId ?? ''}
-                          onChange={(event) => input.onUpdateDraft(store.storeId, { regionId: event.target.value })}
-                        >
-                          {input.lookups?.regions.length === 0 ? (
-                            <option value="">{t('adminMasterData.noActiveRegionalManagers')}</option>
-                          ) : null}
-                          {input.lookups?.regions.map((region) => (
-                            <option key={region.regionId} value={region.regionId}>
-                              {region.regionName}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <select
-                          aria-label={t('adminMasterData.storeStatusAria', { storeName: store.storeName })}
-                          className="master-data-command-row-control"
-                          disabled={saving}
-                          value={normalizeStoreStatus(effectiveStore.status)}
-                          onChange={(event) =>
-                            input.onUpdateDraft(store.storeId, { status: normalizeStoreStatus(event.target.value) })
-                          }
-                        >
-                          <option value="active">{t('adminMasterData.storeStatus.active')}</option>
-                          <option value="inactive">{t('adminMasterData.storeStatus.inactive')}</option>
-                          <option value="closed">{t('adminMasterData.storeStatus.closed')}</option>
-                        </select>
-                      </td>
-                      <td>
-                        <label className="master-data-command-toggle">
-                          <input
-                            aria-label={t('adminMasterData.storeKpiImportEnabledAria', { storeName: store.storeName })}
-                            checked={effectiveStore.kpiImportEnabled}
-                            disabled={saving}
-                            type="checkbox"
-                            onChange={(event) =>
-                              input.onUpdateDraft(store.storeId, {
-                                kpiImportEnabled: event.target.checked,
-                              })
-                            }
-                          />
-                          <span>
-                            {effectiveStore.kpiImportEnabled
-                              ? t('adminMasterData.included')
-                              : t('adminMasterData.excluded')}
-                          </span>
-                        </label>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                        />
+                        <span>
+                          {effectiveStore.kpiImportEnabled
+                            ? t('adminMasterData.included')
+                            : t('adminMasterData.excluded')}
+                        </span>
+                      </label>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
           <MasterDataPager
             offset={input.offset}
             total={input.total}
@@ -1132,7 +1197,7 @@ function StoreMasterPanel(input: {
           />
         </>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -1164,56 +1229,56 @@ function PersonnelMasterPanel(input: {
   const { t } = input
 
   return (
-    <section className="master-data-command-panel" aria-label={t('adminMasterData.personnelTabAria')}>
-      <div className="master-data-command-panel-head">
-        <div>
-          <div className="eyebrow">{t('adminMasterData.tabPersonnel')}</div>
-          <h3>{t('adminMasterData.personnelPanelTitle')}</h3>
-          <p className="master-data-command-panel-copy">{t('adminMasterData.personnelPanelCopy')}</p>
-        </div>
-        <div className="master-data-command-toolbar">
-          <label className="search-field master-data-command-search">
-            <Search size={16} />
+    <AdminSurfaceSection
+      ariaLabel={t('adminMasterData.personnelTabAria')}
+      eyebrow={t('adminMasterData.tabPersonnel')}
+      title={t('adminMasterData.personnelPanelTitle')}
+      description={t('adminMasterData.personnelPanelCopy')}
+      actions={
+        <AdminFilterBar className="tw:w-full tw:md:w-auto">
+          <label className="tw:flex tw:min-w-56 tw:flex-1 tw:items-center tw:gap-2">
+            <Search aria-hidden="true" />
             <span className="sr-only">{t('adminMasterData.searchPersonnel')}</span>
-            <input
+            <Input
               value={input.search}
               onChange={(event) => input.onSearchChange(event.target.value)}
               placeholder={t('adminMasterData.searchPersonnelPlaceholder')}
             />
           </label>
-          <label className="control-select">
-            <span className="sr-only">{t('adminMasterData.filterPersonnelStatus')}</span>
-            <select
-              value={input.statusFilter}
-              onChange={(event) => input.onStatusFilterChange(event.target.value as PersonnelStatusFilter)}
-            >
-              <option value="all">{t('adminMasterData.allStatuses')}</option>
-              <option value="active">{t('adminMasterData.employmentStatus.active')}</option>
-              <option value="inactive">{t('adminMasterData.employmentStatus.inactive')}</option>
-              <option value="terminated">{t('adminMasterData.employmentStatus.terminated')}</option>
-            </select>
-          </label>
-          <label className="control-select">
-            <span className="sr-only">{t('adminMasterData.filterPersonnelStore')}</span>
-            <select value={input.storeFilter} onChange={(event) => input.onStoreFilterChange(event.target.value)}>
-              <option value="all">{t('adminMasterData.allStores')}</option>
-              {input.lookups?.stores.map((store) => (
-                <option key={store.storeId} value={store.storeId}>
-                  {store.storeName}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
-
-      {input.feedback ? <div className="master-data-command-feedback">{input.feedback}</div> : null}
+          <select
+            aria-label={t('adminMasterData.filterPersonnelStatus')}
+            className={nativeSelectClass()}
+            value={input.statusFilter}
+            onChange={(event) => input.onStatusFilterChange(event.target.value as PersonnelStatusFilter)}
+          >
+            <option value="all">{t('adminMasterData.allStatuses')}</option>
+            <option value="active">{t('adminMasterData.employmentStatus.active')}</option>
+            <option value="inactive">{t('adminMasterData.employmentStatus.inactive')}</option>
+            <option value="terminated">{t('adminMasterData.employmentStatus.terminated')}</option>
+          </select>
+          <select
+            aria-label={t('adminMasterData.filterPersonnelStore')}
+            className={nativeSelectClass()}
+            value={input.storeFilter}
+            onChange={(event) => input.onStoreFilterChange(event.target.value)}
+          >
+            <option value="all">{t('adminMasterData.allStores')}</option>
+            {input.lookups?.stores.map((store) => (
+              <option key={store.storeId} value={store.storeId}>
+                {store.storeName}
+              </option>
+            ))}
+          </select>
+        </AdminFilterBar>
+      }
+    >
+      {input.feedback ? <AdminStatePanel title={input.feedback} tone="accent" /> : null}
       {input.isLoading ? (
-        <div className="inline-state inline-state-neutral">{t('adminMasterData.loadingPersonnelMaster')}</div>
+        <AdminStatePanel isLoading title={t('adminMasterData.loadingPersonnelMaster')} />
       ) : input.isError ? (
-        <ScreenState title={t('adminMasterData.errorTitle')} copy={getErrorMessage(input.error)} tone="error" />
+        <AdminStatePanel title={t('adminMasterData.errorTitle')} description={getErrorMessage(input.error)} tone="danger" />
       ) : input.items.length === 0 ? (
-        <EmptyState title={t('adminMasterData.noPersonnelTitle')} copy={t('adminMasterData.noPersonnelCopy')} />
+        <AdminSurfaceEmpty title={t('adminMasterData.noPersonnelTitle')} copy={t('adminMasterData.noPersonnelCopy')} />
       ) : (
         <>
           <MasterDataBulkSaveBar
@@ -1223,163 +1288,157 @@ function PersonnelMasterPanel(input: {
             t={t}
             onSave={input.onSave}
           />
-          <div className="master-data-command-table-wrap">
-            <table className="master-data-command-table master-data-command-personnel-table">
-              <thead>
-                <tr>
-                  <th>{t('adminMasterData.employee')}</th>
-                  <th>{t('adminMasterData.sellerCode')}</th>
-                  <th>{t('adminMasterData.store')}</th>
-                  <th>{t('adminMasterData.position')}</th>
-                  <th>{t('adminMasterData.employment')}</th>
-                  <th>{t('adminMasterData.assignmentStart')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {input.items.map((personnel) => {
-                  const effectivePersonnel = input.getEffectivePersonnel(personnel)
-                  const saving = input.savingPersonnelIds.has(personnel.employeeId)
-                  const personnelName = getPersonnelMasterRowLabel(personnel)
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('adminMasterData.employee')}</TableHead>
+                <TableHead>{t('adminMasterData.sellerCode')}</TableHead>
+                <TableHead>{t('adminMasterData.store')}</TableHead>
+                <TableHead>{t('adminMasterData.position')}</TableHead>
+                <TableHead>{t('adminMasterData.employment')}</TableHead>
+                <TableHead>{t('adminMasterData.assignmentStart')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {input.items.map((personnel) => {
+                const effectivePersonnel = input.getEffectivePersonnel(personnel)
+                const saving = input.savingPersonnelIds.has(personnel.employeeId)
+                const personnelName = getPersonnelMasterRowLabel(personnel)
 
-                  return (
-                    <tr key={personnel.employeeId}>
-                      <td>
-                        <div className="master-data-command-name-grid">
-                          <input
-                            aria-label={t('adminMasterData.personnelFirstNameAria', { personnelName })}
-                            className="master-data-command-row-control"
-                            disabled={saving}
-                            value={effectivePersonnel.firstName}
-                            onChange={(event) =>
-                              input.onUpdateDraft(personnel.employeeId, { firstName: event.target.value })
-                            }
-                          />
-                          <input
-                            aria-label={t('adminMasterData.personnelLastNameAria', { personnelName })}
-                            className="master-data-command-row-control"
-                            disabled={saving}
-                            value={effectivePersonnel.lastName}
-                            onChange={(event) =>
-                              input.onUpdateDraft(personnel.employeeId, { lastName: event.target.value })
-                            }
-                          />
-                        </div>
-                      </td>
-                      <td>
-                        <input
-                          aria-label={t('adminMasterData.personnelSellerCodeAria', { personnelName })}
-                          className="master-data-command-row-control"
+                return (
+                  <TableRow key={personnel.employeeId}>
+                    <TableCell>
+                      <div className="tw:grid tw:min-w-44 tw:grid-cols-1 tw:gap-2 tw:lg:grid-cols-2">
+                        <Input
+                          aria-label={t('adminMasterData.personnelFirstNameAria', { personnelName })}
                           disabled={saving}
-                          value={effectivePersonnel.externalEmployeeRef}
+                          value={effectivePersonnel.firstName}
+                          onChange={(event) =>
+                            input.onUpdateDraft(personnel.employeeId, { firstName: event.target.value })
+                          }
+                        />
+                        <Input
+                          aria-label={t('adminMasterData.personnelLastNameAria', { personnelName })}
+                          disabled={saving}
+                          value={effectivePersonnel.lastName}
+                          onChange={(event) =>
+                            input.onUpdateDraft(personnel.employeeId, { lastName: event.target.value })
+                          }
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        aria-label={t('adminMasterData.personnelSellerCodeAria', { personnelName })}
+                        className="tw:min-w-36"
+                        disabled={saving}
+                        value={effectivePersonnel.externalEmployeeRef}
+                        onChange={(event) =>
+                          input.onUpdateDraft(personnel.employeeId, {
+                            externalEmployeeRef: event.target.value,
+                          })
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <select
+                        aria-label={t('adminMasterData.personnelStoreAria', { personnelName })}
+                        className={nativeSelectClass('tw:min-w-44')}
+                        disabled={saving}
+                        value={effectivePersonnel.storeId}
+                        onChange={(event) =>
+                          input.onUpdateDraft(personnel.employeeId, { storeId: event.target.value })
+                        }
+                      >
+                        <option value="">{t('adminMasterData.allStores')}</option>
+                        {input.lookups?.stores.map((store) => (
+                          <option key={store.storeId} value={store.storeId}>
+                            {store.storeName}
+                          </option>
+                        ))}
+                      </select>
+                    </TableCell>
+                    <TableCell>
+                      <select
+                        aria-label={t('adminMasterData.personnelPositionAria', { personnelName })}
+                        className={nativeSelectClass('tw:min-w-44')}
+                        disabled={saving}
+                        value={effectivePersonnel.positionId}
+                        onChange={(event) =>
+                          input.onUpdateDraft(personnel.employeeId, { positionId: event.target.value })
+                        }
+                      >
+                        <option value="">{t('adminMasterData.position')}</option>
+                        {input.lookups?.positions.map((position) => (
+                          <option key={position.positionId} value={position.positionId}>
+                            {position.positionName}
+                          </option>
+                        ))}
+                      </select>
+                    </TableCell>
+                    <TableCell>
+                      <div className="tw:grid tw:min-w-44 tw:grid-cols-1 tw:gap-2">
+                        <select
+                          aria-label={t('adminMasterData.personnelEmploymentStatusAria', { personnelName })}
+                          className={nativeSelectClass()}
+                          disabled={saving}
+                          value={normalizePersonnelStatus(effectivePersonnel.employmentStatus)}
                           onChange={(event) =>
                             input.onUpdateDraft(personnel.employeeId, {
-                              externalEmployeeRef: event.target.value,
+                              employmentStatus: normalizePersonnelStatus(event.target.value),
+                            })
+                          }
+                        >
+                          <option value="active">{t('adminMasterData.employmentStatus.active')}</option>
+                          <option value="inactive">{t('adminMasterData.employmentStatus.inactive')}</option>
+                          <option value="terminated">{t('adminMasterData.employmentStatus.terminated')}</option>
+                        </select>
+                        <select
+                          aria-label={t('adminMasterData.personnelEmploymentTypeAria', { personnelName })}
+                          className={nativeSelectClass()}
+                          disabled={saving}
+                          value={normalizeEmploymentType(effectivePersonnel.employmentType)}
+                          onChange={(event) =>
+                            input.onUpdateDraft(personnel.employeeId, {
+                              employmentType: normalizeEmploymentType(event.target.value),
+                            })
+                          }
+                        >
+                          <option value="full_time">{t('adminMasterData.employmentType.full_time')}</option>
+                          <option value="part_time">{t('adminMasterData.employmentType.part_time')}</option>
+                          <option value="temporary">{t('adminMasterData.employmentType.temporary')}</option>
+                        </select>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="tw:grid tw:min-w-44 tw:grid-cols-1 tw:gap-2">
+                        <Input
+                          aria-label={t('adminMasterData.personnelHireDateAria', { personnelName })}
+                          disabled={saving}
+                          type="date"
+                          value={dateInputValue(effectivePersonnel.hireDate)}
+                          onChange={(event) =>
+                            input.onUpdateDraft(personnel.employeeId, { hireDate: event.target.value })
+                          }
+                        />
+                        <Input
+                          aria-label={t('adminMasterData.personnelAssignmentStartAria', { personnelName })}
+                          disabled={saving}
+                          type="date"
+                          value={dateInputValue(effectivePersonnel.assignmentStartDate)}
+                          onChange={(event) =>
+                            input.onUpdateDraft(personnel.employeeId, {
+                              assignmentStartDate: event.target.value,
                             })
                           }
                         />
-                      </td>
-                      <td>
-                        <select
-                          aria-label={t('adminMasterData.personnelStoreAria', { personnelName })}
-                          className="master-data-command-row-control"
-                          disabled={saving}
-                          value={effectivePersonnel.storeId}
-                          onChange={(event) =>
-                            input.onUpdateDraft(personnel.employeeId, { storeId: event.target.value })
-                          }
-                        >
-                          <option value="">{t('adminMasterData.allStores')}</option>
-                          {input.lookups?.stores.map((store) => (
-                            <option key={store.storeId} value={store.storeId}>
-                              {store.storeName}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <select
-                          aria-label={t('adminMasterData.personnelPositionAria', { personnelName })}
-                          className="master-data-command-row-control"
-                          disabled={saving}
-                          value={effectivePersonnel.positionId}
-                          onChange={(event) =>
-                            input.onUpdateDraft(personnel.employeeId, { positionId: event.target.value })
-                          }
-                        >
-                          <option value="">{t('adminMasterData.position')}</option>
-                          {input.lookups?.positions.map((position) => (
-                            <option key={position.positionId} value={position.positionId}>
-                              {position.positionName}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td>
-                        <div className="master-data-command-name-grid">
-                          <select
-                            aria-label={t('adminMasterData.personnelEmploymentStatusAria', { personnelName })}
-                            className="master-data-command-row-control"
-                            disabled={saving}
-                            value={normalizePersonnelStatus(effectivePersonnel.employmentStatus)}
-                            onChange={(event) =>
-                              input.onUpdateDraft(personnel.employeeId, {
-                                employmentStatus: normalizePersonnelStatus(event.target.value),
-                              })
-                            }
-                          >
-                            <option value="active">{t('adminMasterData.employmentStatus.active')}</option>
-                            <option value="inactive">{t('adminMasterData.employmentStatus.inactive')}</option>
-                            <option value="terminated">{t('adminMasterData.employmentStatus.terminated')}</option>
-                          </select>
-                          <select
-                            aria-label={t('adminMasterData.personnelEmploymentTypeAria', { personnelName })}
-                            className="master-data-command-row-control"
-                            disabled={saving}
-                            value={normalizeEmploymentType(effectivePersonnel.employmentType)}
-                            onChange={(event) =>
-                              input.onUpdateDraft(personnel.employeeId, {
-                                employmentType: normalizeEmploymentType(event.target.value),
-                              })
-                            }
-                          >
-                            <option value="full_time">{t('adminMasterData.employmentType.full_time')}</option>
-                            <option value="part_time">{t('adminMasterData.employmentType.part_time')}</option>
-                            <option value="temporary">{t('adminMasterData.employmentType.temporary')}</option>
-                          </select>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="master-data-command-name-grid">
-                          <input
-                            aria-label={t('adminMasterData.personnelHireDateAria', { personnelName })}
-                            className="master-data-command-row-control"
-                            disabled={saving}
-                            type="date"
-                            value={dateInputValue(effectivePersonnel.hireDate)}
-                            onChange={(event) =>
-                              input.onUpdateDraft(personnel.employeeId, { hireDate: event.target.value })
-                            }
-                          />
-                          <input
-                            aria-label={t('adminMasterData.personnelAssignmentStartAria', { personnelName })}
-                            className="master-data-command-row-control"
-                            disabled={saving}
-                            type="date"
-                            value={dateInputValue(effectivePersonnel.assignmentStartDate)}
-                            onChange={(event) =>
-                              input.onUpdateDraft(personnel.employeeId, {
-                                assignmentStartDate: event.target.value,
-                              })
-                            }
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
           <MasterDataPager
             offset={input.offset}
             total={input.total}
@@ -1388,9 +1447,10 @@ function PersonnelMasterPanel(input: {
           />
         </>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
+
 
 function getPersonnelMasterRowLabel(personnel: PersonnelMasterItem) {
   const displayName = personnel.displayName.trim()
@@ -1406,46 +1466,23 @@ function MasterDataHistoryPanel(input: { t: TranslateFunction }) {
   const { t } = input
 
   return (
-    <section className="master-data-command-panel" aria-label={t('adminMasterData.historyTabAria')}>
-      <div className="master-data-command-panel-head">
-        <div>
-          <div className="eyebrow">{t('adminMasterData.tabHistory')}</div>
-          <h3>{t('adminMasterData.historyPanelTitle')}</h3>
-          <p className="master-data-command-panel-copy">{t('adminMasterData.historyPanelCopy')}</p>
-        </div>
-      </div>
-      <div className="master-data-command-history">
+    <AdminSurfaceSection
+      ariaLabel={t('adminMasterData.historyTabAria')}
+      eyebrow={t('adminMasterData.tabHistory')}
+      title={t('adminMasterData.historyPanelTitle')}
+      description={t('adminMasterData.historyPanelCopy')}
+    >
+      <div className="tw:grid tw:gap-2">
         <MasterDataHistoryRow label={t('adminMasterData.historyStoreEvent')} eventType="store_master_data.updated" />
         <MasterDataHistoryRow label={t('adminMasterData.historyPersonnelEvent')} eventType="personnel_master_data.updated" />
         <MasterDataHistoryRow label={t('adminMasterData.historyBootstrapEvent')} eventType="master_data_bootstrap.promoted" />
       </div>
-    </section>
-  )
-}
-
-function MasterDataMetric(input: {
-  icon: ReactNode
-  title: string
-  value: string
-  note: string
-  tone?: 'primary'
-}) {
-  return (
-    <article className={`master-data-command-metric${input.tone === 'primary' ? ' master-data-command-metric-primary' : ''}`}>
-      <div className="master-data-command-metric-icon">{input.icon}</div>
-      <span>{input.title}</span>
-      <strong>{input.value}</strong>
-      <p>{input.note}</p>
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
 function MasterDataPill(input: { children: ReactNode; tone?: 'accent' | 'calm' | 'warning' | 'danger' | 'neutral' }) {
-  return (
-    <span className={`master-data-command-pill master-data-command-pill-${input.tone ?? 'neutral'}`}>
-      {input.children}
-    </span>
-  )
+  return <AdminSurfaceBadge tone={toMasterDataSurfaceTone(input.tone)}>{input.children}</AdminSurfaceBadge>
 }
 
 function MasterDataPager(input: {
@@ -1459,24 +1496,24 @@ function MasterDataPager(input: {
   const to = Math.min(input.offset + PAGE_SIZE, input.total)
 
   return (
-    <div className="master-data-command-pager">
-      <span>
+    <AdminActionRow className="tw:justify-between">
+      <AdminSurfaceBadge tone="neutral">
         {formatNumber(from)}-{formatNumber(to)} / {formatNumber(input.total)}
-      </span>
-      <div>
-        <button className="control-button" type="button" disabled={input.offset === 0} onClick={input.onPrevious}>
+      </AdminSurfaceBadge>
+      <AdminActionRow>
+        <Button type="button" variant="outline" disabled={input.offset === 0} onClick={input.onPrevious}>
           {t('adminIntegrations.previous')}
-        </button>
-        <button
-          className="control-button"
+        </Button>
+        <Button
           type="button"
+          variant="outline"
           disabled={input.offset + PAGE_SIZE >= input.total}
           onClick={input.onNext}
         >
           {t('adminIntegrations.next')}
-        </button>
-      </div>
-    </div>
+        </Button>
+      </AdminActionRow>
+    </AdminActionRow>
   )
 }
 
@@ -1488,287 +1525,44 @@ function MasterDataBulkSaveBar(input: {
   onSave: () => void
 }) {
   return (
-    <div className="master-data-command-bulk-actions">
-      <span>{input.t('adminMasterData.pendingChanges', { count: input.pendingCount })}</span>
-      <button
-        className="control-button master-data-command-primary-button"
-        disabled={input.disabled}
-        type="button"
-        onClick={input.onSave}
-      >
-        <Save size={16} />
-        {input.isSaving ? input.t('adminMasterData.saving') : input.t('adminMasterData.saveChanges')}
-      </button>
-    </div>
+    <AdminStatePanel
+      title={input.t('adminMasterData.pendingChanges', { count: input.pendingCount })}
+      tone={input.pendingCount > 0 ? 'warning' : 'neutral'}
+      action={
+        <Button disabled={input.disabled} type="button" onClick={input.onSave}>
+          <Save aria-hidden="true" />
+          {input.isSaving ? input.t('adminMasterData.saving') : input.t('adminMasterData.saveChanges')}
+        </Button>
+      }
+    />
   )
 }
 
 function MasterDataHistoryRow(input: { label: string; eventType: string }) {
   return (
-    <div className="master-data-command-history-row">
-      <span>Audit</span>
-      <strong>{input.label}</strong>
+    <div className="tw:flex tw:flex-col tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+      <div className="tw:grid tw:gap-1">
+        <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Audit</span>
+        <strong className="tw:text-sm tw:font-medium">{input.label}</strong>
+      </div>
       <MasterDataPill tone="accent">{input.eventType}</MasterDataPill>
     </div>
   )
 }
 
-function BatchDetailPanel(input: {
-  batchId: string
-  detailLoading: boolean
-  detailError: unknown
-  detailIsError: boolean
-  readinessLoading: boolean
-  readinessError: unknown
-  readinessIsError: boolean
-  summary: MasterDataBootstrapBatchDetail['summary'] | null
-  readiness: MasterDataBootstrapPromotionReadinessResponse['summary'] | null
-  readinessRows: MasterDataBootstrapPromotionReadinessResponse['rows']['items']
-  rows: MasterDataBootstrapRow[]
-  validating: boolean
-  promoting: boolean
-  onValidate: () => void
-  onPromote: () => void
-}) {
-  const { t } = useLocalization()
-
-  if (input.detailLoading || input.readinessLoading) {
-    return (
-      <ScreenState
-        title={t('adminMasterData.detailLoadingTitle')}
-        copy={t('adminMasterData.detailLoadingCopy')}
-      />
-    )
-  }
-
-  if (input.detailIsError) {
-    return (
-      <ScreenState
-        title={t('adminMasterData.batchUnavailableTitle')}
-        copy={getErrorMessage(input.detailError)}
-        tone="error"
-      />
-    )
-  }
-
-  if (input.readinessIsError) {
-    return (
-      <ScreenState
-        title={t('adminMasterData.readinessUnavailableTitle')}
-        copy={getErrorMessage(input.readinessError)}
-        tone="error"
-      />
-    )
-  }
-
-  if (!input.summary || !input.readiness) {
-    return (
-      <ScreenState
-        title={t('adminMasterData.batchUnavailableTitle')}
-        copy={t('adminMasterData.missingEvidenceCopy')}
-        tone="error"
-      />
-    )
-  }
-
-  const promoteLabel =
-    input.summary.bootstrapEntity === 'store'
-      ? t('adminMasterData.promoteStores')
-      : t('adminMasterData.promotePersonnel')
-  const promotedLabel = `${input.summary.promotedCount} / ${input.summary.rowCount}`
-
-  return (
-    <section className="master-data-command-detail">
-      <div className="master-data-command-metrics master-data-command-detail-metrics">
-        <MasterDataMetric
-          title={t('adminMasterData.readyRows')}
-          value={formatNumber(input.readiness.readyCount)}
-          note={t('adminMasterData.nextAction', {
-            action: formatMasterDataState(input.readiness.nextAction, t),
-          })}
-          icon={<ListChecks size={18} />}
-          tone="primary"
-        />
-        <MasterDataMetric
-          title={t('adminMasterData.promotedRows')}
-          value={formatNumber(input.summary.promotedCount)}
-          note={promotedLabel}
-          icon={<ShieldCheck size={18} />}
-        />
-        <MasterDataMetric
-          title={t('adminMasterData.needsValidationMetric')}
-          value={formatNumber(input.readiness.needsValidationCount)}
-          note={formatMasterDataState(input.readiness.nextAction, t)}
-          icon={<DatabaseZap size={18} />}
-        />
-        <MasterDataMetric
-          title={t('adminMasterData.blockedRows')}
-          value={formatNumber(input.readiness.blockedCount + input.readiness.needsReviewCount)}
-          note={formatMasterDataState(input.readiness.nextAction, t)}
-          icon={<CheckCircle2 size={18} />}
-        />
-      </div>
-
-      <section className="master-data-command-split">
-        <article className="master-data-command-card">
-          <div className="master-data-command-card-head">
-            <div>
-              <div className="eyebrow">{t('adminMasterData.selectedBatch')}</div>
-              <h4>{input.summary.sourceLabel}</h4>
-            </div>
-            <MasterDataPill tone={mapReadinessTone(input.readiness.nextAction)}>
-              {formatMasterDataState(input.readiness.nextAction, t)}
-            </MasterDataPill>
-          </div>
-          <div className="master-data-command-key-grid">
-            <KeyTile label={t('adminMasterData.batch')} value={input.batchId} />
-            <KeyTile label={t('adminMasterData.entity')} value={formatMasterDataEntity(input.summary.bootstrapEntity, t)} />
-            <KeyTile label={t('adminMasterData.status')} value={formatMasterDataState(input.summary.batchStatus, t)} />
-            <KeyTile
-              label={t('adminMasterData.readiness')}
-              value={input.readiness.canPromote ? t('adminMasterData.canPromote') : t('adminMasterData.blocked')}
-            />
-            <KeyTile label={t('adminMasterData.promotedRows')} value={promotedLabel} />
-            <KeyTile label={t('adminMasterData.file')} value={input.summary.fileReference ?? t('adminMasterData.noFileReference')} />
-          </div>
-        </article>
-
-        <article className="master-data-command-card">
-          <div className="master-data-command-card-head">
-            <div>
-              <div className="eyebrow">{t('adminMasterData.actions')}</div>
-              <h4>{t('adminMasterData.commandPanelTitle')}</h4>
-            </div>
-          </div>
-          <p>{t('adminMasterData.commandPanelCopy')}</p>
-          <div className="master-data-command-toolbar">
-            <button
-              className="control-button master-data-command-primary-button"
-              type="button"
-              disabled={input.validating}
-              onClick={input.onValidate}
-            >
-              {input.validating ? t('adminMasterData.validating') : t('adminMasterData.validateBatch')}
-            </button>
-            <button
-              className="control-button master-data-command-primary-button"
-              type="button"
-              disabled={!input.readiness.canPromote || input.promoting}
-              onClick={input.onPromote}
-            >
-              {input.promoting ? t('adminMasterData.promoting') : promoteLabel}
-            </button>
-          </div>
-          {!input.readiness.canPromote ? (
-            <div className="inline-state inline-state-warning">
-              {t('adminMasterData.promotionDisabled')}
-            </div>
-          ) : null}
-        </article>
-      </section>
-
-      <EvidenceList
-        ariaLabel={t('adminMasterData.promotionDryRunEvidenceAria')}
-        eyebrow={t('adminMasterData.dryRun')}
-        title={t('adminMasterData.dryRunTitle')}
-        copy={t('adminMasterData.dryRunCopy')}
-        emptyCopy={t('adminMasterData.dryRunEmpty')}
-        rows={input.readinessRows.map((row) => ({
-          key: row.rowId,
-          title: `#${row.rowNumber} ${resolveDryRunRowLabel(row)}`,
-          pill: formatMasterDataState(row.promotionReadiness, t),
-          tone: mapPromotionReadinessTone(row.promotionReadiness),
-          chips: [
-            [t('adminMasterData.storeCode'), row.sourceStoreCode],
-            [t('adminMasterData.employeeCode'), row.sourceEmployeeCode],
-            [t('adminMasterData.promotedEntity'), row.promotedEntityId],
-            [t('adminMasterData.blockReason'), row.blockReason],
-          ],
-        }))}
-      />
-
-      <EvidenceList
-        ariaLabel={t('adminMasterData.bootstrapRowEvidenceAria')}
-        eyebrow={t('adminMasterData.rowEvidence')}
-        title={t('adminMasterData.rowEvidenceTitle')}
-        emptyCopy={t('adminMasterData.rowEvidenceEmpty')}
-        rows={input.rows.map((row) => ({
-          key: row.rowId,
-          title: `#${row.rowNumber} ${resolveRowName(row)}`,
-          pill: formatMasterDataState(row.validationStatus, t),
-          tone: mapValidationTone(row.validationStatus),
-          copy: row.issueMessage,
-          chips: [
-            [t('adminMasterData.storeCode'), row.sourceStoreCode],
-            [t('adminMasterData.employeeCode'), row.sourceEmployeeCode],
-            [t('adminMasterData.resolvedStore'), row.resolvedStoreId],
-            [t('adminMasterData.resolvedEmployee'), row.resolvedEmployeeId],
-            [t('adminMasterData.resolvedPosition'), row.resolvedPositionId],
-            [t('adminMasterData.promotedEntity'), row.promotedEntityId],
-          ],
-        }))}
-      />
-    </section>
-  )
+function nativeSelectClass(className = '') {
+  return [
+    'tw:h-8 tw:min-w-40 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2.5 tw:text-sm tw:text-foreground tw:outline-none tw:transition-colors tw:focus-visible:border-ring tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:disabled:cursor-not-allowed tw:disabled:opacity-50',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ')
 }
 
-function KeyTile(input: { label: string; value: string }) {
-  return (
-    <div className="master-data-command-key-tile">
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-    </div>
-  )
-}
-
-function EvidenceList(input: {
-  ariaLabel: string
-  eyebrow: string
-  title: string
-  copy?: string
-  emptyCopy: string
-  rows: Array<{
-    key: string
-    title: string
-    pill: string
-    tone: 'accent' | 'calm' | 'warning' | 'danger' | 'neutral'
-    copy?: string | null
-    chips: Array<[string, string | null | undefined]>
-  }>
-}) {
-  const { t } = useLocalization()
-
-  return (
-    <section className="master-data-command-card" aria-label={input.ariaLabel}>
-      <div className="master-data-command-card-head">
-        <div>
-          <div className="eyebrow">{input.eyebrow}</div>
-          <h4>{input.title}</h4>
-          {input.copy ? <p>{input.copy}</p> : null}
-        </div>
-      </div>
-      {input.rows.length === 0 ? (
-        <EmptyState copy={input.emptyCopy} />
-      ) : (
-        <div className="master-data-command-evidence-list">
-          {input.rows.map((row) => (
-            <div className="master-data-command-evidence-row" key={row.key}>
-              <div className="master-data-command-evidence-row-head">
-                <strong>{row.title}</strong>
-                <MasterDataPill tone={row.tone}>{row.pill}</MasterDataPill>
-              </div>
-              {row.copy ? <p>{row.copy}</p> : null}
-              <div className="master-data-command-evidence-meta">
-                {row.chips.map(([label, value]) => (
-                  <span className="master-data-command-chip" key={`${row.key}-${label}`}>
-                    {label}: <code>{value ?? t('adminMasterData.notResolved')}</code>
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </section>
-  )
+function toMasterDataSurfaceTone(input?: 'accent' | 'calm' | 'warning' | 'danger' | 'neutral'): AdminSurfaceTone {
+  if (input === 'calm') return 'success'
+  if (input === 'accent') return 'accent'
+  if (input === 'warning') return 'warning'
+  if (input === 'danger') return 'danger'
+  return 'neutral'
 }

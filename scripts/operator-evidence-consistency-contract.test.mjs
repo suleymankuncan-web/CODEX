@@ -21,6 +21,9 @@ const debtLedger = readText('docs/plans/project-debt-ledger.md')
 const importBatchDetailPage = readText('admin-web/src/pages/ImportBatchDetailPage.tsx')
 const importBatchDetailMessages = readText('admin-web/src/features/localization/messages/import-batch-detail.ts')
 const masterDataBootstrapPage = readText('admin-web/src/pages/MasterDataBootstrapPage.tsx')
+const masterDataBootstrapBatchDetailPanel = readText(
+  'admin-web/src/pages/master-data-bootstrap-batch-detail-panel.tsx',
+)
 const masterDataMessages = readText('admin-web/src/features/localization/messages/admin-master-data.ts')
 const adminRoutingSpec = readText('admin-web/e2e/admin-routing.spec.ts')
 const integrationSurfacesSpec = readText('admin-web/e2e/integration-surfaces.spec.ts')
@@ -79,9 +82,8 @@ test('operator evidence copy is visible on existing admin surfaces', () => {
     requireText(masterDataMessages, phrase)
   }
 
-  for (const phrase of ['adminMasterData.reviewQueueCopy', 'adminMasterData.dryRunCopy']) {
-    requireText(masterDataBootstrapPage, phrase)
-  }
+  requireText(masterDataBootstrapPage, 'adminMasterData.reviewQueueCopy')
+  requireText(masterDataBootstrapBatchDetailPanel, 'adminMasterData.dryRunCopy')
 
   requireText(
     adminRoutingSpec,

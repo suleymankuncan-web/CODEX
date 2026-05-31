@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Clock3, GitBranch, RefreshCcw, Sparkles } from 'lucide-react'
+import { ArrowLeft, Clock3, Download, GitBranch, RefreshCcw, Sparkles } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { Button } from '../components/ui/button'
+import { Progress } from '../components/ui/progress'
 import {
-  EmptyState,
-  MetricAccent,
-  ScreenState,
-  StatusBar,
-  StatusPill,
-} from '../components/dashboard-primitives'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import { downloadCsv } from '../lib/download-csv'
 import {
   getSnapshotRunAudit,
@@ -19,31 +22,26 @@ import {
   type SnapshotRunDependencies,
   type SnapshotRunDetail,
 } from '../features/snapshots/api'
+import {
+  formatSnapshotState,
+  formatSnapshotType,
+  mapSnapshotSurfaceTone,
+} from '../features/snapshots/snapshot-surface-semantics'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
-import { formatDate, formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
-
-function formatSnapshotType(input: string, t: TranslateFunction) {
-  if (input === 'daily') return t('adminSnapshots.type.daily')
-  if (input === 'weekly') return t('adminSnapshots.type.weekly')
-  if (input === 'monthly') return t('adminSnapshots.type.monthly')
-  if (input === 'payroll') return t('adminSnapshots.type.payroll')
-  if (input === 'compliance') return t('adminSnapshots.type.compliance')
-  return input.replaceAll('_', ' ')
-}
-
-function formatSnapshotState(input: string, t: TranslateFunction) {
-  if (input === 'queued') return t('adminSnapshots.status.queued')
-  if (input === 'running') return t('adminSnapshots.status.running')
-  if (input === 'completed') return t('adminSnapshots.status.completed')
-  if (input === 'failed') return t('adminSnapshots.status.failed')
-  if (input === 'healthy') return t('adminSnapshots.health.healthy')
-  if (input === 'in_progress') return t('adminSnapshots.health.inProgress')
-  if (input === 'retry_ready') return t('adminSnapshots.health.retryReady')
-  if (input === 'needs_action') return t('adminSnapshots.health.needsAction')
-  if (input === 'stuck') return t('adminSnapshots.health.stuck')
-  return input.replaceAll('_', ' ')
-}
+import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
+import {
+  AdminKeyValue as KeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
 
 function formatCheckStatus(input: 'pass' | 'fail', t: TranslateFunction) {
   return input === 'pass' ? t('adminSnapshots.check.pass') : t('adminSnapshots.check.fail')
@@ -92,15 +90,38 @@ export function SnapshotRunDetailPage() {
   })
 
   if (!snapshotRunId) {
-    return <ScreenState title={t('adminSnapshots.detailMissingTitle')} copy={t('adminSnapshots.detailMissingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminSnapshots.detailMissingTitle')}
+          description={t('adminSnapshots.detailMissingCopy')}
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (detailQuery.isLoading) {
-    return <ScreenState title={t('adminSnapshots.detailLoadingTitle')} copy={t('adminSnapshots.detailLoadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          isLoading
+          title={t('adminSnapshots.detailLoadingTitle')}
+          description={t('adminSnapshots.detailLoadingCopy')}
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (detailQuery.isError || !detailQuery.data) {
-    return <ScreenState title={t('adminSnapshots.detailUnavailableTitle')} copy={getErrorMessage(detailQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminSnapshots.detailUnavailableTitle')}
+          description={getErrorMessage(detailQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   const detail = detailQuery.data
@@ -114,46 +135,73 @@ export function SnapshotRunDetailPage() {
     detail.cards.turnoverRows
 
   return (
-    <section className="page-stack">
-      <Link className="back-link" to="/admin/snapshots">
-        <ArrowLeft size={16} />
-        {t('adminSnapshots.backToOperations')}
-      </Link>
+    <AdminSurfacePage ariaLabel={t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}>
+      <Button asChild className="tw:w-fit" variant="outline">
+        <Link to="/admin/snapshots">
+          <ArrowLeft aria-hidden="true" />
+          {t('adminSnapshots.backToOperations')}
+        </Link>
+      </Button>
 
-      <section className="hero-panel hero-panel-detail">
-        <div>
-          <div className="eyebrow">{t('adminSnapshots.detailEyebrow')}</div>
-          <h2 className="hero-title">
-            {t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}
-          </h2>
-          <p className="hero-copy">
-            {t('adminSnapshots.detailCopy', {
-              runId: detail.snapshotRun.snapshotRunId,
-              state: formatSnapshotState(detail.snapshotRun.healthState, t),
-            })}{' '}
-            <span className={`inline-state inline-state-${mapHealthTone(detail.snapshotRun.healthState)}`}>
+      <AdminSurfaceHeader
+        eyebrow={t('adminSnapshots.detailEyebrow')}
+        title={t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}
+        description={t('adminSnapshots.detailCopy', {
+          runId: detail.snapshotRun.snapshotRunId,
+          state: formatSnapshotState(detail.snapshotRun.healthState, t),
+        })}
+        icon={<Sparkles size={18} />}
+        meta={
+          <>
+            <AdminSurfaceBadge tone={mapSnapshotSurfaceTone(detail.snapshotRun.healthState)}>
               {formatSnapshotState(detail.snapshotRun.healthState, t)}
-            </span>
-          </p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('adminSnapshots.totalReportRows')} value={String(totalRows)} />
-          <MetricAccent label={t('adminSnapshots.canRerun')} value={detail.canRerun ? t('adminSnapshots.yes') : t('adminSnapshots.no')} />
-          <MetricAccent label={t('adminSnapshots.rerunAllowed')} value={detail.rerunAllowed ? t('adminSnapshots.yes') : t('adminSnapshots.no')} />
-          <MetricAccent
-            label={t('adminSnapshots.kpiConfig')}
-            value={formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion, t)}
-          />
-        </div>
-      </section>
+            </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone={mapSnapshotSurfaceTone(detail.snapshotRun.runStatus)}>
+              {formatSnapshotState(detail.snapshotRun.runStatus, t)}
+            </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone={detail.canRerun ? 'accent' : 'neutral'}>
+              {t('adminSnapshots.canRerun')}: {detail.canRerun ? t('adminSnapshots.yes') : t('adminSnapshots.no')}
+            </AdminSurfaceBadge>
+          </>
+        }
+      />
 
-      {feedback ? (
-        <section className="panel">
-          <div className="inline-state inline-state-accent">{feedback}</div>
-        </section>
-      ) : null}
+      {feedback ? <AdminStatePanel title={feedback} tone="accent" /> : null}
 
-      <section className="two-up-grid">
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'rows',
+            label: t('adminSnapshots.totalReportRows'),
+            value: String(totalRows),
+            icon: <Sparkles size={18} />,
+            tone: 'cyan',
+          },
+          {
+            id: 'can-rerun',
+            label: t('adminSnapshots.canRerun'),
+            value: detail.canRerun ? t('adminSnapshots.yes') : t('adminSnapshots.no'),
+            icon: <RefreshCcw size={18} />,
+            tone: detail.canRerun ? 'accent' : 'neutral',
+          },
+          {
+            id: 'rerun-allowed',
+            label: t('adminSnapshots.rerunAllowed'),
+            value: detail.rerunAllowed ? t('adminSnapshots.yes') : t('adminSnapshots.no'),
+            icon: <Clock3 size={18} />,
+            tone: detail.rerunAllowed ? 'success' : 'warning',
+          },
+          {
+            id: 'kpi-config',
+            label: t('adminSnapshots.kpiConfig'),
+            value: formatSnapshotKpiConfigVersion(detail.snapshotRun.kpiConfigVersion, t),
+            icon: <GitBranch size={18} />,
+            tone: 'neutral',
+          },
+        ]}
+      />
+
+      <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:xl:grid-cols-2">
         <SnapshotRunSummaryPanel detail={detail} />
 
         <SnapshotDependenciesPanel
@@ -163,38 +211,35 @@ export function SnapshotRunDetailPage() {
           onRerun={() => rerunMutation.mutate(snapshotRunId)}
           snapshotRunId={snapshotRunId}
         />
-      </section>
+      </div>
 
-      <section className="two-up-grid">
+      <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:xl:grid-cols-2">
         <SnapshotOutputVolumePanel detail={detail} totalRows={totalRows} />
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.lineageEyebrow')}</div>
-              <h3>{t('adminSnapshots.lineageTitle')}</h3>
-            </div>
-          </div>
+        <AdminSurfaceSection
+          eyebrow={t('adminSnapshots.lineageEyebrow')}
+          title={t('adminSnapshots.lineageTitle')}
+        >
           {lineage ? (
-            <div className="stacked-table">
-              <div className="stacked-row">
-                <div className="stacked-row-head">
-                  <strong>{t('adminSnapshots.parent')}</strong>
-                  <GitBranch size={16} />
+            <div className="tw:grid tw:gap-3">
+              <div className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
+                <div className="tw:flex tw:items-center tw:justify-between tw:gap-2">
+                  <strong className="tw:text-sm tw:font-medium">{t('adminSnapshots.parent')}</strong>
+                  <GitBranch aria-hidden="true" />
                 </div>
-                <p>
+                <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">
                   {lineage.parent
                     ? `${formatSnapshotType(lineage.parent.snapshotType, t)} · ${formatSnapshotState(lineage.parent.runStatus, t)} · ${lineage.parent.snapshotRunId}`
                     : t('adminSnapshots.noParentRun')}
                 </p>
               </div>
-              <div className="stacked-row">
-                <div className="stacked-row-head">
-                  <strong>{t('adminSnapshots.children')}</strong>
-                  <Sparkles size={16} />
+              <div className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
+                <div className="tw:flex tw:items-center tw:justify-between tw:gap-2">
+                  <strong className="tw:text-sm tw:font-medium">{t('adminSnapshots.children')}</strong>
+                  <Sparkles aria-hidden="true" />
                 </div>
                 {lineage.children.length ? (
-                  <div className="queue-meta">
+                  <div className="tw:mt-2 tw:flex tw:flex-col tw:gap-1 tw:text-sm tw:text-muted-foreground">
                     {lineage.children.map((child) => (
                       <span key={child.snapshotRunId}>
                         {formatSnapshotType(child.snapshotType, t)} · {formatSnapshotState(child.runStatus, t)} · {child.snapshotRunId}
@@ -202,52 +247,44 @@ export function SnapshotRunDetailPage() {
                     ))}
                   </div>
                 ) : (
-                  <p>{t('adminSnapshots.noRerunChildren')}</p>
+                  <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">{t('adminSnapshots.noRerunChildren')}</p>
                 )}
               </div>
             </div>
           ) : (
-            <EmptyState copy={t('adminSnapshots.dependencyLoading')} />
+            <AdminSurfaceEmpty copy={t('adminSnapshots.dependencyLoading')} />
           )}
-        </article>
-      </section>
+        </AdminSurfaceSection>
+      </div>
 
-      <section className="two-up-grid detail-bottom-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.failurePostureEyebrow')}</div>
-              <h3>{t('adminSnapshots.failurePostureTitle')}</h3>
-            </div>
-          </div>
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('adminSnapshots.failureReason')}</strong>
-                <Clock3 size={16} />
-              </div>
-              <p>{detail.failureReason ?? t('adminSnapshots.noFailureReason')}</p>
-            </div>
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('adminSnapshots.latestRerunTitle')}</strong>
-                <RefreshCcw size={16} />
-              </div>
-              <p>{detail.latestRerunSnapshotRunId ?? t('adminSnapshots.noRerunCreated')}</p>
-              <span className="queue-subtitle">{t('adminSnapshots.rerunCount', { count: detail.rerunCount })}</span>
-            </div>
-          </div>
-        </article>
+      <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:xl:grid-cols-2">
+        <AdminSurfaceSection
+          eyebrow={t('adminSnapshots.failurePostureEyebrow')}
+          title={t('adminSnapshots.failurePostureTitle')}
+        >
+          <AdminKeyValueGrid className="tw:lg:grid-cols-2">
+            <KeyValue
+              label={t('adminSnapshots.failureReason')}
+              value={detail.failureReason ?? t('adminSnapshots.noFailureReason')}
+            />
+            <KeyValue
+              label={t('adminSnapshots.latestRerunTitle')}
+              value={detail.latestRerunSnapshotRunId ?? t('adminSnapshots.noRerunCreated')}
+            />
+            <KeyValue
+              label={t('adminSnapshots.rerunCount', { count: detail.rerunCount })}
+              value={String(detail.rerunCount)}
+            />
+          </AdminKeyValueGrid>
+        </AdminSurfaceSection>
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminSnapshots.auditTimelineEyebrow')}</div>
-              <h3>{t('adminSnapshots.auditTimelineTitle')}</h3>
-            </div>
-            <button
-              className="control-button"
+        <AdminSurfaceSection
+          eyebrow={t('adminSnapshots.auditTimelineEyebrow')}
+          title={t('adminSnapshots.auditTimelineTitle')}
+          actions={
+            <Button
               type="button"
+              variant="outline"
               onClick={() =>
                 downloadCsv({
                   filename: `snapshot-audit-${snapshotRunId}.csv`,
@@ -263,31 +300,32 @@ export function SnapshotRunDetailPage() {
               }
               disabled={auditItems.length === 0}
             >
+              <Download aria-hidden="true" />
               {t('adminSnapshots.exportAudit')}
-            </button>
-          </div>
+            </Button>
+          }
+        >
           {auditItems.length === 0 ? (
-            <EmptyState copy={t('adminSnapshots.noAuditEntries')} />
+            <AdminSurfaceEmpty copy={t('adminSnapshots.noAuditEntries')} />
           ) : (
-            <div className="timeline">
+            <div className="tw:grid tw:gap-3">
               {auditItems.map((event) => (
-                <div className="timeline-item" key={event.eventLogId}>
-                  <div className="timeline-dot" />
-                  <div>
-                    <strong>{event.eventType}</strong>
-                    <p>{formatDateTime(event.occurredAt, locale)}</p>
-                    <span>
-                      {t('adminSnapshots.actor', { actor: event.actorUserId ?? t('adminSnapshots.system') })} ·{' '}
-                      {t('adminSnapshots.correlation', { correlation: event.correlationId ?? t('adminSnapshots.notAvailable') })}
-                    </span>
+                <div className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3" key={event.eventLogId}>
+                  <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+                    <strong className="tw:text-sm tw:font-medium">{event.eventType}</strong>
+                    <span className="tw:text-xs tw:text-muted-foreground">{formatDateTime(event.occurredAt, locale)}</span>
                   </div>
+                  <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">
+                    {t('adminSnapshots.actor', { actor: event.actorUserId ?? t('adminSnapshots.system') })} ·{' '}
+                    {t('adminSnapshots.correlation', { correlation: event.correlationId ?? t('adminSnapshots.notAvailable') })}
+                  </p>
                 </div>
               ))}
             </div>
           )}
-        </article>
-      </section>
-    </section>
+        </AdminSurfaceSection>
+      </div>
+    </AdminSurfacePage>
   )
 }
 
@@ -296,14 +334,11 @@ function SnapshotRunSummaryPanel(input: { detail: SnapshotRunDetail }) {
   const { snapshotRun } = input.detail
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminSnapshots.executionStateEyebrow')}</div>
-          <h3>{t('adminSnapshots.runSummary')}</h3>
-        </div>
-      </div>
-      <div className="detail-list">
+    <AdminSurfaceSection
+      eyebrow={t('adminSnapshots.executionStateEyebrow')}
+      title={t('adminSnapshots.runSummary')}
+    >
+      <AdminKeyValueGrid className="tw:lg:grid-cols-2">
         {[
           [t('adminSnapshots.runStatus'), formatSnapshotState(snapshotRun.runStatus, t)],
           [t('adminSnapshots.healthState'), formatSnapshotState(snapshotRun.healthState, t)],
@@ -313,13 +348,10 @@ function SnapshotRunSummaryPanel(input: { detail: SnapshotRunDetail }) {
           [t('adminSnapshots.startedAt'), snapshotRun.startedAt ? formatDateTime(snapshotRun.startedAt, locale) : t('adminSnapshots.notStarted')],
           [t('adminSnapshots.finishedAt'), snapshotRun.finishedAt ? formatDateTime(snapshotRun.finishedAt, locale) : t('adminSnapshots.notFinished')],
         ].map(([label, value]) => (
-          <div className="detail-row" key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
+          <KeyValue key={label} label={label} value={value} />
         ))}
-      </div>
-    </article>
+      </AdminKeyValueGrid>
+    </AdminSurfaceSection>
   )
 }
 
@@ -333,24 +365,22 @@ function SnapshotDependenciesPanel(input: {
   const { t } = useLocalization()
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminSnapshots.rerunGovernanceEyebrow')}</div>
-          <h3>{t('adminSnapshots.dependenciesTitle')}</h3>
-        </div>
-        <div className="toolbar-cluster">
-          <button
-            className="control-button"
+    <AdminSurfaceSection
+      eyebrow={t('adminSnapshots.rerunGovernanceEyebrow')}
+      title={t('adminSnapshots.dependenciesTitle')}
+      actions={
+        <>
+          <Button
             type="button"
             onClick={input.onRerun}
             disabled={!input.canRerun || input.isRerunPending}
           >
+            <RefreshCcw aria-hidden="true" />
             {input.isRerunPending ? t('adminSnapshots.rerunning') : t('adminSnapshots.rerunSnapshot')}
-          </button>
-          <button
-            className="control-button"
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={() =>
               downloadCsv({
                 filename: `snapshot-dependency-checks-${input.snapshotRunId}.csv`,
@@ -364,34 +394,37 @@ function SnapshotDependenciesPanel(input: {
             }
             disabled={!input.dependencies?.checks.length}
           >
+            <Download aria-hidden="true" />
             {t('adminSnapshots.exportChecks')}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </>
+      }
+    >
       {input.dependencies ? (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-3">
           {input.dependencies.checks.map((check) => (
-            <div className="stacked-row" key={check.code}>
-              <div className="stacked-row-head">
-                <strong>{check.code}</strong>
-                <StatusPill tone={check.status === 'pass' ? 'calm' : 'danger'}>
+            <div className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3" key={check.code}>
+              <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+                <strong className="tw:text-sm tw:font-medium">{check.code}</strong>
+                <AdminSurfaceBadge tone={check.status === 'pass' ? 'success' : 'danger'}>
                   {formatCheckStatus(check.status, t)}
-                </StatusPill>
+                </AdminSurfaceBadge>
               </div>
-              <p>{check.message}</p>
+              <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">{check.message}</p>
             </div>
           ))}
           {input.dependencies.rerunBlockedReason ? (
-            <div className="empty-card">
-              <strong>{t('adminSnapshots.rerunBlocked')}</strong>
-              <p>{input.dependencies.rerunBlockedReason}</p>
-            </div>
+            <AdminStatePanel
+              title={t('adminSnapshots.rerunBlocked')}
+              description={input.dependencies.rerunBlockedReason}
+              tone="warning"
+            />
           ) : null}
         </div>
       ) : (
-        <EmptyState copy={t('adminSnapshots.dependencyLoading')} />
+        <AdminSurfaceEmpty copy={t('adminSnapshots.dependencyLoading')} />
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
@@ -400,18 +433,44 @@ function SnapshotOutputVolumePanel(input: { detail: SnapshotRunDetail; totalRows
   const total = Math.max(input.totalRows, 1)
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminSnapshots.outputVolumeEyebrow')}</div>
-          <h3>{t('adminSnapshots.materializedSlices')}</h3>
+    <AdminSurfaceSection
+      eyebrow={t('adminSnapshots.outputVolumeEyebrow')}
+      title={t('adminSnapshots.materializedSlices')}
+    >
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t('adminSnapshots.materializedSlices')}</TableHead>
+            <TableHead className="tw:text-right">{t('adminSnapshots.reportRows')}</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <OutputVolumeRow label={t('adminSnapshots.workforceRows')} tone="success" value={input.detail.cards.workforceRows} total={total} />
+          <OutputVolumeRow label={t('adminSnapshots.kpiRows')} tone="accent" value={input.detail.cards.kpiRows} total={total} />
+          <OutputVolumeRow label={t('adminSnapshots.checklistRows')} tone="warning" value={input.detail.cards.checklistRows} total={total} />
+          <OutputVolumeRow label={t('adminSnapshots.turnoverRows')} tone="danger" value={input.detail.cards.turnoverRows} total={total} />
+        </TableBody>
+      </Table>
+    </AdminSurfaceSection>
+  )
+}
+
+function OutputVolumeRow(input: { label: string; tone: AdminSurfaceTone; value: number; total: number }) {
+  const percent = input.total > 0 ? Math.round((input.value / input.total) * 100) : 0
+
+  return (
+    <TableRow>
+      <TableCell>
+        <div className="tw:grid tw:gap-2">
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:text-sm">
+            <span className="tw:text-muted-foreground">{input.label}</span>
+            <span className="tw:font-medium">{percent}%</span>
+          </div>
+          <Progress className={progressToneClass(input.tone)} value={percent} aria-label={input.label} />
         </div>
-      </div>
-      <StatusBar label={t('adminSnapshots.workforceRows')} value={input.detail.cards.workforceRows} total={total} tone="calm" />
-      <StatusBar label={t('adminSnapshots.kpiRows')} value={input.detail.cards.kpiRows} total={total} tone="accent" />
-      <StatusBar label={t('adminSnapshots.checklistRows')} value={input.detail.cards.checklistRows} total={total} tone="warning" />
-      <StatusBar label={t('adminSnapshots.turnoverRows')} value={input.detail.cards.turnoverRows} total={total} tone="danger" />
-    </article>
+      </TableCell>
+      <TableCell className="tw:text-right tw:font-medium">{input.value}</TableCell>
+    </TableRow>
   )
 }
 
@@ -424,4 +483,13 @@ function formatSnapshotKpiConfigVersion(input: {
   }
 
   return t('adminSnapshots.preGovernanceSnapshot')
+}
+
+function progressToneClass(tone: AdminSurfaceTone) {
+  if (tone === 'success') return 'tw:[&_[data-slot=progress-indicator]]:bg-emerald-500'
+  if (tone === 'accent') return 'tw:[&_[data-slot=progress-indicator]]:bg-violet-500'
+  if (tone === 'warning') return 'tw:[&_[data-slot=progress-indicator]]:bg-amber-500'
+  if (tone === 'danger') return 'tw:[&_[data-slot=progress-indicator]]:bg-rose-500'
+  if (tone === 'cyan') return 'tw:[&_[data-slot=progress-indicator]]:bg-cyan-500'
+  return 'tw:[&_[data-slot=progress-indicator]]:bg-slate-400'
 }
