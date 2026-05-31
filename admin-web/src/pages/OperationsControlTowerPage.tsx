@@ -1,24 +1,14 @@
 import { useMemo, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Activity,
-  DatabaseZap,
-  Inbox,
-  Layers3,
-  ServerCog,
-  ShieldCheck,
-  Trophy,
-  Users,
-} from 'lucide-react'
+import { Activity, DatabaseZap, Inbox, Layers3, ServerCog, ShieldCheck, Trophy, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
-  EmptyState,
-  KeyValue,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-  type Tone,
-} from '../components/dashboard-primitives'
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfacePage,
+  type AdminMetricStripItem,
+} from './admin-surface-primitives'
+import { Button } from '../components/ui/button'
 import {
   getImportOverview,
   getNeedsAction,
@@ -55,6 +45,16 @@ import { summarizeWorkflowInboxPressure } from './operations-workflow-signal-mod
 import { WorkflowSignalPanel } from './operations-workflow-signal-panel'
 import { summarizeWorkforcePressure } from './operations-workforce-signal-model'
 import { WorkforceSignalPanel } from './operations-workforce-signal-panel'
+import {
+  OperationsInlineState,
+  OperationsKeyValue,
+  OperationsKeyValueGrid,
+  OperationsPanel,
+  OperationsQueueList,
+  OperationsStatusBadge,
+  type OperationsTone,
+} from './operations-surface-primitives'
+import { toAdminSurfaceTone } from './operations-surface-tones'
 
 const SIGNAL_STALE_TIME_MS = 30_000
 const QUEUE_PREVIEW_SIZE = 4
@@ -260,6 +260,7 @@ export function OperationsControlTowerPage() {
 
     return [
       {
+        id: 'backend',
         title: t('adminOperations.metric.backend'),
         value: backendMetric.label,
         note: backendMetric.copy,
@@ -276,6 +277,7 @@ export function OperationsControlTowerPage() {
           : getSignalFallbackCopy(importOverviewQuery.isError, importOverviewQuery.error, t),
         icon: <DatabaseZap size={18} />,
         tone: importActionCount > 0 ? 'warning' : 'calm',
+        id: 'imports',
       },
       {
         title: t('adminOperations.metric.dataQuality'),
@@ -291,6 +293,7 @@ export function OperationsControlTowerPage() {
           dataQuality.snapshotIssueCount > 0
             ? 'warning'
             : 'calm',
+        id: 'data-quality',
       },
       {
         title: t('adminOperations.metric.snapshots'),
@@ -302,6 +305,7 @@ export function OperationsControlTowerPage() {
           : getSignalFallbackCopy(snapshotOverviewQuery.isError, snapshotOverviewQuery.error, t),
         icon: <Layers3 size={18} />,
         tone: snapshotActionCount > 0 ? 'warning' : 'calm',
+        id: 'snapshots',
       },
       {
         title: t('adminOperations.metric.external'),
@@ -309,6 +313,7 @@ export function OperationsControlTowerPage() {
         note: t('adminOperations.externalMetricNote'),
         icon: <ShieldCheck size={18} />,
         tone: 'neutral',
+        id: 'external',
       },
       {
         title: t('adminOperations.metric.workforce'),
@@ -327,6 +332,7 @@ export function OperationsControlTowerPage() {
             }),
         icon: <Users size={18} />,
         tone: hasWorkforceSignalError ? 'warning' : workforcePressure.total > 0 ? 'warning' : 'calm',
+        id: 'workforce',
       },
       {
         title: t('adminOperations.metric.workflow'),
@@ -341,6 +347,7 @@ export function OperationsControlTowerPage() {
             }),
         icon: <Inbox size={18} />,
         tone: hasWorkflowSignalError ? 'warning' : workflowPressure.total > 0 ? 'warning' : 'calm',
+        id: 'workflow',
       },
       {
         title: t('adminOperations.metric.kpiRankings'),
@@ -369,13 +376,15 @@ export function OperationsControlTowerPage() {
           : hasKpiRankingSignalError || kpiRankingReadiness.issueCount > 0
             ? 'warning'
             : 'calm',
+        id: 'kpi-rankings',
       },
     ] satisfies Array<{
+      id: string
       title: string
       value: string
       note: string
       icon: ReactNode
-      tone: Tone
+      tone: OperationsTone
     }>
   }, [
     healthQuery.data,
@@ -414,11 +423,19 @@ export function OperationsControlTowerPage() {
   ])
 
   if (isInitialLoading) {
-    return <ScreenState title={t('adminOperations.loadingTitle')} copy={t('adminOperations.loadingCopy')} />
+    return (
+      <AdminSurfacePage ariaLabel={t('adminOperations.loadingTitle')}>
+        <AdminStatePanel
+          title={t('adminOperations.loadingTitle')}
+          description={t('adminOperations.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
+    )
   }
 
   return (
-    <section className="page-stack">
+    <AdminSurfacePage ariaLabel={t('adminOperations.heroTitle')}>
       <OperationsHero
         operationalPressure={operationalPressure}
         providerBlockerCount={providerBlockers.length}
@@ -426,18 +443,16 @@ export function OperationsControlTowerPage() {
         t={t}
       />
 
-      <section className="metric-grid">
-        {summaryCards.map((card) => (
-          <MetricCard
-            icon={card.icon}
-            key={card.title}
-            note={card.note}
-            title={card.title}
-            tone={card.tone}
-            value={card.value}
-          />
-        ))}
-      </section>
+      <AdminMetricStrip
+        items={summaryCards.map((card): AdminMetricStripItem => ({
+          description: card.note,
+          icon: card.icon,
+          id: card.id,
+          label: card.title,
+          tone: toAdminSurfaceTone(card.tone),
+          value: card.value,
+        }))}
+      />
 
       <MetricCoveragePanel t={t} />
 
@@ -445,7 +460,7 @@ export function OperationsControlTowerPage() {
 
       <SignalFreshnessPanel items={signalFreshness} locale={locale} t={t} />
 
-      <section className="two-up-grid">
+      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
         <BackendSignalPanel
           health={healthQuery.data}
           isError={healthQuery.isError}
@@ -490,7 +505,7 @@ export function OperationsControlTowerPage() {
         t={t}
       />
 
-      <section className="two-up-grid">
+      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
         <ImportSignalPanel
           error={importOverviewQuery.error ?? importNeedsActionQuery.error}
           isError={importOverviewQuery.isError || importNeedsActionQuery.isError}
@@ -506,7 +521,7 @@ export function OperationsControlTowerPage() {
           t={t}
         />
       </section>
-    </section>
+    </AdminSurfacePage>
   )
 }
 
@@ -523,40 +538,38 @@ function BackendSignalPanel(input: {
         label: input.isError ? input.t('adminOperations.unavailable') : input.t('adminOperations.loading'),
         copy: input.isError ? getErrorMessage(input.error) : input.t('adminOperations.signalLoadingCopy'),
         tone: input.isError ? 'warning' : 'neutral',
-      }
+  }
 
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.backendEyebrow')}</div>
-          <h3>{input.t('adminOperations.backendTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.backendCopy')}</p>
-        </div>
-        <StatusPill tone={status.tone}>{status.label}</StatusPill>
-      </div>
-      <div className="key-grid">
-        <KeyValue
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.backendEyebrow')}
+      title={input.t('adminOperations.backendTitle')}
+      description={input.t('adminOperations.backendCopy')}
+      testId="operations-backend-signal"
+      badge={<OperationsStatusBadge tone={status.tone}>{status.label}</OperationsStatusBadge>}
+    >
+      <OperationsKeyValueGrid>
+        <OperationsKeyValue
           label={input.t('adminOperations.service')}
           value={input.health?.service ?? input.t('adminOperations.unknown')}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.database')}
           value={formatDependencyState(input.health?.checks?.database?.status, input.t)}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.redis')}
           value={formatDependencyState(input.health?.checks?.redis?.status, input.t)}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.queueMode')}
           value={input.health?.queue?.backend ?? input.health?.queueBackend ?? input.t('adminOperations.unknown')}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.readinessProfile')}
           value={input.health?.observability?.readinessProfile ?? input.t('adminOperations.unknown')}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.lastSeen')}
           value={
             input.health?.timestamp
@@ -564,38 +577,32 @@ function BackendSignalPanel(input: {
               : input.t('adminOperations.notCaptured')
           }
         />
-      </div>
-      <p className="queue-reason">{status.copy}</p>
-    </article>
+      </OperationsKeyValueGrid>
+      <p className="tw:m-0 tw:text-sm tw:text-muted-foreground">{status.copy}</p>
+    </OperationsPanel>
   )
 }
 
 function ProviderBlockersPanel(input: { t: TranslateFunction }) {
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.externalEyebrow')}</div>
-          <h3>{input.t('adminOperations.externalTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.externalCopy')}</p>
-        </div>
-        <StatusPill tone="warning">{input.t('adminOperations.blocked')}</StatusPill>
-      </div>
-      <div className="queue-list">
-        {providerBlockers.map((blocker) => (
-          <div className="queue-row" key={blocker.id}>
-            <div className="queue-row-head">
-              <div>
-                <div className="queue-title">{input.t(blocker.titleKey)}</div>
-                <div className="queue-subtitle">{input.t(blocker.ownerKey)}</div>
-              </div>
-              <StatusPill tone="warning">{input.t('adminOperations.inputNeeded')}</StatusPill>
-            </div>
-            <p className="queue-reason">{input.t(blocker.copyKey)}</p>
-          </div>
-        ))}
-      </div>
-    </article>
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.externalEyebrow')}
+      title={input.t('adminOperations.externalTitle')}
+      description={input.t('adminOperations.externalCopy')}
+      testId="operations-provider-blockers"
+      badge={<OperationsStatusBadge tone="warning">{input.t('adminOperations.blocked')}</OperationsStatusBadge>}
+    >
+      <OperationsQueueList
+        items={providerBlockers.map((blocker) => ({
+          id: blocker.id,
+          meta: input.t(blocker.ownerKey),
+          reason: input.t(blocker.copyKey),
+          status: input.t('adminOperations.inputNeeded'),
+          title: input.t(blocker.titleKey),
+          tone: 'warning',
+        }))}
+      />
+    </OperationsPanel>
   )
 }
 
@@ -609,42 +616,47 @@ function ImportSignalPanel(input: {
   const actionCount = countImportActions(input.overview)
 
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.importEyebrow')}</div>
-          <h3>{input.t('adminOperations.importTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.importCopy')}</p>
-        </div>
-        <StatusPill tone={input.isError ? 'warning' : actionCount > 0 ? 'warning' : 'calm'}>
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.importEyebrow')}
+      title={input.t('adminOperations.importTitle')}
+      description={input.t('adminOperations.importCopy')}
+      testId="operations-import-signal"
+      badge={
+        <OperationsStatusBadge tone={input.isError ? 'warning' : actionCount > 0 ? 'warning' : 'calm'}>
           {input.isError
             ? input.t('adminOperations.unavailable')
             : actionCount > 0
               ? input.t('adminOperations.needsAttention')
               : input.t('adminOperations.ready')}
-        </StatusPill>
-      </div>
+        </OperationsStatusBadge>
+      }
+      actions={
+        <Button asChild size="sm" variant="outline">
+          <Link to="/admin/integrations">{input.t('adminOperations.openIntegrations')}</Link>
+        </Button>
+      }
+    >
       {input.isError ? (
-        <div className="inline-state inline-state-warning">{getErrorMessage(input.error)}</div>
+        <OperationsInlineState tone="warning">{getErrorMessage(input.error)}</OperationsInlineState>
       ) : (
-        <div className="key-grid">
-          <KeyValue
+        <OperationsKeyValueGrid>
+          <OperationsKeyValue
             label={input.t('adminOperations.totalBatches')}
             value={String(input.overview?.totals.all ?? 0)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.healthy')}
             value={String(input.overview?.healthTotals.healthy ?? 0)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.retryReady')}
             value={String(input.overview?.healthTotals.retryReady ?? 0)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.blocked')}
             value={String(input.overview?.healthTotals.blocked ?? 0)}
           />
-        </div>
+        </OperationsKeyValueGrid>
       )}
       <QueuePreview
         emptyCopy={input.t('adminOperations.importQueueEmpty')}
@@ -663,12 +675,7 @@ function ImportSignalPanel(input: {
         t={input.t}
         title={input.t('adminOperations.importQueueTitle')}
       />
-      <div className="toolbar-cluster">
-        <Link className="back-link" to="/admin/integrations">
-          <span>{input.t('adminOperations.openIntegrations')}</span>
-        </Link>
-      </div>
-    </article>
+    </OperationsPanel>
   )
 }
 
@@ -682,42 +689,47 @@ function SnapshotSignalPanel(input: {
   const actionCount = countSnapshotActions(input.overview)
 
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.snapshotEyebrow')}</div>
-          <h3>{input.t('adminOperations.snapshotTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.snapshotCopy')}</p>
-        </div>
-        <StatusPill tone={input.isError ? 'warning' : actionCount > 0 ? 'warning' : 'calm'}>
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.snapshotEyebrow')}
+      title={input.t('adminOperations.snapshotTitle')}
+      description={input.t('adminOperations.snapshotCopy')}
+      testId="operations-snapshot-signal"
+      badge={
+        <OperationsStatusBadge tone={input.isError ? 'warning' : actionCount > 0 ? 'warning' : 'calm'}>
           {input.isError
             ? input.t('adminOperations.unavailable')
             : actionCount > 0
               ? input.t('adminOperations.needsAttention')
               : input.t('adminOperations.ready')}
-        </StatusPill>
-      </div>
+        </OperationsStatusBadge>
+      }
+      actions={
+        <Button asChild size="sm" variant="outline">
+          <Link to="/admin/snapshots">{input.t('adminOperations.openSnapshots')}</Link>
+        </Button>
+      }
+    >
       {input.isError ? (
-        <div className="inline-state inline-state-warning">{getErrorMessage(input.error)}</div>
+        <OperationsInlineState tone="warning">{getErrorMessage(input.error)}</OperationsInlineState>
       ) : (
-        <div className="key-grid">
-          <KeyValue
+        <OperationsKeyValueGrid>
+          <OperationsKeyValue
             label={input.t('adminOperations.totalRuns')}
             value={String(input.overview?.totals.all ?? 0)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.healthy')}
             value={String(input.overview?.healthTotals.healthy ?? 0)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.inProgress')}
             value={String(input.overview?.healthTotals.inProgress ?? 0)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.stuck')}
             value={String(input.overview?.healthTotals.stuck ?? 0)}
           />
-        </div>
+        </OperationsKeyValueGrid>
       )}
       <QueuePreview
         emptyCopy={input.t('adminOperations.snapshotQueueEmpty')}
@@ -736,12 +748,7 @@ function SnapshotSignalPanel(input: {
         t={input.t}
         title={input.t('adminOperations.snapshotQueueTitle')}
       />
-      <div className="toolbar-cluster">
-        <Link className="back-link" to="/admin/snapshots">
-          <span>{input.t('adminOperations.openSnapshots')}</span>
-        </Link>
-      </div>
-    </article>
+    </OperationsPanel>
   )
 }
 
@@ -754,42 +761,33 @@ function QueuePreview(input: {
     reason: string
     status: string
     title: string
-    tone: Tone
+    tone: OperationsTone
   }>
   t: TranslateFunction
   title: string
 }) {
   return (
-    <div className="queue-list">
-      <div className="queue-row-head">
-        <strong>{input.title}</strong>
-        <StatusPill tone={input.items.length > 0 ? 'warning' : 'calm'}>
+    <OperationsQueueList
+      emptyCopy={input.emptyCopy}
+      header={input.title}
+      status={
+        <OperationsStatusBadge tone={input.items.length > 0 ? 'warning' : 'calm'}>
           {input.items.length > 0
             ? input.t('adminOperations.queueHasItems', { count: input.items.length })
             : input.t('adminOperations.queueClear')}
-        </StatusPill>
-      </div>
-      {input.items.length === 0 ? (
-        <EmptyState copy={input.emptyCopy} />
-      ) : (
-        input.items.map((item) => (
-          <Link className="queue-row" key={item.id} to={item.href}>
-            <div className="queue-row-head">
-              <div>
-                <div className="queue-title">{item.title}</div>
-                <div className="queue-subtitle">{item.id}</div>
-              </div>
-              <StatusPill tone={item.tone}>{item.status}</StatusPill>
-            </div>
-            <p className="queue-reason">{item.reason}</p>
-            <div className="queue-footer">
-              <span>{item.meta}</span>
-              <Activity size={16} />
-            </div>
-          </Link>
-        ))
-      )}
-    </div>
+        </OperationsStatusBadge>
+      }
+      items={input.items.map((item) => ({
+        footer: item.meta,
+        href: item.href,
+        id: item.id,
+        meta: item.id,
+        reason: item.reason,
+        status: item.status,
+        title: item.title,
+        tone: item.tone,
+      }))}
+    />
   )
 }
 

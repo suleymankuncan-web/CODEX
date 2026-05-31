@@ -203,6 +203,7 @@ function AdminSurfaceSection({
   className,
   description,
   eyebrow,
+  testId,
   title,
 }: {
   ariaLabel?: string
@@ -212,12 +213,14 @@ function AdminSurfaceSection({
   className?: string
   description?: ReactNode
   eyebrow?: ReactNode
+  testId?: string | undefined
   title: ReactNode
 }) {
   return (
     <Card
       aria-label={ariaLabel}
       className={cn('tw:border tw:border-border tw:bg-card/85 tw:shadow-sm', className)}
+      data-testid={testId}
     >
       <CardHeader className="tw:border-b tw:border-border/70 tw:pb-3">
         <div className="tw:min-w-0">

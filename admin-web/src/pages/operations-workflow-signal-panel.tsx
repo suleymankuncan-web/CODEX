@@ -1,16 +1,19 @@
-import { Activity } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import {
-  EmptyState,
-  KeyValue,
-  StatusPill,
-  type Tone,
-} from '../components/dashboard-primitives'
+import { Button } from '../components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { WorkflowInboxItem, WorkflowUrgency } from '../features/workflow/contracts'
 import { mapWorkflowUrgencyTone } from '../features/workflow/contracts'
 import { getErrorMessage } from '../lib/format'
 import type { WorkflowInboxPressure } from './operations-workflow-signal-model'
+import {
+  OperationsInlineState,
+  OperationsKeyValue,
+  OperationsKeyValueGrid,
+  OperationsPanel,
+  OperationsQueueList,
+  OperationsStatusBadge,
+  type OperationsTone,
+} from './operations-surface-primitives'
 
 type WorkflowQueuePreviewItem = {
   href: string
@@ -19,7 +22,7 @@ type WorkflowQueuePreviewItem = {
   reason: string
   status: string
   title: string
-  tone: Tone
+  tone: OperationsTone
 }
 
 export function WorkflowSignalPanel(input: {
@@ -45,80 +48,70 @@ export function WorkflowSignalPanel(input: {
       })).slice(0, 4)
 
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.workflowEyebrow')}</div>
-          <h3>{input.t('adminOperations.workflowTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.workflowCopy')}</p>
-        </div>
-        <StatusPill tone={input.isError ? 'warning' : input.pressure.needsAttentionCount > 0 ? 'warning' : 'calm'}>
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.workflowEyebrow')}
+      title={input.t('adminOperations.workflowTitle')}
+      description={input.t('adminOperations.workflowCopy')}
+      testId="operations-workflow-signal"
+      badge={
+        <OperationsStatusBadge tone={input.isError ? 'warning' : input.pressure.needsAttentionCount > 0 ? 'warning' : 'calm'}>
           {input.isError
             ? input.t('adminOperations.unavailable')
             : input.pressure.needsAttentionCount > 0
               ? input.t('adminOperations.needsAttention')
               : input.t('adminOperations.ready')}
-        </StatusPill>
-      </div>
+        </OperationsStatusBadge>
+      }
+      actions={
+        <Button asChild size="sm" variant="outline">
+          <Link to="/admin/inbox">{input.t('adminOperations.openInbox')}</Link>
+        </Button>
+      }
+    >
 
       {input.isError ? (
-        <div className="inline-state inline-state-warning">{getErrorMessage(input.error)}</div>
+        <OperationsInlineState tone="warning">{getErrorMessage(input.error)}</OperationsInlineState>
       ) : (
-        <div className="key-grid">
-          <KeyValue
+        <OperationsKeyValueGrid>
+          <OperationsKeyValue
             label={input.t('adminOperations.workflowNeedsAttention')}
             value={String(input.pressure.needsAttentionCount)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.workflowHighUrgency')}
             value={String(input.pressure.highUrgencyCount)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.workflowTotal')}
             value={String(input.pressure.total)}
           />
-        </div>
+        </OperationsKeyValueGrid>
       )}
 
       {!input.isError ? (
-        <div className="queue-list">
-          <div className="queue-row-head">
-            <strong>{input.t('adminOperations.workflowQueueTitle')}</strong>
-            <StatusPill tone={previewItems.length > 0 ? 'warning' : 'calm'}>
+        <OperationsQueueList
+          emptyCopy={input.t('adminOperations.workflowQueueEmpty')}
+          header={input.t('adminOperations.workflowQueueTitle')}
+          status={
+            <OperationsStatusBadge tone={previewItems.length > 0 ? 'warning' : 'calm'}>
               {previewItems.length > 0
                 ? input.t('adminOperations.queueHasItems', { count: previewItems.length })
                 : input.t('adminOperations.queueClear')}
-            </StatusPill>
-          </div>
-          {previewItems.length === 0 ? (
-            <EmptyState copy={input.t('adminOperations.workflowQueueEmpty')} />
-          ) : (
-            previewItems.map((item) => (
-              <Link className="queue-row" key={item.id} to={item.href}>
-                <div className="queue-row-head">
-                  <div>
-                    <div className="queue-title">{item.title}</div>
-                    <div className="queue-subtitle">{item.id}</div>
-                  </div>
-                  <StatusPill tone={item.tone}>{item.status}</StatusPill>
-                </div>
-                <p className="queue-reason">{item.reason}</p>
-                <div className="queue-footer">
-                  <span>{item.meta}</span>
-                  <Activity size={16} />
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
+            </OperationsStatusBadge>
+          }
+          items={previewItems.map((item) => ({
+            footer: item.meta,
+            href: item.href,
+            id: item.id,
+            meta: item.id,
+            reason: item.reason,
+            status: item.status,
+            title: item.title,
+            tone: item.tone,
+          }))}
+        />
       ) : null}
-
-      <div className="toolbar-cluster">
-        <Link className="back-link" to="/admin/inbox">
-          <span>{input.t('adminOperations.openInbox')}</span>
-        </Link>
-      </div>
-    </article>
+    </OperationsPanel>
   )
 }
 

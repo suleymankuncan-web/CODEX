@@ -1,7 +1,10 @@
-import { Activity } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { StatusPill, type Tone } from '../components/dashboard-primitives'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import {
+  type OperationsTone,
+  OperationsPanel,
+  OperationsQueueList,
+  OperationsStatusBadge,
+} from './operations-surface-primitives'
 
 type TranslationKey = Parameters<TranslateFunction>[0]
 
@@ -13,7 +16,7 @@ type MetricCoverageItem = {
   sourceKey: TranslationKey
   statusKey: TranslationKey
   titleKey: TranslationKey
-  tone: Tone
+  tone: OperationsTone
 }
 
 const metricCoverageItems: MetricCoverageItem[] = [
@@ -109,51 +112,29 @@ const metricCoverageItems: MetricCoverageItem[] = [
 
 export function MetricCoveragePanel(input: { t: TranslateFunction }) {
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.coverageEyebrow')}</div>
-          <h3>{input.t('adminOperations.coverageTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.coverageCopy')}</p>
-        </div>
-        <StatusPill tone="neutral">
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.coverageEyebrow')}
+      title={input.t('adminOperations.coverageTitle')}
+      description={input.t('adminOperations.coverageCopy')}
+      testId="operations-metric-coverage"
+      badge={
+        <OperationsStatusBadge tone="neutral">
           {input.t('adminOperations.coverageCount', { count: metricCoverageItems.length })}
-        </StatusPill>
-      </div>
-      <div className="queue-list">
-        {metricCoverageItems.map((item) => {
-          const content = (
-            <>
-              <div className="queue-row-head">
-                <div>
-                  <div className="queue-title">{input.t(item.titleKey)}</div>
-                  <div className="queue-subtitle">
-                    {input.t(item.ownerKey)} · {input.t(item.sourceKey)}
-                  </div>
-                </div>
-                <StatusPill tone={item.tone}>{input.t(item.statusKey)}</StatusPill>
-              </div>
-              <p className="queue-reason">{input.t(item.copyKey)}</p>
-              {item.href ? (
-                <div className="queue-footer">
-                  <span>{input.t('adminOperations.coverageOpenSource')}</span>
-                  <Activity size={16} />
-                </div>
-              ) : null}
-            </>
-          )
-
-          return item.href ? (
-            <Link className="queue-row" key={item.id} to={item.href}>
-              {content}
-            </Link>
-          ) : (
-            <div className="queue-row" key={item.id}>
-              {content}
-            </div>
-          )
-        })}
-      </div>
-    </article>
+        </OperationsStatusBadge>
+      }
+    >
+      <OperationsQueueList
+        items={metricCoverageItems.map((item) => ({
+          footer: item.href ? input.t('adminOperations.coverageOpenSource') : undefined,
+          href: item.href,
+          id: item.id,
+          meta: `${input.t(item.ownerKey)} - ${input.t(item.sourceKey)}`,
+          reason: input.t(item.copyKey),
+          status: input.t(item.statusKey),
+          title: input.t(item.titleKey),
+          tone: item.tone,
+        }))}
+      />
+    </OperationsPanel>
   )
 }
