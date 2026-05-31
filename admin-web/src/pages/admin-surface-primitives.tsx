@@ -75,7 +75,7 @@ function AdminSurfaceHeader({
   return (
     <header
       className={cn(
-        'tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:backdrop-blur md:tw:flex-row md:tw:items-start md:tw:justify-between',
+        'tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:backdrop-blur tw:md:flex-row tw:md:items-start tw:md:justify-between',
         className,
       )}
     >
@@ -115,7 +115,7 @@ function AdminMetricStrip({
   items: AdminMetricStripItem[]
 }) {
   return (
-    <div className={cn('tw:grid tw:grid-cols-1 tw:gap-3 sm:tw:grid-cols-2 xl:tw:grid-cols-4', className)}>
+    <div className={cn('tw:grid tw:grid-cols-1 tw:gap-3 tw:sm:grid-cols-2 tw:xl:grid-cols-4', className)}>
       {items.map((item, index) => (
         <Card
           className={cn('tw:min-h-28 tw:border tw:shadow-sm', toneStyles[item.tone ?? 'neutral'])}
@@ -200,7 +200,7 @@ function AdminFilterBar({
   return (
     <div
       className={cn(
-        'tw:flex tw:flex-col tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-3 tw:shadow-sm md:tw:flex-row md:tw:items-center',
+        'tw:flex tw:flex-col tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-3 tw:shadow-sm tw:md:flex-row tw:md:items-center',
         className,
       )}
     >
