@@ -22,7 +22,13 @@ TanStack Query, React Router, Playwright, existing API clients.
 
 ## Status
 
-Draft execution plan. No runtime code is changed by this document.
+Closed on 2026-05-31. Runtime implementation landed through PR #588 through
+PR #600, and final closeout evidence is recorded in
+`docs/evidence/admin-ui-modernization-v1-closeout-2026-05-31.md`.
+
+Two active admin routes remain explicitly parked rather than half-converted:
+`/admin/session` and `/admin/feed`. They are tracked in the inventory and
+closeout evidence with reasons and reopen triggers.
 
 ## Source Evidence
 

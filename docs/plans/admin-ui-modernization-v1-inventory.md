@@ -1,13 +1,16 @@
 # Admin UI Modernization V1 Inventory
 
-Status: PR-1 route intent and contract freeze
+Status: closed Admin UI Modernization V1 baseline
 Date: 2026-05-31
 Source plan: `docs/plans/admin-ui-modernization-v1-plan.md`
 
 This document is the baseline for the Admin UI Modernization V1 PR train. It
 freezes the active `/admin/*` route graph, role visibility, navigation
-visibility, data sources, state expectations, and migration risk before any
-runtime UI refactor starts.
+visibility, data sources, state expectations, and migration risk used by the
+Admin UI Modernization V1 PR train.
+
+Closeout evidence is recorded at
+`docs/evidence/admin-ui-modernization-v1-closeout-2026-05-31.md`.
 
 ## Guardrails
 
@@ -21,6 +24,19 @@ runtime UI refactor starts.
   decisions are outside this train.
 - Any missing data must render loading, empty, error, or access states. Do not
   invent admin metrics or fake operational copy.
+
+## Closeout Status
+
+The V1 migration closed with 31 active `/admin/*` routes and 16 admin
+navigation items under the PR-1 parity baseline. Migrated/new admin page files
+are enforced by `scripts/admin-ui-refactor-guard.test.mjs`.
+
+Explicitly parked active admin routes:
+
+| Route | Page | Reason | Reopen trigger |
+| --- | --- | --- | --- |
+| `/admin/session` | `admin-web/src/pages/SessionReadinessPage.tsx` | Diagnostic session/auth readiness surface still owns existing mock/bearer/header setup language. | Session/auth readiness is redesigned as a production admin page or the diagnostic copy is removed from the route. |
+| `/admin/feed` | `admin-web/src/pages/AdminFeedPage.tsx` | Feed composer/write behavior was intentionally kept out of the read-surface PR to avoid changing publish/pin/archive workflow semantics. | A behavior-preserving feed composer modernization PR is opened with targeted feed workflow verification. |
 
 ## Route Role Baseline
 

@@ -179,15 +179,17 @@ Current maintenance baseline:
   competition scoring/finalization, workforce offboarding/access lifecycle,
   further generator movement, broad E2E decomposition, and redesign-sensitive
   frontend page splits; reopen only with concrete trigger evidence.
-- Admin UI Modernization V1 is the active frontend modernization line for
-  `/admin/*` surfaces. Execution plan:
-  `docs/plans/admin-ui-modernization-v1-plan.md`. PR-1 freezes the admin route,
-  role, navigation, data-source, state, and legacy UI inventory in
-  `docs/plans/admin-ui-modernization-v1-inventory.md` before runtime UI changes.
-  Future PRs must preserve API shape, DB schema, auth/permission semantics,
-  scoring, snapshot interpretation, import lifecycle, approval workflows, and
-  route visibility while migrating admin pages to shadcn/ui, Tailwind v4,
-  lucide icons, and the planned `AdminSurface*` primitives.
+- Admin UI Modernization V1 is closed. Execution plan:
+  `docs/plans/admin-ui-modernization-v1-plan.md`; inventory:
+  `docs/plans/admin-ui-modernization-v1-inventory.md`; closeout evidence:
+  `docs/evidence/admin-ui-modernization-v1-closeout-2026-05-31.md`. PR #588
+  through PR #600 migrated active admin surfaces to shadcn/ui, Tailwind v4,
+  lucide icons, and `AdminSurface*` primitives while preserving API shape, DB
+  schema, auth/permission semantics, scoring, snapshot interpretation, import
+  lifecycle, approval workflows, and route visibility. PR #600 added the
+  AdminSurface primitive guard. `/admin/session` and `/admin/feed` remain
+  explicit parked exceptions with reopen triggers; future admin routes must
+  update the inventory baseline and satisfy the guard before merge.
 
 Latest route/scope guard merge:
 
