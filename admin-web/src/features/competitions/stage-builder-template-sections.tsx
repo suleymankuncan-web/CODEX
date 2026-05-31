@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { PlusCircle } from 'lucide-react'
-import { EmptyState, ScreenState, StatusPill } from '../../components/dashboard-primitives'
 import type { AuthLookupStore } from '../auth/api'
 import type {
   CloneCompetitionTeamTemplatePayload,
@@ -11,6 +10,23 @@ import { getErrorMessage } from '../../lib/format'
 import type { TranslationKey } from '../localization/dictionary'
 import { useLocalization } from '../localization/useLocalization'
 import { formatCount } from './display'
+import {
+  CompetitionActionRow,
+  CompetitionButton,
+  CompetitionCheckbox,
+  CompetitionCheckboxGrid,
+  CompetitionEmptyState,
+  CompetitionFieldGrid,
+  CompetitionInlineNotice,
+  CompetitionKeyValue,
+  CompetitionKeyValueGrid,
+  CompetitionRow,
+  CompetitionRowHeader,
+  CompetitionRowList,
+  CompetitionStatusBadge,
+  CompetitionTextField,
+  CompetitionStatePanel,
+} from './competition-admin-surface-primitives'
 import {
   createTemplateCloneDraft,
   createTemplateEditDraft,
@@ -89,178 +105,154 @@ export function TemplateLibrarySection(input: {
   }
 
   return (
-    <article className="stacked-row stage-template-library">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{t('competition.stageBuilder.templateLibraryTitle')}</strong>
-          <p className="queue-subtitle">{t('competition.stageBuilder.templateLibraryCopy')}</p>
-        </div>
-        <StatusPill tone={input.showInactive ? 'accent' : 'neutral'}>
-          {input.showInactive ? t('competition.stageBuilder.allTemplates') : t('competition.stageBuilder.activeOnly')}
-        </StatusPill>
-      </div>
-      <label className="store-checkbox template-toggle">
-        <input
-          type="checkbox"
-          checked={input.showInactive}
-          onChange={(event) => input.onShowInactiveChange(event.target.checked)}
-        />
-        <span>{t('competition.stageBuilder.showInactiveTemplates')}</span>
-      </label>
+    <CompetitionRow className="stage-template-library">
+      <CompetitionRowHeader
+        title={t('competition.stageBuilder.templateLibraryTitle')}
+        description={t('competition.stageBuilder.templateLibraryCopy')}
+        badge={
+          <CompetitionStatusBadge tone={input.showInactive ? 'accent' : 'neutral'}>
+            {input.showInactive ? t('competition.stageBuilder.allTemplates') : t('competition.stageBuilder.activeOnly')}
+          </CompetitionStatusBadge>
+        }
+      />
+      <CompetitionCheckbox
+        checked={input.showInactive}
+        label={t('competition.stageBuilder.showInactiveTemplates')}
+        onChange={(event) => input.onShowInactiveChange(event.target.checked)}
+      />
 
       {input.isLoading ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.templatesLoadingTitle')}
           copy={t('competition.stageBuilder.templatesLoadingCopy')}
+          isLoading
         />
       ) : null}
 
       {!input.isLoading && input.templates.length === 0 ? (
-        <EmptyState
+        <CompetitionEmptyState
           title={t('competition.stageBuilder.noTemplatesTitle')}
           copy={t('competition.stageBuilder.noTemplatesCopy')}
         />
       ) : null}
 
       {input.templates.length > 0 ? (
-        <div className="stacked-table">
+        <CompetitionRowList>
           {input.templates.map((template) => (
-            <article className="stacked-row" key={template.templateId}>
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{template.templateCode}</strong>
-                  <p className="queue-subtitle">{template.templateName}</p>
-                </div>
-                <StatusPill tone={template.isActive ? 'calm' : 'neutral'}>
+            <CompetitionRow key={template.templateId}>
+              <CompetitionRowHeader
+                title={template.templateCode}
+                description={template.templateName}
+                badge={
+                  <CompetitionStatusBadge tone={template.isActive ? 'calm' : 'neutral'}>
                   {template.isActive ? t('competition.stageBuilder.active') : t('competition.stageBuilder.inactive')}
-                </StatusPill>
-              </div>
-              <div className="key-grid">
-                <div className="key-item">
-                  <span>{t('competition.stageBuilder.stores')}</span>
-                  <strong>{String(template.stores.length)}</strong>
-                </div>
-                <div className="key-item">
-                  <span>{t('competition.stageBuilder.description')}</span>
-                  <strong>{template.description ?? '-'}</strong>
-                </div>
-              </div>
+                  </CompetitionStatusBadge>
+                }
+              />
+              <CompetitionKeyValueGrid>
+                <CompetitionKeyValue label={t('competition.stageBuilder.stores')} value={String(template.stores.length)} />
+                <CompetitionKeyValue label={t('competition.stageBuilder.description')} value={template.description ?? '-'} />
+              </CompetitionKeyValueGrid>
 
               {editDraft?.templateId === template.templateId ? (
-                <div className="stacked-row">
-                  <div className="form-grid">
-                    <label className="field-block">
-                      <span>{t('competition.stageBuilder.editTemplateCode')}</span>
-                      <input
-                        value={editDraft.templateCode}
-                        onChange={(event) =>
-                          updateEditDraft('templateCode', normalizeCode(event.target.value))
-                        }
-                      />
-                    </label>
-                    <label className="field-block">
-                      <span>{t('competition.stageBuilder.editTemplateName')}</span>
-                      <input
-                        value={editDraft.templateName}
-                        onChange={(event) => updateEditDraft('templateName', event.target.value)}
-                      />
-                    </label>
-                    <label className="field-block field-block-full">
-                      <span>{t('competition.stageBuilder.editTemplateDescription')}</span>
-                      <input
-                        value={editDraft.description}
-                        onChange={(event) => updateEditDraft('description', event.target.value)}
-                      />
-                    </label>
-                  </div>
-                  <div className="store-checkbox-grid">
+                <CompetitionRow>
+                  <CompetitionFieldGrid>
+                    <CompetitionTextField
+                      label={t('competition.stageBuilder.editTemplateCode')}
+                      value={editDraft.templateCode}
+                      onChange={(event) =>
+                        updateEditDraft('templateCode', normalizeCode(event.target.value))
+                      }
+                    />
+                    <CompetitionTextField
+                      label={t('competition.stageBuilder.editTemplateName')}
+                      value={editDraft.templateName}
+                      onChange={(event) => updateEditDraft('templateName', event.target.value)}
+                    />
+                    <CompetitionTextField
+                      label={t('competition.stageBuilder.editTemplateDescription')}
+                      value={editDraft.description}
+                      onChange={(event) => updateEditDraft('description', event.target.value)}
+                    />
+                  </CompetitionFieldGrid>
+                  <CompetitionCheckboxGrid>
                     {input.stores.map((store) => (
-                      <label className="store-checkbox" key={`edit-${template.templateId}-${store.storeId}`}>
-                        <input
-                          type="checkbox"
-                          checked={editDraft.storeIds.includes(store.storeId)}
-                          onChange={() => toggleEditStore(store.storeId)}
-                        />
-                        <span>{storeLabel(store)}</span>
-                      </label>
+                      <CompetitionCheckbox
+                        key={`edit-${template.templateId}-${store.storeId}`}
+                        checked={editDraft.storeIds.includes(store.storeId)}
+                        label={storeLabel(store)}
+                        onChange={() => toggleEditStore(store.storeId)}
+                      />
                     ))}
-                  </div>
+                  </CompetitionCheckboxGrid>
                   {editValidationMessage ? (
-                    <p className="validation-copy">{t(editValidationMessage)}</p>
+                    <CompetitionInlineNotice tone="warning">{t(editValidationMessage)}</CompetitionInlineNotice>
                   ) : null}
-                  <div className="action-cluster">
-                    <button
-                      className="control-button"
+                  <CompetitionActionRow>
+                    <CompetitionButton
                       type="button"
                       disabled={Boolean(editValidationMessage) || input.isPending}
                       onClick={submitEditDraft}
                     >
                       {t('competition.stageBuilder.saveTemplate')}
-                    </button>
-                    <button
-                      className="ghost-button"
+                    </CompetitionButton>
+                    <CompetitionButton
+                      variant="outline"
                       type="button"
                       onClick={() => setEditDraft(null)}
                     >
                       {t('competition.stageBuilder.cancelEdit')}
-                    </button>
-                  </div>
-                </div>
+                    </CompetitionButton>
+                  </CompetitionActionRow>
+                </CompetitionRow>
               ) : null}
 
               {cloneDraft?.sourceTemplateId === template.templateId ? (
-                <div className="stacked-row">
-                  <div className="form-grid">
-                    <label className="field-block">
-                      <span>{t('competition.stageBuilder.cloneTemplateCode')}</span>
-                      <input
-                        value={cloneDraft.templateCode}
-                        onChange={(event) =>
-                          updateCloneDraft('templateCode', normalizeCode(event.target.value))
-                        }
-                      />
-                    </label>
-                    <label className="field-block">
-                      <span>{t('competition.stageBuilder.cloneTemplateName')}</span>
-                      <input
-                        value={cloneDraft.templateName}
-                        onChange={(event) => updateCloneDraft('templateName', event.target.value)}
-                      />
-                    </label>
-                    <label className="field-block field-block-full">
-                      <span>{t('competition.stageBuilder.cloneTemplateDescription')}</span>
-                      <input
-                        value={cloneDraft.description}
-                        onChange={(event) => updateCloneDraft('description', event.target.value)}
-                      />
-                    </label>
-                  </div>
+                <CompetitionRow>
+                  <CompetitionFieldGrid>
+                    <CompetitionTextField
+                      label={t('competition.stageBuilder.cloneTemplateCode')}
+                      value={cloneDraft.templateCode}
+                      onChange={(event) =>
+                        updateCloneDraft('templateCode', normalizeCode(event.target.value))
+                      }
+                    />
+                    <CompetitionTextField
+                      label={t('competition.stageBuilder.cloneTemplateName')}
+                      value={cloneDraft.templateName}
+                      onChange={(event) => updateCloneDraft('templateName', event.target.value)}
+                    />
+                    <CompetitionTextField
+                      label={t('competition.stageBuilder.cloneTemplateDescription')}
+                      value={cloneDraft.description}
+                      onChange={(event) => updateCloneDraft('description', event.target.value)}
+                    />
+                  </CompetitionFieldGrid>
                   {cloneValidationMessage ? (
-                    <p className="validation-copy">{t(cloneValidationMessage)}</p>
+                    <CompetitionInlineNotice tone="warning">{t(cloneValidationMessage)}</CompetitionInlineNotice>
                   ) : null}
-                  <div className="action-cluster">
-                    <button
-                      className="control-button"
+                  <CompetitionActionRow>
+                    <CompetitionButton
                       type="button"
                       disabled={Boolean(cloneValidationMessage) || input.isPending}
                       onClick={submitCloneDraft}
                     >
                       {t('competition.stageBuilder.cloneTemplate')}
-                    </button>
-                    <button
-                      className="ghost-button"
+                    </CompetitionButton>
+                    <CompetitionButton
+                      variant="outline"
                       type="button"
                       onClick={() => setCloneDraft(null)}
                     >
                       {t('competition.stageBuilder.cancelClone')}
-                    </button>
-                  </div>
-                </div>
+                    </CompetitionButton>
+                  </CompetitionActionRow>
+                </CompetitionRow>
               ) : null}
 
-              <div className="action-cluster">
-                <button
-                  className="ghost-button"
+              <CompetitionActionRow>
+                <CompetitionButton
+                  variant="outline"
                   type="button"
                   disabled={input.isPending}
                   onClick={() => {
@@ -269,9 +261,9 @@ export function TemplateLibrarySection(input: {
                   }}
                 >
                   {t('competition.stageBuilder.editTemplateButton', { templateCode: template.templateCode })}
-                </button>
-                <button
-                  className="ghost-button"
+                </CompetitionButton>
+                <CompetitionButton
+                  variant="outline"
                   type="button"
                   disabled={input.isPending}
                   onClick={() => {
@@ -280,35 +272,34 @@ export function TemplateLibrarySection(input: {
                   }}
                 >
                   {t('competition.stageBuilder.cloneTemplateButton', { templateCode: template.templateCode })}
-                </button>
+                </CompetitionButton>
                 {template.isActive ? (
-                  <button
-                    className="control-button"
+                  <CompetitionButton
                     type="button"
                     disabled={input.isPending}
                     onClick={() => input.onDeactivate(template.templateId)}
                   >
                     {t('competition.stageBuilder.deactivateTemplateButton', { templateCode: template.templateCode })}
-                  </button>
+                  </CompetitionButton>
                 ) : null}
-              </div>
-            </article>
+              </CompetitionActionRow>
+            </CompetitionRow>
           ))}
-        </div>
+        </CompetitionRowList>
       ) : null}
 
       {input.feedback ? (
-        <ScreenState title={input.feedback} copy={t('competition.stageBuilder.templateLibraryRefreshCopy')} />
+        <CompetitionStatePanel title={input.feedback} copy={t('competition.stageBuilder.templateLibraryRefreshCopy')} />
       ) : null}
 
       {input.error ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.templateLibraryActionFailedTitle')}
           copy={getErrorMessage(input.error)}
           tone="error"
         />
       ) : null}
-    </article>
+    </CompetitionRow>
   )
 }
 
@@ -326,78 +317,69 @@ export function TemplateBuilderSection(input: {
   const { t } = useLocalization()
 
   return (
-    <article className="stacked-row stage-template-builder">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{t('competition.stageBuilder.teamTemplateTitle')}</strong>
-          <p className="queue-subtitle">{t('competition.stageBuilder.teamTemplateCopy')}</p>
-        </div>
-        <StatusPill tone={input.draft.storeIds.length > 0 ? 'accent' : 'warning'}>
+    <CompetitionRow className="stage-template-builder">
+      <CompetitionRowHeader
+        title={t('competition.stageBuilder.teamTemplateTitle')}
+        description={t('competition.stageBuilder.teamTemplateCopy')}
+        badge={
+          <CompetitionStatusBadge tone={input.draft.storeIds.length > 0 ? 'accent' : 'warning'}>
           {formatCount(
             input.draft.storeIds.length,
             'competition.stageBuilder.count.store',
             'competition.stageBuilder.count.stores',
             t,
           )}
-        </StatusPill>
-      </div>
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.templateCode')}</span>
-          <input
-            value={input.draft.templateCode}
-            onChange={(event) => input.onUpdate('templateCode', normalizeCode(event.target.value))}
-          />
-        </label>
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.templateName')}</span>
-          <input
-            value={input.draft.templateName}
-            onChange={(event) => input.onUpdate('templateName', event.target.value)}
-          />
-        </label>
-        <label className="field-block field-block-full">
-          <span>{t('competition.stageBuilder.templateDescription')}</span>
-          <input
-            value={input.draft.description}
-            onChange={(event) => input.onUpdate('description', event.target.value)}
-          />
-        </label>
-      </div>
-      <div className="store-checkbox-grid">
+          </CompetitionStatusBadge>
+        }
+      />
+      <CompetitionFieldGrid>
+        <CompetitionTextField
+          label={t('competition.stageBuilder.templateCode')}
+          value={input.draft.templateCode}
+          onChange={(event) => input.onUpdate('templateCode', normalizeCode(event.target.value))}
+        />
+        <CompetitionTextField
+          label={t('competition.stageBuilder.templateName')}
+          value={input.draft.templateName}
+          onChange={(event) => input.onUpdate('templateName', event.target.value)}
+        />
+        <CompetitionTextField
+          label={t('competition.stageBuilder.templateDescription')}
+          value={input.draft.description}
+          onChange={(event) => input.onUpdate('description', event.target.value)}
+        />
+      </CompetitionFieldGrid>
+      <CompetitionCheckboxGrid>
         {input.stores.map((store) => (
-          <label className="store-checkbox" key={`template-${store.storeId}`}>
-            <input
-              type="checkbox"
-              checked={input.draft.storeIds.includes(store.storeId)}
-              onChange={() => input.onToggleStore(store.storeId)}
-            />
-            <span>{storeLabel(store)}</span>
-          </label>
+          <CompetitionCheckbox
+            key={`template-${store.storeId}`}
+            checked={input.draft.storeIds.includes(store.storeId)}
+            label={storeLabel(store)}
+            onChange={() => input.onToggleStore(store.storeId)}
+          />
         ))}
-      </div>
+      </CompetitionCheckboxGrid>
       {input.validationMessage ? (
-        <p className="validation-copy">{t(input.validationMessage)}</p>
+        <CompetitionInlineNotice tone="warning">{t(input.validationMessage)}</CompetitionInlineNotice>
       ) : null}
-      <div className="action-cluster">
-        <button
-          className="control-button"
+      <CompetitionActionRow>
+        <CompetitionButton
           type="button"
           disabled={Boolean(input.validationMessage) || input.isPending || input.stores.length === 0}
           onClick={input.onSubmit}
         >
-          <PlusCircle size={16} />
+          <PlusCircle data-icon="inline-start" />
           {t('competition.stageBuilder.createTemplate')}
-        </button>
-      </div>
-      {input.feedback ? <ScreenState title={input.feedback} copy={t('competition.stageBuilder.templateListRefreshCopy')} /> : null}
+        </CompetitionButton>
+      </CompetitionActionRow>
+      {input.feedback ? <CompetitionStatePanel title={input.feedback} copy={t('competition.stageBuilder.templateListRefreshCopy')} /> : null}
       {input.error ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.templateCreateErrorTitle')}
           copy={getErrorMessage(input.error)}
           tone="error"
         />
       ) : null}
-    </article>
+    </CompetitionRow>
   )
 }

@@ -8,7 +8,6 @@ export const competitionTr = {
   'competition.admin.heroTitle': 'Bölge yarışma etapları',
   'competition.admin.heroCopy':
     'HR sahipli yarışma kurulumu, canlı sıralama incelemesi ve final kontrolleri tek kontrollü admin yüzeyinde birleşir.',
-  'competition.admin.route': 'Rota',
   'competition.admin.competitions': 'Yarışmalar',
   'competition.admin.warnings': 'Uyarılar',
   'competition.admin.listEyebrow': 'Yarışma listesi',
@@ -309,7 +308,6 @@ export const competitionEn: Record<keyof typeof competitionTr, string> = {
   'competition.admin.heroTitle': 'Region challenge stages',
   'competition.admin.heroCopy':
     'HR-owned challenge setup, live standing review, and finalization checks share one controlled admin surface.',
-  'competition.admin.route': 'Route',
   'competition.admin.competitions': 'Competitions',
   'competition.admin.warnings': 'Warnings',
   'competition.admin.listEyebrow': 'Competition List',

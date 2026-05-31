@@ -1,4 +1,3 @@
-import type { Tone } from '../../components/dashboard-primitives'
 import { formatState } from '../../lib/format'
 import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
 import type {
@@ -13,6 +12,7 @@ type CompetitionLifecycleState = CompetitionSummary['lifecycleState']
 type CompetitionType = CompetitionSummary['competitionType']
 type CompetitionStageLifecycleState = CompetitionStageSummary['lifecycleState']
 type CompetitionFinalizationState = NonNullable<CompetitionStageSummary['finalizationState']>
+export type CompetitionDisplayTone = 'calm' | 'accent' | 'warning' | 'danger' | 'neutral'
 
 const competitionLifecycleLabelKeys: Record<CompetitionLifecycleState, TranslationKey> = {
   draft: 'competition.admin.state.draft',
@@ -43,7 +43,7 @@ const competitionFinalizationLabelKeys: Record<CompetitionFinalizationState, Tra
   overridden: 'competition.admin.state.overridden',
 }
 
-export function competitionStateTone(state: string): Tone {
+export function competitionStateTone(state: string): CompetitionDisplayTone {
   if (state === 'active' || state === 'completed' || state === 'finalized' || state === 'clean') {
     return 'calm'
   }

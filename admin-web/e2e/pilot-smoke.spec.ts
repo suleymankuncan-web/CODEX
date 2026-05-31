@@ -63,7 +63,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     {
       path: '/admin/competitions',
       urlPattern: /\/admin\/competitions$/,
-      heading: page.getByText('/admin/competitions'),
+      heading: page.getByRole('heading', { name: /Bölge yarışma etapları/i }),
     },
   ]
 

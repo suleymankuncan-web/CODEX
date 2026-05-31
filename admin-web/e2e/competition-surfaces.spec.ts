@@ -12,6 +12,22 @@ const inactiveTemplateId = '88888888-8888-4888-8888-888888888888'
 const clonedTemplateId = '77777777-7777-4777-8777-777777777777'
 const stagePackagePlanId = '55555555-5555-4555-8555-555555555555'
 const clonedStagePackagePlanId = '44444444-4444-4444-8444-444444444444'
+const legacyCompetitionSelectors = [
+  '.hero-panel',
+  '.metric-card',
+  '.panel-heading',
+  '.stacked-row',
+  '.stacked-table',
+  '.control-button',
+  '.key-grid',
+  '.queue-subtitle',
+  '.form-grid',
+  '.action-cluster',
+  '.ghost-button',
+  '.field-block',
+  '.store-checkbox',
+  '.validation-copy',
+].join(', ')
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -33,15 +49,16 @@ test.beforeEach(async ({ page }) => {
 test('admin competitions surface shows live scores and warnings', async ({ page }) => {
   await page.goto('/admin/competitions')
 
+  await expect(page.locator(legacyCompetitionSelectors)).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Yarışmalar' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'April Region Challenge' }).first()).toBeVisible()
   const adminReadSummary = page.getByLabel('Yönetici yarışma okuma özeti')
   await expect(adminReadSummary.getByText('Okuma özeti')).toBeVisible()
   await expect(adminReadSummary.getByText('95% katkı kapsamı')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Marmara Demo' })).toBeVisible()
   await expect(
-    page.locator('article').filter({ has: page.getByRole('heading', { name: 'Marmara Demo' }) }).getByText('92.45'),
+    page.getByTestId(`admin-metric-${teamId}-2026-04-22`).getByText('92.45'),
   ).toBeVisible()
   await expect(
     page.getByLabel('Kapsamdaki yarışma uyarıları').getByText('BM checklist eksik', { exact: true }),
@@ -74,7 +91,7 @@ test('admin competitions lets operators retry after the list load fails', async 
   allowCompetitionList = true
   await retryButton.click()
 
-  await expect(page.getByRole('heading', { name: 'April Region Challenge' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'April Region Challenge' }).first()).toBeVisible()
   await expect.poll(() => listAttempts).toBeGreaterThan(1)
   await expect(page.getByRole('heading', { name: 'Yarışma yüzeyi yüklenemedi' })).toHaveCount(0)
 })

@@ -2,13 +2,6 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, RefreshCw, ShieldAlert, Trophy } from 'lucide-react'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
-import {
   createCompetition,
   finalizeStage,
   getCompetition,
@@ -36,6 +29,27 @@ import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import {
+  AdminMetricStrip,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+} from './admin-surface-primitives'
+import {
+  CompetitionActionRow,
+  CompetitionButton,
+  CompetitionEmptyState,
+  CompetitionFieldGrid,
+  CompetitionKeyValue,
+  CompetitionKeyValueGrid,
+  CompetitionRow,
+  CompetitionRowHeader,
+  CompetitionRowList,
+  CompetitionStatePanel,
+  CompetitionStatusBadge,
+  CompetitionSubtleText,
+  CompetitionTextareaField,
+} from '../features/competitions/competition-admin-surface-primitives'
 
 function nextDraftPayload() {
   const startsOn = new Date()
@@ -120,33 +134,38 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
 
   if (competitionsQuery.isLoading) {
     return (
-      <ScreenState
-        title={t('competition.admin.loadingTitle')}
-        copy={t('competition.admin.loadingCopy')}
-      />
+      <AdminSurfacePage ariaLabel={t('competition.admin.loadingTitle')}>
+        <CompetitionStatePanel
+          title={t('competition.admin.loadingTitle')}
+          copy={t('competition.admin.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (competitionsQuery.isError) {
     return (
-      <ScreenState
-        title={t('competition.admin.errorTitle')}
-        copy={getErrorMessage(competitionsQuery.error)}
-        tone="error"
-        action={
-          <button
-            type="button"
-            className="control-button"
-            disabled={competitionsQuery.isFetching}
-            onClick={() => void competitionsQuery.refetch()}
-          >
-            <RefreshCw size={16} />
-            {competitionsQuery.isFetching
-              ? t('competition.admin.retryingAction')
-              : t('competition.admin.retryAction')}
-          </button>
-        }
-      />
+      <AdminSurfacePage ariaLabel={t('competition.admin.errorTitle')}>
+        <CompetitionStatePanel
+          title={t('competition.admin.errorTitle')}
+          copy={getErrorMessage(competitionsQuery.error)}
+          tone="error"
+          action={
+            <CompetitionButton
+              type="button"
+              variant="outline"
+              disabled={competitionsQuery.isFetching}
+              onClick={() => void competitionsQuery.refetch()}
+            >
+              <RefreshCw data-icon="inline-start" />
+              {competitionsQuery.isFetching
+                ? t('competition.admin.retryingAction')
+                : t('competition.admin.retryAction')}
+            </CompetitionButton>
+          }
+        />
+      </AdminSurfacePage>
     )
   }
 
@@ -154,19 +173,26 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
   const activeStage = detailQuery.data?.stages[0] ?? null
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('competition.admin.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('competition.admin.heroTitle')}</h2>
-          <p className="hero-copy">{t('competition.admin.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('competition.admin.route')} value="/admin/competitions" />
-          <MetricAccent label={t('competition.admin.competitions')} value={String(competitions.length)} />
-          <MetricAccent label={t('competition.admin.warnings')} value={String(warningCount)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('competition.admin.heroTitle')}>
+      <AdminSurfaceHeader
+        eyebrow={t('competition.admin.heroEyebrow')}
+        title={t('competition.admin.heroTitle')}
+        description={t('competition.admin.heroCopy')}
+        icon={<Trophy aria-hidden="true" />}
+        meta={
+          <>
+            <CompetitionStatusBadge tone="accent">
+              {`${competitions.length} ${t('competition.admin.competitions')}`}
+            </CompetitionStatusBadge>
+            <CompetitionStatusBadge tone={warningCount > 0 ? 'warning' : 'calm'}>
+              {warningCount > 0 ? t('competition.admin.warningCount', { count: warningCount }) : t('competition.clean')}
+            </CompetitionStatusBadge>
+            <CompetitionStatusBadge tone={canManage ? 'accent' : 'neutral'}>
+              {canManage ? t('competition.admin.newDraft') : t('competition.admin.readOnly')}
+            </CompetitionStatusBadge>
+          </>
+        }
+      />
 
       <CompetitionListPanel
         canManage={canManage}
@@ -178,96 +204,90 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
       />
 
       {selectedCompetition ? (
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('competition.admin.liveEyebrow')}</div>
-              <h3>{selectedCompetition.competitionName}</h3>
-            </div>
-            <StatusPill tone={warningCount > 0 ? 'warning' : 'calm'}>
+        <AdminSurfaceSection
+          eyebrow={t('competition.admin.liveEyebrow')}
+          title={selectedCompetition.competitionName}
+          badge={
+            <CompetitionStatusBadge tone={warningCount > 0 ? 'warning' : 'calm'}>
               {warningCount > 0 ? t('competition.admin.warningCount', { count: warningCount }) : t('competition.clean')}
-            </StatusPill>
-          </div>
+            </CompetitionStatusBadge>
+          }
+        >
 
           {detailQuery.isLoading ? (
-            <ScreenState
+            <CompetitionStatePanel
               title={t('competition.admin.standingLoadingTitle')}
               copy={t('competition.admin.standingLoadingCopy')}
+              isLoading
             />
           ) : null}
 
           {detailQuery.isError ? (
-            <ScreenState
+            <CompetitionStatePanel
               title={t('competition.admin.standingErrorTitle')}
               copy={getErrorMessage(detailQuery.error)}
               tone="error"
               action={
-                <button
+                <CompetitionButton
                   type="button"
-                  className="control-button"
+                  variant="outline"
                   disabled={detailQuery.isFetching}
                   onClick={() => void detailQuery.refetch()}
                 >
-                  <RefreshCw size={16} />
+                  <RefreshCw data-icon="inline-start" />
                   {detailQuery.isFetching
                     ? t('competition.admin.retryingAction')
                     : t('competition.admin.retryAction')}
-                </button>
+                </CompetitionButton>
               }
             />
           ) : null}
 
           {detailQuery.data ? (
-            <div className="page-stack">
+            <div className="tw:grid tw:gap-4">
               <CompetitionReadSummaryPanel summary={buildCompetitionReadSummary(detailQuery.data, locale)} />
 
-              <div className="metric-grid">
-                {detailQuery.data.latestScores.length === 0 ? (
-                  <EmptyState
-                    title={t('competition.admin.noScoreTitle')}
-                    copy={t('competition.admin.noScoreCopy')}
-                  />
-                ) : (
-                  detailQuery.data.latestScores.map((score) => (
-                    <article className="metric-card metric-card-accent" key={`${score.teamId}-${score.snapshotDate}`}>
-                      <div className="metric-icon">
-                        <Trophy size={18} />
-                      </div>
-                      <div className="metric-value">{formatScore(score.scoreValue, t)}</div>
-                      <h3>{score.teamName}</h3>
-                      <p>
-                        {t('competition.admin.rankLine', {
-                          rank: score.rankPosition ?? '-',
-                          population: score.rankingPopulation,
-                          date: formatDate(score.snapshotDate, locale),
-                        })}
-                      </p>
-                      <p>
-                        {t('competition.admin.coverageFraction', {
-                          valid: score.validStoreCount,
-                          total: score.totalStoreCount,
-                        })}
-                      </p>
-                    </article>
-                  ))
-                )}
-              </div>
+              {detailQuery.data.latestScores.length === 0 ? (
+                <CompetitionEmptyState
+                  title={t('competition.admin.noScoreTitle')}
+                  copy={t('competition.admin.noScoreCopy')}
+                />
+              ) : (
+                <AdminMetricStrip
+                  items={detailQuery.data.latestScores.map((score) => ({
+                    id: `${score.teamId}-${score.snapshotDate}`,
+                    label: score.teamName,
+                    value: formatScore(score.scoreValue, t),
+                    description: t('competition.admin.rankLine', {
+                      rank: score.rankPosition ?? '-',
+                      population: score.rankingPopulation,
+                      date: formatDate(score.snapshotDate, locale),
+                    }),
+                    trend: t('competition.admin.coverageFraction', {
+                      valid: score.validStoreCount,
+                      total: score.totalStoreCount,
+                    }),
+                    icon: <Trophy aria-hidden="true" />,
+                    tone: 'accent',
+                  }))}
+                />
+              )}
 
               {canManage ? (
-                <div className="action-cluster">
+                <CompetitionActionRow>
                   {detailQuery.data.stages.map((stage) => (
-                    <button
-                      className="control-button"
+                    <CompetitionButton
                       key={`recalc-${stage.competitionStageId}`}
                       type="button"
+                      variant="outline"
                       disabled={recalcMutation.isPending}
                       onClick={() => recalcMutation.mutate(stage.competitionStageId)}
                     >
-                      <RefreshCw size={16} />
+                      <RefreshCw data-icon="inline-start" />
                       {t('competition.admin.recalculateStage', { stageCode: stage.stageCode })}
-                    </button>
+                    </CompetitionButton>
                   ))}
-                </div>
+                </CompetitionActionRow>
               ) : null}
 
               {canManage ? (
@@ -290,48 +310,46 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
               <ScopedWarningsSection warnings={detailQuery.data.warnings} />
 
               {canManage && activeStage ? (
-                <article className="stacked-row">
-                  <div className="panel-heading">
-                    <div>
-                      <div className="eyebrow">{t('competition.admin.finalizationEyebrow')}</div>
-                      <h3>{activeStage.stageName}</h3>
-                    </div>
-                    <StatusPill tone={competitionStateTone(activeStage.lifecycleState)}>
+                <CompetitionRow>
+                  <CompetitionRowHeader
+                    title={activeStage.stageName}
+                    description={t('competition.admin.finalizationEyebrow')}
+                    badge={
+                      <CompetitionStatusBadge tone={competitionStateTone(activeStage.lifecycleState)}>
                       {formatCompetitionStageState(activeStage.lifecycleState, t)}
-                    </StatusPill>
-                  </div>
-                  <div className="form-grid">
-                    <label>
-                      {t('competition.admin.overrideJustification')}
-                      <textarea
-                        value={overrideJustification}
-                        onChange={(event) => setOverrideJustification(event.target.value)}
-                      />
-                    </label>
-                    <button
-                      className="control-button"
+                      </CompetitionStatusBadge>
+                    }
+                  />
+                  <CompetitionFieldGrid className="tw:xl:grid-cols-[1fr_auto]">
+                    <CompetitionTextareaField
+                      label={t('competition.admin.overrideJustification')}
+                      value={overrideJustification}
+                      onChange={(event) => setOverrideJustification(event.target.value)}
+                    />
+                    <CompetitionButton
+                      className="tw:self-end"
                       type="button"
                       disabled={finalizeMutation.isPending}
                       onClick={() => finalizeMutation.mutate(activeStage.competitionStageId)}
                     >
-                      <CheckCircle2 size={16} />
+                      <CheckCircle2 data-icon="inline-start" />
                       {t('competition.admin.finalizeStage', { stageCode: activeStage.stageCode })}
-                    </button>
-                  </div>
+                    </CompetitionButton>
+                  </CompetitionFieldGrid>
                   {finalizeMutation.isError ? (
-                    <ScreenState
+                    <CompetitionStatePanel
                       title={t('competition.admin.finalizationErrorTitle')}
                       copy={getErrorMessage(finalizeMutation.error)}
                       tone="error"
                     />
                   ) : null}
-                </article>
+                </CompetitionRow>
               ) : null}
             </div>
           ) : null}
-        </section>
+        </AdminSurfaceSection>
       ) : null}
-    </section>
+    </AdminSurfacePage>
   )
 }
 
@@ -346,29 +364,27 @@ function CompetitionListPanel(input: {
   const { locale, t } = useLocalization()
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('competition.admin.listEyebrow')}</div>
-          <h3>{t('competition.admin.listTitle')}</h3>
-        </div>
-        {input.canManage ? (
-          <button
-            className="control-button"
+    <AdminSurfaceSection
+      eyebrow={t('competition.admin.listEyebrow')}
+      title={t('competition.admin.listTitle')}
+      actions={
+        input.canManage ? (
+          <CompetitionButton
             type="button"
             disabled={input.createPending}
             onClick={input.onCreate}
           >
-            <Trophy size={16} />
+            <Trophy data-icon="inline-start" />
             {t('competition.admin.newDraft')}
-          </button>
+          </CompetitionButton>
         ) : (
-          <StatusPill tone="neutral">{t('competition.admin.readOnly')}</StatusPill>
-        )}
-      </div>
+          <CompetitionStatusBadge tone="neutral">{t('competition.admin.readOnly')}</CompetitionStatusBadge>
+        )
+      }
+    >
 
       {input.createError ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.admin.draftErrorTitle')}
           copy={getErrorMessage(input.createError)}
           tone="error"
@@ -376,42 +392,43 @@ function CompetitionListPanel(input: {
       ) : null}
 
       {input.competitions.length === 0 ? (
-        <EmptyState title={t('competition.admin.emptyTitle')} copy={t('competition.admin.emptyCopy')} />
+        <CompetitionEmptyState title={t('competition.admin.emptyTitle')} copy={t('competition.admin.emptyCopy')} />
       ) : (
-        <div className="stacked-table">
+        <CompetitionRowList>
           {input.competitions.map((competition: CompetitionSummary) => (
-            <article className="stacked-row" key={competition.competitionId}>
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{competition.competitionName}</strong>
-                  <p className="queue-subtitle">{competition.competitionCode}</p>
-                </div>
-                <div className="action-cluster">
-                  <StatusPill tone={competitionStateTone(competition.lifecycleState)}>
+            <CompetitionRow key={competition.competitionId}>
+              <CompetitionRowHeader
+                title={competition.competitionName}
+                description={competition.competitionCode}
+                actions={
+                  <>
+                    <CompetitionStatusBadge tone={competitionStateTone(competition.lifecycleState)}>
                     {formatCompetitionLifecycleState(competition.lifecycleState, t)}
-                  </StatusPill>
-                  <button
-                    className="control-button"
-                    type="button"
-                    onClick={() => input.onSelect(competition.competitionId)}
-                  >
-                    {t('competition.admin.review')}
-                  </button>
-                </div>
-              </div>
-              <div className="key-grid">
-                <KeyValue
+                    </CompetitionStatusBadge>
+                    <CompetitionButton
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      onClick={() => input.onSelect(competition.competitionId)}
+                    >
+                      {t('competition.admin.review')}
+                    </CompetitionButton>
+                  </>
+                }
+              />
+              <CompetitionKeyValueGrid>
+                <CompetitionKeyValue
                   label={t('competition.admin.type')}
                   value={formatCompetitionType(competition.competitionType, t)}
                 />
-                <KeyValue label={t('competition.admin.starts')} value={formatDate(competition.startsOn, locale)} />
-                <KeyValue label={t('competition.admin.ends')} value={formatDate(competition.endsOn, locale)} />
-              </div>
-            </article>
+                <CompetitionKeyValue label={t('competition.admin.starts')} value={formatDate(competition.startsOn, locale)} />
+                <CompetitionKeyValue label={t('competition.admin.ends')} value={formatDate(competition.endsOn, locale)} />
+              </CompetitionKeyValueGrid>
+            </CompetitionRow>
           ))}
-        </div>
+        </CompetitionRowList>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -419,23 +436,19 @@ function CompetitionReadSummaryPanel(input: { summary: CompetitionReadSummary })
   const { t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label={t('competition.readSummaryAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('competition.readScope')}</div>
-          <h3>{t('competition.readSummary')}</h3>
-        </div>
-        <StatusPill tone={input.summary.tone}>{input.summary.attentionLabel}</StatusPill>
-      </div>
-      <article className="stacked-row">
-        <p className="queue-subtitle">{input.summary.explanation}</p>
-        <div className="key-grid">
-          <KeyValue label={t('competition.bestVisibleRank')} value={input.summary.bestRankLabel} />
-          <KeyValue label={t('competition.teamCoverage')} value={input.summary.teamCoverageLabel} />
-          <KeyValue label={t('competition.contributionCoverage')} value={input.summary.contributionCoverageLabel} />
-        </div>
-      </article>
-    </section>
+    <AdminSurfaceSection
+      ariaLabel={t('competition.readSummaryAria')}
+      eyebrow={t('competition.readScope')}
+      title={t('competition.readSummary')}
+      badge={<CompetitionStatusBadge tone={input.summary.tone}>{input.summary.attentionLabel}</CompetitionStatusBadge>}
+    >
+      <CompetitionSubtleText>{input.summary.explanation}</CompetitionSubtleText>
+      <CompetitionKeyValueGrid>
+        <CompetitionKeyValue label={t('competition.bestVisibleRank')} value={input.summary.bestRankLabel} />
+        <CompetitionKeyValue label={t('competition.teamCoverage')} value={input.summary.teamCoverageLabel} />
+        <CompetitionKeyValue label={t('competition.contributionCoverage')} value={input.summary.contributionCoverageLabel} />
+      </CompetitionKeyValueGrid>
+    </AdminSurfaceSection>
   )
 }
 
@@ -443,57 +456,60 @@ function ScopedContributionSection(input: { contributions: CompetitionStoreContr
   const { locale, t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label={t('competition.scopedContributionsAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('competition.readScope')}</div>
-          <h3>{t('competition.scopedContributions')}</h3>
-        </div>
-        <StatusPill tone={input.contributions.length > 0 ? 'accent' : 'neutral'}>
+    <AdminSurfaceSection
+      ariaLabel={t('competition.scopedContributionsAria')}
+      eyebrow={t('competition.readScope')}
+      title={t('competition.scopedContributions')}
+      badge={
+        <CompetitionStatusBadge tone={input.contributions.length > 0 ? 'accent' : 'neutral'}>
           {`${input.contributions.length} ${t('competition.rowsSuffix')}`}
-        </StatusPill>
-      </div>
+        </CompetitionStatusBadge>
+      }
+    >
       {input.contributions.length === 0 ? (
-        <EmptyState
+        <CompetitionEmptyState
           title={t('competition.noScopedContributionRowsTitle')}
           copy={t('competition.noScopedContributionRowsCopy')}
         />
       ) : (
-        input.contributions.map((contribution) => {
+        <CompetitionRowList>
+          {input.contributions.map((contribution) => {
           const readability = describeCompetitionContribution(contribution, locale)
 
           return (
-            <article
-              className="stacked-row"
+            <CompetitionRow
               key={`${contribution.stageId}-${contribution.storeId}-${contribution.snapshotDate}`}
             >
-              <div className="stacked-row-head">
-                <div>
-                  <strong>{contribution.storeName}</strong>
-                  <p className="queue-subtitle">
+              <CompetitionRowHeader
+                title={contribution.storeName}
+                description={
+                  <>
                     {contribution.teamName} / {contribution.storeCode}
-                  </p>
-                </div>
-                <div className="action-cluster">
-                  <StatusPill tone={contribution.hasDailyData ? 'calm' : 'warning'}>
+                  </>
+                }
+                actions={
+                  <>
+                  <CompetitionStatusBadge tone={contribution.hasDailyData ? 'calm' : 'warning'}>
                     {formatScore(contribution.scoreValue, t)}
-                  </StatusPill>
-                  <StatusPill tone={readability.tone}>{readability.statusLabel}</StatusPill>
-                </div>
-              </div>
-              <div className="key-grid">
-                <KeyValue label={t('competition.snapshot')} value={formatDate(contribution.snapshotDate, locale)} />
-                <KeyValue label={t('competition.contributionHealth')} value={readability.statusLabel} />
-                <KeyValue label={t('competition.coverage')} value={readability.coverageLabel} />
-                <KeyValue label={t('competition.missingKpis')} value={readability.missingLabel} />
-                <KeyValue label={t('competition.whyItMatters')} value={readability.explanation} />
-                <KeyValue label={t('competition.team')} value={contribution.teamCode} />
-              </div>
-            </article>
+                  </CompetitionStatusBadge>
+                  <CompetitionStatusBadge tone={readability.tone}>{readability.statusLabel}</CompetitionStatusBadge>
+                  </>
+                }
+              />
+              <CompetitionKeyValueGrid>
+                <CompetitionKeyValue label={t('competition.snapshot')} value={formatDate(contribution.snapshotDate, locale)} />
+                <CompetitionKeyValue label={t('competition.contributionHealth')} value={readability.statusLabel} />
+                <CompetitionKeyValue label={t('competition.coverage')} value={readability.coverageLabel} />
+                <CompetitionKeyValue label={t('competition.missingKpis')} value={readability.missingLabel} />
+                <CompetitionKeyValue label={t('competition.whyItMatters')} value={readability.explanation} />
+                <CompetitionKeyValue label={t('competition.team')} value={contribution.teamCode} />
+              </CompetitionKeyValueGrid>
+            </CompetitionRow>
           )
-        })
+        })}
+        </CompetitionRowList>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -501,45 +517,48 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
   const { locale, t } = useLocalization()
 
   return (
-    <section className="stacked-table" aria-label={t('competition.scopedWarningsAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('competition.dataQuality')}</div>
-          <h3>{t('competition.scopedWarnings')}</h3>
-        </div>
-        <StatusPill tone={input.warnings.length > 0 ? 'warning' : 'calm'}>
+    <AdminSurfaceSection
+      ariaLabel={t('competition.scopedWarningsAria')}
+      eyebrow={t('competition.dataQuality')}
+      title={t('competition.scopedWarnings')}
+      badge={
+        <CompetitionStatusBadge tone={input.warnings.length > 0 ? 'warning' : 'calm'}>
           {input.warnings.length > 0
             ? t('competition.admin.warningCount', { count: input.warnings.length })
             : t('competition.clean')}
-        </StatusPill>
-      </div>
+        </CompetitionStatusBadge>
+      }
+    >
       {input.warnings.length === 0 ? (
-        <EmptyState title={t('competition.noOpenWarnings')} copy={t('competition.stageDataCleanCopy')} />
+        <CompetitionEmptyState title={t('competition.noOpenWarnings')} copy={t('competition.stageDataCleanCopy')} />
       ) : (
-        input.warnings.map((warning) => {
+        <CompetitionRowList>
+          {input.warnings.map((warning) => {
           const readability = describeCompetitionWarning(warning, locale)
 
           return (
-            <article className="stacked-row" key={warning.warningId}>
-              <div className="stacked-row-head">
-                <div>
-                  <strong>
-                    <ShieldAlert size={16} /> {readability.title}
-                  </strong>
-                  <p className="queue-subtitle">{readability.explanation}</p>
-                </div>
-                <StatusPill tone={readability.tone}>{formatState(warning.warningLevel)}</StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue label={t('competition.warningCode')} value={formatState(warning.warningCode)} />
-                <KeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart, locale)} />
-                <KeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd, locale)} />
-                <KeyValue label={t('competition.store')} value={warning.storeId ?? t('competition.teamLevel')} />
-              </div>
-            </article>
+            <CompetitionRow key={warning.warningId}>
+              <CompetitionRowHeader
+                title={
+                  <span className="tw:inline-flex tw:items-center tw:gap-2">
+                    <ShieldAlert aria-hidden="true" />
+                    {readability.title}
+                  </span>
+                }
+                description={readability.explanation}
+                badge={<CompetitionStatusBadge tone={readability.tone}>{formatState(warning.warningLevel)}</CompetitionStatusBadge>}
+              />
+              <CompetitionKeyValueGrid>
+                <CompetitionKeyValue label={t('competition.warningCode')} value={formatState(warning.warningCode)} />
+                <CompetitionKeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart, locale)} />
+                <CompetitionKeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd, locale)} />
+                <CompetitionKeyValue label={t('competition.store')} value={warning.storeId ?? t('competition.teamLevel')} />
+              </CompetitionKeyValueGrid>
+            </CompetitionRow>
           )
-        })
+        })}
+        </CompetitionRowList>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }

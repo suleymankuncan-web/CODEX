@@ -2,10 +2,20 @@ import { useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PlusCircle } from 'lucide-react'
 import {
-  EmptyState,
-  ScreenState,
-  StatusPill,
-} from '../../components/dashboard-primitives'
+  CompetitionActionRow,
+  CompetitionButton,
+  CompetitionCheckbox,
+  CompetitionCheckboxGrid,
+  CompetitionEmptyState,
+  CompetitionFieldGrid,
+  CompetitionInlineNotice,
+  CompetitionRow,
+  CompetitionRowHeader,
+  CompetitionSelectField,
+  CompetitionStatePanel,
+  CompetitionStatusBadge,
+  CompetitionTextField,
+} from './competition-admin-surface-primitives'
 import { getAuthLookups, type AuthLookupStore } from '../auth/api'
 import {
   approveCompetitionStagePackagePlan,
@@ -535,99 +545,86 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
   }
 
   return (
-    <section className="stacked-table" aria-label={t('competition.stageBuilder.ariaLabel')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('competition.stageBuilder.eyebrow')}</div>
-          <h3>{t('competition.stageBuilder.createStageTitle')}</h3>
-        </div>
-        <StatusPill tone={validationMessage ? 'warning' : 'calm'}>
-          {validationMessage ? t('competition.stageBuilder.draftIncomplete') : t('competition.stageBuilder.ready')}
-        </StatusPill>
-      </div>
+    <section className="tw:grid tw:gap-4" aria-label={t('competition.stageBuilder.ariaLabel')}>
+      <CompetitionRow>
+        <CompetitionRowHeader
+          title={t('competition.stageBuilder.createStageTitle')}
+          description={t('competition.stageBuilder.eyebrow')}
+          badge={
+            <CompetitionStatusBadge tone={validationMessage ? 'warning' : 'calm'}>
+              {validationMessage ? t('competition.stageBuilder.draftIncomplete') : t('competition.stageBuilder.ready')}
+            </CompetitionStatusBadge>
+          }
+        />
 
-      <article className="stacked-row">
-        <div className="form-grid">
-          <label className="field-block">
-            <span>{t('competition.stageBuilder.stagePreset')}</span>
-            <select
-              value={draft.stagePresetCode ?? ''}
-              onChange={(event) => applyStagePreset(event.target.value)}
-            >
-              <option value="">{t('competition.stageBuilder.manualStage')}</option>
-              {stagePresetOptions.map((preset) => (
-                <option key={preset.code} value={preset.code}>
-                  {t(stagePresetLabelKeys[preset.code])}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field-block">
-            <span>{t('competition.stageBuilder.stageCode')}</span>
-            <input
-              value={draft.stageCode}
-              onChange={(event) => updateDraft('stageCode', normalizeCode(event.target.value))}
-            />
-          </label>
-          <label className="field-block">
-            <span>{t('competition.stageBuilder.stageName')}</span>
-            <input
-              value={draft.stageName}
-              onChange={(event) => updateDraft('stageName', event.target.value)}
-            />
-          </label>
-          <label className="field-block">
-            <span>{t('competition.stageBuilder.stageOrder')}</span>
-            <input
-              min="1"
-              type="number"
-              value={draft.stageOrder}
-              onChange={(event) => updateDraft('stageOrder', event.target.value)}
-            />
-          </label>
-          <label className="field-block">
-            <span>{t('competition.stageBuilder.stageType')}</span>
-            <select
-              value={draft.stageType}
-              onChange={(event) =>
-                updateDraft('stageType', event.target.value as CompetitionStageSummary['stageType'])
-              }
-            >
-              {stageTypeOptions.map((stageType) => (
-                <option key={stageType} value={stageType}>
-                  {formatStageType(stageType, t)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field-block">
-            <span>{t('competition.stageBuilder.stageStarts')}</span>
-            <input
-              type="date"
-              value={draft.startsOn}
-              onChange={(event) => updateDraft('startsOn', event.target.value)}
-            />
-          </label>
-          <label className="field-block">
-            <span>{t('competition.stageBuilder.stageEnds')}</span>
-            <input
-              type="date"
-              value={draft.endsOn}
-              onChange={(event) => updateDraft('endsOn', event.target.value)}
-            />
-          </label>
-        </div>
-      </article>
+        <CompetitionFieldGrid>
+          <CompetitionSelectField
+            label={t('competition.stageBuilder.stagePreset')}
+            value={draft.stagePresetCode ?? ''}
+            onChange={(event) => applyStagePreset(event.target.value)}
+          >
+            <option value="">{t('competition.stageBuilder.manualStage')}</option>
+            {stagePresetOptions.map((preset) => (
+              <option key={preset.code} value={preset.code}>
+                {t(stagePresetLabelKeys[preset.code])}
+              </option>
+            ))}
+          </CompetitionSelectField>
+          <CompetitionTextField
+            label={t('competition.stageBuilder.stageCode')}
+            value={draft.stageCode}
+            onChange={(event) => updateDraft('stageCode', normalizeCode(event.target.value))}
+          />
+          <CompetitionTextField
+            label={t('competition.stageBuilder.stageName')}
+            value={draft.stageName}
+            onChange={(event) => updateDraft('stageName', event.target.value)}
+          />
+          <CompetitionTextField
+            label={t('competition.stageBuilder.stageOrder')}
+            min="1"
+            type="number"
+            value={draft.stageOrder}
+            onChange={(event) => updateDraft('stageOrder', event.target.value)}
+          />
+          <CompetitionSelectField
+            label={t('competition.stageBuilder.stageType')}
+            value={draft.stageType}
+            onChange={(event) =>
+              updateDraft('stageType', event.target.value as CompetitionStageSummary['stageType'])
+            }
+          >
+            {stageTypeOptions.map((stageType) => (
+              <option key={stageType} value={stageType}>
+                {formatStageType(stageType, t)}
+              </option>
+            ))}
+          </CompetitionSelectField>
+          <CompetitionTextField
+            label={t('competition.stageBuilder.stageStarts')}
+            type="date"
+            value={draft.startsOn}
+            onChange={(event) => updateDraft('startsOn', event.target.value)}
+          />
+          <CompetitionTextField
+            label={t('competition.stageBuilder.stageEnds')}
+            type="date"
+            value={draft.endsOn}
+            onChange={(event) => updateDraft('endsOn', event.target.value)}
+          />
+        </CompetitionFieldGrid>
+      </CompetitionRow>
 
       {lookupsQuery.isLoading ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.storesLoadingTitle')}
           copy={t('competition.stageBuilder.storesLoadingCopy')}
+          isLoading
         />
       ) : null}
 
       {lookupsQuery.isError ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.storesErrorTitle')}
           copy={getErrorMessage(lookupsQuery.error)}
           tone="error"
@@ -635,7 +632,7 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
       ) : null}
 
       {!lookupsQuery.isLoading && stores.length === 0 ? (
-        <EmptyState
+        <CompetitionEmptyState
           title={t('competition.stageBuilder.noStoresTitle')}
           copy={t('competition.stageBuilder.noStoresCopy')}
         />
@@ -683,7 +680,7 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
       />
 
       {templatesQuery.isError ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.teamTemplatesErrorTitle')}
           copy={getErrorMessage(templatesQuery.error)}
           tone="error"
@@ -756,32 +753,31 @@ function useStageBuilderFormContent(input: StageBuilderFormProps) {
         onUpdateTeam={updateTeam}
       />
 
-      {validationMessage ? <p className="validation-copy">{t(validationMessage)}</p> : null}
+      {validationMessage ? <CompetitionInlineNotice tone="warning">{t(validationMessage)}</CompetitionInlineNotice> : null}
 
-      <div className="action-cluster">
-        <button
-          className="control-button"
+      <CompetitionActionRow>
+        <CompetitionButton
           type="button"
           disabled={Boolean(validationMessage) || createMutation.isPending || stores.length === 0}
           onClick={submitStage}
         >
-          <PlusCircle size={16} />
+          <PlusCircle data-icon="inline-start" />
           {t('competition.stageBuilder.createStageButton')}
-        </button>
-        <StatusPill tone="neutral">
+        </CompetitionButton>
+        <CompetitionStatusBadge tone="neutral">
           {formatCount(
             draft.teams.length,
             'competition.stageBuilder.count.team',
             'competition.stageBuilder.count.teams',
             t,
           )}
-        </StatusPill>
-      </div>
+        </CompetitionStatusBadge>
+      </CompetitionActionRow>
 
-      {feedback ? <ScreenState title={feedback} copy={t('competition.stageBuilder.stageRefreshCopy')} /> : null}
+      {feedback ? <CompetitionStatePanel title={feedback} copy={t('competition.stageBuilder.stageRefreshCopy')} /> : null}
 
       {createMutation.isError ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.stageCreateErrorTitle')}
           copy={getErrorMessage(createMutation.error)}
           tone="error"
@@ -808,63 +804,57 @@ function StageBuilderTeamsSection(input: {
   return (
     <>
       {input.teams.map((team, teamIndex) => (
-        <article className="stacked-row stage-builder-team" key={teamIndex}>
-          <div className="stacked-row-head">
-            <strong>{t('competition.stageBuilder.teamNumber', { number: teamIndex + 1 })}</strong>
-            <StatusPill tone={team.storeIds.length > 0 ? 'accent' : 'warning'}>
+        <CompetitionRow className="stage-builder-team" key={teamIndex}>
+          <CompetitionRowHeader
+            title={t('competition.stageBuilder.teamNumber', { number: teamIndex + 1 })}
+            badge={
+              <CompetitionStatusBadge tone={team.storeIds.length > 0 ? 'accent' : 'warning'}>
               {formatCount(
                 team.storeIds.length,
                 'competition.stageBuilder.count.store',
                 'competition.stageBuilder.count.stores',
                 t,
               )}
-            </StatusPill>
-          </div>
-          <div className="form-grid">
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.teamTemplateLabel', { number: teamIndex + 1 })}</span>
-              <select
-                value={team.sourceTemplateId ?? ''}
-                onChange={(event) => input.onApplyTemplate(teamIndex, event.target.value)}
-              >
-                <option value="">{t('competition.stageBuilder.manualTeam')}</option>
-                {input.templates.map((template) => (
-                  <option key={template.templateId} value={template.templateId}>
-                    {template.templateCode} - {template.templateName}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.teamCodeLabel', { number: teamIndex + 1 })}</span>
-              <input
-                value={team.teamCode}
-                onChange={(event) =>
-                  input.onUpdateTeam(teamIndex, { teamCode: normalizeCode(event.target.value) })
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.teamNameLabel', { number: teamIndex + 1 })}</span>
-              <input
-                value={team.teamName}
-                onChange={(event) => input.onUpdateTeam(teamIndex, { teamName: event.target.value })}
-              />
-            </label>
-          </div>
-          <div className="store-checkbox-grid">
+              </CompetitionStatusBadge>
+            }
+          />
+          <CompetitionFieldGrid>
+            <CompetitionSelectField
+              label={t('competition.stageBuilder.teamTemplateLabel', { number: teamIndex + 1 })}
+              value={team.sourceTemplateId ?? ''}
+              onChange={(event) => input.onApplyTemplate(teamIndex, event.target.value)}
+            >
+              <option value="">{t('competition.stageBuilder.manualTeam')}</option>
+              {input.templates.map((template) => (
+                <option key={template.templateId} value={template.templateId}>
+                  {template.templateCode} - {template.templateName}
+                </option>
+              ))}
+            </CompetitionSelectField>
+            <CompetitionTextField
+              label={t('competition.stageBuilder.teamCodeLabel', { number: teamIndex + 1 })}
+              value={team.teamCode}
+              onChange={(event) =>
+                input.onUpdateTeam(teamIndex, { teamCode: normalizeCode(event.target.value) })
+              }
+            />
+            <CompetitionTextField
+              label={t('competition.stageBuilder.teamNameLabel', { number: teamIndex + 1 })}
+              value={team.teamName}
+              onChange={(event) => input.onUpdateTeam(teamIndex, { teamName: event.target.value })}
+            />
+          </CompetitionFieldGrid>
+          <CompetitionCheckboxGrid>
             {input.stores.map((store) => (
-              <label className="store-checkbox" key={`${teamIndex}-${store.storeId}`}>
-                <input
-                  type="checkbox"
-                  checked={team.storeIds.includes(store.storeId)}
-                  onChange={() => input.onToggleStore(teamIndex, store.storeId)}
-                />
-                <span>{storeLabel(store)}</span>
-              </label>
+              <CompetitionCheckbox
+                key={`${teamIndex}-${store.storeId}`}
+                checked={team.storeIds.includes(store.storeId)}
+                label={storeLabel(store)}
+                onChange={() => input.onToggleStore(teamIndex, store.storeId)}
+              />
             ))}
-          </div>
-        </article>
+          </CompetitionCheckboxGrid>
+        </CompetitionRow>
       ))}
     </>
   )

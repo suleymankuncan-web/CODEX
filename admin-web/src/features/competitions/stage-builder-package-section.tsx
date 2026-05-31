@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { PlusCircle } from 'lucide-react'
-import { EmptyState, ScreenState, StatusPill } from '../../components/dashboard-primitives'
 import { getErrorMessage } from '../../lib/format'
 import type { TranslateFunction, TranslationKey } from '../localization/dictionary'
 import { useLocalization } from '../localization/useLocalization'
@@ -30,6 +29,23 @@ import {
   type StagePackageDraft,
   type StagePackagePlanEditDraft,
 } from './stage-builder-model'
+import {
+  CompetitionActionRow,
+  CompetitionButton,
+  CompetitionEmptyState,
+  CompetitionFieldGrid,
+  CompetitionInlineNotice,
+  CompetitionKeyValue,
+  CompetitionKeyValueGrid,
+  CompetitionRow,
+  CompetitionRowHeader,
+  CompetitionRowList,
+  CompetitionSelectField,
+  CompetitionStatePanel,
+  CompetitionStatusBadge,
+  CompetitionSubtleText,
+  CompetitionTextField,
+} from './competition-admin-surface-primitives'
 
 function formatAuditMetadata(metadata: Record<string, unknown>, t: TranslateFunction) {
   const planName = typeof metadata.planName === 'string' ? metadata.planName : null
@@ -109,53 +125,49 @@ function StagePackagePlanDecisionPreview(input: { plan: CompetitionStagePackageP
   const preview = buildStagePackagePlanDecisionPreview(input.plan)
 
   return (
-    <div className="stacked-row">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{t('competition.stageBuilder.decisionPreviewTitle')}</strong>
-          <p className="queue-subtitle">{t('competition.stageBuilder.decisionPreviewCopy')}</p>
-        </div>
-        <StatusPill tone="accent">
+    <CompetitionRow>
+      <CompetitionRowHeader
+        title={t('competition.stageBuilder.decisionPreviewTitle')}
+        description={t('competition.stageBuilder.decisionPreviewCopy')}
+        badge={
+          <CompetitionStatusBadge tone="accent">
           {formatCount(
             preview.storeAssignmentCount,
             'competition.stageBuilder.count.storeAssignment',
             'competition.stageBuilder.count.storeAssignments',
             t,
           )}
-        </StatusPill>
-      </div>
-      <div className="key-grid">
-        <div className="key-item">
-          <span>{t('competition.stageBuilder.planWindow')}</span>
-          <strong>{preview.dateRange ?? t('competition.stageBuilder.datesMissing')}</strong>
-        </div>
-        <div className="key-item">
-          <span>{t('competition.stageBuilder.stages')}</span>
-          <strong>
-            {formatCount(
-              input.plan.stageDrafts.length,
-              'competition.stageBuilder.count.stage',
-              'competition.stageBuilder.count.stages',
-              t,
-            )}
-          </strong>
-        </div>
-        <div className="key-item">
-          <span>{t('competition.stageBuilder.teamTemplates')}</span>
-          <strong>{String(preview.teamTemplateLabels.length)}</strong>
-        </div>
-      </div>
-      <div className="stacked-table">
+          </CompetitionStatusBadge>
+        }
+      />
+      <CompetitionKeyValueGrid>
+        <CompetitionKeyValue
+          label={t('competition.stageBuilder.planWindow')}
+          value={preview.dateRange ?? t('competition.stageBuilder.datesMissing')}
+        />
+        <CompetitionKeyValue
+          label={t('competition.stageBuilder.stages')}
+          value={formatCount(
+            input.plan.stageDrafts.length,
+            'competition.stageBuilder.count.stage',
+            'competition.stageBuilder.count.stages',
+            t,
+          )}
+        />
+        <CompetitionKeyValue
+          label={t('competition.stageBuilder.teamTemplates')}
+          value={String(preview.teamTemplateLabels.length)}
+        />
+      </CompetitionKeyValueGrid>
+      <CompetitionRowList>
         {input.plan.stageDrafts.map((stage) => (
-          <article className="stacked-row" key={`${input.plan.planId}-${stage.stageCode}`}>
-            <div className="stacked-row-head">
-              <div>
-                <strong>{stage.stageName}</strong>
-                <p className="queue-subtitle">{`${stage.startsOn} - ${stage.endsOn}`}</p>
-              </div>
-              <StatusPill tone="neutral">{formatStageType(stage.stageType, t)}</StatusPill>
-            </div>
-            <p className="queue-subtitle">
+          <CompetitionRow key={`${input.plan.planId}-${stage.stageCode}`}>
+            <CompetitionRowHeader
+              title={stage.stageName}
+              description={`${stage.startsOn} - ${stage.endsOn}`}
+              badge={<CompetitionStatusBadge tone="neutral">{formatStageType(stage.stageType, t)}</CompetitionStatusBadge>}
+            />
+            <CompetitionSubtleText>
               {[
                 formatCount(
                   stage.teams.length,
@@ -170,12 +182,12 @@ function StagePackagePlanDecisionPreview(input: { plan: CompetitionStagePackageP
                   t,
                 ),
               ].join(' - ')}
-            </p>
-          </article>
+            </CompetitionSubtleText>
+          </CompetitionRow>
         ))}
-      </div>
-      <p className="queue-subtitle">{preview.teamTemplateLabels.join(', ')}</p>
-    </div>
+      </CompetitionRowList>
+      <CompetitionSubtleText>{preview.teamTemplateLabels.join(', ')}</CompetitionSubtleText>
+    </CompetitionRow>
   )
 }
 
@@ -255,16 +267,16 @@ function useStagePackageBuilderSectionContent(input: StagePackageBuilderSectionI
   }
 
   return (
-    <article className="stacked-row stage-package-builder">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{t('competition.stageBuilder.stagePackageTitle')}</strong>
-          <p className="queue-subtitle">{t('competition.stageBuilder.stagePackageCopy')}</p>
-        </div>
-        <StatusPill tone={input.validationMessage ? 'warning' : 'calm'}>
+    <CompetitionRow className="stage-package-builder">
+      <CompetitionRowHeader
+        title={t('competition.stageBuilder.stagePackageTitle')}
+        description={t('competition.stageBuilder.stagePackageCopy')}
+        badge={
+          <CompetitionStatusBadge tone={input.validationMessage ? 'warning' : 'calm'}>
           {input.validationMessage ? t('competition.stageBuilder.packageIncomplete') : t('competition.stageBuilder.ready')}
-        </StatusPill>
-      </div>
+          </CompetitionStatusBadge>
+        }
+      />
 
       <StagePackageDraftFields
         draft={input.draft}
@@ -287,44 +299,45 @@ function useStagePackageBuilderSectionContent(input: StagePackageBuilderSectionI
         onSubmit={input.onSubmit}
       />
 
-      <article className="stacked-row stage-package-plan-library">
-        <div className="stacked-row-head">
-          <div>
-            <strong>{t('competition.stageBuilder.packagePlanLibraryTitle')}</strong>
-            <p className="queue-subtitle">{t('competition.stageBuilder.packagePlanLibraryCopy')}</p>
-          </div>
-          <StatusPill tone="neutral">
+      <CompetitionRow className="stage-package-plan-library">
+        <CompetitionRowHeader
+          title={t('competition.stageBuilder.packagePlanLibraryTitle')}
+          description={t('competition.stageBuilder.packagePlanLibraryCopy')}
+          badge={
+            <CompetitionStatusBadge tone="neutral">
             {formatCount(
               input.plans.length,
               'competition.stageBuilder.count.plan',
               'competition.stageBuilder.count.plans',
               t,
             )}
-          </StatusPill>
-        </div>
+            </CompetitionStatusBadge>
+          }
+        />
 
         {input.isLoadingPlans ? (
-          <ScreenState
+          <CompetitionStatePanel
             title={t('competition.stageBuilder.packagePlansLoadingTitle')}
             copy={t('competition.stageBuilder.packagePlansLoadingCopy')}
+            isLoading
           />
         ) : null}
 
         {!input.isLoadingPlans && input.plans.length === 0 ? (
-          <EmptyState
+          <CompetitionEmptyState
             title={t('competition.stageBuilder.noPackagePlansTitle')}
             copy={t('competition.stageBuilder.noPackagePlansCopy')}
           />
         ) : null}
 
         {input.plans.length > 0 ? (
-          <div className="stacked-table">
+          <CompetitionRowList>
             {input.plans.map((plan) => (
-              <article className="stacked-row" key={plan.planId}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{plan.planName}</strong>
-                    <p className="queue-subtitle">
+              <CompetitionRow key={plan.planId}>
+                <CompetitionRowHeader
+                  title={plan.planName}
+                  description={
+                    <>
                       {[
                         formatStagePackage(plan.packageCode, t),
                         plan.sourcePlan
@@ -333,9 +346,10 @@ function useStagePackageBuilderSectionContent(input: StagePackageBuilderSectionI
                       ]
                         .filter(Boolean)
                         .join(' - ')}
-                    </p>
-                  </div>
-                  <StatusPill
+                    </>
+                  }
+                  badge={
+                    <CompetitionStatusBadge
                     tone={
                       plan.planStatus === 'draft'
                         ? 'warning'
@@ -347,305 +361,265 @@ function useStagePackageBuilderSectionContent(input: StagePackageBuilderSectionI
                     }
                   >
                     {formatPlanStatus(plan.planStatus, t)}
-                  </StatusPill>
-                </div>
-                <div className="key-grid">
-                  <div className="key-item">
-                    <span>{t('competition.stageBuilder.stages')}</span>
-                    <strong>{String(plan.stageDrafts.length)}</strong>
-                  </div>
-                  <div className="key-item">
-                    <span>{t('competition.stageBuilder.createdStages')}</span>
-                    <strong>{String(plan.createdStageIds.length)}</strong>
-                  </div>
-                  <div className="key-item">
-                    <span>{t('competition.stageBuilder.updated')}</span>
-                    <strong>{plan.updatedAt.slice(0, 10)}</strong>
-                  </div>
-                </div>
+                    </CompetitionStatusBadge>
+                  }
+                />
+                <CompetitionKeyValueGrid>
+                  <CompetitionKeyValue label={t('competition.stageBuilder.stages')} value={String(plan.stageDrafts.length)} />
+                  <CompetitionKeyValue label={t('competition.stageBuilder.createdStages')} value={String(plan.createdStageIds.length)} />
+                  <CompetitionKeyValue label={t('competition.stageBuilder.updated')} value={plan.updatedAt.slice(0, 10)} />
+                </CompetitionKeyValueGrid>
                 {editDraft?.planId === plan.planId ? (
-                  <div className="stacked-row">
-                    <div className="form-grid">
-                      <label className="field-block">
-                        <span>{t('competition.stageBuilder.editPlanName')}</span>
-                        <input
-                          value={editDraft.planName}
-                          onChange={(event) => updatePlanEditDraft('planName', event.target.value)}
-                        />
-                      </label>
-                      <label className="field-block">
-                        <span>{t('competition.stageBuilder.editStagePackage')}</span>
-                        <select
-                          value={editDraft.packageCode}
-                          onChange={(event) =>
-                            updatePlanEditDraft(
-                              'packageCode',
-                              event.target.value as CompetitionStagePackageCode,
-                            )
-                          }
-                        >
-                          {stagePackageOptions.map((packageOption) => (
-                            <option key={packageOption.code} value={packageOption.code}>
-                              {t(stagePackageLabelKeys[packageOption.code])}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    </div>
-                    <div className="stacked-table">
+                  <CompetitionRow>
+                    <CompetitionFieldGrid>
+                      <CompetitionTextField
+                        label={t('competition.stageBuilder.editPlanName')}
+                        value={editDraft.planName}
+                        onChange={(event) => updatePlanEditDraft('planName', event.target.value)}
+                      />
+                      <CompetitionSelectField
+                        label={t('competition.stageBuilder.editStagePackage')}
+                        value={editDraft.packageCode}
+                        onChange={(event) =>
+                          updatePlanEditDraft(
+                            'packageCode',
+                            event.target.value as CompetitionStagePackageCode,
+                          )
+                        }
+                      >
+                        {stagePackageOptions.map((packageOption) => (
+                          <option key={packageOption.code} value={packageOption.code}>
+                            {t(stagePackageLabelKeys[packageOption.code])}
+                          </option>
+                        ))}
+                      </CompetitionSelectField>
+                    </CompetitionFieldGrid>
+                    <CompetitionRowList>
                       {editDraft.stageDrafts.map((stageDraft, stageIndex) => (
-                        <article
-                          className="stacked-row stage-package-preview-stage"
+                        <CompetitionRow
+                          className="stage-package-preview-stage"
                           key={`edit-${plan.planId}-${stageDraft.stagePresetCode}`}
                         >
-                          <div className="stacked-row-head">
-                            <div>
-                              <strong>
-                                {t('competition.stageBuilder.editPackageStageNumber', { number: stageIndex + 1 })}
-                              </strong>
-                              <p className="queue-subtitle">
-                                {formatStagePreset(stageDraft.stagePresetCode, t)}
-                              </p>
-                            </div>
-                            <StatusPill tone="accent">{formatStageType(stageDraft.stageType, t)}</StatusPill>
-                          </div>
-                          <div className="form-grid">
-                            <label className="field-block">
-                              <span>{t('competition.stageBuilder.editPackageStageCodeLabel', { number: stageIndex + 1 })}</span>
-                              <input
-                                value={stageDraft.stageCode}
-                                onChange={(event) =>
-                                  updatePlanEditStage(
-                                    stageIndex,
-                                    'stageCode',
-                                    normalizeCode(event.target.value),
-                                  )
-                                }
-                              />
-                            </label>
-                            <label className="field-block">
-                              <span>{t('competition.stageBuilder.editPackageStageNameLabel', { number: stageIndex + 1 })}</span>
-                              <input
-                                value={stageDraft.stageName}
-                                onChange={(event) =>
-                                  updatePlanEditStage(stageIndex, 'stageName', event.target.value)
-                                }
-                              />
-                            </label>
-                            <label className="field-block">
-                              <span>{t('competition.stageBuilder.editPackageStageOrderLabel', { number: stageIndex + 1 })}</span>
-                              <input
-                                min="1"
-                                type="number"
-                                value={stageDraft.stageOrder}
-                                onChange={(event) =>
-                                  updatePlanEditStage(stageIndex, 'stageOrder', event.target.value)
-                                }
-                              />
-                            </label>
-                            <label className="field-block">
-                              <span>{t('competition.stageBuilder.editPackageStageTypeLabel', { number: stageIndex + 1 })}</span>
-                              <select
-                                value={stageDraft.stageType}
-                                onChange={(event) =>
-                                  updatePlanEditStage(stageIndex, 'stageType', event.target.value)
-                                }
-                              >
-                                {stageTypeOptions.map((stageType) => (
-                                  <option key={stageType} value={stageType}>
-                                    {formatStageType(stageType, t)}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                            <label className="field-block">
-                              <span>{t('competition.stageBuilder.editPackageStageStartsLabel', { number: stageIndex + 1 })}</span>
-                              <input
-                                type="date"
-                                value={stageDraft.startsOn}
-                                onChange={(event) =>
-                                  updatePlanEditStage(stageIndex, 'startsOn', event.target.value)
-                                }
-                              />
-                            </label>
-                            <label className="field-block">
-                              <span>{t('competition.stageBuilder.editPackageStageEndsLabel', { number: stageIndex + 1 })}</span>
-                              <input
-                                type="date"
-                                value={stageDraft.endsOn}
-                                onChange={(event) =>
-                                  updatePlanEditStage(stageIndex, 'endsOn', event.target.value)
-                                }
-                              />
-                            </label>
-                          </div>
-                        </article>
+                          <CompetitionRowHeader
+                            title={t('competition.stageBuilder.editPackageStageNumber', { number: stageIndex + 1 })}
+                            description={formatStagePreset(stageDraft.stagePresetCode, t)}
+                            badge={<CompetitionStatusBadge tone="accent">{formatStageType(stageDraft.stageType, t)}</CompetitionStatusBadge>}
+                          />
+                          <CompetitionFieldGrid>
+                            <CompetitionTextField
+                              label={t('competition.stageBuilder.editPackageStageCodeLabel', { number: stageIndex + 1 })}
+                              value={stageDraft.stageCode}
+                              onChange={(event) =>
+                                updatePlanEditStage(
+                                  stageIndex,
+                                  'stageCode',
+                                  normalizeCode(event.target.value),
+                                )
+                              }
+                            />
+                            <CompetitionTextField
+                              label={t('competition.stageBuilder.editPackageStageNameLabel', { number: stageIndex + 1 })}
+                              value={stageDraft.stageName}
+                              onChange={(event) =>
+                                updatePlanEditStage(stageIndex, 'stageName', event.target.value)
+                              }
+                            />
+                            <CompetitionTextField
+                              label={t('competition.stageBuilder.editPackageStageOrderLabel', { number: stageIndex + 1 })}
+                              min="1"
+                              type="number"
+                              value={stageDraft.stageOrder}
+                              onChange={(event) =>
+                                updatePlanEditStage(stageIndex, 'stageOrder', event.target.value)
+                              }
+                            />
+                            <CompetitionSelectField
+                              label={t('competition.stageBuilder.editPackageStageTypeLabel', { number: stageIndex + 1 })}
+                              value={stageDraft.stageType}
+                              onChange={(event) =>
+                                updatePlanEditStage(stageIndex, 'stageType', event.target.value)
+                              }
+                            >
+                              {stageTypeOptions.map((stageType) => (
+                                <option key={stageType} value={stageType}>
+                                  {formatStageType(stageType, t)}
+                                </option>
+                              ))}
+                            </CompetitionSelectField>
+                            <CompetitionTextField
+                              label={t('competition.stageBuilder.editPackageStageStartsLabel', { number: stageIndex + 1 })}
+                              type="date"
+                              value={stageDraft.startsOn}
+                              onChange={(event) =>
+                                updatePlanEditStage(stageIndex, 'startsOn', event.target.value)
+                              }
+                            />
+                            <CompetitionTextField
+                              label={t('competition.stageBuilder.editPackageStageEndsLabel', { number: stageIndex + 1 })}
+                              type="date"
+                              value={stageDraft.endsOn}
+                              onChange={(event) =>
+                                updatePlanEditStage(stageIndex, 'endsOn', event.target.value)
+                              }
+                            />
+                          </CompetitionFieldGrid>
+                        </CompetitionRow>
                       ))}
-                    </div>
+                    </CompetitionRowList>
                     {editValidationMessage ? (
-                      <p className="validation-copy">{t(editValidationMessage)}</p>
+                      <CompetitionInlineNotice tone="warning">{t(editValidationMessage)}</CompetitionInlineNotice>
                     ) : null}
-                    <div className="action-cluster">
-                      <button
-                        className="control-button"
+                    <CompetitionActionRow>
+                      <CompetitionButton
                         type="button"
                         disabled={Boolean(editValidationMessage) || input.isPending}
                         onClick={submitPlanEditDraft}
                       >
                         {t('competition.stageBuilder.savePackagePlanChanges')}
-                      </button>
-                      <button
-                        className="ghost-button"
+                      </CompetitionButton>
+                      <CompetitionButton
+                        variant="outline"
                         type="button"
                         onClick={() => setEditDraft(null)}
                       >
                         {t('competition.stageBuilder.cancelEdit')}
-                      </button>
-                    </div>
-                  </div>
+                      </CompetitionButton>
+                    </CompetitionActionRow>
+                  </CompetitionRow>
                 ) : null}
 
-                <div className="action-cluster">
+                <CompetitionActionRow>
                   {plan.planStatus === 'draft' ? (
                     <>
-                      <button
-                        className="ghost-button"
+                      <CompetitionButton
+                        variant="outline"
                         type="button"
                         disabled={input.isPending}
                         onClick={() => setEditDraft(createStagePackagePlanEditDraft(plan))}
                       >
                         {t('competition.stageBuilder.editPlanButton', { planName: plan.planName })}
-                      </button>
-                      <button
-                        className="ghost-button"
+                      </CompetitionButton>
+                      <CompetitionButton
+                        variant="outline"
                         type="button"
                         disabled={input.isPending}
                         onClick={() => input.onCancelPlan(plan.planId)}
                       >
                         {t('competition.stageBuilder.cancelPlanButton', { planName: plan.planName })}
-                      </button>
-                      <button
-                        className="control-button"
+                      </CompetitionButton>
+                      <CompetitionButton
                         type="button"
                         disabled={input.isPending}
                         onClick={() => input.onSubmitPlan(plan.planId)}
                       >
                         {t('competition.stageBuilder.markReadyButton', { planName: plan.planName })}
-                      </button>
+                      </CompetitionButton>
                     </>
                   ) : null}
                   {plan.planStatus === 'approved' ? (
-                    <button
-                      className="control-button"
+                    <CompetitionButton
                       type="button"
                       disabled={input.isPending}
                       onClick={() => input.onExecutePlan(plan.planId)}
                     >
                       {t('competition.stageBuilder.executePlanButton', { planName: plan.planName })}
-                    </button>
+                    </CompetitionButton>
                   ) : null}
                   {plan.planStatus === 'rejected' ? (
-                    <button
-                      className="control-button"
+                    <CompetitionButton
                       type="button"
                       disabled={input.isPending}
                       onClick={() => input.onClonePlan(plan.planId)}
                     >
                       {t('competition.stageBuilder.clonePlanButton', { planName: plan.planName })}
-                    </button>
+                    </CompetitionButton>
                   ) : null}
-                  <button
-                    className="ghost-button"
+                  <CompetitionButton
+                    variant="outline"
                     type="button"
                     disabled={input.isPending}
                     onClick={() => input.onShowPlanHistory(plan.planId)}
                   >
                     {t('competition.stageBuilder.showHistoryButton', { planName: plan.planName })}
-                  </button>
-                </div>
+                  </CompetitionButton>
+                </CompetitionActionRow>
 
                 {plan.planStatus === 'submitted' ? (
-                  <div className="stacked-row">
+                  <CompetitionRow>
                     <StagePackagePlanDecisionPreview plan={plan} />
-                    <label className="field-block field-block-full">
-                      <span>{t('competition.stageBuilder.decisionNoteLabel', { planName: plan.planName })}</span>
-                      <input
-                        value={reviewNotes[plan.planId] ?? ''}
-                        onChange={(event) => updateReviewNote(plan.planId, event.target.value)}
-                      />
-                    </label>
-                    <div className="action-cluster">
-                      <button
-                        className="control-button"
+                    <CompetitionTextField
+                      label={t('competition.stageBuilder.decisionNoteLabel', { planName: plan.planName })}
+                      value={reviewNotes[plan.planId] ?? ''}
+                      onChange={(event) => updateReviewNote(plan.planId, event.target.value)}
+                    />
+                    <CompetitionActionRow>
+                      <CompetitionButton
                         type="button"
                         disabled={input.isPending}
                         onClick={() => input.onApprovePlan(plan.planId, getReviewPayload(plan.planId))}
                       >
                         {t('competition.stageBuilder.approveDecisionButton', { planName: plan.planName })}
-                      </button>
-                      <button
-                        className="ghost-button"
+                      </CompetitionButton>
+                      <CompetitionButton
+                        variant="outline"
                         type="button"
                         disabled={input.isPending}
                         onClick={() => input.onRejectPlan(plan.planId, getReviewPayload(plan.planId))}
                       >
                         {t('competition.stageBuilder.returnForRevisionButton', { planName: plan.planName })}
-                      </button>
-                    </div>
-                  </div>
+                      </CompetitionButton>
+                    </CompetitionActionRow>
+                  </CompetitionRow>
                 ) : null}
 
                 {input.historyPlanId === plan.planId ? (
-                  <div className="action-cluster">
+                  <CompetitionRowList>
                     {input.isLoadingAudit ? (
-                      <ScreenState
+                      <CompetitionStatePanel
                         title={t('competition.stageBuilder.planHistoryLoadingTitle')}
                         copy={t('competition.stageBuilder.planHistoryLoadingCopy')}
+                        isLoading
                       />
                     ) : null}
                     {!input.isLoadingAudit && input.auditEvents.length === 0 ? (
-                      <EmptyState
+                      <CompetitionEmptyState
                         title={t('competition.stageBuilder.noPlanHistoryTitle')}
                         copy={t('competition.stageBuilder.noPlanHistoryCopy')}
                       />
                     ) : null}
                     {!input.isLoadingAudit && input.auditEvents.length > 0 ? (
-                      <div className="stacked-table">
+                      <CompetitionRowList>
                         {input.auditEvents.map((event) => (
-                          <article className="stacked-row" key={event.eventLogId}>
-                            <div className="stacked-row-head">
-                              <div>
-                                <strong>{event.eventType}</strong>
-                                <p className="queue-subtitle">
-                                  {formatAuditMetadata(event.metadata, t)}
-                                </p>
-                              </div>
-                              <StatusPill tone="neutral">{event.occurredAt.slice(0, 10)}</StatusPill>
-                            </div>
-                          </article>
+                          <CompetitionRow key={event.eventLogId}>
+                            <CompetitionRowHeader
+                              title={event.eventType}
+                              description={formatAuditMetadata(event.metadata, t)}
+                              badge={<CompetitionStatusBadge tone="neutral">{event.occurredAt.slice(0, 10)}</CompetitionStatusBadge>}
+                            />
+                          </CompetitionRow>
                         ))}
-                      </div>
+                      </CompetitionRowList>
                     ) : null}
-                  </div>
+                  </CompetitionRowList>
                 ) : null}
-              </article>
+              </CompetitionRow>
             ))}
-          </div>
+          </CompetitionRowList>
         ) : null}
-      </article>
+      </CompetitionRow>
 
       {input.feedback ? (
-        <ScreenState title={input.feedback} copy={t('competition.stageBuilder.competitionRefreshCopy')} />
+        <CompetitionStatePanel title={input.feedback} copy={t('competition.stageBuilder.competitionRefreshCopy')} />
       ) : null}
 
       {input.error ? (
-        <ScreenState
+        <CompetitionStatePanel
           title={t('competition.stageBuilder.stagePackageActionFailedTitle')}
           copy={getErrorMessage(input.error)}
           tone="error"
         />
       ) : null}
-    </article>
+    </CompetitionRow>
   )
 }
 
@@ -660,62 +634,54 @@ function StagePackageDraftFields(input: {
 
   return (
     <>
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.stagePackage')}</span>
-          <select
-            value={input.draft.packageCode}
-            onChange={(event) => input.onUpdate('packageCode', event.target.value)}
-          >
-            {stagePackageOptions.map((packageOption) => (
-              <option key={packageOption.code} value={packageOption.code}>
-                {t(stagePackageLabelKeys[packageOption.code])}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.packagePlanName')}</span>
-          <input
-            value={input.draft.planName}
-            onChange={(event) => input.onUpdate('planName', event.target.value)}
-          />
-        </label>
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 1 })}</span>
-          <select
-            value={input.draft.firstTemplateId}
-            onChange={(event) => input.onUpdate('firstTemplateId', event.target.value)}
-          >
-            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
-            {input.templates.map((template) => (
-              <option key={template.templateId} value={template.templateId}>
-                {template.templateCode} - {template.templateName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('competition.stageBuilder.packageTeamTemplateLabel', { number: 2 })}</span>
-          <select
-            value={input.draft.secondTemplateId}
-            onChange={(event) => input.onUpdate('secondTemplateId', event.target.value)}
-          >
-            <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
-            {input.templates.map((template) => (
-              <option key={template.templateId} value={template.templateId}>
-                {template.templateCode} - {template.templateName}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <CompetitionFieldGrid>
+        <CompetitionSelectField
+          label={t('competition.stageBuilder.stagePackage')}
+          value={input.draft.packageCode}
+          onChange={(event) => input.onUpdate('packageCode', event.target.value)}
+        >
+          {stagePackageOptions.map((packageOption) => (
+            <option key={packageOption.code} value={packageOption.code}>
+              {t(stagePackageLabelKeys[packageOption.code])}
+            </option>
+          ))}
+        </CompetitionSelectField>
+        <CompetitionTextField
+          label={t('competition.stageBuilder.packagePlanName')}
+          value={input.draft.planName}
+          onChange={(event) => input.onUpdate('planName', event.target.value)}
+        />
+        <CompetitionSelectField
+          label={t('competition.stageBuilder.packageTeamTemplateLabel', { number: 1 })}
+          value={input.draft.firstTemplateId}
+          onChange={(event) => input.onUpdate('firstTemplateId', event.target.value)}
+        >
+          <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
+          {input.templates.map((template) => (
+            <option key={template.templateId} value={template.templateId}>
+              {template.templateCode} - {template.templateName}
+            </option>
+          ))}
+        </CompetitionSelectField>
+        <CompetitionSelectField
+          label={t('competition.stageBuilder.packageTeamTemplateLabel', { number: 2 })}
+          value={input.draft.secondTemplateId}
+          onChange={(event) => input.onUpdate('secondTemplateId', event.target.value)}
+        >
+          <option value="">{t('competition.stageBuilder.selectTemplate')}</option>
+          {input.templates.map((template) => (
+            <option key={template.templateId} value={template.templateId}>
+              {template.templateCode} - {template.templateName}
+            </option>
+          ))}
+        </CompetitionSelectField>
+      </CompetitionFieldGrid>
 
       {input.validationMessage ? (
-        <p className="validation-copy">{t(input.validationMessage)}</p>
+        <CompetitionInlineNotice tone="warning">{t(input.validationMessage)}</CompetitionInlineNotice>
       ) : null}
       {!input.validationMessage && input.planValidationMessage ? (
-        <p className="validation-copy">{t(input.planValidationMessage)}</p>
+        <CompetitionInlineNotice tone="warning">{t(input.planValidationMessage)}</CompetitionInlineNotice>
       ) : null}
     </>
   )
@@ -728,85 +694,71 @@ function StagePackagePreviewStages(input: {
   const { t } = useLocalization()
 
   return (
-    <div className="stacked-table">
+    <CompetitionRowList>
       {input.stageDrafts.map((stageDraft, stageIndex) => (
-        <article className="stacked-row stage-package-preview-stage" key={stageDraft.stagePresetCode}>
-          <div className="stacked-row-head">
-            <div>
-              <strong>{t('competition.stageBuilder.packageStageNumber', { number: stageIndex + 1 })}</strong>
-              <p className="queue-subtitle">{formatStagePreset(stageDraft.stagePresetCode, t)}</p>
-            </div>
-            <StatusPill tone="accent">{formatStageType(stageDraft.stageType, t)}</StatusPill>
-          </div>
-          <div className="form-grid">
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.packageStageCodeLabel', { number: stageIndex + 1 })}</span>
-              <input
-                value={stageDraft.stageCode}
-                onChange={(event) =>
-                  input.onUpdateStage(stageIndex, 'stageCode', normalizeCode(event.target.value))
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.packageStageNameLabel', { number: stageIndex + 1 })}</span>
-              <input
-                value={stageDraft.stageName}
-                onChange={(event) =>
-                  input.onUpdateStage(stageIndex, 'stageName', event.target.value)
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.packageStageOrderLabel', { number: stageIndex + 1 })}</span>
-              <input
-                min="1"
-                type="number"
-                value={stageDraft.stageOrder}
-                onChange={(event) =>
-                  input.onUpdateStage(stageIndex, 'stageOrder', event.target.value)
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.packageStageTypeLabel', { number: stageIndex + 1 })}</span>
-              <select
-                value={stageDraft.stageType}
-                onChange={(event) =>
-                  input.onUpdateStage(stageIndex, 'stageType', event.target.value)
-                }
-              >
-                {stageTypeOptions.map((stageType) => (
-                  <option key={stageType} value={stageType}>
-                    {formatStageType(stageType, t)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.packageStageStartsLabel', { number: stageIndex + 1 })}</span>
-              <input
-                type="date"
-                value={stageDraft.startsOn}
-                onChange={(event) =>
-                  input.onUpdateStage(stageIndex, 'startsOn', event.target.value)
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>{t('competition.stageBuilder.packageStageEndsLabel', { number: stageIndex + 1 })}</span>
-              <input
-                type="date"
-                value={stageDraft.endsOn}
-                onChange={(event) =>
-                  input.onUpdateStage(stageIndex, 'endsOn', event.target.value)
-                }
-              />
-            </label>
-          </div>
-        </article>
+        <CompetitionRow className="stage-package-preview-stage" key={stageDraft.stagePresetCode}>
+          <CompetitionRowHeader
+            title={t('competition.stageBuilder.packageStageNumber', { number: stageIndex + 1 })}
+            description={formatStagePreset(stageDraft.stagePresetCode, t)}
+            badge={<CompetitionStatusBadge tone="accent">{formatStageType(stageDraft.stageType, t)}</CompetitionStatusBadge>}
+          />
+          <CompetitionFieldGrid>
+            <CompetitionTextField
+              label={t('competition.stageBuilder.packageStageCodeLabel', { number: stageIndex + 1 })}
+              value={stageDraft.stageCode}
+              onChange={(event) =>
+                input.onUpdateStage(stageIndex, 'stageCode', normalizeCode(event.target.value))
+              }
+            />
+            <CompetitionTextField
+              label={t('competition.stageBuilder.packageStageNameLabel', { number: stageIndex + 1 })}
+              value={stageDraft.stageName}
+              onChange={(event) =>
+                input.onUpdateStage(stageIndex, 'stageName', event.target.value)
+              }
+            />
+            <CompetitionTextField
+              label={t('competition.stageBuilder.packageStageOrderLabel', { number: stageIndex + 1 })}
+              min="1"
+              type="number"
+              value={stageDraft.stageOrder}
+              onChange={(event) =>
+                input.onUpdateStage(stageIndex, 'stageOrder', event.target.value)
+              }
+            />
+            <CompetitionSelectField
+              label={t('competition.stageBuilder.packageStageTypeLabel', { number: stageIndex + 1 })}
+              value={stageDraft.stageType}
+              onChange={(event) =>
+                input.onUpdateStage(stageIndex, 'stageType', event.target.value)
+              }
+            >
+              {stageTypeOptions.map((stageType) => (
+                <option key={stageType} value={stageType}>
+                  {formatStageType(stageType, t)}
+                </option>
+              ))}
+            </CompetitionSelectField>
+            <CompetitionTextField
+              label={t('competition.stageBuilder.packageStageStartsLabel', { number: stageIndex + 1 })}
+              type="date"
+              value={stageDraft.startsOn}
+              onChange={(event) =>
+                input.onUpdateStage(stageIndex, 'startsOn', event.target.value)
+              }
+            />
+            <CompetitionTextField
+              label={t('competition.stageBuilder.packageStageEndsLabel', { number: stageIndex + 1 })}
+              type="date"
+              value={stageDraft.endsOn}
+              onChange={(event) =>
+                input.onUpdateStage(stageIndex, 'endsOn', event.target.value)
+              }
+            />
+          </CompetitionFieldGrid>
+        </CompetitionRow>
       ))}
-    </div>
+    </CompetitionRowList>
   )
 }
 
@@ -820,32 +772,31 @@ function StagePackageDraftActions(input: {
   const { t } = useLocalization()
 
   return (
-    <div className="action-cluster">
-      <button
-        className="ghost-button"
+    <CompetitionActionRow>
+      <CompetitionButton
+        variant="outline"
         type="button"
         disabled={Boolean(input.planValidationMessage) || input.isPending}
         onClick={input.onSavePlan}
       >
         {t('competition.stageBuilder.savePackagePlan')}
-      </button>
-      <button
-        className="control-button"
+      </CompetitionButton>
+      <CompetitionButton
         type="button"
         disabled={Boolean(input.validationMessage) || input.isPending}
         onClick={input.onSubmit}
       >
-        <PlusCircle size={16} />
+        <PlusCircle data-icon="inline-start" />
         {t('competition.stageBuilder.createStagePackage')}
-      </button>
-      <StatusPill tone="neutral">
+      </CompetitionButton>
+      <CompetitionStatusBadge tone="neutral">
         {formatCount(
           2,
           'competition.stageBuilder.count.stage',
           'competition.stageBuilder.count.stages',
           t,
         )}
-      </StatusPill>
-    </div>
+      </CompetitionStatusBadge>
+    </CompetitionActionRow>
   )
 }
