@@ -51,6 +51,7 @@ export const adminMasterDataTr = {
   'adminMasterData.emptyBatchesTitle': 'Hazırlık partisi bulunamadı.',
   'adminMasterData.emptyBatchesCopy':
     'Bu inceleme yüzeyini kullanmadan önce mağaza veya personel temel partisi yükle.',
+  'adminMasterData.rows': 'Satır',
   'adminMasterData.rowsSuffix': '{count} satır',
   'adminMasterData.noFileReference': 'Dosya referansı yok',
   'adminMasterData.queueFooter':
@@ -263,6 +264,7 @@ export const adminMasterDataEn: Record<keyof typeof adminMasterDataTr, string> =
   'adminMasterData.emptyBatchesTitle': 'No bootstrap batches found.',
   'adminMasterData.emptyBatchesCopy':
     'Stage a store or personnel baseline batch before using this review surface.',
+  'adminMasterData.rows': 'Rows',
   'adminMasterData.rowsSuffix': '{count} rows',
   'adminMasterData.noFileReference': 'No file reference',
   'adminMasterData.queueFooter':
