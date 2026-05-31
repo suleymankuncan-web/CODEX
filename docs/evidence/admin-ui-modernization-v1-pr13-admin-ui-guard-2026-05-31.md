@@ -32,6 +32,7 @@ surfaces explicitly. These files are required to stay anchored to
 - `admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx`
 - `admin-web/src/pages/AuditCenterPage.tsx`
 - `admin-web/src/pages/IntegrationDashboardPage.tsx`
+- `admin-web/src/features/integrations/integration-dashboard-surface-controls.tsx`
 - `admin-web/src/pages/ImportBatchDetailPage.tsx`
 - `admin-web/src/features/integrations/import-batch-detail-surface-primitives.tsx`
 - `admin-web/src/pages/MasterDataBootstrapPage.tsx`

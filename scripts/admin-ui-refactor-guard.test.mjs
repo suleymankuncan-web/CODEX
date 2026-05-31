@@ -101,6 +101,7 @@ const migratedAdminSurfaces = [
     pageFile: 'admin-web/src/pages/IntegrationDashboardPage.tsx',
     checkedFiles: [
       'admin-web/src/pages/IntegrationDashboardPage.tsx',
+      'admin-web/src/features/integrations/integration-dashboard-surface-controls.tsx',
       'admin-web/src/pages/ImportBatchDetailPage.tsx',
       'admin-web/src/features/integrations/import-batch-detail-surface-primitives.tsx',
     ],
