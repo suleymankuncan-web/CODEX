@@ -1,6 +1,6 @@
 # Refactor Completion Inventory V1
 
-Status: Active decision refreshed after Architecture Hardening V4 closeout on 2026-05-31
+Status: Active decision refreshed for Architecture Hardening V5 on 2026-05-31
 
 This inventory closes the recurring "large file means keep refactoring" loop.
 The project still has large files, but they are no longer all active refactor
@@ -141,6 +141,33 @@ The authoritative V4 contract-freeze evidence is:
 ```text
 docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md
 ```
+
+## Architecture Hardening V5 Active Line
+
+V5 is the follow-up line for the debts intentionally parked after V4. Its plan
+is:
+
+```text
+docs/plans/architecture-hardening-v5-plan.md
+```
+
+Active V5 order:
+
+1. First: repair or classify OpenAPI generator parity drift before any generator
+   helper split. The V4 blocker evidence showed `openapi:generate` rewrites
+   `docs/api/openapi.json` from clean `main`, so generator movement is unsafe
+   until the contract gate is stable.
+2. Second: characterize and then extract exactly one deeper
+   `CompetitionRepository` boundary. Scoring, finalization, and stage execution
+   still require separate invariant/test decisions and must not be mixed.
+3. Third: characterize and then extract exactly one deeper workforce command
+   boundary. Seller-code and offboarding command paths stay separate because
+   they carry different transaction, audit, employee mutation, and access
+   lifecycle risks.
+
+V5 does not reopen broad refactor by line count. Any runtime movement must be
+selected by the V5 plan, protected by parity or characterization tests, and
+merged through the normal PR/check/review discipline.
 
 ## Completed Or No Longer Active
 
