@@ -34,6 +34,7 @@ import {
 import { writeCompetitionAudit } from "./competition.repository.audit";
 import { type Queryable } from "./competition.repository.db";
 import { CompetitionReadRepository } from "./competition-read.repository";
+import { CompetitionStagePackagePlanExecutionCommandRepository } from "./competition-stage-package-plan-execution-command.repository";
 import { CompetitionStagePackagePlanReviewCommandRepository } from "./competition-stage-package-plan-review-command.repository";
 import { CompetitionStagePackagePlanReadRepository } from "./competition-stage-package-plan-read.repository";
 import { stagePackagePlanReturningClause } from "./competition-stage-package-plan-write-sql";
@@ -58,6 +59,7 @@ import {
 @Injectable()
 export class CompetitionRepository {
   private readonly competitionReadRepository: CompetitionReadRepository;
+  private readonly stagePackagePlanExecutionCommandRepository: CompetitionStagePackagePlanExecutionCommandRepository;
   private readonly stagePackagePlanReviewCommandRepository =
     new CompetitionStagePackagePlanReviewCommandRepository();
   private readonly stagePackagePlanReadRepository: CompetitionStagePackagePlanReadRepository;
@@ -66,6 +68,8 @@ export class CompetitionRepository {
 
   constructor(private readonly databaseService: DatabaseService) {
     this.competitionReadRepository = new CompetitionReadRepository(databaseService);
+    this.stagePackagePlanExecutionCommandRepository =
+      new CompetitionStagePackagePlanExecutionCommandRepository(databaseService);
     this.stagePackagePlanReadRepository =
       new CompetitionStagePackagePlanReadRepository(databaseService);
     this.teamTemplateReadRepository =
@@ -682,63 +686,9 @@ export class CompetitionRepository {
   async executeStagePackagePlan(
     input: ExecuteCompetitionStagePackagePlanInput,
   ): Promise<{ plan: CompetitionStagePackagePlan; stages: CompetitionStage[] }> {
-    const transition = COMPETITION_STAGE_PACKAGE_PLAN_TRANSITIONS.execute;
-
-    return this.databaseService.withTransaction(async (client) => {
-      const planRow = await this.getStagePackagePlanForUpdate(client, input.planId);
-      this.assertStagePackagePlanTransition(
-        planRow,
-        transition,
-        "Stage package plan is not executable",
-      );
-
-      const stageDrafts = mapStagePackagePlan(planRow).stageDrafts;
-      const stages: CompetitionStage[] = [];
-
-      for (const stageInput of stageDrafts) {
-        const stage = await this.insertStageWithTeams(client, {
-          actorUserId: input.actorUserId,
-          competitionId: planRow.competition_id,
-          ...stageInput,
-        });
-
-        stages.push(stage);
-      }
-
-      const createdStageIds = stages.map((stage) => stage.competitionStageId);
-      const executedPlanResult = await client.query<CompetitionStagePackagePlanRow>(
-        `
-          UPDATE ops.competition_stage_package_plan
-          SET
-            plan_status = $2,
-            executed_by_user_id = $3,
-            executed_at = NOW(),
-            updated_by_user_id = $3,
-            updated_at = NOW(),
-            created_stage_ids = $4::uuid[]
-          WHERE competition_stage_package_plan_id = $1::uuid
-          ${stagePackagePlanReturningClause}
-        `,
-        [input.planId, transition.targetStatus, input.actorUserId, createdStageIds],
-      );
-
-      const executedPlan = mapStagePackagePlan(executedPlanResult.rows[0]);
-
-      await this.writeStagePackagePlanAudit(client, {
-        actorUserId: input.actorUserId,
-        transition,
-        entityId: input.planId,
-        metadata: {
-          competitionId: executedPlan.competitionId,
-          packageCode: executedPlan.packageCode,
-          planName: executedPlan.planName,
-          stageCount: stages.length,
-          createdStageIds,
-        },
-      });
-
-      return { plan: executedPlan, stages };
-    });
+    return this.stagePackagePlanExecutionCommandRepository.executeStagePackagePlan(
+      input,
+    );
   }
 
   async cancelStagePackagePlan(
