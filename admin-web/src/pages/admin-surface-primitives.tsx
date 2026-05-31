@@ -219,7 +219,7 @@ function AdminSurfaceSection({
       aria-label={ariaLabel}
       className={cn('tw:border tw:border-border tw:bg-card/85 tw:shadow-sm', className)}
     >
-      <CardHeader className="tw:border-b tw:pb-3">
+      <CardHeader className="tw:border-b tw:border-border/70 tw:pb-3">
         <div className="tw:min-w-0">
           {eyebrow ? (
             <div className="tw:mb-1 tw:text-[0.7rem] tw:font-medium tw:tracking-[0.08em] tw:text-muted-foreground tw:uppercase">
@@ -230,7 +230,7 @@ function AdminSurfaceSection({
           {description ? <CardDescription className="tw:mt-1">{description}</CardDescription> : null}
         </div>
         {badge || actions ? (
-          <CardAction className="tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
+          <CardAction className="tw:col-span-2 tw:col-start-1 tw:row-start-3 tw:flex tw:w-full tw:flex-wrap tw:items-center tw:justify-start tw:gap-2 tw:pt-2 tw:sm:col-span-1 tw:sm:col-start-2 tw:sm:row-span-2 tw:sm:row-start-1 tw:sm:w-auto tw:sm:justify-end tw:sm:pt-0">
             {badge}
             {actions}
           </CardAction>

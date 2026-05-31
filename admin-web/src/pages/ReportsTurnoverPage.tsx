@@ -1,22 +1,36 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Building2, DoorOpen, Ratio, Users } from 'lucide-react'
+import { ArrowLeft, Building2, DoorOpen, Ratio, TrendingDown, Users } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { AdminReportingToolbar } from '../components/admin-reporting-tools'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
-import { ReportingToolbar } from '../components/reporting-tools'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getTurnoverReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
 import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import {
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
@@ -71,9 +85,9 @@ function getTurnoverRowKey(row: {
   ].join(':')
 }
 
-function mapTurnoverTone(rate: string) {
+function mapTurnoverTone(rate: string): AdminSurfaceTone {
   const value = toNumber(rate)
-  if (value < 0.08) return 'calm'
+  if (value < 0.08) return 'success'
   if (value < 0.15) return 'warning'
   return 'danger'
 }
@@ -147,67 +161,107 @@ export function ReportsTurnoverPage() {
   const averageTurnover = sortedRows.length > 0 ? totals.turnover / sortedRows.length : 0
 
   if (!snapshotRunId) {
-    return <ScreenState title={t('reportsTurnover.missingTitle')} copy={t('reportsTurnover.missingCopy')} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsTurnover.missingTitle')} description={t('reportsTurnover.missingCopy')} tone="danger" />
+      </AdminSurfacePage>
+    )
   }
 
   if (turnoverQuery.isLoading) {
-    return <ScreenState title={t('reportsTurnover.loadingTitle')} copy={t('reportsTurnover.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsTurnover.loadingTitle')} description={t('reportsTurnover.loadingCopy')} isLoading />
+      </AdminSurfacePage>
+    )
   }
 
   if (turnoverQuery.isError) {
-    return <ScreenState title={t('reportsTurnover.errorTitle')} copy={getErrorMessage(turnoverQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsTurnover.errorTitle')} description={getErrorMessage(turnoverQuery.error)} tone="danger" />
+      </AdminSurfacePage>
+    )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('reportsTurnover.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('reportsTurnover.heroTitle')}</h2>
-          <p className="hero-copy">{t('reportsTurnover.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('reportsTurnover.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label={t('reportsTurnover.rowsInView')} value={String(filteredRows.length)} />
-          <MetricAccent label={t('reportsTurnover.avgTurnover')} value={formatPercent(String(averageTurnover), locale)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('reportsTurnover.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('reportsTurnover.heroEyebrow')}
+        title={t('reportsTurnover.heroTitle')}
+        description={t('reportsTurnover.heroCopy')}
+        icon={<TrendingDown size={18} />}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/admin/reports/snapshot-runs">
+              <ArrowLeft aria-hidden="true" />
+              {t('reportsTurnover.chooseAnotherSnapshot')}
+            </Link>
+          </Button>
+        }
+      />
 
-      <Link className="back-link" to="/admin/reports/snapshot-runs">
-        <ArrowLeft size={16} />
-        <span>{t('reportsTurnover.chooseAnotherSnapshot')}</span>
-      </Link>
+      <AdminMetricStrip
+        items={[
+          { id: 'snapshot-run', label: t('reportsTurnover.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
+          { id: 'rows-in-view', label: t('reportsTurnover.rowsInView'), value: filteredRows.length, tone: 'cyan' },
+          { id: 'avg-turnover', label: t('reportsTurnover.avgTurnover'), value: formatPercent(String(averageTurnover), locale), tone: mapTurnoverTone(String(averageTurnover)) },
+        ]}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('reportsTurnover.contextEyebrow')}</div>
-            <h3>{t('reportsTurnover.contextTitle')}</h3>
-          </div>
-        </div>
-        <div className="key-grid">
-          <KeyValue label={t('reportsTurnover.snapshotRunId')} value={snapshotRunId} />
-          <KeyValue label={t('reportsTurnover.rowsLoaded')} value={String(rows.length)} />
-          <KeyValue label={t('reportsTurnover.rowsAfterFilter')} value={String(filteredRows.length)} />
-          <KeyValue label={t('reportsTurnover.leaversInView')} value={String(totals.leavers)} />
-        </div>
-      </section>
+      <AdminSurfaceSection eyebrow={t('reportsTurnover.contextEyebrow')} title={t('reportsTurnover.contextTitle')}>
+        <AdminKeyValueGrid>
+          <AdminKeyValue label={t('reportsTurnover.snapshotRunId')} value={snapshotRunId} />
+          <AdminKeyValue label={t('reportsTurnover.rowsLoaded')} value={String(rows.length)} />
+          <AdminKeyValue label={t('reportsTurnover.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <AdminKeyValue label={t('reportsTurnover.leaversInView')} value={String(totals.leavers)} />
+        </AdminKeyValueGrid>
+      </AdminSurfaceSection>
 
-      <section className="metric-grid">
-        <MetricCard title={t('reportsTurnover.openingHcTitle')} value={Math.round(totals.opening)} note={t('reportsTurnover.openingHcNote')} icon={<Users size={18} />} tone="neutral" />
-        <MetricCard title={t('reportsTurnover.closingHcTitle')} value={Math.round(totals.closing)} note={t('reportsTurnover.closingHcNote', { value: formatMetric(totals.average, locale) })} icon={<Building2 size={18} />} tone="calm" />
-        <MetricCard title={t('reportsTurnover.leaverCountTitle')} value={totals.leavers} note={t('reportsTurnover.leaverCountNote', { value: formatPercent(String(averageTurnover), locale) })} icon={<DoorOpen size={18} />} tone={totals.leavers === 0 ? 'neutral' : 'warning'} />
-        <MetricCard title={t('reportsTurnover.turnoverRateTitle')} value={Math.round(averageTurnover * 100)} note={t('reportsTurnover.turnoverRateNote')} icon={<Ratio size={18} />} tone={averageTurnover < 0.08 ? 'calm' : averageTurnover < 0.15 ? 'warning' : 'danger'} />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'opening-headcount',
+            label: t('reportsTurnover.openingHcTitle'),
+            value: Math.round(totals.opening),
+            description: t('reportsTurnover.openingHcNote'),
+            icon: <Users size={18} />,
+            tone: 'neutral',
+          },
+          {
+            id: 'closing-headcount',
+            label: t('reportsTurnover.closingHcTitle'),
+            value: Math.round(totals.closing),
+            description: t('reportsTurnover.closingHcNote', { value: formatMetric(totals.average, locale) }),
+            icon: <Building2 size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'leaver-count',
+            label: t('reportsTurnover.leaverCountTitle'),
+            value: totals.leavers,
+            description: t('reportsTurnover.leaverCountNote', { value: formatPercent(String(averageTurnover), locale) }),
+            icon: <DoorOpen size={18} />,
+            tone: totals.leavers === 0 ? 'neutral' : 'warning',
+          },
+          {
+            id: 'turnover-rate',
+            label: t('reportsTurnover.turnoverRateTitle'),
+            value: Math.round(averageTurnover * 100),
+            description: t('reportsTurnover.turnoverRateNote'),
+            icon: <Ratio size={18} />,
+            tone: mapTurnoverTone(String(averageTurnover)),
+          },
+        ]}
+      />
 
-      <section className="panel reports-detail-table-panel">
-        <div className="panel-heading panel-heading-spread">
-          <div>
-            <div className="eyebrow">{t('reportsTurnover.tableEyebrow')}</div>
-            <h3>{t('reportsTurnover.tableTitle')}</h3>
-            <p className="panel-copy">{t('reportsTurnover.tableCopy')}</p>
-          </div>
-          <ReportingToolbar
+      <AdminSurfaceSection
+        ariaLabel={t('reportsTurnover.tableTitle')}
+        eyebrow={t('reportsTurnover.tableEyebrow')}
+        title={t('reportsTurnover.tableTitle')}
+        description={t('reportsTurnover.tableCopy')}
+        actions={
+          <AdminReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
@@ -238,49 +292,55 @@ export function ReportsTurnoverPage() {
               })
             }
           >
-            <label className="search-field">
+            <label className="tw:w-full tw:sm:w-80">
               <span className="sr-only">{t('reportsTurnover.filterRows')}</span>
-              <input
+              <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('reportsTurnover.searchPlaceholder')}
               />
             </label>
-          </ReportingToolbar>
-        </div>
-
+          </AdminReportingToolbar>
+        }
+      >
         {sortedRows.length === 0 ? (
-          <EmptyState
-            title={t('reportsTurnover.emptyTitle')}
-            copy={t('reportsTurnover.emptyCopy')}
-          />
+          <AdminSurfaceEmpty title={t('reportsTurnover.emptyTitle')} copy={t('reportsTurnover.emptyCopy')} />
         ) : (
-          <div className="stacked-table">
-            {sortedRows.map((row) => (
-              <article className="stacked-row" key={getTurnoverRowKey(row)}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{getScopeTypeLabel(row.scopeType, t)}</strong>
-                    <span className="queue-subtitle">{getScopeLabel(row, t)}</span>
-                  </div>
-                  <StatusPill tone={mapTurnoverTone(row.turnoverRate)}>
-                    {formatPercent(row.turnoverRate, locale)}
-                  </StatusPill>
-                </div>
-
-                <div className="key-grid">
-                  <KeyValue label={t('reportsTurnover.period')} value={`${formatDate(row.periodStart, locale)} - ${formatDate(row.periodEnd, locale)}`} />
-                  <KeyValue label={t('reportsTurnover.openingHc')} value={formatMetric(toNumber(row.openingHeadcount), locale)} />
-                  <KeyValue label={t('reportsTurnover.closingHc')} value={formatMetric(toNumber(row.closingHeadcount), locale)} />
-                  <KeyValue label={t('reportsTurnover.averageHc')} value={formatMetric(toNumber(row.avgHeadcount), locale)} />
-                  <KeyValue label={t('reportsTurnover.leaverCount')} value={String(row.leaverCount)} />
-                  <KeyValue label={t('reportsTurnover.turnoverRate')} value={formatPercent(row.turnoverRate, locale)} />
-                </div>
-              </article>
-            ))}
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('reportsTurnover.tableTitle')}</TableHead>
+                <TableHead>{t('reportsTurnover.period')}</TableHead>
+                <TableHead>{t('reportsTurnover.openingHc')}</TableHead>
+                <TableHead>{t('reportsTurnover.closingHc')}</TableHead>
+                <TableHead>{t('reportsTurnover.averageHc')}</TableHead>
+                <TableHead>{t('reportsTurnover.leaverCount')}</TableHead>
+                <TableHead className="tw:text-right">{t('reportsTurnover.turnoverRate')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedRows.map((row) => (
+                <TableRow key={getTurnoverRowKey(row)}>
+                  <TableCell>
+                    <div className="tw:font-medium">{getScopeTypeLabel(row.scopeType, t)}</div>
+                    <div className="tw:text-xs tw:text-muted-foreground">{getScopeLabel(row, t)}</div>
+                  </TableCell>
+                  <TableCell>{formatDate(row.periodStart, locale)} - {formatDate(row.periodEnd, locale)}</TableCell>
+                  <TableCell>{formatMetric(toNumber(row.openingHeadcount), locale)}</TableCell>
+                  <TableCell>{formatMetric(toNumber(row.closingHeadcount), locale)}</TableCell>
+                  <TableCell>{formatMetric(toNumber(row.avgHeadcount), locale)}</TableCell>
+                  <TableCell>{row.leaverCount}</TableCell>
+                  <TableCell className="tw:text-right">
+                    <AdminSurfaceBadge tone={mapTurnoverTone(row.turnoverRate)}>
+                      {formatPercent(row.turnoverRate, locale)}
+                    </AdminSurfaceBadge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }

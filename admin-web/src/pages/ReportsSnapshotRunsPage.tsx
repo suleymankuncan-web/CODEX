@@ -1,14 +1,31 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Layers3 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { EmptyState, KeyValue, ScreenState, StatusPill } from '../components/dashboard-primitives'
-import { ReportingToolbar } from '../components/reporting-tools'
+import { AdminReportingToolbar } from '../components/admin-reporting-tools'
+import { Button } from '../components/ui/button'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getReportingSnapshotRuns } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
-import { formatDate, formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
+import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
+import {
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
 
 const runStatusLabelKeys: Record<string, TranslationKey> = {
   completed: 'reportsSnapshotRuns.status.completed',
@@ -45,44 +62,50 @@ export function ReportsSnapshotRunsPage() {
 
   if (runsQuery.isLoading) {
     return (
-      <ScreenState
-        title={t('reportsSnapshotRuns.loadingTitle')}
-        copy={t('reportsSnapshotRuns.loadingCopy')}
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsSnapshotRuns.loadingTitle')}
+          description={t('reportsSnapshotRuns.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (runsQuery.isError) {
     return (
-      <ScreenState
-        title={t('reportsSnapshotRuns.errorTitle')}
-        copy={getErrorMessage(runsQuery.error)}
-        tone="error"
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsSnapshotRuns.errorTitle')}
+          description={getErrorMessage(runsQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('reportsSnapshotRuns.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('reportsSnapshotRuns.heroTitle')}</h2>
-          <p className="hero-copy">{t('reportsSnapshotRuns.heroCopy')}</p>
-        </div>
-        <Link className="back-link" to="/admin/reports">
-          <ArrowLeft size={16} />
-          <span>{t('reportsSnapshotRuns.backToSummary')}</span>
-        </Link>
-      </section>
+    <AdminSurfacePage ariaLabel={t('reportsSnapshotRuns.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('reportsSnapshotRuns.heroEyebrow')}
+        title={t('reportsSnapshotRuns.heroTitle')}
+        description={t('reportsSnapshotRuns.heroCopy')}
+        icon={<Layers3 size={18} />}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/admin/reports">
+              <ArrowLeft aria-hidden="true" />
+              {t('reportsSnapshotRuns.backToSummary')}
+            </Link>
+          </Button>
+        }
+      />
 
-      <section className="panel">
-        <div className="panel-heading panel-heading-spread">
-          <div>
-            <div className="eyebrow">{t('reportsSnapshotRuns.contextsEyebrow')}</div>
-            <h3>{t('reportsSnapshotRuns.recentRunsTitle')}</h3>
-          </div>
-          <ReportingToolbar
+      <AdminSurfaceSection
+        eyebrow={t('reportsSnapshotRuns.contextsEyebrow')}
+        title={t('reportsSnapshotRuns.recentRunsTitle')}
+        actions={
+          <AdminReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
@@ -110,92 +133,99 @@ export function ReportsSnapshotRunsPage() {
               })
             }
           />
-        </div>
-
+        }
+      >
         {sortedRuns.length === 0 ? (
-          <EmptyState copy={t('reportsSnapshotRuns.empty')} />
+          <AdminSurfaceEmpty copy={t('reportsSnapshotRuns.empty')} />
         ) : (
-          <div className="stacked-table">
-            {sortedRuns.map((run) => (
-              <article className="stacked-row" key={run.snapshotRunId}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('reportsSnapshotRuns.recentRunsTitle')}</TableHead>
+                <TableHead>{t('reportsSnapshotRuns.snapshotDate')}</TableHead>
+                <TableHead>{t('reportsSnapshotRuns.period')}</TableHead>
+                <TableHead>{t('reportsSnapshotRuns.generatedAt')}</TableHead>
+                <TableHead>{t('reportsSnapshotRuns.generatedBy')}</TableHead>
+                <TableHead>{t('reportsSnapshotRuns.kpiConfigVersion')}</TableHead>
+                <TableHead className="tw:text-right">{t('reportsSnapshotRuns.backToSummary')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedRuns.map((run) => (
+                <TableRow key={run.snapshotRunId}>
+                  <TableCell>
+                    <div className="tw:font-medium">
                       {t('reportsSnapshotRuns.snapshotLabel', {
                         type: formatSnapshotType(run.snapshotType, t),
                       })}
-                    </strong>
-                    <span className="queue-subtitle">{run.snapshotRunId}</span>
-                  </div>
-                  <StatusPill tone={mapHealthTone(run.runStatus)}>
-                    {formatRunStatus(run.runStatus, t)}
-                  </StatusPill>
-                </div>
-
-                <div className="key-grid">
-                  <KeyValue
-                    label={t('reportsSnapshotRuns.snapshotDate')}
-                    value={formatDate(run.snapshotDate, locale)}
-                  />
-                  <KeyValue
-                    label={t('reportsSnapshotRuns.generatedAt')}
-                    value={formatDateTime(run.generatedAt, locale)}
-                  />
-                  <KeyValue
-                    label={t('reportsSnapshotRuns.period')}
-                    value={`${formatDate(run.periodStart, locale)} - ${formatDate(run.periodEnd, locale)}`}
-                  />
-                  <KeyValue label={t('reportsSnapshotRuns.generatedBy')} value={run.generatedBy} />
-                  <KeyValue
-                    label={t('reportsSnapshotRuns.kpiConfigVersion')}
-                    value={formatKpiConfigVersion(run.kpiConfigVersion, t)}
-                  />
-                </div>
-
-                <div className="action-cluster">
-                  <Link
-                    className="back-link"
-                    to={`/admin/reports/workforce/${run.snapshotRunId}`}
-                    aria-label={t('reportsSnapshotRuns.openWorkforceForSnapshot', {
-                      snapshotRunId: run.snapshotRunId,
-                    })}
-                  >
-                    <span>{t('reportsSnapshotRuns.openWorkforce')}</span>
-                  </Link>
-                  <Link
-                    className="back-link"
-                    to={`/admin/reports/kpis/${run.snapshotRunId}`}
-                    aria-label={t('reportsSnapshotRuns.openKpisForSnapshot', {
-                      snapshotRunId: run.snapshotRunId,
-                    })}
-                  >
-                    <span>{t('reportsSnapshotRuns.openKpis')}</span>
-                  </Link>
-                  <Link
-                    className="back-link"
-                    to={`/admin/reports/checklists/${run.snapshotRunId}`}
-                    aria-label={t('reportsSnapshotRuns.openChecklistsForSnapshot', {
-                      snapshotRunId: run.snapshotRunId,
-                    })}
-                  >
-                    <span>{t('reportsSnapshotRuns.openChecklists')}</span>
-                  </Link>
-                  <Link
-                    className="back-link"
-                    to={`/admin/reports/turnover/${run.snapshotRunId}`}
-                    aria-label={t('reportsSnapshotRuns.openTurnoverForSnapshot', {
-                      snapshotRunId: run.snapshotRunId,
-                    })}
-                  >
-                    <span>{t('reportsSnapshotRuns.openTurnover')}</span>
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
+                    </div>
+                    <div className="tw:mt-1 tw:max-w-64 tw:truncate tw:text-xs tw:text-muted-foreground">
+                      {run.snapshotRunId}
+                    </div>
+                    <div className="tw:mt-2">
+                      <AdminSurfaceBadge tone={mapRunStatusTone(run.runStatus)}>
+                        {formatRunStatus(run.runStatus, t)}
+                      </AdminSurfaceBadge>
+                    </div>
+                  </TableCell>
+                  <TableCell>{formatDate(run.snapshotDate, locale)}</TableCell>
+                  <TableCell>
+                    {formatDate(run.periodStart, locale)} - {formatDate(run.periodEnd, locale)}
+                  </TableCell>
+                  <TableCell>{formatDateTime(run.generatedAt, locale)}</TableCell>
+                  <TableCell>{run.generatedBy}</TableCell>
+                  <TableCell>{formatKpiConfigVersion(run.kpiConfigVersion, t)}</TableCell>
+                  <TableCell>
+                    <div className="tw:flex tw:flex-wrap tw:justify-end tw:gap-2">
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          to={`/admin/reports/workforce/${run.snapshotRunId}`}
+                          aria-label={t('reportsSnapshotRuns.openWorkforceForSnapshot', {
+                            snapshotRunId: run.snapshotRunId,
+                          })}
+                        >
+                          {t('reportsSnapshotRuns.openWorkforce')}
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          to={`/admin/reports/kpis/${run.snapshotRunId}`}
+                          aria-label={t('reportsSnapshotRuns.openKpisForSnapshot', {
+                            snapshotRunId: run.snapshotRunId,
+                          })}
+                        >
+                          {t('reportsSnapshotRuns.openKpis')}
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          to={`/admin/reports/checklists/${run.snapshotRunId}`}
+                          aria-label={t('reportsSnapshotRuns.openChecklistsForSnapshot', {
+                            snapshotRunId: run.snapshotRunId,
+                          })}
+                        >
+                          {t('reportsSnapshotRuns.openChecklists')}
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          to={`/admin/reports/turnover/${run.snapshotRunId}`}
+                          aria-label={t('reportsSnapshotRuns.openTurnoverForSnapshot', {
+                            snapshotRunId: run.snapshotRunId,
+                          })}
+                        >
+                          {t('reportsSnapshotRuns.openTurnover')}
+                        </Link>
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }
 
@@ -218,4 +248,12 @@ function formatRunStatus(status: string, t: TranslateFunction) {
 function formatSnapshotType(type: string, t: TranslateFunction) {
   const key = snapshotTypeLabelKeys[type]
   return key ? t(key) : type
+}
+
+function mapRunStatusTone(status: string): AdminSurfaceTone {
+  if (status === 'completed') return 'success'
+  if (status === 'blocked') return 'warning'
+  if (status === 'stuck' || status === 'needs_action') return 'danger'
+  if (status === 'ready' || status === 'retry_ready') return 'accent'
+  return 'neutral'
 }
