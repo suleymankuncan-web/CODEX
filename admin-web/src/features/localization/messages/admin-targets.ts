@@ -8,11 +8,7 @@ export const adminTargetsTr = {
   'adminTargets.title':
     'Mağazadan gelen hedef dağıtım talepleri için bölge onay kuyruğu.',
   'adminTargets.heroCopy':
-    'Bu alan domain planına bağlanan ilk gerçek onay yüzeyidir. Mağazalar hedef dağıtım taleplerini gönderir; bölge tarafındaki kullanıcılar kısa bir not ve audit iziyle onaylar.',
-  'adminTargets.route': 'Rota',
-  'adminTargets.pending': 'Bekleyen',
-  'adminTargets.regionScope': 'Bölge kapsamı',
-  'adminTargets.noRegionScope': 'Çözülen bölge kapsamı yok',
+    'Mağazalardan gelen aylık hedef dağıtım taleplerini, personel kapsamını ve son kararları tek ekranda takip edin.',
   'adminTargets.actionStores': 'Aksiyon mağazaları',
   'adminTargets.none': 'Yok',
 
@@ -20,8 +16,6 @@ export const adminTargetsTr = {
   'adminTargets.pendingApprovalsNote': 'Hâlâ bölge onayı bekleyen talepler.',
   'adminTargets.recentlyApproved': 'Son onaylananlar',
   'adminTargets.recentlyApprovedNote': 'Mevcut kuyruk kesitinde görünen onaylı talepler.',
-  'adminTargets.queueModel': 'Kuyruk modeli',
-  'adminTargets.queueModelNote': 'Onay motoru işiyle hizalanan ilk gerçek yazma akışı.',
 
   'adminTargets.coverageEyebrow': 'Hedef referans kapsamı',
   'adminTargets.coverageTitle': 'Onaylı personel hedef hazırlığı',
@@ -103,11 +97,7 @@ export const adminTargetsEn: Record<keyof typeof adminTargetsTr, string> = {
   'adminTargets.title':
     'Region approval queue for store-submitted target distribution requests.',
   'adminTargets.heroCopy':
-    'This is the first real approval surface wired to the domain blueprint. Stores submit target distribution requests here, and region-side operators approve them with a short note and audit trace.',
-  'adminTargets.route': 'Route',
-  'adminTargets.pending': 'Pending',
-  'adminTargets.regionScope': 'Region scope',
-  'adminTargets.noRegionScope': 'No resolved region scope',
+    'Track monthly target distribution requests, personnel coverage, and recent decisions from one operational screen.',
   'adminTargets.actionStores': 'Action stores',
   'adminTargets.none': 'None',
 
@@ -117,9 +107,6 @@ export const adminTargetsEn: Record<keyof typeof adminTargetsTr, string> = {
   'adminTargets.recentlyApproved': 'Recently approved',
   'adminTargets.recentlyApprovedNote':
     'Approved requests visible in the current queue slice.',
-  'adminTargets.queueModel': 'Queue model',
-  'adminTargets.queueModelNote':
-    'First real write flow aligned with approval engine work.',
 
   'adminTargets.coverageEyebrow': 'Target Reference Coverage',
   'adminTargets.coverageTitle': 'Approved personnel target readiness',

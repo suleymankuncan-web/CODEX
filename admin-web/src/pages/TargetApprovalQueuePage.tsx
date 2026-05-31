@@ -1,15 +1,16 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, ReceiptText, TimerReset } from 'lucide-react'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-  type Tone,
-} from '../components/dashboard-primitives'
+  CheckCircle2,
+  ClipboardCheck,
+  ReceiptText,
+  Store,
+  Target,
+  UsersRound,
+} from 'lucide-react'
+import { Button } from '../components/ui/button'
+import { Card, CardContent } from '../components/ui/card'
+import { Textarea } from '../components/ui/textarea'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canApproveTargetDistributionRequest,
@@ -22,15 +23,25 @@ import {
   type TargetCoverageRow,
   type TargetDistributionRequest,
 } from '../features/targets/api'
-import {
-  mapInboxStatusTone,
-  mapWorkflowUrgencyTone,
-  toTargetApprovalInboxItem,
-} from '../features/workflow/contracts'
+import { toTargetApprovalInboxItem } from '../features/workflow/contracts'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatDateTime, formatNumber, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { cn } from '../lib/utils'
+import {
+  AdminActionRow,
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
 
 export function TargetApprovalQueuePage(input: {
   authSummary: AuthSessionSummary | null
@@ -61,20 +72,25 @@ export function TargetApprovalQueuePage(input: {
 
   if (approvalsQuery.isLoading) {
     return (
-      <ScreenState
-        title={t('adminTargets.loadingTitle')}
-        copy={t('adminTargets.loadingCopy')}
-      />
+      <AdminSurfacePage ariaLabel={t('adminTargets.loadingTitle')}>
+        <AdminStatePanel
+          title={t('adminTargets.loadingTitle')}
+          description={t('adminTargets.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (approvalsQuery.isError) {
     return (
-      <ScreenState
-        title={t('adminTargets.errorTitle')}
-        copy={getErrorMessage(approvalsQuery.error)}
-        tone="error"
-      />
+      <AdminSurfacePage ariaLabel={t('adminTargets.errorTitle')}>
+        <AdminStatePanel
+          title={t('adminTargets.errorTitle')}
+          description={getErrorMessage(approvalsQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
@@ -89,88 +105,99 @@ export function TargetApprovalQueuePage(input: {
   const attentionCoverageRows = coverageRows
     .filter((item) => item.targetStatus !== 'approved')
     .slice(0, 8)
-  const regionScope = input.authSummary?.user.readScope.regionIds.join(', ') || t('adminTargets.noRegionScope')
   const assignedStoreScope = getAssignedStoreIds(input.authSummary)
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('adminTargets.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('adminTargets.title')}</h2>
-          <p className="hero-copy">{t('adminTargets.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('adminTargets.route')} value="/admin/targets" />
-          <MetricAccent label={t('adminTargets.pending')} value={String(pendingCount)} />
-          <MetricAccent label={t('adminTargets.regionScope')} value={regionScope} />
-          <MetricAccent
-            label={t('adminTargets.actionStores')}
-            value={assignedStoreScope.length ? String(assignedStoreScope.length) : t('adminTargets.none')}
-          />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('adminTargets.title')}>
+      <AdminSurfaceHeader
+        icon={<ClipboardCheck size={20} />}
+        eyebrow={t('adminTargets.heroEyebrow')}
+        title={t('adminTargets.title')}
+        description={t('adminTargets.heroCopy')}
+        meta={
+          <>
+            <AdminSurfaceBadge tone={pendingCount > 0 ? 'warning' : 'success'}>
+              {pendingCount > 0 ? t('adminTargets.needsAttention') : t('adminTargets.clear')}
+            </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone="neutral">
+              {t('adminTargets.actionStores')}: {assignedStoreScope.length || t('adminTargets.none')}
+            </AdminSurfaceBadge>
+          </>
+        }
+      />
 
-      <section className="metric-grid">
-        <MetricCard
-          title={t('adminTargets.pendingApprovals')}
-          value={pendingCount}
-          note={t('adminTargets.pendingApprovalsNote')}
-          icon={<ReceiptText size={18} />}
-          tone="warning"
-        />
-        <MetricCard
-          title={t('adminTargets.recentlyApproved')}
-          value={approvedCount}
-          note={t('adminTargets.recentlyApprovedNote')}
-          icon={<CheckCircle2 size={18} />}
-          tone="calm"
-        />
-        <MetricCard
-          title={t('adminTargets.queueModel')}
-          value={1}
-          note={t('adminTargets.queueModelNote')}
-          icon={<TimerReset size={18} />}
-          tone="accent"
-        />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'pending-target-approvals',
+            label: t('adminTargets.pendingApprovals'),
+            value: pendingCount,
+            description: t('adminTargets.pendingApprovalsNote'),
+            icon: <ReceiptText size={18} />,
+            tone: pendingCount > 0 ? 'warning' : 'success',
+          },
+          {
+            id: 'approved-target-requests',
+            label: t('adminTargets.recentlyApproved'),
+            value: approvedCount,
+            description: t('adminTargets.recentlyApprovedNote'),
+            icon: <CheckCircle2 size={18} />,
+            tone: approvedCount > 0 ? 'success' : 'neutral',
+          },
+          {
+            id: 'target-coverage-rate',
+            label: t('adminTargets.coverageRate'),
+            value: formatCoverageRate(coverageSummary.coverageRate),
+            description: `${coverageSummary.coveredEmployees} / ${coverageSummary.totalEmployees}`,
+            icon: <Target size={18} />,
+            tone: mapCoverageSummaryTone(coverageSummary),
+          },
+          {
+            id: 'personnel-in-target-scope',
+            label: t('adminTargets.personnelInScope'),
+            value: coverageSummary.totalEmployees,
+            description: t('adminTargets.coverageEyebrow'),
+            icon: <UsersRound size={18} />,
+            tone: 'cyan',
+          },
+        ]}
+      />
 
-      <section className="panel" aria-label={t('adminTargets.coverageEyebrow')}>
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminTargets.coverageEyebrow')}</div>
-            <h3>{t('adminTargets.coverageTitle')}</h3>
-          </div>
-          <StatusPill tone={mapCoverageSummaryTone(coverageSummary)}>
+      <AdminSurfaceSection
+        ariaLabel={t('adminTargets.coverageEyebrow')}
+        eyebrow={t('adminTargets.coverageEyebrow')}
+        title={t('adminTargets.coverageTitle')}
+        badge={
+          <AdminSurfaceBadge tone={mapCoverageSummaryTone(coverageSummary)}>
             {coverageSummary.uncoveredEmployees > 0
               ? t('adminTargets.needsReview')
               : t('adminTargets.complete')}
-          </StatusPill>
-        </div>
-
+          </AdminSurfaceBadge>
+        }
+      >
         {coverageQuery.isLoading ? (
-          <p className="queue-subtitle">{t('adminTargets.coverageLoading')}</p>
+          <AdminStatePanel title={t('adminTargets.coverageLoading')} isLoading />
         ) : coverageQuery.isError ? (
-          <p className="queue-subtitle">{getErrorMessage(coverageQuery.error)}</p>
+          <AdminStatePanel title={getErrorMessage(coverageQuery.error)} tone="danger" />
         ) : (
           <>
-            <div className="key-grid">
-              <KeyValue label={t('adminTargets.coveredPersonnel')} value={String(coverageSummary.coveredEmployees)} />
-              <KeyValue label={t('adminTargets.pendingApproval')} value={String(coverageSummary.pendingEmployees)} />
-              <KeyValue label={t('adminTargets.pendingChanges')} value={String(coverageSummary.conflictEmployees)} />
-              <KeyValue label={t('adminTargets.staleReferences')} value={String(coverageSummary.staleEmployees)} />
-              <KeyValue label={t('adminTargets.missingTargets')} value={String(coverageSummary.missingEmployees)} />
-              <KeyValue label={t('adminTargets.coverageRate')} value={formatCoverageRate(coverageSummary.coverageRate)} />
-              <KeyValue label={t('adminTargets.personnelInScope')} value={String(coverageSummary.totalEmployees)} />
-            </div>
+            <AdminKeyValueGrid className="tw:lg:grid-cols-4">
+              <AdminKeyValue label={t('adminTargets.coveredPersonnel')} value={String(coverageSummary.coveredEmployees)} />
+              <AdminKeyValue label={t('adminTargets.pendingApproval')} value={String(coverageSummary.pendingEmployees)} />
+              <AdminKeyValue label={t('adminTargets.pendingChanges')} value={String(coverageSummary.conflictEmployees)} />
+              <AdminKeyValue label={t('adminTargets.staleReferences')} value={String(coverageSummary.staleEmployees)} />
+              <AdminKeyValue label={t('adminTargets.missingTargets')} value={String(coverageSummary.missingEmployees)} />
+              <AdminKeyValue label={t('adminTargets.coverageRate')} value={formatCoverageRate(coverageSummary.coverageRate)} />
+              <AdminKeyValue label={t('adminTargets.personnelInScope')} value={String(coverageSummary.totalEmployees)} />
+            </AdminKeyValueGrid>
 
             {attentionCoverageRows.length === 0 ? (
-              <EmptyState
+              <AdminSurfaceEmpty
                 title={t('adminTargets.noCoverageIssuesTitle')}
                 copy={t('adminTargets.noCoverageIssuesCopy')}
               />
             ) : (
-              <div className="stacked-table">
+              <div className="tw:grid tw:gap-2">
                 {attentionCoverageRows.map((item) => (
                   <TargetCoverageAttentionRow key={`${item.storeId}-${item.employeeId}`} item={item} />
                 ))}
@@ -178,118 +205,86 @@ export function TargetApprovalQueuePage(input: {
             )}
           </>
         )}
-      </section>
+      </AdminSurfaceSection>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminTargets.approvalQueue')}</div>
-            <h3>{t('adminTargets.pendingRequestsTitle')}</h3>
-          </div>
-          <StatusPill tone={pendingCount > 0 ? 'warning' : 'calm'}>
+      <AdminSurfaceSection
+        eyebrow={t('adminTargets.approvalQueue')}
+        title={t('adminTargets.pendingRequestsTitle')}
+        badge={
+          <AdminSurfaceBadge tone={pendingCount > 0 ? 'warning' : 'success'}>
             {pendingCount > 0 ? t('adminTargets.needsAttention') : t('adminTargets.clear')}
-          </StatusPill>
-        </div>
-
+          </AdminSurfaceBadge>
+        }
+      >
         {pendingItems.length === 0 ? (
-          <EmptyState
+          <AdminSurfaceEmpty
             title={t('adminTargets.noPendingTitle')}
             copy={t('adminTargets.noPendingCopy')}
           />
         ) : (
-          <div className="stacked-table">
-            {pendingItems.map((item) => (
-              (() => {
-                const canApprove = canApproveTargetDistributionRequest(input.authSummary, item.storeId)
+          <div className="tw:grid tw:gap-3">
+            {pendingItems.map((item) => {
+              const canApprove = canApproveTargetDistributionRequest(input.authSummary, item.storeId)
 
-                return (
-                  <TargetApprovalRow
-                    key={item.requestId}
-                    item={item}
-                    approvalNote={approvalNotes[item.requestId] ?? ''}
-                    canApprove={canApprove}
-                    onApprovalNoteChange={(next) =>
-                      setApprovalNotes((current) => ({ ...current, [item.requestId]: next }))
+              return (
+                <TargetApprovalRow
+                  key={item.requestId}
+                  item={item}
+                  approvalNote={approvalNotes[item.requestId] ?? ''}
+                  canApprove={canApprove}
+                  onApprovalNoteChange={(next) =>
+                    setApprovalNotes((current) => ({ ...current, [item.requestId]: next }))
+                  }
+                  onApprove={() => {
+                    if (!canApprove) {
+                      return
                     }
-                    onApprove={() => {
-                      if (!canApprove) {
-                        return
-                      }
 
-                      approveMutation.mutate({
-                        requestId: item.requestId,
-                        ...(approvalNotes[item.requestId]
-                          ? { approvalNote: approvalNotes[item.requestId] }
-                          : {}),
-                      })
-                    }}
-                    approving={
-                      approveMutation.isPending &&
-                      approveMutation.variables?.requestId === item.requestId
-                    }
-                  />
-                )
-              })()
-            ))}
+                    approveMutation.mutate({
+                      requestId: item.requestId,
+                      ...(approvalNotes[item.requestId]
+                        ? { approvalNote: approvalNotes[item.requestId] }
+                        : {}),
+                    })
+                  }}
+                  approving={
+                    approveMutation.isPending &&
+                    approveMutation.variables?.requestId === item.requestId
+                  }
+                />
+              )
+            })}
           </div>
         )}
 
-        {approvalNotice ? <p className="queue-subtitle">{approvalNotice}</p> : null}
-      </section>
+        {approvalNotice ? <AdminStatePanel title={approvalNotice} tone="success" /> : null}
+      </AdminSurfaceSection>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminTargets.recentHistory')}</div>
-            <h3>{t('adminTargets.recentlyApprovedTitle')}</h3>
-          </div>
-          <StatusPill tone={approvedItems.length > 0 ? 'calm' : 'accent'}>
+      <AdminSurfaceSection
+        eyebrow={t('adminTargets.recentHistory')}
+        title={t('adminTargets.recentlyApprovedTitle')}
+        badge={
+          <AdminSurfaceBadge tone={approvedItems.length > 0 ? 'success' : 'accent'}>
             {approvedItems.length > 0
               ? t('adminTargets.visible')
               : t('adminTargets.noHistoryYet')}
-          </StatusPill>
-        </div>
-
+          </AdminSurfaceBadge>
+        }
+      >
         {approvedItems.length === 0 ? (
-          <EmptyState
+          <AdminSurfaceEmpty
             title={t('adminTargets.noApprovedTitle')}
             copy={t('adminTargets.noApprovedCopy')}
           />
         ) : (
-          <div className="stacked-table">
+          <div className="tw:grid tw:gap-3">
             {approvedItems.map((item) => (
-              <article className="stacked-row" key={item.requestId}>
-                <div className="stacked-row-head">
-                  <strong>{item.targetLabel}</strong>
-                  <StatusPill tone={mapInboxStatusTone(toTargetApprovalInboxItem(item).inboxStatus)}>
-                    {formatTargetDistributionStatus(item.status, t)}
-                  </StatusPill>
-                </div>
-                <p>
-                  {t('adminTargets.requestSummary', {
-                    store: item.storeName || item.storeId,
-                    month: formatDate(item.requestMonth, locale),
-                  })}
-                </p>
-                <div className="key-grid">
-                  <KeyValue
-                    label={t('adminTargets.totalTarget')}
-                    value={formatTargetAmount(item.totalTargetValue, locale)}
-                  />
-                  <KeyValue label={t('adminTargets.allocationCount')} value={String(item.allocationCount)} />
-                  <KeyValue
-                    label={t('adminTargets.approvedAt')}
-                    value={item.approvedAt ? formatDateTime(item.approvedAt, locale) : t('adminTargets.unknown')}
-                  />
-                  <KeyValue label={t('adminTargets.approver')} value={item.approvedByUserId ?? t('adminTargets.unknown')} />
-                </div>
-                {item.approvalNote ? <p className="queue-subtitle">{item.approvalNote}</p> : null}
-              </article>
+              <ApprovedTargetRequestRow key={item.requestId} item={item} locale={locale} t={t} />
             ))}
           </div>
         )}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }
 
@@ -297,24 +292,35 @@ function TargetCoverageAttentionRow(input: { item: TargetCoverageRow }) {
   const { t } = useLocalization()
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
-        <strong>{input.item.displayName}</strong>
-        <StatusPill tone={mapTargetCoverageStatusTone(input.item.targetStatus)}>
-          {formatTargetCoverageStatus(input.item.targetStatus, t)}
-        </StatusPill>
-      </div>
-      <p>{input.item.storeName || input.item.storeId}</p>
-      <div className="key-grid">
-        <KeyValue label={t('adminTargets.sellerCode')} value={input.item.externalEmployeeRef ?? t('adminTargets.unknown')} />
-        <KeyValue label={t('adminTargets.approvedTarget')} value={formatTargetValue(input.item.targetValue, t)} />
-        <KeyValue label={t('adminTargets.pendingTarget')} value={formatTargetValue(input.item.pendingTargetValue, t)} />
-        <KeyValue
-          label={t('adminTargets.referenceState')}
-          value={formatTargetCoverageReferenceState(input.item, t)}
-        />
-      </div>
-    </article>
+    <Card className={cn('tw:border tw:bg-background/70', rowToneClass(mapTargetCoverageStatusTone(input.item.targetStatus)))} size="sm">
+      <CardContent className="tw:grid tw:gap-3 tw:pt-0">
+        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+          <div className="tw:min-w-0">
+            <div className="tw:flex tw:items-center tw:gap-2">
+              <Store size={16} className="tw:text-primary" />
+              <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-foreground">
+                {input.item.displayName}
+              </h3>
+            </div>
+            <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
+              {input.item.storeName || input.item.storeId}
+            </p>
+          </div>
+          <AdminSurfaceBadge tone={mapTargetCoverageStatusTone(input.item.targetStatus)}>
+            {formatTargetCoverageStatus(input.item.targetStatus, t)}
+          </AdminSurfaceBadge>
+        </div>
+        <AdminKeyValueGrid>
+          <AdminKeyValue label={t('adminTargets.sellerCode')} value={input.item.externalEmployeeRef ?? t('adminTargets.unknown')} />
+          <AdminKeyValue label={t('adminTargets.approvedTarget')} value={formatTargetValue(input.item.targetValue, t)} />
+          <AdminKeyValue label={t('adminTargets.pendingTarget')} value={formatTargetValue(input.item.pendingTargetValue, t)} />
+          <AdminKeyValue
+            label={t('adminTargets.referenceState')}
+            value={formatTargetCoverageReferenceState(input.item, t)}
+          />
+        </AdminKeyValueGrid>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -328,102 +334,158 @@ function TargetApprovalRow(input: {
 }) {
   const { locale, t } = useLocalization()
   const allocations = Array.isArray(input.item.allocations) ? input.item.allocations : []
+  const inboxItem = toTargetApprovalInboxItem(input.item)
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
-        <strong>{input.item.targetLabel}</strong>
-        <StatusPill tone={mapInboxStatusTone(toTargetApprovalInboxItem(input.item).inboxStatus)}>
-          {formatTargetDistributionStatus(input.item.status, t)}
-        </StatusPill>
-      </div>
-      <p>
-        {t('adminTargets.requestSummary', {
-          store: input.item.storeName || input.item.storeId,
-          month: formatDate(input.item.requestMonth, locale),
-        })}
-      </p>
-      <div className="key-grid">
-        <KeyValue
-          label={t('adminTargets.totalTarget')}
-          value={formatTargetAmount(input.item.totalTargetValue, locale)}
-        />
-        <KeyValue label={t('adminTargets.allocationCount')} value={String(input.item.allocationCount)} />
-        <KeyValue label={t('adminTargets.submission')} value={formatDateTime(input.item.createdAt, locale)} />
-        <KeyValue label={t('adminTargets.requestOwner')} value={input.item.submittedByUserId} />
-      </div>
-      {input.item.requestReason ? (
-        <p className="queue-subtitle">
-          {t('adminTargets.reason', { reason: input.item.requestReason })}
-        </p>
-      ) : null}
-      <div className="action-cluster">
-        <StatusPill tone={mapWorkflowUrgencyTone(toTargetApprovalInboxItem(input.item).urgency)}>
-          {t('adminTargets.urgency', {
-            urgency: formatTargetUrgency(toTargetApprovalInboxItem(input.item).urgency, t),
-          })}
-        </StatusPill>
-      </div>
-      {allocations.length ? (
-        <div className="stacked-table">
-          {allocations.map((allocation) => {
-            const targetValue = Number(allocation.targetValue || 0)
+    <Card className={cn('tw:border tw:bg-background/75', rowToneClass(mapTargetDistributionStatusTone(input.item.status)))} size="sm">
+      <CardContent className="tw:grid tw:gap-3 tw:pt-0">
+        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+          <div className="tw:min-w-0">
+            <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-foreground">{input.item.targetLabel}</h3>
+            <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
+              {t('adminTargets.requestSummary', {
+                store: input.item.storeName || input.item.storeId,
+                month: formatDate(input.item.requestMonth, locale),
+              })}
+            </p>
+          </div>
+          <AdminSurfaceBadge tone={mapInboxStatusToSurfaceTone(inboxItem.inboxStatus)}>
+            {formatTargetDistributionStatus(input.item.status, t)}
+          </AdminSurfaceBadge>
+        </div>
+        <AdminKeyValueGrid>
+          <AdminKeyValue
+            label={t('adminTargets.totalTarget')}
+            value={formatTargetAmount(input.item.totalTargetValue, locale)}
+          />
+          <AdminKeyValue label={t('adminTargets.allocationCount')} value={String(input.item.allocationCount)} />
+          <AdminKeyValue label={t('adminTargets.submission')} value={formatDateTime(input.item.createdAt, locale)} />
+          <AdminKeyValue label={t('adminTargets.requestOwner')} value={input.item.submittedByUserId} />
+        </AdminKeyValueGrid>
+        {input.item.requestReason ? (
+          <p className="tw:text-sm tw:text-muted-foreground">
+            {t('adminTargets.reason', { reason: input.item.requestReason })}
+          </p>
+        ) : null}
+        <AdminActionRow>
+          <AdminSurfaceBadge tone={mapTargetUrgencyTone(inboxItem.urgency)}>
+            {t('adminTargets.urgency', {
+              urgency: formatTargetUrgency(inboxItem.urgency, t),
+            })}
+          </AdminSurfaceBadge>
+        </AdminActionRow>
+        {allocations.length ? (
+          <div className="tw:grid tw:gap-2">
+            {allocations.map((allocation) => {
+              const targetValue = Number(allocation.targetValue || 0)
 
-            return (
-              <div className="stacked-row" key={`${input.item.requestId}-${allocation.employeeId}`}>
-                <div className="stacked-row-head">
-                  <strong>{allocation.assigneeLabel}</strong>
-                  <span className="status-pill status-pill-neutral">
+              return (
+                <div
+                  className="tw:grid tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-card/75 tw:p-3 tw:sm:grid-cols-[minmax(0,1fr)_auto] tw:sm:items-center"
+                  key={`${input.item.requestId}-${allocation.employeeId}`}
+                >
+                  <div className="tw:min-w-0">
+                    <div className="tw:text-sm tw:font-medium tw:text-foreground">{allocation.assigneeLabel}</div>
+                    {allocation.note ? <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{allocation.note}</p> : null}
+                  </div>
+                  <AdminSurfaceBadge tone="neutral">
                     {formatTargetAmount(targetValue, locale)} /{' '}
                     {formatTargetShare(targetValue, input.item.totalTargetValue, locale)}
-                  </span>
+                  </AdminSurfaceBadge>
                 </div>
-                {allocation.note ? <p>{allocation.note}</p> : null}
-              </div>
-            )
-          })}
-        </div>
-      ) : null}
-      {input.item.status !== 'approved' && input.canApprove ? (
-        <>
-          <label className="eyebrow" htmlFor={`approval-note-${input.item.requestId}`}>
-            {t('adminTargets.approvalNote')}
-          </label>
-          <textarea
-            id={`approval-note-${input.item.requestId}`}
-            value={input.approvalNote}
-            onChange={(event) => input.onApprovalNoteChange(event.target.value)}
-            rows={3}
-            placeholder={t('adminTargets.optionalRegionNote')}
-          />
-          <div className="action-cluster">
-            <button
-              className="control-button"
-              type="button"
-              onClick={input.onApprove}
-              disabled={input.approving || !input.canApprove}
-            >
-              {input.approving ? t('adminTargets.approving') : t('adminTargets.approveRequest')}
-            </button>
+              )
+            })}
           </div>
-        </>
-      ) : input.item.status !== 'approved' ? (
-        <p className="queue-subtitle">
-          {t('adminTargets.assignedStoreOnly')}
-        </p>
-      ) : input.item.approvedAt ? (
-        <p className="queue-subtitle">
-          {input.item.approvalNote
-            ? t('adminTargets.approvedAtMessageWithNote', {
-                date: formatDateTime(input.item.approvedAt, locale),
-                note: input.item.approvalNote,
-              })
-            : t('adminTargets.approvedAtMessage', {
-                date: formatDateTime(input.item.approvedAt, locale),
+        ) : null}
+        {input.item.status !== 'approved' && input.canApprove ? (
+          <div className="tw:grid tw:gap-2">
+            <label
+              className="tw:text-xs tw:font-medium tw:tracking-[0.08em] tw:text-muted-foreground tw:uppercase"
+              htmlFor={`approval-note-${input.item.requestId}`}
+            >
+              {t('adminTargets.approvalNote')}
+            </label>
+            <Textarea
+              id={`approval-note-${input.item.requestId}`}
+              value={input.approvalNote}
+              onChange={(event) => input.onApprovalNoteChange(event.target.value)}
+              rows={3}
+              placeholder={t('adminTargets.optionalRegionNote')}
+            />
+            <AdminActionRow className="tw:justify-end">
+              <Button
+                type="button"
+                onClick={input.onApprove}
+                disabled={input.approving || !input.canApprove}
+              >
+                <CheckCircle2 size={16} />
+                {input.approving ? t('adminTargets.approving') : t('adminTargets.approveRequest')}
+              </Button>
+            </AdminActionRow>
+          </div>
+        ) : input.item.status !== 'approved' ? (
+          <AdminStatePanel title={t('adminTargets.assignedStoreOnly')} tone="warning" />
+        ) : input.item.approvedAt ? (
+          <AdminStatePanel
+            title={
+              input.item.approvalNote
+                ? t('adminTargets.approvedAtMessageWithNote', {
+                    date: formatDateTime(input.item.approvedAt, locale),
+                    note: input.item.approvalNote,
+                  })
+                : t('adminTargets.approvedAtMessage', {
+                    date: formatDateTime(input.item.approvedAt, locale),
+                  })
+            }
+            tone="success"
+          />
+        ) : null}
+      </CardContent>
+    </Card>
+  )
+}
+
+function ApprovedTargetRequestRow(input: {
+  item: TargetDistributionRequest
+  locale: AppLocale
+  t: TranslateFunction
+}) {
+  const inboxItem = toTargetApprovalInboxItem(input.item)
+
+  return (
+    <Card className="tw:border tw:border-border tw:bg-background/75" size="sm">
+      <CardContent className="tw:grid tw:gap-3 tw:pt-0">
+        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
+          <div className="tw:min-w-0">
+            <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-foreground">{input.item.targetLabel}</h3>
+            <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
+              {input.t('adminTargets.requestSummary', {
+                store: input.item.storeName || input.item.storeId,
+                month: formatDate(input.item.requestMonth, input.locale),
               })}
-        </p>
-      ) : null}
-    </article>
+            </p>
+          </div>
+          <AdminSurfaceBadge tone={mapInboxStatusToSurfaceTone(inboxItem.inboxStatus)}>
+            {formatTargetDistributionStatus(input.item.status, input.t)}
+          </AdminSurfaceBadge>
+        </div>
+        <AdminKeyValueGrid>
+          <AdminKeyValue
+            label={input.t('adminTargets.totalTarget')}
+            value={formatTargetAmount(input.item.totalTargetValue, input.locale)}
+          />
+          <AdminKeyValue label={input.t('adminTargets.allocationCount')} value={String(input.item.allocationCount)} />
+          <AdminKeyValue
+            label={input.t('adminTargets.approvedAt')}
+            value={input.item.approvedAt ? formatDateTime(input.item.approvedAt, input.locale) : input.t('adminTargets.unknown')}
+          />
+          <AdminKeyValue label={input.t('adminTargets.approver')} value={input.item.approvedByUserId ?? input.t('adminTargets.unknown')} />
+        </AdminKeyValueGrid>
+        {input.item.approvalNote ? (
+          <p className="tw:text-sm tw:text-muted-foreground">{input.item.approvalNote}</p>
+        ) : null}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -478,7 +540,7 @@ function mapCoverageSummaryTone(summary: {
   conflictEmployees: number
   staleEmployees: number
   uncoveredEmployees: number
-}): Tone {
+}): AdminSurfaceTone {
   if (summary.conflictEmployees > 0 || summary.staleEmployees > 0) {
     return 'danger'
   }
@@ -491,7 +553,7 @@ function mapCoverageSummaryTone(summary: {
     return 'warning'
   }
 
-  return 'calm'
+  return 'success'
 }
 
 function formatTargetDistributionStatus(status: string, t: TranslateFunction) {
@@ -522,7 +584,7 @@ function formatTargetCoverageStatus(status: string, t: TranslateFunction) {
   }
 }
 
-function mapTargetCoverageStatusTone(status: string): Tone {
+function mapTargetCoverageStatusTone(status: string): AdminSurfaceTone {
   switch (status) {
     case 'pending_change_conflict':
     case 'stale_reference':
@@ -531,9 +593,63 @@ function mapTargetCoverageStatusTone(status: string): Tone {
     case 'missing':
       return 'warning'
     case 'approved':
-      return 'calm'
+      return 'success'
     default:
       return 'neutral'
+  }
+}
+
+function mapTargetDistributionStatusTone(status: string): AdminSurfaceTone {
+  switch (status) {
+    case 'pending_region_approval':
+      return 'warning'
+    case 'approved':
+      return 'success'
+    default:
+      return 'neutral'
+  }
+}
+
+function mapInboxStatusToSurfaceTone(status: string): AdminSurfaceTone {
+  switch (status) {
+    case 'needs_attention':
+      return 'warning'
+    case 'completed':
+      return 'success'
+    case 'informational':
+      return 'accent'
+    default:
+      return 'neutral'
+  }
+}
+
+function mapTargetUrgencyTone(urgency: string): AdminSurfaceTone {
+  switch (urgency) {
+    case 'high':
+      return 'danger'
+    case 'medium':
+      return 'warning'
+    case 'low':
+      return 'accent'
+    default:
+      return 'neutral'
+  }
+}
+
+function rowToneClass(tone: AdminSurfaceTone) {
+  switch (tone) {
+    case 'danger':
+      return 'tw:border-rose-200'
+    case 'warning':
+      return 'tw:border-amber-200'
+    case 'success':
+      return 'tw:border-emerald-200'
+    case 'cyan':
+      return 'tw:border-cyan-200'
+    case 'accent':
+      return 'tw:border-violet-200'
+    default:
+      return 'tw:border-border'
   }
 }
 
