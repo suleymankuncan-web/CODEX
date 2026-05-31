@@ -1,5 +1,10 @@
-import { KeyValue, StatusPill } from '../components/dashboard-primitives'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import {
+  OperationsKeyValue,
+  OperationsKeyValueGrid,
+  OperationsPanel,
+  OperationsStatusBadge,
+} from './operations-surface-primitives'
 
 export type DataQualitySnapshot = {
   blockedBatchCount: number
@@ -20,41 +25,43 @@ export function DataQualitySignalPanel(input: {
     input.dataQuality.snapshotIssueCount > 0
 
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.dataQualityEyebrow')}</div>
-          <h3>{input.t('adminOperations.dataQualityTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.dataQualityCopy')}</p>
-        </div>
-        <StatusPill tone={input.isError ? 'warning' : hasDataQualityPressure ? 'warning' : 'calm'}>
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.dataQualityEyebrow')}
+      title={input.t('adminOperations.dataQualityTitle')}
+      description={input.t('adminOperations.dataQualityCopy')}
+      testId="operations-data-quality"
+      badge={
+        <OperationsStatusBadge tone={input.isError ? 'warning' : hasDataQualityPressure ? 'warning' : 'calm'}>
           {input.isError
             ? input.t('adminOperations.unavailable')
             : hasDataQualityPressure
               ? input.t('adminOperations.needsAttention')
               : input.t('adminOperations.ready')}
-        </StatusPill>
-      </div>
-      <div className="key-grid">
-        <KeyValue
+        </OperationsStatusBadge>
+      }
+    >
+      <OperationsKeyValueGrid>
+        <OperationsKeyValue
           label={input.t('adminOperations.previewErrorRows')}
           value={String(input.dataQuality.errorRowCount)}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.mappingBlockers')}
           value={formatMappingEntityTypes(input.dataQuality.mappingEntityTypes, input.t)}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.blockedImportBatches')}
           value={String(input.dataQuality.blockedBatchCount)}
         />
-        <KeyValue
+        <OperationsKeyValue
           label={input.t('adminOperations.snapshotIssues')}
           value={String(input.dataQuality.snapshotIssueCount)}
         />
-      </div>
-      <p className="queue-reason">{input.t('adminOperations.dataQualitySourceCopy')}</p>
-    </article>
+      </OperationsKeyValueGrid>
+      <p className="tw:m-0 tw:text-sm tw:text-muted-foreground">
+        {input.t('adminOperations.dataQualitySourceCopy')}
+      </p>
+    </OperationsPanel>
   )
 }
 

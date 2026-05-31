@@ -1,13 +1,17 @@
 import { Link } from 'react-router-dom'
-import {
-  KeyValue,
-  StatusPill,
-} from '../components/dashboard-primitives'
+import { Button } from '../components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { KpiConfigResponse, RankingSummary } from '../features/reports/api'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import type { KpiRankingReadiness } from './operations-kpi-ranking-signal-model'
+import {
+  OperationsInlineState,
+  OperationsKeyValue,
+  OperationsKeyValueGrid,
+  OperationsPanel,
+  OperationsStatusBadge,
+} from './operations-surface-primitives'
 
 export function KpiRankingSignalPanel(input: {
   config: KpiConfigResponse | undefined
@@ -28,14 +32,13 @@ export function KpiRankingSignalPanel(input: {
         : 'calm'
 
   return (
-    <article className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.kpiRankingsEyebrow')}</div>
-          <h3>{input.t('adminOperations.kpiRankingsTitle')}</h3>
-          <p className="panel-copy">{input.t('adminOperations.kpiRankingsCopy')}</p>
-        </div>
-        <StatusPill tone={tone}>
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.kpiRankingsEyebrow')}
+      title={input.t('adminOperations.kpiRankingsTitle')}
+      description={input.t('adminOperations.kpiRankingsCopy')}
+      testId="operations-kpi-ranking-signal"
+      badge={
+        <OperationsStatusBadge tone={tone}>
           {input.isLoading
             ? input.t('adminOperations.loading')
             : input.isError
@@ -43,55 +46,59 @@ export function KpiRankingSignalPanel(input: {
             : input.readiness.issueCount > 0
               ? input.t('adminOperations.needsAttention')
               : input.t('adminOperations.ready')}
-        </StatusPill>
-      </div>
+        </OperationsStatusBadge>
+      }
+      actions={
+        <>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/admin/reports">{input.t('adminOperations.openReports')}</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/admin/kpi-config">{input.t('adminOperations.openKpiConfig')}</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/store/rankings">{input.t('adminOperations.openStoreRankings')}</Link>
+          </Button>
+        </>
+      }
+    >
 
       {input.isLoading ? (
-        <div className="inline-state">{input.t('adminOperations.signalLoadingCopy')}</div>
+        <OperationsInlineState>{input.t('adminOperations.signalLoadingCopy')}</OperationsInlineState>
       ) : input.isError ? (
-        <div className="inline-state inline-state-warning">{getErrorMessage(input.error)}</div>
+        <OperationsInlineState tone="warning">{getErrorMessage(input.error)}</OperationsInlineState>
       ) : (
-        <div className="key-grid">
-          <KeyValue
+        <OperationsKeyValueGrid>
+          <OperationsKeyValue
             label={input.t('adminOperations.kpiConfigVersion')}
             value={formatKpiConfigVersion(input.config, input.t)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.kpiPublishedAt')}
             value={formatKpiPublishedAt(input.config, input.locale, input.t)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.rankingPeriod')}
             value={formatRankingPeriod(input.rankings, input.locale, input.t)}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.rankingPopulation')}
             value={input.t('adminOperations.rankingPopulationValue', {
               personnel: input.readiness.personnelPopulation,
               stores: input.readiness.storePopulation,
             })}
           />
-          <KeyValue
+          <OperationsKeyValue
             label={input.t('adminOperations.availableRankingPeriods')}
             value={String(input.readiness.availablePeriodCount)}
           />
-        </div>
+        </OperationsKeyValueGrid>
       )}
 
-      <p className="queue-reason">{input.t('adminOperations.kpiRankingsSourceCopy')}</p>
-
-      <div className="toolbar-cluster">
-        <Link className="back-link" to="/admin/reports">
-          <span>{input.t('adminOperations.openReports')}</span>
-        </Link>
-        <Link className="back-link" to="/admin/kpi-config">
-          <span>{input.t('adminOperations.openKpiConfig')}</span>
-        </Link>
-        <Link className="back-link" to="/store/rankings">
-          <span>{input.t('adminOperations.openStoreRankings')}</span>
-        </Link>
-      </div>
-    </article>
+      <p className="tw:m-0 tw:text-sm tw:text-muted-foreground">
+        {input.t('adminOperations.kpiRankingsSourceCopy')}
+      </p>
+    </OperationsPanel>
   )
 }
 

@@ -1,7 +1,8 @@
-import type { Tone } from '../components/dashboard-primitives'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { WorkflowInboxPressure } from './operations-workflow-signal-model'
 import type { WorkforcePressure } from './operations-workforce-signal-model'
+
+type OperatorActionTone = 'calm' | 'warning' | 'accent' | 'danger' | 'neutral'
 
 type DataQualitySnapshot = {
   blockedBatchCount: number
@@ -17,7 +18,7 @@ export type OperatorAction = {
   status: string
   subtitle: string
   title: string
-  tone: Tone
+  tone: OperatorActionTone
 }
 
 export function buildOperatorActions(input: {

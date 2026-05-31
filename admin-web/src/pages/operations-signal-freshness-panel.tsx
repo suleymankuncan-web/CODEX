@@ -1,9 +1,15 @@
-import { Link } from 'react-router-dom'
-import { KeyValue, StatusPill, type Tone } from '../components/dashboard-primitives'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { formatDateTime, formatNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import type { OperationsSignalFreshnessItem } from './operations-signal-freshness-model'
+import {
+  OperationsKeyValue,
+  OperationsKeyValueGrid,
+  OperationsPanel,
+  OperationsQueueList,
+  OperationsStatusBadge,
+  type OperationsTone,
+} from './operations-surface-primitives'
 
 export function SignalFreshnessPanel(input: {
   items: OperationsSignalFreshnessItem[]
@@ -13,27 +19,18 @@ export function SignalFreshnessPanel(input: {
   const headerStatus = resolveHeaderStatus(input.items)
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{input.t('adminOperations.freshnessEyebrow')}</div>
-          <h3>{input.t('adminOperations.freshnessTitle')}</h3>
-          <p>{input.t('adminOperations.freshnessCopy')}</p>
-        </div>
-        <StatusPill tone={headerStatus.tone}>{input.t(headerStatus.labelKey)}</StatusPill>
-      </div>
-      <div className="stacked-table">
-        {input.items.map((item) => (
-          <Link className="queue-row" key={item.family} to={item.href}>
-            <div className="queue-row-head">
-              <strong>{input.t(familyTitleKey[item.family])}</strong>
-              <StatusPill tone={freshnessTone(item.status)}>
-                {input.t(statusLabelKey[item.status])}
-              </StatusPill>
-            </div>
-            <span className="queue-subtitle">{input.t(familySourceKey[item.family])}</span>
-            <div className="key-grid">
-              <KeyValue
+    <OperationsPanel
+      eyebrow={input.t('adminOperations.freshnessEyebrow')}
+      title={input.t('adminOperations.freshnessTitle')}
+      description={input.t('adminOperations.freshnessCopy')}
+      testId="operations-signal-freshness"
+      badge={<OperationsStatusBadge tone={headerStatus.tone}>{input.t(headerStatus.labelKey)}</OperationsStatusBadge>}
+    >
+      <OperationsQueueList
+        items={input.items.map((item) => ({
+          body: (
+            <OperationsKeyValueGrid className="tw:sm:grid-cols-2 tw:lg:grid-cols-2">
+              <OperationsKeyValue
                 label={input.t('adminOperations.freshnessOpenSignals')}
                 value={
                   item.count === null
@@ -43,7 +40,7 @@ export function SignalFreshnessPanel(input: {
                       })
                 }
               />
-              <KeyValue
+              <OperationsKeyValue
                 label={input.t('adminOperations.freshnessLastObserved')}
                 value={
                   item.lastObservedAt
@@ -51,11 +48,17 @@ export function SignalFreshnessPanel(input: {
                     : input.t('adminOperations.freshnessNoObservation')
                 }
               />
-            </div>
-          </Link>
-        ))}
-      </div>
-    </section>
+            </OperationsKeyValueGrid>
+          ),
+          href: item.href,
+          id: item.family,
+          meta: input.t(familySourceKey[item.family]),
+          status: input.t(statusLabelKey[item.status]),
+          title: input.t(familyTitleKey[item.family]),
+          tone: freshnessTone(item.status),
+        }))}
+      />
+    </OperationsPanel>
   )
 }
 
@@ -65,7 +68,7 @@ type TranslationKey = Parameters<TranslateFunction>[0]
 
 type HeaderStatus = {
   labelKey: TranslationKey
-  tone: Tone
+  tone: OperationsTone
 }
 
 const familyTitleKey: Record<FreshnessFamily, TranslationKey> = {
@@ -91,7 +94,7 @@ const statusLabelKey: Record<FreshnessStatus, TranslationKey> = {
   unavailable: 'adminOperations.unavailable',
 }
 
-function freshnessTone(status: FreshnessStatus): Tone {
+function freshnessTone(status: FreshnessStatus): OperationsTone {
   if (status === 'loading') return 'neutral'
   return status === 'attention' || status === 'unavailable' ? 'warning' : 'calm'
 }

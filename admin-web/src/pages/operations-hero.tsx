@@ -1,10 +1,18 @@
-import { MetricAccent, type Tone } from '../components/dashboard-primitives'
+import { RadioTower } from 'lucide-react'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import {
+  AdminMetricStrip,
+  AdminSurfaceHeader,
+} from './admin-surface-primitives'
+import {
+  type OperationsTone,
+} from './operations-surface-primitives'
+import { toAdminSurfaceTone } from './operations-surface-tones'
 
 export type SignalStatus = {
   copy: string
   label: string
-  tone: Tone
+  tone: OperationsTone
 }
 
 export function OperationsHero(input: {
@@ -14,23 +22,36 @@ export function OperationsHero(input: {
   t: TranslateFunction
 }) {
   return (
-    <section className="hero-panel">
-      <div>
-        <div className="eyebrow">{input.t('adminOperations.heroEyebrow')}</div>
-        <h2 className="hero-title">{input.t('adminOperations.heroTitle')}</h2>
-        <p className="hero-copy">{input.t('adminOperations.heroCopy')}</p>
-      </div>
-      <div className="hero-metrics">
-        <MetricAccent label={input.t('adminOperations.readiness')} value={input.readiness.label} />
-        <MetricAccent
-          label={input.t('adminOperations.operatorPressure')}
-          value={String(input.operationalPressure)}
-        />
-        <MetricAccent
-          label={input.t('adminOperations.externalBlockers')}
-          value={String(input.providerBlockerCount)}
-        />
-      </div>
-    </section>
+    <>
+      <AdminSurfaceHeader
+        eyebrow={input.t('adminOperations.heroEyebrow')}
+        title={input.t('adminOperations.heroTitle')}
+        description={input.t('adminOperations.heroCopy')}
+        icon={<RadioTower size={18} />}
+      />
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'readiness',
+            label: input.t('adminOperations.readiness'),
+            value: input.readiness.label,
+            description: input.readiness.copy,
+            tone: toAdminSurfaceTone(input.readiness.tone),
+          },
+          {
+            id: 'operator-pressure',
+            label: input.t('adminOperations.operatorPressure'),
+            value: input.operationalPressure,
+            tone: input.operationalPressure > 0 ? 'warning' : 'success',
+          },
+          {
+            id: 'external-blockers',
+            label: input.t('adminOperations.externalBlockers'),
+            value: input.providerBlockerCount,
+            tone: input.providerBlockerCount > 0 ? 'warning' : 'success',
+          },
+        ]}
+      />
+    </>
   )
 }
