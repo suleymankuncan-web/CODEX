@@ -4,16 +4,16 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "../app.module";
 import { preserveOpenApiBaselineFromFile } from "./openapi-baseline-preservation";
+import {
+  commandResponseSchema,
+  countProperties,
+  type MutablePathItem,
+  nullableStringProperties,
+  setJsonRequestSchema,
+  setJsonResponseSchema,
+} from "./openapi-schema-helpers";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
-type MutableOperation = {
-  parameters?: Array<Record<string, unknown>>;
-  requestBody?: Record<string, unknown>;
-  responses?: Record<string, Record<string, unknown>>;
-  security?: Array<Record<string, string[]>>;
-};
-
-type MutablePathItem = Record<string, MutableOperation | undefined>;
 
 const publicOperations = [
   { path: "/api/auth/bootstrap", method: "get" },
@@ -5167,90 +5167,3 @@ async function generateOpenApi(): Promise<void> {
   await app.close();
 }
 void generateOpenApi();
-
-function countProperties(propertyNames: string[]) {
-  return Object.fromEntries(
-    propertyNames.map((propertyName) => [
-      propertyName,
-      { type: "integer", minimum: 0 },
-    ]),
-  );
-}
-
-function nullableStringProperties(propertyNames: string[]) {
-  return Object.fromEntries(
-    propertyNames.map((propertyName) => [
-      propertyName,
-      { type: "string", nullable: true },
-    ]),
-  );
-}
-
-function commandResponseSchema(dataSchema: Record<string, unknown>) {
-  return {
-    type: "object",
-    required: ["command", "data"],
-    properties: {
-      command: {
-        type: "object",
-        required: ["status", "message"],
-        properties: {
-          status: { type: "string" },
-          message: { type: "string" },
-        },
-      },
-      data: dataSchema,
-    },
-  };
-}
-
-function setJsonRequestSchema(
-  paths: Record<string, unknown>,
-  path: string,
-  method: string,
-  schemaName: string,
-) {
-  const operation = (paths[path] as MutablePathItem | undefined)?.[method];
-  if (!operation) {
-    return;
-  }
-
-  operation.requestBody = {
-    required: true,
-    content: {
-      "application/json": {
-        schema: {
-          $ref: `#/components/schemas/${schemaName}`,
-        },
-      },
-    },
-  };
-}
-
-function setJsonResponseSchema(
-  paths: Record<string, unknown>,
-  path: string,
-  method: string,
-  description: string,
-  schemaName: string,
-  status = "200",
-) {
-  const operation = (paths[path] as MutablePathItem | undefined)?.[method];
-  if (!operation) {
-    return;
-  }
-
-  operation.responses = {
-    ...(operation.responses ?? {}),
-    [status]: {
-      description,
-      content: {
-        "application/json": {
-          schema: {
-            $ref: `#/components/schemas/${schemaName}`,
-          },
-        },
-      },
-    },
-  };
-}

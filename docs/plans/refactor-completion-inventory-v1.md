@@ -176,9 +176,13 @@ V5 OpenAPI parity repair status:
   response metadata.
 - Evidence:
   `docs/evidence/architecture-hardening-v5-pr2-openapi-parity-repair-2026-05-31.md`.
-- Next allowed OpenAPI step: helper split inside
-  `backend/nestjs/src/openapi/generate-openapi.ts`, using an empty
-  `docs/api/openapi.json` diff as the acceptance gate.
+- Done in V5 PR-3: pure OpenAPI schema/path helpers moved from
+  `backend/nestjs/src/openapi/generate-openapi.ts` to
+  `backend/nestjs/src/openapi/openapi-schema-helpers.ts`; the generator frozen
+  baseline dropped from 5256 to 5169 lines while `docs/api/openapi.json`
+  remained unchanged after generation.
+- Evidence:
+  `docs/evidence/architecture-hardening-v5-pr3-openapi-helper-split-2026-05-31.md`.
 
 ## Completed Or No Longer Active
 
