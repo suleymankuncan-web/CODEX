@@ -121,7 +121,6 @@ function visibilityMatrix(items, roles) {
       visible:
         item.rolesMode === 'omitted' ||
         item.rolesMode === 'unguarded' ||
-        (!item.rolesMode && item.roles.length === 0) ||
         item.roles.includes(role),
     })),
   }))
@@ -206,11 +205,17 @@ test('admin route parity preserves unguarded route semantics', () => {
     rolesMode: 'guarded',
     page: 'SessionReadinessPage',
   })
+  const missingRouteMode = {
+    path: '/admin/session',
+    roles: [],
+    page: 'SessionReadinessPage',
+  }
   const roles = ['NO_SPECIAL_ADMIN_ROLE']
 
   assert.notDeepEqual(guardedEmptySessionRoute, publicSessionRoute)
   assert.equal(visibilityMatrix([publicSessionRoute], roles)[0].visible[0].visible, true)
   assert.equal(visibilityMatrix([guardedEmptySessionRoute], roles)[0].visible[0].visible, false)
+  assert.equal(visibilityMatrix([missingRouteMode], roles)[0].visible[0].visible, false)
 })
 
 test('admin route and navigation visibility matrices have zero drift', () => {
