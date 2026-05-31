@@ -1,14 +1,22 @@
 import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { ArrowRight, DatabaseZap, Layers3, ShieldCheck } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import {
-  EmptyState,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
+import {
+  AuthLinkRow,
+  AuthList,
+  AuthMuted,
+  AuthRowHead,
+} from '../features/auth/AuthSurfacePrimitives'
 import {
   getRoleAssignmentAudit,
   getRoleAssignments,
@@ -171,42 +179,91 @@ export function AuditCenterPage() {
     snapshotQuery.isLoading
 
   if (isLoading) {
-    return <ScreenState title={t('adminAudit.loadingTitle')} copy={t('adminAudit.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('adminAudit.loadingTitle')} description={t('adminAudit.loadingCopy')} />
+      </AdminSurfacePage>
+    )
   }
 
   const firstError = [usersQuery, assignmentsQuery, importQuery, snapshotQuery].find((query) => query.isError)
   if (firstError?.isError) {
-    return <ScreenState title={t('adminAudit.errorTitle')} copy={getErrorMessage(firstError.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminAudit.errorTitle')}
+          description={getErrorMessage(firstError.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   const traceLoading = [...userAuditQueries, ...assignmentAuditQueries].some((query) => query.isLoading)
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('adminAudit.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('adminAudit.title')}</h2>
-          <p className="hero-copy">{t('adminAudit.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('adminAudit.users')} value={String(usersQuery.data?.meta.total ?? users.length)} />
-          <MetricAccent label={t('adminAudit.assignments')} value={String(assignmentsQuery.data?.meta.total ?? assignments.length)} />
-          <MetricAccent label={t('adminAudit.operationalTrails')} value={String(batches.length + runs.length)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('adminAudit.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('adminAudit.heroEyebrow')}
+        title={t('adminAudit.title')}
+        description={t('adminAudit.heroCopy')}
+        icon={<ShieldCheck size={18} />}
+        meta={
+          <>
+            <AdminSurfaceBadge tone="accent">
+              {t('adminAudit.users')}: {usersQuery.data?.meta.total ?? users.length}
+            </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone="cyan">
+              {t('adminAudit.assignments')}: {assignmentsQuery.data?.meta.total ?? assignments.length}
+            </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone="neutral">
+              {t('adminAudit.operationalTrails')}: {batches.length + runs.length}
+            </AdminSurfaceBadge>
+          </>
+        }
+      />
 
-      <section className="metric-grid">
-        <MetricCard title={t('adminAudit.userAudit')} value={users.length} note={t('adminAudit.userAuditNote')} icon={<ShieldCheck size={18} />} tone="calm" />
-        <MetricCard title={t('adminAudit.assignmentAudit')} value={assignments.length} note={t('adminAudit.assignmentAuditNote')} icon={<ShieldCheck size={18} />} tone="accent" />
-        <MetricCard title={t('adminAudit.importTraces')} value={batches.length} note={t('adminAudit.importTracesNote')} icon={<DatabaseZap size={18} />} tone="warning" />
-        <MetricCard title={t('adminAudit.snapshotTraces')} value={runs.length} note={t('adminAudit.snapshotTracesNote')} icon={<Layers3 size={18} />} tone="danger" />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'audit-users',
+            label: t('adminAudit.userAudit'),
+            value: users.length,
+            description: t('adminAudit.userAuditNote'),
+            icon: <ShieldCheck size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'audit-assignments',
+            label: t('adminAudit.assignmentAudit'),
+            value: assignments.length,
+            description: t('adminAudit.assignmentAuditNote'),
+            icon: <ShieldCheck size={18} />,
+            tone: 'accent',
+          },
+          {
+            id: 'audit-imports',
+            label: t('adminAudit.importTraces'),
+            value: batches.length,
+            description: t('adminAudit.importTracesNote'),
+            icon: <DatabaseZap size={18} />,
+            tone: 'warning',
+          },
+          {
+            id: 'audit-snapshots',
+            label: t('adminAudit.snapshotTraces'),
+            value: runs.length,
+            description: t('adminAudit.snapshotTracesNote'),
+            icon: <Layers3 size={18} />,
+            tone: 'danger',
+          },
+        ]}
+      />
 
       <AuditRecentTracePanel recentTrace={recentTrace} traceLoading={traceLoading} />
 
       <AuditSourceGrid users={users} assignments={assignments} batches={batches} runs={runs} />
-    </section>
+    </AdminSurfacePage>
   )
 }
 
@@ -214,38 +271,38 @@ function AuditRecentTracePanel(input: { recentTrace: TraceItem[]; traceLoading: 
   const { locale, t } = useLocalization()
 
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminAudit.recentTrace')}</div>
-          <h3>{t('adminAudit.recentTraceTitle')}</h3>
-        </div>
-        <StatusPill tone={input.traceLoading ? 'warning' : 'accent'}>
+    <AdminSurfaceSection
+      eyebrow={t('adminAudit.recentTrace')}
+      title={t('adminAudit.recentTraceTitle')}
+      badge={
+        <AdminSurfaceBadge tone={input.traceLoading ? 'warning' : 'accent'}>
           {input.traceLoading ? t('adminAudit.hydrating') : t('adminAudit.liveSlice')}
-        </StatusPill>
-      </div>
-
+        </AdminSurfaceBadge>
+      }
+    >
       {input.recentTrace.length === 0 ? (
-        <EmptyState copy={t('adminAudit.noTraceItems')} />
+        <AdminSurfaceEmpty copy={t('adminAudit.noTraceItems')} />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {input.recentTrace.map((item) => (
-            <Link className="stacked-row audit-link-row" key={item.id} to={item.href}>
-              <div className="stacked-row-head">
-                <strong>{item.title}</strong>
-                <StatusPill tone={item.tone}>{formatDateTime(item.happenedAt, locale)}</StatusPill>
-              </div>
-              <p>{item.subtitle}</p>
-              <span className="queue-subtitle">
+            <AuthLinkRow key={item.id} to={item.href}>
+              <AuthRowHead>
+                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{item.title}</strong>
+                <AdminSurfaceBadge tone={toAdminTone(item.tone)}>
+                  {formatDateTime(item.happenedAt, locale)}
+                </AdminSurfaceBadge>
+              </AuthRowHead>
+              <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">{item.subtitle}</p>
+              <AuthMuted>
                 {t('adminAudit.correlation', {
                   correlationId: item.correlationId ?? t('adminAudit.correlationFallback'),
                 })}
-              </span>
-            </Link>
+              </AuthMuted>
+            </AuthLinkRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -256,7 +313,7 @@ function AuditSourceGrid(input: {
   runs: SnapshotNeedsActionItem[]
 }) {
   return (
-    <section className="audit-source-grid">
+    <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
       <AuditUsersPanel users={input.users} />
       <AuditAssignmentsPanel assignments={input.assignments} />
       <AuditImportBatchesPanel batches={input.batches} />
@@ -269,37 +326,34 @@ function AuditUsersPanel(input: { users: UserAccount[] }) {
   const { locale, t } = useLocalization()
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminAudit.authUsers')}</div>
-          <h3>{t('adminAudit.recentAccountAuditEntries')}</h3>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('adminAudit.authUsers')}
+      title={t('adminAudit.recentAccountAuditEntries')}
+    >
       {input.users.length === 0 ? (
-        <EmptyState copy={t('adminAudit.noUserAccounts')} />
+        <AdminSurfaceEmpty copy={t('adminAudit.noUserAccounts')} />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {input.users.slice(0, 6).map((user) => (
-            <Link className="stacked-row audit-link-row" key={user.userId} to={`/admin/audit/users/${user.userId}/audit`}>
-              <div className="stacked-row-head">
-                <strong>{user.username}</strong>
-                <StatusPill tone={user.isActive ? 'calm' : 'danger'}>
+            <AuthLinkRow key={user.userId} to={`/admin/audit/users/${user.userId}/audit`}>
+              <AuthRowHead>
+                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{user.username}</strong>
+                <AdminSurfaceBadge tone={user.isActive ? 'success' : 'danger'}>
                   {formatAuditActiveState(user.isActive, t)}
-                </StatusPill>
-              </div>
-              <p>{user.email}</p>
-              <span className="queue-subtitle">
+                </AdminSurfaceBadge>
+              </AuthRowHead>
+              <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">{user.email}</p>
+              <AuthMuted>
                 {t('adminAudit.authProviderCreated', {
                   provider: user.authProvider,
                   date: formatDateTime(user.createdAt, locale),
                 })}
-              </span>
-            </Link>
+              </AuthMuted>
+            </AuthLinkRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
@@ -307,40 +361,38 @@ function AuditAssignmentsPanel(input: { assignments: RoleAssignment[] }) {
   const { locale, t } = useLocalization()
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminAudit.roleAssignments')}</div>
-          <h3>{t('adminAudit.scopedAccessAuditTrails')}</h3>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('adminAudit.roleAssignments')}
+      title={t('adminAudit.scopedAccessAuditTrails')}
+    >
       {input.assignments.length === 0 ? (
-        <EmptyState copy={t('adminAudit.noRoleAssignments')} />
+        <AdminSurfaceEmpty copy={t('adminAudit.noRoleAssignments')} />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {input.assignments.slice(0, 6).map((assignment) => (
-            <Link
-              className="stacked-row audit-link-row"
+            <AuthLinkRow
               key={assignment.assignmentId}
               to={`/admin/audit/role-assignments/${assignment.assignmentId}/audit`}
             >
-              <div className="stacked-row-head">
-                <strong>{assignment.roleCode}</strong>
-                <StatusPill tone={assignment.active ? 'calm' : 'danger'}>
+              <AuthRowHead>
+                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{assignment.roleCode}</strong>
+                <AdminSurfaceBadge tone={assignment.active ? 'success' : 'danger'}>
                   {formatAuditActiveState(assignment.active, t)}
-                </StatusPill>
-              </div>
-              <p>{assignment.username} - {assignment.scopeType}</p>
-              <span className="queue-subtitle">
+                </AdminSurfaceBadge>
+              </AuthRowHead>
+              <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                {assignment.username} - {assignment.scopeType}
+              </p>
+              <AuthMuted>
                 {t('adminAudit.createdAt', {
                   date: formatDateTime(assignment.createdAt, locale),
                 })}
-              </span>
-            </Link>
+              </AuthMuted>
+            </AuthLinkRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
@@ -348,35 +400,32 @@ function AuditImportBatchesPanel(input: { batches: NeedsActionItem[] }) {
   const { t } = useLocalization()
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminAudit.importBatches')}</div>
-          <h3>{t('adminAudit.batchAuditJumpList')}</h3>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('adminAudit.importBatches')}
+      title={t('adminAudit.batchAuditJumpList')}
+    >
       {input.batches.length === 0 ? (
-        <EmptyState copy={t('adminAudit.noImportBatches')} />
+        <AdminSurfaceEmpty copy={t('adminAudit.noImportBatches')} />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {input.batches.map((batch) => (
-            <Link className="stacked-row audit-link-row" key={batch.batchId} to={`/admin/integrations/${batch.batchId}`}>
-              <div className="stacked-row-head">
-                <strong>{batch.sourceCode} / {batch.entityType}</strong>
-                <StatusPill tone={mapHealthTone(batch.healthState)}>
+            <AuthLinkRow key={batch.batchId} to={`/admin/integrations/${batch.batchId}`}>
+              <AuthRowHead>
+                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{batch.sourceCode} / {batch.entityType}</strong>
+                <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(batch.healthState))}>
                   {formatAuditHealthState(batch.healthState, t)}
-                </StatusPill>
-              </div>
-              <p>{batch.actionReason}</p>
-              <span className="queue-footer">
+                </AdminSurfaceBadge>
+              </AuthRowHead>
+              <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">{batch.actionReason}</p>
+              <span className="tw:inline-flex tw:items-center tw:gap-1 tw:text-xs tw:font-medium tw:text-primary">
                 {t('adminAudit.openBatchDetailAndAudit')}
                 <ArrowRight size={16} />
               </span>
-            </Link>
+            </AuthLinkRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
@@ -384,42 +433,46 @@ function AuditSnapshotRunsPanel(input: { runs: SnapshotNeedsActionItem[] }) {
   const { locale, t } = useLocalization()
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminAudit.snapshotRuns')}</div>
-          <h3>{t('adminAudit.rerunDependencyTrace')}</h3>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('adminAudit.snapshotRuns')}
+      title={t('adminAudit.rerunDependencyTrace')}
+    >
       {input.runs.length === 0 ? (
-        <EmptyState copy={t('adminAudit.noSnapshotRuns')} />
+        <AdminSurfaceEmpty copy={t('adminAudit.noSnapshotRuns')} />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {input.runs.map((run) => (
-            <Link className="stacked-row audit-link-row" key={run.snapshotRunId} to={`/admin/snapshots/${run.snapshotRunId}`}>
-              <div className="stacked-row-head">
-                <strong>{t('adminAudit.snapshotLabel', { type: run.snapshotType })}</strong>
-                <StatusPill tone={mapHealthTone(run.healthState)}>
+            <AuthLinkRow key={run.snapshotRunId} to={`/admin/snapshots/${run.snapshotRunId}`}>
+              <AuthRowHead>
+                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
+                  {t('adminAudit.snapshotLabel', { type: run.snapshotType })}
+                </strong>
+                <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(run.healthState))}>
                   {formatAuditHealthState(run.healthState, t)}
-                </StatusPill>
-              </div>
-              <p>{run.actionReason}</p>
-              <span className="queue-subtitle">
+                </AdminSurfaceBadge>
+              </AuthRowHead>
+              <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">{run.actionReason}</p>
+              <AuthMuted>
                 {t('adminAudit.snapshotStatus', {
                   date: formatDateTime(run.generatedAt, locale),
                   status: formatAuditRunStatus(run.runStatus, t),
                 })}
-              </span>
-            </Link>
+              </AuthMuted>
+            </AuthLinkRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
 function formatAuditActiveState(active: boolean, t: TranslateFunction) {
   return active ? t('adminAudit.active') : t('adminAudit.inactive')
+}
+
+function toAdminTone(tone: TraceItem['tone']): AdminSurfaceTone {
+  if (tone === 'calm') return 'success'
+  return tone
 }
 
 function formatAuditHealthState(state: string, t: TranslateFunction) {

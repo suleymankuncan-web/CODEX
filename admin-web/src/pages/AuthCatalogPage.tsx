@@ -3,12 +3,26 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Fingerprint, Shield, SlidersHorizontal, UserRoundCog } from 'lucide-react'
 import {
-  EmptyState,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+} from './admin-surface-primitives'
+import {
+  AuthActionRow,
+  AuthButton,
+  AuthInput,
+  AuthList,
+  AuthListRow,
+  AuthMuted,
+  AuthNativeSelect,
+  AuthRowHead,
+} from '../features/auth/AuthSurfacePrimitives'
 import {
   getPermissions,
   getRoles,
@@ -75,90 +89,142 @@ export function AuthCatalogPage() {
   }, [deferredSearch, roles])
 
   if (rolesQuery.isLoading || permissionsQuery.isLoading) {
-    return <ScreenState title={t('authCatalog.loadingTitle')} copy={t('authCatalog.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('authCatalog.loadingTitle')} description={t('authCatalog.loadingCopy')} />
+      </AdminSurfacePage>
+    )
   }
 
   if (rolesQuery.isError) {
-    return <ScreenState title={t('authCatalog.roleErrorTitle')} copy={getErrorMessage(rolesQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('authCatalog.roleErrorTitle')}
+          description={getErrorMessage(rolesQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (permissionsQuery.isError) {
-    return <ScreenState title={t('authCatalog.permissionErrorTitle')} copy={getErrorMessage(permissionsQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('authCatalog.permissionErrorTitle')}
+          description={getErrorMessage(permissionsQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('authCatalog.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('authCatalog.heroTitle')}</h2>
-          <p className="hero-copy">{t('authCatalog.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('authCatalog.roles')} value={String(roles.length)} />
-          <MetricAccent label={t('authCatalog.permissions')} value={String(permissions.length)} />
-          <MetricAccent label={t('authCatalog.systemRoles')} value={String(roles.filter((role) => role.isSystemRole).length)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('authCatalog.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('authCatalog.heroEyebrow')}
+        title={t('authCatalog.heroTitle')}
+        description={t('authCatalog.heroCopy')}
+        icon={<Shield size={18} />}
+        meta={
+          <>
+            <AdminSurfaceBadge tone="accent">{t('authCatalog.roles')}: {roles.length}</AdminSurfaceBadge>
+            <AdminSurfaceBadge tone="cyan">{t('authCatalog.permissions')}: {permissions.length}</AdminSurfaceBadge>
+            <AdminSurfaceBadge tone="neutral">
+              {t('authCatalog.systemRoles')}: {roles.filter((role) => role.isSystemRole).length}
+            </AdminSurfaceBadge>
+          </>
+        }
+      />
 
-      <Link className="back-link" to="/admin/auth">
-        <span>{t('authCatalog.backToAuthOverview')}</span>
-      </Link>
+      <AuthActionRow>
+        <AuthButton asChild size="sm" variant="outline">
+          <Link to="/admin/auth">{t('authCatalog.backToAuthOverview')}</Link>
+        </AuthButton>
+      </AuthActionRow>
 
-      <section className="metric-grid">
-        <MetricCard title={t('authCatalog.roleCount')} value={roles.length} note={t('authCatalog.roleCountNote')} icon={<UserRoundCog size={18} />} tone="accent" />
-        <MetricCard title={t('authCatalog.permissionCount')} value={permissions.length} note={t('authCatalog.permissionCountNote')} icon={<Fingerprint size={18} />} tone="calm" />
-        <MetricCard title={t('authCatalog.companyScoped')} value={roles.filter((role) => role.scopeType === 'company').length} note={t('authCatalog.companyScopedNote')} icon={<Shield size={18} />} tone="warning" />
-        <MetricCard title={t('authCatalog.searchable')} value={filteredRoles.length} note={t('authCatalog.searchableNote')} icon={<SlidersHorizontal size={18} />} tone="danger" />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'auth-catalog-role-count',
+            label: t('authCatalog.roleCount'),
+            value: roles.length,
+            description: t('authCatalog.roleCountNote'),
+            icon: <UserRoundCog size={18} />,
+            tone: 'accent',
+          },
+          {
+            id: 'auth-catalog-permission-count',
+            label: t('authCatalog.permissionCount'),
+            value: permissions.length,
+            description: t('authCatalog.permissionCountNote'),
+            icon: <Fingerprint size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'auth-catalog-company-scoped',
+            label: t('authCatalog.companyScoped'),
+            value: roles.filter((role) => role.scopeType === 'company').length,
+            description: t('authCatalog.companyScopedNote'),
+            icon: <Shield size={18} />,
+            tone: 'warning',
+          },
+          {
+            id: 'auth-catalog-searchable',
+            label: t('authCatalog.searchable'),
+            value: filteredRoles.length,
+            description: t('authCatalog.searchableNote'),
+            icon: <SlidersHorizontal size={18} />,
+            tone: 'danger',
+          },
+        ]}
+      />
 
-      {feedback ? (
-        <section className="panel">
-          <div className="inline-state inline-state-accent">{feedback}</div>
-        </section>
-      ) : null}
+      {feedback ? <AdminStatePanel title={feedback} tone="success" /> : null}
 
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading panel-heading-spread">
-            <div>
-              <div className="eyebrow">{t('authCatalog.roles')}</div>
-              <h3>{t('authCatalog.roleDefinitions')}</h3>
-              <p className="queue-subtitle">{t('authCatalog.roleSearchCopy')}</p>
-            </div>
-            <label className="search-field">
-              <span className="sr-only">{t('authCatalog.filterRoles')}</span>
-              <input
+      <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+        <AdminSurfaceSection
+          eyebrow={t('authCatalog.roles')}
+          title={t('authCatalog.roleDefinitions')}
+          description={t('authCatalog.roleSearchCopy')}
+          actions={
+            <label className="tw:min-w-64">
+              <span className="tw:sr-only">{t('authCatalog.filterRoles')}</span>
+              <AuthInput
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('authCatalog.roleSearchPlaceholder')}
               />
             </label>
-          </div>
-
+          }
+        >
           {filteredRoles.length === 0 ? (
-            <EmptyState copy={t('authCatalog.noRolesMatched')} />
+            <AdminSurfaceEmpty copy={t('authCatalog.noRolesMatched')} />
           ) : (
-            <div className="stacked-table">
+            <AuthList>
               {filteredRoles.map((role) => (
-                <article className="stacked-row" key={role.roleId}>
-                  <div className="stacked-row-head">
+                <AuthListRow key={role.roleId}>
+                  <AuthRowHead>
                     <div>
-                      <strong>{role.roleCode}</strong>
-                      <span className="queue-subtitle">{role.roleName}</span>
+                      <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{role.roleCode}</strong>
+                      <AuthMuted>{role.roleName}</AuthMuted>
                     </div>
-                    <StatusPill tone={role.isSystemRole ? 'accent' : 'neutral'}>
+                    <AdminSurfaceBadge tone={role.isSystemRole ? 'accent' : 'neutral'}>
                       {role.isSystemRole ? t('authCatalog.systemRole') : t('authCatalog.customRole')}
-                    </StatusPill>
-                  </div>
-                  <p>{role.description ?? t('authCatalog.noRoleDescription')}</p>
-                  <div className="action-cluster">
-                    <span className="inline-state inline-state-neutral">{role.scopeType}</span>
+                    </AdminSurfaceBadge>
+                  </AuthRowHead>
+                  <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                    {role.description ?? t('authCatalog.noRoleDescription')}
+                  </p>
+                  <AuthActionRow>
+                    <AdminSurfaceBadge tone="neutral">{role.scopeType}</AdminSurfaceBadge>
                     {role.permissions.map((permission) => (
-                      <button
-                        className="control-button"
+                      <AuthButton
                         key={`${role.roleId}:${permission.permissionCode}`}
+                        size="sm"
                         type="button"
+                        variant="outline"
                         onClick={() =>
                           revokeMutation.mutate({
                             roleId: role.roleId,
@@ -168,13 +234,13 @@ export function AuthCatalogPage() {
                         disabled={grantMutation.isPending || revokeMutation.isPending}
                       >
                         {t('authCatalog.revokePermission', { permissionCode: permission.permissionCode })}
-                      </button>
+                      </AuthButton>
                     ))}
-                  </div>
-                  <div className="action-cluster">
-                    <label className="control-select">
-                      <span className="sr-only">{t('authCatalog.permissionToGrant')}</span>
-                      <select
+                  </AuthActionRow>
+                  <AuthActionRow>
+                    <label className="tw:min-w-56">
+                      <span className="tw:sr-only">{t('authCatalog.permissionToGrant')}</span>
+                      <AuthNativeSelect
                         value={draftByRole[role.roleId] ?? ''}
                         onChange={(event) =>
                           setDraftByRole((current) => ({
@@ -189,10 +255,9 @@ export function AuthCatalogPage() {
                             {permission.permissionCode}
                           </option>
                         ))}
-                      </select>
+                      </AuthNativeSelect>
                     </label>
-                    <button
-                      className="control-button"
+                    <AuthButton
                       type="button"
                       onClick={() =>
                         grantMutation.mutate({
@@ -207,42 +272,43 @@ export function AuthCatalogPage() {
                       }
                     >
                       {grantMutation.isPending ? t('authCatalog.granting') : t('authCatalog.grantPermission')}
-                    </button>
-                  </div>
-                </article>
+                    </AuthButton>
+                  </AuthActionRow>
+                </AuthListRow>
               ))}
-            </div>
+            </AuthList>
           )}
-        </article>
+        </AdminSurfaceSection>
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('authCatalog.permissions')}</div>
-              <h3>{t('authCatalog.permissionCatalog')}</h3>
-            </div>
-          </div>
+        <AdminSurfaceSection
+          eyebrow={t('authCatalog.permissions')}
+          title={t('authCatalog.permissionCatalog')}
+        >
           {permissions.length === 0 ? (
-            <EmptyState copy={t('authCatalog.noPermissions')} />
+            <AdminSurfaceEmpty copy={t('authCatalog.noPermissions')} />
           ) : (
-            <div className="stacked-table">
+            <AuthList>
               {permissions.map((permission) => (
-                <article className="stacked-row" key={permission.permissionId}>
-                  <div className="stacked-row-head">
-                    <strong>{permission.permissionCode}</strong>
-                    <StatusPill tone="neutral">{permission.resourceName}</StatusPill>
-                  </div>
-                  <p>{permission.description ?? t('authCatalog.noPermissionDescription')}</p>
-                  <div className="action-cluster">
-                    <span className="inline-state inline-state-neutral">{permission.resourceName}</span>
-                    <span className="inline-state inline-state-calm">{permission.actionName}</span>
-                  </div>
-                </article>
+                <AuthListRow key={permission.permissionId}>
+                  <AuthRowHead>
+                    <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
+                      {permission.permissionCode}
+                    </strong>
+                    <AdminSurfaceBadge tone="neutral">{permission.resourceName}</AdminSurfaceBadge>
+                  </AuthRowHead>
+                  <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                    {permission.description ?? t('authCatalog.noPermissionDescription')}
+                  </p>
+                  <AdminKeyValueGrid className="tw:lg:grid-cols-2">
+                    <AdminKeyValue label={t('authCatalog.permissions')} value={permission.resourceName} />
+                    <AdminKeyValue label={t('authCatalog.permissionCatalog')} value={permission.actionName} />
+                  </AdminKeyValueGrid>
+                </AuthListRow>
               ))}
-            </div>
+            </AuthList>
           )}
-        </article>
+        </AdminSurfaceSection>
       </section>
-    </section>
+    </AdminSurfacePage>
   )
 }

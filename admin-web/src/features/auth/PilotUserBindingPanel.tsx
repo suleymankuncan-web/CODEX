@@ -3,6 +3,15 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useLocalization } from '../localization/useLocalization'
 import { getErrorMessage } from '../../lib/format'
 import { createPilotUserBinding, type AuthLookupStore } from './api'
+import { AdminStatePanel, AdminSurfaceSection } from '../../pages/admin-surface-primitives'
+import {
+  AuthActionRow,
+  AuthButton,
+  AuthField,
+  AuthFormGrid,
+  AuthInput,
+  AuthNativeSelect,
+} from './AuthSurfacePrimitives'
 
 type PilotRole = 'REGION_MANAGER' | 'STORE_MANAGER' | 'VISUAL_MERCHANDISER'
 type PilotAuthProvider = 'oidc' | 'clerk'
@@ -99,39 +108,33 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
   })
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('authAdmin.pilotAccess')}</div>
-          <h3>{t('authAdmin.pilotUserBinding')}</h3>
-        </div>
-      </div>
-      {feedback ? <div className="inline-state inline-state-accent">{feedback}</div> : null}
-      {errorFeedback ? <div className="inline-state inline-state-danger">{errorFeedback}</div> : null}
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('authAdmin.pilotEmployeeId')}</span>
-          <input
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.pilotAccess')}
+      title={t('authAdmin.pilotUserBinding')}
+    >
+      {feedback ? <AdminStatePanel title={feedback} tone="success" /> : null}
+      {errorFeedback ? <AdminStatePanel title={errorFeedback} tone="danger" /> : null}
+      <AuthFormGrid>
+        <AuthField label={t('authAdmin.pilotEmployeeId')}>
+          <AuthInput
             aria-label={t('authAdmin.pilotEmployeeId')}
             value={employeeId}
             onChange={(event) =>
               dispatch({ type: 'set-text-field', field: 'employeeId', value: event.target.value })
             }
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.pilotProviderSubject')}</span>
-          <input
+        </AuthField>
+        <AuthField label={t('authAdmin.pilotProviderSubject')}>
+          <AuthInput
             aria-label={t('authAdmin.pilotProviderSubject')}
             value={providerSubject}
             onChange={(event) =>
               dispatch({ type: 'set-text-field', field: 'providerSubject', value: event.target.value })
             }
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.pilotAuthProvider')}</span>
-          <select
+        </AuthField>
+        <AuthField label={t('authAdmin.pilotAuthProvider')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.pilotAuthProvider')}
             value={authProvider}
             onChange={(event) =>
@@ -143,31 +146,28 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           >
             <option value="clerk">clerk</option>
             <option value="oidc">oidc</option>
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.pilotUsername')}</span>
-          <input
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.pilotUsername')}>
+          <AuthInput
             aria-label={t('authAdmin.pilotUsername')}
             value={username}
             onChange={(event) =>
               dispatch({ type: 'set-text-field', field: 'username', value: event.target.value })
             }
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.pilotEmail')}</span>
-          <input
+        </AuthField>
+        <AuthField label={t('authAdmin.pilotEmail')}>
+          <AuthInput
             aria-label={t('authAdmin.pilotEmail')}
             value={email}
             onChange={(event) =>
               dispatch({ type: 'set-text-field', field: 'email', value: event.target.value })
             }
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.pilotRole')}</span>
-          <select
+        </AuthField>
+        <AuthField label={t('authAdmin.pilotRole')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.pilotRole')}
             value={roleCode}
             onChange={(event) =>
@@ -177,11 +177,10 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
             <option value="STORE_MANAGER">STORE_MANAGER</option>
             <option value="REGION_MANAGER">REGION_MANAGER</option>
             <option value="VISUAL_MERCHANDISER">VISUAL_MERCHANDISER</option>
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.pilotStores')}</span>
-          <select
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.pilotStores')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.pilotStores')}
             multiple
             value={storeIds}
@@ -197,12 +196,11 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
                 {store.storeCode} - {store.storeName}
               </option>
             ))}
-          </select>
-        </label>
-      </div>
-      <div className="action-cluster">
-        <button
-          className="control-button"
+          </AuthNativeSelect>
+        </AuthField>
+      </AuthFormGrid>
+      <AuthActionRow className="tw:justify-end">
+        <AuthButton
           type="button"
           disabled={
             mutation.isPending ||
@@ -226,8 +224,8 @@ export function PilotUserBindingPanel({ stores }: { stores: AuthLookupStore[] })
           }}
         >
           {mutation.isPending ? t('authAdmin.creating') : t('authAdmin.createPilotBinding')}
-        </button>
-      </div>
-    </article>
+        </AuthButton>
+      </AuthActionRow>
+    </AdminSurfaceSection>
   )
 }

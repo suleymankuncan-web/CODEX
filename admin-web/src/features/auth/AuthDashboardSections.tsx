@@ -1,12 +1,28 @@
 import { Link } from 'react-router-dom'
 import { KeyRound, MapPin, ShieldCheck, UserCog, Users } from 'lucide-react'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  StatusPill,
-} from '../../components/dashboard-primitives'
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+} from '../../pages/admin-surface-primitives'
+import {
+  AuthActionRow,
+  AuthButton,
+  AuthField,
+  AuthFormGrid,
+  AuthInput,
+  AuthList,
+  AuthListRow,
+  AuthMuted,
+  AuthNativeSelect,
+  AuthRowHead,
+} from './AuthSurfacePrimitives'
 import { formatDateTime } from '../../lib/format'
 import type {
   ActionStoreAssignment,
@@ -123,48 +139,46 @@ export type AuthDashboardContentProps = {
 
 export function AuthDashboardContent(props: AuthDashboardContentProps) {
   return (
-    <section className="page-stack">
+    <AdminSurfacePage ariaLabel={props.t('authAdmin.heroEyebrow')}>
       <AuthHeroPanel t={props.t} lookups={props.lookups} />
       <AuthMetricsGrid {...props} />
       <FeedbackPanels feedback={props.feedback} errorFeedback={props.errorFeedback} />
       <PilotUserBindingPanel stores={props.lookups.stores} />
       <RolePermissionPreviewPanel t={props.t} lookups={props.lookups} />
-      <section className="two-up-grid">
+      <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
         <CreateUserPanel {...props} />
         <CreateRoleAssignmentPanel {...props} />
       </section>
-      <section className="two-up-grid">
+      <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
         <CreateActionStoreAssignmentPanel {...props} />
         <ActionStoreGrantsPanel {...props} />
       </section>
 
-      <section className="two-up-grid">
+      <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
         <LookupPosturePanel t={props.t} lookups={props.lookups} />
         <UserInventoryPanel {...props} />
       </section>
 
       <RoleAssignmentsPanel {...props} />
-    </section>
+    </AdminSurfacePage>
   )
 }
 
 function AuthHeroPanel({ t, lookups }: Pick<AuthDashboardContentProps, 't' | 'lookups'>) {
   return (
-    <section className="hero-panel">
-      <div>
-        <div className="eyebrow">{t('authAdmin.heroEyebrow')}</div>
-        <h2 className="hero-title">{t('authAdmin.heroTitle')}</h2>
-        <p className="hero-copy">{t('authAdmin.heroCopy')}</p>
-      </div>
-      <div className="hero-metrics">
-        <MetricAccent label={t('authAdmin.users')} value={String(lookups.meta.totalUsers)} />
-        <MetricAccent label={t('authAdmin.roles')} value={String(lookups.meta.totalRoles)} />
-        <MetricAccent
-          label={t('authAdmin.permissions')}
-          value={String(lookups.meta.totalPermissions)}
-        />
-      </div>
-    </section>
+    <AdminSurfaceHeader
+      eyebrow={t('authAdmin.heroEyebrow')}
+      title={t('authAdmin.heroTitle')}
+      description={t('authAdmin.heroCopy')}
+      icon={<ShieldCheck size={18} />}
+      meta={
+        <>
+          <AdminSurfaceBadge tone="accent">{t('authAdmin.users')}: {lookups.meta.totalUsers}</AdminSurfaceBadge>
+          <AdminSurfaceBadge tone="cyan">{t('authAdmin.roles')}: {lookups.meta.totalRoles}</AdminSurfaceBadge>
+          <AdminSurfaceBadge tone="neutral">{t('authAdmin.permissions')}: {lookups.meta.totalPermissions}</AdminSurfaceBadge>
+        </>
+      }
+    />
   )
 }
 
@@ -189,43 +203,51 @@ function AuthMetricsGrid({
   | 'activeActionStores'
 >) {
   return (
-    <section className="metric-grid">
-      <MetricCard
-        title={t('authAdmin.activeUsers')}
-        value={activeUsers}
-        note={t('authAdmin.inactiveAccountsNote', { count: users.length - activeUsers })}
-        icon={<Users size={18} />}
-        tone="calm"
-      />
-      <MetricCard
-        title={t('authAdmin.assignments')}
-        value={assignments.length}
-        note={t('authAdmin.activeRoleGrantsNote', { count: activeAssignments })}
-        icon={<UserCog size={18} />}
-        tone="accent"
-      />
-      <MetricCard
-        title={t('authAdmin.actionStores')}
-        value={actionStoreAssignments.length}
-        note={t('authAdmin.activeStoreActionGrantsNote', { count: activeActionStores })}
-        icon={<MapPin size={18} />}
-        tone="calm"
-      />
-      <MetricCard
-        title={t('authAdmin.roleCatalog')}
-        value={lookups.meta.totalRoles}
-        note={t('authAdmin.roleCatalogNote')}
-        icon={<ShieldCheck size={18} />}
-        tone="warning"
-      />
-      <MetricCard
-        title={t('authAdmin.permissionCatalog')}
-        value={lookups.meta.totalPermissions}
-        note={t('authAdmin.permissionCatalogNote')}
-        icon={<KeyRound size={18} />}
-        tone="danger"
-      />
-    </section>
+    <AdminMetricStrip
+      className="tw:xl:grid-cols-5"
+      items={[
+        {
+          id: 'active-users',
+          label: t('authAdmin.activeUsers'),
+          value: activeUsers,
+          description: t('authAdmin.inactiveAccountsNote', { count: users.length - activeUsers }),
+          icon: <Users size={18} />,
+          tone: 'cyan',
+        },
+        {
+          id: 'assignments',
+          label: t('authAdmin.assignments'),
+          value: assignments.length,
+          description: t('authAdmin.activeRoleGrantsNote', { count: activeAssignments }),
+          icon: <UserCog size={18} />,
+          tone: 'accent',
+        },
+        {
+          id: 'action-stores',
+          label: t('authAdmin.actionStores'),
+          value: actionStoreAssignments.length,
+          description: t('authAdmin.activeStoreActionGrantsNote', { count: activeActionStores }),
+          icon: <MapPin size={18} />,
+          tone: 'success',
+        },
+        {
+          id: 'role-catalog',
+          label: t('authAdmin.roleCatalog'),
+          value: lookups.meta.totalRoles,
+          description: t('authAdmin.roleCatalogNote'),
+          icon: <ShieldCheck size={18} />,
+          tone: 'warning',
+        },
+        {
+          id: 'permission-catalog',
+          label: t('authAdmin.permissionCatalog'),
+          value: lookups.meta.totalPermissions,
+          description: t('authAdmin.permissionCatalogNote'),
+          icon: <KeyRound size={18} />,
+          tone: 'danger',
+        },
+      ]}
+    />
   )
 }
 
@@ -236,15 +258,11 @@ function FeedbackPanels({
   return (
     <>
       {feedback ? (
-        <section className="panel">
-          <div className="inline-state inline-state-accent">{feedback}</div>
-        </section>
+        <AdminStatePanel title={feedback} tone="success" />
       ) : null}
 
       {errorFeedback ? (
-        <section className="panel">
-          <div className="inline-state inline-state-danger">{errorFeedback}</div>
-        </section>
+        <AdminStatePanel title={errorFeedback} tone="danger" />
       ) : null}
     </>
   )
@@ -269,36 +287,32 @@ function CreateUserPanel({
   | 'onSubmitUserForm'
 >) {
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('authAdmin.createUserEyebrow')}</div>
-          <h3>{t('authAdmin.newAccount')}</h3>
-        </div>
-        <Link className="back-link" to="/admin/auth/catalog">
-          <span>{t('authAdmin.openCatalog')}</span>
-        </Link>
-      </div>
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('authAdmin.username')}</span>
-          <input
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.createUserEyebrow')}
+      title={t('authAdmin.newAccount')}
+      actions={
+        <AuthButton asChild size="sm" variant="outline">
+          <Link to="/admin/auth/catalog">{t('authAdmin.openCatalog')}</Link>
+        </AuthButton>
+      }
+    >
+      <AuthFormGrid>
+        <AuthField label={t('authAdmin.username')}>
+          <AuthInput
             value={userForm.username}
             onChange={(event) => onUpdateUserForm('username', event.target.value)}
             placeholder="new.admin"
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.email')}</span>
-          <input
+        </AuthField>
+        <AuthField label={t('authAdmin.email')}>
+          <AuthInput
             value={userForm.email}
             onChange={(event) => onUpdateUserForm('email', event.target.value)}
             placeholder="new.admin@example.com"
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.authProvider')}</span>
-          <select
+        </AuthField>
+        <AuthField label={t('authAdmin.authProvider')}>
+          <AuthNativeSelect
             value={userForm.authProvider}
             onChange={(event) => onUpdateUserForm('authProvider', event.target.value as AuthProvider)}
           >
@@ -307,28 +321,26 @@ function CreateUserPanel({
                 {provider}
               </option>
             ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.employeeId')}</span>
-          <input
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.employeeId')}>
+          <AuthInput
             value={userForm.employeeId}
             onChange={(event) => onUpdateUserForm('employeeId', event.target.value)}
             placeholder={t('authAdmin.optionalEmployeeUuid')}
           />
-        </label>
-      </div>
-      <div className="action-cluster">
-        <button
-          className="control-button"
+        </AuthField>
+      </AuthFormGrid>
+      <AuthActionRow className="tw:justify-end">
+        <AuthButton
           type="button"
           onClick={onSubmitUserForm}
           disabled={mutationBusy || !userForm.username.trim() || !userForm.email.trim()}
         >
           {pending.createUser ? t('authAdmin.creating') : t('authAdmin.createUser')}
-        </button>
-      </div>
-    </article>
+        </AuthButton>
+      </AuthActionRow>
+    </AdminSurfaceSection>
   )
 }
 
@@ -377,26 +389,21 @@ function CreateRoleAssignmentPanel({
     (assignmentForm.scopeType === 'store' && !assignmentForm.storeId.trim())
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('authAdmin.createAssignmentEyebrow')}</div>
-          <h3>{t('authAdmin.scopedRoleGrant')}</h3>
-        </div>
-      </div>
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('authAdmin.searchUsersForRoleGrant')}</span>
-          <input
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.createAssignmentEyebrow')}
+      title={t('authAdmin.scopedRoleGrant')}
+    >
+      <AuthFormGrid>
+        <AuthField label={t('authAdmin.searchUsersForRoleGrant')}>
+          <AuthInput
             aria-label={t('authAdmin.searchUsersForRoleGrant')}
             value={assignmentUserSearch}
             onChange={(event) => onSetAssignmentUserSearch(event.target.value)}
             placeholder={t('authAdmin.userSearchPlaceholder')}
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.roleAssignmentUser')}</span>
-          <select
+        </AuthField>
+        <AuthField label={t('authAdmin.roleAssignmentUser')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.roleAssignmentUser')}
             value={assignmentForm.userId}
             onChange={(event) => onSelectAssignmentUser(event.target.value)}
@@ -407,11 +414,10 @@ function CreateRoleAssignmentPanel({
                 {user.username} - {user.email}
               </option>
             ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.roleAssignmentRole')}</span>
-          <select
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.roleAssignmentRole')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.roleAssignmentRole')}
             value={assignmentForm.roleCode}
             onChange={(event) => onUpdateAssignmentForm('roleCode', event.target.value)}
@@ -422,11 +428,10 @@ function CreateRoleAssignmentPanel({
                 {role.roleCode} - {role.scopeType}
               </option>
             ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.roleAssignmentScopeType')}</span>
-          <select
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.roleAssignmentScopeType')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.roleAssignmentScopeType')}
             value={assignmentForm.scopeType}
             onChange={(event) => onSetAssignmentScopeType(event.target.value as RoleScopeType)}
@@ -436,40 +441,36 @@ function CreateRoleAssignmentPanel({
                 {scopeType}
               </option>
             ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.companyId')}</span>
-          <input
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.companyId')}>
+          <AuthInput
             value={assignmentForm.companyId}
             onChange={(event) => onUpdateAssignmentForm('companyId', event.target.value)}
             placeholder={t('authAdmin.companyIdPlaceholder')}
           />
-        </label>
+        </AuthField>
         {assignmentForm.scopeType !== 'company' ? (
-          <label className="field-block">
-            <span>{t('authAdmin.regionId')}</span>
-            <input
+          <AuthField label={t('authAdmin.regionId')}>
+            <AuthInput
               value={assignmentForm.regionId}
               onChange={(event) => onUpdateAssignmentForm('regionId', event.target.value)}
               placeholder={t('authAdmin.regionIdPlaceholder')}
             />
-          </label>
+          </AuthField>
         ) : null}
         {assignmentForm.scopeType === 'store' ? (
           <>
-            <label className="field-block">
-              <span>{t('authAdmin.searchStoresForRoleGrant')}</span>
-              <input
+            <AuthField label={t('authAdmin.searchStoresForRoleGrant')}>
+              <AuthInput
                 aria-label={t('authAdmin.searchStoresForRoleGrant')}
                 value={assignmentStoreSearch}
                 onChange={(event) => onSetAssignmentStoreSearch(event.target.value)}
                 placeholder={t('authAdmin.storeSearchPlaceholder')}
               />
-            </label>
-            <label className="field-block">
-              <span>{t('authAdmin.roleAssignmentStore')}</span>
-              <select
+            </AuthField>
+            <AuthField label={t('authAdmin.roleAssignmentStore')}>
+              <AuthNativeSelect
                 aria-label={t('authAdmin.roleAssignmentStore')}
                 value={assignmentForm.storeId}
                 onChange={(event) => onSelectAssignmentStore(event.target.value)}
@@ -480,38 +481,35 @@ function CreateRoleAssignmentPanel({
                     {store.storeCode} - {store.storeName} - {store.regionName}
                   </option>
                 ))}
-              </select>
-            </label>
+              </AuthNativeSelect>
+            </AuthField>
           </>
         ) : null}
-        <label className="field-block">
-          <span>{t('authAdmin.effectiveFrom')}</span>
-          <input
+        <AuthField label={t('authAdmin.effectiveFrom')}>
+          <AuthInput
             type="date"
             value={assignmentForm.effectiveFrom}
             onChange={(event) => onUpdateAssignmentForm('effectiveFrom', event.target.value)}
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.effectiveTo')}</span>
-          <input
+        </AuthField>
+        <AuthField label={t('authAdmin.effectiveTo')}>
+          <AuthInput
             type="date"
             value={assignmentForm.effectiveTo}
             onChange={(event) => onUpdateAssignmentForm('effectiveTo', event.target.value)}
           />
-        </label>
-      </div>
-      <div className="action-cluster">
-        <button
-          className="control-button"
+        </AuthField>
+      </AuthFormGrid>
+      <AuthActionRow className="tw:justify-end">
+        <AuthButton
           type="button"
           onClick={onSubmitAssignmentForm}
           disabled={submitDisabled}
         >
           {pending.createAssignment ? t('authAdmin.creating') : t('authAdmin.createAssignment')}
-        </button>
-      </div>
-    </article>
+        </AuthButton>
+      </AuthActionRow>
+    </AdminSurfaceSection>
   )
 }
 
@@ -548,26 +546,21 @@ function CreateActionStoreAssignmentPanel({
   | 'onSubmitActionStoreForm'
 >) {
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('authAdmin.actionStoreAssignmentEyebrow')}</div>
-          <h3>{t('authAdmin.assignedStoresTitle')}</h3>
-        </div>
-      </div>
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('authAdmin.searchUsersForActionAccess')}</span>
-          <input
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.actionStoreAssignmentEyebrow')}
+      title={t('authAdmin.assignedStoresTitle')}
+    >
+      <AuthFormGrid>
+        <AuthField label={t('authAdmin.searchUsersForActionAccess')}>
+          <AuthInput
             aria-label={t('authAdmin.searchUsersForActionAccess')}
             value={actionStoreUserSearch}
             onChange={(event) => onSetActionStoreUserSearch(event.target.value)}
             placeholder={t('authAdmin.userSearchPlaceholder')}
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.actionAccessUser')}</span>
-          <select
+        </AuthField>
+        <AuthField label={t('authAdmin.actionAccessUser')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.actionAccessUser')}
             value={actionStoreForm.userId}
             onChange={(event) => onSelectActionStoreUser(event.target.value)}
@@ -578,20 +571,18 @@ function CreateActionStoreAssignmentPanel({
                 {user.username} - {user.email}
               </option>
             ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.searchStoresForActionAccess')}</span>
-          <input
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.searchStoresForActionAccess')}>
+          <AuthInput
             aria-label={t('authAdmin.searchStoresForActionAccess')}
             value={actionStoreSearch}
             onChange={(event) => onSetActionStoreSearch(event.target.value)}
             placeholder={t('authAdmin.storeSearchPlaceholder')}
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.actionStore')}</span>
-          <select
+        </AuthField>
+        <AuthField label={t('authAdmin.actionStore')}>
+          <AuthNativeSelect
             aria-label={t('authAdmin.actionStore')}
             value={actionStoreForm.storeId}
             onChange={(event) => onSelectActionStore(event.target.value)}
@@ -602,28 +593,25 @@ function CreateActionStoreAssignmentPanel({
                 {store.storeCode} - {store.storeName} - {store.regionName}
               </option>
             ))}
-          </select>
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.effectiveFrom')}</span>
-          <input
+          </AuthNativeSelect>
+        </AuthField>
+        <AuthField label={t('authAdmin.effectiveFrom')}>
+          <AuthInput
             type="date"
             value={actionStoreForm.effectiveFrom}
             onChange={(event) => onUpdateActionStoreForm('effectiveFrom', event.target.value)}
           />
-        </label>
-        <label className="field-block">
-          <span>{t('authAdmin.effectiveTo')}</span>
-          <input
+        </AuthField>
+        <AuthField label={t('authAdmin.effectiveTo')}>
+          <AuthInput
             type="date"
             value={actionStoreForm.effectiveTo}
             onChange={(event) => onUpdateActionStoreForm('effectiveTo', event.target.value)}
           />
-        </label>
-      </div>
-      <div className="action-cluster">
-        <button
-          className="control-button"
+        </AuthField>
+      </AuthFormGrid>
+      <AuthActionRow className="tw:justify-end">
+        <AuthButton
           type="button"
           onClick={onSubmitActionStoreForm}
           disabled={mutationBusy || !actionStoreForm.userId || !actionStoreForm.storeId}
@@ -631,9 +619,9 @@ function CreateActionStoreAssignmentPanel({
           {pending.createActionStoreAssignment
             ? t('authAdmin.assigning')
             : t('authAdmin.assignActionStore')}
-        </button>
-      </div>
-    </article>
+        </AuthButton>
+      </AuthActionRow>
+    </AdminSurfaceSection>
   )
 }
 
@@ -654,35 +642,32 @@ function ActionStoreGrantsPanel({
   | 'onDeactivateActionStoreAssignment'
 >) {
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('authAdmin.actionGrants')}</div>
-          <h3>{t('authAdmin.storeLevelActionAccess')}</h3>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.actionGrants')}
+      title={t('authAdmin.storeLevelActionAccess')}
+    >
       {filteredActionStoreAssignments.length === 0 ? (
-        <EmptyState copy={t('authAdmin.noActionStoreAssignments')} />
+        <AdminSurfaceEmpty copy={t('authAdmin.noActionStoreAssignments')} />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {filteredActionStoreAssignments.map((assignment) => (
-            <article className="stacked-row" key={assignment.assignmentId}>
-              <div className="stacked-row-head">
+            <AuthListRow key={assignment.assignmentId}>
+              <AuthRowHead>
                 <div>
-                  <strong>{assignment.username}</strong>
-                  <span className="queue-subtitle">{assignment.email}</span>
+                  <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{assignment.username}</strong>
+                  <AuthMuted>{assignment.email}</AuthMuted>
                 </div>
-                <StatusPill tone={assignment.active ? 'calm' : 'danger'}>
+                <AdminSurfaceBadge tone={assignment.active ? 'success' : 'danger'}>
                   {assignment.active ? t('authAdmin.active') : t('authAdmin.inactive')}
-                </StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue
+                </AdminSurfaceBadge>
+              </AuthRowHead>
+              <AdminKeyValueGrid>
+                <AdminKeyValue
                   label={t('authAdmin.store')}
                   value={`${assignment.storeCode} - ${assignment.storeName}`}
                 />
-                <KeyValue label={t('authAdmin.region')} value={assignment.regionName} />
-                <KeyValue
+                <AdminKeyValue label={t('authAdmin.region')} value={assignment.regionName} />
+                <AdminKeyValue
                   label={t('authAdmin.effectiveFrom')}
                   value={
                     assignment.effectiveFrom
@@ -690,18 +675,17 @@ function ActionStoreGrantsPanel({
                       : t('authAdmin.immediate')
                   }
                 />
-                <KeyValue label={t('authAdmin.storeId')} value={assignment.storeId} />
-              </div>
-              <div className="action-cluster">
-                <Link
-                  className="back-link"
-                  to={`/admin/auth/action-store-assignments/${assignment.assignmentId}/audit`}
-                >
-                  <span>{t('authAdmin.openAudit')}</span>
-                </Link>
+                <AdminKeyValue label={t('authAdmin.storeId')} value={assignment.storeId} />
+              </AdminKeyValueGrid>
+              <AuthActionRow>
+                <AuthButton asChild size="sm" variant="outline">
+                  <Link to={`/admin/auth/action-store-assignments/${assignment.assignmentId}/audit`}>
+                    {t('authAdmin.openAudit')}
+                  </Link>
+                </AuthButton>
                 {assignment.active ? (
-                  <button
-                    className="control-button"
+                  <AuthButton
+                    size="sm"
                     type="button"
                     onClick={() => onDeactivateActionStoreAssignment(assignment.assignmentId)}
                     disabled={mutationBusy}
@@ -709,43 +693,42 @@ function ActionStoreGrantsPanel({
                     {pending.deactivateActionStoreAssignment
                       ? t('authAdmin.updating')
                       : t('authAdmin.deactivateActionStore')}
-                  </button>
+                  </AuthButton>
                 ) : null}
-              </div>
-            </article>
+              </AuthActionRow>
+            </AuthListRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
 function LookupPosturePanel({ t, lookups }: Pick<AuthDashboardContentProps, 't' | 'lookups'>) {
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('authAdmin.lookupPosture')}</div>
-          <h3>{t('authAdmin.adminOptionSets')}</h3>
-        </div>
-        <Link className="back-link" to="/admin/auth/catalog">
-          <span>{t('authAdmin.openCatalog')}</span>
-        </Link>
-      </div>
-      <div className="key-grid">
-        <KeyValue label={t('authAdmin.scopeTypes')} value={lookups.scopeTypes.join(', ')} />
-        <KeyValue
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.lookupPosture')}
+      title={t('authAdmin.adminOptionSets')}
+      actions={
+        <AuthButton asChild size="sm" variant="outline">
+          <Link to="/admin/auth/catalog">{t('authAdmin.openCatalog')}</Link>
+        </AuthButton>
+      }
+    >
+      <AdminKeyValueGrid>
+        <AdminKeyValue label={t('authAdmin.scopeTypes')} value={lookups.scopeTypes.join(', ')} />
+        <AdminKeyValue
           label={t('authAdmin.authProviders')}
           value={lookups.authProviders.join(', ') || t('authAdmin.none')}
         />
-        <KeyValue label={t('authAdmin.userOptions')} value={String(lookups.optionGroups.users.length)} />
-        <KeyValue label={t('authAdmin.roleOptions')} value={String(lookups.optionGroups.roles.length)} />
-        <KeyValue
+        <AdminKeyValue label={t('authAdmin.userOptions')} value={String(lookups.optionGroups.users.length)} />
+        <AdminKeyValue label={t('authAdmin.roleOptions')} value={String(lookups.optionGroups.roles.length)} />
+        <AdminKeyValue
           label={t('authAdmin.storeOptions')}
           value={String(lookups.optionGroups.stores.length)}
         />
-      </div>
-    </article>
+      </AdminKeyValueGrid>
+    </AdminSurfaceSection>
   )
 }
 
@@ -768,36 +751,33 @@ function UserInventoryPanel({
   | 'onReactivateUser'
 >) {
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('authAdmin.recentUsers')}</div>
-          <h3>{t('authAdmin.accountInventory')}</h3>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.recentUsers')}
+      title={t('authAdmin.accountInventory')}
+    >
       {users.length === 0 ? (
-        <EmptyState copy={t('authAdmin.noUserAccounts')} />
+        <AdminSurfaceEmpty copy={t('authAdmin.noUserAccounts')} />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {users.slice(0, 6).map((user) => (
-            <article className="stacked-row" key={user.userId}>
-              <div className="stacked-row-head">
+            <AuthListRow key={user.userId}>
+              <AuthRowHead>
                 <div>
-                  <strong>{user.username}</strong>
-                  <span className="queue-subtitle">{user.email}</span>
+                  <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{user.username}</strong>
+                  <AuthMuted>{user.email}</AuthMuted>
                 </div>
-                <StatusPill tone={user.isActive ? 'calm' : 'danger'}>
+                <AdminSurfaceBadge tone={user.isActive ? 'success' : 'danger'}>
                   {user.isActive ? t('authAdmin.active') : t('authAdmin.inactive')}
-                </StatusPill>
-              </div>
-              <div className="key-grid">
-                <KeyValue label={t('authAdmin.provider')} value={user.authProvider} />
-                <KeyValue label={t('authAdmin.created')} value={formatDateTime(user.createdAt, locale)} />
-                <KeyValue
+                </AdminSurfaceBadge>
+              </AuthRowHead>
+              <AdminKeyValueGrid>
+                <AdminKeyValue label={t('authAdmin.provider')} value={user.authProvider} />
+                <AdminKeyValue label={t('authAdmin.created')} value={formatDateTime(user.createdAt, locale)} />
+                <AdminKeyValue
                   label={t('authAdmin.employeeStatus')}
                   value={user.employeeStatus ?? t('authAdmin.unlinked')}
                 />
-                <KeyValue
+                <AdminKeyValue
                   label={t('authAdmin.deactivated')}
                   value={
                     user.deactivatedAt
@@ -805,18 +785,18 @@ function UserInventoryPanel({
                       : t('authAdmin.no')
                   }
                 />
-                <KeyValue
+                <AdminKeyValue
                   label={t('authAdmin.deactivationReason')}
                   value={user.deactivationReason ?? t('authAdmin.none')}
                 />
-              </div>
-              <div className="action-cluster">
-                <Link className="back-link" to={`/admin/auth/users/${user.userId}/audit`}>
-                  <span>{t('authAdmin.openAudit')}</span>
-                </Link>
+              </AdminKeyValueGrid>
+              <AuthActionRow>
+                <AuthButton asChild size="sm" variant="outline">
+                  <Link to={`/admin/auth/users/${user.userId}/audit`}>{t('authAdmin.openAudit')}</Link>
+                </AuthButton>
                 {user.isActive ? (
-                  <button
-                    className="control-button"
+                  <AuthButton
+                    size="sm"
                     type="button"
                     onClick={() => {
                       const confirmed = window.confirm(t('authAdmin.deactivateUserConfirm'))
@@ -827,23 +807,23 @@ function UserInventoryPanel({
                     disabled={mutationBusy}
                   >
                     {pending.deactivateUser ? t('authAdmin.updating') : t('authAdmin.deactivateUser')}
-                  </button>
+                  </AuthButton>
                 ) : (
-                  <button
-                    className="control-button"
+                  <AuthButton
+                    size="sm"
                     type="button"
                     onClick={() => onReactivateUser(user.userId)}
                     disabled={mutationBusy}
                   >
                     {pending.reactivateUser ? t('authAdmin.updating') : t('authAdmin.reactivateUser')}
-                  </button>
+                  </AuthButton>
                 )}
-              </div>
-            </article>
+              </AuthActionRow>
+            </AuthListRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
@@ -868,61 +848,59 @@ function RoleAssignmentsPanel({
   | 'onDeactivateAssignment'
 >) {
   return (
-    <section className="panel">
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{t('authAdmin.scopedGrants')}</div>
-          <h3>{t('authAdmin.roleAssignmentQueue')}</h3>
-          <p className="queue-subtitle">{t('authAdmin.assignmentSearchCopy')}</p>
-        </div>
-        <label className="search-field">
-          <span className="sr-only">{t('authAdmin.filterAssignments')}</span>
-          <input
+    <AdminSurfaceSection
+      eyebrow={t('authAdmin.scopedGrants')}
+      title={t('authAdmin.roleAssignmentQueue')}
+      description={t('authAdmin.assignmentSearchCopy')}
+      actions={
+        <label className="tw:min-w-64">
+          <span className="tw:sr-only">{t('authAdmin.filterAssignments')}</span>
+          <AuthInput
             value={search}
             onChange={(event) => onSetSearch(event.target.value)}
             placeholder={t('authAdmin.assignmentSearchPlaceholder')}
           />
         </label>
-      </div>
-
+      }
+    >
       {filteredAssignments.length === 0 ? (
-        <EmptyState
+        <AdminSurfaceEmpty
           title={t('authAdmin.noAssignmentsMatched')}
           copy={t('authAdmin.clearSearchForInventory')}
         />
       ) : (
-        <div className="stacked-table">
+        <AuthList>
           {filteredAssignments.map((assignment) => (
-            <article className="stacked-row" key={assignment.assignmentId}>
-              <div className="stacked-row-head">
+            <AuthListRow key={assignment.assignmentId}>
+              <AuthRowHead>
                 <div>
-                  <strong>{assignment.username}</strong>
-                  <span className="queue-subtitle">{assignment.email}</span>
+                  <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{assignment.username}</strong>
+                  <AuthMuted>{assignment.email}</AuthMuted>
                 </div>
-                <StatusPill tone={assignment.active ? 'calm' : 'danger'}>
+                <AdminSurfaceBadge tone={assignment.active ? 'success' : 'danger'}>
                   {assignment.active ? t('authAdmin.active') : t('authAdmin.inactive')}
-                </StatusPill>
-              </div>
+                </AdminSurfaceBadge>
+              </AuthRowHead>
 
-              <div className="key-grid">
-                <KeyValue
+              <AdminKeyValueGrid>
+                <AdminKeyValue
                   label={t('authAdmin.role')}
                   value={`${assignment.roleCode} · ${assignment.roleName}`}
                 />
-                <KeyValue label={t('authAdmin.scopeType')} value={assignment.scopeType} />
-                <KeyValue
+                <AdminKeyValue label={t('authAdmin.scopeType')} value={assignment.scopeType} />
+                <AdminKeyValue
                   label={t('authAdmin.company')}
                   value={assignment.companyId ?? t('authAdmin.notAvailable')}
                 />
-                <KeyValue
+                <AdminKeyValue
                   label={t('authAdmin.region')}
                   value={assignment.regionId ?? t('authAdmin.notAvailable')}
                 />
-                <KeyValue
+                <AdminKeyValue
                   label={t('authAdmin.store')}
                   value={assignment.storeId ?? t('authAdmin.notAvailable')}
                 />
-                <KeyValue
+                <AdminKeyValue
                   label={t('authAdmin.effectiveFrom')}
                   value={
                     assignment.effectiveFrom
@@ -930,17 +908,16 @@ function RoleAssignmentsPanel({
                       : t('authAdmin.immediate')
                   }
                 />
-              </div>
-              <div className="action-cluster">
-                <Link
-                  className="back-link"
-                  to={`/admin/auth/role-assignments/${assignment.assignmentId}/audit`}
-                >
-                  <span>{t('authAdmin.openAudit')}</span>
-                </Link>
+              </AdminKeyValueGrid>
+              <AuthActionRow>
+                <AuthButton asChild size="sm" variant="outline">
+                  <Link to={`/admin/auth/role-assignments/${assignment.assignmentId}/audit`}>
+                    {t('authAdmin.openAudit')}
+                  </Link>
+                </AuthButton>
                 {assignment.active ? (
-                  <button
-                    className="control-button"
+                  <AuthButton
+                    size="sm"
                     type="button"
                     onClick={() => onDeactivateAssignment(assignment.assignmentId)}
                     disabled={mutationBusy}
@@ -948,13 +925,13 @@ function RoleAssignmentsPanel({
                     {pending.deactivateAssignment
                       ? t('authAdmin.updating')
                       : t('authAdmin.deactivateAssignment')}
-                  </button>
+                  </AuthButton>
                 ) : null}
-              </div>
-            </article>
+              </AuthActionRow>
+            </AuthListRow>
           ))}
-        </div>
+        </AuthList>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
