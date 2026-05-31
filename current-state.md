@@ -74,8 +74,8 @@ Current maintenance baseline:
   `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
   `docs/plans/project-growth-execution-roadmap-v1.md`, and
   `docs/domains/readiness-ops.md` as reference.
-- Architecture Hardening V4 is the active architecture line. Its execution plan
-  is `docs/plans/architecture-hardening-v4-plan.md`; the PR-1 behavior freeze
+- Architecture Hardening V4 is closed. Its execution plan is
+  `docs/plans/architecture-hardening-v4-plan.md`; the PR-1 behavior freeze
   evidence is
   `docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md`.
 - Architecture Hardening V4 PR-2 extracted master-data bootstrap promotion
@@ -119,12 +119,22 @@ Current maintenance baseline:
   navigation, and `/store/incentives` parked-route rules test-covered, and scans
   active Store UI source for selected legacy class/debug/fake-data regressions.
   It does not touch runtime Store UI behavior.
-- Architecture Hardening V4 is closing through PR-8. Closeout evidence is
-  recorded at
+- Architecture Hardening V4 closeout evidence is recorded at
   `docs/evidence/architecture-hardening-v4-closeout-2026-05-31.md`. Estimated
   architecture health after V4 is `93/100`; this is below the original `94/100`
   target because the OpenAPI generator helper split stopped at a real
   pre-refactor parity blocker rather than moving code unsafely.
+- Architecture Hardening V5 is the active follow-up debt line. Its execution
+  plan is `docs/plans/architecture-hardening-v5-plan.md`. V5 starts with the
+  parked OpenAPI generator parity drift, then only proceeds to deeper
+  competition and workforce write-boundary movement after characterization or
+  parity evidence proves behavior can stay unchanged.
+- V5 PR-1 OpenAPI scout evidence is
+  `docs/evidence/architecture-hardening-v5-pr1-openapi-parity-scout-2026-05-31.md`.
+  The V4 blocker still reproduces: `openapi:generate` completes but rewrites
+  `docs/api/openapi.json` with 1889 insertions and 3167 deletions before any
+  generator refactor. The next safe runtime slice is OpenAPI metadata/baseline
+  repair, not generator helper extraction.
 
 Latest route/scope guard merge:
 
