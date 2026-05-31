@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { AppModule } from "../app.module";
+import { preserveOpenApiBaselineFromFile } from "./openapi-baseline-preservation";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 type MutableOperation = {
@@ -35,7 +36,6 @@ const mobileSessionHeader = {
     type: "string",
   },
 };
-
 const mobileChecklistTodayStoreSchema = {
   type: "object",
   required: ["storeId", "storeName"],
@@ -5160,12 +5160,12 @@ async function generateOpenApi(): Promise<void> {
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
+  preserveOpenApiBaselineFromFile(document, outputPath);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`);
 
   await app.close();
 }
-
 void generateOpenApi();
 
 function countProperties(propertyNames: string[]) {
