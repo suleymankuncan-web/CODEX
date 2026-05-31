@@ -184,6 +184,15 @@ V5 OpenAPI parity repair status:
 - Evidence:
   `docs/evidence/architecture-hardening-v5-pr3-openapi-helper-split-2026-05-31.md`.
 
+V5 competition boundary status:
+
+- Done in V5 PR-4: selected stage package plan execution persistence as the
+  next and only competition runtime extraction target.
+- Evidence:
+  `docs/evidence/architecture-hardening-v5-pr4-competition-boundary-characterization-2026-05-31.md`.
+- Parked: scoring recalculation and finalization persistence/policy remain out
+  of scope until separate characterization or golden parity tests exist.
+
 ## Completed Or No Longer Active
 
 These areas should not keep resurfacing as generic refactor prompts:
