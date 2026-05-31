@@ -122,8 +122,11 @@ Active V4 sequence:
    `docs/evidence/architecture-hardening-v4-pr5-openapi-generator-blocker-2026-05-31.md`.
    Do not refactor the generator until the OpenAPI metadata/baseline drift is
    resolved or a separate `Contract Impact: changed` PR is approved.
-5. Store targets E2E split from `admin-web/e2e/store-surfaces.spec.ts` into a
-   focused Store targets spec without dropping user-visible assertions.
+5. Done: Store targets E2E split. The four Store targets scenarios moved from
+   `admin-web/e2e/store-surfaces.spec.ts` into
+   `admin-web/e2e/store-targets-surfaces.spec.ts` with the same user-visible
+   assertions, API route mocks, fixture meaning, role coverage, and payload
+   assertions. Runtime app code and Store UI behavior stayed untouched.
 6. Store UI refactor guard foundation. No Store screen redesign in V4.
 
 The authoritative V4 contract-freeze evidence is:
