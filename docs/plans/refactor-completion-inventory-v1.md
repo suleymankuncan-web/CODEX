@@ -197,6 +197,17 @@ V5 competition boundary status:
 - Parked: scoring recalculation and finalization persistence/policy remain out
   of scope until separate characterization or golden parity tests exist.
 
+V5 workforce command status:
+
+- Done in V5 PR-6: selected seller-code approval command persistence as the
+  next and only workforce runtime extraction target; duplicate handling and
+  transaction/mutation expectations are locked by integration coverage.
+- Evidence:
+  `docs/evidence/architecture-hardening-v5-pr6-workforce-command-characterization-2026-05-31.md`.
+- Parked: offboarding approval and access lifecycle closure remain out of scope
+  until separate characterization covers employee termination, assignment
+  closure, turnover events, linked user lookup, and access lifecycle calls.
+
 ## Completed Or No Longer Active
 
 These areas should not keep resurfacing as generic refactor prompts:
