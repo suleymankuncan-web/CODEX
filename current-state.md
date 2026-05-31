@@ -135,6 +135,12 @@ Current maintenance baseline:
   `docs/api/openapi.json` with 1889 insertions and 3167 deletions before any
   generator refactor. The next safe runtime slice is OpenAPI metadata/baseline
   repair, not generator helper extraction.
+- V5 PR-2 repairs the OpenAPI parity blocker with generator baseline metadata
+  preservation. Evidence:
+  `docs/evidence/architecture-hardening-v5-pr2-openapi-parity-repair-2026-05-31.md`.
+  `openapi:generate` now produces an empty `docs/api/openapi.json` diff while
+  keeping API contract impact intentionally unchanged. The next V5 slice can
+  attempt a helper split inside `backend/nestjs/src/openapi/generate-openapi.ts`.
 
 Latest route/scope guard merge:
 

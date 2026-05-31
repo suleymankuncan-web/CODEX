@@ -169,6 +169,17 @@ V5 does not reopen broad refactor by line count. Any runtime movement must be
 selected by the V5 plan, protected by parity or characterization tests, and
 merged through the normal PR/check/review discipline.
 
+V5 OpenAPI parity repair status:
+
+- Done in V5 PR-2: generator baseline metadata preservation keeps the tracked
+  OpenAPI contract stable when Nest Swagger generation loses DTO, parameter, or
+  response metadata.
+- Evidence:
+  `docs/evidence/architecture-hardening-v5-pr2-openapi-parity-repair-2026-05-31.md`.
+- Next allowed OpenAPI step: helper split inside
+  `backend/nestjs/src/openapi/generate-openapi.ts`, using an empty
+  `docs/api/openapi.json` diff as the acceptance gate.
+
 ## Completed Or No Longer Active
 
 These areas should not keep resurfacing as generic refactor prompts:

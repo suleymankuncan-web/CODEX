@@ -67,7 +67,7 @@ const pilotFeedbackCommandResponseSchema = commandResponseSchema({
   type: "object",
   required: ["feedback"],
   properties: {
-    feedback: pilotFeedbackSchema,
+    feedback: { $ref: "#/components/schemas/PilotFeedback" },
   },
 });
 
@@ -77,7 +77,7 @@ const pilotFeedbackListResponseSchema = {
   properties: {
     items: {
       type: "array",
-      items: pilotFeedbackSchema,
+      items: { $ref: "#/components/schemas/PilotFeedback" },
     },
     meta: {
       type: "object",
