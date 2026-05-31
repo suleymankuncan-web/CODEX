@@ -113,6 +113,12 @@ Current maintenance baseline:
   mocks, fixture meaning, role coverage, and payload assertions are preserved.
   Runtime app code, Store UI behavior, API shape, auth semantics, DB schema,
   scoring, and workflow behavior remained unchanged.
+- Architecture Hardening V4 PR-7 added a Store UI refactor guard foundation in
+  `scripts/store-ui-refactor-guard.test.mjs`. The guard keeps the Store redesign
+  plan's `shadcn/ui` + Tailwind v4 + lucide, real-data-only, role-aware
+  navigation, and `/store/incentives` parked-route rules test-covered, and scans
+  active Store UI source for selected legacy class/debug/fake-data regressions.
+  It does not touch runtime Store UI behavior.
 
 Latest route/scope guard merge:
 

@@ -127,7 +127,11 @@ Active V4 sequence:
    `admin-web/e2e/store-targets-surfaces.spec.ts` with the same user-visible
    assertions, API route mocks, fixture meaning, role coverage, and payload
    assertions. Runtime app code and Store UI behavior stayed untouched.
-6. Store UI refactor guard foundation. No Store screen redesign in V4.
+6. Done: Store UI refactor guard foundation. The new
+   `scripts/store-ui-refactor-guard.test.mjs` keeps Store redesign stack,
+   real-data-only, role-aware navigation, parked `/store/incentives`, and
+   selected active-source legacy/debug/fake-data regressions under script guard.
+   No Store screen redesign or runtime UI behavior changed.
 
 The authoritative V4 contract-freeze evidence is:
 
