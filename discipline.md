@@ -489,6 +489,10 @@ Admin/SaaS yuzeyleri sessiz, operasyonel, yogun ama okunabilir olmalidir.
   Hazir olmayan yuzeylerde once bu stack icin kucuk kurulum/entegrasyon slice'i
   planlanir; lokal ad hoc component veya ikon dili yeni standart yerine
   gecemez.
+- Admin sayfa refactorlerinde ortak sayfa iskeleti `AdminSurface*`
+  primitive katmanidir. Yeni veya migrate edilmis admin page dosyalari bu
+  katmana baglanir; henuz migrate edilmemis yuzeyler sadece acik exception
+  allowlist ile eski primitive/class dilini gecici olarak tasiyabilir.
 - Plum Glacier pilot dili kullaniliyorsa renk/token daginikligi geri
   getirilmez. Yeni pilot/refactor sayfalari eski krem/teal foundation
   gorunumuyle plum/glacier iskeleti karistirmaz.
