@@ -165,6 +165,14 @@ Current maintenance baseline:
   `docs/evidence/architecture-hardening-v5-pr6-workforce-command-characterization-2026-05-31.md`.
   The selected PR-7 target is seller-code approval command persistence only;
   offboarding approval/access lifecycle remains parked.
+- V5 PR-7 extracts only seller-code approval command persistence into
+  `backend/nestjs/src/modules/store-ops/infrastructure/workforce-seller-code-command.repository.ts`.
+  Evidence:
+  `docs/evidence/architecture-hardening-v5-pr7-workforce-seller-code-command-extraction-2026-05-31.md`.
+  `WorkforceRequestRepository` remains the service-facing facade; seller-code
+  duplicate checks, transaction grouping, employee mutation, assignment insert,
+  request update, audit event, API shape, auth semantics, DB schema, and
+  offboarding/access lifecycle behavior stay unchanged.
 
 Latest route/scope guard merge:
 
