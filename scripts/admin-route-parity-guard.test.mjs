@@ -29,6 +29,7 @@ function normalizeRoute(route) {
     page: route.page,
     path: route.path,
     roles: [...route.roles].sort(),
+    rolesMode: route.rolesMode ?? (route.roles.length === 0 ? 'unguarded' : 'guarded'),
   }
 }
 
@@ -51,6 +52,7 @@ function parseAdminRoutes() {
     routes.push({
       path: match[1],
       roles: parseRoleArray(match[2]),
+      rolesMode: 'guarded',
       page: match[3],
     })
   }
@@ -59,6 +61,7 @@ function parseAdminRoutes() {
     routes.push({
       path: '/admin/session',
       roles: [],
+      rolesMode: 'unguarded',
       page: 'SessionReadinessPage',
     })
   }
@@ -117,6 +120,7 @@ function visibilityMatrix(items, roles) {
       id: item.path ?? item.id,
       visible:
         item.rolesMode === 'omitted' ||
+        item.rolesMode === 'unguarded' ||
         (!item.rolesMode && item.roles.length === 0) ||
         item.roles.includes(role),
     })),
@@ -187,6 +191,26 @@ test('admin navigation parity preserves omitted role semantics', () => {
   assert.notDeepEqual(explicitEmptyRoles, publicByOmission)
   assert.equal(visibilityMatrix([publicByOmission], roles)[0].visible[0].visible, true)
   assert.equal(visibilityMatrix([explicitEmptyRoles], roles)[0].visible[0].visible, false)
+})
+
+test('admin route parity preserves unguarded route semantics', () => {
+  const publicSessionRoute = normalizeRoute({
+    path: '/admin/session',
+    roles: [],
+    rolesMode: 'unguarded',
+    page: 'SessionReadinessPage',
+  })
+  const guardedEmptySessionRoute = normalizeRoute({
+    path: '/admin/session',
+    roles: [],
+    rolesMode: 'guarded',
+    page: 'SessionReadinessPage',
+  })
+  const roles = ['NO_SPECIAL_ADMIN_ROLE']
+
+  assert.notDeepEqual(guardedEmptySessionRoute, publicSessionRoute)
+  assert.equal(visibilityMatrix([publicSessionRoute], roles)[0].visible[0].visible, true)
+  assert.equal(visibilityMatrix([guardedEmptySessionRoute], roles)[0].visible[0].visible, false)
 })
 
 test('admin route and navigation visibility matrices have zero drift', () => {

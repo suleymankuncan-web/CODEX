@@ -47,6 +47,7 @@ Current parsed sources:
 - Navigation item diff: `0`
 - Navigation role diff: `0`
 - Navigation omitted-role semantics diff: `0`
+- Route unguarded-role semantics diff: `0`
 - Route visibility matrix diff: `0`
 - Navigation visibility matrix diff: `0`
 
@@ -62,7 +63,7 @@ node --test scripts/admin-route-parity-guard.test.mjs
 Result:
 
 ```text
-pass 5
+pass 6
 fail 0
 ```
 
@@ -90,6 +91,8 @@ Checks:
 - Route and role visibility parity remains unchanged.
 - Public navigation items still require omitted `roles` in source; explicit
   `roles: []` is treated as a behavior change by the guard.
+- Public routes still require an unguarded route source; `adminRoute([])` is
+  treated as a behavior change by the guard.
 
 ## Contract Impact
 
