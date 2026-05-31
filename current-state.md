@@ -141,6 +141,12 @@ Current maintenance baseline:
   `openapi:generate` now produces an empty `docs/api/openapi.json` diff while
   keeping API contract impact intentionally unchanged. The next V5 slice can
   attempt a helper split inside `backend/nestjs/src/openapi/generate-openapi.ts`.
+- V5 PR-3 performs the safe OpenAPI helper split. Evidence:
+  `docs/evidence/architecture-hardening-v5-pr3-openapi-helper-split-2026-05-31.md`.
+  It moves pure schema/path helpers into
+  `backend/nestjs/src/openapi/openapi-schema-helpers.ts`, lowers the frozen
+  generator baseline from 5256 to 5169 lines, and keeps
+  `docs/api/openapi.json` unchanged after generation.
 
 Latest route/scope guard merge:
 
