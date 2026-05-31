@@ -89,7 +89,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 512 | auth/security repository facade | Architecture Hardening V3 extracted user-account, pilot-binding, action-store, role-assignment, and role-permission write commands. Park further auth-admin movement unless concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
-| `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 910 | workforce request command persistence facade | Architecture Hardening V4 PR-3 moved audit insert persistence and repeated write-return SQL projections behind focused helpers while keeping transaction ownership in the facade. Park deeper seller-code/offboarding command splits unless a future parity test can prove transaction grouping. |
+| `backend/nestjs/src/modules/store-ops/infrastructure/workforce-request.repository.ts` | 797 | workforce request command persistence facade | Architecture Hardening V4 PR-3 moved audit insert persistence and repeated write-return SQL projections behind focused helpers. Architecture Hardening V5 PR-7 extracted seller-code approval command persistence behind a focused command repository while keeping `WorkforceRequestRepository` as the service-facing facade. Park offboarding/access lifecycle movement unless separate characterization covers it. |
 | `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 666 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
 | `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 740 | ranking read/scoring application service | PR3 removed broad repository casts and previous helper extraction remains in place. Park further extraction unless a ranking trust/reviewability trigger appears. |
 
@@ -204,6 +204,13 @@ V5 workforce command status:
   transaction/mutation expectations are locked by integration coverage.
 - Evidence:
   `docs/evidence/architecture-hardening-v5-pr6-workforce-command-characterization-2026-05-31.md`.
+- Done in V5 PR-7: seller-code duplicate counting and approval command
+  persistence moved to
+  `backend/nestjs/src/modules/store-ops/infrastructure/workforce-seller-code-command.repository.ts`.
+  `WorkforceRequestRepository` remains the service-facing facade and
+  offboarding/access lifecycle behavior stayed untouched.
+- Evidence:
+  `docs/evidence/architecture-hardening-v5-pr7-workforce-seller-code-command-extraction-2026-05-31.md`.
 - Parked: offboarding approval and access lifecycle closure remain out of scope
   until separate characterization covers employee termination, assignment
   closure, turnover events, linked user lookup, and access lifecycle calls.
