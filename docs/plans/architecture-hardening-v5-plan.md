@@ -1,7 +1,8 @@
 # Architecture Hardening V5 Plan
 
-Status: active draft
+Status: closed
 Created: 2026-05-31
+Closed: 2026-05-31
 
 ## Goal
 
@@ -10,6 +11,9 @@ turning the project back into open-ended refactor work.
 
 Target architecture health after this line: `95/100` if OpenAPI parity is
 repaired and at least one deeper backend boundary is safely narrowed.
+
+Closeout evidence:
+`docs/evidence/architecture-hardening-v5-closeout-2026-05-31.md`
 
 ## Non-Goals
 
