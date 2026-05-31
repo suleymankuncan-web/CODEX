@@ -107,6 +107,12 @@ Current maintenance baseline:
   `docs/api/openapi.json` from clean `origin/main`, and the generated DTO schema
   metadata loses validation-derived properties. Evidence is recorded in
   `docs/evidence/architecture-hardening-v4-pr5-openapi-generator-blocker-2026-05-31.md`.
+- Architecture Hardening V4 PR-6 split Store targets E2E coverage out of the
+  broad Store surface spec. The four Store targets scenarios now live in
+  `admin-web/e2e/store-targets-surfaces.spec.ts`; user-visible assertions, route
+  mocks, fixture meaning, role coverage, and payload assertions are preserved.
+  Runtime app code, Store UI behavior, API shape, auth semantics, DB schema,
+  scoring, and workflow behavior remained unchanged.
 
 Latest route/scope guard merge:
 
