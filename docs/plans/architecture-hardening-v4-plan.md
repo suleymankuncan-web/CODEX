@@ -1,6 +1,6 @@
 # Architecture Hardening V4 Plan
 
-Status: proposed execution plan
+Status: closed through Architecture Hardening V4 closeout on 2026-05-31
 Created: 2026-05-31
 
 ## Goal
@@ -519,20 +519,23 @@ After V4:
 - `MasterDataBootstrapService` has less promotion/write orchestration pressure.
 - `WorkforceRequestRepository` no longer grows as the only workforce write SQL
   facade.
-- `CompetitionRepository` has at least one high-risk scoring/finalization/stage
-  persistence responsibility isolated.
-- One high-risk generator script is smaller or guarded against silent drift.
-- One broad E2E spec is decomposed into reusable helpers without behavior
-  change.
+- `CompetitionRepository` has the selected stage package plan review command
+  persistence responsibility isolated. Scoring, finalization, and stage
+  execution stayed parked by design.
+- The OpenAPI generator helper split did not move code because the pre-refactor
+  parity gate failed from clean main. Evidence is recorded at
+  `docs/evidence/architecture-hardening-v4-pr5-openapi-generator-blocker-2026-05-31.md`.
+- Store targets E2E scenarios moved out of the broad Store surface spec without
+  behavior change.
 - Store UI refactor work has a guard/process foundation for fake data, legacy
   UI remnants, and role mismatch.
 - `current-state.md` and evidence reflect the final state.
 
-Estimated architecture health after completion: `94/100`.
+Estimated architecture health after completion: `93/100`.
 
 This is still not `100/100` because real production evidence, future product
-decisions, and some intentionally parked UI/product surfaces cannot be closed by
-architecture-only refactors.
+decisions, OpenAPI generator parity drift, and some intentionally parked
+UI/product surfaces cannot be closed by architecture-only refactors.
 
 ## Global Stop Conditions
 
