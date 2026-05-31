@@ -1,15 +1,9 @@
-import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CircleDashed, Network, RefreshCw } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
-import {
-  EmptyState,
-  MetricAccent,
-  ScreenState,
-  StatusBar,
-  type Tone,
-} from '../components/dashboard-primitives'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { downloadCsv } from '../lib/download-csv'
 import {
   approveExternalIdMap,
@@ -25,10 +19,32 @@ import {
   type ImportBatchError,
   type ImportBatchReconciliation,
 } from '../features/integrations/api'
+import {
+  DependencyCard,
+  DetailList,
+  DetailProgressRow,
+  LineageChip,
+  LineageChipList,
+  ReconciliationStat,
+} from '../features/integrations/import-batch-detail-surface-primitives'
+import { mapErrorTone, mapQualitySeverityTone, toAdminTone } from '../features/integrations/integration-surface-tone'
 import { useLocalization } from '../features/localization/useLocalization'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import {
+  AdminActionRow,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminMetricStripItem,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
 
 export function ImportBatchDetailPage() {
   const params = useParams()
@@ -139,15 +155,39 @@ export function ImportBatchDetailPage() {
   })
 
   if (!batchId) {
-    return <ScreenState title={t('importBatchDetail.batchIdMissingTitle')} copy={t('importBatchDetail.batchIdMissingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('importBatchDetail.batchIdMissingTitle')}
+          description={t('importBatchDetail.batchIdMissingCopy')}
+          tone="warning"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (detailQuery.isLoading) {
-    return <ScreenState title={t('importBatchDetail.loadingTitle')} copy={t('importBatchDetail.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('importBatchDetail.loadingTitle')}
+          description={t('importBatchDetail.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (detailQuery.isError || !detailQuery.data) {
-    return <ScreenState title={t('importBatchDetail.unavailableTitle')} copy={getErrorMessage(detailQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('importBatchDetail.unavailableTitle')}
+          description={getErrorMessage(detailQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   const detail = detailQuery.data
@@ -168,11 +208,15 @@ export function ImportBatchDetailPage() {
   })
 
   return (
-    <section className="page-stack import-detail-page">
-      <Link className="back-link" to="/admin/integrations">
-        <ArrowLeft size={16} />
-        {t('importBatchDetail.backToQueue')}
-      </Link>
+    <AdminSurfacePage ariaLabel={t('importBatchDetail.heroEyebrow')}>
+      <AdminActionRow>
+        <Button asChild variant="outline">
+          <Link to="/admin/integrations">
+            <ArrowLeft aria-hidden="true" />
+            {t('importBatchDetail.backToQueue')}
+          </Link>
+        </Button>
+      </AdminActionRow>
 
       <ImportBatchHero detail={detail} t={t} />
       <FeedbackPanel feedback={feedback} />
@@ -200,7 +244,7 @@ export function ImportBatchDetailPage() {
       <LineagePanel detail={detail} t={t} />
       <ReconciliationGrid detail={detail} reconciliation={reconciliation} t={t} />
 
-      <section className="two-up-grid detail-bottom-grid">
+      <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.4fr)_minmax(20rem,0.8fr)]">
         <ErrorRowsPanel
           batchId={batchId}
           candidateQueries={{
@@ -236,8 +280,8 @@ export function ImportBatchDetailPage() {
           locale={locale}
           t={t}
         />
-      </section>
-    </section>
+      </div>
+    </AdminSurfacePage>
   )
 }
 
@@ -260,26 +304,53 @@ type CandidateQueryState = {
 
 function ImportBatchHero(input: { detail: ImportBatchDetail; t: TranslateFunction }) {
   const { detail, t } = input
+  const metrics: AdminMetricStripItem[] = [
+    {
+      id: 'records',
+      label: t('importBatchDetail.records'),
+      value: String(detail.batch.recordCount),
+      description: t('importBatchDetail.batchPrefix'),
+      tone: 'neutral',
+    },
+    {
+      id: 'errors',
+      label: t('importBatchDetail.errors'),
+      value: String(detail.batch.errorCount),
+      description: formatStateLabel(detail.batch.status, t),
+      tone: detail.batch.errorCount > 0 ? 'danger' : 'success',
+    },
+    {
+      id: 'retry-now',
+      label: t('importBatchDetail.retryNow'),
+      value: detail.canRetryNow ? t('importBatchDetail.yes') : t('importBatchDetail.no'),
+      description: formatStateLabel(detail.batch.healthState, t),
+      tone: detail.canRetryNow ? 'warning' : 'neutral',
+    },
+  ]
 
   return (
-    <section className="hero-panel hero-panel-detail">
-      <div>
-        <div className="eyebrow">{t('importBatchDetail.heroEyebrow')}</div>
-        <h2 className="hero-title">{detail.batch.sourceCode} / {detail.batch.entityType}</h2>
-        <p className="hero-copy">
-          {t('importBatchDetail.batchPrefix')} <code>{detail.batch.batchId}</code>{' '}
-          {t('importBatchDetail.currentHealthState')}{' '}
-          <span className={`inline-state inline-state-${mapHealthTone(detail.healthState)}`}>
-            {formatStateLabel(detail.healthState, t)}
-          </span>
-        </p>
-      </div>
-      <div className="hero-metrics">
-        <MetricAccent label={t('importBatchDetail.records')} value={String(detail.batch.recordCount)} />
-        <MetricAccent label={t('importBatchDetail.errors')} value={String(detail.batch.errorCount)} />
-        <MetricAccent label={t('importBatchDetail.retryNow')} value={detail.canRetryNow ? t('importBatchDetail.yes') : t('importBatchDetail.no')} />
-      </div>
-    </section>
+    <>
+      <AdminSurfaceHeader
+        eyebrow={t('importBatchDetail.heroEyebrow')}
+        title={`${detail.batch.sourceCode} / ${detail.batch.entityType}`}
+        description={
+          <>
+            {t('importBatchDetail.batchPrefix')} <code>{detail.batch.batchId}</code>{' '}
+            {t('importBatchDetail.currentHealthState')}{' '}
+            <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(detail.healthState))}>
+              {formatStateLabel(detail.healthState, t)}
+            </AdminSurfaceBadge>
+          </>
+        }
+        icon={<Network size={18} aria-hidden="true" />}
+        meta={
+          <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(detail.batch.healthState))}>
+            {formatStateLabel(detail.batch.healthState, t)}
+          </AdminSurfaceBadge>
+        }
+      />
+      <AdminMetricStrip className="tw:xl:grid-cols-3" items={metrics} />
+    </>
   )
 }
 
@@ -289,9 +360,7 @@ function FeedbackPanel(input: { feedback: string | null }) {
   }
 
   return (
-    <section className="panel">
-      <div className="inline-state inline-state-accent">{input.feedback}</div>
-    </section>
+    <AdminStatePanel title={input.feedback} tone="success" />
   )
 }
 
@@ -299,24 +368,24 @@ function ImportDecisionPanel(input: { evidence: ImportDecisionEvidence; t: Trans
   const { evidence, t } = input
 
   return (
-    <section className="panel" aria-label={t('importBatchDetail.decisionAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('importBatchDetail.operatorGate')}</div>
-          <h3>{t('importBatchDetail.operatorDecisionEvidence')}</h3>
-          <p className="panel-copy">{t('importBatchDetail.operatorDecisionCopy')}</p>
-        </div>
-        <span className={`status-pill status-pill-${evidence.tone}`}>
+    <AdminSurfaceSection
+      ariaLabel={t('importBatchDetail.decisionAria')}
+      badge={
+        <AdminSurfaceBadge tone={evidence.tone}>
           {evidence.label}
-        </span>
-      </div>
-      <p className="panel-copy">{evidence.summary}</p>
-      <div className="reconciliation-grid">
+        </AdminSurfaceBadge>
+      }
+      description={t('importBatchDetail.operatorDecisionCopy')}
+      eyebrow={t('importBatchDetail.operatorGate')}
+      title={t('importBatchDetail.operatorDecisionEvidence')}
+    >
+      <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{evidence.summary}</p>
+      <AdminKeyValueGrid>
         {evidence.factors.map(([label, value]) => (
           <ReconciliationStat key={label} label={label} value={value} />
         ))}
-      </div>
-    </section>
+      </AdminKeyValueGrid>
+    </AdminSurfaceSection>
   )
 }
 
@@ -330,14 +399,11 @@ function BatchSummaryGrid(input: {
   const { detail, isRetrying, locale, onRetry, t } = input
 
   return (
-    <section className="two-up-grid">
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('importBatchDetail.executionState')}</div>
-            <h3>{t('importBatchDetail.batchSummary')}</h3>
-          </div>
-        </div>
+    <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
+      <AdminSurfaceSection
+        eyebrow={t('importBatchDetail.executionState')}
+        title={t('importBatchDetail.batchSummary')}
+      >
         <DetailList
           items={[
             [t('importBatchDetail.status'), formatStateLabel(detail.batch.status, t)],
@@ -351,24 +417,23 @@ function BatchSummaryGrid(input: {
             [t('importBatchDetail.fileReference'), detail.batch.fileReference ?? t('importBatchDetail.notAvailable')],
           ]}
         />
-      </article>
+      </AdminSurfaceSection>
 
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('importBatchDetail.dependencyGuidance')}</div>
-            <h3>{t('importBatchDetail.whatBlocksProgress')}</h3>
-          </div>
-          <button
-            className="control-button"
+      <AdminSurfaceSection
+        actions={
+          <Button
+            variant="outline"
             type="button"
             onClick={onRetry}
             disabled={!detail.canRetryNow || isRetrying}
           >
             {isRetrying ? t('importBatchDetail.retrying') : t('importBatchDetail.retryBatch')}
-          </button>
-        </div>
-        <div className="dependency-list">
+          </Button>
+        }
+        eyebrow={t('importBatchDetail.dependencyGuidance')}
+        title={t('importBatchDetail.whatBlocksProgress')}
+      >
+        <div className="tw:grid tw:grid-cols-1 tw:gap-2 tw:md:grid-cols-3">
           <DependencyCard
             icon={<Network size={18} />}
             label={t('importBatchDetail.blockedBy')}
@@ -385,8 +450,8 @@ function BatchSummaryGrid(input: {
             value={detail.recommendedImportOrder.map((entity) => formatEntityType(entity, t)).join(' -> ')}
           />
         </div>
-      </article>
-    </section>
+      </AdminSurfaceSection>
+    </div>
   )
 }
 
@@ -398,15 +463,13 @@ function QualitySummaryPanel(input: {
   const { detail, qualityIssueItems, t } = input
 
   return (
-    <section className="panel" aria-label={t('importBatchDetail.qualityAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('importBatchDetail.qualityGuard')}</div>
-          <h3>{t('importBatchDetail.dataQualitySummary')}</h3>
-        </div>
-      </div>
-      <p className="panel-copy">{t('importBatchDetail.dataQualityCopy')}</p>
-      <div className="reconciliation-grid">
+    <AdminSurfaceSection
+      ariaLabel={t('importBatchDetail.qualityAria')}
+      description={t('importBatchDetail.dataQualityCopy')}
+      eyebrow={t('importBatchDetail.qualityGuard')}
+      title={t('importBatchDetail.dataQualitySummary')}
+    >
+      <AdminKeyValueGrid>
         <ReconciliationStat
           label={t('importBatchDetail.issueRows')}
           value={String(detail.qualityIssueSummary?.totalIssueRows ?? 0)}
@@ -415,28 +478,28 @@ function QualitySummaryPanel(input: {
           label={t('importBatchDetail.highSeverityRowsLabel')}
           value={String(detail.qualityIssueSummary?.highSeverityRows ?? 0)}
         />
-      </div>
+      </AdminKeyValueGrid>
       {qualityIssueItems.length === 0 ? (
-        <EmptyState copy={t('importBatchDetail.noDataQualityIssues')} />
+        <AdminSurfaceEmpty copy={t('importBatchDetail.noDataQualityIssues')} />
       ) : (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-2">
           {qualityIssueItems.map((issue) => (
-            <div className="stacked-row" key={issue.code}>
-              <div className="stacked-row-head">
-                <strong>{formatQualityIssueLabel(issue.code, issue.label, t)}</strong>
-                <span className={`status-pill status-pill-${mapQualitySeverityTone(issue.severity)}`}>
+            <article className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3" key={issue.code}>
+              <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{formatQualityIssueLabel(issue.code, issue.label, t)}</strong>
+                <AdminSurfaceBadge tone={mapQualitySeverityTone(issue.severity)}>
                   {issue.code}
-                </span>
+                </AdminSurfaceBadge>
               </div>
-              <p>{formatQualityIssueDescription(issue.code, issue.description, t)}</p>
-              <span>
+              <p className="tw:mt-2 tw:text-sm tw:leading-6 tw:text-muted-foreground">{formatQualityIssueDescription(issue.code, issue.description, t)}</p>
+              <span className="tw:text-xs tw:text-muted-foreground">
                 {formatIssueOwner(issue.owner, t)} / {formatQualitySeverity(issue.severity, t)} / {formatRowCount(issue.count, t)}
               </span>
-            </div>
+            </article>
           ))}
         </div>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -453,19 +516,15 @@ function KpiReviewPanel(input: {
   }
 
   return (
-    <section className="panel" aria-label={t('importBatchDetail.kpiReviewAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('importBatchDetail.kpiReviewEyebrow')}</div>
-          <h3>{t('importBatchDetail.kpiReviewTitle')}</h3>
-          <p className="panel-copy">{evidence.summary}</p>
-        </div>
-        <div className="heading-action-cluster">
-          <span className={`status-pill status-pill-${evidence.tone}`}>
+    <AdminSurfaceSection
+      ariaLabel={t('importBatchDetail.kpiReviewAria')}
+      actions={
+        <AdminActionRow className="tw:justify-start tw:sm:justify-end">
+          <AdminSurfaceBadge tone={evidence.tone}>
             {evidence.label}
-          </span>
-          <button
-            className="control-button"
+          </AdminSurfaceBadge>
+          <Button
+            variant="outline"
             type="button"
             onClick={() =>
               downloadCsv({
@@ -495,10 +554,14 @@ function KpiReviewPanel(input: {
             disabled={evidence.items.length === 0}
           >
             {t('importBatchDetail.exportReviewRows')}
-          </button>
-        </div>
-      </div>
-      <div className="reconciliation-grid">
+          </Button>
+        </AdminActionRow>
+      }
+      description={evidence.summary}
+      eyebrow={t('importBatchDetail.kpiReviewEyebrow')}
+      title={t('importBatchDetail.kpiReviewTitle')}
+    >
+      <AdminKeyValueGrid>
         <ReconciliationStat
           label={t('importBatchDetail.employeeMatch')}
           value={formatRowCount(evidence.employeeMatchRows, t)}
@@ -515,54 +578,42 @@ function KpiReviewPanel(input: {
           label={t('importBatchDetail.visibleTotalErrors')}
           value={`${evidence.visibleErrorRows} / ${evidence.totalErrorRows}`}
         />
-      </div>
+      </AdminKeyValueGrid>
       {evidence.items.length === 0 ? (
-        <EmptyState copy={t('importBatchDetail.noKpiReviewRows')} />
+        <AdminSurfaceEmpty copy={t('importBatchDetail.noKpiReviewRows')} />
       ) : (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-2">
           {evidence.items.map((item) => (
-            <div className="stacked-row" key={item.rowId}>
-              <div className="stacked-row-head">
-                <strong>{item.sourceRef}</strong>
-                <span className={`status-pill status-pill-${item.tone}`}>
+            <article className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3" key={item.rowId}>
+              <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{item.sourceRef}</strong>
+                <AdminSurfaceBadge tone={item.tone}>
                   {item.categoryLabel}
-                </span>
-                <span className="status-pill status-pill-neutral">
+                </AdminSurfaceBadge>
+                <AdminSurfaceBadge tone="neutral">
                   {item.actionLabel}
-                </span>
+                </AdminSurfaceBadge>
               </div>
-              <p>{item.message}</p>
-              <div className="lineage-chip-list" aria-label={t('importBatchDetail.kpiRowEvidenceAria')}>
+              <p className="tw:mt-2 tw:text-sm tw:leading-6 tw:text-muted-foreground">{item.message}</p>
+              <LineageChipList ariaLabel={t('importBatchDetail.kpiRowEvidenceAria')}>
                 {item.externalRef ? (
-                  <div className="lineage-chip">
-                    <span>{t('importBatchDetail.externalRef')}</span>
-                    <code className="lineage-code">{item.externalRef}</code>
-                  </div>
+                  <LineageChip label={t('importBatchDetail.externalRef')} value={item.externalRef} />
                 ) : null}
                 {item.issueCode ? (
-                  <div className="lineage-chip">
-                    <span>{t('importBatchDetail.issue')}</span>
-                    <code className="lineage-code">{item.issueCode}</code>
-                  </div>
+                  <LineageChip label={t('importBatchDetail.issue')} value={item.issueCode} />
                 ) : null}
                 {item.rawRowReference ? (
-                  <div className="lineage-chip">
-                    <span>{t('importBatchDetail.rawReference')}</span>
-                    <code className="lineage-code">{item.rawRowReference}</code>
-                  </div>
+                  <LineageChip label={t('importBatchDetail.rawReference')} value={item.rawRowReference} />
                 ) : null}
                 {item.rowHash ? (
-                  <div className="lineage-chip">
-                    <span>{t('importBatchDetail.rowHash')}</span>
-                    <code className="lineage-code">{item.rowHash}</code>
-                  </div>
+                  <LineageChip label={t('importBatchDetail.rowHash')} value={item.rowHash} />
                 ) : null}
-              </div>
-            </div>
+              </LineageChipList>
+            </article>
           ))}
         </div>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -570,17 +621,15 @@ function LineagePanel(input: { detail: ImportBatchDetail; t: TranslateFunction }
   const { detail, t } = input
 
   return (
-    <section className="panel" aria-label={t('importBatchDetail.lineageAria')}>
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('importBatchDetail.sourceEvidence')}</div>
-          <h3>{t('importBatchDetail.sourceRowLineage')}</h3>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      ariaLabel={t('importBatchDetail.lineageAria')}
+      eyebrow={t('importBatchDetail.sourceEvidence')}
+      title={t('importBatchDetail.sourceRowLineage')}
+    >
       {detail.lineageSummary?.supported ? (
         <>
-          <p className="panel-copy">{t('importBatchDetail.lineageCopy')}</p>
-          <div className="reconciliation-grid">
+          <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{t('importBatchDetail.lineageCopy')}</p>
+          <AdminKeyValueGrid>
             <ReconciliationStat
               label={t('importBatchDetail.traceReadyRows')}
               value={`${detail.lineageSummary.rowHashCount} / ${detail.batch.recordCount}`}
@@ -589,7 +638,7 @@ function LineagePanel(input: { detail: ImportBatchDetail; t: TranslateFunction }
               label={t('importBatchDetail.readableReferences')}
               value={`${detail.lineageSummary.rawRowReferenceCount} / ${detail.batch.recordCount}`}
             />
-          </div>
+          </AdminKeyValueGrid>
           <DetailList
             items={[
               [t('importBatchDetail.sampleRowHash'), detail.lineageSummary.sampleRowHash ?? t('importBatchDetail.noSampleYet')],
@@ -601,9 +650,9 @@ function LineagePanel(input: { detail: ImportBatchDetail; t: TranslateFunction }
           />
         </>
       ) : (
-        <EmptyState copy={t('importBatchDetail.lineageOnlyKpi')} />
+        <AdminSurfaceEmpty copy={t('importBatchDetail.lineageOnlyKpi')} />
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -615,42 +664,36 @@ function ReconciliationGrid(input: {
   const { detail, reconciliation, t } = input
 
   return (
-    <section className="two-up-grid">
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('importBatchDetail.rowStatus')}</div>
-            <h3>{t('importBatchDetail.batchAccounting')}</h3>
-          </div>
-        </div>
+    <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
+      <AdminSurfaceSection
+        eyebrow={t('importBatchDetail.rowStatus')}
+        title={t('importBatchDetail.batchAccounting')}
+      >
 
         {reconciliation ? (
           <>
-            <div className="reconciliation-grid">
+            <AdminKeyValueGrid className="tw:lg:grid-cols-3">
               <ReconciliationStat label={t('importBatchDetail.accountedRows')} value={String(reconciliation.totals.accountedRows)} />
               <ReconciliationStat label={t('importBatchDetail.unaccountedRowsLabel')} value={String(reconciliation.totals.unaccountedRows)} />
               <ReconciliationStat
                 label={t('importBatchDetail.recordCountMatch')}
                 value={reconciliation.totals.countsMatchRecordCount ? t('importBatchDetail.match') : t('importBatchDetail.mismatch')}
               />
-            </div>
-            <StatusBar label={t('importBatchDetail.processed')} value={reconciliation.rowStatusSummary.processed} rate={reconciliation.rates.processedRate} tone="calm" />
-            <StatusBar label={t('importBatchDetail.validationFailures')} value={reconciliation.rowStatusSummary.validationFailed} rate={reconciliation.rates.validationFailureRate} tone="warning" />
-            <StatusBar label={t('importBatchDetail.retryableErrors')} value={reconciliation.rowStatusSummary.retryableError} rate={reconciliation.rates.retryableErrorRate} tone="danger" />
-            <StatusBar label={t('importBatchDetail.pending')} value={reconciliation.rowStatusSummary.pending} rate={reconciliation.rates.pendingRate} tone="neutral" />
+            </AdminKeyValueGrid>
+            <DetailProgressRow label={t('importBatchDetail.processed')} value={reconciliation.rowStatusSummary.processed} rate={reconciliation.rates.processedRate} tone="success" />
+            <DetailProgressRow label={t('importBatchDetail.validationFailures')} value={reconciliation.rowStatusSummary.validationFailed} rate={reconciliation.rates.validationFailureRate} tone="warning" />
+            <DetailProgressRow label={t('importBatchDetail.retryableErrors')} value={reconciliation.rowStatusSummary.retryableError} rate={reconciliation.rates.retryableErrorRate} tone="danger" />
+            <DetailProgressRow label={t('importBatchDetail.pending')} value={reconciliation.rowStatusSummary.pending} rate={reconciliation.rates.pendingRate} tone="neutral" />
           </>
         ) : (
-          <EmptyState copy={t('importBatchDetail.reconciliationLoading')} />
+          <AdminSurfaceEmpty copy={t('importBatchDetail.reconciliationLoading')} />
         )}
-      </article>
+      </AdminSurfaceSection>
 
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('importBatchDetail.dependencyCounts')}</div>
-            <h3>{t('importBatchDetail.unresolvedReferences')}</h3>
-          </div>
-        </div>
+      <AdminSurfaceSection
+        eyebrow={t('importBatchDetail.dependencyCounts')}
+        title={t('importBatchDetail.unresolvedReferences')}
+      >
         <DetailList
           items={[
             [t('importBatchDetail.employee'), String(detail.dependencySummary.employee)],
@@ -661,8 +704,8 @@ function ReconciliationGrid(input: {
             [t('importBatchDetail.manager'), String(detail.dependencySummary.manager)],
           ]}
         />
-      </article>
-    </section>
+      </AdminSurfaceSection>
+    </div>
   )
 }
 
@@ -684,14 +727,10 @@ function ErrorRowsPanel(input: {
   const { batchId, candidateQueries, errors, mappingInputs, mappingState, searchInputs, onApproveMapping, onMappingInputChange, onSearchInputChange, t } = input
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('importBatchDetail.errorRows')}</div>
-          <h3>{t('importBatchDetail.whyRowsFailed')}</h3>
-        </div>
-        <button
-          className="control-button"
+    <AdminSurfaceSection
+      actions={
+        <Button
+          variant="outline"
           type="button"
           onClick={() =>
             downloadCsv({
@@ -721,12 +760,15 @@ function ErrorRowsPanel(input: {
           disabled={errors.length === 0}
         >
           {t('importBatchDetail.exportErrors')}
-        </button>
-      </div>
+        </Button>
+      }
+      eyebrow={t('importBatchDetail.errorRows')}
+      title={t('importBatchDetail.whyRowsFailed')}
+    >
       {errors.length === 0 ? (
-        <EmptyState copy={t('importBatchDetail.noRowErrors')} />
+        <AdminSurfaceEmpty copy={t('importBatchDetail.noRowErrors')} />
       ) : (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-2">
           {errors.map((error) => (
             <ImportBatchErrorRow
               candidateQueries={candidateQueries}
@@ -743,7 +785,7 @@ function ErrorRowsPanel(input: {
           ))}
         </div>
       )}
-    </article>
+    </AdminSurfaceSection>
   )
 }
 
@@ -765,19 +807,21 @@ function ImportBatchErrorRow(input: {
   const isApproving = mappingState.isPending && mappingState.variables?.rowId === error.rowId
 
   return (
-    <div className="stacked-row">
-      <div className="stacked-row-head">
-        <strong>{error.sourceRef}</strong>
-        <span className={`status-pill status-pill-${mapErrorTone(error.errorCategory)}`}>
+    <article className="tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
+      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+        <strong className="tw:text-sm tw:font-medium tw:text-foreground">{error.sourceRef}</strong>
+        <AdminSurfaceBadge tone={mapErrorTone(error.errorCategory)}>
           {formatErrorCategory(error.errorCategory, t)}
-        </span>
+        </AdminSurfaceBadge>
         {error.qualityIssueCode ? (
-          <span className="status-pill status-pill-accent">
+          <AdminSurfaceBadge tone="accent">
             {t('importBatchDetail.qualityIssuePrefix', { code: error.qualityIssueCode })}
-          </span>
+          </AdminSurfaceBadge>
         ) : null}
       </div>
-      <p>{error.validationError ?? t('importBatchDetail.noValidationMessage')}</p>
+      <p className="tw:mt-2 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+        {error.validationError ?? t('importBatchDetail.noValidationMessage')}
+      </p>
       <ErrorLineageChips error={error} t={t} />
       {error.mappingCandidate ? (
         <MappingAction
@@ -792,7 +836,7 @@ function ImportBatchErrorRow(input: {
           t={t}
         />
       ) : null}
-    </div>
+    </article>
   )
 }
 
@@ -804,20 +848,14 @@ function ErrorLineageChips(input: { error: ImportBatchError; t: TranslateFunctio
   }
 
   return (
-    <div className="lineage-chip-list" aria-label={t('importBatchDetail.rowLineageAria')}>
+    <LineageChipList ariaLabel={t('importBatchDetail.rowLineageAria')}>
       {error.rawRowReference ? (
-        <div className="lineage-chip">
-          <span>{t('importBatchDetail.rawReference')}</span>
-          <code className="lineage-code">{error.rawRowReference}</code>
-        </div>
+        <LineageChip label={t('importBatchDetail.rawReference')} value={error.rawRowReference} />
       ) : null}
       {error.rowHash ? (
-        <div className="lineage-chip">
-          <span>{t('importBatchDetail.rowHash')}</span>
-          <code className="lineage-code">{error.rowHash}</code>
-        </div>
+        <LineageChip label={t('importBatchDetail.rowHash')} value={error.rowHash} />
       ) : null}
-    </div>
+    </LineageChipList>
   )
 }
 
@@ -844,20 +882,22 @@ function MappingAction(input: {
   const candidates = candidateQuery.data?.items ?? []
 
   return (
-    <div className="mapping-action" aria-label={t('importBatchDetail.mappingAria')}>
-      <div className="mapping-targets">
-        <div className="lineage-chip">
-          <span>{t('importBatchDetail.externalEntity', { entity: entityLabel })}</span>
-          <code className="lineage-code">{mappingCandidate.externalId}</code>
-        </div>
-        <div className="lineage-chip">
-          <span>{t('importBatchDetail.targetTable')}</span>
-          <code className="lineage-code">{mappingCandidate.internalTableName}</code>
-        </div>
+    <div
+      className="tw:mt-3 tw:grid tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/70 tw:p-3"
+      aria-label={t('importBatchDetail.mappingAria')}
+    >
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <LineageChip
+          label={t('importBatchDetail.externalEntity', { entity: entityLabel })}
+          value={mappingCandidate.externalId}
+        />
+        <LineageChip
+          label={t('importBatchDetail.targetTable')}
+          value={mappingCandidate.internalTableName}
+        />
       </div>
-      <div className="mapping-controls">
-        <input
-          className="control-input mapping-input"
+      <div className="tw:grid tw:grid-cols-1 tw:gap-2 tw:lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] tw:lg:items-start">
+        <Input
           type="text"
           aria-label={t('importBatchDetail.searchInternalCandidatesForExternal', {
             entity: entityLabel,
@@ -868,7 +908,7 @@ function MappingAction(input: {
           onChange={(event) => onSearchInputChange(entityType, event.target.value)}
         />
         <select
-          className="control-input mapping-select"
+          className="tw:h-8 tw:min-w-0 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:px-2.5 tw:text-sm tw:font-medium tw:text-foreground tw:shadow-sm tw:outline-none focus-visible:tw:border-ring focus-visible:tw:ring-3 focus-visible:tw:ring-ring/50 disabled:tw:opacity-50"
           aria-label={t('importBatchDetail.mapToInternalForExternal', {
             entity: entityLabel,
             externalId: mappingCandidate.externalId,
@@ -884,8 +924,7 @@ function MappingAction(input: {
             </option>
           ))}
         </select>
-        <button
-          className="control-button"
+        <Button
           type="button"
           aria-label={t(
             isApproving
@@ -909,7 +948,7 @@ function MappingAction(input: {
           }
         >
           {isApproving ? t('importBatchDetail.approving') : t('importBatchDetail.approveMapping')}
-        </button>
+        </Button>
         <MappingCandidateState candidateQuery={candidateQuery} candidateCount={candidates.length} t={t} />
       </div>
     </div>
@@ -924,19 +963,19 @@ function MappingCandidateState(input: {
   const { candidateQuery, candidateCount, t } = input
 
   if (candidateQuery.isLoading) {
-    return <span className="mapping-helper">{t('importBatchDetail.loadingInternalCandidates')}</span>
+    return <span className="tw:text-xs tw:text-muted-foreground">{t('importBatchDetail.loadingInternalCandidates')}</span>
   }
 
   if (candidateQuery.isError) {
     return (
-      <span className="mapping-helper mapping-helper-error">
+      <span className="tw:text-xs tw:text-destructive">
         {t('importBatchDetail.candidateListUnavailable', { message: getErrorMessage(candidateQuery.error) })}
       </span>
     )
   }
 
   if (candidateCount === 0) {
-    return <span className="mapping-helper">{t('importBatchDetail.noCandidatesFound')}</span>
+    return <span className="tw:text-xs tw:text-muted-foreground">{t('importBatchDetail.noCandidatesFound')}</span>
   }
 
   return null
@@ -951,14 +990,10 @@ function AuditTimelinePanel(input: {
   const { auditItems, batchId, locale, t } = input
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('importBatchDetail.auditTimeline')}</div>
-          <h3>{t('importBatchDetail.operatorTrace')}</h3>
-        </div>
-        <button
-          className="control-button"
+    <AdminSurfaceSection
+      actions={
+        <Button
+          variant="outline"
           type="button"
           onClick={() =>
             downloadCsv({
@@ -976,62 +1011,36 @@ function AuditTimelinePanel(input: {
           disabled={auditItems.length === 0}
         >
           {t('importBatchDetail.exportAudit')}
-        </button>
-      </div>
+        </Button>
+      }
+      eyebrow={t('importBatchDetail.auditTimeline')}
+      title={t('importBatchDetail.operatorTrace')}
+    >
       {auditItems.length === 0 ? (
-        <EmptyState copy={t('importBatchDetail.noAuditEntries')} />
+        <AdminSurfaceEmpty copy={t('importBatchDetail.noAuditEntries')} />
       ) : (
-        <div className="timeline">
+        <div className="tw:grid tw:gap-3">
           {auditItems.map((event) => (
-            <div className="timeline-item" key={event.eventLogId}>
-              <div className="timeline-dot" />
-              <div>
-                <strong>{event.eventType}</strong>
-                <p>{formatDateTime(event.occurredAt, locale)}</p>
-                <span>
+            <article
+              className="tw:grid tw:grid-cols-[auto_minmax(0,1fr)] tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3"
+              key={event.eventLogId}
+            >
+              <span className="tw:mt-1 tw:size-2 tw:rounded-full tw:bg-primary" />
+              <div className="tw:min-w-0">
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{event.eventType}</strong>
+                <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{formatDateTime(event.occurredAt, locale)}</p>
+                <span className="tw:mt-1 tw:block tw:break-words tw:text-xs tw:text-muted-foreground">
                   {t('importBatchDetail.auditActorLine', {
                     actor: event.actorUserId ?? t('importBatchDetail.system'),
                     correlation: event.correlationId ?? t('importBatchDetail.none'),
                   })}
                 </span>
               </div>
-            </div>
+            </article>
           ))}
         </div>
       )}
-    </article>
-  )
-}
-
-function DetailList(input: { items: [string, string][] }) {
-  return (
-    <div className="detail-list">
-      {input.items.map(([label, value]) => (
-        <div className="detail-row" key={label}>
-          <span>{label}</span>
-          <strong>{value}</strong>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function DependencyCard(input: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="dependency-card">
-      <div className="dependency-icon">{input.icon}</div>
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-    </div>
-  )
-}
-
-function ReconciliationStat(input: { label: string; value: string }) {
-  return (
-    <div className="reconciliation-stat">
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-    </div>
+    </AdminSurfaceSection>
   )
 }
 
@@ -1046,7 +1055,7 @@ function formatRowCount(count: number, t: TranslateFunction) {
 
 type ImportDecisionEvidence = {
   label: string
-  tone: Tone
+  tone: AdminSurfaceTone
   summary: string
   factors: [string, string][]
 }
@@ -1063,7 +1072,7 @@ type KpiReviewItem = {
   category: KpiReviewCategory
   categoryLabel: string
   actionLabel: string
-  tone: Tone
+  tone: AdminSurfaceTone
   externalRef: string | null
   issueCode: string | null
   message: string
@@ -1073,7 +1082,7 @@ type KpiReviewItem = {
 
 type KpiReviewEvidence = {
   label: string
-  tone: Tone
+  tone: AdminSurfaceTone
   summary: string
   employeeMatchRows: number
   storeMatchRows: number
@@ -1122,7 +1131,7 @@ function buildImportDecisionEvidence(input: {
     hasFailures
 
   let label = t('importBatchDetail.go')
-  let tone: Tone = 'calm'
+  let tone: AdminSurfaceTone = 'success'
   let summary = t('importBatchDetail.goSummary')
 
   if (!reconciliation) {
@@ -1214,7 +1223,7 @@ function buildKpiReviewEvidence(input: {
 
   return {
     label: input.t('importBatchDetail.clear'),
-    tone: 'calm',
+    tone: 'success',
     summary: input.t('importBatchDetail.kpiClear'),
     employeeMatchRows,
     storeMatchRows,
@@ -1411,16 +1420,4 @@ function formatErrorCategory(category: string, t: TranslateFunction) {
   if (category === 'missing_dependency') return t('importBatchDetail.errorCategory.missing_dependency')
   if (category === 'write_failure') return t('importBatchDetail.errorCategory.write_failure')
   return category.replaceAll('_', ' ')
-}
-
-function mapQualitySeverityTone(severity: string) {
-  if (severity === 'high') return 'danger'
-  if (severity === 'medium') return 'warning'
-  return 'accent'
-}
-
-function mapErrorTone(category: string) {
-  if (category === 'validation') return 'warning'
-  if (category === 'missing_dependency') return 'accent'
-  return 'danger'
 }

@@ -25,13 +25,11 @@ test('admin import batch detail switches chrome to English copy and persists loc
   await page.goto('/admin/integrations/batch-kpi-lineage-ui-1')
 
   const main = page.getByRole('main')
-  const heroMetrics = main.locator('.hero-metrics')
-
   await expect(page.getByRole('link', { name: 'Entegrasyon kuyruğuna dön' })).toBeVisible()
   await expect(main.getByText('Aktarım parti detayı')).toBeVisible()
-  await expect(heroMetrics.getByText('Kayıt', { exact: true })).toBeVisible()
-  await expect(heroMetrics.getByText('Hata', { exact: true })).toBeVisible()
-  await expect(heroMetrics.getByText('Şimdi tekrar dene', { exact: true })).toBeVisible()
+  await expect(main.locator('[data-testid="admin-metric-records"]').getByText('Kayıt', { exact: true })).toBeVisible()
+  await expect(main.locator('[data-testid="admin-metric-errors"]').getByText('Hata', { exact: true })).toBeVisible()
+  await expect(main.locator('[data-testid="admin-metric-retry-now"]').getByText('Şimdi tekrar dene', { exact: true })).toBeVisible()
   await expect(main.getByLabel('Aktarım karar kanıtı')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Operatör karar kanıtı' })).toBeVisible()
   await expect(main.getByText('Paylaşılan operatör dilini kullanır: Go / Conditional Go / No-Go.')).toBeVisible()
@@ -58,9 +56,9 @@ test('admin import batch detail switches chrome to English copy and persists loc
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('link', { name: 'Back to integration queue' })).toBeVisible()
   await expect(main.getByText('Import Batch Detail')).toBeVisible()
-  await expect(heroMetrics.getByText('Records', { exact: true })).toBeVisible()
-  await expect(heroMetrics.getByText('Errors', { exact: true })).toBeVisible()
-  await expect(heroMetrics.getByText('Retry now', { exact: true })).toBeVisible()
+  await expect(main.locator('[data-testid="admin-metric-records"]').getByText('Records', { exact: true })).toBeVisible()
+  await expect(main.locator('[data-testid="admin-metric-errors"]').getByText('Errors', { exact: true })).toBeVisible()
+  await expect(main.locator('[data-testid="admin-metric-retry-now"]').getByText('Retry now', { exact: true })).toBeVisible()
   await expect(main.getByLabel('Import decision evidence')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Operator decision evidence' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Source row lineage' })).toBeVisible()
@@ -79,7 +77,6 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
 
   const decisionPanel = page.getByLabel('Aktarım karar kanıtı')
   await expect(decisionPanel.getByRole('heading', { name: 'Operatör karar kanıtı' })).toBeVisible()
-  await expect(decisionPanel.locator('.panel-copy').first()).toHaveCSS('color', 'rgb(108, 100, 120)')
   await expect(decisionPanel.getByText('Go / Conditional Go / No-Go')).toBeVisible()
   await expect(decisionPanel.getByText('Conditional Go', { exact: true })).toBeVisible()
   await expect(
@@ -320,14 +317,14 @@ test('admin integrations mobile layout stays bounded across operator tabs', asyn
   const main = page.getByRole('main')
 
   await expect(main.getByRole('heading', { name: 'Integration control panel' })).toBeVisible()
-  await expect(main.locator('.integration-management-metrics')).toBeVisible()
+  await expect(main.locator('[data-testid="admin-metric-status"]')).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
   await page.getByRole('button', { name: 'Evidence' }).click()
   await expect(
     main.getByRole('heading', { name: 'Payload, audit, and reconciliation evidence' }),
   ).toBeVisible()
-  await expect(main.locator('.integration-management-code-block')).toBeVisible()
+  await expect(main.locator('[data-testid="integration-code-block"]')).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
   await page.getByRole('button', { name: /^Issues/ }).click()

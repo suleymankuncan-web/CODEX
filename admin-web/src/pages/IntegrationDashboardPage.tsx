@@ -1,4 +1,4 @@
-import { useDeferredValue, useMemo, useReducer, type Dispatch, type ReactNode } from 'react'
+import { useDeferredValue, useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -15,9 +15,33 @@ import {
   UploadCloud,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { EmptyState, ScreenState, StatusPill } from '../components/dashboard-primitives'
-import { ReportingToolbar } from '../components/reporting-tools'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { downloadCsv } from '../lib/download-csv'
+import {
+  IntegrationEvidenceValue,
+  IntegrationField,
+  IntegrationSelect,
+  IntegrationUploadDrop,
+  UploadSummaryGrid,
+} from '../features/integrations/integration-dashboard-surface-controls'
+import type {
+  CreateBatchMutationState,
+  ImportTemplateQueryState,
+  IntegrationDashboardAction,
+  IntegrationDashboardState,
+  IntegrationDispatch,
+  IntegrationListMeta,
+  IntegrationSortValue,
+  IntegrationSource,
+  IntegrationTab,
+  IntegrationTabOption,
+  IntegrationTemplateSourceSystem,
+  PowerBiPeriodType,
+  PowerBiUploadMutationState,
+  RetryMutationState,
+} from '../features/integrations/integration-dashboard-surface-types'
+import { toAdminTone } from '../features/integrations/integration-surface-tone'
 import {
   createImportBatch,
   getImportOverview,
@@ -25,73 +49,29 @@ import {
   getNeedsAction,
   getImportPayloadTemplate,
   type ImportOverview,
-  type ImportPayloadTemplate,
-  type IntegrationLookups,
-  type ListResponse,
   type NeedsActionItem,
-  type PowerBiExportUploadResponse,
   retryImportBatch,
   uploadPowerBiExport,
 } from '../features/integrations/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
+import {
+  AdminActionRow,
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminMetricStripItem,
+} from './admin-surface-primitives'
 
 const PAGE_SIZE = 12
 const trNumberFormatter = new Intl.NumberFormat('tr-TR')
-
-type IntegrationTab = 'uploads' | 'evidence' | 'errors'
-type PowerBiPeriodType = 'daily' | 'monthly' | 'custom'
-type IntegrationSortValue = 'priority' | 'errors' | 'records' | 'entity'
-type IntegrationTemplateSourceSystem = 'nebim_v3' | 'power_bi'
-type IntegrationQueueFilter = 'entityTypeFilter' | 'statusFilter'
-type IntegrationSource = IntegrationLookups['activeSources'][number]
-type IntegrationTabOption = { id: IntegrationTab; label: string; count?: number }
-type IntegrationDispatch = Dispatch<IntegrationDashboardAction>
-type IntegrationListMeta = ListResponse<NeedsActionItem>['meta']
-
-type IntegrationDashboardState = {
-  activeTab: IntegrationTab
-  search: string
-  sortBy: IntegrationSortValue
-  offset: number
-  entityTypeFilter: string
-  statusFilter: string
-  feedback: string | null
-  createdBatchId: string | null
-  uploadFeedback: string | null
-  uploadedBatchId: string | null
-  templateSourceSystem: IntegrationTemplateSourceSystem
-  selectedTemplateSourceCode: string
-  powerBiSourceCode: string
-  powerBiPeriodType: PowerBiPeriodType
-  powerBiPeriodMonth: string
-  powerBiPeriodStart: string
-  powerBiPeriodEnd: string
-  personnelFile: File | null
-  storeFile: File | null
-}
-
-type IntegrationDashboardAction =
-  | { type: 'setActiveTab'; value: IntegrationTab }
-  | { type: 'setSearch'; value: string }
-  | { type: 'setSortBy'; value: IntegrationSortValue }
-  | { type: 'setQueueFilter'; field: IntegrationQueueFilter; value: string }
-  | { type: 'setOffset'; value: number }
-  | { type: 'clearQueueFilters' }
-  | { type: 'retrySucceeded'; message: string }
-  | { type: 'batchCreated'; message: string; batchId: string }
-  | { type: 'uploadSucceeded'; message: string; batchId: string }
-  | { type: 'uploadFailed'; message: string }
-  | { type: 'setTemplateSourceSystem'; value: IntegrationTemplateSourceSystem }
-  | { type: 'setSelectedTemplateSourceCode'; value: string }
-  | { type: 'setPowerBiSourceCode'; value: string }
-  | { type: 'setPowerBiPeriodType'; value: PowerBiPeriodType }
-  | { type: 'setPowerBiPeriodMonth'; value: string }
-  | { type: 'setPowerBiPeriodStart'; value: string; syncEnd: boolean }
-  | { type: 'setPowerBiPeriodEnd'; value: string }
-  | { type: 'setPersonnelFile'; value: File | null }
-  | { type: 'setStoreFile'; value: File | null }
 
 function getCurrentIsoDate() {
   return new Date().toISOString().slice(0, 10)
@@ -372,51 +352,62 @@ export function IntegrationDashboardPage() {
 
   if (overviewQuery.isLoading || needsActionQuery.isLoading || lookupsQuery.isLoading) {
     return (
-      <ScreenState
-        title={t('adminIntegrations.loadingTitle')}
-        copy={t('adminIntegrations.loadingCopy')}
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminIntegrations.loadingTitle')}
+          description={t('adminIntegrations.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (overviewQuery.isError) {
     return (
-      <ScreenState
-        title={t('adminIntegrations.dashboardUnavailableTitle')}
-        copy={getErrorMessage(overviewQuery.error)}
-        tone="error"
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminIntegrations.dashboardUnavailableTitle')}
+          description={getErrorMessage(overviewQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (needsActionQuery.isError) {
     return (
-      <ScreenState
-        title={t('adminIntegrations.needsActionUnavailableTitle')}
-        copy={getErrorMessage(needsActionQuery.error)}
-        tone="error"
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminIntegrations.needsActionUnavailableTitle')}
+          description={getErrorMessage(needsActionQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (lookupsQuery.isError) {
     return (
-      <ScreenState
-        title={t('adminIntegrations.lookupsUnavailableTitle')}
-        copy={getErrorMessage(lookupsQuery.error)}
-        tone="error"
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminIntegrations.lookupsUnavailableTitle')}
+          description={getErrorMessage(lookupsQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
   const overview = overviewQuery.data
   if (!overview) {
     return (
-      <ScreenState
-        title={t('adminIntegrations.overviewUnavailableTitle')}
-        copy={t('adminIntegrations.overviewUnavailableCopy')}
-        tone="error"
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('adminIntegrations.overviewUnavailableTitle')}
+          description={t('adminIntegrations.overviewUnavailableCopy')}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
@@ -569,92 +560,129 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
     { id: 'evidence', label: t('adminIntegrations.tabEvidence') },
     { id: 'errors', label: t('adminIntegrations.tabErrors'), count: actionCount },
   ]
+  const metricItems: AdminMetricStripItem[] = [
+    {
+      id: 'status',
+      label: t('adminIntegrations.status'),
+      value: actionCount === 0 ? t('adminIntegrations.controlled') : t('adminIntegrations.needsReview'),
+      description:
+        actionCount === 0
+          ? t('adminIntegrations.noCriticalBlock')
+          : t('adminIntegrations.actionCount', { count: actionCount }),
+      tone: actionCount === 0 ? 'success' : 'warning',
+    },
+    {
+      id: 'healthy',
+      label: t('adminIntegrations.healthy'),
+      value: formatNumber(overview.healthTotals.healthy),
+      description: t('adminIntegrations.healthyNote', { count: overview.totals.completed }),
+      icon: <CheckCircle2 size={18} />,
+      tone: 'success',
+    },
+    {
+      id: 'needs-action',
+      label: t('adminIntegrations.needsAction'),
+      value: formatNumber(actionCount),
+      description: t('adminIntegrations.actionSummaryNote'),
+      icon: <AlertTriangle size={18} />,
+      tone: actionCount === 0 ? 'neutral' : 'danger',
+    },
+    {
+      id: 'retry-ready',
+      label: t('adminIntegrations.retryReady'),
+      value: formatNumber(overview.healthTotals.retryReady),
+      description: t('adminIntegrations.retryReadyNote'),
+      icon: <RefreshCw size={18} />,
+      tone: overview.healthTotals.retryReady > 0 ? 'warning' : 'neutral',
+    },
+    {
+      id: 'evidence',
+      label: t('adminIntegrations.evidence'),
+      value: evidenceState,
+      description: formatOptionalBatch(overview.latest.completedBatchId, t),
+      icon: <ShieldCheck size={18} />,
+      tone: overview.latest.completedBatchId ? 'cyan' : 'neutral',
+    },
+  ]
 
   return (
-    <section className="integration-management-page">
-      <header className="integration-management-hero">
-        <div>
-          <div className="eyebrow">{t('adminIntegrations.heroEyebrow')}</div>
-          <h2 className="integration-management-title">{t('adminIntegrations.title')}</h2>
-          <p className="integration-management-copy">{t('adminIntegrations.heroCopy')}</p>
-        </div>
-        <div className="integration-management-hero-actions">
-          <span className="integration-management-chip">
-            {t('adminIntegrations.totalBatches')}: {formatNumber(overview.totals.all)}
-          </span>
-          <button
-            className="control-button integration-management-primary-button"
+    <AdminSurfacePage ariaLabel={t('adminIntegrations.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('adminIntegrations.heroEyebrow')}
+        title={t('adminIntegrations.title')}
+        description={t('adminIntegrations.heroCopy')}
+        icon={<DatabaseZap size={18} />}
+        meta={
+          <>
+            <AdminSurfaceBadge tone="neutral">
+              {t('adminIntegrations.totalBatches')}: {formatNumber(overview.totals.all)}
+            </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone={actionCount === 0 ? 'success' : 'warning'}>
+              {actionCount === 0
+                ? t('adminIntegrations.controlled')
+                : t('adminIntegrations.needsReview')}
+            </AdminSurfaceBadge>
+          </>
+        }
+        actions={
+          <Button
             type="button"
             onClick={() => dispatchPageState({ type: 'setActiveTab', value: 'uploads' })}
           >
+            <UploadCloud aria-hidden="true" />
             {t('adminIntegrations.newUpload')}
-          </button>
-        </div>
-      </header>
+          </Button>
+        }
+      />
 
-      <section className="integration-management-metrics" aria-label={t('adminIntegrations.summaryAria')}>
-        <IntegrationMetric
-          title={t('adminIntegrations.status')}
-          value={actionCount === 0 ? t('adminIntegrations.controlled') : t('adminIntegrations.needsReview')}
-          note={actionCount === 0 ? t('adminIntegrations.noCriticalBlock') : t('adminIntegrations.actionCount', { count: actionCount })}
-          tone="primary"
-        />
-        <IntegrationMetric
-          title={t('adminIntegrations.healthy')}
-          value={formatNumber(overview.healthTotals.healthy)}
-          note={t('adminIntegrations.healthyNote', { count: overview.totals.completed })}
-          icon={<CheckCircle2 size={18} />}
-        />
-        <IntegrationMetric
-          title={t('adminIntegrations.needsAction')}
-          value={formatNumber(actionCount)}
-          note={t('adminIntegrations.actionSummaryNote')}
-          icon={<AlertTriangle size={18} />}
-        />
-        <IntegrationMetric
-          title={t('adminIntegrations.retryReady')}
-          value={formatNumber(overview.healthTotals.retryReady)}
-          note={t('adminIntegrations.retryReadyNote')}
-          icon={<RefreshCw size={18} />}
-        />
-        <IntegrationMetric
-          title={t('adminIntegrations.evidence')}
-          value={evidenceState}
-          note={formatOptionalBatch(overview.latest.completedBatchId, t)}
-          icon={<ShieldCheck size={18} />}
-        />
-      </section>
+      <AdminMetricStrip
+        className="tw:xl:grid-cols-5"
+        items={metricItems}
+      />
 
       {(feedback || uploadFeedback) ? (
-        <section className="integration-management-feedback">
-          {feedback ? <div className="inline-state inline-state-accent">{feedback}</div> : null}
+        <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:lg:grid-cols-2">
+          {feedback ? <AdminStatePanel title={feedback} tone="success" /> : null}
           {createdBatchId ? (
-            <Link className="back-link" to={`/admin/integrations/${createdBatchId}`}>
-              <span>{t('adminIntegrations.openBatchDetail')}</span>
-            </Link>
+            <Button asChild variant="outline">
+              <Link to={`/admin/integrations/${createdBatchId}`}>
+                {t('adminIntegrations.openBatchDetail')}
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
           ) : null}
-          {uploadFeedback ? <div className="inline-state inline-state-accent">{uploadFeedback}</div> : null}
+          {uploadFeedback ? <AdminStatePanel title={uploadFeedback} tone="success" /> : null}
           {uploadedBatchId ? (
-            <Link className="back-link" to={`/admin/integrations/${uploadedBatchId}`}>
-              <span>{t('adminIntegrations.openBatchDetail')}</span>
-            </Link>
+            <Button asChild variant="outline">
+              <Link to={`/admin/integrations/${uploadedBatchId}`}>
+                {t('adminIntegrations.openBatchDetail')}
+                <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
           ) : null}
-        </section>
+        </div>
       ) : null}
 
-      <nav className="integration-management-tabs" aria-label={t('adminIntegrations.tabsAria')}>
+      <AdminActionRow
+        className="tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-2 tw:shadow-sm"
+      >
         {tabs.map((tab) => (
-          <button
-            className={`integration-management-tab${activeTab === tab.id ? ' integration-management-tab-active' : ''}`}
+          <Button
+            aria-pressed={activeTab === tab.id}
             key={tab.id}
+            variant={activeTab === tab.id ? 'default' : 'outline'}
             type="button"
             onClick={() => dispatchPageState({ type: 'setActiveTab', value: tab.id })}
           >
             <span>{tab.label}</span>
-            {typeof tab.count === 'number' ? <strong>{formatNumber(tab.count)}</strong> : null}
-          </button>
+            {typeof tab.count === 'number' ? (
+              <AdminSurfaceBadge tone={tab.count > 0 ? 'warning' : 'neutral'}>
+                {formatNumber(tab.count)}
+              </AdminSurfaceBadge>
+            ) : null}
+          </Button>
         ))}
-      </nav>
+      </AdminActionRow>
 
       {activeTab === 'uploads' ? (
         <IntegrationUploadsPanel
@@ -707,30 +735,8 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
           t={t}
         />
       ) : null}
-    </section>
+    </AdminSurfacePage>
   )
-}
-
-type PowerBiUploadMutationState = {
-  data: PowerBiExportUploadResponse | undefined
-  isPending: boolean
-  mutate: (input: Parameters<typeof uploadPowerBiExport>[0]) => void
-}
-
-type ImportTemplateQueryState = {
-  data: ImportPayloadTemplate | undefined
-  error: unknown
-  isError: boolean
-  isLoading: boolean
-}
-
-type CreateBatchMutationState = {
-  isPending: boolean
-}
-
-type RetryMutationState = {
-  isPending: boolean
-  mutate: (batchId: string) => void
 }
 
 type IntegrationUploadsPanelProps = {
@@ -769,210 +775,228 @@ function IntegrationUploadsPanel(input: IntegrationUploadsPanelProps) {
   } = input
 
   return (
-<section className="integration-management-panel" aria-label={t('adminIntegrations.uploadsTabAria')}>
-          <div className="integration-management-panel-head">
-            <div>
-              <div className="eyebrow">{t('adminIntegrations.tabUploads')}</div>
-              <h3>{t('adminIntegrations.uploadPanelTitle')}</h3>
-              <p className="integration-management-panel-copy">{t('adminIntegrations.uploadPanelCopy')}</p>
-            </div>
-            <div className="toolbar-cluster">
-              <span className="integration-management-chip">{t('adminIntegrations.powerBiKpiSource')}</span>
-              <StatusPill tone={powerBiUploadBlockers.length === 0 ? 'calm' : 'warning'}>
-                {powerBiUploadBlockers.length === 0 ? t('adminIntegrations.ready') : t('adminIntegrations.waiting')}
-              </StatusPill>
+    <AdminSurfaceSection
+      ariaLabel={t('adminIntegrations.uploadsTabAria')}
+      badge={
+        <AdminSurfaceBadge tone={powerBiUploadBlockers.length === 0 ? 'success' : 'warning'}>
+          {powerBiUploadBlockers.length === 0
+            ? t('adminIntegrations.ready')
+            : t('adminIntegrations.waiting')}
+        </AdminSurfaceBadge>
+      }
+      description={t('adminIntegrations.uploadPanelCopy')}
+      eyebrow={t('adminIntegrations.tabUploads')}
+      title={t('adminIntegrations.uploadPanelTitle')}
+    >
+      <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,0.8fr)]">
+        <section className="tw:grid tw:gap-4">
+          <div className="tw:flex tw:min-w-0 tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
+            <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
+              <UploadCloud size={18} aria-hidden="true" />
+            </span>
+            <div className="tw:min-w-0">
+              <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-foreground">
+                {t('adminIntegrations.newUpload')}
+              </h3>
+              <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                {t('adminIntegrations.separateFilesCopy')}
+              </p>
             </div>
           </div>
 
-          <div className="integration-management-split">
-            <div className="integration-management-card">
-              <div className="integration-management-card-head">
-                <div className="integration-management-card-icon"><UploadCloud size={18} /></div>
-                <div>
-                  <h4>{t('adminIntegrations.newUpload')}</h4>
-                  <p>{t('adminIntegrations.separateFilesCopy')}</p>
-                </div>
-              </div>
+          <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:md:grid-cols-2">
+            <IntegrationField label={t('adminIntegrations.powerBiKpiSource')}>
+              <IntegrationSelect
+                value={resolvedPowerBiSourceCode}
+                onChange={(event) =>
+                  dispatchPageState({
+                    type: 'setPowerBiSourceCode',
+                    value: event.target.value,
+                  })
+                }
+                disabled={powerBiSources.length === 0}
+              >
+                {powerBiSources.length === 0 ? (
+                  <option value="">{t('adminIntegrations.noActiveKpiSource')}</option>
+                ) : null}
+                {powerBiSources.map((item) => (
+                  <option key={item.sourceId} value={item.sourceCode}>
+                    {item.sourceCode} - {item.sourceName}
+                  </option>
+                ))}
+              </IntegrationSelect>
+            </IntegrationField>
 
-              <div className="integration-management-form-grid">
-                <label className="field-block">
-                  <span>{t('adminIntegrations.powerBiKpiSource')}</span>
-                  <select
-                    value={resolvedPowerBiSourceCode}
+            <IntegrationField label={t('adminIntegrations.periodType')}>
+              <IntegrationSelect
+                aria-label={t('adminIntegrations.periodType')}
+                value={powerBiPeriodType}
+                onChange={(event) =>
+                  dispatchPageState({
+                    type: 'setPowerBiPeriodType',
+                    value: event.target.value as PowerBiPeriodType,
+                  })
+                }
+              >
+                <option value="monthly">{t('adminIntegrations.monthlySnapshot')}</option>
+                <option value="daily">{t('adminIntegrations.dailyData')}</option>
+                <option value="custom">{t('adminIntegrations.customDateRange')}</option>
+              </IntegrationSelect>
+            </IntegrationField>
+
+            {powerBiPeriodType === 'monthly' ? (
+              <IntegrationField label={t('adminIntegrations.periodMonth')}>
+                <Input
+                  type="month"
+                  value={powerBiPeriodMonth}
+                  onChange={(event) =>
+                    dispatchPageState({
+                      type: 'setPowerBiPeriodMonth',
+                      value: event.target.value,
+                    })
+                  }
+                />
+              </IntegrationField>
+            ) : (
+              <>
+                <IntegrationField label={t('adminIntegrations.start')}>
+                  <Input
+                    aria-label={t('adminIntegrations.start')}
+                    type="date"
+                    value={powerBiPeriodStart}
                     onChange={(event) =>
                       dispatchPageState({
-                        type: 'setPowerBiSourceCode',
+                        type: 'setPowerBiPeriodStart',
+                        value: event.target.value,
+                        syncEnd: powerBiPeriodType === 'daily',
+                      })
+                    }
+                  />
+                </IntegrationField>
+                <IntegrationField label={t('adminIntegrations.end')}>
+                  <Input
+                    aria-label={t('adminIntegrations.end')}
+                    type="date"
+                    value={powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd}
+                    disabled={powerBiPeriodType === 'daily'}
+                    onChange={(event) =>
+                      dispatchPageState({
+                        type: 'setPowerBiPeriodEnd',
                         value: event.target.value,
                       })
                     }
-                    disabled={powerBiSources.length === 0}
-                  >
-                    {powerBiSources.length === 0 ? <option value="">{t('adminIntegrations.noActiveKpiSource')}</option> : null}
-                    {powerBiSources.map((item) => (
-                      <option key={item.sourceId} value={item.sourceCode}>
-                        {item.sourceCode} - {item.sourceName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="field-block">
-                  <span>{t('adminIntegrations.periodType')}</span>
-                  <select
-                    aria-label={t('adminIntegrations.periodType')}
-                    value={powerBiPeriodType}
-                    onChange={(event) =>
-                      dispatchPageState({
-                        type: 'setPowerBiPeriodType',
-                        value: event.target.value as PowerBiPeriodType,
-                      })
-                    }
-                  >
-                    <option value="monthly">{t('adminIntegrations.monthlySnapshot')}</option>
-                    <option value="daily">{t('adminIntegrations.dailyData')}</option>
-                    <option value="custom">{t('adminIntegrations.customDateRange')}</option>
-                  </select>
-                </label>
-
-                {powerBiPeriodType === 'monthly' ? (
-                  <label className="field-block">
-                    <span>{t('adminIntegrations.periodMonth')}</span>
-                    <input
-                      type="month"
-                      value={powerBiPeriodMonth}
-                      onChange={(event) =>
-                        dispatchPageState({
-                          type: 'setPowerBiPeriodMonth',
-                          value: event.target.value,
-                        })
-                      }
-                    />
-                  </label>
-                ) : (
-                  <>
-                    <label className="field-block">
-                      <span>{t('adminIntegrations.start')}</span>
-                      <input
-                        aria-label={t('adminIntegrations.start')}
-                        type="date"
-                        value={powerBiPeriodStart}
-                        onChange={(event) =>
-                          dispatchPageState({
-                            type: 'setPowerBiPeriodStart',
-                            value: event.target.value,
-                            syncEnd: powerBiPeriodType === 'daily',
-                          })
-                        }
-                      />
-                    </label>
-                    <label className="field-block">
-                      <span>{t('adminIntegrations.end')}</span>
-                      <input
-                        aria-label={t('adminIntegrations.end')}
-                        type="date"
-                        value={powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd}
-                        disabled={powerBiPeriodType === 'daily'}
-                        onChange={(event) =>
-                          dispatchPageState({
-                            type: 'setPowerBiPeriodEnd',
-                            value: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                  </>
-                )}
-              </div>
-
-              <div className="integration-management-upload-pair">
-                <label className="integration-management-upload-drop">
-                  <FileSpreadsheet size={20} aria-hidden="true" />
-                  <strong>{t('adminIntegrations.personnelExport')}</strong>
-                  <span>{personnelFile?.name ?? t('adminIntegrations.noFileSelected')}</span>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(event) =>
-                      dispatchPageState({
-                        type: 'setPersonnelFile',
-                        value: event.target.files?.[0] ?? null,
-                      })
-                    }
                   />
-                </label>
-                <label className="integration-management-upload-drop">
-                  <Store size={20} aria-hidden="true" />
-                  <strong>{t('adminIntegrations.storeExport')}</strong>
-                  <span>{storeFile?.name ?? t('adminIntegrations.noFileSelected')}</span>
-                  <input
-                    type="file"
-                    accept=".xlsx,.xls"
-                    onChange={(event) =>
-                      dispatchPageState({
-                        type: 'setStoreFile',
-                        value: event.target.files?.[0] ?? null,
-                      })
-                    }
-                  />
-                </label>
-              </div>
-
-              <div className="toolbar-cluster">
-                <button
-                  className="control-button integration-management-primary-button"
-                  type="button"
-                  disabled={isPowerBiUploadDisabled}
-                  onClick={() =>
-                    uploadPowerBiMutation.mutate({
-                      sourceCode: resolvedPowerBiSourceCode,
-                      periodType: powerBiPeriodType,
-                      ...(powerBiPeriodType === 'monthly' && powerBiPeriodMonth
-                        ? { periodMonth: powerBiPeriodMonth }
-                        : {}),
-                      ...(powerBiPeriodType !== 'monthly' && powerBiPeriodStart
-                        ? { periodStart: powerBiPeriodStart }
-                        : {}),
-                      ...(powerBiPeriodType !== 'monthly'
-                        ? {
-                            periodEnd:
-                              powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd,
-                          }
-                        : {}),
-                      personnelFile,
-                      storeFile,
-                    })
-                  }
-                >
-                  {uploadPowerBiMutation.isPending ? t('adminIntegrations.uploading') : t('adminIntegrations.uploadPowerBiExport')}
-                </button>
-                {powerBiUploadBlockers.length > 0 ? (
-                  <span className="inline-state inline-state-warning" role="status">
-                    <strong>{t('adminIntegrations.powerBiNotReady')}</strong>: {powerBiUploadBlockers.join(' ')}
-                  </span>
-                ) : (
-                  <span className="inline-state inline-state-neutral">
-                    {t('adminIntegrations.powerBiReadyCopy')}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <aside className="integration-management-card integration-management-decision-card">
-              <div className="eyebrow">{t('adminIntegrations.uploadDecisionEyebrow')}</div>
-              <h3>{t('adminIntegrations.uploadDecisionTitle')}</h3>
-              <p>{t('adminIntegrations.uploadDecisionCopy')}</p>
-              <div className="integration-management-decision-list">
-                <DecisionRow label={t('adminIntegrations.latestCompleted')} value={formatOptionalBatch(overview.latest.completedBatchId, t)} />
-                <DecisionRow label={t('adminIntegrations.retryReady')} value={formatNumber(overview.healthTotals.retryReady)} />
-                <DecisionRow label={t('adminIntegrations.blocked')} value={formatNumber(overview.healthTotals.blocked)} />
-              </div>
-            </aside>
+                </IntegrationField>
+              </>
+            )}
           </div>
 
-          {uploadPowerBiMutation.data?.data.summary ? (
-            <UploadSummaryGrid summary={uploadPowerBiMutation.data.data.summary} t={t} />
-          ) : null}
+          <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:md:grid-cols-2">
+            <IntegrationUploadDrop
+              icon={<FileSpreadsheet size={20} aria-hidden="true" />}
+              title={t('adminIntegrations.personnelExport')}
+              fileName={personnelFile?.name ?? t('adminIntegrations.noFileSelected')}
+              onFileChange={(file) =>
+                dispatchPageState({
+                  type: 'setPersonnelFile',
+                  value: file,
+                })
+              }
+            />
+            <IntegrationUploadDrop
+              icon={<Store size={20} aria-hidden="true" />}
+              title={t('adminIntegrations.storeExport')}
+              fileName={storeFile?.name ?? t('adminIntegrations.noFileSelected')}
+              onFileChange={(file) =>
+                dispatchPageState({
+                  type: 'setStoreFile',
+                  value: file,
+                })
+              }
+            />
+          </div>
+
+          <AdminActionRow>
+            <Button
+              type="button"
+              disabled={isPowerBiUploadDisabled}
+              onClick={() =>
+                uploadPowerBiMutation.mutate({
+                  sourceCode: resolvedPowerBiSourceCode,
+                  periodType: powerBiPeriodType,
+                  ...(powerBiPeriodType === 'monthly' && powerBiPeriodMonth
+                    ? { periodMonth: powerBiPeriodMonth }
+                    : {}),
+                  ...(powerBiPeriodType !== 'monthly' && powerBiPeriodStart
+                    ? { periodStart: powerBiPeriodStart }
+                    : {}),
+                  ...(powerBiPeriodType !== 'monthly'
+                    ? {
+                        periodEnd:
+                          powerBiPeriodType === 'daily' ? powerBiPeriodStart : powerBiPeriodEnd,
+                      }
+                    : {}),
+                  personnelFile,
+                  storeFile,
+                })
+              }
+            >
+              {uploadPowerBiMutation.isPending
+                ? t('adminIntegrations.uploading')
+                : t('adminIntegrations.uploadPowerBiExport')}
+            </Button>
+          </AdminActionRow>
+
+          {powerBiUploadBlockers.length > 0 ? (
+            <AdminStatePanel
+              title={t('adminIntegrations.powerBiNotReady')}
+              description={powerBiUploadBlockers.join(' ')}
+              tone="warning"
+            />
+          ) : (
+            <AdminStatePanel
+              title={t('adminIntegrations.powerBiReadyCopy')}
+              tone="neutral"
+            />
+          )}
         </section>
+
+        <aside
+          className="tw:rounded-xl tw:border tw:border-border tw:bg-background/60 tw:p-4"
+          aria-label={t('adminIntegrations.uploadDecisionTitle')}
+        >
+          <div className="tw:mb-3">
+            <div className="tw:text-[0.7rem] tw:font-medium tw:tracking-[0.08em] tw:text-muted-foreground tw:uppercase">
+              {t('adminIntegrations.uploadDecisionEyebrow')}
+            </div>
+            <h3 className="tw:mt-1 tw:text-base tw:font-medium tw:text-foreground">
+              {t('adminIntegrations.uploadDecisionTitle')}
+            </h3>
+            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              {t('adminIntegrations.uploadDecisionCopy')}
+            </p>
+          </div>
+          <AdminKeyValueGrid className="tw:lg:grid-cols-1">
+            <AdminKeyValue
+              label={t('adminIntegrations.latestCompleted')}
+              value={formatOptionalBatch(overview.latest.completedBatchId, t)}
+            />
+            <AdminKeyValue
+              label={t('adminIntegrations.retryReady')}
+              value={formatNumber(overview.healthTotals.retryReady)}
+            />
+            <AdminKeyValue
+              label={t('adminIntegrations.blocked')}
+              value={formatNumber(overview.healthTotals.blocked)}
+            />
+          </AdminKeyValueGrid>
+        </aside>
+      </div>
+
+      {uploadPowerBiMutation.data?.data.summary ? (
+        <UploadSummaryGrid summary={uploadPowerBiMutation.data.data.summary} t={t} />
+      ) : null}
+    </AdminSurfaceSection>
   )
 }
 
@@ -1006,117 +1030,132 @@ function IntegrationEvidencePanel(input: IntegrationEvidencePanelProps) {
   } = input
 
   return (
-<section className="integration-management-panel" aria-label={t('adminIntegrations.evidenceTabAria')}>
-          <div className="integration-management-panel-head">
-            <div>
-              <div className="eyebrow">{t('adminIntegrations.tabEvidence')}</div>
-              <h3>{t('adminIntegrations.evidencePanelTitle')}</h3>
-              <p className="integration-management-panel-copy">{t('adminIntegrations.evidencePanelCopy')}</p>
-            </div>
-            <div className="toolbar-cluster">
-              <label className="control-select">
-                <span className="sr-only">{t('adminIntegrations.templateSourceSystem')}</span>
-                <select
-                  value={templateSourceSystem}
-                  onChange={(event) =>
-                    dispatchPageState({
-                      type: 'setTemplateSourceSystem',
-                      value: event.target.value as IntegrationTemplateSourceSystem,
-                    })
-                  }
-                >
-                  <option value="power_bi">Power BI</option>
-                  <option value="nebim_v3">Nebim V3</option>
-                </select>
-              </label>
-            </div>
-          </div>
+    <AdminSurfaceSection
+      ariaLabel={t('adminIntegrations.evidenceTabAria')}
+      actions={
+        <IntegrationSelect
+          aria-label={t('adminIntegrations.templateSourceSystem')}
+          value={templateSourceSystem}
+          onChange={(event) =>
+            dispatchPageState({
+              type: 'setTemplateSourceSystem',
+              value: event.target.value as IntegrationTemplateSourceSystem,
+            })
+          }
+        >
+          <option value="power_bi">Power BI</option>
+          <option value="nebim_v3">Nebim V3</option>
+        </IntegrationSelect>
+      }
+      description={t('adminIntegrations.evidencePanelCopy')}
+      eyebrow={t('adminIntegrations.tabEvidence')}
+      title={t('adminIntegrations.evidencePanelTitle')}
+    >
+      <AdminKeyValueGrid className="tw:lg:grid-cols-3">
+        <IntegrationEvidenceValue
+          icon={<FileJson size={18} />}
+          label={t('adminIntegrations.payloadEvidence')}
+          description={t('adminIntegrations.payloadEvidenceCopy')}
+          value={importTemplateQuery.data?.entityType ?? 'kpi'}
+        />
+        <IntegrationEvidenceValue
+          icon={<ClipboardCheck size={18} />}
+          label={t('adminIntegrations.auditEvidence')}
+          description={t('adminIntegrations.auditEvidenceCopy')}
+          value={formatOptionalBatch(overview.latest.completedBatchId, t)}
+        />
+        <IntegrationEvidenceValue
+          icon={<DatabaseZap size={18} />}
+          label={t('adminIntegrations.reconciliationEvidence')}
+          description={t('adminIntegrations.reconciliationEvidenceCopy')}
+          value={evidenceState}
+        />
+      </AdminKeyValueGrid>
 
-          <div className="integration-management-evidence-grid">
-            <EvidenceCard
-              icon={<FileJson size={18} />}
-              title={t('adminIntegrations.payloadEvidence')}
-              copy={t('adminIntegrations.payloadEvidenceCopy')}
-              value={importTemplateQuery.data?.entityType ?? 'kpi'}
-            />
-            <EvidenceCard
-              icon={<ClipboardCheck size={18} />}
-              title={t('adminIntegrations.auditEvidence')}
-              copy={t('adminIntegrations.auditEvidenceCopy')}
-              value={formatOptionalBatch(overview.latest.completedBatchId, t)}
-            />
-            <EvidenceCard
-              icon={<DatabaseZap size={18} />}
-              title={t('adminIntegrations.reconciliationEvidence')}
-              copy={t('adminIntegrations.reconciliationEvidenceCopy')}
-              value={evidenceState}
-            />
-          </div>
-
-          {importTemplateQuery.isLoading ? (
-            <div className="inline-state inline-state-neutral">{t('adminIntegrations.loadingTemplate')}</div>
-          ) : importTemplateQuery.isError ? (
-            <div className="inline-state inline-state-danger">{getErrorMessage(importTemplateQuery.error)}</div>
-          ) : importTemplateQuery.data ? (
-            <div className="integration-management-evidence-detail">
-              <div className="toolbar-cluster">
-                <label className="control-select">
-                  <span className="sr-only">{t('adminIntegrations.executionSource')}</span>
-                  <select
-                    value={resolvedTemplateSourceCode}
-                    onChange={(event) =>
-                      dispatchPageState({
-                        type: 'setSelectedTemplateSourceCode',
-                        value: event.target.value,
-                      })
-                    }
-                    disabled={compatibleSources.length === 0}
-                  >
-                    {compatibleSources.length === 0 ? <option value="">{t('adminIntegrations.noActiveKpiSource')}</option> : null}
-                    {compatibleSources.map((item) => (
-                      <option key={item.sourceId} value={item.sourceCode}>
-                        {item.sourceCode} - {item.sourceName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button
-                  className="control-button"
-                  type="button"
-                  disabled={compatibleSources.length === 0 || createBatchMutation.isPending}
-                  onClick={submitSampleImport}
-                >
-                  {createBatchMutation.isPending ? t('adminIntegrations.running') : t('adminIntegrations.createEvidenceSample')}
-                </button>
-              </div>
+      {importTemplateQuery.isLoading ? (
+        <AdminStatePanel
+          title={t('adminIntegrations.loadingTemplate')}
+          isLoading
+        />
+      ) : importTemplateQuery.isError ? (
+        <AdminStatePanel
+          title={getErrorMessage(importTemplateQuery.error)}
+          tone="danger"
+        />
+      ) : importTemplateQuery.data ? (
+        <div className="tw:grid tw:gap-3">
+          <AdminActionRow>
+            <IntegrationSelect
+              aria-label={t('adminIntegrations.executionSource')}
+              value={resolvedTemplateSourceCode}
+              onChange={(event) =>
+                dispatchPageState({
+                  type: 'setSelectedTemplateSourceCode',
+                  value: event.target.value,
+                })
+              }
+              disabled={compatibleSources.length === 0}
+            >
               {compatibleSources.length === 0 ? (
-                <div className="inline-state inline-state-warning">
-                  {t('adminIntegrations.sourceSystemNeedsKpiSource')}
-                </div>
+                <option value="">{t('adminIntegrations.noActiveKpiSource')}</option>
               ) : null}
-              <div className="integration-management-evidence-meta">
-                <span>{t('adminIntegrations.entity')}: {importTemplateQuery.data.entityType}</span>
-                <span>{t('adminIntegrations.source')}: {importTemplateQuery.data.sourceSystem}</span>
-                <span>{t('adminIntegrations.executionSource')}: {resolvedTemplateSourceCode || t('adminIntegrations.none')}</span>
-              </div>
-              {createdBatchId ? (
-                <div className="inline-state inline-state-neutral">
-                  {t('adminIntegrations.latestCreatedBatch')}: <code>{createdBatchId}</code>
-                </div>
-              ) : null}
-              {importTemplateQuery.data.normalizedBehavior?.length ? (
-                <ul className="audit-list">
-                  {importTemplateQuery.data.normalizedBehavior.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-              ) : null}
-              <pre className="integration-management-code-block">
-                {JSON.stringify(importTemplateQuery.data.requestBody, null, 2)}
-              </pre>
-            </div>
+              {compatibleSources.map((item) => (
+                <option key={item.sourceId} value={item.sourceCode}>
+                  {item.sourceCode} - {item.sourceName}
+                </option>
+              ))}
+            </IntegrationSelect>
+            <Button
+              type="button"
+              disabled={compatibleSources.length === 0 || createBatchMutation.isPending}
+              onClick={submitSampleImport}
+            >
+              {createBatchMutation.isPending
+                ? t('adminIntegrations.running')
+                : t('adminIntegrations.createEvidenceSample')}
+            </Button>
+          </AdminActionRow>
+
+          {compatibleSources.length === 0 ? (
+            <AdminStatePanel
+              title={t('adminIntegrations.sourceSystemNeedsKpiSource')}
+              tone="warning"
+            />
           ) : null}
-        </section>
+
+          <AdminKeyValueGrid className="tw:lg:grid-cols-3">
+            <AdminKeyValue label={t('adminIntegrations.entity')} value={importTemplateQuery.data.entityType} />
+            <AdminKeyValue label={t('adminIntegrations.source')} value={importTemplateQuery.data.sourceSystem} />
+            <AdminKeyValue
+              label={t('adminIntegrations.executionSource')}
+              value={resolvedTemplateSourceCode || t('adminIntegrations.none')}
+            />
+          </AdminKeyValueGrid>
+
+          {createdBatchId ? (
+            <AdminStatePanel
+              title={`${t('adminIntegrations.latestCreatedBatch')}: ${createdBatchId}`}
+              tone="neutral"
+            />
+          ) : null}
+
+          {importTemplateQuery.data.normalizedBehavior?.length ? (
+            <ul className="tw:grid tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3 tw:text-sm tw:text-muted-foreground">
+              {importTemplateQuery.data.normalizedBehavior.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          <pre
+            className="tw:max-h-96 tw:overflow-auto tw:rounded-lg tw:border tw:border-border tw:bg-slate-950 tw:p-3 tw:text-xs tw:leading-5 tw:text-slate-100"
+            data-testid="integration-code-block"
+          >
+            {JSON.stringify(importTemplateQuery.data.requestBody, null, 2)}
+          </pre>
+        </div>
+      ) : null}
+    </AdminSurfaceSection>
   )
 }
 
@@ -1152,276 +1191,198 @@ function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
   } = input
 
   return (
-<section className="integration-management-panel" aria-label={t('adminIntegrations.errorsTabAria')}>
-          <div className="integration-management-panel-head">
-            <div>
-              <div className="eyebrow">{t('adminIntegrations.tabErrors')}</div>
-              <h3>{t('adminIntegrations.errorsPanelTitle')}</h3>
-              <p className="integration-management-panel-copy">{t('adminIntegrations.errorsPanelCopy')}</p>
-            </div>
-            <ReportingToolbar
-              sortValue={sortBy}
-              onSortChange={(value) =>
-                dispatchPageState({ type: 'setSortBy', value: value as IntegrationSortValue })
-              }
-              sortOptions={[
-                { value: 'priority', label: t('adminIntegrations.sortPriority') },
-                { value: 'errors', label: t('adminIntegrations.sortErrors') },
-                { value: 'records', label: t('adminIntegrations.sortRecords') },
-                { value: 'entity', label: t('adminIntegrations.sortEntity') },
-              ]}
-              onExport={() =>
-                downloadCsv({
-                  filename: 'integration-needs-action.csv',
-                  columns: ['batchId', 'sourceCode', 'sourceName', 'entityType', 'healthState', 'recordCount', 'errorCount', 'retryCount', 'actionReason', 'recommendedAction'],
-                  rows: sortedItems.map((item) => [
-                    item.batchId,
-                    item.sourceCode,
-                    item.sourceName,
-                    item.entityType,
-                    item.healthState,
-                    item.recordCount,
-                    item.errorCount,
-                    item.retryCount,
-                    item.actionReason,
-                    item.recommendedAction,
-                  ]),
-                })
-              }
+    <AdminSurfaceSection
+      ariaLabel={t('adminIntegrations.errorsTabAria')}
+      actions={
+        <AdminActionRow className="tw:justify-start tw:sm:justify-end">
+          <IntegrationSelect
+            aria-label={t('adminIntegrations.sortPriority')}
+            value={sortBy}
+            onChange={(event) =>
+              dispatchPageState({ type: 'setSortBy', value: event.target.value as IntegrationSortValue })
+            }
+          >
+            <option value="priority">{t('adminIntegrations.sortPriority')}</option>
+            <option value="errors">{t('adminIntegrations.sortErrors')}</option>
+            <option value="records">{t('adminIntegrations.sortRecords')}</option>
+            <option value="entity">{t('adminIntegrations.sortEntity')}</option>
+          </IntegrationSelect>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              downloadCsv({
+                filename: 'integration-needs-action.csv',
+                columns: ['batchId', 'sourceCode', 'sourceName', 'entityType', 'healthState', 'recordCount', 'errorCount', 'retryCount', 'actionReason', 'recommendedAction'],
+                rows: sortedItems.map((item) => [
+                  item.batchId,
+                  item.sourceCode,
+                  item.sourceName,
+                  item.entityType,
+                  item.healthState,
+                  item.recordCount,
+                  item.errorCount,
+                  item.retryCount,
+                  item.actionReason,
+                  item.recommendedAction,
+                ]),
+              })
+            }
+          >
+            {t('adminIntegrations.exportQueue')}
+          </Button>
+        </AdminActionRow>
+      }
+      description={t('adminIntegrations.errorsPanelCopy')}
+      eyebrow={t('adminIntegrations.tabErrors')}
+      title={t('adminIntegrations.errorsPanelTitle')}
+    >
+      <div className="tw:grid tw:grid-cols-1 tw:gap-2 tw:lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]">
+        <label className="tw:relative tw:block">
+          <Search
+            aria-hidden="true"
+            className="tw:pointer-events-none tw:absolute tw:left-3 tw:top-1/2 tw:size-4 tw:-translate-y-1/2 tw:text-muted-foreground"
+          />
+          <span className="tw:sr-only">{t('adminIntegrations.filterQueue')}</span>
+          <Input
+            className="tw:pl-9"
+            value={search}
+            onChange={(event) =>
+              dispatchPageState({ type: 'setSearch', value: event.target.value })
+            }
+            placeholder={t('adminIntegrations.searchQueuePlaceholder')}
+          />
+        </label>
+        <IntegrationSelect
+          aria-label={t('adminIntegrations.filterEntityType')}
+          value={entityTypeFilter}
+          onChange={(event) =>
+            dispatchPageState({
+              type: 'setQueueFilter',
+              field: 'entityTypeFilter',
+              value: event.target.value,
+            })
+          }
+        >
+          <option value="">{t('adminIntegrations.allEntities')}</option>
+          {['employee', 'store', 'kpi', 'assignment', 'position', 'company', 'region'].map((entity) => (
+            <option key={entity} value={entity}>{entity}</option>
+          ))}
+        </IntegrationSelect>
+        <IntegrationSelect
+          aria-label={t('adminIntegrations.filterStatus')}
+          value={statusFilter}
+          onChange={(event) =>
+            dispatchPageState({
+              type: 'setQueueFilter',
+              field: 'statusFilter',
+              value: event.target.value,
+            })
+          }
+        >
+          <option value="">{t('adminIntegrations.allStatuses')}</option>
+          {['pending', 'queued', 'processing', 'completed', 'completed_with_errors', 'failed'].map((status) => (
+            <option key={status} value={status}>{status}</option>
+          ))}
+        </IntegrationSelect>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => dispatchPageState({ type: 'clearQueueFilters' })}
+        >
+          {t('adminIntegrations.clearFilters')}
+        </Button>
+      </div>
+
+      {sortedItems.length === 0 ? (
+        <AdminSurfaceEmpty
+          title={t('adminIntegrations.noQueueItemsTitle')}
+          copy={t('adminIntegrations.noQueueItemsCopy')}
+        />
+      ) : (
+        <div className="tw:grid tw:gap-2">
+          {sortedItems.map((item) => (
+            <article
+              className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:p-3 tw:shadow-sm tw:lg:grid-cols-[minmax(0,1fr)_auto] tw:lg:items-center"
+              key={item.batchId}
             >
-              <label className="search-field integration-management-search">
-                <Search size={16} aria-hidden="true" />
-                <span className="sr-only">{t('adminIntegrations.filterQueue')}</span>
-                <input
-                  value={search}
-                  onChange={(event) =>
-                    dispatchPageState({ type: 'setSearch', value: event.target.value })
-                  }
-                  placeholder={t('adminIntegrations.searchQueuePlaceholder')}
-                />
-              </label>
-            </ReportingToolbar>
-          </div>
-
-          <div className="toolbar-cluster">
-            <label className="control-select">
-              <span className="sr-only">{t('adminIntegrations.filterEntityType')}</span>
-              <select
-                value={entityTypeFilter}
-                onChange={(event) =>
-                  dispatchPageState({
-                    type: 'setQueueFilter',
-                    field: 'entityTypeFilter',
-                    value: event.target.value,
-                  })
-                }
+              <Link
+                className="tw:block tw:min-w-0 tw:no-underline"
+                to={`/admin/integrations/${item.batchId}`}
               >
-                <option value="">{t('adminIntegrations.allEntities')}</option>
-                {['employee', 'store', 'kpi', 'assignment', 'position', 'company', 'region'].map((entity) => (
-                  <option key={entity} value={entity}>{entity}</option>
-                ))}
-              </select>
-            </label>
-            <label className="control-select">
-              <span className="sr-only">{t('adminIntegrations.filterStatus')}</span>
-              <select
-                value={statusFilter}
-                onChange={(event) =>
-                  dispatchPageState({
-                    type: 'setQueueFilter',
-                    field: 'statusFilter',
-                    value: event.target.value,
-                  })
-                }
-              >
-                <option value="">{t('adminIntegrations.allStatuses')}</option>
-                {['pending', 'queued', 'processing', 'completed', 'completed_with_errors', 'failed'].map((status) => (
-                  <option key={status} value={status}>{status}</option>
-                ))}
-              </select>
-            </label>
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => dispatchPageState({ type: 'clearQueueFilters' })}
-            >
-              {t('adminIntegrations.clearFilters')}
-            </button>
-          </div>
-
-          {sortedItems.length === 0 ? (
-            <EmptyState title={t('adminIntegrations.noQueueItemsTitle')} copy={t('adminIntegrations.noQueueItemsCopy')} />
-          ) : (
-            <div className="integration-management-queue-list">
-              {sortedItems.map((item) => (
-                <div className="integration-management-queue-row" key={item.batchId}>
-                  <Link to={`/admin/integrations/${item.batchId}`}>
-                    <div className="queue-row-head">
-                      <div>
-                        <div className="queue-title">{item.sourceCode} / {item.entityType}</div>
-                        <div className="queue-subtitle">{item.batchId}</div>
-                      </div>
-                      <StatusPill tone={mapHealthTone(item.healthState)}>{formatState(item.healthState)}</StatusPill>
-                    </div>
-
-                    <p className="queue-reason">{item.actionReason}</p>
-
-                    <div className="queue-meta">
-                      <span>{t('adminIntegrations.records', { count: item.recordCount })}</span>
-                      <span>{t('adminIntegrations.errors', { count: item.errorCount })}</span>
-                      <span>{t('adminIntegrations.retryCount', { count: item.retryCount })}</span>
-                      {item.recommendedNextEntityType ? <span>{t('adminIntegrations.nextImport', { entity: item.recommendedNextEntityType })}</span> : null}
-                    </div>
-
-                    <div className="queue-footer">
-                      <span>{item.recommendedAction}</span>
-                      <ArrowRight size={16} />
-                    </div>
-                  </Link>
-                  {item.canRetryNow ? (
-                    <div className="action-cluster">
-                      <button
-                        className="control-button"
-                        type="button"
-                        onClick={() => retryMutation.mutate(item.batchId)}
-                        disabled={retryMutation.isPending}
-                      >
-                        {retryMutation.isPending ? t('adminIntegrations.retrying') : t('adminIntegrations.retryBatch')}
-                      </button>
-                    </div>
+                <div className="tw:flex tw:min-w-0 tw:flex-wrap tw:items-center tw:gap-2">
+                  <div className="tw:min-w-0 tw:font-medium tw:text-foreground">
+                    {item.sourceCode} / {item.entityType}
+                  </div>
+                  <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(item.healthState))}>
+                    {formatState(item.healthState)}
+                  </AdminSurfaceBadge>
+                </div>
+                <div className="tw:mt-1 tw:break-all tw:text-xs tw:text-muted-foreground">{item.batchId}</div>
+                <p className="tw:mt-2 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                  {item.actionReason}
+                </p>
+                <div className="tw:mt-3 tw:flex tw:flex-wrap tw:gap-2 tw:text-xs tw:text-muted-foreground">
+                  <AdminSurfaceBadge tone="neutral">
+                    {t('adminIntegrations.records', { count: item.recordCount })}
+                  </AdminSurfaceBadge>
+                  <AdminSurfaceBadge tone={item.errorCount > 0 ? 'danger' : 'neutral'}>
+                    {t('adminIntegrations.errors', { count: item.errorCount })}
+                  </AdminSurfaceBadge>
+                  <AdminSurfaceBadge tone="neutral">
+                    {t('adminIntegrations.retryCount', { count: item.retryCount })}
+                  </AdminSurfaceBadge>
+                  {item.recommendedNextEntityType ? (
+                    <AdminSurfaceBadge tone="warning">
+                      {t('adminIntegrations.nextImport', { entity: item.recommendedNextEntityType })}
+                    </AdminSurfaceBadge>
                   ) : null}
                 </div>
-              ))}
-            </div>
-          )}
-
-          <div className="toolbar-cluster">
-            <button
-              className="control-button"
-              type="button"
-              onClick={() =>
-                dispatchPageState({ type: 'setOffset', value: Math.max(0, offset - PAGE_SIZE) })
-              }
-              disabled={!canGoBack}
-            >
-              {t('adminIntegrations.previous')}
-            </button>
-            <span className="inline-state inline-state-neutral">
-              {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : t('adminIntegrations.zeroResults')}
-            </span>
-            <button
-              className="control-button"
-              type="button"
-              onClick={() => dispatchPageState({ type: 'setOffset', value: offset + PAGE_SIZE })}
-              disabled={!canGoForward}
-            >
-              {t('adminIntegrations.next')}
-            </button>
-          </div>
-        </section>
-  )
-}
-
-function IntegrationMetric(input: {
-  title: string
-  value: string
-  note: string
-  tone?: 'primary'
-  icon?: ReactNode
-}) {
-  return (
-    <article className={`integration-management-metric${input.tone === 'primary' ? ' integration-management-metric-primary' : ''}`}>
-      {input.icon ? <div className="integration-management-metric-icon">{input.icon}</div> : null}
-      <span>{input.title}</span>
-      <strong>{input.value}</strong>
-      <p>{input.note}</p>
-    </article>
-  )
-}
-
-function DecisionRow(input: { label: string; value: string }) {
-  return (
-    <div className="integration-management-decision-row">
-      <span>{input.label}</span>
-      <strong>{input.value}</strong>
-    </div>
-  )
-}
-
-function EvidenceCard(input: { icon: ReactNode; title: string; copy: string; value: string }) {
-  return (
-    <article className="integration-management-evidence-card">
-      <div className="integration-management-card-icon">{input.icon}</div>
-      <h4>{input.title}</h4>
-      <p>{input.copy}</p>
-      <strong>{input.value}</strong>
-    </article>
-  )
-}
-
-function UploadSummaryGrid(input: {
-  summary: {
-    periodMonth: string | null
-    periodStart: string
-    periodEnd: string
-    canonicalRowCount: number
-    personnelRowsRead: number
-    ignoredPersonnelRows: number
-    scopeExcludedPersonnelRows: number
-    personnelGrossSalesRows: number
-    negativePersonnelRowsIgnored: number
-    storeRowsRead: number
-    scopeExcludedStoreRows: number
-    mappingMode: string
-    reconciliation: {
-      comparedStoreCount: number
-      balancedStoreCount: number
-      warningStoreCount: number
-      items: Array<unknown>
-    }
-  }
-  t: TranslateFunction
-}) {
-  const summaryItems = [
-    {
-      label: input.t('adminIntegrations.period'),
-      value: input.summary.periodMonth ?? `${input.summary.periodStart} / ${input.summary.periodEnd}`,
-    },
-    { label: input.t('adminIntegrations.canonicalKpiRows'), value: formatNumber(input.summary.canonicalRowCount) },
-    { label: input.t('adminIntegrations.personnelRowsRead'), value: formatNumber(input.summary.personnelRowsRead) },
-    { label: input.t('adminIntegrations.ignoredPersonnelRows'), value: formatNumber(input.summary.ignoredPersonnelRows) },
-    { label: input.t('adminIntegrations.scopeExcludedPersonnelRows'), value: formatNumber(input.summary.scopeExcludedPersonnelRows) },
-    { label: input.t('adminIntegrations.personnelGrossSalesRows'), value: formatNumber(input.summary.personnelGrossSalesRows) },
-    { label: input.t('adminIntegrations.negativePersonnelRowsIgnored'), value: formatNumber(input.summary.negativePersonnelRowsIgnored) },
-    { label: input.t('adminIntegrations.storeRowsRead'), value: formatNumber(input.summary.storeRowsRead) },
-    { label: input.t('adminIntegrations.scopeExcludedStoreRows'), value: formatNumber(input.summary.scopeExcludedStoreRows) },
-    { label: input.t('adminIntegrations.mappingMode'), value: input.summary.mappingMode },
-  ]
-
-  return (
-    <section className="integration-management-summary-grid" aria-label={input.t('adminIntegrations.uploadResultAria')}>
-      {summaryItems.map((item) => (
-        <div className="key-item" key={item.label}>
-          <span>{item.label}</span>
-          <strong>{item.value}</strong>
+                <div className="tw:mt-3 tw:flex tw:items-center tw:gap-2 tw:text-sm tw:font-medium tw:text-primary">
+                  <span>{item.recommendedAction}</span>
+                  <ArrowRight className="tw:size-4" aria-hidden="true" />
+                </div>
+              </Link>
+              {item.canRetryNow ? (
+                <AdminActionRow className="tw:lg:justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => retryMutation.mutate(item.batchId)}
+                    disabled={retryMutation.isPending}
+                  >
+                    {retryMutation.isPending ? t('adminIntegrations.retrying') : t('adminIntegrations.retryBatch')}
+                  </Button>
+                </AdminActionRow>
+              ) : null}
+            </article>
+          ))}
         </div>
-      ))}
-      {input.summary.reconciliation.items.length > 0 ? (
-        <>
-          <div className="key-item">
-            <span>{input.t('adminIntegrations.comparedStores')}</span>
-            <strong>{formatNumber(input.summary.reconciliation.comparedStoreCount)}</strong>
-          </div>
-          <div className="key-item">
-            <span>{input.t('adminIntegrations.balancedStores')}</span>
-            <strong>{formatNumber(input.summary.reconciliation.balancedStoreCount)}</strong>
-          </div>
-          <div className="key-item">
-            <span>{input.t('adminIntegrations.warningStores')}</span>
-            <strong>{formatNumber(input.summary.reconciliation.warningStoreCount)}</strong>
-          </div>
-        </>
-      ) : null}
-    </section>
+      )}
+
+      <AdminActionRow className="tw:justify-between">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            dispatchPageState({ type: 'setOffset', value: Math.max(0, offset - PAGE_SIZE) })
+          }
+          disabled={!canGoBack}
+        >
+          {t('adminIntegrations.previous')}
+        </Button>
+        <AdminSurfaceBadge tone="neutral">
+          {meta ? `${offset + 1}-${Math.min(offset + PAGE_SIZE, meta.total)} / ${meta.total}` : t('adminIntegrations.zeroResults')}
+        </AdminSurfaceBadge>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => dispatchPageState({ type: 'setOffset', value: offset + PAGE_SIZE })}
+          disabled={!canGoForward}
+        >
+          {t('adminIntegrations.next')}
+        </Button>
+      </AdminActionRow>
+    </AdminSurfaceSection>
   )
 }
