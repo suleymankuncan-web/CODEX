@@ -1,7 +1,22 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { EmptyState, KeyValue, ScreenState } from '../components/dashboard-primitives'
+import {
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminStatePanel,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+} from './admin-surface-primitives'
+import {
+  AuthButton,
+  AuthMuted,
+  AuthRowHead,
+  AuthTimeline,
+  AuthTimelineItem,
+} from '../features/auth/AuthSurfacePrimitives'
 import { getRoleAssignmentAudit } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDateTime, getErrorMessage } from '../lib/format'
@@ -32,84 +47,92 @@ export function AuthAssignmentAuditPage() {
 
   if (!assignmentId) {
     return (
-      <ScreenState
-        title={t('authAuditDetails.assignmentMissingTitle')}
-        copy={t('authAuditDetails.assignmentMissingCopy')}
-        tone="error"
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('authAuditDetails.assignmentMissingTitle')}
+          description={t('authAuditDetails.assignmentMissingCopy')}
+          tone="danger"
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (auditQuery.isLoading) {
     return (
-      <ScreenState
-        title={t('authAuditDetails.assignmentLoadingTitle')}
-        copy={t('authAuditDetails.assignmentLoadingCopy')}
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('authAuditDetails.assignmentLoadingTitle')}
+          description={t('authAuditDetails.assignmentLoadingCopy')}
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (auditQuery.isError) {
-    return <ScreenState title={t('authAuditDetails.assignmentErrorTitle')} copy={getErrorMessage(auditQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('authAuditDetails.assignmentErrorTitle')}
+          description={getErrorMessage(auditQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   const items = auditQuery.data?.items ?? []
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('authAuditDetails.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('authAuditDetails.assignmentHeroTitle')}</h2>
-          <p className="hero-copy">{t('authAuditDetails.assignmentHeroCopy')}</p>
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('authAuditDetails.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('authAuditDetails.heroEyebrow')}
+        title={t('authAuditDetails.assignmentHeroTitle')}
+        description={t('authAuditDetails.assignmentHeroCopy')}
+      />
 
-      <Link className="back-link" to={backLink.to}>
-        <ArrowLeft size={16} />
-        <span>{backLink.label}</span>
-      </Link>
+      <AuthButton asChild size="sm" variant="outline">
+        <Link to={backLink.to}>
+          <ArrowLeft size={16} />
+          <span>{backLink.label}</span>
+        </Link>
+      </AuthButton>
 
       {items.length === 0 ? (
-        <section className="panel">
-          <EmptyState copy={t('authAuditDetails.assignmentEmptyCopy')} />
-        </section>
+        <AdminSurfaceSection title={t('authAuditDetails.assignmentTimelineTitle')}>
+          <AdminSurfaceEmpty copy={t('authAuditDetails.assignmentEmptyCopy')} />
+        </AdminSurfaceSection>
       ) : (
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('authAuditDetails.timelineEyebrow')}</div>
-              <h3>{t('authAuditDetails.assignmentTimelineTitle')}</h3>
-            </div>
-          </div>
-          <div className="timeline">
+        <AdminSurfaceSection
+          eyebrow={t('authAuditDetails.timelineEyebrow')}
+          title={t('authAuditDetails.assignmentTimelineTitle')}
+        >
+          <AuthTimeline>
             {items.map((item) => (
-              <article className="timeline-item" key={item.eventLogId}>
-                <span className="timeline-dot" />
-                <div className="stacked-row-head">
-                  <strong>{item.eventType}</strong>
-                  <span className="queue-subtitle">{formatDateTime(item.occurredAt, locale)}</span>
-                </div>
-                <p>
+              <AuthTimelineItem key={item.eventLogId}>
+                <AuthRowHead>
+                  <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{item.eventType}</strong>
+                  <AuthMuted>{formatDateTime(item.occurredAt, locale)}</AuthMuted>
+                </AuthRowHead>
+                <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">
                   {t('authAuditDetails.actorLine', {
                     actor: item.actorUserId ?? t('authAuditDetails.systemActor'),
                     module: item.metadata.sourceContext?.module ?? t('authAuditDetails.notAvailable'),
                     operation: item.metadata.sourceContext?.operation ?? t('authAuditDetails.notAvailable'),
                   })}
                 </p>
-                <div className="key-grid">
-                  <KeyValue label={t('authAuditDetails.eventLogId')} value={item.eventLogId} />
-                  <KeyValue label={t('authAuditDetails.correlationId')} value={item.correlationId ?? t('authAuditDetails.notAvailable')} />
-                  <KeyValue label={t('authAuditDetails.changedFields')} value={(item.metadata.changedFields ?? []).join(', ') || t('authAuditDetails.none')} />
+                <AdminKeyValueGrid>
+                  <AdminKeyValue label={t('authAuditDetails.eventLogId')} value={item.eventLogId} />
+                  <AdminKeyValue label={t('authAuditDetails.correlationId')} value={item.correlationId ?? t('authAuditDetails.notAvailable')} />
+                  <AdminKeyValue label={t('authAuditDetails.changedFields')} value={(item.metadata.changedFields ?? []).join(', ') || t('authAuditDetails.none')} />
                   {describeDetails(item.metadata.details, t('authAuditDetails.nullValue')).map((detail) => (
-                    <KeyValue key={`${item.eventLogId}:${detail.label}`} label={detail.label} value={detail.value} />
+                    <AdminKeyValue key={`${item.eventLogId}:${detail.label}`} label={detail.label} value={detail.value} />
                   ))}
-                </div>
-              </article>
+                </AdminKeyValueGrid>
+              </AuthTimelineItem>
             ))}
-          </div>
-        </section>
+          </AuthTimeline>
+        </AdminSurfaceSection>
       )}
-    </section>
+    </AdminSurfacePage>
   )
 }

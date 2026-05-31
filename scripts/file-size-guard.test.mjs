@@ -22,7 +22,7 @@ const oversizedBaseline = new Map([
   ['admin-web/src/pages/store-my-performance-model.ts', 1096],
   ['admin-web/src/pages/AdminChecklistTemplatesPage.tsx', 1006],
   ['admin-web/src/styles/store-approvals-ledger.css', 976],
-  ['admin-web/src/features/auth/AuthDashboardSections.tsx', 960],
+  ['admin-web/src/features/auth/AuthDashboardSections.tsx', 937],
   ['backend/nestjs/src/modules/auth/auth-admin.service.ts', 936],
   ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 899],
   ['admin-web/src/features/competitions/StageBuilderForm.tsx', 871],

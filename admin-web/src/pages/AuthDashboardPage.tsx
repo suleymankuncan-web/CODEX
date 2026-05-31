@@ -1,6 +1,6 @@
 import { useDeferredValue, useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ScreenState } from '../components/dashboard-primitives'
+import { AdminStatePanel, AdminSurfacePage } from './admin-surface-primitives'
 import {
   createActionStoreAssignment,
   createRoleAssignment,
@@ -248,11 +248,13 @@ export function AuthDashboardPage() {
 
   if (dashboard.status === 'screen') {
     return (
-      <ScreenState
-        title={dashboard.title}
-        copy={dashboard.copy}
-        {...(dashboard.tone === undefined ? {} : { tone: dashboard.tone })}
-      />
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={dashboard.title}
+          description={dashboard.copy}
+          tone={dashboard.tone === 'error' ? 'danger' : 'neutral'}
+        />
+      </AdminSurfacePage>
     )
   }
 
