@@ -119,6 +119,12 @@ Current maintenance baseline:
   navigation, and `/store/incentives` parked-route rules test-covered, and scans
   active Store UI source for selected legacy class/debug/fake-data regressions.
   It does not touch runtime Store UI behavior.
+- Architecture Hardening V4 is closing through PR-8. Closeout evidence is
+  recorded at
+  `docs/evidence/architecture-hardening-v4-closeout-2026-05-31.md`. Estimated
+  architecture health after V4 is `93/100`; this is below the original `94/100`
+  target because the OpenAPI generator helper split stopped at a real
+  pre-refactor parity blocker rather than moving code unsafely.
 
 Latest route/scope guard merge:
 
@@ -811,6 +817,13 @@ Latest technical assessment decision:
   error-item, and quality-summary helpers out of `IntegrationService`, then
   removed `IntegrationService` from the file-size baseline and architecture
   large-source allowlist.
+- Architecture Hardening V4 is closing through PR #571 through PR #578 plus the
+  V4 closeout slice. Evidence is recorded at
+  `docs/evidence/architecture-hardening-v4-closeout-2026-05-31.md`. V4 moved
+  master-data promotion helpers, workforce request write helpers, selected
+  competition review-command persistence, Store targets E2E coverage, and Store
+  UI refactor guardrails. The OpenAPI generator remains parked because the
+  pre-refactor parity gate exposed generated schema metadata/baseline drift.
 - Current backend architecture boundary state: the application-layer direct
   `DatabaseService` allowlist in
   `scripts/backend-architecture-boundary-guard.test.mjs` is empty, and the
@@ -818,12 +831,12 @@ Latest technical assessment decision:
   blocks new oversized TS/TSX source files without reasoned allowlist entries,
   Store Ops module graph growth, worker job graph growth, application-to-web
   imports, and web-to-infrastructure repository imports.
-- Current estimated architecture health after Architecture Hardening V3 is
-  `88/100`. The project is safer for feature growth but not debt-free:
-  master-data promotion, workforce SQL persistence, competition
-  scoring/finalization, generator scripts, broad E2E specs, and Store UI
-  redesign-sensitive pages remain intentional parked risks until a concrete
-  trigger appears.
+- Current estimated architecture health after Architecture Hardening V4 is
+  `93/100`. The project is safer for feature growth but not debt-free:
+  OpenAPI generator parity drift, deeper workforce SQL transaction splits,
+  competition scoring/finalization/stage execution, remaining broad E2E specs,
+  and Store UI redesign-sensitive pages remain intentional parked risks until a
+  concrete trigger appears.
 - Growth foundation docs are planned through PR #363:
   rules/config boundary, operations control tower V1, authorization matrix drift
   guard, cross-domain data quality inventory, and frontend TypeScript

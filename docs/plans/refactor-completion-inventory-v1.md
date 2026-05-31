@@ -1,6 +1,6 @@
 # Refactor Completion Inventory V1
 
-Status: Active decision refreshed after Architecture Hardening V4 PR-1 on 2026-05-31
+Status: Active decision refreshed after Architecture Hardening V4 closeout on 2026-05-31
 
 This inventory closes the recurring "large file means keep refactoring" loop.
 The project still has large files, but they are no longer all active refactor
@@ -32,10 +32,11 @@ Repository evidence:
 - Architecture Hardening V3 extracted integration import command lifecycle
   orchestration and auth-admin write persistence, then removed
   `IntegrationService` and `AuthAdminRepository` from oversized-source debt.
-- Architecture Hardening V4 PR-1 froze the next behavior-preserving hardening
+- Architecture Hardening V4 froze the next behavior-preserving hardening
   targets in
-  `docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md`
-  before runtime refactors continue.
+  `docs/evidence/architecture-hardening-v4-pr1-inventory-2026-05-31.md`,
+  then closed the safe V4 line through
+  `docs/evidence/architecture-hardening-v4-closeout-2026-05-31.md`.
 - The user has said major page/content/design changes are coming, so broad UI
   polish or page-component splits are likely to be throwaway work right now.
 
@@ -92,12 +93,12 @@ This snapshot is a triage input, not a mandate to split every file.
 | `backend/nestjs/src/modules/store-ops/application/snapshot.service.ts` | 666 | snapshot orchestration service | PR4 extracted direct DB writes/materialization into `SnapshotRunCommandRepository`; keep service orchestration-only. |
 | `backend/nestjs/src/modules/store-ops/application/ranking.service.ts` | 740 | ranking read/scoring application service | PR3 removed broad repository casts and previous helper extraction remains in place. Park further extraction unless a ranking trust/reviewability trigger appears. |
 
-## Architecture Hardening V4 Active Line
+## Architecture Hardening V4 Closed Line
 
 V4 is intentionally narrower than a generic large-file cleanup. It can only
 move runtime code after the PR-1 behavior freeze evidence is satisfied.
 
-Active V4 sequence:
+Closed V4 sequence:
 
 1. Done: `MasterDataBootstrapService` promotion boundary. PR-2 extracted
    promotion readiness, promotable-row assertion, promotion-row builders, and
@@ -132,6 +133,8 @@ Active V4 sequence:
    real-data-only, role-aware navigation, parked `/store/incentives`, and
    selected active-source legacy/debug/fake-data regressions under script guard.
    No Store screen redesign or runtime UI behavior changed.
+7. Done: V4 closeout evidence recorded at
+   `docs/evidence/architecture-hardening-v4-closeout-2026-05-31.md`.
 
 The authoritative V4 contract-freeze evidence is:
 
