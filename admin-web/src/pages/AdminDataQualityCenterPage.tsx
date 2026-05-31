@@ -1,15 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { DatabaseZap, Layers3, ShieldCheck, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-  type Tone,
-} from '../components/dashboard-primitives'
+  AdminKeyValue as KeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty as EmptyState,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
+import { Button } from '../components/ui/button'
 import {
   summarizeDataQualityCenter,
   type DataQualityCenterSummary,
@@ -107,66 +112,107 @@ export function AdminDataQualityCenterPage() {
 
   if (isInitialLoading) {
     return (
-      <ScreenState
-        title={t('dataQuality.loadingTitle')}
-        copy={t('dataQuality.loadingCopy')}
-      />
+      <AdminSurfacePage ariaLabel={t('dataQuality.loadingTitle')}>
+        <AdminStatePanel
+          isLoading
+          title={t('dataQuality.loadingTitle')}
+          description={t('dataQuality.loadingCopy')}
+        />
+      </AdminSurfacePage>
     )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('dataQuality.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('dataQuality.heroTitle')}</h2>
-          <p className="hero-copy">{t('dataQuality.heroCopy')}</p>
-        </div>
-        <div className="metric-accent-grid">
-          <MetricAccent label={t('dataQuality.route')} value="/admin/data-quality" />
-          <MetricAccent label={t('dataQuality.status')} value={t(status.labelKey)} />
-          <MetricAccent
-            label={t('dataQuality.totalPressure')}
-            value={formatNumber(summary.totalPressure, locale)}
-          />
-          <MetricAccent label={t('dataQuality.sourceFamilies')} value={t('dataQuality.sourceFamiliesValue')} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('dataQuality.heroTitle')}>
+      <AdminSurfaceHeader
+        eyebrow={t('dataQuality.heroEyebrow')}
+        title={t('dataQuality.heroTitle')}
+        description={t('dataQuality.heroCopy')}
+        icon={<ShieldCheck size={18} />}
+        meta={
+          <>
+            <AdminSurfaceBadge tone="neutral">{`/admin/data-quality`}</AdminSurfaceBadge>
+            <AdminSurfaceBadge tone={toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning')}>
+              {t(status.labelKey)}
+            </AdminSurfaceBadge>
+          </>
+        }
+      />
 
       {hasSignalError ? (
-        <div className="inline-state inline-state-warning">{t('dataQuality.unavailableCopy')}</div>
+        <AdminStatePanel
+          tone="warning"
+          title={t('dataQuality.unavailable')}
+          description={t('dataQuality.unavailableCopy')}
+        />
       ) : null}
 
-      <section className="metric-grid">
-        <MetricCard
-          title={t('dataQuality.importMetric')}
-          value={formatNumber(summary.importActionCount, locale)}
-          note={t('dataQuality.importMetricNote')}
-          icon={<DatabaseZap size={22} />}
-          tone={metricTone(hasSignalError, summary.importActionCount)}
-        />
-        <MetricCard
-          title={t('dataQuality.snapshotMetric')}
-          value={formatNumber(summary.snapshotActionCount, locale)}
-          note={t('dataQuality.snapshotMetricNote')}
-          icon={<Layers3 size={22} />}
-          tone={metricTone(hasSignalError, summary.snapshotActionCount)}
-        />
-        <MetricCard
-          title={t('dataQuality.workforceMetric')}
-          value={formatNumber(summary.workforcePendingCount, locale)}
-          note={t('dataQuality.workforceMetricNote')}
-          icon={<Users size={22} />}
-          tone={metricTone(hasSignalError, summary.workforcePendingCount)}
-        />
-        <MetricCard
-          title={t('dataQuality.sourceTrustMetric')}
-          value={formatNumber(summary.sourceTrustGapCount, locale)}
-          note={t('dataQuality.sourceTrustMetricNote')}
-          icon={<ShieldCheck size={22} />}
-          tone={metricTone(hasSignalError, summary.sourceTrustGapCount)}
-        />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'import',
+            label: t('dataQuality.importMetric'),
+            value: formatNumber(summary.importActionCount, locale),
+            description: t('dataQuality.importMetricNote'),
+            icon: <DatabaseZap size={18} />,
+            tone: toSurfaceTone(metricTone(hasSignalError, summary.importActionCount)),
+          },
+          {
+            id: 'snapshot',
+            label: t('dataQuality.snapshotMetric'),
+            value: formatNumber(summary.snapshotActionCount, locale),
+            description: t('dataQuality.snapshotMetricNote'),
+            icon: <Layers3 size={18} />,
+            tone: toSurfaceTone(metricTone(hasSignalError, summary.snapshotActionCount)),
+          },
+          {
+            id: 'workforce',
+            label: t('dataQuality.workforceMetric'),
+            value: formatNumber(summary.workforcePendingCount, locale),
+            description: t('dataQuality.workforceMetricNote'),
+            icon: <Users size={18} />,
+            tone: toSurfaceTone(metricTone(hasSignalError, summary.workforcePendingCount)),
+          },
+          {
+            id: 'sourceTrust',
+            label: t('dataQuality.sourceTrustMetric'),
+            value: formatNumber(summary.sourceTrustGapCount, locale),
+            description: t('dataQuality.sourceTrustMetricNote'),
+            icon: <ShieldCheck size={18} />,
+            tone: toSurfaceTone(metricTone(hasSignalError, summary.sourceTrustGapCount)),
+          },
+        ]}
+      />
+
+      <AdminMetricStrip
+        className="tw:xl:grid-cols-4"
+        items={[
+          {
+            id: 'route',
+            label: t('dataQuality.route'),
+            value: '/admin/data-quality',
+            tone: 'neutral',
+          },
+          {
+            id: 'status',
+            label: t('dataQuality.status'),
+            value: t(status.labelKey),
+            tone: toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning'),
+          },
+          {
+            id: 'totalPressure',
+            label: t('dataQuality.totalPressure'),
+            value: formatNumber(summary.totalPressure, locale),
+            tone: toSurfaceTone(metricTone(hasSignalError, summary.totalPressure)),
+          },
+          {
+            id: 'sourceFamilies',
+            label: t('dataQuality.sourceFamilies'),
+            value: t('dataQuality.sourceFamiliesValue'),
+            tone: 'cyan',
+          },
+        ]}
+      />
 
       <ImportMappingPanel
         error={importNeedsActionQuery.error ?? importOverviewQuery.error}
@@ -189,7 +235,7 @@ export function AdminDataQualityCenterPage() {
         kpiConfigVersion={formatKpiConfigVersion(kpiConfigQuery.data, t('dataQuality.unpublishedConfig'))}
         leaderboardSource={formatLeaderboardSource(rankingsQuery.data, t('dataQuality.missingLeaderboardPeriod'))}
       />
-    </section>
+    </AdminSurfacePage>
   )
 }
 
@@ -201,19 +247,18 @@ function ImportMappingPanel(input: {
 }) {
   const { t } = useLocalization()
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('dataQuality.importMetric')}</div>
-          <h3>{t('dataQuality.importPanelTitle')}</h3>
-          <p>{t('dataQuality.importPanelCopy')}</p>
-        </div>
+    <AdminSurfaceSection
+      eyebrow={t('dataQuality.importMetric')}
+      title={t('dataQuality.importPanelTitle')}
+      description={t('dataQuality.importPanelCopy')}
+      badge={
         <StatusPill tone={input.summary.importActionCount > 0 ? 'warning' : 'calm'}>
           {String(input.summary.importActionCount)}
         </StatusPill>
-      </div>
+      }
+    >
       <SignalError error={input.error} />
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue
           label={t('dataQuality.errorRows')}
           value={formatNumber(input.summary.previewErrorRows, input.locale)}
@@ -226,34 +271,38 @@ function ImportMappingPanel(input: {
               : t('dataQuality.noMappings')
           }
         />
-      </div>
+      </AdminKeyValueGrid>
       {input.items.length === 0 ? (
         <EmptyState copy={t('dataQuality.emptyImport')} />
       ) : (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-3">
           {input.items.map((item) => (
-            <Link className="queue-row" key={item.batchId} to={`/admin/integrations/${item.batchId}`}>
-              <div className="queue-row-head">
-                <strong>{item.sourceName}</strong>
+            <Link
+              className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/65 tw:p-3 tw:text-foreground tw:no-underline tw:transition-colors tw:hover:bg-muted/60"
+              key={item.batchId}
+              to={`/admin/integrations/${item.batchId}`}
+            >
+              <div className="tw:flex tw:flex-col tw:gap-2 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+                <strong className="tw:text-sm tw:font-semibold">{item.sourceName}</strong>
                 <StatusPill tone={mapHealthTone(item.healthState)}>{formatState(item.healthState)}</StatusPill>
               </div>
-              <span className="queue-subtitle">
+              <span className="tw:text-xs tw:text-muted-foreground">
                 {t('dataQuality.batch')}: {item.batchId}
               </span>
-              <div className="key-grid">
+              <AdminKeyValueGrid>
                 <KeyValue label={t('dataQuality.errorRows')} value={formatNumber(item.errorCount, input.locale)} />
                 <KeyValue
                   label={t('dataQuality.mappingEntityTypes')}
                   value={item.blockedByEntityTypes.length > 0 ? item.blockedByEntityTypes.join(', ') : t('dataQuality.noMappings')}
                 />
-              </div>
-              <p className="queue-reason">{item.recommendedAction}</p>
-              <span>{t('dataQuality.openIntegration')}</span>
+              </AdminKeyValueGrid>
+              <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{item.recommendedAction}</p>
+              <span className="tw:text-sm tw:font-medium tw:text-primary">{t('dataQuality.openIntegration')}</span>
             </Link>
           ))}
         </div>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -265,51 +314,54 @@ function SnapshotFreshnessPanel(input: {
 }) {
   const { t } = useLocalization()
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('dataQuality.snapshotMetric')}</div>
-          <h3>{t('dataQuality.snapshotPanelTitle')}</h3>
-          <p>{t('dataQuality.snapshotPanelCopy')}</p>
-        </div>
+    <AdminSurfaceSection
+      eyebrow={t('dataQuality.snapshotMetric')}
+      title={t('dataQuality.snapshotPanelTitle')}
+      description={t('dataQuality.snapshotPanelCopy')}
+      badge={
         <StatusPill tone={input.summary.snapshotActionCount > 0 ? 'warning' : 'calm'}>
           {String(input.summary.snapshotActionCount)}
         </StatusPill>
-      </div>
+      }
+    >
       <SignalError error={input.error} />
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue
           label={t('dataQuality.retryReady')}
           value={formatNumber(input.summary.snapshotRetryReadyCount, input.locale)}
         />
-      </div>
+      </AdminKeyValueGrid>
       {input.items.length === 0 ? (
         <EmptyState copy={t('dataQuality.emptySnapshot')} />
       ) : (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-3">
           {input.items.map((item) => (
-            <Link className="queue-row" key={item.snapshotRunId} to={`/admin/snapshots/${item.snapshotRunId}`}>
-              <div className="queue-row-head">
-                <strong>{item.snapshotType}</strong>
+            <Link
+              className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/65 tw:p-3 tw:text-foreground tw:no-underline tw:transition-colors tw:hover:bg-muted/60"
+              key={item.snapshotRunId}
+              to={`/admin/snapshots/${item.snapshotRunId}`}
+            >
+              <div className="tw:flex tw:flex-col tw:gap-2 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+                <strong className="tw:text-sm tw:font-semibold">{item.snapshotType}</strong>
                 <StatusPill tone={mapHealthTone(item.healthState)}>{formatState(item.runStatus)}</StatusPill>
               </div>
-              <span className="queue-subtitle">
+              <span className="tw:text-xs tw:text-muted-foreground">
                 {t('dataQuality.snapshotRun')}: {item.snapshotRunId}
               </span>
-              <div className="key-grid">
+              <AdminKeyValueGrid>
                 <KeyValue label={t('dataQuality.snapshotMetric')} value={item.snapshotDate} />
                 <KeyValue
                   label={t('dataQuality.status')}
                   value={formatOptionalDateTime(item.finishedAt ?? item.generatedAt, input.locale)}
                 />
-              </div>
-              <p className="queue-reason">{item.recommendedAction}</p>
-              <span>{t('dataQuality.openSnapshot')}</span>
+              </AdminKeyValueGrid>
+              <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{item.recommendedAction}</p>
+              <span className="tw:text-sm tw:font-medium tw:text-primary">{t('dataQuality.openSnapshot')}</span>
             </Link>
           ))}
         </div>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -319,23 +371,22 @@ function WorkforceIdentityPanel(input: {
 }) {
   const { t } = useLocalization()
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('dataQuality.workforceMetric')}</div>
-          <h3>{t('dataQuality.workforcePanelTitle')}</h3>
-          <p>{t('dataQuality.workforcePanelCopy')}</p>
-        </div>
-        <Link className="secondary-action" to="/admin/inbox">
-          {t('dataQuality.openInbox')}
-        </Link>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('dataQuality.workforceMetric')}
+      title={t('dataQuality.workforcePanelTitle')}
+      description={t('dataQuality.workforcePanelCopy')}
+      actions={
+        <Button asChild size="sm" variant="outline">
+          <Link to="/admin/inbox">{t('dataQuality.openInbox')}</Link>
+        </Button>
+      }
+    >
       <SignalError error={input.error} />
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue label={t('dataQuality.sellerCodeRequests')} value={String(input.summary.sellerCodePendingCount)} />
         <KeyValue label={t('dataQuality.offboardingRequests')} value={String(input.summary.offboardingPendingCount)} />
-      </div>
-    </section>
+      </AdminKeyValueGrid>
+    </AdminSurfaceSection>
   )
 }
 
@@ -346,23 +397,22 @@ function SourceTrustPanel(input: {
 }) {
   const { t } = useLocalization()
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('dataQuality.sourceTrustMetric')}</div>
-          <h3>{t('dataQuality.guardrailPanelTitle')}</h3>
-          <p>{t('dataQuality.guardrailPanelCopy')}</p>
-        </div>
-        <Link className="secondary-action" to="/admin/kpi-config">
-          {t('dataQuality.openKpiConfig')}
-        </Link>
-      </div>
+    <AdminSurfaceSection
+      eyebrow={t('dataQuality.sourceTrustMetric')}
+      title={t('dataQuality.guardrailPanelTitle')}
+      description={t('dataQuality.guardrailPanelCopy')}
+      actions={
+        <Button asChild size="sm" variant="outline">
+          <Link to="/admin/kpi-config">{t('dataQuality.openKpiConfig')}</Link>
+        </Button>
+      }
+    >
       <SignalError error={input.error} />
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue label={t('dataQuality.publishedKpiConfig')} value={input.kpiConfigVersion} />
         <KeyValue label={t('dataQuality.leaderboardSource')} value={input.leaderboardSource} />
-      </div>
-    </section>
+      </AdminKeyValueGrid>
+    </AdminSurfaceSection>
   )
 }
 
@@ -371,9 +421,11 @@ function SignalError(input: { error: unknown }) {
   if (!input.error) return null
 
   return (
-    <div className="inline-state inline-state-danger">
-      {t('dataQuality.signalError')}: {getErrorMessage(input.error)}
-    </div>
+    <AdminStatePanel
+      tone="danger"
+      title={t('dataQuality.signalError')}
+      description={getErrorMessage(input.error)}
+    />
   )
 }
 
@@ -389,7 +441,18 @@ function resolveCenterStatus(summary: DataQualityCenterSummary, hasSignalError: 
   return { labelKey: 'dataQuality.ready' }
 }
 
-function metricTone(hasSignalError: boolean, value: number): Tone {
+type SurfacePillTone = AdminSurfaceTone | 'calm'
+
+function StatusPill(input: { children: ReactNode; tone?: SurfacePillTone }) {
+  return <AdminSurfaceBadge tone={toSurfaceTone(input.tone)}>{input.children}</AdminSurfaceBadge>
+}
+
+function toSurfaceTone(tone: SurfacePillTone | undefined): AdminSurfaceTone {
+  if (tone === 'calm') return 'success'
+  return tone ?? 'neutral'
+}
+
+function metricTone(hasSignalError: boolean, value: number): SurfacePillTone {
   if (hasSignalError) return 'warning'
   return value > 0 ? 'warning' : 'calm'
 }

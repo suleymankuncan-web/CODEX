@@ -1,23 +1,26 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bell, CheckCircle2, KeyRound, ReceiptText, TrendingUp } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
+  AdminKeyValue as KeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty as EmptyState,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Textarea } from '../components/ui/textarea'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
 import { getWorkflowInbox } from '../features/workflow/api'
-import {
-  mapInboxStatusTone,
-  mapWorkflowUrgencyTone,
-  type WorkflowInboxItem,
-} from '../features/workflow/contracts'
+import type { WorkflowInboxItem } from '../features/workflow/contracts'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -101,6 +104,75 @@ function formatOffboardingAccessClosure(
     closedActionStoreAssignments: closure.closedActionStoreAssignments,
     revokedMobileSessions: closure.revokedMobileSessions,
   })
+}
+
+type WorkflowSurfaceTone = AdminSurfaceTone | 'calm'
+
+function toSurfaceTone(tone: WorkflowSurfaceTone | undefined): AdminSurfaceTone {
+  if (tone === 'calm') {
+    return 'success'
+  }
+
+  return tone ?? 'neutral'
+}
+
+function StatusPill({
+  children,
+  tone,
+}: {
+  children: ReactNode
+  tone?: WorkflowSurfaceTone
+}) {
+  return <AdminSurfaceBadge tone={toSurfaceTone(tone)}>{children}</AdminSurfaceBadge>
+}
+
+function AdminInboxState({
+  copy,
+  isLoading = false,
+  title,
+  tone = 'neutral',
+}: {
+  copy: ReactNode
+  isLoading?: boolean
+  title: ReactNode
+  tone?: AdminSurfaceTone
+}) {
+  return (
+    <AdminSurfacePage ariaLabel={String(title)}>
+      <AdminStatePanel
+        title={title}
+        description={copy}
+        isLoading={isLoading}
+        tone={tone}
+      />
+    </AdminSurfacePage>
+  )
+}
+
+function mapInboxStatusTone(status: WorkflowInboxItem['inboxStatus']): WorkflowSurfaceTone {
+  switch (status) {
+    case 'needs_attention':
+      return 'warning'
+    case 'completed':
+      return 'calm'
+    case 'informational':
+      return 'accent'
+    default:
+      return 'neutral'
+  }
+}
+
+function mapWorkflowUrgencyTone(urgency: WorkflowInboxItem['urgency']): WorkflowSurfaceTone {
+  switch (urgency) {
+    case 'high':
+      return 'danger'
+    case 'medium':
+      return 'warning'
+    case 'low':
+      return 'accent'
+    default:
+      return 'neutral'
+  }
 }
 
 export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }) {
@@ -217,92 +289,110 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
 
   if (!inboxEnabled) {
     return (
-      <ScreenState
+      <AdminInboxState
         title={t('adminInbox.unavailableTitle')}
         copy={t('adminInbox.unavailableCopy')}
-        tone="error"
+        tone="danger"
       />
     )
   }
 
   if (inboxQuery.isLoading) {
     return (
-      <ScreenState
+      <AdminInboxState
         title={t('adminInbox.loadingTitle')}
         copy={t('adminInbox.loadingCopy')}
+        isLoading
       />
     )
   }
 
   if (inboxQuery.isError) {
     return (
-      <ScreenState
+      <AdminInboxState
         title={t('adminInbox.unavailableTitle')}
         copy={getErrorMessage(inboxQuery.error)}
-        tone="error"
+        tone="danger"
       />
     )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('adminInbox.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('adminInbox.heroTitle')}</h2>
-          <p className="hero-copy">{t('adminInbox.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('adminInbox.route')} value="/admin/inbox" />
-          <MetricAccent label={t('adminInbox.regionScope')} value={regionScope} />
-          <MetricAccent label={t('adminInbox.queueItems')} value={String(items.length)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('adminInbox.heroTitle')}>
+      <AdminSurfaceHeader
+        eyebrow={t('adminInbox.heroEyebrow')}
+        title={t('adminInbox.heroTitle')}
+        description={t('adminInbox.heroCopy')}
+        icon={<Bell size={18} />}
+        meta={
+          <>
+            <AdminSurfaceBadge tone="neutral">/admin/inbox</AdminSurfaceBadge>
+            <AdminSurfaceBadge tone="cyan">{regionScope}</AdminSurfaceBadge>
+          </>
+        }
+      />
 
-      <section className="metric-grid">
-        <MetricCard
-          title={t('adminInbox.needsAttention')}
-          value={pendingItems.length}
-          note={t('adminInbox.needsAttentionNote')}
-          icon={<Bell size={18} />}
-          tone={pendingItems.length > 0 ? 'warning' : 'calm'}
-        />
-        <MetricCard
-          title={t('adminInbox.approvals')}
-          value={approvalItems.length}
-          note={t('adminInbox.approvalsNote')}
-          icon={<ReceiptText size={18} />}
-          tone={approvalItems.length > 0 ? 'accent' : 'neutral'}
-        />
-        <MetricCard
-          title={t('adminInbox.kpiTasks')}
-          value={taskItems.length}
-          note={t('adminInbox.kpiTasksNote')}
-          icon={<TrendingUp size={18} />}
-          tone={taskItems.length > 0 ? 'warning' : 'neutral'}
-        />
-        <MetricCard
-          title={t('adminInbox.completed')}
-          value={items.filter((item) => item.inboxStatus === 'completed').length}
-          note={t('adminInbox.completedNote')}
-          icon={<CheckCircle2 size={18} />}
-          tone="calm"
-        />
-        <MetricCard
-          title={t('adminInbox.sellerCode')}
-          value={sellerCodeRequests.length}
-          note={t('adminInbox.sellerCodeNote')}
-          icon={<KeyRound size={18} />}
-          tone={sellerCodeRequests.length > 0 ? 'warning' : 'neutral'}
-        />
-        <MetricCard
-          title={t('adminInbox.offboarding')}
-          value={offboardingRequests.length}
-          note={t('adminInbox.offboardingNote')}
-          icon={<KeyRound size={18} />}
-          tone={offboardingRequests.length > 0 ? 'warning' : 'neutral'}
-        />
-      </section>
+      <AdminMetricStrip
+        className="tw:xl:grid-cols-3"
+        items={[
+          {
+            id: 'queueItems',
+            label: t('adminInbox.queueItems'),
+            value: String(items.length),
+            description: t('adminInbox.regionScope'),
+            trend: regionScope,
+            tone: 'cyan',
+          },
+          {
+            id: 'needsAttention',
+            label: t('adminInbox.needsAttention'),
+            value: pendingItems.length,
+            description: t('adminInbox.needsAttentionNote'),
+            icon: <Bell size={18} />,
+            tone: pendingItems.length > 0 ? 'warning' : 'success',
+          },
+          {
+            id: 'approvals',
+            label: t('adminInbox.approvals'),
+            value: approvalItems.length,
+            description: t('adminInbox.approvalsNote'),
+            icon: <ReceiptText size={18} />,
+            tone: approvalItems.length > 0 ? 'accent' : 'neutral',
+          },
+          {
+            id: 'kpiTasks',
+            label: t('adminInbox.kpiTasks'),
+            value: taskItems.length,
+            description: t('adminInbox.kpiTasksNote'),
+            icon: <TrendingUp size={18} />,
+            tone: taskItems.length > 0 ? 'warning' : 'neutral',
+          },
+          {
+            id: 'completed',
+            label: t('adminInbox.completed'),
+            value: items.filter((item) => item.inboxStatus === 'completed').length,
+            description: t('adminInbox.completedNote'),
+            icon: <CheckCircle2 size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'sellerCode',
+            label: t('adminInbox.sellerCode'),
+            value: sellerCodeRequests.length,
+            description: t('adminInbox.sellerCodeNote'),
+            icon: <KeyRound size={18} />,
+            tone: sellerCodeRequests.length > 0 ? 'warning' : 'neutral',
+          },
+          {
+            id: 'offboarding',
+            label: t('adminInbox.offboarding'),
+            value: offboardingRequests.length,
+            description: t('adminInbox.offboardingNote'),
+            icon: <KeyRound size={18} />,
+            tone: offboardingRequests.length > 0 ? 'warning' : 'neutral',
+          },
+        ]}
+      />
 
       {sellerCodeEnabled ? (
         <SellerCodeQueuePanel
@@ -374,28 +464,24 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
         />
       ) : null}
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminInbox.adminQueueEyebrow')}</div>
-            <h3>{t('adminInbox.adminQueueTitle')}</h3>
-          </div>
-        </div>
-
+      <AdminSurfaceSection
+        eyebrow={t('adminInbox.adminQueueEyebrow')}
+        title={t('adminInbox.adminQueueTitle')}
+      >
         {sortedItems.length === 0 ? (
           <EmptyState
             title={t('adminInbox.emptyQueueTitle')}
             copy={t('adminInbox.emptyQueueCopy')}
           />
         ) : (
-          <div className="stacked-table">
+          <div className="tw:grid tw:gap-3">
             {sortedItems.map((item) => (
               <AdminInboxRow key={`${item.sourceType}:${item.sourceId}`} item={item} />
             ))}
           </div>
         )}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }
 
@@ -419,40 +505,42 @@ function SellerCodeQueuePanel(input: {
   const { t } = useLocalization()
 
   return (
-    <section className="panel" aria-label={t('adminInbox.sellerQueueAria')}>
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
-          <h3>{t('adminInbox.sellerQueueTitle')}</h3>
-          <p className="panel-copy">{t('adminInbox.sellerQueueCopy')}</p>
-        </div>
-        <div className="hero-metrics compact-metrics">
-          <MetricAccent
+    <AdminSurfaceSection
+      ariaLabel={t('adminInbox.sellerQueueAria')}
+      eyebrow={t('adminInbox.workforceEyebrow')}
+      title={t('adminInbox.sellerQueueTitle')}
+      description={t('adminInbox.sellerQueueCopy')}
+      actions={
+        <AdminKeyValueGrid className="tw:min-w-[18rem] tw:grid-cols-2 tw:sm:grid-cols-2 tw:lg:grid-cols-2">
+          <KeyValue
             label={t('adminInbox.lastFranchiseCode')}
             value={input.reference?.lastSellerCode ?? t('adminInbox.noFmCode')}
           />
-          <MetricAccent
+          <KeyValue
             label={t('adminInbox.nextPreview')}
             value={input.reference?.nextSellerCodePreview ?? t('adminInbox.notAvailable')}
           />
-        </div>
-      </div>
+        </AdminKeyValueGrid>
+      }
+    >
 
-      {input.notice ? <div className="inline-state inline-state-accent">{input.notice}</div> : null}
+      {input.notice ? (
+        <AdminStatePanel title={input.notice} tone="accent" />
+      ) : null}
 
       {input.referenceLoading || input.requestsLoading ? (
-        <div className="inline-state inline-state-neutral">{t('adminInbox.loadingSellerRequests')}</div>
+        <AdminStatePanel title={t('adminInbox.loadingSellerRequests')} isLoading />
       ) : input.referenceError ? (
-        <div className="inline-state inline-state-danger">{getErrorMessage(input.referenceError)}</div>
+        <AdminStatePanel title={getErrorMessage(input.referenceError)} tone="danger" />
       ) : input.requestsError ? (
-        <div className="inline-state inline-state-danger">{getErrorMessage(input.requestsError)}</div>
+        <AdminStatePanel title={getErrorMessage(input.requestsError)} tone="danger" />
       ) : input.requests.length === 0 ? (
         <EmptyState
           title={t('adminInbox.noSellerRequestsTitle')}
           copy={t('adminInbox.noSellerRequestsCopy')}
         />
       ) : (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-3">
           {input.requests.map((item) => (
             <SellerCodeRequestRow
               approvePending={input.approvePending}
@@ -474,7 +562,7 @@ function SellerCodeQueuePanel(input: {
           ))}
         </div>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -493,11 +581,11 @@ function SellerCodeRequestRow(input: {
   const displayName = `${input.item.firstName} ${input.item.lastName}`.trim()
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
+    <article className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/65 tw:p-3">
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
         <div>
-          <strong>{displayName}</strong>
-          <p className="queue-subtitle">
+          <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{displayName}</strong>
+          <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
             {t('adminInbox.referenceLine', {
               storeName: input.item.storeName,
               storeType: input.item.storeType,
@@ -508,55 +596,54 @@ function SellerCodeRequestRow(input: {
         <StatusPill tone="warning">{formatTranslatedState(input.item.status, t)}</StatusPill>
       </div>
 
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue label={t('adminInbox.position')} value={input.item.positionName} />
         <KeyValue label={t('adminInbox.nationalIdLast4')} value={input.item.nationalIdLast4} />
         <KeyValue label={t('adminInbox.phone')} value={input.item.phoneNumber} />
         <KeyValue label={t('adminInbox.hireDate')} value={input.item.hireDate} />
-      </div>
+      </AdminKeyValueGrid>
 
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('adminInbox.sellerCodeField')}</span>
-          <input
+      <div className="tw:grid tw:gap-3 tw:md:grid-cols-[minmax(0,1fr)_auto] tw:md:items-end">
+        <label className="tw:grid tw:gap-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground">
+          {t('adminInbox.sellerCodeField')}
+          <Input
             aria-label={t('adminInbox.sellerCodeInputAria', { displayName })}
             value={input.draftCode}
             onChange={(event) => input.onDraftChange(input.item.requestId, event.target.value)}
           />
         </label>
-        <div className="field-block">
+        <div className="tw:grid tw:gap-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground">
           <span>{t('adminInbox.manualControl')}</span>
-          <button
-            className="control-button"
+          <Button
             type="button"
             disabled={input.approvePending || !input.draftCode.trim()}
             onClick={() => input.onApprove(input.item.requestId, input.draftCode.trim())}
           >
             {t('adminInbox.approveSellerCode')}
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="form-grid">
-        <label className="field-block">
-          <span>{t('adminInbox.returnNote')}</span>
-          <textarea
+      <div className="tw:grid tw:gap-3 tw:md:grid-cols-[minmax(0,1fr)_auto] tw:md:items-end">
+        <label className="tw:grid tw:gap-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground">
+          {t('adminInbox.returnNote')}
+          <Textarea
             aria-label={t('adminInbox.returnNoteForAria', { displayName })}
             rows={2}
             value={input.returnNote}
             onChange={(event) => input.onReturnNoteChange(input.item.requestId, event.target.value)}
           />
         </label>
-        <div className="field-block">
+        <div className="tw:grid tw:gap-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground">
           <span>{t('adminInbox.storeCorrection')}</span>
-          <button
-            className="control-button"
+          <Button
             type="button"
+            variant="outline"
             disabled={input.rejectPending || !input.returnNote.trim()}
             onClick={() => input.onReject(input.item.requestId, input.returnNote.trim())}
           >
             {t('adminInbox.returnSellerCode')}
-          </button>
+          </Button>
         </div>
       </div>
     </article>
@@ -577,26 +664,24 @@ function OffboardingQueuePanel(input: {
   const { t } = useLocalization()
 
   return (
-    <section className="panel" aria-label={t('adminInbox.offboardingQueueAria')}>
-      <div className="panel-heading panel-heading-spread">
-        <div>
-          <div className="eyebrow">{t('adminInbox.workforceEyebrow')}</div>
-          <h3>{t('adminInbox.offboardingQueueTitle')}</h3>
-          <p className="panel-copy">{t('adminInbox.offboardingQueueCopy')}</p>
-        </div>
-      </div>
+    <AdminSurfaceSection
+      ariaLabel={t('adminInbox.offboardingQueueAria')}
+      eyebrow={t('adminInbox.workforceEyebrow')}
+      title={t('adminInbox.offboardingQueueTitle')}
+      description={t('adminInbox.offboardingQueueCopy')}
+    >
 
       {input.loading ? (
-        <div className="inline-state inline-state-neutral">{t('adminInbox.loadingOffboardingRequests')}</div>
+        <AdminStatePanel title={t('adminInbox.loadingOffboardingRequests')} isLoading />
       ) : input.error ? (
-        <div className="inline-state inline-state-danger">{getErrorMessage(input.error)}</div>
+        <AdminStatePanel title={getErrorMessage(input.error)} tone="danger" />
       ) : input.requests.length === 0 ? (
         <EmptyState
           title={t('adminInbox.noOffboardingRequestsTitle')}
           copy={t('adminInbox.noOffboardingRequestsCopy')}
         />
       ) : (
-        <div className="stacked-table">
+        <div className="tw:grid tw:gap-3">
           {input.requests.map((item) => (
             <OffboardingRequestRow
               approvePending={input.approvePending}
@@ -611,7 +696,7 @@ function OffboardingQueuePanel(input: {
           ))}
         </div>
       )}
-    </section>
+    </AdminSurfaceSection>
   )
 }
 
@@ -627,55 +712,54 @@ function OffboardingRequestRow(input: {
   const { t } = useLocalization()
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
+    <article className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/65 tw:p-3">
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
         <div>
-          <strong>{input.item.displayName}</strong>
-          <p className="queue-subtitle">
+          <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.item.displayName}</strong>
+          <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
             {input.item.storeName} / {input.item.externalEmployeeRef ?? t('adminInbox.noSellerCode')}
           </p>
         </div>
         <StatusPill tone="warning">{formatTranslatedState(input.item.status, t)}</StatusPill>
       </div>
 
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue label={t('adminInbox.position')} value={input.item.positionName ?? t('adminInbox.noPosition')} />
         <KeyValue label={t('adminInbox.exitDate')} value={input.item.terminationDate} />
         <KeyValue label={t('adminInbox.reason')} value={input.item.terminationReason} />
         <KeyValue label={t('adminInbox.requestNote')} value={input.item.requestReason ?? t('adminInbox.noNote')} />
-      </div>
+      </AdminKeyValueGrid>
 
-      <div className="form-grid">
-        <div className="field-block">
+      <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[auto_minmax(0,1fr)_auto] tw:lg:items-end">
+        <div className="tw:grid tw:gap-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground">
           <span>{t('adminInbox.manualControl')}</span>
-          <button
-            className="control-button"
+          <Button
             type="button"
             disabled={input.approvePending}
             onClick={() => input.onApprove(input.item.requestId)}
           >
             {t('adminInbox.approveOffboarding')}
-          </button>
+          </Button>
         </div>
-        <label className="field-block">
-          <span>{t('adminInbox.returnNote')}</span>
-          <textarea
+        <label className="tw:grid tw:gap-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground">
+          {t('adminInbox.returnNote')}
+          <Textarea
             aria-label={t('adminInbox.returnNoteForAria', { displayName: input.item.displayName })}
             rows={2}
             value={input.returnNote}
             onChange={(event) => input.onReturnNoteChange(input.item.requestId, event.target.value)}
           />
         </label>
-        <div className="field-block">
+        <div className="tw:grid tw:gap-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground">
           <span>{t('adminInbox.storeCorrection')}</span>
-          <button
-            className="control-button"
+          <Button
             type="button"
+            variant="outline"
             disabled={input.rejectPending || !input.returnNote.trim()}
             onClick={() => input.onReject(input.item.requestId, input.returnNote.trim())}
           >
             {t('adminInbox.returnOffboarding')}
-          </button>
+          </Button>
         </div>
       </div>
     </article>
@@ -686,13 +770,13 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
   const { locale, t } = useLocalization()
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
+    <article className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/65 tw:p-3">
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
         <div>
-          <strong>{input.item.title}</strong>
-          <p className="queue-subtitle">{input.item.summary}</p>
+          <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.item.title}</strong>
+          <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">{input.item.summary}</p>
         </div>
-        <div className="action-cluster">
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
           <StatusPill tone="accent">{formatWorkflowSourceTypeLabel(input.item.sourceType, t)}</StatusPill>
           <StatusPill tone={mapInboxStatusTone(input.item.inboxStatus)}>
             {formatTranslatedState(input.item.inboxStatus, t)}
@@ -703,7 +787,7 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
         </div>
       </div>
 
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue label={t('storeTasks.workType')} value={formatWorkflowItemTypeLabel(input.item.itemType, t)} />
         <KeyValue label={t('storeTasks.actorRole')} value={formatState(input.item.actorRole)} />
         <KeyValue label={t('storeTasks.store')} value={input.item.storeName || input.item.storeId} />
@@ -711,16 +795,18 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
           label={t('storeTasks.actionTime')}
           value={input.item.needsAttentionAt ? formatDateTime(input.item.needsAttentionAt, locale) : t('storeTasks.now')}
         />
-      </div>
+      </AdminKeyValueGrid>
 
-      {input.item.historyPreview ? <p className="queue-subtitle">{input.item.historyPreview}</p> : null}
+      {input.item.historyPreview ? (
+        <p className="tw:text-xs tw:leading-5 tw:text-muted-foreground">{input.item.historyPreview}</p>
+      ) : null}
 
       <WorkflowInboxDetail item={input.item} />
 
-      <div className="action-cluster">
-        <Link className="control-button" to={input.item.deepLink}>
-          {input.item.primaryActionLabel}
-        </Link>
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button asChild>
+          <Link to={input.item.deepLink}>{input.item.primaryActionLabel}</Link>
+        </Button>
       </div>
     </article>
   )

@@ -1,14 +1,21 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Save } from 'lucide-react'
+import { MessageSquareWarning, RefreshCw, Save } from 'lucide-react'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  ScreenState,
-  StatusPill,
-  type Tone,
-} from '../components/dashboard-primitives'
+  AdminFilterBar,
+  AdminKeyValue as KeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty as EmptyState,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -79,23 +86,27 @@ export function AdminPilotFeedbackPage() {
 
   if (feedbackQuery.isLoading) {
     return (
-      <ScreenState
+      <AdminSurfacePage ariaLabel={t('pilotFeedback.admin.loadingTitle')}>
+        <AdminStatePanel
+          isLoading
         title={t('pilotFeedback.admin.loadingTitle')}
-        copy={t('pilotFeedback.admin.loadingCopy')}
-      />
+          description={t('pilotFeedback.admin.loadingCopy')}
+        />
+      </AdminSurfacePage>
     )
   }
 
   if (feedbackQuery.isError) {
     return (
-      <ScreenState
-        title={t('pilotFeedback.admin.errorTitle')}
-        copy={getErrorMessage(feedbackQuery.error)}
-        tone="error"
-        action={
-          <button
+      <AdminSurfacePage ariaLabel={t('pilotFeedback.admin.errorTitle')}>
+        <AdminStatePanel
+          title={t('pilotFeedback.admin.errorTitle')}
+          description={getErrorMessage(feedbackQuery.error)}
+          tone="danger"
+          action={
+            <Button
             type="button"
-            className="control-button"
+              variant="outline"
             disabled={feedbackQuery.isFetching}
             onClick={() => void feedbackQuery.refetch()}
           >
@@ -103,42 +114,68 @@ export function AdminPilotFeedbackPage() {
             {feedbackQuery.isFetching
               ? t('pilotFeedback.admin.retryingAction')
               : t('pilotFeedback.admin.retryAction')}
-          </button>
-        }
-      />
+            </Button>
+          }
+        />
+      </AdminSurfacePage>
     )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('pilotFeedback.admin.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('pilotFeedback.admin.heroTitle')}</h2>
-          <p className="hero-copy">{t('pilotFeedback.admin.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('pilotFeedback.admin.route')} value="/admin/pilot-feedback" />
-          <MetricAccent label={t('pilotFeedback.admin.total')} value={String(total)} />
-          <MetricAccent label={t('pilotFeedback.admin.newItems')} value={String(newCount)} />
-          <MetricAccent label={t('pilotFeedback.admin.triagedItems')} value={String(triagedCount)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('pilotFeedback.admin.heroTitle')}>
+      <AdminSurfaceHeader
+        eyebrow={t('pilotFeedback.admin.heroEyebrow')}
+        title={t('pilotFeedback.admin.heroTitle')}
+        description={t('pilotFeedback.admin.heroCopy')}
+        icon={<MessageSquareWarning size={18} />}
+        meta={<AdminSurfaceBadge tone="neutral">/admin/pilot-feedback</AdminSurfaceBadge>}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('pilotFeedback.admin.filtersTitle')}</div>
-            <h3>{t('pilotFeedback.admin.queueTitle')}</h3>
-          </div>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'total',
+            label: t('pilotFeedback.admin.total'),
+            value: String(total),
+            description: t('pilotFeedback.admin.route'),
+            trend: '/admin/pilot-feedback',
+            tone: 'cyan',
+          },
+          {
+            id: 'new',
+            label: t('pilotFeedback.admin.newItems'),
+            value: String(newCount),
+            tone: newCount > 0 ? 'warning' : 'neutral',
+          },
+          {
+            id: 'triaged',
+            label: t('pilotFeedback.admin.triagedItems'),
+            value: String(triagedCount),
+            tone: triagedCount > 0 ? 'accent' : 'neutral',
+          },
+          {
+            id: 'visible',
+            label: t('pilotFeedback.admin.queueTitle'),
+            value: String(items.length),
+            tone: items.length > 0 ? 'success' : 'neutral',
+          },
+        ]}
+      />
+
+      <AdminSurfaceSection
+        eyebrow={t('pilotFeedback.admin.filtersTitle')}
+        title={t('pilotFeedback.admin.queueTitle')}
+        badge={
           <StatusPill tone={items.length > 0 ? 'accent' : 'neutral'}>
             {`${t('pilotFeedback.admin.total')}: ${total}`}
           </StatusPill>
-        </div>
-        <div className="toolbar-cluster">
-          <label className="control-select">
-            <span>{t('pilotFeedback.admin.statusFilter')}</span>
+        }
+      >
+        <AdminFilterBar>
+          <label className="tw:grid tw:min-w-44 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {t('pilotFeedback.admin.statusFilter')}
             <select
+              className="tw:h-8 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2 tw:text-sm tw:text-foreground"
               value={status}
               onChange={(event) => updateStatusFilter(event.target.value as PilotFeedbackStatus | '')}
             >
@@ -150,9 +187,10 @@ export function AdminPilotFeedbackPage() {
               ))}
             </select>
           </label>
-          <label className="control-select">
-            <span>{t('pilotFeedback.admin.classificationFilter')}</span>
+          <label className="tw:grid tw:min-w-52 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {t('pilotFeedback.admin.classificationFilter')}
             <select
+              className="tw:h-8 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2 tw:text-sm tw:text-foreground"
               value={classification}
               onChange={(event) =>
                 updateClassificationFilter(event.target.value as PilotFeedbackClassification | '')
@@ -166,26 +204,25 @@ export function AdminPilotFeedbackPage() {
               ))}
             </select>
           </label>
-        </div>
-      </section>
+        </AdminFilterBar>
+      </AdminSurfaceSection>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('pilotFeedback.admin.heroEyebrow')}</div>
-            <h3>{t('pilotFeedback.admin.queueTitle')}</h3>
-          </div>
+      <AdminSurfaceSection
+        eyebrow={t('pilotFeedback.admin.heroEyebrow')}
+        title={t('pilotFeedback.admin.queueTitle')}
+        badge={
           <StatusPill tone={feedbackQuery.isFetching ? 'warning' : 'calm'}>
             {feedbackQuery.isFetching ? t('pilotFeedback.admin.loadingTitle') : t('pilotFeedback.admin.total')}
           </StatusPill>
-        </div>
+        }
+      >
         {items.length === 0 ? (
           <EmptyState
             title={t('pilotFeedback.admin.emptyTitle')}
             copy={t('pilotFeedback.admin.emptyCopy')}
           />
         ) : (
-          <div className="stacked-table">
+          <div className="tw:grid tw:gap-3">
             {items.map((item) => (
               <PilotFeedbackRow
                 item={item}
@@ -203,8 +240,8 @@ export function AdminPilotFeedbackPage() {
           onNextPage: () => setOffset(offset + PAGE_SIZE),
           onPreviousPage: () => setOffset(Math.max(0, offset - PAGE_SIZE)),
         })}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }
 
@@ -242,13 +279,13 @@ function PilotFeedbackRow(input: {
   }
 
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
+    <article className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:p-4">
+      <div className="tw:flex tw:flex-col tw:gap-2 tw:md:flex-row tw:md:items-start tw:md:justify-between">
         <div>
-          <strong>{input.item.title}</strong>
-          <p className="queue-subtitle">{input.item.description}</p>
+          <strong className="tw:text-sm tw:font-medium tw:text-foreground">{input.item.title}</strong>
+          <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">{input.item.description}</p>
         </div>
-        <div className="action-cluster">
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
           <StatusPill tone={mapSeverityTone(input.item.severitySuggestion)}>
             {input.t(`pilotFeedback.severity.${input.item.severitySuggestion}`)}
           </StatusPill>
@@ -258,7 +295,7 @@ function PilotFeedbackRow(input: {
         </div>
       </div>
 
-      <div className="key-grid">
+      <AdminKeyValueGrid>
         <KeyValue label={input.t('pilotFeedback.typeLabel')} value={input.t(`pilotFeedback.type.${input.item.feedbackType}`)} />
         <KeyValue label={input.t('pilotFeedback.admin.route')} value={input.item.routePath} />
         <KeyValue label={input.t('pilotFeedback.admin.actor')} value={formatActor(input.item)} />
@@ -275,13 +312,14 @@ function PilotFeedbackRow(input: {
               : input.t('pilotFeedback.admin.noClassification')
           }
         />
-      </div>
+      </AdminKeyValueGrid>
 
-      <form className="stacked-row" onSubmit={submitClassification}>
-        <div className="key-grid">
-          <label className="control-select">
-            <span>{input.t('pilotFeedback.admin.classificationFilter')}</span>
+      <form className="tw:grid tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/70 tw:p-3" onSubmit={submitClassification}>
+        <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:md:grid-cols-2">
+          <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {input.t('pilotFeedback.admin.classificationFilter')}
             <select
+              className="tw:h-8 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2 tw:text-sm tw:text-foreground"
               value={classification}
               onChange={(event) => setClassification(event.target.value as PilotFeedbackClassification)}
             >
@@ -292,10 +330,9 @@ function PilotFeedbackRow(input: {
               ))}
             </select>
           </label>
-          <label className="control-select">
-            <span>{input.t('pilotFeedback.admin.noteLabel')}</span>
-            <input
-              className="control-input"
+          <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {input.t('pilotFeedback.admin.noteLabel')}
+            <Input
               value={currentNote}
               maxLength={2000}
               onChange={(event) => setNote(event.target.value)}
@@ -304,23 +341,23 @@ function PilotFeedbackRow(input: {
         </div>
 
         {classifyMutation.isError ? (
-          <p role="alert" className="queue-subtitle">
+          <p role="alert" className="tw:text-sm tw:text-destructive">
             {input.t('pilotFeedback.admin.classifyError')}: {getErrorMessage(classifyMutation.error)}
           </p>
         ) : null}
         {classifyMutation.isSuccess ? (
-          <p role="status" className="queue-subtitle">
+          <p role="status" className="tw:text-sm tw:text-emerald-700">
             {input.t('pilotFeedback.admin.classifySuccess')}
           </p>
         ) : null}
 
-        <div className="action-cluster">
-          <button type="submit" className="control-button" disabled={classifyMutation.isPending}>
+        <div className="tw:flex tw:justify-end">
+          <Button type="submit" disabled={classifyMutation.isPending}>
             <Save aria-hidden="true" size={16} />
             {classifyMutation.isPending
               ? input.t('pilotFeedback.admin.classifying')
               : input.t('pilotFeedback.admin.classifyAction')}
-          </button>
+          </Button>
         </div>
       </form>
     </article>
@@ -344,7 +381,7 @@ function renderPagination(input: {
   const canGoNext = end < input.meta.total
 
   return (
-    <div className="queue-meta">
+    <div className="tw:flex tw:flex-col tw:gap-2 tw:text-sm tw:text-muted-foreground tw:md:flex-row tw:md:items-center tw:md:justify-between">
       <span>
         {input.t('pilotFeedback.admin.range', {
           start,
@@ -352,23 +389,23 @@ function renderPagination(input: {
           total: input.meta.total,
         })}
       </span>
-      <div className="action-cluster">
-        <button
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <Button
           type="button"
-          className="control-button"
+          variant="outline"
           disabled={!canGoPrevious || input.isFetching}
           onClick={input.onPreviousPage}
         >
           {input.t('pilotFeedback.admin.previous')}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="control-button"
+          variant="outline"
           disabled={!canGoNext || input.isFetching}
           onClick={input.onNextPage}
         >
           {input.t('pilotFeedback.admin.next')}
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -388,6 +425,17 @@ function formatPilotFeedbackClassification(
   classification: PilotFeedbackClassification,
 ) {
   return t(`pilotFeedback.classification.${classification}`)
+}
+
+type Tone = AdminSurfaceTone | 'calm'
+
+function StatusPill(input: { children: ReactNode; tone?: Tone }) {
+  return <AdminSurfaceBadge tone={toSurfaceTone(input.tone)}>{input.children}</AdminSurfaceBadge>
+}
+
+function toSurfaceTone(tone: Tone | undefined): AdminSurfaceTone {
+  if (tone === 'calm') return 'success'
+  return tone ?? 'neutral'
 }
 
 function mapSeverityTone(severity: PilotFeedback['severitySuggestion']): Tone {
