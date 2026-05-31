@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert'
 import { Badge } from '../components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Skeleton } from '../components/ui/skeleton'
 import { cn } from '../lib/utils'
 
@@ -119,13 +119,18 @@ function AdminMetricStrip({
       {items.map((item, index) => (
         <Card
           className={cn('tw:min-h-28 tw:border tw:shadow-sm', toneStyles[item.tone ?? 'neutral'])}
+          data-testid={item.id ? `admin-metric-${item.id}` : undefined}
           key={item.id ?? index}
           size="sm"
         >
           <CardHeader className="tw:pb-0">
             <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
               <div className="tw:min-w-0">
-                <CardTitle className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+                <CardTitle
+                  aria-level={2}
+                  className="tw:text-xs tw:font-medium tw:text-muted-foreground"
+                  role="heading"
+                >
                   {item.label}
                 </CardTitle>
                 <div className="tw:mt-2 tw:text-2xl tw:font-semibold tw:tracking-normal">
@@ -182,11 +187,108 @@ function AdminStatePanel({
       role={tone === 'danger' ? 'alert' : 'status'}
     >
       <Icon className={cn('tw:size-4', isLoading && 'tw:animate-spin')} aria-hidden="true" />
-      <AlertTitle>{title}</AlertTitle>
+      <AlertTitle aria-level={2} role="heading">{title}</AlertTitle>
       {description ? <AlertDescription>{description}</AlertDescription> : null}
       {children ? <div className="tw:col-start-2 tw:mt-2">{children}</div> : null}
       {action ? <div className="tw:col-start-2 tw:mt-3">{action}</div> : null}
     </Alert>
+  )
+}
+
+function AdminSurfaceSection({
+  ariaLabel,
+  actions,
+  badge,
+  children,
+  className,
+  description,
+  eyebrow,
+  title,
+}: {
+  ariaLabel?: string
+  actions?: ReactNode
+  badge?: ReactNode
+  children?: ReactNode
+  className?: string
+  description?: ReactNode
+  eyebrow?: ReactNode
+  title: ReactNode
+}) {
+  return (
+    <Card
+      aria-label={ariaLabel}
+      className={cn('tw:border tw:border-border tw:bg-card/85 tw:shadow-sm', className)}
+    >
+      <CardHeader className="tw:border-b tw:pb-3">
+        <div className="tw:min-w-0">
+          {eyebrow ? (
+            <div className="tw:mb-1 tw:text-[0.7rem] tw:font-medium tw:tracking-[0.08em] tw:text-muted-foreground tw:uppercase">
+              {eyebrow}
+            </div>
+          ) : null}
+          <CardTitle aria-level={2} role="heading">{title}</CardTitle>
+          {description ? <CardDescription className="tw:mt-1">{description}</CardDescription> : null}
+        </div>
+        {badge || actions ? (
+          <CardAction className="tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
+            {badge}
+            {actions}
+          </CardAction>
+        ) : null}
+      </CardHeader>
+      {children ? <CardContent className="tw:grid tw:gap-3">{children}</CardContent> : null}
+    </Card>
+  )
+}
+
+function AdminKeyValueGrid({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cn('tw:grid tw:grid-cols-1 tw:gap-2 tw:sm:grid-cols-2 tw:lg:grid-cols-4', className)}>
+      {children}
+    </div>
+  )
+}
+
+function AdminKeyValue({
+  label,
+  value,
+}: {
+  label: ReactNode
+  value: ReactNode
+}) {
+  return (
+    <div className="tw:min-w-0 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
+      <div className="tw:text-xs tw:font-medium tw:text-muted-foreground">{label}</div>
+      <div className="tw:mt-1 tw:break-words tw:text-sm tw:font-medium tw:text-foreground">{value}</div>
+    </div>
+  )
+}
+
+function AdminSurfaceEmpty({
+  children,
+  copy,
+  title,
+}: {
+  children?: ReactNode
+  copy?: ReactNode
+  title?: ReactNode
+}) {
+  const panelTitle = title ?? copy
+
+  return (
+    <AdminStatePanel
+      title={panelTitle}
+      description={title ? copy : undefined}
+      tone="neutral"
+    >
+      {children}
+    </AdminStatePanel>
   )
 }
 
@@ -251,11 +353,15 @@ function AdminSurfaceSkeleton({ className }: { className?: string }) {
 export {
   AdminActionRow,
   AdminFilterBar,
+  AdminKeyValue,
+  AdminKeyValueGrid,
   AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
+  AdminSurfaceEmpty,
   AdminSurfaceHeader,
   AdminSurfacePage,
+  AdminSurfaceSection,
   AdminSurfaceSkeleton,
 }
 

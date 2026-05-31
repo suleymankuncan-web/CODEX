@@ -120,7 +120,7 @@ test('pilot feedback can be submitted and classified inside the app', async ({ p
   await expect(main.getByRole('heading', { name: 'Pilot feedback is classified in one queue.' })).toBeVisible()
   await expect(main.getByText('Checkout submit failed')).toBeVisible()
 
-  const row = page.locator('.stacked-row').filter({ hasText: 'Checkout submit failed' }).first()
+  const row = main.locator('article').filter({ hasText: 'Checkout submit failed' }).first()
   await expect(row.getByText('P1 blocker')).toBeVisible()
   await row.getByLabel('Class').selectOption('p1_pilot_blocker')
   await row.getByLabel('Note').fill('Blocks pilot action confidence.')
@@ -147,7 +147,7 @@ test('pilot feedback classification keeps an existing note when unchanged', asyn
 
   await page.goto('/admin/pilot-feedback')
 
-  const row = page.locator('.stacked-row').filter({ hasText: 'Checkout submit failed' }).first()
+  const row = page.getByRole('main').locator('article').filter({ hasText: 'Checkout submit failed' }).first()
   await expect(row.getByLabel('Note')).toHaveValue('Existing triage context.')
   await row.getByLabel('Class').selectOption('p3_backlog')
   await row.getByRole('button', { name: 'Classify' }).click()
