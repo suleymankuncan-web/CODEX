@@ -147,6 +147,12 @@ Current maintenance baseline:
   `backend/nestjs/src/openapi/openapi-schema-helpers.ts`, lowers the frozen
   generator baseline from 5256 to 5169 lines, and keeps
   `docs/api/openapi.json` unchanged after generation.
+- V5 PR-4 characterizes the next competition boundary without runtime code
+  changes. Evidence:
+  `docs/evidence/architecture-hardening-v5-pr4-competition-boundary-characterization-2026-05-31.md`.
+  The selected PR-5 target is stage package plan execution persistence only;
+  scoring recalculation and finalization remain parked until separate parity or
+  policy characterization exists.
 
 Latest route/scope guard merge:
 
