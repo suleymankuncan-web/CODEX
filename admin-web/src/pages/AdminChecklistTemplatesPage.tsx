@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, ClipboardList, Plus, Rocket, Save, Trash2 } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   createAdminChecklistTemplate,
@@ -12,8 +11,9 @@ import {
 import { useLocalization } from '../features/localization/useLocalization'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { getErrorMessage } from '../lib/format'
+import { AdminChecklistTemplatesExperience } from './AdminChecklistTemplateSurface'
 
-type DraftChecklistItem = {
+export type DraftChecklistItem = {
   id: string
   itemText: string
   note: string
@@ -25,13 +25,13 @@ type DraftChecklistItem = {
   requiresLowScoreNote: boolean
 }
 
-type DraftChecklistSection = {
+export type DraftChecklistSection = {
   id: string
   name: string
   items: DraftChecklistItem[]
 }
 
-type ChecklistTemplateType = 'BM_STORE_VISIT' | 'VM_STORE_VISIT'
+export type ChecklistTemplateType = 'BM_STORE_VISIT' | 'VM_STORE_VISIT'
 
 type TemplateOption = {
   label: string
@@ -69,15 +69,6 @@ const defaultTemplateOption = templateOptions[0] as TemplateOption
 const vmTemplateOption = templateOptions[1] as TemplateOption
 
 const today = new Date().toISOString().slice(0, 10)
-
-const wholeWeightFormatter = new Intl.NumberFormat('tr-TR', {
-  maximumFractionDigits: 0,
-})
-
-const fractionalWeightFormatter = new Intl.NumberFormat('tr-TR', {
-  minimumFractionDigits: 1,
-  maximumFractionDigits: 2,
-})
 
 const initialSections: DraftChecklistSection[] = [
   {
@@ -271,15 +262,6 @@ function getCompanyId(authSummary: AuthSessionSummary | null) {
 
 function roundWeight(value: number) {
   return Math.round(value * 100) / 100
-}
-
-function clampNumber(value: string, fallback: number) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : fallback
-}
-
-function formatWeight(value: number) {
-  return (value % 1 === 0 ? wholeWeightFormatter : fractionalWeightFormatter).format(value)
 }
 
 function buildExpectedValue(item: DraftChecklistItem) {
@@ -562,432 +544,12 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
   }
 }
 
-type AdminChecklistTemplatesPageModel = ReturnType<typeof useAdminChecklistTemplatesPageModel>
+export type AdminChecklistTemplatesPageModel = ReturnType<typeof useAdminChecklistTemplatesPageModel>
 
 export function AdminChecklistTemplatesPage(input: { authSummary: AuthSessionSummary | null }) {
   const model = useAdminChecklistTemplatesPageModel(input)
 
   return <AdminChecklistTemplatesExperience model={model} />
-}
-
-function AdminChecklistTemplatesExperience({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  return (
-    <section className="admin-checklist-builder-page">
-      <AdminChecklistTemplatesHero model={model} />
-      <AdminChecklistTemplatesEditorPanel model={model} />
-    </section>
-  )
-}
-
-function AdminChecklistTemplatesHero({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  const { addSection, canSubmit, isSaving, publishTemplate, saveDraft, t } = model
-
-  return (
-    <header className="admin-checklist-builder-hero">
-      <div>
-        <div className="eyebrow">{t('adminChecklists.heroEyebrow')}</div>
-        <h2>{t('adminChecklists.heroTitle')}</h2>
-        <p>{t('adminChecklists.heroCopy')}</p>
-      </div>
-      <div className="admin-checklist-builder-actions">
-        <button className="admin-checklist-builder-button secondary" type="button" onClick={addSection}>
-          <Plus size={16} />
-          {t('adminChecklists.addSection')}
-        </button>
-        <button
-          className="admin-checklist-builder-button"
-          type="button"
-          onClick={() => void saveDraft()}
-          disabled={isSaving || !canSubmit}
-        >
-          <Save size={16} />
-          {t('adminChecklists.saveDraft')}
-        </button>
-        <button
-          className="admin-checklist-builder-button primary"
-          type="button"
-          onClick={() => void publishTemplate()}
-          disabled={isSaving || !canSubmit}
-        >
-          <Rocket size={16} />
-          {t('adminChecklists.publish')}
-        </button>
-      </div>
-    </header>
-  )
-}
-
-function AdminChecklistTemplatesEditorPanel({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  const { t } = model
-
-  return (
-    <section className="admin-checklist-builder-panel" aria-label={t('adminChecklists.editorAria')}>
-      <AdminChecklistTemplateStrip model={model} />
-      <AdminChecklistStatusStrip model={model} />
-      <AdminChecklistNotice model={model} />
-      <AdminChecklistSectionsList model={model} />
-    </section>
-  )
-}
-
-function AdminChecklistTemplateStrip({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  const {
-    effectiveFrom,
-    selectedTemplate,
-    t,
-    templateName,
-    templateOptions,
-    templateType,
-    updateCurrentDraftFields,
-    updateTemplateType,
-  } = model
-
-  return (
-    <div className="admin-checklist-builder-template-strip">
-      <label className="admin-checklist-builder-field">
-        <span>{t('adminChecklists.templateName')}</span>
-        <input
-          value={templateName}
-          onChange={(event) => {
-            updateCurrentDraftFields({ templateName: event.target.value })
-          }}
-        />
-      </label>
-      <label className="admin-checklist-builder-field">
-        <span>{t('adminChecklists.checklistType')}</span>
-        <select
-          value={templateType}
-          onChange={(event) => updateTemplateType(event.target.value as ChecklistTemplateType)}
-        >
-          {templateOptions.map((option) => (
-            <option key={option.templateType} value={option.templateType}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="admin-checklist-builder-field">
-        <span>{t('adminChecklists.effectiveFrom')}</span>
-        <input
-          type="date"
-          value={effectiveFrom}
-          onChange={(event) => {
-            updateCurrentDraftFields({ effectiveFrom: event.target.value })
-          }}
-        />
-      </label>
-      <div className="admin-checklist-builder-field readonly">
-        <span>{t('adminChecklists.templateCode')}</span>
-        <strong>{selectedTemplate.templateCode}</strong>
-      </div>
-    </div>
-  )
-}
-
-function AdminChecklistStatusStrip({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  const {
-    addSection,
-    companyId,
-    itemCount,
-    savedTemplate,
-    sectionCount,
-    t,
-    totalWeight,
-    weightIsReady,
-  } = model
-
-  return (
-    <div className="admin-checklist-builder-status-strip">
-      <div className="admin-checklist-builder-chips">
-        <span className={weightIsReady ? 'ready' : 'warning'}>
-          {t('adminChecklists.totalWeight', { total: formatWeight(totalWeight) })}
-        </span>
-        <span>{t('adminChecklists.sectionCount', { count: sectionCount })}</span>
-        <span>{t('adminChecklists.itemCount', { count: itemCount })}</span>
-        <span>
-          {savedTemplate
-            ? t('adminChecklists.savedStatus', {
-                version: savedTemplate.versionNo ?? '-',
-                status: savedTemplate.status,
-              })
-            : t('adminChecklists.newDraft')}
-        </span>
-        {!companyId ? <span className="warning">{t('adminChecklists.missingCompanyScope')}</span> : null}
-      </div>
-      <button className="admin-checklist-builder-button secondary" type="button" onClick={addSection}>
-        <Plus size={16} />
-        {t('adminChecklists.addSection')}
-      </button>
-    </div>
-  )
-}
-
-function AdminChecklistNotice({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  const { notice } = model
-
-  if (!notice) return null
-
-  return (
-    <div className={`admin-checklist-builder-notice ${notice.tone}`} role="status">
-      {notice.tone === 'success' ? <CheckCircle2 size={17} /> : <ClipboardList size={17} />}
-      <span>{notice.message}</span>
-    </div>
-  )
-}
-
-function AdminChecklistSectionsList({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  const { addSection, sections, t } = model
-
-  return (
-    <div className="admin-checklist-builder-sections">
-      {sections.map((section, sectionIndex) => (
-        <AdminChecklistSectionCard
-          key={section.id}
-          model={model}
-          section={section}
-          sectionIndex={sectionIndex}
-        />
-      ))}
-
-      <button className="admin-checklist-builder-add-section" type="button" onClick={addSection}>
-        <Plus size={17} />
-        {t('adminChecklists.addSection')}
-      </button>
-    </div>
-  )
-}
-
-function AdminChecklistSectionCard({
-  model,
-  section,
-  sectionIndex,
-}: {
-  model: AdminChecklistTemplatesPageModel
-  section: DraftChecklistSection
-  sectionIndex: number
-}) {
-  const { addItem, removeSection, t, updateSection } = model
-  const sectionWeight = section.items.reduce((sum, item) => sum + item.weight, 0)
-
-  return (
-    <article className="admin-checklist-builder-section">
-      <div className="admin-checklist-builder-section-head">
-        <div className="admin-checklist-builder-section-title">
-          <span>{sectionIndex + 1}</span>
-          <input
-            value={section.name}
-            aria-label={t('adminChecklists.sectionNameAria')}
-            onChange={(event) => updateSection(section.id, event.target.value)}
-          />
-        </div>
-        <div className="admin-checklist-builder-section-actions">
-          <strong>
-            {t('adminChecklists.sectionWeight', {
-              weight: formatWeight(sectionWeight),
-            })}
-          </strong>
-          <button
-            className="admin-checklist-builder-button secondary compact"
-            type="button"
-            onClick={() => addItem(section.id)}
-          >
-            <Plus size={15} />
-            {t('adminChecklists.addItem')}
-          </button>
-          <button
-            className="admin-checklist-builder-icon-button"
-            type="button"
-            aria-label={t('adminChecklists.removeSectionAria')}
-            onClick={() => removeSection(section.id)}
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-      </div>
-
-      <div className="admin-checklist-builder-items">
-        {section.items.map((item, itemIndex) => (
-          <AdminChecklistItemEditor
-            key={item.id}
-            item={item}
-            itemIndex={itemIndex}
-            model={model}
-            sectionId={section.id}
-          />
-        ))}
-      </div>
-    </article>
-  )
-}
-
-function AdminChecklistItemEditor({
-  item,
-  itemIndex,
-  model,
-  sectionId,
-}: {
-  item: DraftChecklistItem
-  itemIndex: number
-  model: AdminChecklistTemplatesPageModel
-  sectionId: string
-}) {
-  const { removeItem, t, updateItem } = model
-
-  return (
-    <div className="admin-checklist-builder-item">
-      <div className="admin-checklist-builder-item-no">{itemIndex + 1}</div>
-      <div className="admin-checklist-builder-item-body">
-        <div className="admin-checklist-builder-question-line">
-          <input
-            value={item.itemText}
-            aria-label={t('adminChecklists.questionAria')}
-            onChange={(event) => updateItem(sectionId, item.id, { itemText: event.target.value })}
-          />
-          <button
-            className="admin-checklist-builder-icon-button"
-            type="button"
-            aria-label={t('adminChecklists.removeItemAria')}
-            onClick={() => removeItem(sectionId, item.id)}
-          >
-            <Trash2 size={16} />
-          </button>
-        </div>
-        <textarea
-          value={item.note}
-          aria-label={t('adminChecklists.itemNoteAria')}
-          onChange={(event) => updateItem(sectionId, item.id, { note: event.target.value })}
-        />
-        <AdminChecklistItemSettings item={item} model={model} sectionId={sectionId} />
-      </div>
-    </div>
-  )
-}
-
-function AdminChecklistItemSettings({
-  item,
-  model,
-  sectionId,
-}: {
-  item: DraftChecklistItem
-  model: AdminChecklistTemplatesPageModel
-  sectionId: string
-}) {
-  const { responseTypeLabels, t, updateItem } = model
-
-  return (
-    <div className="admin-checklist-builder-item-settings">
-      <label>
-        <span>{t('adminChecklists.responseType')}</span>
-        <select
-          value={item.responseType}
-          onChange={(event) =>
-            updateItem(sectionId, item.id, {
-              responseType: event.target.value as ChecklistTemplateResponseType,
-            })
-          }
-        >
-          {(Object.keys(responseTypeLabels) as ChecklistTemplateResponseType[]).map((responseType) => (
-            <option key={responseType} value={responseType}>
-              {responseTypeLabels[responseType]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        <span>{t('adminChecklists.minScore')}</span>
-        <input
-          type="number"
-          min={0}
-          value={item.minScore}
-          onChange={(event) =>
-            updateItem(sectionId, item.id, {
-              minScore: clampNumber(event.target.value, item.minScore),
-            })
-          }
-        />
-      </label>
-      <label>
-        <span>{t('adminChecklists.maxScore')}</span>
-        <input
-          type="number"
-          min={1}
-          value={item.maxScore}
-          onChange={(event) =>
-            updateItem(sectionId, item.id, {
-              maxScore: clampNumber(event.target.value, item.maxScore),
-            })
-          }
-        />
-      </label>
-      <label>
-        <span>{t('adminChecklists.lowScoreThreshold')}</span>
-        <input
-          type="number"
-          min={0}
-          value={item.lowScoreThreshold}
-          onChange={(event) =>
-            updateItem(sectionId, item.id, {
-              lowScoreThreshold: clampNumber(event.target.value, item.lowScoreThreshold),
-            })
-          }
-        />
-      </label>
-      <label>
-        <span>{t('adminChecklists.weight')}</span>
-        <input
-          type="number"
-          min={0}
-          max={100}
-          value={item.weight}
-          onChange={(event) =>
-            updateItem(sectionId, item.id, {
-              weight: clampNumber(event.target.value, item.weight),
-            })
-          }
-        />
-      </label>
-      <label className="admin-checklist-builder-checkbox">
-        <input
-          type="checkbox"
-          checked={item.requiresLowScoreNote}
-          onChange={(event) =>
-            updateItem(sectionId, item.id, {
-              requiresLowScoreNote: event.target.checked,
-            })
-          }
-        />
-        <span>{t('adminChecklists.lowScoreNoteRequired')}</span>
-      </label>
-    </div>
-  )
 }
 
 function resolveValidationMessage(
