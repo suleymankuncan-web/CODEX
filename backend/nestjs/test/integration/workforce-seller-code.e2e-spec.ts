@@ -144,11 +144,15 @@ describe("Workforce seller code requests", () => {
       return { rowCount: 0, rows: [] };
     });
 
+    const withTransaction = jest.fn(
+      async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+        work({ query }),
+    );
+
     const app = await createIntegrationApp({
       databaseService: {
         query,
-        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
-          work({ query }),
+        withTransaction,
       },
     });
 
@@ -264,11 +268,15 @@ describe("Workforce seller code requests", () => {
       return { rowCount: 0, rows: [] };
     });
 
+    const withTransaction = jest.fn(
+      async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+        work({ query }),
+    );
+
     const app = await createIntegrationApp({
       databaseService: {
         query,
-        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
-          work({ query }),
+        withTransaction,
       },
     });
 
@@ -577,11 +585,15 @@ describe("Workforce seller code requests", () => {
       return { rowCount: 0, rows: [] };
     });
 
+    const withTransaction = jest.fn(
+      async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+        work({ query }),
+    );
+
     const app = await createIntegrationApp({
       databaseService: {
         query,
-        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
-          work({ query }),
+        withTransaction,
       },
     });
 
@@ -610,7 +622,112 @@ describe("Workforce seller code requests", () => {
       positionCode,
       positionName,
     });
+    expect(withTransaction).toHaveBeenCalledTimes(1);
+    expect(
+      query.mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("INSERT INTO ops.employee") &&
+          call[0].includes("external_employee_ref"),
+      ),
+    ).toBe(true);
+    expect(
+      query.mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          call[0].includes("INSERT INTO ops.employee_assignment_history"),
+      ),
+    ).toBe(true);
     expectAuditEvent(query, "seller_code_request.approved", "ops.seller_code_request");
+
+    await app.close();
+  });
+
+  it("rejects duplicate seller code approval before employee mutation", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("WHERE scr.seller_code_request_id")) {
+        expect(params).toEqual([requestId]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              seller_code_request_id: requestId,
+              company_id: companyId,
+              region_id: regionId,
+              store_id: storeId,
+              store_code: "MP001",
+              store_name: "Marmara Park",
+              store_type: "franchise",
+              request_type: "create_code",
+              request_status: "pending_hr_approval",
+              first_name: "Ayse",
+              last_name: "Yilmaz",
+              national_id_hash: nationalIdHash,
+              national_id_last4: "8901",
+              phone_number: phoneNumber,
+              requested_hire_date: hireDate,
+              requested_position_id: positionId,
+              position_code: positionCode,
+              position_name: positionName,
+              employment_type: "full_time",
+              requested_seller_code: null,
+              approved_seller_code: null,
+              last_reference_seller_code: "FM8375",
+              submitted_by_user_id: "store-manager-1",
+              reviewed_by_user_id: null,
+              reviewed_at: null,
+              review_note: null,
+              created_at: "2026-04-27T12:00:00.000Z",
+              updated_at: "2026-04-27T12:00:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("seller_code_duplicate_count")) {
+        expect(params).toEqual(["FM8376"]);
+        return {
+          rowCount: 1,
+          rows: [{ seller_code_duplicate_count: "1" }],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const withTransaction = jest.fn(
+      async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+        work({ query }),
+    );
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction,
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/workforce/seller-code-requests/${requestId}/approve`)
+      .set("x-user-id", actorUserId)
+      .set("x-role-codes", "HR_ADMIN")
+      .send({
+        sellerCode: "FM8376",
+        reviewNote: "Kod acildi",
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe("Seller code already exists: FM8376");
+    expect(withTransaction).not.toHaveBeenCalled();
+    expect(
+      query.mock.calls.some(
+        (call) =>
+          typeof call[0] === "string" &&
+          (call[0].includes("INSERT INTO ops.employee") ||
+            call[0].includes("UPDATE ops.seller_code_request") ||
+            call[0].includes("INSERT INTO audit.event_log")),
+      ),
+    ).toBe(false);
 
     await app.close();
   });

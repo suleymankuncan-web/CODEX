@@ -160,6 +160,11 @@ Current maintenance baseline:
   `CompetitionRepository` remains the service-facing facade; scoring,
   finalization, review, cancel, clone, DB schema, API contract, and workflow
   semantics stay unchanged.
+- V5 PR-6 characterizes the next workforce command boundary and strengthens
+  seller-code approval tests. Evidence:
+  `docs/evidence/architecture-hardening-v5-pr6-workforce-command-characterization-2026-05-31.md`.
+  The selected PR-7 target is seller-code approval command persistence only;
+  offboarding approval/access lifecycle remains parked.
 
 Latest route/scope guard merge:
 
