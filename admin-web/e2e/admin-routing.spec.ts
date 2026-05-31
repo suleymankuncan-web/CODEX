@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './test-fixtures'
+import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 
 test.beforeEach(async ({ page }) => {
@@ -471,22 +471,22 @@ test('admin checklist editor keeps BM and VM template drafts separate', async ({
   await page.goto('/admin/checklists')
 
   const main = page.getByRole('main')
-  const templateTypeSelect = main.locator('.admin-checklist-builder-template-strip select')
-  const firstQuestion = main.locator('.admin-checklist-builder-question-line input').first()
+  const templateTypeSelect = main.getByLabel(/Checklist tipi|Checklist type/)
+  const firstQuestion = main.getByTestId('checklist-question-input').first()
 
   await expect(firstQuestion).toHaveValue(/Vitrin sezon/i)
 
-  await templateTypeSelect.selectOption('VM_STORE_VISIT')
+  await chooseChecklistTemplate(page, templateTypeSelect, 'VM Checklist')
   await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardina uygun mu?')
 
   await firstQuestion.fill('VM-only fixture question')
   await expect(firstQuestion).toHaveValue('VM-only fixture question')
 
-  await templateTypeSelect.selectOption('BM_STORE_VISIT')
+  await chooseChecklistTemplate(page, templateTypeSelect, 'BM Checklist')
   await expect(firstQuestion).toHaveValue(/Vitrin sezon/i)
   await expect(firstQuestion).not.toHaveValue('VM-only fixture question')
 
-  await templateTypeSelect.selectOption('VM_STORE_VISIT')
+  await chooseChecklistTemplate(page, templateTypeSelect, 'VM Checklist')
   await expect(firstQuestion).toHaveValue('VM-only fixture question')
 })
 
@@ -496,17 +496,17 @@ test('admin checklist template editor stays bounded on mobile width', async ({ p
   await setStoredLocale(page, 'en')
 
   const main = page.getByRole('main')
-  const templateTypeSelect = main.locator('.admin-checklist-builder-template-strip select')
-  const firstQuestion = main.locator('.admin-checklist-builder-question-line input').first()
+  const templateTypeSelect = main.getByLabel('Checklist type')
+  const firstQuestion = main.getByTestId('checklist-question-input').first()
 
   await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
-  await expect(main.locator('.admin-checklist-builder-template-strip')).toBeVisible()
-  await expect(main.locator('.admin-checklist-builder-status-strip')).toBeVisible()
-  await expect(main.locator('.admin-checklist-builder-item-settings').first()).toBeVisible()
+  await expect(main.getByTestId('checklist-template-editor')).toBeVisible()
+  await expect(main.getByTestId('admin-metric-weight')).toBeVisible()
+  await expect(main.getByTestId('checklist-item-editor').first()).toBeVisible()
   await expect(main.getByRole('button', { name: 'Add Section' }).first()).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
-  await templateTypeSelect.selectOption('VM_STORE_VISIT')
+  await chooseChecklistTemplate(page, templateTypeSelect, 'VM Checklist')
   await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardina uygun mu?')
   await expectNoHorizontalOverflow(page)
 })
@@ -609,6 +609,11 @@ test('snapshot operations routes stay bounded on mobile width', async ({ page })
   await expect(main.getByRole('heading', { name: 'Operator-visible trace' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
+
+async function chooseChecklistTemplate(page: Page, trigger: Locator, optionName: string) {
+  await trigger.click()
+  await page.getByRole('option', { name: optionName }).click()
+}
 
 async function expectNoHorizontalOverflow(page: Page) {
   const measurements = await page.evaluate(() => ({
