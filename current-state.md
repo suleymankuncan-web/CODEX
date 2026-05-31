@@ -173,6 +173,12 @@ Current maintenance baseline:
   duplicate checks, transaction grouping, employee mutation, assignment insert,
   request update, audit event, API shape, auth semantics, DB schema, and
   offboarding/access lifecycle behavior stay unchanged.
+- Architecture Hardening V5 is closed. Closeout evidence:
+  `docs/evidence/architecture-hardening-v5-closeout-2026-05-31.md`. Estimated
+  architecture health after V5 is `95/100`. Remaining parked risks are
+  competition scoring/finalization, workforce offboarding/access lifecycle,
+  further generator movement, broad E2E decomposition, and redesign-sensitive
+  frontend page splits; reopen only with concrete trigger evidence.
 
 Latest route/scope guard merge:
 

@@ -1,6 +1,7 @@
 # Refactor Completion Inventory V1
 
-Status: Active decision refreshed for Architecture Hardening V5 on 2026-05-31
+Status: Active decision refreshed after Architecture Hardening V5 closeout on
+2026-05-31
 
 This inventory closes the recurring "large file means keep refactoring" loop.
 The project still has large files, but they are no longer all active refactor
@@ -169,6 +170,9 @@ V5 does not reopen broad refactor by line count. Any runtime movement must be
 selected by the V5 plan, protected by parity or characterization tests, and
 merged through the normal PR/check/review discipline.
 
+V5 is closed. Closeout evidence:
+`docs/evidence/architecture-hardening-v5-closeout-2026-05-31.md`.
+
 V5 OpenAPI parity repair status:
 
 - Done in V5 PR-2: generator baseline metadata preservation keeps the tracked
@@ -214,6 +218,17 @@ V5 workforce command status:
 - Parked: offboarding approval and access lifecycle closure remain out of scope
   until separate characterization covers employee termination, assignment
   closure, turnover events, linked user lookup, and access lifecycle calls.
+
+V5 closeout status:
+
+- Done: OpenAPI parity repair, OpenAPI helper split, selected competition stage
+  package plan execution persistence extraction, seller-code approval command
+  characterization, and seller-code approval command persistence extraction.
+- Estimated architecture health after V5: `95/100`.
+- Remaining parked risks are finite and trigger-based: competition
+  scoring/finalization, workforce offboarding/access lifecycle, further
+  generator movement, broad E2E decomposition, and redesign-sensitive frontend
+  page splits.
 
 ## Completed Or No Longer Active
 
