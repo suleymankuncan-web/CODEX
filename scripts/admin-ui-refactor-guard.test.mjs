@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-const inventoryPath = 'docs/plans/admin-ui-modernization-v1-inventory.md'
+const adminShellPath = 'admin-web/src/app/admin-shell.tsx'
 const evidencePath = 'docs/evidence/admin-ui-modernization-v1-pr13-admin-ui-guard-2026-05-31.md'
 const adminSurfacePrimitivesPath = 'admin-web/src/pages/admin-surface-primitives.tsx'
 
@@ -131,7 +131,10 @@ const migratedAdminSurfaces = [
   {
     id: 'kpi-config',
     pageFile: 'admin-web/src/pages/AdminKpiConfigPage.tsx',
-    checkedFiles: ['admin-web/src/pages/AdminKpiConfigPage.tsx'],
+    checkedFiles: [
+      'admin-web/src/pages/AdminKpiConfigPage.tsx',
+      'admin-web/src/pages/admin-kpi-config-surface-primitives.tsx',
+    ],
   },
   {
     id: 'competitions',
@@ -199,15 +202,38 @@ function trackedFiles() {
   )
 }
 
-function extractInventoryBaseline() {
-  const match = readText(inventoryPath).match(/```json\r?\n([\s\S]*?)\r?\n```/)
-  assert.ok(match, 'admin UI inventory must contain a JSON route baseline block')
+function parseLiveAdminRoutes() {
+  const text = readText(adminShellPath)
+  const routes = []
+  const adminRoutePattern =
+    /<Route\s+path="([^"]+)"\s+element=\{adminRoute\(\[[\s\S]*?\],\s*<([A-Za-z0-9_]+)/g
 
-  return JSON.parse(match[1])
+  for (const match of text.matchAll(adminRoutePattern)) {
+    routes.push({
+      path: match[1],
+      page: match[2],
+    })
+  }
+
+  if (text.includes('<Route path="/admin/session" element={<SessionGate />} />')) {
+    routes.push({
+      path: '/admin/session',
+      page: 'SessionReadinessPage',
+    })
+  }
+
+  return routes.sort((left, right) => left.path.localeCompare(right.path))
 }
 
-function containsApprovedAdminSurfaceUsage(text) {
-  return /AdminSurface[A-Za-z0-9_]*/.test(text) && /admin-surface-primitives/.test(text)
+function containsApprovedAdminSurfaceAnchor(text) {
+  return [
+    'admin-surface-primitives',
+    'operations-surface-primitives',
+    'AdminChecklistTemplateSurface',
+    'admin-kpi-config-surface-primitives',
+    'competition-admin-surface-primitives',
+    'import-batch-detail-surface-primitives',
+  ].some((anchor) => text.includes(anchor))
 }
 
 function countPatternMatches(text, pattern) {
@@ -230,12 +256,12 @@ function adminUiSurfaceViolations(input = {}) {
     }
 
     const fileTexts = checkedFiles.map((file) => ({ file, text: reader(file, 'utf8') }))
-    const hasAdminSurfaceUsage = fileTexts.some(({ text }) => containsApprovedAdminSurfaceUsage(text))
-    if (!hasAdminSurfaceUsage) {
-      violations.push(`${surface.id}: migrated admin surface does not use AdminSurface* primitives`)
-    }
 
     for (const { file, text } of fileTexts) {
+      if (!containsApprovedAdminSurfaceAnchor(text)) {
+        violations.push(`${file}: migrated admin file is not anchored to AdminSurface* primitives`)
+      }
+
       for (const { pattern, reason } of forbiddenMigratedPatterns) {
         if (countPatternMatches(text, pattern) > 0) {
           violations.push(`${file}: ${reason} matched ${pattern}`)
@@ -255,15 +281,15 @@ function adminUiSurfaceViolations(input = {}) {
   return violations
 }
 
-test('active admin route pages are explicitly migrated or exception-listed', () => {
-  const baseline = extractInventoryBaseline()
+test('live active admin route pages are explicitly migrated or exception-listed', () => {
+  const liveRoutes = parseLiveAdminRoutes()
   const coveredPageFiles = new Set([
     ...migratedAdminSurfaces.flatMap((surface) => surface.checkedFiles.map(normalizePath)),
     ...unmigratedAdminExceptions.map((surface) => normalizePath(surface.pageFile)),
   ])
   const uncovered = []
 
-  for (const route of baseline.routes) {
+  for (const route of liveRoutes) {
     const pageFile = pageFileByComponent.get(route.page)
     assert.ok(pageFile, `missing page file map for ${route.page}`)
 
@@ -303,7 +329,7 @@ test('admin UI guard rejects a synthetic legacy migrated page', () => {
   assert.ok(violations.some((violation) => violation.includes('legacy dashboard-primitives import')))
   assert.ok(violations.some((violation) => violation.includes('legacy admin layout class')))
   assert.ok(violations.some((violation) => violation.includes('fake admin data or copy language')))
-  assert.ok(violations.some((violation) => violation.includes('does not use AdminSurface*')))
+  assert.ok(violations.some((violation) => violation.includes('not anchored to AdminSurface*')))
 })
 
 test('admin UI guard rejects synthetic primitive sprawl without AdminSurface anchoring', () => {
@@ -319,7 +345,7 @@ test('admin UI guard rejects synthetic primitive sprawl without AdminSurface anc
     reader: () => "import { Card } from '../../components/ui/card'\nexport function FakeSurfacePage() { return <Card /> }",
   })
 
-  assert.ok(violations.some((violation) => violation.includes('does not use AdminSurface*')))
+  assert.ok(violations.some((violation) => violation.includes('not anchored to AdminSurface*')))
   assert.ok(violations.some((violation) => violation.includes('parallel surface primitive set')))
 })
 

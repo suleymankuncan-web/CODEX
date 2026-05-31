@@ -42,15 +42,18 @@ surfaces explicitly. These files are required to stay anchored to
 - `admin-web/src/pages/AdminChecklistTemplateSurface.tsx`
 - `admin-web/src/pages/TargetApprovalQueuePage.tsx`
 - `admin-web/src/pages/AdminKpiConfigPage.tsx`
+- `admin-web/src/pages/admin-kpi-config-surface-primitives.tsx`
 - `admin-web/src/pages/CompetitionDashboardPage.tsx`
 - `admin-web/src/features/competitions/StageBuilderForm.tsx`
 - `admin-web/src/features/competitions/competition-admin-surface-primitives.tsx`
 - `admin-web/src/features/competitions/stage-builder-package-section.tsx`
 - `admin-web/src/features/competitions/stage-builder-template-sections.tsx`
 
-The route coverage test reads the PR-1 inventory JSON baseline and fails if an
-active admin route page is neither in the migrated list nor in the exception
-allowlist.
+The route coverage test reads live route declarations from
+`admin-web/src/app/admin-shell.tsx` and fails if an active admin route page is
+neither in the migrated list nor in the exception allowlist. The separate
+PR-2 route parity guard still verifies that the live route graph matches the
+PR-1 inventory baseline.
 
 ## Explicit unmigrated exception allowlist
 
@@ -77,9 +80,10 @@ Migrated surfaces fail the guard if they reintroduce:
 
 ## Positive AdminSurface primitive requirement
 
-The guard is not only a negative pattern scan. Every migrated surface must show
-positive `AdminSurface*` usage anchored to
-`admin-web/src/pages/admin-surface-primitives.tsx`.
+The guard is not only a negative pattern scan. Every checked migrated file must
+show positive `AdminSurface*` anchoring, either by importing
+`admin-web/src/pages/admin-surface-primitives.tsx` directly or by importing an
+approved domain helper that is itself anchored to the shared AdminSurface layer.
 
 Domain helper primitive files are allowed only when they import the shared
 AdminSurface primitive layer. A domain helper named `*surface-primitives.tsx`
