@@ -25,7 +25,7 @@ test('data quality center composes read-only trust signals', async ({ page }) =>
   await expect(page).toHaveURL(/\/admin\/data-quality$/)
   await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Data Quality' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Data defects are separated from product issues.' })).toBeVisible()
-  await expect(page.getByTestId('admin-metric-route')).toContainText('/admin/data-quality')
+  await expect(page.getByTestId('admin-metric-status')).toContainText('Attention')
   await expect(page.getByTestId('admin-metric-totalPressure')).toContainText('61')
   await expect(page.getByTestId('admin-metric-import')).toContainText('3')
   await expect(page.getByTestId('admin-metric-snapshot')).toContainText('1')
@@ -50,6 +50,7 @@ test('data quality center composes read-only trust signals', async ({ page }) =>
   await expect(main.getByRole('link', { name: /Open snapshot detail/i }).first()).toHaveAttribute('href', '/admin/snapshots/snapshot-dq-1')
   await expect(main.getByRole('link', { name: /Open admin inbox/i })).toHaveAttribute('href', '/admin/inbox')
   await expect(main.getByRole('link', { name: /Open KPI config/i })).toHaveAttribute('href', '/admin/kpi-config')
+  await expect(main).not.toContainText('/admin/data-quality')
 })
 
 test('data quality center stays super-admin scoped', async ({ page }) => {

@@ -33,7 +33,7 @@ import { getWorkflowInbox } from '../features/workflow/api'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { DataQualitySignalPanel, type DataQualitySnapshot } from './operations-data-quality-signal-panel'
-import { OperationsHero, type SignalStatus } from './operations-hero'
+import { OperationsHero, OperationsReadinessStrip, type SignalStatus } from './operations-hero'
 import { buildOperatorActions } from './operations-operator-action-model'
 import { OperatorActionListPanel } from './operations-operator-action-list'
 import { summarizeKpiRankingReadiness } from './operations-kpi-ranking-signal-model'
@@ -436,11 +436,12 @@ export function OperationsControlTowerPage() {
 
   return (
     <AdminSurfacePage ariaLabel={t('adminOperations.heroTitle')}>
-      <OperationsHero
-        operationalPressure={operationalPressure}
-        providerBlockerCount={providerBlockers.length}
-        readiness={readiness}
-        t={t}
+      <OperationsHero t={t} />
+
+      <OperatorActionListPanel actions={operatorActions} t={t} />
+
+      <OperationsReadinessStrip
+        operationalPressure={operationalPressure} providerBlockerCount={providerBlockers.length} readiness={readiness} t={t}
       />
 
       <AdminMetricStrip
@@ -455,8 +456,6 @@ export function OperationsControlTowerPage() {
       />
 
       <MetricCoveragePanel t={t} />
-
-      <OperatorActionListPanel actions={operatorActions} t={t} />
 
       <SignalFreshnessPanel items={signalFreshness} locale={locale} t={t} />
 

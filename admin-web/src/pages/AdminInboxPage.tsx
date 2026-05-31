@@ -326,7 +326,9 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
         icon={<Bell size={18} />}
         meta={
           <>
-            <AdminSurfaceBadge tone="neutral">/admin/inbox</AdminSurfaceBadge>
+            <AdminSurfaceBadge tone={pendingItems.length > 0 ? 'warning' : 'success'}>
+              {t('adminInbox.needsAttention')}: {pendingItems.length}
+            </AdminSurfaceBadge>
             <AdminSurfaceBadge tone="cyan">{regionScope}</AdminSurfaceBadge>
           </>
         }
@@ -467,6 +469,11 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
       <AdminSurfaceSection
         eyebrow={t('adminInbox.adminQueueEyebrow')}
         title={t('adminInbox.adminQueueTitle')}
+        badge={
+          <StatusPill tone={sortedItems.length > 0 ? 'warning' : 'calm'}>
+            {sortedItems.length}
+          </StatusPill>
+        }
       >
         {sortedItems.length === 0 ? (
           <EmptyState
@@ -510,6 +517,11 @@ function SellerCodeQueuePanel(input: {
       eyebrow={t('adminInbox.workforceEyebrow')}
       title={t('adminInbox.sellerQueueTitle')}
       description={t('adminInbox.sellerQueueCopy')}
+      badge={
+        <StatusPill tone={input.requests.length > 0 ? 'warning' : 'calm'}>
+          {input.requests.length}
+        </StatusPill>
+      }
       actions={
         <AdminKeyValueGrid className="tw:min-w-[18rem] tw:grid-cols-2 tw:sm:grid-cols-2 tw:lg:grid-cols-2">
           <KeyValue
@@ -669,6 +681,11 @@ function OffboardingQueuePanel(input: {
       eyebrow={t('adminInbox.workforceEyebrow')}
       title={t('adminInbox.offboardingQueueTitle')}
       description={t('adminInbox.offboardingQueueCopy')}
+      badge={
+        <StatusPill tone={input.requests.length > 0 ? 'warning' : 'calm'}>
+          {input.requests.length}
+        </StatusPill>
+      }
     >
 
       {input.loading ? (

@@ -59,7 +59,7 @@ test('admin inbox page switches chrome to English copy and persists locale', asy
   await page.goto('/admin/inbox')
 
   await expect(page.getByRole('heading', { name: 'Admin iş kuyruğu' })).toBeVisible()
-  await expect(page.getByText('Aksiyon bekleyenler')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Aksiyon bekleyenler' })).toBeVisible()
   await expect(page.getByText('Satıcı kodu onay kuyruğu')).toBeVisible()
   await expect(page.getByText('One queue for admin-side approvals and KPI follow-up.')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')

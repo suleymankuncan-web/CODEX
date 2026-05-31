@@ -131,10 +131,10 @@ export function AdminDataQualityCenterPage() {
         icon={<ShieldCheck size={18} />}
         meta={
           <>
-            <AdminSurfaceBadge tone="neutral">{`/admin/data-quality`}</AdminSurfaceBadge>
             <AdminSurfaceBadge tone={toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning')}>
               {t(status.labelKey)}
             </AdminSurfaceBadge>
+            <AdminSurfaceBadge tone="cyan">{t('dataQuality.sourceFamiliesValue')}</AdminSurfaceBadge>
           </>
         }
       />
@@ -146,6 +146,30 @@ export function AdminDataQualityCenterPage() {
           description={t('dataQuality.unavailableCopy')}
         />
       ) : null}
+
+      <AdminMetricStrip
+        className="tw:xl:grid-cols-3"
+        items={[
+          {
+            id: 'status',
+            label: t('dataQuality.status'),
+            value: t(status.labelKey),
+            tone: toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning'),
+          },
+          {
+            id: 'totalPressure',
+            label: t('dataQuality.totalPressure'),
+            value: formatNumber(summary.totalPressure, locale),
+            tone: toSurfaceTone(metricTone(hasSignalError, summary.totalPressure)),
+          },
+          {
+            id: 'sourceFamilies',
+            label: t('dataQuality.sourceFamilies'),
+            value: t('dataQuality.sourceFamiliesValue'),
+            tone: 'cyan',
+          },
+        ]}
+      />
 
       <AdminMetricStrip
         items={[
@@ -184,57 +208,32 @@ export function AdminDataQualityCenterPage() {
         ]}
       />
 
-      <AdminMetricStrip
-        className="tw:xl:grid-cols-4"
-        items={[
-          {
-            id: 'route',
-            label: t('dataQuality.route'),
-            value: '/admin/data-quality',
-            tone: 'neutral',
-          },
-          {
-            id: 'status',
-            label: t('dataQuality.status'),
-            value: t(status.labelKey),
-            tone: toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning'),
-          },
-          {
-            id: 'totalPressure',
-            label: t('dataQuality.totalPressure'),
-            value: formatNumber(summary.totalPressure, locale),
-            tone: toSurfaceTone(metricTone(hasSignalError, summary.totalPressure)),
-          },
-          {
-            id: 'sourceFamilies',
-            label: t('dataQuality.sourceFamilies'),
-            value: t('dataQuality.sourceFamiliesValue'),
-            tone: 'cyan',
-          },
-        ]}
-      />
+      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
+        <ImportMappingPanel
+          error={importNeedsActionQuery.error ?? importOverviewQuery.error}
+          items={importItems}
+          locale={locale}
+          summary={summary}
+        />
+        <SnapshotFreshnessPanel
+          error={snapshotNeedsActionQuery.error ?? snapshotOverviewQuery.error}
+          items={snapshotItems}
+          locale={locale}
+          summary={summary}
+        />
+      </section>
 
-      <ImportMappingPanel
-        error={importNeedsActionQuery.error ?? importOverviewQuery.error}
-        items={importItems}
-        locale={locale}
-        summary={summary}
-      />
-      <SnapshotFreshnessPanel
-        error={snapshotNeedsActionQuery.error ?? snapshotOverviewQuery.error}
-        items={snapshotItems}
-        locale={locale}
-        summary={summary}
-      />
-      <WorkforceIdentityPanel
-        error={sellerCodeRequestsQuery.error ?? offboardingRequestsQuery.error}
-        summary={summary}
-      />
-      <SourceTrustPanel
-        error={kpiConfigQuery.error ?? rankingsQuery.error}
-        kpiConfigVersion={formatKpiConfigVersion(kpiConfigQuery.data, t('dataQuality.unpublishedConfig'))}
-        leaderboardSource={formatLeaderboardSource(rankingsQuery.data, t('dataQuality.missingLeaderboardPeriod'))}
-      />
+      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
+        <WorkforceIdentityPanel
+          error={sellerCodeRequestsQuery.error ?? offboardingRequestsQuery.error}
+          summary={summary}
+        />
+        <SourceTrustPanel
+          error={kpiConfigQuery.error ?? rankingsQuery.error}
+          kpiConfigVersion={formatKpiConfigVersion(kpiConfigQuery.data, t('dataQuality.unpublishedConfig'))}
+          leaderboardSource={formatLeaderboardSource(rankingsQuery.data, t('dataQuality.missingLeaderboardPeriod'))}
+        />
+      </section>
     </AdminSurfacePage>
   )
 }
