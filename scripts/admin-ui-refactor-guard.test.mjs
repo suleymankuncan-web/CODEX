@@ -225,15 +225,25 @@ function parseLiveAdminRoutes() {
   return routes.sort((left, right) => left.path.localeCompare(right.path))
 }
 
+const approvedAdminSurfaceImportSuffixes = [
+  'admin-surface-primitives',
+  'operations-surface-primitives',
+  'AdminChecklistTemplateSurface',
+  'admin-kpi-config-surface-primitives',
+  'competition-admin-surface-primitives',
+  'import-batch-detail-surface-primitives',
+]
+
+function importSources(text) {
+  return [...text.matchAll(/import\s+(?:type\s+)?[^;]*?\s+from\s+['"]([^'"]+)['"]/g)].map(
+    (match) => match[1],
+  )
+}
+
 function containsApprovedAdminSurfaceAnchor(text) {
-  return [
-    'admin-surface-primitives',
-    'operations-surface-primitives',
-    'AdminChecklistTemplateSurface',
-    'admin-kpi-config-surface-primitives',
-    'competition-admin-surface-primitives',
-    'import-batch-detail-surface-primitives',
-  ].some((anchor) => text.includes(anchor))
+  return importSources(text).some((source) =>
+    approvedAdminSurfaceImportSuffixes.some((suffix) => source.endsWith(suffix)),
+  )
 }
 
 function countPatternMatches(text, pattern) {
@@ -271,7 +281,7 @@ function adminUiSurfaceViolations(input = {}) {
       if (
         file.endsWith('surface-primitives.tsx') &&
         file !== adminSurfacePrimitivesPath &&
-        !text.includes('admin-surface-primitives')
+        !importSources(text).some((source) => source.endsWith('admin-surface-primitives'))
       ) {
         violations.push(`${file}: parallel surface primitive set is not anchored to AdminSurface*`)
       }
@@ -342,7 +352,7 @@ test('admin UI guard rejects synthetic primitive sprawl without AdminSurface anc
         checkedFiles: [fakeFile],
       },
     ],
-    reader: () => "import { Card } from '../../components/ui/card'\nexport function FakeSurfacePage() { return <Card /> }",
+    reader: () => "// admin-surface-primitives mention is not an import\nimport { Card } from '../../components/ui/card'\nexport function FakeSurfacePage() { return <Card /> }",
   })
 
   assert.ok(violations.some((violation) => violation.includes('not anchored to AdminSurface*')))

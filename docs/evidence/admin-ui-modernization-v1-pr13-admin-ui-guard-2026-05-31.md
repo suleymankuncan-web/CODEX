@@ -81,9 +81,11 @@ Migrated surfaces fail the guard if they reintroduce:
 ## Positive AdminSurface primitive requirement
 
 The guard is not only a negative pattern scan. Every checked migrated file must
-show positive `AdminSurface*` anchoring, either by importing
-`admin-web/src/pages/admin-surface-primitives.tsx` directly or by importing an
-approved domain helper that is itself anchored to the shared AdminSurface layer.
+show positive `AdminSurface*` anchoring through a real import source, either by
+importing `admin-web/src/pages/admin-surface-primitives.tsx` directly or by
+importing an approved domain helper that is itself anchored to the shared
+AdminSurface layer. Comments or string literals that merely mention
+`admin-surface-primitives` do not satisfy the guard.
 
 Domain helper primitive files are allowed only when they import the shared
 AdminSurface primitive layer. A domain helper named `*surface-primitives.tsx`
