@@ -85,7 +85,7 @@ This snapshot is a triage input, not a mandate to split every file.
 | `admin-web/src/pages/AdminKpiConfigPage.tsx` | 1339 | redesign-sensitive UI page | Park until redesign or concrete governance/action UX bug. |
 | `admin-web/src/pages/StoreRankingsPage.tsx` | 599 | Store rankings page container | PR8 architecture hardening split moved model, table, and detail panel concerns out of the page. Park further visual redesign until a concrete product/UI trigger appears. |
 | `backend/nestjs/src/modules/integration/application/materialization.service.ts` | 188 | data materialization orchestration | Architecture Hardening V2 split row status, employee, store, assignment, position, company, region, and batch persistence out of this service; do not reopen unless import routing behavior changes. |
-| `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1295 | stage/package/scoring repository facade | Architecture Hardening V4 PR-4 extracted the selected stage package plan review command UPDATE/audit persistence while keeping transaction and transition ownership in the facade. Park scoring, finalization, execution, and broader persistence splits until separate invariant/test decisions. |
+| `backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts` | 1245 | stage/package/scoring repository facade | Architecture Hardening V5 PR-5 extracted selected stage package plan execution persistence while keeping the service-facing facade. Park scoring, finalization, and broader persistence splits until separate invariant/test decisions. |
 | `backend/nestjs/src/modules/auth/auth-admin.repository.ts` | 512 | auth/security repository facade | Architecture Hardening V3 extracted user-account, pilot-binding, action-store, role-assignment, and role-permission write commands. Park further auth-admin movement unless concrete auth/security/product trigger appears. |
 | `backend/nestjs/src/shared/openapi-baseline.contract.spec.ts` | 1246 | contract baseline | Park unless contract guard maintainability becomes a real blocker. |
 | `scripts/generate-system-flow.mjs` | 1238 | generator infrastructure | Park unless flow precision or generator bug evidence appears. |
@@ -190,6 +190,10 @@ V5 competition boundary status:
   next and only competition runtime extraction target.
 - Evidence:
   `docs/evidence/architecture-hardening-v5-pr4-competition-boundary-characterization-2026-05-31.md`.
+- Done in V5 PR-5: stage package plan execution persistence moved to
+  `backend/nestjs/src/modules/store-ops/infrastructure/competition-stage-package-plan-execution-command.repository.ts`.
+- Evidence:
+  `docs/evidence/architecture-hardening-v5-pr5-competition-execution-extraction-2026-05-31.md`.
 - Parked: scoring recalculation and finalization persistence/policy remain out
   of scope until separate characterization or golden parity tests exist.
 

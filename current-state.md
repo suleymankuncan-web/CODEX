@@ -153,6 +153,13 @@ Current maintenance baseline:
   The selected PR-5 target is stage package plan execution persistence only;
   scoring recalculation and finalization remain parked until separate parity or
   policy characterization exists.
+- V5 PR-5 extracts only stage package plan execution persistence into
+  `backend/nestjs/src/modules/store-ops/infrastructure/competition-stage-package-plan-execution-command.repository.ts`.
+  Evidence:
+  `docs/evidence/architecture-hardening-v5-pr5-competition-execution-extraction-2026-05-31.md`.
+  `CompetitionRepository` remains the service-facing facade; scoring,
+  finalization, review, cancel, clone, DB schema, API contract, and workflow
+  semantics stay unchanged.
 
 Latest route/scope guard merge:
 
