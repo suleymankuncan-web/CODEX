@@ -179,6 +179,15 @@ Current maintenance baseline:
   competition scoring/finalization, workforce offboarding/access lifecycle,
   further generator movement, broad E2E decomposition, and redesign-sensitive
   frontend page splits; reopen only with concrete trigger evidence.
+- Admin UI Modernization V1 is the active frontend modernization line for
+  `/admin/*` surfaces. Execution plan:
+  `docs/plans/admin-ui-modernization-v1-plan.md`. PR-1 freezes the admin route,
+  role, navigation, data-source, state, and legacy UI inventory in
+  `docs/plans/admin-ui-modernization-v1-inventory.md` before runtime UI changes.
+  Future PRs must preserve API shape, DB schema, auth/permission semantics,
+  scoring, snapshot interpretation, import lifecycle, approval workflows, and
+  route visibility while migrating admin pages to shadcn/ui, Tailwind v4,
+  lucide icons, and the planned `AdminSurface*` primitives.
 
 Latest route/scope guard merge:
 
