@@ -147,3 +147,28 @@
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
+
+@media (max-width: 760px) {
+  .form-grid,
+  .store-checkbox-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field-block,
+  .field-block input,
+  .field-block select,
+  .field-textarea,
+  .control-select,
+  .control-select select,
+  .control-input,
+  .control-button,
+  .search-field,
+  .search-field input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .toolbar-cluster {
+    align-items: stretch;
+  }
+}

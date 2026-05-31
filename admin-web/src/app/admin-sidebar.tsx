@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRef } from 'react'
 import { NavLink } from 'react-router-dom'
 import lufianLogoUrl from '../assets/lufian-logo.png'
+import { Button } from '../components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -71,15 +72,17 @@ export function AdminSidebar(input: {
         </span>
       </div>
 
-      <button
+      <Button
         aria-expanded={!input.collapsed}
         className="admin-command-sidebar-toggle"
+        size="sm"
         type="button"
+        variant="ghost"
         onClick={() => input.onCollapsedChange(!input.collapsed)}
       >
         <ToggleIcon aria-hidden="true" size={18} />
         <span>{input.collapsed ? t('adminShell.sidebar.expand') : t('adminShell.sidebar.collapse')}</span>
-      </button>
+      </Button>
 
       <nav className="admin-command-nav" aria-label={t('adminShell.primaryNavigation')}>
         {primaryNavItems.map((item) => {

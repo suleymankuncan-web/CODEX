@@ -61,7 +61,7 @@ export function AdminShell(input: {
   )
 
   return (
-    <div className={`admin-command-app${isSidebarCollapsed ? ' admin-command-app-collapsed' : ''}`}>
+    <div className={`admin-command-app${isSidebarCollapsed ? ' admin-command-app-collapsed' : ''}`} data-admin-surface-foundation="v1">
       <AdminSidebar
         allowedAdminNav={input.allowedAdminNav}
         authSummary={input.authSummary}
