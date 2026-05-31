@@ -2,21 +2,35 @@ import { useDeferredValue, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, ArrowLeft, Gauge, Target, Trophy } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { AdminReportingToolbar } from '../components/admin-reporting-tools'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
-import { ReportingToolbar } from '../components/reporting-tools'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getKpiReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
 import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import {
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
@@ -34,8 +48,8 @@ function formatPercent(input: string | null, locale: AppLocale) {
   return `${formatMetric(toNumber(input) * 100, locale)}%`
 }
 
-function mapStatusBandTone(input: string | null) {
-  if (input === 'on_track') return 'calm'
+function mapStatusBandTone(input: string | null): AdminSurfaceTone {
+  if (input === 'on_track') return 'success'
   if (input === 'at_risk') return 'warning'
   if (input === 'off_track') return 'danger'
   if (input === 'exceeded' || input === 'over_target') return 'accent'
@@ -122,67 +136,107 @@ export function ReportsKpisPage() {
   const averageAchievement = sortedRows.length > 0 ? totals.achievement / sortedRows.length : 0
 
   if (!snapshotRunId) {
-    return <ScreenState title={t('reportsKpis.missingTitle')} copy={t('reportsKpis.missingCopy')} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsKpis.missingTitle')} description={t('reportsKpis.missingCopy')} tone="danger" />
+      </AdminSurfacePage>
+    )
   }
 
   if (kpiQuery.isLoading) {
-    return <ScreenState title={t('reportsKpis.loadingTitle')} copy={t('reportsKpis.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsKpis.loadingTitle')} description={t('reportsKpis.loadingCopy')} isLoading />
+      </AdminSurfacePage>
+    )
   }
 
   if (kpiQuery.isError) {
-    return <ScreenState title={t('reportsKpis.errorTitle')} copy={getErrorMessage(kpiQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsKpis.errorTitle')} description={getErrorMessage(kpiQuery.error)} tone="danger" />
+      </AdminSurfacePage>
+    )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('reportsKpis.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('reportsKpis.heroTitle')}</h2>
-          <p className="hero-copy">{t('reportsKpis.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('reportsKpis.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label={t('reportsKpis.rowsInView')} value={String(filteredRows.length)} />
-          <MetricAccent label={t('reportsKpis.avgAchievement')} value={formatPercent(String(averageAchievement), locale)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('reportsKpis.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('reportsKpis.heroEyebrow')}
+        title={t('reportsKpis.heroTitle')}
+        description={t('reportsKpis.heroCopy')}
+        icon={<Gauge size={18} />}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/admin/reports/snapshot-runs">
+              <ArrowLeft aria-hidden="true" />
+              {t('reportsKpis.chooseAnotherSnapshot')}
+            </Link>
+          </Button>
+        }
+      />
 
-      <Link className="back-link" to="/admin/reports/snapshot-runs">
-        <ArrowLeft size={16} />
-        <span>{t('reportsKpis.chooseAnotherSnapshot')}</span>
-      </Link>
+      <AdminMetricStrip
+        items={[
+          { id: 'snapshot-run', label: t('reportsKpis.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
+          { id: 'rows-in-view', label: t('reportsKpis.rowsInView'), value: filteredRows.length, tone: 'cyan' },
+          { id: 'avg-achievement', label: t('reportsKpis.avgAchievement'), value: formatPercent(String(averageAchievement), locale), tone: 'accent' },
+        ]}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('reportsKpis.contextEyebrow')}</div>
-            <h3>{t('reportsKpis.contextTitle')}</h3>
-          </div>
-        </div>
-        <div className="key-grid">
-          <KeyValue label={t('reportsKpis.snapshotRunId')} value={snapshotRunId} />
-          <KeyValue label={t('reportsKpis.rowsLoaded')} value={String(rows.length)} />
-          <KeyValue label={t('reportsKpis.rowsAfterFilter')} value={String(filteredRows.length)} />
-          <KeyValue label={t('reportsKpis.offTrackRows')} value={String(totals.offTrack)} />
-        </div>
-      </section>
+      <AdminSurfaceSection eyebrow={t('reportsKpis.contextEyebrow')} title={t('reportsKpis.contextTitle')}>
+        <AdminKeyValueGrid>
+          <AdminKeyValue label={t('reportsKpis.snapshotRunId')} value={snapshotRunId} />
+          <AdminKeyValue label={t('reportsKpis.rowsLoaded')} value={String(rows.length)} />
+          <AdminKeyValue label={t('reportsKpis.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <AdminKeyValue label={t('reportsKpis.offTrackRows')} value={String(totals.offTrack)} />
+        </AdminKeyValueGrid>
+      </AdminSurfaceSection>
 
-      <section className="metric-grid">
-        <MetricCard title={t('reportsKpis.targetTotalTitle')} value={Math.round(totals.target)} note={t('reportsKpis.targetTotalNote')} icon={<Target size={18} />} tone="accent" />
-        <MetricCard title={t('reportsKpis.actualTotalTitle')} value={Math.round(totals.actual)} note={t('reportsKpis.actualTotalNote')} icon={<Gauge size={18} />} tone="calm" />
-        <MetricCard title={t('reportsKpis.onTrackTitle')} value={totals.onTrack} note={t('reportsKpis.onTrackNote', { count: totals.atRisk })} icon={<Trophy size={18} />} tone="calm" />
-        <MetricCard title={t('reportsKpis.offTrackTitle')} value={totals.offTrack} note={t('reportsKpis.offTrackNote', { value: formatPercent(String(averageAchievement), locale) })} icon={<Activity size={18} />} tone={totals.offTrack === 0 ? 'neutral' : 'danger'} />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'target-total',
+            label: t('reportsKpis.targetTotalTitle'),
+            value: Math.round(totals.target),
+            description: t('reportsKpis.targetTotalNote'),
+            icon: <Target size={18} />,
+            tone: 'accent',
+          },
+          {
+            id: 'actual-total',
+            label: t('reportsKpis.actualTotalTitle'),
+            value: Math.round(totals.actual),
+            description: t('reportsKpis.actualTotalNote'),
+            icon: <Gauge size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'on-track',
+            label: t('reportsKpis.onTrackTitle'),
+            value: totals.onTrack,
+            description: t('reportsKpis.onTrackNote', { count: totals.atRisk }),
+            icon: <Trophy size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'off-track',
+            label: t('reportsKpis.offTrackTitle'),
+            value: totals.offTrack,
+            description: t('reportsKpis.offTrackNote', { value: formatPercent(String(averageAchievement), locale) }),
+            icon: <Activity size={18} />,
+            tone: totals.offTrack === 0 ? 'neutral' : 'danger',
+          },
+        ]}
+      />
 
-      <section className="panel reports-detail-table-panel">
-        <div className="panel-heading panel-heading-spread">
-          <div>
-            <div className="eyebrow">{t('reportsKpis.tableEyebrow')}</div>
-            <h3>{t('reportsKpis.tableTitle')}</h3>
-            <p className="panel-copy">{t('reportsKpis.tableCopy')}</p>
-          </div>
-          <ReportingToolbar
+      <AdminSurfaceSection
+        ariaLabel={t('reportsKpis.tableTitle')}
+        eyebrow={t('reportsKpis.tableEyebrow')}
+        title={t('reportsKpis.tableTitle')}
+        description={t('reportsKpis.tableCopy')}
+        actions={
+          <AdminReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
@@ -210,47 +264,53 @@ export function ReportsKpisPage() {
               })
             }
           >
-            <label className="search-field">
+            <label className="tw:w-full tw:sm:w-72">
               <span className="sr-only">{t('reportsKpis.filterRows')}</span>
-              <input
+              <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('reportsKpis.searchPlaceholder')}
               />
             </label>
-          </ReportingToolbar>
-        </div>
-
+          </AdminReportingToolbar>
+        }
+      >
         {sortedRows.length === 0 ? (
-          <EmptyState
-            title={t('reportsKpis.emptyTitle')}
-            copy={t('reportsKpis.emptyCopy')}
-          />
+          <AdminSurfaceEmpty title={t('reportsKpis.emptyTitle')} copy={t('reportsKpis.emptyCopy')} />
         ) : (
-          <div className="stacked-table">
-            {sortedRows.map((row) => (
-              <article className="stacked-row" key={`${row.storeId}:${row.kpiId}`}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{row.storeId}</strong>
-                    <span className="queue-subtitle">{row.kpiId}</span>
-                  </div>
-                  <StatusPill tone={mapStatusBandTone(row.statusBand)}>
-                    {mapStatusBandLabel(row.statusBand, t)}
-                  </StatusPill>
-                </div>
-
-                <div className="key-grid">
-                  <KeyValue label={t('reportsKpis.period')} value={`${formatDate(row.periodStart, locale)} - ${formatDate(row.periodEnd, locale)}`} />
-                  <KeyValue label={t('reportsKpis.targetValue')} value={formatMetric(toNumber(row.targetValue), locale)} />
-                  <KeyValue label={t('reportsKpis.actualValue')} value={formatMetric(toNumber(row.actualValue), locale)} />
-                  <KeyValue label={t('reportsKpis.achievement')} value={formatPercent(row.achievementRate, locale)} />
-                </div>
-              </article>
-            ))}
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('reportsKpis.tableTitle')}</TableHead>
+                <TableHead>{t('reportsKpis.period')}</TableHead>
+                <TableHead>{t('reportsKpis.targetValue')}</TableHead>
+                <TableHead>{t('reportsKpis.actualValue')}</TableHead>
+                <TableHead>{t('reportsKpis.achievement')}</TableHead>
+                <TableHead className="tw:text-right">{t('reportsKpis.sort.status')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedRows.map((row) => (
+                <TableRow key={`${row.storeId}:${row.kpiId}`}>
+                  <TableCell>
+                    <div className="tw:font-medium">{row.storeId}</div>
+                    <div className="tw:text-xs tw:text-muted-foreground">{row.kpiId}</div>
+                  </TableCell>
+                  <TableCell>{formatDate(row.periodStart, locale)} - {formatDate(row.periodEnd, locale)}</TableCell>
+                  <TableCell>{formatMetric(toNumber(row.targetValue), locale)}</TableCell>
+                  <TableCell>{formatMetric(toNumber(row.actualValue), locale)}</TableCell>
+                  <TableCell>{formatPercent(row.achievementRate, locale)}</TableCell>
+                  <TableCell className="tw:text-right">
+                    <AdminSurfaceBadge tone={mapStatusBandTone(row.statusBand)}>
+                      {mapStatusBandLabel(row.statusBand, t)}
+                    </AdminSurfaceBadge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }

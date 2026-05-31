@@ -2,20 +2,34 @@ import { useDeferredValue, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowLeft, ClipboardCheck, SearchCheck, ShieldAlert } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { AdminReportingToolbar } from '../components/admin-reporting-tools'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
-import { ReportingToolbar } from '../components/reporting-tools'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getChecklistReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
 import { formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import {
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+  type AdminSurfaceTone,
+} from './admin-surface-primitives'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
@@ -33,10 +47,10 @@ function formatPercent(input: string | null, locale: AppLocale) {
   return `${formatMetric(toNumber(input) * 100, locale)}%`
 }
 
-function mapChecklistTone(complianceRate: string | null, criticalIssueCount: number) {
+function mapChecklistTone(complianceRate: string | null, criticalIssueCount: number): AdminSurfaceTone {
   if (criticalIssueCount > 0) return 'danger'
   const compliance = toNumber(complianceRate)
-  if (compliance >= 0.95) return 'calm'
+  if (compliance >= 0.95) return 'success'
   if (compliance >= 0.85) return 'warning'
   return 'danger'
 }
@@ -111,67 +125,107 @@ export function ReportsChecklistsPage() {
   const averageCompliance = sortedRows.length > 0 ? totals.complianceRate / sortedRows.length : 0
 
   if (!snapshotRunId) {
-    return <ScreenState title={t('reportsChecklists.missingTitle')} copy={t('reportsChecklists.missingCopy')} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsChecklists.missingTitle')} description={t('reportsChecklists.missingCopy')} tone="danger" />
+      </AdminSurfacePage>
+    )
   }
 
   if (checklistQuery.isLoading) {
-    return <ScreenState title={t('reportsChecklists.loadingTitle')} copy={t('reportsChecklists.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsChecklists.loadingTitle')} description={t('reportsChecklists.loadingCopy')} isLoading />
+      </AdminSurfacePage>
+    )
   }
 
   if (checklistQuery.isError) {
-    return <ScreenState title={t('reportsChecklists.errorTitle')} copy={getErrorMessage(checklistQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel title={t('reportsChecklists.errorTitle')} description={getErrorMessage(checklistQuery.error)} tone="danger" />
+      </AdminSurfacePage>
+    )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('reportsChecklists.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('reportsChecklists.heroTitle')}</h2>
-          <p className="hero-copy">{t('reportsChecklists.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('reportsChecklists.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label={t('reportsChecklists.rowsInView')} value={String(filteredRows.length)} />
-          <MetricAccent label={t('reportsChecklists.avgCompliance')} value={formatPercent(String(averageCompliance), locale)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('reportsChecklists.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('reportsChecklists.heroEyebrow')}
+        title={t('reportsChecklists.heroTitle')}
+        description={t('reportsChecklists.heroCopy')}
+        icon={<ClipboardCheck size={18} />}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/admin/reports/snapshot-runs">
+              <ArrowLeft aria-hidden="true" />
+              {t('reportsChecklists.chooseAnotherSnapshot')}
+            </Link>
+          </Button>
+        }
+      />
 
-      <Link className="back-link" to="/admin/reports/snapshot-runs">
-        <ArrowLeft size={16} />
-        <span>{t('reportsChecklists.chooseAnotherSnapshot')}</span>
-      </Link>
+      <AdminMetricStrip
+        items={[
+          { id: 'snapshot-run', label: t('reportsChecklists.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
+          { id: 'rows-in-view', label: t('reportsChecklists.rowsInView'), value: filteredRows.length, tone: 'cyan' },
+          { id: 'avg-compliance', label: t('reportsChecklists.avgCompliance'), value: formatPercent(String(averageCompliance), locale), tone: 'success' },
+        ]}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('reportsChecklists.contextEyebrow')}</div>
-            <h3>{t('reportsChecklists.contextTitle')}</h3>
-          </div>
-        </div>
-        <div className="key-grid">
-          <KeyValue label={t('reportsChecklists.snapshotRunId')} value={snapshotRunId} />
-          <KeyValue label={t('reportsChecklists.rowsLoaded')} value={String(rows.length)} />
-          <KeyValue label={t('reportsChecklists.rowsAfterFilter')} value={String(filteredRows.length)} />
-          <KeyValue label={t('reportsChecklists.criticalRows')} value={String(totals.rowsWithCriticalIssues)} />
-        </div>
-      </section>
+      <AdminSurfaceSection eyebrow={t('reportsChecklists.contextEyebrow')} title={t('reportsChecklists.contextTitle')}>
+        <AdminKeyValueGrid>
+          <AdminKeyValue label={t('reportsChecklists.snapshotRunId')} value={snapshotRunId} />
+          <AdminKeyValue label={t('reportsChecklists.rowsLoaded')} value={String(rows.length)} />
+          <AdminKeyValue label={t('reportsChecklists.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <AdminKeyValue label={t('reportsChecklists.criticalRows')} value={String(totals.rowsWithCriticalIssues)} />
+        </AdminKeyValueGrid>
+      </AdminSurfaceSection>
 
-      <section className="metric-grid">
-        <MetricCard title={t('reportsChecklists.auditCountTitle')} value={totals.auditCount} note={t('reportsChecklists.auditCountNote')} icon={<SearchCheck size={18} />} tone="accent" />
-        <MetricCard title={t('reportsChecklists.avgScoreTitle')} value={Math.round(averageScore)} note={t('reportsChecklists.avgScoreNote', { value: formatPercent(String(averageCompliance), locale) })} icon={<ClipboardCheck size={18} />} tone="calm" />
-        <MetricCard title={t('reportsChecklists.criticalIssuesTitle')} value={totals.criticalIssues} note={t('reportsChecklists.criticalIssuesNote', { count: totals.rowsWithCriticalIssues })} icon={<AlertTriangle size={18} />} tone={totals.criticalIssues === 0 ? 'neutral' : 'danger'} />
-        <MetricCard title={t('reportsChecklists.criticalRows')} value={totals.rowsWithCriticalIssues} note={t('reportsChecklists.criticalRowsNote')} icon={<ShieldAlert size={18} />} tone={totals.rowsWithCriticalIssues === 0 ? 'calm' : 'warning'} />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'audit-count',
+            label: t('reportsChecklists.auditCountTitle'),
+            value: totals.auditCount,
+            description: t('reportsChecklists.auditCountNote'),
+            icon: <SearchCheck size={18} />,
+            tone: 'accent',
+          },
+          {
+            id: 'avg-score',
+            label: t('reportsChecklists.avgScoreTitle'),
+            value: Math.round(averageScore),
+            description: t('reportsChecklists.avgScoreNote', { value: formatPercent(String(averageCompliance), locale) }),
+            icon: <ClipboardCheck size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'critical-issues',
+            label: t('reportsChecklists.criticalIssuesTitle'),
+            value: totals.criticalIssues,
+            description: t('reportsChecklists.criticalIssuesNote', { count: totals.rowsWithCriticalIssues }),
+            icon: <AlertTriangle size={18} />,
+            tone: totals.criticalIssues === 0 ? 'neutral' : 'danger',
+          },
+          {
+            id: 'critical-rows',
+            label: t('reportsChecklists.criticalRows'),
+            value: totals.rowsWithCriticalIssues,
+            description: t('reportsChecklists.criticalRowsNote'),
+            icon: <ShieldAlert size={18} />,
+            tone: totals.rowsWithCriticalIssues === 0 ? 'success' : 'warning',
+          },
+        ]}
+      />
 
-      <section className="panel reports-detail-table-panel">
-        <div className="panel-heading panel-heading-spread">
-          <div>
-            <div className="eyebrow">{t('reportsChecklists.tableEyebrow')}</div>
-            <h3>{t('reportsChecklists.tableTitle')}</h3>
-            <p className="panel-copy">{t('reportsChecklists.tableCopy')}</p>
-          </div>
-          <ReportingToolbar
+      <AdminSurfaceSection
+        ariaLabel={t('reportsChecklists.tableTitle')}
+        eyebrow={t('reportsChecklists.tableEyebrow')}
+        title={t('reportsChecklists.tableTitle')}
+        description={t('reportsChecklists.tableCopy')}
+        actions={
+          <AdminReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
@@ -197,47 +251,53 @@ export function ReportsChecklistsPage() {
               })
             }
           >
-            <label className="search-field">
+            <label className="tw:w-full tw:sm:w-72">
               <span className="sr-only">{t('reportsChecklists.filterRows')}</span>
-              <input
+              <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('reportsChecklists.searchPlaceholder')}
               />
             </label>
-          </ReportingToolbar>
-        </div>
-
+          </AdminReportingToolbar>
+        }
+      >
         {sortedRows.length === 0 ? (
-          <EmptyState
-            title={t('reportsChecklists.emptyTitle')}
-            copy={t('reportsChecklists.emptyCopy')}
-          />
+          <AdminSurfaceEmpty title={t('reportsChecklists.emptyTitle')} copy={t('reportsChecklists.emptyCopy')} />
         ) : (
-          <div className="stacked-table">
-            {sortedRows.map((row) => (
-              <article className="stacked-row" key={`${row.storeId}:${row.checklistTemplateId}`}>
-                <div className="stacked-row-head">
-                  <div>
-                    <strong>{row.storeId}</strong>
-                    <span className="queue-subtitle">{row.checklistTemplateId}</span>
-                  </div>
-                  <StatusPill tone={mapChecklistTone(row.complianceRate, row.criticalIssueCount)}>
-                    {row.criticalIssueCount > 0 ? t('reportsChecklists.criticalFindings') : t('reportsChecklists.compliant')}
-                  </StatusPill>
-                </div>
-
-                <div className="key-grid">
-                  <KeyValue label={t('reportsChecklists.auditCount')} value={String(row.auditCount)} />
-                  <KeyValue label={t('reportsChecklists.averageScore')} value={formatMetric(toNumber(row.avgScore), locale)} />
-                  <KeyValue label={t('reportsChecklists.complianceRate')} value={formatPercent(row.complianceRate, locale)} />
-                  <KeyValue label={t('reportsChecklists.criticalIssueCount')} value={String(row.criticalIssueCount)} />
-                </div>
-              </article>
-            ))}
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('reportsChecklists.tableTitle')}</TableHead>
+                <TableHead>{t('reportsChecklists.auditCount')}</TableHead>
+                <TableHead>{t('reportsChecklists.averageScore')}</TableHead>
+                <TableHead>{t('reportsChecklists.complianceRate')}</TableHead>
+                <TableHead>{t('reportsChecklists.criticalIssueCount')}</TableHead>
+                <TableHead className="tw:text-right">{t('reportsChecklists.criticalRows')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedRows.map((row) => (
+                <TableRow key={`${row.storeId}:${row.checklistTemplateId}`}>
+                  <TableCell>
+                    <div className="tw:font-medium">{row.storeId}</div>
+                    <div className="tw:text-xs tw:text-muted-foreground">{row.checklistTemplateId}</div>
+                  </TableCell>
+                  <TableCell>{row.auditCount}</TableCell>
+                  <TableCell>{formatMetric(toNumber(row.avgScore), locale)}</TableCell>
+                  <TableCell>{formatPercent(row.complianceRate, locale)}</TableCell>
+                  <TableCell>{row.criticalIssueCount}</TableCell>
+                  <TableCell className="tw:text-right">
+                    <AdminSurfaceBadge tone={mapChecklistTone(row.complianceRate, row.criticalIssueCount)}>
+                      {row.criticalIssueCount > 0 ? t('reportsChecklists.criticalFindings') : t('reportsChecklists.compliant')}
+                    </AdminSurfaceBadge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }

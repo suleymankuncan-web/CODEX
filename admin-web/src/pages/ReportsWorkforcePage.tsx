@@ -2,20 +2,33 @@ import { useDeferredValue, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, BriefcaseBusiness, Building2, Users } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
+import { AdminReportingToolbar } from '../components/admin-reporting-tools'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-} from '../components/dashboard-primitives'
-import { ReportingToolbar } from '../components/reporting-tools'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getWorkforceReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
 import { formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import {
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+} from './admin-surface-primitives'
 
 function toNumber(input: string) {
   const parsed = Number(input)
@@ -96,67 +109,122 @@ export function ReportsWorkforcePage() {
   const rowsWithGap = sortedRows.filter((row) => toNumber(row.gapHeadcount) !== 0 || toNumber(row.gapFte) !== 0).length
 
   if (!snapshotRunId) {
-    return <ScreenState title={t('reportsWorkforce.missingTitle')} copy={t('reportsWorkforce.missingCopy')} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsWorkforce.missingTitle')}
+          description={t('reportsWorkforce.missingCopy')}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (workforceQuery.isLoading) {
-    return <ScreenState title={t('reportsWorkforce.loadingTitle')} copy={t('reportsWorkforce.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsWorkforce.loadingTitle')}
+          description={t('reportsWorkforce.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (workforceQuery.isError) {
-    return <ScreenState title={t('reportsWorkforce.errorTitle')} copy={getErrorMessage(workforceQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsWorkforce.errorTitle')}
+          description={getErrorMessage(workforceQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('reportsWorkforce.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('reportsWorkforce.heroTitle')}</h2>
-          <p className="hero-copy">{t('reportsWorkforce.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('reportsWorkforce.snapshotRun')} value={snapshotRunId.slice(0, 12)} />
-          <MetricAccent label={t('reportsWorkforce.rowsInView')} value={String(filteredRows.length)} />
-          <MetricAccent label={t('reportsWorkforce.storesWithGap')} value={String(rowsWithGap)} />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('reportsWorkforce.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('reportsWorkforce.heroEyebrow')}
+        title={t('reportsWorkforce.heroTitle')}
+        description={t('reportsWorkforce.heroCopy')}
+        icon={<BriefcaseBusiness size={18} />}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/admin/reports/snapshot-runs">
+              <ArrowLeft aria-hidden="true" />
+              {t('reportsWorkforce.chooseAnotherSnapshot')}
+            </Link>
+          </Button>
+        }
+      />
 
-      <Link className="back-link" to="/admin/reports/snapshot-runs">
-        <ArrowLeft size={16} />
-        <span>{t('reportsWorkforce.chooseAnotherSnapshot')}</span>
-      </Link>
+      <AdminMetricStrip
+        items={[
+          { id: 'snapshot-run', label: t('reportsWorkforce.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
+          { id: 'rows-in-view', label: t('reportsWorkforce.rowsInView'), value: filteredRows.length, tone: 'cyan' },
+          { id: 'stores-with-gap', label: t('reportsWorkforce.storesWithGap'), value: rowsWithGap, tone: rowsWithGap === 0 ? 'success' : 'warning' },
+        ]}
+      />
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('reportsWorkforce.contextEyebrow')}</div>
-            <h3>{t('reportsWorkforce.contextTitle')}</h3>
-          </div>
-        </div>
-        <div className="key-grid">
-          <KeyValue label={t('reportsWorkforce.snapshotRunId')} value={snapshotRunId} />
-          <KeyValue label={t('reportsWorkforce.rowsLoaded')} value={String(rows.length)} />
-          <KeyValue label={t('reportsWorkforce.rowsAfterFilter')} value={String(filteredRows.length)} />
-          <KeyValue label={t('reportsWorkforce.gapRows')} value={String(rowsWithGap)} />
-        </div>
-      </section>
+      <AdminSurfaceSection
+        eyebrow={t('reportsWorkforce.contextEyebrow')}
+        title={t('reportsWorkforce.contextTitle')}
+      >
+        <AdminKeyValueGrid>
+          <AdminKeyValue label={t('reportsWorkforce.snapshotRunId')} value={snapshotRunId} />
+          <AdminKeyValue label={t('reportsWorkforce.rowsLoaded')} value={String(rows.length)} />
+          <AdminKeyValue label={t('reportsWorkforce.rowsAfterFilter')} value={String(filteredRows.length)} />
+          <AdminKeyValue label={t('reportsWorkforce.gapRows')} value={String(rowsWithGap)} />
+        </AdminKeyValueGrid>
+      </AdminSurfaceSection>
 
-      <section className="metric-grid">
-        <MetricCard title={t('reportsWorkforce.activeHeadcountTitle')} value={Math.round(totals.activeHeadcount)} note={t('reportsWorkforce.activeFteNote', { value: formatMetric(totals.activeFte, locale) })} icon={<Users size={18} />} tone="calm" />
-        <MetricCard title={t('reportsWorkforce.plannedHeadcountTitle')} value={Math.round(totals.plannedHeadcount)} note={t('reportsWorkforce.plannedFteNote', { value: formatMetric(totals.plannedFte, locale) })} icon={<BriefcaseBusiness size={18} />} tone="accent" />
-        <MetricCard title={t('reportsWorkforce.headcountGapTitle')} value={Math.round(totals.gapHeadcount)} note={t('reportsWorkforce.gapFteNote', { value: formatMetric(totals.gapFte, locale) })} icon={<Building2 size={18} />} tone={totals.gapHeadcount === 0 && totals.gapFte === 0 ? 'neutral' : 'warning'} />
-        <MetricCard title={t('reportsWorkforce.gapRows')} value={rowsWithGap} note={t('reportsWorkforce.gapRowsNote')} icon={<ArrowRight size={18} />} tone={rowsWithGap === 0 ? 'calm' : 'danger'} />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'active-headcount',
+            label: t('reportsWorkforce.activeHeadcountTitle'),
+            value: Math.round(totals.activeHeadcount),
+            description: t('reportsWorkforce.activeFteNote', { value: formatMetric(totals.activeFte, locale) }),
+            icon: <Users size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'planned-headcount',
+            label: t('reportsWorkforce.plannedHeadcountTitle'),
+            value: Math.round(totals.plannedHeadcount),
+            description: t('reportsWorkforce.plannedFteNote', { value: formatMetric(totals.plannedFte, locale) }),
+            icon: <BriefcaseBusiness size={18} />,
+            tone: 'accent',
+          },
+          {
+            id: 'headcount-gap',
+            label: t('reportsWorkforce.headcountGapTitle'),
+            value: Math.round(totals.gapHeadcount),
+            description: t('reportsWorkforce.gapFteNote', { value: formatMetric(totals.gapFte, locale) }),
+            icon: <Building2 size={18} />,
+            tone: totals.gapHeadcount === 0 && totals.gapFte === 0 ? 'neutral' : 'warning',
+          },
+          {
+            id: 'gap-rows',
+            label: t('reportsWorkforce.gapRows'),
+            value: rowsWithGap,
+            description: t('reportsWorkforce.gapRowsNote'),
+            icon: <ArrowRight size={18} />,
+            tone: rowsWithGap === 0 ? 'success' : 'danger',
+          },
+        ]}
+      />
 
-      <section className="panel reports-detail-table-panel">
-        <div className="panel-heading panel-heading-spread">
-          <div>
-            <div className="eyebrow">{t('reportsWorkforce.tableEyebrow')}</div>
-            <h3>{t('reportsWorkforce.tableTitle')}</h3>
-            <p className="panel-copy">{t('reportsWorkforce.tableCopy')}</p>
-          </div>
-          <ReportingToolbar
+      <AdminSurfaceSection
+        ariaLabel={t('reportsWorkforce.tableTitle')}
+        eyebrow={t('reportsWorkforce.tableEyebrow')}
+        title={t('reportsWorkforce.tableTitle')}
+        description={t('reportsWorkforce.tableCopy')}
+        actions={
+          <AdminReportingToolbar
             sortValue={sortBy}
             onSortChange={(value) => setSortBy(value as typeof sortBy)}
             sortOptions={[
@@ -184,53 +252,64 @@ export function ReportsWorkforcePage() {
               })
             }
           >
-            <label className="search-field">
+            <label className="tw:w-full tw:sm:w-64">
               <span className="sr-only">{t('reportsWorkforce.filterRows')}</span>
-              <input
+              <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={t('reportsWorkforce.searchPlaceholder')}
               />
             </label>
-          </ReportingToolbar>
-        </div>
-
+          </AdminReportingToolbar>
+        }
+      >
         {sortedRows.length === 0 ? (
-          <EmptyState
+          <AdminSurfaceEmpty
             title={t('reportsWorkforce.emptyTitle')}
             copy={t('reportsWorkforce.emptyCopy')}
           />
         ) : (
-          <div className="stacked-table">
-            {sortedRows.map((row) => {
-              const hasGap = toNumber(row.gapHeadcount) !== 0 || toNumber(row.gapFte) !== 0
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('reportsWorkforce.contextTitle')}</TableHead>
+                <TableHead>{t('reportsWorkforce.activeHc')}</TableHead>
+                <TableHead>{t('reportsWorkforce.plannedHc')}</TableHead>
+                <TableHead>{t('reportsWorkforce.gapHc')}</TableHead>
+                <TableHead>{t('reportsWorkforce.activeFte')}</TableHead>
+                <TableHead>{t('reportsWorkforce.plannedFte')}</TableHead>
+                <TableHead>{t('reportsWorkforce.gapFte')}</TableHead>
+                <TableHead className="tw:text-right">{t('reportsWorkforce.gapRows')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sortedRows.map((row) => {
+                const hasGap = toNumber(row.gapHeadcount) !== 0 || toNumber(row.gapFte) !== 0
 
-              return (
-                <article className="stacked-row" key={`${row.storeId}:${row.positionId}`}>
-                  <div className="stacked-row-head">
-                    <div>
-                      <strong>{row.storeId}</strong>
-                      <span className="queue-subtitle">{row.positionId}</span>
-                    </div>
-                    <StatusPill tone={hasGap ? 'warning' : 'calm'}>
-                      {hasGap ? t('reportsWorkforce.gapDetected') : t('reportsWorkforce.balanced')}
-                    </StatusPill>
-                  </div>
-
-                  <div className="key-grid">
-                    <KeyValue label={t('reportsWorkforce.activeHc')} value={formatMetric(toNumber(row.activeHeadcount), locale)} />
-                    <KeyValue label={t('reportsWorkforce.plannedHc')} value={formatMetric(toNumber(row.plannedHeadcount), locale)} />
-                    <KeyValue label={t('reportsWorkforce.gapHc')} value={formatMetric(toNumber(row.gapHeadcount), locale)} />
-                    <KeyValue label={t('reportsWorkforce.activeFte')} value={formatMetric(toNumber(row.activeFte), locale)} />
-                    <KeyValue label={t('reportsWorkforce.plannedFte')} value={formatMetric(toNumber(row.plannedFte), locale)} />
-                    <KeyValue label={t('reportsWorkforce.gapFte')} value={formatMetric(toNumber(row.gapFte), locale)} />
-                  </div>
-                </article>
-              )
-            })}
-          </div>
+                return (
+                  <TableRow key={`${row.storeId}:${row.positionId}`}>
+                    <TableCell>
+                      <div className="tw:font-medium">{row.storeId}</div>
+                      <div className="tw:text-xs tw:text-muted-foreground">{row.positionId}</div>
+                    </TableCell>
+                    <TableCell>{formatMetric(toNumber(row.activeHeadcount), locale)}</TableCell>
+                    <TableCell>{formatMetric(toNumber(row.plannedHeadcount), locale)}</TableCell>
+                    <TableCell>{formatMetric(toNumber(row.gapHeadcount), locale)}</TableCell>
+                    <TableCell>{formatMetric(toNumber(row.activeFte), locale)}</TableCell>
+                    <TableCell>{formatMetric(toNumber(row.plannedFte), locale)}</TableCell>
+                    <TableCell>{formatMetric(toNumber(row.gapFte), locale)}</TableCell>
+                    <TableCell className="tw:text-right">
+                      <AdminSurfaceBadge tone={hasGap ? 'warning' : 'success'}>
+                        {hasGap ? t('reportsWorkforce.gapDetected') : t('reportsWorkforce.balanced')}
+                      </AdminSurfaceBadge>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
         )}
-      </section>
-    </section>
+      </AdminSurfaceSection>
+    </AdminSurfacePage>
   )
 }

@@ -289,21 +289,12 @@ test('reports detail table controls stack below copy on mobile', async ({ page }
   await page.setViewportSize({ width: 390, height: 900 })
   await page.goto('/admin/reports/workforce/snapshot-versioned')
 
-  const tablePanel = page.locator('.reports-detail-table-panel')
-  await expect(tablePanel).toBeVisible()
-  await expect(tablePanel.locator('.panel-copy')).toHaveCSS('color', 'rgb(108, 100, 120)')
+  const main = page.getByRole('main')
 
-  const copyBox = await tablePanel.locator('.panel-copy').boundingBox()
-  const toolbarBox = await tablePanel.locator('.toolbar-cluster').boundingBox()
-
-  if (!copyBox || !toolbarBox) {
-    throw new Error('Expected reports detail copy and toolbar to be measurable on mobile.')
-  }
-
-  expect(toolbarBox.y).toBeGreaterThanOrEqual(copyBox.y + copyBox.height - 1)
-  await expect
-    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
-    .toBe(true)
+  await expect(main.getByRole('heading', { name: 'Mağaza-pozisyon kadro dengesi' })).toBeVisible()
+  await expect(main.getByPlaceholder('Mağaza, pozisyon veya açık ara')).toBeVisible()
+  await expect(main.getByRole('button', { name: 'CSV dışa aktar' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
 })
 
 async function expectNoHorizontalOverflow(page: Page) {

@@ -1,17 +1,30 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { BriefcaseBusiness, ClipboardCheck, TrendingDown, Trophy } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, ClipboardCheck, Database, TrendingDown, Trophy } from 'lucide-react'
+import { Button } from '../components/ui/button'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-} from '../components/dashboard-primitives'
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getReportingSnapshotRuns, getReportingSummary } from '../features/reports/api'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
+import {
+  AdminKeyValue,
+  AdminKeyValueGrid,
+  AdminMetricStrip,
+  AdminStatePanel,
+  AdminSurfaceBadge,
+  AdminSurfaceEmpty,
+  AdminSurfaceHeader,
+  AdminSurfacePage,
+  AdminSurfaceSection,
+} from './admin-surface-primitives'
 
 const runStatusLabelKeys: Record<string, TranslationKey> = {
   completed: 'reportsSummary.status.completed',
@@ -27,6 +40,15 @@ const snapshotTypeLabelKeys: Record<string, TranslationKey> = {
   monthly: 'reportsSummary.snapshotType.monthly',
 }
 
+const readPaths = [
+  '/api/reports/summary',
+  '/api/reports/snapshot-runs',
+  '/api/reports/workforce',
+  '/api/reports/kpis',
+  '/api/reports/checklists',
+  '/api/reports/turnover',
+]
+
 export function ReportsSummaryPage() {
   const { locale, t } = useLocalization()
   const summaryQuery = useQuery({
@@ -39,20 +61,52 @@ export function ReportsSummaryPage() {
   })
 
   if (summaryQuery.isLoading || runsQuery.isLoading) {
-    return <ScreenState title={t('reportsSummary.loadingTitle')} copy={t('reportsSummary.loadingCopy')} />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsSummary.loadingTitle')}
+          description={t('reportsSummary.loadingCopy')}
+          isLoading
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (summaryQuery.isError) {
-    return <ScreenState title={t('reportsSummary.errorTitle')} copy={getErrorMessage(summaryQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsSummary.errorTitle')}
+          description={getErrorMessage(summaryQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   if (runsQuery.isError) {
-    return <ScreenState title={t('reportsSummary.runsErrorTitle')} copy={getErrorMessage(runsQuery.error)} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsSummary.runsErrorTitle')}
+          description={getErrorMessage(runsQuery.error)}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   const summary = summaryQuery.data
   if (!summary) {
-    return <ScreenState title={t('reportsSummary.noSummaryTitle')} copy={t('reportsSummary.noSummaryCopy')} tone="error" />
+    return (
+      <AdminSurfacePage>
+        <AdminStatePanel
+          title={t('reportsSummary.noSummaryTitle')}
+          description={t('reportsSummary.noSummaryCopy')}
+          tone="danger"
+        />
+      </AdminSurfacePage>
+    )
   }
 
   const latestRun = summary.latestCompletedSnapshotRun
@@ -63,146 +117,205 @@ export function ReportsSummaryPage() {
     summary.cards.turnoverRows
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('reportsSummary.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('reportsSummary.heroTitle')}</h2>
-          <p className="hero-copy">{t('reportsSummary.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('reportsSummary.totalReportRows')} value={String(totalRows)} />
-          <MetricAccent
-            label={t('reportsSummary.latestRun')}
-            value={latestRun ? formatSnapshotType(latestRun.snapshotType, t) : t('reportsSummary.noCompletedRun')}
-          />
-          <MetricAccent
-            label={t('reportsSummary.status')}
-            value={latestRun ? formatRunStatus(latestRun.runStatus, t) : t('reportsSummary.unavailable')}
-          />
-        </div>
-      </section>
+    <AdminSurfacePage ariaLabel={t('reportsSummary.heroEyebrow')}>
+      <AdminSurfaceHeader
+        eyebrow={t('reportsSummary.heroEyebrow')}
+        title={t('reportsSummary.heroTitle')}
+        description={t('reportsSummary.heroCopy')}
+        icon={<Database size={18} />}
+        actions={
+          <Button asChild variant="outline">
+            <Link to="/admin/reports/snapshot-runs">
+              {t('reportsSummary.openDrillDownChooser')}
+              <ArrowRight aria-hidden="true" />
+            </Link>
+          </Button>
+        }
+      />
+
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'total-report-rows',
+            label: t('reportsSummary.totalReportRows'),
+            value: totalRows,
+            tone: 'neutral',
+          },
+          {
+            id: 'latest-run',
+            label: t('reportsSummary.latestRun'),
+            value: latestRun ? formatSnapshotType(latestRun.snapshotType, t) : t('reportsSummary.noCompletedRun'),
+            tone: latestRun ? 'success' : 'warning',
+          },
+          {
+            id: 'status',
+            label: t('reportsSummary.status'),
+            value: latestRun ? formatRunStatus(latestRun.runStatus, t) : t('reportsSummary.unavailable'),
+            tone: latestRun ? 'success' : 'neutral',
+          },
+        ]}
+      />
 
       {latestRun ? (
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('reportsSummary.latestSnapshotEyebrow')}</div>
-              <h3>{t('reportsSummary.reportingAnchorTitle')}</h3>
-            </div>
-          </div>
-          <div className="key-grid">
-            <KeyValue label={t('reportsSummary.snapshotRunId')} value={latestRun.snapshotRunId} />
-            <KeyValue label={t('reportsSummary.snapshotType')} value={formatSnapshotType(latestRun.snapshotType, t)} />
-            <KeyValue
+        <AdminSurfaceSection
+          eyebrow={t('reportsSummary.latestSnapshotEyebrow')}
+          title={t('reportsSummary.reportingAnchorTitle')}
+        >
+          <AdminKeyValueGrid>
+            <AdminKeyValue label={t('reportsSummary.snapshotRunId')} value={latestRun.snapshotRunId} />
+            <AdminKeyValue label={t('reportsSummary.snapshotType')} value={formatSnapshotType(latestRun.snapshotType, t)} />
+            <AdminKeyValue
               label={t('reportsSummary.period')}
               value={`${formatDate(latestRun.periodStart, locale)} - ${formatDate(latestRun.periodEnd, locale)}`}
             />
-            <KeyValue label={t('reportsSummary.generatedAt')} value={formatDateTime(latestRun.generatedAt, locale)} />
-          </div>
-        </section>
+            <AdminKeyValue label={t('reportsSummary.generatedAt')} value={formatDateTime(latestRun.generatedAt, locale)} />
+          </AdminKeyValueGrid>
+        </AdminSurfaceSection>
       ) : (
-        <section className="panel">
-          <EmptyState
+        <AdminSurfaceSection title={t('reportsSummary.reportingAnchorTitle')}>
+          <AdminSurfaceEmpty
             title={t('reportsSummary.noCompletedTitle')}
             copy={t('reportsSummary.noCompletedCopy')}
           />
-        </section>
+        </AdminSurfaceSection>
       )}
 
-      <section className="metric-grid">
-        <MetricCard title={t('reportsSummary.workforceTitle')} value={summary.cards.workforceRows} note={t('reportsSummary.workforceNote')} icon={<BriefcaseBusiness size={18} />} tone="calm" />
-        <MetricCard title={t('reportsSummary.kpisTitle')} value={summary.cards.kpiRows} note={t('reportsSummary.kpisNote')} icon={<Trophy size={18} />} tone="accent" />
-        <MetricCard title={t('reportsSummary.checklistsTitle')} value={summary.cards.checklistRows} note={t('reportsSummary.checklistsNote')} icon={<ClipboardCheck size={18} />} tone="warning" />
-        <MetricCard title={t('reportsSummary.turnoverTitle')} value={summary.cards.turnoverRows} note={t('reportsSummary.turnoverNote')} icon={<TrendingDown size={18} />} tone="danger" />
-      </section>
+      <AdminMetricStrip
+        items={[
+          {
+            id: 'workforce-rows',
+            label: t('reportsSummary.workforceTitle'),
+            value: summary.cards.workforceRows,
+            description: t('reportsSummary.workforceNote'),
+            icon: <BriefcaseBusiness size={18} />,
+            tone: 'success',
+          },
+          {
+            id: 'kpi-rows',
+            label: t('reportsSummary.kpisTitle'),
+            value: summary.cards.kpiRows,
+            description: t('reportsSummary.kpisNote'),
+            icon: <Trophy size={18} />,
+            tone: 'accent',
+          },
+          {
+            id: 'checklist-rows',
+            label: t('reportsSummary.checklistsTitle'),
+            value: summary.cards.checklistRows,
+            description: t('reportsSummary.checklistsNote'),
+            icon: <ClipboardCheck size={18} />,
+            tone: 'warning',
+          },
+          {
+            id: 'turnover-rows',
+            label: t('reportsSummary.turnoverTitle'),
+            value: summary.cards.turnoverRows,
+            description: t('reportsSummary.turnoverNote'),
+            icon: <TrendingDown size={18} />,
+            tone: 'danger',
+          },
+        ]}
+      />
 
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('reportsSummary.readPathsEyebrow')}</div>
-              <h3>{t('reportsSummary.readPathsTitle')}</h3>
-            </div>
-          </div>
-          <div className="stacked-table">
-            {[
-              '/api/reports/summary',
-              '/api/reports/snapshot-runs',
-              '/api/reports/workforce',
-              '/api/reports/kpis',
-              '/api/reports/checklists',
-              '/api/reports/turnover',
-            ].map((path) => (
-              <div className="stacked-row" key={path}>
-                <div className="stacked-row-head">
-                  <strong>{path}</strong>
-                  <span className="status-pill status-pill-neutral">{t('reportsSummary.readOnly')}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('reportsSummary.recentRunsEyebrow')}</div>
-              <h3>{t('reportsSummary.recentRunsTitle')}</h3>
-            </div>
-            <Link className="back-link" to="/admin/reports/snapshot-runs">
-              <span>{t('reportsSummary.openDrillDownChooser')}</span>
-            </Link>
-          </div>
-          {runsQuery.data?.items.length ? (
-            <div className="stacked-table">
-              {runsQuery.data.items.map((run) => (
-                <article className="stacked-row" key={run.snapshotRunId}>
-                  <div className="stacked-row-head">
-                    <strong>{t('reportsSummary.snapshotLabel', { type: formatSnapshotType(run.snapshotType, t) })}</strong>
-                    <span className="status-pill status-pill-calm">{formatRunStatus(run.runStatus, t)}</span>
-                  </div>
-                  <p>{formatDate(run.periodStart, locale)} - {formatDate(run.periodEnd, locale)}</p>
-                  <span className="queue-subtitle">{run.snapshotRunId}</span>
-                  <div className="action-cluster">
-                    <Link
-                      className="back-link"
-                      to={`/admin/reports/workforce/${run.snapshotRunId}`}
-                      aria-label={t('reportsSummary.openWorkforceForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                    >
-                      <span>{t('reportsSummary.openWorkforce')}</span>
-                    </Link>
-                    <Link
-                      className="back-link"
-                      to={`/admin/reports/kpis/${run.snapshotRunId}`}
-                      aria-label={t('reportsSummary.openKpisForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                    >
-                      <span>{t('reportsSummary.openKpis')}</span>
-                    </Link>
-                    <Link
-                      className="back-link"
-                      to={`/admin/reports/checklists/${run.snapshotRunId}`}
-                      aria-label={t('reportsSummary.openChecklistsForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                    >
-                      <span>{t('reportsSummary.openChecklists')}</span>
-                    </Link>
-                    <Link
-                      className="back-link"
-                      to={`/admin/reports/turnover/${run.snapshotRunId}`}
-                      aria-label={t('reportsSummary.openTurnoverForSnapshot', { snapshotRunId: run.snapshotRunId })}
-                    >
-                      <span>{t('reportsSummary.openTurnover')}</span>
-                    </Link>
-                  </div>
-                </article>
+      <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
+        <AdminSurfaceSection
+          eyebrow={t('reportsSummary.readPathsEyebrow')}
+          title={t('reportsSummary.readPathsTitle')}
+        >
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Endpoint</TableHead>
+                <TableHead className="tw:text-right">{t('reportsSummary.readOnly')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {readPaths.map((path) => (
+                <TableRow key={path}>
+                  <TableCell className="tw:font-mono tw:text-xs">{path}</TableCell>
+                  <TableCell className="tw:text-right">
+                    <AdminSurfaceBadge tone="neutral">{t('reportsSummary.readOnly')}</AdminSurfaceBadge>
+                  </TableCell>
+                </TableRow>
               ))}
-            </div>
+            </TableBody>
+          </Table>
+        </AdminSurfaceSection>
+
+        <AdminSurfaceSection
+          eyebrow={t('reportsSummary.recentRunsEyebrow')}
+          title={t('reportsSummary.recentRunsTitle')}
+        >
+          {runsQuery.data?.items.length ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('reportsSummary.latestRun')}</TableHead>
+                  <TableHead>{t('reportsSummary.period')}</TableHead>
+                  <TableHead className="tw:text-right">{t('reportsSummary.openDrillDownChooser')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {runsQuery.data.items.map((run) => (
+                  <TableRow key={run.snapshotRunId}>
+                    <TableCell>
+                      <div className="tw:font-medium">
+                        {t('reportsSummary.snapshotLabel', { type: formatSnapshotType(run.snapshotType, t) })}
+                      </div>
+                      <div className="tw:mt-1 tw:max-w-56 tw:truncate tw:text-xs tw:text-muted-foreground">
+                        {run.snapshotRunId}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>{formatDate(run.periodStart, locale)} - {formatDate(run.periodEnd, locale)}</div>
+                      <AdminSurfaceBadge tone="success">{formatRunStatus(run.runStatus, t)}</AdminSurfaceBadge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="tw:flex tw:flex-wrap tw:justify-end tw:gap-2">
+                        <Button asChild size="sm" variant="outline">
+                          <Link
+                            to={`/admin/reports/workforce/${run.snapshotRunId}`}
+                            aria-label={t('reportsSummary.openWorkforceForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                          >
+                            {t('reportsSummary.openWorkforce')}
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link
+                            to={`/admin/reports/kpis/${run.snapshotRunId}`}
+                            aria-label={t('reportsSummary.openKpisForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                          >
+                            {t('reportsSummary.openKpis')}
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link
+                            to={`/admin/reports/checklists/${run.snapshotRunId}`}
+                            aria-label={t('reportsSummary.openChecklistsForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                          >
+                            {t('reportsSummary.openChecklists')}
+                          </Link>
+                        </Button>
+                        <Button asChild size="sm" variant="outline">
+                          <Link
+                            to={`/admin/reports/turnover/${run.snapshotRunId}`}
+                            aria-label={t('reportsSummary.openTurnoverForSnapshot', { snapshotRunId: run.snapshotRunId })}
+                          >
+                            {t('reportsSummary.openTurnover')}
+                          </Link>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
-            <EmptyState copy={t('reportsSummary.recentRunsEmpty')} />
+            <AdminSurfaceEmpty copy={t('reportsSummary.recentRunsEmpty')} />
           )}
-        </article>
-      </section>
-    </section>
+        </AdminSurfaceSection>
+      </div>
+    </AdminSurfacePage>
   )
 }
 
