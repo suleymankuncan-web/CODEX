@@ -11,6 +11,7 @@
   --admin-command-plum: #7c3aed;
   --admin-command-cyan: #13a7b3;
   --admin-command-shadow: 0 24px 80px rgba(32, 24, 48, 0.12);
+  --admin-command-focus: rgba(124, 58, 237, 0.22);
   min-height: 100vh;
   overflow-x: hidden;
   padding-left: var(--admin-command-sidebar);
@@ -55,6 +56,10 @@
   min-height: 100vh;
   margin: 0 auto;
   padding: 28px 22px 42px;
+}
+
+.admin-command-app[data-admin-surface-foundation="v1"] .admin-command-main {
+  scroll-padding-top: 24px;
 }
 
 .admin-command-app-collapsed .admin-command-main {
@@ -133,6 +138,7 @@
   background: transparent;
   color: var(--admin-command-muted);
   font: inherit;
+  font-weight: 650;
   text-decoration: none;
 }
 
@@ -162,6 +168,12 @@
   border-color: var(--admin-command-line-strong);
   color: var(--admin-command-ink);
   outline: none;
+}
+
+.admin-command-nav-link:focus-visible,
+.admin-command-utility-link:focus-visible,
+.admin-command-sidebar-toggle:focus-visible {
+  box-shadow: 0 0 0 3px var(--admin-command-focus);
 }
 
 .admin-command-nav-link-active {

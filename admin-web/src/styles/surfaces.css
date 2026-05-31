@@ -249,3 +249,57 @@
   height: 100%;
   border-radius: inherit;
 }
+
+@media (max-width: 760px) {
+  .hero-panel,
+  .panel,
+  .screen-state {
+    padding: 1rem;
+  }
+
+  .hero-title {
+    max-width: none;
+    font-size: clamp(2rem, 9vw, 2.55rem);
+  }
+
+  .hero-copy {
+    max-width: none;
+    font-size: 0.95rem;
+  }
+
+  .hero-metrics {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .accent-chip {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metric-card {
+    padding: 0.95rem;
+  }
+
+  .metric-value {
+    font-size: 1.6rem;
+    letter-spacing: 0;
+  }
+
+  .two-up-grid,
+  .key-grid,
+  .reconciliation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .key-item,
+  .reconciliation-stat,
+  .dependency-card,
+  .detail-row {
+    padding: 0.85rem;
+  }
+}
