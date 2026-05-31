@@ -24,14 +24,14 @@ const oversizedBaseline = new Map([
   ['admin-web/src/features/auth/AuthDashboardSections.tsx', 937],
   ['backend/nestjs/src/modules/auth/auth-admin.service.ts', 936],
   ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 899],
-  ['admin-web/src/features/competitions/StageBuilderForm.tsx', 871],
+  ['admin-web/src/features/competitions/StageBuilderForm.tsx', 861],
   ['admin-web/src/pages/store-my-performance-sections.tsx', 865],
   ['backend/nestjs/src/modules/integration/infrastructure/import-batch-read.repository.ts', 858],
-  ['admin-web/src/features/competitions/stage-builder-package-section.tsx', 851],
+  ['admin-web/src/features/competitions/stage-builder-package-section.tsx', 802],
   ['backend/nestjs/src/modules/store-ops/infrastructure/snapshot-operations.repository.ts', 842],
   ['admin-web/src/pages/OperationsControlTowerPage.tsx', 943],
   ['admin-web/src/pages/store-checklists-logic.ts', 711],
-  ['admin-web/src/features/localization/messages/competition.ts', 603],
+  ['admin-web/src/features/localization/messages/competition.ts', 601],
 ])
 
 function git(args) {
