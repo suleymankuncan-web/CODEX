@@ -82,11 +82,11 @@ Migrated surfaces fail the guard if they reintroduce:
 ## Positive AdminSurface primitive requirement
 
 The guard is not only a negative pattern scan. Every checked migrated file must
-show positive `AdminSurface*` anchoring through a real import source, either by
-importing `admin-web/src/pages/admin-surface-primitives.tsx` directly or by
-importing an approved domain helper that is itself anchored to the shared
-AdminSurface layer. Comments or string literals that merely mention
-`admin-surface-primitives` do not satisfy the guard.
+show positive `AdminSurface*` anchoring through a real import source. The guard
+accepts only exact shared primitive imports or exact approved domain helper
+imports that are themselves checked and anchored to the shared AdminSurface
+layer. Comments, string literals, or lookalike helper paths such as
+`./local-admin-surface-primitives` do not satisfy the guard.
 
 Domain helper primitive files are allowed only when they import the shared
 AdminSurface primitive layer. A domain helper named `*surface-primitives.tsx`
@@ -101,6 +101,8 @@ and fails the guard.
   `hero-panel`, and contains fake metric copy;
 - a synthetic domain `fake-surface-primitives.tsx` file that defines a parallel
   primitive set without importing the shared AdminSurface layer.
+- a synthetic migrated page that imports a lookalike local
+  `./local-admin-surface-primitives` helper instead of an approved shared path.
 
 ## Verification
 

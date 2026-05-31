@@ -226,14 +226,16 @@ function parseLiveAdminRoutes() {
   return routes.sort((left, right) => left.path.localeCompare(right.path))
 }
 
-const approvedAdminSurfaceImportSuffixes = [
-  'admin-surface-primitives',
-  'operations-surface-primitives',
-  'AdminChecklistTemplateSurface',
-  'admin-kpi-config-surface-primitives',
-  'competition-admin-surface-primitives',
-  'import-batch-detail-surface-primitives',
-]
+const approvedAdminSurfaceImportSources = new Set([
+  './admin-surface-primitives',
+  '../../pages/admin-surface-primitives',
+  './operations-surface-primitives',
+  './AdminChecklistTemplateSurface',
+  './admin-kpi-config-surface-primitives',
+  './competition-admin-surface-primitives',
+  '../features/competitions/competition-admin-surface-primitives',
+  '../features/integrations/import-batch-detail-surface-primitives',
+])
 
 function importSources(text) {
   return [...text.matchAll(/import\s+(?:type\s+)?[^;]*?\s+from\s+['"]([^'"]+)['"]/g)].map(
@@ -242,9 +244,7 @@ function importSources(text) {
 }
 
 function containsApprovedAdminSurfaceAnchor(text) {
-  return importSources(text).some((source) =>
-    approvedAdminSurfaceImportSuffixes.some((suffix) => source.endsWith(suffix)),
-  )
+  return importSources(text).some((source) => approvedAdminSurfaceImportSources.has(source))
 }
 
 function countPatternMatches(text, pattern) {
@@ -282,7 +282,7 @@ function adminUiSurfaceViolations(input = {}) {
       if (
         file.endsWith('surface-primitives.tsx') &&
         file !== adminSurfacePrimitivesPath &&
-        !importSources(text).some((source) => source.endsWith('admin-surface-primitives'))
+        !importSources(text).some((source) => source === './admin-surface-primitives' || source === '../../pages/admin-surface-primitives')
       ) {
         violations.push(`${file}: parallel surface primitive set is not anchored to AdminSurface*`)
       }
@@ -358,6 +358,22 @@ test('admin UI guard rejects synthetic primitive sprawl without AdminSurface anc
 
   assert.ok(violations.some((violation) => violation.includes('not anchored to AdminSurface*')))
   assert.ok(violations.some((violation) => violation.includes('parallel surface primitive set')))
+})
+
+test('admin UI guard rejects lookalike local AdminSurface helper imports', () => {
+  const fakeFile = 'admin-web/src/pages/FakeAdminSurfacePage.tsx'
+  const violations = adminUiSurfaceViolations({
+    surfaces: [
+      {
+        id: 'fake-lookalike-helper',
+        pageFile: fakeFile,
+        checkedFiles: [fakeFile],
+      },
+    ],
+    reader: () => "import { AdminSurfacePage } from './local-admin-surface-primitives'\nexport function Fake() { return <AdminSurfacePage /> }",
+  })
+
+  assert.ok(violations.some((violation) => violation.includes('not anchored to AdminSurface*')))
 })
 
 test('admin UI guard evidence records migrated, exception, and negative-case coverage', () => {
