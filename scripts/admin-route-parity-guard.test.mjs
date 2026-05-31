@@ -36,6 +36,7 @@ function normalizeNavItem(item) {
   return {
     id: item.id,
     roles: [...item.roles].sort(),
+    rolesMode: item.rolesMode ?? (item.roles.length === 0 ? 'omitted' : 'declared'),
     to: item.to,
   }
 }
@@ -89,6 +90,7 @@ function parseAdminNavigation() {
       id,
       to,
       roles: rolesMatch ? parseRoleArray(rolesMatch[1]) : [],
+      rolesMode: rolesMatch ? 'declared' : 'omitted',
     })
   }
 
@@ -113,7 +115,10 @@ function visibilityMatrix(items, roles) {
     role,
     visible: items.map((item) => ({
       id: item.path ?? item.id,
-      visible: item.roles.length === 0 || item.roles.includes(role),
+      visible:
+        item.rolesMode === 'omitted' ||
+        (!item.rolesMode && item.roles.length === 0) ||
+        item.roles.includes(role),
     })),
   }))
 }
@@ -162,6 +167,26 @@ test('admin navigation items and nav role visibility match the PR-1 inventory ba
 
   assert.deepEqual(currentNavigation, expectedNavigation)
   assert.equal(diffCount(currentNavigation, expectedNavigation), 0)
+})
+
+test('admin navigation parity preserves omitted role semantics', () => {
+  const publicByOmission = normalizeNavItem({
+    id: 'session',
+    roles: [],
+    rolesMode: 'omitted',
+    to: '/admin/session',
+  })
+  const explicitEmptyRoles = normalizeNavItem({
+    id: 'session',
+    roles: [],
+    rolesMode: 'declared',
+    to: '/admin/session',
+  })
+  const roles = ['NO_SPECIAL_ADMIN_ROLE']
+
+  assert.notDeepEqual(explicitEmptyRoles, publicByOmission)
+  assert.equal(visibilityMatrix([publicByOmission], roles)[0].visible[0].visible, true)
+  assert.equal(visibilityMatrix([explicitEmptyRoles], roles)[0].visible[0].visible, false)
 })
 
 test('admin route and navigation visibility matrices have zero drift', () => {
