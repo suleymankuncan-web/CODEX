@@ -9,7 +9,6 @@ export const adminKpiConfigTr = {
   'adminKpiConfig.heroTitle': 'Skor profilleri ve KPI sahipliği için admin yüzeyi.',
   'adminKpiConfig.heroCopy':
     'Mağaza ve personel skor profilleri artık backend ayarı olarak saklanır. Bu yüzey, ağırlıkları ve sahiplik matrisini kontrollü güncellemek için kullanılır.',
-  'adminKpiConfig.route': 'Rota',
   'adminKpiConfig.storeMetrics': 'Mağaza metriği',
   'adminKpiConfig.ownershipRows': 'Sahiplik satırı',
   'adminKpiConfig.gradingBandsMetric': 'Puanlama bandı',
@@ -93,7 +92,6 @@ export const adminKpiConfigTr = {
   'adminKpiConfig.saveStoreProfile': 'Mağaza profili',
   'adminKpiConfig.savePersonnelProfile': 'Personel profili',
   'adminKpiConfig.matrixRows': 'Matris satırı',
-  'adminKpiConfig.persistence': 'Kalıcı kayıt',
   'adminKpiConfig.saveDraft': 'Taslağı kaydet',
   'adminKpiConfig.saveDraftPending': 'Kaydediliyor...',
   'adminKpiConfig.publishLiveConfig': 'Canlı ayarı yayınla',
@@ -139,7 +137,6 @@ export const adminKpiConfigTr = {
     'aktör {actor} · mağaza metriği {storeMetricCount} · personel metriği {personnelMetricCount} · sahiplik satırı {ownershipRowCount}',
   'adminKpiConfig.unknown': 'bilinmiyor',
   'adminKpiConfig.notAvailable': 'yok',
-  'adminKpiConfig.correlation': 'korelasyon {correlationId}',
   'adminKpiConfig.storeDiff': 'Mağaza farkı',
   'adminKpiConfig.personnelDiff': 'Personel farkı',
 } as const
@@ -155,7 +152,6 @@ export const adminKpiConfigEn: Record<keyof typeof adminKpiConfigTr, string> = {
   'adminKpiConfig.heroTitle': 'Admin surface for score profiles and KPI ownership.',
   'adminKpiConfig.heroCopy':
     'Store and personnel score profiles are now stored as backend config. This surface updates weights and the ownership matrix in a controlled way.',
-  'adminKpiConfig.route': 'Route',
   'adminKpiConfig.storeMetrics': 'Store metrics',
   'adminKpiConfig.ownershipRows': 'Ownership rows',
   'adminKpiConfig.gradingBandsMetric': 'Grading bands',
@@ -239,7 +235,6 @@ export const adminKpiConfigEn: Record<keyof typeof adminKpiConfigTr, string> = {
   'adminKpiConfig.saveStoreProfile': 'Store profile',
   'adminKpiConfig.savePersonnelProfile': 'Personnel profile',
   'adminKpiConfig.matrixRows': 'Matrix rows',
-  'adminKpiConfig.persistence': 'Persistence',
   'adminKpiConfig.saveDraft': 'Save draft',
   'adminKpiConfig.saveDraftPending': 'Saving...',
   'adminKpiConfig.publishLiveConfig': 'Publish live config',
@@ -285,7 +280,6 @@ export const adminKpiConfigEn: Record<keyof typeof adminKpiConfigTr, string> = {
     'actor {actor} · store metrics {storeMetricCount} · personnel metrics {personnelMetricCount} · ownership rows {ownershipRowCount}',
   'adminKpiConfig.unknown': 'unknown',
   'adminKpiConfig.notAvailable': 'n/a',
-  'adminKpiConfig.correlation': 'correlation {correlationId}',
   'adminKpiConfig.storeDiff': 'Store diff',
   'adminKpiConfig.personnelDiff': 'Personnel diff',
 }

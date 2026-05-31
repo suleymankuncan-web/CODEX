@@ -86,14 +86,8 @@ test('admin KPI config profile fields stay editable and save changed draft', asy
 
   await page.goto('/admin/kpi-config')
 
-  const targetMetric = page
-    .locator('.stacked-row')
-    .filter({ has: page.locator('input[value="TARGET_ACHIEVEMENT"]') })
-    .first()
-  const uptMetric = page
-    .locator('.stacked-row')
-    .filter({ has: page.locator('input[value="UPT"]') })
-    .first()
+  const targetMetric = metricEditorRow(page, 'Store Score', 'TARGET_ACHIEVEMENT')
+  const uptMetric = metricEditorRow(page, 'Store Score', 'UPT')
 
   await targetMetric.getByLabel('Etiket').fill('HG skoru')
   await expect(targetMetric.getByLabel('Etiket')).toHaveValue('HG skoru')
@@ -123,14 +117,8 @@ test('admin KPI config explains weight totals before saving draft', async ({ pag
   await page.goto('/admin/kpi-config')
   await setStoredLocale(page, 'en')
 
-  const targetMetric = page
-    .locator('.stacked-row')
-    .filter({ has: page.locator('input[value="TARGET_ACHIEVEMENT"]') })
-    .first()
-  const uptMetric = page
-    .locator('.stacked-row')
-    .filter({ has: page.locator('input[value="UPT"]') })
-    .first()
+  const targetMetric = metricEditorRow(page, 'Store Score', 'TARGET_ACHIEVEMENT')
+  const uptMetric = metricEditorRow(page, 'Store Score', 'UPT')
   const saveButton = page.getByRole('button', { name: 'Save draft' })
 
   await targetMetric.getByLabel('Weight %').fill('')
@@ -193,6 +181,10 @@ async function routeAdminKpiConfigApi(page: Page) {
   await page.route('**/api/reports/kpi-config/audit', async (route) => {
     await route.fulfill({ json: { items: [], meta: { count: 0, total: 0, limit: 20, offset: 0 } } })
   })
+}
+
+function metricEditorRow(page: Page, profileTitle: string, code: string) {
+  return page.getByRole('group', { name: new RegExp(`${profileTitle} .* ${code}`) }).first()
 }
 
 const authSessionFixture = {
