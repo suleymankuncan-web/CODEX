@@ -406,18 +406,18 @@ function StoreRankingTableRow(input: {
 
   return (
     <TableRow className={input.current ? 'store-rankings-own-row' : undefined}>
-      <TableCell data-label={input.t('storeRankings.rankColumn')}>
+      <TableCell className="store-rankings-cell-rank" data-label={input.t('storeRankings.rankColumn')}>
         <RankChip rank={row.rank} t={input.t} />
       </TableCell>
-      <TableCell data-label={input.t('storeRankings.store')}>
+      <TableCell className="store-rankings-cell-entity" data-label={input.t('storeRankings.store')}>
         <RankingEntity label={row.storeName ?? row.storeId} kind="store" rank={row.rank} />
       </TableCell>
-      <TableCell data-label={input.t('storeRankings.storeScore')}>
+      <TableCell className="store-rankings-cell-score" data-label={input.t('storeRankings.storeScore')}>
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </TableCell>
       {input.canSeeDetails
         ? storeMetricCodes.map((code) => (
-            <TableCell data-label={getMetricLabel(input.t, code)} key={code}>
+            <TableCell className="store-rankings-cell-kpi" data-label={getMetricLabel(input.t, code)} key={code}>
               <RankingMetricCell
                 metric={getMetricByCode(row.metrics, code)}
                 code={code}
@@ -427,7 +427,7 @@ function StoreRankingTableRow(input: {
             </TableCell>
           ))
         : null}
-      <TableCell data-label={input.t('storeRankings.action')}>
+      <TableCell className="store-rankings-cell-action" data-label={input.t('storeRankings.action')}>
         {input.canSeeDetails ? (
           <Button
             type="button"
@@ -461,23 +461,28 @@ function PersonnelRankingTableRow(input: {
 
   return (
     <TableRow className={input.current ? 'store-rankings-own-row' : undefined}>
-      <TableCell data-label={input.t('storeRankings.rankColumn')}>
+      <TableCell className="store-rankings-cell-rank" data-label={input.t('storeRankings.rankColumn')}>
         <RankChip rank={row.rank} t={input.t} />
       </TableCell>
-      <TableCell data-label={input.t('storeRankings.personnel')}>
-        <RankingEntity label={row.displayName} kind="personnel" rank={row.rank} />
+      <TableCell className="store-rankings-cell-entity" data-label={input.t('storeRankings.personnel')}>
+        <RankingEntity
+          label={row.displayName}
+          detail={row.storeName ?? input.t('storeRankings.noStore')}
+          kind="personnel"
+          rank={row.rank}
+        />
       </TableCell>
-      <TableCell data-label={input.t('storeRankings.store')}>
+      <TableCell className="store-rankings-cell-store" data-label={input.t('storeRankings.store')}>
         <span className="store-rankings-muted-value">
           {row.storeName ?? input.t('storeRankings.noStore')}
         </span>
       </TableCell>
-      <TableCell data-label={input.t('storeRankings.personnelScore')}>
+      <TableCell className="store-rankings-cell-score" data-label={input.t('storeRankings.personnelScore')}>
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </TableCell>
       {input.canSeeDetails
         ? personnelMetricCodes.map((code) => (
-            <TableCell data-label={getMetricLabel(input.t, code)} key={code}>
+            <TableCell className="store-rankings-cell-kpi" data-label={getMetricLabel(input.t, code)} key={code}>
               <RankingMetricCell
                 metric={getMetricByCode(row.metrics, code)}
                 code={code}
@@ -487,7 +492,7 @@ function PersonnelRankingTableRow(input: {
             </TableCell>
           ))
         : null}
-      <TableCell data-label={input.t('storeRankings.action')}>
+      <TableCell className="store-rankings-cell-action" data-label={input.t('storeRankings.action')}>
         {input.canOpenProfile ? (
           <Button
             type="button"
@@ -521,6 +526,7 @@ function RankChip(input: { rank: number | null; t: TranslateFunction }) {
 
 function RankingEntity(input: {
   label: string
+  detail?: string
   kind: 'store' | 'personnel'
   rank: number | null
 }) {
@@ -533,7 +539,10 @@ function RankingEntity(input: {
       <span className={`store-rankings-entity-icon store-rankings-entity-${tone}`}>
         <Icon aria-hidden="true" />
       </span>
-      <strong>{input.label}</strong>
+      <span className="store-rankings-entity-copy">
+        <strong>{input.label}</strong>
+        {input.detail ? <span className="store-rankings-entity-detail">{input.detail}</span> : null}
+      </span>
     </div>
   )
 }

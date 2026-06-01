@@ -2218,6 +2218,60 @@ test('store rankings page switches to English copy and persists locale', async (
     .toBe(true)
 })
 
+test('store rankings personnel mobile cards keep text separated', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/store/rankings')
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+
+  const firstPersonnelCard = page.locator('.store-rankings-table tbody tr').first()
+  await expect(firstPersonnelCard.locator('.store-rankings-cell-entity')).toBeVisible()
+  await expect(firstPersonnelCard.locator('.store-rankings-entity-detail')).toBeVisible()
+  await expect(firstPersonnelCard.locator('.store-rankings-cell-store')).toBeHidden()
+  await expect(firstPersonnelCard.locator('.store-rankings-cell-score')).toBeVisible()
+  await expect(firstPersonnelCard.locator('.store-rankings-cell-action')).toBeVisible()
+
+  const overlappingCells = await firstPersonnelCard.evaluate((row) => {
+    const cells = Array.from(row.querySelectorAll('td'))
+      .map((cell) => {
+        const rect = cell.getBoundingClientRect()
+
+        return {
+          label: cell.getAttribute('data-label') ?? '',
+          left: rect.left,
+          right: rect.right,
+          top: rect.top,
+          bottom: rect.bottom,
+          visible: rect.width > 0 && rect.height > 0,
+        }
+      })
+      .filter((cell) => cell.visible)
+    const overlaps: string[] = []
+
+    for (let firstIndex = 0; firstIndex < cells.length; firstIndex += 1) {
+      for (let secondIndex = firstIndex + 1; secondIndex < cells.length; secondIndex += 1) {
+        const first = cells[firstIndex]
+        const second = cells[secondIndex]
+        const separated =
+          first.right <= second.left + 1 ||
+          second.right <= first.left + 1 ||
+          first.bottom <= second.top + 1 ||
+          second.bottom <= first.top + 1
+
+        if (!separated) {
+          overlaps.push(`${first.label}/${second.label}`)
+        }
+      }
+    }
+
+    return overlaps
+  })
+
+  expect(overlappingCells).toEqual([])
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+    .toBe(true)
+})
+
 test('store rankings requests exact loaded day and returns to monthly view', async ({ page }) => {
   const rankingRequests: URL[] = []
 

@@ -148,6 +148,12 @@
   border-radius: 12px;
 }
 
+.store-rankings-entity-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
 .store-rankings-entity strong {
   overflow: hidden;
   color: var(--rankings-text);
@@ -155,6 +161,10 @@
   font-weight: 720;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.store-rankings-entity-detail {
+  display: none;
 }
 
 .store-rankings-score-number {
