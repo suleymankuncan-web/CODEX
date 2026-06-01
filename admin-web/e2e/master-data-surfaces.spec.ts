@@ -37,6 +37,7 @@ test('master data bootstrap surface preserves selected batch workflow actions', 
   const main = page.getByRole('main')
 
   await expect(main.getByRole('heading', { name: 'Master Data Command Center' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Promotion decisions follow the batch state.' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Baseline files before live promotion' })).toBeVisible()
   await expect(main.getByText('batch-store-ready').first()).toBeVisible()
   await expect(main.getByText('Ready rows')).toBeVisible()
@@ -46,6 +47,17 @@ test('master data bootstrap surface preserves selected batch workflow actions', 
   await expect(main.getByText('#1 Store Istanbul')).toBeVisible()
   await expect(main.locator('[data-slot="table"]')).toHaveCount(1)
   await expect(main.locator(legacyAdminSelector)).toHaveCount(0)
+  await expectNoHorizontalOverflow(page)
+})
+
+test('master data bootstrap detail stays mobile-safe', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/master-data/batch-store-ready')
+
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Master Data Command Center' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Promotion decisions follow the batch state.' })).toBeVisible()
+  await expect(main.getByText('batch-store-ready').first()).toBeVisible()
   await expectNoHorizontalOverflow(page)
 })
 
