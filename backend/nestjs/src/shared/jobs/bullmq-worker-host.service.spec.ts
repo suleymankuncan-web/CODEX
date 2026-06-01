@@ -26,6 +26,10 @@ import { Test } from "@nestjs/testing";
 import { MODULE_METADATA } from "@nestjs/common/constants";
 import { WorkerModule } from "../../worker.module";
 import { WorkerJobsModule } from "../../worker-jobs.module";
+import { WorkerMaterializationJobsModule } from "../../worker-materialization-jobs.module";
+import { WorkerSnapshotJobsModule } from "../../worker-snapshot-jobs.module";
+import { MaterializationService } from "../../modules/integration/application/materialization.service";
+import { SnapshotService } from "../../modules/store-ops/application/snapshot.service";
 import { AppConfigService } from "../app-config.service";
 import { PG_POOL } from "../database/database.constants";
 import { IntegrationModule } from "../../modules/integration/integration.module";
@@ -142,6 +146,35 @@ describe("BullMqWorkerHostService", () => {
     expect(imports).toContain(WorkerJobsModule);
     expect(imports).not.toContain(IntegrationModule);
     expect(imports).not.toContain(StoreOpsModule);
+  });
+
+  it("keeps worker job providers behind focused job modules", () => {
+    const imports =
+      Reflect.getMetadata(MODULE_METADATA.IMPORTS, WorkerJobsModule) ?? [];
+    const providers =
+      Reflect.getMetadata(MODULE_METADATA.PROVIDERS, WorkerJobsModule) ?? [];
+    const exports =
+      Reflect.getMetadata(MODULE_METADATA.EXPORTS, WorkerJobsModule) ?? [];
+    const materializationExports =
+      Reflect.getMetadata(
+        MODULE_METADATA.EXPORTS,
+        WorkerMaterializationJobsModule,
+      ) ?? [];
+    const snapshotExports =
+      Reflect.getMetadata(MODULE_METADATA.EXPORTS, WorkerSnapshotJobsModule) ??
+      [];
+
+    expect(imports).toEqual([
+      WorkerMaterializationJobsModule,
+      WorkerSnapshotJobsModule,
+    ]);
+    expect(providers).toEqual([]);
+    expect(exports).toEqual([
+      WorkerMaterializationJobsModule,
+      WorkerSnapshotJobsModule,
+    ]);
+    expect(materializationExports).toEqual([MaterializationService]);
+    expect(snapshotExports).toEqual([SnapshotService]);
   });
 
   it("compiles the worker context with BullMQ disabled", async () => {
