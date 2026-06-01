@@ -40,15 +40,6 @@ const snapshotTypeLabelKeys: Record<string, TranslationKey> = {
   monthly: 'reportsSummary.snapshotType.monthly',
 }
 
-const readPaths = [
-  '/api/reports/summary',
-  '/api/reports/snapshot-runs',
-  '/api/reports/workforce',
-  '/api/reports/kpis',
-  '/api/reports/checklists',
-  '/api/reports/turnover',
-]
-
 export function ReportsSummaryPage() {
   const { locale, t } = useLocalization()
   const summaryQuery = useQuery({
@@ -115,6 +106,40 @@ export function ReportsSummaryPage() {
     summary.cards.kpiRows +
     summary.cards.checklistRows +
     summary.cards.turnoverRows
+  const reportCoverageRows = [
+    {
+      id: 'workforce',
+      label: t('reportsSummary.workforceTitle'),
+      rows: summary.cards.workforceRows,
+      note: t('reportsSummary.workforceNote'),
+      href: latestRun ? `/admin/reports/workforce/${latestRun.snapshotRunId}` : null,
+      actionLabel: t('reportsSummary.openWorkforce'),
+    },
+    {
+      id: 'kpis',
+      label: t('reportsSummary.kpisTitle'),
+      rows: summary.cards.kpiRows,
+      note: t('reportsSummary.kpisNote'),
+      href: latestRun ? `/admin/reports/kpis/${latestRun.snapshotRunId}` : null,
+      actionLabel: t('reportsSummary.openKpis'),
+    },
+    {
+      id: 'checklists',
+      label: t('reportsSummary.checklistsTitle'),
+      rows: summary.cards.checklistRows,
+      note: t('reportsSummary.checklistsNote'),
+      href: latestRun ? `/admin/reports/checklists/${latestRun.snapshotRunId}` : null,
+      actionLabel: t('reportsSummary.openChecklists'),
+    },
+    {
+      id: 'turnover',
+      label: t('reportsSummary.turnoverTitle'),
+      rows: summary.cards.turnoverRows,
+      note: t('reportsSummary.turnoverNote'),
+      href: latestRun ? `/admin/reports/turnover/${latestRun.snapshotRunId}` : null,
+      actionLabel: t('reportsSummary.openTurnover'),
+    },
+  ]
 
   return (
     <AdminSurfacePage ariaLabel={t('reportsSummary.heroEyebrow')}>
@@ -219,22 +244,33 @@ export function ReportsSummaryPage() {
 
       <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
         <AdminSurfaceSection
-          eyebrow={t('reportsSummary.readPathsEyebrow')}
-          title={t('reportsSummary.readPathsTitle')}
+          eyebrow={t('reportsSummary.coverageEyebrow')}
+          title={t('reportsSummary.coverageTitle')}
         >
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Endpoint</TableHead>
-                <TableHead className="tw:text-right">{t('reportsSummary.readOnly')}</TableHead>
+                <TableHead>{t('reportsSummary.coverageSlice')}</TableHead>
+                <TableHead>{t('reportsSummary.coverageRows')}</TableHead>
+                <TableHead className="tw:text-right">{t('reportsSummary.coverageAction')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {readPaths.map((path) => (
-                <TableRow key={path}>
-                  <TableCell className="tw:font-mono tw:text-xs">{path}</TableCell>
+              {reportCoverageRows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell>
+                    <div className="tw:font-medium">{row.label}</div>
+                    <div className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{row.note}</div>
+                  </TableCell>
+                  <TableCell>{row.rows}</TableCell>
                   <TableCell className="tw:text-right">
-                    <AdminSurfaceBadge tone="neutral">{t('reportsSummary.readOnly')}</AdminSurfaceBadge>
+                    {row.href ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link to={row.href}>{row.actionLabel}</Link>
+                      </Button>
+                    ) : (
+                      <AdminSurfaceBadge tone="neutral">{t('reportsSummary.unavailable')}</AdminSurfaceBadge>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}

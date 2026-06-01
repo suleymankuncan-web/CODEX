@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom'
 import { AdminReportingToolbar } from '../components/admin-reporting-tools'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
-import { Progress } from '../components/ui/progress'
 import {
   Select,
   SelectContent,
@@ -42,6 +41,7 @@ import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
+import { SnapshotOperationsBrief } from './snapshot-operations-brief'
 import {
   AdminActionRow,
   AdminFilterBar,
@@ -54,7 +54,6 @@ import {
   AdminSurfaceHeader,
   AdminSurfacePage,
   AdminSurfaceSection,
-  type AdminSurfaceTone,
 } from './admin-surface-primitives'
 
 const PAGE_SIZE = 12
@@ -74,7 +73,6 @@ type SnapshotsDashboardPageState = {
   runStatusFilter: SnapshotRunStatusFilter
   feedback: string | null
 }
-
 type SnapshotsDashboardPageAction =
   | { type: 'setSearch'; value: string }
   | { type: 'setSortBy'; value: SnapshotSortValue }
@@ -124,6 +122,34 @@ function snapshotsDashboardPageReducer(
     default:
       return state
   }
+}
+
+function sortSnapshotNeedsActionItems(
+  items: SnapshotNeedsActionItem[],
+  sortBy: SnapshotSortValue,
+) {
+  const sortedItems = [...items]
+  if (sortBy === 'generated-desc') {
+    return sortedItems.sort((left, right) => right.generatedAt.localeCompare(left.generatedAt))
+  }
+  if (sortBy === 'reruns') {
+    return sortedItems.sort((left, right) => right.rerunCount - left.rerunCount)
+  }
+  if (sortBy === 'type') {
+    return sortedItems.sort((left, right) => left.snapshotType.localeCompare(right.snapshotType))
+  }
+
+  return sortedItems.sort(
+    (left, right) => getSnapshotHealthPriority(right.healthState) - getSnapshotHealthPriority(left.healthState),
+  )
+}
+
+function getSnapshotHealthPriority(state: string) {
+  if (state === 'stuck') return 4
+  if (state === 'needs_action') return 3
+  if (state === 'retry_ready') return 2
+  if (state === 'in_progress') return 1
+  return 0
 }
 
 export function SnapshotsDashboardPage() {
@@ -203,26 +229,7 @@ export function SnapshotsDashboardPage() {
   }, [deferredSearch, needsActionQuery.data?.items, t])
 
   const sortedItems = useMemo(() => {
-    const items = [...filteredItems]
-    if (sortBy === 'generated-desc') {
-      return items.sort((left, right) => right.generatedAt.localeCompare(left.generatedAt))
-    }
-    if (sortBy === 'reruns') {
-      return items.sort((left, right) => right.rerunCount - left.rerunCount)
-    }
-    if (sortBy === 'type') {
-      return items.sort((left, right) => left.snapshotType.localeCompare(right.snapshotType))
-    }
-
-    const priority = (state: string) => {
-      if (state === 'stuck') return 4
-      if (state === 'needs_action') return 3
-      if (state === 'retry_ready') return 2
-      if (state === 'in_progress') return 1
-      return 0
-    }
-
-    return items.sort((left, right) => priority(right.healthState) - priority(left.healthState))
+    return sortSnapshotNeedsActionItems(filteredItems, sortBy)
   }, [filteredItems, sortBy])
 
   if (overviewQuery.isLoading || needsActionQuery.isLoading || dailyClosureQuery.isLoading) {
@@ -313,7 +320,11 @@ export function SnapshotsDashboardPage() {
         t={t}
       />
       <SnapshotHealthMetricGrid overview={overview} t={t} />
-      <SnapshotHealthSummaryPanels overview={overview} t={t} />
+      <SnapshotOperationsBrief
+        dailyClosure={dailyClosure}
+        overview={overview}
+        t={t}
+      />
       <SnapshotActionQueuePanel
         dispatchPageState={dispatchPageState}
         filters={{ search, snapshotTypeFilter, runStatusFilter }}
@@ -521,63 +532,6 @@ function SnapshotHealthMetricGrid(input: { overview: SnapshotOverview; t: Transl
         },
       ]}
     />
-  )
-}
-
-function SnapshotHealthSummaryPanels(input: { overview: SnapshotOverview; t: TranslateFunction }) {
-  return (
-    <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:xl:grid-cols-2">
-      <AdminSurfaceSection
-        eyebrow={input.t('adminSnapshots.latestPointers')}
-        title={input.t('adminSnapshots.runTransitions')}
-      >
-        <AdminKeyValueGrid>
-          <KeyValue
-            label={input.t('adminSnapshots.latestCompleted')}
-            value={input.overview.latest.completedSnapshotRunId ?? input.t('adminSnapshots.noCompletedRun')}
-          />
-          <KeyValue
-            label={input.t('adminSnapshots.latestFailed')}
-            value={input.overview.latest.failedSnapshotRunId ?? input.t('adminSnapshots.noFailedRun')}
-          />
-          <KeyValue
-            label={input.t('adminSnapshots.latestInProgress')}
-            value={input.overview.latest.inProgressSnapshotRunId ?? input.t('adminSnapshots.noActiveRun')}
-          />
-          <KeyValue
-            label={input.t('adminSnapshots.latestStuck')}
-            value={input.overview.latest.stuckSnapshotRunId ?? input.t('adminSnapshots.noStuckRun')}
-          />
-        </AdminKeyValueGrid>
-      </AdminSurfaceSection>
-
-      <AdminSurfaceSection
-        eyebrow={input.t('adminSnapshots.healthReading')}
-        title={input.t('adminSnapshots.runStateBalance')}
-      >
-        <HealthProgressRow label={input.t('adminSnapshots.healthy')} tone="success" value={input.overview.healthTotals.healthy} total={input.overview.totals.all} />
-        <HealthProgressRow label={input.t('adminSnapshots.inProgress')} tone="neutral" value={input.overview.healthTotals.inProgress} total={input.overview.totals.all} />
-        <HealthProgressRow label={input.t('adminSnapshots.retryReady')} tone="accent" value={input.overview.healthTotals.retryReady} total={input.overview.totals.all} />
-        <HealthProgressRow label={input.t('adminSnapshots.stuck')} tone="danger" value={input.overview.healthTotals.stuck} total={input.overview.totals.all} />
-      </AdminSurfaceSection>
-    </div>
-  )
-}
-
-function HealthProgressRow(input: { label: string; tone: AdminSurfaceTone; value: number; total: number }) {
-  const percent = input.total > 0 ? Math.round((input.value / input.total) * 100) : 0
-  return (
-    <div className="tw:grid tw:gap-2">
-      <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:text-sm">
-        <span className="tw:text-muted-foreground">{input.label}</span>
-        <span className="tw:font-medium">{input.value} / {input.total}</span>
-      </div>
-      <Progress
-        className={progressToneClass(input.tone)}
-        value={percent}
-        aria-label={input.label}
-      />
-    </div>
   )
 }
 
@@ -885,13 +839,4 @@ function SnapshotQueuePagination(input: {
       </Button>
     </AdminActionRow>
   )
-}
-
-function progressToneClass(tone: AdminSurfaceTone) {
-  if (tone === 'success') return 'tw:[&_[data-slot=progress-indicator]]:bg-emerald-500'
-  if (tone === 'accent') return 'tw:[&_[data-slot=progress-indicator]]:bg-violet-500'
-  if (tone === 'warning') return 'tw:[&_[data-slot=progress-indicator]]:bg-amber-500'
-  if (tone === 'danger') return 'tw:[&_[data-slot=progress-indicator]]:bg-rose-500'
-  if (tone === 'cyan') return 'tw:[&_[data-slot=progress-indicator]]:bg-cyan-500'
-  return 'tw:[&_[data-slot=progress-indicator]]:bg-slate-400'
 }
