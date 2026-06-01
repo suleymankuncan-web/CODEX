@@ -236,7 +236,7 @@ test('store self-performance switches to English copy and persists locale', asyn
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.goto('/store/rankings')
+  await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
