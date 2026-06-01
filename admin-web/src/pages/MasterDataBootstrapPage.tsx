@@ -90,6 +90,7 @@ import {
   type StoreMasterStatusFilter,
 } from './master-data-bootstrap-model'
 import { BatchDetailPanel } from './master-data-bootstrap-batch-detail-panel'
+import { MasterDataReadinessStrip } from './master-data-readiness-strip'
 
 function useMasterDataBootstrapQueries(input: {
   activeTab: MasterDataTab
@@ -446,6 +447,8 @@ export function MasterDataBootstrapPage() {
         t={t}
       />
 
+      <MasterDataReadinessStrip batches={batches} t={t} />
+
       <MasterDataPromotionFeedback feedback={feedback} promotedRows={promotedRows} t={t} />
 
       <MasterDataCommandTabs
@@ -637,7 +640,6 @@ function MasterDataCommandMetrics(input: {
   )
 }
 
-
 function MasterDataPromotionFeedback(input: {
   feedback: string | null
   promotedRows: MasterDataBootstrapPromotionResponse['data']['promotedRows']
@@ -665,7 +667,6 @@ function MasterDataPromotionFeedback(input: {
     </AdminStatePanel>
   )
 }
-
 
 function MasterDataCommandTabs(input: {
   activeTab: MasterDataTab
@@ -843,7 +844,6 @@ function MasterDataBootstrapBatchesPanel(input: {
     </AdminSurfaceSection>
   )
 }
-
 
 async function submitStoreMasterDrafts(input: {
   drafts: Record<string, StoreMasterPatch>

@@ -128,6 +128,18 @@ test('admin import batch detail explains KPI row lineage evidence', async ({ pag
   await expect(page.getByText('Parti detayı açılamadı')).toHaveCount(0)
 })
 
+test('admin import batch detail stays mobile-safe', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/integrations/batch-kpi-lineage-ui-1')
+  await setStoredLocale(page, 'en')
+
+  const main = page.getByRole('main')
+  await expect(main.getByText('Import Batch Detail')).toBeVisible()
+  await expect(main.getByLabel('Import decision evidence')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Why rows failed' })).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('admin integrations keeps store master controls in the master data surface', async ({ page }) => {
   await page.goto('/admin/integrations')
 
@@ -298,6 +310,7 @@ test('admin integrations page switches chrome to English copy and persists local
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByText('Integration control panel')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'No critical queue decision.' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Uploads' })).toBeVisible()
   await page.getByRole('button', { name: 'Issues' }).click()
   await expect(page.getByRole('heading', { name: 'Issue records to review' })).toBeVisible()
@@ -318,6 +331,7 @@ test('admin integrations mobile layout stays bounded across operator tabs', asyn
 
   await expect(main.getByRole('heading', { name: 'Integration control panel' })).toBeVisible()
   await expect(main.locator('[data-testid="admin-metric-status"]')).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'No critical queue decision.' })).toBeVisible()
   await expectNoHorizontalOverflow(page)
 
   await page.getByRole('button', { name: 'Evidence' }).click()

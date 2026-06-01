@@ -42,6 +42,7 @@ import type {
   RetryMutationState,
 } from '../features/integrations/integration-dashboard-surface-types'
 import { toAdminTone } from '../features/integrations/integration-surface-tone'
+import { IntegrationLifecycleStrip } from './integration-lifecycle-strip'
 import {
   createImportBatch,
   getImportOverview,
@@ -640,6 +641,7 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
         items={metricItems}
       />
 
+      <IntegrationLifecycleStrip actionCount={actionCount} overview={overview} primaryItem={sortedItems[0]} t={t} onOpenIssues={() => dispatchPageState({ type: 'setActiveTab', value: 'errors' })} />
       {(feedback || uploadFeedback) ? (
         <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:lg:grid-cols-2">
           {feedback ? <AdminStatePanel title={feedback} tone="success" /> : null}
@@ -1013,7 +1015,6 @@ type IntegrationEvidencePanelProps = {
   t: TranslateFunction
   templateSourceSystem: IntegrationTemplateSourceSystem
 }
-
 function IntegrationEvidencePanel(input: IntegrationEvidencePanelProps) {
   const {
     compatibleSources,
@@ -1173,7 +1174,6 @@ type IntegrationErrorsPanelProps = {
   statusFilter: string
   t: TranslateFunction
 }
-
 function IntegrationErrorsPanel(input: IntegrationErrorsPanelProps) {
   const {
     canGoBack,

@@ -21,6 +21,15 @@ export const adminMasterDataTr = {
   'adminMasterData.auditMetric': 'Değişiklik izi',
   'adminMasterData.auditMetricNote': 'Mağaza ve personel ana veri değişiklikleri audit kaydına yazılır.',
   'adminMasterData.openTabForCount': 'Sekmeyi açınca sayaç netleşir.',
+  'adminMasterData.readinessHandoffEyebrow': 'Hazirlik akisi',
+  'adminMasterData.readinessHandoffTitle': 'Canliya alma karari batch durumuna gore okunur.',
+  'adminMasterData.readinessHandoffCopy':
+    'Sayaclar yalnizca mevcut bootstrap batch listesinden gelir; validasyon ve aktarma uygunlugu backend kanitinda kalir.',
+  'adminMasterData.readinessReady': 'Aktarima hazir',
+  'adminMasterData.readinessValidation': 'Validasyon bekliyor',
+  'adminMasterData.readinessReview': 'Inceleme gerekiyor',
+  'adminMasterData.readinessClosed': 'Kapali / aktarildi',
+  'adminMasterData.readinessNoBatch': 'Batch yok',
 
   'adminMasterData.tabsAria': 'Ana veri yönetim sekmeleri',
   'adminMasterData.tabBatches': 'Hazırlık Partileri',
@@ -234,6 +243,15 @@ export const adminMasterDataEn: Record<keyof typeof adminMasterDataTr, string> =
   'adminMasterData.auditMetric': 'Change trace',
   'adminMasterData.auditMetricNote': 'Store and personnel master-data changes are written to audit.',
   'adminMasterData.openTabForCount': 'Open the tab to resolve the count.',
+  'adminMasterData.readinessHandoffEyebrow': 'Readiness flow',
+  'adminMasterData.readinessHandoffTitle': 'Promotion decisions follow the batch state.',
+  'adminMasterData.readinessHandoffCopy':
+    'Counters come only from the current bootstrap batch list; validation and promotion eligibility stay in backend evidence.',
+  'adminMasterData.readinessReady': 'Ready to promote',
+  'adminMasterData.readinessValidation': 'Needs validation',
+  'adminMasterData.readinessReview': 'Needs review',
+  'adminMasterData.readinessClosed': 'Closed / promoted',
+  'adminMasterData.readinessNoBatch': 'No batch',
 
   'adminMasterData.tabsAria': 'Master data management tabs',
   'adminMasterData.tabBatches': 'Bootstrap Batches',

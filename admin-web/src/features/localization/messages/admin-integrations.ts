@@ -70,6 +70,16 @@ export const adminIntegrationsTr = {
   'adminIntegrations.uploadDecisionCopy':
     'Personel satışları ve mağaza net değerleri mevcut iş kurallarıyla korunur.',
   'adminIntegrations.latestCompleted': 'Son tamamlanan',
+  'adminIntegrations.operatorHandoffEyebrow': 'Operator akisi',
+  'adminIntegrations.operatorHandoffTitle': 'Siradaki karar kuyrukta gorunur.',
+  'adminIntegrations.operatorHandoffClearTitle': 'Kuyrukta kritik karar yok.',
+  'adminIntegrations.operatorHandoffCopy': 'Incelenecek kayitlar hata sekmesinde sirali durur.',
+  'adminIntegrations.operatorHandoffClearCopy': 'Son tamamlanan batch ve kanit durumu izlenebilir.',
+  'adminIntegrations.primaryIssue': 'Birincil kayit',
+  'adminIntegrations.issueReason': 'Aksiyon',
+  'adminIntegrations.reviewIssues': 'Hatalari incele',
+  'adminIntegrations.retryableBatches': 'Tekrar denenebilir',
+  'adminIntegrations.blockedBatches': 'Bloke batch',
 
   'adminIntegrations.uploadResultAria': 'Power BI aktarım sonucu',
   'adminIntegrations.period': 'Dönem',
@@ -210,6 +220,16 @@ export const adminIntegrationsEn: Record<keyof typeof adminIntegrationsTr, strin
   'adminIntegrations.uploadDecisionCopy':
     'Personnel sales and store net values keep the current business rules.',
   'adminIntegrations.latestCompleted': 'Latest completed',
+  'adminIntegrations.operatorHandoffEyebrow': 'Operator flow',
+  'adminIntegrations.operatorHandoffTitle': 'The next decision is visible in the queue.',
+  'adminIntegrations.operatorHandoffClearTitle': 'No critical queue decision.',
+  'adminIntegrations.operatorHandoffCopy': 'Records that need review are ordered in the issues tab.',
+  'adminIntegrations.operatorHandoffClearCopy': 'The latest completed batch and evidence state remain visible.',
+  'adminIntegrations.primaryIssue': 'Primary record',
+  'adminIntegrations.issueReason': 'Action',
+  'adminIntegrations.reviewIssues': 'Review issues',
+  'adminIntegrations.retryableBatches': 'Retryable batches',
+  'adminIntegrations.blockedBatches': 'Blocked batches',
 
   'adminIntegrations.uploadResultAria': 'Power BI upload result',
   'adminIntegrations.period': 'Period',
