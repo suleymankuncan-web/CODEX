@@ -207,6 +207,89 @@ test('store self-performance tolerates ISO period timestamps from live API', asy
   expect(pageErrors).toEqual([])
 })
 
+test('store self-performance requests exact loaded day without inventing unloaded days', async ({ page }) => {
+  const myPerformanceRequests: URL[] = []
+  const loadedPeriods = [
+    {
+      periodType: 'monthly',
+      periodStart: '2026-04-01',
+      periodEnd: '2026-04-30',
+    },
+    {
+      periodType: 'monthly',
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+    },
+    {
+      periodType: 'daily',
+      periodStart: '2026-04-24',
+      periodEnd: '2026-04-24',
+    },
+    {
+      periodType: 'daily',
+      periodStart: '2026-04-25',
+      periodEnd: '2026-04-25',
+    },
+  ]
+
+  await page.unroute('**/api/reports/my-performance**')
+  await page.route('**/api/reports/my-performance**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const requestedPeriodStart = requestUrl.searchParams.get('periodStart')
+    myPerformanceRequests.push(requestUrl)
+
+    if (requestUrl.searchParams.get('periodType') === 'daily') {
+      const periodStart = requestedPeriodStart || '2026-04-25'
+      await route.fulfill({
+        json: {
+          ...myPerformanceFixture,
+          period: {
+            periodStart,
+            periodEnd: periodStart,
+          },
+          score: {
+            value: periodStart === '2026-04-24' ? 88.4 : 89.1,
+            matchedMetrics: 3,
+            totalMetrics: 3,
+          },
+          availablePeriods: loadedPeriods,
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        ...myPerformanceFixture,
+        availablePeriods: loadedPeriods,
+      },
+    })
+  })
+
+  await page.goto('/store/me')
+  await page.locator('button[aria-expanded]').first().click()
+  await page.getByRole('radio', { name: /^G.*n$/ }).click()
+
+  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
+  await expect(page.getByLabel('25 Nis 2026')).toBeChecked()
+  await expect(page.getByLabel('26 Nis 2026')).toHaveCount(0)
+  await page.getByLabel('25 Nis 2026').uncheck()
+  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
+  await expect(page.getByLabel('25 Nis 2026')).not.toBeChecked()
+
+  await expect.poll(() =>
+    myPerformanceRequests.some(
+      (requestUrl) =>
+        requestUrl.searchParams.get('periodType') === 'daily' &&
+        requestUrl.searchParams.get('periodStart') === '2026-04-24',
+    ),
+  ).toBe(true)
+  await expect(page.locator('[data-testid="store-me-period-pill"]')).toHaveText('24 Nis 2026 - 24 Nis 2026')
+
+  await page.getByRole('button', { name: /KPI detay/i }).click()
+  await expect(page.getByRole('dialog', { name: /ay ay performans/i })).toContainText('24 Nis 2026')
+})
+
 test('store self-performance switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/me')
 

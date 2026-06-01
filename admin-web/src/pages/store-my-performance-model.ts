@@ -942,7 +942,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     ? input.monthlyDetailPeriods
     : input.performance.period
       ? [{
-          periodType: 'monthly' as const,
+          periodType: isSamePeriodStart(input.performance.period.periodStart, input.performance.period.periodEnd) ? 'daily' as const : 'monthly' as const,
           periodStart: input.performance.period.periodStart,
           periodEnd: input.performance.period.periodEnd,
         }]
@@ -960,7 +960,7 @@ export function buildStoreMyPerformanceViewModel(input: {
 
     return {
       key: getPeriodDateKey(period.periodStart) || period.periodStart,
-      label: formatMonthYear(input.locale, input.t, period.periodStart),
+      label: period.periodType === 'daily' ? formatDate(period.periodStart, input.locale) : formatMonthYear(input.locale, input.t, period.periodStart),
       periodNote:
         isSamePeriodStart(period.periodStart, getPeriodStart(input.performance))
           ? input.t('storeMe.activePeriod')
