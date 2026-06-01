@@ -218,6 +218,7 @@ test('store targets page lets region managers approve pending target requests in
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  await page.getByLabel('Donem').fill('2026-05')
   await expect(page.getByRole('heading', { name: 'Onay akisi' })).toBeVisible()
   await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
   await page.getByLabel('Karar notu').fill('Bolge onayi')
@@ -291,6 +292,7 @@ test('store targets page submits revision requests from approved target snapshot
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  await page.getByLabel('Donem').fill('2026-05')
   await page.getByRole('radio', { name: /Revize Talebi/ }).click()
   await page.getByRole('button', { name: 'Revize olustur' }).click()
   await page.getByLabel('Store Personnel Revize talebi gonder').fill('40000')
