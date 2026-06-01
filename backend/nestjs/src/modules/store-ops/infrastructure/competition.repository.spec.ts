@@ -515,12 +515,35 @@ describe("CompetitionRepository", () => {
     });
 
     const sql = executedSql.join("\n");
+    const warningDeleteIndex = executedSql.findIndex((statement) =>
+      statement.includes("DELETE FROM rpt.competition_stage_warning"),
+    );
+    const teamSnapshotDeleteIndex = executedSql.findIndex((statement) =>
+      statement.includes("DELETE FROM rpt.competition_stage_score_snapshot"),
+    );
+    const storeSnapshotDeleteIndex = executedSql.findIndex((statement) =>
+      statement.includes("DELETE FROM rpt.competition_stage_store_score_snapshot"),
+    );
+    expect(warningDeleteIndex).toBeGreaterThanOrEqual(0);
+    expect(teamSnapshotDeleteIndex).toBeGreaterThan(warningDeleteIndex);
+    expect(storeSnapshotDeleteIndex).toBeGreaterThan(teamSnapshotDeleteIndex);
     expect(sql).toContain("FROM rpt.snapshot_run run");
     expect(sql).toContain("run.period_start = run.period_end");
+    expect(sql).toContain("('TARGET_ACHIEVEMENT', 40::numeric)");
+    expect(sql).toContain("('CR', 20::numeric)");
+    expect(sql).toContain("('ATV', 15::numeric)");
+    expect(sql).toContain("('UPT', 15::numeric)");
+    expect(sql).toContain("('BM_CHECKLIST', 5::numeric)");
+    expect(sql).toContain("('VM_CHECKLIST', 5::numeric)");
     expect(sql).toContain("'BM_CHECKLIST'");
     expect(sql).toContain("'VM_CHECKLIST'");
+    expect(sql).toContain("CASE WHEN has_daily_data THEN score_value ELSE NULL END");
+    expect(sql).toContain("SUM(CASE WHEN actual_value IS NULL AND achievement_rate IS NULL THEN 0 ELSE weight_percent END)");
     expect(sql).toContain("competition_stage_store_score_snapshot");
     expect(sql).toContain("competition_stage_warning");
+    expect(sql).toContain("CASE WHEN warning.warning_code = 'missing_daily_store_data' THEN 'blocker' ELSE 'warning' END");
+    expect(sql).toContain("AVG(score_value) FILTER (WHERE score_value IS NOT NULL)");
+    expect(sql).toContain("CASE WHEN total_store_count = 0 THEN 0 ELSE valid_store_count::numeric / total_store_count::numeric END");
     expect(sql).toContain("DENSE_RANK()");
   });
 
