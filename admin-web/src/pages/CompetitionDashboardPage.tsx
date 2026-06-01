@@ -7,6 +7,7 @@ import {
   getCompetition,
   listCompetitions,
   recalculateStage,
+  type CompetitionStageSummary,
   type CompetitionStoreContribution,
   type CompetitionSummary,
   type CompetitionWarning,
@@ -201,6 +202,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
         createPending={createMutation.isPending}
         onCreate={() => createMutation.mutate()}
         onSelect={setSelectedCompetitionId}
+        selectedCompetitionId={selectedCompetition?.competitionId ?? null}
       />
 
       {selectedCompetition ? (
@@ -245,6 +247,12 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
 
           {detailQuery.data ? (
             <div className="tw:grid tw:gap-4">
+              <CompetitionDecisionBrief
+                activeStage={activeStage}
+                canManage={canManage}
+                competition={selectedCompetition}
+                warningCount={warningCount}
+              />
               <CompetitionReadSummaryPanel summary={buildCompetitionReadSummary(detailQuery.data, locale)} />
 
               {detailQuery.data.latestScores.length === 0 ? (
@@ -360,6 +368,7 @@ function CompetitionListPanel(input: {
   createPending: boolean
   onCreate: () => void
   onSelect: (competitionId: string) => void
+  selectedCompetitionId: string | null
 }) {
   const { locale, t } = useLocalization()
 
@@ -394,9 +403,14 @@ function CompetitionListPanel(input: {
       {input.competitions.length === 0 ? (
         <CompetitionEmptyState title={t('competition.admin.emptyTitle')} copy={t('competition.admin.emptyCopy')} />
       ) : (
-        <CompetitionRowList>
+        <CompetitionRowList className="tw:xl:grid-cols-2">
           {input.competitions.map((competition: CompetitionSummary) => (
-            <CompetitionRow key={competition.competitionId}>
+            <CompetitionRow
+              key={competition.competitionId}
+              {...(competition.competitionId === input.selectedCompetitionId
+                ? { className: 'tw:border-primary/35 tw:bg-primary/5' }
+                : {})}
+            >
               <CompetitionRowHeader
                 title={competition.competitionName}
                 description={competition.competitionCode}
@@ -429,6 +443,44 @@ function CompetitionListPanel(input: {
         </CompetitionRowList>
       )}
     </AdminSurfaceSection>
+  )
+}
+
+function CompetitionDecisionBrief(input: {
+  activeStage: CompetitionStageSummary | null
+  canManage: boolean
+  competition: CompetitionSummary
+  warningCount: number
+}) {
+  const { locale, t } = useLocalization()
+  const lifecycleLabel = formatCompetitionLifecycleState(input.competition.lifecycleState, t)
+  const activeStageLabel = input.activeStage
+    ? `${input.activeStage.stageCode} / ${formatCompetitionStageState(input.activeStage.lifecycleState, t)}`
+    : t('competition.admin.noActiveStage')
+
+  return (
+    <CompetitionRow className="tw:border-primary/20 tw:bg-gradient-to-r tw:from-primary/5 tw:to-cyan-500/5">
+      <CompetitionRowHeader
+        title={t('competition.admin.decisionBriefTitle')}
+        description={t('competition.admin.decisionBriefCopy', {
+          competition: input.competition.competitionName,
+          status: lifecycleLabel,
+        })}
+        badge={
+          <CompetitionStatusBadge tone={input.warningCount > 0 ? 'warning' : 'calm'}>
+            {input.warningCount > 0
+              ? t('competition.admin.warningCount', { count: input.warningCount })
+              : t('competition.clean')}
+          </CompetitionStatusBadge>
+        }
+      />
+      <CompetitionKeyValueGrid>
+        <CompetitionKeyValue label={t('competition.admin.selectedCompetition')} value={input.competition.competitionCode} />
+        <CompetitionKeyValue label={t('competition.admin.activeStage')} value={activeStageLabel} />
+        <CompetitionKeyValue label={t('competition.admin.operatorMode')} value={input.canManage ? t('competition.admin.newDraft') : t('competition.admin.readOnly')} />
+        <CompetitionKeyValue label={t('competition.admin.ends')} value={formatDate(input.competition.endsOn, locale)} />
+      </CompetitionKeyValueGrid>
+    </CompetitionRow>
   )
 }
 

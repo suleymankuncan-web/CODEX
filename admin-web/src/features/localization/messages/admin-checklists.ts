@@ -41,6 +41,12 @@ export const adminChecklistsTr = {
   'adminChecklists.validationEmptyText': 'Bölüm adı ve madde metni boş bırakılamaz.',
   'adminChecklists.validationInvalidScore': 'Skor alanlarında geçerli sayılar kullanılmalı.',
   'adminChecklists.validationDefault': 'Şablon yayına hazır değil.',
+  'adminChecklists.readyToPublish': 'Yayına hazır',
+  'adminChecklists.publishGate': 'Yayın kapısı',
+  'adminChecklists.blockingFields': 'Eksik alan',
+  'adminChecklists.scoreGuard': 'Skor kontrolü',
+  'adminChecklists.validScores': 'Geçerli',
+  'adminChecklists.invalidScores': 'Geçersiz',
 } as const
 
 export const adminChecklistsEn: Record<keyof typeof adminChecklistsTr, string> = {
@@ -86,4 +92,10 @@ export const adminChecklistsEn: Record<keyof typeof adminChecklistsTr, string> =
   'adminChecklists.validationEmptyText': 'Section names and item text cannot be empty.',
   'adminChecklists.validationInvalidScore': 'Score fields must use valid numbers.',
   'adminChecklists.validationDefault': 'Template is not ready to publish.',
+  'adminChecklists.readyToPublish': 'Ready to publish',
+  'adminChecklists.publishGate': 'Publish gate',
+  'adminChecklists.blockingFields': 'Blocking fields',
+  'adminChecklists.scoreGuard': 'Score guard',
+  'adminChecklists.validScores': 'Valid',
+  'adminChecklists.invalidScores': 'Invalid',
 }
