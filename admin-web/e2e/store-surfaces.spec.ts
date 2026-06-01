@@ -236,7 +236,7 @@ test('store self-performance switches to English copy and persists locale', asyn
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await page.reload()
+  await page.goto('/store/rankings')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
@@ -1176,26 +1176,26 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   await page.goto('/store/rankings')
 
   await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Sıralama dönem seçimi' }).click()
-  await expect(
-    page.getByRole('option', {
-      name: /1 Nis 2026 - 30 Nis 2026/,
-    }),
-  ).toBeVisible()
-  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Yıl filtresi' })).toContainText('2026')
+  const monthFilter = page.getByRole('button', { name: 'Ay filtresi' })
+  await expect(monthFilter).toContainText('Nis')
+  await monthFilter.click()
+  await expect(page.getByRole('checkbox', { name: 'Nis' })).toBeChecked()
+  await page.getByRole('button', { name: 'Gün filtresi' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Nis' })).toHaveCount(0)
+  await expect(page.getByRole('checkbox', { name: 'Tüm ay' })).toBeChecked()
   await expect(page.getByTestId('store-rankings-page')).toBeVisible()
   await expect(page.getByText('Top 100 kapsam')).toBeVisible()
   await expect(page.getByLabel('Sıralama güven özeti')).toContainText('Genel skor')
   await expect(page.getByLabel('Sıralama güven özeti')).toContainText('Canlı rapor')
   await expect(page.getByRole('heading', { name: 'Mağaza listesi' })).toBeVisible()
-  await expect(page.getByText('Mağaza skor')).toBeVisible()
-  await expect(page.locator('.store-rankings-scorebar [data-slot="progress"]').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Skor/ })).toBeVisible()
+  await expect(page.locator('.store-rankings-scorebar').first()).toBeVisible()
   await expect(page.getByText('Sinyal')).toHaveCount(0)
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
   await expect(page.getByRole('heading', { name: 'Personel listesi' })).toBeVisible()
   await expect(page.getByText('Store Personnel - 1').first()).toBeVisible()
-  await expect(page.getByText('Personel skor')).toBeVisible()
-  await expect(page.locator('.store-rankings-scorebar [data-slot="progress"]').first()).toBeVisible()
+  await expect(page.locator('.store-rankings-scorebar').first()).toBeVisible()
   await expect(page.getByText('Sinyal')).toHaveCount(0)
   await expect(page.getByText('Magaza ve personel rankingleri')).toHaveCount(0)
   await expect(page.getByText('Top 100 gorunumu')).toHaveCount(0)
@@ -1283,11 +1283,9 @@ test('store rankings personnel detail opens the selected personnel performance p
 
   await page.goto('/store/rankings')
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
-  await page.getByRole('button', { name: 'Store Personnel - 1' }).click()
-
-  const drawer = page.locator('.store-rankings-drawer')
-  await expect(drawer).toBeVisible()
-  await drawer.getByRole('button', { name: 'Detaya git' }).click()
+  const personnelRow = page.getByRole('row', { name: /Store Personnel - 1/ })
+  await personnelRow.getByRole('button', { name: 'Profile Git' }).click()
+  await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
 
   await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}\\?`))
   await expect.poll(() => new URL(page.url()).searchParams.get('mode')).toBe('live')
@@ -1377,9 +1375,9 @@ test('region manager rankings opens only in-region personnel profile actions', a
   await page.goto('/store/rankings')
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
 
-  await page.getByRole('button', { name: 'BM Region Personnel' }).click()
-  await expect(page.locator('.store-rankings-drawer')).toBeVisible()
-  await page.locator('.store-rankings-drawer').getByRole('button', { name: 'Detaya git' }).click()
+  const inScopeRow = page.getByRole('row', { name: /BM Region Personnel/ })
+  await inScopeRow.getByRole('button', { name: 'Profile Git' }).click()
+  await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
   await expect(page).toHaveURL(new RegExp(`/store/personnel/${demoEmployeeId}\\?`))
   await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
   const inScopeRequestCount = personnelPerformanceRequests.length
@@ -1387,11 +1385,10 @@ test('region manager rankings opens only in-region personnel profile actions', a
 
   await page.goto('/store/rankings')
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
-  await page.getByRole('button', { name: /Other Region Personnel/ }).click()
-  const outOfScopeDrawer = page.locator('.store-rankings-drawer')
-  await expect(outOfScopeDrawer).toBeVisible()
-  await expect(outOfScopeDrawer.getByText('Other Region Personnel')).toBeVisible()
-  await expect(outOfScopeDrawer.getByRole('button', { name: 'Detaya git' })).toHaveCount(0)
+  const outOfScopeRow = page.getByRole('row', { name: /Other Region Personnel/ })
+  await expect(outOfScopeRow).toBeVisible()
+  await expect(outOfScopeRow.getByRole('button', { name: 'Profile Git' })).toHaveCount(0)
+  await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
   await expect.poll(() => personnelPerformanceRequests.length).toBe(inScopeRequestCount)
 })
 
@@ -1507,8 +1504,10 @@ test('store personnel profile falls back when ranking period has no personnel da
 
   await page.goto('/store/rankings')
   await page.getByRole('tab', { name: 'Personel listesi' }).click()
-  await page.getByRole('button', { name: 'Store Personnel - 1' }).click()
-  await page.locator('.store-rankings-drawer').getByRole('button', { name: 'Detaya git' }).click()
+  await page
+    .getByRole('row', { name: /Store Personnel - 1/ })
+    .getByRole('button', { name: 'Profile Git' })
+    .click()
 
   await expect.poll(() =>
     personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-05-01'),
@@ -2032,13 +2031,11 @@ test('store rankings page switches to English copy and persists locale', async (
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
-  await page.getByRole('combobox', { name: 'Ranking period selection' }).click()
-  await expect(
-    page.getByRole('option', {
-      name: /Apr 1, 2026 - Apr 30, 2026/,
-    }),
-  ).toBeVisible()
-  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: 'Year filter' })).toContainText('2026')
+  const monthFilter = page.getByRole('button', { name: 'Month filter' })
+  await expect(monthFilter).toContainText('Apr')
+  await monthFilter.click()
+  await expect(page.getByRole('checkbox', { name: 'Apr' })).toBeChecked()
   await expect(page.getByTestId('store-rankings-page')).toBeVisible()
   await expect(page.getByText('Top 100 scope')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Store list' })).toBeVisible()
@@ -2067,20 +2064,16 @@ test('store rankings page switches to English copy and persists locale', async (
 
 test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
   await page.goto('/store/rankings')
-  const periodSelect = page.getByRole('combobox', { name: 'Sıralama dönem seçimi' })
-  await periodSelect.click()
-  await page.getByRole('option', { name: /1 Nis 2026 - 30 Nis 2026/ }).click()
-
-  await expect(
-    page.getByRole('option', {
-      name: /1 Nis 2026 - 30 Nis 2026/,
-    }),
-  ).toHaveCount(0)
-  await expect(periodSelect).toContainText(/1 Nis 2026 - 30 Nis 2026/)
+  await expect(page.getByRole('button', { name: 'Yıl filtresi' })).toContainText('2026')
+  await expect(page.getByRole('button', { name: 'Ay filtresi' })).toContainText('Nis')
+  await expect(page.getByRole('button', { name: 'Gün filtresi' })).toContainText('Tüm ay')
   await expect(page.getByText('Top 100 kapsam')).toBeVisible()
   await expect(
     page.getByText('Top 100 görünümünü, kendi mağaza ve personel konumunla birlikte takip et.'),
   ).toBeVisible()
+  await page.getByRole('button', { name: 'Gün filtresi' }).click()
+  await page.getByRole('checkbox', { name: '1', exact: true }).click()
+  await expect(page.getByText('Bu seçim için mağaza sıralaması yok.')).toBeVisible()
   await expect(page.getByText('Global liste Top 100 ozet; kendi konumun ayrica gorunur.')).toHaveCount(0)
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
@@ -2121,7 +2114,7 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
           ...rankingsPrivilegedDetailFixture.storeLeaderboard,
           items: ascendingTargetSort
             ? [rankingsPrivilegedLowHgStoreRow]
-            : [rankingsPrivilegedDetailStoreRow],
+            : [rankingsPrivilegedMissingChecklistStoreRow],
         },
       },
     })
@@ -2131,33 +2124,26 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
 
   await expect(page.getByRole('heading', { name: 'Türkiye Referansı' })).toBeVisible()
   await expect(page.getByLabel('Seçili kapsam referansı')).toContainText('Türkiye Referansı')
-  await expect(page.locator('.store-rankings-metric-sort-row')).not.toContainText('KPI')
+  const rankingTable = page.locator('.store-rankings-table')
+  await expect(rankingTable.locator('thead')).not.toContainText('KPI')
   await expect(page.locator('td[data-label="KPI özeti"]')).toHaveCount(0)
   await expect(page.locator('td[data-label="KPI summary"]')).toHaveCount(0)
-  await expect(page.locator('.store-rankings-metric-sort-row')).toContainText('BM Checklist')
-  await expect(page.locator('.store-rankings-metric-sort-row')).toContainText('VM Checklist')
-  await expect
-    .poll(() =>
-      page
-        .locator('.store-rankings-metric-sort-row')
-        .first()
-        .evaluate((element) =>
-          getComputedStyle(element).gridTemplateColumns.split(' ').filter(Boolean).length,
-        ),
-    )
-    .toBe(6)
-  await expect(page.locator('.store-rankings-metric-grid').first()).toContainText('371,09%')
-  await expect(page.locator('.store-rankings-metric-grid').first()).not.toContainText('371.088.457%')
+  await expect(rankingTable.locator('thead')).toContainText('BM Checklist')
+  await expect(rankingTable.locator('thead')).toContainText('VM Checklist')
+  await expect(rankingTable.locator('thead')).not.toContainText('CR')
+  await expect(rankingTable.locator('tbody')).toContainText('371,09%')
+  await expect(rankingTable.locator('tbody')).not.toContainText('371.088.457%')
+  await expect(rankingTable.locator('tbody')).toContainText('Yapılmadı')
 
   await page.locator('.store-rankings-sort-button', { hasText: 'HG%' }).click()
   await page.locator('.store-rankings-sort-button', { hasText: 'HG%' }).click()
 
-  await expect(page.getByRole('button', { name: 'High HG Store' })).toBeVisible()
+  await expect(page.getByText('High HG Store')).toBeVisible()
   await expect(page.getByText('Sıralama hazırlanıyor')).toHaveCount(0)
   await expect(page.getByText('Sıralama yüzeyi açılamadı')).toHaveCount(0)
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('TARGET_ACHIEVEMENT')
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('asc')
-  await expect(page.getByRole('button', { name: 'Low HG Store' })).toBeVisible()
+  await expect(page.getByText('Low HG Store')).toBeVisible()
 })
 
 test('store rankings removes signal chrome while preserving weighted score rows', async ({ page }) => {
@@ -2202,7 +2188,7 @@ test('store rankings removes signal chrome while preserving weighted score rows'
   await expect(rows.nth(1).locator('.store-rankings-scorebar')).toContainText('104,20')
   await expect(page.getByText('Sinyal')).toHaveCount(0)
 
-  await page.getByRole('button', { name: 'Weighted Score Leader' }).click()
+  await rows.nth(0).getByRole('button', { name: 'Detay aç' }).click()
 
   await expect(page.locator('.store-rankings-drawer')).toBeVisible()
   await expect(page.locator('.store-rankings-drawer')).not.toContainText('Detaya git')
@@ -4258,6 +4244,11 @@ const rankingsPrivilegedLowHgStoreRow = {
         }
       : metric,
   ),
+}
+
+const rankingsPrivilegedMissingChecklistStoreRow = {
+  ...rankingsPrivilegedDetailStoreRow,
+  metrics: rankingsPrivilegedDetailStoreRow.metrics.filter((metric) => metric.code !== 'BM_CHECKLIST'),
 }
 
 const scoreDisplayLeaderStoreRow = {

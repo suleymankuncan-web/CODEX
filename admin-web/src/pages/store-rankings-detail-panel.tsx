@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import type { TranslateFunction } from '../features/localization/dictionary'
-import type { PersonnelRankingRow, StoreRankingRow } from '../features/reports/api'
 import type { AppLocale } from '../lib/i18n'
 import {
   type RankingDetailSelection,
@@ -9,7 +8,6 @@ import {
   formatRank,
   formatRankBadge,
   getScoreFill,
-  personnelMetricCodes,
   storeMetricCodes,
 } from './store-rankings-page-model'
 import { MetricDetails } from './store-rankings-table'
@@ -25,23 +23,13 @@ export function RankingDetailDrawer(input: {
   locale: AppLocale
   t: TranslateFunction
   onClose: () => void
-  canOpenPersonnelProfile: (row: PersonnelRankingRow) => boolean
-  onOpenPersonnelProfile: (employeeId: string) => void
 }) {
   if (!input.selection) {
     return null
   }
 
   const row = input.selection.row
-  const isStore = input.selection.type === 'store'
-  const title = isStore
-    ? (row as StoreRankingRow).storeName ?? (row as StoreRankingRow).storeId
-    : (row as PersonnelRankingRow).displayName
-  const caption = isStore
-    ? input.t('storeRankings.storeDetailCaption')
-    : (row as PersonnelRankingRow).storeName ?? input.t('storeRankings.personnelDetailCaption')
-  const metricCodes = isStore ? storeMetricCodes : personnelMetricCodes
-  const personnelRow = !isStore ? (row as PersonnelRankingRow) : null
+  const title = row.storeName ?? row.storeId
 
   return (
     <>
@@ -60,20 +48,13 @@ export function RankingDetailDrawer(input: {
             <Button type="button" variant="outline" onClick={input.onClose}>
               {input.t('storeRankings.closeDetail')}
             </Button>
-            {personnelRow && input.canOpenPersonnelProfile(personnelRow) ? (
-              <Button
-                type="button"
-                variant="default"
-                onClick={() => input.onOpenPersonnelProfile(personnelRow.employeeId)}
-              >
-                {input.t('storeRankings.openPersonnelProfile')}
-              </Button>
-            ) : null}
             <StoreStatusBadge tone="neutral">{input.t('storeRankings.inlineDetail')}</StoreStatusBadge>
           </div>
           <div>
             <h2 className="tw:text-xl tw:font-semibold tw:text-foreground">{title}</h2>
-            <span className="tw:text-sm tw:text-muted-foreground">{caption}</span>
+            <span className="tw:text-sm tw:text-muted-foreground">
+              {input.t('storeRankings.storeDetailCaption')}
+            </span>
           </div>
         </div>
         <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-4 tw:overflow-y-auto tw:p-4">
@@ -81,15 +62,13 @@ export function RankingDetailDrawer(input: {
             className="tw:xl:grid-cols-3"
             items={[
               {
-                label: isStore ? input.t('storeRankings.storeScore') : input.t('storeRankings.personnelScore'),
+                label: input.t('storeRankings.storeScore'),
                 value: formatNumber(input.locale, input.t, row.scoreValue),
               },
               { label: input.t('storeRankings.turkeyRank'), value: formatRankBadge(input.t, row.rank) },
               {
-                label: personnelRow ? input.t('storeRankings.storeRank') : input.t('storeRankings.scope'),
-                value: personnelRow
-                  ? formatRank(input.t, personnelRow.storeRank, personnelRow.storePopulation)
-                  : formatRank(input.t, row.rank, row.population),
+                label: input.t('storeRankings.scope'),
+                value: formatRank(input.t, row.rank, row.population),
               },
             ]}
           />
@@ -101,7 +80,7 @@ export function RankingDetailDrawer(input: {
                 </h3>
                 <MetricDetails
                   metrics={row.metrics ?? []}
-                  metricCodes={metricCodes}
+                  metricCodes={storeMetricCodes}
                   locale={input.locale}
                   t={input.t}
                 />
@@ -131,11 +110,7 @@ export function RankingDetailDrawer(input: {
                 {input.t('storeRankings.coachingNote')}
               </h3>
               <p className="tw:mt-2 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-                {input.t(
-                  isStore
-                    ? 'storeRankings.storeDetailNote'
-                    : 'storeRankings.personnelDetailNote',
-                )}
+                {input.t('storeRankings.storeDetailNote')}
               </p>
             </StoreStackedRow>
           </StoreStackedList>

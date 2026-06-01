@@ -1,10 +1,11 @@
-import { useMemo, useReducer } from 'react'
+import type { ReactNode } from 'react'
+import { useReducer, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Search, Store, Trophy, UsersRound, X } from 'lucide-react'
+import { CalendarClock, CalendarDays, CalendarRange, Search, Store, Trophy, UserCheck, UsersRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -13,8 +14,8 @@ import {
   type PersonnelRankingRow,
   type RankingSummary,
 } from '../features/reports/api'
-import { formatDate, getErrorMessage } from '../lib/format'
-import type { AppLocale } from '../lib/i18n'
+import { getErrorMessage } from '../lib/format'
+import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import { RankingDetailDrawer } from './store-rankings-detail-panel'
 import {
@@ -23,7 +24,6 @@ import {
   type RankingSortKey,
   type SortableRankingRow,
   type StoreRankingsTextFilter,
-  allSelectValue,
   average,
   canUsePrivilegedFilters,
   canUseRankings,
@@ -36,7 +36,6 @@ import {
   getReferenceMetricValue,
   getVisibleWindow,
   initialStoreRankingsPageState,
-  latestPeriodSelectValue,
   personnelMetricCodes,
   storeMetricCodes,
   storeRankingsPageReducer,
@@ -71,6 +70,7 @@ export function StoreRankingsPage(input: {
     regionManagerUserId,
     regionId,
     storeId,
+    dayOfMonth,
     search,
     offset,
     activeList,
@@ -78,6 +78,7 @@ export function StoreRankingsPage(input: {
     sortDirection,
     selectedDetail,
   } = pageState
+  const unsupportedDailySelection = Boolean(dayOfMonth)
   const limit = 100
   const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
   const setFilter = (field: StoreRankingsTextFilter) => (value: string) => {
@@ -95,6 +96,7 @@ export function StoreRankingsPage(input: {
       privilegedSession ? regionId : '',
       privilegedSession ? storeId : '',
       privilegedSession ? search : '',
+      unsupportedDailySelection ? `day-${dayOfMonth}` : 'all-month',
       privilegedSession ? sortKey : 'score',
       privilegedSession ? sortDirection : 'desc',
       privilegedSession ? offset : 0,
@@ -112,7 +114,7 @@ export function StoreRankingsPage(input: {
         limit,
         offset: privilegedSession ? offset : 0,
       }),
-    enabled,
+    enabled: enabled && !unsupportedDailySelection,
     placeholderData: (previousData) => previousData,
     ...transientQueryRetryOptions,
   })
@@ -127,14 +129,23 @@ export function StoreRankingsPage(input: {
       ranking?.personnelLeaderboard.meta.total ?? 0,
     ) >
       offset + limit
-  const activePeriodOptions = useMemo(
-    () => ranking?.availablePeriods ?? [],
-    [ranking?.availablePeriods],
-  )
-  const storeRows = ranking?.storeLeaderboard.items ?? []
-  const personnelRows = ranking?.personnelLeaderboard.items ?? []
+  const storeRows = unsupportedDailySelection ? [] : ranking?.storeLeaderboard.items ?? []
+  const personnelRows = unsupportedDailySelection ? [] : ranking?.personnelLeaderboard.items ?? []
   const canOpenPersonnelProfile = (row: PersonnelRankingRow) =>
     canOpenPersonnelProfileFromRanking(input.authSummary, row)
+  const openPersonnelProfile = (employeeId: string) => {
+    const path = `/store/personnel/${encodeURIComponent(employeeId)}`
+    const params = new URLSearchParams()
+
+    if (ranking?.source.periodStart) {
+      params.set('mode', 'live')
+      params.set('periodType', 'monthly')
+      params.set('periodStart', ranking.source.periodStart)
+    }
+
+    const query = params.toString()
+    navigate(query ? `${path}?${query}` : path)
+  }
 
   if (!enabled) {
     return (
@@ -232,18 +243,15 @@ export function StoreRankingsPage(input: {
         isPrivileged={Boolean(isPrivileged)}
         periodStart={periodStart}
         regionManagerUserId={regionManagerUserId}
-        regionId={regionId}
-        storeId={storeId}
+        dayOfMonth={dayOfMonth}
         search={search}
         sortKey={sortKey}
         sortDirection={sortDirection}
         onPeriodStartChange={setFilter('periodStart')}
         onRegionManagerChange={setFilter('regionManagerUserId')}
-        onRegionChange={setFilter('regionId')}
-        onStoreChange={setFilter('storeId')}
+        onDayOfMonthChange={setFilter('dayOfMonth')}
         onSearchChange={setFilter('search')}
         onClearFilters={() => dispatchPageState({ type: 'clearFilters' })}
-        periodOptions={activePeriodOptions}
         locale={locale}
         t={t}
       />
@@ -269,11 +277,15 @@ export function StoreRankingsPage(input: {
         onActiveListChange={(nextList) =>
           dispatchPageState({ type: 'setActiveList', value: nextList })
         }
-        onOpenDetail={(value) => dispatchPageState({ type: 'setSelectedDetail', value })}
+        onOpenStoreDetail={(row) =>
+          dispatchPageState({ type: 'setSelectedDetail', value: { type: 'store', row } })
+        }
+        onOpenPersonnelProfile={openPersonnelProfile}
         onOffsetChange={(value) => dispatchPageState({ type: 'setOffset', value })}
         hasNextPage={Boolean(hasNextPage)}
         offset={offset}
         limit={limit}
+        forceEmpty={unsupportedDailySelection}
         locale={locale}
         t={t}
       />
@@ -283,20 +295,6 @@ export function StoreRankingsPage(input: {
         locale={locale}
         t={t}
         onClose={() => dispatchPageState({ type: 'setSelectedDetail', value: null })}
-        canOpenPersonnelProfile={canOpenPersonnelProfile}
-        onOpenPersonnelProfile={(employeeId) => {
-          const path = `/store/personnel/${encodeURIComponent(employeeId)}`
-          const params = new URLSearchParams()
-
-          if (ranking.source.periodStart) {
-            params.set('mode', 'live')
-            params.set('periodType', 'monthly')
-            params.set('periodStart', ranking.source.periodStart)
-          }
-
-          const query = params.toString()
-          navigate(query ? `${path}?${query}` : path)
-        }}
       />
     </StoreSurfacePage>
   )
@@ -407,26 +405,39 @@ function RankingControls(input: {
   isPrivileged: boolean
   periodStart: string
   regionManagerUserId: string
-  regionId: string
-  storeId: string
+  dayOfMonth: string
   search: string
   sortKey: RankingSortKey
   sortDirection: RankingSortDirection
-  periodOptions: RankingSummary['availablePeriods']
   onPeriodStartChange: (value: string) => void
   onRegionManagerChange: (value: string) => void
-  onRegionChange: (value: string) => void
-  onStoreChange: (value: string) => void
+  onDayOfMonthChange: (value: string) => void
   onSearchChange: (value: string) => void
   onClearFilters: () => void
   locale: AppLocale
   t: TranslateFunction
 }) {
+  const [openFilter, setOpenFilter] = useState<string | null>(null)
+  const activePeriod = parseRankingPeriod(input.periodStart || input.ranking.source.periodStart)
+  const selectedYear = activePeriod?.year ?? new Date().getFullYear()
+  const selectedMonth = activePeriod?.month ?? new Date().getMonth() + 1
+  const yearOptions = getRankingYearOptions(input.ranking, selectedYear)
+  const dayOptions = Array.from(
+    { length: getDaysInMonth(selectedYear, selectedMonth) },
+    (_, index) => String(index + 1),
+  )
+  const setPeriod = (next: { year?: number; month?: number }) => {
+    input.onPeriodStartChange(
+      formatPeriodStart(next.year ?? selectedYear, next.month ?? selectedMonth),
+    )
+    input.onDayOfMonthChange('')
+  }
+
   return (
     <StoreSectionCard
       ariaLabel={input.t('storeRankings.filtersEyebrow')}
       title={input.t('storeRankings.filtersEyebrow')}
-      description={input.isPrivileged ? input.t('storeRankings.fullDetailAccess') : input.t('storeRankings.summaryAccess')}
+      description={input.t('storeRankings.filterHelp')}
       badge={{
         label:
           input.sortKey === 'score'
@@ -435,9 +446,16 @@ function RankingControls(input: {
         tone: input.sortDirection === 'desc' ? 'neutral' : 'accent',
       }}
     >
-      <div className="tw:grid tw:gap-3 tw:lg:grid-cols-2 tw:2xl:grid-cols-4" role="group">
+      <div
+        className={`store-rankings-filter-grid tw:grid tw:gap-3 ${
+          input.isPrivileged
+            ? 'tw:lg:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(130px,150px))_auto]'
+            : 'tw:lg:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(130px,150px))_auto]'
+        }`}
+        role="group"
+      >
         <label className="tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+          <span className="tw:text-xs tw:font-normal tw:text-muted-foreground">
             {input.t('storeRankings.search')}
           </span>
           <span className="tw:relative tw:flex tw:items-center">
@@ -457,118 +475,185 @@ function RankingControls(input: {
           </span>
         </label>
 
-        <RankingSelectField
-          label={input.t('storeRankings.period')}
-          ariaLabel={input.t('storeRankings.periodSelectLabel')}
-          value={input.periodStart || latestPeriodSelectValue}
-          onValueChange={(value) =>
-            input.onPeriodStartChange(value === latestPeriodSelectValue ? '' : value)
-          }
-          options={[
-            { value: latestPeriodSelectValue, label: input.t('common.latestMonthlyData') },
-            ...input.periodOptions.map((period) => ({
-              value: period.periodStart,
-              label: `${formatDate(period.periodStart, input.locale)} - ${formatDate(
-                period.periodEnd,
-                input.locale,
-              )}`,
-            })),
-          ]}
+        <RankingCheckboxFilter
+          label={input.t('storeRankings.year')}
+          ariaLabel={input.t('storeRankings.yearFilterLabel')}
+          icon={<CalendarDays data-icon="inline-start" aria-hidden="true" />}
+          summary={String(selectedYear)}
+          open={openFilter === 'year'}
+          onOpenChange={(open) => setOpenFilter(open ? 'year' : null)}
+          options={yearOptions.map((year) => ({
+            value: String(year),
+            label: String(year),
+            checked: selectedYear === year,
+            onCheckedChange: (checked) => {
+              if (checked) setPeriod({ year })
+            },
+          }))}
         />
 
-      {input.isPrivileged ? (
-        <>
-          <RankingSelectField
+        <RankingCheckboxFilter
+          label={input.t('storeRankings.month')}
+          ariaLabel={input.t('storeRankings.monthFilterLabel')}
+          icon={<CalendarRange data-icon="inline-start" aria-hidden="true" />}
+          summary={formatMonthLabel(input.locale, selectedMonth)}
+          open={openFilter === 'month'}
+          onOpenChange={(open) => setOpenFilter(open ? 'month' : null)}
+          options={Array.from({ length: 12 }, (_, index) => {
+            const month = index + 1
+
+            return {
+              value: String(month),
+              label: formatMonthLabel(input.locale, month),
+              checked: selectedMonth === month,
+              onCheckedChange: (checked: boolean) => {
+                if (checked) setPeriod({ month })
+              },
+            }
+          })}
+        />
+
+        <RankingCheckboxFilter
+          label={input.t('storeRankings.day')}
+          ariaLabel={input.t('storeRankings.dayFilterLabel')}
+          icon={<CalendarClock data-icon="inline-start" aria-hidden="true" />}
+          summary={input.dayOfMonth || input.t('storeRankings.allMonth')}
+          open={openFilter === 'day'}
+          onOpenChange={(open) => setOpenFilter(open ? 'day' : null)}
+          options={[
+            {
+              value: 'all',
+              label: input.t('storeRankings.allMonth'),
+              checked: !input.dayOfMonth,
+              onCheckedChange: (checked) => {
+                if (checked) input.onDayOfMonthChange('')
+              },
+              wide: true,
+            },
+            ...dayOptions.map((day) => ({
+              value: day,
+              label: day,
+              checked: input.dayOfMonth === day,
+              onCheckedChange: (checked: boolean) => {
+                if (checked) input.onDayOfMonthChange(day)
+              },
+            })),
+          ]}
+          gridClassName="tw:grid-cols-7"
+        />
+
+        {input.isPrivileged ? (
+          <RankingCheckboxFilter
             label={input.t('storeRankings.regionManager')}
             ariaLabel={input.t('storeRankings.regionManagerFilterLabel')}
-            value={input.regionManagerUserId || allSelectValue}
-            onValueChange={(value) =>
-              input.onRegionManagerChange(value === allSelectValue ? '' : value)
+            icon={<UserCheck data-icon="inline-start" aria-hidden="true" />}
+            summary={
+              input.ranking.filters.regionManagers.find((option) => option.id === input.regionManagerUserId)?.label ??
+              input.t('storeRankings.regionManager')
             }
-            options={[
-              { value: allSelectValue, label: input.t('storeRankings.allRegionManagers') },
-              ...input.ranking.filters.regionManagers.map((option) => ({
-                value: option.id,
-                label: option.label,
-              })),
-            ]}
+            open={openFilter === 'region-manager'}
+            onOpenChange={(open) => setOpenFilter(open ? 'region-manager' : null)}
+            options={input.ranking.filters.regionManagers.map((option) => ({
+              value: option.id,
+              label: option.label,
+              checked: input.regionManagerUserId === option.id,
+              onCheckedChange: (checked) => {
+                input.onRegionManagerChange(checked ? option.id : '')
+              },
+            }))}
           />
-          <RankingSelectField
-            label={input.t('storeRankings.region')}
-            ariaLabel={input.t('storeRankings.regionFilterLabel')}
-            value={input.regionId || allSelectValue}
-            onValueChange={(value) =>
-              input.onRegionChange(value === allSelectValue ? '' : value)
-            }
-            options={[
-              { value: allSelectValue, label: input.t('storeRankings.allRegions') },
-              ...input.ranking.filters.regions.map((option) => ({
-                value: option.id,
-                label: option.label,
-              })),
-            ]}
-          />
-          <RankingSelectField
-            label={input.t('storeRankings.store')}
-            ariaLabel={input.t('storeRankings.storeFilterLabel')}
-            value={input.storeId || allSelectValue}
-            onValueChange={(value) =>
-              input.onStoreChange(value === allSelectValue ? '' : value)
-            }
-            options={[
-              { value: allSelectValue, label: input.t('storeRankings.allStores') },
-              ...input.ranking.filters.stores.map((option) => ({
-                value: option.id,
-                label: option.label,
-              })),
-            ]}
-          />
-          <div className="tw:flex tw:flex-col tw:justify-end">
-            <Button type="button" variant="outline" onClick={input.onClearFilters}>
-              <X size={15} aria-hidden="true" />
-              {input.t('storeRankings.clearFilters')}
-            </Button>
-          </div>
-        </>
-      ) : null}
+        ) : null}
 
-        <div className="tw:flex tw:flex-col tw:justify-end tw:gap-2">
-        <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.t('storeRankings.sort')}</span>
-        <div className="tw:inline-flex tw:min-h-9 tw:items-center tw:rounded-lg tw:border tw:border-border tw:bg-card/80 tw:px-3 tw:text-sm tw:font-medium">
-          {input.sortKey === 'score'
-            ? input.t('storeRankings.generalScore')
-            : getMetricLabel(input.t, input.sortKey)}
-          {input.sortDirection === 'desc' ? ' ↓' : ' ↑'}
+        <div className="tw:flex tw:flex-col tw:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setOpenFilter(null)
+              input.onClearFilters()
+              input.onPeriodStartChange('')
+              input.onDayOfMonthChange('')
+            }}
+          >
+            <X data-icon="inline-start" aria-hidden="true" />
+            {input.t('storeRankings.clearFilters')}
+          </Button>
         </div>
       </div>
-        </div>
     </StoreSectionCard>
   )
 }
 
-function RankingSelectField(input: {
+function RankingCheckboxFilter(input: {
   label: string
   ariaLabel: string
-  value: string
-  onValueChange: (value: string) => void
-  options: Array<{ value: string; label: string }>
+  summary: string
+  icon: ReactNode
+  options: Array<{
+    value: string
+    label: string
+    checked: boolean
+    onCheckedChange: (checked: boolean) => void
+    wide?: boolean
+  }>
+  disabled?: boolean
+  gridClassName?: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }) {
   return (
-    <label className="tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
-      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
-      <Select value={input.value} onValueChange={input.onValueChange}>
-        <SelectTrigger aria-label={input.ariaLabel} className="tw:w-full tw:min-w-0">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {input.options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </label>
+    <div className="tw:relative tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
+      <span className="tw:text-xs tw:font-normal tw:text-muted-foreground">{input.label}</span>
+      <details
+        className="store-rankings-filter-menu tw:relative"
+        data-disabled={input.disabled ? 'true' : undefined}
+        open={input.open}
+      >
+        <summary
+          aria-label={input.ariaLabel}
+          className="tw:flex tw:min-h-10 tw:cursor-pointer tw:list-none tw:items-center tw:gap-2 tw:rounded-md tw:border tw:bg-background tw:px-3 tw:text-sm tw:font-normal tw:shadow-xs marker:tw:hidden"
+          onClick={(event) => {
+            event.preventDefault()
+
+            if (!input.disabled) {
+              input.onOpenChange(!input.open)
+            }
+          }}
+          role="button"
+        >
+          {input.icon}
+          <strong className="tw:min-w-0 tw:flex-1 tw:truncate tw:text-sm tw:font-semibold">
+            {input.summary}
+          </strong>
+        </summary>
+        <div
+          className="tw:absolute tw:left-0 tw:top-[calc(100%+0.5rem)] tw:z-30 tw:grid tw:min-w-56 tw:gap-2 tw:rounded-xl tw:border tw:bg-popover tw:p-3 tw:text-popover-foreground tw:shadow-lg"
+        >
+          <div className={`tw:grid tw:gap-2 ${input.gridClassName ?? 'tw:grid-cols-1'}`}>
+            {input.options.map((option) => (
+              <label
+                className={`tw:flex tw:min-h-9 tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:bg-card/80 tw:px-3 tw:text-sm tw:font-medium ${
+                  option.wide ? 'tw:col-span-full' : ''
+                }`}
+                key={option.value}
+              >
+                <Checkbox
+                  checked={option.checked}
+                  disabled={input.disabled}
+                  onCheckedChange={(checked) => {
+                    option.onCheckedChange(checked === true)
+                    if (checked === true) {
+                      input.onOpenChange(false)
+                    }
+                  }}
+                />
+                <span className="tw:truncate">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </details>
+    </div>
   )
 }
 
@@ -620,5 +705,60 @@ function RankingReferenceBar(input: {
         className="tw:xl:grid-cols-4"
       />
     </StoreSectionCard>
+  )
+}
+
+function parseRankingPeriod(value: string | null | undefined) {
+  const match = /^(\d{4})-(\d{2})-\d{2}/.exec(value ?? '')
+
+  if (!match) {
+    return null
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+
+  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
+    return null
+  }
+
+  return { year, month }
+}
+
+function formatPeriodStart(year: number, month: number) {
+  return `${year}-${String(month).padStart(2, '0')}-01`
+}
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month, 0).getDate()
+}
+
+function getRankingYearOptions(ranking: RankingSummary, selectedYear: number) {
+  const currentYear = new Date().getFullYear()
+  const years = new Set<number>([
+    currentYear - 2,
+    currentYear - 1,
+    currentYear,
+    selectedYear,
+  ])
+
+  for (const period of ranking.availablePeriods ?? []) {
+    const parsed = parseRankingPeriod(period.periodStart)
+    if (parsed) {
+      years.add(parsed.year)
+    }
+  }
+
+  const sourcePeriod = parseRankingPeriod(ranking.source.periodStart)
+  if (sourcePeriod) {
+    years.add(sourcePeriod.year)
+  }
+
+  return Array.from(years).sort((left, right) => left - right)
+}
+
+function formatMonthLabel(locale: AppLocale, month: number) {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'short' }).format(
+    new Date(2026, month - 1, 1),
   )
 }
