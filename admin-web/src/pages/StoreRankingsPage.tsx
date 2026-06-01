@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useReducer, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { CalendarClock, CalendarDays, CalendarRange, Search, Store, Trophy, UserCheck, UsersRound, X } from 'lucide-react'
+import { CalendarCheck, CalendarClock, CalendarDays, CalendarRange, LineChart, ListFilter, Search, Store, Trophy, UserCheck, UsersRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
@@ -28,7 +28,6 @@ import {
   canUsePrivilegedFilters,
   canUseRankings,
   formatMetricValue,
-  formatMode,
   formatNumber,
   formatPeriod,
   getLatestRankingFromCache,
@@ -44,12 +43,7 @@ import { canOpenPersonnelProfileFromRanking } from './store-rankings-scope'
 import { RankingWorkspace } from './store-rankings-table'
 import {
   StoreErrorState,
-  StoreInfoGrid,
   StoreLoadingState,
-  StoreMetricCard,
-  StoreMetricGrid,
-  StoreSectionCard,
-  StoreSurfaceHeader,
   StoreSurfacePage,
 } from './store-surface-primitives'
 
@@ -197,31 +191,13 @@ export function StoreRankingsPage(input: {
       className="store-rankings-surface"
       testId="store-rankings-page"
     >
-      <StoreSurfaceHeader
-        titleId="rankings-heading"
-        eyebrow={t('storeRankings.activePeriod')}
-        title={t('storeRankings.pageTitle')}
-        description={
-          isPrivileged
-            ? t('storeRankings.pageSubtitle.privileged')
-            : t('storeRankings.pageSubtitle.scoped')
-        }
-        badges={[
-          {
-            label: isPrivileged ? t('storeRankings.fullScope') : t('storeRankings.top100Scope'),
-            tone: 'accent',
-          },
-          { label: formatMode(t, ranking), tone: 'neutral' },
-          {
-            label: canSeeGlobalDetails
-              ? t('storeRankings.fullDetailAccess')
-              : t('storeRankings.summaryAccess'),
-            tone: canSeeGlobalDetails ? 'calm' : 'warning',
-          },
-          ...(rankingsQuery.isFetching
-            ? [{ label: t('storeRankings.loadingTitle'), tone: 'neutral' as const }]
-            : []),
-        ]}
+      <RankingHeroHeader
+        ranking={ranking}
+        isPrivileged={Boolean(isPrivileged)}
+        canSeeGlobalDetails={canSeeGlobalDetails}
+        isFetching={rankingsQuery.isFetching}
+        locale={locale}
+        t={t}
       />
 
       <RankingSummaryStrip
@@ -230,14 +206,6 @@ export function StoreRankingsPage(input: {
         t={t}
         offset={offset}
         activeList={activeList}
-      />
-
-      <RankingTrustBand
-        ranking={ranking}
-        isPrivileged={Boolean(isPrivileged)}
-        canSeeGlobalDetails={canSeeGlobalDetails}
-        locale={locale}
-        t={t}
       />
 
       <RankingControls
@@ -301,48 +269,47 @@ export function StoreRankingsPage(input: {
   )
 }
 
-function RankingTrustBand(input: {
+function RankingHeroHeader(input: {
   ranking: RankingSummary
   isPrivileged: boolean
   canSeeGlobalDetails: boolean
+  isFetching: boolean
   locale: AppLocale
   t: TranslateFunction
 }) {
   return (
-    <StoreSectionCard
-      ariaLabel={input.t('storeRankings.trustTitle')}
-      title={input.t('storeRankings.trustTitle')}
-      description={input.t('storeRankings.trustScoreNote')}
-      badge={{
-        label: input.canSeeGlobalDetails
-          ? input.t('storeRankings.fullDetailAccess')
-          : input.t('storeRankings.summaryAccess'),
-        tone: input.canSeeGlobalDetails ? 'calm' : 'warning',
-      }}
-    >
-      <StoreInfoGrid
-        items={[
-          {
-            label: input.t('storeRankings.trustPeriodLabel'),
-            value: formatPeriod(input.ranking.source, input.locale, input.t),
-          },
-          {
-            label: input.t('storeRankings.trustScopeLabel'),
-            value: input.isPrivileged
-              ? input.t('storeRankings.trustScopeValue.full')
-              : input.t('storeRankings.trustScopeValue.scoped'),
-          },
-          {
-            label: input.t('storeRankings.trustScoreLabel'),
-            value: input.t('storeRankings.trustScoreValue'),
-          },
-          {
-            label: input.t('storeRankings.trustSourceLabel'),
-            value: input.t('storeRankings.trustSourceValue'),
-          },
-        ]}
-      />
-    </StoreSectionCard>
+    <header className="store-rankings-topbar">
+      <div className="store-rankings-title-block">
+        <span className="store-rankings-eyebrow">
+          <Trophy aria-hidden="true" />
+          {input.t('storeRankings.heroEyebrow')}
+        </span>
+        <h1 id="rankings-heading">{input.t('storeRankings.pageTitle')}</h1>
+        <p>
+          {input.isPrivileged
+            ? input.t('storeRankings.pageSubtitle.privileged')
+            : input.t('storeRankings.pageSubtitle.scoped')}
+        </p>
+      </div>
+      <div className="store-rankings-top-actions" aria-label={input.t('storeRankings.summaryPanelLabel')}>
+        <span className="store-rankings-control-chip">
+          <CalendarDays aria-hidden="true" />
+          {formatPeriod(input.ranking.source, input.locale, input.t)}
+        </span>
+        <span className="store-rankings-control-chip">
+          <Store aria-hidden="true" />
+          {input.isPrivileged ? input.t('storeRankings.fullScope') : input.t('storeRankings.top100Scope')}
+        </span>
+        <span className={`store-rankings-icon-chip ${input.canSeeGlobalDetails ? 'is-calm' : 'is-warning'}`}>
+          {input.canSeeGlobalDetails
+            ? input.t('storeRankings.fullDetailAccess')
+            : input.t('storeRankings.summaryAccess')}
+        </span>
+        {input.isFetching ? (
+          <span className="store-rankings-icon-chip">{input.t('storeRankings.loadingTitle')}</span>
+        ) : null}
+      </div>
+    </header>
   )
 }
 
@@ -363,45 +330,65 @@ function RankingSummaryStrip(input: {
       : input.ranking.personnelLeaderboard.items.length
 
   return (
-    <StoreMetricGrid ariaLabel={input.t('storeRankings.summaryPanelLabel')}>
-      <StoreMetricCard
-        icon={<Trophy size={17} />}
-        title={input.t('storeRankings.activePeriod')}
+    <section className="store-rankings-summary-grid" aria-label={input.t('storeRankings.summaryPanelLabel')}>
+      <RankingMetricCard
+        icon={<CalendarCheck aria-hidden="true" />}
+        label={input.t('storeRankings.activePeriod')}
         value={formatPeriod(input.ranking.source, input.locale, input.t)}
-        note={
+        badge={
           input.ranking.source.periodType === 'daily'
             ? input.t('storeRankings.currentDailyView')
             : input.t('storeRankings.currentMonthlyView')
         }
-        tone="accent"
+        tone="plum"
       />
-      <StoreMetricCard
-        icon={<Store size={17} />}
-        title={input.t('storeRankings.storeScope')}
+      <RankingMetricCard
+        icon={<Store aria-hidden="true" />}
+        label={input.t('storeRankings.storeScope')}
         value={formatNumber(input.locale, input.t, input.ranking.storeLeaderboard.meta.total)}
-        note={input.t('common.storePopulation', {
-          count: input.ranking.storeLeaderboard.meta.total,
-        })}
-        tone="neutral"
+        badge={input.t('storeRankings.store')}
+        tone="aqua"
       />
-      <StoreMetricCard
-        icon={<UsersRound size={17} />}
-        title={input.t('storeRankings.personnelScope')}
+      <RankingMetricCard
+        icon={<UsersRound aria-hidden="true" />}
+        label={input.t('storeRankings.personnelScope')}
         value={formatNumber(input.locale, input.t, input.ranking.personnelLeaderboard.meta.total)}
-        note={
-          input.ranking.access.globalMode === 'full'
-            ? input.t('storeRankings.allPersonnelAccess')
-            : input.t('storeRankings.topPersonnelAccess')
-        }
-        tone="neutral"
+        badge={input.t('storeRankings.personnel')}
+        tone="blue"
       />
-      <StoreMetricCard
-        title={input.t('storeRankings.listingWindow')}
+      <RankingMetricCard
+        icon={<ListFilter aria-hidden="true" />}
+        label={input.t('storeRankings.listingWindow')}
         value={getVisibleWindow(activeMeta.total, input.offset, activeCount, input.t)}
-        note={input.t('storeRankings.pageWindowNote')}
-        tone="calm"
+        badge={input.t('storeRankings.top100View')}
+        tone="warning"
       />
-    </StoreMetricGrid>
+    </section>
+  )
+}
+
+function RankingMetricCard(input: {
+  icon: ReactNode
+  label: string
+  value: string
+  badge: string
+  tone: 'plum' | 'aqua' | 'blue' | 'warning'
+}) {
+  return (
+    <article className="store-rankings-metric-card">
+      <div className="store-rankings-metric-head">
+        <span className={`store-rankings-icon-tile store-rankings-tile-${input.tone}`}>
+          {input.icon}
+        </span>
+        <span className={`store-rankings-badge store-rankings-badge-${input.tone}`}>
+          {input.badge}
+        </span>
+      </div>
+      <div>
+        <div className="store-rankings-metric-label">{input.label}</div>
+        <div className="store-rankings-metric-value">{input.value}</div>
+      </div>
+    </article>
   )
 }
 
@@ -436,37 +423,27 @@ function RankingControls(input: {
   }
 
   return (
-    <StoreSectionCard
-      ariaLabel={input.t('storeRankings.filtersEyebrow')}
-      title={input.t('storeRankings.filtersEyebrow')}
-      description={input.t('storeRankings.filterHelp')}
-      badge={{
-        label:
-          input.sortKey === 'score'
-            ? input.t('storeRankings.generalScore')
-            : getMetricLabel(input.t, input.sortKey),
-        tone: input.sortDirection === 'desc' ? 'neutral' : 'accent',
-      }}
+    <section
+      aria-label={input.t('storeRankings.filtersEyebrow')}
+      className="store-rankings-filter-shell"
     >
       <div
-        className={`store-rankings-filter-grid tw:grid tw:gap-3 ${
+        className={`store-rankings-filter-grid ${
           input.isPrivileged
-            ? 'tw:lg:grid-cols-[minmax(180px,1fr)_repeat(4,minmax(130px,150px))_auto]'
-            : 'tw:lg:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(130px,150px))_auto]'
+            ? 'store-rankings-filter-grid-privileged'
+            : 'store-rankings-filter-grid-scoped'
         }`}
         role="group"
       >
-        <label className="tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
-          <span className="tw:text-xs tw:font-normal tw:text-muted-foreground">
+        <label className="store-rankings-field store-rankings-search-field">
+          <span>
             {input.t('storeRankings.search')}
           </span>
-          <span className="tw:relative tw:flex tw:items-center">
+          <span className="store-rankings-input-shell">
             <Search
-              className="tw:pointer-events-none tw:absolute tw:left-3 tw:size-4 tw:text-muted-foreground"
               aria-hidden="true"
             />
             <Input
-              className="tw:pl-9"
               value={input.search}
               onChange={(event) => input.onSearchChange(event.target.value)}
               placeholder={input.t('storeRankings.searchPlaceholder')}
@@ -544,7 +521,7 @@ function RankingControls(input: {
               },
             })),
           ]}
-          gridClassName="tw:grid-cols-7"
+          gridClassName="store-rankings-date-grid-days"
         />
 
         {input.isPrivileged ? (
@@ -573,6 +550,7 @@ function RankingControls(input: {
           <Button
             type="button"
             variant="outline"
+            className="store-rankings-ghost-button"
             onClick={() => {
               setOpenFilter(null)
               input.onClearFilters()
@@ -585,7 +563,7 @@ function RankingControls(input: {
           </Button>
         </div>
       </div>
-    </StoreSectionCard>
+    </section>
   )
 }
 
@@ -607,16 +585,16 @@ function RankingCheckboxFilter(input: {
   onOpenChange: (open: boolean) => void
 }) {
   return (
-    <div className="tw:relative tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
-      <span className="tw:text-xs tw:font-normal tw:text-muted-foreground">{input.label}</span>
+    <div className="store-rankings-field">
+      <span>{input.label}</span>
       <details
-        className="store-rankings-filter-menu tw:relative"
+        className="store-rankings-filter-menu"
         data-disabled={input.disabled ? 'true' : undefined}
         open={input.open}
       >
         <summary
           aria-label={input.ariaLabel}
-          className="tw:flex tw:min-h-10 tw:cursor-pointer tw:list-none tw:items-center tw:gap-2 tw:rounded-md tw:border tw:bg-background tw:px-3 tw:text-sm tw:font-normal tw:shadow-xs marker:tw:hidden"
+          className="store-rankings-date-box"
           onClick={(event) => {
             event.preventDefault()
 
@@ -627,18 +605,18 @@ function RankingCheckboxFilter(input: {
           role="button"
         >
           {input.icon}
-          <strong className="tw:min-w-0 tw:flex-1 tw:truncate tw:text-sm tw:font-semibold">
+          <strong>
             {input.summary}
           </strong>
         </summary>
         <div
-          className="tw:absolute tw:left-0 tw:top-[calc(100%+0.5rem)] tw:z-30 tw:grid tw:min-w-56 tw:gap-2 tw:rounded-xl tw:border tw:bg-popover tw:p-3 tw:text-popover-foreground tw:shadow-lg"
+          className="store-rankings-date-menu"
         >
-          <div className={`tw:grid tw:gap-2 ${input.gridClassName ?? 'tw:grid-cols-1'}`}>
+          <div className={`store-rankings-date-grid ${input.gridClassName ?? ''}`}>
             {input.options.map((option) => (
               <label
-                className={`tw:flex tw:min-h-9 tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:bg-card/80 tw:px-3 tw:text-sm tw:font-medium ${
-                  option.wide ? 'tw:col-span-full' : ''
+                className={`store-rankings-check-choice ${
+                  option.wide ? 'store-rankings-check-choice-wide' : ''
                 }`}
                 key={option.value}
               >
@@ -647,12 +625,12 @@ function RankingCheckboxFilter(input: {
                   disabled={input.disabled}
                   onCheckedChange={(checked) => {
                     option.onCheckedChange(checked === true)
-                    if (checked === true) {
+                    if (!input.disabled) {
                       input.onOpenChange(false)
                     }
                   }}
                 />
-                <span className="tw:truncate">{option.label}</span>
+                <span>{option.label}</span>
               </label>
             ))}
           </div>
@@ -674,42 +652,53 @@ function RankingReferenceBar(input: {
     input.activeList === 'stores'
       ? input.ranking.reference?.store
       : input.ranking.reference?.personnel
+  const referenceLabel =
+    input.activeList === 'stores'
+      ? input.t('storeRankings.storeList')
+      : input.t('storeRankings.personnelList')
 
   return (
-    <StoreSectionCard
-      ariaLabel={input.t('storeRankings.referenceLabel')}
-      title={input.t('storeRankings.turkeyReference')}
-      description={
-        input.activeList === 'stores'
-          ? input.t('storeRankings.storeList')
-          : input.t('storeRankings.personnelList')
-      }
-      badge={{ label: input.t('storeRankings.trustScoreValue'), tone: 'accent' }}
+    <section
+      className="store-rankings-reference-strip"
+      aria-label={input.t('storeRankings.referenceLabel')}
     >
-      <StoreInfoGrid
-        items={[
-          {
-            label: input.t('storeRankings.averageScore'),
-            value: formatNumber(
-              input.locale,
-              input.t,
-              reference?.averageScore ?? average(input.rows.map((row) => row.scoreValue)),
-            ),
-            tone: 'accent',
-          },
-          ...metricCodes.map((code) => ({
-            label: getMetricLabel(input.t, code),
-            value: formatMetricValue(
-              input.locale,
-              input.t,
-              getReferenceMetricValue(reference, input.rows, code),
-              code,
-            ),
-          })),
-        ]}
-        className="tw:xl:grid-cols-4"
+      <div className="store-rankings-reference-title">
+        <LineChart aria-hidden="true" />
+        <div>
+          <h2>{input.t('storeRankings.turkeyReference')}</h2>
+          <strong>{referenceLabel}</strong>
+        </div>
+      </div>
+      <RankingReferenceItem
+        label={input.t('storeRankings.averageScore')}
+        value={formatNumber(
+          input.locale,
+          input.t,
+          reference?.averageScore ?? average(input.rows.map((row) => row.scoreValue)),
+        )}
       />
-    </StoreSectionCard>
+      {metricCodes.map((code) => (
+        <RankingReferenceItem
+          key={code}
+          label={getMetricLabel(input.t, code)}
+          value={formatMetricValue(
+            input.locale,
+            input.t,
+            getReferenceMetricValue(reference, input.rows, code),
+            code,
+          )}
+        />
+      ))}
+    </section>
+  )
+}
+
+function RankingReferenceItem(input: { label: string; value: string }) {
+  return (
+    <div className="store-rankings-reference-item">
+      <span>{input.label}</span>
+      <strong>{input.value}</strong>
+    </div>
   )
 }
 

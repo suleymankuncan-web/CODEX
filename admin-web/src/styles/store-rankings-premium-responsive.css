@@ -1,0 +1,244 @@
+@media (max-width: 1180px) {
+  .store-rankings-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .store-rankings-filter-grid-privileged,
+  .store-rankings-filter-grid-scoped {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .store-rankings-reference-strip {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .store-rankings-reference-title {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .store-rankings-surface {
+    gap: 12px;
+  }
+
+  .store-rankings-topbar {
+    display: grid;
+    gap: 14px;
+  }
+
+  .store-rankings-top-actions {
+    justify-content: flex-start;
+  }
+
+  .store-rankings-title-block h1 {
+    font-size: 34px;
+  }
+
+  .store-rankings-title-block p {
+    font-size: 14px;
+  }
+
+  .store-rankings-filter-grid-privileged,
+  .store-rankings-filter-grid-scoped,
+  .store-rankings-reference-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .store-rankings-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .store-rankings-metric-card {
+    min-height: 106px;
+    padding: 12px;
+  }
+
+  .store-rankings-metric-head {
+    gap: 8px;
+  }
+
+  .store-rankings-metric-card .store-rankings-badge {
+    max-width: 112px;
+    overflow: hidden;
+    padding: 0 7px;
+    font-size: 10px;
+    text-overflow: ellipsis;
+  }
+
+  .store-rankings-metric-value {
+    font-size: 22px;
+  }
+
+  .store-rankings-tabs-card {
+    overflow: hidden;
+  }
+
+  .store-rankings-tab {
+    min-height: 40px;
+    font-size: 12px;
+  }
+
+  .store-rankings-leaderboard-header {
+    display: grid;
+  }
+
+  .store-rankings-table-wrap {
+    overflow: visible;
+  }
+
+  .store-rankings-table,
+  .store-rankings-table thead,
+  .store-rankings-table tbody,
+  .store-rankings-table tr,
+  .store-rankings-table th,
+  .store-rankings-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .store-rankings-table colgroup,
+  .store-rankings-table thead {
+    display: none;
+  }
+
+  .store-rankings-table tbody {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .store-rankings-table tbody tr {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 8px 12px;
+    border: 1px solid var(--rankings-line);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.76);
+    padding: 12px;
+  }
+
+  .store-rankings-table tbody tr.store-rankings-own-row {
+    border-color: rgba(118, 80, 232, 0.24);
+    background:
+      linear-gradient(135deg, rgba(118, 80, 232, 0.08), rgba(34, 199, 214, 0.05)),
+      rgba(255, 255, 255, 0.78);
+    box-shadow: inset 3px 0 0 var(--rankings-plum);
+  }
+
+  .store-rankings-table td {
+    height: auto;
+    border: 0;
+    padding: 0;
+    text-align: left;
+  }
+
+  .store-rankings-table td[data-label='Mağaza'],
+  .store-rankings-table td[data-label='Personel'] {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .store-rankings-table td[data-label='Sıra'] {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .store-rankings-table td[data-label='Mağaza skor'],
+  .store-rankings-table td[data-label='Personel skor'] {
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(88, 100, 146, 0.1);
+    padding-top: 8px;
+  }
+
+  .store-rankings-table td[data-label='UPT'],
+  .store-rankings-table td[data-label='ATV'],
+  .store-rankings-table td[data-label='HG%'],
+  .store-rankings-table td[data-label='BM Checklist'],
+  .store-rankings-table td[data-label='VM Checklist'] {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+
+  .store-rankings-table td[data-label='Aksiyon'] {
+    grid-column: 1 / -1;
+  }
+
+  .store-rankings-table td[data-label='Aksiyon'] .store-rankings-primary-button {
+    width: 100%;
+  }
+
+  .store-rankings-date-menu {
+    position: static;
+    margin-top: 8px;
+    min-width: 0;
+  }
+
+  .store-rankings-table td[data-label]::before {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--rankings-quiet);
+    font-size: 10px;
+    font-weight: 760;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    content: attr(data-label);
+  }
+
+  .store-rankings-table td[data-label='UPT']::before,
+  .store-rankings-table td[data-label='ATV']::before,
+  .store-rankings-table td[data-label='HG%']::before,
+  .store-rankings-table td[data-label='BM Checklist']::before,
+  .store-rankings-table td[data-label='VM Checklist']::before {
+    margin-bottom: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .store-rankings-table td:nth-child(2) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .store-rankings-table td:first-child {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .store-rankings-table td:has(.store-rankings-score-number) {
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(88, 100, 146, 0.1);
+    padding-top: 8px;
+  }
+
+  .store-rankings-table td:has(.store-rankings-kpi-cell) {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: 84px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+
+  .store-rankings-table td:has(.store-rankings-kpi-cell) .store-rankings-kpi-cell {
+    justify-self: end;
+    min-width: 118px;
+  }
+
+  .store-rankings-table td:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .store-rankings-table td:last-child .store-rankings-primary-button {
+    width: 100%;
+  }
+
+  .store-rankings-table td:has(.store-rankings-kpi-cell)::before {
+    margin-bottom: 0;
+  }
+}
