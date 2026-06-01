@@ -265,11 +265,20 @@ const storeOpsModuleGraphLimits = new Map([
   ],
 ])
 
-const workerJobsModuleGraphLimit = {
-  path: 'backend/nestjs/src/worker-jobs.module.ts',
-  providers: 23,
-  exports: 2,
-}
+const workerJobsModuleGraphLimits = new Map([
+  [
+    'backend/nestjs/src/worker-jobs.module.ts',
+    { imports: 2, providers: 0, exports: 2 },
+  ],
+  [
+    'backend/nestjs/src/worker-materialization-jobs.module.ts',
+    { providers: 19, exports: 1 },
+  ],
+  [
+    'backend/nestjs/src/worker-snapshot-jobs.module.ts',
+    { providers: 4, exports: 1 },
+  ],
+])
 
 function hasDirectDatabaseServiceImport(importEntry) {
   return /(?:^|\/)shared\/database\/database\.service$|database\.service$/.test(importEntry.source)
@@ -781,20 +790,9 @@ function findStoreOpsModuleGraphViolations(files) {
 }
 
 function findWorkerJobsModuleGraphViolations(files) {
-  const workerModuleFiles = files.filter((file) => file.path === 'backend/nestjs/src/worker-jobs.module.ts')
+  const workerModuleFiles = files.filter((file) => workerJobsModuleGraphLimits.has(file.path))
 
-  return findModuleGraphLimitViolations(
-    workerModuleFiles,
-    new Map([
-      [
-        workerJobsModuleGraphLimit.path,
-        {
-          providers: workerJobsModuleGraphLimit.providers,
-          exports: workerJobsModuleGraphLimit.exports,
-        },
-      ],
-    ]),
-  )
+  return findModuleGraphLimitViolations(workerModuleFiles, workerJobsModuleGraphLimits)
 }
 
 const trackedBackendFiles = readBackendSourceFiles()
@@ -1074,20 +1072,20 @@ test('guard rejects fake worker job module provider growth', () => {
   const violations = findWorkerJobsModuleGraphViolations([
     {
       path: 'backend/nestjs/src/worker-jobs.module.ts',
-      content: `
-        import { Module } from "@nestjs/common";
-
-        @Module({
-          providers: [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, NewJobHandler],
-          exports: [A, B],
-        })
-        export class WorkerJobsModule {}
-      `,
+      content: 'import { Module } from "@nestjs/common"; @Module({ imports: [WorkerMaterializationJobsModule, WorkerSnapshotJobsModule], providers: [NewJobHandler], exports: [WorkerMaterializationJobsModule, WorkerSnapshotJobsModule] }) export class WorkerJobsModule {}',
+    },
+    {
+      path: 'backend/nestjs/src/worker-materialization-jobs.module.ts',
+      content: 'import { Module } from "@nestjs/common"; @Module({ providers: [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S], exports: [A] }) export class WorkerMaterializationJobsModule {}',
+    },
+    {
+      path: 'backend/nestjs/src/worker-snapshot-jobs.module.ts',
+      content: 'import { Module } from "@nestjs/common"; @Module({ providers: [A, B, C, D], exports: [A] }) export class WorkerSnapshotJobsModule {}',
     },
   ])
 
   assert.match(violations.join('\n'), /worker-jobs\.module\.ts/)
-  assert.match(violations.join('\n'), /providers graph has 24 entries/)
+  assert.match(violations.join('\n'), /providers graph has 1 entries/)
 })
 
 test('guard rejects module graph spread entries before counting size', () => {
