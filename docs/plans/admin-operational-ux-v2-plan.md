@@ -687,6 +687,10 @@ Every PR in this train must:
 - [ ] Request Codex review in release-blocking mode.
 - [ ] Merge only after checks are green, PR is mergeable, and Codex review is
   clean.
+- [ ] Treat a `chatgpt-codex-connector[bot]` `+1` / thumbs-up reaction on the
+  PR body or latest review/comment card as sufficient Codex approval when it is
+  after the latest push and there are no actionable Codex comments; `eyes` is
+  not approval.
 - [ ] After merge, verify local `main` equals `origin/main`.
 - [ ] Continue to the next PR only after merge closeout is complete.
 
