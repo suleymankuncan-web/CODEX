@@ -1,5 +1,5 @@
 export type RankingSubject = "store" | "personnel";
-export type RankingPeriodType = "monthly";
+export type RankingPeriodType = "daily" | "monthly";
 export type RankingVisibility = "summary" | "detail";
 export type RankingSortKey =
   | "score"

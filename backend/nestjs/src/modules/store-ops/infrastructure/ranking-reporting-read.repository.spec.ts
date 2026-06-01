@@ -14,8 +14,9 @@ describe("RankingReportingReadRepository source filters", () => {
   it("excludes demo seed KPI rows from ranking period selection and lists", async () => {
     const { query, repository } = createRepository();
 
-    await repository.getLatestMonthlyRankingPeriod({
+    await repository.getLatestRankingPeriod({
       metricCodes: ["ATV"],
+      periodType: "monthly",
     });
     await repository.listRankingAvailablePeriods({
       metricCodes: ["ATV"],
@@ -48,6 +49,28 @@ describe("RankingReportingReadRepository source filters", () => {
 
       expect(String(sql)).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
     }
+  });
+
+  it("selects the requested daily ranking period and lists daily plus monthly periods", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getLatestRankingPeriod({
+      metricCodes: ["UPT"],
+      periodType: "daily",
+      periodStart: "2026-05-15",
+    });
+    await repository.listRankingAvailablePeriods({
+      metricCodes: ["UPT"],
+    });
+
+    const [periodSql, periodParams] = query.mock.calls[0];
+    expect(String(periodSql)).toContain("ka.period_type = $2");
+    expect(String(periodSql)).toContain("ka.period_start = $3::date");
+    expect(periodParams).toEqual([["UPT"], "daily", "2026-05-15"]);
+
+    const [availableSql, availableParams] = query.mock.calls[1];
+    expect(String(availableSql)).toContain("ka.period_type IN ('daily', 'monthly')");
+    expect(availableParams).toEqual([["UPT"]]);
   });
 
   it("uses KPI import enabled stores for ranking lists and filter options", async () => {

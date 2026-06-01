@@ -2007,7 +2007,7 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": "Live monthly store and personnel rankings visible to the current actor.",
+            "description": "Live daily or monthly store and personnel rankings visible to the current actor.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11278,6 +11278,7 @@
               "periodType": {
                 "type": "string",
                 "enum": [
+                  "daily",
                   "monthly"
                 ]
               },
@@ -12117,6 +12118,7 @@
                 "periodType": {
                   "type": "string",
                   "enum": [
+                    "daily",
                     "monthly"
                   ]
                 },

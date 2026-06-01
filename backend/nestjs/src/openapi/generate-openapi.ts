@@ -3326,7 +3326,7 @@ const reportingRankingsResponseSchema = {
       required: ["mode", "periodType", "periodStart", "periodEnd"],
       properties: {
         mode: { type: "string", enum: ["live"] },
-        periodType: { type: "string", enum: ["monthly"] },
+        periodType: { type: "string", enum: ["daily", "monthly"] },
         periodStart: { type: "string", nullable: true },
         periodEnd: { type: "string", nullable: true },
       },
@@ -3410,7 +3410,7 @@ const reportingRankingsResponseSchema = {
         type: "object",
         required: ["periodType", "periodStart", "periodEnd"],
         properties: {
-          periodType: { type: "string", enum: ["monthly"] },
+          periodType: { type: "string", enum: ["daily", "monthly"] },
           periodStart: { type: "string" },
           periodEnd: { type: "string" },
         },
@@ -4814,7 +4814,7 @@ async function generateOpenApi(): Promise<void> {
     document.paths,
     "/api/reports/rankings",
     "get",
-    "Live monthly store and personnel rankings visible to the current actor.",
+    "Live daily or monthly store and personnel rankings visible to the current actor.",
     "ReportingRankingsResponse",
   );
 

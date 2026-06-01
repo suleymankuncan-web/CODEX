@@ -64,6 +64,7 @@ describe("RankingService", () => {
     storeRows?: ReturnType<typeof createStoreRows>;
     storeChecklistRows?: StoreRankingFixtureRow[];
     personnelRows?: ReturnType<typeof createPersonnelRows>;
+    period?: typeof period;
     storeBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
     personnelBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
   }) {
@@ -100,8 +101,8 @@ describe("RankingService", () => {
           .map((employeeId) => resolveActiveAssignment(employeeId))
           .filter((assignment) => assignment !== null),
       ),
-      getLatestMonthlyRankingPeriod: jest.fn(async () => period),
-      listRankingAvailablePeriods: jest.fn(async () => [period]),
+      getLatestRankingPeriod: jest.fn(async () => input?.period ?? period),
+      listRankingAvailablePeriods: jest.fn(async () => [input?.period ?? period]),
       listRankingStoreKpiRows: jest.fn(async () => input?.storeRows ?? createStoreRows(105)),
       listRankingStoreChecklistRows: jest.fn(async () => input?.storeChecklistRows ?? []),
       listRankingPersonnelKpiRows: jest.fn(
@@ -257,6 +258,62 @@ describe("RankingService", () => {
     { kpi_code: "ATV", benchmark_value: "3573.08" },
     { kpi_code: "CR", benchmark_value: "0.1126" },
   ];
+
+  it("uses requested daily periods for ranking reads and source metadata", async () => {
+    const dailyPeriod = {
+      period_type: "daily",
+      period_start: "2026-05-15",
+      period_end: "2026-05-15",
+    };
+    const repository = createRepositoryMock({ period: dailyPeriod });
+    const service = createService(repository, createKpiConfigRepositoryMock());
+
+    const result = await service.getRankings({
+      userId: "user-1",
+      employeeId: "employee-105",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: ["company-1"],
+      regionIds: ["region-1"],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "daily",
+      periodStart: "2026-05-15",
+    });
+
+    expect(repository.getLatestRankingPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodType: "daily",
+        periodStart: "2026-05-15",
+      }),
+    );
+    expect(repository.listRankingStoreKpiRows).toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodType: "daily",
+        periodStart: "2026-05-15",
+        periodEnd: "2026-05-15",
+      }),
+    );
+    expect(repository.listRankingPersonnelKpiRows).toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodType: "daily",
+        periodStart: "2026-05-15",
+        periodEnd: "2026-05-15",
+      }),
+    );
+    expect(result.source).toEqual({
+      mode: "live",
+      periodType: "daily",
+      periodStart: "2026-05-15",
+      periodEnd: "2026-05-15",
+    });
+    expect(result.availablePeriods).toEqual([
+      {
+        periodType: "daily",
+        periodStart: "2026-05-15",
+        periodEnd: "2026-05-15",
+      },
+    ]);
+  });
 
   it("caps store personnel to Turkey Top 100 summary rows and includes own position outside the top list", async () => {
     const repository = createRepositoryMock();

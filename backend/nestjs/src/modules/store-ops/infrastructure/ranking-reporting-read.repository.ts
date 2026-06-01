@@ -5,17 +5,18 @@ import { DatabaseService } from "../../../shared/database/database.service";
 export class RankingReportingReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  async getLatestMonthlyRankingPeriod(input: {
+  async getLatestRankingPeriod(input: {
     metricCodes: string[];
+    periodType: "daily" | "monthly";
     periodStart?: string;
   }) {
     if (input.metricCodes.length === 0) {
       return null;
     }
 
-    const params: unknown[] = [input.metricCodes];
+    const params: unknown[] = [input.metricCodes, input.periodType];
     const clauses = [
-      `ka.period_type = 'monthly'`,
+      `ka.period_type = $2`,
       `kd.kpi_code = ANY($1::text[])`,
       `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
@@ -66,7 +67,7 @@ export class RankingReportingReadRepository {
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd
           ON kd.kpi_id = ka.kpi_id
-        WHERE ka.period_type = 'monthly'
+        WHERE ka.period_type IN ('daily', 'monthly')
           AND kd.kpi_code = ANY($1::text[])
           AND COALESCE(ka.source_type, '') <> 'demo_seed'
         ORDER BY 3 DESC, 2 DESC

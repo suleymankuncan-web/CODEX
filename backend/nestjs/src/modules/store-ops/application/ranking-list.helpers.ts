@@ -292,7 +292,7 @@ export function resolveCurrentStoreId(
 
 export function mapAvailablePeriods(periods: RankingPeriodRow[]) {
   return periods.map((period) => ({
-    periodType: "monthly" as const,
+    periodType: period.period_type === "daily" ? "daily" as const : "monthly" as const,
     periodStart: period.period_start,
     periodEnd: period.period_end,
   }));
@@ -301,13 +301,14 @@ export function mapAvailablePeriods(periods: RankingPeriodRow[]) {
 export function getEmptyRankingResponse(input: {
   access: RankingAccess;
   availablePeriods: RankingPeriodRow[];
+  periodType: "daily" | "monthly";
   periodStart: string | null;
   periodEnd: string | null;
 }): RankingResponse {
   return {
     source: {
       mode: "live",
-      periodType: "monthly",
+      periodType: input.periodType,
       periodStart: input.periodStart,
       periodEnd: input.periodEnd,
     },
