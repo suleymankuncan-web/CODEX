@@ -680,6 +680,34 @@ describe("CompetitionService", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it("finalizes cleanly without persisting override note when no warnings remain", async () => {
+    const repo = repository();
+    repo.listOpenWarnings.mockResolvedValue([]);
+    repo.finalizeStage.mockResolvedValue({
+      competitionStageId: "22222222-2222-4222-8222-222222222222",
+      finalizationState: "clean",
+    });
+    const service = new CompetitionService(repo as never);
+
+    const result = await service.finalizeStage({
+      actorUserId: "11111111-1111-4111-8111-111111111111",
+      stageId: "22222222-2222-4222-8222-222222222222",
+      allowOverride: true,
+      overrideJustification: "This text must not be persisted for clean finalization.",
+    });
+
+    expect(result.command.status).toBe("finalized");
+    expect(result.command.message).toBe("Competition stage finalized cleanly");
+    expect(result.data.unresolvedWarnings).toEqual([]);
+    expect(repo.finalizeStage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        finalizationState: "clean",
+        finalizationNote: null,
+        unresolvedWarningCount: 0,
+      }),
+    );
+  });
+
   it("finalizes with overridden state when warnings exist and justification is present", async () => {
     const repo = repository();
     repo.listOpenWarnings.mockResolvedValue([
@@ -695,6 +723,18 @@ describe("CompetitionService", () => {
         message: "VM checklist missing",
         resolvedAt: null,
       },
+      {
+        warningId: "w2",
+        stageId: "stage-1",
+        teamId: "team-1",
+        storeId: "store-2",
+        warningCode: "missing_daily_store_data",
+        warningLevel: "blocker",
+        periodStart: "2026-04-01",
+        periodEnd: "2026-04-30",
+        message: "Daily store data missing",
+        resolvedAt: null,
+      },
     ]);
     repo.finalizeStage.mockResolvedValue({
       competitionStageId: "22222222-2222-4222-8222-222222222222",
@@ -706,7 +746,7 @@ describe("CompetitionService", () => {
       actorUserId: "11111111-1111-4111-8111-111111111111",
       stageId: "22222222-2222-4222-8222-222222222222",
       allowOverride: true,
-      overrideJustification: "April BM record was verified outside the source export.",
+      overrideJustification: "  April BM record was verified outside the source export.  ",
     });
 
     expect(result.command.status).toBe("finalized");
@@ -714,7 +754,7 @@ describe("CompetitionService", () => {
       expect.objectContaining({
         finalizationState: "overridden",
         finalizationNote: "April BM record was verified outside the source export.",
-        unresolvedWarningCount: 1,
+        unresolvedWarningCount: 2,
       }),
     );
   });

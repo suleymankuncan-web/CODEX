@@ -176,6 +176,7 @@ const competitionServiceCoreExpectedTestNames = [
   'lists stage package plan audit events',
   'creates a draft competition through the repository',
   'rejects finalization with open warnings unless override justification is written',
+  'finalizes cleanly without persisting override note when no warnings remain',
   'finalizes with overridden state when warnings exist and justification is present',
   'redacts out-of-scope team stores while returning scoped store contributions',
   'keeps store manager competition detail limited to assigned stores even when company scope is present',
@@ -421,8 +422,8 @@ test('competition service tests are split without dropping team-template or core
     combinedText += `\n${text}`
   }
 
-  assert.equal(totalTests, 26)
-  assert.equal([...readText(competitionServiceSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 18)
+  assert.equal(totalTests, 27)
+  assert.equal([...readText(competitionServiceSplitFiles[0]).matchAll(/\bit\s*\(/g)].length, 19)
   assert.equal([...readText(competitionServiceSplitFiles[1]).matchAll(/\bit\s*\(/g)].length, 8)
   for (const testName of competitionServiceTeamTemplateExpectedTestNames) {
     const exactOccurrences = [...combinedText.matchAll(new RegExp(`it\\("${testName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`, 'g'))].length
