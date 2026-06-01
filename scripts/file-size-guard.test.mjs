@@ -10,7 +10,7 @@ const generatedPrefixes = ['admin-web/src/generated/']
 const oversizedBaseline = new Map([
   ['backend/nestjs/src/openapi/generate-openapi.ts', 5169],
   ['admin-web/src/pages/MasterDataBootstrapPage.tsx', 1568],
-  ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1608],
+  ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1265],
   ['scripts/generate-system-flow.mjs', 1438],
   ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1245],
   ['admin-web/src/pages/IntegrationDashboardPage.tsx', 1388],
