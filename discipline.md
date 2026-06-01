@@ -337,6 +337,11 @@ Codex onayi su sekillerde kabul edilir:
   `chatgpt-codex-connector[bot]` tarafindan verilmis acik `+1` / thumbs-up
   reaksiyonu.
 
+GitHub PR timeline'inda PR govdesi veya ilgili comment/review kartinin altinda
+gorunen bot `+1` reaction'i da bu kapsamdadir. Son push'tan sonra gelmis ve
+actionable Codex yorumu bulunmuyorsa, ayrica metin olarak "no major issues"
+yorumunu beklemek gerekmez.
+
 Bu onay sinyali son push'tan sonra gelmis olmalidir. Onceki commit'e ait
 temiz yorum veya reaksiyon yeni push sonrasinda merge onayi sayilmaz. Sadece
 `eyes` reaksiyonu onay degildir. Actionable Codex yorumu varsa merge edilmez;
