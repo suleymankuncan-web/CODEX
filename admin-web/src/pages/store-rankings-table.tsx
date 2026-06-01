@@ -1,6 +1,5 @@
-import { ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowRight, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
@@ -8,7 +7,6 @@ import type { PersonnelRankingRow, RankingMetricValue, RankingSummary, StoreRank
 import type { AppLocale } from '../lib/i18n'
 import {
   type ActiveRankingList,
-  type RankingDetailSelection,
   type RankingSortDirection,
   type RankingSortKey,
   formatMetricValue,
@@ -16,7 +14,6 @@ import {
   formatRankBadge,
   getMetricByCode,
   getMetricLabel,
-  getScoreFill,
   personnelMetricCodes,
   storeMetricCodes,
 } from './store-rankings-page-model'
@@ -37,11 +34,13 @@ export function RankingWorkspace(input: {
   sortDirection: RankingSortDirection
   onSortChange: (value: RankingSortKey) => void
   onActiveListChange: (value: ActiveRankingList) => void
-  onOpenDetail: (value: RankingDetailSelection) => void
+  onOpenStoreDetail: (row: StoreRankingRow) => void
+  onOpenPersonnelProfile: (employeeId: string) => void
   onOffsetChange: (value: number) => void
   hasNextPage: boolean
   offset: number
   limit: number
+  forceEmpty?: boolean
   locale: AppLocale
   t: TranslateFunction
 }) {
@@ -57,16 +56,15 @@ export function RankingWorkspace(input: {
   const caption =
     input.activeList === 'stores'
       ? input.t('storeRankings.storeResultCaption', {
-          start: meta.total ? input.offset + 1 : 0,
+          start: input.forceEmpty || !meta.total ? 0 : input.offset + 1,
           end: input.offset + rows.length,
-          total: meta.total,
+          total: input.forceEmpty ? 0 : meta.total,
         })
       : input.t('storeRankings.personnelResultCaption', {
-          start: meta.total ? input.offset + 1 : 0,
+          start: input.forceEmpty || !meta.total ? 0 : input.offset + 1,
           end: input.offset + rows.length,
-          total: meta.total,
+          total: input.forceEmpty ? 0 : meta.total,
         })
-  const metricCodes = input.activeList === 'stores' ? storeMetricCodes : personnelMetricCodes
 
   return (
     <StoreSectionCard
@@ -78,6 +76,7 @@ export function RankingWorkspace(input: {
           : input.t('storeRankings.summaryAccess'),
         tone: input.canSeeDetails ? 'calm' : 'warning',
       }}
+      className="store-rankings-board"
     >
       <div className="tw:flex tw:flex-col tw:gap-4">
         <ToggleGroup
@@ -91,109 +90,66 @@ export function RankingWorkspace(input: {
           variant="outline"
           role="tablist"
           aria-label={input.t('storeRankings.listSwitchLabel')}
-          className="tw:w-full tw:flex-wrap tw:justify-start"
+          className="tw:grid tw:w-full tw:grid-cols-1 tw:gap-2 tw:sm:grid-cols-2"
         >
           <ToggleGroupItem
             value="stores"
             role="tab"
             aria-selected={input.activeList === 'stores'}
+            className="tw:gap-2"
           >
             {input.t('storeRankings.storeList')}
+            <StoreStatusBadge tone="accent">
+              {formatNumber(input.locale, input.t, input.ranking.storeLeaderboard.meta.total)}
+            </StoreStatusBadge>
           </ToggleGroupItem>
           <ToggleGroupItem
             value="personnel"
             role="tab"
             aria-selected={input.activeList === 'personnel'}
+            className="tw:gap-2"
           >
             {input.t('storeRankings.personnelList')}
+            <StoreStatusBadge tone="calm">
+              {formatNumber(input.locale, input.t, input.ranking.personnelLeaderboard.meta.total)}
+            </StoreStatusBadge>
           </ToggleGroupItem>
         </ToggleGroup>
 
-        <Table
-          className={`store-rankings-table tw:min-w-[760px]${
-            input.canSeeDetails ? ' store-rankings-table-detail' : ' store-rankings-table-summary'
-          }`}
-          aria-describedby="rankings-heading"
-        >
-          <TableCaption className="tw:sr-only">{caption}</TableCaption>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{input.t('storeRankings.rankColumn')}</TableHead>
-              <TableHead>
-                {input.activeList === 'stores'
-                  ? input.t('storeRankings.store')
-                  : input.t('storeRankings.personnel')}
-              </TableHead>
-              <TableHead>
-                <SortButton
-                  label={
-                    input.activeList === 'stores'
-                      ? input.t('storeRankings.storeScore')
-                      : input.t('storeRankings.personnelScore')
-                  }
-                  sortKey="score"
-                  activeSortKey={input.sortKey}
-                  sortDirection={input.sortDirection}
-                  onSortChange={input.onSortChange}
-                />
-              </TableHead>
-              {input.canSeeDetails ? (
-                <TableHead>
-                  <MetricSortRow
-                    metricCodes={metricCodes}
-                    activeSortKey={input.sortKey}
-                    sortDirection={input.sortDirection}
-                    onSortChange={input.onSortChange}
-                    t={input.t}
-                  />
-                </TableHead>
-              ) : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length ? (
-              input.activeList === 'stores' ? (
-                input.storeRows.map((row) => (
-                  <StoreRankingTableRow
-                    key={row.storeId}
-                    row={row}
-                    canSeeDetails={input.canSeeDetails}
-                    locale={input.locale}
-                    t={input.t}
-                    onOpenDetail={(nextRow) =>
-                      input.onOpenDetail({ type: 'store', row: nextRow })
-                    }
-                  />
-                ))
-              ) : (
-                input.personnelRows.map((row) => (
-                  <PersonnelRankingTableRow
-                    key={row.employeeId}
-                    row={row}
-                    canSeeDetails={input.canSeeDetails}
-                    locale={input.locale}
-                    t={input.t}
-                    onOpenDetail={(nextRow) =>
-                      input.onOpenDetail({ type: 'personnel', row: nextRow })
-                    }
-                  />
-                ))
-              )
+        <div className="tw:overflow-x-auto tw:rounded-lg tw:border">
+          <Table
+            className={`store-rankings-table tw:min-w-[980px]${
+              input.canSeeDetails ? ' store-rankings-table-detail' : ' store-rankings-table-summary'
+            }`}
+            aria-describedby="rankings-heading"
+          >
+            <TableCaption className="tw:sr-only">{caption}</TableCaption>
+            {input.activeList === 'stores' ? (
+              <StoreRankingTable
+                rows={input.storeRows}
+                canSeeDetails={input.canSeeDetails}
+                sortKey={input.sortKey}
+                sortDirection={input.sortDirection}
+                onSortChange={input.onSortChange}
+                onOpenStoreDetail={input.onOpenStoreDetail}
+                locale={input.locale}
+                t={input.t}
+              />
             ) : (
-              <TableRow>
-                <TableCell colSpan={input.canSeeDetails ? 4 : 3}>
-                  <StoreEmptyState
-                    description={
-                      input.activeList === 'stores'
-                        ? input.t('storeRankings.noStores')
-                        : input.t('storeRankings.noPersonnel')
-                    }
-                  />
-                </TableCell>
-              </TableRow>
+              <PersonnelRankingTable
+                rows={input.personnelRows}
+                canSeeDetails={input.canSeeDetails}
+                canOpenPersonnelProfile={input.canOpenPersonnelProfile}
+                sortKey={input.sortKey}
+                sortDirection={input.sortDirection}
+                onSortChange={input.onSortChange}
+                onOpenPersonnelProfile={input.onOpenPersonnelProfile}
+                locale={input.locale}
+                t={input.t}
+              />
             )}
-          </TableBody>
-        </Table>
+          </Table>
+        </div>
 
         <div
           className="tw:flex tw:flex-col tw:gap-3 tw:border-t tw:pt-3 tw:text-sm tw:text-muted-foreground tw:sm:flex-row tw:sm:items-center tw:sm:justify-between"
@@ -201,9 +157,9 @@ export function RankingWorkspace(input: {
         >
           <span className="tw:font-medium">
             {input.t('storeRankings.pageInfo', {
-              start: meta.total ? input.offset + 1 : 0,
+              start: input.forceEmpty || !meta.total ? 0 : input.offset + 1,
               end: input.offset + rows.length,
-              total: meta.total,
+              total: input.forceEmpty ? 0 : meta.total,
             })}
           </span>
           <div className="tw:flex tw:gap-2">
@@ -215,7 +171,7 @@ export function RankingWorkspace(input: {
               disabled={input.offset === 0}
               aria-label={input.t('storeRankings.previousPageLabel')}
             >
-              <ChevronLeft size={16} aria-hidden="true" />
+              <ChevronLeft data-icon="inline-start" aria-hidden="true" />
             </Button>
             <Button
               type="button"
@@ -225,12 +181,161 @@ export function RankingWorkspace(input: {
               disabled={!input.hasNextPage}
               aria-label={input.t('storeRankings.nextPageLabel')}
             >
-              <ChevronRight size={16} aria-hidden="true" />
+              <ChevronRight data-icon="inline-start" aria-hidden="true" />
             </Button>
           </div>
         </div>
       </div>
     </StoreSectionCard>
+  )
+}
+
+function StoreRankingTable(input: {
+  rows: StoreRankingRow[]
+  canSeeDetails: boolean
+  sortKey: RankingSortKey
+  sortDirection: RankingSortDirection
+  onSortChange: (value: RankingSortKey) => void
+  onOpenStoreDetail: (row: StoreRankingRow) => void
+  locale: AppLocale
+  t: TranslateFunction
+}) {
+  return (
+    <>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="tw:w-20 tw:text-center">
+            <SortButton
+              label={input.t('storeRankings.rankColumn')}
+              sortKey="score"
+              activeSortKey={input.sortKey}
+              sortDirection={input.sortDirection}
+              onSortChange={input.onSortChange}
+              compact
+            />
+          </TableHead>
+          <TableHead>{input.t('storeRankings.store')}</TableHead>
+          <TableHead className="tw:text-center">
+            <SortButton
+              label={input.t('storeRankings.score')}
+              sortKey="score"
+              activeSortKey={input.sortKey}
+              sortDirection={input.sortDirection}
+              onSortChange={input.onSortChange}
+            />
+          </TableHead>
+          {input.canSeeDetails
+            ? storeMetricCodes.map((code) => (
+                <TableHead key={code} className="tw:text-center">
+                  <SortButton
+                    label={getMetricLabel(input.t, code)}
+                    sortKey={code}
+                    activeSortKey={input.sortKey}
+                    sortDirection={input.sortDirection}
+                    onSortChange={input.onSortChange}
+                  />
+                </TableHead>
+              ))
+            : null}
+          <TableHead className="tw:text-center">{input.t('storeRankings.action')}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {input.rows.length ? (
+          input.rows.map((row) => (
+            <StoreRankingTableRow
+              key={row.storeId}
+              row={row}
+              canSeeDetails={input.canSeeDetails}
+              locale={input.locale}
+              t={input.t}
+              onOpenStoreDetail={input.onOpenStoreDetail}
+            />
+          ))
+        ) : (
+          <EmptyRankingRow
+            colSpan={input.canSeeDetails ? storeMetricCodes.length + 4 : 4}
+            description={input.t('storeRankings.noStores')}
+          />
+        )}
+      </TableBody>
+    </>
+  )
+}
+
+function PersonnelRankingTable(input: {
+  rows: PersonnelRankingRow[]
+  canSeeDetails: boolean
+  canOpenPersonnelProfile: (row: PersonnelRankingRow) => boolean
+  sortKey: RankingSortKey
+  sortDirection: RankingSortDirection
+  onSortChange: (value: RankingSortKey) => void
+  onOpenPersonnelProfile: (employeeId: string) => void
+  locale: AppLocale
+  t: TranslateFunction
+}) {
+  return (
+    <>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="tw:w-20 tw:text-center">
+            <SortButton
+              label={input.t('storeRankings.rankColumn')}
+              sortKey="score"
+              activeSortKey={input.sortKey}
+              sortDirection={input.sortDirection}
+              onSortChange={input.onSortChange}
+              compact
+            />
+          </TableHead>
+          <TableHead>{input.t('storeRankings.personnel')}</TableHead>
+          <TableHead>{input.t('storeRankings.store')}</TableHead>
+          <TableHead className="tw:text-center">
+            <SortButton
+              label={input.t('storeRankings.score')}
+              sortKey="score"
+              activeSortKey={input.sortKey}
+              sortDirection={input.sortDirection}
+              onSortChange={input.onSortChange}
+            />
+          </TableHead>
+          {input.canSeeDetails
+            ? personnelMetricCodes.map((code) => (
+                <TableHead key={code} className="tw:text-center">
+                  <SortButton
+                    label={getMetricLabel(input.t, code)}
+                    sortKey={code}
+                    activeSortKey={input.sortKey}
+                    sortDirection={input.sortDirection}
+                    onSortChange={input.onSortChange}
+                  />
+                </TableHead>
+              ))
+            : null}
+          <TableHead className="tw:text-center">{input.t('storeRankings.action')}</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {input.rows.length ? (
+          input.rows.map((row) => (
+            <PersonnelRankingTableRow
+              key={row.employeeId}
+              row={row}
+              canSeeDetails={input.canSeeDetails}
+              canOpenProfile={input.canOpenPersonnelProfile(row)}
+              locale={input.locale}
+              t={input.t}
+              onOpenPersonnelProfile={input.onOpenPersonnelProfile}
+            />
+          ))
+        ) : (
+          <EmptyRankingRow
+            colSpan={input.canSeeDetails ? personnelMetricCodes.length + 5 : 5}
+            description={input.t('storeRankings.noPersonnel')}
+          />
+        )}
+      </TableBody>
+    </>
   )
 }
 
@@ -240,47 +345,25 @@ function SortButton(input: {
   activeSortKey: RankingSortKey
   sortDirection: RankingSortDirection
   onSortChange: (value: RankingSortKey) => void
+  compact?: boolean
 }) {
   const active = input.activeSortKey === input.sortKey
 
   return (
     <Button
-      className="store-rankings-sort-button"
+      className={`store-rankings-sort-button tw:h-auto tw:px-0 tw:py-0 tw:text-xs tw:font-medium tw:uppercase tw:tracking-wide${
+        input.compact ? ' tw:mx-auto' : ''
+      }`}
       type="button"
       size="sm"
-      variant={active ? 'default' : 'ghost'}
+      variant="ghost"
       onClick={() => input.onSortChange(input.sortKey)}
       aria-sort={active ? (input.sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'}
     >
-      <ArrowUpDown aria-hidden="true" />
       {input.label}
+      <ArrowUpDown data-icon="inline-end" aria-hidden="true" />
       {active ? <span>{input.sortDirection === 'desc' ? '↓' : '↑'}</span> : null}
     </Button>
-  )
-}
-
-function MetricSortRow(input: {
-  metricCodes: readonly string[]
-  activeSortKey: RankingSortKey
-  sortDirection: RankingSortDirection
-  onSortChange: (value: RankingSortKey) => void
-  t: TranslateFunction
-}) {
-  return (
-    <div
-      className="store-rankings-metric-sort-row tw:grid tw:grid-cols-2 tw:gap-2 tw:md:grid-cols-6"
-    >
-      {input.metricCodes.map((code) => (
-        <SortButton
-          key={code}
-          label={getMetricLabel(input.t, code)}
-          sortKey={code as RankingSortKey}
-          activeSortKey={input.activeSortKey}
-          sortDirection={input.sortDirection}
-          onSortChange={input.onSortChange}
-        />
-      ))}
-    </div>
   )
 }
 
@@ -289,35 +372,45 @@ function StoreRankingTableRow(input: {
   canSeeDetails: boolean
   locale: AppLocale
   t: TranslateFunction
-  onOpenDetail: (row: StoreRankingRow) => void
+  onOpenStoreDetail: (row: StoreRankingRow) => void
 }) {
   const row = input.row
 
   return (
     <TableRow>
-      <TableCell data-label={input.t('storeRankings.rankColumn')}>
-        <StoreStatusBadge tone="accent">{formatRankBadge(input.t, row.rank)}</StoreStatusBadge>
+      <TableCell className="tw:text-center" data-label={input.t('storeRankings.rankColumn')}>
+        <RankChip rank={row.rank} t={input.t} />
       </TableCell>
       <TableCell data-label={input.t('storeRankings.store')}>
-        <RankingEntity
-          label={row.storeName ?? row.storeId}
-          canOpen={input.canSeeDetails}
-          onOpen={() => input.onOpenDetail(row)}
-        />
+        <RankingEntity label={row.storeName ?? row.storeId} />
       </TableCell>
-      <TableCell data-label={input.t('storeRankings.storeScore')}>
+      <TableCell className="tw:text-center" data-label={input.t('storeRankings.storeScore')}>
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </TableCell>
-      {input.canSeeDetails ? (
-        <TableCell data-label={input.t('storeRankings.metricDetailsLabel')}>
-          <MetricDetails
-            metrics={row.metrics ?? []}
-            metricCodes={storeMetricCodes}
-            locale={input.locale}
-            t={input.t}
-          />
-        </TableCell>
-      ) : null}
+      {input.canSeeDetails
+        ? storeMetricCodes.map((code) => (
+            <TableCell className="tw:text-center" data-label={getMetricLabel(input.t, code)} key={code}>
+              <RankingMetricCell
+                metric={getMetricByCode(row.metrics, code)}
+                code={code}
+                locale={input.locale}
+                t={input.t}
+              />
+            </TableCell>
+          ))
+        : null}
+      <TableCell className="tw:text-center" data-label={input.t('storeRankings.action')}>
+        {input.canSeeDetails ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => input.onOpenStoreDetail(row)}
+          >
+            {input.t('storeRankings.openStoreDetail')}
+            <ArrowRight data-icon="inline-end" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </TableCell>
     </TableRow>
   )
 }
@@ -325,66 +418,75 @@ function StoreRankingTableRow(input: {
 function PersonnelRankingTableRow(input: {
   row: PersonnelRankingRow
   canSeeDetails: boolean
+  canOpenProfile: boolean
   locale: AppLocale
   t: TranslateFunction
-  onOpenDetail: (row: PersonnelRankingRow) => void
+  onOpenPersonnelProfile: (employeeId: string) => void
 }) {
   const row = input.row
 
   return (
     <TableRow>
-      <TableCell data-label={input.t('storeRankings.rankColumn')}>
-        <StoreStatusBadge tone="accent">{formatRankBadge(input.t, row.rank)}</StoreStatusBadge>
+      <TableCell className="tw:text-center" data-label={input.t('storeRankings.rankColumn')}>
+        <RankChip rank={row.rank} t={input.t} />
       </TableCell>
       <TableCell data-label={input.t('storeRankings.personnel')}>
-        <RankingEntity
-          label={row.displayName}
-          caption={row.storeName ?? input.t('storeRankings.noStore')}
-          canOpen={input.canSeeDetails}
-          onOpen={() => input.onOpenDetail(row)}
-        />
+        <RankingEntity label={row.displayName} />
       </TableCell>
-      <TableCell data-label={input.t('storeRankings.personnelScore')}>
+      <TableCell data-label={input.t('storeRankings.store')}>
+        <span className="tw:text-sm tw:text-muted-foreground">
+          {row.storeName ?? input.t('storeRankings.noStore')}
+        </span>
+      </TableCell>
+      <TableCell className="tw:text-center" data-label={input.t('storeRankings.personnelScore')}>
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />
       </TableCell>
-      {input.canSeeDetails ? (
-        <TableCell data-label={input.t('storeRankings.metricDetailsLabel')}>
-          <MetricDetails
-            metrics={row.metrics ?? []}
-            metricCodes={personnelMetricCodes}
-            locale={input.locale}
-            t={input.t}
-          />
-        </TableCell>
-      ) : null}
+      {input.canSeeDetails
+        ? personnelMetricCodes.map((code) => (
+            <TableCell className="tw:text-center" data-label={getMetricLabel(input.t, code)} key={code}>
+              <RankingMetricCell
+                metric={getMetricByCode(row.metrics, code)}
+                code={code}
+                locale={input.locale}
+                t={input.t}
+              />
+            </TableCell>
+          ))
+        : null}
+      <TableCell className="tw:text-center" data-label={input.t('storeRankings.action')}>
+        {input.canOpenProfile ? (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => input.onOpenPersonnelProfile(row.employeeId)}
+          >
+            {input.t('storeRankings.profileGo')}
+            <ArrowRight data-icon="inline-end" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </TableCell>
     </TableRow>
+  )
+}
+
+function RankChip(input: { rank: number | null; t: TranslateFunction }) {
+  const medal = input.rank === 1 ? '🥇' : input.rank === 2 ? '🥈' : input.rank === 3 ? '🥉' : null
+
+  return (
+    <StoreStatusBadge tone="accent" className="tw:gap-1">
+      {medal ? <span aria-hidden="true">{medal}</span> : null}
+      {formatRankBadge(input.t, input.rank)}
+    </StoreStatusBadge>
   )
 }
 
 function RankingEntity(input: {
   label: string
-  caption?: string
-  canOpen: boolean
-  onOpen: () => void
 }) {
   return (
-    <div className="tw:flex tw:min-w-0 tw:flex-col">
-      {input.canOpen ? (
-        <Button
-          type="button"
-          variant="link"
-          className="tw:h-auto tw:w-fit tw:max-w-full tw:justify-start tw:p-0 tw:text-left tw:font-semibold"
-          onClick={input.onOpen}
-        >
-          {input.label}
-        </Button>
-      ) : (
-        <strong className="tw:text-sm tw:text-foreground">{input.label}</strong>
-      )}
-      {input.caption ? (
-        <span className="tw:text-xs tw:text-muted-foreground">{input.caption}</span>
-      ) : null}
-    </div>
+    <strong className="tw:block tw:max-w-[18rem] tw:truncate tw:text-sm tw:font-semibold tw:text-foreground">
+      {input.label}
+    </strong>
   )
 }
 
@@ -394,12 +496,51 @@ function RankingScore(input: {
   t: TranslateFunction
 }) {
   return (
-    <div className="store-rankings-scorebar tw:grid tw:min-w-32 tw:gap-2">
-      <strong className="tw:text-sm tw:text-foreground">
-        {formatNumber(input.locale, input.t, input.value)}
-      </strong>
-      <Progress value={getScoreFill(input.value)} />
-    </div>
+    <strong className="store-rankings-scorebar tw:text-lg tw:font-semibold tw:tracking-tight tw:text-foreground">
+      {formatNumber(input.locale, input.t, input.value)}
+    </strong>
+  )
+}
+
+function RankingMetricCell(input: {
+  metric: RankingMetricValue | undefined
+  code: string
+  locale: AppLocale
+  t: TranslateFunction
+}) {
+  if (!input.metric) {
+    const isChecklist = input.code === 'BM_CHECKLIST' || input.code === 'VM_CHECKLIST'
+
+    return (
+      <span
+        className={
+          isChecklist
+            ? 'tw:inline-flex tw:min-h-8 tw:items-center tw:justify-center tw:gap-2 tw:rounded-full tw:border tw:border-destructive/20 tw:bg-destructive/10 tw:px-3 tw:text-xs tw:font-medium tw:text-destructive'
+            : 'tw:text-sm tw:text-muted-foreground'
+        }
+      >
+        {isChecklist ? (
+          <span className="tw:size-2 tw:rounded-full tw:bg-destructive tw:shadow-[0_0_0_4px_hsl(var(--destructive)/0.12)]" aria-hidden="true" />
+        ) : null}
+        {isChecklist ? input.t('storeRankings.notDone') : input.t('common.noData')}
+      </span>
+    )
+  }
+
+  return (
+    <span className="tw:inline-flex tw:min-h-8 tw:min-w-14 tw:items-center tw:justify-center tw:rounded-full tw:border tw:bg-card/80 tw:px-3 tw:text-sm tw:font-medium tw:text-foreground">
+      {formatMetricValue(input.locale, input.t, input.metric, input.code)}
+    </span>
+  )
+}
+
+function EmptyRankingRow(input: { colSpan: number; description: string }) {
+  return (
+    <TableRow>
+      <TableCell colSpan={input.colSpan}>
+        <StoreEmptyState description={input.description} />
+      </TableCell>
+    </TableRow>
   )
 }
 
@@ -416,7 +557,7 @@ export function MetricDetails(input: {
   return (
     <div
       className={`store-rankings-metric-grid tw:grid tw:gap-2 tw:md:grid-cols-3${
-        input.metricCodes.length > 3 ? ' tw:2xl:grid-cols-6' : ''
+        input.metricCodes.length > 3 ? ' tw:2xl:grid-cols-5' : ''
       }`}
       aria-label={input.t('storeRankings.metricDetailsLabel')}
     >

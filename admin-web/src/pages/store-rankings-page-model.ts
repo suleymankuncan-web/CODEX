@@ -2,7 +2,6 @@ import type { QueryClient } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import type {
-  PersonnelRankingRow,
   RankingMetricValue,
   RankingReferenceGroup,
   RankingSummary,
@@ -13,24 +12,20 @@ import type { AppLocale } from '../lib/i18n'
 
 export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
 export const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
-export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
+export const storeMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
 export const personnelMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const
-export const latestPeriodSelectValue = '__latest__'
-export const allSelectValue = '__all__'
 
 export type ActiveRankingList = 'stores' | 'personnel'
 export type RankingSortKey = 'score' | typeof storeMetricCodes[number]
 export type RankingSortDirection = 'asc' | 'desc'
-export type RankingDetailSelection =
-  | { type: 'store'; row: StoreRankingRow }
-  | { type: 'personnel'; row: PersonnelRankingRow }
-  | null
+export type RankingDetailSelection = { type: 'store'; row: StoreRankingRow } | null
 
 export type StoreRankingsPageState = {
   periodStart: string
   regionManagerUserId: string
   regionId: string
   storeId: string
+  dayOfMonth: string
   search: string
   offset: number
   activeList: ActiveRankingList
@@ -44,6 +39,7 @@ export type StoreRankingsTextFilter =
   | 'regionManagerUserId'
   | 'regionId'
   | 'storeId'
+  | 'dayOfMonth'
   | 'search'
 
 export type StoreRankingsPageAction =
@@ -64,6 +60,7 @@ export const initialStoreRankingsPageState: StoreRankingsPageState = {
   regionManagerUserId: '',
   regionId: '',
   storeId: '',
+  dayOfMonth: '',
   search: '',
   offset: 0,
   activeList: 'stores',
@@ -249,6 +246,7 @@ export function storeRankingsPageReducer(
         regionManagerUserId: '',
         regionId: '',
         storeId: '',
+        dayOfMonth: '',
         search: '',
         offset: 0,
       }
