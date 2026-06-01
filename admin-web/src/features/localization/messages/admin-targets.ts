@@ -11,6 +11,17 @@ export const adminTargetsTr = {
     'Mağazalardan gelen aylık hedef dağıtım taleplerini, personel kapsamını ve son kararları tek ekranda takip edin.',
   'adminTargets.actionStores': 'Aksiyon mağazaları',
   'adminTargets.none': 'Yok',
+  'adminTargets.decisionBriefEyebrow': 'Karar özeti',
+  'adminTargets.decisionBriefTitle': 'Görünen onay talebi ve kapsam etkisi',
+  'adminTargets.decisionBriefCopy':
+    'Mevcut talep kuyruğu, hedef kapsamı ve aksiyon mağazası yetkisine göre karar kanıtı.',
+  'adminTargets.nextRequest': 'Görünen talep',
+  'adminTargets.noPendingRequest': 'Bekleyen talep yok',
+  'adminTargets.actionAvailable': 'Onay aksiyonu açık',
+  'adminTargets.approvalBlocked': 'Yetki dışında kalan',
+  'adminTargets.coverageGaps': 'Kapsam açığı',
+  'adminTargets.nextRequestEvidence': '{store} için {month} dağıtımı mevcut kuyrukta.',
+  'adminTargets.actionScopeEvidence': 'Aksiyon mağazası kapsamı: {count}',
 
   'adminTargets.pendingApprovals': 'Bekleyen onaylar',
   'adminTargets.pendingApprovalsNote': 'Hâlâ bölge onayı bekleyen talepler.',
@@ -100,6 +111,17 @@ export const adminTargetsEn: Record<keyof typeof adminTargetsTr, string> = {
     'Track monthly target distribution requests, personnel coverage, and recent decisions from one operational screen.',
   'adminTargets.actionStores': 'Action stores',
   'adminTargets.none': 'None',
+  'adminTargets.decisionBriefEyebrow': 'Decision brief',
+  'adminTargets.decisionBriefTitle': 'Visible approval request and coverage impact',
+  'adminTargets.decisionBriefCopy':
+    'Decision evidence from the current request queue, target coverage, and assigned action-store scope.',
+  'adminTargets.nextRequest': 'Visible request',
+  'adminTargets.noPendingRequest': 'No pending request',
+  'adminTargets.actionAvailable': 'Approval action available',
+  'adminTargets.approvalBlocked': 'Outside approval scope',
+  'adminTargets.coverageGaps': 'Coverage gaps',
+  'adminTargets.nextRequestEvidence': '{store} distribution for {month} is visible in the current queue.',
+  'adminTargets.actionScopeEvidence': 'Assigned action-store scope: {count}',
 
   'adminTargets.pendingApprovals': 'Pending approvals',
   'adminTargets.pendingApprovalsNote':

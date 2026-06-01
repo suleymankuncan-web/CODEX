@@ -106,6 +106,11 @@ export function TargetApprovalQueuePage(input: {
     .filter((item) => item.targetStatus !== 'approved')
     .slice(0, 8)
   const assignedStoreScope = getAssignedStoreIds(input.authSummary)
+  const approvalReadyCount = pendingItems.filter((item) =>
+    canApproveTargetDistributionRequest(input.authSummary, item.storeId),
+  ).length
+  const blockedApprovalCount = pendingItems.length - approvalReadyCount
+  const firstPendingItem = pendingItems[0] ?? null
 
   return (
     <AdminSurfacePage ariaLabel={t('adminTargets.title')}>
@@ -161,6 +166,17 @@ export function TargetApprovalQueuePage(input: {
             tone: 'cyan',
           },
         ]}
+      />
+
+      <TargetApprovalDecisionBrief
+        approvalReadyCount={approvalReadyCount}
+        assignedStoreCount={assignedStoreScope.length}
+        blockedApprovalCount={blockedApprovalCount}
+        coverageSummary={coverageSummary}
+        firstPendingItem={firstPendingItem}
+        locale={locale}
+        pendingCount={pendingItems.length}
+        t={t}
       />
 
       <AdminSurfaceSection
@@ -285,6 +301,74 @@ export function TargetApprovalQueuePage(input: {
         )}
       </AdminSurfaceSection>
     </AdminSurfacePage>
+  )
+}
+
+function TargetApprovalDecisionBrief(input: {
+  approvalReadyCount: number
+  assignedStoreCount: number
+  blockedApprovalCount: number
+  coverageSummary: ReturnType<typeof createEmptyCoverageSummary>
+  firstPendingItem: TargetDistributionRequest | null
+  locale: AppLocale
+  pendingCount: number
+  t: TranslateFunction
+}) {
+  const hasPending = input.pendingCount > 0
+  const tone: AdminSurfaceTone = input.blockedApprovalCount > 0
+    ? 'warning'
+    : hasPending
+      ? 'accent'
+      : mapCoverageSummaryTone(input.coverageSummary)
+
+  return (
+    <AdminSurfaceSection
+      eyebrow={input.t('adminTargets.decisionBriefEyebrow')}
+      title={input.t('adminTargets.decisionBriefTitle')}
+      badge={
+        <AdminSurfaceBadge tone={tone}>
+          {hasPending ? input.t('adminTargets.needsAttention') : input.t('adminTargets.clear')}
+        </AdminSurfaceBadge>
+      }
+    >
+      <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+        {input.t('adminTargets.decisionBriefCopy')}
+      </p>
+      <AdminKeyValueGrid className="tw:lg:grid-cols-4">
+        <AdminKeyValue
+          label={input.t('adminTargets.nextRequest')}
+          value={
+            input.firstPendingItem
+              ? input.firstPendingItem.storeName || input.firstPendingItem.storeId
+              : input.t('adminTargets.noPendingRequest')
+          }
+        />
+        <AdminKeyValue
+          label={input.t('adminTargets.actionAvailable')}
+          value={`${input.approvalReadyCount} / ${input.pendingCount}`}
+        />
+        <AdminKeyValue
+          label={input.t('adminTargets.approvalBlocked')}
+          value={String(input.blockedApprovalCount)}
+        />
+        <AdminKeyValue
+          label={input.t('adminTargets.coverageGaps')}
+          value={`${input.coverageSummary.uncoveredEmployees} / ${input.coverageSummary.totalEmployees}`}
+        />
+      </AdminKeyValueGrid>
+      {input.firstPendingItem ? (
+        <AdminStatePanel
+          title={input.t('adminTargets.nextRequestEvidence', {
+            store: input.firstPendingItem.storeName || input.firstPendingItem.storeId,
+            month: formatDate(input.firstPendingItem.requestMonth, input.locale),
+          })}
+          description={input.t('adminTargets.actionScopeEvidence', {
+            count: String(input.assignedStoreCount),
+          })}
+          tone={tone}
+        />
+      ) : null}
+    </AdminSurfaceSection>
   )
 }
 

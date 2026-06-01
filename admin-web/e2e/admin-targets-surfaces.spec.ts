@@ -22,14 +22,26 @@ test('admin target queue uses AdminSurface primitives without legacy page classe
   await page.goto('/admin/targets')
 
   await expect(page.getByRole('heading', { name: 'Region approval queue for store-submitted target distribution requests.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Visible approval request and coverage impact' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Approved personnel target readiness' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Pending target distribution requests' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Recently approved target requests' })).toBeVisible()
   await expect(page.getByTestId('admin-metric-pending-target-approvals')).toContainText('1')
   await expect(page.getByTestId('admin-metric-target-coverage-rate')).toContainText('67%')
+  await expect(page.getByText('Approval action available')).toBeVisible()
+  await expect(page.getByText('1 / 1')).toBeVisible()
   await expect(page.getByText('May target distribution')).toBeVisible()
   await expect(page.getByText('Store plan update')).toBeVisible()
   await expect(page.locator('.hero-panel, .metric-card, .dashboard-card, .status-pill')).toHaveCount(0)
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+
+  await expect(page.getByRole('heading', { name: 'Visible approval request and coverage impact' })).toBeVisible()
+  const hasNoHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  )
+  expect(hasNoHorizontalOverflow).toBe(true)
 })
 
 test('admin target approval keeps approve payload shape unchanged', async ({ page }) => {

@@ -51,6 +51,7 @@ test('admin KPI config page localizes publish governance preview', async ({ page
   ).toBeVisible()
   await expect(page.getByText('Store profile diff')).toBeVisible()
   await expect(page.getByText('Grading diff')).toBeVisible()
+  await expect(page.getByTestId('admin-metric-publish-state')).toContainText('Review before publish')
   await expect(page.getByText('Versioned schema')).toBeVisible()
   await expect(page.getByText('Active', { exact: true })).toBeVisible()
   await expect(page.getByText('Latest version')).toBeVisible()

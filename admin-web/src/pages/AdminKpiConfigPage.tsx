@@ -439,7 +439,7 @@ function KpiConfigMetricSummary(input: {
         {
           id: 'publish-state',
           label: input.t('adminKpiConfig.publishState'),
-          value: input.editorState.hasUnpublishedChanges ? 1 : 0,
+          value: input.t(input.editorState.hasUnpublishedChanges ? 'adminKpiConfig.reviewBeforePublish' : 'adminKpiConfig.noDraftDelta'),
           description: input.editorState.hasUnpublishedChanges
             ? input.t('adminKpiConfig.draftDiffersFromLive')
             : input.t('adminKpiConfig.draftMatchesLive'),
