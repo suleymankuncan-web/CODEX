@@ -212,6 +212,20 @@ Current maintenance baseline:
   scope remains the authority through ranking/reporting access policies and
   personnel performance `FORBIDDEN` checks; frontend only hides impossible
   actions and does not widen access.
+- Architecture Debt Focus Pass is closed through PR #627. PR #623 split the
+  Store KPI reporting read surface out of `ReportingService`; PR #624 added
+  competition finalization/scoring characterization without runtime changes;
+  PR #625 split worker job module boundaries and kept BullMQ boot behavior
+  smoke-covered; PR #626 added frontend OpenAPI generator selected-operation
+  guardrails; PR #627 added the route-param scope contract guard for
+  query/body-only `ScopeGuard` identifiers. API shape, DB schema, auth and
+  permission semantics, scoring, ranking, snapshot, checklist weights, BullMQ,
+  import lifecycle, and business workflows stayed unchanged. Estimated
+  architecture health after this focused pass is `96/100`; remaining parked
+  risks are deeper competition scoring/finalization extraction, workforce
+  offboarding/access lifecycle boundaries, further backend OpenAPI generator
+  movement, broad E2E decomposition, and future Nebim/prim/norm kadro/store
+  action boundary decisions.
 
 Latest route/scope guard merge:
 
