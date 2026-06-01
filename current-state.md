@@ -199,6 +199,19 @@ Current maintenance baseline:
   queue, approval, and business workflow behavior unchanged, and left
   `/admin/session` plus `/admin/feed` explicitly parked with PR-9 evidence and
   reopen triggers.
+- Store Period Contract V1 is closed through PR #619. Contract:
+  `docs/plans/store-period-contract-v1.md`. PR #616 added the backend rankings
+  `periodType=daily|monthly` contract and regenerated OpenAPI/types; PR #617
+  wired `/store/rankings` to request exact loaded days and return to monthly
+  cumulative requests; PR #618 locked non-privileged rankings as backend-gated
+  summary-only UI; PR #619 aligned `/store/me` daily period labels and added
+  exact loaded-day regression coverage. Monthly means the loaded cumulative
+  month/month-to-date row, single-day means only that date, unloaded dates must
+  not synthesize rank/score/KPI/coaching data, and store manager/personnel
+  ranking access remains Top 100 plus any backend-returned owned row. Backend
+  scope remains the authority through ranking/reporting access policies and
+  personnel performance `FORBIDDEN` checks; frontend only hides impossible
+  actions and does not widen access.
 
 Latest route/scope guard merge:
 
