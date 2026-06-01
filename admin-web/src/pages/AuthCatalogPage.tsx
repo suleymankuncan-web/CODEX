@@ -207,7 +207,7 @@ export function AuthCatalogPage() {
                 <AuthListRow key={role.roleId}>
                   <AuthRowHead>
                     <div>
-                      <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{role.roleCode}</strong>
+                      <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">{role.roleCode}</strong>
                       <AuthMuted>{role.roleName}</AuthMuted>
                     </div>
                     <AdminSurfaceBadge tone={role.isSystemRole ? 'accent' : 'neutral'}>
@@ -291,7 +291,7 @@ export function AuthCatalogPage() {
               {permissions.map((permission) => (
                 <AuthListRow key={permission.permissionId}>
                   <AuthRowHead>
-                    <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
+                    <strong className="tw:text-sm tw:font-medium tw:text-foreground">
                       {permission.permissionCode}
                     </strong>
                     <AdminSurfaceBadge tone="neutral">{permission.resourceName}</AdminSurfaceBadge>

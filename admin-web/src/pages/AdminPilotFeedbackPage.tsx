@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { MessageSquareWarning, RefreshCw, Save } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Inbox, MessageSquareWarning, RefreshCw, Save, Tags } from 'lucide-react'
 import {
   AdminFilterBar,
   AdminKeyValue as KeyValue,
@@ -54,6 +54,10 @@ export function AdminPilotFeedbackPage() {
   const total = meta?.total ?? items.length
   const newCount = items.filter((item) => item.status === 'new').length
   const triagedCount = items.filter((item) => item.status === 'triaged').length
+  const activeStatusLabel = status ? formatPilotFeedbackStatus(t, status) : t('pilotFeedback.admin.allStatuses')
+  const activeClassificationLabel = classification
+    ? formatPilotFeedbackClassification(t, classification)
+    : t('pilotFeedback.admin.allClassifications')
 
   useEffect(() => {
     if (
@@ -89,7 +93,7 @@ export function AdminPilotFeedbackPage() {
       <AdminSurfacePage ariaLabel={t('pilotFeedback.admin.loadingTitle')}>
         <AdminStatePanel
           isLoading
-        title={t('pilotFeedback.admin.loadingTitle')}
+          title={t('pilotFeedback.admin.loadingTitle')}
           description={t('pilotFeedback.admin.loadingCopy')}
         />
       </AdminSurfacePage>
@@ -105,16 +109,16 @@ export function AdminPilotFeedbackPage() {
           tone="danger"
           action={
             <Button
-            type="button"
+              type="button"
               variant="outline"
-            disabled={feedbackQuery.isFetching}
-            onClick={() => void feedbackQuery.refetch()}
-          >
-            <RefreshCw aria-hidden="true" size={16} />
-            {feedbackQuery.isFetching
-              ? t('pilotFeedback.admin.retryingAction')
-              : t('pilotFeedback.admin.retryAction')}
-            </Button>
+              disabled={feedbackQuery.isFetching}
+              onClick={() => void feedbackQuery.refetch()}
+            >
+              <RefreshCw aria-hidden="true" size={16} />
+              {feedbackQuery.isFetching
+                ? t('pilotFeedback.admin.retryingAction')
+                : t('pilotFeedback.admin.retryAction')}
+              </Button>
           }
         />
       </AdminSurfacePage>
@@ -139,24 +143,28 @@ export function AdminPilotFeedbackPage() {
             value: String(total),
             description: t('pilotFeedback.admin.route'),
             trend: '/admin/pilot-feedback',
+            icon: <Inbox size={18} />,
             tone: 'cyan',
           },
           {
             id: 'new',
             label: t('pilotFeedback.admin.newItems'),
             value: String(newCount),
+            icon: <AlertTriangle size={18} />,
             tone: newCount > 0 ? 'warning' : 'neutral',
           },
           {
             id: 'triaged',
             label: t('pilotFeedback.admin.triagedItems'),
             value: String(triagedCount),
+            icon: <CheckCircle2 size={18} />,
             tone: triagedCount > 0 ? 'accent' : 'neutral',
           },
           {
             id: 'visible',
             label: t('pilotFeedback.admin.queueTitle'),
             value: String(items.length),
+            icon: <Tags size={18} />,
             tone: items.length > 0 ? 'success' : 'neutral',
           },
         ]}
@@ -216,6 +224,12 @@ export function AdminPilotFeedbackPage() {
           </StatusPill>
         }
       >
+        <AdminKeyValueGrid>
+          <KeyValue label={t('pilotFeedback.admin.statusFilter')} value={activeStatusLabel} />
+          <KeyValue label={t('pilotFeedback.admin.classificationFilter')} value={activeClassificationLabel} />
+          <KeyValue label={t('pilotFeedback.admin.queueTitle')} value={String(items.length)} />
+          <KeyValue label={t('pilotFeedback.admin.total')} value={String(total)} />
+        </AdminKeyValueGrid>
         {items.length === 0 ? (
           <EmptyState
             title={t('pilotFeedback.admin.emptyTitle')}

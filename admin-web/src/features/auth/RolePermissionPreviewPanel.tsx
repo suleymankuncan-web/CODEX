@@ -121,7 +121,7 @@ export function RolePermissionPreviewPanel({
               <AuthListRow key={row.id}>
                 <AuthRowHead>
                   <div>
-                    <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{row.route}</strong>
+                    <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">{row.route}</strong>
                     <AuthMuted>{t(row.labelKey)}</AuthMuted>
                   </div>
                   <AdminSurfaceBadge tone={allowed ? 'success' : 'neutral'}>

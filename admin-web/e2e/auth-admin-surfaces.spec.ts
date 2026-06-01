@@ -277,6 +277,22 @@ test('auth catalog page switches chrome to English copy and persists locale', as
   await expect(main.getByRole('heading', { name: 'Role and permission definitions stay explicit and inspectable.' })).toBeVisible()
 })
 
+test('auth dashboard remains readable on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'tr')
+  })
+  await page.goto('/admin/auth')
+
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Kullanıcılar, roller ve kapsam duruşu tek operatör görünümünde.' })).toBeVisible()
+  await expect(main.getByTestId('role-permission-preview')).toBeVisible()
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+  )
+  expect(hasHorizontalOverflow).toBe(false)
+})
+
 async function routeAuthAdminApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })

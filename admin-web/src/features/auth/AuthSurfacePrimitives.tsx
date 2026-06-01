@@ -91,7 +91,12 @@ function AuthListRow({
   className?: string
 }) {
   return (
-    <article className={cn('tw:rounded-lg tw:border tw:border-border tw:bg-background/55 tw:p-3', className)}>
+    <article
+      className={cn(
+        'tw:rounded-lg tw:border tw:border-border/80 tw:bg-background/60 tw:p-3 tw:shadow-[0_1px_0_rgba(15,23,42,0.03)]',
+        className,
+      )}
+    >
       {children}
     </article>
   )
@@ -109,7 +114,7 @@ function AuthLinkRow({
   return (
     <Link
       className={cn(
-        'tw:block tw:rounded-lg tw:border tw:border-border tw:bg-background/55 tw:p-3 tw:text-foreground tw:no-underline tw:transition-colors tw:hover:border-primary/40 tw:hover:bg-muted/50',
+        'tw:block tw:rounded-lg tw:border tw:border-border/80 tw:bg-background/60 tw:p-3 tw:text-foreground tw:no-underline tw:shadow-[0_1px_0_rgba(15,23,42,0.03)] tw:transition-colors tw:hover:border-primary/40 tw:hover:bg-muted/50',
         className,
       )}
       to={to}
@@ -126,7 +131,11 @@ function AuthRowHead({
   children: ReactNode
   className?: string
 }) {
-  return <div className={cn('tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-2', className)}>{children}</div>
+  return (
+    <div className={cn('tw:flex tw:flex-wrap tw:items-start tw:justify-between tw:gap-3', className)}>
+      {children}
+    </div>
+  )
 }
 
 function AuthMuted({

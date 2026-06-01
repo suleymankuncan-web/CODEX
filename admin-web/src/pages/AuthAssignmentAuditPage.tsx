@@ -110,7 +110,7 @@ export function AuthAssignmentAuditPage() {
             {items.map((item) => (
               <AuthTimelineItem key={item.eventLogId}>
                 <AuthRowHead>
-                  <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{item.eventType}</strong>
+                  <strong className="tw:text-sm tw:font-medium tw:text-foreground">{item.eventType}</strong>
                   <AuthMuted>{formatDateTime(item.occurredAt, locale)}</AuthMuted>
                 </AuthRowHead>
                 <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">
