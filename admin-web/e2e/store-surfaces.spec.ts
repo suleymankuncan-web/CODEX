@@ -1229,6 +1229,78 @@ test('store rankings retries a transient API failure without leaving the user st
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
 
+test('store rankings keeps non-privileged rows summary-only and backend-gated', async ({ page }) => {
+  let personnelPerformanceRequests = 0
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['STORE_PERSONNEL'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsFixture,
+        storeLeaderboard: {
+          ...rankingsFixture.storeLeaderboard,
+          items: [
+            {
+              ...storeRankingSummaryRow,
+              metrics: rankingsPrivilegedDetailStoreRow.metrics,
+            },
+          ],
+        },
+        personnelLeaderboard: {
+          items: [
+            {
+              ...personnelRankingDetailRow,
+              employeeId: '99999999-9999-4999-8999-999999999998',
+              displayName: 'Other Top Personnel',
+              canOpenProfile: false,
+            },
+          ],
+          currentEmployee: null,
+          managedStorePersonnel: [],
+          meta: {
+            total: 420,
+            limit: 100,
+            offset: 0,
+          },
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    personnelPerformanceRequests += 1
+    await route.fulfill({ status: 403, json: { message: 'Forbidden' } })
+  })
+
+  await page.goto('/store/rankings')
+
+  const rankingTable = page.locator('.store-rankings-table')
+  await expect(page.getByText('Top 100 kapsam')).toBeVisible()
+  await expect(rankingTable.getByRole('columnheader', { name: /UPT/ })).toHaveCount(0)
+  await expect(rankingTable.getByRole('columnheader', { name: /BM/ })).toHaveCount(0)
+  await expect(rankingTable.getByRole('button', { name: 'Detay aç' })).toHaveCount(0)
+
+  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+  await expect(page.getByRole('row', { name: /Other Top Personnel/ })).toBeVisible()
+  await expect(rankingTable.getByRole('columnheader', { name: /ATV/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Profile Git' })).toHaveCount(0)
+  await expect.poll(() => personnelPerformanceRequests).toBe(0)
+})
+
 test('store rankings personnel detail opens the selected personnel performance profile', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
 
