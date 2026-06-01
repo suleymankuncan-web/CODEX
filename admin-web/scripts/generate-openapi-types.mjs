@@ -5,8 +5,12 @@ import { fileURLToPath } from 'node:url'
 const scriptDir = dirname(fileURLToPath(import.meta.url))
 const adminRoot = resolve(scriptDir, '..')
 const repoRoot = resolve(adminRoot, '..')
-const openApiPath = resolve(repoRoot, 'docs/api/openapi.json')
-const outputPath = resolve(adminRoot, 'src/generated/openapi-types.ts')
+const openApiPath = process.env.OPENAPI_TYPES_SOURCE
+  ? resolve(process.env.OPENAPI_TYPES_SOURCE)
+  : resolve(repoRoot, 'docs/api/openapi.json')
+const outputPath = process.env.OPENAPI_TYPES_OUTPUT
+  ? resolve(process.env.OPENAPI_TYPES_OUTPUT)
+  : resolve(adminRoot, 'src/generated/openapi-types.ts')
 const checkMode = process.argv.includes('--check')
 
 const document = JSON.parse(await readFile(openApiPath, 'utf8'))
@@ -104,6 +108,7 @@ const selectedOperations = [
   { path: '/api/workforce/store-employees', method: 'get' },
   { path: '/api/workflow/inbox', method: 'get' },
 ]
+validateSelectedOperations(document, selectedOperations)
 const selectedSchemaNames = collectReferencedSchemaNames(document, selectedOperations)
 
 const output = [
@@ -205,6 +210,43 @@ function groupOperationsByPath(operations) {
   }
 
   return operationsByPath
+}
+
+function validateSelectedOperations(openApiDocument, operations) {
+  const seen = new Set()
+  const missing = []
+
+  for (const operation of operations) {
+    const key = `${operation.method.toUpperCase()} ${operation.path}`
+
+    if (!httpMethods.has(operation.method)) {
+      throw new Error(`Unsupported OpenAPI method selected: ${operation.method}`)
+    }
+
+    if (seen.has(key)) {
+      throw new Error(`Duplicate OpenAPI operation selected: ${key}`)
+    }
+    seen.add(key)
+
+    const pathItem = openApiDocument.paths?.[operation.path]
+    if (!pathItem) {
+      missing.push(`${key} (missing path)`)
+      continue
+    }
+
+    if (!pathItem[operation.method]) {
+      missing.push(`${key} (missing method)`)
+    }
+  }
+
+  if (missing.length > 0) {
+    throw new Error(
+      [
+        'Selected OpenAPI operations are missing from docs/api/openapi.json:',
+        ...missing.map((operation) => `- ${operation}`),
+      ].join('\n'),
+    )
+  }
 }
 
 function collectReferencedSchemaNames(openApiDocument, operations) {
