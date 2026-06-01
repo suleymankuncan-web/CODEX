@@ -12,8 +12,8 @@ import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GetRankingQueryDto {
   @IsOptional()
-  @IsIn(["monthly"])
-  periodType?: "monthly";
+  @IsIn(["daily", "monthly"])
+  periodType?: "daily" | "monthly";
 
   @IsOptional()
   @IsDateString()

@@ -20,8 +20,9 @@ function methodBody(name) {
   return repository.slice(start, nextMethod === -1 ? repository.length : nextMethod)
 }
 
-test('monthly ranking period lookup excludes demo seed source rows', () => {
-  const body = methodBody('getLatestMonthlyRankingPeriod')
+test('ranking period lookup filters requested period type and excludes demo seed source rows', () => {
+  const body = methodBody('getLatestRankingPeriod')
+  assert.ok(body.includes('ka.period_type = $2'))
   assert.ok(body.includes("COALESCE(ka.source_type, '') <> 'demo_seed'"))
 })
 

@@ -1728,7 +1728,7 @@ export type components = {
     "ReportingRankingsResponse": {
       "source": {
         "mode": "live"
-        "periodType": "monthly"
+        "periodType": "daily" | "monthly"
         "periodStart": string | null
         "periodEnd": string | null
       }
@@ -1904,7 +1904,7 @@ export type components = {
         }
       }
       "availablePeriods": Array<{
-          "periodType": "monthly"
+          "periodType": "daily" | "monthly"
           "periodStart": string
           "periodEnd": string
         }>

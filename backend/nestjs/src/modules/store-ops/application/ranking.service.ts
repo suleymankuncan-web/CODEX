@@ -119,8 +119,9 @@ export class RankingService {
         employeeId: input.employeeId,
         companyIds: input.companyIds,
       }),
-      this.rankingReportingReadRepository.getLatestMonthlyRankingPeriod({
+      this.rankingReportingReadRepository.getLatestRankingPeriod({
         metricCodes: allMetricCodes,
+        periodType: input.periodType ?? "monthly",
         periodStart: input.periodStart,
       }),
     ]);
@@ -134,8 +135,13 @@ export class RankingService {
       return getEmptyRankingResponse({
         access,
         availablePeriods,
+        periodType: input.periodType ?? "monthly",
         periodStart: input.periodStart ?? null,
-        periodEnd: input.periodStart ? resolveMonthEnd(input.periodStart) : null,
+        periodEnd: input.periodStart
+          ? input.periodType === "daily"
+            ? input.periodStart
+            : resolveMonthEnd(input.periodStart)
+          : null,
       });
     }
 
@@ -289,7 +295,7 @@ export class RankingService {
     return {
       source: {
         mode: "live",
-        periodType: "monthly",
+        periodType: latestPeriod.period_type === "daily" ? "daily" : "monthly",
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       },
