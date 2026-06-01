@@ -112,7 +112,7 @@
 
   .store-rankings-table tbody tr {
     display: grid;
-    grid-template-columns: 68px minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr);
     gap: 8px 12px;
     border: 1px solid var(--rankings-line);
     border-radius: 16px;
@@ -135,41 +135,59 @@
     text-align: left;
   }
 
-  .store-rankings-table td[data-label='Mağaza'],
-  .store-rankings-table td[data-label='Personel'] {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .store-rankings-table td[data-label='Sıra'] {
+  .store-rankings-cell-rank {
     grid-column: 1;
     grid-row: 1;
     align-self: center;
   }
 
-  .store-rankings-table td[data-label='Mağaza skor'],
-  .store-rankings-table td[data-label='Personel skor'] {
+  .store-rankings-cell-entity {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .store-rankings-entity-detail {
+    display: block;
+    overflow: hidden;
+    color: var(--rankings-muted);
+    font-size: 12px;
+    font-weight: 520;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .store-rankings-table td.store-rankings-cell-store {
+    display: none;
+  }
+
+  .store-rankings-cell-score {
+    display: flex;
     grid-column: 1 / -1;
+    align-items: center;
+    justify-content: space-between;
     border-top: 1px solid rgba(88, 100, 146, 0.1);
     padding-top: 8px;
   }
 
-  .store-rankings-table td[data-label='UPT'],
-  .store-rankings-table td[data-label='ATV'],
-  .store-rankings-table td[data-label='HG%'],
-  .store-rankings-table td[data-label='BM Checklist'],
-  .store-rankings-table td[data-label='VM Checklist'] {
+  .store-rankings-cell-kpi {
     display: grid;
+    grid-column: 1 / -1;
     grid-template-columns: 84px minmax(0, 1fr);
     align-items: center;
     gap: 8px;
   }
 
-  .store-rankings-table td[data-label='Aksiyon'] {
+  .store-rankings-cell-kpi .store-rankings-kpi-cell {
+    justify-self: end;
+    min-width: 112px;
+  }
+
+  .store-rankings-cell-action {
     grid-column: 1 / -1;
   }
 
-  .store-rankings-table td[data-label='Aksiyon'] .store-rankings-primary-button {
+  .store-rankings-cell-action .store-rankings-primary-button {
     width: 100%;
   }
 
@@ -179,9 +197,17 @@
     min-width: 0;
   }
 
-  .store-rankings-table td[data-label]::before {
+  .store-rankings-table td.store-rankings-cell-rank::before,
+  .store-rankings-table td.store-rankings-cell-entity::before,
+  .store-rankings-table td.store-rankings-cell-store::before {
+    display: none;
+    content: none;
+  }
+
+  .store-rankings-table td.store-rankings-cell-score::before,
+  .store-rankings-table td.store-rankings-cell-kpi::before,
+  .store-rankings-table td.store-rankings-cell-action::before {
     display: block;
-    margin-bottom: 4px;
     color: var(--rankings-quiet);
     font-size: 10px;
     font-weight: 760;
@@ -190,55 +216,12 @@
     content: attr(data-label);
   }
 
-  .store-rankings-table td[data-label='UPT']::before,
-  .store-rankings-table td[data-label='ATV']::before,
-  .store-rankings-table td[data-label='HG%']::before,
-  .store-rankings-table td[data-label='BM Checklist']::before,
-  .store-rankings-table td[data-label='VM Checklist']::before {
+  .store-rankings-table td.store-rankings-cell-score::before,
+  .store-rankings-table td.store-rankings-cell-kpi::before {
     margin-bottom: 0;
   }
-}
 
-@media (max-width: 760px) {
-  .store-rankings-table td:nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .store-rankings-table td:first-child {
-    grid-column: 1;
-    grid-row: 1;
-    align-self: center;
-  }
-
-  .store-rankings-table td:has(.store-rankings-score-number) {
-    grid-column: 1 / -1;
-    border-top: 1px solid rgba(88, 100, 146, 0.1);
-    padding-top: 8px;
-  }
-
-  .store-rankings-table td:has(.store-rankings-kpi-cell) {
-    display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: 84px minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-  }
-
-  .store-rankings-table td:has(.store-rankings-kpi-cell) .store-rankings-kpi-cell {
-    justify-self: end;
-    min-width: 118px;
-  }
-
-  .store-rankings-table td:last-child {
-    grid-column: 1 / -1;
-  }
-
-  .store-rankings-table td:last-child .store-rankings-primary-button {
-    width: 100%;
-  }
-
-  .store-rankings-table td:has(.store-rankings-kpi-cell)::before {
-    margin-bottom: 0;
+  .store-rankings-table td.store-rankings-cell-action::before {
+    margin-bottom: 4px;
   }
 }
