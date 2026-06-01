@@ -41,6 +41,8 @@ test('snapshot operations preserve status semantic golden on AdminSurface primit
 
   await expect(main.getByText('Snapshot Operations')).toBeVisible()
   await expect(main.getByRole('button', { name: 'Queue daily closure' })).toBeEnabled()
+  await expect(main.getByRole('heading', { name: 'What to inspect first' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Latest signal to open' })).toBeVisible()
   await expect(main.locator('[data-slot="table"]')).toHaveCount(1)
 
   for (const expected of snapshotStatusGolden) {

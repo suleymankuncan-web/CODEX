@@ -40,6 +40,8 @@ test('reports hub and snapshot chooser keep route semantics on AdminSurface prim
   await expect(main.getByRole('heading', { name: 'Read-only reporting from the latest trustworthy snapshot.' })).toBeVisible()
   await expect(main.getByText('Total report rows')).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Reporting anchor' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Which reports this snapshot output feeds' })).toBeVisible()
+  await expect(main.getByText('/api/reports/summary')).toHaveCount(0)
   await expect(main.getByRole('link', { name: 'Open drill-down chooser' })).toHaveAttribute(
     'href',
     '/admin/reports/snapshot-runs',
