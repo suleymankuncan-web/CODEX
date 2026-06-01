@@ -23,3 +23,6 @@
 @import './styles/auth-login.css';
 @import './styles/reduced-motion.css';
 @import './styles/store-checklists-command.css';
+@import './styles/store-rankings-premium.css';
+@import './styles/store-rankings-premium-table.css';
+@import './styles/store-rankings-premium-responsive.css';
