@@ -4,6 +4,7 @@ import { setStoredLocale } from './locale-test-utils'
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
 const vmTemplateId = '99999999-9999-4999-8999-999999999999'
+const checklistFixtureNow = new Date('2026-05-20T12:00:00.000Z')
 
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
@@ -679,6 +680,7 @@ async function answerChecklistScoreQuestion(page: Page, score: string, note: str
 }
 
 async function setupChecklistPage(page: Page, roleCodes: string[], options: ChecklistFixtureOptions = {}) {
+  await page.clock.setFixedTime(checklistFixtureNow)
   const roleCodeHeader = roleCodes.join(',')
   await page.addInitScript((roles) => {
     window.localStorage.setItem(
