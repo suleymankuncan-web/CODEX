@@ -2062,7 +2062,19 @@ test('store rankings page switches to English copy and persists locale', async (
     .toBe(true)
 })
 
-test('store rankings page explains monthly preview-only ranking', async ({ page }) => {
+test('store rankings requests exact loaded day and returns to monthly view', async ({ page }) => {
+  const rankingRequests: URL[] = []
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    const url = new URL(route.request().url())
+    rankingRequests.push(url)
+
+    await route.fulfill({
+      json: url.searchParams.get('periodType') === 'daily' ? rankingsDailyFixture : rankingsFixture,
+    })
+  })
+
   await page.goto('/store/rankings')
   await expect(page.getByRole('button', { name: 'Yıl filtresi' })).toContainText('2026')
   await expect(page.getByRole('button', { name: 'Ay filtresi' })).toContainText('Nis')
@@ -2072,8 +2084,31 @@ test('store rankings page explains monthly preview-only ranking', async ({ page 
     page.getByText('Top 100 görünümünü, kendi mağaza ve personel konumunla birlikte takip et.'),
   ).toBeVisible()
   await page.getByRole('button', { name: 'Gün filtresi' }).click()
-  await page.getByRole('checkbox', { name: '1', exact: true }).click()
-  await expect(page.getByText('Bu seçim için mağaza sıralaması yok.')).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: '15', exact: true })).toBeVisible()
+  await expect(page.getByRole('checkbox', { name: '16', exact: true })).toHaveCount(0)
+  await page.getByRole('checkbox', { name: '15', exact: true }).click()
+  await expect
+    .poll(() =>
+      rankingRequests.some(
+        (url) =>
+          url.searchParams.get('periodType') === 'daily' &&
+          url.searchParams.get('periodStart') === '2026-04-15',
+      ),
+    )
+    .toBe(true)
+  await expect(page.getByRole('button', { name: 'Gün filtresi' })).toContainText('15')
+  await expect(page.getByText('Seçili gün görünümü')).toBeVisible()
+  await page.getByRole('button', { name: 'Gün filtresi' }).click()
+  await page.getByRole('checkbox', { name: 'Tüm ay' }).click()
+  await expect
+    .poll(() => {
+      const lastRequest = rankingRequests.at(-1)
+
+      return lastRequest
+        ? `${lastRequest.searchParams.get('periodType')}:${lastRequest.searchParams.get('periodStart')}`
+        : ''
+    })
+    .toBe('monthly:2026-04-01')
   await expect(page.getByText('Global liste Top 100 ozet; kendi konumun ayrica gorunur.')).toHaveCount(0)
   await expect(page.getByText('Siralama yuzeyi acilamadi')).toHaveCount(0)
 })
@@ -4351,6 +4386,19 @@ const scoreDisplayFollowerStoreRow = {
   ],
 }
 
+const rankingsAvailablePeriods = [
+  {
+    periodType: 'monthly',
+    periodStart: '2026-04-01',
+    periodEnd: '2026-04-30',
+  },
+  {
+    periodType: 'daily',
+    periodStart: '2026-04-15',
+    periodEnd: '2026-04-15',
+  },
+] as const
+
 const rankingsPrivilegedDetailFixture = {
   source: {
     mode: 'live',
@@ -4408,13 +4456,7 @@ const rankingsPrivilegedDetailFixture = {
       offset: 0,
     },
   },
-  availablePeriods: [
-    {
-      periodType: 'monthly',
-      periodStart: '2026-04-01',
-      periodEnd: '2026-04-30',
-    },
-  ],
+  availablePeriods: rankingsAvailablePeriods,
 }
 
 const rankingsFixture = {
@@ -4491,13 +4533,17 @@ const rankingsFixture = {
       offset: 0,
     },
   },
-  availablePeriods: [
-    {
-      periodType: 'monthly',
-      periodStart: '2026-04-01',
-      periodEnd: '2026-04-30',
-    },
-  ],
+  availablePeriods: rankingsAvailablePeriods,
+}
+
+const rankingsDailyFixture = {
+  ...rankingsFixture,
+  source: {
+    mode: 'live',
+    periodType: 'daily',
+    periodStart: '2026-04-15',
+    periodEnd: '2026-04-15',
+  },
 }
 
 const competitionFixture = {

@@ -78,9 +78,9 @@ export function StoreRankingsPage(input: {
     sortDirection,
     selectedDetail,
   } = pageState
-  const unsupportedDailySelection = Boolean(dayOfMonth)
   const limit = 100
   const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
+  const requestedPeriod = getRequestedRankingPeriod(periodStart, dayOfMonth)
   const setFilter = (field: StoreRankingsTextFilter) => (value: string) => {
     dispatchPageState({ type: 'setFilter', field, value })
   }
@@ -96,14 +96,16 @@ export function StoreRankingsPage(input: {
       privilegedSession ? regionId : '',
       privilegedSession ? storeId : '',
       privilegedSession ? search : '',
-      unsupportedDailySelection ? `day-${dayOfMonth}` : 'all-month',
+      requestedPeriod.periodType,
+      requestedPeriod.periodStart || 'latest',
       privilegedSession ? sortKey : 'score',
       privilegedSession ? sortDirection : 'desc',
       privilegedSession ? offset : 0,
     ],
     queryFn: () =>
       getRankings({
-        ...(periodStart ? { periodStart } : {}),
+        periodType: requestedPeriod.periodType,
+        ...(requestedPeriod.periodStart ? { periodStart: requestedPeriod.periodStart } : {}),
         ...(privilegedSession && regionManagerUserId ? { regionManagerUserId } : {}),
         ...(privilegedSession && regionId ? { regionId } : {}),
         ...(privilegedSession && storeId ? { storeId } : {}),
@@ -114,7 +116,7 @@ export function StoreRankingsPage(input: {
         limit,
         offset: privilegedSession ? offset : 0,
       }),
-    enabled: enabled && !unsupportedDailySelection,
+    enabled,
     placeholderData: (previousData) => previousData,
     ...transientQueryRetryOptions,
   })
@@ -129,8 +131,8 @@ export function StoreRankingsPage(input: {
       ranking?.personnelLeaderboard.meta.total ?? 0,
     ) >
       offset + limit
-  const storeRows = unsupportedDailySelection ? [] : ranking?.storeLeaderboard.items ?? []
-  const personnelRows = unsupportedDailySelection ? [] : ranking?.personnelLeaderboard.items ?? []
+  const storeRows = ranking?.storeLeaderboard.items ?? []
+  const personnelRows = ranking?.personnelLeaderboard.items ?? []
   const canOpenPersonnelProfile = (row: PersonnelRankingRow) =>
     canOpenPersonnelProfileFromRanking(input.authSummary, row)
   const openPersonnelProfile = (employeeId: string) => {
@@ -139,7 +141,7 @@ export function StoreRankingsPage(input: {
 
     if (ranking?.source.periodStart) {
       params.set('mode', 'live')
-      params.set('periodType', 'monthly')
+      params.set('periodType', ranking.source.periodType)
       params.set('periodStart', ranking.source.periodStart)
     }
 
@@ -285,7 +287,6 @@ export function StoreRankingsPage(input: {
         hasNextPage={Boolean(hasNextPage)}
         offset={offset}
         limit={limit}
-        forceEmpty={unsupportedDailySelection}
         locale={locale}
         t={t}
       />
@@ -367,7 +368,11 @@ function RankingSummaryStrip(input: {
         icon={<Trophy size={17} />}
         title={input.t('storeRankings.activePeriod')}
         value={formatPeriod(input.ranking.source, input.locale, input.t)}
-        note={input.t('storeRankings.currentMonthlyView')}
+        note={
+          input.ranking.source.periodType === 'daily'
+            ? input.t('storeRankings.currentDailyView')
+            : input.t('storeRankings.currentMonthlyView')
+        }
         tone="accent"
       />
       <StoreMetricCard
@@ -422,10 +427,7 @@ function RankingControls(input: {
   const selectedYear = activePeriod?.year ?? new Date().getFullYear()
   const selectedMonth = activePeriod?.month ?? new Date().getMonth() + 1
   const yearOptions = getRankingYearOptions(input.ranking, selectedYear)
-  const dayOptions = Array.from(
-    { length: getDaysInMonth(selectedYear, selectedMonth) },
-    (_, index) => String(index + 1),
-  )
+  const dayOptions = getLoadedRankingDayOptions(input.ranking, selectedYear, selectedMonth)
   const setPeriod = (next: { year?: number; month?: number }) => {
     input.onPeriodStartChange(
       formatPeriodStart(next.year ?? selectedYear, next.month ?? selectedMonth),
@@ -535,7 +537,10 @@ function RankingControls(input: {
               label: day,
               checked: input.dayOfMonth === day,
               onCheckedChange: (checked: boolean) => {
-                if (checked) input.onDayOfMonthChange(day)
+                if (checked) {
+                  input.onPeriodStartChange(formatPeriodStart(selectedYear, selectedMonth))
+                  input.onDayOfMonthChange(day)
+                }
               },
             })),
           ]}
@@ -729,8 +734,51 @@ function formatPeriodStart(year: number, month: number) {
   return `${year}-${String(month).padStart(2, '0')}-01`
 }
 
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month, 0).getDate()
+function formatDayPeriodStart(monthStart: string, dayOfMonth: string) {
+  const parsed = parseRankingPeriod(monthStart)
+  const day = Number(dayOfMonth)
+
+  if (!parsed || !Number.isInteger(day) || day < 1 || day > 31) {
+    return ''
+  }
+
+  return `${parsed.year}-${String(parsed.month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function getRequestedRankingPeriod(periodStart: string, dayOfMonth: string): {
+  periodType: 'daily' | 'monthly'
+  periodStart: string
+} {
+  if (dayOfMonth) {
+    return {
+      periodType: 'daily',
+      periodStart: formatDayPeriodStart(periodStart, dayOfMonth),
+    }
+  }
+
+  return {
+    periodType: 'monthly',
+    periodStart,
+  }
+}
+
+function getLoadedRankingDayOptions(ranking: RankingSummary, year: number, month: number) {
+  const days = new Set<number>()
+
+  for (const period of ranking.availablePeriods ?? []) {
+    if (period.periodType !== 'daily') {
+      continue
+    }
+
+    const parsed = parseRankingDayPeriod(period.periodStart)
+    if (parsed?.year === year && parsed.month === month) {
+      days.add(parsed.day)
+    }
+  }
+
+  return Array.from(days)
+    .sort((left, right) => left - right)
+    .map(String)
 }
 
 function getRankingYearOptions(ranking: RankingSummary, selectedYear: number) {
@@ -761,4 +809,30 @@ function formatMonthLabel(locale: AppLocale, month: number) {
   return new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'short' }).format(
     new Date(2026, month - 1, 1),
   )
+}
+
+function parseRankingDayPeriod(value: string | null | undefined) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? '')
+
+  if (!match) {
+    return null
+  }
+
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null
+  }
+
+  return { year, month, day }
 }

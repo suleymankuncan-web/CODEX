@@ -185,6 +185,7 @@ export async function getStoreScoreBreakdown(input: {
 }
 
 export async function getRankings(input?: {
+  periodType?: 'daily' | 'monthly'
   periodStart?: string
   regionManagerUserId?: string
   regionId?: string
@@ -196,7 +197,7 @@ export async function getRankings(input?: {
   offset?: number
 }) {
   const params = new URLSearchParams()
-  params.set('periodType', 'monthly')
+  params.set('periodType', input?.periodType ?? 'monthly')
   if (input?.periodStart) {
     params.set('periodStart', input.periodStart)
   }
