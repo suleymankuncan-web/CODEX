@@ -1,6 +1,6 @@
 # Admin Operational UX V2 Audit Matrix
 
-Status: active audit, maintained through PR-9 parked route recheck
+Status: closed through PR-10 closeout
 Date: 2026-06-01
 Source plan: `docs/plans/admin-operational-ux-v2-plan.md`
 Baseline: `docs/plans/admin-ui-modernization-v1-inventory.md`
@@ -149,3 +149,16 @@ Decision:
 
 No runtime code changed in PR-9. Current parked status is unchanged, so
 `current-state.md` does not need a PR-9 parked-status update.
+
+## PR-10 Closeout
+
+Evidence:
+`docs/evidence/admin-operational-ux-v2-closeout-2026-06-01.md`.
+
+Final decision:
+
+- The V2 audit matrix remains the source of truth for route intent, risk,
+  operational UX direction, primitive sufficiency, and parked-route decisions.
+- All non-parked active admin routes were improved or covered by route-group
+  PRs.
+- `/admin/session` and `/admin/feed` remain parked with PR-9 evidence.

@@ -25,13 +25,24 @@ existing `AdminSurface*` primitive layer in
 
 ## Status
 
-Status: `active plan`
+Status: `closed`
 Date: 2026-06-01
 
 This plan starts after Admin UI Modernization V1 closed. V1 moved admin
 surfaces to shadcn/ui + Tailwind v4 + lucide-react + `AdminSurface*` and added
 the admin UI guard. V2 must improve operational quality without reopening the
 V1 migration as broad churn.
+
+Closeout evidence:
+`docs/evidence/admin-operational-ux-v2-closeout-2026-06-01.md`.
+
+Final result:
+
+- 29 active admin routes improved or covered by route-group PRs.
+- `/admin/session` and `/admin/feed` remain explicitly parked with PR-9
+  evidence and reopen triggers.
+- No API, DB, auth, permission, role, scope, route, navigation, scoring,
+  snapshot, import, queue, approval, or business workflow behavior changed.
 
 ## Source Documents
 
@@ -661,6 +672,12 @@ Steps:
 Stop if:
 
 - Any improved route remains half-converted or lacks explicit parked evidence.
+
+Closeout result:
+
+- Closed by `docs/evidence/admin-operational-ux-v2-closeout-2026-06-01.md`.
+- No improved route remains half-converted.
+- Parked routes have explicit evidence and reopen triggers.
 
 ## Per-PR Operating Checklist
 

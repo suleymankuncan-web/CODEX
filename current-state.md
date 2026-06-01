@@ -190,14 +190,15 @@ Current maintenance baseline:
   AdminSurface primitive guard. `/admin/session` and `/admin/feed` remain
   explicit parked exceptions with reopen triggers; future admin routes must
   update the inventory baseline and satisfy the guard before merge.
-- Admin Operational UX V2 is the active admin frontend follow-up. Execution
-  plan: `docs/plans/admin-operational-ux-v2-plan.md`; PR-1 audit matrix:
-  `docs/plans/admin-operational-ux-v2-audit-matrix.md`. Runtime admin UI work
-  stays blocked until the PR-1 audit and primitive usage map merge. V2 uses
-  Decision Latency and Evidence Confidence to prioritize operational polish,
-  keeps API/DB/auth/workflow/scoring/snapshot/import behavior unchanged, and
-  keeps `/admin/session` plus `/admin/feed` parked unless a separate product
-  decision reopens them.
+- Admin Operational UX V2 is closed. Execution plan:
+  `docs/plans/admin-operational-ux-v2-plan.md`; audit matrix:
+  `docs/plans/admin-operational-ux-v2-audit-matrix.md`; closeout evidence:
+  `docs/evidence/admin-operational-ux-v2-closeout-2026-06-01.md`. PR #602
+  through PR #613 improved or covered 29 active admin routes, kept API, DB,
+  auth, permission, role, scope, route, navigation, scoring, snapshot, import,
+  queue, approval, and business workflow behavior unchanged, and left
+  `/admin/session` plus `/admin/feed` explicitly parked with PR-9 evidence and
+  reopen triggers.
 
 Latest route/scope guard merge:
 
