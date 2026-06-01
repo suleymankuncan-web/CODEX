@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-29T22:58:01.301Z",
+  "generatedAt": "2026-06-01T11:53:26.394Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2473,7 +2473,7 @@
       "exportedFunction": "getRankings",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 228
+        "line": 229
       }
     },
     {
@@ -2488,7 +2488,7 @@
       "exportedFunction": "getChecklistReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 250
+        "line": 251
       }
     },
     {
@@ -2503,7 +2503,7 @@
       "exportedFunction": "getTurnoverReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 254
+        "line": 255
       }
     },
     {

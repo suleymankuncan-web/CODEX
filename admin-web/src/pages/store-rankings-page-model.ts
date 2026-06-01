@@ -162,6 +162,10 @@ export function formatPeriod(
     return t('common.latestMonthlyData')
   }
 
+  if (source.periodType === 'daily' || source.periodStart === source.periodEnd) {
+    return formatDate(source.periodStart, locale)
+  }
+
   return `${formatDate(source.periodStart, locale)} - ${formatDate(source.periodEnd, locale)}`
 }
 
