@@ -333,10 +333,14 @@ Codex onayi su sekillerde kabul edilir:
 
 - `found no major issue`,
 - `didn't find any major issues`,
-- acik thumbs-up/onay reaksiyonu.
+- PR govdesinde veya en son review istegi/comment reaction grubunda
+  `chatgpt-codex-connector[bot]` tarafindan verilmis acik `+1` / thumbs-up
+  reaksiyonu.
 
-Sadece `eyes` reaksiyonu onay degildir. Actionable Codex yorumu varsa merge
-edilmez; once duzeltilir, testler yeniden kosulur, tekrar review beklenir.
+Bu onay sinyali son push'tan sonra gelmis olmalidir. Onceki commit'e ait
+temiz yorum veya reaksiyon yeni push sonrasinda merge onayi sayilmaz. Sadece
+`eyes` reaksiyonu onay degildir. Actionable Codex yorumu varsa merge edilmez;
+once duzeltilir, testler yeniden kosulur, tekrar review beklenir.
 
 Codex review kontrolu sadece tek ekrandan yapilmaz. Su kanallar birlikte
 okunur:
