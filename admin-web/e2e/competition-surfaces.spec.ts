@@ -52,6 +52,7 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
   await expect(page.locator(legacyCompetitionSelectors)).toHaveCount(0)
   await expect(page.getByRole('link', { name: 'Yarışmalar' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
+  await expect(page.getByText('Karar özeti')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' }).first()).toBeVisible()
   const adminReadSummary = page.getByLabel('Yönetici yarışma okuma özeti')
   await expect(adminReadSummary.getByText('Okuma özeti')).toBeVisible()
@@ -149,6 +150,7 @@ test('admin competitions page switches chrome to English copy and persists local
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Region challenge stages' })).toBeVisible()
   await expect(page.getByText('Competition List')).toBeVisible()
+  await expect(page.getByText('Decision brief')).toBeVisible()
   await expect(page.getByRole('button', { name: 'New draft' })).toBeVisible()
   await expect(page.getByText('Bölge yarışma etapları')).toHaveCount(0)
 
@@ -156,6 +158,18 @@ test('admin competitions page switches chrome to English copy and persists local
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Region challenge stages' })).toBeVisible()
+})
+
+test('admin competitions decision surface stays bounded on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/competitions')
+  await setStoredLocale(page, 'en')
+
+  await expect(page.getByText('Decision brief')).toBeVisible()
+  await expect(page.getByText('Selected competition')).toBeVisible()
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+    .toBe(true)
 })
 
 test('admin competition stage builder switches chrome to English copy and persists locale', async ({ page }) => {

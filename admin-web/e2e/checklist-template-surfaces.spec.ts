@@ -30,6 +30,8 @@ test('admin checklist template surface keeps BM and VM drafts isolated', async (
   await expect(main.getByRole('heading', { name: 'Checklist template editor' })).toBeVisible()
   await expect(main.getByTestId('checklist-template-editor')).toBeVisible()
   await expect(main.locator('[class*="admin-checklist-builder"]')).toHaveCount(0)
+  await expect(main.getByText('Publish gate')).toBeVisible()
+  await expect(main.getByText('Ready to publish')).toBeVisible()
   await expect(main.getByText('Total weight: 100/100')).toBeVisible()
   await expect(firstQuestion).toHaveValue(/Vitrin sezon/i)
 
@@ -130,6 +132,18 @@ test('admin checklist template publish preserves create and publish payload shap
     requiresLowScoreNote: true,
   })
   expect(publishPayloads[0]).toEqual({ effectiveFrom: createPayload.effectiveFrom })
+})
+
+test('admin checklist template authoring stays bounded on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/checklists')
+
+  const main = page.getByRole('main')
+  await expect(main.getByText('Publish gate')).toBeVisible()
+  await expect(main.getByTestId('checklist-item-editor').first()).toBeVisible()
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+    .toBe(true)
 })
 
 async function chooseChecklistTemplate(page: Page, trigger: Locator, optionName: string) {

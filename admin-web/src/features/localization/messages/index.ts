@@ -14,6 +14,7 @@ import { adminShellEn, adminShellTr } from './admin-shell'
 import { adminSnapshotsEn, adminSnapshotsTr } from './admin-snapshots'
 import { adminTargetsEn, adminTargetsTr } from './admin-targets'
 import { commonEn, commonTr } from './common'
+import { competitionAdminUxEn, competitionAdminUxTr } from './competition-admin-ux'
 import { competitionEn, competitionTr } from './competition'
 import { dataQualityEn, dataQualityTr } from './data-quality'
 import { importBatchDetailEn, importBatchDetailTr } from './import-batch-detail'
@@ -55,6 +56,7 @@ const tr = {
   ...adminSnapshotsTr,
   ...adminTargetsTr,
   ...commonTr,
+  ...competitionAdminUxTr,
   ...competitionTr,
   ...dataQualityTr,
   ...importBatchDetailTr,
@@ -97,6 +99,7 @@ const en: Record<keyof typeof tr, string> = {
   ...adminSnapshotsEn,
   ...adminTargetsEn,
   ...commonEn,
+  ...competitionAdminUxEn,
   ...competitionEn,
   ...dataQualityEn,
   ...importBatchDetailEn,

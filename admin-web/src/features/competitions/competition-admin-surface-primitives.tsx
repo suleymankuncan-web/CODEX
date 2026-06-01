@@ -105,9 +105,9 @@ function CompetitionRow({
   className?: string
 }) {
   return (
-    <article aria-label={ariaLabel} className={className}>
+    <article aria-label={ariaLabel}>
       <Card
-        className="tw:border tw:border-border tw:bg-background/65 tw:shadow-none"
+        className={cn('tw:border tw:border-border tw:bg-background/65 tw:shadow-none', className)}
         role="group"
         size="sm"
       >

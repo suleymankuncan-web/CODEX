@@ -349,6 +349,9 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
   )
   const weightIsReady = Math.round(totalWeight * 100) === 10_000
   const canSubmit = Boolean(companyId) && weightIsReady && emptyTextCount === 0 && !hasInvalidScore
+  const validationMessage = canSubmit
+    ? t('adminChecklists.readyToPublish')
+    : resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore, t)
 
   const createMutation = useMutation({
     mutationFn: createAdminChecklistTemplate,
@@ -518,7 +521,9 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
     canSubmit,
     companyId,
     currentDraft,
+    emptyTextCount,
     effectiveFrom,
+    hasInvalidScore,
     isSaving,
     itemCount,
     notice,
@@ -540,6 +545,7 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
     updateItem,
     updateSection,
     updateTemplateType,
+    validationMessage,
     weightIsReady,
   }
 }

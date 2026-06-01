@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import {
+  AlertTriangle,
+  CheckCircle2,
   ClipboardList,
   FileText,
   Hash,
@@ -193,6 +195,7 @@ function AdminChecklistTemplatesEditorPanel({
       testId="checklist-template-editor"
     >
       <AdminChecklistTemplateStrip model={model} />
+      <AdminChecklistPublishGate model={model} />
       <AdminChecklistNotice model={model} />
       <AdminChecklistSectionsList model={model} />
     </AdminSurfaceSection>
@@ -257,6 +260,50 @@ function AdminChecklistTemplateStrip({
         <AdminKeyValue label={t('adminChecklists.templateCode')} value={selectedTemplate.templateCode} />
       </AdminKeyValueGrid>
     </AdminFilterBar>
+  )
+}
+
+function AdminChecklistPublishGate({
+  model,
+}: {
+  model: AdminChecklistTemplatesPageModel
+}) {
+  const {
+    canSubmit,
+    emptyTextCount,
+    hasInvalidScore,
+    itemCount,
+    sectionCount,
+    t,
+    validationMessage,
+  } = model
+  const Icon = canSubmit ? CheckCircle2 : AlertTriangle
+
+  return (
+    <div className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-muted/25 tw:p-3 tw:md:grid-cols-[minmax(0,1fr)_auto] tw:md:items-center">
+      <div className="tw:flex tw:min-w-0 tw:items-start tw:gap-3">
+        <span className={cn(
+          'tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-lg',
+          canSubmit ? 'tw:bg-emerald-50 tw:text-emerald-700' : 'tw:bg-amber-50 tw:text-amber-700',
+        )}>
+          <Icon size={17} aria-hidden="true" />
+        </span>
+        <div className="tw:min-w-0">
+          <p className="tw:m-0 tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {t('adminChecklists.publishGate')}
+          </p>
+          <p className="tw:m-0 tw:mt-1 tw:text-sm tw:font-medium tw:text-foreground">{validationMessage}</p>
+        </div>
+      </div>
+      <AdminKeyValueGrid className="tw:grid-cols-3 tw:md:min-w-96">
+        <AdminKeyValue label={t('adminChecklists.sectionCount', { count: sectionCount })} value={sectionCount} />
+        <AdminKeyValue label={t('adminChecklists.itemCount', { count: itemCount })} value={itemCount} />
+        <AdminKeyValue
+          label={hasInvalidScore ? t('adminChecklists.scoreGuard') : t('adminChecklists.blockingFields')}
+          value={hasInvalidScore ? t('adminChecklists.invalidScores') : emptyTextCount}
+        />
+      </AdminKeyValueGrid>
+    </div>
   )
 }
 
@@ -376,8 +423,11 @@ function AdminChecklistItemEditor({
   const { removeItem, t, updateItem } = model
 
   return (
-    <Card className="tw:border tw:border-border/80 tw:bg-card/90" data-testid="checklist-item-editor" size="sm">
-      <CardContent className="tw:grid tw:gap-3 tw:pt-0">
+    <div
+      className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border/80 tw:bg-card/80 tw:p-3"
+      data-testid="checklist-item-editor"
+    >
+      <div className="tw:grid tw:gap-3 tw:xl:grid-cols-[minmax(0,1.15fr)_minmax(420px,0.85fr)]">
         <div className="tw:grid tw:grid-cols-[2rem_minmax(0,1fr)] tw:gap-3">
           <div className="tw:grid tw:size-8 tw:place-items-center tw:rounded-lg tw:bg-muted tw:text-sm tw:font-medium tw:text-muted-foreground">
             {itemIndex + 1}
@@ -403,14 +453,14 @@ function AdminChecklistItemEditor({
             <Textarea
               value={item.note}
               aria-label={t('adminChecklists.itemNoteAria')}
-              className="tw:min-h-16"
+              className="tw:min-h-14"
               onChange={(event) => updateItem(sectionId, item.id, { note: event.target.value })}
             />
-            <AdminChecklistItemSettings item={item} model={model} sectionId={sectionId} />
           </div>
         </div>
-      </CardContent>
-    </Card>
+        <AdminChecklistItemSettings item={item} model={model} sectionId={sectionId} />
+      </div>
+    </div>
   )
 }
 
@@ -426,8 +476,8 @@ function AdminChecklistItemSettings({
   const { responseTypeLabels, t, updateItem } = model
 
   return (
-    <div className="tw:grid tw:grid-cols-1 tw:gap-2 tw:md:grid-cols-2 tw:xl:grid-cols-[1.1fr_repeat(4,0.7fr)_1.4fr]">
-      <FieldShell label={t('adminChecklists.responseType')}>
+    <div className="tw:grid tw:grid-cols-2 tw:gap-2 tw:md:grid-cols-[1.1fr_repeat(4,0.72fr)]">
+      <FieldShell className="tw:col-span-2 tw:md:col-span-1" label={t('adminChecklists.responseType')}>
         <Select
           value={item.responseType}
           onValueChange={(value) =>
@@ -501,7 +551,7 @@ function AdminChecklistItemSettings({
           }
         />
       </FieldShell>
-      <label className="tw:flex tw:min-h-16 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:px-3 tw:py-2 tw:text-sm tw:text-foreground">
+      <label className="tw:col-span-2 tw:flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:px-3 tw:py-2 tw:text-sm tw:text-foreground tw:md:col-span-5">
         <input
           type="checkbox"
           checked={item.requiresLowScoreNote}
