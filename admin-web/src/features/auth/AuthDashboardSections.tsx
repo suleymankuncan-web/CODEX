@@ -654,7 +654,7 @@ function ActionStoreGrantsPanel({
             <AuthListRow key={assignment.assignmentId}>
               <AuthRowHead>
                 <div>
-                  <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{assignment.username}</strong>
+                  <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">{assignment.username}</strong>
                   <AuthMuted>{assignment.email}</AuthMuted>
                 </div>
                 <AdminSurfaceBadge tone={assignment.active ? 'success' : 'danger'}>
@@ -763,7 +763,7 @@ function UserInventoryPanel({
             <AuthListRow key={user.userId}>
               <AuthRowHead>
                 <div>
-                  <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{user.username}</strong>
+                  <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">{user.username}</strong>
                   <AuthMuted>{user.email}</AuthMuted>
                 </div>
                 <AdminSurfaceBadge tone={user.isActive ? 'success' : 'danger'}>
@@ -874,7 +874,7 @@ function RoleAssignmentsPanel({
             <AuthListRow key={assignment.assignmentId}>
               <AuthRowHead>
                 <div>
-                  <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{assignment.username}</strong>
+                  <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">{assignment.username}</strong>
                   <AuthMuted>{assignment.email}</AuthMuted>
                 </div>
                 <AdminSurfaceBadge tone={assignment.active ? 'success' : 'danger'}>

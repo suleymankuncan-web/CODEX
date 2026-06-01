@@ -27,6 +27,8 @@ export const adminAuditTr = {
   'adminAudit.noTraceItems':
     'Henüz iz öğesi yok. Tüm zaman çizelgelerini incelemek için kimlik, import veya snapshot detaylarını aç.',
   'adminAudit.correlation': 'korelasyon {correlationId}',
+  'adminAudit.correlationIdLabel': 'Korelasyon id',
+  'adminAudit.traceTargetLabel': 'Açılacak kayıt',
   'adminAudit.correlationFallback': 'yalnızca detay veya yok',
   'adminAudit.systemActor': 'sistem',
 
@@ -107,6 +109,8 @@ export const adminAuditEn: Record<keyof typeof adminAuditTr, string> = {
   'adminAudit.noTraceItems':
     'No trace items were available yet. Open auth, import, or snapshot detail views to inspect full timelines.',
   'adminAudit.correlation': 'correlation {correlationId}',
+  'adminAudit.correlationIdLabel': 'Correlation id',
+  'adminAudit.traceTargetLabel': 'Trace target',
   'adminAudit.correlationFallback': 'detail-only or n/a',
   'adminAudit.systemActor': 'system',
 

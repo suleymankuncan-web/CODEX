@@ -26,6 +26,8 @@ test('audit center keeps audit links and modern surface primitives', async ({ pa
   await expect(main.getByRole('heading', { name: 'Audit Center' })).toBeVisible()
   await expect(main.getByTestId('admin-metric-audit-users')).toContainText('1')
   await expect(main.getByRole('heading', { name: 'Latest visible events across auth and operations' })).toBeVisible()
+  await expect(main.getByText('Correlation id').first()).toBeVisible()
+  await expect(main.getByText('/admin/audit/users/user-1/audit')).toBeVisible()
   await expect(main.getByRole('link', { name: /super.admin/ }).first()).toHaveAttribute(
     'href',
     '/admin/audit/users/user-1/audit',
@@ -58,6 +60,19 @@ test('audit detail route preserves correlation and back navigation', async ({ pa
   await expect(
     page.locator('.hero-panel, .panel-heading, .timeline-item, .timeline-dot, .key-grid, .back-link'),
   ).toHaveCount(0)
+})
+
+test('audit center keeps trace evidence readable on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/audit')
+
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Audit Center' })).toBeVisible()
+  await expect(main.getByText('/admin/audit/users/user-1/audit')).toBeVisible()
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+  )
+  expect(hasHorizontalOverflow).toBe(false)
 })
 
 async function routeAuditApi(page: Page) {

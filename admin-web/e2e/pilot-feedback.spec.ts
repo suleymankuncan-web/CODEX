@@ -118,6 +118,8 @@ test('pilot feedback can be submitted and classified inside the app', async ({ p
   const main = page.getByRole('main')
   await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Pilot Feedback' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Pilot feedback is classified in one queue.' })).toBeVisible()
+  await expect(main.getByText('All statuses', { exact: true }).filter({ visible: true })).toBeVisible()
+  await expect(main.getByText('All classes', { exact: true }).filter({ visible: true })).toBeVisible()
   await expect(main.getByText('Checkout submit failed')).toBeVisible()
 
   const row = main.locator('article').filter({ hasText: 'Checkout submit failed' }).first()
@@ -158,6 +160,20 @@ test('pilot feedback classification keeps an existing note when unchanged', asyn
     classification: 'p3_backlog',
     note: 'Existing triage context.',
   })
+})
+
+test('pilot feedback queue keeps triage context readable on mobile', async ({ page }) => {
+  await routePilotFeedbackApi(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/admin/pilot-feedback')
+
+  const main = page.getByRole('main')
+  await expect(main.getByRole('heading', { name: 'Pilot feedback is classified in one queue.' })).toBeVisible()
+  await expect(main.getByText('Checkout submit failed')).toBeVisible()
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+  )
+  expect(hasHorizontalOverflow).toBe(false)
 })
 
 async function routeAuthSession(page: Page) {

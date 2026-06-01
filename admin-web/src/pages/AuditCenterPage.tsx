@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { ArrowRight, DatabaseZap, Layers3, ShieldCheck } from 'lucide-react'
 import {
+  AdminKeyValue,
+  AdminKeyValueGrid,
   AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
@@ -287,17 +289,19 @@ function AuditRecentTracePanel(input: { recentTrace: TraceItem[]; traceLoading: 
           {input.recentTrace.map((item) => (
             <AuthLinkRow key={item.id} to={item.href}>
               <AuthRowHead>
-                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{item.title}</strong>
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{item.title}</strong>
                 <AdminSurfaceBadge tone={toAdminTone(item.tone)}>
                   {formatDateTime(item.happenedAt, locale)}
                 </AdminSurfaceBadge>
               </AuthRowHead>
               <p className="tw:m-0 tw:text-sm tw:leading-6 tw:text-muted-foreground">{item.subtitle}</p>
-              <AuthMuted>
-                {t('adminAudit.correlation', {
-                  correlationId: item.correlationId ?? t('adminAudit.correlationFallback'),
-                })}
-              </AuthMuted>
+              <AdminKeyValueGrid className="tw:lg:grid-cols-2">
+                <AdminKeyValue
+                  label={t('adminAudit.correlationIdLabel')}
+                  value={item.correlationId ?? t('adminAudit.correlationFallback')}
+                />
+                <AdminKeyValue label={t('adminAudit.traceTargetLabel')} value={item.href} />
+              </AdminKeyValueGrid>
             </AuthLinkRow>
           ))}
         </AuthList>
@@ -337,7 +341,7 @@ function AuditUsersPanel(input: { users: UserAccount[] }) {
           {input.users.slice(0, 6).map((user) => (
             <AuthLinkRow key={user.userId} to={`/admin/audit/users/${user.userId}/audit`}>
               <AuthRowHead>
-                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{user.username}</strong>
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{user.username}</strong>
                 <AdminSurfaceBadge tone={user.isActive ? 'success' : 'danger'}>
                   {formatAuditActiveState(user.isActive, t)}
                 </AdminSurfaceBadge>
@@ -375,7 +379,7 @@ function AuditAssignmentsPanel(input: { assignments: RoleAssignment[] }) {
               to={`/admin/audit/role-assignments/${assignment.assignmentId}/audit`}
             >
               <AuthRowHead>
-                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{assignment.roleCode}</strong>
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{assignment.roleCode}</strong>
                 <AdminSurfaceBadge tone={assignment.active ? 'success' : 'danger'}>
                   {formatAuditActiveState(assignment.active, t)}
                 </AdminSurfaceBadge>
@@ -411,7 +415,7 @@ function AuditImportBatchesPanel(input: { batches: NeedsActionItem[] }) {
           {input.batches.map((batch) => (
             <AuthLinkRow key={batch.batchId} to={`/admin/integrations/${batch.batchId}`}>
               <AuthRowHead>
-                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{batch.sourceCode} / {batch.entityType}</strong>
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{batch.sourceCode} / {batch.entityType}</strong>
                 <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(batch.healthState))}>
                   {formatAuditHealthState(batch.healthState, t)}
                 </AdminSurfaceBadge>
@@ -444,7 +448,7 @@ function AuditSnapshotRunsPanel(input: { runs: SnapshotNeedsActionItem[] }) {
           {input.runs.map((run) => (
             <AuthLinkRow key={run.snapshotRunId} to={`/admin/snapshots/${run.snapshotRunId}`}>
               <AuthRowHead>
-                <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
+                <strong className="tw:text-sm tw:font-medium tw:text-foreground">
                   {t('adminAudit.snapshotLabel', { type: run.snapshotType })}
                 </strong>
                 <AdminSurfaceBadge tone={toAdminTone(mapHealthTone(run.healthState))}>
