@@ -19,6 +19,7 @@ Use these first:
 
 - `docs/plans/store-action-coaching-loop-v1.md`
 - `docs/plans/store-action-checklist-remediation-v1.md`
+- `docs/plans/store-action-checklist-remediation-implementation-v1.md`
 - `docs/plans/store-action-target-projection-v1.md`
 - `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md`
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md`
