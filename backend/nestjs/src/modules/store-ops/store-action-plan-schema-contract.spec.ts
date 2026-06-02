@@ -7,6 +7,10 @@ const migrationSql = readFileSync(
   join(root, "db/migrations/049_store_action_plan_v1.sql"),
   "utf8",
 );
+const checklistRemediationSourceMigrationSql = readFileSync(
+  join(root, "db/migrations/051_store_action_plan_checklist_remediation_source.sql"),
+  "utf8",
+);
 
 function expectStoreActionPlanShape(sql: string): void {
   expect(sql).toMatch(/CREATE TABLE(?: IF NOT EXISTS)? ops\.store_action_plan\s*\(/);
@@ -21,9 +25,18 @@ function expectStoreActionPlanShape(sql: string): void {
   expect(sql).toContain("source_snapshot_run_id UUID REFERENCES rpt.snapshot_run(snapshot_run_id)");
   expect(sql).toContain("source_kpi_id UUID REFERENCES ops.kpi_definition(kpi_id)");
   expect(sql).toContain("due_on DATE NOT NULL");
-  expect(sql).toContain("CHECK (source_type IN ('kpi_exception'))");
   expect(sql).toContain("CHECK (priority IN ('high', 'medium', 'low'))");
   expect(sql).toContain("CHECK (status IN ('open', 'in_progress', 'blocked', 'closed', 'cancelled'))");
+}
+
+function expectCurrentSourceTypeCheck(sql: string): void {
+  expect(sql).toContain(
+    "CHECK (source_type IN ('kpi_exception', 'checklist_remediation'))",
+  );
+}
+
+function expectInitialSourceTypeCheck(sql: string): void {
+  expect(sql).toContain("CHECK (source_type IN ('kpi_exception'))");
 }
 
 function expectStoreActionPlanIndexes(sql: string): void {
@@ -42,6 +55,18 @@ describe("store action plan schema contract", () => {
   it("defines persisted store action plans in both canonical schema and migration", () => {
     expectStoreActionPlanShape(schemaSql);
     expectStoreActionPlanShape(migrationSql);
+    expectCurrentSourceTypeCheck(schemaSql);
+    expectInitialSourceTypeCheck(migrationSql);
+  });
+
+  it("widens store action source types through the checklist remediation migration", () => {
+    expect(checklistRemediationSourceMigrationSql).toContain(
+      "ALTER TABLE ops.store_action_plan DROP CONSTRAINT",
+    );
+    expect(checklistRemediationSourceMigrationSql).toContain(
+      "ADD CONSTRAINT store_action_plan_source_type_check",
+    );
+    expectCurrentSourceTypeCheck(checklistRemediationSourceMigrationSql);
   });
 
   it("guards terminal status evidence constraints in both schema paths", () => {

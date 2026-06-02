@@ -15,7 +15,7 @@ describe("store action plan contract", () => {
   it("keeps lifecycle, priority, and source values aligned with the schema contract", () => {
     expect(storeActionPlanStatuses).toEqual(["open", "in_progress", "blocked", "closed", "cancelled"]);
     expect(storeActionPlanPriorities).toEqual(["high", "medium", "low"]);
-    expect(storeActionPlanSourceTypes).toEqual(["kpi_exception"]);
+    expect(storeActionPlanSourceTypes).toEqual(["kpi_exception", "checklist_remediation"]);
   });
 
   it("catalogs the Store Action audit events before runtime writes are added", () => {

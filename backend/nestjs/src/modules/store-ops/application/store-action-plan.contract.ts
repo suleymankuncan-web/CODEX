@@ -6,7 +6,7 @@ export const storeActionPlanPriorities = ["high", "medium", "low"] as const;
 
 export type StoreActionPlanPriority = (typeof storeActionPlanPriorities)[number];
 
-export const storeActionPlanSourceTypes = ["kpi_exception"] as const;
+export const storeActionPlanSourceTypes = ["kpi_exception", "checklist_remediation"] as const;
 
 export type StoreActionPlanSourceType = (typeof storeActionPlanSourceTypes)[number];
 

@@ -5761,10 +5761,11 @@
             "type": "string"
           },
           "sourceType": {
-            "type": "string",
             "enum": [
-              "kpi_exception"
-            ]
+              "kpi_exception",
+              "checklist_remediation"
+            ],
+            "type": "string"
           },
           "sourceId": {
             "type": "string"
@@ -17371,7 +17372,8 @@
           "sourceType": {
             "type": "string",
             "enum": [
-              "kpi_exception"
+              "kpi_exception",
+              "checklist_remediation"
             ]
           },
           "sourceId": {
@@ -17508,7 +17510,8 @@
                 "sourceType": {
                   "type": "string",
                   "enum": [
-                    "kpi_exception"
+                    "kpi_exception",
+                    "checklist_remediation"
                   ]
                 },
                 "sourceId": {
@@ -17678,7 +17681,8 @@
                   "sourceType": {
                     "type": "string",
                     "enum": [
-                      "kpi_exception"
+                      "kpi_exception",
+                      "checklist_remediation"
                     ]
                   },
                   "sourceId": {
@@ -17838,7 +17842,8 @@
                   "sourceType": {
                     "type": "string",
                     "enum": [
-                      "kpi_exception"
+                      "kpi_exception",
+                      "checklist_remediation"
                     ]
                   },
                   "sourceId": {
@@ -17937,7 +17942,8 @@
           "sourceType": {
             "type": "string",
             "enum": [
-              "kpi_exception"
+              "kpi_exception",
+              "checklist_remediation"
             ]
           },
           "sourceId": {
