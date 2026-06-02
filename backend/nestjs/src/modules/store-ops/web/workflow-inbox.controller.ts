@@ -9,7 +9,7 @@ export class WorkflowInboxController {
 
   @Get("inbox")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REPORT_VIEWER")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REPORT_VIEWER", "REGION_MANAGER")
   async listInbox(
     @Req()
     request: {

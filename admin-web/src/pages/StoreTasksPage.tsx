@@ -53,7 +53,12 @@ const STORE_ACTION_PLAN_PAGE_SIZE = 20
 
 function canUseWorkflowInbox(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
-  return roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN') || roles.includes('REPORT_VIEWER')
+  return (
+    roles.includes('STORE_MANAGER') ||
+    roles.includes('SUPER_ADMIN') ||
+    roles.includes('REPORT_VIEWER') ||
+    roles.includes('REGION_MANAGER')
+  )
 }
 
 function canUseStoreActionPlans(authSummary: AuthSessionSummary | null) {
@@ -526,6 +531,9 @@ function formatWorkflowPrimaryActionLabel(t: TranslateFunction, item: WorkflowIn
     case 'kpi_exception':
       return t('storeTasks.primary.kpiDetail')
     case 'store_action_plan':
+      if (item.inboxStatus === 'informational') {
+        return item.primaryActionLabel
+      }
       return t('storeTasks.primary.actionPlan')
     default:
       return item.primaryActionLabel
@@ -541,6 +549,9 @@ function formatWorkflowSecondaryActionLabel(t: TranslateFunction, item: Workflow
     case 'kpi_exception':
       return t('storeTasks.secondary.kpiDeviation')
     case 'store_action_plan':
+      if (item.inboxStatus === 'informational') {
+        return item.secondaryActionLabel ?? item.primaryActionLabel
+      }
       return t('storeTasks.secondary.actionPlan')
     default:
       return item.secondaryActionLabel ?? t('storeTasks.secondary.targetDetail')

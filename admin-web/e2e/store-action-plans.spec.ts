@@ -80,6 +80,96 @@ test('store tasks renders persisted action plans from the workflow inbox', async
   await expect(page.getByText('Review plan source')).toBeVisible()
 })
 
+test('store tasks shows region managers checklist remediation plans as informational read rows', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'region-remediation-smoke-user',
+        mockRoleCodes: 'REGION_MANAGER',
+        mockCompanyIds: '',
+        bearerToken: '',
+      }),
+    )
+  })
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['REGION_MANAGER'],
+          scope: {
+            companyIds: [],
+            regionIds: ['00000000-0000-0000-0000-000000000010'],
+            storeIds: [],
+          },
+          readScope: {
+            companyIds: [],
+            regionIds: ['00000000-0000-0000-0000-000000000010'],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: [],
+          },
+          assignedStoreIds: [],
+        },
+      },
+    })
+  })
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            itemType: 'task',
+            sourceType: 'store_action_plan',
+            sourceId: 'action-plan-checklist-1',
+            title: 'Kasa checklist bulgusu',
+            summary: 'Kasa duzeni standardi icin takip',
+            companyId: '00000000-0000-0000-0000-000000000001',
+            regionId: '00000000-0000-0000-0000-000000000010',
+            storeId: demoStoreId,
+            storeName: 'IstinyePark Demo Store',
+            workflowStatus: 'closed',
+            inboxStatus: 'informational',
+            urgency: 'low',
+            createdAt: '2026-05-22T08:00:00.000Z',
+            needsAttentionAt: '2026-05-24T12:00:00.000Z',
+            actorRole: 'STORE_MANAGER',
+            primaryActionLabel: 'Review checklist source',
+            secondaryActionLabel: 'Store reported resolved',
+            deepLink: '/store/checklists?result=instance-1',
+            historyPreview: 'Store reported resolved: Kasa alani duzenlendi',
+          },
+        ],
+        meta: {
+          count: 1,
+          total: 1,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  await expect(getActionPlansPanel(page)).toHaveCount(0)
+  const remediationRow = page.getByTestId('store-task-queue-row').filter({ hasText: 'Kasa checklist bulgusu' })
+  await expect(remediationRow).toBeVisible()
+  await expect(remediationRow.getByText('Informational')).toBeVisible()
+  await expect(remediationRow.getByText('Store reported resolved: Kasa alani duzenlendi')).toBeVisible()
+  const sourceLink = remediationRow.getByRole('link', { name: 'Review checklist source' })
+  await expect(sourceLink).toHaveAttribute('href', '/store/checklists?result=instance-1')
+  await expect(page.getByRole('button', { name: 'Create action plan' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Close plan' })).toHaveCount(0)
+})
+
 test('store tasks lists persisted action plan records with active status controls', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')

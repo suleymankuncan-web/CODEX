@@ -14,6 +14,10 @@ import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-repo
 import { StoreActionPlanRepository } from "../infrastructure/store-action-plan.repository";
 
 const activeStoreActionPlanStatuses = ["open", "in_progress", "blocked"] as const;
+const regionChecklistRemediationStatuses = [
+  ...activeStoreActionPlanStatuses,
+  "closed",
+] as const;
 
 @Injectable()
 export class WorkflowInboxService {
@@ -83,55 +87,61 @@ export class WorkflowInboxService {
       }
     }
 
-    try {
-      const latestCompletedSnapshotRun =
-        await this.snapshotReportingReadRepository.getLatestCompletedSnapshotRun();
+    const canSeeKpiExceptions =
+      input.actorRoles.includes("SUPER_ADMIN") ||
+      input.actorRoles.includes("REPORT_VIEWER") ||
+      input.actorRoles.includes("STORE_MANAGER");
+    if (canSeeKpiExceptions) {
+      try {
+        const latestCompletedSnapshotRun =
+          await this.snapshotReportingReadRepository.getLatestCompletedSnapshotRun();
 
-      if (latestCompletedSnapshotRun) {
-        const canUseAdminKpiRoute =
-          input.actorRoles.includes("SUPER_ADMIN") || input.actorRoles.includes("REPORT_VIEWER");
-        const kpiScope = this.resolveStoreReadScope(input, [
-          "REPORT_VIEWER",
-          "SUPER_ADMIN",
-        ]);
-        const kpiExceptions = await this.snapshotReportingReadRepository.getKpiReport({
-          snapshotRunId: latestCompletedSnapshotRun.snapshot_run_id,
-          companyIds: kpiScope.companyIds,
-          regionIds: kpiScope.regionIds,
-          storeIds: kpiScope.storeIds,
-          limit: 20,
-          offset: 0,
-        });
+        if (latestCompletedSnapshotRun) {
+          const canUseAdminKpiRoute =
+            input.actorRoles.includes("SUPER_ADMIN") || input.actorRoles.includes("REPORT_VIEWER");
+          const kpiScope = this.resolveStoreReadScope(input, [
+            "REPORT_VIEWER",
+            "SUPER_ADMIN",
+          ]);
+          const kpiExceptions = await this.snapshotReportingReadRepository.getKpiReport({
+            snapshotRunId: latestCompletedSnapshotRun.snapshot_run_id,
+            companyIds: kpiScope.companyIds,
+            regionIds: kpiScope.regionIds,
+            storeIds: kpiScope.storeIds,
+            limit: 20,
+            offset: 0,
+          });
 
-        items.push(
-          ...kpiExceptions.rows
-            .filter(
-              (item) => item.status_band === "at_risk" || item.status_band === "off_track",
-            )
-            .map((item) =>
-              toKpiExceptionInboxItem({
-                snapshotRunId: item.snapshot_run_id,
-                storeId: item.store_id,
-                kpiId: item.kpi_id,
-                kpiCode: item.kpi_code,
-                kpiName: item.kpi_name,
-                periodStart: item.period_start,
-                periodEnd: item.period_end,
-                targetValue: item.target_value,
-                actualValue: item.actual_value,
-                achievementRate: item.achievement_rate,
-                statusBand: item.status_band,
-                deepLink: canUseAdminKpiRoute
-                  ? `/admin/reports/kpis/${latestCompletedSnapshotRun.snapshot_run_id}`
-                  : "/store/kpis",
-              }),
-            ),
+          items.push(
+            ...kpiExceptions.rows
+              .filter(
+                (item) => item.status_band === "at_risk" || item.status_band === "off_track",
+              )
+              .map((item) =>
+                toKpiExceptionInboxItem({
+                  snapshotRunId: item.snapshot_run_id,
+                  storeId: item.store_id,
+                  kpiId: item.kpi_id,
+                  kpiCode: item.kpi_code,
+                  kpiName: item.kpi_name,
+                  periodStart: item.period_start,
+                  periodEnd: item.period_end,
+                  targetValue: item.target_value,
+                  actualValue: item.actual_value,
+                  achievementRate: item.achievement_rate,
+                  statusBand: item.status_band,
+                  deepLink: canUseAdminKpiRoute
+                    ? `/admin/reports/kpis/${latestCompletedSnapshotRun.snapshot_run_id}`
+                    : "/store/kpis",
+                }),
+              ),
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Shared inbox skipped KPI exception items: ${this.safeErrorMessage(error)}`,
         );
       }
-    } catch (error) {
-      this.logger.warn(
-        `Shared inbox skipped KPI exception items: ${this.safeErrorMessage(error)}`,
-      );
     }
 
     const canSeeStoreActionPlans =
@@ -150,6 +160,31 @@ export class WorkflowInboxService {
       } catch (error) {
         this.logger.warn(
           `Shared inbox skipped store action plan items: ${this.safeErrorMessage(error)}`,
+        );
+      }
+    }
+
+    const canSeeRegionRemediationInfo =
+      input.actorRoles.includes("REGION_MANAGER") && !canSeeStoreActionPlans;
+    if (canSeeRegionRemediationInfo) {
+      try {
+        const readScope = this.resolveRegionStoreActionPlanReadScope(input);
+        const plans = await this.storeActionPlanRepository.listWorkflowInboxPlans({
+          ...readScope,
+          statuses: [...regionChecklistRemediationStatuses],
+          sourceTypes: ["checklist_remediation"],
+          limit: 20,
+        });
+        items.push(
+          ...plans.map((item) =>
+            toStoreActionPlanInboxItem(item, {
+              audience: "region_manager",
+            }),
+          ),
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Shared inbox skipped region remediation items: ${this.safeErrorMessage(error)}`,
         );
       }
     }
@@ -226,6 +261,23 @@ export class WorkflowInboxService {
     };
   }) {
     return [...new Set(input.actorActionScope?.assignedStoreIds ?? [])];
+  }
+
+  private resolveRegionStoreActionPlanReadScope(input: {
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+  }) {
+    return {
+      companyIds: input.actorScope.companyIds,
+      regionIds: input.actorScope.regionIds,
+      storeIds:
+        input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
+          ? []
+          : input.actorScope.storeIds,
+    };
   }
 
   private safeErrorMessage(error: unknown) {

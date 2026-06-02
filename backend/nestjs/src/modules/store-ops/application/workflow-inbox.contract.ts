@@ -185,11 +185,16 @@ export function toKpiExceptionInboxItem(item: KpiExceptionItem): WorkflowInboxIt
 
 export function toStoreActionPlanInboxItem(
   item: StoreActionPlanInboxSource,
+  options: { audience?: "store_manager" | "region_manager" } = {},
   now = new Date(),
 ): WorkflowInboxItem {
+  const isRegionManagerInfo = options.audience === "region_manager";
   const isActive =
     item.status === "open" || item.status === "in_progress" || item.status === "blocked";
   const overdue = isDateBeforeToday(item.dueOn, now);
+  const isClosed = item.status === "closed";
+  const actionPlanDeepLink = `/store/tasks?actionPlan=${encodeURIComponent(item.actionPlanId)}`;
+  const safeSourceDeepLink = getSafeWorkflowDeepLink(item.sourceDeepLink);
 
   return {
     itemType: "task",
@@ -201,17 +206,61 @@ export function toStoreActionPlanInboxItem(
     regionId: item.regionId,
     storeId: item.storeId,
     workflowStatus: item.status,
-    inboxStatus: isActive ? "needs_attention" : "completed",
-    urgency: overdue || item.priority === "high" ? "high" : item.priority,
+    inboxStatus: isRegionManagerInfo
+      ? "informational"
+      : isActive
+        ? "needs_attention"
+        : "completed",
+    urgency: isRegionManagerInfo && isClosed
+      ? "low"
+      : overdue || item.priority === "high"
+        ? "high"
+        : item.priority,
     createdAt: item.createdAt,
-    needsAttentionAt: toDateOnlyNoonUtcTimestamp(item.dueOn),
+    needsAttentionAt:
+      isRegionManagerInfo && isClosed ? item.updatedAt : toDateOnlyNoonUtcTimestamp(item.dueOn),
     actorRole: "STORE_MANAGER",
-    primaryActionLabel: isActive ? "Open action plan" : "Review action plan",
-    secondaryActionLabel: "Review source",
-    deepLink: `/store/tasks?actionPlan=${encodeURIComponent(item.actionPlanId)}`,
-    historyPreview:
-      item.resolutionNote ?? item.cancelReason ?? `Due ${item.dueOn}; updated ${item.updatedAt}`,
+    primaryActionLabel: isRegionManagerInfo
+      ? "Review checklist source"
+      : isActive
+        ? "Open action plan"
+        : "Review action plan",
+    secondaryActionLabel:
+      isRegionManagerInfo && isClosed ? "Store reported resolved" : "Review source",
+    deepLink: isRegionManagerInfo && safeSourceDeepLink ? safeSourceDeepLink : actionPlanDeepLink,
+    historyPreview: buildStoreActionPlanHistoryPreview(item, { isRegionManagerInfo, isClosed }),
   };
+}
+
+function buildStoreActionPlanHistoryPreview(
+  item: StoreActionPlanInboxSource,
+  input: {
+    isRegionManagerInfo: boolean;
+    isClosed: boolean;
+  },
+) {
+  if (input.isRegionManagerInfo && input.isClosed) {
+    return item.resolutionNote
+      ? `Store reported resolved: ${item.resolutionNote}`
+      : "Store reported resolved";
+  }
+
+  return item.resolutionNote ?? item.cancelReason ?? `Due ${item.dueOn}; updated ${item.updatedAt}`;
+}
+
+function getSafeWorkflowDeepLink(input: string | null) {
+  if (!input || !input.startsWith("/") || input.startsWith("//")) {
+    return null;
+  }
+
+  for (let index = 0; index < input.length; index += 1) {
+    const codePoint = input.charCodeAt(index);
+    if (codePoint <= 31 || codePoint === 127) {
+      return null;
+    }
+  }
+
+  return input;
 }
 
 function isDateBeforeToday(value: string, now: Date) {
