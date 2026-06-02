@@ -34,7 +34,7 @@ export const storeTasksTr = {
   'storeTasks.kpiFollowUps': 'KPI takipleri',
   'storeTasks.kpiFollowUpsNote': 'KPI performans sinyallerinden yükselen takip işleri.',
   'storeTasks.actionPlansMetric': 'Aksiyon planlari',
-  'storeTasks.actionPlansMetricNote': 'KPI sinyallerinden olusan kayitli takip planlari.',
+  'storeTasks.actionPlansMetricNote': 'KPI veya checklist bulgularindan olusan kayitli takip planlari.',
   'storeTasks.createPlanAction': 'Aksiyon plani olustur',
   'storeTasks.createPlanFormLabel': 'KPI takip aksiyon plani',
   'storeTasks.createPlanTitleLabel': 'Baslik',
@@ -83,7 +83,7 @@ export const storeTasksTr = {
   'storeTasks.actionPlansErrorTitle': 'Aksiyon planlari acilamadi',
   'storeTasks.actionPlansEmptyTitle': 'Kayitli aksiyon plani yok',
   'storeTasks.actionPlansEmptyCopy':
-    'Bir KPI sapmasi icin plan olusturuldugunda bu listede gorunur.',
+    'Bir KPI sapmasi veya checklist bulgusu icin plan olustugunda bu listede gorunur.',
   'storeTasks.actionPlansPageStaleTitle': 'Plan sayfasi yenileniyor',
   'storeTasks.actionPlansPageStaleCopy':
     'Bu sayfadaki kayitlar degismis olabilir; liste onceki uygun sayfaya cekiliyor.',
@@ -169,6 +169,7 @@ export const storeTasksTr = {
   'storeTasks.itemType.notification': 'Bilgi',
   'storeTasks.sourceType.target_distribution_request': 'Hedef dağıtımı',
   'storeTasks.sourceType.checklist_receipt': 'Checklist',
+  'storeTasks.sourceType.checklist_remediation': 'Checklist iyilestirme',
   'storeTasks.sourceType.kpi_exception': 'KPI',
   'storeTasks.sourceType.store_action_plan': 'Aksiyon plani',
   'storeTasks.inboxStatus.needs_attention': 'Aksiyon bekliyor',
@@ -249,7 +250,7 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.kpiFollowUps': 'KPI follow-ups',
   'storeTasks.kpiFollowUpsNote': 'Follow-up work raised from KPI performance signals.',
   'storeTasks.actionPlansMetric': 'Action plans',
-  'storeTasks.actionPlansMetricNote': 'Persisted follow-up plans created from KPI signals.',
+  'storeTasks.actionPlansMetricNote': 'Persisted follow-up plans created from KPI or checklist findings.',
   'storeTasks.createPlanAction': 'Create action plan',
   'storeTasks.createPlanFormLabel': 'KPI follow-up action plan',
   'storeTasks.createPlanTitleLabel': 'Title',
@@ -298,7 +299,7 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.actionPlansErrorTitle': 'Action plans could not be opened',
   'storeTasks.actionPlansEmptyTitle': 'No persisted action plans',
   'storeTasks.actionPlansEmptyCopy':
-    'Plans created from KPI deviations will appear in this list.',
+    'Plans created from KPI deviations or checklist findings will appear in this list.',
   'storeTasks.actionPlansPageStaleTitle': 'Refreshing plan page',
   'storeTasks.actionPlansPageStaleCopy':
     'Records on this page may have changed; the list is returning to the nearest available page.',
@@ -384,6 +385,7 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.itemType.notification': 'Information',
   'storeTasks.sourceType.target_distribution_request': 'Target distribution',
   'storeTasks.sourceType.checklist_receipt': 'Checklist',
+  'storeTasks.sourceType.checklist_remediation': 'Checklist remediation',
   'storeTasks.sourceType.kpi_exception': 'KPI',
   'storeTasks.sourceType.store_action_plan': 'Action plan',
   'storeTasks.inboxStatus.needs_attention': 'Needs attention',

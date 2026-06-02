@@ -325,6 +325,8 @@ function formatStoreActionPlanSource(t: TranslateFunction, sourceType: StoreActi
   switch (sourceType) {
     case 'kpi_exception':
       return t('storeTasks.sourceType.kpi_exception')
+    case 'checklist_remediation':
+      return t('storeTasks.sourceType.checklist_remediation')
     default:
       return sourceType
   }
