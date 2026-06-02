@@ -108,6 +108,48 @@ test('store tasks lists persisted action plan records with active status control
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
 })
 
+test('store tasks labels persisted checklist remediation plans without changing checklist receipts', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            actionPlanId: '00000000-0000-0000-0000-00000000c001',
+            sourceType: 'checklist_remediation',
+            sourceId: 'checklist:checklist-instance-bm-1:item:item-1',
+            sourceDeepLink: '/store/checklists?result=checklist-instance-bm-1',
+            title: 'Kasa checklist bulgusu',
+            summary: 'BM Store Visit - Kasa duzeni standartlara uygun mu?',
+          },
+        ],
+        meta: {
+          count: 1,
+          total: 1,
+          limit: 20,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = getActionPlansPanel(page)
+  await expect(actionPlansPanel.getByText('Kasa checklist bulgusu')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Checklist remediation')).toBeVisible()
+  const sourceLink = actionPlansPanel.getByRole('link', { name: 'Open source' })
+  await expect(sourceLink).toHaveAttribute(
+    'href',
+    '/store/checklists?result=checklist-instance-bm-1',
+  )
+  await expect(actionPlansPanel.getByRole('button', { name: 'Close plan' })).toBeVisible()
+})
+
 test('store tasks opens persisted action plan coaching detail on demand', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
