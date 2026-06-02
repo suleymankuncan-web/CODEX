@@ -40,9 +40,9 @@ Use these first:
 - Source families stay source-owned. Store Action should not become a generic
   workflow engine.
 - Checklist acknowledgement and checklist remediation are separate: a
-  `checklist_receipt` is acknowledgement work, while future
-  `checklist_remediation` tasks may be created only from real low or critical
-  findings after acknowledgement.
+  `checklist_receipt` is acknowledgement work, while `checklist_remediation`
+  tasks are created only from real persisted non-compliant checklist findings
+  after acknowledgement.
 - Target-achievement Store Action tasks are projection-risk work, not raw daily
   KPI drift: future target projection tasks require a ready projection
   calendar, weighted confidence gate, projection thresholds, and cautious
@@ -53,8 +53,9 @@ Use these first:
 ## Parked Or High-Risk
 
 - Checklist low-score direct candidates are no longer a generic open idea; the
-  only approved path is the explicit `checklist_remediation` decision, still
-  pending implementation.
+  shipped path is explicit `checklist_remediation` from persisted
+  `is_non_compliant = true` findings only. Score-only threshold generation
+  remains parked until threshold ownership is persisted.
 - Target coverage direct candidates.
 - Target projection is approved only through the explicit projection decision;
   target coverage, approval, missing target, and stale reference workflows stay
@@ -69,3 +70,4 @@ separate go/no-go note.
 ## Latest Evidence
 
 - `docs/evidence/store-action-coaching-detail-v2a.md`
+- `docs/evidence/store-action-checklist-remediation-v1-closeout-2026-06-02.md`
