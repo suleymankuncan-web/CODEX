@@ -1940,6 +1940,8 @@ Primary references:
 - `docs/plans/controlled-pilot-scenario-rehearsal-v1.md`
 - `docs/plans/feature-growth-checklist-v1.md`
 - `docs/plans/store-action-coaching-loop-v1.md`
+- `docs/plans/store-action-checklist-remediation-v1.md`
+- `docs/plans/store-action-target-projection-v1.md`
 
 Pilot Scenario Pack V1, Controlled Pilot Scenario Rehearsal V1, and Feature
 Growth Checklist V1 status:
@@ -1979,17 +1981,37 @@ Store Action V1A status:
 - Source guard evidence: `docs/evidence/store-action-source-guard-v1.md`.
 - Checklist source decision status: checklist-driven coaching follows the KPI
   exception candidate path for `BM_CHECKLIST` / `VM_CHECKLIST`; direct
-  `checklist_receipt` low-score candidates stay parked until threshold ownership
-  and acknowledgement interaction are explicit.
+  `checklist_receipt` low-score candidates remain parked because
+  `checklist_receipt` is acknowledgement work, not remediation work.
+- 2026-06-02 checklist remediation decision update:
+  `checklist_receipt` remains acknowledgement work, but a separate future
+  `checklist_remediation` Store Action source is now approved for automatic
+  remediation task creation after acknowledgement when real low or critical
+  checklist findings exist. Store managers close V1 remediation with a required
+  resolution note; photo evidence and region-manager verification remain parked.
+  Source references, idempotency, scope tests, API/OpenAPI impact, and audit
+  events must be explicit before runtime implementation.
 - Checklist source evidence:
-  `docs/evidence/store-action-checklist-source-decision-v1.md`.
+  `docs/evidence/store-action-checklist-source-decision-v1.md` plus the
+  follow-up remediation decision in
+  `docs/plans/store-action-checklist-remediation-v1.md`.
 - Target source decision status: target-driven coaching follows the KPI
   exception candidate path for `TARGET_ACHIEVEMENT`; direct
   `target_distribution_request` approval and target coverage/miss candidates
   stay parked until owner-by-status and scoring-reference semantics are
   explicit.
+- 2026-06-02 target projection decision update:
+  `TARGET_ACHIEVEMENT` Store Action work should not be created from raw daily
+  KPI drift. The approved future path is month-end target projection risk:
+  projection calendar `ready`, weighted 40% calendar-confidence gate,
+  projection below 90% for task candidate, below 80% for critical priority, and
+  one active task per store/month/source. Store-manager closure means
+  intervention reported, not target fixed. After month close, use result
+  language such as `Hedefe ulasildi`, `Toparlanma saglandi, hedef kacti`, or
+  `Hedef kacti`; do not use `Risk devam ediyor`.
 - Target source evidence:
-  `docs/evidence/store-action-target-source-decision-v1.md`.
+  `docs/evidence/store-action-target-source-decision-v1.md` plus the target
+  projection decision in `docs/plans/store-action-target-projection-v1.md`.
 - V1B persisted action-plan decision status: broad implementation remains
   NO-GO, but the user approved the controlled kademe line. V1B proceeds only
   through separately verified slices with DB placement, rollback, command
@@ -2379,6 +2401,8 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/superpowers/plans/2026-05-23-external-evidence-closure-v2.md` - External Evidence Closure V2 plan
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md` - Store Action test hygiene and visibility evidence
 - `docs/evidence/store-action-coaching-detail-v2a.md` - Store Action read-only coaching detail V2A evidence
+- `docs/plans/store-action-checklist-remediation-v1.md` - Store Action checklist remediation decision
+- `docs/plans/store-action-target-projection-v1.md` - Store Action target projection decision
 - `docs/evidence/role-permission-preview-v1.md` - Role/permission preview evidence
 - `docs/evidence/rules-config-versioning-inventory-v1.md` - Rules / Config Versioning Inventory V1
 - `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` - Norm Kadro / Workforce Planning Read-Only V1

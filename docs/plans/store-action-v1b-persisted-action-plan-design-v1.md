@@ -132,6 +132,23 @@ Allowed transitions:
 
 V1B implementation starts only with KPI exception candidates.
 
+2026-06-02 update:
+
+- Direct `checklist_receipt` remains parked as an action-plan source because it
+  represents acknowledgement work.
+- Checklist remediation is a separate future source family:
+  `checklist_remediation`.
+- The remediation decision is locked in
+  `docs/plans/store-action-checklist-remediation-v1.md`; implementation still
+  needs its own API/source/scope/audit slice before runtime behavior changes.
+- Target projection is also a separate future decision:
+  `docs/plans/store-action-target-projection-v1.md`.
+- Target projection must not be implemented by reinterpreting target approval,
+  target coverage, missing target, or stale target reference rows.
+- The existing `kpi_exception` source may be used only if the implementation
+  records a `target_projection_risk` reason and preserves source references,
+  duplicate prevention, and result-language guardrails.
+
 Active V1B source:
 
 - `kpi_exception`
