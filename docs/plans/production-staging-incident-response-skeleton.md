@@ -40,6 +40,12 @@ $env:ALERT_SMOKE_BACKEND_URL="https://api-staging.hr-axis.com/api"
 npm.cmd run smoke:alert-routing
 ```
 
+For the current controlled staging/internal pilot alert decision, use
+`docs/plans/controlled-pilot-alert-incident-policy-v1.md`. That policy accepts
+Better Stack external health email proof plus Render platform notifications for
+controlled pilot only. It does not claim broad-production incident readiness or
+app-level exception tracking.
+
 Alert response rules:
 
 | Alert id | First response | Owner path |

@@ -180,6 +180,14 @@ Scope:
 - Incident owner, alert destination label, escalation expectations, and
   evidence redaction rules are documented.
 
+Deliverables:
+
+- Add `docs/plans/controlled-pilot-alert-incident-policy-v1.md`.
+- Link the controlled-pilot alert policy from the decision and runbook
+  registries.
+- Record sanitized PR-3 evidence in
+  `docs/evidence/readiness/2026-06-02-free-tier-controlled-pilot-ops-pr3-alert-policy.md`.
+
 Possible implementation:
 
 - Docs/runbook updates.
