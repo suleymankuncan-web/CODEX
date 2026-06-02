@@ -123,6 +123,13 @@ Scope:
 - Keep free-tier Redis accepted only for controlled pilot.
 - Keep persistent production Redis as a parked production requirement.
 
+Deliverables:
+
+- Add `docs/plans/redis-bullmq-controlled-pilot-runbook-v1.md`.
+- Link the controlled-pilot Redis / BullMQ runbook from the runbook registry.
+- Record sanitized PR-2 evidence in
+  `docs/evidence/readiness/2026-06-02-free-tier-controlled-pilot-ops-pr2-redis-runbook.md`.
+
 Possible implementation:
 
 - Docs/runbook updates only unless an existing smoke script has an obvious
