@@ -234,6 +234,14 @@ Scope:
 - Manual recovery expectations are explicit: acceptable data-loss window,
   restore target rules, smoke query, and sanitized evidence rules.
 
+Deliverables:
+
+- Add `docs/plans/controlled-pilot-recovery-posture-v1.md`.
+- Link the controlled-pilot recovery posture from the decision and runbook
+  registries.
+- Record sanitized PR-4 evidence in
+  `docs/evidence/readiness/2026-06-02-free-tier-controlled-pilot-ops-pr4-recovery-posture.md`.
+
 Possible implementation:
 
 - Docs/runbook updates.
