@@ -684,7 +684,7 @@ export type components = {
     }
     "CreateStoreActionPlanRequest": {
       "storeId": string
-      "sourceType": "kpi_exception"
+      "sourceType": "kpi_exception" | "checklist_remediation"
       "sourceId": string
       "sourceDeepLink"?: string
       "sourceSnapshotRunId"?: string
@@ -2242,7 +2242,7 @@ export type components = {
           "storeId": string
           "ownerUserId": string
           "createdByUserId": string
-          "sourceType": "kpi_exception"
+          "sourceType": "kpi_exception" | "checklist_remediation"
           "sourceId": string
           "sourceDeepLink": string | null
           "sourceSnapshotRunId": string | null
@@ -2272,7 +2272,7 @@ export type components = {
           "storeId": string
           "ownerUserId": string
           "createdByUserId": string
-          "sourceType": "kpi_exception"
+          "sourceType": "kpi_exception" | "checklist_remediation"
           "sourceId": string
           "sourceDeepLink": string | null
           "sourceSnapshotRunId": string | null
@@ -2301,7 +2301,7 @@ export type components = {
           "storeId": string
           "ownerUserId": string
           "createdByUserId": string
-          "sourceType": "kpi_exception"
+          "sourceType": "kpi_exception" | "checklist_remediation"
           "sourceId": string
           "sourceDeepLink": string | null
           "sourceSnapshotRunId": string | null

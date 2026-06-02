@@ -12,6 +12,8 @@ type MutableOpenApiDocument = {
   paths: Record<string, unknown>;
 };
 
+const storeActionPlanSourceTypeEnum = ["kpi_exception", "checklist_remediation"];
+
 const storeActionPlanSchema = {
   type: "object",
   required: [
@@ -47,7 +49,7 @@ const storeActionPlanSchema = {
     storeId: { type: "string" },
     ownerUserId: { type: "string" },
     createdByUserId: { type: "string" },
-    sourceType: { type: "string", enum: ["kpi_exception"] },
+    sourceType: { type: "string", enum: storeActionPlanSourceTypeEnum },
     sourceId: { type: "string" },
     sourceDeepLink: { type: "string", nullable: true },
     sourceSnapshotRunId: { type: "string", nullable: true },
@@ -127,7 +129,7 @@ export function applyStoreActionPlanOpenApi(document: MutableOpenApiDocument) {
       required: ["storeId", "sourceType", "sourceId", "title", "priority", "dueOn"],
       properties: {
         storeId: { type: "string" },
-        sourceType: { type: "string", enum: ["kpi_exception"] },
+        sourceType: { type: "string", enum: storeActionPlanSourceTypeEnum },
         sourceId: { type: "string" },
         sourceDeepLink: { type: "string" },
         sourceSnapshotRunId: { type: "string" },

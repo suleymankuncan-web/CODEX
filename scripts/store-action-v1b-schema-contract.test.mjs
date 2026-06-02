@@ -4,20 +4,39 @@ import test from 'node:test'
 
 const schema = readFileSync('db/schema.sql', 'utf8')
 const migration = readFileSync('db/migrations/049_store_action_plan_v1.sql', 'utf8')
+const checklistRemediationSourceMigration = readFileSync(
+  'db/migrations/051_store_action_plan_checklist_remediation_source.sql',
+  'utf8',
+)
 const evidence = readFileSync('docs/evidence/store-action-v1b-schema-v1.md', 'utf8')
 const plan = readFileSync('docs/superpowers/plans/2026-05-22-store-action-v1b-persisted-action-plans.md', 'utf8')
 
 function assertStoreActionShape(sql) {
   assert.match(sql, /CREATE TABLE(?: IF NOT EXISTS)? ops\.store_action_plan\s*\(/)
-  assert.match(sql, /CHECK \(source_type IN \('kpi_exception'\)\)/)
   assert.match(sql, /CHECK \(status IN \('open', 'in_progress', 'blocked', 'closed', 'cancelled'\)\)/)
   assert.match(sql, /idx_store_action_plan_active_source_unique/)
   assert.match(sql, /WHERE status IN \('open', 'in_progress', 'blocked'\)/)
 }
 
+function assertInitialSourceTypeCheck(sql) {
+  assert.match(sql, /CHECK \(source_type IN \('kpi_exception'\)\)/)
+}
+
+function assertCurrentSourceTypeCheck(sql) {
+  assert.match(sql, /CHECK \(source_type IN \('kpi_exception', 'checklist_remediation'\)\)/)
+}
+
 test('store action V1B schema remains additive and source bounded', () => {
   assertStoreActionShape(schema)
   assertStoreActionShape(migration)
+  assertCurrentSourceTypeCheck(schema)
+  assertInitialSourceTypeCheck(migration)
+})
+
+test('store action checklist remediation source migration widens only the source check', () => {
+  assert.match(checklistRemediationSourceMigration, /ALTER TABLE ops\.store_action_plan/)
+  assert.match(checklistRemediationSourceMigration, /ADD CONSTRAINT store_action_plan_source_type_check/)
+  assertCurrentSourceTypeCheck(checklistRemediationSourceMigration)
 })
 
 test('store action V1B schema guard does not let schema mask a broken migration', () => {

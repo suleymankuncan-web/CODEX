@@ -687,7 +687,7 @@ CREATE TABLE ops.store_action_plan (
     cancelled_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CHECK (source_type IN ('kpi_exception')),
+    CONSTRAINT store_action_plan_source_type_check CHECK (source_type IN ('kpi_exception', 'checklist_remediation')),
     CHECK (priority IN ('high', 'medium', 'low')),
     CHECK (status IN ('open', 'in_progress', 'blocked', 'closed', 'cancelled')),
     CHECK (status <> 'closed' OR (closed_at IS NOT NULL AND resolution_note IS NOT NULL)),

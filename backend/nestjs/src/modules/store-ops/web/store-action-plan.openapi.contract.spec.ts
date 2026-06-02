@@ -40,6 +40,10 @@ describe("Store action plan OpenAPI contract", () => {
         meta: expect.any(Object),
       }),
     );
+    expect(document.components?.schemas?.StoreActionPlan?.properties?.sourceType).toEqual({
+      type: "string",
+      enum: ["kpi_exception", "checklist_remediation"],
+    });
 
     const getPlan = document.paths["/api/store-actions/plans/{actionPlanId}"].get;
     expect(getPlan.responses?.["200"]?.content?.["application/json"]?.schema).toEqual({
@@ -49,6 +53,10 @@ describe("Store action plan OpenAPI contract", () => {
     const createPlan = document.paths["/api/store-actions/plans"].post;
     expect(createPlan.requestBody?.content?.["application/json"]?.schema).toEqual({
       $ref: "#/components/schemas/CreateStoreActionPlanRequest",
+    });
+    expect(document.components?.schemas?.CreateStoreActionPlanRequest?.properties?.sourceType).toEqual({
+      type: "string",
+      enum: ["kpi_exception", "checklist_remediation"],
     });
     expect(createPlan.responses?.["201"]?.content?.["application/json"]?.schema).toEqual({
       $ref: "#/components/schemas/StoreActionPlanCommandResponse",

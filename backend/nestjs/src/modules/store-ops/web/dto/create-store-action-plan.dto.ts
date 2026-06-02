@@ -1,12 +1,16 @@
 import { IsDateString, IsIn, IsOptional, IsString } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
+import {
+  storeActionPlanSourceTypes,
+  type StoreActionPlanSourceType,
+} from "../../application/store-action-plan.contract";
 
 export class CreateStoreActionPlanDto {
   @IsPostgresUuid()
   storeId!: string;
 
-  @IsIn(["kpi_exception"])
-  sourceType!: "kpi_exception";
+  @IsIn([...storeActionPlanSourceTypes])
+  sourceType!: StoreActionPlanSourceType;
 
   @IsString()
   sourceId!: string;
