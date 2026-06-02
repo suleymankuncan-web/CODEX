@@ -66,7 +66,7 @@ const adminDataQualityRoles = ['SUPER_ADMIN']
 const adminTargetRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
-const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
+const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']
 const routePrefetchStaleTimeMs = 30_000
 

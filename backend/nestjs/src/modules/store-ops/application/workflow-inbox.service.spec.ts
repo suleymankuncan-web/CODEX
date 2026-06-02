@@ -193,6 +193,87 @@ describe("WorkflowInboxService", () => {
     ]);
   });
 
+  it("adds checklist remediation plans as region-manager informational read items", async () => {
+    const targetDistributionRepository = {
+      listRequests: jest.fn(),
+    };
+    const checklistAcknowledgementRepository = {
+      listChecklistAcknowledgements: jest.fn(async () => []),
+    };
+    const snapshotReportingReadRepository = {
+      getLatestCompletedSnapshotRun: jest.fn(async () => null),
+    };
+    const storeActionPlanRepository = {
+      listWorkflowInboxPlans: jest.fn(async () => [
+        {
+          actionPlanId: "action-plan-closed-1",
+          companyId: "company-1",
+          regionId: "region-1",
+          storeId: "store-1",
+          ownerUserId: "user-1",
+          createdByUserId: "user-1",
+          sourceType: "checklist_remediation",
+          sourceId: "checklist:instance-1:item:item-1",
+          sourceDeepLink: "/store/checklists?result=instance-1",
+          sourceSnapshotRunId: null,
+          sourceKpiId: null,
+          title: "Kasa checklist bulgusu",
+          summary: "Kasa duzeni standardi icin takip",
+          priority: "high",
+          status: "closed",
+          dueOn: "2026-05-24",
+          resolutionNote: "Kasa alani duzenlendi",
+          closedByUserId: "user-1",
+          closedAt: "2026-05-23T09:00:00.000Z",
+          cancelReason: null,
+          cancelledByUserId: null,
+          cancelledAt: null,
+          createdAt: "2026-05-22T08:00:00.000Z",
+          updatedAt: "2026-05-23T09:00:00.000Z",
+        },
+      ]),
+    };
+    const service = new WorkflowInboxService(
+      targetDistributionRepository as never,
+      checklistAcknowledgementRepository as never,
+      snapshotReportingReadRepository as never,
+      storeActionPlanRepository as never,
+    );
+
+    const result = await service.listInbox({
+      actorRoles: ["REGION_MANAGER"],
+      actorScope: {
+        companyIds: [],
+        regionIds: ["region-1"],
+        storeIds: [],
+      },
+      actorActionScope: {
+        assignedStoreIds: [],
+      },
+    });
+
+    expect(storeActionPlanRepository.listWorkflowInboxPlans).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: ["region-1"],
+      storeIds: [],
+      statuses: ["open", "in_progress", "blocked", "closed"],
+      sourceTypes: ["checklist_remediation"],
+      limit: 20,
+    });
+    expect(snapshotReportingReadRepository.getLatestCompletedSnapshotRun).not.toHaveBeenCalled();
+    expect(result.items).toEqual([
+      expect.objectContaining({
+        itemType: "task",
+        sourceType: "store_action_plan",
+        sourceId: "action-plan-closed-1",
+        title: "Kasa checklist bulgusu",
+        inboxStatus: "informational",
+        deepLink: "/store/checklists?result=instance-1",
+        historyPreview: "Store reported resolved: Kasa alani duzenlendi",
+      }),
+    ]);
+  });
+
   it("deep-links pending checklist acknowledgements to the exact checklist receipt", async () => {
     const targetDistributionRepository = {
       listRequests: jest.fn(),

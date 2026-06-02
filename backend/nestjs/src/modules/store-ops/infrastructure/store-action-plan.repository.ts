@@ -169,24 +169,50 @@ export class StoreActionPlanRepository {
   }
 
   async listWorkflowInboxPlans(input: {
-    storeIds: readonly string[];
+    companyIds?: readonly string[];
+    regionIds?: readonly string[];
+    storeIds?: readonly string[];
     statuses: readonly StoreActionPlanStatus[];
+    sourceTypes?: readonly StoreActionPlanSourceType[];
     limit: number;
   }) {
-    if (input.storeIds.length === 0 || input.statuses.length === 0) {
+    if (input.statuses.length === 0) {
       return [];
     }
+
+    const params: unknown[] = [];
+    const filters: string[] = [];
+    this.addScopeFilters(filters, params, {
+      companyIds: input.companyIds ?? [],
+      regionIds: input.regionIds ?? [],
+      storeIds: input.storeIds ?? [],
+    });
+
+    if (filters.length === 0) {
+      return [];
+    }
+
+    params.push([...input.statuses]);
+    filters.push(`status = ANY($${params.length}::text[])`);
+
+    if (input.sourceTypes?.length) {
+      params.push([...input.sourceTypes]);
+      filters.push(`source_type = ANY($${params.length}::text[])`);
+    }
+
+    params.push(input.limit);
+    const limitParam = params.length;
+    const whereSql = filters.join(" AND ");
 
     const result = await this.databaseService.query<StoreActionPlanRow>(
       `
         SELECT ${STORE_ACTION_PLAN_COLUMNS}
         FROM ops.store_action_plan
-        WHERE store_id = ANY($1::uuid[])
-          AND status = ANY($2::text[])
+        WHERE ${whereSql}
         ORDER BY due_on ASC, updated_at DESC
-        LIMIT $3
+        LIMIT $${limitParam}
       `,
-      [[...input.storeIds], [...input.statuses], input.limit],
+      params,
     );
 
     return result.rows.map((row) => this.mapPlan(row));
@@ -448,6 +474,31 @@ export class StoreActionPlanRepository {
     }
 
     return this.mapPlan(row);
+  }
+
+  private addScopeFilters(
+    filters: string[],
+    params: unknown[],
+    scope: {
+      companyIds: readonly string[];
+      regionIds: readonly string[];
+      storeIds: readonly string[];
+    },
+  ) {
+    if (scope.companyIds.length > 0) {
+      params.push([...scope.companyIds]);
+      filters.push(`company_id = ANY($${params.length}::uuid[])`);
+    }
+
+    if (scope.regionIds.length > 0) {
+      params.push([...scope.regionIds]);
+      filters.push(`region_id = ANY($${params.length}::uuid[])`);
+    }
+
+    if (scope.storeIds.length > 0) {
+      params.push([...scope.storeIds]);
+      filters.push(`store_id = ANY($${params.length}::uuid[])`);
+    }
   }
 
   private mapPlan(row: StoreActionPlanRow): StoreActionPlan {

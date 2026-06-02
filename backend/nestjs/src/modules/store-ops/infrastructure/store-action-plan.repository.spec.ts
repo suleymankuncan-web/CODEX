@@ -143,6 +143,45 @@ describe("StoreActionPlanRepository", () => {
     ]);
   });
 
+  it("lists region-scoped checklist remediation plans for informational workflow inbox reads", async () => {
+    const { query, repository } = createTransactionHarness();
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          ...planRow,
+          source_type: "checklist_remediation",
+          status: "closed",
+        },
+      ],
+    });
+
+    const result = await repository.listWorkflowInboxPlans({
+      regionIds: [planRow.region_id],
+      statuses: ["open", "in_progress", "blocked", "closed"],
+      sourceTypes: ["checklist_remediation"],
+      limit: 20,
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("region_id = ANY($1::uuid[])");
+    expect(sql).toContain("status = ANY($2::text[])");
+    expect(sql).toContain("source_type = ANY($3::text[])");
+    expect(sql).toContain("ORDER BY due_on ASC, updated_at DESC");
+    expect(query.mock.calls[0][1]).toEqual([
+      [planRow.region_id],
+      ["open", "in_progress", "blocked", "closed"],
+      ["checklist_remediation"],
+      20,
+    ]);
+    expect(result).toEqual([
+      expect.objectContaining({
+        actionPlanId: planRow.store_action_plan_id,
+        sourceType: "checklist_remediation",
+        status: "closed",
+      }),
+    ]);
+  });
+
   it("updates non-terminal status and records audit metadata", async () => {
     const { query, repository } = createTransactionHarness();
     query.mockResolvedValueOnce({
