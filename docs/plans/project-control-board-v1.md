@@ -67,8 +67,8 @@ The project is in controlled pilot execution mode.
 
 | Area | Current decision | Why |
 | --- | --- | --- |
-| Controlled pilot | Continue | Persona, route, Store Action, upload, and staging readiness evidence cover the current pilot path. |
-| Broad production | No-Go | Provider/recovery/Redis/incident posture still needs production owner acceptance or proof. |
+| Controlled pilot | Continue | Persona, route, Store Action, upload, staging readiness, and free-tier ops posture evidence cover the current scoped pilot path. |
+| Broad production | No-Go | Persistent Redis, managed recovery/PITR/RPO/RTO, final incident/app-level tracking posture, and owner acceptance remain production requirements. |
 | Store Action | Continue in current controlled scope | Manager assigned-store command path is proven; wider sources/actions need separate decision. |
 | Auth and scope | Guarded | Application DB assignments remain source of truth; role/scope changes require evidence rerun. |
 | Imports | Continue current Excel/Power BI path | JSON provider integration remains parked. |
