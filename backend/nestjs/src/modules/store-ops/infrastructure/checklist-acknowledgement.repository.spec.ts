@@ -88,4 +88,75 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
       ],
     });
   });
+
+  it("loads completed checklist remediation source rows with persisted non-compliance flags", async () => {
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
+      rowCount: 1,
+      rows: [
+        {
+          checklist_instance_id: "instance-1",
+          checklist_template_id: "template-1",
+          template_name: "BM Visit",
+          template_type: "BM_STORE_VISIT",
+          category: "BM",
+          store_id: "store-1",
+          store_name: "Bursa Marka Park",
+          completed_at: "2026-05-20T12:36:00.000Z",
+          responses_json: [
+            {
+              templateItemId: "item-1",
+              sectionName: "Kasa",
+              itemNo: 3,
+              itemText: "Kasa duzeni standartlara uygun mu?",
+              responseType: "score",
+              weight: "20.00",
+              maxScore: "10.00",
+              scoreValue: "2.00",
+              commentText: "Kasa alani duzensiz",
+              isNonCompliant: true,
+            },
+            {
+              templateItemId: "item-2",
+              sectionName: "Ekip",
+              itemNo: 4,
+              itemText: "Ekip standartlari uygun mu?",
+              responseType: "yes_no",
+              weight: "10.00",
+              maxScore: "1.00",
+              scoreValue: "1.00",
+              commentText: null,
+              isNonCompliant: false,
+            },
+          ],
+        },
+      ],
+    }));
+    const repository = new ChecklistAcknowledgementRepository({ query } as never);
+
+    const result = await repository.getChecklistRemediationSource("instance-1");
+
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).toContain("ci.status = 'completed'");
+    expect(sql).toContain("'isNonCompliant', COALESCE(cr.is_non_compliant, FALSE)");
+    expect(params).toEqual(["instance-1"]);
+    expect(result).toMatchObject({
+      checklistInstanceId: "instance-1",
+      checklistTemplateId: "template-1",
+      templateType: "BM_STORE_VISIT",
+      storeId: "store-1",
+      storeName: "Bursa Marka Park",
+      responses: [
+        {
+          templateItemId: "item-1",
+          itemText: "Kasa duzeni standartlara uygun mu?",
+          scoreValue: 2,
+          isNonCompliant: true,
+        },
+        {
+          templateItemId: "item-2",
+          isNonCompliant: false,
+        },
+      ],
+    });
+  });
 });

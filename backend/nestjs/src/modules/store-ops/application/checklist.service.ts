@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from "@nestjs/common";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
 import { buildCommandResponse } from "../../../shared/http/response-builders";
 import { buildListResponse } from "../../../shared/http/response-builders";
@@ -9,6 +14,8 @@ import {
   CreateChecklistTemplateInput,
   PublishChecklistTemplateInput,
 } from "./checklist.contract";
+import { extractChecklistRemediationFindings } from "./checklist-remediation-finding.extractor";
+import { StoreActionPlanService } from "./store-action-plan.service";
 
 @Injectable()
 export class ChecklistService {
@@ -16,6 +23,7 @@ export class ChecklistService {
     private readonly storeOpsRepository: StoreOpsRepository,
     private readonly checklistAcknowledgementRepository: ChecklistAcknowledgementRepository,
     private readonly checklistRepository: ChecklistRepository,
+    private readonly storeActionPlanService?: StoreActionPlanService,
   ) {}
 
   async createChecklistTemplate(input: CreateChecklistTemplateInput) {
@@ -292,17 +300,83 @@ export class ChecklistService {
       throw new ForbiddenException("Checklist instance is outside assigned action stores");
     }
 
+    const acknowledgement = await this.checklistAcknowledgementRepository.acknowledgeChecklist({
+      checklistInstanceId: input.checklistInstanceId,
+      actorUserId: input.actorUserId,
+      acknowledgementNote: input.acknowledgementNote,
+    });
+
+    await this.createChecklistRemediationPlans({
+      checklistInstanceId: input.checklistInstanceId,
+      actorUserId: input.actorUserId,
+      actorActionScope: input.actorActionScope,
+      acknowledgedAt: acknowledgement.acknowledgedAt,
+    });
+
     return buildCommandResponse({
       status: "acknowledged",
       message: "Checklist instance acknowledged",
       data: {
-        acknowledgement: await this.checklistAcknowledgementRepository.acknowledgeChecklist({
-          checklistInstanceId: input.checklistInstanceId,
-          actorUserId: input.actorUserId,
-          acknowledgementNote: input.acknowledgementNote,
-        }),
+        acknowledgement,
       },
     });
+  }
+
+  private async createChecklistRemediationPlans(input: {
+    checklistInstanceId: string;
+    actorUserId: string;
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    acknowledgedAt: string | Date;
+  }) {
+    if (!this.storeActionPlanService) {
+      throw new Error("StoreActionPlanService is required for checklist remediation generation");
+    }
+
+    const source = await this.checklistAcknowledgementRepository.getChecklistRemediationSource(
+      input.checklistInstanceId,
+    );
+    const extractionResult = extractChecklistRemediationFindings(source);
+    const dueOn = this.calculateChecklistRemediationDueOn(input.acknowledgedAt);
+
+    for (const finding of extractionResult.findings) {
+      try {
+        await this.storeActionPlanService.createPlan({
+          actorUserId: input.actorUserId,
+          actorScope: {
+            companyIds: [],
+            regionIds: [],
+            storeIds: [finding.storeId],
+          },
+          actorActionScope: input.actorActionScope,
+          storeId: finding.storeId,
+          sourceType: finding.sourceType,
+          sourceId: finding.sourceId,
+          sourceDeepLink: finding.sourceDeepLink,
+          title: finding.title,
+          summary: finding.summary,
+          priority: finding.priority,
+          dueOn,
+        });
+      } catch (error) {
+        if (isDuplicateStoreActionPlanConflict(error)) {
+          continue;
+        }
+
+        throw error;
+      }
+    }
+  }
+
+  private calculateChecklistRemediationDueOn(acknowledgedAt: string | Date) {
+    const dueDate = new Date(acknowledgedAt);
+    if (Number.isNaN(dueDate.getTime())) {
+      throw new BadRequestException("Checklist acknowledgement timestamp is invalid");
+    }
+
+    dueDate.setUTCDate(dueDate.getUTCDate() + 7);
+    return dueDate.toISOString().slice(0, 10);
   }
 
   private async assertCanActOnChecklistInstance(
@@ -483,4 +557,11 @@ export class ChecklistService {
       );
     }
   }
+}
+
+function isDuplicateStoreActionPlanConflict(error: unknown) {
+  return (
+    error instanceof ConflictException &&
+    error.message === "Active store action plan already exists for this source"
+  );
 }
