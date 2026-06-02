@@ -260,6 +260,17 @@ Evidence:
 The second implementation slice keeps current workflow source classification
 explicit before adding another candidate family.
 
+2026-06-02 update:
+
+- The acknowledgement boundary remains valid for `checklist_receipt`.
+- A separate checklist remediation source decision is now locked in
+  `docs/plans/store-action-checklist-remediation-v1.md`.
+- That decision permits future automatic `checklist_remediation` Store Action
+  work after checklist acknowledgement when real low or critical checklist
+  findings exist.
+- Do not implement checklist remediation by reclassifying `checklist_receipt`;
+  the receipt is still acknowledgement work.
+
 Decision:
 
 - `kpi_exception` remains the only active read-only Store Action candidate
@@ -290,6 +301,16 @@ Evidence:
 Checklist-derived Store Action follow-up should not be created directly from
 raw checklist receipts yet.
 
+2026-06-02 update:
+
+- This historical decision is extended by
+  `docs/plans/store-action-checklist-remediation-v1.md`.
+- `checklist_receipt` remains acknowledgement work.
+- A future `checklist_remediation` source may create Store Action tasks after
+  acknowledgement from real low or critical checklist findings.
+- Threshold ownership, source references, idempotency, scope tests, and
+  non-duplicate acknowledgement behavior must be explicit before runtime code.
+
 Decision:
 
 - `checklist_receipt` remains acknowledgement work.
@@ -317,6 +338,17 @@ Evidence:
 
 Target-derived Store Action follow-up should not be created directly from
 target coverage rows yet.
+
+2026-06-02 update:
+
+- This historical target decision is extended by
+  `docs/plans/store-action-target-projection-v1.md`.
+- Target distribution approval, target coverage, missing target setup, and
+  stale target reference states remain target-domain workflow issues.
+- `TARGET_ACHIEVEMENT` Store Action work may proceed only as month-end
+  projection risk, using a ready projection calendar, weighted confidence gate,
+  projection thresholds, duplicate prevention, and result-language guardrails.
+- Do not create target Store Action tasks from raw daily KPI drift.
 
 Decision:
 

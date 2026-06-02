@@ -18,6 +18,8 @@ look before adding another source or write command.
 Use these first:
 
 - `docs/plans/store-action-coaching-loop-v1.md`
+- `docs/plans/store-action-checklist-remediation-v1.md`
+- `docs/plans/store-action-target-projection-v1.md`
 - `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md`
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md`
 - `docs/evidence/store-action-persisted-action-plan-v1b-decision.md`
@@ -36,13 +38,26 @@ Use these first:
   fail closed.
 - Source families stay source-owned. Store Action should not become a generic
   workflow engine.
+- Checklist acknowledgement and checklist remediation are separate: a
+  `checklist_receipt` is acknowledgement work, while future
+  `checklist_remediation` tasks may be created only from real low or critical
+  findings after acknowledgement.
+- Target-achievement Store Action tasks are projection-risk work, not raw daily
+  KPI drift: future target projection tasks require a ready projection
+  calendar, weighted confidence gate, projection thresholds, and cautious
+  before/after result language.
 - API/OpenAPI/frontend client drift must be checked when endpoint contracts
   change.
 
 ## Parked Or High-Risk
 
-- Checklist low-score direct candidates.
+- Checklist low-score direct candidates are no longer a generic open idea; the
+  only approved path is the explicit `checklist_remediation` decision, still
+  pending implementation.
 - Target coverage direct candidates.
+- Target projection is approved only through the explicit projection decision;
+  target coverage, approval, missing target, and stale reference workflows stay
+  parked outside that path.
 - Comments, attachments, notifications, escalation, assignment transfer, AI
   coaching, and non-KPI source families.
 - Reopen/delete behavior for terminal action plans.
