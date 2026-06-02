@@ -1983,14 +1983,18 @@ Store Action V1A status:
   exception candidate path for `BM_CHECKLIST` / `VM_CHECKLIST`; direct
   `checklist_receipt` low-score candidates remain parked because
   `checklist_receipt` is acknowledgement work, not remediation work.
-- 2026-06-02 checklist remediation decision update:
-  `checklist_receipt` remains acknowledgement work, but a separate future
-  `checklist_remediation` Store Action source is now approved for automatic
-  remediation task creation after acknowledgement when real low or critical
-  checklist findings exist. Store managers close V1 remediation with a required
-  resolution note; photo evidence and region-manager verification remain parked.
-  Source references, idempotency, scope tests, API/OpenAPI impact, and audit
-  events must be explicit before runtime implementation.
+- 2026-06-02 checklist remediation closeout:
+  `checklist_receipt` remains acknowledgement work. The separate
+  `checklist_remediation` Store Action source is implemented for automatic
+  remediation task creation after acknowledgement from real persisted
+  `is_non_compliant = true` checklist findings only. Store managers close V1
+  remediation with the existing required resolution note. Region managers have
+  scoped read-only informational visibility for checklist remediation rows, but
+  no verification, reopen, reject, or approval behavior. Photo/file evidence,
+  score-only threshold generation, region-manager verification workflow, and
+  target projection runtime behavior remain parked. The PR train was #635
+  through #641, with closeout evidence at
+  `docs/evidence/store-action-checklist-remediation-v1-closeout-2026-06-02.md`.
 - Checklist source evidence:
   `docs/evidence/store-action-checklist-source-decision-v1.md` plus the
   follow-up remediation decision in

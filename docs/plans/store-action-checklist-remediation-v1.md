@@ -1,6 +1,6 @@
 # Store Action Checklist Remediation V1
 
-Status: decision locked, implementation pending
+Status: decision locked, V1 implemented through PR #637-#641
 Shelf: Store Action
 
 ## Reader And Action
@@ -35,6 +35,23 @@ Checklist acknowledgement and remediation are separate product concepts.
   read surface.
 - Region manager approval, verification, reopen, or rejection of the resolved
   remediation is parked outside V1.
+
+## Implementation Status
+
+V1 is implemented through the Store Action remediation PR train:
+
+- PR #637 widened the persisted Store Action source contract to include
+  `checklist_remediation`.
+- PR #638 added the pure persisted-finding extractor.
+- PR #639 creates remediation Store Action plans after successful checklist
+  acknowledgement from real `is_non_compliant = true` findings only.
+- PR #640 maps the source into Store Tasks without changing
+  `checklist_receipt` acknowledgement language.
+- PR #641 gives region managers read-only informational visibility for scoped
+  checklist remediation rows.
+
+Closeout evidence:
+`docs/evidence/store-action-checklist-remediation-v1-closeout-2026-06-02.md`.
 
 ## Why
 
@@ -71,16 +88,19 @@ flowchart TD
 
 ## Task Formation
 
-Default V1 formation:
+Default shipped V1 formation:
 
 - Create remediation tasks only after successful checklist acknowledgement.
 - Create tasks from real checklist findings only; never from fake UI rows,
   synthetic examples, or frontend-only labels.
-- Use the checklist source model/config to determine low or critical findings.
+- Use persisted `is_non_compliant = true` as the V1 finding source.
+- Do not generate from score-only threshold language until threshold ownership
+  is persisted in DB/API/source data.
 - If the source model has a checklist section, area, or category, group low
-  findings by that unit to avoid noisy task flooding in 30-store regions.
-- If no section, area, or category exists, one low checklist item may become one
-  remediation task.
+  findings by that unit in a future separate grouping PR to avoid noisy task
+  flooding in 30-store regions.
+- If no section, area, or category exists, one non-compliant checklist item may
+  become one remediation task.
 - Each generated remediation task must retain source reference to:
   - checklist instance,
   - store,
@@ -163,7 +183,7 @@ V1 does not include:
 
 ## Implementation Guardrails
 
-Before runtime code changes, the implementing PR must define and verify:
+The shipped V1 runtime line defined and verified:
 
 - exact low/critical source ownership,
 - source reference shape for `checklist_remediation`,

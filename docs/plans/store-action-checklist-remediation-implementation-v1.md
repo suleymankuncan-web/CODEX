@@ -1,21 +1,21 @@
 # Store Action Checklist Remediation Implementation V1
 
-Status: execution-ready plan, runtime implementation pending
+Status: implemented through PR #637-#641, closeout recorded
 Shelf: Store Action
 
 ## Purpose
 
-Implement the locked checklist remediation decision without changing checklist
-acknowledgement meaning.
+Record the locked checklist remediation implementation without changing
+checklist acknowledgement meaning.
 
-The implementation must create persisted Store Action work only from real
+The implementation creates persisted Store Action work only from real
 checklist findings after acknowledgement. It must not turn
 `checklist_receipt` into a remediation task, invent low-score thresholds, or
 add region-manager verification behavior.
 
 ## Repo Evidence
 
-Current runtime state:
+Pre-implementation evidence used by this PR train:
 
 - `ops.store_action_plan.source_type` accepts only `kpi_exception`.
 - `StoreActionPlanSourceType` accepts only `kpi_exception`.
@@ -38,6 +38,20 @@ Implication:
 - V1 generation may use `is_non_compliant = true` as a real finding source.
 - V1 must not generate from score thresholds until a separate DB/API/source
   contract stores the threshold that owns "low" semantics.
+
+## Execution Outcome
+
+The PR train completed the runtime V1 without widening checklist receipt
+semantics:
+
+- PR #637: source contract and schema.
+- PR #638: finding extraction characterization.
+- PR #639: acknowledgement generation orchestrator.
+- PR #640: Store Tasks and read-surface mapping.
+- PR #641: region-manager informational read visibility.
+
+Closeout evidence:
+`docs/evidence/store-action-checklist-remediation-v1-closeout-2026-06-02.md`.
 
 ## Protected Behavior
 
