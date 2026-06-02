@@ -1,6 +1,6 @@
 # Free-Tier Controlled Pilot Ops Posture V1
 
-Status: `planned`
+Status: `closed`
 Scope: controlled staging/internal pilot only
 Broad production: `No-Go`
 
@@ -375,3 +375,15 @@ This line is complete when:
 - Paid/production requirements remain parked with explicit reopen triggers.
 
 This line is not complete if any document implies broad production readiness.
+
+## Closeout
+
+Closeout evidence:
+
+- `docs/evidence/readiness/2026-06-02-free-tier-controlled-pilot-ops-closeout.md`
+
+Final decision:
+
+- Controlled-pilot ops posture is closed for the current scoped
+  staging/internal pilot.
+- Broad production remains `No-Go`.

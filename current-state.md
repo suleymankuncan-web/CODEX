@@ -1502,6 +1502,15 @@ missing item is one of these external proofs.
   alert routing passed `5/5`. Broad production remains `No-Go`; the next real
   decision is app-level error tracking versus explicit platform-alert policy,
   plus production-grade Redis and managed backup/PITR/RPO/RTO acceptance.
+- Free-Tier Controlled Pilot Ops Posture V1 is closed by
+  `docs/evidence/readiness/2026-06-02-free-tier-controlled-pilot-ops-closeout.md`.
+  PR #629 through PR #632 closed the inventory, Redis/BullMQ runbook,
+  controlled-pilot alert policy, and controlled-pilot recovery posture slices;
+  this closeout aligns the operating state. Controlled-pilot ops posture is
+  closed for the current scoped staging/internal pilot. Broad production
+  remains `No-Go` until persistent Redis-compatible posture, final
+  incident/app-level tracking posture, managed recovery/PITR/RPO/RTO posture,
+  and owner/provider acceptance are explicitly closed.
 
 GSD notes:
 

@@ -16,11 +16,13 @@ Documentation entry point:
 
 ## Current Position
 
-As of 23 May 2026, the project is no longer in generic foundation-building
-mode. The production readiness roadmap still provides the broad release
-boundary, but the practical next track is the controlled pilot execution loop:
-run real scoped sessions, record feedback, fix only concrete blockers, and keep
-new module or broad redesign work behind explicit decisions.
+As of 2 June 2026, the project is no longer in generic foundation-building
+mode. The free-tier controlled-pilot ops posture is closed for the current
+scoped staging/internal pilot. The production readiness roadmap still provides
+the broad release boundary, but the practical next track is the controlled
+pilot execution loop: run real scoped sessions, record feedback, fix only
+concrete blockers, and keep new module or broad redesign work behind explicit
+decisions.
 
 - Production Readiness Decision Packet V1:
   `docs/evidence/readiness/2026-05-18-production-readiness-decision.md`
@@ -68,13 +70,17 @@ Current execution loop under Tier A:
 
 Tier B - broad-production/operational hardening:
 
+Controlled-pilot versions of Redis/BullMQ, alerting, and logical recovery are
+closed by `docs/plans/free-tier-controlled-pilot-ops-posture-v1.md`. The items
+below are broad-production requirements, not current pilot blockers.
+
 1. Supabase staging restore drill into an approved disposable target is now
    logically proven for application schemas; production-grade managed
    backup/PITR/RPO/RTO policy remains open.
-2. Production alert policy decision and production destination proof if the
-   team wants broad-production readiness beyond the staging Slack and Better
-   Stack proof. Slack is the proven external delivery path for this staging
-   pass.
+2. Production alert policy decision and production destination proof remain
+   open, along with app-level exception tracking decision or explicit risk
+   acceptance if the team wants broad-production readiness beyond the
+   controlled-pilot Better Stack/Render evidence.
 3. Broad-production Redis/BullMQ decision and health evidence if import or
    snapshot durability is required. Redis/BullMQ is live on staging and accepted
    with Free-tier risk for controlled pilot; broad production still needs a
