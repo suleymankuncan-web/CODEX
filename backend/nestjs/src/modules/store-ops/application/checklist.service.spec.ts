@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common";
 import { ChecklistService } from "./checklist.service";
 
 describe("ChecklistService", () => {
@@ -116,6 +116,263 @@ describe("ChecklistService", () => {
       storeIds: ["store-1", "store-2"],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     });
+  });
+
+  it("creates checklist remediation action plans from acknowledged non-compliant rows", async () => {
+    const acknowledgementRepository = {
+      getChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        storeId: "store-1",
+      }),
+      acknowledgeChecklist: jest.fn().mockResolvedValue({
+        checklistAcknowledgementId: "ack-1",
+        acknowledgedByUserId: "user-1",
+        acknowledgementNote: "Kabul edildi",
+        acknowledgedAt: "2026-05-20T12:36:00.000Z",
+      }),
+      getChecklistRemediationSource: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        checklistTemplateId: "template-1",
+        templateName: "BM Store Visit",
+        templateType: "BM_STORE_VISIT",
+        category: "BM",
+        storeId: "store-1",
+        storeName: "Bursa Marka Park",
+        completedAt: "2026-05-20T12:00:00.000Z",
+        responses: [
+          {
+            templateItemId: "item-1",
+            sectionName: "Kasa",
+            itemNo: 3,
+            itemText: "Kasa duzeni standartlara uygun mu?",
+            responseType: "score",
+            weight: 20,
+            maxScore: 10,
+            scoreValue: 2,
+            commentText: "Kasa alani duzensiz",
+            isNonCompliant: true,
+          },
+          {
+            templateItemId: "item-2",
+            sectionName: "Ekip",
+            itemNo: 4,
+            itemText: "Ekip standartlari uygun mu?",
+            responseType: "yes_no",
+            weight: 10,
+            maxScore: 1,
+            scoreValue: 1,
+            commentText: null,
+            isNonCompliant: false,
+          },
+        ],
+      }),
+    };
+    const storeActionPlanService = {
+      createPlan: jest.fn().mockResolvedValue({ command: { status: "created" } }),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+      storeActionPlanService as never,
+    );
+
+    const result = await service.acknowledgeChecklist({
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+      acknowledgementNote: "Kabul edildi",
+    });
+
+    expect(result.command.status).toBe("acknowledged");
+    expect(acknowledgementRepository.acknowledgeChecklist).toHaveBeenCalledWith({
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+      acknowledgementNote: "Kabul edildi",
+    });
+    expect(storeActionPlanService.createPlan).toHaveBeenCalledTimes(1);
+    expect(storeActionPlanService.createPlan).toHaveBeenCalledWith({
+      actorUserId: "user-1",
+      actorScope: {
+        companyIds: [],
+        regionIds: [],
+        storeIds: ["store-1"],
+      },
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+      storeId: "store-1",
+      sourceType: "checklist_remediation",
+      sourceId: "checklist:instance-1:item:item-1",
+      sourceDeepLink: "/store/checklists?result=instance-1",
+      title: "Kasa checklist bulgusu",
+      summary:
+        "BM Store Visit - Kasa duzeni standartlara uygun mu? - Not: Kasa alani duzensiz",
+      priority: "high",
+      dueOn: "2026-05-27",
+    });
+  });
+
+  it("does not create checklist remediation plans when acknowledged rows are compliant", async () => {
+    const acknowledgementRepository = {
+      getChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        storeId: "store-1",
+      }),
+      acknowledgeChecklist: jest.fn().mockResolvedValue({
+        checklistAcknowledgementId: "ack-1",
+        acknowledgedByUserId: "user-1",
+        acknowledgementNote: null,
+        acknowledgedAt: "2026-05-20T12:36:00.000Z",
+      }),
+      getChecklistRemediationSource: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        checklistTemplateId: "template-1",
+        templateName: "BM Store Visit",
+        templateType: "BM_STORE_VISIT",
+        category: "BM",
+        storeId: "store-1",
+        storeName: "Bursa Marka Park",
+        completedAt: "2026-05-20T12:00:00.000Z",
+        responses: [
+          {
+            templateItemId: "item-1",
+            sectionName: "Kasa",
+            itemNo: 3,
+            itemText: "Kasa duzeni standartlara uygun mu?",
+            responseType: "score",
+            weight: 20,
+            maxScore: 10,
+            scoreValue: 10,
+            commentText: null,
+            isNonCompliant: false,
+          },
+        ],
+      }),
+    };
+    const storeActionPlanService = {
+      createPlan: jest.fn(),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+      storeActionPlanService as never,
+    );
+
+    await service.acknowledgeChecklist({
+      checklistInstanceId: "instance-1",
+      actorUserId: "user-1",
+      actorActionScope: {
+        assignedStoreIds: ["store-1"],
+      },
+    });
+
+    expect(storeActionPlanService.createPlan).not.toHaveBeenCalled();
+  });
+
+  it("keeps checklist acknowledgement idempotent when remediation source already has an active plan", async () => {
+    const acknowledgementRepository = {
+      getChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        storeId: "store-1",
+      }),
+      acknowledgeChecklist: jest.fn().mockResolvedValue({
+        checklistAcknowledgementId: "ack-1",
+        acknowledgedByUserId: "user-1",
+        acknowledgementNote: null,
+        acknowledgedAt: "2026-05-20T12:36:00.000Z",
+      }),
+      getChecklistRemediationSource: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        checklistTemplateId: "template-1",
+        templateName: "BM Store Visit",
+        templateType: "BM_STORE_VISIT",
+        category: "BM",
+        storeId: "store-1",
+        storeName: "Bursa Marka Park",
+        completedAt: "2026-05-20T12:00:00.000Z",
+        responses: [
+          {
+            templateItemId: "item-1",
+            sectionName: "Kasa",
+            itemNo: 3,
+            itemText: "Kasa duzeni standartlara uygun mu?",
+            responseType: "score",
+            weight: 20,
+            maxScore: 10,
+            scoreValue: 2,
+            commentText: null,
+            isNonCompliant: true,
+          },
+        ],
+      }),
+    };
+    const storeActionPlanService = {
+      createPlan: jest
+        .fn()
+        .mockRejectedValue(
+          new ConflictException("Active store action plan already exists for this source"),
+        ),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+      storeActionPlanService as never,
+    );
+
+    await expect(
+      service.acknowledgeChecklist({
+        checklistInstanceId: "instance-1",
+        actorUserId: "user-1",
+        actorActionScope: {
+          assignedStoreIds: ["store-1"],
+        },
+      }),
+    ).resolves.toMatchObject({
+      command: {
+        status: "acknowledged",
+      },
+    });
+
+    expect(storeActionPlanService.createPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not acknowledge or create remediation outside assigned stores", async () => {
+    const acknowledgementRepository = {
+      getChecklistInstanceScope: jest.fn().mockResolvedValue({
+        checklistInstanceId: "instance-1",
+        storeId: "store-2",
+      }),
+      acknowledgeChecklist: jest.fn(),
+      getChecklistRemediationSource: jest.fn(),
+    };
+    const storeActionPlanService = {
+      createPlan: jest.fn(),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      acknowledgementRepository as never,
+      {} as never,
+      storeActionPlanService as never,
+    );
+
+    await expect(
+      service.acknowledgeChecklist({
+        checklistInstanceId: "instance-1",
+        actorUserId: "user-1",
+        actorActionScope: {
+          assignedStoreIds: ["store-1"],
+        },
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(acknowledgementRepository.acknowledgeChecklist).not.toHaveBeenCalled();
+    expect(acknowledgementRepository.getChecklistRemediationSource).not.toHaveBeenCalled();
+    expect(storeActionPlanService.createPlan).not.toHaveBeenCalled();
   });
 
   it("lets region managers read BM and VM checklist visit coverage without granting VM mutation", async () => {
