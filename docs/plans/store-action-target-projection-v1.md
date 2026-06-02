@@ -136,8 +136,8 @@ After the confidence gate passes:
 | Month-End Projection | Product State | Store Action Behavior |
 | --- | --- | --- |
 | `>= 95%` | On target rhythm | no task |
-| `90% - 95%` | Watching | signal only |
-| `80% - 90%` | Task candidate | normal priority |
+| `>= 90% and < 95%` | Watching | signal only |
+| `>= 80% and < 90%` | Task candidate | normal priority |
 | `< 80%` | Critical projection | high priority |
 
 The projection signal can update daily from the first day of the month. The
@@ -351,7 +351,7 @@ The first implementation PR must include targeted coverage for:
 - no task when projection calendar is not ready,
 - no task before weighted 40% confidence gate,
 - no task when projection is at least 90%,
-- normal-priority task when projection is 80% to 90%,
+- normal-priority task when projection is at least 80% and below 90%,
 - high-priority task when projection is below 80%,
 - no duplicate active task for the same store/month/source,
 - task closure requires resolution note,
