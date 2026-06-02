@@ -293,6 +293,10 @@ Expected outcome:
 
 ## Autonomous Execution Rules
 
+These rules are not a standing repository-wide merge permission. They apply
+only when the current user-provided goal explicitly authorizes this PR train to
+be opened, reviewed, checked, and merged autonomously.
+
 The agent may do autonomously:
 
 - Create branches and PRs for the PR train.
@@ -301,8 +305,9 @@ The agent may do autonomously:
 - Run public staging health/readiness smokes that do not require secrets.
 - Use existing configured tools to inspect non-secret provider health if
   available.
-- Open PRs, request release-blocking review, monitor checks, fix failures, and
-  merge when discipline rules are satisfied.
+- Open PRs, request release-blocking review, monitor checks, and fix failures.
+- Merge only when the active user-provided goal explicitly authorizes merging
+  and `discipline.md` merge rules are satisfied.
 
 The agent must not do autonomously:
 
