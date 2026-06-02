@@ -1504,11 +1504,11 @@ missing item is one of these external proofs.
   plus production-grade Redis and managed backup/PITR/RPO/RTO acceptance.
 - Free-Tier Controlled Pilot Ops Posture V1 is closed by
   `docs/evidence/readiness/2026-06-02-free-tier-controlled-pilot-ops-closeout.md`.
-  PR #629 through PR #632 closed the inventory, Redis/BullMQ runbook,
-  controlled-pilot alert policy, and controlled-pilot recovery posture slices;
-  this closeout aligns the operating state. Controlled-pilot ops posture is
-  closed for the current scoped staging/internal pilot. Broad production
-  remains `No-Go` until persistent Redis-compatible posture, final
+  PR #629 through PR #633 closed the inventory, Redis/BullMQ runbook,
+  controlled-pilot alert policy, controlled-pilot recovery posture, and
+  closeout alignment slices. Controlled-pilot ops posture is closed for the
+  current scoped staging/internal pilot. Broad production remains `No-Go`
+  until persistent Redis-compatible posture, final
   incident/app-level tracking posture, managed recovery/PITR/RPO/RTO posture,
   and owner/provider acceptance are explicitly closed.
 

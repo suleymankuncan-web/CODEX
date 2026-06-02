@@ -26,7 +26,7 @@ private payloads are recorded.
 | PR-2 Redis / BullMQ runbook | `#630` | merged | Pending import/snapshot/worker symptoms have a deterministic queue/worker triage order. |
 | PR-3 alert policy | `#631` | merged | Better Stack external health email proof plus Render notifications are accepted for controlled pilot only. |
 | PR-4 recovery posture | `#632` | merged | App-owned schema logical restore is accepted for controlled pilot only; PITR/managed restore remain parked. |
-| PR-5 closeout | current PR | pending until merge | Operating docs are aligned so future agents do not reopen the same pilot ops question. |
+| PR-5 closeout | `#633` | merged | Operating docs are aligned so future agents do not reopen the same pilot ops question. |
 
 ## Controlled-Pilot Accepted Posture
 
