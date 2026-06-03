@@ -71,3 +71,7 @@ separate go/no-go note.
 
 - `docs/evidence/store-action-coaching-detail-v2a.md`
 - `docs/evidence/store-action-checklist-remediation-v1-closeout-2026-06-02.md`
+- `docs/evidence/store-tasks-workbench-v3-2026-06-03.md`
+- `docs/evidence/store-tasks-command-dialog-v1-2026-06-03.md`
+- `docs/evidence/store-tasks-evidence-detail-v1-2026-06-03.md`
+- `docs/evidence/store-tasks-workbench-v3-closeout-2026-06-03.md`
