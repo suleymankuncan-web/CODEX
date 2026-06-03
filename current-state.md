@@ -2175,6 +2175,21 @@ Store Action V1A status:
   until a backend contract exists, and adds no fake task, KPI, checklist, target,
   or ranking data. Evidence:
   `docs/evidence/store-tasks-workbench-v3-2026-06-03.md`.
+- Store Tasks command dialog follow-up PR #644 moved active Store Action
+  status, close, and cancel commands from list rows into the detail dialog,
+  while keeping those commands available from the loaded list-row plan when
+  detail fetch fails. Existing endpoints, payloads, lifecycle semantics, and
+  assigned-store backend scope are unchanged. Evidence:
+  `docs/evidence/store-tasks-command-dialog-v1-2026-06-03.md`.
+- Store Tasks evidence detail follow-up PR #645 extracted the persisted plan
+  detail dialog into a focused component and separated source/status evidence,
+  lifecycle snapshot, audit trace, and command sections without changing
+  runtime contracts. Evidence:
+  `docs/evidence/store-tasks-evidence-detail-v1-2026-06-03.md`.
+- Store Tasks Workbench V3 closeout records PR #643 through #645, local and
+  remote verification, behavior-preserved boundaries, rollback shape, and
+  parked target projection/runtime risks. Evidence:
+  `docs/evidence/store-tasks-workbench-v3-closeout-2026-06-03.md`.
 - Store Action test hygiene and visibility evidence branch split 13 plan
   lifecycle tests from `admin-web/e2e/store-surfaces.spec.ts` into
   `admin-web/e2e/store-action-plans.spec.ts`, reducing the broad spec by
