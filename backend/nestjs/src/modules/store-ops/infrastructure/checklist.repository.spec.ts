@@ -212,6 +212,7 @@ describe("ChecklistRepository", () => {
             store_id: "store-1",
             status: "in_progress",
             max_score: "10.00",
+            expected_value: JSON.stringify({ lowScoreThreshold: 6 }),
           },
         ],
       })
@@ -247,12 +248,50 @@ describe("ChecklistRepository", () => {
     expect(client.query).toHaveBeenNthCalledWith(
       2,
       expect.stringContaining("ON CONFLICT (checklist_instance_id, template_item_id)"),
-      ["instance-1", "item-1", 8, "Good"],
+      ["instance-1", "item-1", 8, "Good", false],
     );
     expect(client.query).toHaveBeenNthCalledWith(
       3,
       expect.stringContaining("status = 'in_progress'"),
       ["instance-1", "user-1"],
+    );
+  });
+
+  it("marks mobile checklist responses non-compliant when the score is at or below the configured low threshold", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            checklist_instance_id: "instance-1",
+            store_id: "store-1",
+            status: "in_progress",
+            max_score: "10.00",
+            expected_value: JSON.stringify({ lowScoreThreshold: 6 }),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            response_id: "response-1",
+            responded_at: "2026-04-28T10:05:00.000Z",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await repository.saveMobileChecklistResponse({
+      checklistInstanceId: "instance-1",
+      templateItemId: "item-1",
+      scoreValue: 6,
+      actorUserId: "user-1",
+    });
+
+    expect(client.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("is_non_compliant"),
+      ["instance-1", "item-1", 6, null, true],
     );
   });
 
