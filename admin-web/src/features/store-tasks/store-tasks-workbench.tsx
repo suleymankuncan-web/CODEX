@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import {
   ArrowRight,
   Bell,
@@ -32,45 +31,31 @@ import {
 } from '@/components/ui/dialog'
 import type { AuthSessionSummary } from '../auth/api'
 import type { TranslateFunction } from '../localization/dictionary'
-import {
-  getStoreActionPlan,
-  type StoreActionPlan,
-} from '../store-actions/api'
 import { StoreActionPlanCreateControl } from '../store-actions/StoreActionPlanCreateControl'
 import { WorkflowInboxDetail } from '../workflow/WorkflowInboxDetail'
 import type { WorkflowInboxItem } from '../workflow/contracts'
 import { formatDateTime, getErrorMessage } from '../../lib/format'
 import type { AppLocale } from '../../lib/i18n'
-import { transientQueryRetryOptions } from '../../lib/query-retry'
 import { cn } from '../../lib/utils'
 import {
   StoreEmptyState,
-  StoreErrorState,
   StoreStatusBadge,
   type StoreSurfaceTone,
 } from '../../pages/store-surface-primitives'
 import {
-  formatActionPlanDate,
   formatActorRoleLabel,
   formatDisplayRoleLabels,
-  formatOptionalDateTime,
-  formatOptionalValue,
-  formatStoreActionPlanPriority,
-  formatStoreActionPlanSource,
-  formatStoreActionPlanStatus,
   formatWorkflowItemTypeLabel,
   formatWorkflowPrimaryActionLabel,
   getSafeInAppPath,
   isActiveStatus,
-  mapStoreActionPlanPriorityTone,
-  mapStoreActionPlanStatusTone,
   type TaskPersona,
   type WorkbenchRow,
   type WorkbenchRowFamily,
   type WorkbenchSummary,
   type WorkbenchTabId,
 } from './store-tasks-workbench-model'
-import { StoreActionPlanCommandPanel } from './StoreActionPlanCommandPanel'
+import { StoreActionPlanDetailDialog } from './StoreActionPlanDetailDialog'
 
 export function AccessState(input: {
   authSummary: AuthSessionSummary | null
@@ -509,97 +494,6 @@ function SourceLink(input: {
   )
 }
 
-function StoreActionPlanDetailDialog(input: {
-  plan: StoreActionPlan
-  canMutate: boolean
-  locale: AppLocale
-  t: TranslateFunction
-}) {
-  const [isOpen, setIsOpen] = useState(false)
-  const detailQuery = useQuery({
-    queryKey: ['store-action-plans', 'store-tasks', 'detail', input.plan.actionPlanId],
-    queryFn: () => getStoreActionPlan({ actionPlanId: input.plan.actionPlanId }),
-    enabled: isOpen,
-    ...transientQueryRetryOptions,
-  })
-  const plan = detailQuery.data?.data?.plan ?? input.plan
-
-  return (
-    <>
-      <Button type="button" size="sm" onClick={() => setIsOpen(true)}>
-        <Eye data-icon="inline-start" />
-        {input.t('storeTasks.actionPlansDetailAction')}
-      </Button>
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent
-          aria-label={input.t('storeTasks.actionPlansDetailRegion')}
-          className="tw:max-h-[min(760px,calc(100dvh-2rem))] tw:max-w-3xl tw:overflow-y-auto tw:p-0"
-        >
-          <div className="tw:border-b tw:border-border/70 tw:bg-muted/25 tw:p-5">
-            <DialogHeader>
-              <DialogTitle className="tw:text-xl tw:font-semibold">{plan.title}</DialogTitle>
-              <DialogDescription>{plan.summary ?? input.t('storeTasks.actionPlansNoSummary')}</DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="tw:grid tw:gap-4 tw:p-5">
-            {detailQuery.isLoading ? (
-              <StoreEmptyState
-                title={input.t('storeTasks.actionPlansDetailLoadingTitle')}
-                description={input.t('storeTasks.actionPlansDetailLoadingCopy')}
-              />
-            ) : null}
-            {detailQuery.isError ? (
-              <StoreErrorState
-                title={input.t('storeTasks.actionPlansDetailErrorTitle')}
-                description={getErrorMessage(detailQuery.error)}
-                action={{
-                  disabled: detailQuery.isFetching,
-                  icon: <RefreshCw data-icon="inline-start" />,
-                  label: input.t('storeTasks.retryAction'),
-                  onClick: () => void detailQuery.refetch(),
-                  variant: 'outline',
-                }}
-              />
-            ) : null}
-            {!detailQuery.isError ? (
-              <>
-                <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2 tw:lg:grid-cols-3">
-                  <MiniFact label={input.t('storeTasks.actionPlansStore')} value={plan.storeId} />
-                  <MiniFact label={input.t('storeTasks.actionPlansSource')} value={formatStoreActionPlanSource(input.t, plan.sourceType)} />
-                  <MiniFact label={input.t('storeTasks.actionPlansDueOn')} value={formatActionPlanDate(plan.dueOn, input.locale)} />
-                  <MiniFact label={input.t('storeTasks.status')} value={formatStoreActionPlanStatus(input.t, plan.status)} tone={mapStoreActionPlanStatusTone(plan.status)} />
-                  <MiniFact label={input.t('storeTasks.priority')} value={formatStoreActionPlanPriority(input.t, plan.priority)} tone={mapStoreActionPlanPriorityTone(plan.priority)} />
-                  <MiniFact label={input.t('storeTasks.actionPlansUpdatedAt')} value={formatDateTime(plan.updatedAt, input.locale)} />
-                </div>
-                <div className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:p-4">
-                  <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">
-                    {input.t('storeTasks.actionPlansLifecycleSnapshot')}
-                  </h3>
-                  <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2">
-                    <DetailLine label={input.t('storeTasks.actionPlansOwner')} value={plan.ownerUserId} />
-                    <DetailLine label={input.t('storeTasks.actionPlansCreatedBy')} value={plan.createdByUserId} />
-                    <DetailLine label={input.t('storeTasks.actionPlansCreatedAt')} value={formatDateTime(plan.createdAt, input.locale)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansSourceId')} value={plan.sourceId} />
-                    <DetailLine label={input.t('storeTasks.actionPlansSourceSnapshot')} value={formatOptionalValue(plan.sourceSnapshotRunId, input.t)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansSourceKpi')} value={formatOptionalValue(plan.sourceKpiId, input.t)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansClosedAt')} value={formatOptionalDateTime(plan.closedAt, input.locale, input.t)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansCancelledAt')} value={formatOptionalDateTime(plan.cancelledAt, input.locale, input.t)} />
-                  </div>
-                </div>
-                <div className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4">
-                  <DetailLine label={input.t('storeTasks.actionPlansResolutionEvidence')} value={formatOptionalValue(plan.resolutionNote, input.t)} />
-                  <DetailLine label={input.t('storeTasks.actionPlansCancelEvidence')} value={formatOptionalValue(plan.cancelReason, input.t)} />
-                </div>
-              </>
-            ) : null}
-            {input.canMutate ? <StoreActionPlanCommandPanel plan={plan} t={input.t} /> : null}
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
-
 function WorkflowItemDetailDialog(input: {
   item: WorkflowInboxItem
   locale: AppLocale
@@ -643,20 +537,6 @@ function WorkflowItemDetailDialog(input: {
         </DialogContent>
       </Dialog>
     </>
-  )
-}
-
-function DetailLine(input: {
-  label: string
-  value: string
-}) {
-  return (
-    <div className="tw:min-w-0">
-      <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
-      <strong className="tw:mt-1 tw:block tw:break-words tw:text-sm tw:font-semibold tw:text-foreground">
-        {input.value}
-      </strong>
-    </div>
   )
 }
 
