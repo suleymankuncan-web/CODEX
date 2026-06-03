@@ -291,7 +291,11 @@ test('store tasks opens persisted action plan detail on demand', async ({ page }
 
   const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
   await expect(detailDialog).toBeVisible()
+  await expect(detailDialog.getByText('Source and status evidence')).toBeVisible()
   await expect(detailDialog.getByText('Lifecycle snapshot')).toBeVisible()
+  await expect(detailDialog.getByText('Audit trace')).toBeVisible()
+  await expect(detailDialog.getByText('Blocked')).toBeVisible()
+  await expect(detailDialog.getByRole('link', { name: 'Open source' })).toHaveAttribute('href', '/store/kpis')
   await expect(detailDialog.getByText('00000000-0000-0000-0000-00000000c001')).toBeVisible()
   await expect(detailDialog.getByText('00000000-0000-0000-0000-00000000d001')).toBeVisible()
   await expect(detailDialog.getByText('Not available').first()).toBeVisible()
