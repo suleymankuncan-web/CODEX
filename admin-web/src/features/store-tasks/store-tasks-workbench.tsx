@@ -417,10 +417,15 @@ function WorkbenchRowView(input: {
             triggerClassName="tw:border-0 tw:bg-gradient-to-r tw:from-[#6847f5] tw:to-[#4f7cf7] tw:text-white tw:shadow-[0_15px_30px_rgba(84,75,224,0.22)] hover:tw:text-white"
           />
         ) : null}
-        {!plan && (!input.row.candidate || input.persona !== 'storeManager') && input.row.workflowItem ? (
+        {!plan && input.row.workflowItem ? (
           <SourceLink
             to={input.row.workflowItem.deepLink}
-            label={formatWorkflowPrimaryActionLabel(input.t, input.row.workflowItem)}
+            label={
+              input.row.candidate && input.persona === 'storeManager'
+                ? input.t('storeTasks.actionPlansOpenSource')
+                : formatWorkflowPrimaryActionLabel(input.t, input.row.workflowItem)
+            }
+            variant={input.row.candidate && input.persona === 'storeManager' ? 'secondary' : 'primary'}
           />
         ) : null}
       </div>
@@ -452,17 +457,25 @@ function RowFact(input: {
 function SourceLink(input: {
   to: string
   label: string
+  variant?: 'primary' | 'secondary'
 }) {
   const safePath = getSafeInAppPath(input.to)
   if (!safePath) {
     return null
   }
 
+  const variant = input.variant ?? 'primary'
+
   return (
     <Button
       asChild
       size="sm"
-      className="tw:border-0 tw:bg-gradient-to-r tw:from-[#6847f5] tw:to-[#4f7cf7] tw:text-white tw:shadow-[0_15px_30px_rgba(84,75,224,0.22)] hover:tw:text-white"
+      variant={variant === 'secondary' ? 'outline' : 'default'}
+      className={cn(
+        variant === 'primary'
+          ? 'tw:border-0 tw:bg-gradient-to-r tw:from-[#6847f5] tw:to-[#4f7cf7] tw:text-white tw:shadow-[0_15px_30px_rgba(84,75,224,0.22)] hover:tw:text-white'
+          : 'tw:border-[#dbe5f2] tw:bg-white/88 tw:text-[#1d2a4a] hover:tw:bg-white hover:tw:text-[#1d2a4a]',
+      )}
     >
       <Link to={safePath}>
         {input.label}

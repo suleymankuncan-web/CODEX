@@ -982,7 +982,7 @@ test('store tasks pages persisted action plan records', async ({ page }) => {
   await page.goto('/store/tasks')
 
   const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByText('2 work')).toBeVisible()
+  await expect(actionPlansPanel.getByText('21 work')).toBeVisible()
   await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
   await expect(getActionPlanRow(page, 'Second page recovery plan')).toBeVisible()
   await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'Second page recovery plan' })).toHaveCount(0)

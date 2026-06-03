@@ -55,9 +55,7 @@ export function StoreActionPlanDetailDialog(input: {
   const sourcePath = plan.sourceDeepLink ? getSafeInAppPath(plan.sourceDeepLink) : null
   const planTone = mapStoreActionPlanStatusTone(plan.status)
   const providedStoreName = input.storeName?.trim()
-  const displayStoreName = providedStoreName && providedStoreName !== plan.storeId
-    ? providedStoreName
-    : input.t('storeTasks.actionPlansNotAvailable')
+  const displayStoreName = providedStoreName || plan.storeId || input.t('storeTasks.actionPlansNotAvailable')
 
   return (
     <>
