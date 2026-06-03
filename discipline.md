@@ -574,6 +574,19 @@ Taste-skill kullanilirken:
   `docs/prototypes/plum-glacier-token-set-v1.md` dosyasidir. Bu karar global
   tema rewrite'i degildir; login ve sonraki yeni/refactor edilen sayfalarda
   tek token setiyle ilerleme disiplinidir.
+- Kullanici bir HTML/prototip ciktisini "bunu sayfaya gecir", "birebir olsun"
+  veya benzeri sekilde onayladiginda prototip artik sadece ilham degil,
+  implementation contract'tir. Uretim sayfasi mevcut eski iskeletin
+  giydirilmis hali olarak kalamaz. Layout, renk paleti, spacing, satir/kart
+  ritmi, status tone'lari, modal/drawer modeli ve interaction akisi prototipten
+  tasinir; demo-only kontroller, fake veri ve rol switch gibi prototip
+  yardimcilari ise kaldirilir. Gercek veri, role/scope, permission,
+  accessibility, responsive davranis veya eksik backend contract nedeniyle
+  sapma gerekiyorsa bu sapma evidence dosyasinda acikca yazilir.
+- Prototype-to-product UI slice'i desktop ve mobile screenshot karsilastirmasi
+  olmadan bitmis sayilmaz. Screenshot prototiple maddi olarak uyusmuyorsa
+  "yaklasti" yeterli degildir; sayfa tekrar duzeltilir veya hangi urun/contract
+  sebebiyle birebir tasinamadigi acik stop notu olarak verilir.
 
 Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
 

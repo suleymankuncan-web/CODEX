@@ -79,7 +79,10 @@ it must not be fake.
 
 ## Prototype To Product
 
-A liked HTML prototype is a visual direction, not an implementation contract.
+A liked HTML prototype is a visual direction while the team is still exploring.
+Once the user approves a prototype as the source for a production page, it
+becomes the implementation contract for that slice.
+
 Before product code:
 
 - map every visible metric, label, status, and action to a real source,
@@ -89,9 +92,22 @@ Before product code:
 - remove old UI remnants rather than restyling them,
 - record what behavior did not change.
 
-The implementation does not need to copy the prototype pixel for pixel when real
-data or role scope makes that wrong. It does need to preserve the approved
-quality, density, hierarchy, and workflow intent.
+For approved prototype implementation:
+
+- start from the prototype file itself, not from the existing page shape,
+- carry over the approved layout, palette, spacing, density, row/card rhythm,
+  modal/drawer structure, status tones, labels, and interaction model,
+- remove demo-only controls such as prototype role switchers instead of
+  shipping them,
+- bind every visible value and action to real API/model/config/state data,
+- replace only the parts that are impossible or wrong in production because of
+  real data, role scope, permission, accessibility, responsiveness, or missing
+  contract,
+- record every intentional visual deviation in evidence with the reason.
+
+If the final desktop and mobile screenshots do not materially match the
+approved prototype, the page is not done. "Inspired by the prototype" is not
+acceptable when the task is to implement that prototype.
 
 ## Decision Latency
 
