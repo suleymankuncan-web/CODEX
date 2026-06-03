@@ -8,9 +8,34 @@ architecture hardening.
 
 Before code or docs changes, read these files from the current branch:
 
+- `CONTRIBUTING.md`
 - `current-state.md`
 - `sokrates.md`
 - `discipline.md`
+
+Every autonomous `/goal` or multi-PR execution prompt should include this same
+four-file read-first block unless the user explicitly narrows the task to a
+single read-only question.
+
+## Operating Document Roles
+
+These files work together; none of them replaces the others.
+
+- `CONTRIBUTING.md` is the short entry contract for repo work.
+- `current-state.md` is the live handoff and freshest project-state record.
+- `sokrates.md` is the decision-quality and risk-reasoning system.
+- `discipline.md` is the day-to-day execution, PR, merge, verification, UI, and
+  refactor operating system.
+
+If they overlap, use this order:
+
+- Fresh facts, latest merged state, parked work, and active caveats:
+  `current-state.md`.
+- Decision method, risk reasoning, prioritization, and stop/ask judgment:
+  `sokrates.md`.
+- Execution mechanics, PR rhythm, merge gates, verification ladder, UI/refactor
+  rules, and done definition: `discipline.md`.
+- Contributor-facing summary and minimum repo contract: this file.
 
 Use the current worktree and external state as authoritative. If local docs,
 git history, and runtime evidence disagree, use the freshest verifiable source
@@ -80,6 +105,16 @@ review, run a local adversarial review pass:
 ## Frontend Store UI Rules
 
 - Store redesign work uses `shadcn/ui`, Tailwind v4, and lucide icons.
+- Store/Admin UI prototype, redesign, refactor, or workflow-surface work must
+  also read `docs/process/product-experience-principles.md`. That document is
+  the product-quality standard for clean but premium, operationally honest
+  screens; it is not part of the default four-file read-first set for unrelated
+  backend or docs-only work.
+- Store/Admin UI prototype, redesign, or refactor work must run a
+  `design-taste-frontend` / taste-skill quality pass before it is considered
+  ready for implementation. Use it as an anti-slop design review on top of the
+  existing shadcn/Tailwind/lucide/AdminSurface/Store primitive rules, not as a
+  replacement for real data, role scope, or workflow correctness.
 - Refactored Store surfaces must not keep old hero-card shells, legacy panel
   classes, debug/handoff copy, fake readiness language, or role-out-of-scope
   navigation links.
@@ -88,6 +123,9 @@ review, run a local adversarial review pass:
   feature, not optional polish.
 - A redesigned page is not done until visible modules serve a real user decision
   or action.
+- Taste-skill output must be adapted to operational product UI: no marketing
+  hero defaults, decorative-only premium elements, fake business copy, or
+  workflow-changing visual ideas.
 
 ## Data Honesty
 

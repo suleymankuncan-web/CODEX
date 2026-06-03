@@ -1,55 +1,86 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Bell, ClipboardList, ListChecks, ReceiptText, RefreshCw, TrendingUp } from 'lucide-react'
+import {
+  CheckCircle2,
+  ClipboardList,
+  ListChecks,
+  RefreshCw,
+  Search,
+  Target,
+  TrendingDown,
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { getDisplayRoleCodes } from '../features/auth/display'
 import { getChecklistAcknowledgements } from '../features/checklists/api'
-import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
-import { listStoreActionPlans } from '../features/store-actions/api'
-import { StoreActionPlanCreateControl } from '../features/store-actions/StoreActionPlanCreateControl'
+import {
+  listStoreActionPlans,
+  type StoreActionPlan,
+  type StoreActionPlanStatus,
+} from '../features/store-actions/api'
 import {
   buildReadOnlyStoreActionCandidates,
   type ReadOnlyStoreActionCandidate,
 } from '../features/store-actions/candidates'
-import { StoreActionPlansPanel } from '../features/store-actions/StoreActionPlansPanel'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
-import { WorkflowInboxDetail } from '../features/workflow/WorkflowInboxDetail'
-import { getWorkflowInbox } from '../features/workflow/api'
 import {
-  mapInboxStatusTone,
+  AccessState,
+  SummaryGrid,
+  StoreTasksWorkbenchBody,
+  WorkbenchHeader,
+  WorkbenchTabs,
+} from '../features/store-tasks/store-tasks-workbench'
+import {
+  formatActionPlanDate,
+  formatDisplayRoleLabels,
+  formatStoreActionPlanPriority,
+  formatStoreActionPlanSource,
+  formatStoreActionPlanStatus,
+  formatWorkflowInboxStatusLabel,
+  formatWorkflowSourceType,
+  formatWorkflowUrgencyLabel,
+  getPlanSourceKey,
+  getWorkflowSourceKey,
+  mapStoreActionPlanPriorityTone,
+  mapStoreActionPlanStatusTone,
+  mapWorkflowTone,
   mapWorkflowUrgencyTone,
-  type WorkflowInboxItem,
-} from '../features/workflow/contracts'
-import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
+  type TaskPersona,
+  type WorkbenchRow,
+  type WorkbenchRowFamily,
+  type WorkbenchRowState,
+  type WorkbenchSummary,
+  type WorkbenchTabId,
+} from '../features/store-tasks/store-tasks-workbench-model'
+import { getWorkflowInbox } from '../features/workflow/api'
+import type { WorkflowInboxItem } from '../features/workflow/contracts'
+import { formatDateTime, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
-  StoreEmptyState,
   StoreErrorState,
-  StoreInfoGrid,
   StoreLoadingState,
-  StoreMetricCard,
-  StoreMetricGrid,
-  StoreSectionCard,
-  StoreStackedList,
-  StoreStackedRow,
   StoreStatusBadge,
-  StoreSurfaceHeader,
   StoreSurfacePage,
-  type StoreSurfaceTone,
 } from './store-surface-primitives'
 
-const actorRoleTranslationKeys: Partial<Record<string, TranslationKey>> = {
-  REGION_APPROVER: 'storeTasks.role.REGION_APPROVER',
-  REPORT_VIEWER: 'storeTasks.role.REPORT_VIEWER',
-  STORE_MANAGER: 'storeTasks.role.STORE_MANAGER',
-  STORE_PERSONNEL: 'storeTasks.role.STORE_PERSONNEL',
-  SUPER_ADMIN: 'storeTasks.role.SUPER_ADMIN',
-}
 const STORE_ACTION_PLAN_PAGE_SIZE = 20
+const STORE_ACTION_PLAN_ACTIVE_INDEX_LIMIT = 100
+const ACTIVE_STORE_ACTION_PLAN_STATUSES = [
+  'open',
+  'in_progress',
+  'blocked',
+] as const satisfies readonly StoreActionPlanStatus[]
 
 function canUseWorkflowInbox(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
@@ -66,6 +97,43 @@ function canUseStoreActionPlans(authSummary: AuthSessionSummary | null) {
   return roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN')
 }
 
+function resolveTaskPersona(authSummary: AuthSessionSummary | null): TaskPersona {
+  const roles = authSummary?.user.roleCodes ?? []
+  if (roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN')) return 'storeManager'
+  if (roles.includes('REGION_MANAGER')) return 'regionManager'
+  return 'readOnly'
+}
+
+async function listActiveStoreActionPlans() {
+  const responses = await Promise.all(
+    ACTIVE_STORE_ACTION_PLAN_STATUSES.map((status) =>
+      listStoreActionPlans({
+        status,
+        limit: STORE_ACTION_PLAN_ACTIVE_INDEX_LIMIT,
+        offset: 0,
+      }),
+    ),
+  )
+
+  return mergeActionPlans(responses.flatMap((response) => response.items), [])
+}
+
+function mergeActionPlans(
+  primaryPlans: readonly StoreActionPlan[],
+  supplementalPlans: readonly StoreActionPlan[],
+) {
+  const plansById = new Map<string, StoreActionPlan>()
+  for (const plan of primaryPlans) {
+    plansById.set(plan.actionPlanId, plan)
+  }
+  for (const plan of supplementalPlans) {
+    if (!plansById.has(plan.actionPlanId)) {
+      plansById.set(plan.actionPlanId, plan)
+    }
+  }
+  return [...plansById.values()]
+}
+
 export function StoreTasksPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -73,7 +141,10 @@ export function StoreTasksPage(input: {
   const queryClient = useQueryClient()
   const inboxEnabled = canUseWorkflowInbox(input.authSummary)
   const storeActionPlansEnabled = canUseStoreActionPlans(input.authSummary)
+  const persona = resolveTaskPersona(input.authSummary)
   const [storeActionPlansOffset, setStoreActionPlansOffset] = useState(0)
+  const [activeTab, setActiveTab] = useState<WorkbenchTabId>('all')
+  const [search, setSearch] = useState('')
   const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? t('storeTasks.noStoreScope')
   const inboxQuery = useQuery({
     queryKey: ['workflow-inbox'],
@@ -91,14 +162,28 @@ export function StoreTasksPage(input: {
     enabled: storeActionPlansEnabled,
     ...transientQueryRetryOptions,
   })
+  const activeStoreActionPlansQuery = useQuery({
+    queryKey: ['store-action-plans', 'store-tasks', 'active-index'],
+    queryFn: listActiveStoreActionPlans,
+    enabled: storeActionPlansEnabled,
+    ...transientQueryRetryOptions,
+  })
 
   const items = useMemo(() => inboxQuery.data?.items ?? [], [inboxQuery.data?.items])
   const storeActionPlans = useMemo(
     () => storeActionPlansQuery.data?.items ?? [],
     [storeActionPlansQuery.data?.items],
   )
+  const activeStoreActionPlans = useMemo(
+    () => activeStoreActionPlansQuery.data ?? [],
+    [activeStoreActionPlansQuery.data],
+  )
+  const visibleStoreActionPlans = useMemo(
+    () => mergeActionPlans(storeActionPlans, activeStoreActionPlans),
+    [activeStoreActionPlans, storeActionPlans],
+  )
   const storeActionPlansMeta = storeActionPlansQuery.data?.meta
-  const storeActionPlansTotal = storeActionPlansMeta?.total ?? storeActionPlans.length
+
   useEffect(() => {
     if (
       !storeActionPlansEnabled ||
@@ -129,34 +214,8 @@ export function StoreTasksPage(input: {
     storeActionPlansOffset,
     storeActionPlansQuery.isFetching,
   ])
-  const sortedItems = useMemo(() => {
-    const urgencyRank = { high: 0, medium: 1, low: 2 }
-    const statusRank = { needs_attention: 0, informational: 1, completed: 2 }
 
-    return items.toSorted((left, right) => {
-      const statusDelta = statusRank[left.inboxStatus] - statusRank[right.inboxStatus]
-      if (statusDelta !== 0) return statusDelta
-
-      const urgencyDelta = urgencyRank[left.urgency] - urgencyRank[right.urgency]
-      if (urgencyDelta !== 0) return urgencyDelta
-
-      const leftTime = new Date(left.needsAttentionAt ?? left.createdAt ?? 0).getTime()
-      const rightTime = new Date(right.needsAttentionAt ?? right.createdAt ?? 0).getTime()
-      return rightTime - leftTime
-    })
-  }, [items])
-  const pendingItems = useMemo(
-    () => items.filter((item) => item.inboxStatus === 'needs_attention'),
-    [items],
-  )
-  const approvalItems = useMemo(
-    () => items.filter((item) => item.itemType === 'approval'),
-    [items],
-  )
-  const acknowledgementItems = useMemo(
-    () => items.filter((item) => item.itemType === 'acknowledgement'),
-    [items],
-  )
+  const sortedItems = useMemo(() => sortWorkflowItems(items), [items])
   const actionCandidates = useMemo(
     () => buildReadOnlyStoreActionCandidates(items),
     [items],
@@ -171,6 +230,46 @@ export function StoreTasksPage(input: {
       ),
     [actionCandidates],
   )
+  const rows = useMemo(
+    () =>
+      buildWorkbenchRows({
+        plans: visibleStoreActionPlans,
+        workflowItems: sortedItems,
+        suppressAllWorkflowActionPlanRows:
+          storeActionPlansEnabled &&
+          !storeActionPlansQuery.isError &&
+          (storeActionPlansMeta?.total ?? 0) > 0 &&
+          (storeActionPlansMeta?.total ?? 0) <= storeActionPlans.length,
+        actionCandidatesBySource,
+        locale,
+        t,
+      }),
+    [
+      actionCandidatesBySource,
+      locale,
+      sortedItems,
+      storeActionPlans,
+      storeActionPlansEnabled,
+      storeActionPlansMeta?.total,
+      storeActionPlansQuery.isError,
+      t,
+      visibleStoreActionPlans,
+    ],
+  )
+  const workbenchRecordCount = useMemo(
+    () =>
+      (storeActionPlansEnabled
+        ? (storeActionPlansMeta?.total ?? storeActionPlans.length)
+        : 0) + rows.filter((row) => row.source === 'workflow').length,
+    [rows, storeActionPlans.length, storeActionPlansEnabled, storeActionPlansMeta?.total],
+  )
+  const filteredRows = useMemo(
+    () => filterRowsBySearchAndTab(rows, search, activeTab),
+    [activeTab, rows, search],
+  )
+  const visibleRows = useMemo(() => sortRowsForWorkbench(filteredRows), [filteredRows])
+  const summary = useMemo(() => buildSummary(rows), [rows])
+  const tabs = useMemo(() => buildTabs(rows, t), [rows, t])
   const hasChecklistReceiptAction = useMemo(
     () => items.some((item) => item.sourceType === 'checklist_receipt'),
     [items],
@@ -184,6 +283,7 @@ export function StoreTasksPage(input: {
       ),
     [items],
   )
+
   useEffect(() => {
     if (!hasChecklistReceiptAction) return
 
@@ -213,18 +313,7 @@ export function StoreTasksPage(input: {
   if (!inboxEnabled) {
     return (
       <StoreSurfacePage ariaLabel={t('storeTasks.unavailableEyebrow')}>
-        <StoreSurfaceHeader
-          eyebrow={t('storeTasks.unavailableEyebrow')}
-          title={t('storeTasks.unavailableTitle')}
-          description={t('storeTasks.unavailableCopy')}
-          badges={[
-            { label: `${t('storeTasks.storeScope')}: ${primaryStoreId}`, tone: 'neutral' },
-            {
-              label: formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes),
-              tone: 'warning',
-            },
-          ]}
-        />
+        <AccessState authSummary={input.authSummary} primaryStoreId={primaryStoreId} t={t} />
       </StoreSurfacePage>
     )
   }
@@ -252,334 +341,326 @@ export function StoreTasksPage(input: {
   }
 
   return (
-    <StoreSurfacePage ariaLabel={t('storeTasks.title')}>
-      <StoreSurfaceHeader
-        eyebrow={t('storeTasks.heroEyebrow')}
-        title={t('storeTasks.title')}
-        description={t('storeTasks.heroCopy')}
-        badges={[
-          { label: `${t('storeTasks.storeScope')}: ${primaryStoreId}`, tone: 'neutral' },
-          { label: `${t('storeTasks.queueItems')}: ${items.length}`, tone: 'accent' },
-          {
-            label: formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes),
-            tone: 'calm',
-          },
-        ]}
+    <StoreSurfacePage ariaLabel={t('storeTasks.title')} className="tw:gap-3">
+      <WorkbenchHeader
+        persona={persona}
+        summary={summary}
+        primaryStoreId={primaryStoreId}
+        roleLabel={formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes)}
+        t={t}
       />
 
-      <StoreMetricGrid>
-        <StoreMetricCard
-          title={t('storeTasks.pendingActions')}
-          value={pendingItems.length}
-          note={t('storeTasks.pendingActionsNote')}
-          icon={<Bell data-icon="inline-start" />}
-          tone={pendingItems.length > 0 ? 'warning' : 'calm'}
-        />
-        <StoreMetricCard
-          title={t('storeTasks.highPriority')}
-          value={items.filter((item) => item.urgency === 'high').length}
-          note={t('storeTasks.highPriorityNote')}
-          icon={<TrendingUp data-icon="inline-start" />}
-          tone={items.some((item) => item.urgency === 'high') ? 'danger' : 'neutral'}
-        />
-        <StoreMetricCard
-          title={t('storeTasks.approvals')}
-          value={approvalItems.length}
-          note={t('storeTasks.approvalsNote')}
-          icon={<ReceiptText data-icon="inline-start" />}
-          tone={approvalItems.length > 0 ? 'accent' : 'neutral'}
-        />
-        <StoreMetricCard
-          title={t('storeTasks.acknowledgements')}
-          value={acknowledgementItems.length}
-          note={t('storeTasks.acknowledgementsNote')}
-          icon={<ClipboardList data-icon="inline-start" />}
-          tone={acknowledgementItems.length > 0 ? 'accent' : 'neutral'}
-        />
-        <StoreMetricCard
-          title={t('storeTasks.kpiFollowUps')}
-          value={actionCandidates.length}
-          note={t('storeTasks.kpiFollowUpsNote')}
-          icon={<TrendingUp data-icon="inline-start" />}
-          tone={actionCandidates.length > 0 ? 'warning' : 'neutral'}
-        />
-        {storeActionPlansEnabled ? (
-          <StoreMetricCard
-            title={t('storeTasks.actionPlansMetric')}
-            value={storeActionPlansTotal}
-            note={t('storeTasks.actionPlansMetricNote')}
-            icon={<ListChecks data-icon="inline-start" />}
-            tone={storeActionPlansTotal > 0 ? 'warning' : 'neutral'}
-          />
-        ) : null}
-      </StoreMetricGrid>
+      <SummaryGrid summary={summary} persona={persona} t={t} />
 
-      <StoreSectionCard title={t('storeTasks.contextTitle')} description={t('storeTasks.queueContext')}>
-        <StoreInfoGrid
-          items={[
-            { label: t('storeTasks.workTypes'), value: t('storeTasks.workTypesValue') },
-            {
-              label: t('storeTasks.kpiConnection'),
-              value: actionCandidates.length > 0 ? t('storeTasks.kpiActive') : t('storeTasks.kpiReady'),
-              tone: actionCandidates.length > 0 ? 'warning' : 'calm',
-            },
-            { label: t('storeTasks.queueStatuses'), value: t('storeTasks.queueStatusesValue') },
-            {
-              label: t('storeTasks.resolvedRoles'),
-              value: formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes),
-            },
-          ]}
-        />
-      </StoreSectionCard>
-
-      {storeActionPlansEnabled ? (
-        <StoreActionPlansPanel
-          plans={storeActionPlans}
-          meta={storeActionPlansMeta}
-          isLoading={storeActionPlansQuery.isLoading}
-          isError={storeActionPlansQuery.isError}
-          isFetching={storeActionPlansQuery.isFetching}
-          error={storeActionPlansQuery.error}
-          locale={locale}
-          t={t}
-          onRetry={() => void storeActionPlansQuery.refetch()}
-          onPreviousPage={() =>
-            setStoreActionPlansOffset((offset) => Math.max(0, offset - STORE_ACTION_PLAN_PAGE_SIZE))
-          }
-          onNextPage={() =>
-            setStoreActionPlansOffset((offset) => offset + STORE_ACTION_PLAN_PAGE_SIZE)
-          }
-        />
-      ) : null}
-
-      <StoreSectionCard title={t('storeTasks.queueTitle')} description={t('storeTasks.todayQueue')}>
-        {items.length === 0 ? (
-          <StoreEmptyState
-            title={t('storeTasks.emptyTitle')}
-            description={t('storeTasks.emptyCopy')}
-          />
-        ) : (
-          <StoreStackedList>
-            {sortedItems.map((item) => (
-              <WorkflowInboxRow
-                key={`${item.sourceType}:${item.sourceId}`}
-                item={item}
-                actionCandidate={
-                  storeActionPlansEnabled
-                    ? actionCandidatesBySource.get(getWorkflowSourceKey(item.storeId, item.sourceType, item.sourceId))
-                    : undefined
-                }
-                locale={locale}
-                t={t}
-                onActionPlanCreated={() => setStoreActionPlansOffset(0)}
+      <Card className="tw:overflow-hidden tw:border-border/80 tw:bg-card/85 tw:shadow-sm">
+        <CardContent className="tw:p-3">
+          <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
+            <label className="tw:flex tw:min-h-10 tw:flex-1 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-background/85 tw:px-3 tw:text-sm tw:shadow-xs tw:lg:max-w-md">
+              <Search className="tw:size-4 tw:text-muted-foreground" />
+              <span className="tw:sr-only">{t('storeTasks.searchLabel')}</span>
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('storeTasks.searchPlaceholder')}
+                className="tw:h-8 tw:border-0 tw:bg-transparent tw:px-0 tw:shadow-none tw:focus-visible:ring-0"
               />
-            ))}
-          </StoreStackedList>
-        )}
-      </StoreSectionCard>
+            </label>
+            <div className="tw:flex tw:flex-wrap tw:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={inboxQuery.isFetching || storeActionPlansQuery.isFetching}
+                onClick={() => {
+                  void inboxQuery.refetch()
+                  if (storeActionPlansEnabled) void storeActionPlansQuery.refetch()
+                }}
+              >
+                <RefreshCw data-icon="inline-start" />
+                {t('storeTasks.refreshAction')}
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/store/checklists">
+                  <ClipboardList data-icon="inline-start" />
+                  {t('storeTasks.checklistsLink')}
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="tw:flex tw:flex-wrap tw:gap-2">
-        <Button asChild variant="outline">
-          <Link to="/store/checklists">{t('storeTasks.checklistsLink')}</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link to="/store/approvals">{t('storeTasks.approvalsLink')}</Link>
-        </Button>
-      </div>
+      <Card
+        data-testid="store-action-plans-panel"
+        className="tw:overflow-hidden tw:border-border/80 tw:bg-card/90 tw:shadow-sm"
+      >
+        <CardHeader className="tw:border-b tw:border-border/70 tw:bg-muted/25 tw:p-0">
+          <div className="tw:flex tw:flex-col tw:gap-3 tw:p-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+            <div>
+              <CardTitle>
+                <h2 className="tw:text-base tw:font-semibold tw:leading-snug tw:text-foreground">
+                  {t('storeTasks.actionPlansTitle')}
+                </h2>
+              </CardTitle>
+              <CardDescription className="tw:mt-1">
+                {persona === 'regionManager'
+                  ? t('storeTasks.workbenchRegionDescription')
+                  : t('storeTasks.workbenchStoreDescription')}
+              </CardDescription>
+            </div>
+            <StoreStatusBadge tone={summary.pending > 0 ? 'warning' : 'calm'}>
+              {t('storeTasks.actionPlansCount', { count: workbenchRecordCount })}
+            </StoreStatusBadge>
+          </div>
+          <WorkbenchTabs activeTab={activeTab} tabs={tabs} onTabChange={setActiveTab} />
+        </CardHeader>
+        <CardContent className="tw:p-0">
+          <StoreTasksWorkbenchBody
+            rows={visibleRows}
+            allRows={rows}
+            search={search}
+            persona={persona}
+            storeActionPlansEnabled={storeActionPlansEnabled}
+            storeActionPlansMeta={storeActionPlansMeta}
+            isStoreActionPlansLoading={storeActionPlansQuery.isLoading}
+            isStoreActionPlansError={storeActionPlansQuery.isError}
+            isStoreActionPlansFetching={storeActionPlansQuery.isFetching}
+            storeActionPlansError={storeActionPlansQuery.error}
+            locale={locale}
+            t={t}
+            onActionPlanCreated={() => setStoreActionPlansOffset(0)}
+            onRetryStoreActionPlans={() => void storeActionPlansQuery.refetch()}
+            onPreviousPage={() =>
+              setStoreActionPlansOffset((offset) => Math.max(0, offset - STORE_ACTION_PLAN_PAGE_SIZE))
+            }
+            onNextPage={() =>
+              setStoreActionPlansOffset((offset) => offset + STORE_ACTION_PLAN_PAGE_SIZE)
+            }
+          />
+        </CardContent>
+      </Card>
     </StoreSurfacePage>
   )
 }
 
-function WorkflowInboxRow(input: {
-  item: WorkflowInboxItem
-  actionCandidate: ReadOnlyStoreActionCandidate | undefined
+function buildWorkbenchRows(input: {
+  plans: readonly StoreActionPlan[]
+  workflowItems: readonly WorkflowInboxItem[]
+  suppressAllWorkflowActionPlanRows: boolean
+  actionCandidatesBySource: Map<string, ReadOnlyStoreActionCandidate>
   locale: AppLocale
   t: TranslateFunction
-  onActionPlanCreated: () => void
-}) {
-  return (
-    <StoreStackedRow testId="store-task-queue-row">
-      <div className="tw:flex tw:flex-col tw:gap-3">
-        <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-          <div className="tw:min-w-0">
-            <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
-              {input.item.title}
-            </strong>
-            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              {input.item.summary}
-            </p>
-          </div>
-          <div className="tw:flex tw:flex-wrap tw:gap-2">
-            <StoreStatusBadge tone="accent">{formatWorkflowSourceTypeLabel(input.t, input.item.sourceType)}</StoreStatusBadge>
-            <StoreStatusBadge tone={mapInboxStatusTone(input.item.inboxStatus) as StoreSurfaceTone}>
-              {formatWorkflowInboxStatusLabel(input.t, input.item.inboxStatus)}
-            </StoreStatusBadge>
-            <StoreStatusBadge tone={mapWorkflowUrgencyTone(input.item.urgency) as StoreSurfaceTone}>
-              {formatWorkflowUrgencyLabel(input.t, input.item.urgency)}
-            </StoreStatusBadge>
-          </div>
-        </div>
-
-        <StoreInfoGrid
-          items={[
-            {
-              label: input.t('storeTasks.workType'),
-              value: formatWorkflowItemTypeLabel(input.t, input.item.itemType),
-            },
-            {
-              label: input.t('storeTasks.actorRole'),
-              value: formatActorRoleLabel(input.t, input.item.actorRole),
-            },
-            {
-              label: input.t('storeTasks.store'),
-              value: input.item.storeName || input.item.storeId,
-            },
-            {
-              label: input.t('storeTasks.actionTime'),
-              value: input.item.needsAttentionAt
-                ? formatDateTime(input.item.needsAttentionAt, input.locale)
-                : input.t('storeTasks.now'),
-            },
-          ]}
-        />
-
-        {input.item.historyPreview ? (
-          <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.item.historyPreview}</p>
-        ) : null}
-
-        <WorkflowInboxDetail item={input.item} />
-
-        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-          <Button asChild size="sm">
-            <Link to={input.item.deepLink}>{formatWorkflowPrimaryActionLabel(input.t, input.item)}</Link>
-          </Button>
-          {input.actionCandidate ? (
-            <StoreActionPlanCreateControl
-              candidate={input.actionCandidate}
-              t={input.t}
-              onCreated={input.onActionPlanCreated}
-            />
-          ) : null}
-          <span className="tw:text-sm tw:text-muted-foreground">
-            {formatWorkflowSecondaryActionLabel(input.t, input.item)}
-          </span>
-        </div>
-      </div>
-    </StoreStackedRow>
+}): WorkbenchRow[] {
+  const workflowPlanRowsById = new Map(
+    input.workflowItems
+      .filter((item) => item.sourceType === 'store_action_plan')
+      .map((item) => [item.sourceId, item]),
   )
-}
+  const persistedPlanIds = new Set(input.plans.map((plan) => plan.actionPlanId))
+  const persistedPlanSourceKeys = new Set(
+    input.plans.map((plan) => getPlanSourceKey(plan.storeId, plan.sourceType, plan.sourceId)),
+  )
+  const planRows = input.plans.map((plan): WorkbenchRow => {
+    const workflowPlanRow = workflowPlanRowsById.get(plan.actionPlanId)
+    return {
+      id: `plan:${plan.actionPlanId}`,
+      source: 'plan',
+      family: mapPlanFamily(plan),
+      state: mapPlanState(plan),
+      title: plan.title,
+      summary: plan.summary?.trim() || input.t('storeTasks.actionPlansNoSummary'),
+      storeId: plan.storeId,
+      storeName: workflowPlanRow?.storeName || plan.storeId,
+      statusLabel: formatStoreActionPlanStatus(input.t, plan.status),
+      priorityLabel: formatStoreActionPlanPriority(input.t, plan.priority),
+      dueLabel: formatActionPlanDate(plan.dueOn, input.locale),
+      evidenceLabel: plan.resolutionNote
+        ? input.t('storeTasks.evidenceReported')
+        : plan.cancelReason
+          ? input.t('storeTasks.evidenceCancelled')
+          : input.t('storeTasks.evidenceOpen'),
+      sourceLabel: formatStoreActionPlanSource(input.t, plan.sourceType),
+      tone: mapStoreActionPlanStatusTone(plan.status),
+      priorityTone: mapStoreActionPlanPriorityTone(plan.priority),
+      plan,
+    }
+  })
 
-function getWorkflowSourceKey(storeId: string, sourceType: WorkflowInboxItem['sourceType'], sourceId: string) {
-  return `${storeId}:${sourceType}:${sourceId}`
-}
-
-function formatDisplayRoleLabels(t: TranslateFunction, roleCodes: readonly string[] | null | undefined) {
-  const displayRoleCodes = getDisplayRoleCodes(roleCodes)
-
-  if (displayRoleCodes.length === 0) {
-    return t('storeTasks.noRoles')
-  }
-
-  return displayRoleCodes.map((roleCode) => formatActorRoleLabel(t, roleCode)).join(', ')
-}
-
-function formatActorRoleLabel(t: TranslateFunction, roleCode: string) {
-  const translationKey = actorRoleTranslationKeys[roleCode]
-  return translationKey ? t(translationKey) : formatState(roleCode)
-}
-
-function formatWorkflowItemTypeLabel(t: TranslateFunction, type: WorkflowInboxItem['itemType']) {
-  switch (type) {
-    case 'approval':
-      return t('storeTasks.itemType.approval')
-    case 'acknowledgement':
-      return t('storeTasks.itemType.acknowledgement')
-    case 'task':
-      return t('storeTasks.itemType.task')
-    case 'notification':
-      return t('storeTasks.itemType.notification')
-    default:
-      return type
-  }
-}
-
-function formatWorkflowSourceTypeLabel(t: TranslateFunction, sourceType: WorkflowInboxItem['sourceType']) {
-  switch (sourceType) {
-    case 'target_distribution_request':
-      return t('storeTasks.sourceType.target_distribution_request')
-    case 'checklist_receipt':
-      return t('storeTasks.sourceType.checklist_receipt')
-    case 'kpi_exception':
-      return t('storeTasks.sourceType.kpi_exception')
-    case 'store_action_plan':
-      return t('storeTasks.sourceType.store_action_plan')
-    default:
-      return sourceType
-  }
-}
-
-function formatWorkflowPrimaryActionLabel(t: TranslateFunction, item: WorkflowInboxItem) {
-  switch (item.sourceType) {
-    case 'target_distribution_request':
-      return item.inboxStatus === 'needs_attention'
-        ? t('storeTasks.primary.targetApprove')
-        : t('storeTasks.primary.targetHistory')
-    case 'checklist_receipt':
-      return item.inboxStatus === 'needs_attention'
-        ? t('storeTasks.primary.checklistAccept')
-        : t('storeTasks.primary.checklistRecord')
-    case 'kpi_exception':
-      return t('storeTasks.primary.kpiDetail')
-    case 'store_action_plan':
-      if (item.inboxStatus === 'informational') {
-        return item.primaryActionLabel
+  const workflowRows = input.workflowItems
+    .filter((item) => {
+      if (item.sourceType === 'store_action_plan') {
+        return !input.suppressAllWorkflowActionPlanRows && !persistedPlanIds.has(item.sourceId)
       }
-      return t('storeTasks.primary.actionPlan')
-    default:
-      return item.primaryActionLabel
-  }
-}
 
-function formatWorkflowSecondaryActionLabel(t: TranslateFunction, item: WorkflowInboxItem) {
-  switch (item.sourceType) {
-    case 'target_distribution_request':
-      return t('storeTasks.secondary.targetDetail')
-    case 'checklist_receipt':
-      return t('storeTasks.secondary.checklistResult')
-    case 'kpi_exception':
-      return t('storeTasks.secondary.kpiDeviation')
-    case 'store_action_plan':
-      if (item.inboxStatus === 'informational') {
-        return item.secondaryActionLabel ?? item.primaryActionLabel
+      return !persistedPlanSourceKeys.has(getWorkflowSourceKey(item.storeId, item.sourceType, item.sourceId))
+    })
+    .map((item): WorkbenchRow => {
+      const candidate = input.actionCandidatesBySource.get(
+        getWorkflowSourceKey(item.storeId, item.sourceType, item.sourceId),
+      )
+      const row: WorkbenchRow = {
+        id: `workflow:${item.sourceType}:${item.sourceId}`,
+        source: 'workflow',
+        family: mapWorkflowFamily(item),
+        state: mapWorkflowState(item),
+        title: item.title,
+        summary: item.summary,
+        storeId: item.storeId,
+        storeName: item.storeName || item.storeId,
+        statusLabel: formatWorkflowInboxStatusLabel(input.t, item.inboxStatus),
+        priorityLabel: formatWorkflowUrgencyLabel(input.t, item.urgency),
+        dueLabel: item.needsAttentionAt
+          ? formatDateTime(item.needsAttentionAt, input.locale)
+          : item.createdAt
+            ? formatDateTime(item.createdAt, input.locale)
+            : input.t('storeTasks.noTime'),
+        evidenceLabel: item.historyPreview ? input.t('storeTasks.evidenceHasContext') : input.t('storeTasks.evidenceSource'),
+        sourceLabel: formatWorkflowSourceType(input.t, item.sourceType),
+        ...(item.historyPreview ? { historyPreview: item.historyPreview } : {}),
+        tone: mapWorkflowTone(item),
+        priorityTone: mapWorkflowUrgencyTone(item.urgency),
+        workflowItem: item,
       }
-      return t('storeTasks.secondary.actionPlan')
-    default:
-      return item.secondaryActionLabel ?? t('storeTasks.secondary.targetDetail')
+      if (candidate) {
+        row.candidate = candidate
+      }
+      return row
+    })
+
+  return [...planRows, ...workflowRows]
+}
+
+function buildSummary(rows: readonly WorkbenchRow[]): WorkbenchSummary {
+  return {
+    total: rows.length,
+    pending: rows.filter((row) => row.state === 'attention' || row.state === 'working').length,
+    checklist: rows.filter((row) => row.family === 'checklist').length,
+    projection: rows.filter((row) => row.family === 'projection').length,
+    reported: rows.filter((row) => row.state === 'reported' || row.state === 'closed').length,
   }
 }
 
-function formatWorkflowInboxStatusLabel(t: TranslateFunction, status: WorkflowInboxItem['inboxStatus']) {
-  switch (status) {
-    case 'needs_attention':
-      return t('storeTasks.inboxStatus.needs_attention')
-    case 'completed':
-      return t('storeTasks.inboxStatus.completed')
-    case 'informational':
-      return t('storeTasks.inboxStatus.informational')
-    default:
-      return formatState(status)
-  }
+function buildTabs(rows: readonly WorkbenchRow[], t: TranslateFunction) {
+  return [
+    {
+      id: 'all' as const,
+      label: t('storeTasks.tab.all'),
+      count: rows.length,
+      icon: <ListChecks className="tw:size-4" />,
+    },
+    {
+      id: 'checklist' as const,
+      label: t('storeTasks.tab.checklist'),
+      count: rows.filter((row) => row.family === 'checklist').length,
+      icon: <ClipboardList className="tw:size-4" />,
+    },
+    {
+      id: 'projection' as const,
+      label: t('storeTasks.tab.projection'),
+      count: rows.filter((row) => row.family === 'projection').length,
+      icon: <TrendingDown className="tw:size-4" />,
+    },
+    {
+      id: 'targets' as const,
+      label: t('storeTasks.tab.targets'),
+      count: rows.filter((row) => row.family === 'targets').length,
+      icon: <Target className="tw:size-4" />,
+    },
+    {
+      id: 'closed' as const,
+      label: t('storeTasks.tab.closed'),
+      count: rows.filter((row) => row.state === 'reported' || row.state === 'closed').length,
+      icon: <CheckCircle2 className="tw:size-4" />,
+    },
+  ]
 }
 
-function formatWorkflowUrgencyLabel(t: TranslateFunction, urgency: WorkflowInboxItem['urgency']) {
-  switch (urgency) {
-    case 'high':
-      return t('storeTasks.urgency.high')
-    case 'medium':
-      return t('storeTasks.urgency.medium')
-    case 'low':
-      return t('storeTasks.urgency.low')
-    default:
-      return formatState(urgency)
+function filterRowsBySearchAndTab(rows: readonly WorkbenchRow[], search: string, tab: WorkbenchTabId) {
+  const normalizedSearch = search.trim().toLocaleLowerCase('tr-TR')
+  return rows.filter((row) => {
+    const tabMatch =
+      tab === 'all' ||
+      (tab === 'checklist' && row.family === 'checklist') ||
+      (tab === 'projection' && row.family === 'projection') ||
+      (tab === 'targets' && row.family === 'targets') ||
+      (tab === 'closed' && (row.state === 'reported' || row.state === 'closed'))
+
+    if (!tabMatch) {
+      return false
+    }
+
+    if (!normalizedSearch) {
+      return true
+    }
+
+    return `${row.title} ${row.summary} ${row.storeName} ${row.storeId}`
+      .toLocaleLowerCase('tr-TR')
+      .includes(normalizedSearch)
+  })
+}
+
+function sortRowsForWorkbench(rows: readonly WorkbenchRow[]) {
+  const stateRank: Record<WorkbenchRowState, number> = {
+    attention: 0,
+    working: 1,
+    reported: 2,
+    closed: 3,
   }
+  const toneRank = {
+    danger: 0,
+    warning: 1,
+    accent: 2,
+    calm: 3,
+    neutral: 4,
+  }
+
+  return [...rows].sort((left, right) => {
+    const stateDelta = stateRank[left.state] - stateRank[right.state]
+    if (stateDelta !== 0) return stateDelta
+    const toneDelta = toneRank[left.tone] - toneRank[right.tone]
+    if (toneDelta !== 0) return toneDelta
+    return left.title.localeCompare(right.title, 'tr-TR')
+  })
+}
+
+function sortWorkflowItems(items: readonly WorkflowInboxItem[]) {
+  const urgencyRank = { high: 0, medium: 1, low: 2 }
+  const statusRank = { needs_attention: 0, informational: 1, completed: 2 }
+
+  return items.toSorted((left, right) => {
+    const statusDelta = statusRank[left.inboxStatus] - statusRank[right.inboxStatus]
+    if (statusDelta !== 0) return statusDelta
+
+    const urgencyDelta = urgencyRank[left.urgency] - urgencyRank[right.urgency]
+    if (urgencyDelta !== 0) return urgencyDelta
+
+    const leftTime = new Date(left.needsAttentionAt ?? left.createdAt ?? 0).getTime()
+    const rightTime = new Date(right.needsAttentionAt ?? right.createdAt ?? 0).getTime()
+    return rightTime - leftTime
+  })
+}
+
+function mapPlanFamily(plan: StoreActionPlan): WorkbenchRowFamily {
+  if (plan.sourceType === 'checklist_remediation') return 'checklist'
+  if (plan.sourceType === 'kpi_exception') return 'projection'
+  return 'other'
+}
+
+function mapWorkflowFamily(item: WorkflowInboxItem): WorkbenchRowFamily {
+  if (item.sourceType === 'checklist_receipt' || item.sourceType === 'store_action_plan') return 'checklist'
+  if (item.sourceType === 'kpi_exception') return 'projection'
+  if (item.sourceType === 'target_distribution_request') return 'targets'
+  return 'other'
+}
+
+function mapPlanState(plan: StoreActionPlan): WorkbenchRowState {
+  if (plan.status === 'open' || plan.status === 'blocked') return 'attention'
+  if (plan.status === 'in_progress') return 'working'
+  if (plan.status === 'closed') return 'reported'
+  return 'closed'
+}
+
+function mapWorkflowState(item: WorkflowInboxItem): WorkbenchRowState {
+  if (item.inboxStatus === 'needs_attention') return 'attention'
+  if (item.inboxStatus === 'informational') return 'reported'
+  return 'closed'
 }

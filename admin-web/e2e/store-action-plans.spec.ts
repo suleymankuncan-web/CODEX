@@ -71,13 +71,14 @@ test('store tasks renders persisted action plans from the workflow inbox', async
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByText('Action plan', { exact: true })).toBeVisible()
-  await expect(page.getByText('Net sales recovery plan')).toBeVisible()
-  await expect(page.getByText('Call the team and confirm recovery actions.')).toBeVisible()
-  const actionLink = page.getByRole('link', { name: 'Go to action plan' })
+  const actionRow = page.getByTestId('store-task-queue-row').filter({ hasText: 'Net sales recovery plan' })
+  await expect(actionRow).toBeVisible()
+  await expect(actionRow.getByText('Action plan', { exact: true })).toBeVisible()
+  await expect(actionRow.getByText('Call the team and confirm recovery actions.')).toBeVisible()
+  await expect(actionRow.getByText('Due 2026-05-24')).toBeVisible()
+  const actionLink = actionRow.getByRole('link', { name: 'Go to action plan' })
   await expect(actionLink).toBeVisible()
   await expect(actionLink).toHaveAttribute('href', '/store/tasks?actionPlan=action-plan-1')
-  await expect(page.getByText('Review plan source')).toBeVisible()
 })
 
 test('store tasks shows region managers checklist remediation plans as informational read rows', async ({ page }) => {
@@ -159,9 +160,10 @@ test('store tasks shows region managers checklist remediation plans as informati
 
   await page.goto('/store/tasks')
 
-  await expect(getActionPlansPanel(page)).toHaveCount(0)
+  await expect(getActionPlansPanel(page)).toBeVisible()
   const remediationRow = page.getByTestId('store-task-queue-row').filter({ hasText: 'Kasa checklist bulgusu' })
   await expect(remediationRow).toBeVisible()
+  await expect(remediationRow.getByText('Action plan', { exact: true })).toBeVisible()
   await expect(remediationRow.getByText('Informational')).toBeVisible()
   await expect(remediationRow.getByText('Store reported resolved: Kasa alani duzenlendi')).toBeVisible()
   const sourceLink = remediationRow.getByRole('link', { name: 'Review checklist source' })
@@ -184,17 +186,18 @@ test('store tasks lists persisted action plan records with active status control
   const actionPlansPanel = getActionPlansPanel(page)
   await expect(actionPlansPanel.getByRole('heading', { name: 'Action plans' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1 plan')).toBeVisible()
-  await expect(actionPlansPanel.getByText('Net sales recovery plan')).toBeVisible()
-  await expect(actionPlansPanel.getByText('Confirm the daily recovery checklist with the team.')).toBeVisible()
-  await expect(actionPlansPanel.getByText('Open', { exact: true })).toBeVisible()
-  await expect(actionPlansPanel.getByText('High', { exact: true })).toBeVisible()
-  await expect(actionPlansPanel.getByText('May 24, 2026')).toBeVisible()
-  const sourceLink = actionPlansPanel.getByRole('link', { name: 'Open source' })
+  const actionPlanRow = getActionPlanRow(page)
+  await expect(actionPlanRow.getByText('Net sales recovery plan')).toBeVisible()
+  await expect(actionPlanRow.getByText('Confirm the daily recovery checklist with the team.')).toBeVisible()
+  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
+  await expect(actionPlanRow.locator('strong').filter({ hasText: /^High$/ })).toBeVisible()
+  await expect(actionPlanRow.getByText('May 24, 2026')).toBeVisible()
+  const sourceLink = actionPlanRow.getByRole('link', { name: 'Open source' })
   await expect(sourceLink).toBeVisible()
   await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
-  await expect(actionPlansPanel.getByRole('button', { name: 'Update status' })).toBeVisible()
-  await expect(actionPlansPanel.getByRole('button', { name: 'Close plan' })).toBeVisible()
-  await expect(actionPlansPanel.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
+  await expect(actionPlanRow.getByRole('button', { name: 'Update status' })).toBeVisible()
+  await expect(actionPlanRow.getByRole('button', { name: 'Close plan' })).toBeVisible()
+  await expect(actionPlanRow.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
 })
 
@@ -229,18 +232,18 @@ test('store tasks labels persisted checklist remediation plans without changing 
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByText('Kasa checklist bulgusu')).toBeVisible()
-  await expect(actionPlansPanel.getByText('Checklist remediation')).toBeVisible()
-  const sourceLink = actionPlansPanel.getByRole('link', { name: 'Open source' })
+  const actionPlanRow = getActionPlanRow(page, 'Kasa checklist bulgusu')
+  await expect(actionPlanRow.getByText('Kasa checklist bulgusu')).toBeVisible()
+  await expect(actionPlanRow.getByText('Checklist remediation')).toBeVisible()
+  const sourceLink = actionPlanRow.getByRole('link', { name: 'Open source' })
   await expect(sourceLink).toHaveAttribute(
     'href',
     '/store/checklists?result=checklist-instance-bm-1',
   )
-  await expect(actionPlansPanel.getByRole('button', { name: 'Close plan' })).toBeVisible()
+  await expect(actionPlanRow.getByRole('button', { name: 'Close plan' })).toBeVisible()
 })
 
-test('store tasks opens persisted action plan coaching detail on demand', async ({ page }) => {
+test('store tasks opens persisted action plan detail on demand', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
   })
@@ -278,13 +281,14 @@ test('store tasks opens persisted action plan coaching detail on demand', async 
   await page.goto('/store/tasks')
 
   const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open coaching detail' }).click()
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
 
-  await expect(actionPlanRow.getByLabel('Action plan coaching detail')).toBeVisible()
-  await expect(actionPlanRow.getByText('Lifecycle snapshot')).toBeVisible()
-  await expect(actionPlanRow.getByText('00000000-0000-0000-0000-00000000c001')).toBeVisible()
-  await expect(actionPlanRow.getByText('00000000-0000-0000-0000-00000000d001')).toBeVisible()
-  await expect(actionPlanRow.getByText('Not available').first()).toBeVisible()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await expect(detailDialog).toBeVisible()
+  await expect(detailDialog.getByText('Lifecycle snapshot')).toBeVisible()
+  await expect(detailDialog.getByText('00000000-0000-0000-0000-00000000c001')).toBeVisible()
+  await expect(detailDialog.getByText('00000000-0000-0000-0000-00000000d001')).toBeVisible()
+  await expect(detailDialog.getByText('Not available').first()).toBeVisible()
   expect(detailRequested).toBe(true)
 })
 
@@ -334,7 +338,6 @@ test('store tasks updates a persisted action plan status', async ({ page }) => {
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = getActionPlansPanel(page)
   const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Update status' }).click()
   const statusForm = actionPlanRow.locator('form[aria-label="Action plan status"]')
@@ -346,7 +349,7 @@ test('store tasks updates a persisted action plan status', async ({ page }) => {
     status: 'blocked',
     note: 'Waiting for regional input',
   })
-  await expect(actionPlansPanel.getByText('Blocked', { exact: true })).toBeVisible()
+  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Blocked$/ })).toBeVisible()
 })
 
 test('store tasks keeps status update failures local to the action plan form', async ({ page }) => {
@@ -379,7 +382,7 @@ test('store tasks keeps status update failures local to the action plan form', a
 
   await expect(statusForm.getByRole('alert')).toContainText('Status could not be updated')
   await expect(statusForm.getByRole('alert')).toContainText('Terminal plan cannot be updated')
-  await expect(actionPlanRow.locator('[data-slot="badge"]').filter({ hasText: 'Open' })).toBeVisible()
+  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
 })
 
 test('store tasks closes a persisted action plan with a resolution note', async ({ page }) => {
@@ -421,7 +424,7 @@ test('store tasks closes a persisted action plan with a resolution note', async 
           {
             ...storeActionPlansFixture.items[0],
             status: closed ? 'closed' : 'open',
-            resolutionNote: closed ? 'Coaching completed with the store team' : null,
+            resolutionNote: closed ? 'Resolution completed with the store team' : null,
           },
         ],
       },
@@ -434,13 +437,13 @@ test('store tasks closes a persisted action plan with a resolution note', async 
   const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
   const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
-  await closeForm.getByLabel('Resolution note').fill('Coaching completed with the store team')
+  await closeForm.getByLabel('Resolution note').fill('Resolution completed with the store team')
   await closeForm.getByRole('button', { name: 'Close' }).click()
 
   expect(capturedCloseBody).toMatchObject({
-    resolutionNote: 'Coaching completed with the store team',
+    resolutionNote: 'Resolution completed with the store team',
   })
-  await expect(actionPlansPanel.getByText('Closed', { exact: true })).toBeVisible()
+  await expect(actionPlanRow.getByText('Closed', { exact: true })).toBeVisible()
   await expect(actionPlanRow.getByRole('button', { name: 'Close plan' })).toHaveCount(0)
 })
 
@@ -469,12 +472,12 @@ test('store tasks keeps close failures local to the action plan form', async ({ 
   const actionPlanRow = getActionPlanRow(page)
   await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
   const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
-  await closeForm.getByLabel('Resolution note').fill('Coaching completed with the store team')
+  await closeForm.getByLabel('Resolution note').fill('Resolution completed with the store team')
   await closeForm.getByRole('button', { name: 'Close' }).click()
 
   await expect(closeForm.getByRole('alert')).toContainText('Plan could not be closed')
   await expect(closeForm.getByRole('alert')).toContainText('Action plan was already closed')
-  await expect(actionPlanRow.getByText('Open', { exact: true })).toBeVisible()
+  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
 })
 
 test('store tasks cancels a persisted action plan with a reason', async ({ page }) => {
@@ -569,7 +572,7 @@ test('store tasks keeps cancel failures local to the action plan form', async ({
 
   await expect(cancelForm.getByRole('alert')).toContainText('Plan could not be cancelled')
   await expect(cancelForm.getByRole('alert')).toContainText('Action plan was already cancelled')
-  await expect(actionPlanRow.getByText('Open', { exact: true })).toBeVisible()
+  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
 })
 
 test('store tasks creates an action plan from a KPI follow-up candidate', async ({ page }) => {
@@ -681,7 +684,7 @@ test('store tasks creates an action plan from a KPI follow-up candidate', async 
     dueOn: '2026-05-27',
   })
   const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByText('UPT at risk')).toBeVisible()
+  await expect(getActionPlanRow(page, 'UPT at risk')).toBeVisible()
   await expect(actionPlansPanel.getByText('May 27, 2026')).toBeVisible()
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
 })
@@ -718,17 +721,180 @@ test('store tasks keeps create failures local to the KPI follow-up form', async 
 
   await expect(createForm.getByRole('alert')).toContainText('Action plan could not be created')
   await expect(createForm.getByRole('alert')).toContainText('Active store action plan already exists')
-  await expect(page.getByText('No persisted action plans')).toBeVisible()
+  await expect(getActionPlansPanel(page).getByTestId('store-action-plan-row')).toHaveCount(0)
+  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'UPT at risk' })).toBeVisible()
+})
+
+test('store tasks keeps workflow rows visible when persisted action plans fail', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    await route.fulfill({
+      status: 503,
+      json: { message: 'Temporary action plan outage' },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlansPanel = getActionPlansPanel(page)
+  await expect(actionPlansPanel.getByText('Action plans could not be opened')).toBeVisible()
+  await expect(actionPlansPanel.getByText('Temporary action plan outage')).toBeVisible()
+  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'UPT at risk' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Go to KPI detail' })).toBeVisible()
+})
+
+test('store tasks keeps off-page workflow action plans when active index cannot prove a persisted row', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            itemType: 'task',
+            sourceType: 'store_action_plan',
+            sourceId: '00000000-0000-0000-0000-00000000a099',
+            title: 'Off-page active plan',
+            summary: 'Active action plan projected by the workflow inbox.',
+            companyId: '00000000-0000-0000-0000-000000000001',
+            regionId: '00000000-0000-0000-0000-000000000010',
+            storeId: demoStoreId,
+            storeName: 'IstinyePark Demo Store',
+            workflowStatus: 'open',
+            inboxStatus: 'needs_attention',
+            urgency: 'high',
+            createdAt: '2026-05-23T08:00:00.000Z',
+            needsAttentionAt: '2026-05-25T12:00:00.000Z',
+            actorRole: 'STORE_MANAGER',
+            primaryActionLabel: 'Open action plan',
+            secondaryActionLabel: 'Review source',
+            deepLink: '/store/tasks?actionPlan=00000000-0000-0000-0000-00000000a099',
+          },
+        ],
+        meta: {
+          count: 1,
+          total: 1,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const url = new URL(route.request().url())
+
+    if (url.searchParams.has('status')) {
+      await route.fulfill({
+        json: {
+          items: [],
+          meta: { count: 0, total: 0, limit: 100, offset: 0 },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            ...storeActionPlansFixture.items[0],
+            actionPlanId: '00000000-0000-0000-0000-00000000c099',
+            title: 'Closed archive plan',
+            status: 'closed',
+          },
+        ],
+        meta: {
+          count: 20,
+          total: 21,
+          limit: 20,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/tasks')
+
+  await expect(getActionPlanRow(page, 'Closed archive plan')).toBeVisible()
+  const offPageWorkflowRow = page.getByTestId('store-task-queue-row').filter({ hasText: 'Off-page active plan' })
+  await expect(offPageWorkflowRow).toBeVisible()
+  await expect(offPageWorkflowRow.getByRole('link', { name: 'Go to action plan' })).toBeVisible()
 })
 
 test('store tasks pages persisted action plan records', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
   })
+  await page.unroute('**/api/workflow/inbox')
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          workflowInboxFixture.items[0],
+          {
+            itemType: 'task',
+            sourceType: 'store_action_plan',
+            sourceId: '00000000-0000-0000-0000-00000000a021',
+            title: 'Second page recovery plan',
+            summary: 'This projection is already represented by the paged plan endpoint.',
+            companyId: '00000000-0000-0000-0000-000000000001',
+            regionId: '00000000-0000-0000-0000-000000000010',
+            storeId: demoStoreId,
+            storeName: 'IstinyePark Demo Store',
+            workflowStatus: 'open',
+            inboxStatus: 'needs_attention',
+            urgency: 'high',
+            createdAt: '2026-05-23T08:00:00.000Z',
+            needsAttentionAt: '2026-05-25T12:00:00.000Z',
+            actorRole: 'STORE_MANAGER',
+            primaryActionLabel: 'Open action plan',
+            secondaryActionLabel: 'Review source',
+            deepLink: '/store/tasks?actionPlan=00000000-0000-0000-0000-00000000a021',
+          },
+        ],
+        meta: {
+          count: 2,
+          total: 2,
+          limit: 30,
+          offset: 0,
+        },
+      },
+    })
+  })
   await page.unroute('**/api/store-actions/plans**')
   await page.route('**/api/store-actions/plans**', async (route) => {
-    const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? '0')
+    const url = new URL(route.request().url())
+    const status = url.searchParams.get('status')
+    const offset = Number(url.searchParams.get('offset') ?? '0')
     const isSecondPage = offset === 20
+
+    if (status) {
+      await route.fulfill({
+        json:
+          status === 'open'
+            ? {
+                items: [
+                  {
+                    ...storeActionPlansFixture.items[0],
+                    actionPlanId: '00000000-0000-0000-0000-00000000a021',
+                    title: 'Second page recovery plan',
+                  },
+                ],
+                meta: { count: 1, total: 1, limit: 100, offset: 0 },
+              }
+            : {
+                items: [],
+                meta: { count: 0, total: 0, limit: 100, offset: 0 },
+              },
+      })
+      return
+    }
 
     await route.fulfill({
       json: {
@@ -756,6 +922,8 @@ test('store tasks pages persisted action plan records', async ({ page }) => {
   const actionPlansPanel = getActionPlansPanel(page)
   await expect(actionPlansPanel.getByText('21 plan')).toBeVisible()
   await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
+  await expect(getActionPlanRow(page, 'Second page recovery plan')).toBeVisible()
+  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'Second page recovery plan' })).toHaveCount(0)
   await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
   await expect(actionPlansPanel.getByRole('button', { name: 'Previous' })).toBeDisabled()
 

@@ -5,6 +5,29 @@ disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
 gundelik is akisini, PR ritmini, dogrulama disiplinini ve durma kurallarini
 tek yerde toplar.
 
+## Isletim Dokumanlari Rol Haritasi
+
+Bu repo dort ana isletim dokumaniyla calisir:
+
+- `CONTRIBUTING.md`: kisa repo sozlesmesi ve minimum contributor beklentisi.
+- `current-state.md`: canli handoff, son merge durumu, parked kararlar,
+  caveat'ler ve taze proje gercegi.
+- `sokrates.md`: karar kalitesi, risk muhakemesi, onceliklendirme, ne zaman
+  durulacagi veya soru sorulacagi.
+- `discipline.md`: gundelik execution, PR/merge, verification, UI/refactor,
+  dosya boyutu ve done/stop isletim sistemi.
+
+Tekrar eden kurallar bilerek vardir: `CONTRIBUTING.md` hizli sozlesme,
+`discipline.md` uygulama detayi, `sokrates.md` karar muhakemesi verir. Celiski
+gibi gorunurse:
+
+- taze durum ve aktif caveat icin `current-state.md`,
+- karar verme ve risk siniflandirma icin `sokrates.md`,
+- PR/merge/verification/UI/refactor uygulamasi icin `discipline.md`,
+- minimum contributor sozlesmesi icin `CONTRIBUTING.md`
+
+kanonik kabul edilir.
+
 ## Bu Dosya Nasil Okunur
 
 Bu dosya tek parca kalir; alt process dosyalarina bolunmedigi surece baglayici
@@ -17,7 +40,8 @@ isletim sistemi buradadir. Hizli navigasyon icin:
   `Repo-Native Subagent Review Model`, `Merge Disiplini`.
 - Verification: `Verification Ladder`, `External Evidence Disiplini`.
 - UI refactor: `UI/UX Disiplini`, `Prototype to Product`, Store Me
-  refactorundan cikan tekrar kullanilabilir sayfa kurallari.
+  refactorundan cikan tekrar kullanilabilir sayfa kurallari,
+  `docs/process/product-experience-principles.md` ve taste-skill kalite pass'i.
 - Mimari/refactor: `Hard Boundaries`, `Refactor Disiplini`,
   `Dosya Satir Prensipleri`.
 - Risk ve durma: `Regression Trap Register`, `Stop Rules`,
@@ -27,13 +51,26 @@ isletim sistemi buradadir. Hizli navigasyon icin:
 
 Her yeni oturumda veya context kaybi sonrasi:
 
-1. `current-state.md` oku.
-2. `sokrates.md` oku.
-3. Bu dosyayi oku.
-4. `origin/main` ve local git durumunu kontrol et.
-5. Root working tree kirliyse unrelated degisikliklere dokunma.
-6. En guncel talebi eski plandan ustte tut.
-7. Hedefi, riskleri, ilk guvenli adimi ve dogrulama yolunu netlestir.
+1. `CONTRIBUTING.md` oku.
+2. `current-state.md` oku.
+3. `sokrates.md` oku.
+4. Bu dosyayi oku.
+5. `origin/main` ve local git durumunu kontrol et.
+6. Root working tree kirliyse unrelated degisikliklere dokunma.
+7. En guncel talebi eski plandan ustte tut.
+8. Hedefi, riskleri, ilk guvenli adimi ve dogrulama yolunu netlestir.
+
+Her otonom `/goal`, multi-PR veya uzun sureli uygulama promptu varsayilan
+olarak su read-first blogunu tasir:
+
+- `CONTRIBUTING.md`
+- `current-state.md`
+- `sokrates.md`
+- `discipline.md`
+
+Kullanici promptta bu dosyalari tek tek yazmasa bile bu dortlu isleme dahil
+edilir. Sadece kullanici acikca tek bir read-only soru veya dar belge inceleme
+istediyse kapsam daraltilabilir.
 
 ## Ana Ilke
 
@@ -471,6 +508,34 @@ Input yoksa bu isler park edilir ve local-only guvenli ise gecilir.
 
 Admin/SaaS yuzeyleri sessiz, operasyonel, yogun ama okunabilir olmalidir.
 
+UI/prototype/redesign/refactor veya workflow-heavy Store/Admin yuzeyi varsa
+`docs/process/product-experience-principles.md` zorunlu urun deneyimi
+referansidir. Bu dosya her gorev icin besinci read-first dokumani degildir;
+sadece product experience, sayfa yapisi, interaction, mobil aksiyon veya gorsel
+kalite degistiren islerde okunur. Ana kural: clean but premium, decorative
+degil; visually strong ama operationally honest.
+
+UI/prototype/redesign/refactor islerinde `design-taste-frontend` / taste-skill
+zorunlu kalite pass'idir. Bu skill tek basina urun karari veya design system
+yerine gecmez; shadcn/ui, Tailwind v4, lucide, AdminSurface/Store primitive,
+gercek veri, role/scope ve workflow kurallarinin ustune anti-slop tasarim
+denetimi olarak uygulanir.
+
+Taste-skill kullanilirken:
+
+- once kisa design read yapilir: yuzey turu, persona, operasyonel yogunluk ve
+  gorsel dil netlesir,
+- landing/marketing varsayilanlari admin/store operasyonel yuzeylerine
+  tasinmaz,
+- generic AI-purple gradient, gereksiz hero, uc esit kart, dekoratif
+  glassmorphism, sahte premium copy ve gostermelik animasyon engellenir,
+- UI kararinin gercek kullanici kararina veya aksiyonuna hizmet edip etmedigi
+  kontrol edilir,
+- mobile/desktop overflow, button contrast, shape consistency, copy kalitesi ve
+  eski UI kalintisi preflight olarak okunur,
+- skill'in dashboard disi notlari baglamli uygulanir; operasyonel product UI'da
+  veri ve workflow dogrulugu her zaman estetik tercihin ustundedir.
+
 - Landing/hero pazarlama dili yok.
 - Broad redesign yok.
 - Nested card ve dekoratif gradient/orb yok.
@@ -545,6 +610,8 @@ Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
 HTML/prototype begenilmis olsa bile product implementation sayilmaz. Product'a
 tasinmadan once su pass zorunludur:
 
+- Taste-skill pass'i: design read, density, operasyonel karar akisi,
+  anti-slop preflight, mobile/desktop kalite ve copy denetimi yapildi mi?
 - Gercek veri mapping'i: her gorunen metrik, liste, status ve aksiyon hangi
   API/query/model/config alanindan geliyor?
 - Role matrix: hangi rol hangi sekme, toolbar item, route ve aksiyonu gorecek?

@@ -1,7 +1,8 @@
 # Sokrates Working Principle
 
-Sokrates is the default operating rule for the HR Axis / Store Ops workspace.
-Read this file after `current-state.md` and before planning or coding.
+Sokrates is the default decision-quality rule for the HR Axis / Store Ops
+workspace. It is part of the four-file operating set:
+`CONTRIBUTING.md`, `current-state.md`, `sokrates.md`, and `discipline.md`.
 The user does not need to explicitly say "Sokrates mode"; apply it
 automatically and proportionally based on the risk of the request.
 
@@ -17,6 +18,27 @@ The target is not a larger process. The target is better judgment:
 - skeptical when the work is risky,
 - decisive when evidence is enough,
 - willing to stop when the next step would be dishonest or too broad.
+
+## Relationship To The Operating Docs
+
+Use the four operating docs as one system:
+
+- `CONTRIBUTING.md`: short repo contract and minimum rules.
+- `current-state.md`: freshest project handoff, merged state, active caveats,
+  parked work, and next-action context.
+- `sokrates.md`: decision quality, prioritization, risk reasoning, ambiguity,
+  and stop/ask judgment.
+- `discipline.md`: execution mechanics, PR rhythm, merge discipline,
+  verification, UI/refactor rules, and done definition.
+
+If the files overlap, do not treat the overlap as a conflict. Use the
+document that owns the question:
+
+- Current facts and caveats: `current-state.md`.
+- Decision method and risk reasoning: `sokrates.md`.
+- Execution, PR, merge, verification, UI, and refactor mechanics:
+  `discipline.md`.
+- Contributor-facing summary: `CONTRIBUTING.md`.
 
 ## Core Stance
 
@@ -44,21 +66,23 @@ The target is not a larger process. The target is better judgment:
 
 At the start of a new session or after context loss:
 
-1. Read `current-state.md`.
-2. Read this file.
-3. Check git status before touching files.
-4. Identify unrelated dirty files and leave them alone.
-5. Identify the current branch and whether `origin/main` is relevant to the
+1. Read `CONTRIBUTING.md`.
+2. Read `current-state.md`.
+3. Read this file.
+4. Read `discipline.md`.
+5. Check git status before touching files.
+6. Identify unrelated dirty files and leave them alone.
+7. Identify the current branch and whether `origin/main` is relevant to the
    request.
-6. Restate the active goal, known caveats, and immediate next safe step.
+8. Restate the active goal, known caveats, and immediate next safe step.
 
 Do not restart old work from memory when local handoff files provide fresher
 context.
 
 Freshness rule:
 
-- If `current-state.md`, `sokrates.md`, git history, and local worktree state
-  disagree, trust the freshest verifiable source and name the conflict.
+- If the operating docs, git history, and local worktree state disagree, trust
+  the freshest verifiable source and name the conflict.
 - If the user gives a newer instruction than a stored plan, the newer
   instruction steers the turn unless it violates a hard boundary.
 - If a decision depends on latest PR, CI, provider, dependency, price, schedule,

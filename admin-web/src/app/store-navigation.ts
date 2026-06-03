@@ -210,6 +210,12 @@ const regionManagerNavigation: StoreNavigationItem[] = [
     icon: 'targets',
   },
   {
+    id: 'tasks',
+    labelKey: 'storeHome.nav.tasks',
+    path: '/store/tasks',
+    icon: 'tasks',
+  },
+  {
     id: 'reports',
     labelKey: 'storeHome.nav.reports',
     path: '/store/reports',
@@ -271,7 +277,7 @@ function isStoreNavigationItemAllowed(
     case 'approvals':
       return canListTargetDistributionRequests(authSummary)
     case 'tasks':
-      return hasAnyRole(authSummary, ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])
+      return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])
     case 'targets':
       return hasAnyRole(authSummary, ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'])
     case 'reports':

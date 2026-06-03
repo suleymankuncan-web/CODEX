@@ -41,6 +41,7 @@ Use this directory like an operating library, not a diary.
 | Check whether a debt is open | `docs/plans/project-debt-ledger.md` | Closed debts, blocked dependencies, and strategic backlog. |
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
 | Add a future feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Source-of-truth, auth, API, DB, workflow, operations, and rollback gates. |
+| Modernize Store/Admin UI | `docs/process/product-experience-principles.md` | Product-quality standard for clean but premium, operationally honest UI work. |
 | Inspect the system map | `docs/flows/README.md` | Generated frontend route, API, controller, and OpenAPI flow map. |
 | Continue UI pilot prototypes | `docs/prototypes/README.md` | Prototype shelf, Plum Glacier token set, login pilot references, and visual boundary rules. |
 
@@ -57,6 +58,7 @@ Use for daily direction and working discipline.
 - `docs/plans/decision-registry-v1.md`
 - `docs/plans/runbook-registry-v1.md`
 - `docs/plans/evidence-automation-index-v1.md`
+- `docs/process/product-experience-principles.md`
 - `docs/plans/project-growth-execution-roadmap-v1.md`
 - `docs/plans/active-next-actions.md`
 - `docs/plans/project-debt-ledger.md`
