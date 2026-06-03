@@ -1,23 +1,19 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  Calendar,
   CheckCircle2,
   ClipboardList,
+  Layers3,
   ListChecks,
   RefreshCw,
+  Route,
   Search,
+  SlidersHorizontal,
+  Store,
   Target,
   TrendingDown,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getChecklistAcknowledgements } from '../features/checklists/api'
@@ -42,7 +38,6 @@ import {
 } from '../features/store-tasks/store-tasks-workbench'
 import {
   formatActionPlanDate,
-  formatDisplayRoleLabels,
   formatStoreActionPlanPriority,
   formatStoreActionPlanSource,
   formatStoreActionPlanStatus,
@@ -70,7 +65,6 @@ import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   StoreErrorState,
   StoreLoadingState,
-  StoreStatusBadge,
   StoreSurfacePage,
 } from './store-surface-primitives'
 
@@ -270,6 +264,10 @@ export function StoreTasksPage(input: {
   const visibleRows = useMemo(() => sortRowsForWorkbench(filteredRows), [filteredRows])
   const summary = useMemo(() => buildSummary(rows), [rows])
   const tabs = useMemo(() => buildTabs(rows, t), [rows, t])
+  const activeTabLabel = tabs.find((tab) => tab.id === activeTab)?.label ?? t('storeTasks.allSources')
+  const periodLabel = useMemo(() => resolveWorkbenchPeriodLabel(rows, locale, t), [locale, rows, t])
+  const scopeLabel = persona === 'regionManager' ? t('storeTasks.regionView') : t('storeTasks.storeView')
+  const statusFilterLabel = activeTab === 'closed' ? t('storeTasks.closedWork') : t('storeTasks.openWork')
   const hasChecklistReceiptAction = useMemo(
     () => items.some((item) => item.sourceType === 'checklist_receipt'),
     [items],
@@ -341,105 +339,133 @@ export function StoreTasksPage(input: {
   }
 
   return (
-    <StoreSurfacePage ariaLabel={t('storeTasks.title')} className="tw:gap-3">
+    <StoreSurfacePage ariaLabel={t('storeTasks.title')} className="tw:mx-auto tw:w-full tw:max-w-7xl tw:gap-3">
       <WorkbenchHeader
         persona={persona}
-        summary={summary}
-        primaryStoreId={primaryStoreId}
-        roleLabel={formatDisplayRoleLabels(t, input.authSummary?.user.roleCodes)}
         t={t}
       />
 
       <SummaryGrid summary={summary} persona={persona} t={t} />
 
-      <Card className="tw:overflow-hidden tw:border-border/80 tw:bg-card/85 tw:shadow-sm">
-        <CardContent className="tw:p-3">
-          <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
-            <label className="tw:flex tw:min-h-10 tw:flex-1 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-background/85 tw:px-3 tw:text-sm tw:shadow-xs tw:lg:max-w-md">
-              <Search className="tw:size-4 tw:text-muted-foreground" />
-              <span className="tw:sr-only">{t('storeTasks.searchLabel')}</span>
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={t('storeTasks.searchPlaceholder')}
-                className="tw:h-8 tw:border-0 tw:bg-transparent tw:px-0 tw:shadow-none tw:focus-visible:ring-0"
-              />
-            </label>
-            <div className="tw:flex tw:flex-wrap tw:gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={inboxQuery.isFetching || storeActionPlansQuery.isFetching}
-                onClick={() => {
-                  void inboxQuery.refetch()
-                  if (storeActionPlansEnabled) void storeActionPlansQuery.refetch()
-                }}
-              >
-                <RefreshCw data-icon="inline-start" />
-                {t('storeTasks.refreshAction')}
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/store/checklists">
-                  <ClipboardList data-icon="inline-start" />
-                  {t('storeTasks.checklistsLink')}
-                </Link>
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <section className="tw:grid tw:grid-cols-[2.4rem_minmax(0,1fr)] tw:gap-3 tw:rounded-[1.1rem] tw:border tw:border-[#10adc5]/25 tw:bg-gradient-to-r tw:from-[#10adc5]/10 tw:to-[#6847f5]/5 tw:p-3 tw:shadow-[0_14px_36px_rgba(39,58,91,0.07)] tw:md:grid-cols-[2.4rem_minmax(0,1fr)_auto] tw:md:items-center">
+        <span className="tw:flex tw:size-9 tw:items-center tw:justify-center tw:rounded-xl tw:border tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:text-[#08798d]">
+          <Route className="tw:size-4" />
+        </span>
+        <div className="tw:min-w-0">
+          <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{t('storeTasks.workflowRuleTitle')}</strong>
+          <span className="tw:mt-1 tw:block tw:text-xs tw:leading-5 tw:text-muted-foreground">{t('storeTasks.workflowRuleCopy')}</span>
+        </div>
+        <span className="tw:col-start-2 tw:inline-flex tw:min-h-7 tw:items-center tw:justify-center tw:justify-self-start tw:rounded-full tw:border tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#08798d] tw:md:col-auto">
+          {t('storeTasks.workflowRuleBadge')}
+        </span>
+      </section>
 
-      <Card
+      <div className="tw:grid tw:gap-2.5 tw:rounded-[1.25rem] tw:border tw:border-[#dbe5f2] tw:bg-white/75 tw:p-2.5 tw:shadow-[0_16px_42px_rgba(42,57,90,0.08)] tw:backdrop-blur tw:lg:grid-cols-[minmax(240px,1fr)_repeat(4,minmax(132px,0.55fr))]">
+        <label className="tw:grid tw:gap-1.5">
+          <span className="tw:pl-1 tw:text-[0.68rem] tw:font-semibold tw:text-[#8793a9]">{t('storeTasks.searchLabel')}</span>
+          <span className="tw:flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-[#dbe5f2] tw:bg-white/85 tw:px-3 tw:text-sm">
+            <Search className="tw:size-4 tw:text-[#62708a]" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t('storeTasks.searchPlaceholder')}
+              className="tw:h-8 tw:border-0 tw:bg-transparent tw:px-0 tw:shadow-none tw:focus-visible:ring-0"
+            />
+          </span>
+        </label>
+        <ToolbarField label={t('storeTasks.periodLabel')} value={periodLabel} icon={<Calendar className="tw:size-4" />} />
+        <ToolbarField label={t('storeTasks.scopeFilterLabel')} value={scopeLabel} icon={<Store className="tw:size-4" />} />
+        <ToolbarField label={t('storeTasks.sourceFilterLabel')} value={activeTab === 'all' ? t('storeTasks.allSources') : activeTabLabel} icon={<Layers3 className="tw:size-4" />} />
+        <ToolbarField label={t('storeTasks.statusFilterLabel')} value={statusFilterLabel} icon={<SlidersHorizontal className="tw:size-4" />} />
+      </div>
+
+      <WorkbenchTabs activeTab={activeTab} tabs={tabs} onTabChange={setActiveTab} />
+
+      <section
         data-testid="store-action-plans-panel"
-        className="tw:overflow-hidden tw:border-border/80 tw:bg-card/90 tw:shadow-sm"
+        className="tw:overflow-hidden tw:rounded-[1.35rem] tw:border tw:border-[#cfd9ea] tw:bg-white/85 tw:shadow-[0_24px_70px_rgba(30,52,88,0.13)] tw:backdrop-blur"
       >
-        <CardHeader className="tw:border-b tw:border-border/70 tw:bg-muted/25 tw:p-0">
-          <div className="tw:flex tw:flex-col tw:gap-3 tw:p-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-            <div>
-              <CardTitle>
-                <h2 className="tw:text-base tw:font-semibold tw:leading-snug tw:text-foreground">
-                  {t('storeTasks.actionPlansTitle')}
-                </h2>
-              </CardTitle>
-              <CardDescription className="tw:mt-1">
-                {persona === 'regionManager'
-                  ? t('storeTasks.workbenchRegionDescription')
-                  : t('storeTasks.workbenchStoreDescription')}
-              </CardDescription>
-            </div>
-            <StoreStatusBadge tone={summary.pending > 0 ? 'warning' : 'calm'}>
-              {t('storeTasks.actionPlansCount', { count: workbenchRecordCount })}
-            </StoreStatusBadge>
+        <header className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-[#dbe5f2] tw:px-4 tw:py-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+          <div>
+            <h2 className="tw:text-base tw:font-semibold tw:leading-snug tw:text-[#071631]">
+              {persona === 'regionManager'
+                ? t('storeTasks.queuePanelTitleRegion')
+                : t('storeTasks.queuePanelTitleStore')}
+            </h2>
+            <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-[#62708a]">
+              {persona === 'regionManager'
+                ? t('storeTasks.queuePanelCopyRegion')
+                : t('storeTasks.queuePanelCopyStore')}
+            </p>
           </div>
-          <WorkbenchTabs activeTab={activeTab} tabs={tabs} onTabChange={setActiveTab} />
-        </CardHeader>
-        <CardContent className="tw:p-0">
-          <StoreTasksWorkbenchBody
-            rows={visibleRows}
-            allRows={rows}
-            search={search}
-            persona={persona}
-            storeActionPlansEnabled={storeActionPlansEnabled}
-            storeActionPlansMeta={storeActionPlansMeta}
-            isStoreActionPlansLoading={storeActionPlansQuery.isLoading}
-            isStoreActionPlansError={storeActionPlansQuery.isError}
-            isStoreActionPlansFetching={storeActionPlansQuery.isFetching}
-            storeActionPlansError={storeActionPlansQuery.error}
-            locale={locale}
-            t={t}
-            onActionPlanCreated={() => setStoreActionPlansOffset(0)}
-            onRetryStoreActionPlans={() => void storeActionPlansQuery.refetch()}
-            onPreviousPage={() =>
-              setStoreActionPlansOffset((offset) => Math.max(0, offset - STORE_ACTION_PLAN_PAGE_SIZE))
-            }
-            onNextPage={() =>
-              setStoreActionPlansOffset((offset) => offset + STORE_ACTION_PLAN_PAGE_SIZE)
-            }
-          />
-        </CardContent>
-      </Card>
+          <span className="tw:inline-flex tw:min-h-[27px] tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-[#6847f5]/20 tw:bg-[#eee9ff] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#5a37df]">
+            {t('storeTasks.queueCount', { count: workbenchRecordCount })}
+          </span>
+        </header>
+        <StoreTasksWorkbenchBody
+          rows={visibleRows}
+          allRows={rows}
+          search={search}
+          persona={persona}
+          storeActionPlansEnabled={storeActionPlansEnabled}
+          storeActionPlansMeta={storeActionPlansMeta}
+          isStoreActionPlansLoading={storeActionPlansQuery.isLoading}
+          isStoreActionPlansError={storeActionPlansQuery.isError}
+          isStoreActionPlansFetching={storeActionPlansQuery.isFetching}
+          storeActionPlansError={storeActionPlansQuery.error}
+          locale={locale}
+          t={t}
+          onActionPlanCreated={() => setStoreActionPlansOffset(0)}
+          onRetryStoreActionPlans={() => void storeActionPlansQuery.refetch()}
+          onPreviousPage={() =>
+            setStoreActionPlansOffset((offset) => Math.max(0, offset - STORE_ACTION_PLAN_PAGE_SIZE))
+          }
+          onNextPage={() =>
+            setStoreActionPlansOffset((offset) => offset + STORE_ACTION_PLAN_PAGE_SIZE)
+          }
+        />
+      </section>
     </StoreSurfacePage>
   )
+}
+
+function ToolbarField(input: {
+  label: string
+  value: string
+  icon: ReactNode
+}) {
+  return (
+    <div className="tw:grid tw:gap-1.5">
+      <span className="tw:pl-1 tw:text-[0.68rem] tw:font-semibold tw:text-[#8793a9]">{input.label}</span>
+      <div className="tw:flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-[#dbe5f2] tw:bg-white/85 tw:px-3 tw:text-sm tw:font-medium tw:text-[#071631]">
+        <span className="tw:text-[#62708a]">{input.icon}</span>
+        <span className="tw:min-w-0 tw:truncate">{input.value}</span>
+      </div>
+    </div>
+  )
+}
+
+function resolveWorkbenchPeriodLabel(
+  rows: readonly WorkbenchRow[],
+  locale: AppLocale,
+  t: TranslateFunction,
+) {
+  const planDueDate = rows.find((row) => row.plan?.dueOn)?.plan?.dueOn
+  const workflowDate = rows.find((row) => row.workflowItem?.needsAttentionAt || row.workflowItem?.createdAt)
+    ?.workflowItem
+  const rawDate = planDueDate ?? workflowDate?.needsAttentionAt ?? workflowDate?.createdAt
+
+  if (!rawDate) {
+    return t('storeTasks.currentRecordsPeriod')
+  }
+
+  const normalized = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? `${rawDate}T12:00:00.000Z` : rawDate
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) {
+    return t('storeTasks.currentRecordsPeriod')
+  }
+
+  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date)
 }
 
 function buildWorkbenchRows(input: {
@@ -480,6 +506,7 @@ function buildWorkbenchRows(input: {
           : input.t('storeTasks.evidenceOpen'),
       sourceLabel: formatStoreActionPlanSource(input.t, plan.sourceType),
       tone: mapStoreActionPlanStatusTone(plan.status),
+      statusTone: mapPlanStatusBadgeTone(plan.status),
       priorityTone: mapStoreActionPlanPriorityTone(plan.priority),
       plan,
     }
@@ -517,6 +544,7 @@ function buildWorkbenchRows(input: {
         sourceLabel: formatWorkflowSourceType(input.t, item.sourceType),
         ...(item.historyPreview ? { historyPreview: item.historyPreview } : {}),
         tone: mapWorkflowTone(item),
+        statusTone: mapWorkflowStatusBadgeTone(item),
         priorityTone: mapWorkflowUrgencyTone(item.urgency),
         workflowItem: item,
       }
@@ -659,8 +687,31 @@ function mapPlanState(plan: StoreActionPlan): WorkbenchRowState {
   return 'closed'
 }
 
+function mapPlanStatusBadgeTone(status: StoreActionPlanStatus) {
+  switch (status) {
+    case 'open':
+    case 'in_progress':
+      return 'warning'
+    case 'blocked':
+      return 'danger'
+    case 'closed':
+      return 'calm'
+    case 'cancelled':
+      return 'neutral'
+    default:
+      return 'neutral'
+  }
+}
+
 function mapWorkflowState(item: WorkflowInboxItem): WorkbenchRowState {
   if (item.inboxStatus === 'needs_attention') return 'attention'
   if (item.inboxStatus === 'informational') return 'reported'
   return 'closed'
+}
+
+function mapWorkflowStatusBadgeTone(item: WorkflowInboxItem) {
+  if (item.inboxStatus === 'needs_attention') return 'warning'
+  if (item.inboxStatus === 'completed') return 'calm'
+  if (item.inboxStatus === 'informational') return 'accent'
+  return 'neutral'
 }

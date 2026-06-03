@@ -1,9 +1,10 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CirclePlus, Save, X } from 'lucide-react'
+import { ArrowRight, CirclePlus, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { getErrorMessage } from '../../lib/format'
+import { cn } from '../../lib/utils'
 import type { TranslateFunction } from '../localization/dictionary'
 import {
   createStoreActionPlan,
@@ -23,6 +24,8 @@ export function StoreActionPlanCreateControl(input: {
   candidate: ReadOnlyStoreActionCandidate
   t: TranslateFunction
   onCreated: () => void
+  triggerLabel?: string
+  triggerClassName?: string
 }) {
   const titleId = useId()
   const summaryId = useId()
@@ -95,9 +98,24 @@ export function StoreActionPlanCreateControl(input: {
   if (!isOpen) {
     return (
       <>
-        <Button type="button" size="sm" variant="outline" onClick={openForm}>
-          <CirclePlus data-icon="inline-start" />
-          {input.t('storeTasks.createPlanAction')}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className={cn(input.triggerClassName)}
+          onClick={openForm}
+        >
+          {input.triggerLabel ? (
+            <>
+              {input.triggerLabel}
+              <ArrowRight data-icon="inline-end" />
+            </>
+          ) : (
+            <>
+              <CirclePlus data-icon="inline-start" />
+              {input.t('storeTasks.createPlanAction')}
+            </>
+          )}
         </Button>
         {createPlanMutation.isSuccess ? (
           <span className="tw:text-sm tw:text-muted-foreground">{input.t('storeTasks.createPlanSuccess')}</span>

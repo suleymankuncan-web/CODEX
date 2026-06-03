@@ -9,12 +9,12 @@ export function StoreActionPlanCommandPanel(input: {
   t: TranslateFunction
 }) {
   return (
-    <div className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-primary/20 tw:bg-primary/5 tw:p-4">
+    <div className="tw:grid tw:gap-3">
       <div>
-        <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">
+        <h4 className="tw:text-sm tw:font-semibold tw:text-[#071631]">
           {input.t('storeTasks.actionPlansCommandPanelTitle')}
-        </h3>
-        <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
+        </h4>
+        <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-[#62708a]">
           {input.t('storeTasks.actionPlansCommandPanelCopy')}
         </p>
       </div>

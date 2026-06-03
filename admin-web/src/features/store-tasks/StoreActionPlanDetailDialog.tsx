@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowRight, Eye, RefreshCw } from 'lucide-react'
+import { ArrowRight, CheckCircle2, ClipboardList, RefreshCw } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,7 +26,6 @@ import {
 } from '../store-actions/api'
 import {
   formatActionPlanDate,
-  formatOptionalDateTime,
   formatOptionalValue,
   formatStoreActionPlanPriority,
   formatStoreActionPlanSource,
@@ -39,9 +38,11 @@ import { StoreActionPlanCommandPanel } from './StoreActionPlanCommandPanel'
 
 export function StoreActionPlanDetailDialog(input: {
   plan: StoreActionPlan
+  storeName?: string
   canMutate: boolean
   locale: AppLocale
   t: TranslateFunction
+  triggerLabel?: string
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const detailQuery = useQuery({
@@ -52,25 +53,41 @@ export function StoreActionPlanDetailDialog(input: {
   })
   const plan = detailQuery.data?.data?.plan ?? input.plan
   const sourcePath = plan.sourceDeepLink ? getSafeInAppPath(plan.sourceDeepLink) : null
+  const planTone = mapStoreActionPlanStatusTone(plan.status)
+  const providedStoreName = input.storeName?.trim()
+  const displayStoreName = providedStoreName && providedStoreName !== plan.storeId
+    ? providedStoreName
+    : input.t('storeTasks.actionPlansNotAvailable')
 
   return (
     <>
-      <Button type="button" size="sm" onClick={() => setIsOpen(true)}>
-        <Eye data-icon="inline-start" />
-        {input.t('storeTasks.actionPlansDetailAction')}
+      <Button
+        type="button"
+        size="sm"
+        className="tw:border-0 tw:bg-gradient-to-br tw:from-[#6847f5] tw:to-[#4f7cf7] tw:text-white tw:shadow-[0_15px_30px_rgba(84,75,224,0.22)] hover:tw:text-white"
+        onClick={() => setIsOpen(true)}
+      >
+        {input.triggerLabel ?? input.t('storeTasks.actionPlansDetailAction')}
+        <ArrowRight data-icon="inline-end" />
       </Button>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
           aria-label={input.t('storeTasks.actionPlansDetailRegion')}
-          className="tw:max-h-[min(760px,calc(100dvh-2rem))] tw:max-w-3xl tw:overflow-y-auto tw:p-0"
+          className="tw:top-auto tw:bottom-0 tw:left-0 tw:max-h-[calc(100dvh-0.75rem)] tw:max-w-full tw:translate-x-0 tw:translate-y-0 tw:overflow-hidden tw:rounded-b-none tw:rounded-t-2xl tw:p-0 tw:sm:top-1/2 tw:sm:bottom-auto tw:sm:left-1/2 tw:sm:max-h-[min(760px,calc(100dvh-2rem))] tw:sm:max-w-4xl tw:sm:-translate-x-1/2 tw:sm:-translate-y-1/2 tw:sm:rounded-2xl"
         >
-          <div className="tw:border-b tw:border-border/70 tw:bg-muted/25 tw:p-5">
-            <DialogHeader>
-              <DialogTitle className="tw:text-xl tw:font-semibold">{plan.title}</DialogTitle>
-              <DialogDescription>{plan.summary ?? input.t('storeTasks.actionPlansNoSummary')}</DialogDescription>
+          <div className="tw:flex tw:max-h-[calc(100dvh-0.75rem)] tw:flex-col tw:sm:max-h-[min(760px,calc(100dvh-2rem))]">
+          <div className="tw:border-b tw:border-[#dbe5f2] tw:bg-white/90 tw:p-4 tw:pr-14 tw:sm:p-[1.125rem]">
+            <DialogHeader className="tw:flex-row tw:items-start tw:gap-3 tw:space-y-0">
+              <span className={cn('tw:flex tw:size-11 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:border', toneSurfaceClasses[planTone])}>
+                <ClipboardList className="tw:size-5" />
+              </span>
+              <div className="tw:min-w-0">
+                <DialogTitle className="tw:text-xl tw:font-semibold tw:leading-tight tw:text-[#071631]">{plan.title}</DialogTitle>
+                <DialogDescription className="tw:mt-1 tw:text-[#62708a]">{plan.summary ?? input.t('storeTasks.actionPlansNoSummary')}</DialogDescription>
+              </div>
             </DialogHeader>
           </div>
-          <div className="tw:grid tw:gap-4 tw:p-5">
+          <div className="tw:grid tw:gap-4 tw:overflow-y-auto tw:p-4 tw:sm:p-5">
             {detailQuery.isLoading ? (
               <StoreEmptyState
                 title={input.t('storeTasks.actionPlansDetailLoadingTitle')}
@@ -92,56 +109,88 @@ export function StoreActionPlanDetailDialog(input: {
             ) : null}
             {!detailQuery.isError ? (
               <>
-                <section className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:p-4">
-                  <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
-                    <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">
-                      {input.t('storeTasks.actionPlansEvidenceSnapshot')}
+                <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2 tw:lg:grid-cols-4">
+                  <MiniFact label={input.t('storeTasks.actionPlansStore')} value={displayStoreName} />
+                  <MiniFact label={input.t('storeTasks.actionPlansSource')} value={formatStoreActionPlanSource(input.t, plan.sourceType)} />
+                  <MiniFact label={input.t('storeTasks.status')} value={formatStoreActionPlanStatus(input.t, plan.status)} tone={mapStoreActionPlanStatusTone(plan.status)} />
+                  <MiniFact label={input.t('storeTasks.actionPlansDueOn')} value={formatActionPlanDate(plan.dueOn, input.locale)} />
+                </div>
+                <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1.04fr)_minmax(18rem,0.96fr)]">
+                  <section className="tw:rounded-[1.125rem] tw:border tw:border-[#dbe5f2] tw:bg-white/72 tw:p-3.5">
+                    <h3 className="tw:mb-2.5 tw:text-sm tw:font-semibold tw:text-[#071631]">
+                      {input.t('storeTasks.actionPlansWhyTitle')}
                     </h3>
-                    {sourcePath ? (
-                      <Button asChild size="sm" variant="outline">
-                        <Link to={sourcePath}>
-                          {input.t('storeTasks.actionPlansOpenSource')}
-                          <ArrowRight data-icon="inline-end" />
-                        </Link>
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2 tw:lg:grid-cols-3">
-                    <MiniFact label={input.t('storeTasks.actionPlansStore')} value={plan.storeId} />
-                    <MiniFact label={input.t('storeTasks.actionPlansSource')} value={formatStoreActionPlanSource(input.t, plan.sourceType)} />
-                    <MiniFact label={input.t('storeTasks.actionPlansDueOn')} value={formatActionPlanDate(plan.dueOn, input.locale)} />
-                    <MiniFact label={input.t('storeTasks.status')} value={formatStoreActionPlanStatus(input.t, plan.status)} tone={mapStoreActionPlanStatusTone(plan.status)} />
-                    <MiniFact label={input.t('storeTasks.priority')} value={formatStoreActionPlanPriority(input.t, plan.priority)} tone={mapStoreActionPlanPriorityTone(plan.priority)} />
-                    <MiniFact label={input.t('storeTasks.actionPlansUpdatedAt')} value={formatDateTime(plan.updatedAt, input.locale)} />
-                  </div>
-                </section>
-                <section className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4">
-                  <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">
-                    {input.t('storeTasks.actionPlansLifecycleSnapshot')}
-                  </h3>
-                  <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2">
-                    <DetailLine label={input.t('storeTasks.actionPlansCreatedAt')} value={formatDateTime(plan.createdAt, input.locale)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansClosedAt')} value={formatOptionalDateTime(plan.closedAt, input.locale, input.t)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansCancelledAt')} value={formatOptionalDateTime(plan.cancelledAt, input.locale, input.t)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansResolutionEvidence')} value={formatOptionalValue(plan.resolutionNote, input.t)} />
-                    <DetailLine label={input.t('storeTasks.actionPlansCancelEvidence')} value={formatOptionalValue(plan.cancelReason, input.t)} />
-                  </div>
-                </section>
-                <section className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-muted/25 tw:p-4">
-                  <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">
-                    {input.t('storeTasks.actionPlansAuditTrace')}
-                  </h3>
-                  <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2">
-                    <DetailLine label={input.t('storeTasks.actionPlansOwner')} value={plan.ownerUserId} muted />
-                    <DetailLine label={input.t('storeTasks.actionPlansCreatedBy')} value={plan.createdByUserId} muted />
-                    <DetailLine label={input.t('storeTasks.actionPlansSourceId')} value={plan.sourceId} muted />
-                    <DetailLine label={input.t('storeTasks.actionPlansSourceSnapshot')} value={formatOptionalValue(plan.sourceSnapshotRunId, input.t)} muted />
-                    <DetailLine label={input.t('storeTasks.actionPlansSourceKpi')} value={formatOptionalValue(plan.sourceKpiId, input.t)} muted />
-                  </div>
-                </section>
+                    <div className="tw:grid tw:gap-2">
+                      <EvidenceRow
+                        label={input.t('storeTasks.actionPlansSource')}
+                        value={formatStoreActionPlanSource(input.t, plan.sourceType)}
+                        tone={planTone}
+                        t={input.t}
+                      />
+                      <EvidenceRow
+                        label={input.t('storeTasks.actionPlansTriggerEvidence')}
+                        value={plan.summary ?? input.t('storeTasks.actionPlansNoSummary')}
+                        tone={planTone}
+                        t={input.t}
+                      />
+                      <EvidenceRow
+                        label={input.t('storeTasks.priority')}
+                        value={formatStoreActionPlanPriority(input.t, plan.priority)}
+                        tone={mapStoreActionPlanPriorityTone(plan.priority)}
+                        t={input.t}
+                      />
+                    </div>
+                  </section>
+                  <section className="tw:rounded-[1.125rem] tw:border tw:border-[#dbe5f2] tw:bg-white/72 tw:p-3.5">
+                    <h3 className="tw:mb-2.5 tw:text-sm tw:font-semibold tw:text-[#071631]">
+                      {input.canMutate
+                        ? input.t('storeTasks.actionPlansStoreActionTitle')
+                        : input.t('storeTasks.actionPlansRegionViewTitle')}
+                    </h3>
+                    {input.canMutate ? (
+                      <StoreActionPlanCommandPanel plan={plan} t={input.t} />
+                    ) : (
+                      <div className="tw:rounded-xl tw:border tw:border-[#dbe5f2] tw:bg-[#f8fbff] tw:p-3 tw:text-sm tw:leading-6 tw:text-[#62708a]">
+                        {input.t('storeTasks.actionPlansRegionViewCopy')}
+                      </div>
+                    )}
+                  </section>
+                  <section className="tw:rounded-[1.125rem] tw:border tw:border-[#dbe5f2] tw:bg-white/72 tw:p-3.5">
+                    <h3 className="tw:mb-2.5 tw:text-sm tw:font-semibold tw:text-[#071631]">
+                      {input.t('storeTasks.actionPlansTimelineTitle')}
+                    </h3>
+                    <div className="tw:grid tw:gap-2">
+                      <TimelineLine label={input.t('storeTasks.actionPlansCreatedAt')} value={formatDateTime(plan.createdAt, input.locale)} />
+                      <TimelineLine label={input.t('storeTasks.actionPlansUpdatedAt')} value={formatDateTime(plan.updatedAt, input.locale)} />
+                      {plan.closedAt ? <TimelineLine label={input.t('storeTasks.actionPlansClosedAt')} value={formatDateTime(plan.closedAt, input.locale)} /> : null}
+                      {plan.cancelledAt ? <TimelineLine label={input.t('storeTasks.actionPlansCancelledAt')} value={formatDateTime(plan.cancelledAt, input.locale)} /> : null}
+                    </div>
+                  </section>
+                  <section className="tw:rounded-[1.125rem] tw:border tw:border-[#dbe5f2] tw:bg-white/72 tw:p-3.5">
+                    <h3 className="tw:mb-2.5 tw:text-sm tw:font-semibold tw:text-[#071631]">
+                      {input.t('storeTasks.actionPlansResolutionEvidence')}
+                    </h3>
+                    <div className="tw:grid tw:gap-2">
+                      <DetailLine label={input.t('storeTasks.actionPlansResolutionEvidence')} value={formatOptionalValue(plan.resolutionNote, input.t)} />
+                      <DetailLine label={input.t('storeTasks.actionPlansCancelEvidence')} value={formatOptionalValue(plan.cancelReason, input.t)} />
+                    </div>
+                  </section>
+                </div>
+                <footer className="tw:flex tw:flex-col tw:gap-2 tw:border-t tw:border-[#dbe5f2] tw:pt-3 tw:text-xs tw:text-[#62708a] tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+                  <span>{input.t('storeTasks.actionPlansDetailFootnote')}</span>
+                  {sourcePath ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={sourcePath}>
+                        {input.t('storeTasks.actionPlansOpenSource')}
+                        <ArrowRight data-icon="inline-end" />
+                      </Link>
+                    </Button>
+                  ) : null}
+                </footer>
               </>
             ) : null}
-            {input.canMutate ? <StoreActionPlanCommandPanel plan={plan} t={input.t} /> : null}
+            {detailQuery.isError && input.canMutate ? <StoreActionPlanCommandPanel plan={plan} t={input.t} /> : null}
+          </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -155,9 +204,45 @@ function MiniFact(input: {
   tone?: StoreSurfaceTone
 }) {
   return (
-    <div className={cn('tw:min-h-14 tw:rounded-xl tw:border tw:p-2.5', input.tone ? toneSurfaceClasses[input.tone] : 'tw:border-border tw:bg-background/70')}>
-      <span className="tw:block tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">{input.label}</span>
-      <strong className="tw:mt-1 tw:block tw:text-sm tw:font-semibold tw:text-foreground">{input.value}</strong>
+    <div className={cn('tw:min-h-14 tw:rounded-xl tw:border tw:p-2.5', input.tone ? toneSurfaceClasses[input.tone] : 'tw:border-[#dbe5f2] tw:bg-white/80')}>
+      <span className="tw:block tw:text-[0.68rem] tw:font-semibold tw:uppercase tw:tracking-wide tw:text-[#8793a9]">{input.label}</span>
+      <strong className="tw:mt-1 tw:block tw:break-words tw:text-sm tw:font-semibold tw:text-[#071631]">{input.value}</strong>
+    </div>
+  )
+}
+
+function EvidenceRow(input: {
+  label: string
+  value: string
+  tone: StoreSurfaceTone
+  t: TranslateFunction
+}) {
+  return (
+    <div className="tw:grid tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-3 tw:rounded-xl tw:border tw:border-[#dbe5f2] tw:bg-[#f8fbff] tw:p-3">
+      <div className="tw:min-w-0">
+        <span className="tw:block tw:text-[0.68rem] tw:font-medium tw:text-[#62708a]">{input.label}</span>
+        <strong className="tw:mt-1 tw:block tw:break-words tw:text-sm tw:font-semibold tw:text-[#071631]">{input.value}</strong>
+      </div>
+      <span className={cn('tw:inline-flex tw:h-7 tw:items-center tw:justify-center tw:rounded-full tw:border tw:px-2.5 tw:text-xs tw:font-semibold', toneSurfaceClasses[input.tone])}>
+        {input.t('storeTasks.actionPlansEvidenceClear')}
+      </span>
+    </div>
+  )
+}
+
+function TimelineLine(input: {
+  label: string
+  value: string
+}) {
+  return (
+    <div className="tw:grid tw:grid-cols-[1.25rem_minmax(0,1fr)] tw:gap-2">
+      <span className="tw:mt-0.5 tw:flex tw:size-5 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-[#6847f5]/25 tw:bg-[#eee9ff] tw:text-[#5a37df]">
+        <CheckCircle2 className="tw:size-3" />
+      </span>
+      <div className="tw:min-w-0">
+        <strong className="tw:block tw:text-sm tw:font-semibold tw:text-[#071631]">{input.label}</strong>
+        <span className="tw:block tw:text-xs tw:text-[#62708a]">{input.value}</span>
+      </div>
     </div>
   )
 }
@@ -168,12 +253,12 @@ function DetailLine(input: {
   muted?: boolean
 }) {
   return (
-    <div className="tw:min-w-0">
-      <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
+    <div className="tw:grid tw:min-w-0 tw:grid-cols-[8rem_minmax(0,1fr)] tw:gap-3 tw:border-b tw:border-[#dbe5f2]/80 tw:pb-2 last:tw:border-b-0 last:tw:pb-0">
+      <span className="tw:text-xs tw:font-medium tw:text-[#62708a]">{input.label}</span>
       <strong
         className={cn(
-          'tw:mt-1 tw:block tw:break-words tw:text-sm tw:font-semibold',
-          input.muted ? 'tw:text-muted-foreground' : 'tw:text-foreground',
+          'tw:block tw:break-words tw:text-sm tw:font-semibold',
+          input.muted ? 'tw:text-[#62708a]' : 'tw:text-[#071631]',
         )}
       >
         {input.value}
@@ -183,9 +268,9 @@ function DetailLine(input: {
 }
 
 const toneSurfaceClasses: Record<StoreSurfaceTone, string> = {
-  accent: 'tw:border-primary/20 tw:bg-primary/5 tw:text-primary',
-  calm: 'tw:border-accent/25 tw:bg-accent/10 tw:text-accent-foreground',
-  danger: 'tw:border-destructive/20 tw:bg-destructive/10 tw:text-destructive',
-  neutral: 'tw:border-border tw:bg-card/80 tw:text-foreground',
-  warning: 'tw:border-chart-4/30 tw:bg-chart-4/10 tw:text-foreground',
+  accent: 'tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:text-[#08798d]',
+  calm: 'tw:border-[#10b981]/25 tw:bg-[#e8fbf3] tw:text-[#06784e]',
+  danger: 'tw:border-[#ef426f]/25 tw:bg-[#ffe8ef] tw:text-[#d6244f]',
+  neutral: 'tw:border-[#dbe5f2] tw:bg-white/80 tw:text-[#071631]',
+  warning: 'tw:border-[#f59e0b]/25 tw:bg-[#fff4df] tw:text-[#925900]',
 }

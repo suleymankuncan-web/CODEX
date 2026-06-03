@@ -52,6 +52,7 @@ export type WorkbenchRow = {
   sourceLabel: string
   historyPreview?: string
   tone: StoreSurfaceTone
+  statusTone: StoreSurfaceTone
   priorityTone: StoreSurfaceTone
   plan?: StoreActionPlan
   workflowItem?: WorkflowInboxItem

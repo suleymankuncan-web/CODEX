@@ -2190,6 +2190,16 @@ Store Action V1A status:
   remote verification, behavior-preserved boundaries, rollback shape, and
   parked target projection/runtime risks. Evidence:
   `docs/evidence/store-tasks-workbench-v3-closeout-2026-06-03.md`.
+- Store Tasks Prototype Parity V1 moves `/store/tasks` from "inspired by" to
+  approved-prototype parity: prototype color tokens, compact metric cards,
+  workflow rule band, filter toolbar, segmented source tabs, queue panel,
+  source/evidence/status row rhythm, primary CTA buttons, and the premium
+  detail dialog/bottom sheet are reflected in production UI. The HTML demo role
+  switcher was removed; production role visibility stays driven by real auth
+  role/scope. The slice keeps API shape, DB schema, auth/permission semantics,
+  workflow behavior, Store Action lifecycle commands, and target projection
+  generation unchanged. Evidence:
+  `docs/evidence/store-tasks-prototype-parity-v1-2026-06-03.md`.
 - Store Action test hygiene and visibility evidence branch split 13 plan
   lifecycle tests from `admin-web/e2e/store-surfaces.spec.ts` into
   `admin-web/e2e/store-action-plans.spec.ts`, reducing the broad spec by

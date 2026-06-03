@@ -660,7 +660,7 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
     .getByRole('link', { name: 'Görevler', exact: true })
     .click()
 
-  await expect(page.getByRole('heading', { name: /Bugunku aksiyon masasi/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
   expect(workflowInboxRequests).toBe(1)
 })
 
@@ -1153,7 +1153,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Görevler',
     path: '/store/tasks',
-    ready: page.getByRole('heading', { name: /Bugunku aksiyon masasi/i }),
+    ready: page.getByRole('heading', { name: /Store Action İş Akışı/i }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Duyurular',
@@ -2443,14 +2443,13 @@ test('store rankings removes signal chrome while preserving weighted score rows'
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: /Bugunku aksiyon masasi/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
   await expect(page.getByText('Detay ozeti')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Aksiyon planlari' })).toBeVisible()
-  await expect(page.getByText('Aksiyon bekleyenler').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza aksiyon kuyruğu' })).toBeVisible()
+  await expect(page.getByText('Kendi mağazamda açık iş').first()).toBeVisible()
   await expect(page.getByText('KPI / projeksiyon').first()).toBeVisible()
-  await expect(page.getByRole('button', { name: /Tum akis/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: /KPI detay/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Aksiyon plani olustur' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Tüm akış/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Plan/i })).toBeVisible()
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
@@ -2484,7 +2483,7 @@ test('store tasks lets managers retry after the queue load fails', async ({ page
   allowInbox = true
   await retryButton.click()
 
-  await expect(page.getByRole('heading', { name: /Bugunku aksiyon masasi/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
   await expect.poll(() => inboxAttempts).toBeGreaterThan(1)
   await expect(page.getByRole('heading', { name: 'İş kuyruğu açılamadı' })).toHaveCount(0)
 })
@@ -2495,13 +2494,12 @@ test('store tasks page switches to English copy and persists locale', async ({ p
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Today's action desk/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Action plans' })).toBeVisible()
-  await expect(page.getByText('Pending actions').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store Action workflow/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store action queue' })).toBeVisible()
+  await expect(page.getByText('Open work in my store').first()).toBeVisible()
   await expect(page.getByText('KPI / projection').first()).toBeVisible()
   await expect(page.getByRole('button', { name: /All flow/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Go to KPI detail' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Create action plan' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open plan' })).toBeVisible()
   await expect(page.getByText('Aksiyon gerektiren işler')).toHaveCount(0)
   await expect(page.getByText('Detay özeti')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
@@ -2511,7 +2509,7 @@ test('store tasks page switches to English copy and persists locale', async ({ p
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Today's action desk/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store Action workflow/i })).toBeVisible()
 })
 
 test('store tasks checklist acknowledgement opens the exact checklist receipt', async ({ page }) => {
