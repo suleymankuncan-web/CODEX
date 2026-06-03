@@ -1142,10 +1142,28 @@ Latest technical assessment decision:
 
 ## Sokrates
 
-Sokrates is the default working principle for this project.
+Sokrates is the default decision-quality principle for this project. It works
+with the other operating docs rather than replacing them.
 
-Always read `sokrates.md` after reading `current-state.md` and before planning
-or coding. That file is the canonical, detailed operating rule.
+For every new session, context recovery, autonomous `/goal`, or multi-PR line,
+the default read-first operating set is:
+
+- `CONTRIBUTING.md` - short repo contract and minimum rules.
+- `current-state.md` - live handoff and freshest project-state record.
+- `sokrates.md` - decision quality, risk reasoning, prioritization, and
+  stop/ask judgment.
+- `discipline.md` - execution, PR, merge, verification, UI/refactor, and done
+  rules.
+
+UI/product experience work has one additional required reference:
+`docs/process/product-experience-principles.md`. It is not a fifth default
+operating document for unrelated work; use it when a task changes Store/Admin
+page structure, prototype-to-product implementation, interaction behavior,
+mobile action surfaces, or visual quality.
+
+If these files overlap, use the document that owns the question: this file for
+fresh project facts, `sokrates.md` for decision method, `discipline.md` for
+execution mechanics, and `CONTRIBUTING.md` for the contributor-facing summary.
 
 Working relationship note: the user is a non-developer HR/operator building
 this product through close, candid collaboration with Codex. Keep the tone
@@ -2147,6 +2165,16 @@ Store Action V1A status:
   create from KPI candidate, update active status, close with resolution note,
   and cancel with reason. The next Store Action work should be a new explicit
   decision, not automatic continuation.
+- Store Tasks Workbench V3 local implementation expands `/store/tasks` into a
+  role-aware operational surface. `STORE_MANAGER` continues to use real
+  persisted Store Action plans and existing command controls; `REGION_MANAGER`
+  gets scoped workflow inbox remediation rows as read-only evidence without
+  Store Action write controls; `STORE_PERSONNEL` remains out of route scope. The
+  UI suppresses duplicate workflow candidates only when a matching action plan
+  id or source key already exists, keeps target projection generation parked
+  until a backend contract exists, and adds no fake task, KPI, checklist, target,
+  or ranking data. Evidence:
+  `docs/evidence/store-tasks-workbench-v3-2026-06-03.md`.
 - Store Action test hygiene and visibility evidence branch split 13 plan
   lifecycle tests from `admin-web/e2e/store-surfaces.spec.ts` into
   `admin-web/e2e/store-action-plans.spec.ts`, reducing the broad spec by
@@ -2374,6 +2402,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/plans/decision-registry-v1.md` - Active decision registry
 - `docs/plans/runbook-registry-v1.md` - Repeatable runbook registry
 - `docs/plans/project-growth-execution-roadmap-v1.md` - Ordered first eight growth tracks
+- `docs/process/product-experience-principles.md` - Store/Admin product experience quality standard
 - `docs/plans/docs-library-metadata-standard-v1.md` - Docs Library metadata and guard policy
 - `docs/plans/backend-foundation-hardening-plan-v1.md` - Backend Foundation Hardening Plan V1
 - `docs/plans/backup-restore-drill-runbook-v1.md` - Backup Restore Drill Runbook V1
