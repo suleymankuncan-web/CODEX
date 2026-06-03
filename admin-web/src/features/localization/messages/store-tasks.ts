@@ -149,6 +149,9 @@ export const storeTasksTr = {
   'storeTasks.actionPlansSourceKpi': 'KPI',
   'storeTasks.actionPlansResolutionEvidence': 'Cozum notu',
   'storeTasks.actionPlansCancelEvidence': 'Iptal nedeni',
+  'storeTasks.actionPlansCommandPanelTitle': 'Aksiyon komutu',
+  'storeTasks.actionPlansCommandPanelCopy':
+    'Durum degisikligi, cozum notu veya iptal nedeni bu detay penceresinden kaydedilir.',
   'storeTasks.actionPlansNotAvailable': 'Yok',
   'storeTasks.actionPlansRange': '{start}-{end} / {total}',
   'storeTasks.actionPlansPrevious': 'Onceki',
@@ -403,6 +406,9 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.actionPlansSourceKpi': 'KPI',
   'storeTasks.actionPlansResolutionEvidence': 'Resolution note',
   'storeTasks.actionPlansCancelEvidence': 'Cancel reason',
+  'storeTasks.actionPlansCommandPanelTitle': 'Action command',
+  'storeTasks.actionPlansCommandPanelCopy':
+    'Status changes, resolution notes, and cancel reasons are saved from this detail window.',
   'storeTasks.actionPlansNotAvailable': 'Not available',
   'storeTasks.actionPlansRange': '{start}-{end} / {total}',
   'storeTasks.actionPlansPrevious': 'Previous',

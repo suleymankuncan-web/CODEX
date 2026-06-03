@@ -36,10 +36,7 @@ import {
   getStoreActionPlan,
   type StoreActionPlan,
 } from '../store-actions/api'
-import { StoreActionPlanCancelControl } from '../store-actions/StoreActionPlanCancelControl'
-import { StoreActionPlanCloseControl } from '../store-actions/StoreActionPlanCloseControl'
 import { StoreActionPlanCreateControl } from '../store-actions/StoreActionPlanCreateControl'
-import { StoreActionPlanStatusControl } from '../store-actions/StoreActionPlanStatusControl'
 import { WorkflowInboxDetail } from '../workflow/WorkflowInboxDetail'
 import type { WorkflowInboxItem } from '../workflow/contracts'
 import { formatDateTime, getErrorMessage } from '../../lib/format'
@@ -73,6 +70,7 @@ import {
   type WorkbenchSummary,
   type WorkbenchTabId,
 } from './store-tasks-workbench-model'
+import { StoreActionPlanCommandPanel } from './StoreActionPlanCommandPanel'
 
 export function AccessState(input: {
   authSummary: AuthSessionSummary | null
@@ -436,7 +434,12 @@ function WorkbenchRowView(input: {
 
         <div className="tw:flex tw:flex-wrap tw:items-start tw:gap-2 tw:xl:justify-end tw:xl:pr-36">
           {plan ? (
-            <StoreActionPlanDetailDialog plan={plan} locale={input.locale} t={input.t} />
+            <StoreActionPlanDetailDialog
+              plan={plan}
+              canMutate={canMutatePlan}
+              locale={input.locale}
+              t={input.t}
+            />
           ) : null}
           {input.row.workflowItem ? (
             <WorkflowItemDetailDialog item={input.row.workflowItem} locale={input.locale} t={input.t} />
@@ -462,13 +465,6 @@ function WorkbenchRowView(input: {
               t={input.t}
               onCreated={input.onActionPlanCreated}
             />
-          ) : null}
-          {canMutatePlan ? (
-            <div className="tw:flex tw:flex-wrap tw:gap-2">
-              <StoreActionPlanStatusControl plan={plan} t={input.t} />
-              <StoreActionPlanCloseControl plan={plan} t={input.t} />
-              <StoreActionPlanCancelControl plan={plan} t={input.t} />
-            </div>
           ) : null}
           {input.persona === 'regionManager' ? (
             <span className="tw:rounded-full tw:bg-muted tw:px-2.5 tw:py-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
@@ -515,6 +511,7 @@ function SourceLink(input: {
 
 function StoreActionPlanDetailDialog(input: {
   plan: StoreActionPlan
+  canMutate: boolean
   locale: AppLocale
   t: TranslateFunction
 }) {
@@ -525,7 +522,7 @@ function StoreActionPlanDetailDialog(input: {
     enabled: isOpen,
     ...transientQueryRetryOptions,
   })
-  const plan = detailQuery.data?.data.plan ?? input.plan
+  const plan = detailQuery.data?.data?.plan ?? input.plan
 
   return (
     <>
@@ -595,6 +592,7 @@ function StoreActionPlanDetailDialog(input: {
                 </div>
               </>
             ) : null}
+            {input.canMutate ? <StoreActionPlanCommandPanel plan={plan} t={input.t} /> : null}
           </div>
         </DialogContent>
       </Dialog>

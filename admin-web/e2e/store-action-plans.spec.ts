@@ -195,9 +195,13 @@ test('store tasks lists persisted action plan records with active status control
   const sourceLink = actionPlanRow.getByRole('link', { name: 'Open source' })
   await expect(sourceLink).toBeVisible()
   await expect(sourceLink).toHaveAttribute('href', '/store/kpis')
-  await expect(actionPlanRow.getByRole('button', { name: 'Update status' })).toBeVisible()
-  await expect(actionPlanRow.getByRole('button', { name: 'Close plan' })).toBeVisible()
-  await expect(actionPlanRow.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
+  await expect(actionPlanRow.getByRole('button', { name: 'Update status' })).toHaveCount(0)
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await expect(detailDialog.getByText('Action command')).toBeVisible()
+  await expect(detailDialog.getByRole('button', { name: 'Update status' })).toBeVisible()
+  await expect(detailDialog.getByRole('button', { name: 'Close plan' })).toBeVisible()
+  await expect(detailDialog.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
 })
 
@@ -240,7 +244,9 @@ test('store tasks labels persisted checklist remediation plans without changing 
     'href',
     '/store/checklists?result=checklist-instance-bm-1',
   )
-  await expect(actionPlanRow.getByRole('button', { name: 'Close plan' })).toBeVisible()
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Kasa checklist bulgusu' })
+  await expect(detailDialog.getByRole('button', { name: 'Close plan' })).toBeVisible()
 })
 
 test('store tasks opens persisted action plan detail on demand', async ({ page }) => {
@@ -292,6 +298,43 @@ test('store tasks opens persisted action plan detail on demand', async ({ page }
   expect(detailRequested).toBe(true)
 })
 
+test('store tasks keeps persisted plan commands available when detail fails', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+
+  await page.unroute('**/api/store-actions/plans**')
+  await page.route('**/api/store-actions/plans**', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+
+    if (
+      request.method() === 'GET' &&
+      url.pathname.endsWith(`/store-actions/plans/${storeActionPlansFixture.items[0].actionPlanId}`)
+    ) {
+      await route.fulfill({
+        status: 503,
+        json: { message: 'Action plan detail temporarily unavailable' },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeActionPlansFixture })
+  })
+
+  await page.goto('/store/tasks')
+
+  const actionPlanRow = getActionPlanRow(page)
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await expect(detailDialog.getByText('Plan detail could not be opened')).toBeVisible()
+  await expect(detailDialog.getByText('Action command')).toBeVisible()
+  await expect(detailDialog.getByRole('button', { name: 'Update status' })).toBeVisible()
+  await expect(detailDialog.getByRole('button', { name: 'Close plan' })).toBeVisible()
+  await expect(detailDialog.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
+})
+
 test('store tasks updates a persisted action plan status', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
@@ -339,8 +382,10 @@ test('store tasks updates a persisted action plan status', async ({ page }) => {
   await page.goto('/store/tasks')
 
   const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Update status' }).click()
-  const statusForm = actionPlanRow.locator('form[aria-label="Action plan status"]')
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await detailDialog.getByRole('button', { name: 'Update status' }).click()
+  const statusForm = detailDialog.locator('form[aria-label="Action plan status"]')
   await statusForm.getByLabel('Status').selectOption('blocked')
   await statusForm.getByLabel('Note').fill('Waiting for regional input')
   await statusForm.getByRole('button', { name: 'Save status' }).click()
@@ -375,8 +420,10 @@ test('store tasks keeps status update failures local to the action plan form', a
   await page.goto('/store/tasks')
 
   const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Update status' }).click()
-  const statusForm = actionPlanRow.locator('form[aria-label="Action plan status"]')
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await detailDialog.getByRole('button', { name: 'Update status' }).click()
+  const statusForm = detailDialog.locator('form[aria-label="Action plan status"]')
   await statusForm.getByLabel('Status').selectOption('blocked')
   await statusForm.getByRole('button', { name: 'Save status' }).click()
 
@@ -433,10 +480,11 @@ test('store tasks closes a persisted action plan with a resolution note', async 
 
   await page.goto('/store/tasks')
 
-  const actionPlansPanel = getActionPlansPanel(page)
   const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
-  const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await detailDialog.getByRole('button', { name: 'Close plan' }).click()
+  const closeForm = detailDialog.locator('form[aria-label="Close action plan"]')
   await closeForm.getByLabel('Resolution note').fill('Resolution completed with the store team')
   await closeForm.getByRole('button', { name: 'Close' }).click()
 
@@ -470,8 +518,10 @@ test('store tasks keeps close failures local to the action plan form', async ({ 
   await page.goto('/store/tasks')
 
   const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Close plan' }).click()
-  const closeForm = actionPlanRow.locator('form[aria-label="Close action plan"]')
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await detailDialog.getByRole('button', { name: 'Close plan' }).click()
+  const closeForm = detailDialog.locator('form[aria-label="Close action plan"]')
   await closeForm.getByLabel('Resolution note').fill('Resolution completed with the store team')
   await closeForm.getByRole('button', { name: 'Close' }).click()
 
@@ -530,8 +580,10 @@ test('store tasks cancels a persisted action plan with a reason', async ({ page 
 
   const actionPlansPanel = getActionPlansPanel(page)
   const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Cancel plan' }).click()
-  const cancelForm = actionPlanRow.locator('form[aria-label="Cancel action plan"]')
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await detailDialog.getByRole('button', { name: 'Cancel plan' }).click()
+  const cancelForm = detailDialog.locator('form[aria-label="Cancel action plan"]')
   await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
   await cancelForm.getByRole('button', { name: 'Cancel plan' }).click()
 
@@ -565,8 +617,10 @@ test('store tasks keeps cancel failures local to the action plan form', async ({
   await page.goto('/store/tasks')
 
   const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Cancel plan' }).click()
-  const cancelForm = actionPlanRow.locator('form[aria-label="Cancel action plan"]')
+  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
+  const detailDialog = page.getByRole('dialog', { name: 'Net sales recovery plan' })
+  await detailDialog.getByRole('button', { name: 'Cancel plan' }).click()
+  const cancelForm = detailDialog.locator('form[aria-label="Cancel action plan"]')
   await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
   await cancelForm.getByRole('button', { name: 'Cancel plan' }).click()
 
