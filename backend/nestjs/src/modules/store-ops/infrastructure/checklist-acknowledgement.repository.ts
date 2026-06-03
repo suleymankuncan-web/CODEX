@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { isChecklistScoreNonCompliant } from "../application/checklist-low-score-policy";
 
 type ChecklistAcknowledgementRow = {
   checklist_instance_id: string;
@@ -48,6 +49,7 @@ type ChecklistRemediationSourceRow = {
 
 type ChecklistRemediationResponseRow = ChecklistAcknowledgementResponseRow & {
   isNonCompliant?: boolean | string | null;
+  expectedValue?: string | null;
 };
 
 @Injectable()
@@ -242,6 +244,7 @@ export class ChecklistAcknowledgementRepository {
                 'responseType', cti.response_type,
                 'weight', cti.weight,
                 'maxScore', cti.max_score,
+                'expectedValue', cti.expected_value,
                 'scoreValue', cr.score_value,
                 'commentText', cr.comment_text,
                 'isNonCompliant', COALESCE(cr.is_non_compliant, FALSE)
@@ -329,7 +332,15 @@ export class ChecklistAcknowledgementRepository {
           : Number(row.scoreValue),
       commentText: row.commentText ?? null,
       isNonCompliant:
-        row.isNonCompliant === true || String(row.isNonCompliant ?? "").toLowerCase() === "true",
+        row.isNonCompliant === true ||
+        String(row.isNonCompliant ?? "").toLowerCase() === "true" ||
+        isChecklistScoreNonCompliant({
+          expectedValue: row.expectedValue,
+          scoreValue:
+            row.scoreValue === null || row.scoreValue === undefined
+              ? null
+              : Number(row.scoreValue),
+        }),
     }));
   }
 

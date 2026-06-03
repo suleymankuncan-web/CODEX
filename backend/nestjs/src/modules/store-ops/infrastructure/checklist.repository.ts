@@ -8,6 +8,7 @@ import {
   MobileChecklistToday,
   PublishChecklistTemplateInput,
 } from "../application/checklist.contract";
+import { isChecklistScoreNonCompliant } from "../application/checklist-low-score-policy";
 
 @Injectable()
 export class ChecklistRepository {
@@ -367,13 +368,15 @@ export class ChecklistRepository {
         store_id: string;
         status: string;
         max_score: string;
+        expected_value: string | null;
       }>(
         `
           SELECT
             ci.checklist_instance_id,
             ci.store_id,
             ci.status,
-            cti.max_score
+            cti.max_score,
+            cti.expected_value
           FROM ops.checklist_instance ci
           INNER JOIN ops.checklist_template_item cti
             ON cti.checklist_template_id = ci.checklist_template_id
@@ -408,13 +411,15 @@ export class ChecklistRepository {
             checklist_instance_id,
             template_item_id,
             score_value,
-            comment_text
+            comment_text,
+            is_non_compliant
           )
-          VALUES ($1::uuid, $2::uuid, $3::numeric, $4)
+          VALUES ($1::uuid, $2::uuid, $3::numeric, $4, $5::boolean)
           ON CONFLICT (checklist_instance_id, template_item_id) DO UPDATE
           SET
             score_value = EXCLUDED.score_value,
             comment_text = EXCLUDED.comment_text,
+            is_non_compliant = EXCLUDED.is_non_compliant,
             responded_at = NOW()
           RETURNING response_id, responded_at
         `,
@@ -423,6 +428,10 @@ export class ChecklistRepository {
           input.templateItemId,
           input.scoreValue,
           input.commentText ?? null,
+          isChecklistScoreNonCompliant({
+            expectedValue: guard.expected_value,
+            scoreValue: input.scoreValue,
+          }),
         ],
       );
 
