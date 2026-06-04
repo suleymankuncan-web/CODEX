@@ -573,6 +573,112 @@ test('store KPI live checklist impact uses completed BM and VM visits from highl
   await expect(page.getByText('VM checklist: not included in score this period')).toHaveCount(0)
 })
 
+test('region manager store KPI overview waits for selected store before loading detail highlights', async ({ page }) => {
+  const rankingRequests: URL[] = []
+  const highlightRequests: URL[] = []
+  const regionStoreRows = Array.from({ length: 9 }, (_, index) => {
+    const storeNumber = index + 1
+    return {
+      ...rankingsPrivilegedDetailStoreRow,
+      storeId: index === 0 ? 'store-high-hg' : `store-region-${storeNumber}`,
+      storeName: index === 0 ? 'High HG Store' : `Region Store ${storeNumber}`,
+      rank: storeNumber,
+      population: 9,
+      scoreValue: 91.4 - index,
+    }
+  })
+
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/reports/rankings**')
+  await page.unroute('**/api/reports/store-kpi-highlights**')
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-kpi-user',
+          employeeId: null,
+          roleCodes: ['REGION_MANAGER'],
+          scope: {
+            ...authSessionFixture.user.scope,
+            storeIds: [],
+          },
+          readScope: {
+            ...authSessionFixture.user.readScope,
+            storeIds: regionStoreRows.map((row) => row.storeId),
+          },
+          actionScope: {
+            assignedStoreIds: [],
+          },
+          assignedStoreIds: [],
+        },
+        scopeSummary: {
+          ...authSessionFixture.scopeSummary,
+          assignedStoreCount: 0,
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/reports/rankings**', async (route) => {
+    rankingRequests.push(new URL(route.request().url()))
+    await route.fulfill({
+      json: {
+        ...rankingsPrivilegedDetailFixture,
+        filters: {
+          ...rankingsPrivilegedDetailFixture.filters,
+          stores: regionStoreRows.map((row) => ({ id: row.storeId, label: row.storeName })),
+        },
+        storeLeaderboard: {
+          ...rankingsPrivilegedDetailFixture.storeLeaderboard,
+          items: regionStoreRows,
+          currentStore: regionStoreRows[0],
+          meta: {
+            ...rankingsPrivilegedDetailFixture.storeLeaderboard.meta,
+            total: regionStoreRows.length,
+          },
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
+    const url = new URL(route.request().url())
+    const selectedStoreId = url.searchParams.get('storeId') ?? 'store-high-hg'
+    const selectedStore = regionStoreRows.find((row) => row.storeId === selectedStoreId)
+    highlightRequests.push(url)
+    await route.fulfill({
+      json: {
+        ...storeKpiHighlightsFixture,
+        store: {
+          storeId: selectedStoreId,
+          storeName: selectedStore?.storeName ?? 'Selected Store',
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/kpis')
+
+  await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
+  await expect(page.getByText('Region Store 9')).toBeVisible()
+  await expect(page.getByRole('link', { name: "KPI'a git" })).toHaveCount(regionStoreRows.length)
+  expect(rankingRequests.length).toBeGreaterThan(0)
+  expect(rankingRequests.at(-1)?.searchParams.get('regionManagerUserId')).toBe('region-kpi-user')
+  expect(highlightRequests).toHaveLength(0)
+
+  await page.getByRole('link', { name: "KPI'a git" }).nth(8).click()
+
+  await expect(page).toHaveURL(/\/store\/kpis\?storeId=store-region-9&periodStart=2026-04-01/)
+  await expect.poll(() => highlightRequests.length).toBeGreaterThan(0)
+  expect(highlightRequests.at(-1)?.searchParams.get('storeId')).toBe('store-region-9')
+  expect(highlightRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-04-01')
+  await expect(page.getByRole('button', { name: 'Kapanmış gün' })).toHaveCount(0)
+})
+
 test('store KPI highlights switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/kpis')
 

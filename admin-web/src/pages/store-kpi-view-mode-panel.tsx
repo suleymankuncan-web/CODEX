@@ -22,6 +22,7 @@ type StoreKpiPeriodOption = {
 type StoreKpiViewModePanelModel = {
   activeSnapshotRun: ReportingSnapshotRun | null | undefined
   availableSnapshotRuns: ReportingSnapshotRun[]
+  closedSnapshotModeAllowed?: boolean
   latestLivePeriodLabel: string
   livePeriodStart: string
   liveSummary: { availablePeriods?: StoreKpiPeriodOption[] } | null | undefined
@@ -38,6 +39,7 @@ export function StoreKpiViewModePanel({ model }: { model: StoreKpiViewModePanelM
   const {
     activeSnapshotRun,
     availableSnapshotRuns,
+    closedSnapshotModeAllowed = true,
     latestLivePeriodLabel,
     livePeriodStart,
     liveSummary,
@@ -57,6 +59,7 @@ export function StoreKpiViewModePanel({ model }: { model: StoreKpiViewModePanelM
           type="single"
           value={viewMode}
           onValueChange={(nextValue) => {
+            if (nextValue === 'closed' && !closedSnapshotModeAllowed) return
             if (nextValue === 'live' || nextValue === 'closed') setViewMode(nextValue)
           }}
           aria-label={t('storeKpis.viewModeEyebrow')}
@@ -65,9 +68,11 @@ export function StoreKpiViewModePanel({ model }: { model: StoreKpiViewModePanelM
           <ToggleGroupItem value="live" aria-label={t('storeKpis.livePeriod')}>
             {t('storeKpis.livePeriod')}
           </ToggleGroupItem>
-          <ToggleGroupItem value="closed" aria-label={t('storeKpis.closedDay')}>
-            {t('storeKpis.closedDay')}
-          </ToggleGroupItem>
+          {closedSnapshotModeAllowed ? (
+            <ToggleGroupItem value="closed" aria-label={t('storeKpis.closedDay')}>
+              {t('storeKpis.closedDay')}
+            </ToggleGroupItem>
+          ) : null}
         </ToggleGroup>
         {viewMode === 'live' ? (
           <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-center">
