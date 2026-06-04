@@ -23,6 +23,7 @@ import {
   formatChecklistStatus,
   resolveLocalizedStoreScoreMeaning,
 } from './store-kpi-highlights-formatters'
+import { resolveLiveChecklistImpact } from './store-kpi-checklist-impact'
 export {
   describeLocalizedBenchmarkCap,
   formatAchievementValue,
@@ -60,71 +61,16 @@ export type DisplayKpiRow = {
   scoreStatus: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
 }
 
-export type ChecklistImpactComponent = {
-  included: boolean
-  score: number | null
-  weight: number
-  contribution: number | null
-  status: string
-  missingReason?: string
-  visitCount: number
-}
+export type StoreKpisRegionSortKey =
+  | 'score'
+  | 'TARGET_ACHIEVEMENT'
+  | 'UPT'
+  | 'ATV'
+  | 'CR'
+  | 'BM_CHECKLIST'
+  | 'VM_CHECKLIST'
 
-function resolveLiveChecklistImpact(input: {
-  rows: DisplayKpiRow[]
-  metricCode: 'BM_CHECKLIST' | 'VM_CHECKLIST'
-  scoreProfile: {
-    metrics: Array<{
-      code: string
-      weightPercent: number
-    }>
-  } | undefined
-}): ChecklistImpactComponent | null {
-  const metricConfig = input.scoreProfile?.metrics.find(
-    (metric) => metric.code === input.metricCode,
-  )
-  const row = input.rows.find((item) => item.kpiCode === input.metricCode)
-
-  if (!metricConfig && !row) {
-    return null
-  }
-
-  const weight = metricConfig?.weightPercent ?? row?.scoreContribution ?? 0
-
-  if (row?.scoreStatus === 'scored' && row.actualValue !== null) {
-    const score = toNumber(row.actualValue)
-    const contribution =
-      row.scoreContribution !== null && row.scoreContribution !== undefined
-        ? row.scoreContribution
-        : row.scoredRatio !== null && row.scoredRatio !== undefined
-          ? row.scoredRatio * weight
-          : row.achievementRate !== null && row.achievementRate !== undefined
-            ? toNumber(row.achievementRate) * weight
-            : null
-
-    return {
-      included: true,
-      score,
-      weight,
-      contribution,
-      status: 'included',
-      visitCount: 1,
-    }
-  }
-
-  return {
-    included: false,
-    score: null,
-    weight,
-    contribution: null,
-    status: row?.scoreStatus ?? 'not_included',
-    missingReason:
-      input.metricCode === 'BM_CHECKLIST'
-        ? 'bm_checklist_not_completed_for_period'
-        : 'vm_checklist_not_completed_for_period',
-    visitCount: 0,
-  }
-}
+export type StoreKpisRegionSortDirection = 'asc' | 'desc'
 
 function clampScore(input: number) {
   if (!Number.isFinite(input)) {
@@ -184,6 +130,10 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   const [viewModeState, setViewModeState] = useState<'live' | 'closed'>('live')
   const [selectedSnapshotRunId, setSelectedSnapshotRunId] = useState('')
   const [livePeriodStart, setLivePeriodStart] = useState('')
+  const [regionOverviewSort, setRegionOverviewSortState] = useState<{
+    sortKey: StoreKpisRegionSortKey
+    sortDirection: StoreKpisRegionSortDirection
+  }>({ sortKey: 'score', sortDirection: 'desc' })
   const closedSnapshotModeAllowed = hasDetailDefault && !isRegionManagerOverview
   const viewMode = closedSnapshotModeAllowed ? viewModeState : 'live'
   const setViewMode = (value: 'live' | 'closed') => {
@@ -199,6 +149,13 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
       nextParams.delete('periodStart')
     }
     setSearchParams(nextParams, { replace: true })
+  }
+  const setRegionOverviewSort = (sortKey: StoreKpisRegionSortKey) => {
+    setRegionOverviewSortState((current) => ({
+      sortKey,
+      sortDirection:
+        current.sortKey === sortKey && current.sortDirection === 'desc' ? 'asc' : 'desc',
+    }))
   }
 
   const configQuery = useQuery({
@@ -221,14 +178,22 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   })
 
   const regionOverviewQuery = useQuery({
-    queryKey: ['store-kpis-region-overview', 'monthly', routePeriodStart, 'score', 'desc', regionManagerUserId, 0],
+    queryKey: [
+      'store-kpis-region-overview',
+      'monthly',
+      routePeriodStart,
+      regionOverviewSort.sortKey,
+      regionOverviewSort.sortDirection,
+      regionManagerUserId,
+      0,
+    ],
     queryFn: () =>
       getRankings({
         periodType: 'monthly',
         ...(routePeriodStart ? { periodStart: routePeriodStart } : {}),
         ...(regionManagerUserId ? { regionManagerUserId } : {}),
-        sortKey: 'score',
-        sortDirection: 'desc',
+        sortKey: regionOverviewSort.sortKey,
+        sortDirection: regionOverviewSort.sortDirection,
         limit: 100,
         offset: 0,
       }),
@@ -573,11 +538,13 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     reportingAllowed,
     regionOverviewQuery,
     regionOverviewRows,
+    regionOverviewSort,
     routePeriodStart,
     rows,
     selectedSnapshotRunId,
     selectedStoreId,
     setLivePeriodStart: setLivePeriodFilter,
+    setRegionOverviewSort,
     setSelectedSnapshotRunId,
     setViewMode,
     storeGrade,

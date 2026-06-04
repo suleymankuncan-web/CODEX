@@ -1,5 +1,4 @@
 import type { AuthSessionSummary } from '../features/auth/api'
-import { Link } from 'react-router-dom'
 import { getErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
 import {
@@ -7,9 +6,9 @@ import {
   useStoreKpiHighlightsPageModel,
 } from './store-kpi-highlights-model'
 import { StoreKpisCommandDeck } from './store-kpis-command-deck'
+import { StoreKpisRegionOverview } from './store-kpis-region-overview'
 import {
   StoreErrorState,
-  StoreEmptyState,
   StoreInfoGrid,
   StoreLoadingState,
   StoreSectionCard,
@@ -59,7 +58,7 @@ export function StoreKpiHighlightsPage(input: {
   }
 
   if (model.isRegionManagerOverview) {
-    return <StoreKpiRegionOverviewFoundation model={model} />
+    return <StoreKpisRegionOverview model={model} />
   }
 
   if (model.viewMode === 'live' && model.liveKpiQuery.isError) {
@@ -118,86 +117,6 @@ export function StoreKpiHighlightsPage(input: {
   }
 
   return <StoreKpiHighlightsExperience model={model} />
-}
-
-function StoreKpiRegionOverviewFoundation({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const { regionOverviewRows, t } = model
-
-  return (
-    <StoreSurfacePage
-      ariaLabel={t('storeKpis.regionOverviewTitle')}
-      testId="store-kpis-region-overview"
-    >
-      <StoreSurfaceHeader
-        eyebrow={t('storeKpis.regionOverviewEyebrow')}
-        title={t('storeKpis.regionOverviewTitle')}
-        description={t('storeKpis.regionOverviewCopy')}
-        badges={[
-          {
-            label: t('storeKpis.regionOverviewStoreCount', {
-              count: regionOverviewRows.length,
-            }),
-            tone: 'calm',
-          },
-        ]}
-      />
-
-      <StoreSectionCard
-        title={t('storeKpis.regionOverviewStoresTitle')}
-        description={t('storeKpis.regionOverviewStoresCopy')}
-        badge={{
-          label: t('storeKpis.regionOverviewFoundationBadge'),
-          tone: 'accent',
-        }}
-      >
-        {regionOverviewRows.length > 0 ? (
-          <div className="tw:flex tw:flex-col tw:gap-2">
-            {regionOverviewRows.map((row) => (
-              <div
-                key={row.storeId}
-                className="tw:grid tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/70 tw:p-3 tw:sm:grid-cols-[minmax(0,1fr)_auto_auto] tw:sm:items-center"
-              >
-                <div className="tw:min-w-0">
-                  <strong className="tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-foreground">
-                    {row.storeName}
-                  </strong>
-                  <span className="tw:text-xs tw:text-muted-foreground">
-                    {t('storeKpis.regionOverviewScopedStore')}
-                  </span>
-                </div>
-                <StoreInfoGrid
-                  className="tw:sm:min-w-44 tw:sm:grid-cols-1 tw:xl:grid-cols-1"
-                  items={[
-                    {
-                      label: t('storeKpis.score'),
-                      value:
-                        row.scoreValue !== null && row.scoreValue !== undefined
-                          ? new Intl.NumberFormat(model.locale, {
-                              maximumFractionDigits: 1,
-                            }).format(row.scoreValue)
-                          : t('storeKpis.noData'),
-                    },
-                  ]}
-                />
-                <Link
-                  className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:rounded-md tw:bg-primary tw:px-3 tw:text-sm tw:font-medium tw:text-primary-foreground tw:shadow-sm tw:transition-colors hover:tw:bg-primary/90"
-                  to={model.getRegionStoreDetailPath(row.storeId)}
-                >
-                  {t('storeKpis.openStoreKpi')}
-                </Link>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <StoreEmptyState
-            title={t('storeKpis.regionOverviewEmptyTitle')}
-            description={t('storeKpis.regionOverviewEmptyCopy')}
-            titleAsHeading
-          />
-        )}
-      </StoreSectionCard>
-    </StoreSurfacePage>
-  )
 }
 
 function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageModel }) {

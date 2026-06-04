@@ -613,8 +613,13 @@ test('region manager store KPI overview waits for selected store before loading 
       rank: storeNumber,
       population: 9,
       scoreValue: 91.4 - index,
+      metrics:
+        index === 2
+          ? rankingsPrivilegedDetailStoreRow.metrics.filter((metric) => metric.code !== 'VM_CHECKLIST')
+          : rankingsPrivilegedDetailStoreRow.metrics,
     }
   })
+  let storeLeaderboardTotal = regionStoreRows.length
 
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/reports/rankings**')
@@ -665,7 +670,7 @@ test('region manager store KPI overview waits for selected store before loading 
           currentStore: regionStoreRows[0],
           meta: {
             ...rankingsPrivilegedDetailFixture.storeLeaderboard.meta,
-            total: regionStoreRows.length,
+            total: storeLeaderboardTotal,
           },
         },
       },
@@ -691,14 +696,40 @@ test('region manager store KPI overview waits for selected store before loading 
   await page.goto('/store/kpis')
 
   await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bölge Performansı' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
-  await expect(page.getByText('Region Store 9')).toBeVisible()
-  await expect(page.getByRole('link', { name: "KPI'a git" })).toHaveCount(regionStoreRows.length)
+  await expect(page.getByText('Bölge KPI değerleri')).toBeVisible()
+  await expect(
+    page.getByTestId('store-kpis-region-overview').getByText('Region Store 9').first(),
+  ).toBeVisible()
+  await expect(page.getByText('VM Pasif').first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /KPI sayfasına git/ })).toHaveCount(regionStoreRows.length)
+  await page.setViewportSize({ width: 390, height: 900 })
+  await expect(page.getByTestId('store-kpis-region-overview')).toBeInViewport()
+  await page.setViewportSize({ width: 1440, height: 900 })
+  storeLeaderboardTotal = 120
+  await page.reload()
+  await expect(page.getByText('Tüm kapsam dönmediği için ortalama gösterilmez.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
+  storeLeaderboardTotal = regionStoreRows.length
+  await page.reload()
+  await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
   expect(rankingRequests.length).toBeGreaterThan(0)
   expect(rankingRequests.at(-1)?.searchParams.get('regionManagerUserId')).toBe('region-kpi-user')
+  expect(rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('score')
+  expect(rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('desc')
   expect(highlightRequests).toHaveLength(0)
 
-  await page.getByRole('link', { name: "KPI'a git" }).nth(8).click()
+  await page.getByRole('button', { name: 'UPT sütununa göre sırala' }).click()
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('UPT')
+  expect(rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('desc')
+
+  await page.getByRole('button', { name: 'UPT sütununa göre sırala' }).click()
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('asc')
+  expect(rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('UPT')
+  expect(highlightRequests).toHaveLength(0)
+
+  await page.getByRole('link', { name: 'Region Store 9 KPI sayfasına git' }).click()
 
   await expect(page).toHaveURL(/\/store\/kpis\?storeId=store-region-9&periodStart=2026-04-01/)
   await expect.poll(() => highlightRequests.length).toBeGreaterThan(0)
