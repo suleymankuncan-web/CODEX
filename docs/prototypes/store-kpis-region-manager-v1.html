@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Store KPI - Bölge Müdürü</title>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root {
+        --ink: #071331;
+        --muted: #667194;
+        --quiet: #8a94b3;
+        --line: #dfe5f2;
+        --surface: rgba(255, 255, 255, 0.88);
+        --wash: #eef4fb;
+        --plum: #6d4cff;
+        --cyan: #16bdd3;
+        --blue: #2f6dff;
+        --amber: #e88512;
+        --rose: #ed4770;
+        --green: #16a875;
+        --plum-soft: #efe8ff;
+        --cyan-soft: #dcfbff;
+        --amber-soft: #fff0dc;
+        --rose-soft: #ffe6ee;
+        --green-soft: #ddf8ed;
+        --shadow: 0 22px 60px rgba(40, 55, 93, 0.14);
+        --shadow-soft: 0 12px 34px rgba(40, 55, 93, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 18% 0%, rgba(109, 76, 255, 0.16), transparent 30%),
+          radial-gradient(circle at 82% 0%, rgba(22, 189, 211, 0.2), transparent 34%),
+          linear-gradient(180deg, #f9fbff 0%, #eef4fb 100%);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 232px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        border-right: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(20px);
+        padding: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+        border-radius: 19px;
+        background: white;
+        padding: 12px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--plum), var(--cyan));
+        color: white;
+        font-weight: 820;
+      }
+
+      .brand strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .brand small {
+        display: block;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 760;
+        letter-spacing: 0.08em;
+      }
+
+      .nav {
+        display: grid;
+        gap: 8px;
+        margin-top: 22px;
+      }
+
+      .nav a {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-radius: 15px;
+        color: #59627f;
+        padding: 11px 10px;
+        font-size: 13px;
+        font-weight: 720;
+        text-decoration: none;
+      }
+
+      .nav a.active {
+        background: linear-gradient(90deg, rgba(109, 76, 255, 0.14), rgba(22, 189, 211, 0.12));
+        color: var(--plum);
+      }
+
+      .nav i,
+      .chip i,
+      .action i {
+        width: 17px;
+        height: 17px;
+      }
+
+      main {
+        padding: 24px;
+      }
+
+      .shell {
+        display: grid;
+        gap: 16px;
+        max-width: 1420px;
+        margin: 0 auto;
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .hero {
+        display: grid;
+        min-height: 96px;
+        align-content: center;
+        gap: 10px;
+        border: 1px solid rgba(200, 212, 231, 0.72);
+        border-radius: 24px;
+        background:
+          linear-gradient(110deg, rgba(255, 255, 255, 0.9), rgba(230, 250, 255, 0.78)),
+          radial-gradient(circle at 4% 8%, rgba(109, 76, 255, 0.16), transparent 32%),
+          rgba(255, 255, 255, 0.82);
+        box-shadow: var(--shadow);
+        padding: 18px 20px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 3vw, 42px);
+        line-height: 1;
+        letter-spacing: -0.045em;
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+
+      .hero-meta span {
+        display: inline-flex;
+        min-height: 25px;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        color: #59627f;
+        padding: 0 9px;
+        font-size: 11px;
+        font-weight: 660;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px;
+        justify-content: flex-end;
+      }
+
+      .chip {
+        display: inline-flex;
+        min-height: 40px;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.84);
+        color: var(--ink);
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 740;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        max-width: 1040px;
+      }
+
+      .card,
+      .panel,
+      .store-card {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .card {
+        min-height: 118px;
+        border-radius: 23px;
+        padding: 16px;
+      }
+
+      .card-head,
+      .panel-head,
+      .metric-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .icon {
+        display: grid;
+        width: 39px;
+        height: 39px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--plum-soft);
+        color: var(--plum);
+      }
+
+      .icon.cyan {
+        background: var(--cyan-soft);
+        color: #0697aa;
+      }
+
+      .icon.amber {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .icon.rose {
+        background: var(--rose-soft);
+        color: var(--rose);
+      }
+
+      .badge {
+        display: inline-flex;
+        min-height: 26px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .badge.good {
+        background: var(--green-soft);
+        color: #087751;
+      }
+
+      .badge.warn {
+        background: var(--amber-soft);
+        color: #a35b00;
+      }
+
+      .badge.risk {
+        background: var(--rose-soft);
+        color: #c52d54;
+      }
+
+      .badge.info {
+        background: var(--cyan-soft);
+        color: #087f91;
+      }
+
+      .label {
+        margin: 12px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .value {
+        margin-top: 5px;
+        font-size: 31px;
+        font-weight: 790;
+        letter-spacing: -0.045em;
+      }
+
+      .subline {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .kpi-average-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-top: 12px;
+      }
+
+      .kpi-average {
+        border: 1px solid rgba(224, 229, 242, 0.78);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.68);
+        padding: 8px;
+        text-align: center;
+      }
+
+      .kpi-average span {
+        display: block;
+        color: var(--quiet);
+        font-size: 10px;
+        font-weight: 650;
+      }
+
+      .kpi-average strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 13px;
+        font-weight: 720;
+        letter-spacing: -0.025em;
+      }
+
+      .content-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+        max-width: 1040px;
+      }
+
+      .panel {
+        border-radius: 25px;
+        overflow: hidden;
+      }
+
+      .panel-head {
+        min-height: 68px;
+        border-bottom: 1px solid var(--line);
+        padding: 15px 16px;
+      }
+
+      .panel-head h2,
+      .panel-head h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 770;
+        letter-spacing: -0.03em;
+      }
+
+      .panel-head p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .store-list {
+        display: grid;
+        gap: 0;
+        padding: 0 14px 14px;
+      }
+
+      .store-card {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.88fr) 52px repeat(4, minmax(70px, 0.26fr)) minmax(22px, 0.12fr) minmax(112px, 0.34fr) minmax(34px, 1fr) minmax(62px, auto);
+        gap: 10px;
+        align-items: center;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        background: transparent;
+        box-shadow: none;
+        min-height: 62px;
+        padding: 8px 0;
+      }
+
+      .store-card:last-child {
+        border-bottom: 0;
+      }
+
+      .store-line-head {
+        display: grid;
+        grid-template-columns: minmax(220px, 0.88fr) 52px repeat(4, minmax(70px, 0.26fr)) minmax(22px, 0.12fr) minmax(112px, 0.34fr) minmax(34px, 1fr) minmax(62px, auto);
+        gap: 10px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        color: #667194;
+        padding: 11px 14px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.035em;
+        text-transform: uppercase;
+      }
+
+      .store-line-head span:last-child {
+        grid-column: 10;
+      }
+
+      .store-line-head > span:nth-child(7) {
+        grid-column: 8;
+      }
+
+      .store-line-head > span:nth-child(n + 2) {
+        text-align: center;
+      }
+
+      .store-line-head > span:first-child {
+        text-align: left;
+      }
+
+      .sort-label {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+        padding: 0;
+        font: inherit;
+        letter-spacing: inherit;
+        text-transform: inherit;
+      }
+
+      .sort-label.is-active {
+        color: var(--plum);
+      }
+
+      .store-line-head span:first-child .sort-label {
+        justify-content: flex-start;
+      }
+
+      .store-name {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .store-icon {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--plum-soft);
+        color: var(--plum);
+      }
+
+      .store-name strong {
+        display: block;
+        font-size: 14px;
+        font-weight: 680;
+      }
+
+      .store-name span {
+        display: block;
+        margin-top: 2px;
+        color: var(--quiet);
+        font-size: 11px;
+        font-weight: 680;
+      }
+
+      .score-pill {
+        display: inline-flex;
+        min-width: 46px;
+        min-height: 30px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        background: white;
+        color: var(--ink);
+        box-shadow: inset 0 0 0 1px var(--line);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .metric-mini {
+        text-align: center;
+      }
+
+      .metric-mini span {
+        display: none;
+        color: var(--quiet);
+        font-size: 10px;
+        font-weight: 650;
+      }
+
+      .metric-mini strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 690;
+        letter-spacing: -0.025em;
+      }
+
+      .checkset {
+        display: inline-grid;
+        grid-column: 8;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 112px;
+        gap: 4px;
+        justify-self: center;
+      }
+
+      .check-chip {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+        border: 1px solid rgba(22, 168, 117, 0.16);
+        border-radius: 10px;
+        background: rgba(221, 248, 237, 0.72);
+        color: #087751;
+        padding: 0 6px;
+        font-size: 10px;
+        font-weight: 620;
+        white-space: nowrap;
+      }
+
+      .check-chip b {
+        color: inherit;
+        font-weight: 760;
+      }
+
+      .check-chip.passive {
+        border-color: rgba(237, 71, 112, 0.16);
+        background: rgba(255, 230, 238, 0.72);
+        color: #c52d54;
+      }
+
+      .action {
+        position: relative;
+        display: inline-flex;
+        grid-column: 10;
+        min-height: 30px;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 0;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--plum), var(--blue));
+        color: white;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 680;
+        text-decoration: none;
+        white-space: nowrap;
+      }
+
+      .action::after {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% + 8px);
+        z-index: 5;
+        min-width: max-content;
+        border: 1px solid rgba(99, 112, 141, 0.18);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 12px 28px rgba(27, 46, 83, 0.14);
+        color: var(--ink);
+        content: attr(aria-label);
+        font-size: 11px;
+        font-weight: 650;
+        opacity: 0;
+        padding: 7px 9px;
+        pointer-events: none;
+        transform: translateY(4px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+      }
+
+      .action:hover::after,
+      .action:focus-visible::after {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .action.secondary {
+        border: 1px solid rgba(109, 76, 255, 0.22);
+        background: rgba(109, 76, 255, 0.08);
+        color: var(--plum);
+      }
+
+      @media (max-width: 1180px) {
+        .app,
+        .topbar,
+        .content-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        main {
+          padding: 16px;
+        }
+
+        .toolbar {
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .summary-grid,
+        .kpi-average-grid,
+        .store-card {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hero {
+          border-radius: 23px;
+          padding: 18px;
+        }
+
+        .store-line-head {
+          display: none;
+        }
+
+        .action {
+          grid-column: auto;
+          width: 100%;
+        }
+
+        .checkset {
+          grid-column: auto;
+          justify-self: stretch;
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">HR</div>
+          <div>
+            <strong>LUFIAN</strong>
+            <small>STORE HOME</small>
+          </div>
+        </div>
+        <nav class="nav">
+          <a href="#"><i data-lucide="home"></i>Ana Sayfa</a>
+          <a href="#"><i data-lucide="trophy"></i>Rankings</a>
+          <a class="active" href="#"><i data-lucide="activity"></i>KPI Özetleri</a>
+          <a href="#"><i data-lucide="clipboard-check"></i>Checklist</a>
+          <a href="#"><i data-lucide="check-square"></i>Görevler</a>
+          <a href="#"><i data-lucide="target"></i>Hedefler</a>
+          <a href="#"><i data-lucide="settings"></i>Ayarlar</a>
+        </nav>
+      </aside>
+
+      <main>
+        <div class="shell">
+          <header class="topbar">
+            <section class="hero">
+              <h1>Bölge Performansı</h1>
+              <div class="hero-meta">
+                <span>KPI görünümü</span>
+                <span>8 mağaza</span>
+                <span>Mayıs 2026</span>
+              </div>
+            </section>
+            <div class="toolbar">
+              <button class="chip"><i data-lucide="calendar-days"></i>Mayıs 2026</button>
+              <button class="chip"><i data-lucide="map"></i>Marmara Bölgesi</button>
+              <button class="chip"><i data-lucide="shield-check"></i>BM kapsamı</button>
+            </div>
+          </header>
+
+          <section class="summary-grid">
+            <article class="card">
+              <div class="card-head"><div class="icon"><i data-lucide="gauge"></i></div><span class="badge good">Stabil</span></div>
+              <p class="label">Bölge ortalama skoru</p>
+              <div class="value">82</div>
+              <p class="subline">Tanımlı 8 mağaza üzerinden.</p>
+            </article>
+            <article class="card">
+              <div class="card-head"><div class="icon cyan"><i data-lucide="store"></i></div><span class="badge info">Kapsam</span></div>
+              <p class="label">Kapsam</p>
+              <div class="value">25</div>
+              <p class="subline">Mağaza · 120 personel</p>
+            </article>
+            <article class="card">
+              <div class="card-head"><div class="icon amber"><i data-lucide="activity"></i></div><span class="badge warn">Ortalama</span></div>
+              <p class="label">Bölge KPI değerleri</p>
+              <div class="kpi-average-grid">
+                <div class="kpi-average"><span>HG%</span><strong>%94</strong></div>
+                <div class="kpi-average"><span>UPT</span><strong>2.8</strong></div>
+                <div class="kpi-average"><span>ATV</span><strong>₺1.240</strong></div>
+                <div class="kpi-average"><span>CR</span><strong>%19.5</strong></div>
+              </div>
+            </article>
+          </section>
+
+          <section class="content-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Bölge mağazaları</h2>
+                  <p>Her satır bölge müdürüne tanımlı bir mağazadır. Mağaza dışı kayıtlar burada görünmez.</p>
+                </div>
+                <span class="badge info">8 mağaza</span>
+              </div>
+              <div class="store-line-head">
+                <span><button class="sort-label" type="button" data-sort="name">Mağaza</button></span>
+                <span><button class="sort-label" type="button" data-sort="score">Skor</button></span>
+                <span><button class="sort-label" type="button" data-sort="hg">HG%</button></span>
+                <span><button class="sort-label" type="button" data-sort="upt">UPT</button></span>
+                <span><button class="sort-label" type="button" data-sort="atv">ATV</button></span>
+                <span><button class="sort-label" type="button" data-sort="cr">CR</button></span>
+                <span><button class="sort-label" type="button" data-sort="checklist">Checklist</button></span>
+                <span>Aksiyon</span>
+              </div>
+              <div class="store-list" data-store-list>
+                <article class="store-card" data-name="Bursa Marka Park" data-score="92" data-hg="108" data-upt="3.1" data-atv="1420" data-cr="24" data-checklist="178">
+                  <div class="store-name">
+                    <div class="store-icon"><i data-lucide="store"></i></div>
+                    <div><strong>Bursa Marka Park</strong></div>
+                  </div>
+                  <span class="score-pill">92</span>
+                  <div class="metric-mini"><span>HG%</span><strong>%108</strong></div>
+                  <div class="metric-mini"><span>UPT</span><strong>3.1</strong></div>
+                  <div class="metric-mini"><span>ATV</span><strong>₺1.420</strong></div>
+                  <div class="metric-mini"><span>CR</span><strong>%24</strong></div>
+                  <div class="checkset"><span class="check-chip">BM <b>92</b></span><span class="check-chip">VM <b>86</b></span></div>
+                  <a class="action" href="#" aria-label="Bursa Marka Park KPI sayfasına git"><span>Aç</span><i data-lucide="arrow-right"></i></a>
+                </article>
+
+                <article class="store-card" data-name="İstinyePark Demo Store" data-score="87" data-hg="65" data-upt="2.8" data-atv="1240" data-cr="18.4" data-checklist="90">
+                  <div class="store-name">
+                    <div class="store-icon"><i data-lucide="store"></i></div>
+                    <div><strong>İstinyePark Demo Store</strong></div>
+                  </div>
+                  <span class="score-pill">87</span>
+                  <div class="metric-mini"><span>HG%</span><strong>%65</strong></div>
+                  <div class="metric-mini"><span>UPT</span><strong>2.8</strong></div>
+                  <div class="metric-mini"><span>ATV</span><strong>₺1.240</strong></div>
+                  <div class="metric-mini"><span>CR</span><strong>%18.4</strong></div>
+                  <div class="checkset"><span class="check-chip">BM <b>90</b></span><span class="check-chip passive">VM <b>Pasif</b></span></div>
+                  <a class="action" href="#" aria-label="İstinyePark Demo Store KPI sayfasına git"><span>Aç</span><i data-lucide="arrow-right"></i></a>
+                </article>
+
+                <article class="store-card" data-name="Ankara Forum" data-score="84" data-hg="97" data-upt="2.7" data-atv="1210" data-cr="20.1" data-checklist="165">
+                  <div class="store-name">
+                    <div class="store-icon"><i data-lucide="store"></i></div>
+                    <div><strong>Ankara Forum</strong></div>
+                  </div>
+                  <span class="score-pill">84</span>
+                  <div class="metric-mini"><span>HG%</span><strong>%97</strong></div>
+                  <div class="metric-mini"><span>UPT</span><strong>2.7</strong></div>
+                  <div class="metric-mini"><span>ATV</span><strong>₺1.210</strong></div>
+                  <div class="metric-mini"><span>CR</span><strong>%20.1</strong></div>
+                  <div class="checkset"><span class="check-chip">BM <b>84</b></span><span class="check-chip">VM <b>81</b></span></div>
+                  <a class="action" href="#" aria-label="Ankara Forum KPI sayfasına git"><span>Aç</span><i data-lucide="arrow-right"></i></a>
+                </article>
+
+                <article class="store-card" data-name="İzmir İstinye" data-score="78" data-hg="88" data-upt="2.5" data-atv="1110" data-cr="16" data-checklist="72">
+                  <div class="store-name">
+                    <div class="store-icon"><i data-lucide="store"></i></div>
+                    <div><strong>İzmir İstinye</strong></div>
+                  </div>
+                  <span class="score-pill">78</span>
+                  <div class="metric-mini"><span>HG%</span><strong>%88</strong></div>
+                  <div class="metric-mini"><span>UPT</span><strong>2.5</strong></div>
+                  <div class="metric-mini"><span>ATV</span><strong>₺1.110</strong></div>
+                  <div class="metric-mini"><span>CR</span><strong>%16</strong></div>
+                  <div class="checkset"><span class="check-chip passive">BM <b>Pasif</b></span><span class="check-chip">VM <b>72</b></span></div>
+                  <a class="action" href="#" aria-label="İzmir İstinye KPI sayfasına git"><span>Aç</span><i data-lucide="arrow-right"></i></a>
+                </article>
+
+                <article class="store-card" data-name="Antalya TerraCity" data-score="81" data-hg="92" data-upt="3.0" data-atv="1180" data-cr="19.2" data-checklist="162">
+                  <div class="store-name">
+                    <div class="store-icon"><i data-lucide="store"></i></div>
+                    <div><strong>Antalya TerraCity</strong></div>
+                  </div>
+                  <span class="score-pill">81</span>
+                  <div class="metric-mini"><span>HG%</span><strong>%92</strong></div>
+                  <div class="metric-mini"><span>UPT</span><strong>3.0</strong></div>
+                  <div class="metric-mini"><span>ATV</span><strong>₺1.180</strong></div>
+                  <div class="metric-mini"><span>CR</span><strong>%19.2</strong></div>
+                  <div class="checkset"><span class="check-chip">BM <b>79</b></span><span class="check-chip">VM <b>83</b></span></div>
+                  <a class="action" href="#" aria-label="Antalya TerraCity KPI sayfasına git"><span>Aç</span><i data-lucide="arrow-right"></i></a>
+                </article>
+              </div>
+            </div>
+
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      lucide.createIcons();
+
+      const storeList = document.querySelector("[data-store-list]");
+      const sortButtons = document.querySelectorAll("[data-sort]");
+      const sortState = {
+        key: "score",
+        direction: "desc",
+      };
+      const collator = new Intl.Collator("tr", {
+        sensitivity: "base",
+        numeric: true,
+      });
+
+      const getSortValue = (row, key) => {
+        if (key === "name") {
+          return row.dataset.name || "";
+        }
+
+        return Number(row.dataset[key] || 0);
+      };
+
+      const sortStores = (key, direction) => {
+        const rows = Array.from(storeList.querySelectorAll(".store-card"));
+
+        rows.sort((a, b) => {
+          const left = getSortValue(a, key);
+          const right = getSortValue(b, key);
+          const result = key === "name" ? collator.compare(left, right) : left - right;
+
+          return direction === "asc" ? result : -result;
+        });
+
+        rows.forEach((row) => storeList.appendChild(row));
+      };
+
+      sortButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.sort;
+          const direction =
+            sortState.key === key && sortState.direction === "desc" ? "asc" : "desc";
+
+          sortState.key = key;
+          sortState.direction = direction;
+
+          sortButtons.forEach((item) => {
+            item.classList.remove("is-active");
+            item.removeAttribute("aria-sort");
+          });
+
+          button.classList.add("is-active");
+          button.setAttribute(
+            "aria-sort",
+            direction === "asc" ? "ascending" : "descending",
+          );
+
+          sortStores(key, direction);
+        });
+      });
+    </script>
+  </body>
+</html>

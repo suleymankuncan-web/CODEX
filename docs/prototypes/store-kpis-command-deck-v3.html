@@ -1,0 +1,2095 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Store KPI Command Deck V3</title>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root {
+        --ink: #071331;
+        --muted: #63708d;
+        --quiet: #8a93aa;
+        --line: rgba(99, 112, 141, 0.18);
+        --surface: rgba(255, 255, 255, 0.9);
+        --bg: #eef4fb;
+        --plum: #6d4cff;
+        --plum-soft: #eee8ff;
+        --blue: #2f6dff;
+        --blue-soft: #e8efff;
+        --cyan: #16bdd3;
+        --cyan-soft: #dcfbff;
+        --green: #16a875;
+        --green-soft: #e4f9ef;
+        --amber: #e88512;
+        --amber-soft: #fff2df;
+        --rose: #ed4770;
+        --rose-soft: #ffe6ee;
+        --shadow: 0 22px 70px rgba(27, 46, 83, 0.13);
+        --shadow-soft: 0 12px 38px rgba(27, 46, 83, 0.09);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 11% 2%, rgba(109, 76, 255, 0.16), transparent 34%),
+          radial-gradient(circle at 80% 0%, rgba(22, 189, 211, 0.22), transparent 35%),
+          linear-gradient(180deg, #f8fbff 0%, var(--bg) 100%);
+        color: var(--ink);
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 238px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 18px 14px;
+        border-right: 1px solid rgba(99, 112, 141, 0.14);
+        background: rgba(255, 255, 255, 0.62);
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px 18px;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--plum), var(--cyan));
+        color: white;
+        font-size: 13px;
+        font-weight: 820;
+      }
+
+      .brand strong {
+        display: block;
+        font-size: 13px;
+        letter-spacing: 0.03em;
+      }
+
+      .brand small {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .nav {
+        display: grid;
+        gap: 5px;
+        margin-top: 6px;
+      }
+
+      .nav a {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        min-height: 42px;
+        border-radius: 15px;
+        padding: 0 12px;
+        color: #4e5874;
+        font-size: 13px;
+        font-weight: 680;
+        text-decoration: none;
+      }
+
+      .nav a.active {
+        background: linear-gradient(90deg, rgba(109, 76, 255, 0.16), rgba(22, 189, 211, 0.12));
+        color: var(--plum);
+      }
+
+      .nav i,
+      .button i,
+      .tab i,
+      .chip i {
+        width: 17px;
+        height: 17px;
+      }
+
+      main {
+        min-width: 0;
+        padding: 26px;
+      }
+
+      .shell {
+        max-width: 1500px;
+        margin: 0 auto;
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 18px;
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .hero-title-card {
+        position: relative;
+        display: flex;
+        min-height: 112px;
+        align-items: center;
+        overflow: hidden;
+        border: 1px solid rgba(99, 112, 141, 0.14);
+        border-radius: 30px;
+        background:
+          radial-gradient(circle at 3% 8%, rgba(109, 76, 255, 0.24), transparent 34%),
+          radial-gradient(circle at 82% 4%, rgba(22, 189, 211, 0.28), transparent 36%),
+          linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(242, 249, 255, 0.78));
+        box-shadow: var(--shadow-soft);
+        padding: 22px 24px;
+      }
+
+      .hero-title-card::after {
+        position: absolute;
+        right: -70px;
+        bottom: -92px;
+        width: 260px;
+        height: 260px;
+        border: 1px solid rgba(109, 76, 255, 0.13);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.32);
+        content: "";
+      }
+
+      .title-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .title-icon {
+        display: grid;
+        width: 52px;
+        height: 52px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 18px;
+        background: linear-gradient(135deg, var(--plum), var(--cyan));
+        color: #fff;
+        box-shadow: 0 16px 34px rgba(109, 76, 255, 0.25);
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--plum);
+        font-size: 11px;
+        font-weight: 780;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+      }
+
+      .hero-title-card .eyebrow {
+        margin: 0;
+        color: var(--ink);
+        font-size: clamp(24px, 3vw, 36px);
+        font-weight: 820;
+        letter-spacing: -0.045em;
+        text-transform: none;
+      }
+
+      .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .button,
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.82);
+        color: var(--ink);
+        padding: 0 14px;
+        font-size: 13px;
+        font-weight: 730;
+        text-decoration: none;
+      }
+
+      .button.primary {
+        border: 0;
+        background: linear-gradient(135deg, var(--plum), var(--blue));
+        color: white;
+        box-shadow: 0 14px 30px rgba(109, 76, 255, 0.26);
+      }
+
+      .role-card {
+        margin-top: 18px;
+        border: 1px solid rgba(99, 112, 141, 0.16);
+        border-radius: 30px;
+        background:
+          linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72)),
+          rgba(255, 255, 255, 0.82);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .role-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: start;
+        padding: 22px 24px 18px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .role-head h2 {
+        margin: 0;
+        font-size: 25px;
+        letter-spacing: -0.04em;
+      }
+
+      .role-head p {
+        margin: 7px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: 27px;
+        border-radius: 999px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .badge.info {
+        background: var(--cyan-soft);
+        color: #05798b;
+      }
+
+      .badge.good {
+        background: var(--green-soft);
+        color: #0a7a54;
+      }
+
+      .badge.warn {
+        background: var(--amber-soft);
+        color: #b05b00;
+      }
+
+      .badge.risk {
+        background: var(--rose-soft);
+        color: #c7204d;
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-bottom: 1px solid var(--line);
+        background: rgba(247, 249, 255, 0.7);
+      }
+
+      .tabs.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .tab {
+        display: flex;
+        min-height: 54px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        background: transparent;
+        color: #606b8c;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 780;
+      }
+
+      .tab:last-child {
+        border-right: 0;
+      }
+
+      .tab.active {
+        background: linear-gradient(90deg, rgba(109, 76, 255, 0.13), rgba(22, 189, 211, 0.09));
+        color: var(--plum);
+        box-shadow: inset 0 -2px 0 var(--plum);
+      }
+
+      .tab-panel {
+        display: none;
+        padding: 18px;
+      }
+
+      .tab-panel.active {
+        display: block;
+      }
+
+      .store-grid {
+        display: grid;
+        grid-template-columns: minmax(300px, 0.86fr) minmax(0, 1.14fr);
+        gap: 14px;
+      }
+
+      .metric-radar {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .tile,
+      .panel,
+      .store-row {
+        border: 1px solid var(--line);
+        background: var(--surface);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .tile {
+        min-height: 122px;
+        border-radius: 22px;
+        padding: 15px;
+      }
+
+      .tile-head,
+      .panel-head,
+      .row-main,
+      .person-main {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .icon {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--plum-soft);
+        color: var(--plum);
+      }
+
+      .icon.cyan {
+        background: var(--cyan-soft);
+        color: #0697aa;
+      }
+
+      .icon.blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .icon.amber {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .icon.rose {
+        background: var(--rose-soft);
+        color: var(--rose);
+      }
+
+      .tile .label,
+      .micro-label {
+        margin: 12px 0 0;
+        color: #697494;
+        font-size: 12px;
+        font-weight: 740;
+      }
+
+      .value {
+        margin-top: 5px;
+        font-size: 30px;
+        font-weight: 790;
+        letter-spacing: -0.045em;
+      }
+
+      .value small {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 650;
+        letter-spacing: 0;
+      }
+
+      .subline {
+        margin: 8px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.38;
+      }
+
+      .target-progress {
+        display: grid;
+        gap: 8px;
+        margin-top: 11px;
+      }
+
+      .target-progress-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 720;
+      }
+
+      .target-progress-row strong {
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 780;
+      }
+
+      .target-track {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(224, 229, 242, 0.9);
+        overflow: hidden;
+      }
+
+      .target-fill {
+        display: block;
+        width: 65%;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--plum), var(--cyan));
+      }
+
+      .score-orbit {
+        display: grid;
+        min-height: 264px;
+        align-content: center;
+        justify-items: center;
+        gap: 16px;
+        border-radius: 26px;
+        background:
+          radial-gradient(circle at 50% 22%, rgba(109, 76, 255, 0.1), transparent 42%),
+          linear-gradient(145deg, rgba(255, 255, 255, 0.88), rgba(243, 250, 255, 0.62));
+        padding: 16px;
+      }
+
+      .orbit-ring {
+        position: relative;
+        display: grid;
+        width: 214px;
+        height: 214px;
+        place-items: center;
+        border-radius: 999px;
+        background:
+          conic-gradient(
+            from -22deg,
+            var(--cyan) 0 35%,
+            var(--plum) 35% 55%,
+            var(--amber) 55% 75%,
+            var(--rose) 75% 90%,
+            var(--blue) 90% 95%,
+            var(--green) 95% 100%
+          );
+        box-shadow: 0 20px 46px rgba(109, 76, 255, 0.14);
+        animation: scorePulse 5.8s ease-in-out infinite;
+      }
+
+      .orbit-ring::after {
+        position: absolute;
+        inset: 22px;
+        border-radius: inherit;
+        background: white;
+        content: "";
+      }
+
+      .orbit-core {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+      }
+
+      .orbit-core strong {
+        display: block;
+        font-size: 50px;
+        letter-spacing: -0.06em;
+      }
+
+      .orbit-core span {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 720;
+      }
+
+      .score-legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        width: min(100%, 260px);
+      }
+
+      .score-dot {
+        position: relative;
+        display: inline-flex;
+        width: 22px;
+        height: 22px;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 999px;
+        background: transparent;
+        cursor: pointer;
+      }
+
+      .score-dot::before {
+        width: 11px;
+        height: 11px;
+        border-radius: 999px;
+        background: var(--cyan);
+        box-shadow: 0 0 0 4px rgba(22, 189, 211, 0.12);
+        content: "";
+      }
+
+      .score-dot::after {
+        position: absolute;
+        left: 50%;
+        bottom: calc(100% + 8px);
+        z-index: 5;
+        min-width: max-content;
+        border: 1px solid rgba(99, 112, 141, 0.18);
+        border-radius: 11px;
+        background: rgba(255, 255, 255, 0.96);
+        box-shadow: 0 12px 28px rgba(27, 46, 83, 0.14);
+        color: var(--ink);
+        content: attr(data-label);
+        font-size: 11px;
+        font-weight: 760;
+        opacity: 0;
+        padding: 7px 9px;
+        pointer-events: none;
+        transform: translate(-50%, 4px);
+        transition: opacity 0.15s ease, transform 0.15s ease;
+        white-space: nowrap;
+      }
+
+      .score-dot:hover::after,
+      .score-dot:focus-visible::after,
+      .score-dot.active::after {
+        opacity: 1;
+        transform: translate(-50%, 0);
+      }
+
+      .score-dot.upt::before {
+        background: var(--plum);
+        box-shadow: 0 0 0 4px rgba(109, 76, 255, 0.12);
+      }
+
+      .score-dot.atv::before {
+        background: var(--amber);
+        box-shadow: 0 0 0 4px rgba(232, 133, 18, 0.12);
+      }
+
+      .score-dot.cr::before {
+        background: var(--rose);
+        box-shadow: 0 0 0 4px rgba(237, 71, 112, 0.12);
+      }
+
+      .score-dot.bm::before {
+        background: var(--blue);
+        box-shadow: 0 0 0 4px rgba(47, 109, 255, 0.12);
+      }
+
+      .score-dot.vm::before {
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(22, 168, 117, 0.12);
+      }
+
+      @keyframes scorePulse {
+        0%,
+        100% {
+          transform: scale(1);
+          filter: saturate(1);
+        }
+
+        50% {
+          transform: scale(1.025);
+          filter: saturate(1.08);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .orbit-ring {
+          animation: none;
+        }
+      }
+
+      .panel {
+        border-radius: 24px;
+        overflow: hidden;
+      }
+
+      .panel-head {
+        min-height: 62px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .panel-head h3 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 760;
+        letter-spacing: -0.025em;
+      }
+
+      .panel-head p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .ratio-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 700;
+      }
+
+      .legend-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--green);
+      }
+
+      .legend-dot.warn {
+        background: var(--amber);
+      }
+
+      .legend-dot.risk {
+        background: var(--rose);
+      }
+
+      .score-trend {
+        margin-top: 14px;
+      }
+
+      .chart-shell {
+        position: relative;
+        padding: 18px 18px 14px;
+      }
+
+      .chart-summary {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .year-picker {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+      }
+
+      .year-picker summary {
+        display: inline-flex;
+        min-height: 38px;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 12px 24px rgba(36, 48, 81, 0.08);
+        color: var(--ink);
+        cursor: pointer;
+        list-style: none;
+        padding: 0 13px;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .year-picker summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .year-picker summary i {
+        width: 15px;
+        height: 15px;
+        color: var(--plum);
+      }
+
+      .year-picker-panel {
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 10;
+        display: grid;
+        min-width: 150px;
+        gap: 6px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background:
+          linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 255, 0.94)),
+          white;
+        box-shadow: 0 22px 50px rgba(36, 48, 81, 0.16);
+        padding: 8px;
+      }
+
+      .year-picker-panel button {
+        display: flex;
+        min-height: 34px;
+        align-items: center;
+        justify-content: space-between;
+        border: 0;
+        border-radius: 12px;
+        background: transparent;
+        color: #667194;
+        cursor: pointer;
+        padding: 0 9px;
+        text-align: left;
+        font-size: 12px;
+        font-weight: 720;
+      }
+
+      .year-picker-panel button.active {
+        background: linear-gradient(90deg, rgba(109, 76, 255, 0.12), rgba(22, 189, 211, 0.12));
+        color: var(--plum);
+      }
+
+      .chart-stat {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(244, 250, 255, 0.76));
+        padding: 10px 12px;
+      }
+
+      .chart-stat span {
+        display: block;
+        color: var(--quiet);
+        font-size: 11px;
+        font-weight: 720;
+      }
+
+      .chart-stat strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--ink);
+        font-size: 22px;
+        font-weight: 780;
+        letter-spacing: -0.04em;
+      }
+
+      .score-chart {
+        position: relative;
+        min-height: 284px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background:
+          radial-gradient(circle at 16% 20%, rgba(109, 76, 255, 0.12), transparent 28%),
+          radial-gradient(circle at 88% 18%, rgba(22, 189, 211, 0.14), transparent 30%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 252, 255, 0.78));
+        overflow: hidden;
+      }
+
+      .score-chart svg {
+        display: block;
+        width: 100%;
+        height: 244px;
+      }
+
+      .trend-line {
+        fill: none;
+        stroke: url(#storeScoreLine);
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 5;
+        filter: drop-shadow(0 12px 14px rgba(109, 76, 255, 0.16));
+      }
+
+      .trend-area {
+        fill: url(#storeScoreArea);
+      }
+
+      .chart-grid-line {
+        stroke: rgba(103, 113, 148, 0.16);
+        stroke-dasharray: 5 8;
+      }
+
+      .chart-dot {
+        fill: #fff;
+        stroke: var(--plum);
+        stroke-width: 4;
+      }
+
+      .chart-dot.current {
+        stroke: var(--cyan);
+        filter: drop-shadow(0 0 10px rgba(22, 189, 211, 0.42));
+      }
+
+      .chart-label {
+        fill: #667194;
+        font-size: 11px;
+        font-weight: 720;
+      }
+
+      .chart-value {
+        fill: var(--ink);
+        font-size: 12px;
+        font-weight: 780;
+      }
+
+      table {
+        width: 100%;
+        min-width: 760px;
+        border-collapse: collapse;
+      }
+
+      th {
+        height: 40px;
+        background: rgba(247, 248, 255, 0.76);
+        color: #667194;
+        padding: 0 14px;
+        text-align: left;
+        font-size: 11px;
+        font-weight: 780;
+        letter-spacing: 0.03em;
+      }
+
+      td {
+        border-top: 1px solid var(--line);
+        padding: 10px 14px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      .metric-name,
+      .employee-name,
+      .store-name {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .metric-name strong,
+      .employee-name strong,
+      .store-name strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .metric-name span,
+      .employee-name span,
+      .store-name span {
+        display: block;
+        margin-top: 2px;
+        color: var(--quiet);
+        font-size: 11px;
+      }
+
+      .dot {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 12px;
+        background: var(--plum-soft);
+        color: var(--plum);
+      }
+
+      .number {
+        font-weight: 760;
+        letter-spacing: -0.02em;
+      }
+
+      .score-pill {
+        display: inline-flex;
+        min-width: 56px;
+        min-height: 27px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #fff;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .ratio-line {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 760;
+        white-space: nowrap;
+      }
+
+      .ratio-line::before {
+        width: 7px;
+        height: 7px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--green);
+        content: "";
+      }
+
+      .ratio-line span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 680;
+      }
+
+      .ratio-line.warn::before {
+        background: var(--amber);
+      }
+
+      .ratio-line.risk::before {
+        background: var(--rose);
+      }
+
+      .people-lines {
+        display: grid;
+        gap: 0;
+        padding: 12px 14px;
+      }
+
+      .person-line-head {
+        display: grid;
+        grid-template-columns: minmax(190px, 0.78fr) repeat(5, 54px) 92px minmax(24px, 1fr) 70px;
+        gap: 8px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        color: #667194;
+        padding: 0 0 8px;
+        font-size: 10px;
+        font-weight: 790;
+        letter-spacing: 0.035em;
+      }
+
+      .person-line-head span:nth-child(n + 2) {
+        text-align: center;
+      }
+
+      .person-line-head span:last-child {
+        grid-column: 9;
+      }
+
+      .people-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(284px, 0.38fr);
+        gap: 14px;
+        align-items: start;
+      }
+
+      .person-line {
+        display: grid;
+        grid-template-columns: minmax(190px, 0.78fr) repeat(5, 54px) 92px minmax(24px, 1fr) 70px;
+        gap: 8px;
+        align-items: center;
+        min-height: 52px;
+        border-bottom: 1px solid var(--line);
+        padding: 6px 0;
+      }
+
+      .person-line:last-child {
+        border-bottom: 0;
+      }
+
+      .person-line-value {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 760;
+        letter-spacing: -0.02em;
+        text-align: center;
+      }
+
+      .person-line-value span {
+        display: none;
+      }
+
+      .person-line .profile-link {
+        grid-column: 9;
+      }
+
+      .avatar {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--plum-soft), var(--cyan-soft));
+        color: var(--plum);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .profile-link {
+        display: inline-flex;
+        min-height: 34px;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid rgba(109, 76, 255, 0.24);
+        border-radius: 13px;
+        background: rgba(109, 76, 255, 0.08);
+        color: var(--plum);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 780;
+        text-decoration: none;
+      }
+
+      .profile-link.compact {
+        min-height: 29px;
+        justify-self: end;
+        padding: 0 8px;
+        white-space: nowrap;
+      }
+
+      .contribution-card {
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background:
+          radial-gradient(circle at 50% 0%, rgba(109, 76, 255, 0.14), transparent 38%),
+          linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(245, 251, 255, 0.78));
+        box-shadow: var(--shadow-soft);
+        padding: 15px;
+      }
+
+      .contribution-ring {
+        display: grid;
+        width: 160px;
+        height: 160px;
+        margin: 10px auto 14px;
+        place-items: center;
+        border-radius: 999px;
+        background:
+          conic-gradient(
+            var(--cyan) 0 90%,
+            var(--blue) 90% 95%,
+            var(--green) 95% 100%
+          );
+        box-shadow: 0 18px 38px rgba(109, 76, 255, 0.14);
+      }
+
+      .contribution-ring-inner {
+        display: grid;
+        width: 112px;
+        height: 112px;
+        place-items: center;
+        border-radius: inherit;
+        background: white;
+        text-align: center;
+      }
+
+      .contribution-ring-inner strong {
+        display: block;
+        font-size: 34px;
+        font-weight: 790;
+        letter-spacing: -0.055em;
+      }
+
+      .contribution-ring-inner span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 720;
+      }
+
+      .source-list {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 14px;
+      }
+
+      .source-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        border: 1px solid rgba(224, 229, 242, 0.78);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.7);
+        padding: 8px 9px;
+      }
+
+      .source-name {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .source-name::before {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--cyan);
+        box-shadow: 0 0 0 4px rgba(22, 189, 211, 0.12);
+        content: "";
+      }
+
+      .source-item:nth-child(2) .source-name::before {
+        background: var(--blue);
+        box-shadow: 0 0 0 4px rgba(47, 109, 255, 0.12);
+      }
+
+      .source-item:nth-child(3) .source-name::before {
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(22, 168, 117, 0.12);
+      }
+
+      .source-share {
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 780;
+        letter-spacing: -0.02em;
+      }
+
+      .source-share.muted {
+        color: var(--muted);
+        font-weight: 720;
+      }
+
+      .source-note {
+        border: 1px solid rgba(22, 189, 211, 0.2);
+        border-radius: 14px;
+        background: linear-gradient(90deg, rgba(220, 251, 255, 0.72), rgba(255, 255, 255, 0.7));
+        color: #31516c;
+        margin: -4px 0 14px;
+        padding: 9px 10px;
+        font-size: 11px;
+        font-weight: 690;
+        line-height: 1.42;
+      }
+
+      .redistribution-list {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin: 0;
+      }
+
+      .redistribution-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        border: 1px solid rgba(224, 229, 242, 0.7);
+        border-radius: 13px;
+        background: rgba(255, 255, 255, 0.64);
+        padding: 7px 9px;
+      }
+
+      .redistribution-item span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 730;
+      }
+
+      .redistribution-item strong {
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 790;
+        letter-spacing: -0.02em;
+      }
+
+      .redistribution-panel {
+        border-top: 1px solid var(--line);
+        padding: 12px 14px 14px;
+      }
+
+      .redistribution-panel .source-note {
+        margin: 0 0 10px;
+      }
+
+      .redistribution-panel .contribution-section-title {
+        margin: 0 0 9px;
+      }
+
+      .contribution-section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin: 2px 0 9px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 790;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .contribution-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .contribution-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        border: 1px solid rgba(224, 229, 242, 0.78);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.72);
+        padding: 8px 9px;
+      }
+
+      .contribution-name {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .contribution-name::before {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 auto;
+        border-radius: 999px;
+        background: var(--cyan);
+        box-shadow: 0 0 0 4px rgba(22, 189, 211, 0.12);
+        content: "";
+      }
+
+      .contribution-item:nth-child(2) .contribution-name::before {
+        background: var(--plum);
+        box-shadow: 0 0 0 4px rgba(109, 76, 255, 0.12);
+      }
+
+      .contribution-item:nth-child(3) .contribution-name::before {
+        background: var(--blue);
+        box-shadow: 0 0 0 4px rgba(47, 109, 255, 0.12);
+      }
+
+      .contribution-item:nth-child(4) .contribution-name::before {
+        background: var(--amber);
+        box-shadow: 0 0 0 4px rgba(232, 133, 18, 0.12);
+      }
+
+      .contribution-item:nth-child(5) .contribution-name::before {
+        background: var(--rose);
+        box-shadow: 0 0 0 4px rgba(237, 71, 112, 0.12);
+      }
+
+      .contribution-name strong {
+        display: block;
+        overflow: hidden;
+        color: var(--ink);
+        font-size: 12px;
+        font-weight: 750;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .contribution-name span {
+        display: none;
+      }
+
+      .contribution-share {
+        color: var(--ink);
+        font-size: 13px;
+        font-weight: 780;
+        letter-spacing: -0.02em;
+      }
+
+      .region-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 0.86fr) minmax(360px, 1.14fr);
+        gap: 14px;
+      }
+
+      .store-stack {
+        display: grid;
+        gap: 8px;
+      }
+
+      .store-row {
+        border-radius: 18px;
+        padding: 11px;
+      }
+
+      .store-row.active {
+        border-color: rgba(109, 76, 255, 0.35);
+        background:
+          linear-gradient(90deg, rgba(109, 76, 255, 0.1), rgba(22, 189, 211, 0.06)),
+          white;
+      }
+
+      .store-metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 7px;
+        margin-top: 10px;
+      }
+
+      .store-metrics span {
+        display: block;
+        min-height: 42px;
+        border: 1px solid var(--line);
+        border-radius: 13px;
+        background: rgba(247, 249, 255, 0.72);
+        padding: 7px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 730;
+      }
+
+      .store-metrics strong {
+        display: block;
+        margin-top: 2px;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .people-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .person-card {
+        display: grid;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.86);
+        padding: 13px;
+      }
+
+      .kpi-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .kpi-mini {
+        min-height: 56px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(247, 249, 255, 0.72);
+        padding: 8px;
+      }
+
+      .kpi-mini strong {
+        display: block;
+        font-size: 14px;
+        letter-spacing: -0.02em;
+      }
+
+      .kpi-mini span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 720;
+      }
+
+      .detail-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+        background:
+          radial-gradient(circle at 0% 0%, rgba(109, 76, 255, 0.1), transparent 35%),
+          rgba(255, 255, 255, 0.76);
+      }
+
+      .detail-head h3 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: -0.035em;
+      }
+
+      .detail-head p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        padding: 14px 16px;
+      }
+
+      .detail-grid .tile {
+        min-height: 94px;
+        padding: 12px;
+      }
+
+      .person-table {
+        padding: 0 16px 16px;
+      }
+
+      .notice {
+        margin-top: 14px;
+        border: 1px solid rgba(22, 189, 211, 0.22);
+        border-radius: 20px;
+        background:
+          linear-gradient(90deg, rgba(220, 251, 255, 0.72), rgba(255, 255, 255, 0.82)),
+          white;
+        padding: 13px 15px;
+        color: #234260;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 1180px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          display: none;
+        }
+
+        main {
+          padding: 16px;
+        }
+
+        .topbar,
+        .role-head,
+        .store-grid,
+        .people-workspace,
+        .region-layout {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar,
+        .pill-row {
+          justify-content: flex-start;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .role-card {
+          border-radius: 22px;
+        }
+
+        .panel-head {
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .hero-title-card {
+          min-height: 96px;
+          border-radius: 22px;
+          padding: 18px;
+        }
+
+        .title-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 15px;
+        }
+
+        .role-head,
+        .tab-panel {
+          padding: 14px;
+        }
+
+        .metric-radar,
+        .chart-summary,
+        .detail-grid,
+        .people-workspace,
+        .redistribution-list,
+        .people-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .tabs,
+        .tabs.three {
+          grid-template-columns: 1fr;
+        }
+
+        .store-metrics,
+        .kpi-strip {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .score-orbit {
+          min-height: 236px;
+        }
+
+        .orbit-ring {
+          width: 178px;
+          height: 178px;
+        }
+
+        .orbit-ring::after {
+          inset: 18px;
+        }
+
+        .orbit-core strong {
+          font-size: 43px;
+        }
+
+        .person-line {
+          grid-template-columns: minmax(0, 1fr) repeat(5, auto);
+          row-gap: 7px;
+        }
+
+        .person-line-head {
+          display: none;
+        }
+
+        .person-line .badge,
+        .person-line .profile-link {
+          grid-column: span 2;
+          justify-self: stretch;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">HR</div>
+          <div>
+            <strong>LUFIAN</strong>
+            <small>STORE HOME</small>
+          </div>
+        </div>
+        <nav class="nav">
+          <a href="#"><i data-lucide="home"></i>Ana Sayfa</a>
+          <a href="#"><i data-lucide="trophy"></i>Rankings</a>
+          <a class="active" href="#"><i data-lucide="activity"></i>KPI Özetleri</a>
+          <a href="#"><i data-lucide="clipboard-check"></i>Checklist</a>
+          <a href="#"><i data-lucide="check-square"></i>Görevler</a>
+          <a href="#"><i data-lucide="target"></i>Hedefler</a>
+          <a href="#"><i data-lucide="settings"></i>Ayarlar</a>
+        </nav>
+      </aside>
+
+      <main>
+        <div class="shell">
+          <header class="topbar">
+            <div class="hero-title-card">
+              <div class="title-content">
+                <div class="title-icon"><i data-lucide="activity"></i></div>
+                <div>
+                  <p class="eyebrow">Store KPI</p>
+                </div>
+              </div>
+            </div>
+            <div class="toolbar">
+              <button class="chip"><i data-lucide="calendar-days"></i>Mayıs 2026</button>
+              <button class="chip"><i data-lucide="map"></i>Marmara Bölgesi</button>
+              <button class="button primary"><i data-lucide="refresh-cw"></i>Veriyi yenile</button>
+            </div>
+          </header>
+
+          <section class="role-card">
+            <div class="role-head">
+              <div>
+                <p class="eyebrow">Mağaza Müdürü</p>
+                <h2>İstinyePark KPI çalışma alanı</h2>
+                <p>Mağaza müdürü kendi mağaza skorunu ve mağazadaki personel KPI performansını sekme içinde yönetir.</p>
+              </div>
+              <div class="pill-row">
+                <span class="badge info">Kendi mağaza kapsamı</span>
+                <span class="badge good">6 mağaza KPI</span>
+                <span class="badge warn">5 personel</span>
+              </div>
+            </div>
+
+            <div class="tabs" data-tabs="store-manager">
+              <button class="tab active" data-target="sm-store"><i data-lucide="store"></i>Mağaza KPI</button>
+              <button class="tab" data-target="sm-people"><i data-lucide="users"></i>Personel KPI</button>
+            </div>
+
+            <div id="sm-store" class="tab-panel active" data-panel="store-manager">
+              <div class="store-grid">
+                <div class="panel score-orbit">
+                  <div class="orbit-ring">
+                    <div class="orbit-core">
+                      <strong>87</strong>
+                      <span>Mağaza skoru</span>
+                    </div>
+                  </div>
+                  <div class="score-legend" aria-label="Mağaza skoru KPI renkleri">
+                    <button class="score-dot" type="button" data-label="Hedef gerçekleşme · 22.8 puan" aria-label="Hedef gerçekleşme 22.8 puan"></button>
+                    <button class="score-dot upt" type="button" data-label="UPT · 21.6 puan" aria-label="UPT 21.6 puan"></button>
+                    <button class="score-dot atv" type="button" data-label="ATV · 18.2 puan" aria-label="ATV 18.2 puan"></button>
+                    <button class="score-dot cr" type="button" data-label="CR · 13.2 puan" aria-label="CR 13.2 puan"></button>
+                    <button class="score-dot bm" type="button" data-label="BM Checklist · 4.6 puan" aria-label="BM Checklist 4.6 puan"></button>
+                    <button class="score-dot vm" type="button" data-label="VM Checklist · pasif" aria-label="VM Checklist pasif"></button>
+                  </div>
+                </div>
+
+                <div class="metric-radar">
+                  <article class="tile">
+                    <div class="tile-head"><div class="icon cyan"><i data-lucide="target"></i></div><span class="badge warn">%65</span></div>
+                    <p class="label">Hedef gerçekleşme</p>
+                    <div class="value">₺184K</div>
+                    <div class="target-progress" aria-label="Hedef gerçekleşme ilerleme durumu">
+                      <div class="target-progress-row"><span>Mevcut hedef</span><strong>₺284K</strong></div>
+                      <div class="target-track"><span class="target-fill"></span></div>
+                      <div class="target-progress-row"><span>Anlık net satış</span><strong>₺184K</strong></div>
+                    </div>
+                    <p class="subline">Hedefin %65'i gerçekleşti.</p>
+                  </article>
+                  <article class="tile">
+                    <div class="tile-head"><div class="icon blue"><i data-lucide="package-plus"></i></div><span class="badge good">Güçlü</span></div>
+                    <p class="label">UPT</p>
+                    <div class="value">2.8</div>
+                    <p class="subline">Türkiye referansı 2.6.</p>
+                  </article>
+                  <article class="tile">
+                    <div class="tile-head"><div class="icon amber"><i data-lucide="receipt"></i></div><span class="badge warn">Takipte</span></div>
+                    <p class="label">ATV</p>
+                    <div class="value">₺1.240</div>
+                    <p class="subline">Referans ₺1.365.</p>
+                  </article>
+                  <article class="tile">
+                    <div class="tile-head"><div class="icon rose"><i data-lucide="mouse-pointer-click"></i></div><span class="badge warn">Takipte</span></div>
+                    <p class="label">CR</p>
+                    <div class="value">%18.4</div>
+                    <p class="subline">Referans %21.0.</p>
+                  </article>
+                  <article class="tile">
+                    <div class="tile-head"><div class="icon"><i data-lucide="clipboard-check"></i></div><span class="badge good">BM</span></div>
+                    <p class="label">BM Checklist</p>
+                    <div class="value">92 <small>/ 100</small></div>
+                    <p class="subline">Bölge müdürü checklist skoru.</p>
+                  </article>
+                  <article class="tile">
+                    <div class="tile-head"><div class="icon rose"><i data-lucide="clipboard-x"></i></div><span class="badge warn">VM</span></div>
+                    <p class="label">VM Checklist</p>
+                    <div class="value">Yok</div>
+                    <p class="subline">Yapılmadığında skor mevcut KPI'lardan hesaplanır.</p>
+                  </article>
+                </div>
+              </div>
+
+              <div class="panel" style="margin-top: 14px">
+                <div class="panel-head">
+                  <div>
+                    <h3>Mağaza KPI katkı kırılımı</h3>
+                    <p>Mağaza KPI'ları KPI config ağırlığı ve referansla birlikte okunur.</p>
+                    <div class="ratio-legend" aria-label="Oran renk açıklaması">
+                      <span class="legend-item"><span class="legend-dot"></span>İyi / hedef üstü</span>
+                      <span class="legend-item"><span class="legend-dot warn"></span>Takip gerekli</span>
+                      <span class="legend-item"><span class="legend-dot risk"></span>Problem / yapılmadı</span>
+                    </div>
+                  </div>
+                  <span class="badge info">Mağaza KPI</span>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>KPI</th>
+                        <th>Gerçekleşen</th>
+                        <th>Referans</th>
+                        <th>Oran</th>
+                        <th>Ağırlık</th>
+                        <th>Katkı</th>
+                        <th>Durum</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="metric-name"><div class="dot"><i data-lucide="target"></i></div><div><strong>Hedef gerçekleşme</strong><span>Mağaza hedefi</span></div></div></td>
+                        <td class="number">₺184.200</td>
+                        <td>₺284.000</td>
+                        <td><div class="ratio-line warn">65% <span>Takip</span></div></td>
+                        <td><span class="score-pill">35%</span></td>
+                        <td class="number">22.8</td>
+                        <td><span class="badge warn">Takipte</span></td>
+                      </tr>
+                      <tr>
+                        <td><div class="metric-name"><div class="dot"><i data-lucide="package-plus"></i></div><div><strong>UPT</strong><span>Ürün adedi</span></div></div></td>
+                        <td class="number">2.8</td>
+                        <td>2.6</td>
+                        <td><div class="ratio-line">108% <span>Güçlü</span></div></td>
+                        <td><span class="score-pill">20%</span></td>
+                        <td class="number">21.6</td>
+                        <td><span class="badge good">Skorlandı</span></td>
+                      </tr>
+                      <tr>
+                        <td><div class="metric-name"><div class="dot"><i data-lucide="receipt"></i></div><div><strong>ATV</strong><span>Ortalama sepet</span></div></div></td>
+                        <td class="number">₺1.240</td>
+                        <td>₺1.365</td>
+                        <td><div class="ratio-line warn">91% <span>Takip</span></div></td>
+                        <td><span class="score-pill">20%</span></td>
+                        <td class="number">18.2</td>
+                        <td><span class="badge warn">Aksiyon adayı</span></td>
+                      </tr>
+                      <tr>
+                        <td><div class="metric-name"><div class="dot"><i data-lucide="mouse-pointer-click"></i></div><div><strong>CR</strong><span>Dönüşüm oranı</span></div></div></td>
+                        <td class="number">%18.4</td>
+                        <td>%21.0</td>
+                        <td><div class="ratio-line warn">88% <span>Takip</span></div></td>
+                        <td><span class="score-pill">15%</span></td>
+                        <td class="number">13.2</td>
+                        <td><span class="badge warn">Aksiyon adayı</span></td>
+                      </tr>
+                      <tr>
+                        <td><div class="metric-name"><div class="dot"><i data-lucide="clipboard-check"></i></div><div><strong>BM Checklist</strong><span>Bölge müdürü ziyaret skoru</span></div></div></td>
+                        <td class="number">92</td>
+                        <td>100</td>
+                        <td><div class="ratio-line">92% <span>Skorlu</span></div></td>
+                        <td><span class="score-pill">5%</span></td>
+                        <td class="number">4.6</td>
+                        <td><span class="badge good">Skorlandı</span></td>
+                      </tr>
+                      <tr>
+                        <td><div class="metric-name"><div class="dot"><i data-lucide="clipboard-x"></i></div><div><strong>VM Checklist</strong><span>VM ziyaret skoru</span></div></div></td>
+                        <td class="number">Yok</td>
+                        <td>100</td>
+                        <td><div class="ratio-line risk">Yapılmadı</div></td>
+                        <td><span class="score-pill">Pasif</span></td>
+                        <td class="number">Dağıtıldı</td>
+                        <td><span class="badge warn">Mevcut KPI'lardan hesaplandı</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="panel score-trend">
+                <div class="panel-head">
+                  <div>
+                    <h3>Aylık mağaza skor trendi</h3>
+                    <p>Seçili yıl içindeki aylık mağaza skorları görünür; veri olmayan aylar boş kalır.</p>
+                  </div>
+                  <details class="year-picker">
+                    <summary><i data-lucide="calendar-days"></i>2026</summary>
+                    <div class="year-picker-panel" aria-label="Skor trendi yıl seçimi">
+                      <button class="active" type="button">2026 <span>Bu yıl</span></button>
+                      <button type="button">2025</button>
+                      <button type="button">2024</button>
+                    </div>
+                  </details>
+                </div>
+                <div class="chart-shell">
+                  <div class="chart-summary">
+                    <div class="chart-stat">
+                      <span>2026 son skor</span>
+                      <strong>87</strong>
+                    </div>
+                    <div class="chart-stat">
+                      <span>2026 en yüksek</span>
+                      <strong>90</strong>
+                    </div>
+                    <div class="chart-stat">
+                      <span>2026 ort.</span>
+                      <strong>82.4</strong>
+                    </div>
+                  </div>
+                  <div class="score-chart" aria-label="Ay ay mağaza skoru grafiği">
+                    <svg viewBox="0 0 960 244" role="img" aria-labelledby="store-score-chart-title">
+                      <title id="store-score-chart-title">Ocak ayından Aralık ayına mağaza skor trendi</title>
+                      <defs>
+                        <linearGradient id="storeScoreLine" x1="82" y1="0" x2="886" y2="0" gradientUnits="userSpaceOnUse">
+                          <stop offset="0" stop-color="#6d4cff" />
+                          <stop offset="0.48" stop-color="#3d73f6" />
+                          <stop offset="1" stop-color="#16bdd3" />
+                        </linearGradient>
+                        <linearGradient id="storeScoreArea" x1="0" y1="48" x2="0" y2="214" gradientUnits="userSpaceOnUse">
+                          <stop offset="0" stop-color="#6d4cff" stop-opacity="0.18" />
+                          <stop offset="0.58" stop-color="#16bdd3" stop-opacity="0.09" />
+                          <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+                        </linearGradient>
+                      </defs>
+                      <line class="chart-grid-line" x1="64" y1="46" x2="900" y2="46" />
+                      <line class="chart-grid-line" x1="64" y1="92" x2="900" y2="92" />
+                      <line class="chart-grid-line" x1="64" y1="138" x2="900" y2="138" />
+                      <line class="chart-grid-line" x1="64" y1="184" x2="900" y2="184" />
+                      <text class="chart-label" x="24" y="50">95</text>
+                      <text class="chart-label" x="24" y="96">85</text>
+                      <text class="chart-label" x="24" y="142">75</text>
+                      <text class="chart-label" x="24" y="188">65</text>
+                      <path class="trend-area" d="M82 150 C112 134 130 118 154 120 C184 122 202 98 226 98 C260 98 272 146 298 142 C330 136 342 84 370 82 C402 80 416 114 442 112 C474 110 488 70 514 68 C544 66 558 96 586 96 C618 94 632 48 658 46 C690 44 704 76 730 72 C764 68 778 104 802 100 C836 96 850 64 874 60 L874 214 L82 214 Z" />
+                      <path class="trend-line" d="M82 150 C112 134 130 118 154 120 C184 122 202 98 226 98 C260 98 272 146 298 142 C330 136 342 84 370 82 C402 80 416 114 442 112 C474 110 488 70 514 68 C544 66 558 96 586 96 C618 94 632 48 658 46 C690 44 704 76 730 72 C764 68 778 104 802 100 C836 96 850 64 874 60" />
+                      <g>
+                        <circle class="chart-dot" cx="82" cy="150" r="7" />
+                        <text class="chart-value" x="76" y="136">70</text>
+                        <text class="chart-label" x="69" y="230">Oca</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="154" cy="120" r="7" />
+                        <text class="chart-value" x="142" y="106">77</text>
+                        <text class="chart-label" x="141" y="230">Şub</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="226" cy="98" r="7" />
+                        <text class="chart-value" x="214" y="84">82</text>
+                        <text class="chart-label" x="215" y="230">Mar</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="298" cy="142" r="7" />
+                        <text class="chart-value" x="286" y="128">72</text>
+                        <text class="chart-label" x="288" y="230">Nis</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot current" cx="370" cy="82" r="8" />
+                        <text class="chart-value" x="358" y="68">87</text>
+                        <text class="chart-label" x="359" y="230">May</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="442" cy="112" r="7" />
+                        <text class="chart-value" x="430" y="98">80</text>
+                        <text class="chart-label" x="432" y="230">Haz</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="514" cy="68" r="7" />
+                        <text class="chart-value" x="502" y="54">90</text>
+                        <text class="chart-label" x="504" y="230">Tem</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="586" cy="96" r="7" />
+                        <text class="chart-value" x="574" y="82">84</text>
+                        <text class="chart-label" x="576" y="230">Ağu</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="658" cy="46" r="7" />
+                        <text class="chart-value" x="646" y="32">91</text>
+                        <text class="chart-label" x="648" y="230">Eyl</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="730" cy="72" r="7" />
+                        <text class="chart-value" x="718" y="58">88</text>
+                        <text class="chart-label" x="720" y="230">Eki</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="802" cy="100" r="7" />
+                        <text class="chart-value" x="790" y="86">81</text>
+                        <text class="chart-label" x="791" y="230">Kas</text>
+                      </g>
+                      <g>
+                        <circle class="chart-dot" cx="874" cy="60" r="7" />
+                        <text class="chart-value" x="862" y="46">89</text>
+                        <text class="chart-label" x="863" y="230">Ara</text>
+                      </g>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="sm-people" class="tab-panel" data-panel="store-manager">
+              <div class="people-workspace">
+                <div class="panel">
+                  <div class="panel-head">
+                    <div>
+                      <h3>Personel KPI</h3>
+                      <p>Personel bazlı skor, UPT ve ATV değerleri tek satırda okunur.</p>
+                    </div>
+                    <span class="badge info">6 kişi</span>
+                  </div>
+                  <div class="people-lines">
+                    <div class="person-line-head" aria-hidden="true">
+                      <span>Personel</span>
+                      <span>Skor</span>
+                      <span>Katkı</span>
+                      <span>UPT</span>
+                      <span>ATV</span>
+                      <span>HG%</span>
+                      <span>Durum</span>
+                      <span>Aksiyon</span>
+                    </div>
+                    <div class="person-line">
+                      <div class="employee-name"><div class="avatar">SP</div><div><strong>Store Personnel</strong><span>FM8001 · Satış uzmanı</span></div></div>
+                      <div class="person-line-value">91<span>Skor</span></div>
+                      <div class="person-line-value">18.6<span>Katkı</span></div>
+                      <div class="person-line-value">3.1<span>UPT</span></div>
+                      <div class="person-line-value">₺1.420<span>ATV</span></div>
+                      <div class="person-line-value">%108<span>HG%</span></div>
+                      <span class="badge good">Güçlü</span>
+                      <a class="profile-link compact" href="#">Profil <i data-lucide="arrow-right"></i></a>
+                    </div>
+                    <div class="person-line">
+                      <div class="employee-name"><div class="avatar">AY</div><div><strong>Ayşe Yılmaz</strong><span>FM8101 · Satış uzmanı</span></div></div>
+                      <div class="person-line-value">84<span>Skor</span></div>
+                      <div class="person-line-value">17.2<span>Katkı</span></div>
+                      <div class="person-line-value">2.6<span>UPT</span></div>
+                      <div class="person-line-value">₺1.180<span>ATV</span></div>
+                      <div class="person-line-value">%96<span>HG%</span></div>
+                      <span class="badge warn">ATV takipte</span>
+                      <a class="profile-link compact" href="#">Profil <i data-lucide="arrow-right"></i></a>
+                    </div>
+                    <div class="person-line">
+                      <div class="employee-name"><div class="avatar">MK</div><div><strong>Mert Kaya</strong><span>FM8104 · Kasa / satış</span></div></div>
+                      <div class="person-line-value">82<span>Skor</span></div>
+                      <div class="person-line-value">16.8<span>Katkı</span></div>
+                      <div class="person-line-value">2.5<span>UPT</span></div>
+                      <div class="person-line-value">₺1.210<span>ATV</span></div>
+                      <div class="person-line-value">%101<span>HG%</span></div>
+                      <span class="badge good">Stabil</span>
+                      <a class="profile-link compact" href="#">Profil <i data-lucide="arrow-right"></i></a>
+                    </div>
+                    <div class="person-line">
+                      <div class="employee-name"><div class="avatar">SK</div><div><strong>Seda Kurt</strong><span>FM8105 · Satış uzmanı</span></div></div>
+                      <div class="person-line-value">80<span>Skor</span></div>
+                      <div class="person-line-value">16.4<span>Katkı</span></div>
+                      <div class="person-line-value">2.3<span>UPT</span></div>
+                      <div class="person-line-value">₺1.260<span>ATV</span></div>
+                      <div class="person-line-value">%92<span>HG%</span></div>
+                      <span class="badge warn">UPT takipte</span>
+                      <a class="profile-link compact" href="#">Profil <i data-lucide="arrow-right"></i></a>
+                    </div>
+                    <div class="person-line">
+                      <div class="employee-name"><div class="avatar">DA</div><div><strong>Deniz Arslan</strong><span>FM8102 · Satış uzmanı</span></div></div>
+                      <div class="person-line-value">78<span>Skor</span></div>
+                      <div class="person-line-value">16.0<span>Katkı</span></div>
+                      <div class="person-line-value">2.2<span>UPT</span></div>
+                      <div class="person-line-value">₺1.060<span>ATV</span></div>
+                      <div class="person-line-value">%88<span>HG%</span></div>
+                      <span class="badge risk">Geride</span>
+                      <a class="profile-link compact" href="#">Profil <i data-lucide="arrow-right"></i></a>
+                    </div>
+                    <div class="person-line">
+                      <div class="employee-name"><div class="avatar">ED</div><div><strong>Ece Demir</strong><span>FM8103 · Satış uzmanı</span></div></div>
+                      <div class="person-line-value">73<span>Skor</span></div>
+                      <div class="person-line-value">15.0<span>Katkı</span></div>
+                      <div class="person-line-value">2.1<span>UPT</span></div>
+                      <div class="person-line-value">₺980<span>ATV</span></div>
+                      <div class="person-line-value">%81<span>HG%</span></div>
+                      <span class="badge risk">Kritik</span>
+                      <a class="profile-link compact" href="#">Profil <i data-lucide="arrow-right"></i></a>
+                    </div>
+                  </div>
+                  <div class="redistribution-panel">
+                    <div class="source-note">
+                      Checklist yapılmadığında pasif ağırlık HG%, ATV, UPT ve CR gibi aktif KPI'lara oranlı dağıtılır; başka checklist ağırlığına taşınmaz.
+                    </div>
+                    <div class="contribution-section-title">
+                      <span>Pasif ağırlık dağılımı</span>
+                      <span>Pasif checklist %5</span>
+                    </div>
+                    <div class="redistribution-list">
+                      <div class="redistribution-item"><span>HG%</span><strong>+%1.94</strong></div>
+                      <div class="redistribution-item"><span>ATV</span><strong>+%1.11</strong></div>
+                      <div class="redistribution-item"><span>UPT</span><strong>+%1.11</strong></div>
+                      <div class="redistribution-item"><span>CR</span><strong>+%0.83</strong></div>
+                    </div>
+                  </div>
+                </div>
+                <aside class="contribution-card">
+                  <div class="panel-head" style="padding: 0 0 12px; border-bottom: 0; min-height: auto">
+                    <div>
+                      <h3>Skor kaynakları</h3>
+                      <p>Mağaza skoru ve personel KPI iç dağılımı ayrı okunur.</p>
+                    </div>
+                  </div>
+                  <div class="contribution-ring" aria-label="Mağaza skor kaynakları">
+                    <div class="contribution-ring-inner">
+                      <div>
+                        <strong>87</strong>
+                        <span>Mağaza skoru</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="source-list">
+                    <div class="source-item">
+                      <div class="source-name">Personel KPI</div>
+                      <div class="source-share">81 puan</div>
+                    </div>
+                    <div class="source-item">
+                      <div class="source-name">BM Checklist</div>
+                      <div class="source-share">4 puan</div>
+                    </div>
+                    <div class="source-item">
+                      <div class="source-name">VM Checklist</div>
+                      <div class="source-share muted">Pasif</div>
+                    </div>
+                  </div>
+                </aside>
+              </div>
+            </div>
+          </section>
+
+        </div>
+      </main>
+    </div>
+
+    <script>
+      lucide.createIcons();
+
+      document.querySelectorAll("[data-tabs]").forEach((group) => {
+        const key = group.dataset.tabs;
+        group.querySelectorAll(".tab").forEach((tab) => {
+          tab.addEventListener("click", () => {
+            group.querySelectorAll(".tab").forEach((item) => item.classList.remove("active"));
+            tab.classList.add("active");
+            document.querySelectorAll(`[data-panel="${key}"]`).forEach((panel) => panel.classList.remove("active"));
+            document.getElementById(tab.dataset.target).classList.add("active");
+          });
+        });
+      });
+
+      document.querySelectorAll(".score-dot").forEach((dot) => {
+        dot.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const isActive = dot.classList.contains("active");
+          document.querySelectorAll(".score-dot.active").forEach((item) => item.classList.remove("active"));
+          if (!isActive) dot.classList.add("active");
+        });
+      });
+
+      document.addEventListener("click", () => {
+        document.querySelectorAll(".score-dot.active").forEach((item) => item.classList.remove("active"));
+      });
+    </script>
+  </body>
+</html>
