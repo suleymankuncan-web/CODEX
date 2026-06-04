@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Button } from '../components/ui/button'
-import { getRankings, type PersonnelRankingRow } from '../features/reports/api'
+import { getRankings, type PersonnelRankingRow, type RankingMetricValue } from '../features/reports/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   formatAchievementValue,
@@ -426,7 +426,7 @@ function PersonnelRow({ model, row }: { model: StoreKpiHighlightsPageModel; row:
       <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{formatNumber(model.locale, row.metrics?.reduce((sum, metric) => sum + Number(metric.contributionValue ?? 0), 0) ?? 0, 1)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatRankingMetric(model.locale, getMetric('UPT')?.actualValue)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatCurrency(model.locale, getMetric('ATV')?.actualValue)}</td>
-      <td className="tw:px-4 tw:py-3 tw:text-sm">{target?.actualValue !== undefined && target?.actualValue !== null ? `${formatNumber(model.locale, Number(target.actualValue) * 100, 0)}%` : model.t('storeKpis.noData')}</td>
+      <td className="tw:px-4 tw:py-3 tw:text-sm">{formatPersonnelTargetAchievement(model, target)}</td>
       <td className="tw:px-4 tw:py-3"><StatusPill tone={statusTone} label={statusTone === 'good' ? model.t('storeKpis.commandStrong') : statusTone === 'warn' ? model.t('storeKpis.commandWatch') : model.t('storeKpis.commandBehind')} /></td>
       <td className="tw:px-4 tw:py-3">{row.canOpenProfile && employeeId ? <Link className="tw:inline-flex tw:h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-[#b8a7ff] tw:px-3 tw:text-sm tw:font-semibold tw:text-[#6d4df7]" to={profilePath}>{model.t('storeKpis.commandProfile')}<ArrowRight className="tw:size-4" /></Link> : <span className="tw:text-sm tw:text-[#65708d]">{model.t('storeKpis.noData')}</span>}</td>
     </tr>
@@ -527,6 +527,26 @@ function formatCurrency(locale: string, input: unknown) {
 function formatRankingMetric(locale: string, input: unknown) {
   const value = Number(input)
   return Number.isFinite(value) ? formatNumber(locale, value, 1) : '-'
+}
+
+function formatPersonnelTargetAchievement(
+  model: StoreKpiHighlightsPageModel,
+  metric: RankingMetricValue | undefined,
+) {
+  const actualValue = toFiniteNumber(metric?.actualValue)
+  if (actualValue === null) return model.t('storeKpis.noData')
+
+  const targetValue = toFiniteNumber(metric?.targetValue) ?? toFiniteNumber(metric?.benchmarkValue)
+  const ratio = targetValue !== null && targetValue !== 0
+    ? actualValue / Math.abs(targetValue)
+    : actualValue
+
+  return `${formatNumber(model.locale, ratio * 100, 0)}%`
+}
+
+function toFiniteNumber(input: unknown) {
+  const value = Number(input)
+  return Number.isFinite(value) ? value : null
 }
 
 function formatMonthLabel(input: string, locale: string) {

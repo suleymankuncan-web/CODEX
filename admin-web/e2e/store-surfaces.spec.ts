@@ -441,6 +441,7 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await page.getByRole('button', { name: 'Personel KPI' }).click()
 
   await expect(page.getByRole('heading', { name: 'Personel KPI' })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toContainText('371%')
   await expect(page.getByText(/Skor kayna/)).toBeVisible()
   await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
   await expect(page.getByText('Store KPI Highlights')).toHaveCount(0)
@@ -4476,6 +4477,20 @@ const personnelRankingDetailRow = {
   ],
 }
 
+const personnelRankingRawTargetRow = {
+  ...personnelRankingDetailRow,
+  metrics: personnelRankingDetailRow.metrics.map((metric) =>
+    metric.code === 'TARGET_ACHIEVEMENT'
+      ? {
+          ...metric,
+          actualValue: 3710884.57,
+          targetValue: 1000000,
+          benchmarkValue: 1000000,
+        }
+      : metric,
+  ),
+}
+
 const regionManagerInScopePersonnelRow = {
   ...personnelRankingDetailRow,
   employeeId: demoEmployeeId,
@@ -4793,7 +4808,7 @@ const rankingsFixture = {
     },
   },
   personnelLeaderboard: {
-    items: [personnelRankingSummaryRow],
+    items: [personnelRankingRawTargetRow],
     currentEmployee: {
       ...personnelRankingSummaryRow,
       visibility: 'detail',
