@@ -65,7 +65,7 @@ const adminOperationsRoles = ['SUPER_ADMIN']
 const adminDataQualityRoles = ['SUPER_ADMIN']
 const adminTargetRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
-const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER']
+const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER', 'REGION_MANAGER']
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']
 const routePrefetchStaleTimeMs = 30_000
@@ -212,6 +212,14 @@ function getStoreMePrefetchTasks(authSummary: AuthSessionSummary | null): Prefet
 
 function getStoreKpiPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
   const reportingAllowed = hasAnyRole(authSummary, storeReportingRoles)
+  const hasRegionManagerRole = hasAnyRole(authSummary, ['REGION_MANAGER'])
+  const hasStoreDetailDefault = hasAnyRole(authSummary, [
+    'SUPER_ADMIN',
+    'REPORT_VIEWER',
+    'AUDITOR',
+    'STORE_MANAGER',
+  ])
+
   return [
     {
       queryKey: ['store-kpi-config'],
@@ -224,7 +232,20 @@ function getStoreKpiPrefetchTasks(authSummary: AuthSessionSummary | null): Prefe
         getStoreKpiHighlights({
           periodType: 'monthly',
         }),
-      enabled: reportingAllowed,
+      enabled: reportingAllowed && (!hasRegionManagerRole || hasStoreDetailDefault),
+    },
+    {
+      queryKey: ['store-kpis-region-overview', 'monthly', '', 'score', 'desc', authSummary?.user.userId ?? '', 0],
+      queryFn: () =>
+        getRankings({
+          periodType: 'monthly',
+          ...(authSummary?.user.userId ? { regionManagerUserId: authSummary.user.userId } : {}),
+          sortKey: 'score',
+          sortDirection: 'desc',
+          limit: 100,
+          offset: 0,
+        }),
+      enabled: reportingAllowed && hasRegionManagerRole && !hasStoreDetailDefault && Boolean(authSummary?.user.userId),
     },
   ]
 }

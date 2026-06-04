@@ -6,6 +6,21 @@ export const storeKpisTr = {
   'storeKpis.store': 'Mağaza',
   'storeKpis.noStoreScope': 'Mağaza kapsamı yok',
   'storeKpis.status': 'Durum',
+  'storeKpis.regionOverviewEyebrow': 'Bölge KPI',
+  'storeKpis.regionOverviewTitle': 'Bölge mağazaları',
+  'storeKpis.regionOverviewCopy':
+    'Tanımlı mağazalar gerçek sıralama kapsamından okunur. Mağaza seçildiğinde KPI detayı açılır.',
+  'storeKpis.regionOverviewStoreCount': '{count} mağaza',
+  'storeKpis.regionOverviewStoresTitle': 'Kapsamdaki mağazalar',
+  'storeKpis.regionOverviewStoresCopy':
+    'Her satır bölge müdürünün okuyabildiği gerçek mağaza kapsamından gelir.',
+  'storeKpis.regionOverviewFoundationBadge': 'Kapsam okuma',
+  'storeKpis.regionOverviewScopedStore': 'Bölge kapsamı',
+  'storeKpis.regionOverviewEmptyTitle': 'Kapsamda mağaza görünmüyor',
+  'storeKpis.regionOverviewEmptyCopy':
+    'Bu oturum için sıralama veya mağaza kapsamı henüz görünür değil.',
+  'storeKpis.regionOverviewErrorTitle': 'Bölge KPI listesi açılamadı',
+  'storeKpis.openStoreKpi': "KPI'a git",
   'storeKpis.authWaiting': 'Yetki bekliyor',
   'storeKpis.storeScope': 'Mağaza kapsamı',
   'storeKpis.noOpenStoreScope': 'Açık mağaza kapsamı yok',
@@ -264,6 +279,21 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.store': 'Store',
   'storeKpis.noStoreScope': 'No store scope',
   'storeKpis.status': 'Status',
+  'storeKpis.regionOverviewEyebrow': 'Region KPI',
+  'storeKpis.regionOverviewTitle': 'Region stores',
+  'storeKpis.regionOverviewCopy':
+    'Assigned stores are read from the real ranking scope. Store KPI detail opens after a store is selected.',
+  'storeKpis.regionOverviewStoreCount': '{count} stores',
+  'storeKpis.regionOverviewStoresTitle': 'Stores in scope',
+  'storeKpis.regionOverviewStoresCopy':
+    'Each row comes from the real store scope readable by the region manager.',
+  'storeKpis.regionOverviewFoundationBadge': 'Scope read',
+  'storeKpis.regionOverviewScopedStore': 'Region scope',
+  'storeKpis.regionOverviewEmptyTitle': 'No stores are visible in scope',
+  'storeKpis.regionOverviewEmptyCopy':
+    'Ranking or store scope is not visible for this session yet.',
+  'storeKpis.regionOverviewErrorTitle': 'Region KPI list could not be opened',
+  'storeKpis.openStoreKpi': 'Open KPI',
   'storeKpis.authWaiting': 'Waiting for access',
   'storeKpis.storeScope': 'Store scope',
   'storeKpis.noOpenStoreScope': 'No open store scope',

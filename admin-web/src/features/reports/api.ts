@@ -159,6 +159,7 @@ export async function getPersonnelPerformance(
 export async function getStoreKpiHighlights(input?: {
   periodType?: 'daily' | 'weekly' | 'monthly'
   periodStart?: string
+  storeId?: string
 }) {
   const params = new URLSearchParams()
   if (input?.periodType) {
@@ -166,6 +167,9 @@ export async function getStoreKpiHighlights(input?: {
   }
   if (input?.periodStart) {
     params.set('periodStart', input.periodStart)
+  }
+  if (input?.storeId) {
+    params.set('storeId', input.storeId)
   }
 
   const query = params.toString()

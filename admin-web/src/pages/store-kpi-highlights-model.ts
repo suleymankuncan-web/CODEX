@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
   getKpiConfig,
   getKpiReport,
+  getRankings,
   getReportingSnapshotRuns,
   getStoreScoreBreakdown,
   getStoreKpiHighlights,
@@ -138,25 +140,66 @@ function hasReportingAccess(authSummary: AuthSessionSummary | null) {
     roles.includes('SUPER_ADMIN') ||
     roles.includes('REPORT_VIEWER') ||
     roles.includes('AUDITOR') ||
-    roles.includes('STORE_MANAGER')
+    roles.includes('STORE_MANAGER') ||
+    roles.includes('REGION_MANAGER')
   )
 }
 
 function hasStoreShellIntent(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
-  return roles.includes('STORE_MANAGER') || Boolean(authSummary?.user.scope.storeIds.length)
+  return (
+    roles.includes('STORE_MANAGER') ||
+    roles.includes('REGION_MANAGER') ||
+    Boolean(authSummary?.user.scope.storeIds.length)
+  )
 }
 
-export function useStoreKpiHighlightsPageModel(input: {
-  authSummary: AuthSessionSummary | null
-}) {
+function hasStoreDetailDefault(authSummary: AuthSessionSummary | null) {
+  return authSummary?.user.roleCodes.some((role) =>
+    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER' || role === 'AUDITOR' || role === 'STORE_MANAGER'
+  ) ?? false
+}
+
+function getQueryValue(searchParams: URLSearchParams, key: string) {
+  return searchParams.get(key)?.trim() || ''
+}
+
+export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
+  const [searchParams, setSearchParams] = useSearchParams()
   const reportingAllowed = hasReportingAccess(input.authSummary)
   const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? undefined
   const storeShellIntent = hasStoreShellIntent(input.authSummary)
-  const [viewMode, setViewMode] = useState<'live' | 'closed'>('live')
+  const selectedStoreId = getQueryValue(searchParams, 'storeId')
+  const routePeriodStart = getQueryValue(searchParams, 'periodStart')
+  const hasRegionManagerRole = input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false
+  const regionManagerUserId = input.authSummary?.user.userId ?? ''
+  const hasDetailDefault = hasStoreDetailDefault(input.authSummary)
+  const isRegionManagerOverview = hasRegionManagerRole && !hasDetailDefault && selectedStoreId.length === 0
+  const isRegionManagerStoreDetail = hasRegionManagerRole && selectedStoreId.length > 0
+  const effectiveStoreId = selectedStoreId || primaryStoreId
+  const storeKpiSurfaceMode = isRegionManagerOverview
+    ? 'regionOverview'
+    : isRegionManagerStoreDetail ? 'regionStoreDetail' : 'storeDetail'
+  const [viewModeState, setViewModeState] = useState<'live' | 'closed'>('live')
   const [selectedSnapshotRunId, setSelectedSnapshotRunId] = useState('')
   const [livePeriodStart, setLivePeriodStart] = useState('')
+  const closedSnapshotModeAllowed = hasDetailDefault && !isRegionManagerOverview
+  const viewMode = closedSnapshotModeAllowed ? viewModeState : 'live'
+  const setViewMode = (value: 'live' | 'closed') => {
+    if (value !== 'closed' || closedSnapshotModeAllowed) setViewModeState(value)
+  }
+  const activeLivePeriodStart = livePeriodStart || routePeriodStart
+  const setLivePeriodFilter = (value: string) => {
+    setLivePeriodStart(value)
+    const nextParams = new URLSearchParams(searchParams)
+    if (value) {
+      nextParams.set('periodStart', value)
+    } else {
+      nextParams.delete('periodStart')
+    }
+    setSearchParams(nextParams, { replace: true })
+  }
 
   const configQuery = useQuery({
     queryKey: ['store-kpi-config'],
@@ -166,13 +209,30 @@ export function useStoreKpiHighlightsPageModel(input: {
   })
 
   const liveKpiQuery = useQuery({
-    queryKey: ['store-kpis-live', livePeriodStart || 'latest-monthly'],
+    queryKey: ['store-kpis-live', selectedStoreId || primaryStoreId || 'no-selected-store', activeLivePeriodStart || 'latest-monthly'],
     queryFn: () =>
       getStoreKpiHighlights({
         periodType: 'monthly',
-        ...(livePeriodStart ? { periodStart: livePeriodStart } : {}),
+        ...(activeLivePeriodStart ? { periodStart: activeLivePeriodStart } : {}),
+        ...(selectedStoreId ? { storeId: selectedStoreId } : {}),
       }),
-    enabled: reportingAllowed && viewMode === 'live',
+    enabled: reportingAllowed && viewMode === 'live' && !isRegionManagerOverview,
+    ...transientQueryRetryOptions,
+  })
+
+  const regionOverviewQuery = useQuery({
+    queryKey: ['store-kpis-region-overview', 'monthly', routePeriodStart, 'score', 'desc', regionManagerUserId, 0],
+    queryFn: () =>
+      getRankings({
+        periodType: 'monthly',
+        ...(routePeriodStart ? { periodStart: routePeriodStart } : {}),
+        ...(regionManagerUserId ? { regionManagerUserId } : {}),
+        sortKey: 'score',
+        sortDirection: 'desc',
+        limit: 100,
+        offset: 0,
+      }),
+    enabled: reportingAllowed && isRegionManagerOverview && Boolean(regionManagerUserId),
     ...transientQueryRetryOptions,
   })
 
@@ -184,7 +244,7 @@ export function useStoreKpiHighlightsPageModel(input: {
         limit: 30,
         offset: 0,
       }),
-    enabled: reportingAllowed && viewMode === 'closed',
+    enabled: reportingAllowed && viewMode === 'closed' && !isRegionManagerOverview,
     ...transientQueryRetryOptions,
   })
 
@@ -202,24 +262,25 @@ export function useStoreKpiHighlightsPageModel(input: {
   })
 
   const scoreBreakdownQuery = useQuery({
-    queryKey: ['store-score-breakdown', snapshotRunId || 'no-run', primaryStoreId ?? 'no-store'],
+    queryKey: ['store-score-breakdown', snapshotRunId || 'no-run', effectiveStoreId ?? 'no-store'],
     queryFn: () =>
       getStoreScoreBreakdown({
         snapshotRunId,
-        storeId: primaryStoreId ?? '',
+        storeId: effectiveStoreId ?? '',
       }),
     enabled:
       reportingAllowed &&
       viewMode === 'closed' &&
       Boolean(snapshotRunId) &&
-      Boolean(primaryStoreId),
+      Boolean(effectiveStoreId) &&
+      !isRegionManagerOverview,
     ...transientQueryRetryOptions,
   })
 
   const liveRows = useMemo<DisplayKpiRow[]>(() => {
     return (
       liveKpiQuery.data?.metrics.map((metric) => ({
-        storeId: liveKpiQuery.data?.store?.storeId ?? primaryStoreId ?? '',
+        storeId: liveKpiQuery.data?.store?.storeId ?? effectiveStoreId ?? '',
         kpiCode: metric.code,
         kpiName: metric.label,
         periodStart: liveKpiQuery.data?.period?.periodStart ?? '',
@@ -245,12 +306,12 @@ export function useStoreKpiHighlightsPageModel(input: {
         scoreStatus: metric.scoreStatus,
       })) ?? []
     )
-  }, [liveKpiQuery.data, primaryStoreId])
+  }, [effectiveStoreId, liveKpiQuery.data])
 
   const closedRows = useMemo<DisplayKpiRow[]>(() => {
     const allRows = closedKpiQuery.data?.items ?? []
-    const filteredRows = primaryStoreId
-      ? allRows.filter((row) => row.storeId === primaryStoreId)
+    const filteredRows = effectiveStoreId
+      ? allRows.filter((row) => row.storeId === effectiveStoreId)
       : allRows
 
     return filteredRows.map((row) => ({
@@ -273,7 +334,7 @@ export function useStoreKpiHighlightsPageModel(input: {
       statusBand: row.statusBand,
       scoreStatus: row.achievementRate ? 'scored' : 'missing',
     }))
-  }, [closedKpiQuery.data?.items, primaryStoreId])
+  }, [closedKpiQuery.data?.items, effectiveStoreId])
 
   const rows = viewMode === 'live' ? liveRows : closedRows
   const storeKpiScoreProfile = configQuery.data?.storeProfile
@@ -454,16 +515,31 @@ export function useStoreKpiHighlightsPageModel(input: {
   const configForbidden = configQuery.error instanceof ApiError && configQuery.error.status === 403
   const isLoading =
     (configQuery.isLoading && !configForbidden) ||
-    (viewMode === 'live' ? liveKpiQuery.isLoading : dailySnapshotQuery.isLoading || closedKpiQuery.isLoading)
+    (isRegionManagerOverview
+      ? regionOverviewQuery.isLoading
+      : viewMode === 'live'
+        ? liveKpiQuery.isLoading
+        : dailySnapshotQuery.isLoading || closedKpiQuery.isLoading)
   const liveSummary = liveKpiQuery.data
   const activeStoreName =
     viewMode === 'live'
-      ? liveSummary?.store?.storeName ?? t('storeKpis.noStoreScope')
-      : primaryStoreId ?? t('storeKpis.noStoreScope')
+      ? liveSummary?.store?.storeName ?? effectiveStoreId ?? t('storeKpis.noStoreScope')
+      : effectiveStoreId ?? t('storeKpis.noStoreScope')
   const latestLivePeriodLabel =
     liveSummary?.period
       ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)} (${t('storeKpis.latestMonthlyPeriod')})`
       : t('storeKpis.latestMonthlyPeriod')
+  const regionOverviewRows = regionOverviewQuery.data?.storeLeaderboard.items ?? []
+  const regionOverviewSource = regionOverviewQuery.data?.source ?? null
+  const regionOverviewPeriodStart = regionOverviewSource?.periodStart ?? routePeriodStart
+  const getRegionStoreDetailPath = (storeId: string) => {
+    const params = new URLSearchParams({ storeId })
+    if (regionOverviewPeriodStart) {
+      params.set('periodStart', regionOverviewPeriodStart)
+    }
+
+    return `/store/kpis?${params.toString()}`
+  }
 
   return {
     activeSnapshotRun,
@@ -475,14 +551,19 @@ export function useStoreKpiHighlightsPageModel(input: {
     bmChecklistStatusLabel,
     closedKpiQuery,
     closedScoreBreakdown,
+    closedSnapshotModeAllowed,
     configForbidden,
     configQuery,
     dailySnapshotQuery,
+    effectiveStoreId,
+    getRegionStoreDetailPath,
     isLoading,
+    isRegionManagerOverview,
+    isRegionManagerStoreDetail,
     kpiOwnershipMatrix,
     latestLivePeriodLabel,
     liveKpiQuery,
-    livePeriodStart,
+    livePeriodStart: activeLivePeriodStart,
     liveSummary,
     locale,
     matchedMetricCount,
@@ -490,13 +571,18 @@ export function useStoreKpiHighlightsPageModel(input: {
     personnelWeightsReady,
     primaryStoreId,
     reportingAllowed,
+    regionOverviewQuery,
+    regionOverviewRows,
+    routePeriodStart,
     rows,
     selectedSnapshotRunId,
-    setLivePeriodStart,
+    selectedStoreId,
+    setLivePeriodStart: setLivePeriodFilter,
     setSelectedSnapshotRunId,
     setViewMode,
     storeGrade,
     storeKpiScoreProfile,
+    storeKpiSurfaceMode,
     storeScoreMeaning,
     storeShellIntent,
     t,

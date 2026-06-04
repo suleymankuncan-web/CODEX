@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T15:48:33.136Z",
+  "generatedAt": "2026-06-04T17:02:53.930Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 53,
     "matchedFrontendApiCallCount": 139,
     "openApiEndpointCount": 173,
-    "routeApiEdgeCount": 212,
+    "routeApiEdgeCount": 213,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -2443,7 +2443,7 @@
       "exportedFunction": "getStoreKpiHighlights",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 172
+        "line": 176
       }
     },
     {
@@ -2458,7 +2458,7 @@
       "exportedFunction": "getStoreScoreBreakdown",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 184
+        "line": 188
       }
     },
     {
@@ -2473,7 +2473,7 @@
       "exportedFunction": "getRankings",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 229
+        "line": 233
       }
     },
     {
@@ -2488,7 +2488,7 @@
       "exportedFunction": "getChecklistReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 251
+        "line": 255
       }
     },
     {
@@ -2503,7 +2503,7 @@
       "exportedFunction": "getTurnoverReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 255
+        "line": 259
       }
     },
     {
@@ -7397,6 +7397,11 @@
         "id": "edge:route:store:/store/kpis:api:102",
         "routeId": "route:store:/store/kpis",
         "apiCallId": "api:102"
+      },
+      {
+        "id": "edge:route:store:/store/kpis:api:103",
+        "routeId": "route:store:/store/kpis",
+        "apiCallId": "api:103"
       },
       {
         "id": "edge:route:store:/store/kpis:api:91",
