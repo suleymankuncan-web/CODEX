@@ -442,6 +442,7 @@ test('store KPI highlights page explains metric source semantics', async ({ page
 
   await expect(page.getByRole('heading', { name: 'Personel KPI' })).toBeVisible()
   await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toContainText('371%')
+  await expect(page.getByText('Global Top Personnel')).toHaveCount(0)
   await expect(page.getByText(/Skor kayna/)).toBeVisible()
   await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
   await expect(page.getByText('Store KPI Highlights')).toHaveCount(0)
@@ -4808,7 +4809,17 @@ const rankingsFixture = {
     },
   },
   personnelLeaderboard: {
-    items: [personnelRankingRawTargetRow],
+    items: [
+      {
+        ...personnelRankingSummaryRow,
+        employeeId: 'global-personnel-001',
+        displayName: 'Global Top Personnel',
+        storeId: 'outside-store',
+        storeName: 'Outside Store',
+        canOpenProfile: false,
+        metrics: undefined,
+      },
+    ],
     currentEmployee: {
       ...personnelRankingSummaryRow,
       visibility: 'detail',
@@ -4822,21 +4833,7 @@ const rankingsFixture = {
         },
       ],
     },
-    managedStorePersonnel: [
-      {
-        ...personnelRankingSummaryRow,
-        visibility: 'detail',
-        metrics: [
-          {
-            code: 'UPT',
-            label: 'UPT',
-            actualValue: 4.8,
-            benchmarkValue: 4.2,
-            contributionValue: 29,
-          },
-        ],
-      },
-    ],
+    managedStorePersonnel: [personnelRankingRawTargetRow],
     meta: {
       total: 420,
       limit: 100,
