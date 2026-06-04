@@ -456,6 +456,10 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('Configured blend')).toHaveCount(0)
   await expect(page.getByText('Effective blend')).toHaveCount(0)
   await expect(page.getByText('KPI rows unavailable')).toHaveCount(0)
+
+  await page.getByRole('button', { name: /Kapan/ }).click()
+  await expect(page.getByText('Store Personnel - 1')).toHaveCount(0)
+  await expect(page.getByText('Global Top Personnel')).toHaveCount(0)
 })
 
 test('store KPI live checklist impact uses completed BM and VM visits from highlights', async ({ page }) => {
@@ -3627,6 +3631,79 @@ async function routeStoreSurfaceApi(page: Page) {
 
   await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
     await route.fulfill({ json: storeKpiHighlightsFixture })
+  })
+
+  await page.route('**/api/reports/kpis**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: storeKpiHighlightsFixture.metrics.map((metric) => ({
+          snapshotRunId: 'snapshot-2026-04-24',
+          storeId: demoStoreId,
+          kpiId: `closed-${metric.code}`,
+          kpiCode: metric.code,
+          kpiName: metric.label,
+          periodStart: '2026-04-24',
+          periodEnd: '2026-04-24',
+          targetValue: metric.targetValue === null ? null : String(metric.targetValue),
+          actualValue: metric.actualValue === null ? null : String(metric.actualValue),
+          achievementRate: metric.achievementRate === null ? null : String(metric.achievementRate),
+          statusBand: metric.statusBand,
+        })),
+        meta: {
+          count: storeKpiHighlightsFixture.metrics.length,
+          total: storeKpiHighlightsFixture.metrics.length,
+          limit: 50,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/reports/store-score-breakdown**', async (route) => {
+    await route.fulfill({
+      json: {
+        snapshotRunId: 'snapshot-2026-04-24',
+        storeId: demoStoreId,
+        scoreStatus: 'final',
+        totalScore: 87,
+        missingWeightPolicy: 'return_missing_weight_to_kpi',
+        configuredWeights: {
+          kpiPerformanceWeight: 90,
+          bmChecklistWeight: 5,
+          vmChecklistWeight: 5,
+        },
+        effectiveWeights: {
+          kpiPerformanceWeight: 100,
+          bmChecklistWeight: 0,
+          vmChecklistWeight: 0,
+        },
+        components: {
+          kpi: {
+            included: true,
+            score: 87,
+            weight: 100,
+            contribution: 87,
+            status: 'included',
+          },
+          bmChecklist: {
+            included: false,
+            score: null,
+            weight: 0,
+            contribution: null,
+            status: 'not_included',
+            visitCount: 0,
+          },
+          vmChecklist: {
+            included: false,
+            score: null,
+            weight: 0,
+            contribution: null,
+            status: 'not_included',
+            visitCount: 0,
+          },
+        },
+      },
+    })
   })
 
   await page.route('**/api/reports/leaderboards/closed**', async (route) => {
