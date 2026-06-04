@@ -1,4 +1,5 @@
 import { IsDateString, IsIn, IsOptional } from "class-validator";
+import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class GetStoreKpiHighlightsQueryDto {
   @IsOptional()
@@ -8,4 +9,8 @@ export class GetStoreKpiHighlightsQueryDto {
   @IsOptional()
   @IsDateString()
   periodStart?: string;
+
+  @IsOptional()
+  @IsPostgresUuid()
+  storeId?: string;
 }

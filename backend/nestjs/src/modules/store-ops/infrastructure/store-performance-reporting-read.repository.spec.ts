@@ -41,4 +41,45 @@ describe("StorePerformanceReportingReadRepository benchmark queries", () => {
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("COALESCE(ka.source_type, '') <> 'demo_seed'");
   });
+
+  it("reads store scope for selected store access checks", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getStoreScopeById("00000000-0000-4000-8000-000000000101");
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("company_id::text AS company_id");
+    expect(sql).toContain("region_id::text AS region_id");
+    expect(sql).toContain("WHERE store_id = $1::uuid");
+    expect(query).toHaveBeenCalledWith(expect.any(String), [
+      "00000000-0000-4000-8000-000000000101",
+    ]);
+  });
+
+  it("checks active region-manager assignment before selected store access", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.canRegionManagerReadStore({
+      userId: "00000000-0000-4000-8000-000000000201",
+      storeId: "00000000-0000-4000-8000-000000000101",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("company.status = 'active'");
+    expect(sql).toContain("region.status = 'active'");
+    expect(sql).toContain("store.status = 'active'");
+    expect(sql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(sql).toContain("ura.company_id = store.company_id");
+    expect(sql).toContain("ura.scope_type = 'region'");
+    expect(sql).toContain("ura.region_id = store.region_id");
+    expect(sql).toContain("ura.scope_type = 'store'");
+    expect(sql).toContain("ura.store_id = store.store_id");
+    expect(sql).toContain("ura.user_id = $1::uuid");
+    expect(sql).toContain("store.store_id = $2::uuid");
+    expect(sql).toContain("ura.start_at <= NOW()");
+    expect(query).toHaveBeenCalledWith(expect.any(String), [
+      "00000000-0000-4000-8000-000000000201",
+      "00000000-0000-4000-8000-000000000101",
+    ]);
+  });
 });

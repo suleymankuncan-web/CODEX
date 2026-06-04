@@ -28,11 +28,13 @@ export class ReportingStoreKpiReadService {
     storeIds: string[];
     periodType?: "daily" | "weekly" | "monthly";
     periodStart?: string;
+    storeId?: string;
+    regionManagerUserId?: string;
   }) {
     const config = await this.getKpiConfig();
     const profile = config.storeProfile;
     const metricCodes = profile.metrics.map((metric) => metric.code);
-    const storeId = input.storeIds[0] ?? null;
+    const storeId = input.storeId ?? input.storeIds[0] ?? null;
 
     if (!storeId) {
       return {
@@ -69,6 +71,16 @@ export class ReportingStoreKpiReadService {
           scoreStatus: "missing" as const,
         })),
       };
+    }
+
+    if (input.storeId) {
+      await this.assertCanReadStore({
+        storeId,
+        companyIds: input.companyIds,
+        regionIds: input.regionIds,
+        storeIds: input.storeIds,
+        regionManagerUserId: input.regionManagerUserId,
+      });
     }
 
     const [storeName, availablePeriods, latestPeriod] = await Promise.all([
@@ -398,5 +410,62 @@ export class ReportingStoreKpiReadService {
       const value = Number(row.benchmark_value);
       return Number.isFinite(value) && value !== 0;
     });
+  }
+
+  private async assertCanReadStore(input: {
+    storeId: string;
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    regionManagerUserId?: string;
+  }) {
+    if (input.storeIds.includes(input.storeId)) {
+      return;
+    }
+
+    if (
+      input.regionManagerUserId &&
+      await this.storePerformanceReportingReadRepository.canRegionManagerReadStore({
+        userId: input.regionManagerUserId,
+        storeId: input.storeId,
+      })
+    ) {
+      return;
+    }
+
+    if (input.regionManagerUserId) {
+      throw new ForbiddenException(
+        "Store KPI highlights are outside current store scope.",
+      );
+    }
+
+    const storeScope =
+      await this.storePerformanceReportingReadRepository.getStoreScopeById(
+        input.storeId,
+      );
+
+    if (!storeScope) {
+      throw new ForbiddenException(
+        "Store KPI highlights are outside current store scope.",
+      );
+    }
+
+    if (
+      storeScope.company_id &&
+      input.companyIds.includes(storeScope.company_id)
+    ) {
+      return;
+    }
+
+    if (
+      storeScope.region_id &&
+      input.regionIds.includes(storeScope.region_id)
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException(
+      "Store KPI highlights are outside current store scope.",
+    );
   }
 }

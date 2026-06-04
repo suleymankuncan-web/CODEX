@@ -48,6 +48,114 @@ describe("ReportingController", () => {
       storeIds: ["store-1"],
       periodType: "monthly",
       periodStart: "2026-04-01",
+      storeId: undefined,
+      regionManagerUserId: undefined,
+    });
+  });
+
+  it("keeps dual-role store manager KPI highlights defaulting to assigned stores", async () => {
+    const { controller, reportingService } = createController();
+
+    await controller.getStoreKpiHighlights(
+      {
+        user: {
+          userId: "dual-role-user",
+          roleCodes: ["REGION_MANAGER", "STORE_MANAGER"],
+          scope: {
+            companyIds: ["company-1"],
+            regionIds: ["region-1"],
+            storeIds: ["store-from-role-union"],
+          },
+          actionScope: {
+            assignedStoreIds: ["assigned-store-1"],
+          },
+        },
+      },
+      {
+        periodType: "monthly",
+        periodStart: "2026-04-01",
+      },
+    );
+
+    expect(reportingService.getStoreKpiHighlights).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["assigned-store-1"],
+      periodType: "monthly",
+      periodStart: "2026-04-01",
+      storeId: undefined,
+      regionManagerUserId: "dual-role-user",
+    });
+  });
+
+  it("passes selected store KPI highlights through region scope for region managers", async () => {
+    const { controller, reportingService } = createController();
+
+    await controller.getStoreKpiHighlights(
+      {
+        user: {
+          userId: "region-manager-user",
+          roleCodes: ["REGION_MANAGER"],
+          scope: {
+            companyIds: ["company-1"],
+            regionIds: ["region-1"],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: [],
+          },
+        },
+      },
+      {
+        periodType: "monthly",
+        periodStart: "2026-04-01",
+        storeId: "00000000-0000-4000-8000-000000000101",
+      },
+    );
+
+    expect(reportingService.getStoreKpiHighlights).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      periodType: "monthly",
+      periodStart: "2026-04-01",
+      storeId: "00000000-0000-4000-8000-000000000101",
+      regionManagerUserId: "region-manager-user",
+    });
+  });
+
+  it("does not select a default store for region manager KPI highlights without storeId", async () => {
+    const { controller, reportingService } = createController();
+
+    await controller.getStoreKpiHighlights(
+      {
+        user: {
+          userId: "region-manager-user",
+          roleCodes: ["REGION_MANAGER"],
+          scope: {
+            companyIds: ["company-1"],
+            regionIds: ["region-1"],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: [],
+          },
+        },
+      },
+      {
+        periodType: "monthly",
+        periodStart: "2026-04-01",
+      },
+    );
+
+    expect(reportingService.getStoreKpiHighlights).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      periodType: "monthly",
+      periodStart: "2026-04-01",
+      storeId: undefined,
+      regionManagerUserId: "region-manager-user",
     });
   });
 
@@ -130,5 +238,16 @@ describe("ReportingController", () => {
     );
 
     expect(roles).toEqual(expect.arrayContaining(["REGION_MANAGER", "SUPER_ADMIN"]));
+  });
+
+  it("allows region managers to request selected store KPI highlights", () => {
+    const { controller } = createController();
+
+    const roles = Reflect.getMetadata(
+      REQUIRED_ROLES_KEY,
+      controller.getStoreKpiHighlights,
+    );
+
+    expect(roles).toEqual(expect.arrayContaining(["STORE_MANAGER", "REGION_MANAGER"]));
   });
 });

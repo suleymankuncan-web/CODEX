@@ -293,10 +293,10 @@ export class ReportingService {
     storeIds: string[];
     periodType?: "daily" | "weekly" | "monthly";
     periodStart?: string;
+    storeId?: string; regionManagerUserId?: string;
   }) {
     return this.storeKpiReadService.getStoreKpiHighlights(input);
   }
-
   async getStoreMonthlyScoreBreakdown(input: {
     snapshotRunId: string;
     storeId: string;
