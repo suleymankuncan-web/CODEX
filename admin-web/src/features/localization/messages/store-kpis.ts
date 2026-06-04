@@ -1,3 +1,5 @@
+import { storeKpisCommandEn, storeKpisCommandTr } from './store-kpis-command'
+
 export const storeKpisTr = {
   'storeKpis.unavailableEyebrow': 'KPI görünümü',
   'storeKpis.title': "Mağaza KPI'ları",
@@ -52,6 +54,7 @@ export const storeKpisTr = {
   'storeKpis.scorePoints': '{value} puan',
   'storeKpis.noScorableRows': 'Skorlanacak satır yok',
   'storeKpis.latestMonthlyPeriod': 'Son aylık dönem',
+  ...storeKpisCommandTr,
 
   'storeKpis.viewModeEyebrow': 'Görünüm modu',
   'storeKpis.viewModeTitle': 'Canlı import verisi mi, kapanmış gün mü',
@@ -325,6 +328,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.scorePoints': '{value} points',
   'storeKpis.noScorableRows': 'No rows to score',
   'storeKpis.latestMonthlyPeriod': 'Latest monthly period',
+  ...storeKpisCommandEn,
 
   'storeKpis.viewModeEyebrow': 'View mode',
   'storeKpis.viewModeTitle': 'Live import data or closed day',
