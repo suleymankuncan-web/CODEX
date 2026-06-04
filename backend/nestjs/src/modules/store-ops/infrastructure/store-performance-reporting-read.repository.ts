@@ -19,6 +19,69 @@ export class StorePerformanceReportingReadRepository {
     return result.rows[0]?.store_name ?? null;
   }
 
+  async getStoreScopeById(storeId: string) {
+    const result = await this.databaseService.query<{
+      store_id: string;
+      company_id: string | null;
+      region_id: string | null;
+    }>(
+      `
+        SELECT
+          store_id::text AS store_id,
+          company_id::text AS company_id,
+          region_id::text AS region_id
+        FROM ops.store
+        WHERE store_id = $1::uuid
+        LIMIT 1
+      `,
+      [storeId],
+    );
+
+    return result.rows[0] ?? null;
+  }
+
+  async canRegionManagerReadStore(input: { userId: string; storeId: string }) {
+    const result = await this.databaseService.query<{ can_read: boolean }>(
+      `
+        SELECT EXISTS (
+          SELECT 1
+          FROM ops.store store
+          INNER JOIN ops.company company
+            ON company.company_id = store.company_id
+          INNER JOIN ops.region region
+            ON region.region_id = store.region_id
+           AND region.company_id = store.company_id
+          INNER JOIN ops.user_role_assignment ura ON (
+            (
+              ura.scope_type = 'region'
+              AND ura.company_id = store.company_id
+              AND ura.region_id = store.region_id
+            )
+            OR (
+              ura.scope_type = 'store'
+              AND ura.company_id = store.company_id
+              AND ura.region_id = store.region_id
+              AND ura.store_id = store.store_id
+            )
+          )
+          INNER JOIN ops.role role
+            ON role.role_id = ura.role_id
+           AND role.role_code = 'REGION_MANAGER'
+          WHERE ura.user_id = $1::uuid
+            AND store.store_id = $2::uuid
+            AND company.status = 'active'
+            AND region.status = 'active'
+            AND store.status = 'active'
+            AND ura.start_at <= NOW()
+            AND (ura.end_at IS NULL OR ura.end_at >= NOW())
+        ) AS can_read
+      `,
+      [input.userId, input.storeId],
+    );
+
+    return result.rows[0]?.can_read === true;
+  }
+
   async getLatestStoreKpiPeriod(input: {
     storeId: string;
     metricCodes: string[];

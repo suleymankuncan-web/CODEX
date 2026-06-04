@@ -156,6 +156,143 @@ describe("ReportingService KPI benchmark scoring", () => {
     );
   });
 
+  it("reads selected store KPI highlights when the store is inside active region-manager scope", async () => {
+    const reportingRepository = {
+      canRegionManagerReadStore: jest.fn(async () => true),
+      getStoreScopeById: jest.fn(),
+      getStoreNameById: jest.fn(async () => "IstinyePark"),
+      listStoreKpiPeriods: jest.fn(async () => []),
+      getLatestStoreKpiPeriod: jest.fn(async () => null),
+    };
+    const service = createReportingService(reportingRepository);
+
+    const result = await service.getStoreKpiHighlights({
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      storeId: "store-2",
+      regionManagerUserId: "region-manager-user",
+      periodType: "monthly",
+      periodStart: "2026-05-01",
+    });
+
+    expect(reportingRepository.canRegionManagerReadStore).toHaveBeenCalledWith({
+      userId: "region-manager-user",
+      storeId: "store-2",
+    });
+    expect(reportingRepository.getStoreScopeById).not.toHaveBeenCalled();
+    expect(reportingRepository.getLatestStoreKpiPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({
+        storeId: "store-2",
+        periodType: "monthly",
+        periodStart: "2026-05-01",
+      }),
+    );
+    expect(result.store).toEqual({
+      storeId: "store-2",
+      storeName: "IstinyePark",
+    });
+    expect(result.partial.isPartial).toBe(true);
+  });
+
+  it("blocks selected store KPI highlights outside the caller store scope", async () => {
+    const reportingRepository = {
+      getStoreScopeById: jest.fn(async () => ({
+        store_id: "store-2",
+        company_id: "company-1",
+        region_id: "region-2",
+      })),
+      getStoreNameById: jest.fn(),
+      listStoreKpiPeriods: jest.fn(),
+      getLatestStoreKpiPeriod: jest.fn(),
+    };
+    const service = createReportingService(reportingRepository);
+
+    await expect(
+      service.getStoreKpiHighlights({
+        companyIds: [],
+        regionIds: ["region-1"],
+        storeIds: [],
+        storeId: "store-2",
+        periodType: "monthly",
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(reportingRepository.getStoreNameById).not.toHaveBeenCalled();
+    expect(reportingRepository.getLatestStoreKpiPeriod).not.toHaveBeenCalled();
+  });
+
+  it("does not trust aggregate region scope for dual-role selected store KPI highlights", async () => {
+    const reportingRepository = {
+      canRegionManagerReadStore: jest.fn(async () => false),
+      getStoreScopeById: jest.fn(),
+      getStoreNameById: jest.fn(),
+      listStoreKpiPeriods: jest.fn(),
+      getLatestStoreKpiPeriod: jest.fn(),
+    };
+    const service = createReportingService(reportingRepository);
+
+    await expect(
+      service.getStoreKpiHighlights({
+        companyIds: [],
+        regionIds: ["region-from-store-role-union"],
+        storeIds: ["assigned-store-1"],
+        storeId: "store-2",
+        regionManagerUserId: "dual-role-user",
+        periodType: "monthly",
+      }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(reportingRepository.getStoreScopeById).not.toHaveBeenCalled();
+    expect(reportingRepository.getStoreNameById).not.toHaveBeenCalled();
+  });
+
+  it("allows selected store KPI highlights inside assigned store scope", async () => {
+    const reportingRepository = {
+      getStoreScopeById: jest.fn(),
+      getStoreNameById: jest.fn(async () => "Assigned Store"),
+      listStoreKpiPeriods: jest.fn(async () => []),
+      getLatestStoreKpiPeriod: jest.fn(async () => null),
+    };
+    const service = createReportingService(reportingRepository);
+
+    const result = await service.getStoreKpiHighlights({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1", "store-2"],
+      storeId: "store-2",
+      periodType: "monthly",
+    });
+
+    expect(reportingRepository.getStoreScopeById).not.toHaveBeenCalled();
+    expect(reportingRepository.getLatestStoreKpiPeriod).toHaveBeenCalledWith(
+      expect.objectContaining({ storeId: "store-2" }),
+    );
+    expect(result.store?.storeId).toBe("store-2");
+  });
+
+  it("keeps region manager KPI highlights unselected when storeId is omitted", async () => {
+    const reportingRepository = {
+      getStoreScopeById: jest.fn(),
+      getStoreNameById: jest.fn(),
+      listStoreKpiPeriods: jest.fn(),
+      getLatestStoreKpiPeriod: jest.fn(),
+    };
+    const service = createReportingService(reportingRepository);
+
+    const result = await service.getStoreKpiHighlights({
+      companyIds: [],
+      regionIds: ["region-1"],
+      storeIds: [],
+      periodType: "monthly",
+    });
+
+    expect(reportingRepository.getStoreScopeById).not.toHaveBeenCalled();
+    expect(reportingRepository.getStoreNameById).not.toHaveBeenCalled();
+    expect(result.store).toBeNull();
+    expect(result.partial.isPartial).toBe(true);
+  });
+
   it("does not score personnel target achievement without an approved target", async () => {
     const reportingRepository = {
       resolveEmployeeIdForAuthIdentity: jest.fn(async () => "employee-1"),

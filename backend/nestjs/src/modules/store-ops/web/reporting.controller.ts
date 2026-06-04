@@ -260,11 +260,12 @@ export class ReportingController {
 
   @Get("store-kpi-highlights")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER")
   async getStoreKpiHighlights(
     @Req()
     request: {
       user: {
+        userId?: string;
         roleCodes: string[];
         scope: {
           companyIds: string[];
@@ -278,12 +279,25 @@ export class ReportingController {
     },
     @Query() query: GetStoreKpiHighlightsQueryDto,
   ) {
-    const storeReadScope = this.resolveStoreReadScope({
-      actorRoleCodes: request.user.roleCodes,
-      actorScope: request.user.scope,
-      actorActionScope: request.user.actionScope,
-      broadReadRoles: ["SUPER_ADMIN"],
-    });
+    const assignedStoreIds = request.user.actionScope?.assignedStoreIds.length
+      ? request.user.actionScope.assignedStoreIds
+      : request.user.scope.storeIds;
+    const isRegionManagerRead =
+      request.user.roleCodes.includes("REGION_MANAGER") &&
+      !request.user.roleCodes.includes("SUPER_ADMIN");
+    const storeReadScope =
+      isRegionManagerRead
+        ? {
+            companyIds: [],
+            regionIds: [],
+            storeIds: request.user.roleCodes.includes("STORE_MANAGER") ? assignedStoreIds : [],
+          }
+        : this.resolveStoreReadScope({
+            actorRoleCodes: request.user.roleCodes,
+            actorScope: request.user.scope,
+            actorActionScope: request.user.actionScope,
+            broadReadRoles: ["SUPER_ADMIN"],
+          });
 
     return this.reportingService.getStoreKpiHighlights({
       companyIds: storeReadScope.companyIds,
@@ -291,6 +305,8 @@ export class ReportingController {
       storeIds: storeReadScope.storeIds,
       periodType: query.periodType,
       periodStart: query.periodStart,
+      storeId: query.storeId,
+      regionManagerUserId: isRegionManagerRead ? request.user.userId : undefined,
     });
   }
 
@@ -574,4 +590,5 @@ export class ReportingController {
       storeIds,
     };
   }
+
 }
