@@ -422,6 +422,30 @@ test('store self-performance closed mode uses readable snapshot labels', async (
 })
 
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsFixture,
+        personnelLeaderboard: {
+          ...rankingsFixture.personnelLeaderboard,
+          items: [
+            {
+              ...personnelRankingSummaryRow,
+              employeeId: 'global-personnel-001',
+              displayName: 'Global Top Personnel',
+              storeId: 'outside-store',
+              storeName: 'Outside Store',
+              canOpenProfile: false,
+              metrics: undefined,
+            },
+          ],
+          managedStorePersonnel: [personnelRankingRawTargetRow],
+        },
+      },
+    })
+  })
+
   await page.goto('/store/kpis')
 
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
@@ -1245,7 +1269,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Mağaza KPI',
     path: '/store/kpis',
-    ready: page.getByRole('heading', { name: "Mağaza KPI'ları" }),
+    ready: page.getByRole('heading', { name: /KPI çalışma alanı/ }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Rankings',
@@ -4886,17 +4910,7 @@ const rankingsFixture = {
     },
   },
   personnelLeaderboard: {
-    items: [
-      {
-        ...personnelRankingSummaryRow,
-        employeeId: 'global-personnel-001',
-        displayName: 'Global Top Personnel',
-        storeId: 'outside-store',
-        storeName: 'Outside Store',
-        canOpenProfile: false,
-        metrics: undefined,
-      },
-    ],
+    items: [personnelRankingSummaryRow],
     currentEmployee: {
       ...personnelRankingSummaryRow,
       visibility: 'detail',
@@ -4910,7 +4924,7 @@ const rankingsFixture = {
         },
       ],
     },
-    managedStorePersonnel: [personnelRankingRawTargetRow],
+    managedStorePersonnel: [],
     meta: {
       total: 420,
       limit: 100,

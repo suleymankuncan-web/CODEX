@@ -23,8 +23,13 @@ test.beforeEach(async ({ page }) => {
 test('kpi metrics explain capped benchmark performance', async ({ page }) => {
   await page.goto('/store/kpis')
 
-  await expect(page.getByText('Skor limiti 120%+')).toBeVisible()
-  await expect(page.getByText('Gerçek oran %148')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mağaza KPI' })).toBeVisible()
+  await expect(page.getByText('UPT').first()).toBeVisible()
+  await expect(page.getByRole('row', { name: /UPT/ })).toContainText('4,44')
+  await expect(page.getByRole('row', { name: /UPT/ })).toContainText('3')
+  await expect(page.getByRole('row', { name: /UPT/ })).toContainText('1,48 puan')
+  await expect(page.getByRole('row', { name: /UPT/ })).toContainText('18')
 })
 
 test('my performance explains missing benchmark or target', async ({ page }) => {
@@ -39,13 +44,15 @@ test('my performance explains missing benchmark or target', async ({ page }) => 
 test('store KPI closed view explains effective BM and VM checklist weights', async ({ page }) => {
   await page.goto('/store/kpis')
 
-  await page.getByRole('radio', { name: 'Kapanmış gün' }).click()
+  await page.getByRole('button', { name: 'Kapanmış gün' }).click()
 
-  await expect(page.getByText('VM checklist: bu dönem skora dahil edilmedi')).toBeVisible()
-  await expect(page.getByText('VM payı KPI tarafında kaldı')).toBeVisible()
-  await expect(page.getByText('BM checklist katkısı')).toBeVisible()
-  await expect(page.getByText('Plan 90/5/5')).toBeVisible()
-  await expect(page.getByText('Uygulanan 95/5/0')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' })).toHaveValue('snapshot-1')
+  await expect(page.getByText('BM checklist').first()).toBeVisible()
+  await expect(page.getByText('VM checklist').first()).toBeVisible()
+  await expect(page.getByText('Yapılmadı').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Personel KPI' }).click()
+  await expect(page.getByText('Skor kaynağı')).toBeVisible()
+  await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
   await expect(page.getByText('Configured 90/5/5')).toHaveCount(0)
   await expect(page.getByText('Effective 95/5/0')).toHaveCount(0)
 })
@@ -53,22 +60,15 @@ test('store KPI closed view explains effective BM and VM checklist weights', asy
 test('store KPI closed view lets users choose a closed snapshot from the list', async ({ page }) => {
   await page.goto('/store/kpis')
 
-  await page.getByRole('radio', { name: 'Kapanmış gün' }).click()
-  await page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' }).click()
-  await expect(
-    page.getByRole('option', {
-      name: '20 Nis 2026 kapanışı - Nisan aylık kapanış',
-    }),
-  ).toBeVisible()
-  await page
-    .getByRole('option', {
-      name: '20 Nis 2026 kapanışı - Nisan aylık kapanış',
-    })
-    .click()
+  await page.getByRole('button', { name: 'Kapanmış gün' }).click()
+  await page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' }).selectOption('snapshot-2026-04-20')
 
-  await expect(page.getByText('1 VM checklist yapıldı')).toBeVisible()
-  await expect(page.getByText('VM checklist katkısı 5')).toBeVisible()
-  await expect(page.getByText('Uygulanan 95/0/5')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' })).toHaveValue('snapshot-2026-04-20')
+  await expect(page.getByText('VM checklist').first()).toBeVisible()
+  await expect(page.getByText('Yapılmadı').first()).toBeVisible()
+  await page.getByRole('button', { name: 'Personel KPI' }).click()
+  await expect(page.getByText('Skor kaynağı')).toBeVisible()
+  await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
   await expect(page.getByText('Effective 95/0/5')).toHaveCount(0)
 })
 
@@ -111,6 +111,37 @@ async function routeBenchmarkExplainabilityApi(page: Page) {
 
   await page.route('**/api/reports/my-performance**', async (route) => {
     await route.fulfill({ json: myPerformanceFixture })
+  })
+
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        source: {
+          mode: 'live',
+          periodType: 'monthly',
+          periodStart: '2026-03-01',
+          periodEnd: '2026-03-31',
+        },
+        access: {
+          globalMode: 'top100',
+          canSeeGlobalDetails: false,
+          canSeeManagedStorePersonnelDetails: true,
+        },
+        filters: { regionManagers: [], regions: [], stores: [] },
+        storeLeaderboard: {
+          items: [],
+          currentStore: null,
+          meta: { total: 0, limit: 100, offset: 0 },
+        },
+        personnelLeaderboard: {
+          items: [],
+          currentEmployee: null,
+          managedStorePersonnel: [],
+          meta: { total: 0, limit: 100, offset: 0 },
+        },
+        availablePeriods: [],
+      },
+    })
   })
 }
 
