@@ -422,27 +422,53 @@ test('store self-performance closed mode uses readable snapshot labels', async (
 })
 
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsFixture,
+        personnelLeaderboard: {
+          ...rankingsFixture.personnelLeaderboard,
+          items: [
+            {
+              ...personnelRankingSummaryRow,
+              employeeId: 'global-personnel-001',
+              displayName: 'Global Top Personnel',
+              storeId: 'outside-store',
+              storeName: 'Outside Store',
+              canOpenProfile: false,
+              metrics: undefined,
+            },
+          ],
+          managedStorePersonnel: [personnelRankingRawTargetRow],
+        },
+      },
+    })
+  })
+
   await page.goto('/store/kpis')
 
-  await expect(page.getByRole('heading', { name: "Mağaza KPI'ları" })).toBeVisible()
-  await expect(page.getByText('Mağaza skor özeti')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'KPI satırları', exact: true })).toBeVisible()
-  await expect(page.getByText('İzlenecek KPI')).toBeVisible()
-  await expect(page.getByText('Mağaza skor yorumu')).toBeVisible()
-  await expect(page.getByText('Güçlü mağaza skoru')).toBeVisible()
-  await expect(page.getByText("Aksiyon: ritmi koru; düşük katkılı ilk KPI'yi günlük izle.")).toBeVisible()
-  await expect(page.getByText('Skor güveni: 100% ağırlık kapsandı.')).toBeVisible()
-  await expect(page.getByText('BM checklist durumu')).toBeVisible()
-  await expect(page.getByText('BM checklist: bu dönem skora dahil edilmedi')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Mağaza skor kaynakları' })).toBeVisible()
-  await expect(page.getByText('Satış hedefi girilen hedeften; CR, ATV ve UPT Türkiye ortalamasından puanlanır.')).toBeVisible()
-  await expect(page.getByText('BM ve VM checklist tamamlanan aylık ziyaret varsa küçük ağırlıkla skora katılır.')).toBeVisible()
-  await expect(page.getByText('Gerçek oran %120 üzerinde olsa da skor katkısı %120 cap ile hesaplanır.')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Skor kırılımı' })).toBeVisible()
-  await expect(page.getByText('Tam', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Veri kaynağı').first()).toBeVisible()
-  await expect(page.getByText('Hedef bazlı skor').first()).toBeVisible()
-  await expect(page.getByText('Operasyon verisi').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
+  await expect(page.getByText('Store KPI', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: /KPI/ }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Personel KPI' })).toBeVisible()
+  await expect(page.getByText('104,6').first()).toBeVisible()
+  await expect(page.getByText(/KPI config/)).toBeVisible()
+  await expect(page.getByText('Takip gerekli')).toBeVisible()
+  await expect(page.getByText(/Problem/)).toBeVisible()
+  await expect(page.getByText(/Hedef/).first()).toBeVisible()
+  await expect(page.getByText('BM checklist').first()).toBeVisible()
+  await expect(page.getByText('VM checklist').first()).toBeVisible()
+  await expect(page.getByText(/Yap/).first()).toBeVisible()
+  await expect(page.getByText(/skor trendi/i)).toBeVisible()
+
+  await page.getByRole('button', { name: 'Personel KPI' }).click()
+
+  await expect(page.getByRole('heading', { name: 'Personel KPI' })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toContainText('371%')
+  await expect(page.getByText('Global Top Personnel')).toHaveCount(0)
+  await expect(page.getByText(/Skor kayna/)).toBeVisible()
+  await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
   await expect(page.getByText('Store KPI Highlights')).toHaveCount(0)
   await expect(page.getByText('Store skor yorumu')).toHaveCount(0)
   await expect(page.getByText('Weighted Score Summary')).toHaveCount(0)
@@ -454,6 +480,10 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('Configured blend')).toHaveCount(0)
   await expect(page.getByText('Effective blend')).toHaveCount(0)
   await expect(page.getByText('KPI rows unavailable')).toHaveCount(0)
+
+  await page.getByRole('button', { name: /Kapan/ }).click()
+  await expect(page.getByText('Store Personnel - 1')).toHaveCount(0)
+  await expect(page.getByText('Global Top Personnel')).toHaveCount(0)
 })
 
 test('store KPI live checklist impact uses completed BM and VM visits from highlights', async ({ page }) => {
@@ -563,14 +593,12 @@ test('store KPI live checklist impact uses completed BM and VM visits from highl
 
   await page.goto('/store/kpis')
 
-  await expect(page.getByText('BM checklist status')).toBeVisible()
-  await expect(page.getByText('1 BM checklist completed')).toBeVisible()
-  await expect(page.getByText('BM checklist contribution 4')).toBeVisible()
-  await expect(page.getByText('VM checklist status')).toBeVisible()
-  await expect(page.getByText('1 VM checklist completed')).toBeVisible()
-  await expect(page.getByText('VM checklist contribution 5')).toBeVisible()
-  await expect(page.getByText('BM checklist: not included in score this period')).toHaveCount(0)
-  await expect(page.getByText('VM checklist: not included in score this period')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /BM checklist - 4/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /VM checklist - 5/ })).toBeVisible()
+  await expect(page.getByText('BM checklist').first()).toBeVisible()
+  await expect(page.getByText('VM checklist').first()).toBeVisible()
+  await expect(page.getByText('Passive')).toHaveCount(0)
 })
 
 test('region manager store KPI overview waits for selected store before loading detail highlights', async ({ page }) => {
@@ -685,20 +713,17 @@ test('store KPI highlights switches to English copy and persists locale', async 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Store KPIs' })).toBeVisible()
-  await expect(page.getByText('Store score summary')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Score breakdown' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'KPI rows', exact: true })).toBeVisible()
-  await expect(page.getByText('KPIs to watch')).toBeVisible()
-  await expect(page.getByText('Store score meaning')).toBeVisible()
-  await expect(page.getByText('Strong store score')).toBeVisible()
-  await expect(page.getByText('Action: keep the rhythm; watch the first low-contribution KPI daily.')).toBeVisible()
-  await expect(page.getByText('Score confidence: 100% weight covered.')).toBeVisible()
-  await expect(page.getByText('BM checklist status')).toBeVisible()
-  await expect(page.getByText('BM checklist: not included in score this period')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Store score sources' })).toBeVisible()
-  await expect(page.getByText('Target-based score').first()).toBeVisible()
-  await expect(page.getByText('Operational data').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Store KPI' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Personnel KPI' })).toBeVisible()
+  await expect(page.getByText('Store score', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store KPI contribution breakdown' })).toBeVisible()
+  await expect(page.getByText('Store KPIs are read together with KPI config weight and reference.')).toBeVisible()
+  await expect(page.getByText('Good / above target')).toBeVisible()
+  await expect(page.getByText('Problem / not done')).toBeVisible()
+  await page.getByRole('button', { name: 'Personnel KPI' }).click()
+  await expect(page.getByRole('heading', { name: 'Score source' })).toBeVisible()
+  await expect(page.getByText('Personnel KPI impact')).toBeVisible()
   await expect(page.getByText("Mağaza KPI'ları")).toHaveCount(0)
   await expect(page.getByText('Mağaza skor özeti')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
@@ -708,7 +733,7 @@ test('store KPI highlights switches to English copy and persists locale', async 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Store KPIs' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Store KPI' })).toBeVisible()
 })
 
 test('store shell exposes Turkish-first chrome and hides technical auth roles', async ({ page }) => {
@@ -1244,7 +1269,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Mağaza KPI',
     path: '/store/kpis',
-    ready: page.getByRole('heading', { name: "Mağaza KPI'ları" }),
+    ready: page.getByRole('heading', { name: /KPI çalışma alanı/ }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Rankings',
@@ -3632,6 +3657,79 @@ async function routeStoreSurfaceApi(page: Page) {
     await route.fulfill({ json: storeKpiHighlightsFixture })
   })
 
+  await page.route('**/api/reports/kpis**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: storeKpiHighlightsFixture.metrics.map((metric) => ({
+          snapshotRunId: 'snapshot-2026-04-24',
+          storeId: demoStoreId,
+          kpiId: `closed-${metric.code}`,
+          kpiCode: metric.code,
+          kpiName: metric.label,
+          periodStart: '2026-04-24',
+          periodEnd: '2026-04-24',
+          targetValue: metric.targetValue === null ? null : String(metric.targetValue),
+          actualValue: metric.actualValue === null ? null : String(metric.actualValue),
+          achievementRate: metric.achievementRate === null ? null : String(metric.achievementRate),
+          statusBand: metric.statusBand,
+        })),
+        meta: {
+          count: storeKpiHighlightsFixture.metrics.length,
+          total: storeKpiHighlightsFixture.metrics.length,
+          limit: 50,
+          offset: 0,
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/reports/store-score-breakdown**', async (route) => {
+    await route.fulfill({
+      json: {
+        snapshotRunId: 'snapshot-2026-04-24',
+        storeId: demoStoreId,
+        scoreStatus: 'final',
+        totalScore: 87,
+        missingWeightPolicy: 'return_missing_weight_to_kpi',
+        configuredWeights: {
+          kpiPerformanceWeight: 90,
+          bmChecklistWeight: 5,
+          vmChecklistWeight: 5,
+        },
+        effectiveWeights: {
+          kpiPerformanceWeight: 100,
+          bmChecklistWeight: 0,
+          vmChecklistWeight: 0,
+        },
+        components: {
+          kpi: {
+            included: true,
+            score: 87,
+            weight: 100,
+            contribution: 87,
+            status: 'included',
+          },
+          bmChecklist: {
+            included: false,
+            score: null,
+            weight: 0,
+            contribution: null,
+            status: 'not_included',
+            visitCount: 0,
+          },
+          vmChecklist: {
+            included: false,
+            score: null,
+            weight: 0,
+            contribution: null,
+            status: 'not_included',
+            visitCount: 0,
+          },
+        },
+      },
+    })
+  })
+
   await page.route('**/api/reports/leaderboards/closed**', async (route) => {
     const requestUrl = new URL(route.request().url())
     await route.fulfill({
@@ -4481,6 +4579,20 @@ const personnelRankingDetailRow = {
   ],
 }
 
+const personnelRankingRawTargetRow = {
+  ...personnelRankingDetailRow,
+  metrics: personnelRankingDetailRow.metrics.map((metric) =>
+    metric.code === 'TARGET_ACHIEVEMENT'
+      ? {
+          ...metric,
+          actualValue: 3710884.57,
+          targetValue: 1000000,
+          benchmarkValue: 1000000,
+        }
+      : metric,
+  ),
+}
+
 const regionManagerInScopePersonnelRow = {
   ...personnelRankingDetailRow,
   employeeId: demoEmployeeId,
@@ -4812,21 +4924,7 @@ const rankingsFixture = {
         },
       ],
     },
-    managedStorePersonnel: [
-      {
-        ...personnelRankingSummaryRow,
-        visibility: 'detail',
-        metrics: [
-          {
-            code: 'UPT',
-            label: 'UPT',
-            actualValue: 4.8,
-            benchmarkValue: 4.2,
-            contributionValue: 29,
-          },
-        ],
-      },
-    ],
+    managedStorePersonnel: [],
     meta: {
       total: 420,
       limit: 100,

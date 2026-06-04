@@ -2,25 +2,11 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import { Link } from 'react-router-dom'
 import { getErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
-import { StoreKpiViewModePanel } from './store-kpi-view-mode-panel'
 import {
   type StoreKpiHighlightsPageModel,
   useStoreKpiHighlightsPageModel,
 } from './store-kpi-highlights-model'
-import {
-  StoreKpiChecklistImpactPanel,
-  StoreKpiHeroPanel,
-  StoreKpiPartialDataPanel,
-  StoreKpiScopeSignalGrid,
-  StoreKpiScoreMeaningPanel,
-  StoreKpiScoreSourcesPanel,
-  StoreKpiSummaryGrid,
-} from './store-kpi-score-summary'
-import {
-  StoreKpiOwnershipPanel,
-  StoreKpiPriorityPanel,
-  StoreKpiScoreBreakdownPanel,
-} from './store-kpi-metric-list'
+import { StoreKpisCommandDeck } from './store-kpis-command-deck'
 import {
   StoreErrorState,
   StoreEmptyState,
@@ -248,19 +234,5 @@ function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageMode
 }
 
 function StoreKpiHighlightsExperience({ model }: { model: StoreKpiHighlightsPageModel }) {
-  return (
-    <StoreSurfacePage ariaLabel={model.t('storeKpis.title')}>
-      <StoreKpiHeroPanel model={model} />
-      <StoreKpiViewModePanel model={model} />
-      <StoreKpiSummaryGrid model={model} />
-      <StoreKpiChecklistImpactPanel model={model} />
-      <StoreKpiScoreSourcesPanel model={model} />
-      <StoreKpiScopeSignalGrid model={model} />
-      <StoreKpiPartialDataPanel model={model} />
-      <StoreKpiScoreMeaningPanel model={model} />
-      <StoreKpiScoreBreakdownPanel model={model} />
-      <StoreKpiOwnershipPanel model={model} />
-      <StoreKpiPriorityPanel model={model} />
-    </StoreSurfacePage>
-  )
+  return <StoreKpisCommandDeck model={model} />
 }
