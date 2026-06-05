@@ -6,7 +6,6 @@ import {
   ClipboardList,
   Clock3,
   RotateCcw,
-  Store,
   UserMinus,
   UserPlus,
   UsersRound,
@@ -58,6 +57,7 @@ import {
   StoreSurfaceHeader,
   StoreSurfacePage,
 } from './store-surface-primitives'
+import { RegionWorkforceView } from './store-workforce-region-view'
 
 type WorkforceMode = 'region' | 'store'
 type WorkforcePanel = 'personnel' | 'sellerCodeRequest' | 'offboardingRequest' | 'returnedRequests'
@@ -73,7 +73,7 @@ export function StoreWorkforcePage(input: {
   const mode = resolveWorkforceMode(input.authSummary)
 
   if (mode === 'region') {
-    return <RegionWorkforceFoundation />
+    return <RegionWorkforceView authSummary={input.authSummary} />
   }
 
   return <StoreManagerWorkforce authSummary={input.authSummary} />
@@ -641,112 +641,6 @@ function StoreManagerWorkforce(input: {
           </StoreSectionCard>
         </div>
       </div>
-    </StoreSurfacePage>
-  )
-}
-
-function RegionWorkforceFoundation() {
-  const { t } = useLocalization()
-  const overviewItems = [
-    {
-      label: t('storeWorkforce.personnelScope'),
-      value: t('storeWorkforce.valuePending'),
-      tone: 'warning' as const,
-    },
-    {
-      label: t('storeWorkforce.averageTenure'),
-      value: t('storeWorkforce.valuePending'),
-      tone: 'warning' as const,
-    },
-    {
-      label: t('storeWorkforce.normActual'),
-      value: t('storeWorkforce.valueNotConfigured'),
-      tone: 'neutral' as const,
-    },
-    {
-      label: t('storeWorkforce.openMovements'),
-      value: t('storeWorkforce.valueCurrentFlow'),
-      tone: 'calm' as const,
-    },
-  ]
-  const foundationRows = [
-    {
-      icon: <UsersRound size={18} />,
-      title: t('storeWorkforce.regionPersonnelTitle'),
-      copy: t('storeWorkforce.regionPersonnelCopy'),
-    },
-    {
-      icon: <Clock3 size={18} />,
-      title: t('storeWorkforce.tenureTitle'),
-      copy: t('storeWorkforce.tenureCopy'),
-    },
-    {
-      icon: <ClipboardList size={18} />,
-      title: t('storeWorkforce.requestTitle'),
-      copy: t('storeWorkforce.requestCopy'),
-    },
-  ]
-
-  return (
-    <StoreSurfacePage
-      ariaLabel={t('storeWorkforce.title')}
-      className="tw:mx-auto tw:w-full tw:max-w-7xl"
-      testId="store-workforce-page"
-    >
-      <StoreSurfaceHeader
-        eyebrow={t('storeWorkforce.eyebrow')}
-        title={t('storeWorkforce.title')}
-        description={t('storeWorkforce.regionDescription')}
-        badges={[
-          { label: t('storeWorkforce.regionBadge'), tone: 'accent' },
-          { label: t('storeWorkforce.foundationBadge'), tone: 'warning' },
-        ]}
-        action={{
-          label: t('storeWorkforce.openApprovals'),
-          to: '/store/approvals',
-          variant: 'outline',
-          icon: <ClipboardList size={16} />,
-        }}
-      />
-
-      <StoreInfoGrid items={overviewItems} />
-
-      <StoreSectionCard
-        title={t('storeWorkforce.foundationTitle')}
-        description={t('storeWorkforce.foundationCopy')}
-        badge={{ label: t('storeWorkforce.foundationStatus'), tone: 'warning' }}
-      >
-        <StoreStackedList>
-          {foundationRows.map((row) => (
-            <StoreStackedRow key={row.title} className="tw:flex tw:items-start tw:gap-3">
-              <span className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-secondary tw:text-primary">
-                {row.icon}
-              </span>
-              <span className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1">
-                <strong className="tw:text-sm tw:font-medium tw:text-foreground">{row.title}</strong>
-                <span className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{row.copy}</span>
-              </span>
-            </StoreStackedRow>
-          ))}
-        </StoreStackedList>
-      </StoreSectionCard>
-
-      <StoreSectionCard
-        title={t('storeWorkforce.regionDetailTitle')}
-        badge={{ label: t('storeWorkforce.detailAction'), tone: 'neutral' }}
-      >
-        <StoreEmptyState
-          title={t('storeWorkforce.regionDetailEmptyTitle')}
-          titleAsHeading
-          description={t('storeWorkforce.regionDetailEmptyCopy')}
-          action={{
-            label: t('storeWorkforce.openApprovals'),
-            to: '/store/approvals',
-            variant: 'secondary',
-            icon: <Store size={16} />,
-          }}
-        />
-      </StoreSectionCard>
     </StoreSurfacePage>
   )
 }

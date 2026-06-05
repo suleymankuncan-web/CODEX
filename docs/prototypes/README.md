@@ -22,6 +22,22 @@ implemented and verified.
   after the Lufian login simplification and Clerk spacing pass.
 - `docs/prototypes/assets/hr-axis-06-assets.md` describes the raster logo
   assets used by the prototype pages.
+- `docs/prototypes/store-workforce-prototype-v1.html` is the locked Store
+  workforce / Norm Kadro visual contract for the Store workforce split.
+- `docs/prototypes/store-approvals-request-center-v1.html` is the locked Store
+  approvals / Talep Merkezi visual contract for the approvals cleanup.
+
+## Locked Prototype Contracts
+
+These files are not loose inspiration. When their matching production surface is
+implemented, layout, palette, density, status tones, row rhythm, modal/drawer
+model, labels, and interaction flow must match unless a documented production
+constraint requires a deviation.
+
+| Prototype | Surface | SHA-256 |
+| --- | --- | --- |
+| `docs/prototypes/store-workforce-prototype-v1.html` | `/store/workforce` | `93390D1705B9DFEC74E3ACF084320FC91B1F31580E45C6FE8A26B479EDCD031F` |
+| `docs/prototypes/store-approvals-request-center-v1.html` | `/store/approvals` request center | `F122E2A80F1E9AFFDCCF2942F6E3F609942409527047B5452B50874E8AE2CABD` |
 
 ## Supporting References
 
