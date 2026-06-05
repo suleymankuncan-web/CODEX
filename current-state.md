@@ -20,8 +20,9 @@ Redis/BullMQ Render worker closure through PR #536, the Store checklist flow
 polish through PR #537, the first architecture hardening line through PR #552,
 Architecture Hardening V2 through PR #566, Architecture Hardening V3
 through PR #570, and the Architecture Hardening V4 line through the PR-3
-workforce request persistence boundary, plus the Store KPIs Prototype Parity V1
-line through PR #653 and final closeout evidence.
+workforce request persistence boundary, the Store KPIs Prototype Parity V1
+line through PR #653 and final closeout evidence, plus the Store Workforce And
+Approvals Split V1 line through PR #659 and final closeout evidence.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -244,16 +245,25 @@ Current maintenance baseline:
   region averages when the ranking response does not cover full `meta.total`.
   API shape, DB schema, auth/scope semantics, scoring, ranking, checklist
   weights, snapshot behavior, and business workflows remained unchanged.
-- Store Workforce And Approvals Split V1 is the active Store workflow split
-  line. Plan:
-  `docs/plans/store-workforce-and-approvals-split-v1-plan.md`. PR-1 evidence:
-  `docs/evidence/store-workforce-and-approvals-split-pr1-contract-matrix-2026-06-05.md`.
-  The current evidence says Store Manager workforce work is backed by existing
-  assigned/action-store contracts, while Region Manager workforce detail is not
-  fully backed by current Store workforce APIs and must use honest unavailable
-  states or stop for a separate read-contract plan. `/store/approvals` must not
-  lose seller-code/offboarding creation or returned-request correction until
-  `/store/workforce` proves those replacement paths.
+- Store Workforce And Approvals Split V1 is closed through PR #655 to PR #659
+  plus the PR-6 closeout slice. Plan:
+  `docs/plans/store-workforce-and-approvals-split-v1-plan.md`; closeout
+  evidence:
+  `docs/evidence/store-workforce-and-approvals-split-v1-closeout-2026-06-06.md`.
+  PR #655 locked the route/role/data-source/prototype contract, PR #656 added
+  `/store/workforce` and sidebar `Norm Kadro`, PR #657 implemented the Store
+  Manager workforce view and preserved seller-code/offboarding creation plus
+  returned-request correction, PR #658 implemented the Region Manager
+  workforce view with same-page `Detay ac`, and PR #659 converted
+  `/store/approvals` into `Talep Merkezi`. Store approvals is now a status
+  center, Store targets remains target distribution/revision owner, and Store
+  workforce owns seller-code/offboarding creation and correction. API shape, DB
+  schema, auth/permission semantics, target distribution lifecycle,
+  seller-code/offboarding lifecycle, scoring, ranking, checklist weights,
+  snapshot behavior, BullMQ/import/provider behavior, and business workflows
+  stayed unchanged. Parked risks: Region Manager workforce aggregate/detail
+  data and completed norm target data require separate safe read contracts and
+  must keep honest unavailable states until then.
 
 Latest route/scope guard merge:
 

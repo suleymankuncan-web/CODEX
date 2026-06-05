@@ -1,10 +1,14 @@
 # Store Workforce And Approvals Split V1 Plan
 
-Status: active plan
+Status: closed through PR-6 closeout
 
 PR-1 contract evidence:
 
 - `docs/evidence/store-workforce-and-approvals-split-pr1-contract-matrix-2026-06-05.md`
+
+Closeout evidence:
+
+- `docs/evidence/store-workforce-and-approvals-split-v1-closeout-2026-06-06.md`
 
 ## Reader And Action
 
