@@ -21,11 +21,23 @@ export function getReadStoreIds(authSummary: AuthSessionSummary | null) {
   return authSummary?.user.readScope.storeIds ?? authSummary?.user.scope.storeIds ?? []
 }
 
+export function getReadRegionIds(authSummary: AuthSessionSummary | null) {
+  return authSummary?.user.readScope.regionIds ?? authSummary?.user.scope.regionIds ?? []
+}
+
 export function getAssignedStoreIds(authSummary: AuthSessionSummary | null) {
   return (
     authSummary?.user.actionScope.assignedStoreIds ??
     authSummary?.user.assignedStoreIds ??
     authSummary?.user.scope.storeIds ??
+    []
+  )
+}
+
+export function getActionStoreIds(authSummary: AuthSessionSummary | null) {
+  return (
+    authSummary?.user.actionScope.assignedStoreIds ??
+    authSummary?.user.assignedStoreIds ??
     []
   )
 }
@@ -66,4 +78,14 @@ export function canReadChecklistResults(authSummary: AuthSessionSummary | null) 
 
 export function canOpenStoreChecklists(authSummary: AuthSessionSummary | null) {
   return canReadChecklistResults(authSummary)
+}
+
+export function canOpenStoreWorkforce(authSummary: AuthSessionSummary | null) {
+  const canOpenAsStoreManager =
+    hasAnyRole(authSummary, ['STORE_MANAGER']) && getActionStoreIds(authSummary).length > 0
+  const canOpenAsRegionManager =
+    hasAnyRole(authSummary, ['REGION_MANAGER']) &&
+    (getReadStoreIds(authSummary).length > 0 || getReadRegionIds(authSummary).length > 0)
+
+  return canOpenAsStoreManager || canOpenAsRegionManager
 }

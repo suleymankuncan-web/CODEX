@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canListTargetDistributionRequests,
+  canOpenStoreWorkforce,
   canOpenStoreChecklists,
 } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -22,6 +23,7 @@ import {
   StoreSettingsPage,
   StoreTargetsPage,
   StoreTasksPage,
+  StoreWorkforcePage,
 } from './route-loaders'
 import { RouteLoadingState, RouteProgressState, StoreRouteGuard } from './route-states'
 import { RouteRecoveryBoundary } from './route-recovery-boundary'
@@ -49,6 +51,7 @@ export function StoreShell(input: {
     canOpenStoreChecklists(input.authSummary)
   const storeTasksAllowed = storePersona !== 'personnel'
   const storeTargetsAllowed = canListTargetDistributionRequests(input.authSummary)
+  const storeWorkforceAllowed = canOpenStoreWorkforce(input.authSummary)
   const location = useLocation()
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
@@ -197,6 +200,15 @@ export function StoreShell(input: {
                 <StoreTargetsPage authSummary={input.authSummary} />,
                 {
                   allowed: storeTargetsAllowed,
+                  firstAllowedPath: input.firstAllowedPath,
+                },
+              )}
+            />
+            <Route path="/store/workforce"
+              element={storeRoute(
+                <StoreWorkforcePage authSummary={input.authSummary} />,
+                {
+                  allowed: storeWorkforceAllowed,
                   firstAllowedPath: input.firstAllowedPath,
                 },
               )}

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-04T17:02:53.930Z",
+  "generatedAt": "2026-06-05T14:16:22.671Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -9,11 +9,11 @@
     "backendEndpointsWithoutFrontendCallCount": 34,
     "controllerCount": 20,
     "frontendApiCallCount": 139,
-    "frontendRouteCount": 53,
+    "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 139,
     "openApiEndpointCount": 173,
     "routeApiEdgeCount": 213,
-    "routesWithoutApiCallCount": 3,
+    "routesWithoutApiCallCount": 4,
     "unmatchedFrontendApiCallCount": 0
   },
   "frontendRoutes": [
@@ -59,7 +59,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 208
+        "line": 220
       }
     },
     {
@@ -687,7 +687,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 116
+        "line": 119
       }
     },
     {
@@ -704,7 +704,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 177
+        "line": 180
       }
     },
     {
@@ -722,7 +722,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 132
+        "line": 135
       }
     },
     {
@@ -739,7 +739,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 173
+        "line": 176
       }
     },
     {
@@ -757,7 +757,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 169
+        "line": 172
       }
     },
     {
@@ -772,7 +772,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 124
+        "line": 127
       }
     },
     {
@@ -789,7 +789,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 187
+        "line": 190
       }
     },
     {
@@ -806,7 +806,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 153
+        "line": 156
       }
     },
     {
@@ -823,7 +823,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 157
+        "line": 160
       }
     },
     {
@@ -840,7 +840,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 161
+        "line": 164
       }
     },
     {
@@ -857,7 +857,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 165
+        "line": 168
       }
     },
     {
@@ -874,7 +874,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 204
+        "line": 216
       }
     },
     {
@@ -892,7 +892,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 191
+        "line": 194
       }
     },
     {
@@ -909,7 +909,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 195
+        "line": 198
       }
     },
     {
@@ -926,7 +926,24 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-shell.tsx",
-        "line": 143
+        "line": 146
+      }
+    },
+    {
+      "id": "route:store:/store/workforce",
+      "path": "/store/workforce",
+      "surface": "store",
+      "domain": "workforce",
+      "kind": "page",
+      "component": "StoreWorkforcePage",
+      "componentFile": "admin-web/src/pages/StoreWorkforcePage.tsx",
+      "guard": "StoreRouteGuard",
+      "roles": [
+        "STORE_ACCESS"
+      ],
+      "source": {
+        "file": "admin-web/src/app/store-shell.tsx",
+        "line": 207
       }
     }
   ],
@@ -8593,7 +8610,8 @@
     "routesWithoutApiCalls": [
       "route:store:/store/incentives",
       "route:store:/store/reports",
-      "route:store:/store/settings"
+      "route:store:/store/settings",
+      "route:store:/store/workforce"
     ],
     "unmatchedApiCalls": []
   }

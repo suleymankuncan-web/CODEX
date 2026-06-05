@@ -43,6 +43,7 @@ const loadStoreReportsPage = () => import('../pages/StoreReportsPage').then((mod
 const loadStoreSettingsPage = () => import('../pages/StoreSettingsPage').then((module) => ({ default: module.StoreSettingsPage }))
 const loadStoreTargetsPage = () => import('../pages/StoreTargetsPage').then((module) => ({ default: module.StoreTargetsPage }))
 const loadStoreTasksPage = () => import('../pages/StoreTasksPage').then((module) => ({ default: module.StoreTasksPage }))
+const loadStoreWorkforcePage = () => import('../pages/StoreWorkforcePage').then((module) => ({ default: module.StoreWorkforcePage }))
 const loadTargetApprovalQueuePage = () => import('../pages/TargetApprovalQueuePage').then((module) => ({ default: module.TargetApprovalQueuePage }))
 
 export const AuditCenterPage = lazy(loadAuditCenterPage)
@@ -88,4 +89,5 @@ export const StoreReportsPage = lazy(loadStoreReportsPage)
 export const StoreSettingsPage = lazy(loadStoreSettingsPage)
 export const StoreTargetsPage = lazy(loadStoreTargetsPage)
 export const StoreTasksPage = lazy(loadStoreTasksPage)
+export const StoreWorkforcePage = lazy(loadStoreWorkforcePage)
 export const TargetApprovalQueuePage = lazy(loadTargetApprovalQueuePage)
