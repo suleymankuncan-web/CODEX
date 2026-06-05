@@ -54,7 +54,7 @@ export const storeWorkforceTr = {
     'Magaza personeli, pozisyon dagilimi, kidem ve personel talepleri ayni yuzeyde yonetilir.',
   'storeWorkforce.missingActionStoreTitle': 'Atanmis magaza bulunamadi',
   'storeWorkforce.missingActionStoreCopy':
-    'Norm Kadro sadece aksiyon kapsami olan magaza muduru icin acilir. Talep yolu genisletilmedi.',
+    'Norm Kadro sadece atanmis magazasi bulunan magaza muduru icin acilir. Talep yolu genisletilmedi.',
   'storeWorkforce.personnelLoadingTitle': 'Personel kayitlari okunuyor',
   'storeWorkforce.personnelLoadingCopy': 'Aktif magaza personeli yukleniyor.',
   'storeWorkforce.personnelScopeNote': 'Aktif magaza personeli.',
@@ -172,15 +172,15 @@ export const storeWorkforceTr = {
 
 export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
   'storeWorkforce.title': 'Workforce Plan',
-  'storeWorkforce.eyebrow': 'Personnel scope',
-  'storeWorkforce.storeBadge': 'Store scope',
-  'storeWorkforce.regionBadge': 'Region scope',
+  'storeWorkforce.eyebrow': 'Personnel coverage',
+  'storeWorkforce.storeBadge': 'Store view',
+  'storeWorkforce.regionBadge': 'Region view',
   'storeWorkforce.foundationBadge': 'Foundation',
   'storeWorkforce.storeDescription':
     'Store personnel, position mix, tenure, and personnel requests will be collected on this surface.',
   'storeWorkforce.regionDescription':
-    'Region managers will inspect workforce status for their scoped stores here; store detail opens in the same page.',
-  'storeWorkforce.personnelScope': 'Personnel scope',
+    'Region managers will inspect workforce status for their authorized stores here; store detail opens in the same page.',
+  'storeWorkforce.personnelScope': 'Personnel coverage',
   'storeWorkforce.averageTenure': 'Average tenure',
   'storeWorkforce.normActual': 'Planned / actual',
   'storeWorkforce.openMovements': 'Open movement',
@@ -195,7 +195,7 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
   'storeWorkforce.foundationStatus': 'Foundation',
   'storeWorkforce.storePersonnelTitle': 'Store personnel list',
   'storeWorkforce.storePersonnelCopy':
-    'Active personnel, position, and tenure data will be connected through the store scope.',
+    'Active personnel, position, and tenure data will be connected through the store view.',
   'storeWorkforce.regionPersonnelTitle': 'Region store list',
   'storeWorkforce.regionPersonnelCopy':
     'The region view will show only authorized stores; store detail opens inside the page.',
@@ -226,7 +226,7 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
     'Store personnel, position mix, tenure, and personnel requests are managed on one surface.',
   'storeWorkforce.missingActionStoreTitle': 'No assigned store was found',
   'storeWorkforce.missingActionStoreCopy':
-    'Workforce opens only for a store manager with action-scope store access. The request path was not widened.',
+    'Workforce opens only for a store manager with an assigned store. The request path was not widened.',
   'storeWorkforce.personnelLoadingTitle': 'Loading personnel records',
   'storeWorkforce.personnelLoadingCopy': 'Active store personnel is loading.',
   'storeWorkforce.personnelScopeNote': 'Active store personnel.',
@@ -275,11 +275,11 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
   'storeWorkforce.missingPosition': 'No position',
   'storeWorkforce.missingDate': 'No date',
   'storeWorkforce.regionManagerDescription':
-    'Region managers see only stores in their authorized scope; store detail opens in the same page.',
+    'Region managers see only their authorized stores; store detail opens in the same page.',
   'storeWorkforce.regionSummaryAria': 'Region workforce summary metrics',
-  'storeWorkforce.regionTotalScope': 'Total scope',
+  'storeWorkforce.regionTotalScope': 'Total coverage',
   'storeWorkforce.regionAverageTenure': 'Region avg. tenure',
-  'storeWorkforce.regionStoreScope': 'Store scope',
+  'storeWorkforce.regionStoreScope': 'Store coverage',
   'storeWorkforce.regionStoreScopeNote': 'Read from the authorized store list in the session.',
   'storeWorkforce.regionStoreScopeUnavailableNote':
     'No authorized store list was returned, so no store row can be produced.',
@@ -291,26 +291,26 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
     'A safe data source for regional request movement is not available yet.',
   'storeWorkforce.regionStoreListTitle': 'Region stores',
   'storeWorkforce.regionStoreListDescription':
-    'Every row comes from the authorized store scope in the session; out-of-scope stores are not shown.',
+    'Every row comes from the authorized stores in the session; unauthorized stores are not shown.',
   'storeWorkforce.regionStoreListBadge': '{count} stores',
   'storeWorkforce.regionStoreListContractTitle': 'Data source required for store list',
   'storeWorkforce.regionStoreListContractCopy':
-    'The session has region scope but no authorized store list. Regional totals are not estimated.',
+    'The session has a region assignment but no authorized store list. Regional totals are not estimated.',
   'storeWorkforce.regionStoreListEmptyTitle': 'No region store was found',
   'storeWorkforce.regionStoreListEmptyCopy':
-    'No authorized store or region scope was returned for this session.',
-  'storeWorkforce.regionEvidenceTitle': 'Scope evidence',
+    'No authorized store or region assignment was returned for this session.',
+  'storeWorkforce.regionEvidenceTitle': 'Access evidence',
   'storeWorkforce.regionEvidenceCopy':
-    'This panel separates data that comes from real authorization scope from data still waiting for a source.',
-  'storeWorkforce.regionReadScope': 'Authorized scope',
+    'This panel separates data that comes from real authorized access from data still waiting for a source.',
+  'storeWorkforce.regionReadScope': 'Authorized access',
   'storeWorkforce.regionReadScopeValue': '{stores} stores / {regions} regions',
   'storeWorkforce.regionDataSource': 'Source',
-  'storeWorkforce.regionDataSourceValue': 'Session read scope',
+  'storeWorkforce.regionDataSourceValue': 'Session read access',
   'storeWorkforce.regionForbiddenAction': 'Restricted action',
   'storeWorkforce.regionForbiddenActionValue': 'No store navigation',
   'storeWorkforce.regionPositionTotalsTitle': 'Region position totals',
   'storeWorkforce.regionPositionTotalsDescription':
-    'The position mix for scoped stores appears when the safe source is ready.',
+    'The position mix for authorized stores appears when the safe source is ready.',
   'storeWorkforce.regionTenureSignalTitle': 'Tenure signal',
   'storeWorkforce.regionTenureSignalDescription':
     'Experience balance highlights risky stores early when the source is ready.',
