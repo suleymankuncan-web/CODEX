@@ -5,6 +5,7 @@ const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoRegionId = '00000000-0000-0000-0000-000000000010'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 const demoPositionId = '44444444-4444-4444-8444-444444444444'
+const regionSecondStoreId = '00000000-0000-0000-0000-000000000101'
 const outsideStoreId = '00000000-0000-0000-0000-000000000999'
 
 async function selectComboboxOption(page: Page, trigger: Locator, optionName: string | RegExp) {
@@ -109,6 +110,64 @@ test('store workforce route is visible for region manager read scope', async ({ 
   await expect(page).toHaveURL(/\/store\/workforce$/)
   await expect(page.getByTestId('store-workforce-page')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
+})
+
+test('store workforce page shows only region manager read-scope rows and opens detail in page', async ({ page }) => {
+  const workforceCalls: string[] = []
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REGION_MANAGER'],
+    readStoreIds: [demoStoreId, regionSecondStoreId],
+    readRegionIds: [demoRegionId],
+    scopeStoreIds: [],
+    scopeRegionIds: [demoRegionId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+  await routeUnexpectedWorkforceDetailCalls(page, workforceCalls)
+
+  await page.goto('/store/workforce')
+
+  await expect(page.getByTestId('store-workforce-page')).toBeVisible()
+  await expect(page.getByText(demoStoreId).first()).toBeVisible()
+  await expect(page.getByText(regionSecondStoreId).first()).toBeVisible()
+  await expect(page.getByText(outsideStoreId)).toHaveCount(0)
+  await expect(page.getByText('Magazaya git yok')).toBeVisible()
+  expect(workforceCalls).toEqual([])
+
+  const firstRow = page.getByTestId('store-workforce-region-row').filter({ hasText: demoStoreId })
+  await firstRow.getByRole('button', { name: /Detay|Open detail/i }).click()
+
+  const detail = page.getByTestId('store-workforce-region-detail-dialog')
+  await expect(detail).toBeVisible()
+  await expect(detail).toContainText(demoStoreId)
+  await expect(detail).toContainText(/Kaynak gerekli|Data source required/)
+  await expect(page).toHaveURL(/\/store\/workforce$/)
+  expect(workforceCalls).toEqual([])
+})
+
+test('store workforce region detail stays usable on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const workforceCalls: string[] = []
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REGION_MANAGER'],
+    readStoreIds: [demoStoreId],
+    readRegionIds: [demoRegionId],
+    scopeStoreIds: [],
+    scopeRegionIds: [demoRegionId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+  await routeUnexpectedWorkforceDetailCalls(page, workforceCalls)
+
+  await page.goto('/store/workforce')
+  await page.getByTestId('store-workforce-region-row').getByRole('button', { name: /Detay|Open detail/i }).click()
+
+  await expect(page.getByTestId('store-workforce-region-detail-dialog')).toBeVisible()
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(hasHorizontalOverflow).toBe(false)
+  expect(workforceCalls).toEqual([])
 })
 
 test('store workforce route stays hidden for store personnel', async ({ page }) => {
@@ -4073,6 +4132,26 @@ async function routeAuthSession(page: Page, authSession: ReturnType<typeof creat
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
   })
+}
+
+async function routeUnexpectedWorkforceDetailCalls(page: Page, calls: string[]) {
+  const patterns = [
+    '**/api/workforce/store-employees**',
+    '**/api/workforce/position-options**',
+    '**/api/workforce/seller-code-requests**',
+    '**/api/workforce/offboarding-requests**',
+  ]
+
+  for (const pattern of patterns) {
+    await page.unroute(pattern)
+    await page.route(pattern, async (route) => {
+      calls.push(route.request().url())
+      await route.fulfill({
+        status: 403,
+        json: { message: 'Region workforce detail contract is not expected in this PR.' },
+      })
+    })
+  }
 }
 
 async function routeStoreSurfaceApi(page: Page) {

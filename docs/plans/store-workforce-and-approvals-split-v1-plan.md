@@ -71,6 +71,10 @@ The desired split is:
 10. The approved prototype is the visual contract for density, palette, row
     rhythm, modal model, status tones, and role-specific information
     architecture.
+11. `docs/prototypes/store-workforce-prototype-v1.html` is the locked visual
+    contract for `/store/workforce`.
+12. `docs/prototypes/store-approvals-request-center-v1.html` is the locked
+    visual contract for `/store/approvals` after it becomes `Talep Merkezi`.
 
 ## Non-Goals
 
@@ -584,7 +588,8 @@ Verification:
 - targeted e2e for region manager route visibility and scoped store rows,
 - targeted e2e for modal open/close and mobile drawer,
 - negative test or assertion proving out-of-scope store rows are absent,
-- visual QA desktop/mobile against approved prototype.
+- visual QA desktop/mobile against the locked prototype:
+  `docs/prototypes/store-workforce-prototype-v1.html`.
 
 Rollback:
 
@@ -638,7 +643,8 @@ Verification:
 - targeted check that approvals correction actions open the matching workforce
   correction context by request type and request id,
 - targeted check that open/completed tabs and pagination behave as expected,
-- visual QA desktop/mobile against approved prototype.
+- visual QA desktop/mobile against the locked prototype:
+  `docs/prototypes/store-approvals-request-center-v1.html`.
 
 Rollback:
 
@@ -686,6 +692,12 @@ Stop if:
 
 - Use shadcn/ui, Tailwind v4, and lucide.
 - Keep the approved prototype density and row rhythm.
+- Treat locked prototype HTML files as visual contracts, not references. A
+  production implementation must carry over the visible structure, palette,
+  density, row/card rhythm, status colors, modal/drawer behavior, labels, and
+  main interaction flow. If real data, role scope, missing backend contract,
+  accessibility, or responsiveness requires a deviation, record the reason in
+  evidence before PR.
 - Use compact metric cards.
 - Use tables for desktop dense data and cards/drawer for mobile.
 - Do not use landing-page hero language.

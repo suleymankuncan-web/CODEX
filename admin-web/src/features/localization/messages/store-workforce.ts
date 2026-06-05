@@ -14,6 +14,8 @@ export const storeWorkforceTr = {
   'storeWorkforce.openMovements': 'Açık hareket',
   'storeWorkforce.valuePending': 'Veri bekleniyor',
   'storeWorkforce.valueNotConfigured': 'Tanımlı değil',
+  'storeWorkforce.valueContractRequired': 'Veri kaynagi gerekli',
+  'storeWorkforce.valueContractShort': 'Kaynak gerekli',
   'storeWorkforce.valueCurrentFlow': 'Mevcut akış',
   'storeWorkforce.foundationTitle': 'Norm kadro yüzeyi hazırlandı',
   'storeWorkforce.foundationCopy':
@@ -58,7 +60,7 @@ export const storeWorkforceTr = {
   'storeWorkforce.personnelScopeNote': 'Aktif magaza personeli.',
   'storeWorkforce.averageTenureNote': 'Giris tarihi olan kayitlardan hesaplanir.',
   'storeWorkforce.averageTenureMissing': '{count} kayitta giris tarihi eksik.',
-  'storeWorkforce.normActualHonestNote': 'Norm hedefi icin tamamlanmis Store contract yok.',
+  'storeWorkforce.normActualHonestNote': 'Norm hedefi icin tamamlanmis Store veri kaynagi yok.',
   'storeWorkforce.openMovementsNote': 'Acik veya iade edilmis personel talepleri.',
   'storeWorkforce.personnelListTitle': 'Magaza personeli',
   'storeWorkforce.personnelListDescription':
@@ -100,6 +102,72 @@ export const storeWorkforceTr = {
   'storeWorkforce.missingEmployeeName': 'Personel adi yok',
   'storeWorkforce.missingPosition': 'Pozisyon bilgisi yok',
   'storeWorkforce.missingDate': 'Tarih yok',
+  'storeWorkforce.regionManagerDescription':
+    'Bolge muduru yalnizca kendi yetki kapsamina giren magaza satirlarini gorur; magaza detayi sayfa icinde acilir.',
+  'storeWorkforce.regionSummaryAria': 'Bolge norm kadro ozetleri',
+  'storeWorkforce.regionTotalScope': 'Toplam kapsam',
+  'storeWorkforce.regionAverageTenure': 'Bolge ort. kidem',
+  'storeWorkforce.regionStoreScope': 'Magaza kapsami',
+  'storeWorkforce.regionStoreScopeNote': 'Oturumdaki yetkili magaza listesinden okunur.',
+  'storeWorkforce.regionStoreScopeUnavailableNote':
+    'Yetkili magaza listesi donmedigi icin magaza satiri uretilemez.',
+  'storeWorkforce.regionPersonnelContractNote':
+    'Bolge toplam personel icin guvenli veri kaynagi henuz yok.',
+  'storeWorkforce.regionTenureContractNote':
+    'Bolge ortalama kidem icin guvenli veri kaynagi henuz yok.',
+  'storeWorkforce.regionMovementContractNote':
+    'Bolge talep hareketleri icin guvenli veri kaynagi henuz yok.',
+  'storeWorkforce.regionStoreListTitle': 'Bolge magazalari',
+  'storeWorkforce.regionStoreListDescription':
+    'Her satir oturumdaki yetkili magaza kapsamindan okunur; kapsam disi magaza gosterilmez.',
+  'storeWorkforce.regionStoreListBadge': '{count} magaza',
+  'storeWorkforce.regionStoreListContractTitle': 'Magaza listesi icin veri kaynagi gerekli',
+  'storeWorkforce.regionStoreListContractCopy':
+    'Oturumda bolge kapsami var ancak yetkili magaza listesi yok. Bolge toplami tahmin edilmez.',
+  'storeWorkforce.regionStoreListEmptyTitle': 'Bolge magazasi bulunamadi',
+  'storeWorkforce.regionStoreListEmptyCopy':
+    'Bu oturum icin yetkili magaza veya bolge kapsam bilgisi donmedi.',
+  'storeWorkforce.regionEvidenceTitle': 'Kapsam kaniti',
+  'storeWorkforce.regionEvidenceCopy':
+    'Bu panel, ekranda hangi verinin gercek yetki kapsamindan geldigini ve hangi verinin kaynagini bekledigini ayirir.',
+  'storeWorkforce.regionReadScope': 'Yetki kapsami',
+  'storeWorkforce.regionReadScopeValue': '{stores} magaza / {regions} bolge',
+  'storeWorkforce.regionDataSource': 'Kaynak',
+  'storeWorkforce.regionDataSourceValue': 'Oturum okuma kapsami',
+  'storeWorkforce.regionForbiddenAction': 'Kisitli aksiyon',
+  'storeWorkforce.regionForbiddenActionValue': 'Magazaya git yok',
+  'storeWorkforce.regionPositionTotalsTitle': 'Bolge pozisyon toplami',
+  'storeWorkforce.regionPositionTotalsDescription':
+    'Kapsamdaki magazalarin pozisyon dagilimi guvenli kaynak hazir olunca okunur.',
+  'storeWorkforce.regionTenureSignalTitle': 'Kidem sinyali',
+  'storeWorkforce.regionTenureSignalDescription':
+    'Tecrube dengesi kaynak hazir oldugunda riskli magazalari erken gosterir.',
+  'storeWorkforce.storeColumn': 'Magaza',
+  'storeWorkforce.personnelColumn': 'Personel',
+  'storeWorkforce.tenureColumn': 'Kidem',
+  'storeWorkforce.movementColumn': 'Talep hareketi',
+  'storeWorkforce.positionBalanceColumn': 'Pozisyon dengesi',
+  'storeWorkforce.statusColumn': 'Durum',
+  'storeWorkforce.sourceWaiting': 'Kaynak bekliyor',
+  'storeWorkforce.sourceWaitingShort': 'Bekliyor',
+  'storeWorkforce.actionColumn': 'Aksiyon',
+  'storeWorkforce.closeDetail': 'Detayi kapat',
+  'storeWorkforce.regionDetailTitleWithStore': '{store} Workforce Detayi',
+  'storeWorkforce.regionDetailPeopleTab': 'Personel',
+  'storeWorkforce.regionDetailPositionsTab': 'Pozisyon',
+  'storeWorkforce.regionDetailRequestsTab': 'Talepler',
+  'storeWorkforce.regionDetailModalCopy':
+    'Detay ayni sayfa icinde acilir. Bolge muduru icin guvenli personel ve talep verisi hazir degilse durum acik gosterilir.',
+  'storeWorkforce.regionDetailContract': 'Detay verisi',
+  'storeWorkforce.regionDetailPersonnelTitle': 'Personel detayi',
+  'storeWorkforce.regionDetailPersonnelCopy':
+    'Bolge muduru icin guvenli personel satiri kaynagi olmadigi icin personel satiri gosterilmiyor.',
+  'storeWorkforce.regionDetailPositionTitle': 'Pozisyon dagilimi',
+  'storeWorkforce.regionDetailPositionCopy':
+    'Pozisyon dagilimi personel satirlarindan turetilir; bolge detay verisi hazir olmadan hesaplanmaz.',
+  'storeWorkforce.regionDetailRequestsTitle': 'Personel talep hareketleri',
+  'storeWorkforce.regionDetailRequestsCopy':
+    'Satici kodu ve cikis talepleri mevcut akisla korunur; bolge detayi icin ayri okuma kaynagi gerekir.',
 }
 
 export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
@@ -118,6 +186,8 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
   'storeWorkforce.openMovements': 'Open movement',
   'storeWorkforce.valuePending': 'Data pending',
   'storeWorkforce.valueNotConfigured': 'Not configured',
+  'storeWorkforce.valueContractRequired': 'Data source required',
+  'storeWorkforce.valueContractShort': 'Source required',
   'storeWorkforce.valueCurrentFlow': 'Current flow',
   'storeWorkforce.foundationTitle': 'Workforce surface foundation is ready',
   'storeWorkforce.foundationCopy':
@@ -162,7 +232,7 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
   'storeWorkforce.personnelScopeNote': 'Active store personnel.',
   'storeWorkforce.averageTenureNote': 'Calculated from records with a start date.',
   'storeWorkforce.averageTenureMissing': '{count} records are missing a start date.',
-  'storeWorkforce.normActualHonestNote': 'There is no completed Store contract for staffing norm targets.',
+  'storeWorkforce.normActualHonestNote': 'There is no completed Store data source for staffing norm targets.',
   'storeWorkforce.openMovementsNote': 'Open or returned personnel requests.',
   'storeWorkforce.personnelListTitle': 'Store personnel',
   'storeWorkforce.personnelListDescription':
@@ -204,4 +274,70 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
   'storeWorkforce.missingEmployeeName': 'No personnel name',
   'storeWorkforce.missingPosition': 'No position',
   'storeWorkforce.missingDate': 'No date',
+  'storeWorkforce.regionManagerDescription':
+    'Region managers see only stores in their authorized scope; store detail opens in the same page.',
+  'storeWorkforce.regionSummaryAria': 'Region workforce summary metrics',
+  'storeWorkforce.regionTotalScope': 'Total scope',
+  'storeWorkforce.regionAverageTenure': 'Region avg. tenure',
+  'storeWorkforce.regionStoreScope': 'Store scope',
+  'storeWorkforce.regionStoreScopeNote': 'Read from the authorized store list in the session.',
+  'storeWorkforce.regionStoreScopeUnavailableNote':
+    'No authorized store list was returned, so no store row can be produced.',
+  'storeWorkforce.regionPersonnelContractNote':
+    'A safe data source for regional personnel total is not available yet.',
+  'storeWorkforce.regionTenureContractNote':
+    'A safe data source for regional average tenure is not available yet.',
+  'storeWorkforce.regionMovementContractNote':
+    'A safe data source for regional request movement is not available yet.',
+  'storeWorkforce.regionStoreListTitle': 'Region stores',
+  'storeWorkforce.regionStoreListDescription':
+    'Every row comes from the authorized store scope in the session; out-of-scope stores are not shown.',
+  'storeWorkforce.regionStoreListBadge': '{count} stores',
+  'storeWorkforce.regionStoreListContractTitle': 'Data source required for store list',
+  'storeWorkforce.regionStoreListContractCopy':
+    'The session has region scope but no authorized store list. Regional totals are not estimated.',
+  'storeWorkforce.regionStoreListEmptyTitle': 'No region store was found',
+  'storeWorkforce.regionStoreListEmptyCopy':
+    'No authorized store or region scope was returned for this session.',
+  'storeWorkforce.regionEvidenceTitle': 'Scope evidence',
+  'storeWorkforce.regionEvidenceCopy':
+    'This panel separates data that comes from real authorization scope from data still waiting for a source.',
+  'storeWorkforce.regionReadScope': 'Authorized scope',
+  'storeWorkforce.regionReadScopeValue': '{stores} stores / {regions} regions',
+  'storeWorkforce.regionDataSource': 'Source',
+  'storeWorkforce.regionDataSourceValue': 'Session read scope',
+  'storeWorkforce.regionForbiddenAction': 'Restricted action',
+  'storeWorkforce.regionForbiddenActionValue': 'No store navigation',
+  'storeWorkforce.regionPositionTotalsTitle': 'Region position totals',
+  'storeWorkforce.regionPositionTotalsDescription':
+    'The position mix for scoped stores appears when the safe source is ready.',
+  'storeWorkforce.regionTenureSignalTitle': 'Tenure signal',
+  'storeWorkforce.regionTenureSignalDescription':
+    'Experience balance highlights risky stores early when the source is ready.',
+  'storeWorkforce.storeColumn': 'Store',
+  'storeWorkforce.personnelColumn': 'Personnel',
+  'storeWorkforce.tenureColumn': 'Tenure',
+  'storeWorkforce.movementColumn': 'Request movement',
+  'storeWorkforce.positionBalanceColumn': 'Position balance',
+  'storeWorkforce.statusColumn': 'Status',
+  'storeWorkforce.sourceWaiting': 'Source pending',
+  'storeWorkforce.sourceWaitingShort': 'Pending',
+  'storeWorkforce.actionColumn': 'Action',
+  'storeWorkforce.closeDetail': 'Close detail',
+  'storeWorkforce.regionDetailTitleWithStore': '{store} workforce detail',
+  'storeWorkforce.regionDetailPeopleTab': 'People',
+  'storeWorkforce.regionDetailPositionsTab': 'Positions',
+  'storeWorkforce.regionDetailRequestsTab': 'Requests',
+  'storeWorkforce.regionDetailModalCopy':
+    'Detail opens inside the page. When safe regional personnel and request data is not available, the UI shows that explicitly.',
+  'storeWorkforce.regionDetailContract': 'Detail data',
+  'storeWorkforce.regionDetailPersonnelTitle': 'Personnel detail',
+  'storeWorkforce.regionDetailPersonnelCopy':
+    'Personnel rows are not shown because there is no safe personnel-row source for region managers.',
+  'storeWorkforce.regionDetailPositionTitle': 'Position distribution',
+  'storeWorkforce.regionDetailPositionCopy':
+    'Position distribution is derived from personnel rows and is not calculated before regional detail data exists.',
+  'storeWorkforce.regionDetailRequestsTitle': 'Personnel request movements',
+  'storeWorkforce.regionDetailRequestsCopy':
+    'Seller-code and offboarding requests stay on the current flow; regional detail needs a separate read source.',
 }

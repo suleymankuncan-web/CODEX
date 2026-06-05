@@ -1,0 +1,1007 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Store Approvals - Talep Merkezi Prototype</title>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    :root {
+      --ink: #081332;
+      --muted: #667397;
+      --soft: #f6f8fc;
+      --line: #dfe6f3;
+      --purple: #6d47ff;
+      --purple-soft: #eee8ff;
+      --cyan: #20bfd3;
+      --cyan-soft: #ddfbff;
+      --green: #14ad72;
+      --green-soft: #def9ec;
+      --amber: #f59e0b;
+      --amber-soft: #fff1d9;
+      --rose: #f43f6d;
+      --rose-soft: #ffe4ec;
+      --card: rgba(255, 255, 255, .86);
+      --shadow: 0 24px 70px rgba(61, 79, 122, .16);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 8%, rgba(109, 71, 255, .16), transparent 30%),
+        radial-gradient(circle at 84% 8%, rgba(32, 191, 211, .24), transparent 30%),
+        linear-gradient(135deg, #f7f8ff 0%, #edf7fb 48%, #f8fbff 100%);
+      min-height: 100vh;
+      font-size: 14px;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .shell {
+      width: min(1400px, calc(100vw - 48px));
+      margin: 0 auto;
+      padding: 32px 0 48px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 18px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #6d47ff, #20bfd3);
+      color: white;
+      box-shadow: 0 18px 34px rgba(109, 71, 255, .22);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 38px);
+      letter-spacing: 0;
+      line-height: 1.02;
+      font-weight: 750;
+    }
+
+    .brand p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .role-switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px;
+      border: 1px solid rgba(109, 71, 255, .18);
+      background: rgba(255,255,255,.76);
+      border-radius: 18px;
+      box-shadow: 0 14px 42px rgba(61, 79, 122, .12);
+      flex: 0 0 auto;
+    }
+
+    .role-switch button {
+      border: 0;
+      border-radius: 13px;
+      padding: 10px 14px;
+      color: #334060;
+      background: transparent;
+      cursor: pointer;
+      font-weight: 650;
+    }
+
+    .role-switch button.active {
+      color: #fff;
+      background: linear-gradient(135deg, #6d47ff, #355cff);
+      box-shadow: 0 10px 24px rgba(109, 71, 255, .25);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr);
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 18px;
+    }
+
+    .hero-panel,
+    .summary-card,
+    .filterbar,
+    .table-card,
+    .side-card,
+    .timeline {
+      background: var(--card);
+      border: 1px solid rgba(180, 193, 219, .72);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(22px);
+    }
+
+    .hero-panel {
+      border-radius: 26px;
+      padding: 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero-panel:after {
+      content: "";
+      position: absolute;
+      inset: auto -80px -110px auto;
+      width: 260px;
+      height: 260px;
+      background: radial-gradient(circle, rgba(32,191,211,.24), transparent 64%);
+      pointer-events: none;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 30px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      color: #4f31dd;
+      background: var(--purple-soft);
+      font-weight: 700;
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+
+    .hero-panel h2 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 40px);
+      line-height: 1.04;
+      font-weight: 760;
+      letter-spacing: 0;
+      max-width: 720px;
+    }
+
+    .hero-panel p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 760px;
+    }
+
+    .scope-stack {
+      display: grid;
+      gap: 10px;
+      min-width: 230px;
+      align-content: center;
+    }
+
+    .scope-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 14px;
+      border: 1px solid rgba(109, 71, 255, .14);
+      background: rgba(255,255,255,.78);
+      border-radius: 16px;
+    }
+
+    .scope-pill span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .scope-pill strong {
+      font-size: 17px;
+      font-weight: 760;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card {
+      min-height: 118px;
+      border-radius: 20px;
+      padding: 18px;
+      display: grid;
+      grid-template-columns: 44px minmax(0, 1fr);
+      gap: 14px;
+      align-items: center;
+    }
+
+    .metric-icon {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+    }
+
+    .summary-card strong {
+      display: block;
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 760;
+      margin: 4px 0;
+    }
+
+    .summary-card span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .filterbar {
+      border-radius: 20px;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: minmax(320px, 1.35fr) repeat(3, minmax(150px, .52fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .field {
+      position: relative;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .field i {
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #667397;
+      pointer-events: none;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      height: 42px;
+      border-radius: 13px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.72);
+      color: var(--ink);
+      outline: none;
+      padding: 0 13px 0 38px;
+      font-weight: 560;
+    }
+
+    .field select {
+      padding-left: 16px;
+      padding-right: 36px;
+    }
+
+    .table-card {
+      border-radius: 22px;
+      overflow: hidden;
+    }
+
+    .table-head {
+      padding: 18px 18px 14px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .table-head h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 760;
+    }
+
+    .table-head p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      line-height: 1.45;
+      font-size: 13px;
+    }
+
+    .table-tools {
+      display: grid;
+      justify-items: end;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .request-tabs {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px;
+      border: 1px solid rgba(109, 71, 255, .14);
+      border-radius: 15px;
+      background: rgba(255,255,255,.72);
+    }
+
+    .request-tab {
+      height: 32px;
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      color: #52607f;
+      padding: 0 11px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 740;
+      white-space: nowrap;
+    }
+
+    .request-tab.active {
+      color: #4f31dd;
+      background: var(--purple-soft);
+    }
+
+    .count-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 30px;
+      min-width: 82px;
+      padding: 0 12px;
+      border-radius: 999px;
+      color: #00899c;
+      background: var(--cyan-soft);
+      font-size: 12px;
+      font-weight: 760;
+      flex: 0 0 auto;
+    }
+
+    .request-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    .request-table th {
+      padding: 12px 16px;
+      text-align: left;
+      color: #687395;
+      background: rgba(244, 247, 252, .84);
+      border-bottom: 1px solid var(--line);
+      font-size: 11px;
+      letter-spacing: .02em;
+      font-weight: 760;
+      text-transform: uppercase;
+    }
+
+    .request-table td {
+      padding: 13px 16px;
+      border-bottom: 1px solid rgba(218, 226, 240, .9);
+      vertical-align: middle;
+    }
+
+    .request-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 13px 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(248, 250, 253, .74);
+    }
+
+    .pager span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 620;
+    }
+
+    .pager-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .page-button {
+      min-width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      background: rgba(255,255,255,.82);
+      color: #4b5776;
+      cursor: pointer;
+      font-weight: 720;
+    }
+
+    .page-button.active {
+      border-color: rgba(109,71,255,.28);
+      background: var(--purple-soft);
+      color: #5534e6;
+    }
+
+    .request-row.urgent {
+      background: linear-gradient(90deg, rgba(255,228,236,.72), rgba(255,255,255,.32) 42%);
+    }
+
+    .request-row.returned {
+      background: linear-gradient(90deg, rgba(255,241,217,.72), rgba(255,255,255,.28) 42%);
+    }
+
+    .request-row.is-hidden,
+    .mobile-request.is-hidden {
+      display: none;
+    }
+
+    .record {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .record-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+    }
+
+    .record strong,
+    .store strong {
+      display: block;
+      font-weight: 720;
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .record span,
+    .store span,
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 28px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .status.waiting { color: #b35b00; background: var(--amber-soft); }
+    .status.ok { color: #087a51; background: var(--green-soft); }
+    .status.returned { color: #bf1846; background: var(--rose-soft); }
+    .status.info { color: #4f31dd; background: var(--purple-soft); }
+
+    .action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 38px;
+      padding: 0 11px;
+      border: 1px solid rgba(109, 71, 255, .22);
+      border-radius: 13px;
+      background: #fff;
+      color: #4f31dd;
+      font-weight: 740;
+      font-size: 13px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .action.primary {
+      background: linear-gradient(135deg, #6d47ff, #355cff);
+      color: #fff;
+      box-shadow: 0 12px 24px rgba(109, 71, 255, .22);
+    }
+
+    .side {
+      display: grid;
+      gap: 14px;
+    }
+
+    .side-card {
+      border-radius: 22px;
+      padding: 18px;
+    }
+
+    .side-card h3 {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 760;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .priority-list,
+    .timeline-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .priority-item {
+      display: grid;
+      grid-template-columns: 9px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 11px 0;
+      border-bottom: 1px solid rgba(218, 226, 240, .88);
+    }
+
+    .priority-item:last-child { border-bottom: 0; }
+
+    .priority-item strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .priority-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .small-badge {
+      min-height: 26px;
+      padding: 0 10px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 750;
+      background: var(--soft);
+      color: #465272;
+    }
+
+    .timeline {
+      border-radius: 22px;
+      padding: 18px;
+    }
+
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 10px 0;
+    }
+
+    .timeline-dot {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--purple-soft);
+      color: #5a37e8;
+    }
+
+    .timeline-item strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .timeline-item span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .role-view { display: none; }
+    .role-view.active { display: block; }
+
+    .mobile-cards { display: none; }
+
+    @media (max-width: 1040px) {
+      .shell { width: min(100% - 28px, 940px); padding-top: 20px; }
+      .topbar,
+      .hero,
+      .layout { grid-template-columns: 1fr; display: grid; }
+      .topbar { align-items: stretch; }
+      .role-switch { justify-content: stretch; }
+      .role-switch button { flex: 1; }
+      .hero-panel { flex-direction: column; }
+      .scope-stack { grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .summary-grid { grid-template-columns: 1fr; }
+      .filterbar { grid-template-columns: 1fr 1fr; }
+      .side { grid-template-columns: 1fr; }
+      .desktop-table { display: none; }
+      .mobile-cards { display: grid; gap: 10px; padding: 12px; }
+      .mobile-request {
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.72);
+        border-radius: 16px;
+        padding: 13px;
+        display: grid;
+        gap: 11px;
+      }
+      .mobile-request .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 620px) {
+      body { font-size: 13px; }
+      .shell { width: min(100% - 20px, 480px); }
+      .brand { align-items: flex-start; }
+      .brand-mark { width: 40px; height: 40px; border-radius: 14px; }
+      .brand p { font-size: 12px; }
+      .role-switch { padding: 6px; border-radius: 16px; }
+      .role-switch button { padding: 9px 8px; font-size: 12px; }
+      .hero-panel { padding: 18px; border-radius: 22px; }
+      .scope-stack,
+      .filterbar { grid-template-columns: 1fr; }
+      .summary-card { min-height: 96px; padding: 14px; }
+      .summary-card strong { font-size: 24px; }
+      .table-head { padding: 15px; display: grid; }
+      .table-tools { justify-items: stretch; }
+      .request-tabs { width: 100%; }
+      .request-tab { flex: 1; padding: 0 8px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark"><i data-lucide="receipt-text"></i></div>
+        <div>
+          <h1>Talep Merkezi</h1>
+          <p>Hedef girişi bu sayfadan çıkar; burada açılmış talepler, durumlar ve doğru işlem rotası okunur.</p>
+        </div>
+      </div>
+      <div class="role-switch" aria-label="Prototip rol görünümü">
+        <button class="active" type="button" data-role-target="region">Bölge Müdürü</button>
+        <button type="button" data-role-target="store">Mağaza Müdürü</button>
+      </div>
+    </div>
+
+    <section id="region" class="role-view active">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="metric-icon" style="background:var(--amber-soft);color:var(--amber)"><i data-lucide="clock-3"></i></div>
+          <div><span>Karar bekleyen</span><strong>6</strong><span>Hedef dağıtımı ve iade dönüşleri.</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="metric-icon" style="background:var(--rose-soft);color:var(--rose)"><i data-lucide="undo-2"></i></div>
+          <div><span>Düzeltme dönen</span><strong>3</strong><span>Mağaza aksiyonu gerektiren kayıtlar.</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="metric-icon" style="background:var(--green-soft);color:var(--green)"><i data-lucide="check-circle-2"></i></div>
+          <div><span>Kapanan</span><strong>14</strong><span>Bu ay sonuçlanan talep kayıtları.</span></div>
+        </div>
+      </div>
+
+      <div class="layout">
+        <div>
+          <div class="filterbar">
+            <div class="field"><i data-lucide="search"></i><input value="Marmara" aria-label="Ara" /></div>
+            <div class="field"><select aria-label="Talep tipi"><option>Tüm tipler</option><option>Hedef</option><option>Satıcı kodu</option><option>Personel çıkış</option></select></div>
+            <div class="field"><select aria-label="Durum"><option>Tüm durumlar</option><option>Bekliyor</option><option>İade edildi</option><option>Onaylandı</option></select></div>
+            <div class="field"><select aria-label="Dönem"><option>Haziran 2026</option><option>Mayıs 2026</option></select></div>
+          </div>
+
+          <section class="table-card">
+            <div class="table-head">
+              <div>
+                <h3>Bölge talep kuyruğu</h3>
+                <p>Her satır gerçek bir talep kaydını temsil eder; liste sayfa başına en fazla 15 kayıt gösterir.</p>
+              </div>
+              <div class="table-tools">
+                <div class="request-tabs" data-tabs-for="region">
+                  <button class="request-tab active" type="button" data-request-tab="open">Açık / Bekleyen</button>
+                  <button class="request-tab" type="button" data-request-tab="done">Tamamlanan</button>
+                </div>
+                <span class="count-pill" data-count-for="region">18 açık kayıt</span>
+              </div>
+            </div>
+            <div class="desktop-table">
+              <table class="request-table">
+                <colgroup>
+                  <col style="width:25%" />
+                  <col style="width:19%" />
+                  <col style="width:18%" />
+                  <col style="width:14%" />
+                  <col style="width:11%" />
+                  <col style="width:13%" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Talep</th>
+                    <th>Mağaza</th>
+                    <th>Durum</th>
+                    <th>Kaynak</th>
+                    <th>Güncellendi</th>
+                    <th>Aksiyon</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="request-row urgent" data-bucket="open">
+                    <td><div class="record"><div class="record-icon" style="background:var(--amber-soft);color:var(--amber)"><i data-lucide="target"></i></div><div><strong>Haziran hedef dağıtımı</strong><span>Toplam hedef ve personel dağılımı</span></div></div></td>
+                    <td><div class="store"><strong>Bursa Marka Park</strong><span>BM kapsam satırı</span></div></td>
+                    <td><span class="status waiting"><span class="dot"></span>Bölge onayı bekliyor</span></td>
+                    <td class="muted">Hedef akışı</td>
+                    <td class="muted">Bugün 10:42</td>
+                    <td><a class="action primary" href="#">Hedefe git <i data-lucide="arrow-right"></i></a></td>
+                  </tr>
+                  <tr class="request-row returned" data-bucket="open">
+                    <td><div class="record"><div class="record-icon" style="background:var(--rose-soft);color:var(--rose)"><i data-lucide="user-plus"></i></div><div><strong>Satıcı kodu talebi</strong><span>Yeni personel kod kaydı</span></div></div></td>
+                    <td><div class="store"><strong>Ankara Forum</strong><span>Store manager gönderimi</span></div></td>
+                    <td><span class="status returned"><span class="dot"></span>İade edildi</span></td>
+                    <td class="muted">Personel talebi</td>
+                    <td class="muted">Dün 16:20</td>
+                    <td><a class="action" href="#">Talebi incele</a></td>
+                  </tr>
+                  <tr class="request-row is-hidden" data-bucket="done">
+                    <td><div class="record"><div class="record-icon" style="background:var(--green-soft);color:var(--green)"><i data-lucide="badge-check"></i></div><div><strong>Mayıs hedef dağıtımı</strong><span>Onaylanmış snapshot</span></div></div></td>
+                    <td><div class="store"><strong>İzmir İstinye</strong><span>BM kapsam satırı</span></div></td>
+                    <td><span class="status ok"><span class="dot"></span>Onaylandı</span></td>
+                    <td class="muted">Hedef akışı</td>
+                    <td class="muted">31 May 18:10</td>
+                    <td><a class="action" href="#">Detay</a></td>
+                  </tr>
+                  <tr class="request-row urgent" data-bucket="open">
+                    <td><div class="record"><div class="record-icon" style="background:var(--purple-soft);color:var(--purple)"><i data-lucide="log-out"></i></div><div><strong>Personel çıkış talebi</strong><span>Erişim kapanışı bekliyor</span></div></div></td>
+                    <td><div class="store"><strong>Kocaeli 41 Burda</strong><span>HR kuyruğu</span></div></td>
+                    <td><span class="status waiting"><span class="dot"></span>HR onayı bekliyor</span></td>
+                    <td class="muted">Personel talebi</td>
+                    <td class="muted">29 May 09:30</td>
+                    <td><a class="action" href="#">Durumu oku</a></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mobile-cards">
+              <article class="mobile-request request-row urgent" data-bucket="open"><div class="row"><div class="record"><div class="record-icon" style="background:var(--amber-soft);color:var(--amber)"><i data-lucide="target"></i></div><div><strong>Haziran hedef dağıtımı</strong><span>Bursa Marka Park</span></div></div><span class="status waiting"><span class="dot"></span>Bekliyor</span></div><a class="action primary" href="#">Hedefe git <i data-lucide="arrow-right"></i></a></article>
+              <article class="mobile-request request-row returned" data-bucket="open"><div class="row"><div class="record"><div class="record-icon" style="background:var(--rose-soft);color:var(--rose)"><i data-lucide="user-plus"></i></div><div><strong>Satıcı kodu talebi</strong><span>Ankara Forum</span></div></div><span class="status returned"><span class="dot"></span>İade</span></div><a class="action" href="#">Talebi incele</a></article>
+              <article class="mobile-request request-row is-hidden" data-bucket="done"><div class="row"><div class="record"><div class="record-icon" style="background:var(--green-soft);color:var(--green)"><i data-lucide="badge-check"></i></div><div><strong>Mayıs hedef dağıtımı</strong><span>İzmir İstinye</span></div></div><span class="status ok"><span class="dot"></span>Onaylandı</span></div><a class="action" href="#">Detay</a></article>
+            </div>
+            <div class="pager" aria-label="Bölge talep sayfalama">
+              <span data-pager-for="region">1-15 / 18 açık kayıt gösteriliyor</span>
+              <div class="pager-actions">
+                <button class="page-button active" type="button">1</button>
+                <button class="page-button" type="button">2</button>
+                <button class="page-button" type="button" aria-label="Sonraki sayfa"><i data-lucide="chevron-right"></i></button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="side">
+          <section class="side-card">
+            <h3><i data-lucide="list-checks"></i> Aksiyon gerekenler</h3>
+            <ul class="priority-list">
+              <li class="priority-item"><span class="dot" style="color:var(--amber)"></span><div><strong>2 hedef talebi karar bekliyor</strong><span>Hedef akışında inceleme gerekir.</span></div><span class="small-badge">Hedef</span></li>
+              <li class="priority-item"><span class="dot" style="color:var(--rose)"></span><div><strong>1 iade dönüşü gecikti</strong><span>Mağaza düzeltme göndermemiş.</span></div><span class="small-badge">İade</span></li>
+              <li class="priority-item"><span class="dot" style="color:var(--cyan)"></span><div><strong>3 personel talebi bekliyor</strong><span>Kod ve çıkış kayıtları izleniyor.</span></div><span class="small-badge">Personel</span></li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </section>
+
+    <section id="store" class="role-view">
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="metric-icon" style="background:var(--amber-soft);color:var(--amber)"><i data-lucide="send"></i></div>
+          <div><span>Gönderilen hedef</span><strong>1</strong><span>Bölge onayı bekleyen aktif talep.</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="metric-icon" style="background:var(--rose-soft);color:var(--rose)"><i data-lucide="file-warning"></i></div>
+          <div><span>Düzeltme gereken</span><strong>2</strong><span>İade edilmiş personel/kod talebi.</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="metric-icon" style="background:var(--green-soft);color:var(--green)"><i data-lucide="circle-check"></i></div>
+          <div><span>Tamamlanan</span><strong>5</strong><span>Bu ay kapanmış mağaza talepleri.</span></div>
+        </div>
+      </div>
+
+      <div class="layout">
+        <div>
+          <div class="filterbar">
+            <div class="field"><i data-lucide="search"></i><input value="İstinye" aria-label="Ara" /></div>
+            <div class="field"><select aria-label="Talep tipi"><option>Tüm tipler</option><option>Hedef</option><option>Satıcı kodu</option><option>Personel çıkış</option></select></div>
+            <div class="field"><select aria-label="Durum"><option>Tüm durumlar</option><option>Bekliyor</option><option>İade edildi</option><option>Onaylandı</option></select></div>
+            <div class="field"><select aria-label="Dönem"><option>Haziran 2026</option><option>Mayıs 2026</option></select></div>
+          </div>
+
+          <section class="table-card">
+            <div class="table-head">
+              <div>
+                <h3>Mağaza taleplerim</h3>
+                <p>Bu liste mağazadan çıkan kayıtların durum defteridir; sayfa başına en fazla 15 kayıt görünür.</p>
+              </div>
+              <div class="table-tools">
+                <div class="request-tabs" data-tabs-for="store">
+                  <button class="request-tab active" type="button" data-request-tab="open">Açık / Bekleyen</button>
+                  <button class="request-tab" type="button" data-request-tab="done">Tamamlanan</button>
+                </div>
+                <span class="count-pill" data-count-for="store">3 açık kayıt</span>
+              </div>
+            </div>
+            <div class="desktop-table">
+              <table class="request-table">
+                <colgroup>
+                  <col style="width:27%" />
+                  <col style="width:20%" />
+                  <col style="width:19%" />
+                  <col style="width:13%" />
+                  <col style="width:9%" />
+                  <col style="width:12%" />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th>Talep</th>
+                    <th>Kapsam</th>
+                    <th>Durum</th>
+                    <th>Kaynak</th>
+                    <th>Güncellendi</th>
+                    <th>Aksiyon</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr class="request-row urgent" data-bucket="open">
+                    <td><div class="record"><div class="record-icon" style="background:var(--amber-soft);color:var(--amber)"><i data-lucide="target"></i></div><div><strong>Haziran hedef dağıtımı</strong><span>Toplam 5 personel hedefli</span></div></div></td>
+                    <td><div class="store"><strong>İstinyePark</strong><span>Mağaza hedef talebi</span></div></td>
+                    <td><span class="status waiting"><span class="dot"></span>Bölge onayı bekliyor</span></td>
+                    <td class="muted">Hedef akışı</td>
+                    <td class="muted">Bugün 09:18</td>
+                    <td><a class="action primary" href="#">Hedefe git <i data-lucide="arrow-right"></i></a></td>
+                  </tr>
+                  <tr class="request-row returned" data-bucket="open">
+                    <td><div class="record"><div class="record-icon" style="background:var(--rose-soft);color:var(--rose)"><i data-lucide="user-plus"></i></div><div><strong>Satıcı kodu talebi</strong><span>TC bilgisi yeniden isteniyor</span></div></div></td>
+                    <td><div class="store"><strong>Yeni personel</strong><span>FM8294 taslak dönüşü</span></div></td>
+                    <td><span class="status returned"><span class="dot"></span>İade edildi</span></td>
+                    <td class="muted">Personel talebi</td>
+                    <td class="muted">Dün 14:05</td>
+                    <td><a class="action" href="#">Düzelt</a></td>
+                  </tr>
+                  <tr class="request-row is-hidden" data-bucket="done">
+                    <td><div class="record"><div class="record-icon" style="background:var(--green-soft);color:var(--green)"><i data-lucide="badge-check"></i></div><div><strong>Mayıs hedef dağıtımı</strong><span>Onaylı hedef snapshot</span></div></div></td>
+                    <td><div class="store"><strong>İstinyePark</strong><span>Ay kapanışı</span></div></td>
+                    <td><span class="status ok"><span class="dot"></span>Onaylandı</span></td>
+                    <td class="muted">Hedef akışı</td>
+                    <td class="muted">31 May 18:10</td>
+                    <td><a class="action" href="#">Detay</a></td>
+                  </tr>
+                  <tr class="request-row" data-bucket="open">
+                    <td><div class="record"><div class="record-icon" style="background:var(--purple-soft);color:var(--purple)"><i data-lucide="log-out"></i></div><div><strong>Personel çıkış talebi</strong><span>Çıkış tarihi 10 Haziran</span></div></div></td>
+                    <td><div class="store"><strong>Store Personnel Covered</strong><span>Aktif personel</span></div></td>
+                    <td><span class="status info"><span class="dot"></span>HR onayı bekliyor</span></td>
+                    <td class="muted">Personel talebi</td>
+                    <td class="muted">3 Haz 11:30</td>
+                    <td><a class="action" href="#">Durum</a></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="mobile-cards">
+              <article class="mobile-request request-row urgent" data-bucket="open"><div class="row"><div class="record"><div class="record-icon" style="background:var(--amber-soft);color:var(--amber)"><i data-lucide="target"></i></div><div><strong>Haziran hedef dağıtımı</strong><span>Bölge onayı bekliyor</span></div></div><span class="status waiting"><span class="dot"></span>Bekliyor</span></div><a class="action primary" href="#">Hedefe git <i data-lucide="arrow-right"></i></a></article>
+              <article class="mobile-request request-row returned" data-bucket="open"><div class="row"><div class="record"><div class="record-icon" style="background:var(--rose-soft);color:var(--rose)"><i data-lucide="user-plus"></i></div><div><strong>Satıcı kodu talebi</strong><span>İade edildi</span></div></div><span class="status returned"><span class="dot"></span>İade</span></div><a class="action" href="#">Düzelt</a></article>
+              <article class="mobile-request request-row is-hidden" data-bucket="done"><div class="row"><div class="record"><div class="record-icon" style="background:var(--green-soft);color:var(--green)"><i data-lucide="badge-check"></i></div><div><strong>Mayıs hedef dağıtımı</strong><span>Onaylandı</span></div></div><span class="status ok"><span class="dot"></span>Onaylandı</span></div><a class="action" href="#">Detay</a></article>
+            </div>
+            <div class="pager" aria-label="Mağaza talep sayfalama">
+              <span data-pager-for="store">1-3 / 3 açık kayıt gösteriliyor</span>
+              <div class="pager-actions">
+                <button class="page-button active" type="button">1</button>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="side">
+          <section class="side-card">
+            <h3><i data-lucide="corner-up-right"></i> Aksiyon gerekenler</h3>
+            <ul class="priority-list">
+              <li class="priority-item"><span class="dot" style="color:var(--purple)"></span><div><strong>Yeni hedef veya revize</strong><span>Hedef akışında açılır.</span></div><span class="small-badge">Hedef</span></li>
+              <li class="priority-item"><span class="dot" style="color:var(--rose)"></span><div><strong>İade edilen kod talebi</strong><span>Düzeltme yeniden gönderime gider.</span></div><span class="small-badge">Düzelt</span></li>
+              <li class="priority-item"><span class="dot" style="color:var(--cyan)"></span><div><strong>Çıkış talebi durumu</strong><span>Personel talebi kararı bekler.</span></div><span class="small-badge">İzle</span></li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    lucide.createIcons({ attrs: { width: 18, height: 18, strokeWidth: 2 } });
+    const buttons = document.querySelectorAll('[data-role-target]');
+    const views = document.querySelectorAll('.role-view');
+    buttons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.roleTarget;
+        buttons.forEach((item) => item.classList.toggle('active', item === button));
+        views.forEach((view) => view.classList.toggle('active', view.id === target));
+      });
+    });
+
+    const tabMeta = {
+      region: {
+        open: { count: '18 açık kayıt', pager: '1-15 / 18 açık kayıt gösteriliyor' },
+        done: { count: '5 tamamlanan', pager: '1-5 / 5 tamamlanan kayıt gösteriliyor' }
+      },
+      store: {
+        open: { count: '3 açık kayıt', pager: '1-3 / 3 açık kayıt gösteriliyor' },
+        done: { count: '5 tamamlanan', pager: '1-5 / 5 tamamlanan kayıt gösteriliyor' }
+      }
+    };
+
+    document.querySelectorAll('[data-tabs-for]').forEach((tabGroup) => {
+      const scope = tabGroup.dataset.tabsFor;
+      tabGroup.querySelectorAll('[data-request-tab]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          const bucket = tab.dataset.requestTab;
+          tabGroup.querySelectorAll('[data-request-tab]').forEach((item) => {
+            item.classList.toggle('active', item === tab);
+          });
+          document.querySelectorAll(`#${scope} [data-bucket]`).forEach((row) => {
+            row.classList.toggle('is-hidden', row.dataset.bucket !== bucket);
+          });
+          const count = document.querySelector(`[data-count-for="${scope}"]`);
+          const pager = document.querySelector(`[data-pager-for="${scope}"]`);
+          if (count) count.textContent = tabMeta[scope][bucket].count;
+          if (pager) pager.textContent = tabMeta[scope][bucket].pager;
+        });
+      });
+    });
+  </script>
+</body>
+</html>
