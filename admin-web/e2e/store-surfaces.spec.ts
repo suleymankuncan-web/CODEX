@@ -188,6 +188,15 @@ test('store workforce route stays hidden for store personnel', async ({ page }) 
 })
 
 test('store workforce page reads store manager personnel and workforce movements', async ({ page }) => {
+  await page.route('**/api/workforce/store-employees**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...storeEmployeesFixture,
+        items: [...storeEmployeesFixture.items, returnedOffboardingEmployeeFixture],
+        meta: { count: 2, total: 2, limit: 50, offset: 0 },
+      },
+    })
+  })
   await page.route('**/api/workforce/seller-code-requests**', async (route) => {
     await route.fulfill({
       json: {
@@ -199,8 +208,8 @@ test('store workforce page reads store manager personnel and workforce movements
   await page.route('**/api/workforce/offboarding-requests**', async (route) => {
     await route.fulfill({
       json: {
-        items: [offboardingRequestFixture, outsideStoreOffboardingRequestFixture],
-        meta: { count: 1, total: 1, limit: 50, offset: 0 },
+        items: [offboardingRequestFixture, returnedOffboardingStatusFixture, outsideStoreOffboardingRequestFixture],
+        meta: { count: 2, total: 2, limit: 50, offset: 0 },
       },
     })
   })
@@ -210,9 +219,12 @@ test('store workforce page reads store manager personnel and workforce movements
   await expect(page.getByTestId('store-workforce-page')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
   const personnelList = page.getByTestId('store-workforce-personnel-list')
-  await expect(personnelList.getByText('Store Personnel')).toBeVisible()
-  await expect(personnelList.getByText('FM8001')).toBeVisible()
-  await expect(personnelList.getByText('Sales Consultant')).toBeVisible()
+  await expect(personnelList.getByText('Store Personnel').first()).toBeVisible()
+  await expect(personnelList.getByText('FM8001').first()).toBeVisible()
+  await expect(personnelList.getByText('Sales Consultant').first()).toBeVisible()
+  const returnedOffboardingRow = personnelList.locator('tr').filter({ hasText: 'Returned Offboarding Personnel' })
+  const returnedOffboardingStatus = returnedOffboardingRow.getByTestId('store-workforce-personnel-row-status')
+  await expect(returnedOffboardingStatus).toHaveText('Aktif')
   await expect(page.getByText('Personel talep hareketleri')).toBeVisible()
   await expect(page.getByText('Outside Store')).toHaveCount(0)
   await expect(page.getByText('Outside Personnel')).toHaveCount(0)
@@ -5625,6 +5637,14 @@ const rejectedOffboardingRequestFixture = {
   updatedAt: '2026-04-27T10:00:00.000Z',
 }
 
+const returnedOffboardingStatusFixture = {
+  ...rejectedOffboardingRequestFixture,
+  requestId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee80',
+  employeeId: '00000000-0000-0000-0000-000000000208',
+  displayName: 'Returned Offboarding Personnel',
+  externalEmployeeRef: 'FM8008',
+}
+
 const outsideStoreOffboardingRequestFixture = {
   ...offboardingRequestFixture,
   requestId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee90',
@@ -5666,6 +5686,18 @@ const storeEmployeesFixture = {
     limit: 1,
     offset: 0,
   },
+}
+
+const returnedOffboardingEmployeeFixture = {
+  employeeId: '00000000-0000-0000-0000-000000000208',
+  displayName: 'Returned Offboarding Personnel',
+  externalEmployeeRef: 'FM8008',
+  storeId: demoStoreId,
+  positionId: demoPositionId,
+  positionCode: 'SALES_CONSULTANT',
+  positionName: 'Sales Consultant',
+  assignmentStartDate: '2026-03-15',
+  employmentStatus: 'active',
 }
 
 const positionOptionsFixture = {

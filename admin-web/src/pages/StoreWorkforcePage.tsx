@@ -6,7 +6,9 @@ import {
   BriefcaseBusiness,
   ClipboardList,
   Clock3,
+  LogOut,
   RotateCcw,
+  Search,
   UserMinus,
   UserPlus,
   UsersRound,
@@ -25,36 +27,37 @@ import {
   resubmitSellerCodeRequest,
   type OffboardingRequest,
   type SellerCodeRequest,
-  type StoreEmployee,
 } from '../features/workforce/api'
-import { formatDate, formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
-import type { AppLocale } from '../lib/i18n'
+import { formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
 import { StoreRequestFeedback } from './store-approvals-atoms'
 import { OffboardingRequestForm } from './store-approvals-offboarding-form'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
 import { SellerCodeRequestForm } from './store-approvals-seller-code-form'
-import {
-  createStoreApprovalsPageState,
-  formatApprovalStatus,
-  storeApprovalsPageReducer,
-} from './store-approvals-model'
+import { createStoreApprovalsPageState, storeApprovalsPageReducer } from './store-approvals-model'
 import {
   buildWorkforceRequestSummaries,
   deriveWorkforceSummary,
-  getTenureFromDate,
   isClosedWorkforceStatus,
-  parseDateOnly,
 } from './store-workforce-model'
+import {
+  PersonnelMobileCard,
+  PersonnelTableRow,
+  StoreWorkforceMetricCard,
+  StoreWorkforcePanel,
+  StoreWorkforceTh,
+  StoreWorkforceTenureGrid,
+  WorkforceBarRow,
+} from './store-workforce-store-manager-presentation'
+import {
+  getPersonnelRowStatus,
+  getRequestStatusClass,
+  getWorkforceRequestStatusLabel,
+  isPendingOffboardingApprovalStatus,
+} from './store-workforce-store-manager-view-model'
 import {
   StoreEmptyState,
   StoreErrorState,
-  StoreInfoGrid,
-  StoreMetricCard,
-  StoreMetricGrid,
   StoreSectionCard,
-  StoreStackedList,
-  StoreStackedRow,
-  StoreStatusBadge,
   StoreSurfaceHeader,
   StoreSurfacePage,
 } from './store-surface-primitives'
@@ -92,6 +95,9 @@ function StoreManagerWorkforce(input: {
   const now = useMemo(() => new Date(), [])
   const loadedHandoffRef = useRef<string | null>(null)
   const [activePanel, setActivePanel] = useState<WorkforcePanel>('personnel')
+  const [personnelSearch, setPersonnelSearch] = useState('')
+  const [positionFilter, setPositionFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [state, dispatch] = useReducer(
     storeApprovalsPageReducer,
     {
@@ -129,11 +135,15 @@ function StoreManagerWorkforce(input: {
     enabled,
   })
 
-  const employees = storeEmployeesQuery.data?.items ?? []
-  const sellerCodeRequests =
-    sellerCodeRequestsQuery.data?.items.filter((item) => item.storeId === storeId) ?? []
-  const offboardingRequests =
-    offboardingRequestsQuery.data?.items.filter((item) => item.storeId === storeId) ?? []
+  const employees = useMemo(() => storeEmployeesQuery.data?.items ?? [], [storeEmployeesQuery.data?.items])
+  const sellerCodeRequests = useMemo(
+    () => sellerCodeRequestsQuery.data?.items.filter((item) => item.storeId === storeId) ?? [],
+    [sellerCodeRequestsQuery.data?.items, storeId],
+  )
+  const offboardingRequests = useMemo(
+    () => offboardingRequestsQuery.data?.items.filter((item) => item.storeId === storeId) ?? [],
+    [offboardingRequestsQuery.data?.items, storeId],
+  )
   const returnedSellerCodeRequests = sellerCodeRequests.filter((item) => item.status === 'rejected')
   const returnedOffboardingRequests = offboardingRequests.filter((item) => item.status === 'rejected')
   const requests = buildWorkforceRequestSummaries({
@@ -142,6 +152,36 @@ function StoreManagerWorkforce(input: {
   })
   const openMovementCount = requests.filter((item) => !isClosedWorkforceStatus(item.status)).length
   const workforceSummary = deriveWorkforceSummary(employees, now, locale)
+  const positionOptions = useMemo(
+    () => Array.from(new Set(employees.map((item) => item.positionName).filter(Boolean))).sort(),
+    [employees],
+  )
+  const openOffboardingEmployeeIds = useMemo(
+    () =>
+      new Set(
+        offboardingRequests
+          .filter((item) => isPendingOffboardingApprovalStatus(item.status) && item.employeeId)
+          .map((item) => item.employeeId as string),
+      ),
+    [offboardingRequests],
+  )
+  const visibleEmployees = useMemo(() => {
+    const normalizedSearch = personnelSearch.trim().toLocaleLowerCase('tr-TR')
+
+    return employees.filter((employee) => {
+      const haystack = [
+        employee.displayName,
+        employee.externalEmployeeRef ?? '',
+        employee.positionName,
+      ].join(' ').toLocaleLowerCase('tr-TR')
+      const matchesSearch = normalizedSearch === '' || haystack.includes(normalizedSearch)
+      const matchesPosition = positionFilter === 'all' || employee.positionName === positionFilter
+      const status = getPersonnelRowStatus(employee, openOffboardingEmployeeIds)
+      const matchesStatus = statusFilter === 'all' || status.kind === statusFilter
+
+      return matchesSearch && matchesPosition && matchesStatus
+    })
+  }, [employees, openOffboardingEmployeeIds, personnelSearch, positionFilter, statusFilter])
   const sellerCodeMutation = useMutation({
     mutationFn: createSellerCodeRequest,
     onSuccess: (result) => {
@@ -376,27 +416,39 @@ function StoreManagerWorkforce(input: {
       className="tw:mx-auto tw:w-full tw:max-w-7xl"
       testId="store-workforce-page"
     >
-      <StoreSurfaceHeader
-        eyebrow={t('storeWorkforce.eyebrow')}
-        title={t('storeWorkforce.title')}
-        titleId="store-workforce-title"
-        description={t('storeWorkforce.storeManagerDescription')}
-        badges={[
-          { label: t('storeWorkforce.storeBadge'), tone: 'accent' },
-          { label: t('storeWorkforce.realDataBadge'), tone: 'calm' },
-        ]}
-      />
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-center tw:md:justify-between">
+        <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+          <span className="tw:grid tw:size-11 tw:shrink-0 tw:place-items-center tw:rounded-2xl tw:bg-[#efe9ff] tw:text-[#6847ff]">
+            <UsersRound className="tw:size-5" />
+          </span>
+          <div className="tw:min-w-0">
+            <h1
+              id="store-workforce-title"
+              className="tw:text-[30px] tw:font-semibold tw:leading-none tw:tracking-normal tw:text-[#071333] tw:md:text-[34px]"
+            >
+              {t('storeWorkforce.title')}
+            </h1>
+            <p className="tw:mt-2 tw:max-w-3xl tw:text-sm tw:leading-5 tw:text-[#647194]">
+              {t('storeWorkforce.storeManagerDescription')}
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <StoreMetricGrid ariaLabel={t('storeWorkforce.summaryAria')}>
-        <StoreMetricCard
-          icon={<UsersRound data-icon="inline-start" />}
+      <div
+        className="tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
+        aria-label={t('storeWorkforce.summaryAria')}
+      >
+        <StoreWorkforceMetricCard
+          icon={<UsersRound className="tw:size-5" />}
+          iconClassName="tw:bg-[#dffaff] tw:text-[#00aabd]"
           title={t('storeWorkforce.personnelScope')}
           value={formatNumber(employees.length, locale)}
           note={t('storeWorkforce.personnelScopeNote')}
-          tone="accent"
         />
-        <StoreMetricCard
-          icon={<Clock3 data-icon="inline-start" />}
+        <StoreWorkforceMetricCard
+          icon={<Clock3 className="tw:size-5" />}
+          iconClassName="tw:bg-[#efe9ff] tw:text-[#6847ff]"
           title={t('storeWorkforce.averageTenure')}
           value={workforceSummary.averageTenureLabel}
           note={workforceSummary.missingTenureCount > 0
@@ -404,72 +456,173 @@ function StoreManagerWorkforce(input: {
               count: workforceSummary.missingTenureCount,
             })
             : t('storeWorkforce.averageTenureNote')}
-          tone="calm"
         />
-        <StoreMetricCard
-          icon={<BriefcaseBusiness data-icon="inline-start" />}
+        <StoreWorkforceMetricCard
+          icon={<BriefcaseBusiness className="tw:size-5" />}
+          iconClassName="tw:bg-[#fff1d9] tw:text-[#f59e0b]"
           title={t('storeWorkforce.normActual')}
           value={t('storeWorkforce.valueNotConfigured')}
           note={t('storeWorkforce.normActualHonestNote')}
-          tone="neutral"
         />
-        <StoreMetricCard
-          icon={<ClipboardList data-icon="inline-start" />}
+        <StoreWorkforceMetricCard
+          icon={<ClipboardList className="tw:size-5" />}
+          iconClassName="tw:bg-[#ffe4ec] tw:text-[#f43f6d]"
           title={t('storeWorkforce.openMovements')}
           value={formatNumber(openMovementCount, locale)}
           note={t('storeWorkforce.openMovementsNote')}
-          tone={openMovementCount > 0 ? 'warning' : 'calm'}
         />
-      </StoreMetricGrid>
+      </div>
 
-      <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-4">
-          <StoreSectionCard
-            title={t('storeWorkforce.personnelListTitle')}
-            description={t('storeWorkforce.personnelListDescription')}
-            badge={{
-              label: t('storeWorkforce.personnelListBadge', {
-                count: employees.length,
-              }),
-              tone: 'calm',
-            }}
-            testId="store-workforce-personnel-list"
-          >
-            {storeEmployeesQuery.isError ? (
-              <StoreErrorState
-                title={t('storeWorkforce.personnelErrorTitle')}
-                description={getErrorMessage(storeEmployeesQuery.error)}
+      <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="tw:min-w-0">
+          <div className="tw:mb-3 tw:grid tw:gap-2.5 tw:rounded-[1.25rem] tw:border tw:border-[#dfe6f3] tw:bg-white/80 tw:p-2.5 tw:shadow-[0_18px_48px_rgba(58,75,118,0.10)] tw:backdrop-blur tw:md:grid-cols-[minmax(220px,1fr)_190px_180px]">
+            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
+              <Search className="tw:size-4 tw:text-[#647194]" />
+              <input
+                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none tw:placeholder:text-[#7c88a6]"
+                value={personnelSearch}
+                aria-label="Personel ara"
+                placeholder="Personel ara"
+                onChange={(event) => setPersonnelSearch(event.target.value)}
               />
-            ) : employees.length === 0 ? (
-              <StoreEmptyState
-                title={t('storeWorkforce.personnelEmptyTitle')}
-                titleAsHeading
-                description={t('storeWorkforce.personnelEmptyCopy')}
-              />
-            ) : (
-              <StoreStackedList>
-                {employees.map((employee) => (
-                  <PersonnelRow
-                    key={employee.employeeId}
-                    employee={employee}
-                    locale={locale}
-                    now={now}
-                    t={t}
-                  />
+            </label>
+            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
+              <BriefcaseBusiness className="tw:size-4 tw:text-[#647194]" />
+              <select
+                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
+                value={positionFilter}
+                aria-label="Pozisyon filtresi"
+                onChange={(event) => setPositionFilter(event.target.value)}
+              >
+                <option value="all">Tüm pozisyonlar</option>
+                {positionOptions.map((position) => (
+                  <option key={position} value={position}>{position}</option>
                 ))}
-              </StoreStackedList>
-            )}
-          </StoreSectionCard>
+              </select>
+            </label>
+            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
+              <ClipboardList className="tw:size-4 tw:text-[#647194]" />
+              <select
+                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
+                value={statusFilter}
+                aria-label="Durum filtresi"
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="all">Tüm durumlar</option>
+                <option value="active">Aktif</option>
+                <option value="codeWaiting">Kod bekliyor</option>
+                <option value="offboarding">Çıkış talebi</option>
+              </select>
+            </label>
+          </div>
 
-          <StoreSectionCard
+          <section
+            className="tw:overflow-hidden tw:rounded-[1.375rem] tw:border tw:border-[#dfe6f3] tw:bg-white/85 tw:shadow-[0_24px_70px_rgba(58,75,118,0.14)] tw:backdrop-blur"
+            data-testid="store-workforce-personnel-list"
+          >
+            <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-[#dfe6f3] tw:px-4 tw:py-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+              <div>
+                <h2 className="tw:text-[19px] tw:font-semibold tw:tracking-normal tw:text-[#071333]">
+                  {t('storeWorkforce.personnelListTitle')}
+                </h2>
+                <p className="tw:mt-1 tw:text-sm tw:leading-5 tw:text-[#647194]">
+                  {t('storeWorkforce.personnelListDescription')}
+                </p>
+              </div>
+              <div className="tw:flex tw:flex-wrap tw:gap-2">
+                <button
+                  className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:bg-gradient-to-br tw:from-[#6847ff] tw:to-[#355cff] tw:px-3 tw:text-sm tw:font-semibold tw:text-white tw:shadow-[0_12px_24px_rgba(104,71,255,0.22)]"
+                  type="button"
+                  onClick={() => setActivePanel('sellerCodeRequest')}
+                >
+                  <UserPlus className="tw:size-4" />
+                  Yeni personel
+                </button>
+                <button
+                  className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:border tw:border-[#cfc5ff] tw:bg-white tw:px-3 tw:text-sm tw:font-semibold tw:text-[#5534e6]"
+                  type="button"
+                  onClick={() => setActivePanel('offboardingRequest')}
+                >
+                  <LogOut className="tw:size-4" />
+                  Çıkış talebi
+                </button>
+              </div>
+            </div>
+
+            {storeEmployeesQuery.isError ? (
+              <div className="tw:p-4">
+                <StoreErrorState
+                  title={t('storeWorkforce.personnelErrorTitle')}
+                  description={getErrorMessage(storeEmployeesQuery.error)}
+                />
+              </div>
+            ) : employees.length === 0 ? (
+              <div className="tw:p-4">
+                <StoreEmptyState
+                  title={t('storeWorkforce.personnelEmptyTitle')}
+                  titleAsHeading
+                  description={t('storeWorkforce.personnelEmptyCopy')}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="tw:hidden tw:md:block">
+                  <table className="tw:w-full tw:table-fixed tw:border-collapse">
+                    <colgroup>
+                      <col className="tw:w-[26%]" />
+                      <col className="tw:w-[17%]" />
+                      <col className="tw:w-[13%]" />
+                      <col className="tw:w-[12%]" />
+                      <col className="tw:w-[16%]" />
+                      <col className="tw:w-[16%]" />
+                    </colgroup>
+                    <thead>
+                      <tr className="tw:bg-[#f4f7fc]/90">
+                        <StoreWorkforceTh>Personel</StoreWorkforceTh>
+                        <StoreWorkforceTh>Pozisyon</StoreWorkforceTh>
+                        <StoreWorkforceTh>Giriş tarihi</StoreWorkforceTh>
+                        <StoreWorkforceTh>Kıdem</StoreWorkforceTh>
+                        <StoreWorkforceTh>Kod durumu</StoreWorkforceTh>
+                        <StoreWorkforceTh>Durum</StoreWorkforceTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleEmployees.map((employee) => (
+                        <PersonnelTableRow
+                          key={employee.employeeId}
+                          employee={employee}
+                          locale={locale}
+                          now={now}
+                          openOffboardingEmployeeIds={openOffboardingEmployeeIds}
+                          t={t}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="tw:grid tw:gap-2.5 tw:p-3 tw:md:hidden">
+                  {visibleEmployees.map((employee) => (
+                    <PersonnelMobileCard
+                      key={employee.employeeId}
+                      employee={employee}
+                      locale={locale}
+                      now={now}
+                      openOffboardingEmployeeIds={openOffboardingEmployeeIds}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+
+        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-4">
+          <StoreWorkforcePanel
             title={t('storeWorkforce.positionDistributionTitle')}
             description={t('storeWorkforce.positionDistributionDescription')}
-            badge={{
-              label: t('storeWorkforce.positionDistributionBadge', {
-                count: workforceSummary.positionRows.length,
-              }),
-              tone: 'accent',
-            }}
+            badge={t('storeWorkforce.personnelListBadge', { count: employees.length })}
+            badgeClassName="tw:rounded-full tw:bg-[#dffaff] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#00889b]"
           >
             {workforceSummary.positionRows.length === 0 ? (
               <StoreEmptyState
@@ -478,46 +631,42 @@ function StoreManagerWorkforce(input: {
                 description={t('storeWorkforce.positionDistributionEmptyCopy')}
               />
             ) : (
-              <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2">
-                {workforceSummary.positionRows.map((row) => (
-                  <div
+              <div className="tw:grid tw:gap-3">
+                {workforceSummary.positionRows.map((row, index) => (
+                  <WorkforceBarRow
                     key={row.label}
-                    className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-card/70 tw:p-3"
-                  >
-                    <span className="tw:min-w-0 tw:truncate tw:text-sm tw:font-medium tw:text-foreground">
-                      {row.label}
-                    </span>
-                    <StoreStatusBadge tone="calm">{formatNumber(row.count, locale)}</StoreStatusBadge>
-                  </div>
+                    label={row.label}
+                    value={row.count}
+                    max={Math.max(1, employees.length)}
+                    index={index}
+                    locale={locale}
+                  />
                 ))}
               </div>
             )}
-          </StoreSectionCard>
+          </StoreWorkforcePanel>
 
-          <StoreSectionCard
+          <StoreWorkforcePanel
             title={t('storeWorkforce.tenureBucketsTitle')}
             description={t('storeWorkforce.tenureBucketsDescription')}
+            badge={workforceSummary.averageTenureLabel}
+            badgeClassName="tw:rounded-full tw:bg-[#efe9ff] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#5534e6]"
           >
-            <StoreInfoGrid
+            <StoreWorkforceTenureGrid
               items={workforceSummary.tenureBuckets.map((bucket) => ({
                 label: bucket.label,
                 value: formatNumber(bucket.count, locale),
-                tone: bucket.count > 0 ? 'calm' : 'neutral',
               }))}
             />
-          </StoreSectionCard>
-        </div>
+          </StoreWorkforcePanel>
 
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-4">
-          <StoreSectionCard
+          <StoreWorkforcePanel
             title={t('storeWorkforce.requestCenterTitle')}
             description={t('storeWorkforce.requestCenterDescription')}
-            badge={{
-              label: t('storeWorkforce.requestCenterBadge', {
-                count: requests.length,
-              }),
-              tone: requests.length > 0 ? 'warning' : 'neutral',
-            }}
+            badge={t('storeWorkforce.requestCenterBadge', { count: openMovementCount })}
+            badgeClassName={openMovementCount > 0
+              ? 'tw:rounded-full tw:bg-[#fff1d9] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#a35a00]'
+              : 'tw:rounded-full tw:bg-[#f4f7fc] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#465272]'}
           >
             {sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError ? (
               <div className="tw:flex tw:flex-col tw:gap-2">
@@ -539,32 +688,36 @@ function StoreManagerWorkforce(input: {
                 description={t('storeWorkforce.requestsEmptyCopy')}
               />
             ) : (
-              <StoreStackedList>
+              <div className="tw:grid tw:gap-2">
                 {requests.slice(0, 6).map((request) => (
-                  <StoreStackedRow key={request.key}>
-                    <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
+                  <article
+                    key={request.key}
+                    className="tw:rounded-2xl tw:border tw:border-[#e4eaf5] tw:bg-white/70 tw:p-2.5"
+                  >
+                    <div className="tw:flex tw:items-start tw:justify-between tw:gap-2">
                       <div className="tw:min-w-0">
-                        <strong className="tw:block tw:truncate tw:text-sm tw:font-medium tw:text-foreground">
+                        <strong className="tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-[#071333]">
                           {request.title}
                         </strong>
-                        <span className="tw:block tw:truncate tw:text-xs tw:text-muted-foreground">
+                        <span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-[#647194]">
                           {request.subtitle}
                         </span>
-                        <span className="tw:mt-1 tw:block tw:text-xs tw:text-muted-foreground">
-                          {formatDateTime(request.updatedAt, locale)}
-                        </span>
                       </div>
-                      <StoreStatusBadge tone={mapWorkforceStatusTone(request.status)}>
-                        {formatApprovalStatus(request.status, t)}
-                      </StoreStatusBadge>
+                      <span className={getRequestStatusClass(request.status)}>
+                        <span className="tw:size-1.5 tw:rounded-full tw:bg-current" />
+                        {getWorkforceRequestStatusLabel(request.status)}
+                      </span>
                     </div>
-                  </StoreStackedRow>
+                    <span className="tw:mt-2 tw:block tw:text-xs tw:font-medium tw:text-[#647194]">
+                      {formatDateTime(request.updatedAt, locale)}
+                    </span>
+                  </article>
                 ))}
-              </StoreStackedList>
+              </div>
             )}
-          </StoreSectionCard>
+          </StoreWorkforcePanel>
 
-          <StoreSectionCard
+          <StoreWorkforcePanel
             title={t('storeWorkforce.requestActionTitle')}
             description={t('storeWorkforce.requestActionDescription')}
             testId="store-workforce-request-workbench"
@@ -711,69 +864,9 @@ function StoreManagerWorkforce(input: {
                 t={t}
               />
             ) : null}
-          </StoreSectionCard>
+          </StoreWorkforcePanel>
         </div>
       </div>
     </StoreSurfacePage>
   )
-}
-
-function PersonnelRow(input: {
-  employee: StoreEmployee
-  locale: AppLocale
-  now: Date
-  t: ReturnType<typeof useLocalization>['t']
-}) {
-  const tenure = getTenureFromDate(input.employee.assignmentStartDate, input.now, input.locale)
-  const reference = input.employee.externalEmployeeRef ?? input.t('storeWorkforce.missingReference')
-
-  return (
-    <StoreStackedRow className="tw:grid tw:gap-3 tw:md:grid-cols-[minmax(180px,1.2fr)_minmax(140px,0.8fr)_minmax(120px,0.7fr)_minmax(120px,0.7fr)] tw:md:items-center">
-      <div className="tw:min-w-0">
-        <strong className="tw:block tw:truncate tw:text-sm tw:font-medium tw:text-foreground">
-          {input.employee.displayName || input.t('storeWorkforce.missingEmployeeName')}
-        </strong>
-        <span className="tw:block tw:truncate tw:text-xs tw:text-muted-foreground">{reference}</span>
-      </div>
-      <div className="tw:min-w-0">
-        <span className="tw:block tw:text-[11px] tw:font-medium tw:uppercase tw:tracking-wide tw:text-muted-foreground">
-          {input.t('storeWorkforce.position')}
-        </span>
-        <span className="tw:block tw:truncate tw:text-sm tw:text-foreground">
-          {input.employee.positionName || input.t('storeWorkforce.missingPosition')}
-        </span>
-      </div>
-      <div>
-        <span className="tw:block tw:text-[11px] tw:font-medium tw:uppercase tw:tracking-wide tw:text-muted-foreground">
-          {input.t('storeWorkforce.assignmentStart')}
-        </span>
-        <span className="tw:block tw:text-sm tw:text-foreground">
-          {formatSafeDate(input.employee.assignmentStartDate, input.locale, input.t)}
-        </span>
-      </div>
-      <div>
-        <span className="tw:block tw:text-[11px] tw:font-medium tw:uppercase tw:tracking-wide tw:text-muted-foreground">
-          {input.t('storeWorkforce.tenure')}
-        </span>
-        <StoreStatusBadge tone={tenure.months === null ? 'neutral' : 'calm'}>
-          {tenure.label}
-        </StoreStatusBadge>
-      </div>
-    </StoreStackedRow>
-  )
-}
-
-function formatSafeDate(
-  value: string,
-  locale: AppLocale,
-  t: ReturnType<typeof useLocalization>['t'],
-) {
-  return parseDateOnly(value) ? formatDate(value, locale) : t('storeWorkforce.missingDate')
-}
-
-function mapWorkforceStatusTone(status: string) {
-  if (status === 'approved') return 'calm'
-  if (status === 'rejected') return 'warning'
-  if (status.includes('pending')) return 'accent'
-  return 'neutral'
 }
