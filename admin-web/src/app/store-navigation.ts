@@ -1,6 +1,7 @@
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   canListTargetDistributionRequests,
+  canOpenStoreWorkforce,
   canOpenStoreChecklists,
   hasAnyRole,
 } from '../features/auth/authorization'
@@ -20,6 +21,7 @@ export type StoreNavIconId =
   | 'settings'
   | 'targets'
   | 'tasks'
+  | 'workforce'
 
 type StoreNavigationItem = {
   id: string
@@ -152,6 +154,12 @@ const managerNavigation: StoreNavigationItem[] = [
     icon: 'targets',
   },
   {
+    id: 'workforce',
+    labelKey: 'storeHome.nav.workforce',
+    path: '/store/workforce',
+    icon: 'workforce',
+  },
+  {
     id: 'tasks',
     labelKey: 'storeHome.nav.tasks',
     path: '/store/tasks',
@@ -208,6 +216,12 @@ const regionManagerNavigation: StoreNavigationItem[] = [
     labelKey: 'storeHome.nav.targets',
     path: '/store/targets',
     icon: 'targets',
+  },
+  {
+    id: 'workforce',
+    labelKey: 'storeHome.nav.workforce',
+    path: '/store/workforce',
+    icon: 'workforce',
   },
   {
     id: 'tasks',
@@ -280,6 +294,8 @@ function isStoreNavigationItemAllowed(
       return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])
     case 'targets':
       return hasAnyRole(authSummary, ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'])
+    case 'workforce':
+      return canOpenStoreWorkforce(authSummary)
     case 'reports':
       return hasAnyRole(authSummary, ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'STORE_MANAGER', 'REGION_MANAGER'])
     case 'settings':

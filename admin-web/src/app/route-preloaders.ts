@@ -21,6 +21,7 @@ const routePreloaders: Array<{
   { match: (pathname) => pathname === '/store/incentives', preload: () => import('../pages/StoreIncentivesPage') },
   { match: (pathname) => pathname === '/store/settings', preload: () => import('../pages/StoreSettingsPage') },
   { match: (pathname) => pathname === '/store/targets', preload: () => import('../pages/StoreTargetsPage') },
+  { match: (pathname) => pathname === '/store/workforce', preload: () => import('../pages/StoreWorkforcePage') },
   { match: (pathname) => pathname === '/store/reports', preload: () => import('../pages/StoreReportsPage') },
   { match: (pathname) => pathname === '/admin/session', preload: () => import('../pages/SessionReadinessPage') },
   { match: (pathname) => pathname === '/admin/operations', preload: () => import('../pages/OperationsControlTowerPage') },

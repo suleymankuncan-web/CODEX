@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
+const demoRegionId = '00000000-0000-0000-0000-000000000010'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 const demoPositionId = '44444444-4444-4444-8444-444444444444'
 
@@ -31,6 +32,99 @@ test.beforeEach(async ({ page }) => {
   })
 
   await routeStoreSurfaceApi(page)
+})
+
+test('store workforce route is visible for store manager true action scope', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['STORE_MANAGER'],
+    readStoreIds: [demoStoreId],
+    scopeStoreIds: [demoStoreId],
+    actionStoreIds: [demoStoreId],
+    legacyAssignedStoreIds: [],
+  }))
+
+  await page.goto('/store/home')
+
+  const workforceLink = page.locator('.store-command-nav').getByRole('link', { name: 'Norm Kadro' })
+  await expect(workforceLink).toBeVisible()
+
+  await workforceLink.click()
+  await expect(page).toHaveURL(/\/store\/workforce$/)
+  await expect(page.getByTestId('store-workforce-page')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
+})
+
+test('store workforce route stays hidden for read-scope-only store manager', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['STORE_MANAGER'],
+    readStoreIds: [demoStoreId],
+    scopeStoreIds: [demoStoreId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+
+  await page.goto('/store/home')
+  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Norm Kadro' })).toHaveCount(0)
+
+  await page.goto('/store/workforce')
+  await expect(page.getByTestId('store-workforce-page')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+})
+
+test('store workforce route stays hidden for reporting users with read scope', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REPORT_VIEWER'],
+    readStoreIds: [demoStoreId],
+    scopeStoreIds: [demoStoreId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+
+  await page.goto('/store/home')
+  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Norm Kadro' })).toHaveCount(0)
+
+  await page.goto('/store/workforce')
+  await expect(page.getByTestId('store-workforce-page')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+})
+
+test('store workforce route is visible for region manager read scope', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REGION_MANAGER'],
+    readStoreIds: [],
+    readRegionIds: [demoRegionId],
+    scopeStoreIds: [],
+    scopeRegionIds: [demoRegionId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+
+  await page.goto('/store/home')
+
+  const workforceLink = page.locator('.store-command-nav').getByRole('link', { name: 'Norm Kadro' })
+  await expect(workforceLink).toBeVisible()
+
+  await workforceLink.click()
+  await expect(page).toHaveURL(/\/store\/workforce$/)
+  await expect(page.getByTestId('store-workforce-page')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
+})
+
+test('store workforce route stays hidden for store personnel', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['STORE_PERSONNEL'],
+    readStoreIds: [demoStoreId],
+    scopeStoreIds: [demoStoreId],
+    actionStoreIds: [demoStoreId],
+    legacyAssignedStoreIds: [demoStoreId],
+  }))
+
+  await page.goto('/store/home')
+  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Norm Kadro' })).toHaveCount(0)
+
+  await page.goto('/store/workforce')
+  await expect(page.getByTestId('store-workforce-page')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
 })
 
 test('store self-performance page renders live score, metrics, and ranks', async ({ page }) => {
@@ -3639,6 +3733,51 @@ async function expectHealthyStoreTransition(page: Page) {
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function createStoreAuthSession(input: {
+  roleCodes: string[]
+  readStoreIds: string[]
+  readRegionIds?: string[]
+  scopeStoreIds: string[]
+  scopeRegionIds?: string[]
+  actionStoreIds: string[]
+  legacyAssignedStoreIds: string[]
+}) {
+  return {
+    ...authSessionFixture,
+    user: {
+      ...authSessionFixture.user,
+      roleCodes: input.roleCodes,
+      scope: {
+        ...authSessionFixture.user.scope,
+        regionIds: input.scopeRegionIds ?? [],
+        storeIds: input.scopeStoreIds,
+      },
+      readScope: {
+        ...authSessionFixture.user.readScope,
+        regionIds: input.readRegionIds ?? [],
+        storeIds: input.readStoreIds,
+      },
+      actionScope: {
+        assignedStoreIds: input.actionStoreIds,
+      },
+      assignedStoreIds: input.legacyAssignedStoreIds,
+    },
+    scopeSummary: {
+      ...authSessionFixture.scopeSummary,
+      regionCount: (input.readRegionIds ?? []).length,
+      storeCount: input.readStoreIds.length,
+      assignedStoreCount: input.actionStoreIds.length,
+    },
+  }
+}
+
+async function routeAuthSession(page: Page, authSession: ReturnType<typeof createStoreAuthSession>) {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({ json: authSession })
+  })
 }
 
 async function routeStoreSurfaceApi(page: Page) {

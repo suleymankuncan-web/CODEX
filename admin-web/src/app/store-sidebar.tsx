@@ -12,6 +12,7 @@ import {
   TrendingUp,
   Trophy,
   UserRound,
+  UsersRound,
 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { NavLink } from 'react-router-dom'
@@ -38,6 +39,7 @@ const iconById: Record<StoreNavIconId, LucideIcon> = {
   settings: Settings,
   targets: Target,
   tasks: Bell,
+  workforce: UsersRound,
 }
 
 function getIdentityLabel(authSummary: AuthSessionSummary | null) {
