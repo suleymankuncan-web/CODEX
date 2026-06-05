@@ -1,636 +1,424 @@
-import { useMemo, useReducer } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle2, Clock3, ReceiptText, ShieldCheck } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { RefreshCcw, Search } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
-  canApproveTargetDistributionRequest,
-  canCreateTargetDistributionRequest,
   canListTargetDistributionRequests,
   getAssignedStoreIds,
   getReadStoreIds,
 } from '../features/auth/authorization'
-import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { getAllTargetDistributionRequests } from '../features/targets/api'
 import {
-  approveTargetDistributionRequest,
-  createTargetDistributionRequest,
-  getAllTargetDistributionRequests,
-  getStoreTargetingPersonnel,
-  type TargetDistributionAllocation,
-  type TargetDistributionRequest,
-} from '../features/targets/api'
-import {
-  createOffboardingRequest,
-  createSellerCodeRequest,
   getOffboardingRequests,
-  getPositionOptions,
   getSellerCodeRequests,
-  getStoreEmployees,
-  resubmitOffboardingRequest,
-  resubmitSellerCodeRequest,
-  type OffboardingRequest,
-  type SellerCodeRequest,
 } from '../features/workforce/api'
 import { getErrorMessage } from '../lib/format'
+import type { AppLocale } from '../lib/i18n'
 import {
-  createStoreApprovalsPageState,
-  resolveStoreApprovalsPersona,
-  storeApprovalsPageReducer,
-} from './store-approvals-model'
-import { StoreApprovalsWorkbench } from './store-approvals-workbench'
+  buildRequestRows,
+  createPeriodOptions,
+  formatCopy,
+  matchesStatusFilter,
+  PAGE_SIZE,
+  requestCenterCopy,
+  type RequestCenterCopy,
+  type RequestCenterRow,
+  type RequestCenterStatus,
+  type RequestCenterTab,
+  type RequestCenterType,
+} from './store-approvals-request-center-model'
 import {
+  RequestCenterHeader,
+  RequestCenterMetrics,
+  RequestCenterMobileCard,
+  RequestCenterSelect,
+  RequestCenterTableRow,
+} from './store-approvals-request-center-sections'
+import { resolveStoreApprovalsPersona, type StoreApprovalsPersona } from './store-approvals-model'
+import {
+  StoreEmptyState,
   StoreErrorState,
   StoreLoadingState,
-  StoreMetricCard,
-  StoreMetricGrid,
-  StoreSurfaceHeader,
   StoreSurfacePage,
 } from './store-surface-primitives'
 
-function useStoreApprovalsPageContent(input: {
+export function StoreApprovalsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
-  const queryClient = useQueryClient()
-  const { locale, t } = useLocalization()
-  const user = input.authSummary?.user
+  const { locale } = useLocalization()
+  const copy = requestCenterCopy[locale]
+  const persona = resolveStoreApprovalsPersona(input.authSummary)
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
   const readStoreIds = getReadStoreIds(input.authSummary)
-  const primaryStoreId = assignedStoreIds[0] ?? null
-  const persona = resolveStoreApprovalsPersona(input.authSummary)
-  const canListRequests = canListTargetDistributionRequests(input.authSummary)
-  const initialStoreId = primaryStoreId || ''
-  const initialCanCreateForStore = canCreateTargetDistributionRequest(input.authSummary, initialStoreId || null)
-  const isStoreManagerLedger = persona === 'storeManager'
-  const isRegionManagerLedger = persona === 'regionManager'
-  const initialShowTargetSubmission = isStoreManagerLedger && initialCanCreateForStore
-  const initialShowTargetApprovalQueue = isRegionManagerLedger && canListRequests
-  const [state, dispatch] = useReducer(
-    storeApprovalsPageReducer,
-    {
-      defaultTargetLabel: t('storeApprovals.targetLabelDefault'),
-      initialPanel: initialShowTargetSubmission
-        ? 'targetRequest'
-        : initialShowTargetApprovalQueue
-          ? 'targetApproval'
-          : 'submittedTargets',
-    },
-    createStoreApprovalsPageState,
+  const scopeStoreIds = useMemo(
+    () => Array.from(new Set([...assignedStoreIds, ...readStoreIds])),
+    [assignedStoreIds, readStoreIds],
   )
-  const {
-    selectedStoreId,
-    requestMonth,
-    targetLabel,
-    totalTargetValue,
-    requestReason,
-    submissionNotice,
-    approvalNotes,
-    approvalNotice,
-    activeLedgerPanel,
-    sellerFirstName,
-    sellerLastName,
-    sellerNationalId,
-    sellerPhoneNumber,
-    sellerHireDate,
-    sellerPositionId,
-    sellerEmploymentType,
-    sellerRequestReason,
-    sellerRequestNotice,
-    editingSellerRequestId,
-    offboardingEmployeeId,
-    offboardingTerminationDate,
-    offboardingRequestReason,
-    offboardingNotice,
-    editingOffboardingRequestId,
-    allocations,
-  } = state
-  const storeId = selectedStoreId || primaryStoreId || ''
-  const canCreateForStore = canCreateTargetDistributionRequest(input.authSummary, storeId || null)
-  const showTargetSubmission = isStoreManagerLedger && canCreateForStore
-  const showWorkforceHrQueues = isStoreManagerLedger && canCreateForStore
-  const showTargetApprovalQueue = isRegionManagerLedger && canListRequests
+  const canReadTargets = canListTargetDistributionRequests(input.authSummary)
+  const shouldReadWorkforce = persona === 'storeManager' && assignedStoreIds.length > 0
   const scopeKey = [
     persona,
-    (user?.roleCodes ?? []).join('|'),
-    readStoreIds.join('|'),
+    input.authSummary?.user.roleCodes.join('|') ?? '',
     assignedStoreIds.join('|'),
-    storeId,
+    readStoreIds.join('|'),
   ].join(':')
-  const requestsQuery = useQuery({
-    queryKey: ['target-distribution-requests', 'store-approvals-ledger', scopeKey],
+
+  const targetRequestsQuery = useQuery({
+    queryKey: ['target-distribution-requests', 'store-approvals-request-center', scopeKey],
     queryFn: () => getAllTargetDistributionRequests(),
-    enabled: canListRequests && persona !== 'readOnly',
+    enabled: canReadTargets && persona !== 'readOnly',
   })
-  const personnelQuery = useQuery({
-    queryKey: ['store-targeting-personnel', 'store-approvals-ledger', scopeKey],
-    queryFn: () => getStoreTargetingPersonnel(storeId),
-    enabled: showTargetSubmission,
+  const sellerCodeRequestsQuery = useQuery({
+    queryKey: ['seller-code-requests', 'store-approvals-request-center', scopeKey],
+    queryFn: () => getSellerCodeRequests(),
+    enabled: shouldReadWorkforce,
   })
-  const positionOptionsQuery = useQuery({
-    queryKey: ['workforce-position-options', 'store-approvals-ledger', scopeKey],
-    queryFn: () => getPositionOptions(storeId),
-    enabled: showWorkforceHrQueues,
-  })
-  const storeEmployeesQuery = useQuery({
-    queryKey: ['workforce-store-employees', 'store-approvals-ledger', scopeKey],
-    queryFn: () => getStoreEmployees(storeId),
-    enabled: showWorkforceHrQueues,
-  })
-  const rejectedSellerCodeRequestsQuery = useQuery({
-    queryKey: ['seller-code-requests', 'rejected', 'store-approvals-ledger', scopeKey],
-    queryFn: () => getSellerCodeRequests({ status: 'rejected' }),
-    enabled: showWorkforceHrQueues,
-  })
-  const rejectedOffboardingRequestsQuery = useQuery({
-    queryKey: ['offboarding-requests', 'rejected', 'store-approvals-ledger', scopeKey],
-    queryFn: () => getOffboardingRequests({ status: 'rejected' }),
-    enabled: showWorkforceHrQueues,
+  const offboardingRequestsQuery = useQuery({
+    queryKey: ['offboarding-requests', 'store-approvals-request-center', scopeKey],
+    queryFn: () => getOffboardingRequests(),
+    enabled: shouldReadWorkforce,
   })
 
-  const createMutation = useMutation({
-    mutationFn: createTargetDistributionRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
-      dispatch({
-        type: 'resetTargetRequestSuccess',
-        defaultTargetLabel: t('storeApprovals.targetLabelDefault'),
-        message: result.command.message,
-      })
-    },
-  })
+  const isInitialLoading =
+    (targetRequestsQuery.isLoading && !targetRequestsQuery.data) ||
+    (shouldReadWorkforce &&
+      ((sellerCodeRequestsQuery.isLoading && !sellerCodeRequestsQuery.data) ||
+        (offboardingRequestsQuery.isLoading && !offboardingRequestsQuery.data)))
 
-  const sellerCodeMutation = useMutation({
-    mutationFn: createSellerCodeRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
-    },
-  })
-  const resubmitSellerCodeMutation = useMutation({
-    mutationFn: resubmitSellerCodeRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
-    },
-  })
-  const offboardingMutation = useMutation({
-    mutationFn: createOffboardingRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
-      void queryClient.invalidateQueries({ queryKey: ['workforce-store-employees'] })
-      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
-    },
-  })
-  const approveTargetMutation = useMutation({
-    mutationFn: approveTargetDistributionRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
-      dispatch({ type: 'setApprovalNotice', message: result.command.message })
-    },
-  })
-  const resubmitOffboardingMutation = useMutation({
-    mutationFn: resubmitOffboardingRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
-      void queryClient.invalidateQueries({ queryKey: ['workforce-store-employees'] })
-      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
-    },
-  })
-
-  const activeAllocations = useMemo(() => {
-    const personnel = personnelQuery.data?.items ?? []
-    if (personnel.length === 0) {
-      return []
-    }
-    const allocationsByEmployeeId = new Map<string, TargetDistributionAllocation>()
-    for (const item of allocations) {
-      if (!item.employeeId.trim()) continue
-      allocationsByEmployeeId.set(item.employeeId, item)
-    }
-    return personnel.map((person) => ({
-      employeeId: person.employeeId,
-      assigneeLabel: person.displayName,
-      targetValue: allocationsByEmployeeId.get(person.employeeId)?.targetValue ?? 0,
-      note: allocationsByEmployeeId.get(person.employeeId)?.note ?? '',
-    }))
-  }, [allocations, personnelQuery.data?.items])
-
-  const returnedSellerCodeRequests = rejectedSellerCodeRequestsQuery.data?.items ?? []
-  const returnedOffboardingRequests = rejectedOffboardingRequestsQuery.data?.items ?? []
-
-  const startEditingSellerRequest = (item: SellerCodeRequest) => {
-    dispatch({
-      type: 'loadSellerRequestEdit',
-      item,
-      notice: item.reviewNote
-        ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
-        : t('storeApprovals.returnedSellerLoaded'),
-    })
+  if (isInitialLoading) {
+    return <StoreLoadingState title={copy.loadingTitle} description={copy.loadingCopy} />
   }
 
-  const startEditingOffboardingRequest = (item: OffboardingRequest) => {
-    dispatch({
-      type: 'loadOffboardingRequestEdit',
-      item,
-      notice: item.reviewNote
-        ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
-        : t('storeApprovals.returnedOffboardingLoaded'),
-    })
-  }
-
-  if (canListRequests && requestsQuery.isLoading && !requestsQuery.data) {
+  if (targetRequestsQuery.isError) {
     return (
-      <StoreLoadingState
-        title={t('storeApprovals.loadingTitle')}
-        description={t('storeApprovals.loadingCopy')}
-      />
-    )
-  }
-
-  if (canListRequests && requestsQuery.isError) {
-    return (
-      <StoreSurfacePage ariaLabel={t('storeApprovals.ledgerTitle')}>
+      <StoreSurfacePage ariaLabel={copy.aria}>
         <StoreErrorState
-          title={t('storeApprovals.errorTitle')}
-          description={getErrorMessage(requestsQuery.error)}
+          title={copy.errorTitle}
+          description={getErrorMessage(targetRequestsQuery.error)}
         />
       </StoreSurfacePage>
     )
   }
 
-  const requests = requestsQuery.data?.items ?? []
-  const pendingTargetRequests = requests.filter((item) => item.status === 'pending_region_approval')
-  const submittedTargetRequests = showTargetApprovalQueue
-    ? requests.filter((item) => item.status !== 'pending_region_approval')
-    : requests
-  const pendingCount = pendingTargetRequests.length
-  const approvedCount = requests.filter((item) => item.status === 'approved').length
-  const returnedWorkforceCount =
-    returnedSellerCodeRequests.length + returnedOffboardingRequests.length
-  const allocationTotal = activeAllocations.reduce((sum, item) => sum + Number(item.targetValue || 0), 0)
-  const totalTargetNumber = Number(totalTargetValue || 0)
-  const totalsAligned = allocationTotal === totalTargetNumber
-  const canSubmit =
-    showTargetSubmission &&
-    Boolean(storeId) &&
-    Boolean(targetLabel.trim()) &&
-    totalTargetNumber > 0 &&
-    totalsAligned &&
-    activeAllocations.length > 0 &&
-    activeAllocations.every(
-      (item) => item.employeeId.trim() && item.assigneeLabel.trim() && Number(item.targetValue) > 0,
+  if (persona === 'readOnly') {
+    return (
+      <StoreSurfacePage
+        ariaLabel={copy.aria}
+        className="tw:mx-auto tw:w-full tw:max-w-[1400px]"
+        testId="store-approvals-ledger"
+      >
+        <RequestCenterHeader copy={copy} />
+        <StoreEmptyState
+          title={copy.emptyTitle}
+          titleAsHeading
+          description={copy.emptyCopy}
+        />
+      </StoreSurfacePage>
     )
-  const canSubmitSellerCodeRequest =
-    showWorkforceHrQueues &&
-    Boolean(storeId) &&
-    Boolean(sellerFirstName.trim()) &&
-    Boolean(sellerLastName.trim()) &&
-    /^[0-9]{11}$/.test(sellerNationalId.trim()) &&
-    Boolean(sellerPhoneNumber.trim()) &&
-    Boolean(sellerHireDate) &&
-    Boolean(sellerPositionId.trim())
-  const canSubmitOffboardingRequest =
-    showWorkforceHrQueues &&
-    Boolean(storeId) &&
-    Boolean(offboardingEmployeeId.trim()) &&
-    Boolean(offboardingTerminationDate) &&
-    Boolean(offboardingRequestReason.trim())
-  const sellerRequestPending = sellerCodeMutation.isPending || resubmitSellerCodeMutation.isPending
-  const offboardingRequestPending = offboardingMutation.isPending || resubmitOffboardingMutation.isPending
-  const updateTargetAllocationValue = (index: number, targetValue: number) => {
-    dispatch({
-      type: 'replaceAllocations',
-      allocations: activeAllocations.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, targetValue } : item,
-      ),
-    })
   }
-  const updateTargetAllocationNote = (index: number, note: string) => {
-    dispatch({
-      type: 'replaceAllocations',
-      allocations: activeAllocations.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, note } : item,
-      ),
-    })
-  }
-  const submitTargetDistributionRequest = () => {
-    createMutation.mutate({
-      storeId,
-      requestMonth: `${requestMonth}-01`,
-      targetLabel,
-      totalTargetValue: Number(totalTargetValue),
-      ...(requestReason ? { requestReason } : {}),
-      allocations: activeAllocations,
-    })
-  }
-  const submitSellerCodeRequest = () => {
-    const trimmedSellerRequestReason = sellerRequestReason.trim()
-    const payload = {
-      firstName: sellerFirstName.trim(),
-      lastName: sellerLastName.trim(),
-      nationalId: sellerNationalId.trim(),
-      phoneNumber: sellerPhoneNumber.trim(),
-      hireDate: sellerHireDate,
-      requestedPositionId: sellerPositionId.trim(),
-      employmentType: sellerEmploymentType,
-      ...(trimmedSellerRequestReason ? { requestReason: trimmedSellerRequestReason } : {}),
-    }
 
-    if (editingSellerRequestId) {
-      resubmitSellerCodeMutation.mutate({
-        requestId: editingSellerRequestId,
-        ...payload,
-      })
-      return
-    }
-
-    sellerCodeMutation.mutate({
-      storeId,
-      requestType: 'create_code',
-      ...payload,
-    })
-  }
-  const cancelSellerRequestEdit = () => {
-    dispatch({ type: 'cancelSellerRequestEdit' })
-  }
-  const submitOffboardingRequest = () => {
-    const requestReason = offboardingRequestReason.trim()
-    const payload = {
-      employeeId: offboardingEmployeeId,
-      terminationDate: offboardingTerminationDate,
-      terminationReason: requestReason.slice(0, 80),
-      requestReason,
-    }
-
-    if (editingOffboardingRequestId) {
-      resubmitOffboardingMutation.mutate({
-        requestId: editingOffboardingRequestId,
-        ...payload,
-      })
-      return
-    }
-
-    offboardingMutation.mutate({
-      storeId,
-      ...payload,
-    })
-  }
-  const cancelOffboardingRequestEdit = () => {
-    dispatch({ type: 'cancelOffboardingRequestEdit' })
-  }
-  const approveTargetRequest = (request: TargetDistributionRequest) => {
-    const canApprove = canApproveTargetDistributionRequest(input.authSummary, request.storeId)
-
-    if (!canApprove) {
-      return
-    }
-
-    approveTargetMutation.mutate({
-      requestId: request.requestId,
-      ...(approvalNotes[request.requestId] ? { approvalNote: approvalNotes[request.requestId] } : {}),
-    })
-  }
+  const rows = buildRequestRows({
+    copy,
+    locale,
+    offboardingRequests: offboardingRequestsQuery.data?.items ?? [],
+    persona,
+    scopeStoreIds,
+    sellerCodeRequests: sellerCodeRequestsQuery.data?.items ?? [],
+    targetRequests: targetRequestsQuery.data?.items ?? [],
+  })
 
   return (
-    <StoreSurfacePage
-      ariaLabel={t('storeApprovals.ledgerTitle')}
-      ariaLabelledBy="store-approvals-ledger-title"
-      testId="store-approvals-ledger"
-    >
-      <StoreApprovalsHeader
-        isRegionManagerLedger={isRegionManagerLedger}
-        isStoreManagerLedger={isStoreManagerLedger}
-        t={t}
-      />
-
-      <StoreApprovalsMetrics
-        approvedCount={approvedCount}
-        pendingCount={pendingCount}
-        personnelCount={personnelQuery.data?.items.length ?? 0}
-        returnedWorkforceCount={returnedWorkforceCount}
-        showTargetApprovalQueue={showTargetApprovalQueue}
-        showTargetSubmission={showTargetSubmission}
-        showWorkforceHrQueues={showWorkforceHrQueues}
-        t={t}
-      />
-
-      <StoreApprovalsWorkbench
-        activeLedgerPanel={activeLedgerPanel}
-        approvals={{
-          approvalNotes,
-          approvalNotice,
-          approvingRequestId: approveTargetMutation.variables?.requestId ?? null,
-          pendingRequests: pendingTargetRequests,
-          isApproving: approveTargetMutation.isPending,
-        }}
-        locale={locale}
-        panels={{
-          showTargetApprovalQueue,
-          showTargetSubmission,
-          showWorkforceHrQueues,
-        }}
-        returnedRequests={{
-          hasOffboardingRequestsError: rejectedOffboardingRequestsQuery.isError,
-          hasSellerCodeRequestsError: rejectedSellerCodeRequestsQuery.isError,
-          offboardingRequestsError: rejectedOffboardingRequestsQuery.error,
-          returnedOffboardingRequests,
-          returnedSellerCodeRequests,
-          sellerCodeRequestsError: rejectedSellerCodeRequestsQuery.error,
-        }}
-        sellerCodeRequest={{
-          editingRequestId: editingSellerRequestId,
-          errors: {
-            create: sellerCodeMutation.error,
-            createVisible: sellerCodeMutation.isError,
-            resubmit: resubmitSellerCodeMutation.error,
-            resubmitVisible: resubmitSellerCodeMutation.isError,
-          },
-          positionOptionsQuery,
-          sellerEmploymentType,
-          sellerFirstName,
-          sellerHireDate,
-          sellerLastName,
-          sellerNationalId,
-          sellerPhoneNumber,
-          sellerPositionId,
-          sellerRequestReason,
-          submission: {
-            notice: sellerRequestNotice,
-            pending: sellerRequestPending,
-          },
-          submitAllowed: canSubmitSellerCodeRequest,
-        }}
-        offboardingRequest={{
-          editingRequestId: editingOffboardingRequestId,
-          errors: {
-            create: offboardingMutation.error,
-            createVisible: offboardingMutation.isError,
-            resubmit: resubmitOffboardingMutation.error,
-            resubmitVisible: resubmitOffboardingMutation.isError,
-          },
-          offboardingEmployeeId,
-          offboardingRequestReason,
-          offboardingTerminationDate,
-          storeEmployeesQuery,
-          submission: {
-            notice: offboardingNotice,
-            pending: offboardingRequestPending,
-          },
-          submitAllowed: canSubmitOffboardingRequest,
-        }}
-        submittedTargetRequests={submittedTargetRequests}
-        targetRequest={{
-          activeAllocations,
-          allocationTotal,
-          assignedStoreIds,
-          errors: {
-            create: createMutation.error,
-            createVisible: createMutation.isError,
-          },
-          personnelQuery,
-          primaryStoreId,
-          requestMonth,
-          requestReason,
-          storeId,
-          submission: {
-            notice: submissionNotice,
-            pending: createMutation.isPending,
-          },
-          submitAllowed: canSubmit,
-          targetLabel,
-          totalTargetValue,
-          totalsAligned,
-        }}
-        t={t}
-        onActivePanelChange={(panel) => dispatch({ type: 'setActiveLedgerPanel', panel })}
-        onAllocationNoteChange={updateTargetAllocationNote}
-        onAllocationValueChange={updateTargetAllocationValue}
-        onApproveTargetRequest={approveTargetRequest}
-        onApprovalNoteChange={(requestId, value) =>
-          dispatch({ type: 'setApprovalNote', requestId, value })
-        }
-        onCancelOffboardingEdit={cancelOffboardingRequestEdit}
-        onCancelSellerEdit={cancelSellerRequestEdit}
-        onEditOffboardingRequest={startEditingOffboardingRequest}
-        onEditSellerCodeRequest={startEditingSellerRequest}
-        onOffboardingEmployeeIdChange={(value) =>
-          dispatch({ type: 'setOffboardingEmployeeId', value })
-        }
-        onOffboardingRequestReasonChange={(value) =>
-          dispatch({ type: 'setOffboardingRequestReason', value })
-        }
-        onOffboardingTerminationDateChange={(value) =>
-          dispatch({ type: 'setOffboardingTerminationDate', value })
-        }
-        onRequestMonthChange={(value) => dispatch({ type: 'setRequestMonth', value })}
-        onRequestReasonChange={(value) => dispatch({ type: 'setRequestReason', value })}
-        onSellerEmploymentTypeChange={(value) =>
-          dispatch({ type: 'setSellerEmploymentType', value })
-        }
-        onSellerFirstNameChange={(value) => dispatch({ type: 'setSellerFirstName', value })}
-        onSellerHireDateChange={(value) => dispatch({ type: 'setSellerHireDate', value })}
-        onSellerLastNameChange={(value) => dispatch({ type: 'setSellerLastName', value })}
-        onSellerNationalIdChange={(value) => dispatch({ type: 'setSellerNationalId', value })}
-        onSellerPhoneNumberChange={(value) => dispatch({ type: 'setSellerPhoneNumber', value })}
-        onSellerPositionIdChange={(value) => dispatch({ type: 'setSellerPositionId', value })}
-        onSellerRequestReasonChange={(value) =>
-          dispatch({ type: 'setSellerRequestReason', value })
-        }
-        onStoreIdChange={(value) => dispatch({ type: 'setSelectedStoreId', value })}
-        onSubmitOffboardingRequest={submitOffboardingRequest}
-        onSubmitSellerCodeRequest={submitSellerCodeRequest}
-        onSubmitTargetRequest={submitTargetDistributionRequest}
-        onTargetLabelChange={(value) => dispatch({ type: 'setTargetLabel', value })}
-        onTotalTargetValueChange={(value) => dispatch({ type: 'setTotalTargetValue', value })}
-        canApproveRequest={(request) =>
-          canApproveTargetDistributionRequest(input.authSummary, request.storeId)
-        }
-      />
-    </StoreSurfacePage>
-  )
-}
-export function StoreApprovalsPage(input: {
-  authSummary: AuthSessionSummary | null
-}) {
-  return useStoreApprovalsPageContent(input)
-}
-
-function StoreApprovalsHeader(input: {
-  isRegionManagerLedger: boolean
-  isStoreManagerLedger: boolean
-  t: TranslateFunction
-}) {
-  return (
-    <StoreSurfaceHeader
-      eyebrow={input.t('storeApprovals.ledgerEyebrow')}
-      title={input.t('storeApprovals.ledgerTitle')}
-      titleId="store-approvals-ledger-title"
-      description={
-        input.isRegionManagerLedger
-          ? input.t('storeApprovals.regionManagerSubtitle')
-          : input.isStoreManagerLedger
-            ? input.t('storeApprovals.storeManagerSubtitle')
-            : input.t('storeApprovals.readOnlySubtitle')
-      }
+    <RequestCenterSurface
+      copy={copy}
+      locale={locale}
+      offboardingError={offboardingRequestsQuery.error}
+      offboardingErrorVisible={shouldReadWorkforce && offboardingRequestsQuery.isError}
+      persona={persona}
+      rows={rows}
+      sellerCodeError={sellerCodeRequestsQuery.error}
+      sellerCodeErrorVisible={shouldReadWorkforce && sellerCodeRequestsQuery.isError}
     />
   )
 }
 
-function StoreApprovalsMetrics(input: {
-  approvedCount: number
-  pendingCount: number
-  personnelCount: number
-  returnedWorkforceCount: number
-  showTargetApprovalQueue: boolean
-  showTargetSubmission: boolean
-  showWorkforceHrQueues: boolean
-  t: TranslateFunction
+function RequestCenterSurface(input: {
+  copy: RequestCenterCopy
+  locale: AppLocale
+  offboardingError: unknown
+  offboardingErrorVisible: boolean
+  persona: StoreApprovalsPersona
+  rows: RequestCenterRow[]
+  sellerCodeError: unknown
+  sellerCodeErrorVisible: boolean
 }) {
+  const [activeTab, setActiveTab] = useState<RequestCenterTab>('open')
+  const [page, setPage] = useState(1)
+  const [query, setQuery] = useState('')
+  const [typeFilter, setTypeFilter] = useState<RequestCenterType>('all')
+  const [statusFilter, setStatusFilter] = useState<RequestCenterStatus>('all')
+  const [periodFilter, setPeriodFilter] = useState('all')
+  const periodOptions = useMemo(() => createPeriodOptions(input.rows, input.locale), [input.rows, input.locale])
+  const filteredRows = useMemo(
+    () =>
+      input.rows.filter((row) => {
+        if (row.bucket !== activeTab) return false
+        if (typeFilter !== 'all' && row.type !== typeFilter) return false
+        if (statusFilter !== 'all' && !matchesStatusFilter(row.status, statusFilter)) return false
+        if (periodFilter !== 'all' && row.updatedAt.slice(0, 7) !== periodFilter) return false
+
+        const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+        if (!normalizedQuery) return true
+
+        return [
+          row.title,
+          row.subtitle,
+          row.scopeTitle,
+          row.scopeSubtitle,
+          row.statusLabel,
+          row.sourceLabel,
+        ].some((value) => value.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
+      }),
+    [activeTab, input.rows, periodFilter, query, statusFilter, typeFilter],
+  )
+  const openCount = input.rows.filter((row) => row.bucket === 'open').length
+  const doneCount = input.rows.filter((row) => row.bucket === 'done').length
+  const returnedCount = input.rows.filter((row) => matchesStatusFilter(row.status, 'returned')).length
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageRows = filteredRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const from = filteredRows.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
+  const to = Math.min(safePage * PAGE_SIZE, filteredRows.length)
+  const resetFilters = () => {
+    setQuery('')
+    setTypeFilter('all')
+    setStatusFilter('all')
+    setPeriodFilter('all')
+    setPage(1)
+  }
+
   return (
-    <StoreMetricGrid ariaLabel={input.t('storeApprovals.ledgerMetrics')}>
-      <StoreMetricCard
-        icon={<ReceiptText data-icon="inline-start" />}
-        title={input.t('storeApprovals.pendingApprovals')}
-        note={input.t('storeApprovals.pendingApprovalsNote')}
-        value={String(input.pendingCount)}
-        tone={input.pendingCount > 0 ? 'warning' : 'calm'}
+    <StoreSurfacePage
+      ariaLabel={input.copy.aria}
+      ariaLabelledBy="store-approvals-request-center-title"
+      className="tw:mx-auto tw:w-full tw:max-w-[1400px] tw:gap-4"
+      testId="store-approvals-ledger"
+    >
+      <RequestCenterHeader copy={input.copy} />
+      <RequestCenterMetrics
+        copy={input.copy}
+        doneCount={doneCount}
+        openCount={openCount}
+        returnedCount={returnedCount}
       />
-      <StoreMetricCard
-        icon={<ShieldCheck data-icon="inline-start" />}
-        title={input.t('storeApprovals.approvalIntent')}
-        note={
-          input.showTargetApprovalQueue
-            ? input.t('storeApprovals.targetApprovalQueueTitle')
-            : input.t('storeApprovals.approvalIntentNote')
-        }
-        value={input.showTargetSubmission || input.showTargetApprovalQueue ? '1' : '0'}
-        tone={input.showTargetSubmission || input.showTargetApprovalQueue ? 'accent' : 'neutral'}
-      />
-      <StoreMetricCard
-        icon={<Clock3 data-icon="inline-start" />}
-        title={input.t('storeApprovals.approvedRequests')}
-        note={input.t('storeApprovals.approvedRequestsNote')}
-        value={String(input.approvedCount)}
-        tone={input.approvedCount > 0 ? 'calm' : 'neutral'}
-      />
-      <StoreMetricCard
-        icon={<CheckCircle2 data-icon="inline-start" />}
-        title={
-          input.showWorkforceHrQueues
-            ? input.t('storeApprovals.ledgerReturnedCorrections')
-            : input.t('storeApprovals.storePersonnel')
-        }
-        note={
-          input.showWorkforceHrQueues
-            ? input.t('storeApprovals.workforceQueueTitle')
-            : input.t('storeApprovals.regionReviewCopy')
-        }
-        value={
-          input.showWorkforceHrQueues
-            ? String(input.returnedWorkforceCount)
-            : String(input.personnelCount)
-        }
-        tone={input.returnedWorkforceCount > 0 ? 'warning' : 'neutral'}
-      />
-    </StoreMetricGrid>
+
+      {input.sellerCodeErrorVisible || input.offboardingErrorVisible ? (
+        <div className="tw:grid tw:gap-2">
+          {input.sellerCodeErrorVisible ? (
+            <StoreErrorState
+              title={input.copy.errorTitle}
+              description={getErrorMessage(input.sellerCodeError)}
+            />
+          ) : null}
+          {input.offboardingErrorVisible ? (
+            <StoreErrorState
+              title={input.copy.errorTitle}
+              description={getErrorMessage(input.offboardingError)}
+            />
+          ) : null}
+        </div>
+      ) : null}
+
+      <section
+        aria-label="Talep merkezi filtreleri"
+        className="tw:grid tw:gap-2 tw:rounded-2xl tw:border tw:border-border/80 tw:bg-card/85 tw:p-3 tw:shadow-[0_20px_60px_rgba(61,79,122,0.12)] tw:lg:grid-cols-[minmax(280px,1.35fr)_minmax(150px,0.52fr)_minmax(150px,0.52fr)_minmax(150px,0.52fr)_auto]"
+      >
+        <label className="tw:flex tw:min-h-11 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-white/75 tw:px-3">
+          <Search className="tw:size-4 tw:text-muted-foreground" />
+          <span className="tw:sr-only">{input.copy.searchPlaceholder}</span>
+          <Input
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setPage(1)
+            }}
+            placeholder={input.copy.searchPlaceholder}
+            className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-sm tw:font-medium tw:shadow-none tw:focus-visible:ring-0"
+          />
+        </label>
+        <RequestCenterSelect
+          ariaLabel={input.copy.allTypes}
+          value={typeFilter}
+          onChange={(value) => {
+            setTypeFilter(value as RequestCenterType)
+            setPage(1)
+          }}
+          items={[
+            { value: 'all', label: input.copy.allTypes },
+            { value: 'target', label: input.copy.targetType },
+            { value: 'sellerCode', label: input.copy.sellerCodeType },
+            { value: 'offboarding', label: input.copy.offboardingType },
+          ]}
+        />
+        <RequestCenterSelect
+          ariaLabel={input.copy.allStatuses}
+          value={statusFilter}
+          onChange={(value) => {
+            setStatusFilter(value as RequestCenterStatus)
+            setPage(1)
+          }}
+          items={[
+            { value: 'all', label: input.copy.allStatuses },
+            { value: 'pending', label: input.copy.pendingHrStatus },
+            { value: 'returned', label: input.copy.rejectedStatus },
+            { value: 'approved', label: input.copy.approvedStatus },
+          ]}
+        />
+        <RequestCenterSelect
+          ariaLabel={input.copy.periodAll}
+          value={periodFilter}
+          onChange={(value) => {
+            setPeriodFilter(value)
+            setPage(1)
+          }}
+          items={[{ value: 'all', label: input.copy.periodAll }, ...periodOptions]}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          onClick={resetFilters}
+          className="tw:min-h-11 tw:justify-center tw:gap-2 tw:rounded-xl tw:bg-white/75"
+        >
+          <RefreshCcw className="tw:size-4" />
+          {input.copy.resetFilters}
+        </Button>
+      </section>
+
+      <Card className="tw:overflow-hidden tw:rounded-2xl tw:border-border/80 tw:bg-card/85 tw:shadow-[0_24px_70px_rgba(61,79,122,0.14)]">
+        <CardHeader className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border/80 tw:p-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+          <div className="tw:min-w-0">
+            <CardTitle>
+              <h2 className="tw:text-lg tw:font-semibold tw:text-foreground">
+                {input.persona === 'regionManager'
+                  ? input.copy.regionTableTitle
+                  : input.copy.storeTableTitle}
+              </h2>
+            </CardTitle>
+            <p className="tw:mt-2 tw:max-w-2xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              {input.copy.tableDescription}
+            </p>
+          </div>
+          <ToggleGroup
+            type="single"
+            value={activeTab}
+            onValueChange={(value) => {
+              if (!value) return
+              setActiveTab(value as RequestCenterTab)
+              setPage(1)
+            }}
+            className="tw:flex tw:justify-start tw:rounded-xl tw:border tw:border-border tw:bg-white/80 tw:p-1"
+          >
+            <ToggleGroupItem value="open" className="tw:h-8 tw:rounded-lg tw:px-3 tw:text-sm">
+              {input.copy.openTab}
+            </ToggleGroupItem>
+            <ToggleGroupItem value="done" className="tw:h-8 tw:rounded-lg tw:px-3 tw:text-sm">
+              {input.copy.doneTab}
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <span className="tw:rounded-full tw:bg-primary/10 tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-primary">
+            {formatCopy(activeTab === 'open' ? input.copy.countOpen : input.copy.countDone, {
+              count: String(filteredRows.length),
+            })}
+          </span>
+        </CardHeader>
+        <CardContent className="tw:p-0">
+          {filteredRows.length === 0 ? (
+            <div className="tw:p-4">
+              <StoreEmptyState
+                title={input.copy.emptyTitle}
+                description={input.copy.emptyCopy}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="tw:hidden tw:overflow-x-auto tw:md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="tw:bg-muted/55">
+                      <TableHead className="tw:px-4 tw:text-[11px] tw:uppercase tw:tracking-[0.02em]">
+                        {input.copy.requestColumn}
+                      </TableHead>
+                      <TableHead className="tw:px-4 tw:text-[11px] tw:uppercase tw:tracking-[0.02em]">
+                        {input.persona === 'regionManager'
+                          ? input.copy.scopeColumnRegion
+                          : input.copy.scopeColumnStore}
+                      </TableHead>
+                      <TableHead className="tw:px-4 tw:text-[11px] tw:uppercase tw:tracking-[0.02em]">
+                        {input.copy.statusColumn}
+                      </TableHead>
+                      <TableHead className="tw:px-4 tw:text-[11px] tw:uppercase tw:tracking-[0.02em]">
+                        {input.copy.sourceColumn}
+                      </TableHead>
+                      <TableHead className="tw:px-4 tw:text-[11px] tw:uppercase tw:tracking-[0.02em]">
+                        {input.copy.updatedColumn}
+                      </TableHead>
+                      <TableHead className="tw:px-4 tw:text-[11px] tw:uppercase tw:tracking-[0.02em]">
+                        {input.copy.actionColumn}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pageRows.map((row) => (
+                      <RequestCenterTableRow key={row.id} row={row} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              <div className="tw:grid tw:gap-2 tw:p-3 tw:md:hidden">
+                {pageRows.map((row) => (
+                  <RequestCenterMobileCard key={row.id} row={row} />
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="tw:flex tw:flex-col tw:gap-3 tw:border-t tw:border-border/80 tw:bg-muted/35 tw:p-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+            <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {formatCopy(input.copy.pager, {
+                from: String(from),
+                to: String(to),
+                total: String(filteredRows.length),
+              })}
+            </span>
+            <div className="tw:flex tw:flex-wrap tw:gap-2">
+              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                <Button
+                  key={pageNumber}
+                  type="button"
+                  size="icon"
+                  variant={pageNumber === safePage ? 'secondary' : 'outline'}
+                  className="tw:size-8 tw:rounded-lg"
+                  onClick={() => setPage(pageNumber)}
+                  aria-label={`Sayfa ${pageNumber}`}
+                >
+                  {pageNumber}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </StoreSurfacePage>
   )
 }

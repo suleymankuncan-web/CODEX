@@ -1,4 +1,5 @@
-import { useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
@@ -84,9 +85,12 @@ function StoreManagerWorkforce(input: {
 }) {
   const queryClient = useQueryClient()
   const { locale, t } = useLocalization()
+  const [searchParams] = useSearchParams()
   const storeIds = getActionStoreIds(input.authSummary)
-  const storeId = storeIds[0] ?? ''
+  const requestedStoreId = searchParams.get('storeId')?.trim() ?? ''
+  const storeId = storeIds.includes(requestedStoreId) ? requestedStoreId : (storeIds[0] ?? '')
   const now = useMemo(() => new Date(), [])
+  const loadedHandoffRef = useRef<string | null>(null)
   const [activePanel, setActivePanel] = useState<WorkforcePanel>('personnel')
   const [state, dispatch] = useReducer(
     storeApprovalsPageReducer,
@@ -253,6 +257,75 @@ function StoreManagerWorkforce(input: {
     })
     setActivePanel('offboardingRequest')
   }
+  const handoffRequestType = searchParams.get('requestType')
+  const handoffRequestId = searchParams.get('requestId')
+
+  useEffect(() => {
+    if (!handoffRequestType || !handoffRequestId) {
+      return
+    }
+
+    const handoffKey = `${handoffRequestType}:${handoffRequestId}`
+
+    if (loadedHandoffRef.current === handoffKey) {
+      return
+    }
+
+    if (handoffRequestType === 'sellerCode') {
+      const item = returnedSellerCodeRequests.find(
+        (request) => request.requestId === handoffRequestId,
+      )
+
+      if (item) {
+        loadedHandoffRef.current = handoffKey
+        queueMicrotask(() => {
+          dispatch({
+            type: 'loadSellerRequestEdit',
+            item,
+            notice: item.reviewNote
+              ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
+              : t('storeApprovals.returnedSellerLoaded'),
+          })
+          setActivePanel('sellerCodeRequest')
+        })
+        return
+      }
+    }
+
+    if (handoffRequestType === 'offboarding') {
+      const item = returnedOffboardingRequests.find(
+        (request) => request.requestId === handoffRequestId,
+      )
+
+      if (item) {
+        loadedHandoffRef.current = handoffKey
+        queueMicrotask(() => {
+          dispatch({
+            type: 'loadOffboardingRequestEdit',
+            item,
+            notice: item.reviewNote
+              ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
+              : t('storeApprovals.returnedOffboardingLoaded'),
+          })
+          setActivePanel('offboardingRequest')
+        })
+        return
+      }
+    }
+
+    if (sellerCodeRequestsQuery.isFetched && offboardingRequestsQuery.isFetched) {
+      loadedHandoffRef.current = handoffKey
+      queueMicrotask(() => setActivePanel('returnedRequests'))
+    }
+  }, [
+    handoffRequestId,
+    handoffRequestType,
+    offboardingRequestsQuery.isFetched,
+    returnedOffboardingRequests,
+    returnedSellerCodeRequests,
+    sellerCodeRequestsQuery.isFetched,
+    t,
+  ])
 
   if (!storeId) {
     return (

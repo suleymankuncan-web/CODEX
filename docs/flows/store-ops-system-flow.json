@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-05T15:48:09.700Z",
+  "generatedAt": "2026-06-05T20:04:56.946Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 139,
     "openApiEndpointCount": 173,
-    "routeApiEdgeCount": 221,
+    "routeApiEdgeCount": 209,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -7291,59 +7291,14 @@
         "apiCallId": "api:28"
       },
       {
-        "id": "edge:route:store:/store/approvals:api:121",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:121"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:124",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:124"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:125",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:125"
-      },
-      {
         "id": "edge:route:store:/store/approvals:api:128",
         "routeId": "route:store:/store/approvals",
         "apiCallId": "api:128"
       },
       {
-        "id": "edge:route:store:/store/approvals:api:131",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:131"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:132",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:132"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:133",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:133"
-      },
-      {
         "id": "edge:route:store:/store/approvals:api:134",
         "routeId": "route:store:/store/approvals",
         "apiCallId": "api:134"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:135",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:135"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:136",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:136"
-      },
-      {
-        "id": "edge:route:store:/store/approvals:api:139",
-        "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:139"
       },
       {
         "id": "edge:route:store:/store/checklists:api:24",
@@ -7531,11 +7486,6 @@
         "apiCallId": "api:120"
       },
       {
-        "id": "edge:route:store:/store/tasks:api:121",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:121"
-      },
-      {
         "id": "edge:route:store:/store/tasks:api:126",
         "routeId": "route:store:/store/tasks",
         "apiCallId": "api:126"
@@ -7544,16 +7494,6 @@
         "id": "edge:route:store:/store/tasks:api:128",
         "routeId": "route:store:/store/tasks",
         "apiCallId": "api:128"
-      },
-      {
-        "id": "edge:route:store:/store/tasks:api:132",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:132"
-      },
-      {
-        "id": "edge:route:store:/store/tasks:api:133",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:133"
       },
       {
         "id": "edge:route:store:/store/tasks:api:134",

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
@@ -70,11 +71,49 @@ import {
   StoreSurfacePage,
 } from './store-surface-primitives'
 
+function getQueryMonthInput(value: string | null) {
+  if (!value) {
+    return null
+  }
+
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    return value
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return value.slice(0, 7)
+  }
+
+  return null
+}
+
+function getQueryStatusFilter(value: string | null): TargetStatusFilter {
+  if (value === 'pending' || value === 'approved') {
+    return value
+  }
+
+  return 'all'
+}
+
+function getQueryWorkflowTab(value: string | null): TargetWorkflowTab | null {
+  if (
+    value === 'approval' ||
+    value === 'distribution' ||
+    value === 'revision' ||
+    value === 'approved'
+  ) {
+    return value
+  }
+
+  return null
+}
+
 export function StoreTargetsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale } = useLocalization()
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
   const copy = targetCopy[locale]
   const assignedStoreIds = useMemo(
     () => getAssignedStoreIds(input.authSummary),
@@ -87,17 +126,35 @@ export function StoreTargetsPage(input: {
 
     return assignedStoreIds[0] ?? ''
   }, [assignedStoreIds, input.authSummary])
-  const [requestMonth, setRequestMonth] = useState(getCurrentMonthInput)
-  const [selectedStoreId, setSelectedStoreId] = useState('')
+  const [requestMonth, setRequestMonth] = useState(
+    () => getQueryMonthInput(searchParams.get('requestMonth')) ?? getCurrentMonthInput(),
+  )
+  const [selectedStoreId, setSelectedStoreId] = useState(() => {
+    const queryStoreId = searchParams.get('storeId')?.trim() ?? ''
+
+    if (queryStoreId && (!defaultStoreId || assignedStoreIds.includes(queryStoreId))) {
+      return queryStoreId
+    }
+
+    if (defaultStoreId) {
+      return ''
+    }
+
+    return queryStoreId
+  })
   const [targetLabel, setTargetLabel] = useState<string>(copy.targetLabelDefault)
   const [totalTargetValue, setTotalTargetValue] = useState('')
   const [requestReason, setRequestReason] = useState('')
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
   const [allocationDrafts, setAllocationDrafts] = useState<Record<string, TargetAllocationDraft>>({})
   const [formNotice, setFormNotice] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<TargetWorkflowTab | null>(null)
+  const [activeTab, setActiveTab] = useState<TargetWorkflowTab | null>(() =>
+    getQueryWorkflowTab(searchParams.get('tab')),
+  )
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<TargetStatusFilter>('all')
+  const [statusFilter, setStatusFilter] = useState<TargetStatusFilter>(() =>
+    getQueryStatusFilter(searchParams.get('status')),
+  )
   const requestMonthStart = `${requestMonth}-01`
   const effectiveSelectedStoreId = selectedStoreId || defaultStoreId
   const canSelectAllStores = !defaultStoreId
