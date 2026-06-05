@@ -20,7 +20,8 @@ Redis/BullMQ Render worker closure through PR #536, the Store checklist flow
 polish through PR #537, the first architecture hardening line through PR #552,
 Architecture Hardening V2 through PR #566, Architecture Hardening V3
 through PR #570, and the Architecture Hardening V4 line through the PR-3
-workforce request persistence boundary.
+workforce request persistence boundary, plus the Store KPIs Prototype Parity V1
+line through PR #653 and final closeout evidence.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -226,6 +227,23 @@ Current maintenance baseline:
   offboarding/access lifecycle boundaries, further backend OpenAPI generator
   movement, broad E2E decomposition, and future Nebim/prim/norm kadro/store
   action boundary decisions.
+- Store KPIs Prototype Parity V1 is closed through PR #654. Plan:
+  `docs/superpowers/plans/2026-06-04-store-kpis-prototype-parity-v1.md`.
+  Approved prototypes are
+  `docs/prototypes/store-kpis-command-deck-v3.html` and
+  `docs/prototypes/store-kpis-region-manager-v1.html`. PR #649 tracked the
+  prototype contract; PR #650 added selected-store Region Manager read
+  contract behavior; PR #651 wired frontend route state; PR #652 implemented
+  the Store Manager command deck; PR #653 implemented the Region Manager
+  scoped overview and `/store/kpis?storeId=<storeId>` drill-in; PR #654 added
+  final closeout evidence and handoff state. Closeout evidence:
+  `docs/evidence/store-kpis-prototype-parity-v1-closeout-2026-06-05.md`.
+  Production uses real API/model/config data only, keeps Store Manager on own
+  store, keeps Region Manager scoped to assigned stores, keeps `/store/me`
+  self-only and `/store/personnel/:employeeId` for other personnel, and hides
+  region averages when the ranking response does not cover full `meta.total`.
+  API shape, DB schema, auth/scope semantics, scoring, ranking, checklist
+  weights, snapshot behavior, and business workflows remained unchanged.
 
 Latest route/scope guard merge:
 
@@ -2461,6 +2479,7 @@ Keep these references because contract tests and future resumes depend on them:
 - `docs/evidence/store-action-coaching-detail-v2a.md` - Store Action read-only coaching detail V2A evidence
 - `docs/plans/store-action-checklist-remediation-v1.md` - Store Action checklist remediation decision
 - `docs/plans/store-action-target-projection-v1.md` - Store Action target projection decision
+- `docs/evidence/store-kpis-prototype-parity-v1-closeout-2026-06-05.md` - Store KPIs Prototype Parity V1 closeout
 - `docs/evidence/role-permission-preview-v1.md` - Role/permission preview evidence
 - `docs/evidence/rules-config-versioning-inventory-v1.md` - Rules / Config Versioning Inventory V1
 - `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` - Norm Kadro / Workforce Planning Read-Only V1
