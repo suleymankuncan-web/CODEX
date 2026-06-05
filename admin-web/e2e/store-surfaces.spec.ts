@@ -5,6 +5,7 @@ const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoRegionId = '00000000-0000-0000-0000-000000000010'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 const demoPositionId = '44444444-4444-4444-8444-444444444444'
+const outsideStoreId = '00000000-0000-0000-0000-000000000999'
 
 async function selectComboboxOption(page: Page, trigger: Locator, optionName: string | RegExp) {
   const option =
@@ -125,6 +126,300 @@ test('store workforce route stays hidden for store personnel', async ({ page }) 
   await page.goto('/store/workforce')
   await expect(page.getByTestId('store-workforce-page')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+})
+
+test('store workforce page reads store manager personnel and workforce movements', async ({ page }) => {
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [sellerCodeRequestFixture, rejectedSellerCodeRequestFixture, outsideStoreSellerCodeRequestFixture],
+        meta: { count: 2, total: 2, limit: 50, offset: 0 },
+      },
+    })
+  })
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [offboardingRequestFixture, outsideStoreOffboardingRequestFixture],
+        meta: { count: 1, total: 1, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/workforce')
+
+  await expect(page.getByTestId('store-workforce-page')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
+  const personnelList = page.getByTestId('store-workforce-personnel-list')
+  await expect(personnelList.getByText('Store Personnel')).toBeVisible()
+  await expect(personnelList.getByText('FM8001')).toBeVisible()
+  await expect(personnelList.getByText('Sales Consultant')).toBeVisible()
+  await expect(page.getByText('Personel talep hareketleri')).toBeVisible()
+  await expect(page.getByText('Outside Store')).toHaveCount(0)
+  await expect(page.getByText('Outside Personnel')).toHaveCount(0)
+  await expect(page.getByText('TC numarasi tekrar kontrol edilmeli')).toHaveCount(0)
+  await expect(page.getByLabel(/Norm kadro personel islemleri/i)).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Sat.*kodu.*talebi/i })).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Personel.*talebi/i })).toBeVisible()
+})
+
+test('store workforce page keeps the store manager surface usable on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  await page.goto('/store/workforce')
+
+  await expect(page.getByTestId('store-workforce-page')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
+  await expect(page.getByLabel(/Norm kadro personel islemleri/i)).toBeVisible()
+  await expect(page.getByTestId('store-workforce-personnel-list')).toBeVisible()
+
+  const hasHorizontalOverflow = await page.evaluate(() => {
+    const root = document.documentElement
+    return root.scrollWidth > root.clientWidth + 1
+  })
+  expect(hasHorizontalOverflow).toBe(false)
+})
+
+test('store workforce page submits seller code requests with the existing payload shape', async ({ page }) => {
+  let capturedPayload: unknown = null
+
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'POST') {
+      capturedPayload = request.postDataJSON()
+      expect(capturedPayload).toEqual({
+        storeId: demoStoreId,
+        requestType: 'create_code',
+        firstName: 'Ayse',
+        lastName: 'Yilmaz',
+        nationalId: '12345678901',
+        phoneNumber: '05551234567',
+        hireDate: '2026-05-01',
+        requestedPositionId: demoPositionId,
+        employmentType: 'full_time',
+        requestReason: 'Yeni personel',
+      })
+
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'accepted',
+            message: 'Seller code request submitted for HR approval',
+          },
+          data: {
+            request: sellerCodeRequestFixture,
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/workforce')
+  await page.getByRole('radio', { name: /Sat.*kodu.*talebi/i }).click()
+
+  const sellerCodeForm = page.getByLabel(/Sat.*kodu.*formu/i)
+  await expect(sellerCodeForm.getByRole('heading', { name: /Sat.*kodu.*talebi/i })).toBeVisible()
+  await sellerCodeForm.getByLabel('Ad', { exact: true }).fill('Ayse')
+  await sellerCodeForm.getByLabel('Soyad', { exact: true }).fill('Yilmaz')
+  await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678901')
+  await sellerCodeForm.getByLabel(/Telefon/i).fill('05551234567')
+  await sellerCodeForm.getByLabel(/giri.*tarihi/i).fill('2026-05-01')
+  const positionSelect = sellerCodeForm.getByRole('combobox', { name: 'Pozisyon' })
+  await selectComboboxOption(page, positionSelect, 'Satış Danışmanı')
+  await sellerCodeForm.getByLabel('Talep nedeni').fill('Yeni personel')
+  await sellerCodeForm.getByRole('button', { name: /g.*nder/i }).click()
+
+  await expect(page.getByText('Seller code request submitted for HR approval')).toBeVisible()
+  expect(capturedPayload).not.toBeNull()
+})
+
+test('store workforce page submits offboarding requests with the existing payload shape', async ({ page }) => {
+  let capturedPayload: unknown = null
+
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'POST') {
+      capturedPayload = request.postDataJSON()
+      expect(capturedPayload).toEqual({
+        storeId: demoStoreId,
+        employeeId: demoEmployeeId,
+        terminationDate: '2026-05-10',
+        terminationReason: 'Personel istifa etti',
+        requestReason: 'Personel istifa etti',
+      })
+
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'accepted',
+            message: 'Offboarding request submitted for HR approval',
+          },
+          data: {
+            request: offboardingRequestFixture,
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/workforce')
+  await page.getByRole('radio', { name: /Personel.*talebi/i }).click()
+
+  const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
+  const employeeSelect = offboardingForm.getByRole('combobox', { name: 'Personel' })
+  await selectComboboxOption(page, employeeSelect, /Store Personnel/)
+  await offboardingForm.getByLabel(/tarihi/i).fill('2026-05-10')
+  await offboardingForm.getByLabel('Talep nedeni').fill('Personel istifa etti')
+  await offboardingForm.getByRole('button', { name: /g.*nder/i }).click()
+
+  await expect(page.getByText('Offboarding request submitted for HR approval')).toBeVisible()
+  expect(capturedPayload).not.toBeNull()
+})
+
+test('store workforce page keeps returned request resubmit identity and payload parity', async ({ page }) => {
+  const capturedSellerPayloads: unknown[] = []
+  const capturedOffboardingPayloads: unknown[] = []
+  const capturedPatchPaths: string[] = []
+
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'PATCH' && pathname.endsWith('/resubmit')) {
+      capturedPatchPaths.push(pathname)
+      const body = request.postDataJSON()
+      capturedSellerPayloads.push(body)
+      expect(pathname).toContain(rejectedSellerCodeRequestFixture.requestId)
+      expect(body).toEqual({
+        firstName: 'Ayse',
+        lastName: 'Yilmaz',
+        nationalId: '12345678902',
+        phoneNumber: '05551234567',
+        hireDate: '2026-05-02',
+        requestedPositionId: demoPositionId,
+        employmentType: 'full_time',
+        requestReason: 'TC guncellendi',
+      })
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'resubmitted',
+            message: 'Seller code request resubmitted for HR approval',
+          },
+          data: {
+            request: {
+              ...rejectedSellerCodeRequestFixture,
+              status: 'pending_hr_approval',
+              nationalIdLast4: '8902',
+              hireDate: '2026-05-02',
+              reviewNote: null,
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [rejectedSellerCodeRequestFixture, outsideStoreRejectedSellerCodeRequestFixture],
+        meta: { count: 1, total: 1, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+
+    if (request.method() === 'PATCH' && pathname.endsWith('/resubmit')) {
+      capturedPatchPaths.push(pathname)
+      const body = request.postDataJSON()
+      capturedOffboardingPayloads.push(body)
+      expect(pathname).toContain(rejectedOffboardingRequestFixture.requestId)
+      expect(body).toEqual({
+        employeeId: demoEmployeeId,
+        terminationDate: '2026-05-12',
+        terminationReason: 'Tarih ve sebep guncellendi',
+        requestReason: 'Tarih ve sebep guncellendi',
+      })
+      await route.fulfill({
+        json: {
+          command: {
+            status: 'resubmitted',
+            message: 'Offboarding request resubmitted for HR approval',
+          },
+          data: {
+            request: {
+              ...rejectedOffboardingRequestFixture,
+              status: 'pending_hr_approval',
+              terminationDate: '2026-05-12',
+              terminationReason: 'Tarih ve sebep guncellendi',
+              requestReason: 'Tarih ve sebep guncellendi',
+              reviewNote: null,
+            },
+          },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      json: {
+        items: [rejectedOffboardingRequestFixture, outsideStoreRejectedOffboardingRequestFixture],
+        meta: { count: 1, total: 1, limit: 50, offset: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/workforce')
+  await page.getByRole('radio', { name: /ade.*kay/i }).click()
+  await expect(page.getByText('TC numarasi tekrar kontrol edilmeli')).toBeVisible()
+  await expect(page.getByText('Cikis tarihi tekrar kontrol edilmeli')).toBeVisible()
+  await expect(page.getByText('Outside store correction')).toHaveCount(0)
+  await expect(page.getByText('Outside offboarding correction')).toHaveCount(0)
+
+  await page.getByRole('button', { name: /Sat.*kodu.*d.*zenle/i }).click()
+  const sellerCodeForm = page.getByLabel(/Sat.*kodu.*formu/i)
+  await expect(sellerCodeForm.getByLabel('Ad', { exact: true })).toHaveValue('Ayse')
+  await sellerCodeForm.getByLabel('TC kimlik no').fill('12345678902')
+  await sellerCodeForm.getByLabel(/giri.*tarihi/i).fill('2026-05-02')
+  await sellerCodeForm.getByLabel('Talep nedeni').fill('TC guncellendi')
+  await sellerCodeForm.getByRole('button', { name: /yeniden.*g.*nder/i }).click()
+  await expect(page.getByText('Seller code request resubmitted for HR approval')).toBeVisible()
+
+  await page.getByRole('radio', { name: /ade.*kay/i }).click()
+  await page.getByRole('button', { name: /Personel.*d.*zenle/i }).click()
+  const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
+  await offboardingForm.getByLabel(/tarihi/i).fill('2026-05-12')
+  await offboardingForm.getByLabel('Talep nedeni').fill('Tarih ve sebep guncellendi')
+  await offboardingForm.getByRole('button', { name: /yeniden.*g.*nder/i }).click()
+  await expect(page.getByText('Offboarding request resubmitted for HR approval')).toBeVisible()
+
+  expect(capturedSellerPayloads).toHaveLength(1)
+  expect(capturedOffboardingPayloads).toHaveLength(1)
+  expect(capturedPatchPaths).toEqual([
+    `/api/workforce/seller-code-requests/${rejectedSellerCodeRequestFixture.requestId}/resubmit`,
+    `/api/workforce/offboarding-requests/${rejectedOffboardingRequestFixture.requestId}/resubmit`,
+  ])
 })
 
 test('store self-performance page renders live score, metrics, and ranks', async ({ page }) => {
@@ -5411,6 +5706,26 @@ const rejectedSellerCodeRequestFixture = {
   updatedAt: '2026-04-27T10:00:00.000Z',
 }
 
+const outsideStoreSellerCodeRequestFixture = {
+  ...sellerCodeRequestFixture,
+  requestId: 'dddddddd-dddd-4ddd-8ddd-dddddddddd90',
+  storeId: outsideStoreId,
+  storeCode: 'DEMO-999',
+  storeName: 'Outside Store',
+  firstName: 'Outside',
+  lastName: 'Store',
+  updatedAt: '2026-04-27T11:00:00.000Z',
+}
+
+const outsideStoreRejectedSellerCodeRequestFixture = {
+  ...outsideStoreSellerCodeRequestFixture,
+  status: 'rejected',
+  reviewedByUserId: 'hr-admin-user',
+  reviewedAt: '2026-04-27T11:30:00.000Z',
+  reviewNote: 'Outside store correction',
+  updatedAt: '2026-04-27T11:30:00.000Z',
+}
+
 const rejectedOffboardingRequestFixture = {
   ...offboardingRequestFixture,
   status: 'rejected',
@@ -5418,6 +5733,27 @@ const rejectedOffboardingRequestFixture = {
   reviewedAt: '2026-04-27T10:00:00.000Z',
   reviewNote: 'Cikis tarihi tekrar kontrol edilmeli',
   updatedAt: '2026-04-27T10:00:00.000Z',
+}
+
+const outsideStoreOffboardingRequestFixture = {
+  ...offboardingRequestFixture,
+  requestId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee90',
+  storeId: outsideStoreId,
+  storeCode: 'DEMO-999',
+  storeName: 'Outside Store',
+  employeeId: '00000000-0000-0000-0000-000000000909',
+  displayName: 'Outside Personnel',
+  externalEmployeeRef: 'FM9901',
+  updatedAt: '2026-04-27T11:00:00.000Z',
+}
+
+const outsideStoreRejectedOffboardingRequestFixture = {
+  ...outsideStoreOffboardingRequestFixture,
+  status: 'rejected',
+  reviewedByUserId: 'hr-admin-user',
+  reviewedAt: '2026-04-27T11:30:00.000Z',
+  reviewNote: 'Outside offboarding correction',
+  updatedAt: '2026-04-27T11:30:00.000Z',
 }
 
 const storeEmployeesFixture = {

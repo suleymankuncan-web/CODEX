@@ -46,6 +46,60 @@ export const storeWorkforceTr = {
   'storeWorkforce.realRecordsPending': 'Gerçek kayıt bekleniyor',
   'storeWorkforce.requestFlowPreserved': 'Talep yolu korunur',
   'storeWorkforce.currentFlowKept': 'Mevcut talep yolu açık',
+  'storeWorkforce.realDataBadge': 'Gercek veri',
+  'storeWorkforce.summaryAria': 'Norm kadro ozetleri',
+  'storeWorkforce.storeManagerDescription':
+    'Magaza personeli, pozisyon dagilimi, kidem ve personel talepleri ayni yuzeyde yonetilir.',
+  'storeWorkforce.missingActionStoreTitle': 'Atanmis magaza bulunamadi',
+  'storeWorkforce.missingActionStoreCopy':
+    'Norm Kadro sadece aksiyon kapsami olan magaza muduru icin acilir. Talep yolu genisletilmedi.',
+  'storeWorkforce.personnelLoadingTitle': 'Personel kayitlari okunuyor',
+  'storeWorkforce.personnelLoadingCopy': 'Aktif magaza personeli yukleniyor.',
+  'storeWorkforce.personnelScopeNote': 'Aktif magaza personeli.',
+  'storeWorkforce.averageTenureNote': 'Giris tarihi olan kayitlardan hesaplanir.',
+  'storeWorkforce.averageTenureMissing': '{count} kayitta giris tarihi eksik.',
+  'storeWorkforce.normActualHonestNote': 'Norm hedefi icin tamamlanmis Store contract yok.',
+  'storeWorkforce.openMovementsNote': 'Acik veya iade edilmis personel talepleri.',
+  'storeWorkforce.personnelListTitle': 'Magaza personeli',
+  'storeWorkforce.personnelListDescription':
+    'Her satir mevcut aktif personel kaydindan okunur; isim, kod, pozisyon ve kidem uydurulmaz.',
+  'storeWorkforce.personnelListBadge': '{count} kisi',
+  'storeWorkforce.personnelErrorTitle': 'Personel listesi acilamadi',
+  'storeWorkforce.personnelEmptyTitle': 'Aktif personel kaydi yok',
+  'storeWorkforce.personnelEmptyCopy':
+    'Bu magaza icin donen aktif personel kaydi bulunmuyor.',
+  'storeWorkforce.positionDistributionTitle': 'Pozisyon dagilimi',
+  'storeWorkforce.positionDistributionDescription':
+    'Dagilim aktif personel satirlarindaki pozisyonlardan hesaplanir.',
+  'storeWorkforce.positionDistributionBadge': '{count} pozisyon',
+  'storeWorkforce.positionDistributionEmptyTitle': 'Pozisyon dagilimi yok',
+  'storeWorkforce.positionDistributionEmptyCopy':
+    'Aktif personel kaydi olmadigi icin pozisyon dagilimi gosterilemiyor.',
+  'storeWorkforce.tenureBucketsTitle': 'Kidem dagilimi',
+  'storeWorkforce.tenureBucketsDescription':
+    'Giris tarihi olmayan personel kidem hesaplamasina dahil edilmez.',
+  'storeWorkforce.requestCenterTitle': 'Personel talep hareketleri',
+  'storeWorkforce.requestCenterDescription':
+    'Satici kodu ve cikis talepleri mevcut durumlariyla okunur.',
+  'storeWorkforce.requestCenterBadge': '{count} kayit',
+  'storeWorkforce.requestsEmptyTitle': 'Personel talep hareketi yok',
+  'storeWorkforce.requestsEmptyCopy':
+    'Bu magaza icin satici kodu veya cikis talebi kaydi donmedi.',
+  'storeWorkforce.requestActionTitle': 'Personel islemleri',
+  'storeWorkforce.requestActionDescription':
+    'Yeni talep ve iade duzeltmeleri mevcut personel talebi akisiyle gonderilir.',
+  'storeWorkforce.requestActionAria': 'Norm kadro personel islemleri',
+  'storeWorkforce.openPersonnelPanel': 'Personel listesi',
+  'storeWorkforce.personnelActionTitle': 'Personel listesi sol alanda okunur',
+  'storeWorkforce.personnelActionCopy':
+    'Yeni talep acmak veya iade duzeltmek icin ilgili personel islem sekmesini secin.',
+  'storeWorkforce.position': 'Pozisyon',
+  'storeWorkforce.assignmentStart': 'Giris tarihi',
+  'storeWorkforce.tenure': 'Kidem',
+  'storeWorkforce.missingReference': 'Kod yok',
+  'storeWorkforce.missingEmployeeName': 'Personel adi yok',
+  'storeWorkforce.missingPosition': 'Pozisyon bilgisi yok',
+  'storeWorkforce.missingDate': 'Tarih yok',
 }
 
 export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
@@ -96,4 +150,58 @@ export const storeWorkforceEn: Record<keyof typeof storeWorkforceTr, string> = {
   'storeWorkforce.realRecordsPending': 'Real records pending',
   'storeWorkforce.requestFlowPreserved': 'Request path preserved',
   'storeWorkforce.currentFlowKept': 'Current request path open',
+  'storeWorkforce.realDataBadge': 'Real data',
+  'storeWorkforce.summaryAria': 'Workforce summary metrics',
+  'storeWorkforce.storeManagerDescription':
+    'Store personnel, position mix, tenure, and personnel requests are managed on one surface.',
+  'storeWorkforce.missingActionStoreTitle': 'No assigned store was found',
+  'storeWorkforce.missingActionStoreCopy':
+    'Workforce opens only for a store manager with action-scope store access. The request path was not widened.',
+  'storeWorkforce.personnelLoadingTitle': 'Loading personnel records',
+  'storeWorkforce.personnelLoadingCopy': 'Active store personnel is loading.',
+  'storeWorkforce.personnelScopeNote': 'Active store personnel.',
+  'storeWorkforce.averageTenureNote': 'Calculated from records with a start date.',
+  'storeWorkforce.averageTenureMissing': '{count} records are missing a start date.',
+  'storeWorkforce.normActualHonestNote': 'There is no completed Store contract for staffing norm targets.',
+  'storeWorkforce.openMovementsNote': 'Open or returned personnel requests.',
+  'storeWorkforce.personnelListTitle': 'Store personnel',
+  'storeWorkforce.personnelListDescription':
+    'Every row is read from the active personnel response; names, references, positions, and tenure are not invented.',
+  'storeWorkforce.personnelListBadge': '{count} people',
+  'storeWorkforce.personnelErrorTitle': 'Personnel list could not be opened',
+  'storeWorkforce.personnelEmptyTitle': 'No active personnel records',
+  'storeWorkforce.personnelEmptyCopy':
+    'No active personnel records were returned for this store.',
+  'storeWorkforce.positionDistributionTitle': 'Position distribution',
+  'storeWorkforce.positionDistributionDescription':
+    'Distribution is calculated from position values on active personnel rows.',
+  'storeWorkforce.positionDistributionBadge': '{count} positions',
+  'storeWorkforce.positionDistributionEmptyTitle': 'No position distribution',
+  'storeWorkforce.positionDistributionEmptyCopy':
+    'Position distribution cannot be shown because no active personnel records were returned.',
+  'storeWorkforce.tenureBucketsTitle': 'Tenure distribution',
+  'storeWorkforce.tenureBucketsDescription':
+    'Personnel without a start date are excluded from tenure calculations.',
+  'storeWorkforce.requestCenterTitle': 'Personnel request movements',
+  'storeWorkforce.requestCenterDescription':
+    'Seller-code and offboarding requests are read with their current statuses.',
+  'storeWorkforce.requestCenterBadge': '{count} records',
+  'storeWorkforce.requestsEmptyTitle': 'No personnel request movements',
+  'storeWorkforce.requestsEmptyCopy':
+    'No seller-code or offboarding request records were returned for this store.',
+  'storeWorkforce.requestActionTitle': 'Personnel actions',
+  'storeWorkforce.requestActionDescription':
+    'New requests and returned corrections are submitted through the existing personnel request flow.',
+  'storeWorkforce.requestActionAria': 'Workforce personnel actions',
+  'storeWorkforce.openPersonnelPanel': 'Personnel list',
+  'storeWorkforce.personnelActionTitle': 'Read the personnel list on the left',
+  'storeWorkforce.personnelActionCopy':
+    'Choose the related personnel action tab to create a request or correct a returned request.',
+  'storeWorkforce.position': 'Position',
+  'storeWorkforce.assignmentStart': 'Start date',
+  'storeWorkforce.tenure': 'Tenure',
+  'storeWorkforce.missingReference': 'No code',
+  'storeWorkforce.missingEmployeeName': 'No personnel name',
+  'storeWorkforce.missingPosition': 'No position',
+  'storeWorkforce.missingDate': 'No date',
 }
