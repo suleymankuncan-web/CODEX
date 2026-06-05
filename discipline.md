@@ -623,6 +623,16 @@ Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
 HTML/prototype begenilmis olsa bile product implementation sayilmaz. Product'a
 tasinmadan once su pass zorunludur:
 
+- Production-contract faithful prototype: UI prototipi varsayilan olarak yeni
+  feature onerisi degildir; mevcut production route/component/API/query/model,
+  role/scope, state ve workflow contract'inin daha iyi gorsellestirilmesidir.
+  Prototip uretmeden once hedef yuzeyin route'u, component'i, veri contract'i,
+  aksiyonlari, role gorunurlugu ve loading/empty/error/access state'i okunur.
+  Prototipte mevcut projede olmayan metric, filtre, tarih semantigi, sosyal
+  etkilesim, notification, detail action, media upload, workflow adimi veya
+  backend alan gerekiyorsa bu parca acikca `contract-discovery / future idea`
+  olarak etiketlenir ve kullanici ayrica kapsamlamadan product
+  implementation'a tasinmaz.
 - Taste-skill pass'i: design read, density, operasyonel karar akisi,
   anti-slop preflight, mobile/desktop kalite ve copy denetimi yapildi mi?
 - Gercek veri mapping'i: her gorunen metrik, liste, status ve aksiyon hangi

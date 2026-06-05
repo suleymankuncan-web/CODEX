@@ -244,6 +244,16 @@ Current maintenance baseline:
   region averages when the ranking response does not cover full `meta.total`.
   API shape, DB schema, auth/scope semantics, scoring, ranking, checklist
   weights, snapshot behavior, and business workflows remained unchanged.
+- Store Workforce And Approvals Split V1 is the active Store workflow split
+  line. Plan:
+  `docs/plans/store-workforce-and-approvals-split-v1-plan.md`. PR-1 evidence:
+  `docs/evidence/store-workforce-and-approvals-split-pr1-contract-matrix-2026-06-05.md`.
+  The current evidence says Store Manager workforce work is backed by existing
+  assigned/action-store contracts, while Region Manager workforce detail is not
+  fully backed by current Store workforce APIs and must use honest unavailable
+  states or stop for a separate read-contract plan. `/store/approvals` must not
+  lose seller-code/offboarding creation or returned-request correction until
+  `/store/workforce` proves those replacement paths.
 
 Latest route/scope guard merge:
 

@@ -42,6 +42,7 @@ Use this directory like an operating library, not a diary.
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
 | Add a future feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Source-of-truth, auth, API, DB, workflow, operations, and rollback gates. |
 | Modernize Store/Admin UI | `docs/process/product-experience-principles.md` | Product-quality standard for clean but premium, operationally honest UI work. |
+| Split Store workforce from approvals | `docs/plans/store-workforce-and-approvals-split-v1-plan.md` | Active plan for `/store/workforce`, Norm Kadro ownership, and approvals becoming a request center. |
 | Inspect the system map | `docs/flows/README.md` | Generated frontend route, API, controller, and OpenAPI flow map. |
 | Continue UI pilot prototypes | `docs/prototypes/README.md` | Prototype shelf, Plum Glacier token set, login pilot references, and visual boundary rules. |
 
@@ -63,6 +64,7 @@ Use for daily direction and working discipline.
 - `docs/plans/active-next-actions.md`
 - `docs/plans/project-debt-ledger.md`
 - `docs/plans/project-progress-plan-v1.md`
+- `docs/plans/store-workforce-and-approvals-split-v1-plan.md`
 
 ### Pilot Shelf
 

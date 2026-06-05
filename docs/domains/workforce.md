@@ -18,6 +18,8 @@ which command boundaries remain parked.
 Use these first:
 
 - `docs/plans/workforce-request-repository-boundary-inventory-v1.md`
+- `docs/plans/store-workforce-and-approvals-split-v1-plan.md`
+- `docs/evidence/store-workforce-and-approvals-split-pr1-contract-matrix-2026-06-05.md`
 - `docs/plans/store-ops-repository-risk-review-2026-04-30.md`
 - `docs/plans/personnel-management-v1.md`
 - `docs/plans/scope-auth-regression-matrix-v1.md`
@@ -27,6 +29,9 @@ Use these first:
 
 - Seller-code and offboarding lifecycles are their own workforce request
   boundary.
+- Store-facing seller-code and offboarding creation should move to the
+  `/store/workforce` Norm Kadro surface before `/store/approvals` is reduced to
+  a request/status ledger.
 - Store scope, target personnel reads, headcount gap, and legacy checklist
   writes remain outside that request boundary.
 - Personnel lifecycle writes must preserve audit and assignment-history
