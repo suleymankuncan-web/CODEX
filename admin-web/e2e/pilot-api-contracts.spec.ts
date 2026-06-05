@@ -71,14 +71,10 @@ test('store approvals render pending requests with nullable approval fields', as
   await routeStoreApprovalsMinimalApi(page)
 
   await page.goto('/store/approvals')
-  await page.getByRole('radio', { name: 'Hedef onaylarını aç' }).click()
 
-  await expect(
-    page.getByLabel('Hedef onay kayıtları').getByText('May target split'),
-  ).toBeVisible()
-  await expect(
-    page.getByLabel('Hedef onay kayıtları').getByText(/bölge onayı bekliyor/i),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Talep Merkezi' })).toBeVisible()
+  await expect(page.getByText('May target split').first()).toBeVisible()
+  await expect(page.getByText(/bölge onayı bekliyor/i).first()).toBeVisible()
   expect(pageErrors).toEqual([])
 })
 

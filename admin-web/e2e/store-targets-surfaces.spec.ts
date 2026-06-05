@@ -1,6 +1,7 @@
 import { expect, test } from './test-fixtures'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
+const nonPrimaryStoreId = '00000000-0000-0000-0000-000000000101'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 const pendingTargetRequestId = '00000000-0000-4000-8000-000000000777'
 
@@ -146,6 +147,81 @@ test('store targets page renders only role-fit target flows', async ({ page }) =
   await expect(page.getByRole('radio', { name: /Onaylananlar/ })).toBeVisible()
   await expect(page.getByRole('radio', { name: /Dagitim talebi/ })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: /Revize Talebi/ })).toHaveCount(0)
+})
+
+test('store targets page honors query store id for multi-store managers', async ({ page }) => {
+  const requestUrls: URL[] = []
+  const coverageUrls: URL[] = []
+
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.unroute('**/api/target-distributions/coverage**')
+  await page.unroute('**/api/target-distributions/store-personnel**')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          actionScope: {
+            assignedStoreIds: [demoStoreId, nonPrimaryStoreId],
+          },
+          assignedStoreIds: [demoStoreId, nonPrimaryStoreId],
+        },
+        scopeSummary: {
+          ...authSessionFixture.scopeSummary,
+          assignedStoreCount: 2,
+        },
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'GET') {
+      requestUrls.push(new URL(request.url()))
+      await route.fulfill({
+        json: {
+          ...pendingTargetDistributionRequestsFixture,
+          items: [
+            {
+              ...pendingTargetDistributionRequestsFixture.items[0],
+              storeId: nonPrimaryStoreId,
+              storeName: 'Marmara Park Demo Store',
+            },
+          ],
+        },
+      })
+      return
+    }
+
+    await route.fulfill({
+      status: 403,
+      json: { message: 'Target distribution write route is not mocked in this surface test.' },
+    })
+  })
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    coverageUrls.push(new URL(route.request().url()))
+    await route.fulfill({
+      json: {
+        ...targetCoverageFixture,
+        items: targetCoverageFixture.items.map((item) => ({
+          ...item,
+          storeId: nonPrimaryStoreId,
+          storeName: 'Marmara Park Demo Store',
+        })),
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
+    await route.fulfill({ json: storeTargetingPersonnelFixture })
+  })
+
+  await page.goto(`/store/targets?requestMonth=2026-05&storeId=${nonPrimaryStoreId}&status=pending`)
+
+  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  expect(requestUrls.at(-1)?.searchParams.get('storeId')).toBe(nonPrimaryStoreId)
+  expect(coverageUrls.at(-1)?.searchParams.get('storeId')).toBe(nonPrimaryStoreId)
 })
 
 test('store targets page lets region managers approve pending target requests in scope', async ({ page }) => {
