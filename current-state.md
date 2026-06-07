@@ -21,8 +21,9 @@ polish through PR #537, the first architecture hardening line through PR #552,
 Architecture Hardening V2 through PR #566, Architecture Hardening V3
 through PR #570, and the Architecture Hardening V4 line through the PR-3
 workforce request persistence boundary, the Store KPIs Prototype Parity V1
-line through PR #653 and final closeout evidence, plus the Store Workforce And
-Approvals Split V1 line through PR #659 and final closeout evidence.
+line through PR #653 and final closeout evidence, the Store Workforce And
+Approvals Split V1 line through PR #659 and final closeout evidence, and the
+Store bugfix/refactor follow-up through PR #666.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -264,6 +265,23 @@ Current maintenance baseline:
   stayed unchanged. Parked risks: Region Manager workforce aggregate/detail
   data and completed norm target data require separate safe read contracts and
   must keep honest unavailable states until then.
+- Store bugfix/refactor follow-up is closed through PR #662 to PR #666. PR #662
+  fixed checklist remediation low-score parsing so real non-compliant checklist
+  findings can generate Store Tasks after the existing checklist acknowledgement
+  flow. PR #663 fixed `/store/kpis` role/profile mapping so Store Managers stay
+  in own-store/personnel KPI context while Region Managers see their assigned
+  store overview and profile actions follow the backend `canOpenProfile`
+  contract. PR #664 fixed Store KPI display correctness: missing personnel
+  targets show `Hedef bekleniyor` instead of synthetic HG percentages, mojibake
+  `Katkı` text is repaired, and the monthly store score trend reads the selected
+  year independently of the selected month. PR #665 fixed Store Workforce
+  start-date projection by reading assignment start date with employee hire date
+  fallback from the real workforce lookup query. PR #666 removed the old Store
+  Workforce personnel action workbench and attached the existing seller-code,
+  offboarding, and returned-request correction forms to shadcn dialog actions.
+  API shape, DB schema, auth/scope semantics, scoring, ranking, checklist
+  weights, target lifecycle, seller-code/offboarding payloads, returned-request
+  identity, and workflow state semantics stayed unchanged.
 
 Latest route/scope guard merge:
 
