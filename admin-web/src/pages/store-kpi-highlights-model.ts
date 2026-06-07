@@ -106,6 +106,12 @@ function hasStoreDetailDefault(authSummary: AuthSessionSummary | null) {
   ) ?? false
 }
 
+function hasGlobalStoreDetailDefault(authSummary: AuthSessionSummary | null) {
+  return authSummary?.user.roleCodes.some((role) =>
+    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER' || role === 'AUDITOR'
+  ) ?? false
+}
+
 function getQueryValue(searchParams: URLSearchParams, key: string) {
   return searchParams.get(key)?.trim() || ''
 }
@@ -121,7 +127,8 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   const hasRegionManagerRole = input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false
   const regionManagerUserId = input.authSummary?.user.userId ?? ''
   const hasDetailDefault = hasStoreDetailDefault(input.authSummary)
-  const isRegionManagerOverview = hasRegionManagerRole && !hasDetailDefault && selectedStoreId.length === 0
+  const hasGlobalDetailDefault = hasGlobalStoreDetailDefault(input.authSummary)
+  const isRegionManagerOverview = hasRegionManagerRole && !hasGlobalDetailDefault && selectedStoreId.length === 0
   const isRegionManagerStoreDetail = hasRegionManagerRole && selectedStoreId.length > 0
   const effectiveStoreId = selectedStoreId || primaryStoreId
   const storeKpiSurfaceMode = isRegionManagerOverview
@@ -134,7 +141,8 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     sortKey: StoreKpisRegionSortKey
     sortDirection: StoreKpisRegionSortDirection
   }>({ sortKey: 'score', sortDirection: 'desc' })
-  const closedSnapshotModeAllowed = hasDetailDefault && !isRegionManagerOverview
+  const closedSnapshotModeAllowed =
+    hasDetailDefault && (!hasRegionManagerRole || hasGlobalDetailDefault) && !isRegionManagerOverview
   const viewMode = closedSnapshotModeAllowed ? viewModeState : 'live'
   const setViewMode = (value: 'live' | 'closed') => {
     if (value !== 'closed' || closedSnapshotModeAllowed) setViewModeState(value)

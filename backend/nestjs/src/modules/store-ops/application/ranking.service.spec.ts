@@ -371,6 +371,7 @@ describe("RankingService", () => {
     expect(result.personnelLeaderboard.managedStorePersonnel[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
+        canOpenProfile: true,
         visibility: "detail",
         metrics: expect.arrayContaining([
           expect.objectContaining({
