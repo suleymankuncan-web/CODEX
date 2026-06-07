@@ -11,9 +11,15 @@ import {
   RefreshCw,
   Target,
 } from 'lucide-react'
-import { useQuery, type UseQueryResult } from '@tanstack/react-query'
+import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Button } from '../components/ui/button'
-import { getRankings, type PersonnelRankingRow, type RankingMetricValue } from '../features/reports/api'
+import {
+  getRankings,
+  getStoreKpiHighlights,
+  type PersonnelRankingRow,
+  type RankingMetricValue,
+  type StoreKpiHighlightsSummary,
+} from '../features/reports/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   formatAchievementValue,
@@ -356,7 +362,27 @@ function ContributionRow({ model, code, row }: { model: StoreKpiHighlightsPageMo
 
 function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPageModel; className?: string }) {
   const currentMonth = model.liveSummary?.period?.periodStart?.slice(0, 7)
-  const months = model.liveSummary?.availablePeriods.filter((period) => period.periodType === 'monthly') ?? []
+  const trendYear = (model.livePeriodStart || model.liveSummary?.period?.periodStart || new Date().toISOString()).slice(0, 4)
+  const months = (model.liveSummary?.availablePeriods ?? [])
+    .filter((period) => period.periodType === 'monthly' && period.periodStart.slice(0, 4) === trendYear)
+    .sort((left, right) => left.periodStart.localeCompare(right.periodStart))
+  const trendQueries = useQueries({
+    queries: months.map((period) => ({
+      queryKey: [
+        'store-kpis-live-trend',
+        model.selectedStoreId || model.primaryStoreId || 'no-selected-store',
+        period.periodStart,
+      ],
+      queryFn: () =>
+        getStoreKpiHighlights({
+          periodType: 'monthly',
+          periodStart: period.periodStart,
+          ...(model.selectedStoreId ? { storeId: model.selectedStoreId } : {}),
+        }),
+      enabled: model.reportingAllowed && model.viewMode === 'live' && Boolean(model.liveSummary),
+      ...transientQueryRetryOptions,
+    })),
+  })
   return (
     <section className={`tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:p-4 tw:shadow-sm ${className}`}>
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
@@ -371,17 +397,48 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
       <div className="tw:mt-5 tw:flex tw:min-h-40 tw:items-end tw:gap-3 tw:overflow-x-auto tw:rounded-2xl tw:bg-[#f7f8fc] tw:p-4">
         {months.length > 0 ? months.map((period) => {
           const isCurrent = period.periodStart.slice(0, 7) === currentMonth
+          const queryState = trendQueries.find((_, index) => months[index]?.periodStart === period.periodStart)
+          const summary =
+            queryState?.data ??
+            (model.liveSummary?.period?.periodStart === period.periodStart
+              ? model.liveSummary
+              : undefined)
+          const scoreValue = calculateStoreScoreFromHighlights(model, summary)
           return (
             <div key={period.periodStart} className="tw:flex tw:min-w-16 tw:flex-1 tw:flex-col tw:items-center tw:gap-2">
               <div className={`tw:size-4 tw:rounded-full ${isCurrent ? 'tw:bg-[#6d4df7]' : 'tw:bg-white tw:ring-1 tw:ring-border'}`} />
               <span className="tw:text-xs tw:font-medium tw:text-[#65708d]">{formatShortMonth(period.periodStart, model.locale)}</span>
-              <strong className="tw:text-xs tw:font-semibold tw:text-[#071332]">{isCurrent ? formatNumber(model.locale, model.weightedScore.scoreValue * 100, 1) : model.t('storeKpis.noData')}</strong>
+              <strong className="tw:text-xs tw:font-semibold tw:text-[#071332]">
+                {queryState?.isLoading
+                  ? '...'
+                  : scoreValue === null || queryState?.isError
+                    ? model.t('storeKpis.noData')
+                    : formatNumber(model.locale, scoreValue * 100, 1)}
+              </strong>
             </div>
           )
         }) : <StoreEmptyState title={model.t('storeKpis.commandTrendEmptyTitle')} description={model.t('storeKpis.commandTrendEmptyCopy')} />}
       </div>
     </section>
   )
+}
+
+function calculateStoreScoreFromHighlights(
+  model: StoreKpiHighlightsPageModel,
+  summary: StoreKpiHighlightsSummary | undefined,
+) {
+  if (!summary) return null
+
+  return (model.storeKpiScoreProfile?.metrics ?? []).reduce((total, metric) => {
+    const row = summary.metrics.find((item) => item.code.toUpperCase() === metric.code.toUpperCase())
+    if (!row) return total
+    if (row.scoreContribution !== null && row.scoreContribution !== undefined) {
+      return total + Number(row.scoreContribution) / 100
+    }
+
+    const achievementRate = toFiniteNumber(row.achievementRate)
+    return total + (achievementRate === null ? 0 : (Math.max(0, Math.min(achievementRate, 1.2)) * metric.weightPercent) / 100)
+  }, 0)
 }
 
 function PersonnelKpiRows(input: {
@@ -402,7 +459,7 @@ function PersonnelKpiRows(input: {
         <div className="tw:overflow-x-auto">
           <table className="tw:min-w-[780px] tw:w-full tw:border-collapse tw:text-left">
             <thead className="tw:bg-[#f7f8fc] tw:text-xs tw:font-semibold tw:uppercase tw:text-[#63708f]">
-              <tr>{['Personel', 'Skor', 'KatkÄ±', 'UPT', 'ATV', 'HG%', 'Durum', 'Aksiyon'].map((label) => <th key={label} className="tw:px-4 tw:py-3">{label}</th>)}</tr>
+              <tr>{['Personel', 'Skor', 'Katkı', 'UPT', 'ATV', 'HG%', 'Durum', 'Aksiyon'].map((label) => <th key={label} className="tw:px-4 tw:py-3">{label}</th>)}</tr>
             </thead>
             <tbody>{input.rows.map((row) => <PersonnelRow key={row.employeeId} model={input.model} row={row} />)}</tbody>
           </table>
@@ -539,6 +596,8 @@ function formatPersonnelTargetAchievement(
   if (actualValue === null) return model.t('storeKpis.noData')
 
   const targetValue = toFiniteNumber(metric?.targetValue) ?? toFiniteNumber(metric?.benchmarkValue)
+  if (targetValue === null || targetValue === 0) return model.t('storeKpis.targetWaiting')
+
   const ratio = targetValue !== null && targetValue !== 0
     ? actualValue / Math.abs(targetValue)
     : actualValue
