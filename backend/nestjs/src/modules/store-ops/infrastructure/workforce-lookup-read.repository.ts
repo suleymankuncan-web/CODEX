@@ -30,7 +30,7 @@ type ActiveStoreEmployeeRow = {
   position_id: string;
   position_code: string;
   position_name: string;
-  assignment_start_date: string;
+  assignment_start_date: string | null;
   employment_status: string;
 };
 
@@ -120,7 +120,7 @@ export class WorkforceLookupReadRepository {
           eah.position_id,
           p.position_code,
           p.position_name,
-          eah.start_date AS assignment_start_date,
+          COALESCE(eah.start_date, e.hire_date)::text AS assignment_start_date,
           e.employment_status
         FROM ops.employee_assignment_history eah
         INNER JOIN ops.employee e
@@ -157,7 +157,7 @@ export class WorkforceLookupReadRepository {
           eah.position_id,
           p.position_code,
           p.position_name,
-          eah.start_date AS assignment_start_date,
+          COALESCE(eah.start_date, e.hire_date)::text AS assignment_start_date,
           e.employment_status
         FROM ops.employee_assignment_history eah
         INNER JOIN ops.employee e

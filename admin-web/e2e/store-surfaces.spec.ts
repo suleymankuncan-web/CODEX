@@ -222,6 +222,7 @@ test('store workforce page reads store manager personnel and workforce movements
   await expect(personnelList.getByText('Store Personnel').first()).toBeVisible()
   await expect(personnelList.getByText('FM8001').first()).toBeVisible()
   await expect(personnelList.getByText('Sales Consultant').first()).toBeVisible()
+  await expect(personnelList.getByText(/1.*Nis.*2026/).first()).toBeVisible()
   const returnedOffboardingRow = personnelList.locator('tr').filter({ hasText: 'Returned Offboarding Personnel' })
   const returnedOffboardingStatus = returnedOffboardingRow.getByTestId('store-workforce-personnel-row-status')
   await expect(returnedOffboardingStatus).toHaveText('Aktif')
