@@ -16,9 +16,12 @@ export type RankingPeriodRow = {
 };
 
 export type RankingFilters = {
+  assignedStoreIds?: string[];
   regionManagerUserId?: string;
   regionId?: string;
+  regionIds?: string[];
   storeId?: string;
+  storeIds?: string[];
   search?: string;
 };
 
@@ -167,10 +170,7 @@ export function applyStoreFilters(
   const normalizedSearch = normalizeSearch(filters.search);
 
   return rows.filter((row) => {
-    if (
-      filters.regionManagerUserId &&
-      row.regionManagerUserId !== filters.regionManagerUserId
-    ) {
+    if (isOutsideScopedStoreRead(row, filters)) {
       return false;
     }
 
@@ -201,10 +201,7 @@ export function applyPersonnelFilters(
   const normalizedSearch = normalizeSearch(filters.search);
 
   return rows.filter((row) => {
-    if (
-      filters.regionManagerUserId &&
-      row.regionManagerUserId !== filters.regionManagerUserId
-    ) {
+    if (isOutsideScopedStoreRead(row, filters)) {
       return false;
     }
 
@@ -227,6 +224,35 @@ export function applyPersonnelFilters(
 
     return true;
   });
+}
+
+function isOutsideScopedStoreRead(
+  row: Pick<StoreRankingRow | PersonnelRankingRow, "regionId" | "regionManagerUserId" | "storeId">,
+  filters: RankingFilters,
+) {
+  const scopedStoreIds = uniqueStrings([
+    ...(filters.storeIds ?? []),
+    ...(filters.assignedStoreIds ?? []),
+  ]);
+  const scopedRegionIds = filters.regionIds ?? [];
+  const shouldUseReadScope = Boolean(filters.regionManagerUserId);
+
+  if (shouldUseReadScope && scopedStoreIds.length > 0) {
+    return row.storeId === null || !scopedStoreIds.includes(row.storeId);
+  }
+
+  if (shouldUseReadScope && scopedRegionIds.length > 0) {
+    return row.regionId === null || !scopedRegionIds.includes(row.regionId);
+  }
+
+  return Boolean(
+    filters.regionManagerUserId &&
+      row.regionManagerUserId !== filters.regionManagerUserId,
+  );
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 export function selectGlobalRows<Row>(

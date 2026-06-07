@@ -20,7 +20,7 @@ import {
   X,
 } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { getReadRegionIds, getReadStoreIds } from '../features/auth/authorization'
+import { getAssignedStoreIds, getReadRegionIds, getReadStoreIds } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatNumber } from '../lib/format'
 
@@ -79,7 +79,10 @@ export function RegionWorkforceView(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
-  const readStoreIds = useMemo(() => getUniqueIds(getReadStoreIds(input.authSummary)), [input.authSummary])
+  const readStoreIds = useMemo(
+    () => getUniqueIds([...getReadStoreIds(input.authSummary), ...getAssignedStoreIds(input.authSummary)]),
+    [input.authSummary],
+  )
   const readRegionIds = useMemo(() => getUniqueIds(getReadRegionIds(input.authSummary)), [input.authSummary])
   const scopedRows = useMemo(
     () =>
