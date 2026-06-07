@@ -24,6 +24,7 @@ import {
   resolveLocalizedStoreScoreMeaning,
 } from './store-kpi-highlights-formatters'
 import { resolveLiveChecklistImpact } from './store-kpi-checklist-impact'
+import { useRegionOverviewPeriodModel } from './store-kpis-region-period-model'
 export {
   describeLocalizedBenchmarkCap,
   formatAchievementValue,
@@ -165,6 +166,14 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
         current.sortKey === sortKey && current.sortDirection === 'desc' ? 'asc' : 'desc',
     }))
   }
+  const regionPeriodModel = useRegionOverviewPeriodModel({
+    isRegionManagerOverview,
+    regionManagerUserId,
+    reportingAllowed,
+    routePeriodStart,
+    searchParams,
+    setSearchParams,
+  })
 
   const configQuery = useQuery({
     queryKey: ['store-kpi-config'],
@@ -185,11 +194,13 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     ...transientQueryRetryOptions,
   })
 
+  const activeRegionOverviewPeriodStart = regionPeriodModel.activePeriodStart
+
   const regionOverviewQuery = useQuery({
     queryKey: [
       'store-kpis-region-overview',
       'monthly',
-      routePeriodStart,
+      activeRegionOverviewPeriodStart,
       regionOverviewSort.sortKey,
       regionOverviewSort.sortDirection,
       regionManagerUserId,
@@ -198,16 +209,23 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     queryFn: () =>
       getRankings({
         periodType: 'monthly',
-        ...(routePeriodStart ? { periodStart: routePeriodStart } : {}),
+        ...(activeRegionOverviewPeriodStart ? { periodStart: activeRegionOverviewPeriodStart } : {}),
         ...(regionManagerUserId ? { regionManagerUserId } : {}),
         sortKey: regionOverviewSort.sortKey,
         sortDirection: regionOverviewSort.sortDirection,
         limit: 100,
         offset: 0,
       }),
-    enabled: reportingAllowed && isRegionManagerOverview && Boolean(regionManagerUserId),
+    enabled:
+      reportingAllowed &&
+      isRegionManagerOverview &&
+      Boolean(regionManagerUserId) &&
+      Boolean(activeRegionOverviewPeriodStart),
     ...transientQueryRetryOptions,
   })
+  const effectiveRegionOverviewQuery = activeRegionOverviewPeriodStart
+    ? regionOverviewQuery
+    : regionPeriodModel.seedQuery
 
   const dailySnapshotQuery = useQuery({
     queryKey: ['store-kpis-snapshot-runs', 'daily-list'],
@@ -489,7 +507,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   const isLoading =
     (configQuery.isLoading && !configForbidden) ||
     (isRegionManagerOverview
-      ? regionOverviewQuery.isLoading
+      ? effectiveRegionOverviewQuery.isLoading
       : viewMode === 'live'
         ? liveKpiQuery.isLoading
         : dailySnapshotQuery.isLoading || closedKpiQuery.isLoading)
@@ -502,9 +520,10 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     liveSummary?.period
       ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)} (${t('storeKpis.latestMonthlyPeriod')})`
       : t('storeKpis.latestMonthlyPeriod')
-  const regionOverviewRows = regionOverviewQuery.data?.storeLeaderboard.items ?? []
-  const regionOverviewSource = regionOverviewQuery.data?.source ?? null
-  const regionOverviewPeriodStart = regionOverviewSource?.periodStart ?? routePeriodStart
+  const regionOverviewRows = effectiveRegionOverviewQuery.data?.storeLeaderboard.items ?? []
+  const regionOverviewSource = effectiveRegionOverviewQuery.data?.source ?? null
+  const regionOverviewPeriodStart =
+    activeRegionOverviewPeriodStart ?? regionOverviewSource?.periodStart ?? routePeriodStart
   const getRegionStoreDetailPath = (storeId: string) => {
     const params = new URLSearchParams({ storeId })
     if (regionOverviewPeriodStart) {
@@ -544,14 +563,17 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     personnelWeightsReady,
     primaryStoreId,
     reportingAllowed,
-    regionOverviewQuery,
+    regionOverviewActivePeriodStart: activeRegionOverviewPeriodStart,
+    regionOverviewQuery: effectiveRegionOverviewQuery,
     regionOverviewRows,
+    regionOverviewSeedQuery: regionPeriodModel.seedQuery,
     regionOverviewSort,
     routePeriodStart,
     rows,
     selectedSnapshotRunId,
     selectedStoreId,
     setLivePeriodStart: setLivePeriodFilter,
+    setRegionOverviewPeriodStart: regionPeriodModel.setPeriodStart,
     setRegionOverviewSort,
     setSelectedSnapshotRunId,
     setViewMode,

@@ -1152,6 +1152,14 @@ test('region manager store KPI overview waits for selected store before loading 
     }
   })
   let storeLeaderboardTotal = regionStoreRows.length
+  const regionKpiAvailablePeriods = [
+    ...rankingsAvailablePeriods,
+    {
+      periodType: 'monthly',
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-31',
+    },
+  ]
 
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/reports/rankings**')
@@ -1188,10 +1196,18 @@ test('region manager store KPI overview waits for selected store before loading 
   })
 
   await page.route('**/api/reports/rankings**', async (route) => {
-    rankingRequests.push(new URL(route.request().url()))
+    const requestUrl = new URL(route.request().url())
+    const periodStart = requestUrl.searchParams.get('periodStart') ?? '2026-04-01'
+    rankingRequests.push(requestUrl)
     await route.fulfill({
       json: {
         ...rankingsPrivilegedDetailFixture,
+        source: {
+          ...rankingsPrivilegedDetailFixture.source,
+          periodStart,
+          periodEnd: periodStart === '2026-05-01' ? '2026-05-31' : '2026-04-30',
+        },
+        availablePeriods: regionKpiAvailablePeriods,
         filters: {
           ...rankingsPrivilegedDetailFixture.filters,
           stores: regionStoreRows.map((row) => ({ id: row.storeId, label: row.storeName })),
@@ -1248,9 +1264,13 @@ test('region manager store KPI overview waits for selected store before loading 
   await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
   expect(rankingRequests.length).toBeGreaterThan(0)
   expect(rankingRequests.at(-1)?.searchParams.get('regionManagerUserId')).toBe('region-kpi-user')
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-05-01')
   expect(rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('score')
   expect(rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('desc')
   expect(highlightRequests).toHaveLength(0)
+
+  await page.getByLabel('Bölge KPI dönemi').selectOption('2026-04-01')
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-04-01')
 
   await page.getByRole('button', { name: 'UPT sütununa göre sırala' }).click()
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('UPT')
