@@ -213,12 +213,18 @@ function getStoreMePrefetchTasks(authSummary: AuthSessionSummary | null): Prefet
 function getStoreKpiPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
   const reportingAllowed = hasAnyRole(authSummary, storeReportingRoles)
   const hasRegionManagerRole = hasAnyRole(authSummary, ['REGION_MANAGER'])
-  const hasStoreDetailDefault = hasAnyRole(authSummary, [
+  const hasGlobalStoreDetailDefault = hasAnyRole(authSummary, [
     'SUPER_ADMIN',
     'REPORT_VIEWER',
     'AUDITOR',
-    'STORE_MANAGER',
   ])
+  const hasStoreDetailDefault =
+    (!hasRegionManagerRole || hasGlobalStoreDetailDefault) && hasAnyRole(authSummary, [
+      'SUPER_ADMIN',
+      'REPORT_VIEWER',
+      'AUDITOR',
+      'STORE_MANAGER',
+    ])
 
   return [
     {
@@ -245,7 +251,11 @@ function getStoreKpiPrefetchTasks(authSummary: AuthSessionSummary | null): Prefe
           limit: 100,
           offset: 0,
         }),
-      enabled: reportingAllowed && hasRegionManagerRole && !hasStoreDetailDefault && Boolean(authSummary?.user.userId),
+      enabled:
+        reportingAllowed &&
+        hasRegionManagerRole &&
+        !hasGlobalStoreDetailDefault &&
+        Boolean(authSummary?.user.userId),
     },
   ]
 }

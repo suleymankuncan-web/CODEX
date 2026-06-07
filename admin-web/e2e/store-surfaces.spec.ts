@@ -926,6 +926,10 @@ test('store KPI highlights page explains metric source semantics', async ({ page
 
   await expect(page.getByRole('heading', { name: 'Personel KPI' })).toBeVisible()
   await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toContainText('371%')
+  await expect(page.getByRole('row', { name: /Store Personnel - 1/ }).getByRole('link', { name: /Profil/ })).toHaveAttribute(
+    'href',
+    new RegExp(`/store/personnel/${demoEmployeeId}\\?mode=live&periodType=monthly&periodStart=2026-04-01`),
+  )
   await expect(page.getByText('Global Top Personnel')).toHaveCount(0)
   await expect(page.getByText(/Skor kayna/)).toBeVisible()
   await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
@@ -1093,23 +1097,23 @@ test('region manager store KPI overview waits for selected store before loading 
           ...authSessionFixture.user,
           userId: 'region-kpi-user',
           employeeId: null,
-          roleCodes: ['REGION_MANAGER'],
+          roleCodes: ['REGION_MANAGER', 'STORE_MANAGER'],
           scope: {
             ...authSessionFixture.user.scope,
-            storeIds: [],
+            storeIds: [regionStoreRows[0].storeId],
           },
           readScope: {
             ...authSessionFixture.user.readScope,
             storeIds: regionStoreRows.map((row) => row.storeId),
           },
           actionScope: {
-            assignedStoreIds: [],
+            assignedStoreIds: [regionStoreRows[0].storeId],
           },
-          assignedStoreIds: [],
+          assignedStoreIds: [regionStoreRows[0].storeId],
         },
         scopeSummary: {
           ...authSessionFixture.scopeSummary,
-          assignedStoreCount: 0,
+          assignedStoreCount: 1,
         },
       },
     })
