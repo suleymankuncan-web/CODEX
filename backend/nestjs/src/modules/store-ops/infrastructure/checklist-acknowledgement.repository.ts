@@ -49,7 +49,7 @@ type ChecklistRemediationSourceRow = {
 
 type ChecklistRemediationResponseRow = ChecklistAcknowledgementResponseRow & {
   isNonCompliant?: boolean | string | null;
-  expectedValue?: string | null;
+  expectedValue?: unknown;
 };
 
 @Injectable()
