@@ -176,6 +176,7 @@ export const storeKpisTr = {
   'storeKpis.kpiRowWaiting': 'KPI satırı bekleniyor',
   'storeKpis.missingReferenceReason': 'Eksik referans: {reason}',
   'storeKpis.noData': 'Veri yok',
+  'storeKpis.targetWaiting': 'Hedef bekleniyor',
   'storeKpis.missingReference': 'Eksik referans',
   'storeKpis.pendingNormalizationStatus': 'Normalizasyon bekliyor',
 
@@ -450,6 +451,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.kpiRowWaiting': 'Waiting for KPI row',
   'storeKpis.missingReferenceReason': 'Missing reference: {reason}',
   'storeKpis.noData': 'No data',
+  'storeKpis.targetWaiting': 'Target pending',
   'storeKpis.missingReference': 'Missing reference',
   'storeKpis.pendingNormalizationStatus': 'Waiting for normalization',
 

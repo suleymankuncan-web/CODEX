@@ -883,6 +883,54 @@ test('store self-performance closed mode uses readable snapshot labels', async (
 
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
   await page.unroute('**/api/reports/rankings**')
+  await page.unroute('**/api/reports/store-kpi-highlights**')
+  await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const isMay = requestUrl.searchParams.get('periodStart') === '2026-05-01'
+
+    await route.fulfill({
+      json: {
+        ...storeKpiHighlightsFixture,
+        period: isMay
+          ? {
+              periodStart: '2026-05-01',
+              periodEnd: '2026-05-31',
+            }
+          : storeKpiHighlightsFixture.period,
+        availablePeriods: [
+          {
+            periodType: 'monthly',
+            periodStart: '2026-04-01',
+            periodEnd: '2026-04-30',
+          },
+          {
+            periodType: 'monthly',
+            periodStart: '2026-05-01',
+            periodEnd: '2026-05-31',
+          },
+        ],
+        metrics: isMay
+          ? storeKpiHighlightsFixture.metrics.map((metric) =>
+              metric.code === 'TARGET_ACHIEVEMENT'
+                ? {
+                    ...metric,
+                    actualValue: 0.8,
+                    achievementRate: 0.8,
+                    scoreContribution: 56,
+                    statusBand: 'at_risk',
+                  }
+                : {
+                    ...metric,
+                    actualValue: 0.9,
+                    achievementRate: 0.9,
+                    scoreContribution: 27,
+                    statusBand: 'at_risk',
+                  },
+            )
+          : storeKpiHighlightsFixture.metrics,
+      },
+    })
+  })
   await page.route('**/api/reports/rankings**', async (route) => {
     await route.fulfill({
       json: {
@@ -900,7 +948,20 @@ test('store KPI highlights page explains metric source semantics', async ({ page
               metrics: undefined,
             },
           ],
-          managedStorePersonnel: [personnelRankingRawTargetRow],
+          managedStorePersonnel: [
+            {
+              ...personnelRankingRawTargetRow,
+              metrics: personnelRankingRawTargetRow.metrics.map((metric) =>
+                metric.code === 'TARGET_ACHIEVEMENT'
+                  ? {
+                      ...metric,
+                      targetValue: null,
+                      benchmarkValue: null,
+                    }
+                  : metric,
+              ),
+            },
+          ],
         },
       },
     })
@@ -921,11 +982,15 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('VM checklist').first()).toBeVisible()
   await expect(page.getByText(/Yap/).first()).toBeVisible()
   await expect(page.getByText(/skor trendi/i)).toBeVisible()
+  await expect(page.getByText('Nis', { exact: true })).toBeVisible()
+  await expect(page.getByText('May', { exact: true })).toBeVisible()
+  await expect(page.getByText('83')).toBeVisible()
 
   await page.getByRole('button', { name: 'Personel KPI' }).click()
 
   await expect(page.getByRole('heading', { name: 'Personel KPI' })).toBeVisible()
-  await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toContainText('371%')
+  await expect(page.getByRole('columnheader', { name: 'Katkı' })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toContainText('Hedef bekleniyor')
   await expect(page.getByRole('row', { name: /Store Personnel - 1/ }).getByRole('link', { name: /Profil/ })).toHaveAttribute(
     'href',
     new RegExp(`/store/personnel/${demoEmployeeId}\\?mode=live&periodType=monthly&periodStart=2026-04-01`),
