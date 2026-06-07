@@ -1,7 +1,13 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   BriefcaseBusiness,
   ClipboardList,
@@ -9,7 +15,6 @@ import {
   LogOut,
   RotateCcw,
   Search,
-  UserMinus,
   UserPlus,
   UsersRound,
 } from 'lucide-react'
@@ -64,7 +69,7 @@ import {
 import { RegionWorkforceView } from './store-workforce-region-view'
 
 type WorkforceMode = 'region' | 'store'
-type WorkforcePanel = 'personnel' | 'sellerCodeRequest' | 'offboardingRequest' | 'returnedRequests'
+type WorkforceDialog = 'sellerCodeRequest' | 'offboardingRequest' | 'returnedRequests'
 
 function resolveWorkforceMode(authSummary: AuthSessionSummary | null): WorkforceMode {
   const roles = authSummary?.user.roleCodes ?? []
@@ -94,7 +99,7 @@ function StoreManagerWorkforce(input: {
   const storeId = storeIds.includes(requestedStoreId) ? requestedStoreId : (storeIds[0] ?? '')
   const now = useMemo(() => new Date(), [])
   const loadedHandoffRef = useRef<string | null>(null)
-  const [activePanel, setActivePanel] = useState<WorkforcePanel>('personnel')
+  const [activeDialog, setActiveDialog] = useState<WorkforceDialog | null>(null)
   const [personnelSearch, setPersonnelSearch] = useState('')
   const [positionFilter, setPositionFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -146,6 +151,8 @@ function StoreManagerWorkforce(input: {
   )
   const returnedSellerCodeRequests = sellerCodeRequests.filter((item) => item.status === 'rejected')
   const returnedOffboardingRequests = offboardingRequests.filter((item) => item.status === 'rejected')
+  const returnedRequestCount =
+    returnedSellerCodeRequests.length + returnedOffboardingRequests.length
   const requests = buildWorkforceRequestSummaries({
     offboardingRequests,
     sellerCodeRequests,
@@ -285,7 +292,7 @@ function StoreManagerWorkforce(input: {
         ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
         : t('storeApprovals.returnedSellerLoaded'),
     })
-    setActivePanel('sellerCodeRequest')
+    setActiveDialog('sellerCodeRequest')
   }
   const startEditingOffboardingRequest = (item: OffboardingRequest) => {
     dispatch({
@@ -295,7 +302,21 @@ function StoreManagerWorkforce(input: {
         ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
         : t('storeApprovals.returnedOffboardingLoaded'),
     })
-    setActivePanel('offboardingRequest')
+    setActiveDialog('offboardingRequest')
+  }
+  const openSellerCodeDialog = () => {
+    dispatch({ type: 'cancelSellerRequestEdit' })
+    setActiveDialog('sellerCodeRequest')
+  }
+  const openOffboardingDialog = () => {
+    dispatch({ type: 'cancelOffboardingRequestEdit' })
+    setActiveDialog('offboardingRequest')
+  }
+  const openReturnedRequestsDialog = () => setActiveDialog('returnedRequests')
+  const closeWorkforceDialog = (open: boolean) => {
+    if (!open) {
+      setActiveDialog(null)
+    }
   }
   const handoffRequestType = searchParams.get('requestType')
   const handoffRequestId = searchParams.get('requestId')
@@ -326,7 +347,7 @@ function StoreManagerWorkforce(input: {
               ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
               : t('storeApprovals.returnedSellerLoaded'),
           })
-          setActivePanel('sellerCodeRequest')
+          setActiveDialog('sellerCodeRequest')
         })
         return
       }
@@ -347,7 +368,7 @@ function StoreManagerWorkforce(input: {
               ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
               : t('storeApprovals.returnedOffboardingLoaded'),
           })
-          setActivePanel('offboardingRequest')
+          setActiveDialog('offboardingRequest')
         })
         return
       }
@@ -355,7 +376,7 @@ function StoreManagerWorkforce(input: {
 
     if (sellerCodeRequestsQuery.isFetched && offboardingRequestsQuery.isFetched) {
       loadedHandoffRef.current = handoffKey
-      queueMicrotask(() => setActivePanel('returnedRequests'))
+      queueMicrotask(() => setActiveDialog('returnedRequests'))
     }
   }, [
     handoffRequestId,
@@ -533,7 +554,7 @@ function StoreManagerWorkforce(input: {
                 <button
                   className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:bg-gradient-to-br tw:from-[#6847ff] tw:to-[#355cff] tw:px-3 tw:text-sm tw:font-semibold tw:text-white tw:shadow-[0_12px_24px_rgba(104,71,255,0.22)]"
                   type="button"
-                  onClick={() => setActivePanel('sellerCodeRequest')}
+                  onClick={openSellerCodeDialog}
                 >
                   <UserPlus className="tw:size-4" />
                   Yeni personel
@@ -541,11 +562,21 @@ function StoreManagerWorkforce(input: {
                 <button
                   className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:border tw:border-[#cfc5ff] tw:bg-white tw:px-3 tw:text-sm tw:font-semibold tw:text-[#5534e6]"
                   type="button"
-                  onClick={() => setActivePanel('offboardingRequest')}
+                  onClick={openOffboardingDialog}
                 >
                   <LogOut className="tw:size-4" />
                   Çıkış talebi
                 </button>
+                {returnedRequestCount > 0 ? (
+                  <button
+                    className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:border tw:border-[#ead7a8] tw:bg-[#fff8e8] tw:px-3 tw:text-sm tw:font-semibold tw:text-[#9a5a00]"
+                    type="button"
+                    onClick={openReturnedRequestsDialog}
+                  >
+                    <RotateCcw className="tw:size-4" />
+                    İade kayıtları
+                  </button>
+                ) : null}
               </div>
             </div>
 
@@ -717,61 +748,28 @@ function StoreManagerWorkforce(input: {
             )}
           </StoreWorkforcePanel>
 
-          <StoreWorkforcePanel
-            title={t('storeWorkforce.requestActionTitle')}
-            description={t('storeWorkforce.requestActionDescription')}
-            testId="store-workforce-request-workbench"
-          >
-            <ToggleGroup
-              aria-label={t('storeWorkforce.requestActionAria')}
-              className="store-approvals-action-tabs tw:mb-3"
-              type="single"
-              value={activePanel}
-              onValueChange={(value) => {
-                if (value) setActivePanel(value as WorkforcePanel)
-              }}
-            >
-              <ToggleGroupItem
-                className="store-approvals-action-tab"
-                value="personnel"
-                aria-label={t('storeWorkforce.openPersonnelPanel')}
-              >
-                {t('storeWorkforce.openPersonnelPanel')}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                className="store-approvals-action-tab"
-                value="sellerCodeRequest"
-                aria-label={t('storeApprovals.openSellerCodeRequest')}
-              >
-                <UserPlus size={14} />
-                {t('storeApprovals.openSellerCodeRequest')}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                className="store-approvals-action-tab"
-                value="offboardingRequest"
-                aria-label={t('storeApprovals.openOffboardingRequest')}
-              >
-                <UserMinus size={14} />
-                {t('storeApprovals.openOffboardingRequest')}
-              </ToggleGroupItem>
-              <ToggleGroupItem
-                className="store-approvals-action-tab"
-                value="returnedRequests"
-                aria-label={t('storeApprovals.openReturnedRequests')}
-              >
-                <RotateCcw size={14} />
-                {t('storeApprovals.openReturnedRequests')}
-              </ToggleGroupItem>
-            </ToggleGroup>
+        </div>
+      </div>
 
-            {activePanel === 'personnel' ? (
-              <StoreEmptyState
-                title={t('storeWorkforce.personnelActionTitle')}
-                titleAsHeading
-                description={t('storeWorkforce.personnelActionCopy')}
-              />
-            ) : null}
-            {activePanel === 'sellerCodeRequest' ? (
+      <Dialog open={activeDialog !== null} onOpenChange={closeWorkforceDialog}>
+        <DialogContent
+          className="tw:max-h-[min(88vh,760px)] tw:overflow-y-auto tw:rounded-[1.35rem] tw:border-[#dfe6f3] tw:bg-white/95 tw:p-0 tw:shadow-[0_32px_90px_rgba(58,75,118,0.22)] tw:sm:max-w-3xl"
+          closeLabel={t('storeWorkforce.closeDetail')}
+        >
+          <DialogHeader className="tw:border-b tw:border-[#dfe6f3] tw:px-5 tw:py-4 tw:pr-12">
+            <DialogTitle className="tw:text-[20px] tw:font-semibold tw:tracking-normal tw:text-[#071333]">
+              {activeDialog === 'sellerCodeRequest'
+                ? t('storeApprovals.sellerCodeTitle')
+                : activeDialog === 'offboardingRequest'
+                  ? t('storeApprovals.offboardingTitle')
+                  : t('storeApprovals.returnedTitle')}
+            </DialogTitle>
+            <DialogDescription className="tw:text-sm tw:leading-5 tw:text-[#647194]">
+              {t('storeWorkforce.requestActionDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="tw:p-4">
+            {activeDialog === 'sellerCodeRequest' ? (
               <SellerCodeRequestForm
                 access={{
                   createAllowed: enabled,
@@ -815,7 +813,7 @@ function StoreManagerWorkforce(input: {
                 t={t}
               />
             ) : null}
-            {activePanel === 'offboardingRequest' ? (
+            {activeDialog === 'offboardingRequest' ? (
               <OffboardingRequestForm
                 access={{
                   createAllowed: enabled,
@@ -850,7 +848,7 @@ function StoreManagerWorkforce(input: {
                 t={t}
               />
             ) : null}
-            {activePanel === 'returnedRequests' ? (
+            {activeDialog === 'returnedRequests' ? (
               <ReturnedRequestsPanel
                 locale={locale}
                 returnedOffboardingRequests={returnedOffboardingRequests}
@@ -864,9 +862,9 @@ function StoreManagerWorkforce(input: {
                 t={t}
               />
             ) : null}
-          </StoreWorkforcePanel>
-        </div>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </StoreSurfacePage>
   )
 }

@@ -230,9 +230,9 @@ test('store workforce page reads store manager personnel and workforce movements
   await expect(page.getByText('Outside Store')).toHaveCount(0)
   await expect(page.getByText('Outside Personnel')).toHaveCount(0)
   await expect(page.getByText('TC numarasi tekrar kontrol edilmeli')).toHaveCount(0)
-  await expect(page.getByLabel(/Norm kadro personel islemleri/i)).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Sat.*kodu.*talebi/i })).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Personel.*talebi/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Yeni personel' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Çıkış talebi' })).toBeVisible()
+  await expect(page.getByTestId('store-workforce-request-workbench')).toHaveCount(0)
 })
 
 test('store workforce page keeps the store manager surface usable on mobile', async ({ page }) => {
@@ -242,7 +242,8 @@ test('store workforce page keeps the store manager surface usable on mobile', as
 
   await expect(page.getByTestId('store-workforce-page')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
-  await expect(page.getByLabel(/Norm kadro personel islemleri/i)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Yeni personel' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Çıkış talebi' })).toBeVisible()
   await expect(page.getByTestId('store-workforce-personnel-list')).toBeVisible()
 
   const hasHorizontalOverflow = await page.evaluate(() => {
@@ -296,7 +297,7 @@ test('store workforce page submits seller code requests with the existing payloa
   })
 
   await page.goto('/store/workforce')
-  await page.getByRole('radio', { name: /Sat.*kodu.*talebi/i }).click()
+  await page.getByRole('button', { name: 'Yeni personel' }).click()
 
   const sellerCodeForm = page.getByLabel(/Sat.*kodu.*formu/i)
   await expect(sellerCodeForm.getByRole('heading', { name: /Sat.*kodu.*talebi/i })).toBeVisible()
@@ -353,7 +354,7 @@ test('store workforce page submits offboarding requests with the existing payloa
   })
 
   await page.goto('/store/workforce')
-  await page.getByRole('radio', { name: /Personel.*talebi/i }).click()
+  await page.getByRole('button', { name: 'Çıkış talebi' }).click()
 
   const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
   const employeeSelect = offboardingForm.getByRole('combobox', { name: 'Personel' })
@@ -463,7 +464,7 @@ test('store workforce page keeps returned request resubmit identity and payload 
   })
 
   await page.goto('/store/workforce')
-  await page.getByRole('radio', { name: /ade.*kay/i }).click()
+  await page.getByRole('button', { name: /ade.*kay/i }).click()
   await expect(page.getByText('TC numarasi tekrar kontrol edilmeli')).toBeVisible()
   await expect(page.getByText('Cikis tarihi tekrar kontrol edilmeli')).toBeVisible()
   await expect(page.getByText('Outside store correction')).toHaveCount(0)
@@ -478,7 +479,8 @@ test('store workforce page keeps returned request resubmit identity and payload 
   await sellerCodeForm.getByRole('button', { name: /yeniden.*g.*nder/i }).click()
   await expect(page.getByText('Seller code request resubmitted for HR approval')).toBeVisible()
 
-  await page.getByRole('radio', { name: /ade.*kay/i }).click()
+  await page.keyboard.press('Escape')
+  await page.getByRole('button', { name: /ade.*kay/i }).click()
   await page.getByRole('button', { name: /Personel.*d.*zenle/i }).click()
   const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
   await offboardingForm.getByLabel(/tarihi/i).fill('2026-05-12')
