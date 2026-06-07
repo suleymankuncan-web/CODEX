@@ -423,6 +423,40 @@ describe("RankingService", () => {
     expect(result.personnelLeaderboard.items[0]).toHaveProperty("metrics");
   });
 
+  it("limits region manager rankings to assigned action stores before user-id fallback", async () => {
+    const repository = createRepositoryMock({
+      storeRows: createStoreRows(12).map((row) => ({
+        ...row,
+        region_manager_user_id: "different-region-manager",
+        region_manager_name: "Different Region Manager",
+      })),
+    });
+    const service = createService(repository, createKpiConfigRepositoryMock());
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: ["store-002", "store-005", "store-009"],
+      periodType: "monthly",
+      regionManagerUserId: "regional-1",
+      limit: 100,
+      offset: 0,
+    });
+
+    expect(result.storeLeaderboard.meta.total).toBe(3);
+    expect(result.storeLeaderboard.items.map((row) => row.storeId)).toEqual([
+      "store-002",
+      "store-005",
+      "store-009",
+    ]);
+    expect(
+      result.storeLeaderboard.items.every((row) => row.visibility === "detail"),
+    ).toBe(true);
+  });
+
   it("marks personnel profile navigation from active assignment scope, not ranking period region", async () => {
     const repository = createRepositoryMock({
       personnelRows: [
