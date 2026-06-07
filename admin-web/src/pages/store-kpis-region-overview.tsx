@@ -47,7 +47,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             </div>
           </section>
           <div className="tw:flex tw:flex-wrap tw:gap-2 tw:lg:justify-end">
-            <RegionToolbarChip icon={CalendarDays} label={summary.periodLabel} />
+            <RegionPeriodSelect model={model} />
             <RegionToolbarChip icon={Map} label={model.t('storeKpis.regionCommandManagerScope')} />
             <RegionToolbarChip icon={ShieldCheck} label={model.t('storeKpis.regionCommandScope')} />
           </div>
@@ -166,6 +166,39 @@ function RegionMeta({ label }: { label: string }) {
     <span className="tw:inline-flex tw:min-h-6 tw:items-center tw:rounded-full tw:bg-white/80 tw:px-2.5 tw:text-[11px] tw:font-medium tw:text-[#59627f]">
       {label}
     </span>
+  )
+}
+
+function RegionPeriodSelect({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const monthlyPeriods =
+    model.regionOverviewQuery.data?.availablePeriods.filter(
+      (period) => period.periodType === 'monthly',
+    ) ?? []
+  const activePeriodStart =
+    model.regionOverviewActivePeriodStart ??
+    model.regionOverviewQuery.data?.source.periodStart ??
+    ''
+
+  return (
+    <label className="tw:inline-flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-[0.95rem] tw:border tw:border-[#dce4f1] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[#071332]">
+      <CalendarDays aria-hidden="true" className="tw:size-4" />
+      <span className="tw:sr-only">{model.t('storeKpis.regionPeriodSelect')}</span>
+      <select
+        aria-label={model.t('storeKpis.regionPeriodSelect')}
+        className="tw:min-w-32 tw:border-0 tw:bg-transparent tw:p-0 tw:text-xs tw:font-medium tw:text-[#071332] tw:outline-none"
+        value={activePeriodStart}
+        onChange={(event) => model.setRegionOverviewPeriodStart(event.target.value)}
+      >
+        {monthlyPeriods.length === 0 ? (
+          <option value={activePeriodStart}>{model.t('storeKpis.regionLatestPeriod')}</option>
+        ) : null}
+        {monthlyPeriods.map((period) => (
+          <option key={period.periodStart} value={period.periodStart}>
+            {formatMonthLabel(period.periodStart, model.locale)}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
@@ -396,7 +429,10 @@ function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
         })
       : model.t('storeKpis.regionAverageIncompleteCopy'),
     metricAverages,
-    periodLabel: formatMonthLabel(ranking?.source.periodStart ?? model.routePeriodStart, model.locale),
+    periodLabel: formatMonthLabel(
+      model.regionOverviewActivePeriodStart || ranking?.source.periodStart || model.routePeriodStart,
+      model.locale,
+    ),
     personnelCountLabel:
       personnelTotal !== undefined
         ? model.t('storeKpis.regionScopeCopy', {
