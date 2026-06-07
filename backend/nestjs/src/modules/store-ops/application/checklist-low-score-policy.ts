@@ -3,7 +3,7 @@ type ChecklistExpectedValuePolicy = {
 };
 
 export function isChecklistScoreNonCompliant(input: {
-  expectedValue?: string | null;
+  expectedValue?: unknown;
   scoreValue?: number | null;
 }) {
   if (input.scoreValue === null || input.scoreValue === undefined) {
@@ -24,14 +24,26 @@ export function isChecklistScoreNonCompliant(input: {
 }
 
 function parseChecklistExpectedValuePolicy(
-  expectedValue: string | null | undefined,
+  expectedValue: unknown,
 ): ChecklistExpectedValuePolicy {
   if (!expectedValue) {
     return { lowScoreThreshold: null };
   }
 
   try {
-    const parsed = JSON.parse(expectedValue) as { lowScoreThreshold?: unknown };
+    const parsed =
+      typeof expectedValue === "string"
+        ? (JSON.parse(expectedValue) as { lowScoreThreshold?: unknown })
+        : expectedValue;
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !("lowScoreThreshold" in parsed)
+    ) {
+      return { lowScoreThreshold: null };
+    }
+
     const lowScoreThreshold = Number(parsed.lowScoreThreshold);
     if (!Number.isFinite(lowScoreThreshold) || lowScoreThreshold < 0) {
       return { lowScoreThreshold: null };

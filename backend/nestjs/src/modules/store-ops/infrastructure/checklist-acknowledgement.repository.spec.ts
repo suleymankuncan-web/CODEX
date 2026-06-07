@@ -202,4 +202,46 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
       isNonCompliant: true,
     });
   });
+
+  it("derives remediation non-compliance when JSONB expected value is returned as an object", async () => {
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
+      rowCount: 1,
+      rows: [
+        {
+          checklist_instance_id: "instance-1",
+          checklist_template_id: "template-1",
+          template_name: "BM Visit",
+          template_type: "BM_STORE_VISIT",
+          category: "BM",
+          store_id: "store-1",
+          store_name: "Bursa Marka Park",
+          completed_at: "2026-05-20T12:36:00.000Z",
+          responses_json: [
+            {
+              templateItemId: "item-1",
+              sectionName: "Kasa",
+              itemNo: 3,
+              itemText: "Kasa duzeni standartlara uygun mu?",
+              responseType: "score",
+              weight: "20.00",
+              maxScore: "10.00",
+              expectedValue: { lowScoreThreshold: 6 },
+              scoreValue: "2.00",
+              commentText: "Kasa alani duzensiz",
+              isNonCompliant: false,
+            },
+          ],
+        },
+      ],
+    }));
+    const repository = new ChecklistAcknowledgementRepository({ query } as never);
+
+    const result = await repository.getChecklistRemediationSource("instance-1");
+
+    expect(result?.responses[0]).toMatchObject({
+      templateItemId: "item-1",
+      scoreValue: 2,
+      isNonCompliant: true,
+    });
+  });
 });
