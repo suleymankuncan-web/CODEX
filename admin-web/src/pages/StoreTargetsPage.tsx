@@ -108,6 +108,15 @@ function getQueryWorkflowTab(value: string | null): TargetWorkflowTab | null {
   return null
 }
 
+function getLatestTargetRequestMonth(requests: TargetDistributionRequest[]) {
+  const months = requests
+    .map((request) => getQueryMonthInput(request.requestMonth))
+    .filter((month): month is string => Boolean(month))
+    .sort((left, right) => right.localeCompare(left))
+
+  return months[0] ?? null
+}
+
 export function StoreTargetsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -115,6 +124,7 @@ export function StoreTargetsPage(input: {
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const copy = targetCopy[locale]
+  const queryRequestMonth = getQueryMonthInput(searchParams.get('requestMonth'))
   const assignedStoreIds = useMemo(
     () => getAssignedStoreIds(input.authSummary),
     [input.authSummary],
@@ -127,8 +137,9 @@ export function StoreTargetsPage(input: {
     return assignedStoreIds[0] ?? ''
   }, [assignedStoreIds, input.authSummary])
   const [requestMonth, setRequestMonth] = useState(
-    () => getQueryMonthInput(searchParams.get('requestMonth')) ?? getCurrentMonthInput(),
+    () => queryRequestMonth ?? getCurrentMonthInput(),
   )
+  const [monthTouched, setMonthTouched] = useState(() => Boolean(queryRequestMonth))
   const [selectedStoreId, setSelectedStoreId] = useState(() => {
     const queryStoreId = searchParams.get('storeId')?.trim() ?? ''
 
@@ -156,6 +167,7 @@ export function StoreTargetsPage(input: {
     getQueryStatusFilter(searchParams.get('status')),
   )
   const requestMonthStart = `${requestMonth}-01`
+  const hasExplicitRequestMonth = Boolean(queryRequestMonth)
   const effectiveSelectedStoreId = selectedStoreId || defaultStoreId
   const canSelectAllStores = !defaultStoreId
   const canReadTargets = canListTargetDistributionRequests(input.authSummary)
@@ -169,27 +181,37 @@ export function StoreTargetsPage(input: {
     queryKey: [
       'target-distribution-requests',
       'store-targets',
-      requestMonthStart,
+      hasExplicitRequestMonth ? requestMonthStart : 'auto-month',
       effectiveSelectedStoreId || 'all',
     ],
     queryFn: () =>
       getAllTargetDistributionRequests({
-        requestMonth: requestMonthStart,
+        ...(hasExplicitRequestMonth ? { requestMonth: requestMonthStart } : {}),
         ...(effectiveSelectedStoreId ? { storeId: effectiveSelectedStoreId } : {}),
       }),
     enabled: canReadTargets,
     staleTime: 30_000,
   })
+  const targetRequests = requestsQuery.data?.items ?? []
+  const latestTargetRequestMonth =
+    !hasExplicitRequestMonth &&
+    !monthTouched &&
+    targetRequests.length > 0
+      ? getLatestTargetRequestMonth(targetRequests)
+      : null
+  const activeRequestMonth = latestTargetRequestMonth ?? requestMonth
+  const activeRequestMonthStart = `${activeRequestMonth}-01`
+
   const coverageQuery = useQuery({
     queryKey: [
       'target-distribution-coverage',
       'store-targets',
-      requestMonthStart,
+      activeRequestMonthStart,
       coverageStoreId ?? 'all',
     ],
     queryFn: () =>
       getTargetCoverage({
-        requestMonth: requestMonthStart,
+        requestMonth: activeRequestMonthStart,
         ...(coverageStoreId ? { storeId: coverageStoreId } : {}),
       }),
     enabled: canReadTargets,
@@ -261,15 +283,14 @@ export function StoreTargetsPage(input: {
     )
   }
 
-  const targetRequests = requestsQuery.data?.items ?? []
   const coverageRows = coverageQuery.data?.items ?? []
   const coverageSummary =
-    coverageQuery.data?.summary ?? createEmptyCoverageSummary(requestMonthStart)
+    coverageQuery.data?.summary ?? createEmptyCoverageSummary(activeRequestMonthStart)
   const scopedTargetRequests = targetRequests.filter((request) =>
     isTargetRequestInScope({
       effectiveSelectedStoreId,
       request,
-      requestMonthStart,
+      requestMonthStart: activeRequestMonthStart,
       searchQuery,
       statusFilter,
     }),
@@ -328,7 +349,7 @@ export function StoreTargetsPage(input: {
 
     createMutation.mutate({
       storeId: effectiveSelectedStoreId,
-      requestMonth: requestMonthStart,
+      requestMonth: activeRequestMonthStart,
       targetLabel: targetLabel.trim(),
       totalTargetValue: totalTargetNumber,
       ...(requestReason.trim() ? { requestReason: requestReason.trim() } : {}),
@@ -393,6 +414,7 @@ export function StoreTargetsPage(input: {
     setSearchQuery('')
     setStatusFilter('all')
     setSelectedStoreId('')
+    setMonthTouched(true)
     setRequestMonth(getCurrentMonthInput())
   }
 
@@ -412,7 +434,7 @@ export function StoreTargetsPage(input: {
                 {copy.eyebrow}
               </StoreStatusBadge>
               <StoreStatusBadge tone="calm">
-                {formatMonthLabel(requestMonth, locale)} {copy.periodBadge}
+                {formatMonthLabel(activeRequestMonth, locale)} {copy.periodBadge}
               </StoreStatusBadge>
               <StoreStatusBadge tone={pendingRequests.length > 0 ? 'warning' : 'neutral'}>
                 {pendingRequests.length} {copy.pendingRequests.toLowerCase()}
@@ -488,11 +510,12 @@ export function StoreTargetsPage(input: {
           <Input
             aria-label={copy.period}
             type="month"
-            value={requestMonth}
+            value={activeRequestMonth}
             onChange={(event) => {
               const nextMonth = event.target.value
 
               if (/^\d{4}-\d{2}$/.test(nextMonth)) {
+                setMonthTouched(true)
                 setRequestMonth(nextMonth)
               }
             }}

@@ -149,6 +149,29 @@ test('store targets page renders only role-fit target flows', async ({ page }) =
   await expect(page.getByRole('radio', { name: /Revize Talebi/ })).toHaveCount(0)
 })
 
+test('store targets page opens latest visible target request month when no month is provided', async ({ page }) => {
+  const requestUrls: URL[] = []
+  const coverageUrls: URL[] = []
+
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.unroute('**/api/target-distributions/coverage**')
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    requestUrls.push(new URL(route.request().url()))
+    await route.fulfill({ json: pendingTargetDistributionRequestsAcrossMonthsFixture })
+  })
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    coverageUrls.push(new URL(route.request().url()))
+    await route.fulfill({ json: targetCoverageFixture })
+  })
+
+  await page.goto('/store/targets')
+
+  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  await expect(page.getByLabel('Donem')).toHaveValue('2026-06')
+  expect(requestUrls.some((url) => !url.searchParams.has('requestMonth'))).toBe(true)
+  await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-06-01')
+})
+
 test('store targets page honors query store id for multi-store managers', async ({ page }) => {
   const requestUrls: URL[] = []
   const coverageUrls: URL[] = []
@@ -458,6 +481,24 @@ const pendingTargetDistributionRequestsFixture = {
   meta: {
     count: 1,
     total: 1,
+    limit: 30,
+    offset: 0,
+  },
+}
+
+const pendingTargetDistributionRequestsAcrossMonthsFixture = {
+  items: [
+    {
+      ...pendingTargetDistributionRequestsFixture.items[0],
+      requestId: '00000000-0000-4000-8000-000000000779',
+      requestMonth: '2026-06-01',
+      targetLabel: 'Haziran hedef dagitimi',
+    },
+    ...pendingTargetDistributionRequestsFixture.items,
+  ],
+  meta: {
+    count: 2,
+    total: 2,
     limit: 30,
     offset: 0,
   },
