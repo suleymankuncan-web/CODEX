@@ -599,7 +599,9 @@ function RegionStoreMobileCard(input: {
         <MiniValue
           label={input.t('storeWorkforce.averageTenure')}
           value={
-            input.row.isEmployeeError
+            input.row.isEmployeeLoading
+              ? input.t('storeWorkforce.sourceWaitingShort')
+              : input.row.isEmployeeError
               ? input.t('storeWorkforce.valueNotConfigured')
               : input.row.summary.averageTenureLabel
           }
@@ -792,8 +794,12 @@ function RegionStoreDetailDialog(input: {
             <MiniMetric
               label={input.t('storeWorkforce.averageTenure')}
               value={
-                input.row && !input.row.isEmployeeError
-                  ? input.row.summary.averageTenureLabel
+                input.row
+                  ? input.row.isEmployeeLoading
+                    ? input.t('storeWorkforce.sourceWaitingShort')
+                    : input.row.isEmployeeError
+                      ? input.t('storeWorkforce.valueNotConfigured')
+                      : input.row.summary.averageTenureLabel
                   : input.t('storeWorkforce.valueNotConfigured')
               }
             />
