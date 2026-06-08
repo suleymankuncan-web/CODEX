@@ -132,6 +132,7 @@ test('store workforce page shows only region manager read-scope rows and opens d
   await expect(page.getByText('Marmara Forum').first()).toBeVisible()
   await expect(page.getByText(outsideStoreId)).toHaveCount(0)
   await expect(page.getByText('Magazaya git yok')).toBeVisible()
+  await expect(page.getByText('5 / 1').first()).toBeVisible()
   expect(workforceCalls).toEqual([
     demoStoreId,
     regionSecondStoreId,
@@ -4116,6 +4117,22 @@ async function routeRegionWorkforceReadCalls(page: Page, calls: string[]) {
     await route.fulfill({ json: storeEmployeesFixture })
   })
 
+  await page.route('**/api/workforce/headcount-gap**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const storeId = requestUrl.searchParams.get('storeId') ?? ''
+    await route.fulfill({
+      json: {
+        store_id: storeId,
+        planned_headcount: storeId === regionSecondStoreId ? '2.00' : '5.00',
+        active_headcount: storeId === regionSecondStoreId ? '1.00' : '1.00',
+        headcount_gap: storeId === regionSecondStoreId ? '1.00' : '4.00',
+        planned_fte: storeId === regionSecondStoreId ? '2.00' : '5.00',
+        active_fte: storeId === regionSecondStoreId ? '1.00' : '1.00',
+        fte_gap: storeId === regionSecondStoreId ? '1.00' : '4.00',
+      },
+    })
+  })
+
   await page.route('**/api/workforce/position-options**', async (route) => {
     await route.fulfill({ status: 403, json: { message: 'Position options are not used by region workforce read view.' } })
   })
@@ -4134,6 +4151,24 @@ async function routeStoreSurfaceApi(page: Page) {
 
   await page.route('**/api/feed?**', async (route) => {
     await route.fulfill({ json: storeFeedFixture })
+  })
+
+  await page.route('**/api/org/stores', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            store_id: demoStoreId,
+            store_code: 'IST-DEMO',
+            store_name: 'IstinyePark Demo Store',
+            region_id: demoRegionId,
+            company_id: '00000000-0000-0000-0000-000000000001',
+            status: 'active',
+          },
+        ],
+        meta: { count: 1, total: 1, limit: 1, offset: 0 },
+      },
+    })
   })
 
   await page.route('**/api/reports/kpi-config', async (route) => {
@@ -4329,6 +4364,22 @@ async function routeStoreSurfaceApi(page: Page) {
 
   await page.route('**/api/workforce/store-employees**', async (route) => {
     await route.fulfill({ json: storeEmployeesFixture })
+  })
+
+  await page.route('**/api/workforce/headcount-gap**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const storeId = requestUrl.searchParams.get('storeId') ?? demoStoreId
+    await route.fulfill({
+      json: {
+        store_id: storeId,
+        planned_headcount: '5.00',
+        active_headcount: '1.00',
+        headcount_gap: '4.00',
+        planned_fte: '5.00',
+        active_fte: '1.00',
+        fte_gap: '4.00',
+      },
+    })
   })
 
   await page.route('**/api/workforce/seller-code-requests**', async (route) => {

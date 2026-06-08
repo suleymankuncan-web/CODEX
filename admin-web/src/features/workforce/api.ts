@@ -25,6 +25,26 @@ export type StoreEmployee = StoreEmployees['items'][number]
 export type OffboardingRequests = ApiGetResponse<'/api/workforce/offboarding-requests'>
 export type OffboardingRequest = OffboardingRequests['items'][number]
 
+type RawHeadcountGap = {
+  store_id: string
+  planned_headcount: string
+  active_headcount: string
+  headcount_gap: string
+  planned_fte: string
+  active_fte: string
+  fte_gap: string
+} | null
+
+export type StoreHeadcountGap = {
+  storeId: string
+  plannedHeadcount: string
+  activeHeadcount: string
+  headcountGap: string
+  plannedFte: string
+  activeFte: string
+  fteGap: string
+} | null
+
 export type OrgStore = {
   store_id: string
   store_code: string
@@ -133,6 +153,32 @@ export async function getPositionOptions(storeId: string) {
 export async function getStoreEmployees(storeId: string) {
   const params = new URLSearchParams({ storeId })
   return fetchOpenApiJson('/api/workforce/store-employees', { query: params })
+}
+
+export async function getStoreHeadcountGap(input: {
+  storeId: string
+  periodStart: string
+  periodEnd: string
+}) {
+  const params = new URLSearchParams({
+    storeId: input.storeId,
+    periodStart: input.periodStart,
+    periodEnd: input.periodEnd,
+  })
+  const response = await fetchJson<RawHeadcountGap>(
+    `/workforce/headcount-gap?${params.toString()}`,
+  )
+  if (!response) return null
+
+  return {
+    storeId: response.store_id,
+    plannedHeadcount: response.planned_headcount,
+    activeHeadcount: response.active_headcount,
+    headcountGap: response.headcount_gap,
+    plannedFte: response.planned_fte,
+    activeFte: response.active_fte,
+    fteGap: response.fte_gap,
+  } satisfies NonNullable<StoreHeadcountGap>
 }
 
 export async function getOrgStores() {

@@ -18,10 +18,23 @@ export class WorkforceService {
   ) {}
 
   async getStoreHeadcountGap(input: {
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    actorRoleCodes: string[];
     storeId: string;
     periodStart: string;
     periodEnd: string;
   }) {
+    if (!(await this.canReadWorkforceStore(input, input.storeId))) {
+      throw new ForbiddenException("Requested store is outside workforce read scope");
+    }
+
     return this.storeOpsRepository.getStoreHeadcountGap(input);
   }
 
