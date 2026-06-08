@@ -39,6 +39,23 @@ constraint requires a deviation.
 | `docs/prototypes/store-workforce-prototype-v1.html` | `/store/workforce` | `93390D1705B9DFEC74E3ACF084320FC91B1F31580E45C6FE8A26B479EDCD031F` |
 | `docs/prototypes/store-approvals-request-center-v1.html` | `/store/approvals` request center | `F122E2A80F1E9AFFDCCF2942F6E3F609942409527047B5452B50874E8AE2CABD` |
 
+## Prototype Implementation Evidence
+
+When a locked prototype is promoted into a production route, the PR evidence
+must stay short but complete. Record:
+
+- approved prototype path, source screenshot, or spec reference,
+- route, persona, role visibility, and scope matrix,
+- real data source for every visible metric, status, row, and action,
+- loading, empty, error, access, and partial-data states,
+- desktop and mobile screenshot comparison against the locked prototype,
+- intentional production deviations with reasons,
+- fake data, demo rows, and prototype-only helper cleanup.
+
+Prototype evidence belongs in the PR or `docs/evidence/*`. This README remains
+the prototype shelf and hash registry; it is not a second product-experience
+policy.
+
 ## Supporting References
 
 - `docs/prototypes/login-pilot-v1.html` and
