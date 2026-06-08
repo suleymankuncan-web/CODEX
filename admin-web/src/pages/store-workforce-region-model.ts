@@ -8,5 +8,9 @@ export type RegionStoreRow = {
   headcountGap: StoreHeadcountGap
   isLoading: boolean
   isError: boolean
+  isEmployeeLoading: boolean
+  isHeadcountLoading: boolean
+  isEmployeeError: boolean
+  isHeadcountError: boolean
   summary: ReturnType<typeof deriveWorkforceSummary>
 }

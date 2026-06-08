@@ -30,6 +30,7 @@ import {
   ModalPositionPane,
   ModalRequestsPlaceholder,
 } from './store-workforce-region-detail-panes'
+import { MiniBars, MiniMetric, MiniValue } from './store-workforce-region-metrics'
 import type { RegionStoreRow } from './store-workforce-region-model'
 
 type DetailTab = 'people' | 'positions' | 'requests'
@@ -154,6 +155,10 @@ export function RegionWorkforceView(input: {
           headcountGap: headcountQuery?.data ?? null,
           isLoading: (query?.isLoading ?? false) || (headcountQuery?.isLoading ?? false),
           isError: (query?.isError ?? false) || (headcountQuery?.isError ?? false),
+          isEmployeeLoading: query?.isLoading ?? false,
+          isHeadcountLoading: headcountQuery?.isLoading ?? false,
+          isEmployeeError: query?.isError ?? false,
+          isHeadcountError: headcountQuery?.isError ?? false,
           summary: deriveWorkforceSummary(employees, now, locale),
         }
       }),
@@ -502,14 +507,14 @@ function RegionStoreDesktopRow(input: {
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
 }) {
-  const personnelValue = input.row.isLoading
+  const personnelValue = input.row.isEmployeeLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
-    : input.row.isError
+    : input.row.isEmployeeError
       ? input.t('storeWorkforce.valueNotConfigured')
       : input.row.employees.length.toString()
-  const normActualValue = input.row.isLoading
+  const normActualValue = input.row.isEmployeeLoading || input.row.isHeadcountLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
-    : input.row.isError
+    : input.row.isEmployeeError || input.row.isHeadcountError
       ? input.t('storeWorkforce.valueNotConfigured')
       : formatNormActualLabel({
           actualFallback: input.row.employees.length,
@@ -536,7 +541,11 @@ function RegionStoreDesktopRow(input: {
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
         <span className={cn('tw:text-sm tw:font-medium tw:whitespace-nowrap', textMuted)}>
-          {input.row.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.row.summary.averageTenureLabel}
+          {input.row.isEmployeeLoading
+            ? input.t('storeWorkforce.sourceWaitingShort')
+            : input.row.isEmployeeError
+              ? input.t('storeWorkforce.valueNotConfigured')
+              : input.row.summary.averageTenureLabel}
         </span>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
@@ -545,7 +554,7 @@ function RegionStoreDesktopRow(input: {
         </span>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <MiniBars inactive={input.row.isLoading || input.row.employees.length === 0} />
+        <MiniBars inactive={input.row.isEmployeeLoading || input.row.employees.length === 0} />
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
         <Status tone={statusTone}>{statusLabel}</Status>
@@ -564,8 +573,10 @@ function RegionStoreMobileCard(input: {
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
 }) {
-  const personnelValue = input.row.isLoading
+  const personnelValue = input.row.isEmployeeLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
+    : input.row.isEmployeeError
+      ? input.t('storeWorkforce.valueNotConfigured')
     : input.row.employees.length.toString()
   const statusTone = input.row.isError ? 'rose' : input.row.isLoading ? 'amber' : 'cyan'
   const statusLabel = input.row.isError
@@ -585,13 +596,20 @@ function RegionStoreMobileCard(input: {
       </div>
       <div className="tw:grid tw:grid-cols-2 tw:gap-2">
         <MiniValue label={input.t('storeWorkforce.personnelColumn')} value={personnelValue} />
-        <MiniValue label={input.t('storeWorkforce.averageTenure')} value={input.row.summary.averageTenureLabel} />
+        <MiniValue
+          label={input.t('storeWorkforce.averageTenure')}
+          value={
+            input.row.isEmployeeError
+              ? input.t('storeWorkforce.valueNotConfigured')
+              : input.row.summary.averageTenureLabel
+          }
+        />
         <MiniValue
           label={input.t('storeWorkforce.normActual')}
           value={
-            input.row.isLoading
+            input.row.isEmployeeLoading || input.row.isHeadcountLoading
               ? input.t('storeWorkforce.sourceWaitingShort')
-              : input.row.isError
+              : input.row.isEmployeeError || input.row.isHeadcountError
                 ? input.t('storeWorkforce.valueNotConfigured')
               : formatNormActualLabel({
                   actualFallback: input.row.employees.length,
@@ -650,32 +668,6 @@ function DetailButton(input: {
       {input.children}
       <ChevronRight className="tw:size-4" />
     </Button>
-  )
-}
-
-function MiniBars(input: { inactive?: boolean }) {
-  const muted = input.inactive ? 'tw:opacity-35' : undefined
-
-  return (
-    <div className={cn('tw:flex tw:h-[18px] tw:w-28 tw:items-center tw:gap-1', muted)} aria-hidden="true">
-      <span className="tw:block tw:h-2.5 tw:w-[54%] tw:rounded-full tw:bg-[#6847ff]" />
-      <span className="tw:block tw:h-2.5 tw:w-[16%] tw:rounded-full tw:bg-[#f59e0b]" />
-      <span className="tw:block tw:h-2.5 tw:w-[18%] tw:rounded-full tw:bg-[#20bfd3]" />
-      <span className="tw:block tw:h-2.5 tw:w-[12%] tw:rounded-full tw:bg-[#12a873]" />
-    </div>
-  )
-}
-
-function MiniValue(input: { label: string; value: string }) {
-  return (
-    <div className="tw:rounded-xl tw:border tw:border-[#dfe6f3] tw:bg-white/70 tw:p-2.5">
-      <span className={cn('tw:block tw:text-[11px] tw:font-semibold', textMuted)}>
-        {input.label}
-      </span>
-      <strong className={cn('tw:mt-1 tw:block tw:text-xs tw:font-bold', textInk)}>
-        {input.value}
-      </strong>
-    </div>
   )
 }
 
@@ -768,8 +760,12 @@ function RegionStoreDetailDialog(input: {
             </DialogDescription>
           </div>
           <div className="tw:flex tw:shrink-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
-            <Pill tone={input.row?.isLoading ? 'amber' : 'cyan'}>
-              {input.row?.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.t('storeWorkforce.realDataBadge')}
+            <Pill tone={input.row?.isError ? 'rose' : input.row?.isLoading ? 'amber' : 'cyan'}>
+              {input.row?.isError
+                ? input.t('storeWorkforce.valueNotConfigured')
+                : input.row?.isLoading
+                  ? input.t('storeWorkforce.sourceWaitingShort')
+                  : input.t('storeWorkforce.realDataBadge')}
             </Pill>
             <button
               type="button"
@@ -785,13 +781,29 @@ function RegionStoreDetailDialog(input: {
         <div className="tw:grid tw:gap-4 tw:p-4 tw:sm:p-[18px]">
           <div className="tw:grid tw:grid-cols-2 tw:gap-2.5 tw:sm:grid-cols-4">
             <MiniMetric label={input.t('storeWorkforce.storeColumn')} value={input.row?.storeLabel ?? input.t('storeWorkforce.valueNotConfigured')} />
-            <MiniMetric label={input.t('storeWorkforce.personnelColumn')} value={input.row ? input.row.employees.length.toString() : input.t('storeWorkforce.valueNotConfigured')} />
-            <MiniMetric label={input.t('storeWorkforce.averageTenure')} value={input.row?.summary.averageTenureLabel ?? input.t('storeWorkforce.valueNotConfigured')} />
+            <MiniMetric
+              label={input.t('storeWorkforce.personnelColumn')}
+              value={
+                input.row && !input.row.isEmployeeError
+                  ? input.row.employees.length.toString()
+                  : input.t('storeWorkforce.valueNotConfigured')
+              }
+            />
+            <MiniMetric
+              label={input.t('storeWorkforce.averageTenure')}
+              value={
+                input.row && !input.row.isEmployeeError
+                  ? input.row.summary.averageTenureLabel
+                  : input.t('storeWorkforce.valueNotConfigured')
+              }
+            />
             <MiniMetric
               label={input.t('storeWorkforce.normActual')}
               value={
                 input.row
-                  ? input.row.isError
+                  ? input.row.isEmployeeLoading || input.row.isHeadcountLoading
+                    ? input.t('storeWorkforce.sourceWaitingShort')
+                    : input.row.isEmployeeError || input.row.isHeadcountError
                     ? input.t('storeWorkforce.valueNotConfigured')
                     : formatNormActualLabel({
                       actualFallback: input.row.employees.length,
@@ -828,17 +840,6 @@ function RegionStoreDetailDialog(input: {
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function MiniMetric(input: { label: string; value: string }) {
-  return (
-    <div className="tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:p-3">
-      <span className={cn('tw:text-xs tw:font-semibold', textMuted)}>{input.label}</span>
-      <strong className={cn('tw:mt-1 tw:block tw:truncate tw:text-lg tw:font-bold', textInk)}>
-        {input.value}
-      </strong>
-    </div>
   )
 }
 
