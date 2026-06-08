@@ -24,7 +24,8 @@ workforce request persistence boundary, the Store KPIs Prototype Parity V1
 line through PR #653 and final closeout evidence, the Store Workforce And
 Approvals Split V1 line through PR #659 and final closeout evidence, and the
 Store bugfix/refactor follow-up through PR #666, plus the Store Workforce
-norm/fiili binding fix through PR #672.
+norm/fiili binding fix through PR #672, and Project Health Uplift PR Train V1
+through PR #679.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
@@ -78,6 +79,21 @@ Current maintenance baseline:
   `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
   `docs/plans/project-growth-execution-roadmap-v1.md`, and
   `docs/domains/readiness-ops.md` as reference.
+- Project Health Uplift PR Train V1 is closed through PR #679. Plan:
+  `docs/plans/project-health-uplift-pr-train-v1.md`. PR #674 consolidated
+  request-intake/process links without creating a new policy; PR #675 added the
+  advisory affected verification selector; PR #676 added locked prototype parity
+  guard/evidence; PR #677 added the Store persona regression pack; PR #678
+  recorded the observability contract scout; PR #679 added the providerless
+  `/admin/operations` local API failure snapshot. API shape, DB schema,
+  auth/permission semantics, scoring/ranking/snapshot behavior, queue/import
+  lifecycle, and business workflows remained unchanged. Broad-production
+  app-level monitoring remains parked until provider/owner evidence exists.
+  Evidence:
+  `docs/evidence/project-health-uplift-pr5-observability-contract-scout-2026-06-08.md`
+  and
+  `docs/evidence/project-health-uplift-pr6-providerless-api-failure-snapshot-2026-06-08.md`.
+  Project health estimate after this train: `97/100`.
 - Architecture Hardening V4 is closed. Its execution plan is
   `docs/plans/architecture-hardening-v4-plan.md`; the PR-1 behavior freeze
   evidence is
