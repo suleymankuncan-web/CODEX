@@ -72,8 +72,14 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
     ...transientQueryRetryOptions,
   })
   const personnelLeaderboard = personnelRankingQuery.data?.personnelLeaderboard
+  const storeFilteredPersonnelRows = personnelLeaderboard?.items ?? []
   const managedPersonnelRows = personnelLeaderboard?.managedStorePersonnel ?? []
-  const personnelRows = model.viewMode === 'live' ? managedPersonnelRows : []
+  const personnelRows =
+    model.viewMode === 'live'
+      ? model.storeKpiSurfaceMode === 'regionStoreDetail'
+        ? storeFilteredPersonnelRows
+        : managedPersonnelRows
+      : []
   const scoreValue = Math.round(model.weightedScore.scoreValue * 1000) / 10
   const storeRows = useMemo(
     () => storeMetricOrder.map((code) => findMetricRow(model.rows, code)).filter(Boolean) as DisplayKpiRow[],
