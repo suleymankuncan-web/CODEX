@@ -96,6 +96,109 @@ Before implementation starts, the working note should be clear enough to answer:
 
 If these answers are not known, stop and ask the user more questions before coding.
 
+## Intake Decision Gates
+
+Use these gates before implementation starts. They do not replace the interview;
+they decide whether the work is ready to proceed.
+
+### Hard Stop
+
+Stop before coding if any of these are true:
+
+- API, auth, scope, DB, scoring, or workflow contract is unclear.
+- Fake or representative data would be presented as real product data.
+- Rollback cannot be done by reverting the PR and no rollback plan exists.
+- Affected route, service, or test scope is not written.
+- A domain decision is not linked to current-state, a decision registry, or the
+  relevant domain document.
+
+### Soft Warning
+
+Continue only with an explicit note if any of these are true:
+
+- A small UI change lands in a large file, but it does not introduce a new
+  domain decision model.
+- Full e2e runtime is approaching 8 minutes, but there is no flake evidence.
+- A refactor candidate exists, but the new behavior is already characterized.
+
+## Decision Owners
+
+Decision owners are review lenses, not a new approval system. Use the matching
+owner when a request touches that domain:
+
+- Store/Admin UI: frontend owner + role/route parity reviewer.
+- Store KPI: KPI/scoring domain owner + backend contract reviewer.
+- Store Tasks / Store Action: workflow/action lifecycle owner.
+- Workforce: auth/scope/audit owner.
+- Reporting: reporting read-model owner.
+- Integration / Import: source adapter/import lifecycle owner.
+- E2E / Release Gate: release verification owner.
+- Decision Registry / Current State: domain decision owner.
+
+## Affected Verification And Release Gate
+
+Every meaningful feature PR should state the affected verification matrix before
+coding starts:
+
+- frontend lint/build
+- targeted Playwright, component, or e2e checks
+- backend targeted test/build
+- API/OpenAPI check when API shape can be affected
+- root release gate when the change has broad surface impact
+
+Smoke, affected, and full checks may be separated for PR preflight, but they do
+not replace the release gate. Affected verification proves the changed surface;
+the release gate protects the product. If full e2e runtime rises above 8
+minutes, record a warning. If it rises above 10 minutes, open a test
+decomposition plan instead of weakening the gate.
+
+## PR Description Checklist
+
+Use this checklist in PR descriptions for meaningful feature work:
+
+```markdown
+## Feature Intake
+
+- [ ] Feature domain:
+- [ ] Triggered guardrail:
+- [ ] Affected route/page/service/API:
+- [ ] API/auth/DB/scoring/workflow contract impact: unchanged / changed
+- [ ] Decision registry/current-state/domain doc updated?
+- [ ] Did this add a new decision model to a large file?
+- [ ] If extraction is needed, was it separated from the feature PR?
+
+## Affected Verification
+
+- [ ] Frontend lint/build:
+- [ ] Targeted Playwright/component/e2e:
+- [ ] Backend targeted test/build:
+- [ ] API/OpenAPI check:
+- [ ] Root release gate:
+
+## Rollback
+
+- [ ] Is PR revert sufficient?
+- [ ] Is data repair, migration rollback, or queue drain required?
+```
+
+## Refactor Boundary
+
+Open a refactor when:
+
+- new behavior creates a third or fourth decision model in the same file
+- current behavior cannot be understood without characterization
+- the same domain logic repeats across two routes or services
+- review can no longer evaluate the change safely
+- the PR no longer has one review story
+
+Do not open a refactor when:
+
+- the file is long only
+- the change is aesthetic only
+- behavior is not characterized yet
+- the feature and a large extraction would land in the same PR
+- the goal is to weaken a guard before the guard failure is understood
+
 ## CODEX DÜRÜST YORUM
 
 For every meaningful new module, feature, workflow, data model, route, permission, or integration, include a short section titled `CODEX DÜRÜST YORUM` before implementation starts.
@@ -218,6 +321,10 @@ From this point forward:
 
 ## Relationship To Other Planning Docs
 
+This file is the source of truth for feature and request intake. Other
+checklists may support this policy, but they must point back here and cannot
+override it.
+
 This policy should be used together with:
 
 - [feature-integration-spine-v1.md](./feature-integration-spine-v1.md)
@@ -226,6 +333,8 @@ This policy should be used together with:
 - [phase-7-production-ux-and-real-auth.md](./phase-7-production-ux-and-real-auth.md)
 - [phase-7-shell-boundaries.md](./phase-7-shell-boundaries.md)
 - [project-stability-guardrails.md](./project-stability-guardrails.md)
+- [product-experience-principles.md](../process/product-experience-principles.md)
+- [refactor-completion-inventory-v1.md](./refactor-completion-inventory-v1.md)
 
 ## Expected Outcome
 
