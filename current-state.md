@@ -23,7 +23,8 @@ through PR #570, and the Architecture Hardening V4 line through the PR-3
 workforce request persistence boundary, the Store KPIs Prototype Parity V1
 line through PR #653 and final closeout evidence, the Store Workforce And
 Approvals Split V1 line through PR #659 and final closeout evidence, and the
-Store bugfix/refactor follow-up through PR #666.
+Store bugfix/refactor follow-up through PR #666, plus the Store Workforce
+norm/fiili binding fix through PR #672.
 It is the starting point for continuing in a fresh window.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
