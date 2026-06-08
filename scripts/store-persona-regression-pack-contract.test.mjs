@@ -43,8 +43,12 @@ function requireText(text, expected) {
   assert.ok(text.includes(expected), `missing required text: ${expected}`)
 }
 
+function readText(path) {
+  return readFileSync(path, 'utf8').replace(/\r\n/g, '\n')
+}
+
 test('Store persona regression pack evidence maps recent bug classes to real tests', () => {
-  const evidence = readFileSync(evidencePath, 'utf8')
+  const evidence = readText(evidencePath)
 
   for (const expected of [
     'Region Manager assigned-store KPI visibility',
@@ -61,10 +65,10 @@ test('Store persona regression pack evidence maps recent bug classes to real tes
 })
 
 test('Store persona regression pack points to existing test cases', () => {
-  const evidence = readFileSync(evidencePath, 'utf8')
+  const evidence = readText(evidencePath)
 
   for (const { file, phrases } of protectedEvidence) {
-    const text = readFileSync(file, 'utf8')
+    const text = readText(file)
     requireText(evidence, file)
 
     for (const phrase of phrases) {
@@ -75,7 +79,7 @@ test('Store persona regression pack points to existing test cases', () => {
 })
 
 test('Store persona regression pack blocks runtime-behavior claims', () => {
-  const evidence = readFileSync(evidencePath, 'utf8')
+  const evidence = readText(evidencePath)
 
   for (const expected of [
     'does not change Store UI',
