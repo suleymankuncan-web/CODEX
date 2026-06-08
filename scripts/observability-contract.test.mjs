@@ -29,6 +29,12 @@ const authAssignmentAuditPage = readText('admin-web/src/pages/AuthAssignmentAudi
 const auditCenterPage = readText('admin-web/src/pages/AuditCenterPage.tsx')
 const operationalObservabilityReview = readText('docs/plans/operational-observability-review.md')
 const phase6CloseoutChecklist = readText('docs/plans/phase-6-closeout-checklist.md')
+const apiDiagnostics = readText('admin-web/src/lib/api-diagnostics.ts')
+const apiClient = readText('admin-web/src/lib/api.ts')
+const operationsControlTowerPage = readText('admin-web/src/pages/OperationsControlTowerPage.tsx')
+const projectHealthPr5ObservabilityScout = readText(
+  'docs/evidence/project-health-uplift-pr5-observability-contract-scout-2026-06-08.md',
+)
 
 test('observability env contract is documented and example-only', () => {
   for (const variable of [
@@ -123,4 +129,42 @@ test('operational observability review reflects the current controlled-pilot bou
   ]) {
     requireText(operationalObservabilityReview + phase6CloseoutChecklist, expected)
   }
+})
+
+test('project health PR-5 observability scout stays providerless and evidence-bound', () => {
+  for (const expected of [
+    'Providerless Runtime Slice Candidates',
+    'Candidate A: Operations API Failure Snapshot',
+    'Read the existing `window.__STORE_OPS_API_FAILURES__` ring buffer',
+    'Do not add backend endpoints, DB tables, auth semantics, external providers',
+    'PR-6 Decision',
+    'Proceed, but only with Candidate A',
+    'Stop if the runtime slice needs a migration, backend write endpoint, provider',
+  ]) {
+    requireText(projectHealthPr5ObservabilityScout, expected)
+  }
+
+  for (const expected of [
+    'window.__STORE_OPS_API_FAILURES__',
+    'store-ops-api-failure',
+    'api.failure',
+    'API_FAILURE_RING_LIMIT',
+    'sanitizeErrorMessage',
+    'sanitizeRequestId',
+  ]) {
+    requireText(apiDiagnostics, expected)
+    requireText(projectHealthPr5ObservabilityScout, expected)
+  }
+
+  for (const expected of [
+    'emitApiFailureDiagnostic',
+    'getRequestIdFromHeaders',
+    'emitResponseFailureDiagnostic',
+  ]) {
+    requireText(apiClient, expected)
+  }
+
+  requireText(operationsControlTowerPage, 'health.observability?.status ===')
+  requireText(projectHealthPr5ObservabilityScout, '/admin/operations')
+  requireText(projectHealthPr5ObservabilityScout, 'externalDelivery` is still `not-enabled`')
 })
