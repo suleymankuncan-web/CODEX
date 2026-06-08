@@ -176,7 +176,7 @@ export function RegionWorkforceView(input: {
     () => deriveWorkforceSummary(allEmployees, now, locale),
     [allEmployees, locale, now],
   )
-  const isAnyStoreLoading = scopedRows.some((row) => row.isLoading)
+  const isAnyStoreLoading = scopedRows.some((row) => row.isEmployeeLoading)
 
   return (
     <section
