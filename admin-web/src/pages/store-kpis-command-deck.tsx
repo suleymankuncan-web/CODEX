@@ -389,6 +389,43 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
       ...transientQueryRetryOptions,
     })),
   })
+  const trendItems = months.map((period, index) => {
+    const queryState = trendQueries[index]
+    const summary =
+      queryState?.data ??
+      (model.liveSummary?.period?.periodStart === period.periodStart
+        ? model.liveSummary
+        : undefined)
+    const scoreValue = calculateStoreScoreFromHighlights(model, summary)
+
+    return {
+      isCurrent: period.periodStart.slice(0, 7) === currentMonth,
+      isError: queryState?.isError ?? false,
+      isLoading: queryState?.isLoading ?? false,
+      label: formatShortMonth(period.periodStart, model.locale),
+      periodStart: period.periodStart,
+      scoreValue,
+    }
+  })
+  const validTrendItems = trendItems.filter((item) => !item.isLoading && !item.isError && item.scoreValue !== null)
+  const scoreValues = validTrendItems.map((item) => (item.scoreValue ?? 0) * 100)
+  const minScore = Math.min(...scoreValues)
+  const maxScore = Math.max(...scoreValues)
+  const chartPoints = trendItems.map((item, index) => ({
+    ...item,
+    x: trendItems.length === 0 ? 50 : ((index + 0.5) * 100) / trendItems.length,
+    y:
+      item.scoreValue === null || item.isLoading || item.isError || scoreValues.length === 0
+        ? null
+        : maxScore === minScore
+          ? 50
+          : 82 - ((((item.scoreValue ?? 0) * 100) - minScore) / (maxScore - minScore)) * 58,
+  }))
+  const linePath = chartPoints
+    .filter((item): item is typeof item & { y: number } => item.y !== null)
+    .map((item) => `${item.x},${item.y}`)
+    .join(' ')
+
   return (
     <section className={`tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:p-4 tw:shadow-sm ${className}`}>
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
@@ -400,30 +437,65 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
           <summary className="tw:flex tw:h-9 tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium"><CalendarDays className="tw:size-4" />{currentMonth?.slice(0, 4) ?? new Date().getFullYear()}</summary>
         </details>
       </div>
-      <div className="tw:mt-5 tw:flex tw:min-h-40 tw:items-end tw:gap-3 tw:overflow-x-auto tw:rounded-2xl tw:bg-[#f7f8fc] tw:p-4">
-        {months.length > 0 ? months.map((period) => {
-          const isCurrent = period.periodStart.slice(0, 7) === currentMonth
-          const queryState = trendQueries.find((_, index) => months[index]?.periodStart === period.periodStart)
-          const summary =
-            queryState?.data ??
-            (model.liveSummary?.period?.periodStart === period.periodStart
-              ? model.liveSummary
-              : undefined)
-          const scoreValue = calculateStoreScoreFromHighlights(model, summary)
-          return (
-            <div key={period.periodStart} className="tw:flex tw:min-w-16 tw:flex-1 tw:flex-col tw:items-center tw:gap-2">
-              <div className={`tw:size-4 tw:rounded-full ${isCurrent ? 'tw:bg-[#6d4df7]' : 'tw:bg-white tw:ring-1 tw:ring-border'}`} />
-              <span className="tw:text-xs tw:font-medium tw:text-[#65708d]">{formatShortMonth(period.periodStart, model.locale)}</span>
-              <strong className="tw:text-xs tw:font-semibold tw:text-[#071332]">
-                {queryState?.isLoading
-                  ? '...'
-                  : scoreValue === null || queryState?.isError
-                    ? model.t('storeKpis.noData')
-                    : formatNumber(model.locale, scoreValue * 100, 1)}
-              </strong>
+      <div className="tw:mt-5 tw:overflow-x-auto tw:rounded-2xl tw:bg-[#f7f8fc] tw:p-4">
+        {trendItems.length > 0 ? (
+          <div className="tw:relative tw:min-h-40 tw:min-w-[520px] tw:pt-3">
+            <div className="tw:relative tw:h-[112px]">
+              <svg className="tw:absolute tw:inset-0 tw:h-full tw:w-full tw:overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                  <linearGradient id="store-kpi-monthly-trend-line" x1="0" x2="1" y1="0" y2="0">
+                    <stop offset="0%" stopColor="#20bfd3" />
+                    <stop offset="55%" stopColor="#6d4df7" />
+                    <stop offset="100%" stopColor="#f59e0b" />
+                  </linearGradient>
+                </defs>
+                {linePath ? (
+                  <polyline
+                    fill="none"
+                    points={linePath}
+                    stroke="url(#store-kpi-monthly-trend-line)"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="3.2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ) : null}
+              </svg>
+              {chartPoints.map((item) => (
+                <div
+                  key={item.periodStart}
+                  className="tw:absolute tw:z-10 tw:-translate-x-1/2 tw:-translate-y-1/2"
+                  style={{ left: `${item.x}%`, top: `${item.y ?? 50}%` }}
+                >
+                  <div
+                    className={[
+                      'tw:size-4 tw:rounded-full tw:border-2 tw:border-[#f7f8fc] tw:shadow-[0_8px_18px_rgba(104,71,255,0.18)]',
+                      item.y === null
+                        ? 'tw:bg-white tw:ring-1 tw:ring-border'
+                        : item.isCurrent
+                          ? 'tw:bg-[#6d4df7]'
+                          : 'tw:bg-[#20bfd3]',
+                    ].join(' ')}
+                  />
+                </div>
+              ))}
             </div>
-          )
-        }) : <StoreEmptyState title={model.t('storeKpis.commandTrendEmptyTitle')} description={model.t('storeKpis.commandTrendEmptyCopy')} />}
+            <div className="tw:grid" style={{ gridTemplateColumns: `repeat(${trendItems.length}, minmax(64px, 1fr))` }}>
+              {chartPoints.map((item) => (
+                <div key={item.periodStart} className="tw:flex tw:min-w-16 tw:flex-col tw:items-center tw:gap-2">
+                  <span className="tw:text-xs tw:font-medium tw:text-[#65708d]">{item.label}</span>
+                  <strong className="tw:text-xs tw:font-semibold tw:text-[#071332]">
+                    {item.isLoading
+                      ? '...'
+                      : item.scoreValue === null || item.isError
+                        ? model.t('storeKpis.noData')
+                        : formatNumber(model.locale, item.scoreValue * 100, 1)}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : <StoreEmptyState title={model.t('storeKpis.commandTrendEmptyTitle')} description={model.t('storeKpis.commandTrendEmptyCopy')} />}
       </div>
     </section>
   )

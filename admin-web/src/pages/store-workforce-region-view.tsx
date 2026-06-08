@@ -446,13 +446,13 @@ function RegionStoreTable(input: {
       <div className="tw:hidden tw:md:block">
         <table className="tw:w-full tw:table-fixed tw:border-collapse">
           <colgroup>
-            <col style={{ width: '23%' }} />
+            <col style={{ width: '25%' }} />
+            <col style={{ width: '9%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '15%' }} />
+            <col style={{ width: '13%' }} />
             <col style={{ width: '12%' }} />
             <col style={{ width: '13%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '14%' }} />
           </colgroup>
           <thead>
             <tr>
@@ -467,7 +467,7 @@ function RegionStoreTable(input: {
               ].map((heading) => (
                 <th
                   key={heading}
-                  className="tw:border-b tw:border-[#dfe6f3] tw:bg-[#f4f7fc]/85 tw:px-2.5 tw:py-3 tw:text-left tw:text-[11px] tw:font-bold tw:tracking-[0.02em] tw:text-[#687395] tw:uppercase"
+                  className="tw:border-b tw:border-[#dfe6f3] tw:bg-[#f4f7fc]/85 tw:px-3 tw:py-3 tw:text-left tw:text-[11px] tw:font-bold tw:tracking-[0.02em] tw:text-[#687395] tw:uppercase"
                 >
                   {heading}
                 </th>
@@ -531,15 +531,15 @@ function RegionStoreDesktopRow(input: {
 
   return (
     <tr data-testid="store-workforce-region-row">
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
         <StoreIdentity row={input.row} />
       </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
         <span className={cn('tw:text-sm tw:font-semibold tw:whitespace-nowrap', textInk)}>
           {personnelValue}
         </span>
       </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
         <span className={cn('tw:text-sm tw:font-medium tw:whitespace-nowrap', textMuted)}>
           {input.row.isEmployeeLoading
             ? input.t('storeWorkforce.sourceWaitingShort')
@@ -548,18 +548,18 @@ function RegionStoreDesktopRow(input: {
               : input.row.summary.averageTenureLabel}
         </span>
       </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <span className={cn('tw:text-sm tw:font-semibold tw:whitespace-nowrap', textInk)}>
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
+        <span className={cn('tw:block tw:max-w-[130px] tw:truncate tw:text-sm tw:font-semibold tw:whitespace-nowrap', textInk)} title={normActualValue}>
           {normActualValue}
         </span>
       </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
         <MiniBars inactive={input.row.isEmployeeLoading || input.row.employees.length === 0} />
       </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
         <Status tone={statusTone}>{statusLabel}</Status>
       </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px] tw:text-right">
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px] tw:text-right">
         <DetailButton onClick={() => input.onSelectStore(input.row.storeId)}>
           {input.t('storeWorkforce.detailAction')}
         </DetailButton>
@@ -637,7 +637,7 @@ function StoreIdentity(input: { row: RegionStoreRow }) {
       <div className="tw:min-w-0">
         <strong
           className={cn(
-            'tw:block tw:max-w-[160px] tw:truncate tw:text-sm tw:font-semibold tw:leading-tight tw:md:max-w-[150px] tw:xl:max-w-[120px]',
+            'tw:block tw:max-w-[180px] tw:truncate tw:text-sm tw:font-semibold tw:leading-tight tw:md:max-w-[170px] tw:xl:max-w-[155px]',
             textInk,
           )}
           title={input.row.storeLabel}
@@ -660,7 +660,7 @@ function DetailButton(input: {
       variant="outline"
       size="sm"
       className={cn(
-        'tw:h-9 tw:rounded-[13px] tw:border-[#6847ff]/20 tw:px-2.5 tw:text-[13px] tw:font-bold tw:whitespace-nowrap tw:text-[#5534e6] tw:shadow-none',
+        'tw:h-8 tw:rounded-[12px] tw:border-[#6847ff]/20 tw:px-2.5 tw:text-xs tw:font-bold tw:whitespace-nowrap tw:text-[#5534e6] tw:shadow-none',
         input.primary
           ? 'tw:w-full tw:border-transparent tw:bg-[linear-gradient(135deg,#6847ff,#355cff)] tw:text-white tw:shadow-[0_12px_24px_rgba(104,71,255,0.22)]'
           : 'tw:bg-white',
@@ -668,7 +668,7 @@ function DetailButton(input: {
       onClick={input.onClick}
     >
       {input.children}
-      <ChevronRight className="tw:size-4" />
+      <ChevronRight className="tw:size-3.5" />
     </Button>
   )
 }
@@ -883,12 +883,12 @@ function Status(input: { children: ReactNode; tone: Tone }) {
   return (
     <span
       className={cn(
-        'tw:inline-flex tw:min-h-[27px] tw:items-center tw:gap-1.5 tw:rounded-full tw:px-2.5 tw:text-xs tw:font-bold tw:whitespace-nowrap',
+        'tw:inline-flex tw:min-h-[25px] tw:max-w-[96px] tw:items-center tw:gap-1.5 tw:rounded-full tw:px-2 tw:text-[11px] tw:font-bold tw:whitespace-nowrap',
         toneClasses[input.tone].status,
       )}
     >
-      <span className="tw:size-[7px] tw:rounded-full tw:bg-current" />
-      {input.children}
+      <span className="tw:size-1.5 tw:shrink-0 tw:rounded-full tw:bg-current" />
+      <span className="tw:min-w-0 tw:truncate">{input.children}</span>
     </span>
   )
 }
