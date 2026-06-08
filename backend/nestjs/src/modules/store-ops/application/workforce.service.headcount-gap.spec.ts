@@ -26,6 +26,8 @@ describe("WorkforceService headcount gap access", () => {
         region_id: input?.storeRegionId ?? regionId,
         store_id: storeId,
       }),
+      listSellerCodeRequests: jest.fn().mockResolvedValue([]),
+      listOffboardingRequests: jest.fn().mockResolvedValue([]),
     };
 
     return {
@@ -89,5 +91,39 @@ describe("WorkforceService headcount gap access", () => {
     })).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(storeOpsRepository.getStoreHeadcountGap).not.toHaveBeenCalled();
+  });
+
+  it("keeps workforce request lists limited to assigned stores even when read scope is broader", async () => {
+    const assignedStoreId = "00000000-0000-0000-0000-000000000101";
+    const broadReadStoreId = "00000000-0000-0000-0000-000000000102";
+    const { service, workforceRequestRepository } = createService();
+    const scopeInput = {
+      actorScope: {
+        companyIds: [],
+        regionIds: [],
+        storeIds: [broadReadStoreId],
+      },
+      actorActionScope: {
+        assignedStoreIds: [assignedStoreId],
+      },
+      actorRoleCodes: ["STORE_MANAGER"],
+      status: "pending_hr_approval" as const,
+    };
+
+    await service.listSellerCodeRequests(scopeInput);
+    await service.listOffboardingRequests(scopeInput);
+
+    expect(workforceRequestRepository.listSellerCodeRequests).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: [assignedStoreId],
+      status: "pending_hr_approval",
+    });
+    expect(workforceRequestRepository.listOffboardingRequests).toHaveBeenCalledWith({
+      companyIds: [],
+      regionIds: [],
+      storeIds: [assignedStoreId],
+      status: "pending_hr_approval",
+    });
   });
 });
