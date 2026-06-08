@@ -1,4 +1,4 @@
-import { sendJson } from '../../lib/api'
+import { fetchJson, sendJson } from '../../lib/api'
 import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
 
 type CommandResponse<T> = {
@@ -24,6 +24,22 @@ export type StoreEmployee = StoreEmployees['items'][number]
 
 export type OffboardingRequests = ApiGetResponse<'/api/workforce/offboarding-requests'>
 export type OffboardingRequest = OffboardingRequests['items'][number]
+
+export type OrgStore = {
+  store_id: string
+  store_code: string
+  store_name: string
+  region_id: string
+  company_id: string
+  status: string
+}
+
+export type OrgStoresResponse = {
+  items: OrgStore[]
+  meta?: {
+    total?: number
+  }
+}
 
 export type OffboardingAccessClosure = {
   userAccessClosed: boolean
@@ -117,6 +133,10 @@ export async function getPositionOptions(storeId: string) {
 export async function getStoreEmployees(storeId: string) {
   const params = new URLSearchParams({ storeId })
   return fetchOpenApiJson('/api/workforce/store-employees', { query: params })
+}
+
+export async function getOrgStores() {
+  return fetchJson<OrgStoresResponse>('/org/stores')
 }
 
 export async function getOffboardingRequests(input?: { status?: string }) {

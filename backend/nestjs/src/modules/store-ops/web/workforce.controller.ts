@@ -102,18 +102,20 @@ export class WorkforceController {
   }
 
   @Get("store-employees")
-  @RequireActionScope("store")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN")
   async listStoreEmployees(
     @Req()
     request: {
       user: {
         scope: {
+          companyIds: string[];
+          regionIds: string[];
           storeIds: string[];
         };
         actionScope: {
           assignedStoreIds: string[];
         };
+        roleCodes: string[];
       };
     },
     @Query() query: ListStoreEmployeesQueryDto,
@@ -121,6 +123,7 @@ export class WorkforceController {
     return this.workforceService.listActiveStoreEmployees({
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       storeId: query.storeId,
     });
   }

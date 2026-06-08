@@ -101,15 +101,18 @@ export class WorkforceService {
 
   async listActiveStoreEmployees(input: {
     actorScope: {
+      companyIds: string[];
+      regionIds: string[];
       storeIds: string[];
     };
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    actorRoleCodes?: string[];
     storeId: string;
   }) {
-    if (!this.canActOnStore(input.actorActionScope, input.actorScope, input.storeId)) {
-      throw new ForbiddenException("Requested store is outside assigned action stores");
+    if (!(await this.canReadWorkforceStore(input, input.storeId))) {
+      throw new ForbiddenException("Requested store is outside workforce read scope");
     }
 
     const rows = await this.workforceRequestRepository.listActiveStoreEmployees({
@@ -623,6 +626,64 @@ export class WorkforceService {
   ) {
     const assignedStoreIds = actionScope?.assignedStoreIds ?? legacyScope.storeIds;
     return assignedStoreIds.includes(storeId);
+  }
+
+  private async canReadWorkforceStore(
+    input: {
+      actorScope: {
+        companyIds?: string[];
+        regionIds?: string[];
+        storeIds: string[];
+      };
+      actorActionScope?: {
+        assignedStoreIds: string[];
+      };
+      actorRoleCodes?: string[];
+    },
+    storeId: string,
+  ) {
+    const actorRoleCodes = input.actorRoleCodes ?? [];
+    const assignedStoreIds = input.actorActionScope?.assignedStoreIds ?? [];
+    const hasActionStore = assignedStoreIds.includes(storeId);
+    const canUseReadScope = (input.actorRoleCodes ?? []).some((roleCode) =>
+      ["REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN"].includes(roleCode),
+    );
+    const canUseStoreManagerActionScope =
+      actorRoleCodes.includes("STORE_MANAGER") && hasActionStore;
+
+    if (canUseStoreManagerActionScope) {
+      return true;
+    }
+
+    if (!canUseReadScope) {
+      return false;
+    }
+
+    if (input.actorScope.storeIds.includes(storeId)) {
+      return true;
+    }
+
+    const store = await this.workforceRequestRepository.getStoreForSellerCodeRequest(storeId);
+    if (!store) {
+      return false;
+    }
+
+    const regionIds = input.actorScope.regionIds ?? [];
+    const hasBroadReadScope = actorRoleCodes.some((roleCode) =>
+      ["HR_ADMIN", "SUPER_ADMIN"].includes(roleCode),
+    );
+    if (hasBroadReadScope) {
+      return (
+        (input.actorScope.companyIds ?? []).includes(store.company_id) ||
+        regionIds.includes(store.region_id)
+      );
+    }
+
+    if (actorRoleCodes.includes("REGION_MANAGER")) {
+      return regionIds.includes(store.region_id);
+    }
+
+    return false;
   }
 
   private assertCanReviewWorkforceRequest(

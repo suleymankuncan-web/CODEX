@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -8,10 +9,8 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import {
-  BriefcaseBusiness,
   CalendarClock,
   ChevronRight,
-  ClipboardList,
   Inbox,
   Search,
   Store,
@@ -22,12 +21,15 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getAssignedStoreIds, getReadRegionIds, getReadStoreIds } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
+import { getOrgStores, getStoreEmployees } from '../features/workforce/api'
 import { formatNumber } from '../lib/format'
-
-type RegionStoreRow = {
-  storeId: string
-  storeLabel: string
-}
+import { deriveWorkforceSummary } from './store-workforce-model'
+import {
+  ModalPersonnelPane,
+  ModalPositionPane,
+  ModalRequestsPlaceholder,
+} from './store-workforce-region-detail-panes'
+import type { RegionStoreRow } from './store-workforce-region-model'
 
 type DetailTab = 'people' | 'positions' | 'requests'
 type Tone = 'cyan' | 'purple' | 'green' | 'amber' | 'rose' | 'blue'
@@ -79,23 +81,76 @@ export function RegionWorkforceView(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
-  const readStoreIds = useMemo(
-    () => getUniqueIds([...getReadStoreIds(input.authSummary), ...getAssignedStoreIds(input.authSummary)]),
-    [input.authSummary],
+  const now = useMemo(() => new Date(), [])
+  const explicitReadStoreIds = useMemo(() => getUniqueIds(getReadStoreIds(input.authSummary)), [input.authSummary])
+  const assignedStoreIds = useMemo(() => getUniqueIds(getAssignedStoreIds(input.authSummary)), [input.authSummary])
+  const fallbackStoreIds = useMemo(
+    () => getUniqueIds([...explicitReadStoreIds, ...assignedStoreIds]),
+    [assignedStoreIds, explicitReadStoreIds],
   )
   const readRegionIds = useMemo(() => getUniqueIds(getReadRegionIds(input.authSummary)), [input.authSummary])
-  const scopedRows = useMemo(
-    () =>
-      readStoreIds.map((storeId) => ({
+  const orgStoresQuery = useQuery({
+    queryKey: ['store-workforce-region-org-stores', fallbackStoreIds.join('|'), readRegionIds.join('|')],
+    queryFn: getOrgStores,
+  })
+  const scopedStores = useMemo(
+    () => {
+      const orgStores = orgStoresQuery.data?.items ?? []
+      const hasRegionalScope = readRegionIds.length > 0
+      const scopedOrgStores = !hasRegionalScope && fallbackStoreIds.length > 0
+        ? orgStores.filter((store) => fallbackStoreIds.includes(store.store_id))
+        : orgStores
+
+      if (scopedOrgStores.length > 0) {
+        return scopedOrgStores.map((store) => ({
+          storeId: store.store_id,
+          storeLabel: store.store_name || store.store_code || store.store_id,
+        }))
+      }
+
+      return fallbackStoreIds.map((storeId) => ({
         storeId,
         storeLabel: storeId,
-      })),
-    [readStoreIds],
+      }))
+    },
+    [fallbackStoreIds, orgStoresQuery.data?.items, readRegionIds.length],
+  )
+  const storeEmployeeQueries = useQueries({
+    queries: scopedStores.map((store) => ({
+      queryKey: ['workforce-store-employees', 'store-workforce-region', store.storeId],
+      queryFn: () => getStoreEmployees(store.storeId),
+      enabled: Boolean(store.storeId),
+    })),
+  })
+  const scopedRows = useMemo(
+    () =>
+      scopedStores.map((store, index) => {
+        const query = storeEmployeeQueries[index]
+        const employees = query?.data?.items ?? []
+
+        return {
+          ...store,
+          employees,
+          isLoading: query?.isLoading ?? false,
+          isError: query?.isError ?? false,
+          summary: deriveWorkforceSummary(employees, now, locale),
+        }
+      }),
+    [locale, now, scopedStores, storeEmployeeQueries],
   )
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
   const selectedStore = scopedRows.find((row) => row.storeId === selectedStoreId) ?? null
   const hasStoreRows = scopedRows.length > 0
   const hasRegionScopeOnly = !hasStoreRows && readRegionIds.length > 0
+  const allEmployees = useMemo(
+    () => scopedRows.flatMap((row) => row.employees),
+    [scopedRows],
+  )
+  const regionSummary = useMemo(
+    () => deriveWorkforceSummary(allEmployees, now, locale),
+    [allEmployees, locale, now],
+  )
+  const isAnyStoreLoading = scopedRows.some((row) => row.isLoading)
 
   return (
     <section
@@ -140,14 +195,14 @@ export function RegionWorkforceView(input: {
             icon={<Users className="tw:size-[18px]" />}
             iconTone="cyan"
             label={t('storeWorkforce.regionTotalScope')}
-            value={t('storeWorkforce.valueContractShort')}
+            value={isAnyStoreLoading ? t('storeWorkforce.sourceWaitingShort') : formatNumber(allEmployees.length, locale)}
             note={t('storeWorkforce.regionPersonnelContractNote')}
           />
           <MetricCard
             icon={<CalendarClock className="tw:size-[18px]" />}
             iconTone="purple"
             label={t('storeWorkforce.regionAverageTenure')}
-            value={t('storeWorkforce.valueContractShort')}
+            value={isAnyStoreLoading ? t('storeWorkforce.sourceWaitingShort') : regionSummary.averageTenureLabel}
             note={t('storeWorkforce.regionTenureContractNote')}
           />
           <MetricCard
@@ -223,10 +278,11 @@ export function RegionWorkforceView(input: {
               badgeTone="cyan"
             >
               <UnavailableList
-                rows={[
-                  t('storeWorkforce.sourceWaitingShort'),
-                  t('storeWorkforce.regionDataSourceValue'),
-                ]}
+                rows={
+                  regionSummary.positionRows.length > 0
+                    ? regionSummary.positionRows.slice(0, 5).map((row) => `${row.label}: ${formatNumber(row.count, locale)}`)
+                    : [t('storeWorkforce.sourceWaitingShort')]
+                }
               />
             </SidePanel>
 
@@ -238,20 +294,17 @@ export function RegionWorkforceView(input: {
             >
               <div className="tw:grid tw:grid-cols-2 tw:gap-2 tw:md:grid-cols-4 tw:xl:grid-cols-2">
                 {[
-                  '0-3 ay',
-                  '3-12 ay',
-                  '1-3 yil',
-                  '3+ yil',
-                ].map((label) => (
+                  ...regionSummary.tenureBuckets,
+                ].map((bucket) => (
                   <div
-                    key={label}
+                    key={bucket.key}
                     className="tw:min-h-[78px] tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/65 tw:p-3"
                   >
                     <strong className={cn('tw:block tw:text-sm tw:font-bold', textInk)}>
-                      {t('storeWorkforce.valueContractShort')}
+                      {isAnyStoreLoading ? t('storeWorkforce.sourceWaitingShort') : formatNumber(bucket.count, locale)}
                     </strong>
                     <span className={cn('tw:mt-1 tw:block tw:text-xs tw:font-semibold', textMuted)}>
-                      {label}
+                      {bucket.label}
                     </span>
                   </div>
                 ))}
@@ -425,27 +478,46 @@ function RegionStoreDesktopRow(input: {
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
 }) {
+  const personnelValue = input.row.isLoading
+    ? input.t('storeWorkforce.sourceWaitingShort')
+    : input.row.isError
+      ? input.t('storeWorkforce.valueNotConfigured')
+      : input.row.employees.length.toString()
+  const normActualValue = input.row.isLoading
+    ? input.t('storeWorkforce.sourceWaitingShort')
+    : `${input.t('storeWorkforce.valueNotConfigured')} / ${input.row.employees.length}`
+  const statusTone = input.row.isError ? 'rose' : input.row.isLoading ? 'amber' : 'cyan'
+  const statusLabel = input.row.isError
+    ? input.t('storeWorkforce.valueNotConfigured')
+    : input.row.isLoading
+      ? input.t('storeWorkforce.sourceWaitingShort')
+      : input.t('storeWorkforce.realDataBadge')
+
   return (
     <tr data-testid="store-workforce-region-row">
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
         <StoreIdentity row={input.row} />
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <UnavailablePill>{input.t('storeWorkforce.sourceWaitingShort')}</UnavailablePill>
-      </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <span className={cn('tw:text-sm tw:font-medium tw:whitespace-nowrap', textMuted)}>
-          {input.t('storeWorkforce.sourceWaitingShort')}
+        <span className={cn('tw:text-sm tw:font-semibold tw:whitespace-nowrap', textInk)}>
+          {personnelValue}
         </span>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <Pill tone="amber">{input.t('storeWorkforce.valueNotConfigured')}</Pill>
+        <span className={cn('tw:text-sm tw:font-medium tw:whitespace-nowrap', textMuted)}>
+          {input.row.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.row.summary.averageTenureLabel}
+        </span>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <MiniBars inactive />
+        <span className={cn('tw:text-sm tw:font-semibold tw:whitespace-nowrap', textInk)}>
+          {normActualValue}
+        </span>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <Status tone="amber">{input.t('storeWorkforce.sourceWaitingShort')}</Status>
+        <MiniBars inactive={input.row.isLoading || input.row.employees.length === 0} />
+      </td>
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
+        <Status tone={statusTone}>{statusLabel}</Status>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px] tw:text-right">
         <DetailButton onClick={() => input.onSelectStore(input.row.storeId)}>
@@ -461,6 +533,10 @@ function RegionStoreMobileCard(input: {
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
 }) {
+  const personnelValue = input.row.isLoading
+    ? input.t('storeWorkforce.sourceWaitingShort')
+    : input.row.employees.length.toString()
+
   return (
     <article
       className="tw:grid tw:gap-3 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:p-3"
@@ -468,11 +544,13 @@ function RegionStoreMobileCard(input: {
     >
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
         <StoreIdentity row={input.row} />
-        <Status tone="amber">{input.t('storeWorkforce.sourceWaitingShort')}</Status>
+        <Status tone={input.row.isLoading ? 'amber' : 'cyan'}>
+          {input.row.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.t('storeWorkforce.realDataBadge')}
+        </Status>
       </div>
       <div className="tw:grid tw:grid-cols-2 tw:gap-2">
-        <MiniValue label={input.t('storeWorkforce.personnelColumn')} value={input.t('storeWorkforce.valueContractShort')} />
-        <MiniValue label={input.t('storeWorkforce.averageTenure')} value={input.t('storeWorkforce.valueContractShort')} />
+        <MiniValue label={input.t('storeWorkforce.personnelColumn')} value={personnelValue} />
+        <MiniValue label={input.t('storeWorkforce.averageTenure')} value={input.row.summary.averageTenureLabel} />
       </div>
       <DetailButton primary onClick={() => input.onSelectStore(input.row.storeId)}>
         {input.t('storeWorkforce.detailAction')}
@@ -493,7 +571,7 @@ function StoreIdentity(input: { row: RegionStoreRow }) {
             'tw:block tw:max-w-[160px] tw:truncate tw:text-sm tw:font-semibold tw:leading-tight tw:md:max-w-[150px] tw:xl:max-w-[120px]',
             textInk,
           )}
-          title={input.row.storeId}
+          title={input.row.storeLabel}
         >
           {input.row.storeLabel}
         </strong>
@@ -632,7 +710,7 @@ function RegionStoreDetailDialog(input: {
             <DialogTitle className={cn('tw:text-[22px] tw:font-bold tw:leading-tight', textInk)}>
               {input.row
                 ? input.t('storeWorkforce.regionDetailTitleWithStore', {
-                    store: formatCompactStoreLabel(input.row.storeId),
+                    store: input.row.storeLabel,
                   })
                 : input.t('storeWorkforce.regionDetailTitle')}
             </DialogTitle>
@@ -641,7 +719,9 @@ function RegionStoreDetailDialog(input: {
             </DialogDescription>
           </div>
           <div className="tw:flex tw:shrink-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
-            <Pill tone="amber">{input.t('storeWorkforce.valueContractShort')}</Pill>
+            <Pill tone={input.row?.isLoading ? 'amber' : 'cyan'}>
+              {input.row?.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.t('storeWorkforce.realDataBadge')}
+            </Pill>
             <button
               type="button"
               aria-label={input.t('storeWorkforce.closeDetail')}
@@ -655,9 +735,9 @@ function RegionStoreDetailDialog(input: {
 
         <div className="tw:grid tw:gap-4 tw:p-4 tw:sm:p-[18px]">
           <div className="tw:grid tw:grid-cols-2 tw:gap-2.5 tw:sm:grid-cols-4">
-            <MiniMetric label={input.t('storeWorkforce.storeColumn')} value={input.row?.storeId ?? input.t('storeWorkforce.valueNotConfigured')} />
-            <MiniMetric label={input.t('storeWorkforce.personnelColumn')} value={input.t('storeWorkforce.valueContractShort')} />
-            <MiniMetric label={input.t('storeWorkforce.averageTenure')} value={input.t('storeWorkforce.valueContractShort')} />
+            <MiniMetric label={input.t('storeWorkforce.storeColumn')} value={input.row?.storeLabel ?? input.t('storeWorkforce.valueNotConfigured')} />
+            <MiniMetric label={input.t('storeWorkforce.personnelColumn')} value={input.row ? input.row.employees.length.toString() : input.t('storeWorkforce.valueNotConfigured')} />
+            <MiniMetric label={input.t('storeWorkforce.averageTenure')} value={input.row?.summary.averageTenureLabel ?? input.t('storeWorkforce.valueNotConfigured')} />
             <MiniMetric label={input.t('storeWorkforce.openMovements')} value={input.t('storeWorkforce.valueContractShort')} />
           </div>
 
@@ -674,28 +754,13 @@ function RegionStoreDetailDialog(input: {
           </div>
 
           {activeTab === 'people' ? (
-            <ModalUnavailablePane
-              icon={<UsersRound className="tw:size-4" />}
-              title={input.t('storeWorkforce.regionDetailPersonnelTitle')}
-              copy={input.t('storeWorkforce.regionDetailPersonnelCopy')}
-              t={input.t}
-            />
+            <ModalPersonnelPane row={input.row} t={input.t} />
           ) : null}
           {activeTab === 'positions' ? (
-            <ModalUnavailablePane
-              icon={<BriefcaseBusiness className="tw:size-4" />}
-              title={input.t('storeWorkforce.regionDetailPositionTitle')}
-              copy={input.t('storeWorkforce.regionDetailPositionCopy')}
-              t={input.t}
-            />
+            <ModalPositionPane row={input.row} t={input.t} />
           ) : null}
           {activeTab === 'requests' ? (
-            <ModalUnavailablePane
-              icon={<ClipboardList className="tw:size-4" />}
-              title={input.t('storeWorkforce.regionDetailRequestsTitle')}
-              copy={input.t('storeWorkforce.regionDetailRequestsCopy')}
-              t={input.t}
-            />
+            <ModalRequestsPlaceholder t={input.t} />
           ) : null}
         </div>
       </DialogContent>
@@ -731,32 +796,6 @@ function ModalTab(input: { active: boolean; children: ReactNode; onClick: () => 
   )
 }
 
-function ModalUnavailablePane(input: {
-  copy: string
-  icon: ReactNode
-  title: string
-  t: ReturnType<typeof useLocalization>['t']
-}) {
-  return (
-    <div className="tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:p-4">
-      <div className="tw:flex tw:items-start tw:gap-3">
-        <div className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-[13px] tw:bg-[#efe9ff] tw:text-[#5534e6]">
-          {input.icon}
-        </div>
-        <div className="tw:min-w-0">
-          <Status tone="amber">{input.t('storeWorkforce.valueContractShort')}</Status>
-          <strong className={cn('tw:mt-3 tw:block tw:text-base tw:font-bold', textInk)}>
-            {input.title}
-          </strong>
-          <p className={cn('tw:mt-1.5 tw:text-sm tw:leading-6', textMuted)}>
-            {input.copy}
-          </p>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function Pill(input: { children: ReactNode; tone: Tone }) {
   return (
     <span
@@ -784,15 +823,6 @@ function Status(input: { children: ReactNode; tone: Tone }) {
   )
 }
 
-function UnavailablePill(input: { children: ReactNode }) {
-  return <Pill tone="amber">{input.children}</Pill>
-}
-
 function getUniqueIds(ids: string[]) {
   return Array.from(new Set(ids.filter(Boolean))).sort((left, right) => left.localeCompare(right))
-}
-
-function formatCompactStoreLabel(storeId: string) {
-  const suffix = storeId.split('-').at(-1)?.slice(-4) || storeId.slice(-4)
-  return `Magaza kaydi ${suffix}`
 }

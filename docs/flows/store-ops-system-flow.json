@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-06-05T20:04:56.946Z",
+  "generatedAt": "2026-06-08T04:41:40.415Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
     "backendEndpointCount": 173,
-    "backendEndpointsWithoutFrontendCallCount": 34,
+    "backendEndpointsWithoutFrontendCallCount": 33,
     "controllerCount": 20,
-    "frontendApiCallCount": 139,
+    "frontendApiCallCount": 140,
     "frontendRouteCount": 54,
-    "matchedFrontendApiCallCount": 139,
+    "matchedFrontendApiCallCount": 140,
     "openApiEndpointCount": 173,
-    "routeApiEdgeCount": 209,
+    "routeApiEdgeCount": 210,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -2850,7 +2850,7 @@
       "exportedFunction": "getSellerCodeReference",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 37
+        "line": 53
       }
     },
     {
@@ -2865,7 +2865,7 @@
       "exportedFunction": "getSellerCodeRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 48
+        "line": 64
       }
     },
     {
@@ -2880,7 +2880,7 @@
       "exportedFunction": "approveSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 56
+        "line": 72
       }
     },
     {
@@ -2895,7 +2895,7 @@
       "exportedFunction": "rejectSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 72
+        "line": 88
       }
     },
     {
@@ -2910,7 +2910,7 @@
       "exportedFunction": "resubmitSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 94
+        "line": 110
       }
     },
     {
@@ -2925,7 +2925,7 @@
       "exportedFunction": "getPositionOptions",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 114
+        "line": 130
       }
     },
     {
@@ -2940,11 +2940,26 @@
       "exportedFunction": "getStoreEmployees",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 119
+        "line": 135
       }
     },
     {
       "id": "api:134",
+      "client": "legacy-json",
+      "functionName": "fetchJson",
+      "method": "GET",
+      "rawPath": "/org/stores",
+      "path": "/api/org/stores",
+      "backendEndpointId": "endpoint:GET:/api/org/stores",
+      "openApiCovered": true,
+      "exportedFunction": "getOrgStores",
+      "source": {
+        "file": "admin-web/src/features/workforce/api.ts",
+        "line": 139
+      }
+    },
+    {
+      "id": "api:135",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2955,11 +2970,11 @@
       "exportedFunction": "getOffboardingRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 128
+        "line": 148
       }
     },
     {
-      "id": "api:135",
+      "id": "api:136",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2970,11 +2985,11 @@
       "exportedFunction": "createSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 143
+        "line": 163
       }
     },
     {
-      "id": "api:136",
+      "id": "api:137",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2985,11 +3000,11 @@
       "exportedFunction": "createOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 159
+        "line": 179
       }
     },
     {
-      "id": "api:137",
+      "id": "api:138",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3000,11 +3015,11 @@
       "exportedFunction": "approveOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 172
+        "line": 192
       }
     },
     {
-      "id": "api:138",
+      "id": "api:139",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3015,11 +3030,11 @@
       "exportedFunction": "rejectOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 189
+        "line": 209
       }
     },
     {
-      "id": "api:139",
+      "id": "api:140",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3030,7 +3045,7 @@
       "exportedFunction": "resubmitOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 207
+        "line": 227
       }
     }
   ],
@@ -5286,7 +5301,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 156
+        "line": 159
       }
     },
     {
@@ -5300,7 +5315,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 183
+        "line": 186
       }
     },
     {
@@ -5314,7 +5329,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 275
+        "line": 278
       }
     },
     {
@@ -5328,7 +5343,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 292
+        "line": 295
       }
     },
     {
@@ -5342,7 +5357,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 309
+        "line": 312
       }
     },
     {
@@ -5398,7 +5413,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 128
+        "line": 131
       }
     },
     {
@@ -5412,7 +5427,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 211
+        "line": 214
       }
     },
     {
@@ -5426,7 +5441,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 229
+        "line": 232
       }
     },
     {
@@ -5440,7 +5455,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 246
+        "line": 249
       }
     },
     {
@@ -6796,9 +6811,9 @@
         "apiCallId": "api:128"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:134",
+        "id": "edge:route:admin:/admin/data-quality:api:135",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:134"
+        "apiCallId": "api:135"
       },
       {
         "id": "edge:route:admin:/admin/data-quality:api:61",
@@ -6876,19 +6891,19 @@
         "apiCallId": "api:130"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:134",
+        "id": "edge:route:admin:/admin/inbox:api:135",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:134"
-      },
-      {
-        "id": "edge:route:admin:/admin/inbox:api:137",
-        "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:137"
+        "apiCallId": "api:135"
       },
       {
         "id": "edge:route:admin:/admin/inbox:api:138",
         "routeId": "route:admin:/admin/inbox",
         "apiCallId": "api:138"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:139",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:139"
       },
       {
         "id": "edge:route:admin:/admin/integrations:api:61",
@@ -7126,9 +7141,9 @@
         "apiCallId": "api:128"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:134",
+        "id": "edge:route:admin:/admin/operations:api:135",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:134"
+        "apiCallId": "api:135"
       },
       {
         "id": "edge:route:admin:/admin/operations:api:61",
@@ -7296,9 +7311,9 @@
         "apiCallId": "api:128"
       },
       {
-        "id": "edge:route:store:/store/approvals:api:134",
+        "id": "edge:route:store:/store/approvals:api:135",
         "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:134"
+        "apiCallId": "api:135"
       },
       {
         "id": "edge:route:store:/store/checklists:api:24",
@@ -7496,9 +7511,9 @@
         "apiCallId": "api:128"
       },
       {
-        "id": "edge:route:store:/store/tasks:api:134",
+        "id": "edge:route:store:/store/tasks:api:135",
         "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:134"
+        "apiCallId": "api:135"
       },
       {
         "id": "edge:route:store:/store/tasks:api:28",
@@ -7541,9 +7556,14 @@
         "apiCallId": "api:136"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:139",
+        "id": "edge:route:store:/store/workforce:api:137",
         "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:139"
+        "apiCallId": "api:137"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:140",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:140"
       }
     ],
     "apiToEndpoint": [
@@ -7743,39 +7763,44 @@
         "backendEndpointId": "endpoint:GET:/api/workforce/store-employees"
       },
       {
-        "id": "edge:api:134:endpoint:GET:/api/workforce/offboarding-requests",
+        "id": "edge:api:134:endpoint:GET:/api/org/stores",
         "apiCallId": "api:134",
+        "backendEndpointId": "endpoint:GET:/api/org/stores"
+      },
+      {
+        "id": "edge:api:135:endpoint:GET:/api/workforce/offboarding-requests",
+        "apiCallId": "api:135",
         "backendEndpointId": "endpoint:GET:/api/workforce/offboarding-requests"
       },
       {
-        "id": "edge:api:135:endpoint:POST:/api/workforce/seller-code-requests",
-        "apiCallId": "api:135",
+        "id": "edge:api:136:endpoint:POST:/api/workforce/seller-code-requests",
+        "apiCallId": "api:136",
         "backendEndpointId": "endpoint:POST:/api/workforce/seller-code-requests"
       },
       {
-        "id": "edge:api:136:endpoint:POST:/api/workforce/offboarding-requests",
-        "apiCallId": "api:136",
+        "id": "edge:api:137:endpoint:POST:/api/workforce/offboarding-requests",
+        "apiCallId": "api:137",
         "backendEndpointId": "endpoint:POST:/api/workforce/offboarding-requests"
       },
       {
-        "id": "edge:api:137:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
-        "apiCallId": "api:137",
+        "id": "edge:api:138:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
+        "apiCallId": "api:138",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve"
       },
       {
-        "id": "edge:api:138:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
-        "apiCallId": "api:138",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject"
-      },
-      {
-        "id": "edge:api:139:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
+        "id": "edge:api:139:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
         "apiCallId": "api:139",
-        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject"
       },
       {
         "id": "edge:api:14:endpoint:PATCH:/api/auth/users/{userId}/reactivate",
         "apiCallId": "api:14",
         "backendEndpointId": "endpoint:PATCH:/api/auth/users/{userId}/reactivate"
+      },
+      {
+        "id": "edge:api:140:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
+        "apiCallId": "api:140",
+        "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
       },
       {
         "id": "edge:api:15:endpoint:POST:/api/auth/users",
@@ -8521,6 +8546,13 @@
         "frontendCallCount": 1
       },
       {
+        "id": "controller:org",
+        "controller": "org",
+        "domain": "org",
+        "endpointCount": 1,
+        "frontendCallCount": 1
+      },
+      {
         "id": "controller:workflow-inbox",
         "controller": "workflow-inbox",
         "domain": "workflow",
@@ -8539,13 +8571,6 @@
         "controller": "migrations",
         "domain": "admin",
         "endpointCount": 2,
-        "frontendCallCount": 0
-      },
-      {
-        "id": "controller:org",
-        "controller": "org",
-        "domain": "org",
-        "endpointCount": 1,
         "frontendCallCount": 0
       }
     ]
@@ -8579,7 +8604,6 @@
       "endpoint:POST:/api/mobile/auth/sessions",
       "endpoint:DELETE:/api/mobile/auth/sessions/{sessionId}",
       "endpoint:POST:/api/mobile/checklists/instances/{checklistInstanceId}/acknowledge",
-      "endpoint:GET:/api/org/stores",
       "endpoint:GET:/api/reports/leaderboards/closed",
       "endpoint:GET:/api/snapshots/lookups",
       "endpoint:GET:/api/snapshots/runs",

@@ -123,26 +123,32 @@ test('store workforce page shows only region manager read-scope rows and opens d
     actionStoreIds: [],
     legacyAssignedStoreIds: [],
   }))
-  await routeUnexpectedWorkforceDetailCalls(page, workforceCalls)
+  await routeRegionWorkforceReadCalls(page, workforceCalls)
 
   await page.goto('/store/workforce')
 
   await expect(page.getByTestId('store-workforce-page')).toBeVisible()
-  await expect(page.getByText(demoStoreId).first()).toBeVisible()
-  await expect(page.getByText(regionSecondStoreId).first()).toBeVisible()
+  await expect(page.getByText('IstinyePark Demo Store').first()).toBeVisible()
+  await expect(page.getByText('Marmara Forum').first()).toBeVisible()
   await expect(page.getByText(outsideStoreId)).toHaveCount(0)
   await expect(page.getByText('Magazaya git yok')).toBeVisible()
-  expect(workforceCalls).toEqual([])
+  expect(workforceCalls).toEqual([
+    demoStoreId,
+    regionSecondStoreId,
+  ])
 
-  const firstRow = page.getByTestId('store-workforce-region-row').filter({ hasText: demoStoreId })
+  const firstRow = page.getByTestId('store-workforce-region-row').filter({ hasText: 'IstinyePark Demo Store' })
   await firstRow.getByRole('button', { name: /Detay|Open detail/i }).click()
 
   const detail = page.getByTestId('store-workforce-region-detail-dialog')
   await expect(detail).toBeVisible()
-  await expect(detail).toContainText(demoStoreId)
-  await expect(detail).toContainText(/Kaynak gerekli|Data source required/)
+  await expect(detail).toContainText('IstinyePark Demo Store')
+  await expect(detail).toContainText('Store Personnel')
   await expect(page).toHaveURL(/\/store\/workforce$/)
-  expect(workforceCalls).toEqual([])
+  expect(workforceCalls).toEqual([
+    demoStoreId,
+    regionSecondStoreId,
+  ])
 })
 
 test('store workforce region detail stays usable on mobile', async ({ page }) => {
@@ -157,17 +163,24 @@ test('store workforce region detail stays usable on mobile', async ({ page }) =>
     actionStoreIds: [],
     legacyAssignedStoreIds: [],
   }))
-  await routeUnexpectedWorkforceDetailCalls(page, workforceCalls)
+  await routeRegionWorkforceReadCalls(page, workforceCalls)
 
   await page.goto('/store/workforce')
-  await page.getByTestId('store-workforce-region-row').getByRole('button', { name: /Detay|Open detail/i }).click()
+  await page
+    .getByRole('article')
+    .filter({ hasText: 'IstinyePark Demo Store' })
+    .getByRole('button', { name: /Detay|Open detail/i })
+    .click()
 
   await expect(page.getByTestId('store-workforce-region-detail-dialog')).toBeVisible()
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   )
   expect(hasHorizontalOverflow).toBe(false)
-  expect(workforceCalls).toEqual([])
+  expect(workforceCalls).toEqual([
+    demoStoreId,
+    regionSecondStoreId,
+  ])
 })
 
 test('store workforce route stays hidden for store personnel', async ({ page }) => {
@@ -4049,24 +4062,69 @@ async function routeAuthSession(page: Page, authSession: ReturnType<typeof creat
   })
 }
 
-async function routeUnexpectedWorkforceDetailCalls(page: Page, calls: string[]) {
-  const patterns = [
-    '**/api/workforce/store-employees**',
-    '**/api/workforce/position-options**',
-    '**/api/workforce/seller-code-requests**',
-    '**/api/workforce/offboarding-requests**',
-  ]
-
-  for (const pattern of patterns) {
-    await page.unroute(pattern)
-    await page.route(pattern, async (route) => {
-      calls.push(route.request().url())
-      await route.fulfill({
-        status: 403,
-        json: { message: 'Region workforce detail contract is not expected in this PR.' },
-      })
+async function routeRegionWorkforceReadCalls(page: Page, calls: string[]) {
+  await page.route('**/api/org/stores', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            store_id: demoStoreId,
+            store_code: 'IST-DEMO',
+            store_name: 'IstinyePark Demo Store',
+            region_id: demoRegionId,
+            company_id: '00000000-0000-0000-0000-000000000001',
+            status: 'active',
+          },
+          {
+            store_id: regionSecondStoreId,
+            store_code: 'MAR-FORUM',
+            store_name: 'Marmara Forum',
+            region_id: demoRegionId,
+            company_id: '00000000-0000-0000-0000-000000000001',
+            status: 'active',
+          },
+        ],
+        meta: { count: 2, total: 2, limit: 2, offset: 0 },
+      },
     })
-  }
+  })
+
+  await page.route('**/api/workforce/store-employees**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const storeId = requestUrl.searchParams.get('storeId') ?? ''
+    calls.push(storeId)
+
+    if (storeId === regionSecondStoreId) {
+      await route.fulfill({
+        json: {
+          items: [
+            {
+              ...storeEmployeesFixture.items[0],
+              employeeId: '00000000-0000-0000-0000-000000000203',
+              displayName: 'Region Second Personnel',
+              externalEmployeeRef: 'FM8101',
+              storeId: regionSecondStoreId,
+              assignmentStartDate: '2025-12-01',
+            },
+          ],
+          meta: { count: 1, total: 1, limit: 1, offset: 0 },
+        },
+      })
+      return
+    }
+
+    await route.fulfill({ json: storeEmployeesFixture })
+  })
+
+  await page.route('**/api/workforce/position-options**', async (route) => {
+    await route.fulfill({ status: 403, json: { message: 'Position options are not used by region workforce read view.' } })
+  })
+  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+    await route.fulfill({ status: 403, json: { message: 'Workforce requests are not used by region workforce read view.' } })
+  })
+  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
+    await route.fulfill({ status: 403, json: { message: 'Offboarding requests are not used by region workforce read view.' } })
+  })
 }
 
 async function routeStoreSurfaceApi(page: Page) {
