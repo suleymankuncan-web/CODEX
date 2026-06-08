@@ -512,9 +512,9 @@ function RegionStoreDesktopRow(input: {
     : input.row.isEmployeeError
       ? input.t('storeWorkforce.valueNotConfigured')
       : input.row.employees.length.toString()
-  const normActualValue = input.row.isEmployeeLoading || input.row.isHeadcountLoading
+  const normActualValue = input.row.isHeadcountLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
-    : input.row.isEmployeeError || input.row.isHeadcountError
+    : input.row.isHeadcountError
       ? input.t('storeWorkforce.valueNotConfigured')
       : formatNormActualLabel({
           actualFallback: input.row.employees.length,
@@ -607,9 +607,9 @@ function RegionStoreMobileCard(input: {
         <MiniValue
           label={input.t('storeWorkforce.normActual')}
           value={
-            input.row.isEmployeeLoading || input.row.isHeadcountLoading
+            input.row.isHeadcountLoading
               ? input.t('storeWorkforce.sourceWaitingShort')
-              : input.row.isEmployeeError || input.row.isHeadcountError
+              : input.row.isHeadcountError
                 ? input.t('storeWorkforce.valueNotConfigured')
               : formatNormActualLabel({
                   actualFallback: input.row.employees.length,
@@ -801,9 +801,9 @@ function RegionStoreDetailDialog(input: {
               label={input.t('storeWorkforce.normActual')}
               value={
                 input.row
-                  ? input.row.isEmployeeLoading || input.row.isHeadcountLoading
+                  ? input.row.isHeadcountLoading
                     ? input.t('storeWorkforce.sourceWaitingShort')
-                    : input.row.isEmployeeError || input.row.isHeadcountError
+                    : input.row.isHeadcountError
                     ? input.t('storeWorkforce.valueNotConfigured')
                     : formatNormActualLabel({
                       actualFallback: input.row.employees.length,
