@@ -567,6 +567,12 @@ function RegionStoreMobileCard(input: {
   const personnelValue = input.row.isLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
     : input.row.employees.length.toString()
+  const statusTone = input.row.isError ? 'rose' : input.row.isLoading ? 'amber' : 'cyan'
+  const statusLabel = input.row.isError
+    ? input.t('storeWorkforce.valueNotConfigured')
+    : input.row.isLoading
+      ? input.t('storeWorkforce.sourceWaitingShort')
+      : input.t('storeWorkforce.realDataBadge')
 
   return (
     <article
@@ -575,9 +581,7 @@ function RegionStoreMobileCard(input: {
     >
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
         <StoreIdentity row={input.row} />
-        <Status tone={input.row.isLoading ? 'amber' : 'cyan'}>
-          {input.row.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.t('storeWorkforce.realDataBadge')}
-        </Status>
+        <Status tone={statusTone}>{statusLabel}</Status>
       </div>
       <div className="tw:grid tw:grid-cols-2 tw:gap-2">
         <MiniValue label={input.t('storeWorkforce.personnelColumn')} value={personnelValue} />
@@ -587,6 +591,8 @@ function RegionStoreMobileCard(input: {
           value={
             input.row.isLoading
               ? input.t('storeWorkforce.sourceWaitingShort')
+              : input.row.isError
+                ? input.t('storeWorkforce.valueNotConfigured')
               : formatNormActualLabel({
                   actualFallback: input.row.employees.length,
                   headcountGap: input.row.headcountGap,
