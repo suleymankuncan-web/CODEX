@@ -28,10 +28,46 @@ test('operations surface uses AdminSurface primitives without legacy dashboard c
   await expect(page.getByTestId('operations-action-list')).toBeVisible()
   await expect(page.getByTestId('operations-signal-freshness')).toContainText('Live')
   await expect(page.getByTestId('operations-backend-signal')).toContainText('Ready')
+  await expect(page.getByTestId('operations-api-failure-snapshot')).toContainText('No API failures were captured in this browser session.')
 
   await expect(
     page.locator('.hero-panel, .metric-card, .accent-chip, .panel-heading, .queue-row, .key-item, .status-pill'),
   ).toHaveCount(0)
+})
+
+test('operations surface reads local sanitized API failure diagnostics', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__STORE_OPS_API_FAILURES__ = [
+      {
+        event: 'api.failure',
+        route: '/admin/operations?tab=:value',
+        method: 'GET',
+        path: '/reports/rankings/:uuid',
+        queryKeys: ['limit', 'periodStart'],
+        status: 503,
+        durationMs: 127,
+        retryable: true,
+        requestAttempt: 2,
+        errorCategory: 'http',
+        errorMessage: 'Request failed with status 503',
+        requestId: 'req-ops-1',
+        occurredAt: '2026-06-08T10:00:00.000Z',
+      },
+    ]
+  })
+
+  await page.goto('/admin/operations')
+
+  const snapshot = page.getByTestId('operations-api-failure-snapshot')
+  await expect(snapshot).toContainText('Recent API failure snapshot')
+  await expect(snapshot).toContainText('window.__STORE_OPS_API_FAILURES__')
+  await expect(snapshot).toContainText('No provider, backend endpoint, DB record, or alert delivery was added')
+  await expect(snapshot).toContainText('/reports/rankings/:uuid')
+  await expect(snapshot).toContainText('GET / 503 / http')
+  await expect(snapshot).toContainText('Retryable')
+  await expect(snapshot).toContainText('query: limit, periodStart')
+  await expect(snapshot).toContainText('request: req-ops-1')
+  await expect(snapshot).toContainText('127 ms')
 })
 
 test('operations surface remains mobile-width bounded', async ({ page }) => {
