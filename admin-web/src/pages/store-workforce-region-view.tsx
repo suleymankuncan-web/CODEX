@@ -21,14 +21,16 @@ import {
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getAssignedStoreIds, getReadRegionIds, getReadStoreIds } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
-import { getOrgStores, getStoreEmployees } from '../features/workforce/api'
+import { getOrgStores, getStoreEmployees, getStoreHeadcountGap } from '../features/workforce/api'
 import { formatNumber } from '../lib/format'
+import { formatNormActualLabel, getMonthRange } from './store-workforce-headcount'
 import { deriveWorkforceSummary } from './store-workforce-model'
 import {
   ModalPersonnelPane,
   ModalPositionPane,
   ModalRequestsPlaceholder,
 } from './store-workforce-region-detail-panes'
+import { MiniBars, MiniMetric, MiniValue } from './store-workforce-region-metrics'
 import type { RegionStoreRow } from './store-workforce-region-model'
 
 type DetailTab = 'people' | 'positions' | 'requests'
@@ -82,6 +84,7 @@ export function RegionWorkforceView(input: {
 }) {
   const { locale, t } = useLocalization()
   const now = useMemo(() => new Date(), [])
+  const currentMonthRange = useMemo(() => getMonthRange(now), [now])
   const explicitReadStoreIds = useMemo(() => getUniqueIds(getReadStoreIds(input.authSummary)), [input.authSummary])
   const assignedStoreIds = useMemo(() => getUniqueIds(getAssignedStoreIds(input.authSummary)), [input.authSummary])
   const fallbackStoreIds = useMemo(
@@ -122,21 +125,44 @@ export function RegionWorkforceView(input: {
       enabled: Boolean(store.storeId),
     })),
   })
+  const storeHeadcountQueries = useQueries({
+    queries: scopedStores.map((store) => ({
+      queryKey: [
+        'workforce-headcount-gap',
+        'store-workforce-region',
+        store.storeId,
+        currentMonthRange.periodStart,
+        currentMonthRange.periodEnd,
+      ],
+      queryFn: () => getStoreHeadcountGap({
+        storeId: store.storeId,
+        periodStart: currentMonthRange.periodStart,
+        periodEnd: currentMonthRange.periodEnd,
+      }),
+      enabled: Boolean(store.storeId),
+    })),
+  })
   const scopedRows = useMemo(
     () =>
       scopedStores.map((store, index) => {
         const query = storeEmployeeQueries[index]
+        const headcountQuery = storeHeadcountQueries[index]
         const employees = query?.data?.items ?? []
 
         return {
           ...store,
           employees,
-          isLoading: query?.isLoading ?? false,
-          isError: query?.isError ?? false,
+          headcountGap: headcountQuery?.data ?? null,
+          isLoading: (query?.isLoading ?? false) || (headcountQuery?.isLoading ?? false),
+          isError: (query?.isError ?? false) || (headcountQuery?.isError ?? false),
+          isEmployeeLoading: query?.isLoading ?? false,
+          isHeadcountLoading: headcountQuery?.isLoading ?? false,
+          isEmployeeError: query?.isError ?? false,
+          isHeadcountError: headcountQuery?.isError ?? false,
           summary: deriveWorkforceSummary(employees, now, locale),
         }
       }),
-    [locale, now, scopedStores, storeEmployeeQueries],
+    [locale, now, scopedStores, storeEmployeeQueries, storeHeadcountQueries],
   )
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
   const selectedStore = scopedRows.find((row) => row.storeId === selectedStoreId) ?? null
@@ -150,7 +176,7 @@ export function RegionWorkforceView(input: {
     () => deriveWorkforceSummary(allEmployees, now, locale),
     [allEmployees, locale, now],
   )
-  const isAnyStoreLoading = scopedRows.some((row) => row.isLoading)
+  const isAnyStoreLoading = scopedRows.some((row) => row.isEmployeeLoading)
 
   return (
     <section
@@ -250,7 +276,7 @@ export function RegionWorkforceView(input: {
               </div>
 
               {hasStoreRows ? (
-                <RegionStoreTable rows={scopedRows} onSelectStore={setSelectedStoreId} t={t} />
+                <RegionStoreTable rows={scopedRows} locale={locale} onSelectStore={setSelectedStoreId} t={t} />
               ) : (
                 <div className="tw:p-4">
                   <EmptyPrototypeState
@@ -410,6 +436,7 @@ function FilterSelect(input: { ariaLabel: string; values: string[] }) {
 }
 
 function RegionStoreTable(input: {
+  locale: ReturnType<typeof useLocalization>['locale']
   rows: RegionStoreRow[]
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
@@ -451,6 +478,7 @@ function RegionStoreTable(input: {
             {input.rows.map((row) => (
               <RegionStoreDesktopRow
                 key={row.storeId}
+                locale={input.locale}
                 row={row}
                 onSelectStore={input.onSelectStore}
                 t={input.t}
@@ -474,18 +502,26 @@ function RegionStoreTable(input: {
 }
 
 function RegionStoreDesktopRow(input: {
+  locale: ReturnType<typeof useLocalization>['locale']
   row: RegionStoreRow
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
 }) {
-  const personnelValue = input.row.isLoading
+  const personnelValue = input.row.isEmployeeLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
-    : input.row.isError
+    : input.row.isEmployeeError
       ? input.t('storeWorkforce.valueNotConfigured')
       : input.row.employees.length.toString()
-  const normActualValue = input.row.isLoading
+  const normActualValue = input.row.isHeadcountLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
-    : `${input.t('storeWorkforce.valueNotConfigured')} / ${input.row.employees.length}`
+    : input.row.isHeadcountError
+      ? input.t('storeWorkforce.valueNotConfigured')
+      : formatNormActualLabel({
+          actualFallback: input.row.employees.length,
+          headcountGap: input.row.headcountGap,
+          locale: input.locale,
+          notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
+        })
   const statusTone = input.row.isError ? 'rose' : input.row.isLoading ? 'amber' : 'cyan'
   const statusLabel = input.row.isError
     ? input.t('storeWorkforce.valueNotConfigured')
@@ -505,7 +541,11 @@ function RegionStoreDesktopRow(input: {
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
         <span className={cn('tw:text-sm tw:font-medium tw:whitespace-nowrap', textMuted)}>
-          {input.row.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.row.summary.averageTenureLabel}
+          {input.row.isEmployeeLoading
+            ? input.t('storeWorkforce.sourceWaitingShort')
+            : input.row.isEmployeeError
+              ? input.t('storeWorkforce.valueNotConfigured')
+              : input.row.summary.averageTenureLabel}
         </span>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
@@ -514,7 +554,7 @@ function RegionStoreDesktopRow(input: {
         </span>
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
-        <MiniBars inactive={input.row.isLoading || input.row.employees.length === 0} />
+        <MiniBars inactive={input.row.isEmployeeLoading || input.row.employees.length === 0} />
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-2.5 tw:py-[11px]">
         <Status tone={statusTone}>{statusLabel}</Status>
@@ -533,9 +573,17 @@ function RegionStoreMobileCard(input: {
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
 }) {
-  const personnelValue = input.row.isLoading
+  const personnelValue = input.row.isEmployeeLoading
     ? input.t('storeWorkforce.sourceWaitingShort')
+    : input.row.isEmployeeError
+      ? input.t('storeWorkforce.valueNotConfigured')
     : input.row.employees.length.toString()
+  const statusTone = input.row.isError ? 'rose' : input.row.isLoading ? 'amber' : 'cyan'
+  const statusLabel = input.row.isError
+    ? input.t('storeWorkforce.valueNotConfigured')
+    : input.row.isLoading
+      ? input.t('storeWorkforce.sourceWaitingShort')
+      : input.t('storeWorkforce.realDataBadge')
 
   return (
     <article
@@ -544,13 +592,34 @@ function RegionStoreMobileCard(input: {
     >
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
         <StoreIdentity row={input.row} />
-        <Status tone={input.row.isLoading ? 'amber' : 'cyan'}>
-          {input.row.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.t('storeWorkforce.realDataBadge')}
-        </Status>
+        <Status tone={statusTone}>{statusLabel}</Status>
       </div>
       <div className="tw:grid tw:grid-cols-2 tw:gap-2">
         <MiniValue label={input.t('storeWorkforce.personnelColumn')} value={personnelValue} />
-        <MiniValue label={input.t('storeWorkforce.averageTenure')} value={input.row.summary.averageTenureLabel} />
+        <MiniValue
+          label={input.t('storeWorkforce.averageTenure')}
+          value={
+            input.row.isEmployeeLoading
+              ? input.t('storeWorkforce.sourceWaitingShort')
+              : input.row.isEmployeeError
+              ? input.t('storeWorkforce.valueNotConfigured')
+              : input.row.summary.averageTenureLabel
+          }
+        />
+        <MiniValue
+          label={input.t('storeWorkforce.normActual')}
+          value={
+            input.row.isHeadcountLoading
+              ? input.t('storeWorkforce.sourceWaitingShort')
+              : input.row.isHeadcountError
+                ? input.t('storeWorkforce.valueNotConfigured')
+              : formatNormActualLabel({
+                  actualFallback: input.row.employees.length,
+                  headcountGap: input.row.headcountGap,
+                  notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
+                })
+          }
+        />
       </div>
       <DetailButton primary onClick={() => input.onSelectStore(input.row.storeId)}>
         {input.t('storeWorkforce.detailAction')}
@@ -601,32 +670,6 @@ function DetailButton(input: {
       {input.children}
       <ChevronRight className="tw:size-4" />
     </Button>
-  )
-}
-
-function MiniBars(input: { inactive?: boolean }) {
-  const muted = input.inactive ? 'tw:opacity-35' : undefined
-
-  return (
-    <div className={cn('tw:flex tw:h-[18px] tw:w-28 tw:items-center tw:gap-1', muted)} aria-hidden="true">
-      <span className="tw:block tw:h-2.5 tw:w-[54%] tw:rounded-full tw:bg-[#6847ff]" />
-      <span className="tw:block tw:h-2.5 tw:w-[16%] tw:rounded-full tw:bg-[#f59e0b]" />
-      <span className="tw:block tw:h-2.5 tw:w-[18%] tw:rounded-full tw:bg-[#20bfd3]" />
-      <span className="tw:block tw:h-2.5 tw:w-[12%] tw:rounded-full tw:bg-[#12a873]" />
-    </div>
-  )
-}
-
-function MiniValue(input: { label: string; value: string }) {
-  return (
-    <div className="tw:rounded-xl tw:border tw:border-[#dfe6f3] tw:bg-white/70 tw:p-2.5">
-      <span className={cn('tw:block tw:text-[11px] tw:font-semibold', textMuted)}>
-        {input.label}
-      </span>
-      <strong className={cn('tw:mt-1 tw:block tw:text-xs tw:font-bold', textInk)}>
-        {input.value}
-      </strong>
-    </div>
   )
 }
 
@@ -719,8 +762,12 @@ function RegionStoreDetailDialog(input: {
             </DialogDescription>
           </div>
           <div className="tw:flex tw:shrink-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
-            <Pill tone={input.row?.isLoading ? 'amber' : 'cyan'}>
-              {input.row?.isLoading ? input.t('storeWorkforce.sourceWaitingShort') : input.t('storeWorkforce.realDataBadge')}
+            <Pill tone={input.row?.isError ? 'rose' : input.row?.isLoading ? 'amber' : 'cyan'}>
+              {input.row?.isError
+                ? input.t('storeWorkforce.valueNotConfigured')
+                : input.row?.isLoading
+                  ? input.t('storeWorkforce.sourceWaitingShort')
+                  : input.t('storeWorkforce.realDataBadge')}
             </Pill>
             <button
               type="button"
@@ -736,8 +783,42 @@ function RegionStoreDetailDialog(input: {
         <div className="tw:grid tw:gap-4 tw:p-4 tw:sm:p-[18px]">
           <div className="tw:grid tw:grid-cols-2 tw:gap-2.5 tw:sm:grid-cols-4">
             <MiniMetric label={input.t('storeWorkforce.storeColumn')} value={input.row?.storeLabel ?? input.t('storeWorkforce.valueNotConfigured')} />
-            <MiniMetric label={input.t('storeWorkforce.personnelColumn')} value={input.row ? input.row.employees.length.toString() : input.t('storeWorkforce.valueNotConfigured')} />
-            <MiniMetric label={input.t('storeWorkforce.averageTenure')} value={input.row?.summary.averageTenureLabel ?? input.t('storeWorkforce.valueNotConfigured')} />
+            <MiniMetric
+              label={input.t('storeWorkforce.personnelColumn')}
+              value={
+                input.row && !input.row.isEmployeeError
+                  ? input.row.employees.length.toString()
+                  : input.t('storeWorkforce.valueNotConfigured')
+              }
+            />
+            <MiniMetric
+              label={input.t('storeWorkforce.averageTenure')}
+              value={
+                input.row
+                  ? input.row.isEmployeeLoading
+                    ? input.t('storeWorkforce.sourceWaitingShort')
+                    : input.row.isEmployeeError
+                      ? input.t('storeWorkforce.valueNotConfigured')
+                      : input.row.summary.averageTenureLabel
+                  : input.t('storeWorkforce.valueNotConfigured')
+              }
+            />
+            <MiniMetric
+              label={input.t('storeWorkforce.normActual')}
+              value={
+                input.row
+                  ? input.row.isHeadcountLoading
+                    ? input.t('storeWorkforce.sourceWaitingShort')
+                    : input.row.isHeadcountError
+                    ? input.t('storeWorkforce.valueNotConfigured')
+                    : formatNormActualLabel({
+                      actualFallback: input.row.employees.length,
+                      headcountGap: input.row.headcountGap,
+                      notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
+                    })
+                  : input.t('storeWorkforce.valueNotConfigured')
+              }
+            />
             <MiniMetric label={input.t('storeWorkforce.openMovements')} value={input.t('storeWorkforce.valueContractShort')} />
           </div>
 
@@ -765,17 +846,6 @@ function RegionStoreDetailDialog(input: {
         </div>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function MiniMetric(input: { label: string; value: string }) {
-  return (
-    <div className="tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:p-3">
-      <span className={cn('tw:text-xs tw:font-semibold', textMuted)}>{input.label}</span>
-      <strong className={cn('tw:mt-1 tw:block tw:truncate tw:text-lg tw:font-bold', textInk)}>
-        {input.value}
-      </strong>
-    </div>
   )
 }
 

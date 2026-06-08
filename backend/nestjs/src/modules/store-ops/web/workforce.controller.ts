@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from "@nestjs/common";
 import { WorkforceService } from "../application/workforce.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
-import { RequireActionScope, RequireScope } from "../../auth/decorators/scope.decorator";
+import { RequireActionScope } from "../../auth/decorators/scope.decorator";
 import { HeadcountGapQueryDto } from "./dto/headcount-gap.query";
 import { SellerCodeReferenceQueryDto } from "./dto/seller-code-reference.query";
 import { CreateSellerCodeRequestDto } from "./dto/create-seller-code-request.dto";
@@ -33,11 +33,28 @@ export class WorkforceController {
   constructor(private readonly workforceService: WorkforceService) {}
 
   @Get("headcount-gap")
-  @RequireScope("store")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN")
   async getHeadcountGap(
+    @Req()
+    request: {
+      user: {
+        scope: {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        };
+        actionScope: {
+          assignedStoreIds: string[];
+        };
+        roleCodes: string[];
+      };
+    },
     @Query() query: HeadcountGapQueryDto,
   ) {
     return this.workforceService.getStoreHeadcountGap({
+      actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      actorRoleCodes: request.user.roleCodes,
       storeId: query.storeId,
       periodStart: query.periodStart,
       periodEnd: query.periodEnd,

@@ -28,6 +28,7 @@ import {
   getPositionOptions,
   getSellerCodeRequests,
   getStoreEmployees,
+  getStoreHeadcountGap,
   resubmitOffboardingRequest,
   resubmitSellerCodeRequest,
   type OffboardingRequest,
@@ -39,6 +40,7 @@ import { OffboardingRequestForm } from './store-approvals-offboarding-form'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
 import { SellerCodeRequestForm } from './store-approvals-seller-code-form'
 import { createStoreApprovalsPageState, storeApprovalsPageReducer } from './store-approvals-model'
+import { formatNormActualLabel, getMonthRange, hasPlannedHeadcount } from './store-workforce-headcount'
 import {
   buildWorkforceRequestSummaries,
   deriveWorkforceSummary,
@@ -70,7 +72,6 @@ import { RegionWorkforceView } from './store-workforce-region-view'
 
 type WorkforceMode = 'region' | 'store'
 type WorkforceDialog = 'sellerCodeRequest' | 'offboardingRequest' | 'returnedRequests'
-
 function resolveWorkforceMode(authSummary: AuthSessionSummary | null): WorkforceMode {
   const roles = authSummary?.user.roleCodes ?? []
   return roles.includes('REGION_MANAGER') ? 'region' : 'store'
@@ -98,6 +99,7 @@ function StoreManagerWorkforce(input: {
   const requestedStoreId = searchParams.get('storeId')?.trim() ?? ''
   const storeId = storeIds.includes(requestedStoreId) ? requestedStoreId : (storeIds[0] ?? '')
   const now = useMemo(() => new Date(), [])
+  const currentMonthRange = useMemo(() => getMonthRange(now), [now])
   const loadedHandoffRef = useRef<string | null>(null)
   const [activeDialog, setActiveDialog] = useState<WorkforceDialog | null>(null)
   const [personnelSearch, setPersonnelSearch] = useState('')
@@ -122,6 +124,21 @@ function StoreManagerWorkforce(input: {
   const storeEmployeesQuery = useQuery({
     queryKey: ['workforce-store-employees', 'store-workforce', scopeKey],
     queryFn: () => getStoreEmployees(storeId),
+    enabled,
+  })
+  const headcountGapQuery = useQuery({
+    queryKey: [
+      'workforce-headcount-gap',
+      'store-workforce',
+      scopeKey,
+      currentMonthRange.periodStart,
+      currentMonthRange.periodEnd,
+    ],
+    queryFn: () => getStoreHeadcountGap({
+      storeId,
+      periodStart: currentMonthRange.periodStart,
+      periodEnd: currentMonthRange.periodEnd,
+    }),
     enabled,
   })
   const positionOptionsQuery = useQuery({
@@ -159,6 +176,17 @@ function StoreManagerWorkforce(input: {
   })
   const openMovementCount = requests.filter((item) => !isClosedWorkforceStatus(item.status)).length
   const workforceSummary = deriveWorkforceSummary(employees, now, locale)
+  const normActualLabel = useMemo(
+    () => formatNormActualLabel({
+      actualFallback: employees.length,
+      headcountGap: headcountGapQuery.data ?? null,
+      locale,
+      notConfiguredLabel: t('storeWorkforce.valueNotConfigured'),
+    }),
+    [employees.length, headcountGapQuery.data, locale, t],
+  )
+  const normActualValue = headcountGapQuery.isLoading ? t('storeWorkforce.sourceWaitingShort') : headcountGapQuery.isError ? t('storeWorkforce.valueNotConfigured') : normActualLabel
+  const normActualNote = !headcountGapQuery.isError && hasPlannedHeadcount(headcountGapQuery.data ?? null) ? t('storeWorkforce.realDataBadge') : t('storeWorkforce.normActualHonestNote')
   const positionOptions = useMemo(
     () => Array.from(new Set(employees.map((item) => item.positionName).filter(Boolean))).sort(),
     [employees],
@@ -482,8 +510,8 @@ function StoreManagerWorkforce(input: {
           icon={<BriefcaseBusiness className="tw:size-5" />}
           iconClassName="tw:bg-[#fff1d9] tw:text-[#f59e0b]"
           title={t('storeWorkforce.normActual')}
-          value={t('storeWorkforce.valueNotConfigured')}
-          note={t('storeWorkforce.normActualHonestNote')}
+          value={normActualValue}
+          note={normActualNote}
         />
         <StoreWorkforceMetricCard
           icon={<ClipboardList className="tw:size-5" />}
