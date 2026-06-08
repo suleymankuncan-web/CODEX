@@ -791,7 +791,9 @@ function RegionStoreDetailDialog(input: {
               label={input.t('storeWorkforce.normActual')}
               value={
                 input.row
-                  ? formatNormActualLabel({
+                  ? input.row.isError
+                    ? input.t('storeWorkforce.valueNotConfigured')
+                    : formatNormActualLabel({
                       actualFallback: input.row.employees.length,
                       headcountGap: input.row.headcountGap,
                       notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
