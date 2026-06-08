@@ -33,6 +33,7 @@ import { getWorkflowInbox } from '../features/workflow/api'
 import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { DataQualitySignalPanel, type DataQualitySnapshot } from './operations-data-quality-signal-panel'
+import { OperationsApiFailureSnapshotPanel } from './operations-api-failure-snapshot-panel'
 import { OperationsHero, OperationsReadinessStrip, type SignalStatus } from './operations-hero'
 import { buildOperatorActions } from './operations-operator-action-model'
 import { OperatorActionListPanel } from './operations-operator-action-list'
@@ -460,13 +461,11 @@ export function OperationsControlTowerPage() {
       <SignalFreshnessPanel items={signalFreshness} locale={locale} t={t} />
 
       <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
-        <BackendSignalPanel
-          health={healthQuery.data}
-          isError={healthQuery.isError}
-          error={healthQuery.error}
-          locale={locale}
-          t={t}
-        />
+        <BackendSignalPanel error={healthQuery.error} health={healthQuery.data} isError={healthQuery.isError} locale={locale} t={t} />
+        <OperationsApiFailureSnapshotPanel locale={locale} t={t} />
+      </section>
+
+      <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
         <ProviderBlockersPanel t={t} />
       </section>
 
