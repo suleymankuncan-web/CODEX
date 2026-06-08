@@ -185,6 +185,8 @@ function StoreManagerWorkforce(input: {
     }),
     [employees.length, headcountGapQuery.data, locale, t],
   )
+  const normActualValue = headcountGapQuery.isLoading ? t('storeWorkforce.sourceWaitingShort') : headcountGapQuery.isError ? t('storeWorkforce.valueNotConfigured') : normActualLabel
+  const normActualNote = !headcountGapQuery.isError && hasPlannedHeadcount(headcountGapQuery.data ?? null) ? t('storeWorkforce.realDataBadge') : t('storeWorkforce.normActualHonestNote')
   const positionOptions = useMemo(
     () => Array.from(new Set(employees.map((item) => item.positionName).filter(Boolean))).sort(),
     [employees],
@@ -508,12 +510,8 @@ function StoreManagerWorkforce(input: {
           icon={<BriefcaseBusiness className="tw:size-5" />}
           iconClassName="tw:bg-[#fff1d9] tw:text-[#f59e0b]"
           title={t('storeWorkforce.normActual')}
-          value={headcountGapQuery.isLoading ? t('storeWorkforce.sourceWaitingShort') : normActualLabel}
-          note={
-            hasPlannedHeadcount(headcountGapQuery.data ?? null)
-              ? t('storeWorkforce.realDataBadge')
-              : t('storeWorkforce.normActualHonestNote')
-          }
+          value={normActualValue}
+          note={normActualNote}
         />
         <StoreWorkforceMetricCard
           icon={<ClipboardList className="tw:size-5" />}
