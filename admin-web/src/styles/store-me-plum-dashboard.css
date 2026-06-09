@@ -315,14 +315,14 @@
 }
 
 .store-me-line-chart line {
-  stroke: rgba(92, 86, 116, 0.18);
-  stroke-dasharray: 5 7;
+  stroke: rgba(92, 86, 116, 0.24);
+  stroke-dasharray: 6 8;
 }
 
 .store-me-line-chart circle {
   fill: var(--store-me-surface-strong);
   stroke: url(#storeMePlumLine);
-  stroke-width: 5;
+  stroke-width: 6;
 }
 
 .store-me-line-chart text {
