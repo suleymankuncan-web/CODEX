@@ -76,10 +76,10 @@ type ChartPoint = {
 
 const chartWidth = 720
 const chartHeight = 292
-const chartTop = 28
-const chartBottom = 214
-const chartLeft = 42
-const chartRight = 678
+const chartTop = 64
+const chartBottom = 198
+const chartLeft = 92
+const chartRight = 628
 
 const actionIconById: Record<TodayAction['icon'], typeof ListChecks> = {
   data: Database,
@@ -456,20 +456,21 @@ export function StoreMyPerformancePlumDashboard({
                   <stop offset="100%" stopColor="var(--store-me-teal)" />
                 </linearGradient>
                 <linearGradient id="storeMePlumArea" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="var(--store-me-teal)" stopOpacity="0.2" />
-                  <stop offset="100%" stopColor="var(--store-me-purple)" stopOpacity="0" />
+                  <stop offset="0%" stopColor="var(--store-me-teal)" stopOpacity="0.28" />
+                  <stop offset="100%" stopColor="var(--store-me-purple)" stopOpacity="0.04" />
                 </linearGradient>
               </defs>
               {[0, 1, 2, 3].map((line) => {
                 const y = chartTop + ((chartBottom - chartTop) * line) / 3
 
-                return <line key={line} x1="24" x2="696" y1={y} y2={y} />
+                return <line key={line} x1={chartLeft - 20} x2={chartRight + 20} y1={y} y2={y} />
               })}
               <path d={chart.areaPath} fill="url(#storeMePlumArea)" />
-              <path d={chart.linePath} fill="none" stroke="url(#storeMePlumLine)" strokeLinecap="round" strokeWidth="6" />
+              <path d={chart.linePath} fill="none" stroke="rgba(124, 58, 237, 0.16)" strokeLinecap="round" strokeWidth="14" />
+              <path d={chart.linePath} fill="none" stroke="url(#storeMePlumLine)" strokeLinecap="round" strokeWidth="8" />
               {chart.points.map((point) => (
                 <g key={point.key}>
-                  <circle cx={point.x} cy={point.y} r="8" />
+                  <circle cx={point.x} cy={point.y} r="9" />
                   <text className="checkpoint-value" x={point.x} y={point.y - 16}>
                     {point.scoreLabel}
                   </text>
