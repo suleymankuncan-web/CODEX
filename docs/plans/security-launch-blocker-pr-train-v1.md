@@ -254,6 +254,9 @@ Allowed within this plan:
 - create `codex/` branches for each PR;
 - edit docs, tests, backend auth transport, frontend session transport, env
   examples, and guard scripts within the scoped train;
+- implement scoped runtime token and cookie handling inside the browser-session
+  endpoint, resolver, middleware, and tests using redacted fixtures or synthetic
+  test values only;
 - run local release gates and GitHub/Vercel checks;
 - open one small PR at a time with rollback and verification notes.
 
@@ -261,8 +264,11 @@ Stop and ask for explicit owner input before:
 
 - changing provider configuration in Clerk, Render, Vercel, Supabase, or Redis;
 - adding a cookie `Domain` attribute instead of using host-only cookies;
-- handling raw bearer tokens, cookies, passwords, JWTs, private keys, or
-  database URLs;
+- viewing, copying, pasting, logging, committing, or recording real raw bearer
+  tokens, cookies, passwords, JWTs, private keys, database URLs, Redis URLs, or
+  provider secrets in docs, PRs, issues, chat, logs, screenshots, or evidence;
+- using real provider sessions or credentials in local scripts without an
+  explicit evidence runbook step and sanitized output guard;
 - mutating staging or production data;
 - adding a DB migration;
 - changing role/scope authorization semantics;
