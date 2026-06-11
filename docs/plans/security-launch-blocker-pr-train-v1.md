@@ -57,11 +57,12 @@ The browser session transport changes:
 1. The frontend may request a provider token from Clerk in memory.
 2. The frontend sends that token once to a backend browser-session endpoint.
 3. The backend verifies the provider token through the existing auth provider.
-4. The backend issues a short-lived, backend-signed app session cookie.
+4. The backend issues a short-lived, backend-signed app session cookie using
+   the existing `jose` dependency or Node crypto primitives.
 5. The browser stores only cookies:
-   - `HttpOnly` app session cookie, not readable by JavaScript;
+   - host-only `HttpOnly` app session cookie, not readable by JavaScript;
    - readable CSRF nonce cookie, not an auth credential.
-6. API calls from the browser use `credentials: "include"`.
+6. Browser-session creation and API calls use `credentials: "include"`.
 7. Unsafe methods include an `X-CSRF-Token` header matching the CSRF cookie and
    the hash stored inside the signed app session.
 8. Backend request auth resolves cookie sessions for browser traffic and keeps
@@ -70,6 +71,8 @@ The browser session transport changes:
 
 The app session cookie must contain only minimum auth transport claims:
 
+- session envelope version;
+- signing key id;
 - provider key;
 - provider subject;
 - issued-at timestamp;
@@ -87,9 +90,28 @@ backend DB authorization on each request.
 - Backend: NestJS, existing JWT/JWKS provider, Express middleware, existing
   validation/CORS/rate-limit/security header stack.
 - Session: backend-signed short-lived cookie with `HttpOnly`, `Secure` in
-  production, `SameSite=Lax` by default, and CSRF nonce binding.
+  production, host-only scope by default, `SameSite=Lax` by default, and CSRF
+  nonce binding.
 - Verification: existing root script tests, backend unit/e2e tests, frontend
   build/e2e tests, security guard scripts, sanitized staging evidence.
+
+## Plan Review Fixes Applied
+
+The first plan pass left several implementation traps. They are fixed in this
+version:
+
+- frontend transport uses `VITE_BROWSER_SESSION_TRANSPORT`, not a broad
+  `VITE_AUTH_TRANSPORT`, so existing `VITE_AUTH_MODE=mock|bearer` semantics do
+  not drift;
+- backend cookie auth must use a dedicated browser-session resolver and shared
+  authorization merge path, not a synthetic `Authorization` header;
+- Clerk bridge, PKCE callback, logout, Session Readiness copy, and existing
+  bearer smoke/e2e harnesses are all in scope for the frontend migration;
+- session signing, key rotation, TTL, host-only cookie scope, and no
+  cookie-only refresh are explicit requirements;
+- CSRF is scoped to cookie-authenticated protected state-changing requests, with
+  endpoint-specific behavior for session create/clear;
+- mobile session endpoints remain out of scope.
 
 ## Findings Being Addressed
 
@@ -101,6 +123,14 @@ Current risk:
   frontend env and browser storage.
 - The same session layer can write bearer and provider id tokens to
   `sessionStorage`.
+- `admin-web/src/features/auth/clerk-session.tsx` currently syncs Clerk tokens
+  into the bearer session path.
+- `admin-web/src/pages/AuthCallbackPage.tsx` currently writes PKCE token
+  exchange results through `startBearerSession`.
+- `admin-web/src/pages/AuthLogoutPage.tsx` can depend on a stored provider id
+  token for `id_token_hint`.
+- Session Readiness and Auth Flow localized copy still describes sessionStorage
+  bearer-token behavior.
 - The API client sends browser-owned `Authorization: Bearer ...` headers.
 
 Why this blocks launch:
@@ -145,6 +175,9 @@ Current risk:
 Required outcome:
 
 - Environment inventory names the cookie browser-session variables.
+- `VITE_AUTH_MODE` keeps its existing `mock` versus `bearer` meaning.
+- `VITE_BROWSER_SESSION_TRANSPORT` selects whether real browser sessions use
+  legacy bearer transport or cookie transport.
 - Production-like config fails closed when cookie sessions are enabled without
   a signing secret or secure cookie settings.
 - Local/dev mocks remain allowed only where existing mock auth rules allow them.
@@ -191,6 +224,7 @@ This train does not:
 - create a new identity provider;
 - add backend refresh-token storage;
 - add long-lived server-side sessions;
+- change mobile session endpoints or mobile session storage;
 - change role names, scope semantics, or assigned-store authorization;
 - change API response shapes except for the new browser-session endpoints;
 - change database schema unless a later PR is explicitly rescoped and approved;
@@ -213,11 +247,13 @@ Allowed within this plan:
 Stop and ask for explicit owner input before:
 
 - changing provider configuration in Clerk, Render, Vercel, Supabase, or Redis;
+- adding a cookie `Domain` attribute instead of using host-only cookies;
 - handling raw bearer tokens, cookies, passwords, JWTs, private keys, or
   database URLs;
 - mutating staging or production data;
 - adding a DB migration;
 - changing role/scope authorization semantics;
+- extending browser app-session TTL beyond one hour;
 - removing bearer support from protected smoke scripts;
 - changing API response contracts outside the new session endpoints;
 - claiming protected staging evidence without a real session;
@@ -267,19 +303,38 @@ Expected files:
 
 Implementation tasks:
 
+- define production-like for this train as `NODE_ENV=production` or any deployed
+  staging/production environment using a real provider session. Do not use
+  `READINESS_PROFILE=controlled-pilot` to weaken cookie security;
 - add backend env contract:
   - `BROWSER_SESSION_COOKIE_ENABLED`;
   - `BROWSER_SESSION_COOKIE_NAME`;
   - `BROWSER_SESSION_CSRF_COOKIE_NAME`;
   - `BROWSER_SESSION_SECRET`;
+  - `BROWSER_SESSION_PREVIOUS_SECRET`;
   - `BROWSER_SESSION_TTL_SECONDS`;
+  - `BROWSER_SESSION_RENEWAL_WINDOW_SECONDS`;
   - `BROWSER_SESSION_SAME_SITE`;
 - add frontend env contract:
-  - `VITE_AUTH_TRANSPORT` with allowed values `bearer` and `cookie`;
+  - `VITE_BROWSER_SESSION_TRANSPORT` with allowed values `bearer` and
+    `cookie`;
 - require `BROWSER_SESSION_SECRET` only when cookie sessions are enabled in a
   production-like backend;
+- reject default, empty, short, or low-entropy browser-session secrets in
+  production-like backends;
+- sign new cookies only with `BROWSER_SESSION_SECRET` and verify with
+  `BROWSER_SESSION_SECRET` plus optional `BROWSER_SESSION_PREVIOUS_SECRET`;
 - require `Secure` cookies when `NODE_ENV=production`;
+- default cookies to host-only scope with no `Domain` attribute;
 - reject `SameSite=None` unless secure cookies are enabled;
+- keep `SameSite=None` behind explicit owner approval because the current
+  staging and production frontend/API hosts are same-site subdomains;
+- define `BROWSER_SESSION_TTL_SECONDS` default and upper bound. V1 default is
+  900 seconds; production-like values above 3600 seconds require explicit owner
+  approval;
+- define renewal as provider-backed only. A cookie alone cannot refresh itself;
+  frontend must re-derive a fresh app session from the active Clerk/provider
+  browser session;
 - keep committed examples placeholder-only;
 - document that `VITE_BEARER_TOKEN` remains local-only and must not be used for
   launch browser sessions.
@@ -295,6 +350,8 @@ Merge criteria:
 - env names are documented, guarded, and represented in examples;
 - no auth behavior changes yet;
 - production-like startup cannot enable cookie sessions insecurely.
+- `VITE_AUTH_MODE` keeps the existing `mock`/`bearer` contract and is not
+  overloaded as the browser transport flag.
 
 Rollback:
 
@@ -325,7 +382,19 @@ Implementation tasks:
   - returns only sanitized session metadata already safe for the browser.
 - add `DELETE /api/auth/browser-session`:
   - clears the app session and CSRF cookies;
-  - does not require raw token evidence.
+  - does not require raw token evidence;
+  - does not perform any DB or authorization mutation in V1.
+- extract the current JWT provider-user plus DB authorization merge into a
+  shared internal path in `AuthContextService` so JWT and cookie transport use
+  the same role/scope/assigned-store resolution;
+- add a dedicated browser-session resolver:
+  - verify the signed app session envelope;
+  - reject expired, malformed, unsigned, wrong-key, wrong-version, or
+    unsupported-algorithm cookies;
+  - derive provider key and provider subject from the signed envelope;
+  - call the shared DB authorization merge path;
+  - do not synthesize a fake `Authorization` header and do not feed the app
+    session cookie into `JwtAuthProvider`.
 - add cookie request auth:
   - read the app session cookie;
   - verify signature and expiry;
@@ -335,22 +404,38 @@ Implementation tasks:
   - prefer explicit bearer auth when both bearer and cookie are present during
     the migration window.
 - add CSRF middleware for cookie-authenticated unsafe requests:
-  - protect `POST`, `PUT`, `PATCH`, and `DELETE`;
+  - protect cookie-authenticated protected `POST`, `PUT`, `PATCH`, and
+    `DELETE` domain routes;
   - skip `GET`, `HEAD`, and `OPTIONS`;
   - skip bearer-authenticated script calls while bearer support remains;
   - verify header, readable CSRF cookie, and signed session CSRF hash;
   - return 403 without session internals on failure.
+- keep browser-session create and clear endpoint behavior explicit:
+  - create requires a valid provider bearer token and does not require an
+    existing CSRF token;
+  - clear may clear cookies without trusting the session and returns no
+    sensitive output;
+  - any future server-side logout mutation is a separate CSRF-protected PR.
+- ensure CORS preflight allows `X-CSRF-Token` only through the existing explicit
+  origin allowlist and credentials contract.
 - keep `/api/health`, `/api/health/live`, and `/api/auth/bootstrap` public.
 
 Verification:
 
 - backend unit tests for cookie flag construction;
+- backend unit tests for app-session signing, previous-secret verification, and
+  current-secret signing;
 - backend auth tests for valid session, expired session, malformed session, and
   logout clear-cookie behavior;
+- backend tests proving JWT bearer auth and cookie auth produce equivalent
+  app user role/scope/action-scope results for the same mapped provider subject;
 - backend CSRF tests for unsafe methods with missing, mismatched, and valid
   CSRF tokens;
+- backend CSRF tests proving browser-session create and clear follow their
+  endpoint-specific rules;
 - backend tests proving bearer-authenticated smoke/script requests still work;
-- `npm.cmd --prefix backend/nestjs run build` if available;
+- `npm.cmd --prefix backend/nestjs run test -- --runInBand`;
+- `npm.cmd --prefix backend/nestjs run build`;
 - `npm.cmd run test:scripts`.
 
 Merge criteria:
@@ -361,6 +446,8 @@ Merge criteria:
 - cookies use `HttpOnly`, `Secure` in production, bounded TTL, and approved
   `SameSite`;
 - CSRF guard is active only where cookie auth applies.
+- no cookie-authenticated request can bypass the existing app DB role/scope and
+  assigned-store authorization path.
 
 Rollback:
 
@@ -377,23 +464,44 @@ Purpose:
 Expected files:
 
 - `admin-web/src/features/session/session-storage.ts`;
-- frontend Clerk bridge/session files under `admin-web/src`;
-- frontend API client/fetch helper files under `admin-web/src`;
+- `admin-web/src/features/session/session-context.tsx`;
+- `admin-web/src/features/session/session-context-value.ts`;
+- `admin-web/src/features/auth/clerk-session.tsx`;
+- `admin-web/src/pages/AuthCallbackPage.tsx`;
+- `admin-web/src/pages/AuthLogoutPage.tsx`;
+- `admin-web/src/lib/api.ts`;
+- `admin-web/src/features/localization/messages/auth-flow.ts`;
+- `admin-web/src/features/localization/messages/session-readiness.ts`;
 - frontend auth/session tests and Playwright specs.
 
 Implementation tasks:
 
-- when `VITE_AUTH_TRANSPORT=cookie`, request Clerk/provider token only in
-  memory;
+- when `VITE_BROWSER_SESSION_TRANSPORT=cookie`, request Clerk/provider token
+  only in memory;
 - call `POST /api/auth/browser-session` with the token;
 - never write bearer, id, access, refresh, or provider tokens to
   `localStorage` or `sessionStorage`;
+- allow the existing transient PKCE `code_verifier` sessionStorage value only
+  for the pre-auth authorization-code exchange. It must still be removed after
+  exchange and must never appear in evidence;
 - keep non-secret UI preferences out of scope and do not confuse them with
   token storage;
-- configure browser API calls with `credentials: "include"`;
+- configure browser-session create/clear and normal browser API calls with
+  `credentials: "include"` in cookie transport;
 - attach `X-CSRF-Token` from the readable CSRF cookie for unsafe methods;
 - call `DELETE /api/auth/browser-session` on logout and clear any legacy token
   storage keys defensively;
+- update Clerk refresh handling so token refresh creates a new backend app
+  session instead of writing a token to sessionStorage;
+- update PKCE callback handling so `access_token` is posted to the backend
+  browser-session endpoint in cookie transport and `id_token` is not persisted;
+- update logout behavior:
+  - Clerk sessions use Clerk `signOut` plus backend cookie clear;
+  - generic OIDC logout must not require storing an id token in browser storage;
+  - provider logout without `id_token_hint` is acceptable in cookie transport
+    unless the provider owner explicitly requires a different flow;
+- update user-facing Auth Flow and Session Readiness copy so it no longer says
+  real provider tokens are stored in sessionStorage;
 - keep local/mock auth behavior available only under existing mock rules;
 - keep bearer mode available for approved smoke scripts until closeout.
 
@@ -402,7 +510,13 @@ Verification:
 - frontend unit tests for no token writes in cookie transport;
 - frontend API client tests for `credentials: "include"`;
 - unsafe-method tests for CSRF header attachment;
+- Clerk bridge tests for cookie-session creation and renewal without
+  sessionStorage token writes;
+- PKCE callback tests for browser-session endpoint handoff without id-token
+  persistence;
 - logout tests proving legacy storage keys are cleared;
+- localization/copy checks or targeted e2e assertions proving the visible auth
+  explanation no longer claims sessionStorage token storage for launch mode;
 - targeted Playwright auth/session smoke if available;
 - `npm.cmd --prefix admin-web run build`;
 - `npm.cmd run test:scripts`.
@@ -416,8 +530,8 @@ Merge criteria:
 
 Rollback:
 
-- switch `VITE_AUTH_TRANSPORT` back to `bearer` for controlled rollback while
-  investigating;
+- switch `VITE_BROWSER_SESSION_TRANSPORT` back to `bearer` for controlled
+  rollback while investigating;
 - do not remove bearer backend support until PR-5 closeout.
 
 ### PR-4: Token Storage Regression Guard
@@ -438,7 +552,8 @@ Implementation tasks:
 
 - add or extend a script guard that rejects launch browser code paths writing
   bearer, id, access, refresh, or provider token values to browser storage;
-- keep narrowly allowed local/mock keys documented if any remain;
+- keep narrowly allowed local/mock and pre-auth PKCE keys documented if any
+  remain;
 - extend sanitized evidence guard to reject raw cookies, JWT-like strings,
   authorization codes, PKCE verifiers, and storage dumps;
 - update auth edge evidence language from "local bearer token storage is empty"
@@ -455,6 +570,10 @@ Merge criteria:
 - guard fails on obvious reintroduction of `sessionStorage` token writes in the
   provider browser path;
 - guard does not block non-secret UI preferences;
+- guard does not block the transient PKCE verifier storage path, but evidence
+  guard rejects any captured verifier value;
+- existing bearer-based smoke/e2e helpers remain allowed only in test/script
+  files and only with redacted output;
 - evidence guard still accepts sanitized auth/session facts.
 
 Rollback:
@@ -481,14 +600,19 @@ Expected files:
 Implementation tasks:
 
 - add a smoke path that logs in through the real provider and confirms:
-  - app session cookie exists with expected flags;
-  - CSRF cookie exists and is not an auth credential;
+  - app session cookie exists with expected flags, with value redacted before
+    output;
+  - CSRF cookie exists and is not an auth credential, with value redacted before
+    output;
   - `localStorage` and `sessionStorage` have no raw provider/bearer tokens;
   - an assigned-store protected action succeeds;
   - an unassigned-store action still returns 403;
   - unsafe request without CSRF returns 403;
   - logout clears app session and CSRF cookies;
   - evidence output is sanitized.
+- keep legacy bearer-token staging smokes available for controlled script
+  checks, but do not use them as proof that launch browser token storage is
+  fixed.
 - if no real staging credentials/session are available, record
   `blocked_external` instead of inventing proof.
 
@@ -503,6 +627,8 @@ Merge criteria:
 
 - real staging evidence exists or the blocker is recorded explicitly;
 - raw tokens/cookies/passwords/provider subjects are absent from evidence;
+- cookie evidence records only name, domain/host scope, path, expiry class,
+  `HttpOnly`, `Secure`, and `SameSite` facts;
 - assigned/unassigned authorization behavior remains correct.
 
 Rollback:
@@ -559,8 +685,8 @@ Minimum local gates by PR type:
 | PR type | Required local gates |
 | --- | --- |
 | Docs-only | `git diff --check`, `npm.cmd run test:scripts` |
-| Backend auth/session | targeted backend auth tests, backend build, `npm.cmd run test:scripts` |
-| Frontend session/API | frontend build, targeted frontend tests, `npm.cmd run test:scripts` |
+| Backend auth/session | targeted backend auth tests, backend build, `npm.cmd run test:scripts`, root `npm.cmd run check:release` before ready-to-merge unless blocked by documented external input |
+| Frontend session/API | frontend build, targeted frontend tests, `npm.cmd run test:scripts`, root `npm.cmd run check:release` before ready-to-merge unless blocked by documented external input |
 | Evidence script | targeted script test, evidence guard, `npm.cmd run test:scripts` |
 | Closeout | `git diff --check`, `npm.cmd run test:scripts`, CI/Vercel green |
 
@@ -579,10 +705,15 @@ The train is complete only when all of these are true:
   provider tokens in browser-readable storage;
 - app session cookie is `HttpOnly`, `Secure` in production, bounded by TTL, and
   uses the approved `SameSite` mode;
+- app session cookie is host-only by default and has no `Domain` attribute
+  unless a separate owner-approved cross-subdomain cookie decision exists;
+- app session renewal requires an active provider browser session and never
+  refreshes from the app cookie alone;
 - unsafe cookie-authenticated requests require CSRF protection;
 - backend DB role/scope/assigned-store authorization still decides access;
 - CORS remains explicit allowlist only;
 - `VITE_BEARER_TOKEN` remains empty for production-like browser deployments;
+- `VITE_AUTH_MODE` and `VITE_BROWSER_SESSION_TRANSPORT` are separate contracts;
 - launch-mode env examples are placeholder-only and documented;
 - tests and guards fail if launch browser token storage is reintroduced;
 - staging/provider evidence is real and sanitized, or explicitly recorded as
@@ -596,7 +727,8 @@ The migration keeps bearer auth as a controlled rollback path until closeout.
 
 Rollback order:
 
-1. Disable cookie transport in frontend env.
+1. Disable cookie transport in frontend env by setting
+   `VITE_BROWSER_SESSION_TRANSPORT=bearer`.
 2. Keep backend bearer verification active.
 3. Clear app session and CSRF cookies on logout or manual recovery.
 4. Revert the smallest failing PR.
