@@ -49,8 +49,17 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `AUTH_TOKEN_URL` | Auth owner | Render backend env | Public | Must be the real provider token URL for PKCE exchange. | Empty in local example. |
 | `AUTH_CALLBACK_PATH` | Auth owner | Render backend env | Public | Must match the frontend/provider callback registration. | `/auth/callback` |
 | `AUTH_POST_LOGOUT_REDIRECT_PATH` | Auth owner | Render backend env | Public | Must match provider post-logout registration. | `/auth/login` |
+| `BROWSER_SESSION_COOKIE_ENABLED` | Auth owner | Render backend env | Internal | Enables backend-owned browser app-session cookies only after the session contract PRs land. | `false` |
+| `BROWSER_SESSION_COOKIE_NAME` | Auth owner | Render backend env | Internal | Stable host-only HttpOnly app-session cookie name; do not add a cookie `Domain` attribute without owner approval. | `hr_axis_browser_session` |
+| `BROWSER_SESSION_CSRF_COOKIE_NAME` | Auth owner | Render backend env | Internal | Optional same-host CSRF nonce compatibility cookie name; current staging/production uses response nonce transport instead. | `hr_axis_csrf_nonce` |
+| `BROWSER_SESSION_SECRET` | Auth owner | Render backend env | Secret | Required and non-default when cookie sessions are enabled in production-like backends. | Empty placeholder. |
+| `BROWSER_SESSION_PREVIOUS_SECRET` | Auth owner | Render backend env | Secret | Optional previous signing secret for rotation; must be non-default and differ from the current secret when set. | Empty placeholder. |
+| `BROWSER_SESSION_TTL_SECONDS` | Auth owner | Render backend env | Internal | Default `900`; values above `3600` require explicit owner approval and must not be used by this train. | `900` |
+| `BROWSER_SESSION_RENEWAL_WINDOW_SECONDS` | Auth owner | Render backend env | Internal | Renewal window must be lower than the app-session TTL and renewal must be provider-backed. | `120` |
+| `BROWSER_SESSION_SAME_SITE` | Auth owner | Render backend env | Internal | Must be `lax` or `strict` unless `SameSite=None` has explicit owner approval and Secure cookies are active. | `lax` |
 | `VITE_API_BASE_URL` | Frontend owner | Vercel frontend env | Public | Must point to the target backend `/api` URL. | `/api` |
 | `VITE_AUTH_MODE` | Frontend/Auth owner | Vercel frontend env | Public | Must be `bearer` for real environments. | `mock` |
+| `VITE_BROWSER_SESSION_TRANSPORT` | Frontend/Auth owner | Vercel frontend env | Public | Selects real browser session transport: `bearer` for legacy rollback or `cookie` after backend cookie-session support is proven. | `bearer` |
 | `VITE_AUTH_PROVIDER` | Frontend/Auth owner | Vercel frontend env | Public | Must be `clerk` when Clerk owns browser auth. | `oidc` |
 | `VITE_BEARER_TOKEN` | Frontend/Auth owner | Vercel frontend env | Secret | Must stay empty in production and committed examples. | Empty. |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Frontend/Auth owner | Vercel frontend env | Public | Required when `VITE_AUTH_PROVIDER=clerk`; publishable key only. | Empty in local example. |
@@ -100,6 +109,14 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `AUTH_CALLBACK_PATH` | P0 | `/auth/callback` unless route changes. | Must match provider callback registration. |
 | `AUTH_LOGOUT_URL` | P1 | Provider logout endpoint when supported. | Needed for provider logout smoke. |
 | `AUTH_POST_LOGOUT_REDIRECT_PATH` | P0 | `/auth/login` unless route changes. | Must match provider post-logout registration. |
+| `BROWSER_SESSION_COOKIE_ENABLED` | P0 for launch cookie transport, P1 while disabled | Must be `true` only after browser-session endpoint, CSRF, frontend bridge, and evidence guards are merged. | Defaults to `false`; does not weaken existing bearer/script rollback support. |
+| `BROWSER_SESSION_COOKIE_NAME` | P1 | Stable host-only app-session cookie name. | No cookie `Domain` attribute is configured by this contract. |
+| `BROWSER_SESSION_CSRF_COOKIE_NAME` | P1 | Optional same-host CSRF nonce compatibility cookie name only. | Current staging/production frontend/API subdomains use response nonce transport, not a widened cookie domain. |
+| `BROWSER_SESSION_SECRET` | P0 conditional | Required, at least 32 characters, and non-default when cookie sessions are enabled in production-like backends. | Secret-bearing signing key; keep committed examples empty. |
+| `BROWSER_SESSION_PREVIOUS_SECRET` | P1 conditional | Optional previous signing secret for rotation; when set, must be non-default and differ from `BROWSER_SESSION_SECRET`. | Used only to verify old cookies while signing with the current secret. |
+| `BROWSER_SESSION_TTL_SECONDS` | P0 | Default `900`; values above `3600` require explicit owner approval. | App session cannot refresh itself from the cookie alone. |
+| `BROWSER_SESSION_RENEWAL_WINDOW_SECONDS` | P1 | Must be lower than `BROWSER_SESSION_TTL_SECONDS`. | Frontend renewal must re-derive a session from the active provider browser session. |
+| `BROWSER_SESSION_SAME_SITE` | P0 | `lax` by default; `none` requires Secure cookies and explicit owner approval. | Current staging/production hosts are same-site subdomains, so `none` is not the default. |
 | `QUEUE_BACKEND` | P0 | `in-memory` is allowed for local and controlled pilot; `bullmq` is required when `READINESS_PROFILE=broad-production` or durable background processing is required. | Local default is `in-memory`; BullMQ uses Redis-backed queues. |
 | `REDIS_URL` | P0 conditional | Required when `QUEUE_BACKEND=bullmq` or `RATE_LIMIT_BACKEND=redis` in production. | Secret-bearing if provider uses credentials. |
 | `QUEUE_IMPORT_NAME` | P1 | Stable import queue name. | Defaults to `store-ops-import`. |
@@ -122,6 +139,7 @@ These values are read by `admin-web/src`.
 | --- | --- | --- | --- |
 | `VITE_API_BASE_URL` | P0 | Points to production backend `/api`. | Public value, not secret. |
 | `VITE_AUTH_MODE` | P0 | Must be `bearer` for real environments. | Local can use `mock`. |
+| `VITE_BROWSER_SESSION_TRANSPORT` | P0 for launch browser sessions | `bearer` preserves the legacy rollback path; `cookie` is the launch target after backend cookie sessions are proven. | Separate from `VITE_AUTH_MODE`; do not overload auth mode as the transport flag. |
 | `VITE_AUTH_PROVIDER` | P0 | Use `clerk` when Clerk owns browser authentication. | Enables Clerk frontend bridge; authorization remains in HR Axis DB. |
 | `VITE_USER_ID` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
 | `VITE_ROLE_CODES` | P1 local-only | Do not use for production auth. | Mock-session helper only. |
@@ -181,6 +199,8 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - Do not paste PKCE `code_verifier` values.
 - Do not paste client secrets.
 - Do not store production credentials in screenshots.
+- Do not record browser app-session cookie values, CSRF nonce values, provider
+  subjects, or storage dumps in evidence.
 - Keep committed `.env.example` files placeholder-only.
 - Store real secrets in the hosting environment or secret manager.
 - Rotate any value that appears in chat, issue comments, screenshots, or logs.
@@ -213,6 +233,11 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_JWKS_URL` match real provider.
 - [ ] `JWT_SECRET` is empty when JWKS is used, or explicitly approved for non-JWKS mode.
 - [ ] Provider authorize/token/logout URLs are filled.
+- [ ] If cookie browser sessions are enabled, `BROWSER_SESSION_SECRET` is set
+      through provider secrets, `BROWSER_SESSION_PREVIOUS_SECRET` is set only
+      during rotation, TTL is `900` unless approved otherwise, and
+      `BROWSER_SESSION_SAME_SITE` remains `lax` or `strict` unless explicit
+      owner approval exists for `none`.
 - [ ] Queue backend and Redis are filled if durable workers are enabled.
 - [ ] Daily closure automation remains disabled until approved.
 
@@ -220,6 +245,9 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 
 - [ ] `VITE_API_BASE_URL` points to production API.
 - [ ] `VITE_AUTH_MODE=bearer`.
+- [ ] `VITE_BROWSER_SESSION_TRANSPORT=cookie` only after backend cookie
+      session support, frontend bridge, CSRF guard, and sanitized evidence are
+      merged; otherwise keep `bearer` as controlled rollback.
 - [ ] `VITE_AUTH_PROVIDER` matches the browser auth provider, for example `clerk`.
 - [ ] `VITE_CLERK_PUBLISHABLE_KEY` is set only when Clerk is enabled.
 - [ ] `VITE_CLERK_JWT_TEMPLATE` is set only when backend audience verification requires a Clerk JWT template.

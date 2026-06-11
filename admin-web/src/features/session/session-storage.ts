@@ -1,7 +1,9 @@
 export type SessionMode = 'mock' | 'bearer'
+export type BrowserSessionTransport = 'bearer' | 'cookie'
 
 export type SessionState = {
   mode: SessionMode
+  browserSessionTransport: BrowserSessionTransport
   mockUserId: string
   mockRoleCodes: string
   mockCompanyIds: string
@@ -20,6 +22,9 @@ const TOKEN_REFRESH_SKEW_SECONDS = 30
 
 export const defaultSession: SessionState = {
   mode: resolveSessionMode(import.meta.env.VITE_AUTH_MODE),
+  browserSessionTransport: resolveBrowserSessionTransport(
+    import.meta.env.VITE_BROWSER_SESSION_TRANSPORT,
+  ),
   mockUserId: import.meta.env.VITE_USER_ID ?? '80000000-0000-0000-0000-000000000001',
   mockRoleCodes:
     import.meta.env.VITE_ROLE_CODES ??
@@ -167,6 +172,7 @@ export function persistClientSession(session: SessionState) {
   const persisted: SessionState = {
     ...normalized,
     bearerToken: '',
+    browserSessionTransport: defaultSession.browserSessionTransport,
   }
 
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persisted))
@@ -177,6 +183,9 @@ export function normalizeSession(session: Partial<SessionState>): SessionState {
 
   return {
     mode: resolveSessionMode(session.mode),
+    browserSessionTransport: resolveBrowserSessionTransport(
+      session.browserSessionTransport ?? defaultSession.browserSessionTransport,
+    ),
     mockUserId: session.mockUserId?.trim() || defaultSession.mockUserId,
     mockRoleCodes: session.mockRoleCodes?.trim() || defaultSession.mockRoleCodes,
     mockCompanyIds: session.mockCompanyIds?.trim() || defaultSession.mockCompanyIds,
@@ -199,6 +208,10 @@ function appendHeader(headers: Record<string, string>, key: string, value: strin
 
 function resolveSessionMode(input: unknown): SessionMode {
   return input === 'bearer' ? 'bearer' : 'mock'
+}
+
+function resolveBrowserSessionTransport(input: unknown): BrowserSessionTransport {
+  return input === 'cookie' ? 'cookie' : 'bearer'
 }
 
 function isJwtExpired(token: string, skewSeconds = 0) {

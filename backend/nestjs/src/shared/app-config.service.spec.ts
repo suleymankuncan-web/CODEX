@@ -551,4 +551,142 @@ describe("AppConfigService", () => {
       }).authPostLogoutRedirectPath,
     ).toThrow("AUTH_POST_LOGOUT_REDIRECT_PATH must be a same-origin path in production");
   });
+
+  it("keeps browser cookie sessions disabled by default", () => {
+    const config = createConfig({
+      NODE_ENV: "development",
+    });
+
+    expect(config.browserSessionCookieEnabled).toBe(false);
+    expect(config.browserSessionCookieName).toBe("hr_axis_browser_session");
+    expect(config.browserSessionCsrfCookieName).toBe("hr_axis_csrf_nonce");
+    expect(config.browserSessionSecret).toBeUndefined();
+    expect(config.browserSessionPreviousSecret).toBeUndefined();
+    expect(config.browserSessionTtlSeconds).toBe(900);
+    expect(config.browserSessionRenewalWindowSeconds).toBe(120);
+    expect(config.browserSessionSameSite).toBe("lax");
+    expect(config.browserSessionCookieSecure).toBe(false);
+  });
+
+  it("requires a strong browser session secret for production-like cookie sessions", () => {
+    expect(() =>
+      createConfig({
+        AUTH_MODE: "jwt",
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+      }).browserSessionSecret,
+    ).toThrow(
+      "BROWSER_SESSION_SECRET must be configured when browser cookie sessions are enabled",
+    );
+
+    expect(() =>
+      createConfig({
+        AUTH_MODE: "jwt",
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+        BROWSER_SESSION_SECRET: "change-me-browser-session-secret-value",
+      }).browserSessionSecret,
+    ).toThrow("BROWSER_SESSION_SECRET must be at least 32 characters and non-default");
+
+    expect(
+      createConfig({
+        AUTH_MODE: "jwt",
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+        BROWSER_SESSION_SECRET: "0123456789abcdef0123456789ABCDEF",
+      }).browserSessionSecret,
+    ).toBe("0123456789abcdef0123456789ABCDEF");
+  });
+
+  it("validates optional previous browser session secrets when configured", () => {
+    expect(() =>
+      createConfig({
+        AUTH_MODE: "jwt",
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+        BROWSER_SESSION_PREVIOUS_SECRET: "placeholder-browser-session-secret",
+        BROWSER_SESSION_SECRET: "0123456789abcdef0123456789ABCDEF",
+      }).browserSessionPreviousSecret,
+    ).toThrow(
+      "BROWSER_SESSION_PREVIOUS_SECRET must be at least 32 characters and non-default",
+    );
+
+    expect(() =>
+      createConfig({
+        AUTH_MODE: "jwt",
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+        BROWSER_SESSION_PREVIOUS_SECRET: "0123456789abcdef0123456789ABCDEF",
+        BROWSER_SESSION_SECRET: "0123456789abcdef0123456789ABCDEF",
+      }).browserSessionPreviousSecret,
+    ).toThrow(
+      "BROWSER_SESSION_PREVIOUS_SECRET must differ from BROWSER_SESSION_SECRET",
+    );
+
+    expect(
+      createConfig({
+        AUTH_MODE: "jwt",
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+        BROWSER_SESSION_PREVIOUS_SECRET: "abcdef0123456789ABCDEF0123456789",
+        BROWSER_SESSION_SECRET: "0123456789abcdef0123456789ABCDEF",
+      }).browserSessionPreviousSecret,
+    ).toBe("abcdef0123456789ABCDEF0123456789");
+  });
+
+  it("bounds browser session ttl and renewal windows", () => {
+    expect(() =>
+      createConfig({
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+        BROWSER_SESSION_TTL_SECONDS: "7200",
+      }).browserSessionTtlSeconds,
+    ).toThrow("BROWSER_SESSION_TTL_SECONDS cannot exceed 3600");
+
+    expect(() =>
+      createConfig({
+        BROWSER_SESSION_RENEWAL_WINDOW_SECONDS: "900",
+        BROWSER_SESSION_TTL_SECONDS: "900",
+      }).browserSessionRenewalWindowSeconds,
+    ).toThrow(
+      "BROWSER_SESSION_RENEWAL_WINDOW_SECONDS must be lower than BROWSER_SESSION_TTL_SECONDS",
+    );
+
+    const config = createConfig({
+      BROWSER_SESSION_RENEWAL_WINDOW_SECONDS: "300",
+      BROWSER_SESSION_TTL_SECONDS: "1800",
+    });
+
+    expect(config.browserSessionTtlSeconds).toBe(1800);
+    expect(config.browserSessionRenewalWindowSeconds).toBe(300);
+  });
+
+  it("validates browser session same-site and cookie enabled values", () => {
+    expect(() =>
+      createConfig({
+        BROWSER_SESSION_COOKIE_ENABLED: "sometimes",
+      }).browserSessionCookieEnabled,
+    ).toThrow("BROWSER_SESSION_COOKIE_ENABLED must be true or false");
+
+    expect(() =>
+      createConfig({
+        BROWSER_SESSION_SAME_SITE: "wide",
+      }).browserSessionSameSite,
+    ).toThrow("BROWSER_SESSION_SAME_SITE must be one of lax, strict, none");
+
+    expect(() =>
+      createConfig({
+        BROWSER_SESSION_SAME_SITE: "none",
+        NODE_ENV: "development",
+      }).browserSessionSameSite,
+    ).toThrow("BROWSER_SESSION_SAME_SITE=none requires secure cookies");
+
+    expect(() =>
+      createConfig({
+        BROWSER_SESSION_COOKIE_ENABLED: "true",
+        BROWSER_SESSION_SAME_SITE: "none",
+        BROWSER_SESSION_SECRET: "0123456789abcdef0123456789ABCDEF",
+        NODE_ENV: "production",
+      }),
+    ).toThrow("BROWSER_SESSION_SAME_SITE=none requires explicit owner approval");
+
+    expect(
+      createConfig({
+        BROWSER_SESSION_SAME_SITE: "strict",
+      }).browserSessionSameSite,
+    ).toBe("strict");
+  });
 });

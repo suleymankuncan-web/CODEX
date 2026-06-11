@@ -23,6 +23,7 @@ Use these first:
 - `docs/plans/auth-admin-repository-risk-review-2026-04-30.md`
 - `docs/plans/auth-admin-user-account-boundary-decision-v1.md`
 - `docs/plans/import-upload-authorization-decision-v1.md`
+- `docs/plans/security-launch-blocker-pr-train-v1.md`
 
 Current live evidence:
 
@@ -38,6 +39,14 @@ Current live evidence:
   fail closed.
 - Raw tokens, cookies, provider subjects, full JWTs, and private user data do
   not belong in evidence.
+- `VITE_AUTH_MODE` keeps the existing `mock`/`bearer` meaning; browser session
+  transport is selected separately with `VITE_BROWSER_SESSION_TRANSPORT`.
+- Launch browser cookie sessions require backend-owned HttpOnly host-only app
+  session cookies, bounded TTL, Secure cookies in production, and CSRF nonce
+  transport that does not require widening cookie `Domain`.
+- `BROWSER_SESSION_SECRET` is required when cookie sessions are enabled in
+  production-like backends; committed examples and evidence must never contain
+  real session secrets, raw cookies, or provider tokens.
 
 ## Parked Or High-Risk
 
