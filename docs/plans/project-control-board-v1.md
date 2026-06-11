@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-05-23
+Last verified: 2026-06-12
 
 ## Reader And Action
 
@@ -37,6 +37,8 @@ The project is in controlled pilot execution mode.
 5. Batch P2 fixes only when they share surface, risk, verification, and
    rollback story.
 6. Keep evidence sanitized.
+7. If feedback is unavailable and launch-readiness work is needed, execute the
+   Security Launch Blocker PR Train V1 one slice at a time.
 
 ## What We Do Not Do Now
 
@@ -47,6 +49,8 @@ The project is in controlled pilot execution mode.
 - Do not change auth, API response shape, DB, provider config, queue posture,
   KPI scoring, checklist weights, import lifecycle, or workflow semantics
   unless explicitly scoped.
+- Do not persist bearer, id, access, refresh, provider, or secret values in
+  browser-readable storage for a launch browser session.
 
 ## Control Links
 
@@ -58,6 +62,7 @@ The project is in controlled pilot execution mode.
 | Execute next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` |
 | Continue the pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` |
 | Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` |
+| Execute launch security blocker train | `docs/plans/security-launch-blocker-pr-train-v1.md` |
 | Check next practical work | `docs/plans/active-next-actions.md` |
 | Check debt/backlog state | `docs/plans/project-debt-ledger.md` |
 | Add a feature safely | `docs/plans/feature-integration-spine-v1.md` |
@@ -72,6 +77,7 @@ The project is in controlled pilot execution mode.
 | Broad production | No-Go | Persistent Redis, managed recovery/PITR/RPO/RTO, final incident/app-level tracking posture, and owner acceptance remain production requirements. |
 | Store Action | Continue in current controlled scope | Manager assigned-store command path is proven; wider sources/actions need separate decision. |
 | Auth and scope | Guarded | Application DB assignments remain source of truth; role/scope changes require evidence rerun. |
+| Launch browser session security | Active blocker train | Browser-readable token storage must be replaced by backend cookie session transport, CSRF protection, env guards, and sanitized evidence before MVP/launch readiness can be claimed. |
 | Imports | Continue current Excel/Power BI path | JSON provider integration remains parked. |
 | Refactor | Closed as broad workstream | Only concrete product/risk/refactor triggers reopen code movement. |
 | UI redesign | Parked | User said large visual changes will come later. |
@@ -85,7 +91,9 @@ is:
 1. run a scoped pilot session,
 2. record the session,
 3. fix only concrete blockers,
-4. update the decision/runbook registries only if a decision or procedure
+4. if feedback is unavailable, execute the Security Launch Blocker PR Train V1
+   instead of inventing feedback,
+5. update the decision/runbook registries only if a decision or procedure
    changes.
 
 ## Stop Rules
@@ -98,4 +106,6 @@ Stop and report if:
 - evidence is being used beyond what it proves;
 - broad production, redesign, or new-module work is being started without an
   explicit decision;
+- the work would handle raw tokens, cookies, provider secrets, database URLs,
+  or private user data in docs, PRs, logs, or chat;
 - the next PR cannot be described in one paragraph.
