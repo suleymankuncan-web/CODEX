@@ -68,6 +68,18 @@ Current execution loop under Tier A:
 5. Keep using `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` for any
    new persona onboarding or role/scope evidence.
 
+2026-06-12 PR-train state:
+
+- Controlled Pilot Feedback Loop PR Train V1 PR-0 is merged through PR #682.
+- The active feedback log now has the feedback record contract, severity
+  definitions, and next-PR rule.
+- Closeout evidence:
+  `docs/evidence/pilot-readiness/2026-06-12-controlled-pilot-feedback-loop-v1-closeout.md`.
+- No new post-contract `PILOT-FB-YYYYMMDD-NN` record exists yet, so the train
+  is ready but blocked on real or assisted session feedback. Do not open a code
+  PR until a sanitized record identifies the next P0/P1 or same-surface P2
+  item.
+
 Tier B - broad-production/operational hardening:
 
 Controlled-pilot versions of Redis/BullMQ, alerting, and logical recovery are
