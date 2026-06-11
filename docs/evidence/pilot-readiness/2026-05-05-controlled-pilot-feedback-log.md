@@ -44,6 +44,130 @@ Allowed evidence:
 - observed API status codes if useful,
 - decision notes.
 
+## Feedback Record Contract
+
+Use this record shape for each new controlled-pilot finding. Existing historical
+sessions may keep their original narrative form, but every new actionable issue
+must have this structure before it drives a PR.
+
+```text
+### Feedback ID: PILOT-FB-YYYYMMDD-NN
+
+Session:
+Reporter:
+Moderator:
+Decision owner:
+Environment:
+Persona / role:
+Route / surface:
+
+Expected behavior:
+
+Actual behavior:
+
+Evidence:
+- Type:
+- Link or sanitized note:
+
+Severity:
+- P0 stop / P1 pilot blocker / P2 pilot friction / P3 backlog
+
+Reason for severity:
+
+Contract impact suspected:
+- None / UI-only / frontend data binding / backend read/API /
+  backend write/workflow / auth-DB-scoring-queue-provider
+
+Decision:
+- Fix now / Batch with same-surface P2 / Park / Needs product decision /
+  Needs provider or session input
+
+Next action:
+
+Owner:
+```
+
+A finding is not actionable until it names:
+
+- affected persona or role,
+- affected route or surface,
+- expected behavior,
+- actual behavior,
+- severity,
+- decision,
+- next action.
+
+## Severity Definitions
+
+`P0 stop`:
+
+- forbidden data is visible,
+- a read-only role can mutate,
+- login/session is broken for the pilot path,
+- data corruption or unsafe workflow transition is possible,
+- Store Action or import behavior can affect the wrong store or role,
+- evidence would require raw secrets to prove safely.
+
+Action:
+
+- stop the normal feedback PR train,
+- open only a P0 fix PR or P0 evidence-blocker PR,
+- do not batch with other work.
+
+`P1 pilot blocker`:
+
+- a role cannot complete the planned pilot flow,
+- a primary route is unusable,
+- support cannot recover or explain the state,
+- a required Store Action or workflow control fails in the scoped path,
+- a real data binding issue creates wrong operational interpretation.
+
+Action:
+
+- open the next code PR unless a P0 exists,
+- fix one blocker per PR unless the same root cause closes multiple records.
+
+`P2 pilot friction`:
+
+- the flow is usable but confusing,
+- copy or empty/error state causes uncertainty,
+- mobile or desktop layout is bounded but awkward,
+- a non-critical action takes too many steps,
+- a role can proceed but needs support explanation.
+
+Action:
+
+- batch only when findings share the same surface, risk class, verification,
+  and rollback story,
+- do not interrupt P0/P1 work.
+
+`P3 backlog`:
+
+- feedback is a nice-to-have,
+- the request implies a new feature,
+- the request implies broad redesign,
+- the request needs a product decision,
+- the request depends on provider, role, module, or production posture work.
+
+Action:
+
+- park with a trigger,
+- do not convert directly into code.
+
+## Next PR Rule
+
+After each real or assisted controlled-pilot session:
+
+1. Close or block P0 items.
+2. Select one P1 item that blocks the next controlled-pilot session.
+3. Batch P2 only if it is same-surface and same-gate.
+4. Park P3 with a trigger.
+5. Update the pilot decision.
+
+Do not open a code PR from intuition. The next product PR must point to a
+sanitized feedback record, severity, expected behavior, actual behavior, and
+verification path.
+
 ## Pilot Users
 
 ### Admin / Support User

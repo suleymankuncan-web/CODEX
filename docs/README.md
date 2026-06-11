@@ -40,6 +40,7 @@ Use this directory like an operating library, not a diary.
 | Pick the next practical task | `docs/plans/active-next-actions.md` | Current working list and pilot-vs-production split. |
 | Check whether a debt is open | `docs/plans/project-debt-ledger.md` | Closed debts, blocked dependencies, and strategic backlog. |
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
+| Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` | Feedback intake, P0/P1/P2/P3 triage, PR sequence, autonomy limits, and closeout criteria. |
 | Add a future feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Source-of-truth, auth, API, DB, workflow, operations, and rollback gates. |
 | Modernize Store/Admin UI | `docs/process/product-experience-principles.md` | Product-quality standard for clean but premium, operationally honest UI work. |
 | Split Store workforce from approvals | `docs/plans/store-workforce-and-approvals-split-v1-plan.md` | Active plan for `/store/workforce`, Norm Kadro ownership, and approvals becoming a request center. |
@@ -71,6 +72,7 @@ Use for daily direction and working discipline.
 Use for controlled staging/internal pilot work.
 
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md`
+- `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md`
 - `docs/plans/controlled-pilot-operating-checklist-v1.md`
 - `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`
 - `docs/plans/pilot-persona-evidence-runbook-v1.md`

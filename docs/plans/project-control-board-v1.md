@@ -57,6 +57,7 @@ The project is in controlled pilot execution mode.
 | Pick an operating checklist | `docs/plans/runbook-registry-v1.md` |
 | Execute next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` |
 | Continue the pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` |
+| Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` |
 | Check next practical work | `docs/plans/active-next-actions.md` |
 | Check debt/backlog state | `docs/plans/project-debt-ledger.md` |
 | Add a feature safely | `docs/plans/feature-integration-spine-v1.md` |

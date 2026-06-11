@@ -124,6 +124,10 @@ Operating plan:
   or mock checks as protected, provider, restore, or production proof.
 - `docs/plans/controlled-pilot-execution-roadmap-v1.md` is the current control
   document for day-to-day pilot execution.
+- `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` is the active PR
+  train for turning real controlled-pilot feedback into intake records,
+  P0/P1 blocker fixes, optional same-surface P2 batches, and closeout decisions
+  without reopening broad foundation, redesign, provider, or production work.
 - `docs/plans/production-evidence-closure-joint-plan-v1.md` remains the
   reference for broad-production provider posture, not the active pilot loop.
 - Do not claim broad-production readiness from docs or local checks alone; each
