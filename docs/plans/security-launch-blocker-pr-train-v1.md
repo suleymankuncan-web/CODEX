@@ -61,11 +61,17 @@ The browser session transport changes:
    the existing `jose` dependency or Node crypto primitives.
 5. The browser stores only cookies:
    - host-only `HttpOnly` app session cookie, not readable by JavaScript;
-   - readable CSRF nonce cookie, not an auth credential.
+   - optional readable CSRF nonce cookie only when frontend and API host shape
+     makes that cookie readable by the frontend origin.
 6. Browser-session creation and API calls use `credentials: "include"`.
-7. Unsafe methods include an `X-CSRF-Token` header matching the CSRF cookie and
-   the hash stored inside the signed app session.
-8. Backend request auth resolves cookie sessions for browser traffic and keeps
+7. Browser-session creation returns a non-secret CSRF nonce in a
+   frontend-readable response body. The frontend keeps the nonce in memory and
+   may cache it with the browser session state; it must not be treated as an
+   auth credential or recorded in evidence. This avoids requiring a cookie
+   `Domain` attribute when frontend and API are different host-only subdomains.
+8. Unsafe methods include an `X-CSRF-Token` header matching the frontend-held
+   nonce and the nonce hash stored inside the signed app session.
+9. Backend request auth resolves cookie sessions for browser traffic and keeps
    `Authorization: Bearer` support for controlled scripts, smoke tests, and
    rollback until the train closes.
 
@@ -111,6 +117,9 @@ version:
   cookie-only refresh are explicit requirements;
 - CSRF is scoped to cookie-authenticated protected state-changing requests, with
   endpoint-specific behavior for session create/clear;
+- CSRF nonce transport does not depend on a frontend-readable API-host cookie
+  because staging and production use separate host-only frontend/API
+  subdomains;
 - mobile session endpoints remain out of scope.
 
 ## Findings Being Addressed
@@ -159,6 +168,10 @@ Required outcome:
 
 - Cookie-authenticated `POST`, `PUT`, `PATCH`, and `DELETE` requests require a
   valid CSRF header.
+- The CSRF nonce is returned by the browser-session creation/bootstrap response
+  and held by the frontend for later unsafe requests. The plan must not rely on
+  JavaScript reading an API-host cookie when frontend and API are separate
+  host-only subdomains.
 - Bearer-authenticated script requests remain supported without CSRF during the
   migration window.
 - CSRF failure returns a generic 403 response without leaking session details.
@@ -326,6 +339,10 @@ Implementation tasks:
   `BROWSER_SESSION_SECRET` plus optional `BROWSER_SESSION_PREVIOUS_SECRET`;
 - require `Secure` cookies when `NODE_ENV=production`;
 - default cookies to host-only scope with no `Domain` attribute;
+- document `BROWSER_SESSION_CSRF_COOKIE_NAME` as optional compatibility
+  metadata for same-origin/same-host deployments only. In the current staging
+  and production subdomain shape, the launch path must use the frontend-readable
+  browser-session response nonce, not a widened cookie domain;
 - reject `SameSite=None` unless secure cookies are enabled;
 - keep `SameSite=None` behind explicit owner approval because the current
   staging and production frontend/API hosts are same-site subdomains;
@@ -378,8 +395,11 @@ Implementation tasks:
   - verifies it through the existing JWT/JWKS auth provider;
   - creates a short-lived backend app session;
   - sets the HttpOnly app session cookie;
-  - sets the readable CSRF nonce cookie;
-  - returns only sanitized session metadata already safe for the browser.
+  - returns a non-secret CSRF nonce plus sanitized session metadata already safe
+    for the browser;
+  - may also set a readable CSRF nonce cookie only for same-host compatible
+    deployments, but the V1 staging/production launch path must not depend on
+    that cookie being readable from the frontend subdomain.
 - add `DELETE /api/auth/browser-session`:
   - clears the app session and CSRF cookies;
   - does not require raw token evidence;
@@ -408,7 +428,10 @@ Implementation tasks:
     `DELETE` domain routes;
   - skip `GET`, `HEAD`, and `OPTIONS`;
   - skip bearer-authenticated script calls while bearer support remains;
-  - verify header, readable CSRF cookie, and signed session CSRF hash;
+  - verify the `X-CSRF-Token` header against the signed session CSRF hash;
+  - if a readable CSRF cookie is present and readable in a same-host deployment,
+    it may be checked for consistency, but absence of a frontend-readable
+    API-host cookie must not break the current cross-subdomain launch shape;
   - return 403 without session internals on failure.
 - keep browser-session create and clear endpoint behavior explicit:
   - create requires a valid provider bearer token and does not require an
@@ -488,7 +511,8 @@ Implementation tasks:
   token storage;
 - configure browser-session create/clear and normal browser API calls with
   `credentials: "include"` in cookie transport;
-- attach `X-CSRF-Token` from the readable CSRF cookie for unsafe methods;
+- attach `X-CSRF-Token` from the browser-session response nonce for unsafe
+  methods;
 - call `DELETE /api/auth/browser-session` on logout and clear any legacy token
   storage keys defensively;
 - update Clerk refresh handling so token refresh creates a new backend app
@@ -509,7 +533,8 @@ Verification:
 
 - frontend unit tests for no token writes in cookie transport;
 - frontend API client tests for `credentials: "include"`;
-- unsafe-method tests for CSRF header attachment;
+- unsafe-method tests for CSRF header attachment from the browser-session
+  response nonce;
 - Clerk bridge tests for cookie-session creation and renewal without
   sessionStorage token writes;
 - PKCE callback tests for browser-session endpoint handoff without id-token
@@ -602,8 +627,9 @@ Implementation tasks:
 - add a smoke path that logs in through the real provider and confirms:
   - app session cookie exists with expected flags, with value redacted before
     output;
-  - CSRF cookie exists and is not an auth credential, with value redacted before
-    output;
+  - CSRF nonce transport is proven without recording the nonce value; if a
+    compatibility CSRF cookie exists, only its non-sensitive flags/scope are
+    recorded with value redacted;
   - `localStorage` and `sessionStorage` have no raw provider/bearer tokens;
   - an assigned-store protected action succeeds;
   - an unassigned-store action still returns 403;
