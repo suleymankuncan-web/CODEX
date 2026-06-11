@@ -12,9 +12,11 @@ import { AuthRoleAssignmentCommandRepository } from "./auth-role-assignment-comm
 import { AuthRolePermissionCommandRepository } from "./auth-role-permission-command.repository";
 import { AuthUserAccountCommandRepository } from "./auth-user-account-command.repository";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
+import { BrowserSessionService } from "./browser-session.service";
 import { AuthContextService } from "./auth-context.service";
 import { AuthRoleScopePolicyService } from "./auth-role-scope-policy.service";
 import { AuthGuard } from "./guards/auth.guard";
+import { BrowserSessionCsrfGuard } from "./guards/browser-session-csrf.guard";
 import { MobileSessionGuard } from "./guards/mobile-session.guard";
 import { RoleGuard } from "./guards/role.guard";
 import { ScopeGuard } from "./guards/scope.guard";
@@ -42,6 +44,7 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
     AuthAdminRepository,
     AuthAdminService,
     AuthRoleScopePolicyService,
+    BrowserSessionService,
     AuthContextService,
     AuthAuthorizationRepository,
     MobileSessionRepository,
@@ -52,6 +55,10 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
     {
       provide: APP_GUARD,
       useClass: AuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: BrowserSessionCsrfGuard,
     },
     {
       provide: APP_GUARD,
@@ -67,6 +74,7 @@ import { MobileAuthController } from "./web/mobile-auth.controller";
     AccessLifecycleService,
     AuthContextService,
     AuthAuthorizationRepository,
+    BrowserSessionService,
   ],
 })
 export class AuthModule {}

@@ -17,7 +17,13 @@ type CorsResponse = {
   };
 };
 
-const DEFAULT_ALLOWED_HEADERS = "authorization,content-type,x-correlation-id";
+const ALLOWED_HEADERS = new Set([
+  "authorization",
+  "content-type",
+  "x-correlation-id",
+  "x-csrf-token",
+]);
+const DEFAULT_ALLOWED_HEADERS = [...ALLOWED_HEADERS].join(",");
 const ALLOWED_METHODS = "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS";
 
 export function createCorsAllowlistMiddleware(allowedOrigins: string[]) {
@@ -50,8 +56,7 @@ export function createCorsAllowlistMiddleware(allowedOrigins: string[]) {
     res.setHeader("Access-Control-Allow-Methods", ALLOWED_METHODS);
     res.setHeader(
       "Access-Control-Allow-Headers",
-      resolveHeader(req.headers["access-control-request-headers"]) ??
-        DEFAULT_ALLOWED_HEADERS,
+      resolveAllowedHeaders(req.headers["access-control-request-headers"]),
     );
 
     if (req.method === "OPTIONS") {
@@ -65,4 +70,18 @@ export function createCorsAllowlistMiddleware(allowedOrigins: string[]) {
 
 function resolveHeader(value: string | string[] | undefined): string | undefined {
   return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
+}
+
+function resolveAllowedHeaders(value: string | string[] | undefined): string {
+  const requestedHeaders = resolveHeader(value);
+  if (!requestedHeaders) {
+    return DEFAULT_ALLOWED_HEADERS;
+  }
+
+  const allowed = requestedHeaders
+    .split(",")
+    .map((header) => header.trim().toLowerCase())
+    .filter((header) => ALLOWED_HEADERS.has(header));
+
+  return allowed.length > 0 ? allowed.join(",") : DEFAULT_ALLOWED_HEADERS;
 }

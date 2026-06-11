@@ -7,6 +7,8 @@ import {
 import { AppConfigService } from "../../shared/app-config.service";
 import { redactSensitiveLogValue } from "../../shared/structured-log";
 import { AuthAuthorizationRepository } from "./auth-authorization.repository";
+import { BrowserSessionService } from "./browser-session.service";
+import { parseCookieHeader } from "./browser-session-cookie";
 import { JwtAuthProvider } from "./providers/jwt-auth.provider";
 import { MockAuthProvider } from "./providers/mock-auth.provider";
 
@@ -78,30 +80,103 @@ export class AuthContextService {
     private readonly authAuthorizationRepository: AuthAuthorizationRepository,
     private readonly mockAuthProvider: MockAuthProvider,
     private readonly jwtAuthProvider: JwtAuthProvider,
+    private readonly browserSessionService?: BrowserSessionService,
   ) {}
 
   async resolveUser(request: {
     headers: Record<string, string | string[] | undefined>;
   }): Promise<AuthenticatedUser | null> {
-    const user = await (async () => {
+    const providerUser = await (async () => {
+      const bearerUser = await this.resolveBearerUser(request);
+      if (bearerUser) {
+        return {
+          mapProviderSubject: this.appConfigService.authMode === "jwt",
+          user: bearerUser,
+        };
+      }
+
+      const browserSessionUser = this.resolveBrowserSessionUser(request);
+      if (browserSessionUser) {
+        return {
+          mapProviderSubject: false,
+          user: browserSessionUser,
+        };
+      }
+
       switch (this.appConfigService.authMode) {
-      case "jwt":
-        return this.jwtAuthProvider.resolveUser(request);
       case "mock":
         if (!this.appConfigService.allowMockAuth) {
           throw new UnauthorizedException("Mock auth is disabled");
         }
-        return this.mockAuthProvider.resolveUser(request);
+        return {
+          mapProviderSubject: false,
+          user: await this.mockAuthProvider.resolveUser(request),
+        };
+      case "jwt":
+        return {
+          mapProviderSubject: true,
+          user: null,
+        };
       default:
         throw new UnauthorizedException("Unsupported auth mode");
       }
     })();
 
-    if (!user) {
+    if (!providerUser.user) {
       return null;
     }
 
-    const providerUser = buildAuthenticatedUser(user);
+    return this.resolveAuthorizationContext(
+      buildAuthenticatedUser(providerUser.user),
+      providerUser.mapProviderSubject,
+    );
+  }
+
+  async resolveJwtBearerToken(token: string): Promise<AuthenticatedUser> {
+    if (this.appConfigService.authMode !== "jwt") {
+      throw new UnauthorizedException("Unsupported auth mode");
+    }
+
+    return this.resolveAuthorizationContext(
+      await this.jwtAuthProvider.resolveBearerToken(token),
+      true,
+    );
+  }
+
+  private async resolveBearerUser(request: {
+    headers: Record<string, string | string[] | undefined>;
+  }): Promise<AuthenticatedUser | null> {
+    if (this.appConfigService.authMode !== "jwt") {
+      return null;
+    }
+
+    return this.jwtAuthProvider.resolveUser(request);
+  }
+
+  private resolveBrowserSessionUser(request: {
+    headers: Record<string, string | string[] | undefined>;
+  }): AuthenticatedUser | null {
+    if (!this.appConfigService.browserSessionCookieEnabled) {
+      return null;
+    }
+
+    if (!this.browserSessionService) {
+      throw new UnauthorizedException("Invalid browser session");
+    }
+
+    const cookies = parseCookieHeader(request.headers.cookie);
+    const cookieValue = cookies[this.appConfigService.browserSessionCookieName];
+    if (!cookieValue) {
+      return null;
+    }
+
+    return this.browserSessionService.verifySession(cookieValue).user;
+  }
+
+  private async resolveAuthorizationContext(
+    providerUser: AuthenticatedUser,
+    mapProviderSubject: boolean,
+  ): Promise<AuthenticatedUser> {
     let appUser = providerUser;
 
     let assignments: Awaited<
@@ -113,7 +188,7 @@ export class AuthContextService {
 
     try {
       if (
-        this.appConfigService.authMode === "jwt" &&
+        mapProviderSubject &&
         providerUser.userId !== "unknown-user"
       ) {
         const mappedUser =

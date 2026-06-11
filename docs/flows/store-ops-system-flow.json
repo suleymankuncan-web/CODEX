@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-08T07:19:48.116Z",
+  "generatedAt": "2026-06-11T23:32:03.704Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 173,
-    "backendEndpointsWithoutFrontendCallCount": 32,
+    "backendEndpointCount": 175,
+    "backendEndpointsWithoutFrontendCallCount": 34,
     "controllerCount": 20,
     "frontendApiCallCount": 141,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 141,
-    "openApiEndpointCount": 173,
+    "openApiEndpointCount": 175,
     "routeApiEdgeCount": 211,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0
@@ -3314,7 +3314,35 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 11
+        "line": 29
+      }
+    },
+    {
+      "id": "endpoint:DELETE:/api/auth/browser-session",
+      "method": "DELETE",
+      "path": "/api/auth/browser-session",
+      "rawControllerPath": "auth",
+      "rawMethodPath": "browser-session",
+      "controller": "auth-session",
+      "domain": "auth",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
+        "line": 115
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/auth/browser-session",
+      "method": "POST",
+      "path": "/api/auth/browser-session",
+      "rawControllerPath": "auth",
+      "rawMethodPath": "browser-session",
+      "controller": "auth-session",
+      "domain": "auth",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
+        "line": 69
       }
     },
     {
@@ -3496,7 +3524,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/auth/web/auth-session.controller.ts",
-        "line": 40
+        "line": 58
       }
     },
     {
@@ -5595,6 +5623,18 @@
       "id": "openapi:GET:/api/auth/bootstrap",
       "method": "GET",
       "path": "/api/auth/bootstrap",
+      "domain": "auth"
+    },
+    {
+      "id": "openapi:DELETE:/api/auth/browser-session",
+      "method": "DELETE",
+      "path": "/api/auth/browser-session",
+      "domain": "auth"
+    },
+    {
+      "id": "openapi:POST:/api/auth/browser-session",
+      "method": "POST",
+      "path": "/api/auth/browser-session",
       "domain": "auth"
     },
     {
@@ -8543,16 +8583,16 @@
         "frontendCallCount": 2
       },
       {
-        "id": "controller:admin-checklist-template",
-        "controller": "admin-checklist-template",
-        "domain": "admin",
-        "endpointCount": 2,
-        "frontendCallCount": 2
-      },
-      {
         "id": "controller:auth-session",
         "controller": "auth-session",
         "domain": "auth",
+        "endpointCount": 4,
+        "frontendCallCount": 2
+      },
+      {
+        "id": "controller:admin-checklist-template",
+        "controller": "admin-checklist-template",
+        "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 2
       },
@@ -8605,6 +8645,8 @@
       "endpoint:PUT:/api/admin/feed/{feedPostId}",
       "endpoint:POST:/api/admin/migrations/run",
       "endpoint:GET:/api/admin/migrations/status",
+      "endpoint:DELETE:/api/auth/browser-session",
+      "endpoint:POST:/api/auth/browser-session",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",

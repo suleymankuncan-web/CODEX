@@ -4376,6 +4376,32 @@
           "PilotFeedback"
         ]
       }
+    },
+    "/api/auth/browser-session": {
+      "post": {
+        "operationId": "AuthSessionController_createBrowserSession",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthSession"
+        ]
+      },
+      "delete": {
+        "operationId": "AuthSessionController_clearBrowserSession",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "AuthSession"
+        ]
+      }
     }
   },
   "info": {
