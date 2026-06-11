@@ -2408,6 +2408,12 @@ Pilot Reliability Spine V1 current branch:
   `docs/plans/active-next-actions.md` should steer work toward the controlled
   pilot execution loop: collect real feedback, classify P0/P1/P2/P3, fix only
   concrete blockers, and keep broad production posture decisions separate.
+- Controlled Pilot Feedback Loop PR Train V1 PR-0 is merged through PR #682.
+  The active feedback log now contains the post-contract feedback record
+  template, severity definitions, and next-PR rule. Closeout evidence is
+  `docs/evidence/pilot-readiness/2026-06-12-controlled-pilot-feedback-loop-v1-closeout.md`.
+  No new post-contract `PILOT-FB-YYYYMMDD-NN` record exists yet, so do not open
+  a code PR from this train until real or assisted session feedback is recorded.
 
 Current user direction on 2026-05-18:
 
