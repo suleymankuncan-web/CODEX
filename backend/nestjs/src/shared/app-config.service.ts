@@ -2,10 +2,13 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 export type QueueBackend = "in-memory" | "bullmq";
+export type BrowserSessionSameSite = "lax" | "strict" | "none";
 
 @Injectable()
 export class AppConfigService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) {
+    this.assertBrowserSessionContract();
+  }
 
   private readString(key: string, fallback: string): string {
     const value = this.configService.get<string>(key);
@@ -91,6 +94,24 @@ export class AppConfigService {
     }
 
     return this.readNonNegativeInteger(key, fallback);
+  }
+
+  private readBoolean(key: string, fallback: boolean): boolean {
+    const value = this.readOptionalString(key);
+
+    if (!value) {
+      return fallback;
+    }
+
+    if (value === "true") {
+      return true;
+    }
+
+    if (value === "false") {
+      return false;
+    }
+
+    throw new Error(`${key} must be true or false`);
   }
 
   private requireProductionHttpsUrl(
@@ -432,6 +453,85 @@ export class AppConfigService {
     );
   }
 
+  get browserSessionCookieEnabled(): boolean {
+    return this.readBoolean("BROWSER_SESSION_COOKIE_ENABLED", false);
+  }
+
+  get browserSessionCookieName(): string {
+    return this.readString("BROWSER_SESSION_COOKIE_NAME", "hr_axis_browser_session");
+  }
+
+  get browserSessionCsrfCookieName(): string {
+    return this.readString("BROWSER_SESSION_CSRF_COOKIE_NAME", "hr_axis_csrf_nonce");
+  }
+
+  get browserSessionSecret(): string | undefined {
+    const value = this.readOptionalString("BROWSER_SESSION_SECRET");
+    this.validateBrowserSessionSecret("BROWSER_SESSION_SECRET", value);
+    return value;
+  }
+
+  get browserSessionPreviousSecret(): string | undefined {
+    const value = this.readOptionalString("BROWSER_SESSION_PREVIOUS_SECRET");
+    this.validateBrowserSessionSecret("BROWSER_SESSION_PREVIOUS_SECRET", value);
+
+    if (value && this.browserSessionSecret && value === this.browserSessionSecret) {
+      throw new Error(
+        "BROWSER_SESSION_PREVIOUS_SECRET must differ from BROWSER_SESSION_SECRET",
+      );
+    }
+
+    return value;
+  }
+
+  get browserSessionTtlSeconds(): number {
+    const value = this.readPositiveInteger("BROWSER_SESSION_TTL_SECONDS", "900");
+
+    if (this.browserSessionCookieEnabled && value > 3600) {
+      throw new Error("BROWSER_SESSION_TTL_SECONDS cannot exceed 3600");
+    }
+
+    return value;
+  }
+
+  get browserSessionRenewalWindowSeconds(): number {
+    const value = this.readPositiveInteger(
+      "BROWSER_SESSION_RENEWAL_WINDOW_SECONDS",
+      "120",
+    );
+
+    if (value >= this.browserSessionTtlSeconds) {
+      throw new Error(
+        "BROWSER_SESSION_RENEWAL_WINDOW_SECONDS must be lower than BROWSER_SESSION_TTL_SECONDS",
+      );
+    }
+
+    return value;
+  }
+
+  get browserSessionSameSite(): BrowserSessionSameSite {
+    const value = this.readString("BROWSER_SESSION_SAME_SITE", "lax").toLowerCase();
+    const allowedValues = new Set(["lax", "strict", "none"]);
+
+    if (!allowedValues.has(value)) {
+      throw new Error("BROWSER_SESSION_SAME_SITE must be one of lax, strict, none");
+    }
+
+    if (value === "none" && !this.browserSessionCookieSecure) {
+      throw new Error("BROWSER_SESSION_SAME_SITE=none requires secure cookies");
+    }
+
+    if (value === "none") {
+      throw new Error("BROWSER_SESSION_SAME_SITE=none requires explicit owner approval");
+    }
+
+    return value as BrowserSessionSameSite;
+  }
+
+  get browserSessionCookieSecure(): boolean {
+    return this.isProduction;
+  }
+
   get queueBackend(): QueueBackend {
     const value = this.readString("QUEUE_BACKEND", "in-memory");
     const allowedValues = new Set(["in-memory", "bullmq"]);
@@ -482,5 +582,66 @@ export class AppConfigService {
       "DAILY_CLOSURE_ACTOR_USER_ID",
       "00000000-0000-0000-0000-000000000998",
     );
+  }
+
+  private get browserSessionProductionLike(): boolean {
+    return this.isProduction || this.authMode === "jwt";
+  }
+
+  private assertBrowserSessionContract(): void {
+    if (!this.browserSessionCookieEnabled) {
+      return;
+    }
+
+    this.browserSessionSecret;
+    this.browserSessionPreviousSecret;
+    this.browserSessionTtlSeconds;
+    this.browserSessionRenewalWindowSeconds;
+    this.browserSessionSameSite;
+  }
+
+  private validateBrowserSessionSecret(
+    key: string,
+    value: string | undefined,
+  ): void {
+    if (!this.browserSessionCookieEnabled) {
+      return;
+    }
+
+    if (!this.browserSessionProductionLike) {
+      return;
+    }
+
+    if (!value && key === "BROWSER_SESSION_PREVIOUS_SECRET") {
+      return;
+    }
+
+    if (!value) {
+      throw new Error(`${key} must be configured when browser cookie sessions are enabled`);
+    }
+
+    const normalized = value.trim();
+    const lower = normalized.toLowerCase();
+    const weakValues = new Set([
+      "change-me",
+      "changeme",
+      "placeholder",
+      "browser-session-secret",
+      "secret",
+      "test",
+      "dev",
+      "local",
+    ]);
+
+    if (
+      normalized.length < 32 ||
+      weakValues.has(lower) ||
+      lower.includes("change-me") ||
+      lower.includes("placeholder") ||
+      /^(.)(\1)+$/.test(normalized) ||
+      new Set(normalized).size < 12
+    ) {
+      throw new Error(`${key} must be at least 32 characters and non-default`);
+    }
   }
 }
