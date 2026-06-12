@@ -1272,7 +1272,7 @@ test('region manager store KPI overview waits for selected store before loading 
   await page.setViewportSize({ width: 1440, height: 900 })
   storeLeaderboardTotal = 120
   await page.reload()
-  await expect(page.getByText('Tüm kapsam dönmediği için ortalama gösterilmez.')).toBeVisible()
+  await expect(page.getByText('Tüm mağazalar dönmediği için ortalama gösterilmez.')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
   storeLeaderboardTotal = regionStoreRows.length
   await page.reload()
@@ -1829,11 +1829,11 @@ test('visual merchandiser lands on checklist-only shell from store root', async 
   await expect(storeNav.locator('a[href="/store/kpis"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/rankings"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/approvals"]')).toHaveCount(0)
-  await expect(page.getByText('VM kapsamı').first()).toBeVisible()
+  await expect(page.getByText('VM görünümü').first()).toBeVisible()
   await expect(page.getByLabel(/VM ziyaret yok/)).toHaveCount(2)
   await expect(page.getByText('BM Checklist')).toHaveCount(0)
   await expect(page.getByText('BM skor')).toHaveCount(0)
-  await expect(page.getByText('BM kapsamı')).toHaveCount(0)
+  await expect(page.getByText('BM görünümü')).toHaveCount(0)
   await expect(page.getByText('BM + VM')).toHaveCount(0)
   await expectHealthyStoreTransition(page)
 })
