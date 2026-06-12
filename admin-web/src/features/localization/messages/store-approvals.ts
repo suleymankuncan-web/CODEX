@@ -1,10 +1,10 @@
 export const storeApprovalsTr = {
-  'storeApprovals.loadingTitle': 'Mağaza onayları yükleniyor',
+  'storeApprovals.loadingTitle': 'Talep Merkezi yükleniyor',
   'storeApprovals.loadingCopy':
-    'Bu mağaza kapsamından daha önce gönderilen hedef dağıtım talepleri alınıyor.',
-  'storeApprovals.errorTitle': 'Mağaza onayları açılamadı',
+    'Bu mağaza için daha önce gönderilen hedef dağıtım talepleri alınıyor.',
+  'storeApprovals.errorTitle': 'Talep Merkezi açılamadı',
 
-  'storeApprovals.heroEyebrow': 'Mağaza onayları',
+  'storeApprovals.heroEyebrow': 'Talep Merkezi',
   'storeApprovals.title': 'Mağaza onay talepleri mağaza iş akışının içinde kalır.',
   'storeApprovals.heroCopy':
     'Mağaza müdürü hedef dağıtımını, satıcı kodu talebini ve personel çıkışını tek yüzeyden hazırlar; karar ve kontrol adımları ilgili onay kuyruğuna akar.',
@@ -15,16 +15,16 @@ export const storeApprovalsTr = {
   'storeApprovals.regionManagerSubtitle':
     'Bölge görünümünde yalnızca mevcut yetkinin kapsadığı hedef dağıtım onayları yer alır.',
   'storeApprovals.readOnlySubtitle':
-    'Bu kullanıcı için mağaza talep kayıtları salt okunur kapsamda gösterilir.',
-  'storeApprovals.ledgerScope': 'Ledger kapsamı',
-  'storeApprovals.ledgerMetrics': 'Ledger özet metrikleri',
+    'Bu kullanıcı için mağaza talep kayıtları izleme görünümünde gösterilir.',
+  'storeApprovals.ledgerScope': 'Talep alanı',
+  'storeApprovals.ledgerMetrics': 'Talep özeti',
   'storeApprovals.ledgerReturnedCorrections': 'Düzeltme bekleyenler',
   'storeApprovals.targetQueueTitle': 'Hedef dağıtım kayıtları',
   'storeApprovals.workforceQueueTitle': 'Personel talep kayıtları',
   'storeApprovals.targetApprovalQueueTitle': 'Hedef onay kayıtları',
   'storeApprovals.ledgerStatus': 'Kayıt durumu',
   'storeApprovals.ledgerTableAria': 'Talep ve onay kayıtları',
-  'storeApprovals.ledgerSearchAria': 'Ledger kayıtlarında ara',
+  'storeApprovals.ledgerSearchAria': 'Talep kayıtlarında ara',
   'storeApprovals.ledgerSearchPlaceholder': 'Talep, mağaza veya kişi ara',
   'storeApprovals.ledgerTypeFilterAria': 'Talep tipi filtresi',
   'storeApprovals.ledgerStatusFilterAria': 'Talep durumu filtresi',
@@ -34,7 +34,7 @@ export const storeApprovalsTr = {
   'storeApprovals.emptyQueue': 'Seçili filtrelerde kayıt yok',
   'storeApprovals.ledgerColumnType': 'Tip',
   'storeApprovals.ledgerColumnRecord': 'Kayıt',
-  'storeApprovals.ledgerColumnScope': 'Kapsam',
+  'storeApprovals.ledgerColumnScope': 'Alan',
   'storeApprovals.ledgerColumnStatus': 'Durum',
   'storeApprovals.ledgerColumnWait': 'Bekleme',
   'storeApprovals.ledgerColumnSource': 'Kaynak',
@@ -52,7 +52,7 @@ export const storeApprovalsTr = {
   'storeApprovals.ledgerActionCreate': 'Talep aç',
   'storeApprovals.sellerCodeLedgerDetail': 'Yeni personel için satıcı kodu talebi oluştur.',
   'storeApprovals.offboardingLedgerDetail': 'Mağazadan ayrılacak personel için çıkış talebi oluştur.',
-  'storeApprovals.ledgerInspectorAria': 'Ledger detay ve aksiyon alanı',
+  'storeApprovals.ledgerInspectorAria': 'Talep detay ve aksiyon alanı',
   'storeApprovals.ledgerInspectorEyebrow': 'İş kaydı',
   'storeApprovals.ledgerInspectorTitle': 'Tablodan seç, detayı burada yönet.',
   'storeApprovals.ledgerInspectorCopy':
@@ -71,14 +71,14 @@ export const storeApprovalsTr = {
     'Bir talep satırındaki aksiyonu ya da bu paneldeki kısa yolları kullanarak işlem alanını aç.',
   'storeApprovals.targetApprovalEmptyTitle': 'Onay bekleyen hedef talebi yok',
   'storeApprovals.targetApprovalEmptyCopy':
-    'Bölge kapsamına düşen yeni hedef dağıtım talepleri burada listelenir.',
+    'Bölge kararına düşen yeni hedef dağıtım talepleri burada listelenir.',
   'storeApprovals.approvalNote': 'Onay notu',
   'storeApprovals.approvalNotePlaceholder': 'Bölge onayı için opsiyonel not',
   'storeApprovals.approving': 'Onaylanıyor...',
   'storeApprovals.approveTargetRequest': 'Hedef talebini onayla',
   'storeApprovals.cannotApproveStore': 'Bu mağaza için onay yetkisi yok',
-  'storeApprovals.submittedTargetLedgerTitle': 'Gönderilen hedef ledger',
-  'storeApprovals.route': 'Rota',
+  'storeApprovals.submittedTargetLedgerTitle': 'Gönderilen hedef talepleri',
+  'storeApprovals.route': 'Sayfa',
   'storeApprovals.actionStore': 'Aksiyon mağazası',
   'storeApprovals.noActionStore': 'Aksiyon mağazası yok',
   'storeApprovals.state': 'Durum',
@@ -130,7 +130,7 @@ export const storeApprovalsTr = {
   'storeApprovals.targetUnavailableCopy':
     'Hedef dağıtım gönderimi sadece bu mağazada aksiyon yetkisi olan oturumlarda kullanılabilir.',
   'storeApprovals.storeId': 'Mağaza no',
-  'storeApprovals.scopedStoreId': 'Kapsamdaki mağaza no',
+  'storeApprovals.scopedStoreId': 'Mağaza no',
   'storeApprovals.requestMonth': 'Talep ayı',
   'storeApprovals.targetLabel': 'Hedef etiketi',
   'storeApprovals.targetLabelDefault': 'Aylık personel hedef dağıtımı',
@@ -162,7 +162,7 @@ export const storeApprovalsTr = {
   'storeApprovals.personnelRequest': 'Personel talebi',
   'storeApprovals.sellerFormAria': 'Satıcı kodu talebi formu',
   'storeApprovals.sellerCodeTitle': 'Satıcı kodu talebi',
-  'storeApprovals.hrQueue': 'HR kuyruğu',
+  'storeApprovals.hrQueue': 'HR onayı',
   'storeApprovals.sellerUnavailableCopy':
     'Satıcı kodu talepleri sadece bu mağazada aksiyon yetkisi olan oturumlarda kullanılabilir.',
   'storeApprovals.firstName': 'Ad',
@@ -203,10 +203,10 @@ export const storeApprovalsTr = {
   'storeApprovals.readStoreIds': 'Okuma mağazaları',
   'storeApprovals.actionStoreIds': 'Aksiyon mağazaları',
   'storeApprovals.none': 'yok',
-  'storeApprovals.approvalRouteFit': 'Onay rota uyumu',
+  'storeApprovals.approvalRouteFit': 'Talep akış uyumu',
   'storeApprovals.routeFitReady': 'Mağaza gönderimi burada yapılır',
-  'storeApprovals.routeFitPending': 'Sınır rol kontratından önce hazır',
-  'storeApprovals.regionApprovalQueue': 'Bölge onay kuyruğu',
+  'storeApprovals.routeFitPending': 'Rol sınırı netleşmeden alan hazır',
+  'storeApprovals.regionApprovalQueue': 'Bölge karar listesi',
 
   'storeApprovals.submittedEyebrow': 'Gönderilen talepler',
   'storeApprovals.submittedTitle': 'Gönderilen talepler',
@@ -231,15 +231,15 @@ export const storeApprovalsTr = {
   'storeApprovals.regionReviewCopy':
     'Bölge kuyruğu talebi onaylayabilir ve mağaza yüzeyine yönetim kontrolleri sızmadan kısa not ekleyebilir.',
   'storeApprovals.boundaryRule': 'Sınır kuralı',
-  'storeApprovals.boundaryTitle': '/store/approvals dışında kalan işler',
+  'storeApprovals.boundaryTitle': 'Talep Merkezi dışında kalan işler',
   'storeApprovals.workflowGovernance': 'Akış yönetimi',
   'storeApprovals.workflowGovernanceCopy':
     'Onay politikası tasarımı, mağazalar arası inceleme ve bölge override kontrolleri admin tarafında kalır.',
   'storeApprovals.storeConsumption': 'Mağaza kullanımı',
   'storeApprovals.storeConsumptionCopy':
-    'Mağaza kullanıcıları dağıtımı hazırlar ve onay durumunu izler; bu rota bölge konsoluna dönüşmez.',
+    'Mağaza kullanıcıları dağıtımı hazırlar ve onay durumunu izler; bu sayfa bölge konsoluna dönüşmez.',
   'storeApprovals.backToStoreHome': 'Mağaza ana sayfasına dön',
-  'storeApprovals.openRegionApprovalQueue': 'Bölge onay kuyruğunu aç',
+  'storeApprovals.openRegionApprovalQueue': 'Bölge karar listesini aç',
 
   'storeApprovals.status.pending_region_approval': 'bölge onayı bekliyor',
   'storeApprovals.status.pending_hr_approval': 'HR onayı bekliyor',
@@ -256,15 +256,15 @@ export const storeApprovalsTr = {
 } as const
 
 export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
-  'storeApprovals.loadingTitle': 'Loading store approvals',
+  'storeApprovals.loadingTitle': 'Loading Request Center',
   'storeApprovals.loadingCopy':
-    'Pulling target distribution requests already submitted for this store scope.',
-  'storeApprovals.errorTitle': 'Store approvals unavailable',
+    'Pulling target distribution requests already submitted for this store.',
+  'storeApprovals.errorTitle': 'Request Center unavailable',
 
-  'storeApprovals.heroEyebrow': 'Store approvals',
+  'storeApprovals.heroEyebrow': 'Request Center',
   'storeApprovals.title': 'Store approval requests stay inside the store workflow.',
   'storeApprovals.heroCopy':
-    'The store manager prepares target distribution, seller code, and employee exit requests from one surface; decision and control steps flow to the right approval queue.',
+    'The store manager prepares target distribution, seller code, and employee exit requests from one surface; decision and control steps flow to the right approval list.',
   'storeApprovals.ledgerEyebrow': 'Store workflow',
   'storeApprovals.ledgerTitle': 'Request Center',
   'storeApprovals.storeManagerSubtitle':
@@ -272,16 +272,16 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.regionManagerSubtitle':
     'The region view only shows target distribution approvals covered by the current authority.',
   'storeApprovals.readOnlySubtitle':
-    'Store request records are shown in read-only scope for this user.',
-  'storeApprovals.ledgerScope': 'Ledger scope',
-  'storeApprovals.ledgerMetrics': 'Ledger summary metrics',
+    'Store request records are shown in observation mode for this user.',
+  'storeApprovals.ledgerScope': 'Request area',
+  'storeApprovals.ledgerMetrics': 'Request summary metrics',
   'storeApprovals.ledgerReturnedCorrections': 'Returned corrections',
   'storeApprovals.targetQueueTitle': 'Target distribution records',
   'storeApprovals.workforceQueueTitle': 'Personnel request records',
   'storeApprovals.targetApprovalQueueTitle': 'Target approval records',
   'storeApprovals.ledgerStatus': 'Record status',
   'storeApprovals.ledgerTableAria': 'Request and approval records',
-  'storeApprovals.ledgerSearchAria': 'Search ledger records',
+  'storeApprovals.ledgerSearchAria': 'Search request records',
   'storeApprovals.ledgerSearchPlaceholder': 'Search request, store, or person',
   'storeApprovals.ledgerTypeFilterAria': 'Request type filter',
   'storeApprovals.ledgerStatusFilterAria': 'Request status filter',
@@ -291,7 +291,7 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.emptyQueue': 'No record matches the selected filters',
   'storeApprovals.ledgerColumnType': 'Type',
   'storeApprovals.ledgerColumnRecord': 'Record',
-  'storeApprovals.ledgerColumnScope': 'Scope',
+  'storeApprovals.ledgerColumnScope': 'Area',
   'storeApprovals.ledgerColumnStatus': 'Status',
   'storeApprovals.ledgerColumnWait': 'Waiting',
   'storeApprovals.ledgerColumnSource': 'Source',
@@ -309,7 +309,7 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.ledgerActionCreate': 'Open request',
   'storeApprovals.sellerCodeLedgerDetail': 'Create a seller code request for a new employee.',
   'storeApprovals.offboardingLedgerDetail': 'Create an exit request for an employee leaving the store.',
-  'storeApprovals.ledgerInspectorAria': 'Ledger detail and action area',
+  'storeApprovals.ledgerInspectorAria': 'Request detail and action area',
   'storeApprovals.ledgerInspectorEyebrow': 'Work record',
   'storeApprovals.ledgerInspectorTitle': 'Select from the table, manage details here.',
   'storeApprovals.ledgerInspectorCopy':
@@ -328,14 +328,14 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
     'Use a row action or the shortcuts in this panel to open the work area.',
   'storeApprovals.targetApprovalEmptyTitle': 'No target request is waiting for approval',
   'storeApprovals.targetApprovalEmptyCopy':
-    'New target distribution requests in the region scope will be listed here.',
+    'New target distribution requests waiting for a region decision will be listed here.',
   'storeApprovals.approvalNote': 'Approval note',
   'storeApprovals.approvalNotePlaceholder': 'Optional note for region approval',
   'storeApprovals.approving': 'Approving...',
   'storeApprovals.approveTargetRequest': 'Approve target request',
   'storeApprovals.cannotApproveStore': 'No approval authority for this store',
-  'storeApprovals.submittedTargetLedgerTitle': 'Submitted target ledger',
-  'storeApprovals.route': 'Route',
+  'storeApprovals.submittedTargetLedgerTitle': 'Submitted target requests',
+  'storeApprovals.route': 'Page',
   'storeApprovals.actionStore': 'Action store',
   'storeApprovals.noActionStore': 'No action store',
   'storeApprovals.state': 'State',
@@ -387,7 +387,7 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.targetUnavailableCopy':
     'Target distribution submission is available only to sessions with action access to this store.',
   'storeApprovals.storeId': 'Store id',
-  'storeApprovals.scopedStoreId': 'Scoped store id',
+  'storeApprovals.scopedStoreId': 'Store id',
   'storeApprovals.requestMonth': 'Request month',
   'storeApprovals.targetLabel': 'Target label',
   'storeApprovals.targetLabelDefault': 'Monthly personnel target distribution',
@@ -419,7 +419,7 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.personnelRequest': 'Personnel request',
   'storeApprovals.sellerFormAria': 'Seller code request form',
   'storeApprovals.sellerCodeTitle': 'Seller code request',
-  'storeApprovals.hrQueue': 'HR queue',
+  'storeApprovals.hrQueue': 'HR approval',
   'storeApprovals.sellerUnavailableCopy':
     'Seller code requests are available only to sessions with action access to this store.',
   'storeApprovals.firstName': 'First name',
@@ -452,7 +452,7 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.resubmitOffboardingRequest': 'Resubmit offboarding request',
 
   'storeApprovals.resolvedSession': 'Resolved Session',
-  'storeApprovals.resolvedTitle': 'Why this request flow belongs in the store shell',
+  'storeApprovals.resolvedTitle': 'Why this request flow belongs here',
   'storeApprovals.userId': 'User id',
   'storeApprovals.sessionNotResolved': 'Session not resolved',
   'storeApprovals.roles': 'Roles',
@@ -460,14 +460,14 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.readStoreIds': 'Read store ids',
   'storeApprovals.actionStoreIds': 'Action store ids',
   'storeApprovals.none': 'none',
-  'storeApprovals.approvalRouteFit': 'Approval route fit',
+  'storeApprovals.approvalRouteFit': 'Request flow fit',
   'storeApprovals.routeFitReady': 'Store submission belongs here',
-  'storeApprovals.routeFitPending': 'Boundary is ready before role contract',
-  'storeApprovals.regionApprovalQueue': 'Region approval queue',
+  'storeApprovals.routeFitPending': 'View is ready before role boundary is finalized',
+  'storeApprovals.regionApprovalQueue': 'Region decision list',
 
   'storeApprovals.submittedEyebrow': 'Submitted requests',
   'storeApprovals.submittedTitle': 'Submitted requests',
-  'storeApprovals.submittedSubtitle': 'Requests that already left the store shell',
+  'storeApprovals.submittedSubtitle': 'Requests submitted from the store view',
   'storeApprovals.noSubmittedTitle': 'No requests submitted yet',
   'storeApprovals.noSubmittedCopy':
     'Once the store submits a target split, the request will appear here with its current approval state.',
@@ -483,20 +483,20 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.handlesTitle': 'What this page already handles',
   'storeApprovals.storeSubmission': 'Store submission',
   'storeApprovals.storeSubmissionCopy':
-    'Store managers can now send a person-level target split into a real approval queue.',
+    'Store managers can now send a person-level target split into a real approval flow.',
   'storeApprovals.regionReview': 'Region review',
   'storeApprovals.regionReviewCopy':
-    'The region-side queue can approve the request and attach a short note without leaking governance controls into the store shell.',
+    'The region-side flow can approve the request and attach a short note without leaking governance controls into the store view.',
   'storeApprovals.boundaryRule': 'Boundary Rule',
-  'storeApprovals.boundaryTitle': 'What stays outside /store/approvals',
+  'storeApprovals.boundaryTitle': 'What stays outside Request Center',
   'storeApprovals.workflowGovernance': 'Workflow governance',
   'storeApprovals.workflowGovernanceCopy':
     'Approval policy design, cross-store investigation, and region override controls should remain admin-side.',
   'storeApprovals.storeConsumption': 'Store consumption',
   'storeApprovals.storeConsumptionCopy':
-    'Store users should prepare the split and then watch approval state without turning this route into a region console.',
+    'Store users should prepare the split and then watch approval state without turning this page into a region console.',
   'storeApprovals.backToStoreHome': 'Back to store home',
-  'storeApprovals.openRegionApprovalQueue': 'Open region approval queue',
+  'storeApprovals.openRegionApprovalQueue': 'Open region decision list',
 
   'storeApprovals.status.pending_region_approval': 'waiting for region approval',
   'storeApprovals.status.pending_hr_approval': 'waiting for HR approval',

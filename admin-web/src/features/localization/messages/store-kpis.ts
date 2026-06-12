@@ -6,26 +6,26 @@ export const storeKpisTr = {
   'storeKpis.unavailableCopy':
     'KPI raporlama yetkisi açıldığında mağaza skoru ve aksiyon sinyalleri burada görünür.',
   'storeKpis.store': 'Mağaza',
-  'storeKpis.noStoreScope': 'Mağaza kapsamı yok',
+  'storeKpis.noStoreScope': 'Yetkili mağaza yok',
   'storeKpis.status': 'Durum',
   'storeKpis.regionOverviewEyebrow': 'Bölge KPI',
   'storeKpis.regionOverviewTitle': 'Bölge mağazaları',
   'storeKpis.regionOverviewCopy':
-    'Tanımlı mağazalar gerçek sıralama kapsamından okunur. Mağaza seçildiğinde KPI detayı açılır.',
+    'Tanımlı mağazalar gerçek sıralama verisinden okunur. Mağaza seçildiğinde KPI detayı açılır.',
   'storeKpis.regionOverviewStoreCount': '{count} mağaza',
-  'storeKpis.regionOverviewStoresTitle': 'Kapsamdaki mağazalar',
+  'storeKpis.regionOverviewStoresTitle': 'Yetkili mağazalar',
   'storeKpis.regionOverviewStoresCopy':
-    'Her satır bölge müdürünün okuyabildiği gerçek mağaza kapsamından gelir.',
-  'storeKpis.regionOverviewFoundationBadge': 'Kapsam okuma',
-  'storeKpis.regionOverviewScopedStore': 'Bölge kapsamı',
-  'storeKpis.regionOverviewEmptyTitle': 'Kapsamda mağaza görünmüyor',
+    'Her satır bölge müdürünün yetkili mağaza listesinden gelir.',
+  'storeKpis.regionOverviewFoundationBadge': 'Yetki görünümü',
+  'storeKpis.regionOverviewScopedStore': 'Bölge mağazası',
+  'storeKpis.regionOverviewEmptyTitle': 'Yetkili mağaza görünmüyor',
   'storeKpis.regionOverviewEmptyCopy':
-    'Bu oturum için sıralama veya mağaza kapsamı henüz görünür değil.',
+    'Bu oturum için sıralama veya yetkili mağaza listesi henüz görünür değil.',
   'storeKpis.regionOverviewErrorTitle': 'Bölge KPI listesi açılamadı',
   'storeKpis.openStoreKpi': "KPI'a git",
   'storeKpis.authWaiting': 'Yetki bekliyor',
-  'storeKpis.storeScope': 'Mağaza kapsamı',
-  'storeKpis.noOpenStoreScope': 'Açık mağaza kapsamı yok',
+  'storeKpis.storeScope': 'Mağaza görünümü',
+  'storeKpis.noOpenStoreScope': 'Açık mağaza yok',
   'storeKpis.readStatus': 'Okuma durumu',
   'storeKpis.readWaiting': 'KPI raporlama yetkisi bekliyor',
 
@@ -99,7 +99,7 @@ export const storeKpisTr = {
   'storeKpis.checklist.shareStayed': '{label} payı KPI tarafında kaldı',
 
   'storeKpis.scoreSourcesAria': 'Mağaza skor kaynak açıklaması',
-  'storeKpis.scoreContractEyebrow': 'Skor Kontratı',
+  'storeKpis.scoreContractEyebrow': 'Skor kuralı',
   'storeKpis.storeScoreSources': 'Mağaza skor kaynakları',
   'storeKpis.officialRule': 'Resmi kural',
   'storeKpis.scoreSourcesCopy':
@@ -115,15 +115,15 @@ export const storeKpisTr = {
     'Gerçek oran %120 üzerinde olsa da skor katkısı %120 cap ile hesaplanır.',
   'storeKpis.turkeyAverage': 'Türkiye ortalaması',
   'storeKpis.turkeyAverageValue':
-    'Yüklenen özet satırlar karşılaştırma bilgisidir; skor referansı mağaza kapsamına göre hesaplanır.',
+    'Yüklenen özet satırlar karşılaştırma bilgisidir; skor referansı seçili mağazaya göre hesaplanır.',
 
-  'storeKpis.activeScopeEyebrow': 'Aktif kapsam',
+  'storeKpis.activeScopeEyebrow': 'Aktif mağaza',
   'storeKpis.activeScopeTitle': 'Bu görünüm hangi mağazayı okuyor',
   'storeKpis.storeName': 'Mağaza adı',
   'storeKpis.dataView': 'Veri görünümü',
   'storeKpis.liveImportedMonthlyData': 'Import edilen aylık canlı durum',
   'storeKpis.dailyClosedRecord': 'Günlük kapanış kaydı',
-  'storeKpis.readScope': 'Okuma kapsamı',
+  'storeKpis.readScope': 'Görünüm',
   'storeKpis.readScopeValue': 'Mağaza KPI görünümü',
 
   'storeKpis.topSignalEyebrow': 'Öne çıkan sinyal',
@@ -281,26 +281,26 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.unavailableCopy':
     'Store score and action signals will appear here when KPI reporting access is enabled.',
   'storeKpis.store': 'Store',
-  'storeKpis.noStoreScope': 'No store scope',
+  'storeKpis.noStoreScope': 'No authorized store',
   'storeKpis.status': 'Status',
   'storeKpis.regionOverviewEyebrow': 'Region KPI',
   'storeKpis.regionOverviewTitle': 'Region stores',
   'storeKpis.regionOverviewCopy':
-    'Assigned stores are read from the real ranking scope. Store KPI detail opens after a store is selected.',
+    'Assigned stores are read from real ranking data. Store KPI detail opens after a store is selected.',
   'storeKpis.regionOverviewStoreCount': '{count} stores',
-  'storeKpis.regionOverviewStoresTitle': 'Stores in scope',
+  'storeKpis.regionOverviewStoresTitle': 'Authorized stores',
   'storeKpis.regionOverviewStoresCopy':
-    'Each row comes from the real store scope readable by the region manager.',
-  'storeKpis.regionOverviewFoundationBadge': 'Scope read',
-  'storeKpis.regionOverviewScopedStore': 'Region scope',
-  'storeKpis.regionOverviewEmptyTitle': 'No stores are visible in scope',
+    'Each row comes from the authorized store list for the region manager.',
+  'storeKpis.regionOverviewFoundationBadge': 'Access view',
+  'storeKpis.regionOverviewScopedStore': 'Region store',
+  'storeKpis.regionOverviewEmptyTitle': 'No authorized stores are visible',
   'storeKpis.regionOverviewEmptyCopy':
-    'Ranking or store scope is not visible for this session yet.',
+    'Ranking or authorized store list is not visible for this session yet.',
   'storeKpis.regionOverviewErrorTitle': 'Region KPI list could not be opened',
   'storeKpis.openStoreKpi': 'Open KPI',
   'storeKpis.authWaiting': 'Waiting for access',
-  'storeKpis.storeScope': 'Store scope',
-  'storeKpis.noOpenStoreScope': 'No open store scope',
+  'storeKpis.storeScope': 'Store view',
+  'storeKpis.noOpenStoreScope': 'No open store',
   'storeKpis.readStatus': 'Read status',
   'storeKpis.readWaiting': 'Waiting for KPI reporting access',
 
@@ -374,7 +374,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.checklist.shareStayed': '{label} share stayed on the KPI side',
 
   'storeKpis.scoreSourcesAria': 'Store score source explanation',
-  'storeKpis.scoreContractEyebrow': 'Score Contract',
+  'storeKpis.scoreContractEyebrow': 'Score rule',
   'storeKpis.storeScoreSources': 'Store score sources',
   'storeKpis.officialRule': 'Official rule',
   'storeKpis.scoreSourcesCopy':
@@ -390,15 +390,15 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
     'Even when actual ratio is above 120%, score contribution is calculated with the 120% cap.',
   'storeKpis.turkeyAverage': 'Turkey average',
   'storeKpis.turkeyAverageValue':
-    'Loaded summary rows provide comparison context; score reference is calculated from the store scope.',
+    'Loaded summary rows provide comparison context; score reference is calculated from the selected store.',
 
-  'storeKpis.activeScopeEyebrow': 'Active scope',
+  'storeKpis.activeScopeEyebrow': 'Active store',
   'storeKpis.activeScopeTitle': 'Which store this view reads',
   'storeKpis.storeName': 'Store name',
   'storeKpis.dataView': 'Data view',
   'storeKpis.liveImportedMonthlyData': 'Imported monthly live status',
   'storeKpis.dailyClosedRecord': 'Daily closed record',
-  'storeKpis.readScope': 'Read scope',
+  'storeKpis.readScope': 'View',
   'storeKpis.readScopeValue': 'Store KPI view',
 
   'storeKpis.topSignalEyebrow': 'Top signal',

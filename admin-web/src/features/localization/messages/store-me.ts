@@ -146,7 +146,7 @@ export const storeMeTr = {
   'storeMe.noStoreRank': 'Henüz mağaza içi sıralama verisi yok.',
   'storeMe.myStore': 'Mağazam',
   'storeMe.activeStore': 'Aktif mağaza: {storeName}',
-  'storeMe.activeStoreScope': 'Bireysel performans bu aktif mağaza kapsamı ile okunur.',
+  'storeMe.activeStoreScope': 'Bireysel performans bu aktif mağaza ile okunur.',
 
   'storeMe.scoreMeaning': 'Skor yorumu',
   'storeMe.focus': 'Odak',
@@ -387,7 +387,7 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.noStoreRank': 'No in-store ranking data yet.',
   'storeMe.myStore': 'My store',
   'storeMe.activeStore': 'Active store: {storeName}',
-  'storeMe.activeStoreScope': 'Individual performance is read within this active store scope.',
+  'storeMe.activeStoreScope': 'Individual performance is read within this active store.',
 
   'storeMe.scoreMeaning': 'Score meaning',
   'storeMe.focus': 'Focus',

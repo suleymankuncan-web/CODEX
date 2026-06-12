@@ -291,8 +291,7 @@
   .store-checklist-session-score span,
   .store-checklist-session-progress span,
   .store-checklist-session-answer-heading span,
-  .store-checklist-session-note-field > label,
-  .store-checklist-session-photo-panel > div:first-child span {
+  .store-checklist-session-note-field > label {
     font-size: 0.62rem;
     letter-spacing: 0.03em;
   }
@@ -343,8 +342,7 @@
 
   .store-checklist-session-question-copy p,
   .store-checklist-session-answer-heading small,
-  .store-checklist-session-note-field small,
-  .store-checklist-session-photo-panel small {
+  .store-checklist-session-note-field small {
     font-size: 0.72rem;
     line-height: 1.32;
   }
@@ -380,26 +378,6 @@
 
   .store-checklist-session-note-field textarea {
     min-height: 4.5rem;
-  }
-
-  .store-checklist-session-photo-panel {
-    gap: 0.4rem;
-    border-radius: 0.82rem;
-    padding: 0.5rem;
-  }
-
-  .store-checklist-session-photo-row {
-    grid-template-columns: minmax(0, 1fr) 5.6rem;
-    gap: 0.38rem;
-  }
-
-  .store-checklist-session-photo-button {
-    height: 2.7rem;
-    font-size: 0.78rem;
-  }
-
-  .store-checklist-session-photo-placeholder {
-    font-size: 0.64rem;
   }
 
   .store-checklist-session-question-actions,

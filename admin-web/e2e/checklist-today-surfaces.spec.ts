@@ -266,7 +266,7 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   })
 
   await page.goto('/store/tasks')
-  await expect(page.getByRole('heading', { name: 'Store action queue' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store action list' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'I acknowledge' })).toHaveCount(0)
   expect(workflowInboxRequests).toBe(1)
 
@@ -288,7 +288,7 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   await expect.poll(() => handoffState.completed).toBe(true)
 
   await page.goto('/store/tasks')
-  await expect(page.getByRole('heading', { name: 'Store action queue' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store action list' })).toBeVisible()
 
   await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
   await expect(page.getByRole('link', { name: 'I acknowledge' })).toBeVisible()
@@ -357,8 +357,8 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   })
   await page.goto('/store/checklists')
 
-  await expect(page.getByText('VM kapsamı').first()).toBeVisible()
-  await expect(page.getByText('BM kapsamı')).toHaveCount(0)
+  await expect(page.getByText('VM görünümü').first()).toBeVisible()
+  await expect(page.getByText('BM görünümü')).toHaveCount(0)
   await expect(page.getByText('BM + VM')).toHaveCount(0)
   await expect(page.getByText('BM skor')).toHaveCount(0)
   await expect(page.getByText('BM yapılmadı')).toHaveCount(0)

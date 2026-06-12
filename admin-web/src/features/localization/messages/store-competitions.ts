@@ -1,21 +1,20 @@
 export const storeCompetitionsTr = {
-  'storeCompetitions.noStoreScope': 'Mağaza kapsamı yok',
+  'storeCompetitions.noStoreScope': 'Yetkili mağaza yok',
   'storeCompetitions.unavailableTitle': 'Yarışma yüzeyi açılamadı',
   'storeCompetitions.unavailableCopy':
-    'Bu mağaza rotası mağaza müdürü veya mağaza personeli oturumu gerektirir.',
+    'Bu sayfa mağaza müdürü veya mağaza personeli oturumu gerektirir.',
   'storeCompetitions.loadingTitle': 'Mağaza yarışmaları yükleniyor',
   'storeCompetitions.loadingCopy':
-    'Mağaza alanı kapsamlı yarışma sıralamalarını kontrol ediyor.',
+    'Mağaza yarışma sıralamaları kontrol ediliyor.',
   'storeCompetitions.errorTitle': 'Yarışma yüzeyi açılamadı',
   'storeCompetitions.retryAction': 'Tekrar dene',
   'storeCompetitions.retryingAction': 'Tekrar deneniyor...',
 
   'storeCompetitions.heroEyebrow': 'Mağaza yarışmaları',
-  'storeCompetitions.title': 'Mağaza yarışmaları ve kapsamdaki katkı skorları.',
+  'storeCompetitions.title': 'Mağaza yarışmaları ve katkı skorları.',
   'storeCompetitions.heroCopy':
-    'Mağaza kullanıcıları aktif yarışma sıralamalarını ve çözülen okuma kapsamına ait katkı satırlarını görür.',
-  'storeCompetitions.route': 'Rota',
-  'storeCompetitions.storeScope': 'Mağaza kapsamı',
+    'Mağaza kullanıcıları aktif yarışma sıralamalarını ve kendi mağazalarına ait katkı satırlarını görür.',
+  'storeCompetitions.storeScope': 'Mağaza',
   'storeCompetitions.competitions': 'Yarışmalar',
   'storeCompetitions.contributions': 'Katkılar',
 
@@ -24,7 +23,7 @@ export const storeCompetitionsTr = {
   'storeCompetitions.readOnly': 'Sadece okuma',
   'storeCompetitions.noVisibleTitle': 'Görünür yarışma yok',
   'storeCompetitions.noVisibleCopy':
-    'Kapsamdaki en az bir mağaza katıldığında yarışmalar burada görünür.',
+    'Yetkili mağazalardan en az biri katıldığında yarışmalar burada görünür.',
   'storeCompetitions.review': 'İncele',
   'storeCompetitions.type': 'Tür',
   'storeCompetitions.state': 'Durum',
@@ -35,46 +34,45 @@ export const storeCompetitionsTr = {
   'storeCompetitions.readSummaryAria': 'Mağaza yarışma okuma özeti',
   'storeCompetitions.warningCount': '{count} uyarı',
   'storeCompetitions.standingLoadingTitle': 'Sıralama yükleniyor',
-  'storeCompetitions.standingLoadingCopy': 'Kapsamlı yarışma detayı yükleniyor.',
+  'storeCompetitions.standingLoadingCopy': 'Yarışma detayı yükleniyor.',
   'storeCompetitions.standingErrorTitle': 'Sıralama açılamadı',
   'storeCompetitions.teams': 'Takımlar',
   'storeCompetitions.teamsNote':
     'Bu yarışma için görünür güncel takım sıralama satırları.',
   'storeCompetitions.contributionRows': 'Katkı satırları',
-  'storeCompetitions.scopedContributionsAria': 'Kapsamdaki mağaza yarışma katkıları',
+  'storeCompetitions.scopedContributionsAria': 'Yetkili mağaza yarışma katkıları',
   'storeCompetitions.contributionRowsNote':
-    'Mevcut okuma kapsamındaki mağaza katkı satırları.',
+    'Yetkili mağazalara ait katkı satırları.',
   'storeCompetitions.warnings': 'Uyarılar',
-  'storeCompetitions.scopedWarningsAria': 'Kapsamdaki mağaza yarışma uyarıları',
+  'storeCompetitions.scopedWarningsAria': 'Yetkili mağaza yarışma uyarıları',
   'storeCompetitions.warningsNote':
-    'Bu oturum kapsamına göre filtrelenen veri kalite uyarıları.',
+    'Yetkili mağazalara göre filtrelenen veri kalite uyarıları.',
   'storeCompetitions.teamStanding': 'Takım sıralaması',
   'storeCompetitions.latestScores': 'Son skorlar',
   'storeCompetitions.noTeamSnapshot': 'Henüz takım skoru görünümü yok.',
   'storeCompetitions.score': 'Skor',
-  'storeCompetitions.coverage': 'Kapsam',
+  'storeCompetitions.coverage': 'Katılım',
   'storeCompetitions.teamCode': 'Takım kodu',
   'storeCompetitions.partialScore': 'Kısmi',
 } as const
 
 export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, string> = {
-  'storeCompetitions.noStoreScope': 'No store scope',
+  'storeCompetitions.noStoreScope': 'No authorized store',
   'storeCompetitions.unavailableTitle': 'Competition surface unavailable',
   'storeCompetitions.unavailableCopy':
-    'This store route requires a store manager or store personnel session.',
+    'This page requires a store manager or store personnel session.',
   'storeCompetitions.loadingTitle': 'Store competitions are loading',
   'storeCompetitions.loadingCopy':
-    'The store shell is checking scoped competition standings.',
+    'Store competition standings are being checked.',
   'storeCompetitions.errorTitle': 'Competition surface could not load',
   'storeCompetitions.retryAction': 'Try again',
   'storeCompetitions.retryingAction': 'Retrying...',
 
   'storeCompetitions.heroEyebrow': 'Store competitions',
-  'storeCompetitions.title': 'Store competitions and scoped contribution scores.',
+  'storeCompetitions.title': 'Store competitions and contribution scores.',
   'storeCompetitions.heroCopy':
-    'Store users see active competition standings and the contribution rows that belong to their resolved read scope.',
-  'storeCompetitions.route': 'Route',
-  'storeCompetitions.storeScope': 'Store scope',
+    'Store users see active competition standings and contribution rows for their stores.',
+  'storeCompetitions.storeScope': 'Store',
   'storeCompetitions.competitions': 'Competitions',
   'storeCompetitions.contributions': 'Contributions',
 
@@ -83,7 +81,7 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.readOnly': 'Read only',
   'storeCompetitions.noVisibleTitle': 'No visible competitions',
   'storeCompetitions.noVisibleCopy':
-    'Competitions appear here when at least one scoped store participates.',
+    'Competitions appear here when at least one authorized store participates.',
   'storeCompetitions.review': 'Review',
   'storeCompetitions.type': 'Type',
   'storeCompetitions.state': 'State',
@@ -94,19 +92,19 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.readSummaryAria': 'Store competition read summary',
   'storeCompetitions.warningCount': '{count} warnings',
   'storeCompetitions.standingLoadingTitle': 'Standing is loading',
-  'storeCompetitions.standingLoadingCopy': 'Scoped competition detail is loading.',
+  'storeCompetitions.standingLoadingCopy': 'Competition detail is loading.',
   'storeCompetitions.standingErrorTitle': 'Standing could not load',
   'storeCompetitions.teams': 'Teams',
   'storeCompetitions.teamsNote':
     'Current team standing rows visible for this competition.',
   'storeCompetitions.contributionRows': 'Contribution rows',
-  'storeCompetitions.scopedContributionsAria': 'Scoped store competition contributions',
+  'storeCompetitions.scopedContributionsAria': 'Authorized store competition contributions',
   'storeCompetitions.contributionRowsNote':
-    'Store contribution rows inside the current read scope.',
+    'Contribution rows for authorized stores.',
   'storeCompetitions.warnings': 'Warnings',
-  'storeCompetitions.scopedWarningsAria': 'Scoped store competition warnings',
+  'storeCompetitions.scopedWarningsAria': 'Authorized store competition warnings',
   'storeCompetitions.warningsNote':
-    'Data quality warnings filtered by this session scope.',
+    'Data quality warnings filtered to authorized stores.',
   'storeCompetitions.teamStanding': 'Team standing',
   'storeCompetitions.latestScores': 'Latest scores',
   'storeCompetitions.noTeamSnapshot': 'No team score snapshot is available yet.',

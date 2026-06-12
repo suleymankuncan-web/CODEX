@@ -5,7 +5,7 @@ export const storeHomeTr = {
   'storeHome.shellRejectedTitle': 'Mağaza alanı açılamadı',
   'storeHome.shellRejectedFallback': 'Oturum mağaza ön izleme alanı için çözülemedi.',
   'storeHome.shellEyebrow': 'Mağaza alanı',
-  'storeHome.shellTitle': 'Mağaza kapsamlı işler için görev odaklı ön izleme.',
+  'storeHome.shellTitle': 'Mağaza işleri için görev odaklı ön izleme.',
   'storeHome.shellCopy':
     'Checklist, KPI, onay ve prim akışlarının mağaza kullanıcısına ayrı ve sade bir yüzeyden gelmesi gereken alan burası.',
   'storeHome.preview': 'Ön izleme',
@@ -72,8 +72,8 @@ export const storeHomeTr = {
   'storeHome.command.vmTimelineTitle': 'Checklist akışı',
   'storeHome.command.latestLoadedPeriodPending': 'Son veri: bağlanacak',
   'storeHome.command.connected': 'Bağlı',
-  'storeHome.command.connectedRoutesCopy': 'Sayfalar sol toolbar üzerinden rol kapsamına göre açılır.',
-  'storeHome.command.routeConnected': 'Bu sayfa store alanı içinde açılır.',
+  'storeHome.command.connectedRoutesCopy': 'Sayfalar sol toolbar üzerinden role göre açılır.',
+  'storeHome.command.routeConnected': 'Bu sayfa mağaza alanı içinde açılır.',
   'storeHome.command.ready': 'Hazır',
   'storeHome.command.kpiSnapshot': 'KPI görünümü',
   'storeHome.dashboard.metricsAria': 'Store home özet metrikleri',
@@ -121,9 +121,9 @@ export const storeHomeTr = {
   'storeHome.metric.turkeyRank': 'Türkiye sırası',
   'storeHome.metric.storeScope': 'Yetkili mağaza',
   'storeHome.metric.pendingRequests': 'Bekleyen talep',
-  'storeHome.metric.checklistCoverage': 'Checklist kapsamı',
+  'storeHome.metric.checklistCoverage': 'Checklist tamamlanma',
   'storeHome.metric.checklistStatus': 'Checklist durumu',
-  'storeHome.metric.checklistQueue': 'Checklist kuyruğu',
+  'storeHome.metric.checklistQueue': 'Checklist listesi',
   'storeHome.metric.pendingWork': 'Bekleyen iş',
   'storeHome.metric.pendingWorkNote': 'Açık iş: {requests} talep, {checklists} checklist.',
   'storeHome.metric.kpiSnapshotPending': 'KPI verisi bekleniyor.',
@@ -142,12 +142,12 @@ export const storeHomeTr = {
   'storeHome.checklistCard.regionTitle': 'Checklist saha turu',
   'storeHome.checklistCard.regionNote': 'BM + VM ziyaret durumu',
   'storeHome.checklistCard.regionCopy':
-    '{scope} mağaza kapsamında {count} checklist bekliyor, {completed} checklist tamamlandı.',
+    '{scope} mağaza içinde {count} checklist bekliyor, {completed} checklist tamamlandı.',
   'storeHome.checklistCard.regionMetricNote': '{completed} tamamlanan checklist',
   'storeHome.checklistCard.vmTitle': 'VM checklist kuyruğu',
   'storeHome.checklistCard.vmNote': 'Görsel sunum saha akışı',
   'storeHome.checklistCard.vmCopy':
-    '{scope} mağaza kapsamında {count} VM checklist bekliyor, {completed} checklist tamamlandı.',
+    '{scope} mağaza içinde {count} VM checklist bekliyor, {completed} checklist tamamlandı.',
   'storeHome.checklistCard.vmMetricNote': '{completed} tamamlanan VM checklist',
   'storeHome.utility.primaryAction': 'Birincil aksiyon',
   'storeHome.utility.statusPreference': 'Tercih',
@@ -157,7 +157,7 @@ export const storeHomeTr = {
   'storeHome.heroTitle':
     'Mağaza kullanıcısı için admin panelinden ayrılmış görev odaklı ana sayfa.',
   'storeHome.heroCopy':
-    'Checklist, KPI, onay ve prim işleri mağaza kapsamlı kullanıcıya rapor kalabalığı olarak değil, odaklı günlük aksiyon olarak gelmeli.',
+    'Checklist, KPI, onay ve prim işleri mağaza kullanıcısına rapor kalabalığı olarak değil, odaklı günlük aksiyon olarak gelmeli.',
   'storeHome.area': 'Alan',
   'storeHome.currentLanding': 'Geçerli açılış',
   'storeHome.purpose': 'Amaç',
@@ -168,9 +168,9 @@ export const storeHomeTr = {
     'Checklist takibi, onaylar ve primle ilgili gözden geçirmeler burada başlamalı.',
   'storeHome.storeFocus': 'Mağaza odağı',
   'storeHome.storeFocusNote':
-    'Mağaza kullanıcısı yalnızca kendi kapsamını ilgilendiren parçayı görmeli.',
+    'Mağaza kullanıcısı yalnızca kendi mağazasını ilgilendiren parçayı görmeli.',
   'storeHome.sharedAuthority': 'Ortak yetki',
-  'storeHome.sharedAuthorityNote': 'Yüzey ayrı; auth, kapsam ve audit temelleri ortak kalır.',
+  'storeHome.sharedAuthorityNote': 'Yüzey ayrı; oturum, yetki ve kayıt temelleri ortak kalır.',
 
   'storeHome.feedErrorTitle': 'Sabit duyurular açılamadı',
   'storeHome.pinnedAnnouncements': 'Sabit duyurular',
@@ -189,13 +189,13 @@ export const storeHomeTr = {
     'Checklist tamamlamaları, bekleyen onaylar ve mağazada hemen aksiyon gerektiren işler.',
   'storeHome.kpiSummaries': 'KPI özetleri',
   'storeHome.kpiSummariesCopy':
-    'Varsayılan giriş admin tipi rapor tabloları değil, mağaza kapsamlı özet kartlar ve hızlı trendler olmalı.',
+    'Varsayılan giriş admin tipi rapor tabloları değil, mağaza odaklı özet kartlar ve hızlı trendler olmalı.',
   'storeHome.incentiveSummary': 'Prim özeti',
   'storeHome.incentiveSummaryCopy':
     'Gelecekte prim görünürlüğü mağaza alanında okunmalı; konfigürasyon ve inceleme admin tarafında kalmalı.',
 
   'storeHome.resolvedSession': 'Çözülen oturum',
-  'storeHome.resolvedTitle': 'Mevcut kullanıcı mağaza alanına hangi kapsamla geliyor',
+  'storeHome.resolvedTitle': 'Mevcut kullanıcı mağaza alanına hangi yetkiyle geliyor',
   'storeHome.userId': 'Kullanıcı id',
   'storeHome.sessionNotResolved': 'Oturum çözülmedi',
   'storeHome.roles': 'Roller',
@@ -208,14 +208,14 @@ export const storeHomeTr = {
   'storeHome.storeKpis': 'Mağaza KPI özetleri',
   'storeHome.myPerformance': 'Benim performansım',
   'storeHome.rankings': 'Sıralamalar',
-  'storeHome.storeApprovals': 'Mağaza onayları',
+  'storeHome.storeApprovals': 'Talep Merkezi',
   'storeHome.storeIncentives': 'Mağaza primleri',
 
-  'storeHome.routeSkeleton': 'Yüzey iskeleti',
+  'storeHome.routeSkeleton': 'Yüzey planı',
   'storeHome.routeSkeletonTitle': 'Gelecek mağaza işleri hangi yüzeye oturmalı',
-  'storeHome.workQueue': 'İş kuyruğu',
+  'storeHome.workQueue': 'İş listesi',
   'storeHome.workQueueCopy':
-    'Checklist takibi, bekleyen talepler ve gelecek mağaza aksiyonları için günlük kuyruk.',
+    'Checklist takibi, bekleyen talepler ve gelecek mağaza aksiyonları için günlük liste.',
   'storeHome.checklists': 'Checklistler',
   'storeHome.checklistsCopy':
     'Mağaza uygulama yüzeyi, tamamlama ilerlemesi ve checklist takibi.',
@@ -241,7 +241,7 @@ export const storeHomeTr = {
   'storeHome.doNotMoveTitle': 'Bunları /store içine taşırma',
   'storeHome.governanceStaysTitle': 'Yönetişim admin öncelikli kalır',
   'storeHome.governanceStaysCopy':
-    'Import operasyonları, snapshot orkestrasyonu, auth yönetimi, audit incelemesi ve mağazalar arası platform kontrolleri mağaza kullanıcılarını desteklese bile admin alanında kalmalı.',
+    'Import operasyonları, snapshot orkestrasyonu, oturum yönetimi, kayıt incelemesi ve mağazalar arası platform kontrolleri mağaza kullanıcılarını desteklese bile admin alanında kalmalı.',
 
   'storeHome.role.STORE_MANAGER': 'Mağaza müdürü',
   'storeHome.role.STORE_PERSONNEL': 'Mağaza personeli',
@@ -259,7 +259,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.shellRejectedTitle': 'Store workspace could not be opened',
   'storeHome.shellRejectedFallback': 'The session could not be resolved for store preview.',
   'storeHome.shellEyebrow': 'Store workspace',
-  'storeHome.shellTitle': 'Task-focused preview for store-scoped work.',
+  'storeHome.shellTitle': 'Task-focused preview for store work.',
   'storeHome.shellCopy':
     'Checklist, KPI, approval, and incentive flows belong here when store users need a separate, simple surface.',
   'storeHome.preview': 'Preview',
@@ -319,14 +319,14 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.command.vmTitle': 'Checklist home is ready.',
   'storeHome.command.vmCopy': 'VM users focus only on checklist and announcement flows.',
   'storeHome.command.vmHeroTitle': 'Checklist work is connected to a clean surface.',
-  'storeHome.command.vmHeroCopy': 'VM-only users keep landing on the checklist queue instead of store home.',
-  'storeHome.command.vmFocusTitle': 'Checklist queue is the first action point.',
+  'storeHome.command.vmHeroCopy': 'VM-only users keep landing on the checklist list instead of store home.',
+  'storeHome.command.vmFocusTitle': 'Checklist list is the first action point.',
   'storeHome.command.vmFocusCopy': 'Store KPI and approval flows are not visible to VM-only users.',
   'storeHome.command.vmSummaryTitle': 'Checklist summary',
   'storeHome.command.vmTimelineTitle': 'Checklist flow',
   'storeHome.command.latestLoadedPeriodPending': 'Latest data: pending',
   'storeHome.command.connected': 'Connected',
-  'storeHome.command.connectedRoutesCopy': 'Pages open through the left toolbar according to role scope.',
+  'storeHome.command.connectedRoutesCopy': 'Pages open through the left toolbar according to role access.',
   'storeHome.command.routeConnected': 'This page opens inside the store workspace.',
   'storeHome.command.ready': 'Ready',
   'storeHome.command.kpiSnapshot': 'KPI view',
@@ -377,7 +377,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.metric.pendingRequests': 'Pending requests',
   'storeHome.metric.checklistCoverage': 'Checklist coverage',
   'storeHome.metric.checklistStatus': 'Checklist status',
-  'storeHome.metric.checklistQueue': 'Checklist queue',
+  'storeHome.metric.checklistQueue': 'Checklist list',
   'storeHome.metric.pendingWork': 'Open work',
   'storeHome.metric.pendingWorkNote': 'Open work: {requests} requests, {checklists} checklist items.',
   'storeHome.metric.kpiSnapshotPending': 'KPI data pending.',
@@ -398,7 +398,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.checklistCard.regionCopy':
     '{count} checklist visits are waiting across {scope} stores; {completed} are completed.',
   'storeHome.checklistCard.regionMetricNote': '{completed} completed checklists',
-  'storeHome.checklistCard.vmTitle': 'VM checklist queue',
+  'storeHome.checklistCard.vmTitle': 'VM checklist list',
   'storeHome.checklistCard.vmNote': 'Visual presentation field flow',
   'storeHome.checklistCard.vmCopy':
     '{count} VM checklist visits are waiting across {scope} stores; {completed} are completed.',
@@ -410,7 +410,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.heroEyebrow': 'Store home Phase 1',
   'storeHome.heroTitle': 'Task-focused home page separated from the admin console.',
   'storeHome.heroCopy':
-    'Checklist, KPI, approval, and incentive work should reach store-scoped users as focused daily action, not as report clutter.',
+    'Checklist, KPI, approval, and incentive work should reach store users as focused daily action, not as report clutter.',
   'storeHome.area': 'Area',
   'storeHome.currentLanding': 'Current landing',
   'storeHome.purpose': 'Purpose',
@@ -420,10 +420,10 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.todayWorkNote':
     'Checklist follow-up, approvals, and incentive reviews should start here.',
   'storeHome.storeFocus': 'Store focus',
-  'storeHome.storeFocusNote': 'Store users should only see the part that belongs to their scope.',
+  'storeHome.storeFocusNote': 'Store users should only see the part that belongs to their store.',
   'storeHome.sharedAuthority': 'Shared authority',
   'storeHome.sharedAuthorityNote':
-    'The surface is separate; auth, scope, and audit foundations stay shared.',
+    'The surface is separate; session, access, and record foundations stay shared.',
 
   'storeHome.feedErrorTitle': 'Pinned announcements could not be opened',
   'storeHome.pinnedAnnouncements': 'Pinned announcements',
@@ -442,13 +442,13 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
     'Checklist completion, pending approvals, and work that needs immediate action in the store.',
   'storeHome.kpiSummaries': 'KPI summaries',
   'storeHome.kpiSummariesCopy':
-    'The default landing should be store-scoped summary cards and quick trends, not admin-style report tables.',
+    'The default landing should be store-focused summary cards and quick trends, not admin-style report tables.',
   'storeHome.incentiveSummary': 'Incentive summary',
   'storeHome.incentiveSummaryCopy':
     'Future incentive visibility should be read inside the store area; configuration and review should remain admin-side.',
 
   'storeHome.resolvedSession': 'Resolved session',
-  'storeHome.resolvedTitle': 'Which scope brings the current user into the store area',
+  'storeHome.resolvedTitle': 'Which access brings the current user into the store area',
   'storeHome.userId': 'User id',
   'storeHome.sessionNotResolved': 'Session not resolved',
   'storeHome.roles': 'Roles',
@@ -461,14 +461,14 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.storeKpis': 'Store KPI summaries',
   'storeHome.myPerformance': 'My performance',
   'storeHome.rankings': 'Rankings',
-  'storeHome.storeApprovals': 'Store approvals',
+  'storeHome.storeApprovals': 'Request Center',
   'storeHome.storeIncentives': 'Store incentives',
 
-  'storeHome.routeSkeleton': 'Surface skeleton',
+  'storeHome.routeSkeleton': 'Surface plan',
   'storeHome.routeSkeletonTitle': 'Where future store work should land',
-  'storeHome.workQueue': 'Work queue',
+  'storeHome.workQueue': 'Work list',
   'storeHome.workQueueCopy':
-    'Daily queue for checklist follow-up, pending requests, and future store actions.',
+    'Daily list for checklist follow-up, pending requests, and future store actions.',
   'storeHome.checklists': 'Checklists',
   'storeHome.checklistsCopy':
     'Store execution surface, completion progress, and checklist follow-up.',
@@ -493,7 +493,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.doNotMoveTitle': 'Do not move these into /store',
   'storeHome.governanceStaysTitle': 'Governance stays admin-first',
   'storeHome.governanceStaysCopy':
-    'Import operations, snapshot orchestration, auth management, audit review, and cross-store platform controls should stay in the admin area even when they support store users.',
+    'Import operations, snapshot orchestration, session management, record review, and cross-store platform controls should stay in the admin area even when they support store users.',
 
   'storeHome.role.STORE_MANAGER': 'Store manager',
   'storeHome.role.STORE_PERSONNEL': 'Store personnel',

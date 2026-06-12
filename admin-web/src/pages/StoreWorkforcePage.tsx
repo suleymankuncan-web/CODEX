@@ -530,8 +530,8 @@ function StoreManagerWorkforce(input: {
               <input
                 className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none tw:placeholder:text-[#7c88a6]"
                 value={personnelSearch}
-                aria-label="Personel ara"
-                placeholder="Personel ara"
+                aria-label={t('storeWorkforce.personnelSearchAria')}
+                placeholder={t('storeWorkforce.personnelSearchPlaceholder')}
                 onChange={(event) => setPersonnelSearch(event.target.value)}
               />
             </label>
@@ -540,10 +540,10 @@ function StoreManagerWorkforce(input: {
               <select
                 className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
                 value={positionFilter}
-                aria-label="Pozisyon filtresi"
+                aria-label={t('storeWorkforce.positionFilterAria')}
                 onChange={(event) => setPositionFilter(event.target.value)}
               >
-                <option value="all">Tüm pozisyonlar</option>
+                <option value="all">{t('storeWorkforce.allPositions')}</option>
                 {positionOptions.map((position) => (
                   <option key={position} value={position}>{position}</option>
                 ))}
@@ -554,13 +554,13 @@ function StoreManagerWorkforce(input: {
               <select
                 className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
                 value={statusFilter}
-                aria-label="Durum filtresi"
+                aria-label={t('storeWorkforce.statusFilterAria')}
                 onChange={(event) => setStatusFilter(event.target.value)}
               >
-                <option value="all">Tüm durumlar</option>
-                <option value="active">Aktif</option>
-                <option value="codeWaiting">Kod bekliyor</option>
-                <option value="offboarding">Çıkış talebi</option>
+                <option value="all">{t('storeWorkforce.allStatuses')}</option>
+                <option value="active">{t('storeWorkforce.statusActive')}</option>
+                <option value="codeWaiting">{t('storeWorkforce.statusCodeWaiting')}</option>
+                <option value="offboarding">{t('storeWorkforce.statusOffboarding')}</option>
               </select>
             </label>
           </div>
