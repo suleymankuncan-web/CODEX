@@ -17,6 +17,7 @@ import { useSession } from '../features/session/session-context-value'
 import {
   defaultSession,
   getBearerSessionCacheKey,
+  isCookieBrowserSession,
   type SessionMode,
   type SessionState,
 } from '../features/session/session-storage'
@@ -26,13 +27,16 @@ export function SessionReadinessPage() {
   const { session, isReady, saveSession, resetSession } = useSession()
   const [draft, setDraft] = useState(session)
   const [verificationRequested, setVerificationRequested] = useState(false)
+  const [saveError, setSaveError] = useState(false)
   const sessionModeLabel = formatSessionMode(session.mode, t)
   const readinessLabel = isReady ? t('sessionReadiness.yes') : t('sessionReadiness.needsSetup')
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
+  const cookieSessionKey = session.browserSessionKey.trim() || 'cookie-session-missing'
+  const authSessionKey = isCookieBrowserSession(session) ? cookieSessionKey : bearerSessionKey
   const sessionQuery = useQuery({
     queryKey:
       session.mode === 'bearer'
-        ? ['auth-session', session.mode, bearerSessionKey]
+        ? ['auth-session', session.mode, session.browserSessionTransport, authSessionKey]
         : [
             'auth-session',
             session.mode,
@@ -100,22 +104,45 @@ export function SessionReadinessPage() {
           isReady={isReady}
           session={session}
           setDraft={setDraft}
-          onSave={() => {
-            saveSession(draft)
-            setVerificationRequested(false)
+          onSave={async () => {
+            setSaveError(false)
+            try {
+              await saveSession(draft)
+              setVerificationRequested(false)
+            } catch {
+              setSaveError(true)
+            }
           }}
-          onVerify={() => {
-            saveSession(draft)
-            setVerificationRequested(true)
-            void sessionQuery.refetch()
+          onVerify={async () => {
+            setSaveError(false)
+            try {
+              await saveSession(draft)
+              setVerificationRequested(true)
+              void sessionQuery.refetch()
+            } catch {
+              setSaveError(true)
+            }
           }}
-          onReset={() => {
-            resetSession()
-            setDraft(defaultSession)
-            setVerificationRequested(false)
+          onReset={async () => {
+            setSaveError(false)
+            try {
+              await resetSession()
+              setDraft(defaultSession)
+              setVerificationRequested(false)
+            } catch {
+              setSaveError(true)
+            }
           }}
         />
       </section>
+
+      {saveError ? (
+        <ScreenState
+          title={t('sessionReadiness.saveFailedTitle')}
+          copy={t('sessionReadiness.saveFailedCopy')}
+          tone="error"
+        />
+      ) : null}
 
       <SessionVerificationPanel
         sessionQuery={sessionQuery}
@@ -138,6 +165,13 @@ function SessionModePanel(input: {
   const mode = input.draft.mode
   const requestPreview = useMemo(() => {
     if (mode === 'bearer') {
+      if (isCookieBrowserSession(input.draft)) {
+        return [
+          { label: 'Cookie', value: t('sessionReadiness.cookieSessionPreview') },
+          { label: 'X-CSRF-Token', value: t('sessionReadiness.csrfMemoryPreview') },
+        ]
+      }
+
       return input.draft.bearerToken
         ? [{ label: 'Authorization', value: `Bearer ${truncateToken(input.draft.bearerToken)}` }]
         : [{ label: 'Authorization', value: t('sessionReadiness.noTokenSetYet') }]
@@ -333,6 +367,9 @@ function SessionModePanel(input: {
               </StatusPill>
             </div>
             <p>{t('sessionReadiness.bearerModeCopy')}</p>
+            {isCookieBrowserSession(input.session) ? (
+              <p>{t('sessionReadiness.cookieTransportCopy')}</p>
+            ) : null}
           </div>
         </div>
       </article>

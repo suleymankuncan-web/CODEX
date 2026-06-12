@@ -24,6 +24,9 @@ export const sessionReadinessTr = {
   'sessionReadiness.roleCodes': 'Rol kodları',
   'sessionReadiness.bearerPlaceholder': 'Gerçek auth akışı için JWT access token yapıştır',
   'sessionReadiness.saveSession': 'Oturumu kaydet',
+  'sessionReadiness.saveFailedTitle': 'Oturum kaydedilemedi',
+  'sessionReadiness.saveFailedCopy':
+    'Cookie oturumu backend tarafında temizlenemedi. Mevcut oturum korunuyor; tekrar deneyin veya yeniden giriş yapın.',
   'sessionReadiness.verifyCurrentSession': 'Mevcut oturumu doğrula',
   'sessionReadiness.resetToDefaults': 'Varsayılanlara dön',
   'sessionReadiness.requestPreview': 'İstek önizlemesi',
@@ -36,7 +39,11 @@ export const sessionReadinessTr = {
   'sessionReadiness.bearerMode': 'Bearer modu',
   'sessionReadiness.prodPath': 'Prod yolu',
   'sessionReadiness.bearerModeCopy':
-    '`Authorization: Bearer ...` gönderir. NestJS backend JWT doğrulamayı destekliyor; sonraki iş IdP wiring, token edinimi ve rol claim eşleştirmesidir. Tokenlar artık browser session bitince temizlenen session storage içinde tutulur.',
+    'Bearer fallback `Authorization: Bearer ...` gönderir. Cookie transport aktifken gerçek provider token tarayıcı storage alanına yazılmaz; backend HttpOnly app-session cookie kurar.',
+  'sessionReadiness.cookieTransportCopy':
+    'Launch cookie transport normal API isteklerinde `credentials: include` kullanır ve unsafe methodlarda backend response nonce değerinden gelen memory-only CSRF headerı ekler.',
+  'sessionReadiness.cookieSessionPreview': 'HttpOnly app-session cookie browser tarafından okunmadan gönderilir',
+  'sessionReadiness.csrfMemoryPreview': 'Yalnızca memory içinde tutulan nonce unsafe isteklerde eklenir',
   'sessionReadiness.sessionVerification': 'Oturum doğrulama',
   'sessionReadiness.sessionVerificationTitle': 'Korumalı backend el sıkışması',
   'sessionReadiness.verified': 'Doğrulandı',
@@ -91,6 +98,9 @@ export const sessionReadinessEn: Record<keyof typeof sessionReadinessTr, string>
   'sessionReadiness.roleCodes': 'Role codes',
   'sessionReadiness.bearerPlaceholder': 'Paste a JWT access token for a real auth flow',
   'sessionReadiness.saveSession': 'Save session',
+  'sessionReadiness.saveFailedTitle': 'Session was not saved',
+  'sessionReadiness.saveFailedCopy':
+    'The cookie session could not be cleared by the backend. The current session is kept; retry or sign in again.',
   'sessionReadiness.verifyCurrentSession': 'Verify current session',
   'sessionReadiness.resetToDefaults': 'Reset to defaults',
   'sessionReadiness.requestPreview': 'Request preview',
@@ -103,7 +113,11 @@ export const sessionReadinessEn: Record<keyof typeof sessionReadinessTr, string>
   'sessionReadiness.bearerMode': 'Bearer mode',
   'sessionReadiness.prodPath': 'Prod path',
   'sessionReadiness.bearerModeCopy':
-    'Sends `Authorization: Bearer ...`. The NestJS backend already has JWT verification support, so the remaining work later is IdP wiring, token acquisition, and role claims mapping. Tokens are now kept in session storage so they clear when the browser session ends.',
+    'Bearer fallback sends `Authorization: Bearer ...`. When cookie transport is active, real provider tokens are not written to browser storage; the backend creates the HttpOnly app-session cookie.',
+  'sessionReadiness.cookieTransportCopy':
+    'Launch cookie transport sends normal API calls with `credentials: include` and adds a memory-only CSRF header from the backend response nonce for unsafe methods.',
+  'sessionReadiness.cookieSessionPreview': 'HttpOnly app-session cookie is sent without being readable by the browser',
+  'sessionReadiness.csrfMemoryPreview': 'Memory-only nonce is attached to unsafe requests',
   'sessionReadiness.sessionVerification': 'Session verification',
   'sessionReadiness.sessionVerificationTitle': 'Protected backend handshake',
   'sessionReadiness.verified': 'Verified',

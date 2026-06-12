@@ -14,7 +14,7 @@ import { preloadRouteModule } from './app/route-preloaders'
 import { StoreShell } from './app/store-shell'
 import { getAuthSession } from './features/auth/api'
 import { useSession } from './features/session/session-context-value'
-import { getBearerSessionCacheKey } from './features/session/session-storage'
+import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 
 function App() {
@@ -26,11 +26,19 @@ function App() {
   const [sessionNotice, setSessionNotice] = useState<string | null>(null)
   const bearerTokenReadiness = session.bearerToken.trim() ? 'token-present' : 'token-missing'
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
+  const cookieSessionKey = session.browserSessionKey.trim() || 'cookie-session-missing'
+  const shellBearerSessionKey = isCookieBrowserSession(session) ? cookieSessionKey : bearerSessionKey
   const currentReturnPath = getCurrentReturnPath(location)
   const sessionQuery = useQuery({
     queryKey:
       session.mode === 'bearer'
-        ? ['shell-session', session.mode, bearerTokenReadiness, bearerSessionKey]
+        ? [
+            'shell-session',
+            session.mode,
+            session.browserSessionTransport,
+            bearerTokenReadiness,
+            shellBearerSessionKey,
+          ]
         : [
             'shell-session',
             session.mode,
@@ -55,8 +63,8 @@ function App() {
       expireSession()
       setSessionNotice(
         detail?.message
-          ? `Session expired while calling ${detail.path}. Update the bearer token and verify again.`
-          : 'Session expired. Update the bearer token and verify again.',
+          ? `Session expired while calling ${detail.path}. Sign in again and verify the session.`
+          : 'Session expired. Sign in again and verify the session.',
       )
       navigate(buildAuthLoginPath(currentReturnPath), { replace: true })
     }
@@ -66,14 +74,25 @@ function App() {
   }, [currentReturnPath, expireSession, navigate])
 
   useEffect(() => {
-    if (session.mode !== 'bearer' || bearerTokenReadiness !== 'token-present') {
+    if (session.mode !== 'bearer') {
+      return
+    }
+
+    if (session.browserSessionTransport !== 'cookie' && bearerTokenReadiness !== 'token-present') {
       return
     }
 
     void queryClient.invalidateQueries({
       predicate: (query) => query.queryKey[0] !== 'shell-session',
     })
-  }, [bearerSessionKey, bearerTokenReadiness, queryClient, session.mode])
+  }, [
+    bearerSessionKey,
+    bearerTokenReadiness,
+    cookieSessionKey,
+    queryClient,
+    session.browserSessionTransport,
+    session.mode,
+  ])
 
   const authSummary = sessionQuery.data ?? null
   const visibleSessionNotice = ['/admin/session', '/auth/login'].includes(pathname)

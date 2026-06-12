@@ -13,18 +13,26 @@ export type SessionState = {
   mockRegionIds: string
   mockReadRegionIds: string
   bearerToken: string
+  browserSessionKey: string
+}
+
+declare global {
+  interface Window {
+    __storeOpsBrowserSessionCsrfToken?: string
+  }
 }
 
 const SESSION_STORAGE_KEY = 'store-ops-admin-session'
 const BEARER_TOKEN_STORAGE_KEY = 'store-ops-admin-bearer-token'
 const PROVIDER_ID_TOKEN_STORAGE_KEY = 'store-ops-admin-provider-id-token'
 const TOKEN_REFRESH_SKEW_SECONDS = 30
+const DEFAULT_BROWSER_SESSION_TRANSPORT = resolveBrowserSessionTransport(
+  import.meta.env.VITE_BROWSER_SESSION_TRANSPORT,
+)
 
 export const defaultSession: SessionState = {
   mode: resolveSessionMode(import.meta.env.VITE_AUTH_MODE),
-  browserSessionTransport: resolveBrowserSessionTransport(
-    import.meta.env.VITE_BROWSER_SESSION_TRANSPORT,
-  ),
+  browserSessionTransport: DEFAULT_BROWSER_SESSION_TRANSPORT,
   mockUserId: import.meta.env.VITE_USER_ID ?? '80000000-0000-0000-0000-000000000001',
   mockRoleCodes:
     import.meta.env.VITE_ROLE_CODES ??
@@ -37,6 +45,7 @@ export const defaultSession: SessionState = {
   mockRegionIds: import.meta.env.VITE_REGION_IDS ?? '',
   mockReadRegionIds: import.meta.env.VITE_READ_REGION_IDS ?? import.meta.env.VITE_REGION_IDS ?? '',
   bearerToken: import.meta.env.VITE_BEARER_TOKEN ?? '',
+  browserSessionKey: '',
 }
 
 export function readClientSession(): SessionState {
@@ -110,6 +119,10 @@ export function writeClientBearerSession(token: string, providerIdToken?: string
 
 export function buildSessionHeaders(session: SessionState): Record<string, string> {
   if (session.mode === 'bearer') {
+    if (isCookieBrowserSession(session)) {
+      return {}
+    }
+
     if (session.bearerToken.trim() && !isJwtExpired(session.bearerToken)) {
       return {
         Authorization: `Bearer ${session.bearerToken.trim()}`,
@@ -136,6 +149,10 @@ export function buildSessionHeaders(session: SessionState): Record<string, strin
 
 export function isSessionReady(session: SessionState) {
   if (session.mode === 'bearer') {
+    if (isCookieBrowserSession(session)) {
+      return Boolean(readBrowserSessionCsrfToken())
+    }
+
     return Boolean(session.bearerToken.trim())
   }
 
@@ -172,10 +189,31 @@ export function persistClientSession(session: SessionState) {
   const persisted: SessionState = {
     ...normalized,
     bearerToken: '',
-    browserSessionTransport: defaultSession.browserSessionTransport,
   }
 
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(persisted))
+}
+
+export function isCookieBrowserSession(session: Pick<SessionState, 'mode' | 'browserSessionTransport'>) {
+  return session.mode === 'bearer' && session.browserSessionTransport === 'cookie'
+}
+
+let browserSessionCsrfToken = ''
+
+export function readBrowserSessionCsrfToken() {
+  if (typeof window !== 'undefined') {
+    return window.__storeOpsBrowserSessionCsrfToken ?? ''
+  }
+
+  return browserSessionCsrfToken
+}
+
+export function writeBrowserSessionCsrfToken(token: string) {
+  browserSessionCsrfToken = token
+
+  if (typeof window !== 'undefined') {
+    window.__storeOpsBrowserSessionCsrfToken = token
+  }
 }
 
 export function normalizeSession(session: Partial<SessionState>): SessionState {
@@ -183,9 +221,7 @@ export function normalizeSession(session: Partial<SessionState>): SessionState {
 
   return {
     mode: resolveSessionMode(session.mode),
-    browserSessionTransport: resolveBrowserSessionTransport(
-      session.browserSessionTransport ?? defaultSession.browserSessionTransport,
-    ),
+    browserSessionTransport: resolveSessionBrowserTransport(session.browserSessionTransport),
     mockUserId: session.mockUserId?.trim() || defaultSession.mockUserId,
     mockRoleCodes: session.mockRoleCodes?.trim() || defaultSession.mockRoleCodes,
     mockCompanyIds: session.mockCompanyIds?.trim() || defaultSession.mockCompanyIds,
@@ -196,6 +232,7 @@ export function normalizeSession(session: Partial<SessionState>): SessionState {
     mockRegionIds: session.mockRegionIds?.trim() ?? defaultSession.mockRegionIds,
     mockReadRegionIds: session.mockReadRegionIds?.trim() ?? defaultSession.mockReadRegionIds,
     bearerToken: isJwtExpired(bearerToken) ? '' : bearerToken,
+    browserSessionKey: session.browserSessionKey?.trim() ?? defaultSession.browserSessionKey,
   }
 }
 
@@ -212,6 +249,14 @@ function resolveSessionMode(input: unknown): SessionMode {
 
 function resolveBrowserSessionTransport(input: unknown): BrowserSessionTransport {
   return input === 'cookie' ? 'cookie' : 'bearer'
+}
+
+function resolveSessionBrowserTransport(input: unknown): BrowserSessionTransport {
+  if (DEFAULT_BROWSER_SESSION_TRANSPORT === 'cookie') {
+    return 'cookie'
+  }
+
+  return resolveBrowserSessionTransport(input)
 }
 
 function isJwtExpired(token: string, skewSeconds = 0) {

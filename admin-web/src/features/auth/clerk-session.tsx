@@ -130,6 +130,7 @@ export function ClerkLoginActions(input: { returnTo: string }) {
 
 export function ClerkLogoutEffect(input: { onFallback: () => void }) {
   const { isLoaded, signOut } = useAuth()
+  const { clearProviderSession } = useSession()
   const { onFallback } = input
   const handledRef = useRef(false)
 
@@ -139,13 +140,19 @@ export function ClerkLogoutEffect(input: { onFallback: () => void }) {
     }
 
     handledRef.current = true
-    signOut({ redirectUrl: '/auth/login' }).catch(() => onFallback())
-  }, [isLoaded, onFallback, signOut])
+    clearProviderSession()
+      .then(() => signOut({ redirectUrl: '/auth/login' }))
+      .catch(() => onFallback())
+  }, [clearProviderSession, isLoaded, onFallback, signOut])
 
   return null
 }
 function ClerkSessionBridge() {
-  const { clearToBearerMode, startBearerSession, setProviderSessionHydrating } = useSession()
+  const {
+    clearProviderSession,
+    startProviderSession,
+    setProviderSessionHydrating,
+  } = useSession()
   const { getToken, isLoaded, isSignedIn } = useAuth()
   const lastTokenRef = useRef<string | null>(null)
   const template = (import.meta.env.VITE_CLERK_JWT_TEMPLATE ?? '').trim() || undefined
@@ -174,10 +181,10 @@ function ClerkSessionBridge() {
 
     if (!isSignedIn) {
       lastTokenRef.current = null
-      clearToBearerMode()
+      void clearProviderSession()
       setProviderSessionHydrating(false)
     }
-  }, [clearToBearerMode, isLoaded, isSignedIn, setProviderSessionHydrating])
+  }, [clearProviderSession, isLoaded, isSignedIn, setProviderSessionHydrating])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
@@ -191,10 +198,10 @@ function ClerkSessionBridge() {
       }
 
       lastTokenRef.current = token
-      startBearerSession(token)
-      return token
+      await startProviderSession(token)
+      return { refreshed: true, bearerToken: token }
     })
-  }, [getToken, getClerkToken, isLoaded, isSignedIn, startBearerSession])
+  }, [getToken, getClerkToken, isLoaded, isSignedIn, startProviderSession])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
@@ -213,11 +220,11 @@ function ClerkSessionBridge() {
         }
 
         lastTokenRef.current = token
-        startBearerSession(token)
+        await startProviderSession(token)
       } catch {
         if (!cancelled) {
           lastTokenRef.current = null
-          clearToBearerMode()
+          void clearProviderSession()
         }
       } finally {
         if (!cancelled) {
@@ -236,12 +243,12 @@ function ClerkSessionBridge() {
       window.clearInterval(intervalId)
     }
   }, [
-    clearToBearerMode,
+    clearProviderSession,
     getClerkToken,
     isLoaded,
     isSignedIn,
     setProviderSessionHydrating,
-    startBearerSession,
+    startProviderSession,
   ])
 
   return null

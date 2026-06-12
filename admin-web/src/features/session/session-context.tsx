@@ -2,14 +2,17 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
 import { isClerkSessionProviderAvailable } from '../auth/clerk-config'
+import { clearBrowserSessionCookie, createBrowserSession } from '../../lib/api'
 import { SessionContext, type SessionContextValue } from './session-context-value'
 import {
   clearClientBearerSession,
   defaultSession,
+  isCookieBrowserSession,
   isSessionReady,
   normalizeSession,
   persistClientSession,
@@ -20,35 +23,74 @@ import {
 
 export function SessionProvider(input: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>(() => readClientSession())
+  const sessionRef = useRef(session)
   const [isProviderSessionHydrating, setProviderSessionHydrating] = useState(() =>
     isClerkSessionProviderAvailable(),
   )
 
   useEffect(() => {
+    sessionRef.current = session
+  }, [session])
+
+  useEffect(() => {
     persistClientSession(session)
   }, [session])
 
-  const saveSession = useCallback((next: SessionState) => {
-    if (next.mode === 'bearer') {
-      writeClientBearerSession(next.bearerToken)
+  const saveSession = useCallback(async (next: SessionState) => {
+    const normalizedNext = normalizeSession(next)
+    const nextSession = normalizeSession({
+      ...normalizedNext,
+      browserSessionKey: isCookieBrowserSession(normalizedNext)
+        ? normalizedNext.browserSessionKey
+        : '',
+    })
+
+    if (
+      sessionRef.current.browserSessionTransport === 'cookie' &&
+      !isCookieBrowserSession(nextSession)
+    ) {
+      try {
+        await clearBrowserSessionCookie()
+      } catch (error) {
+        clearClientBearerSession()
+        throw error
+      }
+    }
+
+    if (nextSession.mode === 'bearer' && !isCookieBrowserSession(nextSession)) {
+      writeClientBearerSession(nextSession.bearerToken)
     } else {
       clearClientBearerSession()
     }
 
-    setSession(normalizeSession(next))
+    setSession(nextSession)
   }, [])
 
-  const resetSession = useCallback(() => {
-    clearClientBearerSession()
+  const resetSession = useCallback(async () => {
+    if (sessionRef.current.browserSessionTransport === 'cookie') {
+      try {
+        await clearBrowserSessionCookie()
+      } catch (error) {
+        clearClientBearerSession()
+        throw error
+      }
+    } else {
+      clearClientBearerSession()
+    }
     setSession(defaultSession)
   }, [])
 
   const expireSession = useCallback(() => {
-    clearClientBearerSession()
+    if (sessionRef.current.browserSessionTransport === 'cookie') {
+      void clearBrowserSessionCookie().catch(() => undefined)
+    } else {
+      clearClientBearerSession()
+    }
     setSession((current) =>
       normalizeSession({
         ...current,
         bearerToken: '',
+        browserSessionKey: '',
       }),
     )
   }, [])
@@ -60,6 +102,49 @@ export function SessionProvider(input: { children: ReactNode }) {
         ...current,
         mode: 'bearer',
         bearerToken: token,
+        browserSessionKey: '',
+      }),
+    )
+  }, [])
+
+  const startProviderSession = useCallback(async (token: string, providerIdToken?: string | null) => {
+    if (sessionRef.current.browserSessionTransport === 'cookie') {
+      await createBrowserSession(token)
+      const browserSessionTransport = sessionRef.current.browserSessionTransport
+      setSession((current) =>
+        normalizeSession({
+          ...current,
+          mode: 'bearer',
+          browserSessionTransport,
+          bearerToken: '',
+          browserSessionKey: createBrowserSessionCacheKey(),
+        }),
+      )
+      return
+    }
+
+    startBearerSession(token, providerIdToken)
+  }, [startBearerSession])
+
+  const clearProviderSession = useCallback(async () => {
+    if (sessionRef.current.browserSessionTransport === 'cookie') {
+      try {
+        await clearBrowserSessionCookie()
+      } catch (error) {
+        clearClientBearerSession()
+        throw error
+      }
+    } else {
+      clearClientBearerSession()
+    }
+
+    setSession((current) =>
+      normalizeSession({
+        ...current,
+        mode: 'bearer',
+        browserSessionTransport: sessionRef.current.browserSessionTransport,
+        bearerToken: '',
+        browserSessionKey: '',
       }),
     )
   }, [])
@@ -71,6 +156,7 @@ export function SessionProvider(input: { children: ReactNode }) {
         ...current,
         mode: 'bearer',
         bearerToken: '',
+        browserSessionKey: '',
       }),
     )
   }, [])
@@ -84,6 +170,8 @@ export function SessionProvider(input: { children: ReactNode }) {
       resetSession,
       expireSession,
       startBearerSession,
+      startProviderSession,
+      clearProviderSession,
       clearToBearerMode,
       setProviderSessionHydrating,
     }),
@@ -95,8 +183,18 @@ export function SessionProvider(input: { children: ReactNode }) {
       saveSession,
       session,
       startBearerSession,
+      startProviderSession,
+      clearProviderSession,
     ],
   )
 
   return <SessionContext.Provider value={value}>{input.children}</SessionContext.Provider>
+}
+
+function createBrowserSessionCacheKey() {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
 }
