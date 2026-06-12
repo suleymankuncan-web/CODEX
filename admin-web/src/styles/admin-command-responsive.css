@@ -11,6 +11,9 @@
     min-height: 74px;
     flex-direction: row;
     align-items: center;
+    border-bottom: 1px solid var(--admin-command-line);
+    background: rgba(255, 255, 255, 0.78);
+    box-shadow: none;
     overflow-x: auto;
     padding: 10px 12px;
   }
@@ -33,6 +36,21 @@
     padding: 0 12px;
     border: 1px solid var(--admin-command-line);
     background: rgba(255, 255, 255, 0.72);
+    box-shadow: none;
+  }
+
+  .admin-command-nav-link-active,
+  .admin-command-nav-link-active:hover,
+  .admin-command-nav-link-active:focus-visible,
+  .admin-command-nav-link-active:active {
+    border-color: transparent;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.12));
+    color: #4c2aa5;
+    box-shadow: none;
+  }
+
+  .admin-command-nav-link-active:focus-visible {
+    box-shadow: 0 0 0 3px var(--admin-command-focus);
   }
 
   .admin-command-main,
