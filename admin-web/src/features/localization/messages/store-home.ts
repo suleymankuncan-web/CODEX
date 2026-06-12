@@ -57,22 +57,10 @@ export const storeHomeTr = {
   'storeHome.command.managerTitle': 'Mağaza Yönetim Paneli',
   'storeHome.command.managerCopy':
     'KPI, sıralama, talep ve checklist aksiyonları mağaza müdürü için tek girişte toplandı.',
-  'storeHome.command.managerHeroTitle': 'Mağaza operasyonu tek komuta yüzeyinden yönetilir.',
-  'storeHome.command.managerHeroCopy':
-    'Günlük KPI görünümü, bekleyen talepler ve checklist kabul işleri bu panelden ilgili sayfalara yönlenir.',
-  'storeHome.command.managerFocusTitle': 'Satıcı kodu ve hedef işleri Talepler / Onaylar altında.',
-  'storeHome.command.managerFocusCopy':
-    'Bekleyen talebe dokunulduğunda mağaza müdürünün aksiyon alacağı sayfa açılır.',
   'storeHome.command.managerTimelineTitle': 'Mağaza akışı',
   'storeHome.command.regionTitle': 'Bölge ana ekranı hazır.',
   'storeHome.command.regionCopy':
     'Bölge müdürü rankings, KPI özetleri, checklist, hedef ve talep akışlarına aynı sol toolbar ile gider.',
-  'storeHome.command.regionHeroTitle': 'Bölge kontrol merkezi tek yüzeye taşındı.',
-  'storeHome.command.regionHeroCopy':
-    'Mağaza kapsamı, checklist bekleyenleri ve talepler bu girişten ilgili sayfalara yönlenir.',
-  'storeHome.command.regionFocusTitle': 'Checklist aksiyonu sol toolbar içindeki Checklist menüsünde.',
-  'storeHome.command.regionFocusCopy':
-    'BM checklistleri checklist menüsünde görünür; detay akışı ilgili sayfada olgunlaşır.',
   'storeHome.command.regionTimelineTitle': 'Bölge akışı',
   'storeHome.command.vmTitle': 'Checklist ana ekranı hazır.',
   'storeHome.command.vmCopy': 'VM kullanıcısı yalnızca checklist ve duyuru akışına odaklanır.',
@@ -323,22 +311,10 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.command.managerTitle': 'Store Management Panel',
   'storeHome.command.managerCopy':
     'KPIs, rankings, requests, and checklist actions are collected in one store-manager entry.',
-  'storeHome.command.managerHeroTitle': 'Store operations run from one command surface.',
-  'storeHome.command.managerHeroCopy':
-    'Daily KPI visibility, pending requests, and checklist acknowledgements open from this panel.',
-  'storeHome.command.managerFocusTitle': 'Salesperson code and target work live under Requests / Approvals.',
-  'storeHome.command.managerFocusCopy':
-    'Clicking pending requests opens the page where store managers take action.',
   'storeHome.command.managerTimelineTitle': 'Store flow',
   'storeHome.command.regionTitle': 'Region home is ready.',
   'storeHome.command.regionCopy':
     'Region managers reach rankings, KPI summaries, checklist, targets, and requests through one left toolbar.',
-  'storeHome.command.regionHeroTitle': 'The region command center now has one surface.',
-  'storeHome.command.regionHeroCopy':
-    'Store scope, checklist follow-up, and request flows open from this entry.',
-  'storeHome.command.regionFocusTitle': 'Checklist action is in the left toolbar Checklist menu.',
-  'storeHome.command.regionFocusCopy':
-    'BM checklists are visible in the Checklist menu; page detail flow matures on the related surface.',
   'storeHome.command.regionTimelineTitle': 'Region flow',
   'storeHome.command.vmTitle': 'Checklist home is ready.',
   'storeHome.command.vmCopy': 'VM users focus only on checklist and announcement flows.',
