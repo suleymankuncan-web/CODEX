@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HR Axis Store Home - Bolge Muduru</title>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root {
+        color-scheme: light;
+        --color-bg: #f8f5fb;
+        --color-bg-glacier: #edf7f6;
+        --color-surface: rgba(255, 255, 255, 0.88);
+        --color-surface-strong: #ffffff;
+        --color-surface-soft: rgba(255, 255, 255, 0.68);
+        --color-ink: #171421;
+        --color-muted: #6c6478;
+        --color-quiet: #9e93aa;
+        --color-line: rgba(36, 28, 50, 0.1);
+        --color-line-strong: rgba(36, 28, 50, 0.18);
+        --color-primary: #7c3aed;
+        --color-primary-deep: #4c2aa5;
+        --color-primary-soft: rgba(124, 58, 237, 0.12);
+        --color-blue: #3765ea;
+        --color-accent: #13a7b3;
+        --color-accent-soft: rgba(19, 167, 179, 0.12);
+        --color-success: #10b981;
+        --color-warning: #f59e0b;
+        --color-danger: #e11d48;
+        --color-focus: rgba(124, 58, 237, 0.22);
+        --shadow-soft: 0 18px 48px rgba(32, 24, 48, 0.08);
+        --shadow-panel: 0 24px 80px rgba(32, 24, 48, 0.12);
+        --radius: 12px;
+        --radius-sm: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--color-bg);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          linear-gradient(135deg, rgba(248, 245, 251, 0.98), rgba(237, 247, 246, 0.94)),
+          var(--color-bg);
+        color: var(--color-ink);
+        font-family:
+          "Segoe UI Variable",
+          "Segoe UI",
+          ui-sans-serif,
+          system-ui,
+          sans-serif;
+      }
+
+      button,
+      input {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .app {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: 264px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        height: 100vh;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 24px;
+        border-right: 1px solid var(--color-line);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 18px;
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 54px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface-strong);
+        padding: 10px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .brand img {
+        width: 116px;
+        height: auto;
+        display: block;
+      }
+
+      .brand-context {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+        margin-left: auto;
+        text-align: right;
+      }
+
+      .brand-context strong,
+      .brand-context span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .brand-context strong {
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .brand-context span {
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .nav {
+        display: grid;
+        gap: 6px;
+        margin-top: 20px;
+      }
+
+      .nav a {
+        display: grid;
+        grid-template-columns: 20px minmax(0, 1fr);
+        align-items: center;
+        gap: 10px;
+        min-height: 40px;
+        border-radius: var(--radius-sm);
+        color: var(--color-muted);
+        padding: 0 10px;
+        font-size: 13px;
+        font-weight: 720;
+        text-decoration: none;
+      }
+
+      .nav a[aria-current="page"] {
+        background: linear-gradient(135deg, var(--color-primary-soft), var(--color-accent-soft));
+        color: var(--color-primary-deep);
+      }
+
+      .nav a span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .nav svg,
+      .button svg,
+      .chip svg,
+      .row-action svg,
+      .status-icon svg {
+        width: 17px;
+        height: 17px;
+        stroke-width: 2;
+      }
+
+      .side-summary {
+        display: grid;
+        gap: 10px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface);
+        padding: 12px;
+      }
+
+      .side-summary span {
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .side-summary strong {
+        display: block;
+        margin-top: 4px;
+        font-size: 18px;
+      }
+
+      main {
+        min-width: 0;
+        padding: 22px;
+      }
+
+      .surface {
+        display: grid;
+        max-width: 1360px;
+        gap: 14px;
+        margin: 0 auto;
+      }
+
+      .header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface);
+        padding: 18px;
+        box-shadow: var(--shadow-panel);
+      }
+
+      .eyebrow {
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 6px;
+        font-size: clamp(24px, 3vw, 34px);
+        line-height: 1.08;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      .description {
+        max-width: 820px;
+        margin-top: 8px;
+        color: var(--color-muted);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+
+      .badges,
+      .actions,
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .badges {
+        margin-top: 12px;
+      }
+
+      .actions {
+        justify-content: flex-end;
+      }
+
+      .badge,
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        border: 1px solid var(--color-line);
+        border-radius: 999px;
+        background: var(--color-surface-soft);
+        color: var(--color-muted);
+        min-height: 30px;
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 740;
+        white-space: nowrap;
+      }
+
+      .badge.accent {
+        border-color: rgba(124, 58, 237, 0.2);
+        background: var(--color-primary-soft);
+        color: var(--color-primary-deep);
+      }
+
+      .badge.ready {
+        border-color: rgba(16, 185, 129, 0.22);
+        background: rgba(16, 185, 129, 0.1);
+        color: #087a55;
+      }
+
+      .badge.warn {
+        border-color: rgba(245, 158, 11, 0.28);
+        background: rgba(245, 158, 11, 0.13);
+        color: #8a5100;
+      }
+
+      .button,
+      .row-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 38px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-sm);
+        background: linear-gradient(135deg, var(--color-primary), var(--color-blue), var(--color-accent));
+        color: white;
+        padding: 0 13px;
+        font-size: 13px;
+        font-weight: 760;
+        text-decoration: none;
+        white-space: nowrap;
+        box-shadow: 0 14px 28px rgba(76, 42, 165, 0.16);
+      }
+
+      .button.secondary,
+      .row-action.secondary {
+        border-color: var(--color-line-strong);
+        background: var(--color-surface-strong);
+        color: var(--color-primary-deep);
+        box-shadow: none;
+      }
+
+      .button:focus-visible,
+      .row-action:focus-visible,
+      .nav a:focus-visible {
+        outline: 4px solid var(--color-focus);
+        outline-offset: 2px;
+      }
+
+      .button:active,
+      .row-action:active {
+        transform: translateY(1px);
+      }
+
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        min-width: 0;
+        min-height: 132px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface);
+        padding: 14px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .metric-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .status-icon {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: var(--radius-sm);
+        background: var(--color-primary-soft);
+        color: var(--color-primary-deep);
+      }
+
+      .status-icon.calm {
+        background: var(--color-accent-soft);
+        color: #087b86;
+      }
+
+      .status-icon.warn {
+        background: rgba(245, 158, 11, 0.14);
+        color: #8a5100;
+      }
+
+      .metric-label {
+        margin-top: 13px;
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .metric-value {
+        margin-top: 5px;
+        font-size: 28px;
+        font-weight: 780;
+      }
+
+      .metric-note {
+        margin-top: 7px;
+        color: var(--color-muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(300px, 0.72fr);
+        gap: 14px;
+        align-items: start;
+      }
+
+      .stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .panel {
+        min-width: 0;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-soft);
+        overflow: hidden;
+      }
+
+      .panel-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: start;
+        border-bottom: 1px solid var(--color-line);
+        padding: 15px;
+      }
+
+      .panel h2 {
+        font-size: 16px;
+        line-height: 1.25;
+        font-weight: 760;
+      }
+
+      .panel p {
+        margin-top: 5px;
+        color: var(--color-muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .rows {
+        display: grid;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        min-height: 74px;
+        border-bottom: 1px solid var(--color-line);
+        padding: 12px 15px;
+      }
+
+      .row:last-child {
+        border-bottom: 0;
+      }
+
+      .row strong {
+        display: block;
+        min-width: 0;
+        font-size: 14px;
+        font-weight: 760;
+      }
+
+      .row small {
+        display: block;
+        margin-top: 3px;
+        color: var(--color-muted);
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .value-pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 78px;
+        min-height: 32px;
+        border: 1px solid var(--color-line);
+        border-radius: 999px;
+        background: var(--color-surface-strong);
+        color: var(--color-ink);
+        padding: 0 10px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .focus {
+        display: grid;
+        gap: 12px;
+        padding: 15px;
+      }
+
+      .focus-box {
+        border: 1px solid rgba(124, 58, 237, 0.2);
+        border-radius: var(--radius-sm);
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(19, 167, 179, 0.09));
+        padding: 13px;
+      }
+
+      .focus-box strong {
+        display: block;
+        font-size: 14px;
+      }
+
+      .focus-box span {
+        display: block;
+        margin-top: 5px;
+        color: var(--color-muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .info-grid {
+        display: grid;
+        gap: 9px;
+        padding: 15px;
+      }
+
+      .info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 44px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface-soft);
+        padding: 9px 10px;
+      }
+
+      .info span {
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 720;
+      }
+
+      .info strong {
+        font-size: 13px;
+        text-align: right;
+      }
+
+      .state-list {
+        display: grid;
+        gap: 8px;
+        padding: 15px;
+      }
+
+      .state {
+        display: grid;
+        grid-template-columns: 10px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius-sm);
+        background: var(--color-surface-soft);
+        padding: 10px;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        margin-top: 4px;
+        border-radius: 999px;
+        background: var(--color-success);
+      }
+
+      .dot.warn {
+        background: var(--color-warning);
+      }
+
+      .dot.danger {
+        background: var(--color-danger);
+      }
+
+      .state strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .state span {
+        display: block;
+        margin-top: 3px;
+        color: var(--color-muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      @media (max-width: 1180px) {
+        .app {
+          grid-template-columns: 88px minmax(0, 1fr);
+        }
+
+        .sidebar {
+          padding: 14px;
+        }
+
+        .brand {
+          justify-content: center;
+          min-height: 48px;
+        }
+
+        .brand img,
+        .brand-context,
+        .nav a span,
+        .side-summary {
+          display: none;
+        }
+
+        .nav a {
+          grid-template-columns: 1fr;
+          justify-items: center;
+          padding: 0;
+        }
+      }
+
+      @media (max-width: 920px) {
+        .header,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .actions {
+          justify-content: flex-start;
+        }
+
+        .metric-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .app {
+          display: block;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--color-line);
+        }
+
+        .brand img,
+        .brand-context {
+          display: block;
+        }
+
+        .brand {
+          justify-content: flex-start;
+        }
+
+        .nav {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding-bottom: 2px;
+        }
+
+        .nav a {
+          grid-template-columns: 18px max-content;
+          flex: 0 0 auto;
+          padding: 0 10px;
+        }
+
+        .nav a span {
+          display: block;
+        }
+
+        main {
+          padding: 14px;
+        }
+
+        .header,
+        .metric,
+        .panel {
+          border-radius: 10px;
+        }
+
+        .metric-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .row {
+          grid-template-columns: 34px minmax(0, 1fr);
+        }
+
+        .row .value-pill,
+        .row .row-action {
+          grid-column: 2;
+          justify-self: start;
+        }
+
+        .panel-head {
+          grid-template-columns: 1fr;
+        }
+
+        .button,
+        .row-action {
+          width: 100%;
+          min-width: 0;
+        }
+
+        .actions {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Store navigasyonu">
+        <div>
+          <div class="brand">
+            <img src="assets/hr-axis-06-horizontal.png" alt="HR Axis" />
+            <div class="brand-context">
+              <strong>Store Home</strong>
+              <span>B&#246;lge</span>
+            </div>
+          </div>
+
+          <nav class="nav" aria-label="Pozisyon bazl&#305; sekmeler">
+            <a href="/store/home" aria-current="page"><i data-lucide="home"></i><span>Ana Sayfa</span></a>
+            <a href="/store/rankings"><i data-lucide="trophy"></i><span>Rankings</span></a>
+            <a href="/store/kpis"><i data-lucide="activity"></i><span>KPI &#214;zetleri</span></a>
+            <a href="/store/checklists"><i data-lucide="clipboard-check"></i><span>Checklist</span></a>
+            <a href="/store/approvals"><i data-lucide="inbox"></i><span>Talepler / Onaylar</span></a>
+            <a href="/store/targets"><i data-lucide="target"></i><span>Hedefler</span></a>
+            <a href="/store/workforce"><i data-lucide="users"></i><span>Norm Kadro</span></a>
+            <a href="/store/tasks"><i data-lucide="list-checks"></i><span>G&#246;revler</span></a>
+            <a href="/store/reports"><i data-lucide="bar-chart-3"></i><span>Raporlar</span></a>
+            <a href="/store/feed"><i data-lucide="megaphone"></i><span>Duyurular</span></a>
+          </nav>
+        </div>
+
+        <div class="side-summary" aria-label="Store oturum baglami">
+          <span>Oturum kullan&#305;c&#305;s&#305;</span>
+          <strong>B&#246;lge m&#252;d&#252;r&#252;</strong>
+          <span>Yetkili ma&#287;azalar oturumdan okunur</span>
+        </div>
+      </aside>
+
+      <main>
+        <section class="surface" aria-label="Store ana sayfa">
+          <header class="header">
+            <div>
+              <span class="eyebrow">Ma&#287;aza ana sayfas&#305;</span>
+              <h1>B&#246;lge ana ekran&#305;</h1>
+              <p class="description">
+                B&#246;lge m&#252;d&#252;r&#252; rankings, KPI &#246;zetleri, checklist, hedef ve talep ak&#305;&#351;lar&#305;n&#305; ayn&#305; men&#252;den a&#231;ar.
+                Yetki kapsam&#305; ve g&#252;nl&#252;k saha aksiyonu ilk ekranda net kal&#305;r.
+              </p>
+              <div class="badges">
+                <span class="badge accent">B&#246;lge m&#252;d&#252;r&#252;</span>
+                <span class="badge">Kapsam: oturumdan</span>
+                <span class="badge ready">G&#252;ncel d&#246;nem</span>
+              </div>
+            </div>
+          </header>
+
+          <section class="metric-grid" aria-label="Bolge ozet metrikleri">
+            <article class="metric">
+              <div class="metric-top">
+                <span class="status-icon"><i data-lucide="store"></i></span>
+                <span class="badge">Kapsam</span>
+              </div>
+              <p class="metric-label">Ma&#287;aza kapsam&#305;</p>
+              <div class="metric-value">3</div>
+              <p class="metric-note">Yetkili b&#246;lge kapsam&#305;ndaki aktif ma&#287;aza.</p>
+            </article>
+            <article class="metric">
+              <div class="metric-top">
+                <span class="status-icon calm"><i data-lucide="clipboard-check"></i></span>
+                <span class="badge warn">Saha</span>
+              </div>
+              <p class="metric-label">Checklist kapsam&#305;</p>
+              <div class="metric-value">5</div>
+              <p class="metric-note">Bekleyen saha ve kabul i&#351;i.</p>
+            </article>
+            <article class="metric">
+              <div class="metric-top">
+                <span class="status-icon"><i data-lucide="activity"></i></span>
+                <span class="badge ready">Ba&#287;l&#305;</span>
+              </div>
+              <p class="metric-label">KPI &#246;zetleri</p>
+              <div class="metric-value">4 metrik</div>
+              <p class="metric-note">HG, UPT, ATV ve CR b&#246;lge snapshot.</p>
+            </article>
+            <article class="metric">
+              <div class="metric-top">
+                <span class="status-icon warn"><i data-lucide="target"></i></span>
+                <span class="badge">Karar</span>
+              </div>
+              <p class="metric-label">Hedef / talep ak&#305;&#351;&#305;</p>
+              <div class="metric-value">2</div>
+              <p class="metric-note">B&#246;lge karar&#305; bekleyen hedef ve talep.</p>
+            </article>
+          </section>
+
+          <section class="layout">
+            <div class="stack">
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>B&#246;lge &#246;zet dashboard</h2>
+                    <p>B&#246;lge durumunu ilk bak&#305;&#351;ta okutan temel sinyaller.</p>
+                  </div>
+                  <span class="badge accent">Bug&#252;n</span>
+                </div>
+                <div class="rows">
+                  <div class="row">
+                    <span class="status-icon calm"><i data-lucide="clipboard-check"></i></span>
+                    <span>
+                      <strong>Checklist a&#231;&#305;k i&#351;</strong>
+                      <small>BM saha turu, VM takip ve ma&#287;aza kabul i&#351;leri birlikte izlenir.</small>
+                    </span>
+                    <span class="value-pill">5 i&#351;</span>
+                  </div>
+                  <div class="row">
+                    <span class="status-icon"><i data-lucide="activity"></i></span>
+                    <span>
+                      <strong>KPI b&#246;lge ortalamas&#305;</strong>
+                      <small>HG %92, UPT 2.6, ATV &#8378;1.140, CR %17.8.</small>
+                    </span>
+                    <span class="value-pill">Dengeli</span>
+                  </div>
+                  <div class="row">
+                    <span class="status-icon warn"><i data-lucide="target"></i></span>
+                    <span>
+                      <strong>Hedef ve talep karar&#305;</strong>
+                      <small>B&#246;lge karar&#305; bekleyen hedef ve talep kalemleri.</small>
+                    </span>
+                    <span class="value-pill">2 karar</span>
+                  </div>
+                  <div class="row">
+                    <span class="status-icon"><i data-lucide="store"></i></span>
+                    <span>
+                      <strong>Takip isteyen ma&#287;aza</strong>
+                      <small>Operasyonel sinyali dikkat isteyen ma&#287;aza say&#305;s&#305;.</small>
+                    </span>
+                    <span class="value-pill">1 ma&#287;aza</span>
+                  </div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>Ma&#287;aza k&#305;r&#305;l&#305;m&#305;</h2>
+                    <p>B&#246;lge dashboard i&#231;inde ma&#287;aza sa&#287;l&#305;&#287;&#305; k&#305;sa okunur.</p>
+                  </div>
+                  <span class="badge ready">3 ma&#287;aza</span>
+                </div>
+                <div class="rows">
+                  <div class="row">
+                    <span class="status-icon"><i data-lucide="trending-up"></i></span>
+                    <span><strong>Y&#252;ksek performans</strong><small>Hedef, sepet ve checklist dengesi iyi olan ma&#287;azalar.</small></span>
+                    <span class="value-pill">2 ma&#287;aza</span>
+                  </div>
+                  <div class="row">
+                    <span class="status-icon warn"><i data-lucide="alert-triangle"></i></span>
+                    <span><strong>Takip isteyen</strong><small>Hedef veya checklist sinyali dikkat isteyen ma&#287;aza.</small></span>
+                    <span class="value-pill">1 ma&#287;aza</span>
+                  </div>
+                  <div class="row">
+                    <span class="status-icon calm"><i data-lucide="users"></i></span>
+                    <span><strong>Kadro sinyali</strong><small>Aktif personel ve norm takip sat&#305;r&#305;.</small></span>
+                    <span class="value-pill">36 aktif</span>
+                  </div>
+                  <div class="row">
+                    <span class="status-icon"><i data-lucide="bar-chart-3"></i></span>
+                    <span><strong>Eksik KPI</strong><small>G&#252;ncel snapshotta eksik KPI okumas&#305; olan ma&#287;aza.</small></span>
+                    <span class="value-pill">0</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <aside class="stack">
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>Saha sinyalleri</h2>
+                    <p>G&#252;n i&#231;i takip gerektiren ba&#351;l&#305;klar.</p>
+                  </div>
+                  <span class="badge warn">Aktif</span>
+                </div>
+                <div class="state-list">
+                  <div class="state"><i class="dot warn"></i><span><strong>Checklist saha turu</strong><span>5 i&#351; b&#246;lge takip listesinde.</span></span></div>
+                  <div class="state"><i class="dot"></i><span><strong>KPI dengesi</strong><span>2 ma&#287;aza iyi bantta, 1 ma&#287;aza yak&#305;n takipte.</span></span></div>
+                  <div class="state"><i class="dot warn"></i><span><strong>Hedef karar&#305;</strong><span>2 karar b&#246;lge g&#246;zden ge&#231;irmesi bekliyor.</span></span></div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>Yak&#305;n d&#246;nem</h2>
+                    <p>Dashboard ba&#287;lam&#305; i&#231;in k&#305;sa veri &#231;er&#231;evesi.</p>
+                  </div>
+                  <span class="badge ready">Haz&#305;r</span>
+                </div>
+                <div class="info-grid">
+                  <div class="info"><span>Son veri</span><strong>Bug&#252;n 18:00</strong></div>
+                  <div class="info"><span>Kapsam</span><strong>3 ma&#287;aza</strong></div>
+                  <div class="info"><span>Personel</span><strong>36 aktif</strong></div>
+                  <div class="info"><span>A&#231;&#305;k i&#351;</span><strong>7</strong></div>
+                </div>
+              </article>
+
+              <article class="panel">
+                <div class="panel-head">
+                  <div>
+                    <h2>B&#246;lge KPI snapshot</h2>
+                    <p>D&#246;nemin ana ortalamalar&#305;.</p>
+                  </div>
+                  <span class="badge accent">&#214;zet</span>
+                </div>
+                <div class="state-list">
+                  <div class="state"><i class="dot"></i><span><strong>HG%</strong><span>B&#246;lge ortalamas&#305; %92.</span></span></div>
+                  <div class="state"><i class="dot"></i><span><strong>UPT</strong><span>B&#246;lge ortalamas&#305; 2.6.</span></span></div>
+                  <div class="state"><i class="dot warn"></i><span><strong>ATV</strong><span>Ortalama &#8378;1.140, yak&#305;n takip.</span></span></div>
+                </div>
+              </article>
+            </aside>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      lucide.createIcons();
+    </script>
+  </body>
+</html>
