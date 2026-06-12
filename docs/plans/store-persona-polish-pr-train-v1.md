@@ -233,11 +233,13 @@ Implementation requirements:
 
 1. Inspect the current headcount/workforce data contract before editing and
    record whether a real shortage-start timestamp exists.
-2. Add a pure helper for norm status interpretation:
+2. Add a pure helper for norm status interpretation. The helper must parse
+   headcount fields as finite numbers before comparing because the current
+   frontend workforce contract carries headcount values as strings:
    - planned > active: `Eksik`,
    - planned = active: `Tam`,
    - active > planned: `Fazla`,
-   - planned missing: honest not-configured fallback.
+   - non-finite or missing planned value: honest not-configured fallback.
 3. Use existing fields first:
    - `plannedHeadcount`,
    - `activeHeadcount`,
