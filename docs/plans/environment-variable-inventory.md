@@ -200,7 +200,7 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - Do not paste client secrets.
 - Do not store production credentials in screenshots.
 - Do not record browser app-session cookie values, CSRF nonce values, provider
-  subjects, or storage dumps in evidence.
+  subjects, or browser storage dumps in evidence.
 - Keep committed `.env.example` files placeholder-only.
 - Store real secrets in the hosting environment or secret manager.
 - Rotate any value that appears in chat, issue comments, screenshots, or logs.

@@ -17,7 +17,7 @@ const sensitiveQueryParams = new Set([
 const rawJwtPattern = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]*\b/
 const redactedValuePattern = /^<[^>]*redacted[^>]*>$/i
 const sensitiveKeyPattern =
-  /^(accessToken|authorizationCode|bearerToken|clientSecret|code|codeChallenge|codeVerifier|cookie|cookies|idToken|idTokenHint|privateKey|refreshToken|sessionState|sessionStorage)$/i
+  /^(accessToken|authCode|authorizationCode|bearerToken|clientSecret|code|codeChallenge|codeVerifier|cookie|cookies|cookieHeader|csrfCookie|documentCookie|idToken|idTokenHint|localStorage|pkceVerifier|privateKey|refreshToken|sessionState|sessionStorage|setCookie)$/i
 const privateIdentityKeyPattern =
   /^(email|employee_id|employeeId|preferred_username|preferredUsername|providerSubject|sub|userId)$/i
 
@@ -71,13 +71,20 @@ function inspectUrl(value, path, failures) {
 }
 
 function walkEvidence(value, path, failures) {
+  const key = path[path.length - 1] ?? ''
+  const normalizedKey = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
+
+  if (normalizedKey === 'localstorage' || normalizedKey === 'sessionstorage') {
+    failures.push(`${path.join('.')} contains a browser storage dump`)
+    return
+  }
+
   if (typeof value === 'string') {
     if (rawJwtPattern.test(value)) {
       failures.push(`${path.join('.')} contains raw compact JWT material`)
     }
 
-    const key = path[path.length - 1] ?? ''
-    if (sensitiveKeyPattern.test(key) && !isRedacted(value)) {
+    if ((sensitiveKeyPattern.test(key) || sensitiveKeyPattern.test(normalizedKey)) && !isRedacted(value)) {
       failures.push(`${path.join('.')} contains unredacted secret-like material`)
     }
 

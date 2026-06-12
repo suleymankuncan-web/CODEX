@@ -46,6 +46,8 @@ test('staging auth session edge evidence guard document records the controlled b
     'Expired-token edge evidence',
     'No raw bearer tokens',
     'No refresh token',
+    'no browser-readable token storage exists for provider sessions after logout',
+    'browser storage dumps',
     'guard:auth:evidence',
     'smoke:auth:staging',
     'smoke:auth:staging:action',
@@ -96,7 +98,7 @@ test('runbook and evidence template keep logout and expired-token review explici
       'Expired Token',
       'id_token_hint',
       'browser returns to `/auth/login`',
-      'expired bearer JWT is cleared',
+      'no browser-readable token storage exists for provider sessions',
       'API requests do not include `Authorization: Bearer <expired-jwt>`',
       'No refresh token',
     ]) {

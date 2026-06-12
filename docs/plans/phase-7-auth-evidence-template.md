@@ -14,7 +14,9 @@
 - Do not paste refresh tokens.
 - Do not paste authorization codes.
 - Do not paste PKCE `code_verifier` values.
-- Do not paste client secrets, private keys, cookies, or session storage dumps.
+- Do not paste client secrets, private keys, cookies, or browser storage dumps.
+- no browser-readable token storage exists for provider sessions; record only
+  boolean storage facts, never storage contents.
 - Do not attach screenshots that expose tokens, cookies, secrets, or personal data beyond the smoke user identity.
 - Store only sanitized decoded payloads and sanitized HTTP response shapes.
 
