@@ -619,6 +619,14 @@ Purpose:
 - prove the new browser session model with real protected staging input without
   storing raw secrets.
 
+PR-5 blocked evidence:
+
+- `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
+  records that real staging cookie-session proof is externally blocked until an
+  approved provider session, seeded assigned/unassigned store inputs, and
+  sanitized smoke path are available. This note does not claim broad production
+  readiness.
+
 Expected files:
 
 - `admin-web/scripts/auth-live-smoke.mjs` or a new cookie-session smoke script;
