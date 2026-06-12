@@ -1,4 +1,5 @@
-import { ArrowRight } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Activity, ArrowRight, ClipboardCheck, Inbox, ListChecks, Store, Target, Trophy } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -24,12 +25,12 @@ import {
 import { getWorkflowInbox } from '../features/workflow/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
-  StoreInfoGrid,
   StoreMetricCard,
   StoreMetricGrid,
   StoreSectionCard,
   StoreStackedList,
   StoreStackedRow,
+  StoreStatusBadge,
   StoreSurfaceHeader,
   StoreSurfacePage,
   type StoreSurfaceTone,
@@ -40,19 +41,26 @@ type HomeMetric = {
   value: string
   noteKey?: TranslationKey
   note?: string
+  icon?: ReactNode
   tone?: StoreSurfaceTone
   href?: string
+}
+
+type HomeDashboardRow = {
+  actionLabel: string
+  copy: string
+  href: string
+  icon: ReactNode
+  id: string
+  testId?: string
+  title: string
+  tone: StoreSurfaceTone
+  value: string
 }
 
 type HomeConfig = {
   titleKey: TranslationKey
   copyKey: TranslationKey
-  heroTitleKey: TranslationKey
-  heroCopyKey: TranslationKey
-  focusTitleKey: TranslationKey
-  focusCopyKey: TranslationKey
-  focusActionKey: TranslationKey
-  focusHref: string
   summaryTitleKey: TranslationKey
   timelineTitleKey: TranslationKey
 }
@@ -71,48 +79,24 @@ const homeConfigByPersona: Record<StorePersona, HomeConfig> = {
   personnel: {
     titleKey: 'storeHome.command.personnelTitle',
     copyKey: 'storeHome.command.personnelCopy',
-    heroTitleKey: 'storeHome.command.personnelHeroTitle',
-    heroCopyKey: 'storeHome.command.personnelHeroCopy',
-    focusTitleKey: 'storeHome.command.personnelFocusTitle',
-    focusCopyKey: 'storeHome.command.personnelFocusCopy',
-    focusActionKey: 'storeHome.command.openPerformance',
-    focusHref: '/store/me',
     summaryTitleKey: 'storeHome.command.personnelSummaryTitle',
     timelineTitleKey: 'storeHome.command.personnelTimelineTitle',
   },
   storeManager: {
     titleKey: 'storeHome.command.managerTitle',
     copyKey: 'storeHome.command.managerCopy',
-    heroTitleKey: 'storeHome.command.managerHeroTitle',
-    heroCopyKey: 'storeHome.command.managerHeroCopy',
-    focusTitleKey: 'storeHome.command.managerFocusTitle',
-    focusCopyKey: 'storeHome.command.managerFocusCopy',
-    focusActionKey: 'storeHome.nav.requestsApprovals',
-    focusHref: '/store/approvals',
-    summaryTitleKey: 'storeHome.command.managerSummaryTitle',
+    summaryTitleKey: 'storeHome.dashboard.managerTitle',
     timelineTitleKey: 'storeHome.command.managerTimelineTitle',
   },
   regionManager: {
     titleKey: 'storeHome.command.regionTitle',
     copyKey: 'storeHome.command.regionCopy',
-    heroTitleKey: 'storeHome.command.regionHeroTitle',
-    heroCopyKey: 'storeHome.command.regionHeroCopy',
-    focusTitleKey: 'storeHome.command.regionFocusTitle',
-    focusCopyKey: 'storeHome.command.regionFocusCopy',
-    focusActionKey: 'storeHome.nav.checklists',
-    focusHref: '/store/checklists',
-    summaryTitleKey: 'storeHome.command.regionSummaryTitle',
+    summaryTitleKey: 'storeHome.dashboard.regionTitle',
     timelineTitleKey: 'storeHome.command.regionTimelineTitle',
   },
   visualMerchandiser: {
     titleKey: 'storeHome.command.vmTitle',
     copyKey: 'storeHome.command.vmCopy',
-    heroTitleKey: 'storeHome.command.vmHeroTitle',
-    heroCopyKey: 'storeHome.command.vmHeroCopy',
-    focusTitleKey: 'storeHome.command.vmFocusTitle',
-    focusCopyKey: 'storeHome.command.vmFocusCopy',
-    focusActionKey: 'storeHome.nav.checklists',
-    focusHref: '/store/checklists',
     summaryTitleKey: 'storeHome.command.vmSummaryTitle',
     timelineTitleKey: 'storeHome.command.vmTimelineTitle',
   },
@@ -129,14 +113,25 @@ function formatStoreScope(authSummary: AuthSessionSummary | null) {
   return assignedStoreCount > 0 ? String(assignedStoreCount) : String(storeCount)
 }
 
+function parseHomeCount(value: string | null | undefined) {
+  if (!value) return null
+  if (!/^\d+$/.test(value)) return null
+  return Number(value)
+}
+
 function buildMetrics(input: {
+  availablePaths: ReadonlySet<string>
   checklistSummary: ChecklistHomeSummary | null
   persona: StorePersona
+  pendingValue: string
+  pendingWorkNote: string
+  pendingWorkValue: string
   pendingRequestsValue: string | null
   storeScopeValue: string
 }) {
   const metrics: HomeMetric[] = [
     {
+      icon: <Store data-icon="inline-start" />,
       labelKey: 'storeHome.metric.storeScope',
       value: input.storeScopeValue,
       noteKey: 'storeHome.metric.authorizedStores',
@@ -144,8 +139,36 @@ function buildMetrics(input: {
     },
   ]
 
-  if (input.pendingRequestsValue !== null) {
+  if (input.persona === 'storeManager') {
+    if (input.availablePaths.has('/store/tasks')) {
+      metrics.push({
+        icon: <Inbox data-icon="inline-start" />,
+        labelKey: 'storeHome.metric.pendingWork',
+        note: input.pendingWorkNote,
+        value: input.pendingWorkValue,
+        tone: parseHomeCount(input.pendingWorkValue) ? 'warning' : 'calm',
+        href: '/store/tasks',
+      })
+    }
+  } else if (input.persona === 'regionManager') {
+    const targetRequestHref = input.availablePaths.has('/store/approvals')
+      ? '/store/approvals'
+      : input.availablePaths.has('/store/targets')
+        ? '/store/targets'
+        : null
+    if (targetRequestHref) {
+      metrics.push({
+        icon: <Target data-icon="inline-start" />,
+        labelKey: 'storeHome.metric.targetRequestFlow',
+        noteKey: 'storeHome.metric.targetRequestPending',
+        value: input.pendingValue,
+        tone: 'neutral',
+        href: targetRequestHref,
+      })
+    }
+  } else if (input.pendingRequestsValue !== null && input.availablePaths.has('/store/approvals')) {
     metrics.push({
+      icon: <Inbox data-icon="inline-start" />,
       labelKey: 'storeHome.metric.pendingRequests',
       value: input.pendingRequestsValue,
       noteKey: 'storeHome.metric.openRequests',
@@ -154,8 +177,9 @@ function buildMetrics(input: {
     })
   }
 
-  if (input.checklistSummary) {
+  if (input.checklistSummary && input.availablePaths.has('/store/checklists')) {
     const checklistMetric: HomeMetric = {
+      icon: <ClipboardCheck data-icon="inline-start" />,
       labelKey:
         input.persona === 'visualMerchandiser'
           ? 'storeHome.metric.checklistQueue'
@@ -170,8 +194,22 @@ function buildMetrics(input: {
     metrics.push(checklistMetric)
   }
 
+  if ((input.persona === 'storeManager' || input.persona === 'regionManager') && input.availablePaths.has('/store/kpis')) {
+    metrics.push({
+      icon: <Activity data-icon="inline-start" />,
+      labelKey: input.persona === 'regionManager'
+        ? 'storeHome.nav.kpiSummaries'
+        : 'storeHome.command.kpiSnapshot',
+      noteKey: 'storeHome.metric.kpiSnapshotPending',
+      value: input.pendingValue,
+      tone: 'neutral',
+      href: '/store/kpis',
+    })
+  }
+
   if (input.persona === 'personnel') {
     metrics.push({
+      icon: <Trophy data-icon="inline-start" />,
       labelKey: 'storeHome.nav.myPerformance',
       value: 'KPI',
       noteKey: 'storeHome.command.openPerformance',
@@ -219,10 +257,9 @@ export function StoreHomePage(input: {
   })
   const config = homeConfigByPersona[persona]
   const navigation = getRoleAwareStoreNavigation(input.authSummary)
+  const availablePaths = new Set(navigation.map((item) => item.path))
   const title = t(config.titleKey)
   const copy = t(config.copyKey)
-  const heroTitle = t(config.heroTitleKey)
-  const heroCopy = t(config.heroCopyKey)
   const pendingValue = t('storeHome.valuePending')
   const storeScopeValue = formatStoreScope(input.authSummary)
   const workflowItems = workflowInboxQuery.data?.items ?? []
@@ -242,9 +279,26 @@ export function StoreHomePage(input: {
     storeScopeValue,
     t,
   })
+  const checklistCount = parseHomeCount(checklistSummary?.metricValue)
+  const requestCount =
+    canUseWorkflowInbox && !workflowInboxQuery.isLoading && !workflowInboxQuery.isError
+      ? pendingWorkflowItems.length
+      : null
+  const pendingWorkValue =
+    checklistSummary && checklistSummary.metricValue !== pendingValue && requestCount !== null
+      ? String((checklistCount ?? 0) + requestCount)
+      : pendingValue
+  const pendingWorkNote = t('storeHome.metric.pendingWorkNote', {
+    checklists: checklistSummary?.metricValue ?? pendingValue,
+    requests: requestCount === null ? pendingValue : String(requestCount),
+  })
   const metrics = buildMetrics({
+    availablePaths,
     checklistSummary,
     persona,
+    pendingValue,
+    pendingWorkNote,
+    pendingWorkValue,
     pendingRequestsValue,
     storeScopeValue,
   })
@@ -256,79 +310,86 @@ export function StoreHomePage(input: {
     workflowItems,
     workflowLoading: workflowInboxQuery.isLoading,
     workflowUnavailable: workflowInboxQuery.isError,
+  }).filter((item) => availablePaths.has(item.href))
+  const dashboardRows = buildHomeDashboardRows({
+    availablePaths,
+    checklistSummary,
+    pendingRequestsValue,
+    pendingValue,
+    pendingWorkValue,
+    persona,
+    t,
   })
-  const summaryRows = [
-    {
-      labelKey: 'storeHome.summary.period',
-      value: t('storeHome.summary.currentMonth'),
-    },
-    {
-      labelKey: 'storeHome.summary.scope',
-      value: storeScopeValue,
-    },
-    {
-      labelKey: 'storeHome.summary.language',
-      value: t('storeHome.summary.languageSettings'),
-    },
-  ] satisfies Array<{ labelKey: TranslationKey; value: string }>
+  const dashboardTitleKey =
+    persona === 'regionManager'
+      ? 'storeHome.dashboard.regionTitle'
+      : persona === 'storeManager'
+        ? 'storeHome.dashboard.managerTitle'
+        : config.summaryTitleKey
+  const dashboardCopyKey =
+    persona === 'regionManager'
+      ? 'storeHome.dashboard.regionCopy'
+      : persona === 'storeManager'
+        ? 'storeHome.dashboard.managerCopy'
+        : config.copyKey
+  const timelineItems = navigation.slice(1, 5)
+  const showKpiSnapshotPanel =
+    (persona === 'storeManager' || persona === 'regionManager') && availablePaths.has('/store/kpis')
 
   return (
-    <StoreSurfacePage ariaLabel={t('storeHome.command.aria')} className="store-command-home">
+    <StoreSurfacePage
+      ariaLabel={t('storeHome.command.aria')}
+      className="store-command-home"
+      testId="store-home-dashboard"
+    >
       <StoreSurfaceHeader
         eyebrow={t('storeHome.homeEyebrow')}
         title={title}
         description={copy}
         badges={[
           { label: t(`storeHome.persona.${persona}` as TranslationKey), tone: 'accent' },
-          { label: `${t('storeHome.summary.scope')}: ${storeScopeValue}`, tone: 'neutral' },
+          { label: `${t('storeHome.metric.authorizedStores')}: ${storeScopeValue}`, tone: 'neutral' },
         ]}
       />
 
-      <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+      <StoreMetricGrid ariaLabel={t('storeHome.dashboard.metricsAria')} className="tw:xl:grid-cols-4">
+        {metrics.map((metric) => (
+          <HomeMetricCard key={metric.labelKey} metric={metric} />
+        ))}
+      </StoreMetricGrid>
+
+      <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.85fr)]">
         <div className="tw:flex tw:flex-col tw:gap-4">
           <StoreSectionCard
-            title={heroTitle}
-            description={heroCopy}
-            action={{
-              icon: <ArrowRight data-icon="inline-start" />,
-              label: t(config.focusActionKey),
-              to: config.focusHref,
-            }}
+            title={t(dashboardTitleKey)}
+            description={t(dashboardCopyKey)}
+            badge={{ label: t('storeHome.command.ready'), tone: 'calm' }}
           >
-            <StoreStackedRow tone="accent">
-              <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
-                {t(config.focusTitleKey)}
-              </strong>
-              <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-                {t(config.focusCopyKey)}
-              </p>
-            </StoreStackedRow>
-
-            {metrics.length > 0 ? (
-              <StoreMetricGrid className="tw:mt-3 tw:xl:grid-cols-3">
-                {metrics.map((metric) => (
-                  <HomeMetricCard key={metric.labelKey} metric={metric} />
-                ))}
-              </StoreMetricGrid>
-            ) : null}
-
-            {checklistSummary ? <ChecklistHomeCard summary={checklistSummary} /> : null}
+            <StoreStackedList>
+              {dashboardRows.map((row) => (
+                <HomeDashboardRowCard key={row.id} row={row} />
+              ))}
+            </StoreStackedList>
           </StoreSectionCard>
 
           <DailyCommandBriefPanel items={dailyBriefItems} />
+        </div>
+
+        <div className="tw:flex tw:flex-col tw:gap-4">
+          {showKpiSnapshotPanel ? <KpiSnapshotPanel pendingValue={pendingValue} persona={persona} /> : null}
 
           <StoreSectionCard
             title={t(config.timelineTitleKey)}
             badge={{ label: t('storeHome.command.connected'), tone: 'calm' }}
           >
             <StoreStackedList>
-              {navigation.slice(1, 5).map((item) => (
+              {timelineItems.map((item) => (
                 <StoreStackedRow key={item.id}>
                   <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
                     <strong className="tw:text-sm tw:text-foreground">{t(item.labelKey)}</strong>
                     <Button asChild size="sm" variant="outline">
                       <Link to={item.path}>
-                        {t('storeHome.dailyBrief.openSource')}
+                        {t('storeHome.dashboard.open')}
                         <ArrowRight data-icon="inline-end" />
                       </Link>
                     </Button>
@@ -338,19 +399,6 @@ export function StoreHomePage(input: {
             </StoreStackedList>
           </StoreSectionCard>
         </div>
-
-        <StoreSectionCard
-          title={t(config.summaryTitleKey)}
-          badge={{ label: t('storeHome.command.ready'), tone: 'calm' }}
-        >
-          <StoreInfoGrid
-            items={summaryRows.map((row) => ({
-              label: t(row.labelKey),
-              value: row.value,
-            }))}
-            className="tw:sm:grid-cols-1 tw:xl:grid-cols-1"
-          />
-        </StoreSectionCard>
       </div>
     </StoreSurfacePage>
   )
@@ -377,7 +425,7 @@ function DailyCommandBriefPanel(input: { items: DailyCommandBriefItem[] }) {
                 </small>
               </span>
               <Button asChild size="sm" variant="outline">
-                <Link aria-label={`${t('storeHome.dailyBrief.openSource')}: ${t(item.sourceLabelKey)}`} to={item.href}>
+                <Link aria-label={`${t('storeHome.dashboard.open')}: ${t(item.sourceLabelKey)}`} to={item.href}>
                   {item.value}
                   <ArrowRight data-icon="inline-end" />
                 </Link>
@@ -390,15 +438,217 @@ function DailyCommandBriefPanel(input: { items: DailyCommandBriefItem[] }) {
   )
 }
 
+function buildHomeDashboardRows(input: {
+  availablePaths: ReadonlySet<string>
+  checklistSummary: ChecklistHomeSummary | null
+  pendingRequestsValue: string | null
+  pendingValue: string
+  pendingWorkValue: string
+  persona: StorePersona
+  t: ReturnType<typeof useLocalization>['t']
+}): HomeDashboardRow[] {
+  const rows: HomeDashboardRow[] = []
+  const checklistRow = input.checklistSummary && input.availablePaths.has('/store/checklists')
+    ? {
+        actionLabel: input.checklistSummary.actionLabel,
+        copy: input.checklistSummary.copy,
+        href: '/store/checklists',
+        icon: <ClipboardCheck data-icon="inline-start" />,
+        id: 'checklists',
+        testId: 'store-home-checklist-card',
+        title: input.checklistSummary.title,
+        tone: input.checklistSummary.tone === 'attention' ? 'warning' : 'calm',
+        value: input.checklistSummary.metricValue,
+      } satisfies HomeDashboardRow
+    : null
+
+  if (input.persona === 'storeManager') {
+    if (input.availablePaths.has('/store/tasks')) {
+      rows.push({
+        actionLabel: input.t('storeHome.dashboard.open'),
+        copy: input.t('storeHome.dashboard.managerPendingWorkCopy'),
+        href: '/store/tasks',
+        icon: <ListChecks data-icon="inline-start" />,
+        id: 'pending-work',
+        title: input.t('storeHome.dashboard.pendingWorkTitle'),
+        tone: parseHomeCount(input.pendingWorkValue) ? 'warning' : 'calm',
+        value: input.pendingWorkValue,
+      })
+    }
+    if (checklistRow) rows.push(checklistRow)
+    if (input.availablePaths.has('/store/kpis')) {
+      rows.push({
+        actionLabel: input.t('storeHome.dashboard.open'),
+        copy: input.t('storeHome.dashboard.kpiPendingCopy'),
+        href: '/store/kpis',
+        icon: <Activity data-icon="inline-start" />,
+        id: 'kpi-snapshot',
+        title: input.t('storeHome.command.kpiSnapshot'),
+        tone: 'neutral',
+        value: input.pendingValue,
+      })
+    }
+    if (input.availablePaths.has('/store/approvals')) {
+      rows.push({
+        actionLabel: input.t('storeHome.dashboard.open'),
+        copy: input.t('storeHome.dashboard.approvalsCopy'),
+        href: '/store/approvals',
+        icon: <Inbox data-icon="inline-start" />,
+        id: 'approvals',
+        title: input.t('storeHome.nav.requestsApprovals'),
+        tone: parseHomeCount(input.pendingRequestsValue) ? 'warning' : 'neutral',
+        value: input.pendingRequestsValue ?? input.pendingValue,
+      })
+    }
+
+    return rows
+  }
+
+  if (input.persona === 'regionManager') {
+    if (checklistRow) rows.push(checklistRow)
+    if (input.availablePaths.has('/store/kpis')) {
+      rows.push({
+        actionLabel: input.t('storeHome.dashboard.open'),
+        copy: input.t('storeHome.dashboard.regionKpiCopy'),
+        href: '/store/kpis',
+        icon: <Activity data-icon="inline-start" />,
+        id: 'region-kpis',
+        title: input.t('storeHome.nav.kpiSummaries'),
+        tone: 'neutral',
+        value: input.pendingValue,
+      })
+    }
+    if (input.availablePaths.has('/store/targets')) {
+      rows.push({
+        actionLabel: input.t('storeHome.dashboard.open'),
+        copy: input.t('storeHome.dashboard.regionTargetsCopy'),
+        href: '/store/targets',
+        icon: <Target data-icon="inline-start" />,
+        id: 'targets',
+        title: input.t('storeHome.nav.targets'),
+        tone: 'neutral',
+        value: input.pendingValue,
+      })
+    }
+    if (input.availablePaths.has('/store/reports')) {
+      rows.push({
+        actionLabel: input.t('storeHome.dashboard.open'),
+        copy: input.t('storeHome.dashboard.regionReportsCopy'),
+        href: '/store/reports',
+        icon: <Trophy data-icon="inline-start" />,
+        id: 'reports',
+        title: input.t('storeHome.nav.reports'),
+        tone: 'neutral',
+        value: input.pendingValue,
+      })
+    }
+
+    return rows
+  }
+
+  if (input.availablePaths.has('/store/me')) {
+    rows.push({
+      actionLabel: input.t('storeHome.dashboard.open'),
+      copy: input.t('storeHome.dailyBrief.performanceCopy'),
+      href: '/store/me',
+      icon: <Trophy data-icon="inline-start" />,
+      id: 'performance',
+      title: input.t('storeHome.nav.myPerformance'),
+      tone: 'neutral',
+      value: input.pendingValue,
+    })
+  }
+  if (checklistRow) rows.push(checklistRow)
+
+  return rows
+}
+
+function HomeDashboardRowCard(input: { row: HomeDashboardRow }) {
+  return (
+    <StoreStackedRow
+      tone={input.row.tone}
+      {...(input.row.testId ? { testId: input.row.testId } : {})}
+    >
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
+        <div className="tw:flex tw:min-w-0 tw:gap-3">
+          <span className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-background tw:text-primary">
+            {input.row.icon}
+          </span>
+          <span className="tw:min-w-0">
+            <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
+              {input.row.title}
+            </strong>
+            <span className="tw:mt-1 tw:block tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              {input.row.copy}
+            </span>
+          </span>
+        </div>
+        <div className="tw:flex tw:shrink-0 tw:items-center tw:gap-3 tw:lg:justify-end">
+          <StoreStatusBadge tone={input.row.tone}>{input.row.value}</StoreStatusBadge>
+          <Button asChild size="sm" variant="outline">
+            <Link aria-label={`${input.row.title} ${input.row.actionLabel}`} to={input.row.href}>
+              {input.row.actionLabel}
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </StoreStackedRow>
+  )
+}
+
+function KpiSnapshotPanel(input: { pendingValue: string; persona: StorePersona }) {
+  const { t } = useLocalization()
+  const title =
+    input.persona === 'regionManager'
+      ? t('storeHome.dashboard.regionKpiTitle')
+      : t('storeHome.command.kpiSnapshot')
+
+  return (
+    <StoreSectionCard
+      title={title}
+      description={t('storeHome.dashboard.kpiSnapshotCopy')}
+      badge={{ label: input.pendingValue, tone: 'neutral' }}
+    >
+      <StoreStackedList>
+        <StoreStackedRow>
+          <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+            <span className="tw:min-w-0">
+              <strong className="tw:block tw:text-sm tw:text-foreground">
+                {t('storeHome.dashboard.kpiSnapshotStatus')}
+              </strong>
+              <small className="tw:block tw:text-sm tw:leading-6 tw:text-muted-foreground">
+                {t('storeHome.metric.kpiSnapshotPending')}
+              </small>
+            </span>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/store/kpis">
+                {t('storeHome.dashboard.open')}
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          </div>
+        </StoreStackedRow>
+        <StoreStackedRow tone="neutral">
+          <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3">
+            <span className="tw:text-sm tw:font-medium tw:text-muted-foreground">
+              {t('storeHome.dashboard.kpiMetricSet')}
+            </span>
+            <StoreStatusBadge tone="neutral">{input.pendingValue}</StoreStatusBadge>
+          </div>
+        </StoreStackedRow>
+      </StoreStackedList>
+    </StoreSectionCard>
+  )
+}
+
 function HomeMetricCard(input: { metric: HomeMetric }) {
   const { t } = useLocalization()
-  const note = input.metric.href
-    ? input.metric.note
-    : input.metric.note ?? (input.metric.noteKey ? t(input.metric.noteKey) : undefined)
+  const note = input.metric.note ?? (input.metric.noteKey ? t(input.metric.noteKey) : undefined)
   const action = input.metric.href
     ? {
         icon: <ArrowRight data-icon="inline-start" />,
-        label: input.metric.noteKey ? t(input.metric.noteKey) : t('storeHome.dailyBrief.openSource'),
+        label: t('storeHome.dashboard.open'),
         to: input.metric.href,
         variant: 'outline' as const,
       }
@@ -406,42 +656,13 @@ function HomeMetricCard(input: { metric: HomeMetric }) {
 
   return (
     <StoreMetricCard
+      icon={input.metric.icon}
       title={t(input.metric.labelKey)}
       value={input.metric.value}
       {...(input.metric.tone ? { tone: input.metric.tone } : {})}
       {...(note ? { note } : {})}
       {...(action ? { action } : {})}
     />
-  )
-}
-
-function ChecklistHomeCard(input: { summary: ChecklistHomeSummary }) {
-  return (
-    <StoreStackedRow
-      className="tw:mt-3"
-      testId="store-home-checklist-card"
-      tone={input.summary.tone === 'attention' ? 'warning' : 'calm'}
-    >
-      <div className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
-        <div className="tw:min-w-0">
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.summary.note}</span>
-          <strong className="tw:block tw:text-sm tw:text-foreground">{input.summary.title}</strong>
-          <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.summary.copy}</p>
-        </div>
-        <div className="tw:flex tw:items-center tw:gap-3">
-          <strong className="tw:text-2xl tw:text-foreground">{input.summary.metricValue}</strong>
-          <Button asChild size="sm" variant="outline">
-            <Link
-              aria-label={`${input.summary.title} ${input.summary.actionLabel}`}
-              to="/store/checklists"
-            >
-              {input.summary.actionLabel}
-              <ArrowRight data-icon="inline-end" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-    </StoreStackedRow>
   )
 }
 
