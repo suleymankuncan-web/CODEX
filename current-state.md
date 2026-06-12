@@ -2419,6 +2419,10 @@ Pilot Reliability Spine V1 current branch:
   `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`.
   Real Region Manager staging cookie-session evidence is recorded in
   `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`.
+  The repeatable rerun command is
+  `npm.cmd --prefix admin-web run smoke:auth:staging:cookie-session`; it uses
+  ignored local smoke credentials and records only sanitized status/cookie,
+  storage, role/scope, CSRF, and logout proof.
   The earlier blocked attempt remains historical context in
   `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`.
   Do not claim broad production readiness from this train.

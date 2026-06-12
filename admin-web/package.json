@@ -14,6 +14,7 @@
     "smoke:auth:action": "node scripts/auth-live-smoke.mjs --include-action-smoke",
     "smoke:auth:staging": "node scripts/auth-live-smoke.mjs --staging",
     "smoke:auth:staging:action": "node scripts/auth-live-smoke.mjs --staging --include-action-smoke",
+    "smoke:auth:staging:cookie-session": "node scripts/auth-cookie-session-live-smoke.mjs --staging",
     "smoke:auth:staging:token-scope": "node scripts/auth-token-scope-smoke.mjs --staging",
     "smoke:store-action:staging:command": "node scripts/store-action-command-smoke.mjs --staging",
     "smoke:ui": "npm run build && npm run test:e2e",
