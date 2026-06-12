@@ -22,6 +22,16 @@ const ALLOWED_HEADERS = new Set([
   "content-type",
   "x-correlation-id",
   "x-csrf-token",
+  "x-assigned-store-ids",
+  "x-company-ids",
+  "x-employee-id",
+  "x-read-company-ids",
+  "x-read-region-ids",
+  "x-read-store-ids",
+  "x-region-ids",
+  "x-role-codes",
+  "x-store-ids",
+  "x-user-id",
 ]);
 const DEFAULT_ALLOWED_HEADERS = [...ALLOWED_HEADERS].join(",");
 const ALLOWED_METHODS = "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS";

@@ -45,6 +45,42 @@ describe("createCorsAllowlistMiddleware", () => {
     expect(headers["access-control-allow-credentials"]).toBe("true");
   });
 
+  it("preserves explicit local mock-auth headers without reflecting arbitrary headers", () => {
+    const middleware = createCorsAllowlistMiddleware(["http://localhost:5173"]);
+    const { headers, response } = createResponse();
+
+    middleware(
+      {
+        headers: {
+          "access-control-request-headers": [
+            "x-user-id",
+            "x-role-codes",
+            "x-company-ids",
+            "x-read-store-ids",
+            "x-assigned-store-ids",
+            "x-evil",
+          ].join(","),
+          origin: "http://localhost:5173",
+        },
+        method: "OPTIONS",
+        originalUrl: "/api/auth/session",
+      },
+      response,
+      jest.fn(),
+    );
+
+    expect(headers["access-control-allow-headers"]).toBe(
+      [
+        "x-user-id",
+        "x-role-codes",
+        "x-company-ids",
+        "x-read-store-ids",
+        "x-assigned-store-ids",
+      ].join(","),
+    );
+    expect(headers["access-control-allow-headers"]).not.toContain("x-evil");
+  });
+
   it("rejects disallowed origins before exposing credentialed CORS headers", () => {
     const middleware = createCorsAllowlistMiddleware(["https://app.example.com"]);
     const json = jest.fn();
