@@ -5,6 +5,7 @@ export type ChecklistCoverageRow = {
   template: MobileChecklistToday['templates'][number]
   active: MobileChecklistToday['activeInstances'][number] | undefined
   summary: MobileChecklistToday['monthlySummaries'][number] | undefined
+  completedAt: string | null
   completedCount: number
 }
 
