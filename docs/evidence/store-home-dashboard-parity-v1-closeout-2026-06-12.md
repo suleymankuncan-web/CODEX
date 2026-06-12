@@ -12,8 +12,8 @@ Home dashboard parity for Store Manager and Region Manager personas.
 | PR-0 prototype lock | #696 | `162082bef1fe8ba807816b4d022acd35aadc2fc6` | Locked the Store Home dashboard prototypes and added the prototype hash guard. |
 | PR-1 toolbar parity | #697 | `dab4ea2f2658ba36f7a0858797a232405f756e78` | Moved Store and Admin sidebar nav bodies toward the approved prototype rhythm while keeping the existing Lufian header/brand area unchanged. |
 | PR-2 dashboard parity | #698 | `068e78e3af68797d7c2c668a97b7b934d8519df6` | Reworked Store Home for Store Manager and Region Manager as dashboard summary surfaces, removed old source/debug summary remnants, and kept actions role-aware. |
-| PR-3 closeout | this PR | pending | Records final parity evidence, screenshot artifacts, data mapping, unchanged behavior, and handoff state. |
-| Post-closeout cleanup | follow-up PR | pending | Completion audit removed retired Store Manager and Region Manager hero/focus localization keys left unused after the dashboard replacement. |
+| PR-3 closeout | #699 | `efcea8addfa6ff9d97087b95a5b1017e53e0ad76` | Records final parity evidence, screenshot artifacts, data mapping, unchanged behavior, and handoff state. |
+| Post-closeout cleanup | #700 | `c45734743795b8e74e02b836e1f8f957dc8307f3` | Completion audit removed retired Store Manager and Region Manager hero/focus localization keys left unused after the dashboard replacement. |
 
 ## Prototype Contracts
 
