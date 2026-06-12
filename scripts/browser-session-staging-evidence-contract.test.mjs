@@ -6,6 +6,8 @@ import test from 'node:test'
 const workspaceRoot = join(import.meta.dirname, '..')
 const evidencePath =
   'docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md'
+const packagePath = 'admin-web/package.json'
+const smokeScriptPath = 'admin-web/scripts/auth-cookie-session-live-smoke.mjs'
 const vercelIgnorePath = 'admin-web/.vercelignore'
 
 function readText(path) {
@@ -17,6 +19,8 @@ function requireText(text, value) {
 }
 
 const evidence = readText(evidencePath)
+const packageJson = JSON.parse(readText(packagePath))
+const smokeScript = readText(smokeScriptPath)
 
 test('browser-session staging evidence records the real sanitized cookie proof', () => {
   assert.equal(existsSync(join(workspaceRoot, evidencePath)), true, `${evidencePath} must exist`)
@@ -30,6 +34,7 @@ test('browser-session staging evidence records the real sanitized cookie proof',
     'REGION_MANAGER',
     '/admin/competitions',
     '`provider.configured=true`',
+    '`POST /api/auth/browser-session` without a bearer token returned `401`',
     '`POST /api/auth/browser-session` returned `201`',
     '`HttpOnly=true`',
     '`Secure=true`',
@@ -54,6 +59,23 @@ test('browser-session staging evidence keeps token storage and production limits
     'different persona',
     'target request create endpoint is scoped to `STORE_MANAGER` and `SUPER_ADMIN`',
     'rerun this sanitized proof',
+  ]) {
+    requireText(evidence, expected)
+  }
+})
+
+test('browser-session staging evidence names the repeatable cookie-session smoke command', () => {
+  requireText(evidence, '## Rerun Command')
+  requireText(evidence, 'npm.cmd --prefix admin-web run smoke:auth:staging:cookie-session')
+
+  for (const expected of [
+    '`AUTH_SMOKE_BASE_URL`',
+    '`AUTH_SMOKE_API_BASE_URL`',
+    '`AUTH_SMOKE_USERNAME`',
+    '`AUTH_SMOKE_PASSWORD`',
+    '`AUTH_SMOKE_OTP`',
+    '`AUTH_SMOKE_EXPECTED_ROLE`',
+    '`AUTH_SMOKE_EXPECTED_LANDING`',
   ]) {
     requireText(evidence, expected)
   }
@@ -97,5 +119,60 @@ test('vercel deployment ignores local env and secret-bearing files', () => {
     'test-results',
   ]) {
     requireText(vercelIgnore, expected)
+  }
+})
+
+test('admin package exposes the repeatable staging cookie-session smoke', () => {
+  assert.equal(
+    packageJson.scripts['smoke:auth:staging:cookie-session'],
+    'node scripts/auth-cookie-session-live-smoke.mjs --staging',
+  )
+})
+
+test('cookie-session live smoke script guards the launch security contract', () => {
+  for (const expected of [
+    'AUTH_SMOKE_BASE_URL',
+    'AUTH_SMOKE_API_BASE_URL',
+    'AUTH_SMOKE_USERNAME',
+    'AUTH_SMOKE_PASSWORD',
+    'AUTH_SMOKE_OTP',
+    'AUTH_SMOKE_EXPECTED_ROLE',
+    'AUTH_SMOKE_EXPECTED_LANDING',
+    'hr_axis_browser_session',
+    'store-ops-admin-session',
+    'store-ops-admin-bearer-token',
+    'store-ops-admin-provider-id-token',
+    'window.__storeOpsBrowserSessionCsrfToken',
+    '/api/auth/browser-session',
+    'auth/browser-session',
+    'auth/session',
+    'target-distributions/requests',
+    'appSessionBrowserSessionKeyPresent',
+    'appSessionTransport',
+    'tokenShapedStorageKeys',
+    'unsafeMissingHeaderStatus',
+    'SMOKE_FAIL',
+    'Bearer <redacted>',
+    '<redacted-jwt>',
+  ]) {
+    requireText(smokeScript, expected)
+  }
+})
+
+test('cookie-session live smoke script does not ship local credentials or raw tokens', () => {
+  for (const forbidden of [
+    '424242',
+    'StoreOps123!',
+    'store.manager',
+    /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/,
+    /rnd_[A-Za-z0-9_-]+/,
+    /postgres(?:ql)?:\/\/\S+/i,
+    /redis:\/\/\S+/i,
+  ]) {
+    if (typeof forbidden === 'string') {
+      assert.equal(smokeScript.includes(forbidden), false, `script must not contain ${forbidden}`)
+    } else {
+      assert.doesNotMatch(smokeScript, forbidden)
+    }
   }
 })

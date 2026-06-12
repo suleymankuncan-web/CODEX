@@ -40,6 +40,7 @@ Sanitized observed results:
 - `GET /api/health` returned `200`.
 - `GET /api/auth/bootstrap` returned `authMode=jwt`,
   `provider.configured=true`, `responseType=code`, and a token URL was present.
+- `POST /api/auth/browser-session` without a bearer token returned `401`.
 - Browser login reached `/admin/competitions`.
 - `POST /api/auth/browser-session` returned `201`.
 - Backend-owned app cookie was observed with:
@@ -67,6 +68,7 @@ Sanitized proof output:
 
 ```json
 {
+  "evidenceStatus": "protected_staging_cookie_session_passed",
   "status": "passed",
   "baseUrl": "https://staging.hr-axis.com",
   "apiBaseUrl": "https://api-staging.hr-axis.com/api",
@@ -80,17 +82,20 @@ Sanitized proof output:
   },
   "browserSession": {
     "createStatus": 201,
-    "clearStatus": 200
+    "clearStatus": 200,
+    "noBearerStatus": 401
   },
   "cookie": {
     "name": "hr_axis_browser_session",
     "domain": "api-staging.hr-axis.com",
     "httpOnly": true,
     "secure": true,
-    "sameSite": "Lax"
+    "sameSite": "Lax",
+    "hostOnly": true
   },
   "session": {
     "authStatus": 200,
+    "authenticated": true,
     "roleCodes": ["REGION_MANAGER"],
     "companyScopeCount": 1,
     "assignedStoreCount": 3
@@ -98,6 +103,8 @@ Sanitized proof output:
   "storage": {
     "appBearerStored": false,
     "appProviderIdTokenStored": false,
+    "appSessionBrowserSessionKeyPresent": true,
+    "appSessionTransport": "cookie",
     "tokenShapedStorageKeys": [],
     "suspiciousKeyCount": 0,
     "csrfNoncePresent": true
@@ -107,9 +114,36 @@ Sanitized proof output:
   },
   "logout": {
     "appCookiePresentAfterLogout": false
-  }
+  },
+  "limitations": [
+    "Password, one-time code, bearer token, provider token, cookie value, provider subject, and raw storage values are intentionally excluded.",
+    "This smoke proves the configured persona session and does not approve broad production."
+  ]
 }
 ```
+
+## Rerun Command
+
+Repeat this proof with the guarded live smoke script:
+
+```powershell
+npm.cmd --prefix admin-web run smoke:auth:staging:cookie-session
+```
+
+The command loads ignored local values from `admin-web/.env.local` when they
+exist. Required or accepted inputs:
+
+- `AUTH_SMOKE_BASE_URL` defaults to `https://staging.hr-axis.com`.
+- `AUTH_SMOKE_API_BASE_URL` defaults to `https://api-staging.hr-axis.com/api`.
+- `AUTH_SMOKE_USERNAME` is required and must not be recorded in evidence.
+- `AUTH_SMOKE_PASSWORD` is required and must not be recorded in evidence.
+- `AUTH_SMOKE_OTP` is required only when Clerk asks for the one-time code.
+- `AUTH_SMOKE_EXPECTED_ROLE` defaults to `REGION_MANAGER`.
+- `AUTH_SMOKE_EXPECTED_LANDING` defaults to `/admin/competitions`.
+
+Do not paste raw password, one-time code, bearer token, provider token, cookie
+value, provider subject, Render API key, or database credential into the
+evidence output.
 
 ## What This Proves
 
