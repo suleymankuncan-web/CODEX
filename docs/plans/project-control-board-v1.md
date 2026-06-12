@@ -37,8 +37,9 @@ The project is in controlled pilot execution mode.
 5. Batch P2 fixes only when they share surface, risk, verification, and
    rollback story.
 6. Keep evidence sanitized.
-7. If feedback is unavailable and launch-readiness work is needed, execute the
-   Security Launch Blocker PR Train V1 one slice at a time.
+7. If feedback is unavailable and launch-readiness work is needed, choose the
+   next local-only readiness slice through this board; the local Security
+   Launch Blocker PR Train V1 implementation is already closed.
 
 ## What We Do Not Do Now
 
@@ -77,7 +78,7 @@ The project is in controlled pilot execution mode.
 | Broad production | No-Go | Persistent Redis, managed recovery/PITR/RPO/RTO, final incident/app-level tracking posture, and owner acceptance remain production requirements. |
 | Store Action | Continue in current controlled scope | Manager assigned-store command path is proven; wider sources/actions need separate decision. |
 | Auth and scope | Guarded | Application DB assignments remain source of truth; role/scope changes require evidence rerun. |
-| Launch browser session security | Active blocker train | Browser-readable token storage must be replaced by backend cookie session transport, CSRF protection, env guards, and sanitized evidence before MVP/launch readiness can be claimed. |
+| Launch browser session security | Guarded / external evidence blocked | Local implementation and guards are closed in `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`; real staging cookie-session proof remains blocked on `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`. |
 | Imports | Continue current Excel/Power BI path | JSON provider integration remains parked. |
 | Refactor | Closed as broad workstream | Only concrete product/risk/refactor triggers reopen code movement. |
 | UI redesign | Parked | User said large visual changes will come later. |
@@ -91,8 +92,9 @@ is:
 1. run a scoped pilot session,
 2. record the session,
 3. fix only concrete blockers,
-4. if feedback is unavailable, execute the Security Launch Blocker PR Train V1
-   instead of inventing feedback,
+4. if feedback is unavailable, choose the next local-only readiness slice or
+   provide the external inputs needed for the blocked launch browser-session
+   staging evidence instead of inventing proof,
 5. update the decision/runbook registries only if a decision or procedure
    changes.
 

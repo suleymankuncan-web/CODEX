@@ -684,6 +684,13 @@ Purpose:
 - close the train only after the secure browser session path is implemented,
   guarded, and proven.
 
+PR-6 closeout evidence:
+
+- `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`
+  closes the local implementation and guard portion of this train while keeping
+  real staging cookie-session evidence `blocked_external` and broad production
+  `No-Go`.
+
 Expected files:
 
 - `current-state.md`;

@@ -79,12 +79,13 @@ Current execution loop under Tier A:
   is ready but blocked on real or assisted session feedback. Do not open a code
   PR until a sanitized record identifies the next P0/P1 or same-surface P2
   item.
-- If no real or assisted feedback can be supplied, the next useful local
-  launch-readiness work is Security Launch Blocker PR Train V1:
-  `docs/plans/security-launch-blocker-pr-train-v1.md`. This is a scoped auth
-  transport/security train that removes browser-readable token storage,
-  introduces backend cookie session + CSRF safeguards, and records sanitized
-  evidence without claiming broad production.
+- Security Launch Blocker PR Train V1 is closed for local implementation and
+  guards through PR #689. Closeout evidence:
+  `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`.
+  Real staging cookie-session evidence remains `blocked_external` until the
+  inputs listed in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
+  are available. Do not claim broad production readiness from this train.
 
 Tier B - broad-production/operational hardening:
 
@@ -1531,10 +1532,10 @@ findings before coding.
 If a concrete P0/P1 pilot blocker appears, open a small targeted fix loop.
 
 If no feedback can be supplied and the owner wants progress without inventing
-pilot evidence, use `docs/plans/security-launch-blocker-pr-train-v1.md` as the
-next local PR train. Start with the docs/control PR, then proceed one auth
-transport slice at a time: env contract, backend cookie session, frontend token
-storage removal, regression guard, staging evidence, closeout.
+pilot evidence, do not reopen the completed local Security Launch Blocker PR
+Train V1. Either provide the real staging inputs needed by
+`docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
+or choose another local-only readiness slice through the control board.
 
 If the owner decides to move toward broad production, return to the production
 readiness decision packet and explicitly close or accept the Redis, alerting,
@@ -1551,10 +1552,12 @@ If neither staging values nor true baseline files are available, do not open sou
 
 Recommended local candidate:
 
-- Execute `docs/plans/security-launch-blocker-pr-train-v1.md` if pilot
-  feedback remains unavailable and the owner wants to remove MVP/launch
-  blockers. Stop before raw secrets, provider config, staging mutation, DB
-  migration, or role/scope semantic changes.
+- If pilot feedback remains unavailable, choose the next local-only readiness
+  slice through `docs/plans/project-control-board-v1.md`; the local Security
+  Launch Blocker PR Train V1 implementation is already closed. To close the
+  remaining launch browser-session evidence gap, provide the real staging
+  inputs recorded in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`.
 - Follow `docs/plans/backend-foundation-hardening-plan-v1.md`; P0-4 Operator evidence consistency pass is done, so the next local foundation candidate should be chosen through the intake gate instead of opening a new module by reflex.
 - When true baseline master data exists, run a controlled store/personnel bootstrap dry-run and admin review smoke before promotion.
 - If no staging or baseline evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.
