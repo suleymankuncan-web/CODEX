@@ -1,23 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
-import {
-  CalendarClock,
-  ChevronRight,
-  Inbox,
-  Search,
-  Store,
-  Users,
-  UsersRound,
-  X,
-} from 'lucide-react'
+import { CalendarClock, ChevronRight, Inbox, Search, Store, Users, UsersRound, X } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getAssignedStoreIds, getReadRegionIds, getReadStoreIds } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
