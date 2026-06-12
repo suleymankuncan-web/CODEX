@@ -2417,10 +2417,11 @@ Pilot Reliability Spine V1 current branch:
 - Security Launch Blocker PR Train V1 is closed for local implementation and
   guards through PR #689. Closeout evidence:
   `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`.
-  Real staging cookie-session evidence remains `blocked_external` until the
-  inputs listed in
-  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
-  are available. Do not claim broad production readiness from this train.
+  Real Region Manager staging cookie-session evidence is recorded in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`.
+  The earlier blocked attempt remains historical context in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`.
+  Do not claim broad production readiness from this train.
 
 Current user direction on 2026-05-18:
 

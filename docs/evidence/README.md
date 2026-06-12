@@ -53,6 +53,7 @@ Current anchors:
 - `2026-05-23-redis-production-posture-v1.md`
 - `2026-05-23-supabase-recovery-posture-v1.md`
 - `2026-05-23-alert-email-policy-decision-v1.md`
+- `2026-06-12-browser-session-staging-evidence.md`
 - `2026-06-12-browser-session-staging-evidence-blocked.md`
 - `2026-06-12-security-launch-blocker-pr-train-closeout.md`
 

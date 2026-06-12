@@ -82,10 +82,11 @@ Current execution loop under Tier A:
 - Security Launch Blocker PR Train V1 is closed for local implementation and
   guards through PR #689. Closeout evidence:
   `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`.
-  Real staging cookie-session evidence remains `blocked_external` until the
-  inputs listed in
-  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
-  are available. Do not claim broad production readiness from this train.
+  Real Region Manager staging cookie-session evidence is recorded in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`.
+  The earlier blocked attempt remains historical context in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`.
+  Do not claim broad production readiness from this train.
 
 Tier B - broad-production/operational hardening:
 
@@ -1533,9 +1534,10 @@ If a concrete P0/P1 pilot blocker appears, open a small targeted fix loop.
 
 If no feedback can be supplied and the owner wants progress without inventing
 pilot evidence, do not reopen the completed local Security Launch Blocker PR
-Train V1. Either provide the real staging inputs needed by
-`docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
-or choose another local-only readiness slice through the control board.
+Train V1. Real Region Manager staging cookie-session evidence is already
+recorded in
+`docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`; choose
+the next pilot-feedback or local-only readiness slice through the control board.
 
 If the owner decides to move toward broad production, return to the production
 readiness decision packet and explicitly close or accept the Redis, alerting,
@@ -1554,10 +1556,9 @@ Recommended local candidate:
 
 - If pilot feedback remains unavailable, choose the next local-only readiness
   slice through `docs/plans/project-control-board-v1.md`; the local Security
-  Launch Blocker PR Train V1 implementation is already closed. To close the
-  remaining launch browser-session evidence gap, provide the real staging
-  inputs recorded in
-  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`.
+  Launch Blocker PR Train V1 implementation is already closed and current
+  Region Manager staging cookie-session evidence is recorded in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`.
 - Follow `docs/plans/backend-foundation-hardening-plan-v1.md`; P0-4 Operator evidence consistency pass is done, so the next local foundation candidate should be chosen through the intake gate instead of opening a new module by reflex.
 - When true baseline master data exists, run a controlled store/personnel bootstrap dry-run and admin review smoke before promotion.
 - If no staging or baseline evidence exists, keep source-specific adapter work closed and choose the next small guard only through the intake gate.
