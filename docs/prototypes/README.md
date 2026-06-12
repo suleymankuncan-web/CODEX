@@ -26,6 +26,10 @@ implemented and verified.
   workforce / Norm Kadro visual contract for the Store workforce split.
 - `docs/prototypes/store-approvals-request-center-v1.html` is the locked Store
   approvals / Talep Merkezi visual contract for the approvals cleanup.
+- `docs/prototypes/store-home-store-manager-standard-v1.html` is the locked
+  Store Home dashboard visual contract for the Store Manager persona.
+- `docs/prototypes/store-home-region-manager-standard-v1.html` is the locked
+  Store Home dashboard visual contract for the Region Manager persona.
 
 ## Locked Prototype Contracts
 
@@ -38,6 +42,8 @@ constraint requires a deviation.
 | --- | --- | --- |
 | `docs/prototypes/store-workforce-prototype-v1.html` | `/store/workforce` | `93390D1705B9DFEC74E3ACF084320FC91B1F31580E45C6FE8A26B479EDCD031F` |
 | `docs/prototypes/store-approvals-request-center-v1.html` | `/store/approvals` request center | `F122E2A80F1E9AFFDCCF2942F6E3F609942409527047B5452B50874E8AE2CABD` |
+| `docs/prototypes/store-home-store-manager-standard-v1.html` | `/store/home` Store Manager dashboard | `B36442A7244FCF4FE85954E4F08C88E2A3684055DD03D854F3C54DA629022E37` |
+| `docs/prototypes/store-home-region-manager-standard-v1.html` | `/store/home` Region Manager dashboard | `DF4E1583D39588FFA2B150937DAC3556983A59F781960C8DC986ED396B4A1E81` |
 
 ## Prototype Implementation Evidence
 
