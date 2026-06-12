@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './test-fixtures'
+import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
@@ -144,6 +144,9 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   })
   await page.goto('/store/checklists')
 
+  const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
+  const visitDateCell = visitRow.locator('.store-checklists-date-cell')
+  await expect(visitDateCell).toHaveText('-')
   await expect(page.getByRole('button', { name: 'Start checklist' })).toBeVisible()
   await page.getByRole('button', { name: 'Start checklist' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -165,6 +168,9 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(visitRow.getByRole('button', { name: 'Continue' })).toBeVisible()
+  await expect(visitDateCell).toHaveText('-')
+  await expect(visitDateCell).not.toContainText('May 20, 2026')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
   await expect(page.getByRole('dialog').getByRole('textbox', { name: /Note/ })).toHaveValue('Handoff-ready visit')
@@ -175,6 +181,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
     { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
   ])
   await expect.poll(() => handoffState.completed).toBe(true)
+  await expect(visitDateCell).toContainText('May 20, 2026')
   await expect(page.locator('#store-checklist-tab-incomplete small')).toHaveText('0')
   await page.getByRole('tab', { name: /Incomplete/ }).click()
   await expect(page.getByText('No incomplete records')).toBeVisible()
@@ -190,6 +197,8 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect(resultRow).toBeVisible()
   await resultRow.getByRole('button', { name: 'View details' }).click()
   await expect(page.getByText('Checklist result', { exact: true })).toBeVisible()
+  await expect(page.locator('.store-checklist-result-overview')).toBeVisible()
+  await expect(page.locator('.store-checklist-result-action-card')).toBeVisible()
   await page.getByLabel('Acknowledgement note').fill('Store saw the completed visit')
   await page.getByRole('button', { name: 'I acknowledge' }).click()
 
@@ -580,6 +589,20 @@ test('store manager checklist result treats unavailable score as neutral', async
   ).toHaveCount(0)
 })
 
+test('store manager checklist result modal stays usable on mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 844 })
+  await setupChecklistPage(page, ['STORE_MANAGER'], { longCopy: true })
+  await page.goto('/store/checklists?tab=inbox&result=44444444-4444-4444-8444-444444444444')
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('.store-checklist-result-overview')).toBeVisible()
+  await expect(dialog.locator('.store-checklist-result-findings')).toBeVisible()
+  await expect(dialog.locator('.store-checklist-result-action-card')).toBeVisible()
+  await expect(page.getByLabel(/Kabul notu|Acknowledgement note/)).toBeVisible()
+  await expectNoElementHorizontalOverflow(dialog)
+})
+
 test('checklist visit surface stays usable on mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 844 })
   await setupChecklistPage(page, ['REGION_MANAGER'], { longCopy: true })
@@ -621,6 +644,7 @@ type ChecklistFixtureOptions = {
   showStartedInstanceOnRefetch?: boolean
   completeFailureMessage?: string
   resultWithoutScore?: boolean
+  completedThisMonth?: ChecklistCompletedThisMonthFixture[]
 }
 
 type ChecklistActiveInstanceFixture = {
@@ -643,6 +667,15 @@ type ChecklistMonthlySummaryFixture = {
   monthStart: string
   completedCount: number
   averageScore: number | null
+}
+
+type ChecklistCompletedThisMonthFixture = {
+  checklistInstanceId: string
+  checklistTemplateId: string
+  storeId: string
+  completedAt: string
+  totalScore: number
+  acknowledgedAt: string | null
 }
 
 type ChecklistRequestLog = {
@@ -724,6 +757,10 @@ async function expectNoHorizontalOverflow(page: Page) {
     .toBe(true)
 }
 
+async function expectNoElementHorizontalOverflow(locator: Locator) {
+  await expect.poll(async () => locator.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true)
+}
+
 async function answerChecklistScoreQuestion(page: Page, score: string, note: string) {
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('radio', { name: score, exact: true }).click()
@@ -771,9 +808,11 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
   })
 
   await page.route('**/api/mobile/checklists/today', async (route) => {
+    const shouldShowStartedInstance =
+      options.showStartedInstanceOnRefetch && startedInstanceVisible && !options.handoffState?.completed
     await route.fulfill({
       json: createMobileChecklistTodayFixture(
-        options.showStartedInstanceOnRefetch && startedInstanceVisible
+        shouldShowStartedInstance
           ? {
               ...options,
               activeInstances: [
@@ -988,6 +1027,20 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
     })
   }
   const visibleTemplates = options.omitTemplates ? [] : templates
+  const completedThisMonth =
+    options.completedThisMonth ??
+    (options.handoffState?.completed
+      ? [
+          {
+            checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+            checklistTemplateId: templateId,
+            storeId,
+            completedAt: '2026-05-20T10:30:00.000Z',
+            totalScore: 86,
+            acknowledgedAt: options.handoffState.acknowledged ? '2026-05-20T11:00:00.000Z' : null,
+          },
+        ]
+      : [])
 
   return {
   data: {
@@ -1005,8 +1058,16 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
         },
       ]
     ).map((instance) => ({ ...instance, responses: instance.responses ?? [] })),
-    completedThisMonth: [],
-    pendingAcknowledgements: [],
+    completedThisMonth,
+    pendingAcknowledgements: completedThisMonth
+      .filter((item) => item.acknowledgedAt === null)
+      .map((item) => ({
+        checklistInstanceId: item.checklistInstanceId,
+        checklistTemplateId: item.checklistTemplateId,
+        storeId: item.storeId,
+        completedAt: item.completedAt,
+        totalScore: item.totalScore,
+      })),
     monthlySummaries: options.monthlySummaries ?? [
       {
         storeId,

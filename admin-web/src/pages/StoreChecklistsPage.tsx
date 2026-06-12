@@ -39,6 +39,7 @@ import {
   buildChecklistResponseDrafts,
   buildChecklistStoreVisitRows,
   buildMonthOptions,
+  compareDate,
   doesChecklistItemMatchFilters,
   doesCoverageRowMatchFilters,
   formatMonthKey,
@@ -90,6 +91,52 @@ function mergeSavedResponseIntoMobileToday(
       ...current.data,
       activeInstances,
     },
+  }
+}
+
+function getCoverageCompletedSource(input: {
+  acknowledgementItems: ChecklistAcknowledgementItem[]
+  checklistTemplateId: string
+  mobileToday: MobileChecklistToday | undefined
+  month: string
+  storeId: string
+}) {
+  const completedByInstance = new Map<string, string>()
+  const addCompletedSource = (source: {
+    checklistInstanceId: string
+    checklistTemplateId: string
+    completedAt: string | null
+    storeId: string
+  }) => {
+    if (
+      source.storeId !== input.storeId ||
+      source.checklistTemplateId !== input.checklistTemplateId ||
+      !source.completedAt
+    ) {
+      return
+    }
+    if (input.month !== 'all' && getMonthKey(source.completedAt) !== input.month) return
+
+    const current = completedByInstance.get(source.checklistInstanceId)
+    if (!current || compareDate(source.completedAt, current) > 0) {
+      completedByInstance.set(source.checklistInstanceId, source.completedAt)
+    }
+  }
+
+  for (const item of input.mobileToday?.completedThisMonth ?? []) {
+    addCompletedSource(item)
+  }
+  for (const item of input.mobileToday?.pendingAcknowledgements ?? []) {
+    addCompletedSource(item)
+  }
+  for (const item of input.acknowledgementItems) {
+    addCompletedSource(item)
+  }
+
+  const completedDates = [...completedByInstance.values()]
+  return {
+    completedAt: completedDates.toSorted((left, right) => compareDate(right, left))[0] ?? null,
+    completedCount: completedByInstance.size,
   }
 }
 
@@ -340,13 +387,25 @@ function useStoreChecklistsPageContent(input: {
         selectedMonth === 'all'
           ? matchingSummaries[0]
           : matchingSummaries.find((item) => getMonthKey(item.monthStart) === selectedMonth)
+      const completedSource = getCoverageCompletedSource({
+        acknowledgementItems: items,
+        checklistTemplateId: template.checklistTemplateId,
+        mobileToday,
+        month: selectedMonth,
+        storeId: store.storeId,
+      })
 
       return {
         store,
         template,
         active,
         summary,
-        completedCount: Math.max(summary?.completedCount ?? 0, localCompletedRows[rowKey] ?? 0),
+        completedAt: completedSource.completedAt,
+        completedCount: Math.max(
+          summary?.completedCount ?? 0,
+          completedSource.completedCount,
+          localCompletedRows[rowKey] ?? 0,
+        ),
       }
     }),
   )

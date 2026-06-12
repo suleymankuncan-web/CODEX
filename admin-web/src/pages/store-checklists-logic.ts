@@ -189,8 +189,8 @@ export function getStoreVisitSummary(
 }
 
 export function getStoreVisitDate(row: ChecklistStoreVisitRow) {
-  const bmDate = row.bm ? getCoverageDate(row.bm) : null
-  const vmDate = row.vm ? getCoverageDate(row.vm) : null
+  const bmDate = row.bm && row.bm.completedCount > 0 ? row.bm.completedAt : null
+  const vmDate = row.vm && row.vm.completedCount > 0 ? row.vm.completedAt : null
 
   if (!bmDate) return vmDate
   if (!vmDate) return bmDate
@@ -469,11 +469,7 @@ export function doesCoverageRowMatchFilters(
 ) {
   if (filters.type !== 'all' && row.template.templateType !== filters.type) return false
   if (filters.month !== 'all') {
-    const rowMonths = [
-      getMonthKey(row.summary?.monthStart),
-      getMonthKey(row.active?.updatedAt),
-      getMonthKey(row.active?.startedAt),
-    ]
+    const rowMonths = [getMonthKey(row.summary?.monthStart), getMonthKey(row.completedAt), getMonthKey(row.active?.updatedAt), getMonthKey(row.active?.startedAt)]
     const isCurrentMissingRow =
       filters.month === getCurrentMonthKey() && getCoverageStatus(row) === 'missing'
     const isCurrentLocalCompletion =
