@@ -2096,8 +2096,8 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   await expect(page.getByRole('checkbox', { name: 'Nis' })).toHaveCount(0)
   await expect(page.getByRole('checkbox', { name: 'Tüm ay' })).toBeChecked()
   await expect(page.getByTestId('store-rankings-page')).toBeVisible()
-  await expect(page.getByText('Top 100 kapsam')).toBeVisible()
-  await expect(page.getByLabel('Seçili kapsam referansı')).toContainText('Türkiye Referansı')
+  await expect(page.getByText('Top 100 görünüm', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('Seçili görünüm referansı')).toContainText('Türkiye Referansı')
   await expect(page.getByLabel('Sıralama güven özeti')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Türkiye mağaza sıralaması' })).toBeVisible()
   await expect(page.getByRole('button', { name: /^Skor/ })).toBeVisible()
@@ -2200,7 +2200,7 @@ test('store rankings keeps non-privileged rows summary-only and backend-gated', 
   await page.goto('/store/rankings')
 
   const rankingTable = page.locator('.store-rankings-table')
-  await expect(page.getByText('Top 100 kapsam')).toBeVisible()
+  await expect(page.getByText('Top 100 görünüm', { exact: true })).toBeVisible()
   await expect(rankingTable.getByRole('columnheader', { name: /UPT/ })).toHaveCount(0)
   await expect(rankingTable.getByRole('columnheader', { name: /BM/ })).toHaveCount(0)
   await expect(rankingTable.getByRole('button', { name: 'Detay aç' })).toHaveCount(0)
@@ -3021,7 +3021,7 @@ test('store rankings page switches to English copy and persists locale', async (
   await expect(page.getByRole('checkbox', { name: 'Apr' })).toBeChecked()
   await monthFilter.click()
   await expect(page.getByTestId('store-rankings-page')).toBeVisible()
-  await expect(page.getByText('Top 100 scope')).toBeVisible()
+  await expect(page.locator('header').getByText('Top 100 view', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Turkey store ranking' })).toBeVisible()
   await expect(page.getByRole('table', { name: /Showing store results/i })).toBeVisible()
   await page.getByRole('tab', { name: 'Personnel list' }).click()
@@ -3117,7 +3117,7 @@ test('store rankings requests exact loaded day and returns to monthly view', asy
   await expect(page.getByRole('button', { name: 'Yıl filtresi' })).toContainText('2026')
   await expect(page.getByRole('button', { name: 'Ay filtresi' })).toContainText('Nis')
   await expect(page.getByRole('button', { name: 'Gün filtresi' })).toContainText('Tüm ay')
-  await expect(page.getByText('Top 100 kapsam')).toBeVisible()
+  await expect(page.getByText('Top 100 görünüm', { exact: true })).toBeVisible()
   await expect(
     page.getByText('Top 100 görünümünü, kendi mağaza ve personel konumunla birlikte takip et.'),
   ).toBeVisible()
@@ -3196,7 +3196,7 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
   await page.goto('/store/rankings')
 
   await expect(page.getByRole('heading', { name: 'Türkiye Referansı' })).toBeVisible()
-  await expect(page.getByLabel('Seçili kapsam referansı')).toContainText('Türkiye Referansı')
+  await expect(page.getByLabel('Seçili görünüm referansı')).toContainText('Türkiye Referansı')
   const rankingTable = page.locator('.store-rankings-table')
   await expect(rankingTable.locator('thead')).not.toContainText('KPI')
   await expect(page.locator('td[data-label="KPI özeti"]')).toHaveCount(0)
@@ -3273,7 +3273,7 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
 
   await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
   await expect(page.getByText('Detay ozeti')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Mağaza aksiyon kuyruğu' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza aksiyon listesi' })).toBeVisible()
   await expect(page.getByText('Kendi mağazamda açık iş').first()).toBeVisible()
   await expect(page.getByText('KPI / projeksiyon').first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Tüm akış/i })).toBeVisible()
@@ -3304,7 +3304,7 @@ test('store tasks lets managers retry after the queue load fails', async ({ page
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: 'İş kuyruğu açılamadı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'İş listesi açılamadı' })).toBeVisible()
   const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
   await expect(retryButton).toBeVisible()
 
@@ -3313,7 +3313,7 @@ test('store tasks lets managers retry after the queue load fails', async ({ page
 
   await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
   await expect.poll(() => inboxAttempts).toBeGreaterThan(1)
-  await expect(page.getByRole('heading', { name: 'İş kuyruğu açılamadı' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'İş listesi açılamadı' })).toHaveCount(0)
 })
 
 test('store tasks page switches to English copy and persists locale', async ({ page }) => {
@@ -3323,7 +3323,7 @@ test('store tasks page switches to English copy and persists locale', async ({ p
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store Action workflow/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Store action queue' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Store action list' })).toBeVisible()
   await expect(page.getByText('Open work in my store').first()).toBeVisible()
   await expect(page.getByText('KPI / projection').first()).toBeVisible()
   await expect(page.getByRole('button', { name: /All flow/i })).toBeVisible()
@@ -3611,10 +3611,12 @@ test('store incentives page switches to English copy and persists locale', async
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store incentive visibility/i })).toBeVisible()
-  await expect(page.getByText('Incentive view')).toBeVisible()
+  await expect(page.getByText('Incentive view', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Live payouts' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Store tasks' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Store approvals' })).toBeVisible()
+  await expect(
+    page.getByLabel('Store incentive visibility').getByRole('link', { name: 'Request Center' }),
+  ).toBeVisible()
   await expect(page.getByText('Mağaza prim görünürlüğü')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
@@ -3632,7 +3634,7 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'April Region Challenge' }).first()).toBeVisible()
   const readSummary = page.getByLabel('Mağaza yarışma okuma özeti')
-  const contributionRows = page.getByLabel('Kapsamdaki mağaza yarışma katkıları')
+  const contributionRows = page.getByLabel('Yetkili mağaza yarışma katkıları')
   await expect(readSummary.getByText('Okuma özeti')).toBeVisible()
   await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
   await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
@@ -4067,7 +4069,7 @@ test('language toggle localizes competition read labels and persists preference'
   await page.goto('/store/competitions')
 
   const readSummary = page.getByLabel('Mağaza yarışma okuma özeti')
-  const contributionRows = page.getByLabel('Kapsamdaki mağaza yarışma katkıları')
+  const contributionRows = page.getByLabel('Yetkili mağaza yarışma katkıları')
 
   await expect(readSummary.getByRole('heading', { name: 'Okuma özeti' })).toBeVisible()
   await expect(readSummary.getByText('95% katkı kapsamı')).toBeVisible()
@@ -4077,7 +4079,7 @@ test('language toggle localizes competition read labels and persists preference'
   await setStoredLocale(page, 'en')
 
   const readSummaryEn = page.getByLabel('Store competition read summary')
-  const contributionRowsEn = page.getByLabel('Scoped store competition contributions')
+  const contributionRowsEn = page.getByLabel('Authorized store competition contributions')
 
   await expect(readSummaryEn.getByRole('heading', { name: 'Read summary' })).toBeVisible()
   await expect(readSummaryEn.getByText('95% contribution coverage')).toBeVisible()

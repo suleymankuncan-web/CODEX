@@ -1,5 +1,5 @@
 export const storeFeedTr = {
-  'storeFeed.noStoreScope': 'Mağaza kapsamı yok',
+  'storeFeed.noStoreScope': 'Yetkili mağaza yok',
   'storeFeed.loadingTitle': 'Duyurular yükleniyor',
   'storeFeed.loadingCopy': 'Mağaza akışı hazırlanıyor.',
   'storeFeed.errorTitle': 'Duyurular açılamadı',
@@ -10,12 +10,11 @@ export const storeFeedTr = {
   'storeFeed.title': 'Şirket, bölge ve mağaza duyuruları tek akışta.',
   'storeFeed.heroCopy':
     'Yarışma duyuruları burada görünür; skor ve sıralama takibi mevcut performans yüzeylerinden yapılır.',
-  'storeFeed.route': 'Rota',
   'storeFeed.visiblePost': 'Görünen post',
-  'storeFeed.storeScope': 'Mağaza kapsamı',
+  'storeFeed.storeScope': 'Yetkili mağaza',
 
   'storeFeed.visiblePosts': 'Görünen postlar',
-  'storeFeed.visiblePostsNote': 'Kapsamla eşleşen yayınlanmış duyurular.',
+  'storeFeed.visiblePostsNote': 'Yetkili mağaza veya bölgeyle eşleşen yayınlanmış duyurular.',
   'storeFeed.pinnedPosts': 'Sabitlenenler',
   'storeFeed.pinnedPostsNote': 'Ana sayfada öne çıkabilecek duyurular.',
   'storeFeed.challengeAnnouncements': 'Yarışma duyuruları',
@@ -24,9 +23,9 @@ export const storeFeedTr = {
 
   'storeFeed.feedEyebrow': 'Akış',
   'storeFeed.visibleAnnouncements': 'Görünen duyurular',
-  'storeFeed.emptyTitle': 'Kapsamına uygun duyuru yok',
+  'storeFeed.emptyTitle': 'Sana uygun duyuru yok',
   'storeFeed.emptyCopy':
-    'Şirket, bölge veya mağaza kapsamına uygun yayın geldiğinde burada görünür.',
+    'Şirket, bölge veya mağaza yayını geldiğinde burada görünür.',
 
   'storeFeed.type.announcement': 'Duyuru',
   'storeFeed.type.challenge': 'Meydan okuma',
@@ -47,7 +46,7 @@ export const storeFeedTr = {
 } as const
 
 export const storeFeedEn: Record<keyof typeof storeFeedTr, string> = {
-  'storeFeed.noStoreScope': 'No store scope',
+  'storeFeed.noStoreScope': 'No authorized store',
   'storeFeed.loadingTitle': 'Loading announcements',
   'storeFeed.loadingCopy': 'Preparing the store feed.',
   'storeFeed.errorTitle': 'Announcements could not be opened',
@@ -58,23 +57,22 @@ export const storeFeedEn: Record<keyof typeof storeFeedTr, string> = {
   'storeFeed.title': 'Company, region, and store announcements in one feed.',
   'storeFeed.heroCopy':
     'Challenge announcements appear here; score and ranking follow-up stays on the existing performance surfaces.',
-  'storeFeed.route': 'Route',
   'storeFeed.visiblePost': 'Visible posts',
-  'storeFeed.storeScope': 'Store scope',
+  'storeFeed.storeScope': 'Authorized stores',
 
   'storeFeed.visiblePosts': 'Visible posts',
-  'storeFeed.visiblePostsNote': 'Published announcements that match the current scope.',
+  'storeFeed.visiblePostsNote': 'Published announcements that match your store or region.',
   'storeFeed.pinnedPosts': 'Pinned posts',
   'storeFeed.pinnedPostsNote': 'Announcements that can be highlighted on the home page.',
   'storeFeed.challengeAnnouncements': 'Challenge announcements',
   'storeFeed.challengeAnnouncementsNote':
-    'Focused posts that route to ranking or profile surfaces.',
+    'Focused posts that lead to ranking or profile surfaces.',
 
   'storeFeed.feedEyebrow': 'Feed',
   'storeFeed.visibleAnnouncements': 'Visible announcements',
-  'storeFeed.emptyTitle': 'No announcement for your scope',
+  'storeFeed.emptyTitle': 'No announcement for you',
   'storeFeed.emptyCopy':
-    'Company, region, or store-scoped announcements will appear here when published.',
+    'Company, region, or store announcements will appear here when published.',
 
   'storeFeed.type.announcement': 'Announcement',
   'storeFeed.type.challenge': 'Challenge',

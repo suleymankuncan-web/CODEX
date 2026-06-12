@@ -76,8 +76,8 @@ export function StoreChecklistsHero(input: {
           note={
             canManageVisits
               ? vmOnlyVisitScope
-                ? getStaticCopy(locale, 'VM kapsamı', 'VM scope')
-                : getStaticCopy(locale, 'BM kapsamı', 'BM scope')
+                ? getStaticCopy(locale, 'VM görünümü', 'VM view')
+                : getStaticCopy(locale, 'BM görünümü', 'BM view')
               : getStaticCopy(locale, 'Kabul kayıtları', 'Receipt records')
           }
           tone={heroStoreCount > 0 ? 'accent' : 'neutral'}

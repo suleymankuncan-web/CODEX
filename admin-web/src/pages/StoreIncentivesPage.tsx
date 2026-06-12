@@ -1,12 +1,19 @@
+import type { ReactNode } from 'react'
 import { ArrowRight, Coins, Eye, ShieldCheck, SlidersHorizontal, Wallet } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  StatusPill,
-} from '../components/dashboard-primitives'
+  StoreEmptyState,
+  StoreInfoGrid,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSectionCard,
+  StoreStackedList,
+  StoreStackedRow,
+  StoreStatusBadge,
+  StoreSurfaceActionButton,
+  StoreSurfaceHeader,
+  StoreSurfacePage,
+  type StoreSurfaceTone,
+} from './store-surface-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { canListTargetDistributionRequests } from '../features/auth/authorization'
 import { getDisplayRoleCodes } from '../features/auth/display'
@@ -53,200 +60,224 @@ export function StoreIncentivesPage(input: {
   const showApprovalsLink = canListTargetDistributionRequests(input.authSummary)
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel store-hero-panel">
-        <div>
-          <div className="eyebrow">{t('storeIncentives.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('storeIncentives.title')}</h2>
-          <p className="hero-copy">{t('storeIncentives.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('storeIncentives.route')} value="/store/incentives" />
-          <MetricAccent
-            label={t('storeIncentives.storeScope')}
-            value={primaryStoreId ?? t('storeIncentives.noStoreScope')}
-          />
-          <MetricAccent
-            label={t('storeIncentives.state')}
-            value={t('storeIncentives.foundation')}
-          />
-        </div>
-      </section>
+    <StoreSurfacePage
+      ariaLabel={t('storeIncentives.title')}
+      className="tw:mx-auto tw:w-full tw:max-w-7xl"
+    >
+      <StoreSurfaceHeader
+        eyebrow={t('storeIncentives.heroEyebrow')}
+        title={t('storeIncentives.title')}
+        description={t('storeIncentives.heroCopy')}
+        badges={[
+          {
+            label: `${t('storeIncentives.storeScope')}: ${primaryStoreId ?? t('storeIncentives.noStoreScope')}`,
+            tone: primaryStoreId ? 'calm' : 'warning',
+          },
+          {
+            label: `${t('storeIncentives.state')}: ${t('storeIncentives.foundation')}`,
+            tone: 'neutral',
+          },
+        ]}
+      />
 
-      <section className="metric-grid store-metric-grid">
-        <MetricCard
+      <StoreMetricGrid>
+        <StoreMetricCard
           title={t('storeIncentives.visibilityShape')}
           value={1}
           note={t('storeIncentives.visibilityShapeNote')}
           icon={<Eye size={18} />}
           tone="accent"
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeIncentives.storeIntent')}
           value={storeIntent ? 1 : 0}
           note={t('storeIncentives.storeIntentNote')}
           icon={<ShieldCheck size={18} />}
           tone={storeIntent ? 'calm' : 'warning'}
         />
-        <MetricCard
+        <StoreMetricCard
           title={t('storeIncentives.livePayouts')}
           value={0}
           note={t('storeIncentives.livePayoutsNote')}
           icon={<Wallet size={18} />}
           tone="warning"
         />
-      </section>
+      </StoreMetricGrid>
 
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeIncentives.futureStoreView')}</div>
-              <h3>{t('storeIncentives.belongsTitle')}</h3>
-            </div>
-            <StatusPill tone="accent">{t('storeIncentives.preview')}</StatusPill>
-          </div>
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeIncentives.storeLevelSnapshot')}</strong>
-                <StatusPill tone="calm">{t('storeIncentives.readable')}</StatusPill>
-              </div>
-              <p>{t('storeIncentives.storeLevelSnapshotCopy')}</p>
-            </div>
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeIncentives.explanationContext')}</strong>
-                <StatusPill tone="warning">{t('storeIncentives.important')}</StatusPill>
-              </div>
-              <p>{t('storeIncentives.explanationContextCopy')}</p>
-            </div>
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeIncentives.actionHandoff')}</strong>
-                <StatusPill tone="accent">{t('storeIncentives.later')}</StatusPill>
-              </div>
-              <p>{t('storeIncentives.actionHandoffCopy')}</p>
-            </div>
-          </div>
-        </article>
+      <section className="tw:grid tw:gap-4 tw:lg:grid-cols-2">
+        <StoreSectionCard
+          title={t('storeIncentives.belongsTitle')}
+          description={t('storeIncentives.futureStoreView')}
+          badge={{ label: t('storeIncentives.preview'), tone: 'accent' }}
+        >
+          <StoreStackedList>
+            <IncentiveReadinessRow
+              title={t('storeIncentives.storeLevelSnapshot')}
+              copy={t('storeIncentives.storeLevelSnapshotCopy')}
+              badge={t('storeIncentives.readable')}
+              tone="calm"
+            />
+            <IncentiveReadinessRow
+              title={t('storeIncentives.explanationContext')}
+              copy={t('storeIncentives.explanationContextCopy')}
+              badge={t('storeIncentives.important')}
+              tone="warning"
+            />
+            <IncentiveReadinessRow
+              title={t('storeIncentives.actionHandoff')}
+              copy={t('storeIncentives.actionHandoffCopy')}
+              badge={t('storeIncentives.later')}
+              tone="accent"
+            />
+          </StoreStackedList>
+        </StoreSectionCard>
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeIncentives.resolvedSession')}</div>
-              <h3>{t('storeIncentives.shellFitTitle')}</h3>
-            </div>
-          </div>
-          <div className="key-grid">
-            <KeyValue
-              label={t('storeIncentives.userId')}
-              value={user?.userId ?? t('storeIncentives.sessionNotResolved')}
-            />
-            <KeyValue
-              label={t('storeIncentives.roles')}
-              value={formatRoles(t, user?.roleCodes)}
-            />
-            <KeyValue
-              label={t('storeIncentives.storeIds')}
-              value={user?.scope.storeIds.join(', ') || t('storeIncentives.none')}
-            />
-            <KeyValue
-              label={t('storeIncentives.incentiveRouteFit')}
-              value={
-                storeIntent
+        <StoreSectionCard
+          title={t('storeIncentives.shellFitTitle')}
+          description={t('storeIncentives.resolvedSession')}
+        >
+          <StoreInfoGrid
+            items={[
+              {
+                label: t('storeIncentives.userId'),
+                value: user?.userId ?? t('storeIncentives.sessionNotResolved'),
+              },
+              {
+                label: t('storeIncentives.roles'),
+                value: formatRoles(t, user?.roleCodes),
+              },
+              {
+                label: t('storeIncentives.storeIds'),
+                value: user?.scope.storeIds.join(', ') || t('storeIncentives.none'),
+              },
+              {
+                label: t('storeIncentives.incentiveRouteFit'),
+                value: storeIntent
                   ? t('storeIncentives.storeShellFit')
-                  : t('storeIncentives.boundaryReady')
-              }
+                  : t('storeIncentives.boundaryReady'),
+                tone: storeIntent ? 'calm' : 'warning',
+              },
+            ]}
+          />
+
+          <div className="tw:mt-4 tw:flex tw:flex-wrap tw:gap-2">
+            <StoreSurfaceActionButton
+              action={{
+                label: t('storeIncentives.storeTasks'),
+                to: '/store/tasks',
+                variant: 'outline',
+              }}
+            />
+            <StoreSurfaceActionButton
+              action={{
+                label: t('storeIncentives.storeKpis'),
+                to: '/store/kpis',
+                variant: 'outline',
+              }}
             />
           </div>
-
-          <div className="action-cluster">
-            <Link className="control-button store-shell-link" to="/store/tasks">
-              {t('storeIncentives.storeTasks')}
-            </Link>
-            <Link className="control-button store-shell-link" to="/store/kpis">
-              {t('storeIncentives.storeKpis')}
-            </Link>
-          </div>
-        </article>
+        </StoreSectionCard>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('storeIncentives.notImplemented')}</div>
-            <h3>{t('storeIncentives.notPretendTitle')}</h3>
-          </div>
-        </div>
-        <EmptyState
+      <StoreSectionCard
+        title={t('storeIncentives.notPretendTitle')}
+        description={t('storeIncentives.notImplemented')}
+      >
+        <StoreEmptyState
           title={t('storeIncentives.emptyTitle')}
-          copy={t('storeIncentives.emptyCopy')}
+          description={t('storeIncentives.emptyCopy')}
         />
+      </StoreSectionCard>
+
+      <section className="tw:grid tw:gap-4 tw:lg:grid-cols-2">
+        <StoreSectionCard
+          title={t('storeIncentives.nextTitle')}
+          description={t('storeIncentives.nextEvolution')}
+        >
+          <StoreStackedList>
+            <IncentiveIconRow
+              title={t('storeIncentives.summaryCards')}
+              copy={t('storeIncentives.summaryCardsCopy')}
+              icon={<ArrowRight size={16} />}
+            />
+            <IncentiveIconRow
+              title={t('storeIncentives.explanationDetail')}
+              copy={t('storeIncentives.explanationDetailCopy')}
+              icon={<ArrowRight size={16} />}
+            />
+          </StoreStackedList>
+        </StoreSectionCard>
+
+        <StoreSectionCard
+          title={t('storeIncentives.boundaryTitle')}
+          description={t('storeIncentives.boundaryRule')}
+        >
+          <StoreStackedList>
+            <IncentiveIconRow
+              title={t('storeIncentives.ruleGovernance')}
+              copy={t('storeIncentives.ruleGovernanceCopy')}
+              icon={<SlidersHorizontal size={16} />}
+            />
+            <IncentiveIconRow
+              title={t('storeIncentives.storeConsumption')}
+              copy={t('storeIncentives.storeConsumptionCopy')}
+              icon={<Coins size={16} />}
+            />
+          </StoreStackedList>
+        </StoreSectionCard>
       </section>
 
-      <section className="two-up-grid">
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeIncentives.nextEvolution')}</div>
-              <h3>{t('storeIncentives.nextTitle')}</h3>
-            </div>
-          </div>
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeIncentives.summaryCards')}</strong>
-                <ArrowRight size={16} />
-              </div>
-              <p>{t('storeIncentives.summaryCardsCopy')}</p>
-            </div>
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeIncentives.explanationDetail')}</strong>
-                <ArrowRight size={16} />
-              </div>
-              <p>{t('storeIncentives.explanationDetailCopy')}</p>
-            </div>
-          </div>
-        </article>
-
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('storeIncentives.boundaryRule')}</div>
-              <h3>{t('storeIncentives.boundaryTitle')}</h3>
-            </div>
-          </div>
-          <div className="stacked-table">
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeIncentives.ruleGovernance')}</strong>
-                <SlidersHorizontal size={16} />
-              </div>
-              <p>{t('storeIncentives.ruleGovernanceCopy')}</p>
-            </div>
-            <div className="stacked-row">
-              <div className="stacked-row-head">
-                <strong>{t('storeIncentives.storeConsumption')}</strong>
-                <Coins size={16} />
-              </div>
-              <p>{t('storeIncentives.storeConsumptionCopy')}</p>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <div className="action-cluster">
-        <Link className="control-button store-shell-link" to="/store">
-          {t('storeIncentives.backHome')}
-        </Link>
+      <div className="tw:flex tw:flex-wrap tw:gap-2">
+        <StoreSurfaceActionButton
+          action={{
+            label: t('storeIncentives.backHome'),
+            to: '/store',
+            variant: 'outline',
+          }}
+        />
         {showApprovalsLink ? (
-          <Link className="control-button store-shell-link" to="/store/approvals">
-            {t('storeIncentives.storeApprovals')}
-          </Link>
+          <StoreSurfaceActionButton
+            action={{
+              label: t('storeIncentives.storeApprovals'),
+              to: '/store/approvals',
+              variant: 'outline',
+            }}
+          />
         ) : null}
       </div>
-    </section>
+    </StoreSurfacePage>
+  )
+}
+
+function IncentiveReadinessRow(input: {
+  title: string
+  copy: string
+  badge: string
+  tone: StoreSurfaceTone
+}) {
+  return (
+    <StoreStackedRow tone={input.tone} className="tw:flex tw:flex-col tw:gap-2">
+      <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
+        <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.title}</strong>
+        <StoreStatusBadge tone={input.tone}>{input.badge}</StoreStatusBadge>
+      </div>
+      <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.copy}</p>
+    </StoreStackedRow>
+  )
+}
+
+function IncentiveIconRow(input: {
+  title: string
+  copy: string
+  icon: ReactNode
+}) {
+  return (
+    <StoreStackedRow className="tw:flex tw:flex-col tw:gap-2">
+      <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
+        <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.title}</strong>
+        <span className="tw:text-primary">{input.icon}</span>
+      </div>
+      <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.copy}</p>
+    </StoreStackedRow>
   )
 }

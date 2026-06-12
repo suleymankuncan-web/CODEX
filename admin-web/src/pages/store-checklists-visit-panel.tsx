@@ -104,7 +104,7 @@ export function StoreChecklistsVisitPanel(input: {
             {isIncompletePanel
               ? getStaticCopy(
                   input.locale,
-                  'Kapsamda olup seçili dönem içinde tamamlanmış checklist kaydı görünmeyen mağazalar listelenir.',
+                  'Yetkili mağaza listesinde olup seçili dönem içinde tamamlanmış checklist kaydı görünmeyen mağazalar listelenir.',
                   'Selected stores without a completed checklist in the selected period are listed here.',
                 )
               : input.display.vmOnlyVisitScope

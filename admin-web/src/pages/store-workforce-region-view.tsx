@@ -253,7 +253,7 @@ export function RegionWorkforceView(input: {
 
         <div className="tw:grid tw:items-start tw:gap-4 tw:xl:grid-cols-[minmax(0,1fr)_minmax(280px,300px)]">
           <div className="tw:min-w-0">
-            <FilterBar />
+            <FilterBar t={t} />
 
             <section
               className={cn('tw:overflow-hidden tw:rounded-[22px]', glassPanel, surfaceShadow)}
@@ -391,7 +391,7 @@ function MetricCard(input: {
   )
 }
 
-function FilterBar() {
+function FilterBar(input: { t: ReturnType<typeof useLocalization>['t'] }) {
   return (
     <div
       className={cn(
@@ -403,17 +403,27 @@ function FilterBar() {
       <label className="tw:relative tw:flex tw:items-center">
         <Search className="tw:pointer-events-none tw:absolute tw:left-3 tw:size-[18px] tw:text-[#667397]" />
         <input
-          aria-label="Magaza ara"
+          aria-label={input.t('storeWorkforce.regionSearchAria')}
           className={cn(
             'tw:h-[42px] tw:w-full tw:rounded-[13px] tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:pr-3.5 tw:pl-10 tw:text-sm tw:font-medium tw:outline-none',
             textInk,
           )}
-          placeholder="Magaza ara"
+          placeholder={input.t('storeWorkforce.regionSearchPlaceholder')}
           readOnly
         />
       </label>
-      <FilterSelect ariaLabel="Durum filtresi" values={['Tum durumlar', 'Kaynak bekliyor']} />
-      <FilterSelect ariaLabel="Siralama" values={['Personel kapsami', 'Ortalama kidem', 'Bekleyen talep']} />
+      <FilterSelect
+        ariaLabel={input.t('storeWorkforce.regionStatusFilterAria')}
+        values={[input.t('storeWorkforce.regionAllStatuses'), input.t('storeWorkforce.sourceWaiting')]}
+      />
+      <FilterSelect
+        ariaLabel={input.t('storeWorkforce.regionSortAria')}
+        values={[
+          input.t('storeWorkforce.regionSortPersonnelScope'),
+          input.t('storeWorkforce.regionSortAverageTenure'),
+          input.t('storeWorkforce.regionSortPendingRequests'),
+        ]}
+      />
     </div>
   )
 }

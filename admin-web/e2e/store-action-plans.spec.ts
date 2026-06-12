@@ -188,7 +188,7 @@ test('store tasks lists persisted action plan records with active status control
   await page.goto('/store/tasks')
 
   const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByRole('heading', { name: 'Store action queue' })).toBeVisible()
+  await expect(actionPlansPanel.getByRole('heading', { name: 'Store action list' })).toBeVisible()
   await expect(actionPlansPanel.getByText('1 work')).toBeVisible()
   const actionPlanRow = getActionPlanRow(page)
   await expect(actionPlanRow.getByText('Net sales recovery plan')).toBeVisible()
