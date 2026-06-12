@@ -41,7 +41,7 @@ Use this directory like an operating library, not a diary.
 | Check whether a debt is open | `docs/plans/project-debt-ledger.md` | Closed debts, blocked dependencies, and strategic backlog. |
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
 | Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` | Feedback intake, P0/P1/P2/P3 triage, PR sequence, autonomy limits, and closeout criteria. |
-| Remove launch security blockers | `docs/plans/security-launch-blocker-pr-train-v1.md` | Browser token storage removal, backend cookie session transport, CSRF, env guards, evidence, and closeout sequence. |
+| Close launch browser-session evidence gap | `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md` and `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md` | Local implementation is guarded; real staging cookie-session proof still needs approved external inputs. |
 | Add a future feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Source-of-truth, auth, API, DB, workflow, operations, and rollback gates. |
 | Modernize Store/Admin UI | `docs/process/product-experience-principles.md` | Product-quality standard for clean but premium, operationally honest UI work. |
 | Split Store workforce from approvals | `docs/plans/store-workforce-and-approvals-split-v1-plan.md` | Active plan for `/store/workforce`, Norm Kadro ownership, and approvals becoming a request center. |
@@ -91,6 +91,8 @@ evidence, incident posture, and recovery.
 - `docs/evidence/readiness/2026-05-23-supabase-recovery-posture-v1.md`
 - `docs/evidence/readiness/2026-05-23-alert-email-policy-decision-v1.md`
 - `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md`
+- `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
+- `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`
 - `docs/plans/security-launch-blocker-pr-train-v1.md`
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
@@ -210,8 +212,11 @@ Broad production remains separate from the controlled pilot and is still a
 No-Go until the remaining provider, recovery, Redis, and incident posture
 decisions are accepted or proven.
 
-When no real or assisted pilot feedback is available, the allowed local
-readiness path is the Security Launch Blocker PR Train V1:
-`docs/plans/security-launch-blocker-pr-train-v1.md`. It removes the
-browser-readable token-storage launch blocker through a scoped auth transport
-train; it does not by itself approve broad production.
+When no real or assisted pilot feedback is available, do not reopen the local
+Security Launch Blocker PR Train V1. That implementation and guard train is
+closed in
+`docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`.
+The remaining launch browser-session evidence gap needs the approved external
+inputs recorded in
+`docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`;
+do not invent proof or claim broad production readiness from local checks.

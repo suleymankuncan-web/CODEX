@@ -2414,12 +2414,13 @@ Pilot Reliability Spine V1 current branch:
   `docs/evidence/pilot-readiness/2026-06-12-controlled-pilot-feedback-loop-v1-closeout.md`.
   No new post-contract `PILOT-FB-YYYYMMDD-NN` record exists yet, so do not open
   a code PR from this train until real or assisted session feedback is recorded.
-- If feedback cannot be supplied and the user wants useful local progress, use
-  Security Launch Blocker PR Train V1:
-  `docs/plans/security-launch-blocker-pr-train-v1.md`. It plans the scoped
-  path from browser-readable token storage to backend cookie session transport,
-  CSRF protection, env guards, sanitized provider/session evidence, and
-  closeout. It does not approve broad production by itself.
+- Security Launch Blocker PR Train V1 is closed for local implementation and
+  guards through PR #689. Closeout evidence:
+  `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`.
+  Real staging cookie-session evidence remains `blocked_external` until the
+  inputs listed in
+  `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`
+  are available. Do not claim broad production readiness from this train.
 
 Current user direction on 2026-05-18:
 
