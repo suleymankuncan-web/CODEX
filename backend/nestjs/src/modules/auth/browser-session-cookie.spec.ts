@@ -45,4 +45,12 @@ describe("browser session cookies", () => {
       hr_axis_browser_session: "signed.value",
     });
   });
+
+  it("ignores unrelated malformed cookie values instead of throwing", () => {
+    expect(
+      parseCookieHeader("tracking=100%; hr_axis_browser_session=signed%2Evalue"),
+    ).toEqual({
+      hr_axis_browser_session: "signed.value",
+    });
+  });
 });

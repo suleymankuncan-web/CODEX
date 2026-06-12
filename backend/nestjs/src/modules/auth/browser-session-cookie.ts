@@ -58,9 +58,20 @@ export function parseCookieHeader(
       return cookies;
     }
 
-    cookies[name] = decodeURIComponent(rawValue.join("="));
+    const decodedValue = safeDecodeCookieValue(rawValue.join("="));
+    if (decodedValue !== undefined) {
+      cookies[name] = decodedValue;
+    }
     return cookies;
   }, {});
+}
+
+function safeDecodeCookieValue(value: string): string | undefined {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return undefined;
+  }
 }
 
 function formatSameSite(value: BrowserSessionSameSite): string {
