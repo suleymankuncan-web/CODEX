@@ -13,6 +13,7 @@ Home dashboard parity for Store Manager and Region Manager personas.
 | PR-1 toolbar parity | #697 | `dab4ea2f2658ba36f7a0858797a232405f756e78` | Moved Store and Admin sidebar nav bodies toward the approved prototype rhythm while keeping the existing Lufian header/brand area unchanged. |
 | PR-2 dashboard parity | #698 | `068e78e3af68797d7c2c668a97b7b934d8519df6` | Reworked Store Home for Store Manager and Region Manager as dashboard summary surfaces, removed old source/debug summary remnants, and kept actions role-aware. |
 | PR-3 closeout | this PR | pending | Records final parity evidence, screenshot artifacts, data mapping, unchanged behavior, and handoff state. |
+| Post-closeout cleanup | follow-up PR | pending | Completion audit removed retired Store Manager and Region Manager hero/focus localization keys left unused after the dashboard replacement. |
 
 ## Prototype Contracts
 
@@ -152,6 +153,18 @@ PR-3 closeout gate:
 
 - `git diff --check`: pass.
 - `node --test scripts/prototype-parity-guard.test.mjs`: pass.
+- `npm.cmd run test:scripts`: pass, 458/458.
+
+Post-closeout cleanup verification:
+
+- Retired `storeHome.command.managerHero*`, `storeHome.command.managerFocus*`,
+  `storeHome.command.regionHero*`, and `storeHome.command.regionFocus*`
+  localization keys removed from runtime source.
+- `rg -n "managerHero|managerFocus|regionHero|regionFocus|Store operations run from one command surface|The region command center now has one surface" admin-web/src/features/localization/messages/store-home.ts admin-web/src/pages/StoreHomePage.tsx`: no matches.
+- `npm.cmd --prefix admin-web run lint`: pass.
+- `npm.cmd --prefix admin-web run build`: pass.
+- `npm.cmd --prefix admin-web run test:e2e -- store-surfaces.spec.ts -g "store home prefetches the task queue|store home switches to English copy|store home dashboard actions follow role-aware navigation"`: pass, 3/3.
+- `node --test scripts/prototype-parity-guard.test.mjs`: pass, 3/3.
 - `npm.cmd run test:scripts`: pass, 458/458.
 
 ## Remaining Risks
