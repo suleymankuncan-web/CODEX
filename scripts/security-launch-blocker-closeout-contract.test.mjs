@@ -7,6 +7,8 @@ const workspaceRoot = join(import.meta.dirname, '..')
 
 const closeoutPath =
   'docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md'
+const passedPath =
+  'docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md'
 const blockedPath =
   'docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md'
 
@@ -35,7 +37,9 @@ test('security launch blocker closeout evidence exists and keeps production no-g
     'Status: guarded',
     'No broad production Go is claimed here.',
     'Broad production remains `No-Go`.',
-    'Real protected staging cookie-session evidence remains `blocked_external`.',
+    'A later approved Region Manager staging run closed the browser-session evidence',
+    'Real Region Manager staging cookie-session evidence is now recorded as',
+    '`protected_staging_cookie_session_passed`.',
     'Do not use legacy bearer smoke',
     'as proof that launch browser token storage is fixed.',
   ]) {
@@ -65,29 +69,32 @@ test('security launch blocker closeout preserves auth and evidence boundaries', 
     'assigned-store authorization path',
     'Bearer support remains as a controlled rollback and script-smoke path',
     'Auth evidence guards reject raw cookies',
+    passedPath,
     blockedPath,
   ]) {
     requireText(closeout, expected)
   }
 })
 
-test('operating docs point to the security launch closeout and current external blocker', () => {
+test('operating docs point to the security launch closeout and current staging proof', () => {
   for (const text of [currentState, activeNextActions, controlBoard, runbookRegistry, library]) {
     requireText(text, closeoutPath)
-    requireText(text, blockedPath)
+    requireText(text, passedPath)
   }
 
   requireText(evidenceRegister, '2026-06-12-security-launch-blocker-pr-train-closeout.md')
+  requireText(evidenceRegister, '2026-06-12-browser-session-staging-evidence.md')
   requireText(evidenceRegister, '2026-06-12-browser-session-staging-evidence-blocked.md')
   requireText(library, 'do not reopen the local')
   requireText(library, 'Security Launch Blocker PR Train V1. That implementation and guard train is')
-  requireText(library, 'The remaining launch browser-session evidence gap needs the approved external')
-  requireText(library, 'do not invent proof or claim broad production readiness')
-  requireText(controlBoard, 'Launch browser session security | Guarded / external evidence blocked')
-  requireText(runbookRegistry, 'Close launch browser-session evidence gap')
+  requireText(library, 'Real Region Manager staging cookie-session evidence passed')
+  requireText(library, 'Do not claim broad production readiness from this auth proof.')
+  requireText(controlBoard, 'Launch browser session security | Guarded / staging proof passed')
+  requireText(runbookRegistry, 'Check launch browser-session evidence')
   for (const text of [activeNextActions, currentState]) {
     requireText(text, 'Security Launch Blocker PR Train V1 is closed for local implementation')
     requireText(text, 'guards through PR #689')
+    requireText(text, 'The earlier blocked attempt remains historical context')
   }
 })
 

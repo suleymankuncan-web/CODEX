@@ -11,9 +11,13 @@ This note closes the local implementation and guard portion of
 
 The train replaced launch browser-session token persistence with a backend
 cookie-session transport, added CSRF protection for cookie-authenticated unsafe
-protected requests, added regression and evidence guards, and recorded that
-real staging cookie-session evidence is externally blocked until approved live
-inputs exist.
+protected requests, added regression and evidence guards, and initially
+recorded that real staging cookie-session evidence was externally blocked until
+approved live inputs existed.
+
+A later approved Region Manager staging run closed the browser-session evidence
+gap for login/session/storage/CSRF/logout behavior:
+`docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`.
 
 No broad production Go is claimed here. Broad production remains `No-Go`.
 
@@ -26,7 +30,7 @@ No broad production Go is claimed here. Broad production remains `No-Go`.
 | PR-2 backend browser-session foundation | `#686` | `512b8f1cff2bd4cb1ec8c4f1c4babbf33528b88d` | Added backend-owned app-session cookies, bounded TTL, host-only scope, CSRF rules, and shared DB authorization resolution. |
 | PR-3 frontend cookie-session bridge | `#687` | `1b286556bdfe329e2f99cfd261b5b0c433f9c5fb` | Moved real browser sessions to cookie transport and removed launch provider token persistence from browser-readable storage. |
 | PR-4 token-storage and evidence guards | `#688` | `d244b811e2f764605c1f5a2bc15c4b7ec5030d7a` | Added frontend token-storage regression coverage and hardened sanitized auth evidence guards. |
-| PR-5 staging evidence status | `#689` | `5ae2695f230983022ba28ff851be3a2341fa35d9` | Recorded `blocked_external` because no approved real staging provider session or seeded assigned/unassigned inputs were available. |
+| PR-5 staging evidence status | `#689` | `5ae2695f230983022ba28ff851be3a2341fa35d9` | Recorded `blocked_external` because no approved real staging provider session or seeded assigned/unassigned inputs were available at that time. |
 
 PR-6 is this closeout/update-docs slice. It records the final state and does
 not change runtime behavior.
@@ -45,18 +49,21 @@ not change runtime behavior.
 - Auth evidence guards reject raw cookies, token-shaped values, authorization
   codes, PKCE verifiers, provider subjects, and browser storage dumps.
 
-## What Is Still Externally Blocked
+## Subsequent Staging Evidence
 
-Real protected staging cookie-session evidence remains `blocked_external`.
+Real Region Manager staging cookie-session evidence is now recorded as
+`protected_staging_cookie_session_passed`.
 
-Required inputs are recorded in
+Current proof:
+`docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`.
+
+Historical blocked attempt:
 `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`.
 
-Until those inputs exist and a sanitized smoke passes, do not claim:
-
-- real staging cookie-session proof,
-- MVP/launch auth evidence fully closed from live provider behavior,
-- broad production readiness.
+This closes the launch browser-session security evidence gap for the tested
+Region Manager login/session/storage/CSRF/logout path. It does not claim Store
+Action write proof for a different persona and does not approve broad
+production readiness.
 
 ## Verification Recorded During The Train
 
@@ -86,7 +93,7 @@ Launch browser-session security:
 
 - Guarded locally.
 - Runtime implementation and regression guards are merged.
-- Real staging cookie-session evidence remains externally blocked.
+- Real Region Manager staging cookie-session evidence passed.
 
 Controlled pilot:
 
@@ -104,10 +111,10 @@ Default next action returns to the controlled pilot execution loop: run a real
 or assisted scoped pilot session, record feedback, and fix concrete P0/P1
 blockers only.
 
-If the owner wants to close the remaining launch browser-session evidence gap,
-provide the external inputs listed in the PR-5 blocked evidence note and rerun
-the sanitized staging cookie-session smoke path. Do not use legacy bearer smoke
-as proof that launch browser token storage is fixed.
+If the owner needs to refresh launch browser-session evidence after auth,
+provider, role, cookie, or domain changes, use the sanitized staging
+cookie-session proof path recorded in
+`docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`. Do not use legacy bearer smoke as proof that launch browser token storage is fixed.
 
 ## Rollback
 
