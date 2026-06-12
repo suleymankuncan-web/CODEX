@@ -398,11 +398,7 @@
     rgba(255, 255, 255, 0.74);
 }
 
-.store-checklist-result-modal {
-  display: grid;
-  gap: 0.85rem;
-  padding: 0.9rem;
-}
+.store-checklist-result-modal { display: grid; gap: 0.85rem; padding: 0.9rem; }
 
 [data-slot="dialog-header"].store-checklist-result-head {
   display: grid;
@@ -433,16 +429,9 @@
   border-radius: 0.9rem;
 }
 
-.store-checklist-result-icon svg {
-  width: 1.08rem;
-  height: 1.08rem;
-}
+.store-checklist-result-icon svg { width: 1.08rem; height: 1.08rem; }
 
-.store-checklist-result-head h3 {
-  color: var(--surface-ink, var(--checklist-ink));
-  font-size: clamp(1.22rem, 2.4vw, 1.55rem);
-  line-height: 1.08;
-}
+.store-checklist-result-head h3 { color: var(--surface-ink, var(--checklist-ink)); font-size: clamp(1.22rem, 2.4vw, 1.55rem); line-height: 1.08; }
 
 .store-checklist-result-head p {
   max-width: 70ch;
@@ -507,9 +496,7 @@
   padding: 0.72rem;
 }
 
-.store-checklist-result-digest-card {
-  margin-top: 0;
-}
+.store-checklist-result-digest-card { margin-top: 0; }
 
 .store-checklist-result-alert {
   grid-template-columns: auto minmax(0, 0.28fr) minmax(0, 1fr);
@@ -517,11 +504,7 @@
   margin-top: 0;
 }
 
-.store-checklist-result-alert svg {
-  width: 1rem;
-  height: 1rem;
-  color: var(--checklist-amber);
-}
+.store-checklist-result-alert svg { width: 1rem; height: 1rem; color: var(--checklist-amber); }
 
 .store-checklist-result-alert p {
   margin: 0;
@@ -547,10 +530,7 @@
   padding: 0.72rem;
 }
 
-.store-checklist-result-action-card {
-  position: sticky;
-  top: 0;
-}
+.store-checklist-result-action-card { position: sticky; top: 0; }
 
 .store-checklist-result-block-head {
   display: flex;
@@ -606,10 +586,7 @@
   color: var(--checklist-plum);
 }
 
-.store-checklist-result-action-context svg {
-  width: 0.92rem;
-  height: 0.92rem;
-}
+.store-checklist-result-action-context svg { width: 0.92rem; height: 0.92rem; }
 
 .store-checklist-result-action-context p {
   margin: 0;
@@ -639,17 +616,11 @@
   backdrop-filter: none;
 }
 
-.store-checklist-result-action-card .store-checklist-modal-footer button {
-  min-width: 0;
-}
+.store-checklist-result-action-card .store-checklist-modal-footer button { min-width: 0; }
 
-.store-checklist-result-section {
-  border-radius: 0.9rem;
-}
+.store-checklist-result-section { border-radius: 0.9rem; }
 
-.store-checklist-result-section-head {
-  background: linear-gradient(90deg, rgba(124, 58, 237, 0.07), rgba(19, 167, 179, 0.05));
-}
+.store-checklist-result-section-head { background: linear-gradient(90deg, rgba(124, 58, 237, 0.07), rgba(19, 167, 179, 0.05)); }
 
 .store-checklist-result-item {
   min-width: 0;

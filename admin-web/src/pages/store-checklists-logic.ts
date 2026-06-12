@@ -189,8 +189,8 @@ export function getStoreVisitSummary(
 }
 
 export function getStoreVisitDate(row: ChecklistStoreVisitRow) {
-  const bmDate = row.bm ? getCoverageCompletedDate(row.bm) : null
-  const vmDate = row.vm ? getCoverageCompletedDate(row.vm) : null
+  const bmDate = row.bm && row.bm.completedCount > 0 ? row.bm.completedAt : null
+  const vmDate = row.vm && row.vm.completedCount > 0 ? row.vm.completedAt : null
 
   if (!bmDate) return vmDate
   if (!vmDate) return bmDate
@@ -623,11 +623,6 @@ export function compareChecklistItems(
 
 export function getCoverageDate(row: ChecklistCoverageRow) {
   return row.active?.updatedAt ?? row.active?.startedAt ?? row.summary?.monthStart ?? null
-}
-
-export function getCoverageCompletedDate(row: ChecklistCoverageRow) {
-  if (row.completedCount <= 0) return null
-  return row.completedAt
 }
 
 export function getCoveragePriority(row: ChecklistCoverageRow) {
