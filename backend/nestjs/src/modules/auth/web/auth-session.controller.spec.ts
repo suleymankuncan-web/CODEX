@@ -13,7 +13,7 @@ describe("AuthSessionController", () => {
       authLogoutUrl: "https://idp.example.com/logout",
       authPostLogoutRedirectPath: "/auth/login",
       authTokenUrl: "https://idp.example.com/oauth/token",
-    } as never);
+    } as never, {} as never, {} as never);
 
     expect(controller.getBootstrap()).toEqual({
       authMode: "jwt",
@@ -44,7 +44,7 @@ describe("AuthSessionController", () => {
       authLogoutUrl: undefined,
       authPostLogoutRedirectPath: "/auth/login",
       authTokenUrl: undefined,
-    } as never);
+    } as never, {} as never, {} as never);
 
     expect(controller.getBootstrap().provider.configured).toBe(false);
   });

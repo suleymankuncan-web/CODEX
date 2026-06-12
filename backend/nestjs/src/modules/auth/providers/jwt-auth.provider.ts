@@ -36,7 +36,10 @@ export class JwtAuthProvider implements AuthProvider {
       return null;
     }
 
-    const token = bearer.slice("Bearer ".length);
+    return this.resolveBearerToken(bearer.slice("Bearer ".length));
+  }
+
+  async resolveBearerToken(token: string): Promise<AuthenticatedUser> {
     const verification = await this.verifyToken(token);
 
     const payload = verification.payload;

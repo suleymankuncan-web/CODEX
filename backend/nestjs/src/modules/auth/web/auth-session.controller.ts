@@ -1,11 +1,29 @@
-import { Controller, Get, Req } from "@nestjs/common";
+import {
+  Controller,
+  Delete,
+  Get,
+  NotFoundException,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { AppConfigService } from "../../../shared/app-config.service";
-import { AuthenticatedUser } from "../auth-context.service";
+import { AuthContextService, AuthenticatedUser } from "../auth-context.service";
+import { BrowserSessionService } from "../browser-session.service";
+import {
+  serializeBrowserSessionCookie,
+  serializeClearCookie,
+} from "../browser-session-cookie";
 import { Public } from "../decorators/public.decorator";
 
 @Controller("auth")
 export class AuthSessionController {
-  constructor(private readonly appConfigService: AppConfigService) {}
+  constructor(
+    private readonly appConfigService: AppConfigService,
+    private readonly authContextService: AuthContextService,
+    private readonly browserSessionService: BrowserSessionService,
+  ) {}
 
   @Public()
   @Get("bootstrap")
@@ -44,7 +62,84 @@ export class AuthSessionController {
       user: AuthenticatedUser;
     },
   ) {
-    const user = request.user;
+    return this.buildSessionResponse(request.user);
+  }
+
+  @Public()
+  @Post("browser-session")
+  async createBrowserSession(
+    @Req()
+    request: {
+      headers: Record<string, string | string[] | undefined>;
+    },
+    @Res({ passthrough: true })
+    response: {
+      setHeader(name: string, value: string | string[]): void;
+    },
+  ) {
+    if (!this.appConfigService.browserSessionCookieEnabled) {
+      throw new NotFoundException("Browser session transport is disabled");
+    }
+
+    const bearer = resolveHeader(request.headers.authorization);
+    if (!bearer?.startsWith("Bearer ")) {
+      throw new UnauthorizedException("Bearer token is required");
+    }
+
+    const user = await this.authContextService.resolveJwtBearerToken(
+      bearer.slice("Bearer ".length),
+    );
+    const issued = this.browserSessionService.issueSession(user);
+
+    response.setHeader(
+      "Set-Cookie",
+      serializeBrowserSessionCookie({
+        httpOnly: true,
+        maxAgeSeconds: this.appConfigService.browserSessionTtlSeconds,
+        name: this.appConfigService.browserSessionCookieName,
+        sameSite: this.appConfigService.browserSessionSameSite,
+        secure: this.appConfigService.browserSessionCookieSecure,
+        value: issued.cookieValue,
+      }),
+    );
+
+    return {
+      csrfToken: issued.csrfNonce,
+      expiresAt: issued.expiresAt,
+      sessionId: issued.sessionId,
+      session: this.buildSessionResponse(user),
+    };
+  }
+
+  @Public()
+  @Delete("browser-session")
+  clearBrowserSession(
+    @Res({ passthrough: true })
+    response: {
+      setHeader(name: string, value: string | string[]): void;
+    },
+  ) {
+    response.setHeader("Set-Cookie", [
+      serializeClearCookie({
+        httpOnly: true,
+        name: this.appConfigService.browserSessionCookieName,
+        sameSite: this.appConfigService.browserSessionSameSite,
+        secure: this.appConfigService.browserSessionCookieSecure,
+      }),
+      serializeClearCookie({
+        httpOnly: false,
+        name: this.appConfigService.browserSessionCsrfCookieName,
+        sameSite: this.appConfigService.browserSessionSameSite,
+        secure: this.appConfigService.browserSessionCookieSecure,
+      }),
+    ]);
+
+    return {
+      cleared: true,
+    };
+  }
+
+  private buildSessionResponse(user: AuthenticatedUser) {
     const authMode = this.appConfigService.authMode || "mock";
 
     return {
@@ -77,4 +172,8 @@ export class AuthSessionController {
       },
     };
   }
+}
+
+function resolveHeader(value: string | string[] | undefined): string | undefined {
+  return (Array.isArray(value) ? value[0] : value)?.trim() || undefined;
 }

@@ -13,14 +13,13 @@ import {
   setJsonResponseSchema,
 } from "./openapi-schema-helpers";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
+import { applyBrowserSessionOpenApi } from "./browser-session-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
-
 const publicOperations = [
   { path: "/api/auth/bootstrap", method: "get" },
   { path: "/api/health", method: "get" },
   { path: "/api/health/live", method: "get" },
 ] as const;
-
 const mobileSessionOperations = [
   { path: "/api/mobile/auth/session", method: "get" },
   { path: "/api/mobile/auth/sessions", method: "get" },
@@ -4523,6 +4522,7 @@ async function generateOpenApi(): Promise<void> {
 
   applyStoreActionPlanOpenApi(document);
   applyPilotFeedbackOpenApi(document);
+  applyBrowserSessionOpenApi(document);
   setJsonResponseSchema(
     document.paths,
     "/api/integrations/import-batches/overview",
