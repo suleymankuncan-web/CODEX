@@ -14,12 +14,14 @@ cookie-session evidence is not claimed from this workspace.
 
 Evidence status: `blocked_external`.
 
-Reason: this workspace does not contain an approved real staging provider
-session, staging smoke credential, controlled browser session, or seeded
-assigned/unassigned store input for a cookie-session evidence run. The train
-must not invent proof, paste credentials, record raw cookies, mutate staging
-data, or change Clerk, Render, Vercel, Supabase, or provider configuration to
-manufacture evidence.
+Reason: this workspace did not initially contain an approved real staging
+provider session, staging smoke credential, controlled browser session, or
+seeded assigned/unassigned store input for a cookie-session evidence run. A
+later controlled staging login attempt provided a real Region Manager persona,
+but the deployed staging frontend/backend still did not satisfy the
+cookie-session evidence contract. The train must not invent proof, paste
+credentials, record raw cookies, mutate staging data, or change Clerk, Render,
+Vercel, Supabase, or provider configuration to manufacture evidence.
 
 This is not a broad production Go. Broad production remains `No-Go`.
 
@@ -38,6 +40,40 @@ This is not a broad production Go. Broad production remains `No-Go`.
 These local and CI results are implementation and guard evidence only. They do
 not prove real staging provider behavior.
 
+## 2026-06-12 Controlled Staging Attempt
+
+A real staging login was attempted against:
+
+- Frontend: `https://staging.hr-axis.com`
+- Backend API: `https://api-staging.hr-axis.com/api`
+- Persona class: Region Manager
+- Expected app role: `REGION_MANAGER`
+- Expected landing route: `/admin/competitions`
+
+The credential and one-time code were handled only through the local shell and
+were not recorded in repository files or evidence output.
+
+Sanitized observed results:
+
+- `GET https://api-staging.hr-axis.com/api/health` returned `200`.
+- `GET https://api-staging.hr-axis.com/api/auth/bootstrap` returned
+  `authMode=jwt`, but `provider.configured=false`; provider token and logout
+  URLs were not configured in the backend bootstrap response.
+- Browser login reached `/admin/competitions`.
+- Direct API `GET /auth/session` with only browser credentials returned `403`,
+  so the backend did not accept the browser session as an app cookie session.
+- Browser storage contained `sessionStorage` key
+  `store-ops-admin-bearer-token`.
+- No `hr_axis_browser_session` app cookie was observed.
+- Observed cookies were Clerk/browser-provider cookies, not backend-owned
+  HttpOnly app-session cookies.
+
+Result: the controlled staging attempt does not unblock this evidence. It
+confirms the live staging deployment is still on a browser-readable bearer
+storage path for this persona/build and lacks accepted backend browser-session
+cookie proof. The remaining blocker is approved real staging provider evidence
+on a deployed cookie-session configuration.
+
 ## Required External Inputs To Unblock
 
 - Approved staging frontend origin and backend API target for the smoke run.
@@ -53,6 +89,8 @@ not prove real staging provider behavior.
   and app-session TTL at or below one hour.
 - Confirmation that the staging frontend uses
   `VITE_BROWSER_SESSION_TRANSPORT=cookie` for the evidence run.
+- Confirmation that `GET /api/auth/bootstrap` reports the provider as
+  configured for the deployed backend used by the frontend evidence run.
 
 ## Required Evidence Once Inputs Exist
 
