@@ -29,6 +29,8 @@ test('PR-5 browser-session staging evidence is explicitly blocked on real extern
     'Evidence status: `blocked_external`.',
     'approved real staging provider',
     'controlled browser session',
+    'A real staging login was attempted',
+    'the deployed staging frontend/backend still did not satisfy the',
     'must not invent proof',
     'This is not a broad production Go.',
     'Broad production remains `No-Go`.',
@@ -46,12 +48,17 @@ test('PR-5 evidence note records the external inputs required for a real staging
     'Seeded unassigned store id',
     'Approved request month',
     'non-default signing secret',
+    'provider.configured=false',
+    'store-ops-admin-bearer-token',
+    'No `hr_axis_browser_session` app cookie was observed.',
     'explicit CORS',
     'allowlist',
     'host-only app-session cookie scope',
     'no cookie `Domain` attribute',
     'app-session TTL at or below one hour',
     '`VITE_BROWSER_SESSION_TRANSPORT=cookie`',
+    'provider as',
+    'configured for the deployed backend',
   ]) {
     requireText(evidence, expected)
   }
