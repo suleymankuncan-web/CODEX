@@ -14,7 +14,7 @@ import { useSession } from '../features/session/session-context-value'
 
 export function AuthCallbackPage() {
   const { t } = useLocalization()
-  const { startBearerSession } = useSession()
+  const { startProviderSession } = useSession()
   const navigate = useNavigate()
   const [exchangeError, setExchangeError] = useState<string | null>(null)
   const handledRef = useRef(false)
@@ -49,8 +49,11 @@ export function AuthCallbackPage() {
 
     if (token && token !== 'demo-placeholder-token') {
       handledRef.current = true
-      startBearerSession(token)
-      navigate(callbackPayload.returnTo ?? '/', { replace: true })
+      startProviderSession(token)
+        .then(() => navigate(callbackPayload.returnTo ?? '/', { replace: true }))
+        .catch((error: unknown) => {
+          setExchangeError(error instanceof Error ? error.message : String(error))
+        })
       return
     }
 
@@ -69,8 +72,9 @@ export function AuthCallbackPage() {
       bootstrap: bootstrapQuery.data,
     })
       .then((result) => {
-        startBearerSession(result.accessToken, result.idToken)
-        navigate(result.returnTo, { replace: true })
+        return startProviderSession(result.accessToken, result.idToken).then(() => {
+          navigate(result.returnTo, { replace: true })
+        })
       })
       .catch((error: unknown) => {
         setExchangeError(error instanceof Error ? error.message : String(error))
@@ -84,7 +88,7 @@ export function AuthCallbackPage() {
     callbackPayload.state,
     manualTokenCallbackRejected,
     navigate,
-    startBearerSession,
+    startProviderSession,
     token,
   ])
 

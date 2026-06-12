@@ -174,7 +174,7 @@ test('auth logout page switches chrome to English copy and persists locale while
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'tr')
   await expect(page.getByRole('heading', { name: 'Çıkış yapılıyor' })).toBeVisible()
-  await expect(page.getByText('İstemci bearer oturumu temizleniyor')).toBeVisible()
+  await expect(page.getByText(/legacy client token/)).toBeVisible()
   await expect(page.getByText('Signing out')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
@@ -184,7 +184,7 @@ test('auth logout page switches chrome to English copy and persists locale while
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Signing out' })).toBeVisible()
-  await expect(page.getByText('The client bearer session is being cleared')).toBeVisible()
+  await expect(page.getByText('The app session and legacy client token traces are being cleared, then the app returns to the configured logout destination.')).toBeVisible()
   await expect(page.getByText('Çıkış yapılıyor')).toHaveCount(0)
 
   await page.reload()

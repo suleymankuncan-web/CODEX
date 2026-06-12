@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ScreenState } from '../components/dashboard-primitives'
 import { getAuthBootstrap } from '../features/auth/api'
@@ -6,13 +6,14 @@ import { buildProviderLogoutUrl } from '../features/auth/auth-flow'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
 import { ClerkLogoutEffect } from '../features/auth/clerk-session'
 import { useLocalization } from '../features/localization/useLocalization'
-import { readClientProviderIdToken } from '../features/session/session-storage'
+import { isCookieBrowserSession, readClientProviderIdToken } from '../features/session/session-storage'
 import { useSession } from '../features/session/session-context-value'
 
 export function AuthLogoutPage() {
   const { t } = useLocalization()
-  const { clearToBearerMode } = useSession()
+  const { clearProviderSession, session } = useSession()
   const handledRef = useRef(false)
+  const [logoutFailed, setLogoutFailed] = useState(false)
   const clerkReady = isClerkSessionProviderAvailable()
   const bootstrapQuery = useQuery({
     queryKey: ['auth-bootstrap'],
@@ -27,20 +28,26 @@ export function AuthLogoutPage() {
     }
 
     handledRef.current = true
-    const providerIdToken = readClientProviderIdToken()
+    setLogoutFailed(false)
+    const providerIdToken = isCookieBrowserSession(session) ? '' : readClientProviderIdToken()
     const providerLogoutUrl = buildProviderLogoutUrl({
       ...(bootstrapQuery.data === undefined ? {} : { bootstrap: bootstrapQuery.data }),
       idToken: providerIdToken,
     })
-    clearToBearerMode()
+    clearProviderSession()
+      .then(() => {
+        if (providerLogoutUrl) {
+          window.location.replace(providerLogoutUrl)
+          return
+        }
 
-    if (providerLogoutUrl) {
-      window.location.replace(providerLogoutUrl)
-      return
-    }
-
-    window.location.replace('/auth/login')
-  }, [bootstrapQuery.data, bootstrapQuery.isPending, clearToBearerMode, clerkReady])
+        window.location.replace('/auth/login')
+      })
+      .catch(() => {
+        handledRef.current = false
+        setLogoutFailed(true)
+      })
+  }, [bootstrapQuery.data, bootstrapQuery.isPending, clearProviderSession, clerkReady, session])
 
   useEffect(() => {
     if (clerkReady) {
@@ -54,8 +61,9 @@ export function AuthLogoutPage() {
     <section className="auth-flow-shell">
       {clerkReady ? <ClerkLogoutEffect onFallback={finishLocalLogout} /> : null}
       <ScreenState
-        title={t('authFlow.logoutTitle')}
-        copy={t('authFlow.logoutCopy')}
+        title={logoutFailed ? t('authFlow.logoutFailedTitle') : t('authFlow.logoutTitle')}
+        copy={logoutFailed ? t('authFlow.logoutFailedCopy') : t('authFlow.logoutCopy')}
+        {...(logoutFailed ? { tone: 'error' as const } : {})}
       />
     </section>
   )

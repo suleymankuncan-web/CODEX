@@ -35,7 +35,7 @@ export const authFlowTr = {
   'authFlow.scaffolded': 'İskelet',
   'authFlow.providerRedirect': 'Sağlayıcı yönlendirmesi',
   'authFlow.providerRedirectClerk':
-    'Clerk yapılandırıldı; bu route hosted Clerk giriş akışını açabilir ve oluşan oturum tokenını backend bearer kontratına eşitleyebilir.',
+    'Clerk yapılandırıldı; bu route hosted Clerk giriş akışını açabilir ve provider tokenını browser storage alanına yazmadan backend app-session cookie kontratına devredebilir.',
   'authFlow.providerRedirectOidc':
     'OIDC tarzı sağlayıcı ayarları mevcut; bu route kullanıcıyı yapılandırılmış authorization endpointine devredebilir.',
   'authFlow.providerRedirectNeedsEnv':
@@ -50,7 +50,7 @@ export const authFlowTr = {
   'authFlow.manualSessionSetup': 'Manuel oturum kurulumu',
   'authFlow.providerLoginNotReady': 'Sağlayıcı girişi hazır değil: {error}',
   'authFlow.clerkReadyCopy':
-    'Clerk kullanıcıyı içeri alır, frontend Clerk oturum tokenını mevcut bearer token olarak saklar ve /api/auth/session gerçek DB rolünü ve kapsamı çözer.',
+    'Clerk kullanıcıyı içeri alır, frontend provider tokenını yalnızca backend browser-session endpointine devreder ve /api/auth/session gerçek DB rolünü ve kapsamı çözer.',
   'authFlow.providerReadyCopy':
     'Sağlayıcı girişi /auth/callback üzerinden döner, kodu PKCE ile değiştirir ve doğrulanmış oturum /admin mi /store mu doğru iniş kabuğu kararını verir.',
   'authFlow.providerNeedsEnvCopy':
@@ -62,7 +62,7 @@ export const authFlowTr = {
     'Env config üzerinden authorization URL oluştur, tarayıcıyı yönlendir, sonra sağlayıcı kodunu /auth/callback üzerinde al ve PKCE ile değiştir.',
   'authFlow.verificationGate': 'Doğrulama kapısı',
   'authFlow.verificationGateCopy':
-    'Callback bearer tokenı yalnızca code exchange sonrası saklar. Kabuk seçimi yine /api/auth/session gerçek rol ve kapsam bağlamını doğruladıktan sonra yapılır.',
+    'Cookie transport aktifken callback access tokenı storage alanına yazmadan backend app-session cookie kurar. Kabuk seçimi yine /api/auth/session gerçek rol ve kapsam bağlamını doğruladıktan sonra yapılır.',
   'authFlow.clerkPublishableKeyMissingTitle': 'Clerk publishable key eksik',
   'authFlow.clerkPublishableKeyMissingCopy':
     'VITE_AUTH_PROVIDER clerk olarak ayarlı, ancak bu frontend build için VITE_CLERK_PUBLISHABLE_KEY yapılandırılmamış.',
@@ -97,11 +97,14 @@ export const authFlowTr = {
   'authFlow.intendedReturnPath': 'Hedeflenen dönüş yolu: {returnTo}',
   'authFlow.completingLoginTitle': 'Giriş tamamlanıyor',
   'authFlow.completingLoginCopy':
-    'Callback bearer token aldı, mevcut oturum olarak sakladı ve uygulamayı şimdi doğrulanmış kabuk akışına geri yönlendiriyor.',
+    'Callback credential aldı, seçili transport üzerinden uygulama oturumunu kurdu ve uygulamayı şimdi doğrulanmış kabuk akışına geri yönlendiriyor.',
 
   'authFlow.logoutTitle': 'Çıkış yapılıyor',
   'authFlow.logoutCopy':
-    'İstemci bearer oturumu temizleniyor ve uygulama yapılandırılmış çıkış hedefine dönüyor.',
+    'Uygulama oturumu ve legacy client token izleri temizleniyor; uygulama yapılandırılmış çıkış hedefine dönüyor.',
+  'authFlow.logoutFailedTitle': 'Çıkış tamamlanamadı',
+  'authFlow.logoutFailedCopy':
+    'Cookie oturumu backend tarafında temizlenemedi. Mevcut sayfada kalın ve tekrar deneyin.',
 } as const
 
 export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
@@ -141,7 +144,7 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
   'authFlow.scaffolded': 'Scaffolded',
   'authFlow.providerRedirect': 'Provider redirect',
   'authFlow.providerRedirectClerk':
-    'Clerk is configured, so this route can open the hosted Clerk sign-in flow and sync the resulting session token into the backend bearer contract.',
+    'Clerk is configured, so this route can open the hosted Clerk sign-in flow and hand the provider token to the backend app-session cookie contract without writing it to browser storage.',
   'authFlow.providerRedirectOidc':
     'OIDC-style provider settings are present, so this route can hand the user off to the configured authorization endpoint.',
   'authFlow.providerRedirectNeedsEnv':
@@ -156,7 +159,7 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
   'authFlow.manualSessionSetup': 'Manual session setup',
   'authFlow.providerLoginNotReady': 'Provider login is not ready: {error}',
   'authFlow.clerkReadyCopy':
-    'Clerk signs the user in, the frontend stores the Clerk session token as the current bearer token, and /api/auth/session resolves the actual DB role and scope.',
+    'Clerk signs the user in, the frontend hands the provider token only to the backend browser-session endpoint, and /api/auth/session resolves the actual DB role and scope.',
   'authFlow.providerReadyCopy':
     'Provider login will return through /auth/callback, exchange the code with PKCE, and let the verified session decide whether /admin or /store is the right landing shell.',
   'authFlow.providerNeedsEnvCopy':
@@ -168,7 +171,7 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
     'Build an authorization URL from env config, redirect the browser, then receive the provider code at `/auth/callback` and exchange it with PKCE.',
   'authFlow.verificationGate': 'Verification gate',
   'authFlow.verificationGateCopy':
-    'The callback only stores a bearer token after code exchange. Shell choice still happens after `/api/auth/session` confirms the real role and scope context.',
+    'When cookie transport is active, the callback creates the backend app-session cookie without writing the access token to storage. Shell choice still happens after `/api/auth/session` confirms the real role and scope context.',
   'authFlow.clerkPublishableKeyMissingTitle': 'Clerk publishable key is missing',
   'authFlow.clerkPublishableKeyMissingCopy':
     'VITE_AUTH_PROVIDER is set to clerk, but VITE_CLERK_PUBLISHABLE_KEY is not configured for this frontend build.',
@@ -203,8 +206,11 @@ export const authFlowEn: Record<keyof typeof authFlowTr, string> = {
   'authFlow.intendedReturnPath': 'Intended return path: {returnTo}',
   'authFlow.completingLoginTitle': 'Completing login',
   'authFlow.completingLoginCopy':
-    'The callback received a bearer token, stored it as the current session, and is routing the app back into the verified shell flow now.',
+    'The callback received a credential, established the app session through the selected transport, and is routing the app back into the verified shell flow now.',
   'authFlow.logoutTitle': 'Signing out',
   'authFlow.logoutCopy':
-    'The client bearer session is being cleared and the app is returning to the configured logout destination.',
+    'The app session and legacy client token traces are being cleared, then the app returns to the configured logout destination.',
+  'authFlow.logoutFailedTitle': 'Sign-out did not complete',
+  'authFlow.logoutFailedCopy':
+    'The cookie session could not be cleared by the backend. Stay on this page and retry.',
 }
