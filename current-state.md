@@ -900,7 +900,7 @@ Store checklists follow-up after the approvals line:
   checklist session modal remains preserved. The page intentionally does not
   show the removed priority side rail or banner; priority/incomplete work stays
   represented through the real checklist rows/tabs. The final release guard fix
-  lowered `store-checklists-logic.ts` to 711 lines and updated
+  lowered `store-checklists-logic.ts` to 707 lines and updated
   `scripts/file-size-guard.test.mjs` accordingly.
 
 ## Product Position

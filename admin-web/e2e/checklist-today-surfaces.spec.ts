@@ -88,6 +88,35 @@ test('store manager checklist inbox keeps overdue acknowledgements visible by de
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toBeVisible()
 })
 
+test('completed checklist source keeps past month visit rows visible without monthly summary', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementCompletedAt: '2026-04-12T09:00:00.000Z',
+    activeInstances: [],
+    completedThisMonth: [
+      {
+        checklistInstanceId: '44444444-4444-4444-8444-444444444444',
+        checklistTemplateId: templateId,
+        storeId,
+        completedAt: '2026-04-12T09:00:00.000Z',
+        totalScore: 86,
+        acknowledgedAt: null,
+      },
+    ],
+    monthlySummaries: [],
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('combobox', { name: 'Month filter' }).click()
+  await page.getByRole('option', { name: 'April 2026' }).click()
+
+  const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
+  await expect(visitRow).toBeVisible()
+  await expect(visitRow.locator('.store-checklists-date-cell')).toContainText('Apr 12, 2026')
+})
+
 test('store checklist area lets managers retry after acknowledgement load fails', async ({ page }) => {
   let acknowledgementAttempts = 0
   let allowAcknowledgements = false
