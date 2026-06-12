@@ -84,7 +84,6 @@ export type StoreChecklistsAction =
     }
   | { type: 'resetSessionDrafts' }
   | { type: 'closeSession' }
-  | { type: 'completeVisitSubmitted' }
   | { type: 'setScoreDraft'; templateItemId: string; score: number | null }
   | { type: 'setCommentDraft'; templateItemId: string; comment: string }
   | { type: 'setAckNote'; checklistInstanceId: string; note: string }
@@ -231,7 +230,6 @@ export function storeChecklistsReducer(
     case 'resetSessionDrafts':
       return { ...state, scores: {}, comments: {}, selectedSessionKey: null, sessionDirty: false }
     case 'closeSession':
-    case 'completeVisitSubmitted':
       return { ...state, selectedSessionKey: null, sessionDirty: false }
     case 'setScoreDraft': {
       const nextScores = { ...state.scores }

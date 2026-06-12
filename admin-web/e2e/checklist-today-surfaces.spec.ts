@@ -483,6 +483,7 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(
     page.getByRole('heading', { name: 'Checklist Flow' }),
   ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Notifications' })).toHaveCount(0)
   await expect(page.getByRole('tab', { name: /Visit flow/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
   await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
@@ -497,6 +498,9 @@ test('store checklist surface switches to English copy and persists locale', asy
   await page.getByRole('tab', { name: /Visit flow/ }).click()
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Mark item' })).toHaveCount(0)
+  await expect(page.getByText('Add photo (optional)')).toHaveCount(0)
+  await expect(page.getByText('Not ready')).toHaveCount(0)
   await expect(page.getByText('Draft saved')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save draft' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Complete', exact: true })).toBeVisible()
@@ -528,6 +532,52 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(
     page.getByRole('heading', { name: 'Checklist Flow' }),
   ).toBeVisible()
+})
+
+test('checklist completion waits for API success before showing completed notice', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    completeFailureMessage: 'Checklist complete failed',
+    requests,
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await answerChecklistScoreQuestion(page, '8', 'Completion should wait')
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Complete', exact: true }).click()
+
+  await expect.poll(() => requests.completes).toEqual([
+    { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
+  ])
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByRole('dialog').getByText('Checklist complete failed')).toBeVisible()
+  await expect(page.getByText('Completed successfully')).toHaveCount(0)
+})
+
+test('store manager checklist result treats unavailable score as neutral', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, ['STORE_MANAGER'], { resultWithoutScore: true })
+  await page.goto('/store/checklists?tab=inbox&result=44444444-4444-4444-8444-444444444444')
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.locator('.store-checklist-modal-summary').getByText('No score').first()).toBeVisible()
+  await expect(dialog.locator('.store-checklist-modal-summary .store-checklists-fact').first()).toHaveCSS('display', 'grid')
+  await expect(
+    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar > div').first(),
+  ).toHaveCSS('display', 'grid')
+  await expect(
+    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar b.store-checklists-tone-neutral'),
+  ).toHaveCount(1)
+  await expect(
+    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar b.store-checklists-tone-warning'),
+  ).toHaveCount(0)
 })
 
 test('checklist visit surface stays usable on mobile width', async ({ page }) => {
@@ -569,6 +619,8 @@ type ChecklistFixtureOptions = {
   handoffTemplateName?: string
   handoffTemplateType?: string
   showStartedInstanceOnRefetch?: boolean
+  completeFailureMessage?: string
+  resultWithoutScore?: boolean
 }
 
 type ChecklistActiveInstanceFixture = {
@@ -801,6 +853,13 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
   await page.route('**/api/mobile/checklists/instances/*/complete', async (route) => {
     const match = route.request().url().match(/instances\/([^/]+)\/complete/)
     options.requests?.completes.push({ checklistInstanceId: match?.[1] ?? '' })
+    if (options.completeFailureMessage) {
+      await route.fulfill({
+        status: 500,
+        body: options.completeFailureMessage,
+      })
+      return
+    }
     if (options.handoffState) {
       options.handoffState.completed = true
     }
@@ -992,8 +1051,8 @@ function createChecklistAcknowledgementsFixture(
       completedByUserId: 'region-user-1',
       completedAt: options.acknowledgementCompletedAt ?? '2026-05-20T09:00:00.000Z',
       status: 'completed',
-      totalScore: 86,
-      complianceRate: 0.75,
+      totalScore: options.resultWithoutScore ? null : 86,
+      complianceRate: options.resultWithoutScore ? null : 0.75,
       responses: [
         {
           templateItemId: '55555555-5555-4555-8555-555555555555',
@@ -1003,7 +1062,7 @@ function createChecklistAcknowledgementsFixture(
           responseType: 'score',
           weight: 60,
           maxScore: 10,
-          scoreValue: 5,
+          scoreValue: options.resultWithoutScore ? null : 5,
           commentText: fixtureLowScoreComment,
         },
         {
@@ -1014,7 +1073,7 @@ function createChecklistAcknowledgementsFixture(
           responseType: 'score',
           weight: 40,
           maxScore: 10,
-          scoreValue: 9,
+          scoreValue: options.resultWithoutScore ? null : 9,
           commentText: 'Temiz',
         },
       ],

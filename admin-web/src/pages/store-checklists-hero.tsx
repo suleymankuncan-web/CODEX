@@ -1,9 +1,7 @@
 import {
   BarChart3,
-  Bell,
   CalendarDays,
   CheckSquare,
-  ChevronDown,
   Clock3,
   Store as StoreIcon,
 } from 'lucide-react'
@@ -63,16 +61,7 @@ export function StoreChecklistsHero(input: {
           >
             <CalendarDays aria-hidden="true" />
             <span>{periodLabel}</span>
-            <ChevronDown aria-hidden="true" />
           </div>
-          <button
-            className="store-checklists-icon-button"
-            type="button"
-            aria-label={getStaticCopy(locale, 'Bildirimler', 'Notifications')}
-          >
-            <span aria-hidden="true" />
-            <Bell aria-hidden="true" />
-          </button>
         </div>
       </div>
 

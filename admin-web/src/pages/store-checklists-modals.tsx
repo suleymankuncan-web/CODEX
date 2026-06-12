@@ -1,7 +1,5 @@
 import { useMemo, useState, type ComponentType } from 'react'
 import {
-  Bookmark,
-  Camera,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -23,6 +21,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
 import type { ChecklistAcknowledgementItem, MobileChecklistToday } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import { getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import type { ChecklistSession } from './store-checklists-model'
 import {
@@ -56,6 +55,7 @@ export function StoreChecklistsModals(input: {
   selectedSession: ChecklistSession | null
   t: TranslateFunction
   visitState: {
+    completeError: unknown | null
     completing: boolean
     saving: boolean
     starting: boolean
@@ -74,6 +74,7 @@ export function StoreChecklistsModals(input: {
         <ChecklistVisitModal
           active={input.selectedSession.active}
           comments={input.comments}
+          completeError={input.visitState.completeError}
           isCompleting={input.visitState.completing}
           isSaving={input.visitState.saving}
           isStarting={input.visitState.starting}
@@ -107,6 +108,7 @@ export function StoreChecklistsModals(input: {
 function ChecklistVisitModal(input: {
   active: MobileChecklistToday['activeInstances'][number] | undefined
   comments: Record<string, string>
+  completeError: unknown | null
   isCompleting: boolean
   isSaving: boolean
   isStarting: boolean
@@ -293,14 +295,6 @@ function ChecklistVisitModal(input: {
                     <span>
                       {activeIndex + 1} / {itemEntries.length}
                     </span>
-                    <Button
-                      aria-label={getStaticCopy(input.locale, 'Maddeyi işaretle', 'Mark item')}
-                      size="icon-sm"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <Bookmark data-icon="inline-start" />
-                    </Button>
                   </div>
                   <div className="store-checklist-session-question-copy">
                     <h3>{activeEntry.item.itemText}</h3>
@@ -339,8 +333,6 @@ function ChecklistVisitModal(input: {
                     />
                   </div>
 
-                  <ChecklistSessionPhotoPanel active={Boolean(input.active)} locale={input.locale} t={input.t} />
-
                   <div className="store-checklist-session-question-actions">
                     <Button
                       disabled={activeIndex <= 0}
@@ -367,7 +359,9 @@ function ChecklistVisitModal(input: {
 
           <div className="store-checklist-session-footer">
             <div className="store-checklist-session-state">
-              {!input.active && input.isStarting ? (
+              {input.completeError ? (
+                <span>{getErrorMessage(input.completeError)}</span>
+              ) : !input.active && input.isStarting ? (
                 <span>{input.t('storeChecklists.startPending')}</span>
               ) : missingResponseCount > 0 ? (
                 <span>{input.t('storeChecklists.missingResponsesHint', { count: missingResponseCount })}</span>
@@ -497,31 +491,6 @@ function ChecklistSessionAnswerControl(input: {
           }
         />
       )}
-    </div>
-  )
-}
-
-function ChecklistSessionPhotoPanel(input: {
-  active: boolean
-  locale: AppLocale
-  t: TranslateFunction
-}) {
-  return (
-    <div className="store-checklist-session-photo-panel">
-      <div>
-        <span>{input.t('storeChecklists.photoTitle')}</span>
-        <small>{input.t('storeChecklists.photoCopy')}</small>
-      </div>
-      <div className="store-checklist-session-photo-row">
-        <Button className="store-checklist-session-photo-button" disabled type="button" variant="outline">
-          <Camera data-icon="inline-start" />
-          {input.t('storeChecklists.photoAdd')}
-        </Button>
-        <div className="store-checklist-session-photo-placeholder" aria-hidden="true">
-          <Camera />
-          <span>{getStaticCopy(input.locale, 'Hazır değil', 'Not ready')}</span>
-        </div>
-      </div>
     </div>
   )
 }
