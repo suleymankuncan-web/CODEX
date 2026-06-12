@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This runbook defines the operational checklist for collecting real staging IdP evidence without storing raw tokens, authorization codes, PKCE verifiers, refresh tokens, client secrets, cookies, or session storage dumps.
+This runbook defines the operational checklist for collecting real staging IdP evidence without storing raw tokens, authorization codes, PKCE verifiers, refresh tokens, client secrets, cookies, or browser storage dumps.
 
 The local Keycloak smoke is already proven. This runbook is only for a real staging identity provider and a seeded staging database.
 
@@ -35,7 +35,7 @@ Approved by:
 - Do not paste refresh tokens.
 - Do not paste authorization codes.
 - Do not paste PKCE `code_verifier` values.
-- Do not paste client secrets, private keys, cookies, or session storage dumps.
+- Do not paste client secrets, private keys, cookies, or browser storage dumps.
 - Do not attach screenshots that expose tokens, cookies, secrets, or personal data beyond the smoke user identity.
 - Store only sanitized decoded payloads and sanitized HTTP response shapes.
 
@@ -74,7 +74,7 @@ Logout evidence must prove:
 
 - provider logout request includes `id_token_hint`,
 - browser returns to `/auth/login`,
-- local bearer token storage is cleared,
+- no browser-readable token storage exists for provider sessions,
 - local provider id token storage is cleared.
 
 Expired Token evidence must prove:
@@ -178,7 +178,7 @@ The staging script fails before any network request if:
 - [ ] Evidence contains logout result.
 - [ ] Evidence contains expired-token result.
 - [ ] Evidence guard passes before the note is approved.
-- [ ] Evidence contains no raw bearer token, id token, refresh token, code, verifier, cookie, client secret, private key, or session storage dump.
+- [ ] Evidence contains no raw bearer token, id token, refresh token, code, verifier, cookie, client secret, private key, or browser storage dump.
 
 ### 5. Approval Decision
 

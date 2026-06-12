@@ -46,8 +46,8 @@ Logout edge evidence:
 
 - provider logout is requested with an `id_token_hint`,
 - browser returns to `/auth/login`,
-- local bearer token storage is empty after logout,
-- local provider id token storage is empty after logout.
+- no browser-readable token storage exists for provider sessions after logout;
+  the legacy bearer/id-token storage checks must both report `false`.
 
 Expired-token edge evidence:
 
@@ -65,7 +65,7 @@ No raw id tokens may be stored.
 
 No refresh token may be requested, stored, logged, or attached.
 
-No raw authorization codes, PKCE `code_verifier` values, client secrets, cookies, private keys, session storage dumps, provider subjects, full JWTs, or private personal data may be pasted into evidence.
+No raw authorization codes, PKCE `code_verifier` values, client secrets, cookies, private keys, browser storage dumps, provider subjects, full JWTs, or private personal data may be pasted into evidence.
 
 Only sanitized JSON from the smoke script may be copied into a dated evidence note after `guard:auth:evidence` passes.
 
@@ -73,7 +73,7 @@ Only sanitized JSON from the smoke script may be copied into a dated evidence no
 
 No-Go if logout cannot return safely to `/auth/login`.
 
-No-Go if local bearer or provider id token storage remains populated after logout.
+No-Go if browser-readable bearer, provider, id, access, or refresh token storage exists for provider sessions after logout.
 
 No-Go if expired bearer token evidence sends an API `Authorization` header.
 

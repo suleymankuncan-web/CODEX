@@ -163,6 +163,49 @@ test('auth evidence guard rejects unredacted sensitive URL parameters', () => {
   assert.match(result.stderr, /code_challenge/)
 })
 
+test('auth evidence guard rejects raw cookie material and PKCE verifier aliases', () => {
+  const result = runGuard(
+    validEvidence({
+      browserSession: {
+        setCookie: 'store_ops_browser_session=raw-cookie-value; HttpOnly; Secure; SameSite=Lax',
+        pkceVerifier: 'plain-pkce-verifier-value',
+      },
+    }),
+  )
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /secret-like material/i)
+})
+
+test('auth evidence guard rejects browser storage dumps even when values are redacted', () => {
+  const result = runGuard(
+    validEvidence({
+      browserStorage: {
+        sessionStorage: {
+          'store-ops-admin-bearer-token': '<redacted>',
+          'store-ops-admin-provider-id-token': '<redacted>',
+        },
+      },
+    }),
+  )
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /browser storage dump/i)
+})
+
+test('auth evidence guard rejects redacted browser storage dump placeholders', () => {
+  const result = runGuard(
+    validEvidence({
+      browserStorage: {
+        sessionStorage: '<redacted>',
+      },
+    }),
+  )
+
+  assert.notEqual(result.status, 0)
+  assert.match(result.stderr, /browser storage dump/i)
+})
+
 test('auth evidence guard requires negative action smoke to prove assigned-store boundaries', () => {
   const result = runGuard(
     validEvidence({

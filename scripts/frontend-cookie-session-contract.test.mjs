@@ -17,9 +17,8 @@ const sessionStorage = readText('admin-web/src/features/session/session-storage.
 const authLogoutPage = readText('admin-web/src/pages/AuthLogoutPage.tsx')
 
 test('cookie browser sessions do not refresh before ordinary requests', () => {
-  const cookieReturnIndex = api.indexOf(`if (isCookieBrowserSession(session)) {
-    return { session, headers }
-  }`)
+  const cookieReturnMatch = /if \(isCookieBrowserSession\(session\)\) \{\s*return \{ session, headers \}\s*\}/.exec(api)
+  const cookieReturnIndex = cookieReturnMatch?.index ?? -1
   const refreshIndex = api.indexOf('const refreshedHeaders = await prepareRefreshedHeaders')
 
   assert.ok(

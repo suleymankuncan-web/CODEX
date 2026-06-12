@@ -31,6 +31,7 @@ test('staging auth runbook preserves security evidence rules', () => {
     'Do not paste authorization codes',
     'Do not paste PKCE `code_verifier` values',
     'Do not paste client secrets',
+    'Do not paste client secrets, private keys, cookies, or browser storage dumps',
   ]) {
     assert.match(runbook, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
