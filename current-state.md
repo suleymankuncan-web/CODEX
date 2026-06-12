@@ -89,9 +89,11 @@ Current maintenance baseline:
   for Store Manager and Region Manager using existing auth, workflow, checklist,
   and role-aware navigation sources only. PR #700 then removed the retired
   manager/region hero/focus localization keys that no production Store Home
-  component uses. API shape, DB schema, auth/permission semantics,
-  scoring/ranking/checklist weights, queue/import behavior, and business
-  workflows remained unchanged.
+  component uses. PR #702 tightened the Store/Admin shell and Store Home
+  dashboard palette to the locked Plum Glacier prototype token values and added
+  computed-style e2e guards for future drift. API shape, DB schema,
+  auth/permission semantics, scoring/ranking/checklist weights, queue/import
+  behavior, and business workflows remained unchanged.
 - Project Health Uplift PR Train V1 is closed through PR #679. Plan:
   `docs/plans/project-health-uplift-pr-train-v1.md`. PR #674 consolidated
   request-intake/process links without creating a new policy; PR #675 added the
