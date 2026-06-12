@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
+import { readComputedStyle } from './style-test-utils'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoRegionId = '00000000-0000-0000-0000-000000000010'
@@ -1361,6 +1362,63 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByText('uma_authorization')).toHaveCount(0)
   await expect(page.getByText('default-roles-store-ops')).toHaveCount(0)
   await expect(page.getByText('Task-first preview for store-scoped work.')).toHaveCount(0)
+})
+
+test('store home uses locked Plum Glacier prototype palette tokens', async ({ page }) => {
+  await page.goto('/store/home')
+
+  await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
+
+  const app = await readComputedStyle(page, '.store-shell.store-command-app')
+  expect(app.backgroundColor).toBe('rgb(248, 245, 251)')
+  expect(app.backgroundImage).toContain('rgba(248, 245, 251, 0.98)')
+  expect(app.backgroundImage).toContain('rgba(237, 247, 246, 0.94)')
+  expect(app.color).toBe('rgb(23, 20, 33)')
+
+  const activeNav = await readComputedStyle(page, '.store-command-nav-link-active')
+  expect(activeNav.backgroundImage).toContain('rgba(124, 58, 237, 0.12)')
+  expect(activeNav.backgroundImage).toContain('rgba(19, 167, 179, 0.12)')
+  expect(activeNav.color).toBe('rgb(76, 42, 165)')
+
+  const header = await readComputedStyle(page, '.store-command-home [data-store-surface-header]')
+  expect(header.backgroundColor).toBe('rgba(255, 255, 255, 0.88)')
+  expect(header.borderColor).toBe('rgba(36, 28, 50, 0.1)')
+  expect(header.boxShadow).toContain('rgba(32, 24, 48, 0.12)')
+
+  const card = await readComputedStyle(page, '.store-command-home [data-slot="card"]')
+  expect(card.backgroundColor).toBe('rgba(255, 255, 255, 0.88)')
+  expect(card.borderColor).toBe('rgba(36, 28, 50, 0.1)')
+  expect(card.boxShadow).toContain('rgba(32, 24, 48, 0.08)')
+
+  const accentBadge = await readComputedStyle(
+    page,
+    '.store-command-home [data-slot="badge"][data-store-tone="accent"]',
+  )
+  expect(accentBadge.backgroundColor).toBe('rgba(124, 58, 237, 0.12)')
+  expect(accentBadge.borderColor).toBe('rgba(124, 58, 237, 0.2)')
+  expect(accentBadge.color).toBe('rgb(76, 42, 165)')
+
+  const calmBadge = await readComputedStyle(
+    page,
+    '.store-command-home [data-slot="badge"][data-store-tone="calm"]',
+  )
+  expect(calmBadge.backgroundColor).toBe('rgba(16, 185, 129, 0.1)')
+  expect(calmBadge.borderColor).toBe('rgba(16, 185, 129, 0.22)')
+  expect(calmBadge.color).toBe('rgb(8, 122, 85)')
+
+  const outlineButton = await readComputedStyle(
+    page,
+    '.store-command-home [data-slot="button"][data-variant="outline"]',
+  )
+  expect(outlineButton.backgroundColor).toBe('rgb(255, 255, 255)')
+  expect(outlineButton.borderColor).toBe('rgba(36, 28, 50, 0.18)')
+  expect(outlineButton.color).toBe('rgb(76, 42, 165)')
+  expect(outlineButton.minHeight).toBe('38px')
+
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(hasHorizontalOverflow).toBe(false)
 })
 
 test('store home prefetches the task queue for manager navigation', async ({ page }) => {
