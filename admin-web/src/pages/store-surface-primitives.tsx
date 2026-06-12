@@ -71,7 +71,10 @@ export function StoreSurfaceHeader(input: {
   titleId?: string
 }) {
   return (
-    <header className="tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:md:flex-row tw:md:items-start tw:md:justify-between">
+    <header
+      data-store-surface-header
+      className="tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:md:flex-row tw:md:items-start tw:md:justify-between"
+    >
       <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-2">
         {input.eyebrow ? (
           <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.eyebrow}</span>
@@ -161,10 +164,17 @@ export function StoreMetricCard(input: {
     input.progress === undefined ? undefined : Math.max(0, Math.min(100, input.progress))
 
   return (
-    <Card size="sm" className={cn('tw:min-h-32', toneClasses[input.tone ?? 'neutral'])}>
+    <Card
+      data-store-tone={input.tone ?? 'neutral'}
+      size="sm"
+      className={cn('tw:min-h-32', toneClasses[input.tone ?? 'neutral'])}
+    >
       <CardHeader className="tw:flex tw:flex-row tw:items-start tw:gap-3">
         {input.icon ? (
-          <span className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-secondary tw:text-primary">
+          <span
+            data-store-surface-icon
+            className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-secondary tw:text-primary"
+          >
             {input.icon}
           </span>
         ) : null}
@@ -199,6 +209,7 @@ export function StoreSectionCard(input: {
     <Card
       aria-label={input.ariaLabel}
       aria-labelledby={input.ariaLabelledBy}
+      data-store-section-card
       data-testid={input.testId}
       className={cn('tw:bg-card/85 tw:shadow-sm', input.className)}
     >
@@ -256,6 +267,7 @@ export function StoreStatusBadge(input: {
 }) {
   return (
     <Badge
+      data-store-tone={input.tone ?? 'neutral'}
       variant={toneBadgeVariant[input.tone ?? 'neutral']}
       className={cn(input.tone === 'warning' ? 'tw:text-foreground' : undefined, input.className)}
     >
@@ -278,6 +290,7 @@ export function StoreStackedRow(input: {
   return (
     <article
       aria-label={input.ariaLabel}
+      data-store-tone={input.tone ?? 'neutral'}
       data-testid={input.testId}
       className={cn(
         'tw:rounded-lg tw:border tw:p-3 tw:transition-colors',

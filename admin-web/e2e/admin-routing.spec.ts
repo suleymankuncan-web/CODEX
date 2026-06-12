@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
+import { readComputedStyle } from './style-test-utils'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -100,6 +101,37 @@ test('admin shell switches chrome to English copy and persists locale', async ({
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(sidebar.locator('.admin-command-brand').getByText('LUFIAN')).toBeVisible()
+})
+
+test('admin shell uses locked Plum Glacier sidebar palette tokens', async ({ page }) => {
+  await page.goto('/admin/audit')
+
+  const sidebar = page.locator('.admin-command-sidebar')
+  await expect(sidebar).toBeVisible()
+
+  const app = await readComputedStyle(page, '.admin-command-app')
+  expect(app.backgroundColor).toBe('rgb(248, 245, 251)')
+  expect(app.backgroundImage).toContain('rgba(248, 245, 251, 0.98)')
+  expect(app.backgroundImage).toContain('rgba(237, 247, 246, 0.94)')
+  expect(app.color).toBe('rgb(23, 20, 33)')
+
+  const activeNav = await readComputedStyle(page, '.admin-command-nav-link-active')
+  expect(activeNav.backgroundImage).toContain('rgba(124, 58, 237, 0.12)')
+  expect(activeNav.backgroundImage).toContain('rgba(19, 167, 179, 0.12)')
+  expect(activeNav.color).toBe('rgb(76, 42, 165)')
+
+  const sidebarStyle = await readComputedStyle(page, '.admin-command-sidebar')
+  expect(sidebarStyle.backgroundColor).toBe('rgba(255, 255, 255, 0.72)')
+  expect(sidebarStyle.borderColor).toContain('rgba(36, 28, 50, 0.1)')
+
+  const avatar = await readComputedStyle(page, '.admin-command-avatar')
+  expect(avatar.backgroundColor).toBe('rgba(19, 167, 179, 0.12)')
+  expect(avatar.color).toBe('rgb(8, 123, 134)')
+
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  )
+  expect(hasHorizontalOverflow).toBe(false)
 })
 
 test('admin sidebar prefetches integration data before opening integrations', async ({ page }) => {

@@ -8,21 +8,24 @@
   --admin-command-line: rgba(36, 28, 50, 0.1);
   --admin-command-line-strong: rgba(36, 28, 50, 0.18);
   --admin-command-surface: rgba(255, 255, 255, 0.84);
+  --admin-command-surface-soft: rgba(255, 255, 255, 0.68);
+  --admin-command-surface-strong: #ffffff;
   --admin-command-plum: #7c3aed;
+  --admin-command-plum-deep: #4c2aa5;
+  --admin-command-plum-soft: rgba(124, 58, 237, 0.12);
+  --admin-command-blue: #3765ea;
   --admin-command-cyan: #13a7b3;
+  --admin-command-cyan-soft: rgba(19, 167, 179, 0.12);
   --admin-command-shadow: 0 24px 80px rgba(32, 24, 48, 0.12);
+  --admin-command-soft-shadow: 0 18px 48px rgba(32, 24, 48, 0.08);
   --admin-command-focus: rgba(124, 58, 237, 0.22);
   min-height: 100vh;
   overflow-x: hidden;
   padding-left: var(--admin-command-sidebar);
   color: var(--admin-command-ink);
   background:
-    linear-gradient(rgba(54, 44, 76, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(54, 44, 76, 0.045) 1px, transparent 1px),
-    radial-gradient(circle at 14% 12%, rgba(124, 58, 237, 0.13), transparent 34rem),
-    radial-gradient(circle at 88% 8%, rgba(19, 167, 179, 0.13), transparent 32rem),
-    linear-gradient(135deg, var(--admin-command-bg) 0%, #fbfcff 48%, var(--admin-command-bg-2) 100%);
-  background-size: 28px 28px, 28px 28px, auto, auto, auto;
+    linear-gradient(135deg, rgba(248, 245, 251, 0.98), rgba(237, 247, 246, 0.94)),
+    var(--admin-command-bg);
   transition: padding-left 220ms ease;
 }
 
@@ -180,8 +183,8 @@
 
 .admin-command-nav-link-active {
   border-color: transparent;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.12));
-  color: #4c2aa5;
+  background: linear-gradient(135deg, var(--admin-command-plum-soft), var(--admin-command-cyan-soft));
+  color: var(--admin-command-plum-deep);
   box-shadow: none;
   font-weight: 800;
 }
@@ -190,8 +193,8 @@
 .admin-command-nav-link-active:focus-visible,
 .admin-command-nav-link-active:active {
   border-color: transparent;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.12));
-  color: #4c2aa5;
+  background: linear-gradient(135deg, var(--admin-command-plum-soft), var(--admin-command-cyan-soft));
+  color: var(--admin-command-plum-deep);
 }
 
 .admin-command-nav-link-active:focus-visible {
@@ -230,8 +233,8 @@
   flex: 0 0 34px;
   place-items: center;
   border-radius: 12px;
-  background: linear-gradient(135deg, #1b1531, var(--admin-command-plum));
-  color: #fff;
+  background: var(--admin-command-cyan-soft);
+  color: #087b86;
   font-size: 0.74rem;
   font-weight: 900;
 }

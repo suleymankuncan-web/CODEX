@@ -44,8 +44,8 @@
   .admin-command-nav-link-active:focus-visible,
   .admin-command-nav-link-active:active {
     border-color: transparent;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.12));
-    color: #4c2aa5;
+    background: linear-gradient(135deg, var(--admin-command-plum-soft), var(--admin-command-cyan-soft));
+    color: var(--admin-command-plum-deep);
     box-shadow: none;
   }
 
