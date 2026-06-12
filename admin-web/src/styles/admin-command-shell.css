@@ -1,5 +1,5 @@
 .admin-command-app {
-  --admin-command-sidebar: 224px;
+  --admin-command-sidebar: 264px;
   --admin-command-sidebar-collapsed: 74px;
   --admin-command-bg: #f8f5fb;
   --admin-command-bg-2: #edf7f6;
@@ -39,10 +39,10 @@
   flex-direction: column;
   gap: 14px;
   border-right: 1px solid var(--admin-command-line);
-  background: rgba(255, 255, 255, 0.78);
-  padding: 18px 14px;
-  box-shadow: 14px 0 50px rgba(30, 24, 46, 0.08);
-  backdrop-filter: blur(22px);
+  background: rgba(255, 255, 255, 0.72);
+  padding: 18px;
+  box-shadow: none;
+  backdrop-filter: blur(18px);
   transition: width 220ms ease, padding 220ms ease;
 }
 
@@ -132,13 +132,14 @@
 .admin-command-sidebar-toggle,
 .admin-command-nav-link,
 .admin-command-utility-link {
-  min-height: 42px;
+  min-height: 40px;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 8px;
   background: transparent;
   color: var(--admin-command-muted);
   font: inherit;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 720;
   text-decoration: none;
 }
 
@@ -150,13 +151,13 @@
 
 .admin-command-nav {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   overflow: auto;
-  padding: 2px 0;
+  padding: 4px 0;
 }
 
 .admin-command-nav-link {
-  padding: 0 11px;
+  padding: 0 10px;
 }
 
 .admin-command-nav-link:hover,
@@ -165,7 +166,8 @@
 .admin-command-utility-link:focus-visible,
 .admin-command-sidebar-toggle:hover,
 .admin-command-sidebar-toggle:focus-visible {
-  border-color: var(--admin-command-line-strong);
+  border-color: rgba(124, 58, 237, 0.10);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--admin-command-ink);
   outline: none;
 }
@@ -178,15 +180,28 @@
 
 .admin-command-nav-link-active {
   border-color: transparent;
-  background: linear-gradient(135deg, var(--admin-command-plum), #3765ea 60%, var(--admin-command-cyan));
-  color: #fff;
-  box-shadow: 0 14px 30px rgba(77, 70, 229, 0.22);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.12));
+  color: #4c2aa5;
+  box-shadow: none;
+  font-weight: 800;
+}
+
+.admin-command-nav-link-active:hover,
+.admin-command-nav-link-active:focus-visible,
+.admin-command-nav-link-active:active {
+  border-color: transparent;
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(19, 167, 179, 0.12));
+  color: #4c2aa5;
+}
+
+.admin-command-nav-link-active:focus-visible {
+  box-shadow: 0 0 0 3px var(--admin-command-focus);
 }
 
 .admin-command-nav-icon {
   display: grid;
-  width: 24px;
-  flex: 0 0 24px;
+  width: 20px;
+  flex: 0 0 20px;
   place-items: center;
 }
 
