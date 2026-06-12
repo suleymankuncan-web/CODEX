@@ -79,6 +79,16 @@ Current execution loop under Tier A:
   is ready but blocked on real or assisted session feedback. Do not open a code
   PR until a sanitized record identifies the next P0/P1 or same-surface P2
   item.
+- All six active pilot personas were rerun through staging cookie-session,
+  route allow/deny, storage, backend boundary, and logout rehearsal on
+  2026-06-12. Evidence:
+  `docs/evidence/pilot-readiness/2026-06-12-all-pilot-persona-cookie-session-rehearsal.md`.
+- Assisted pilot feedback collection is intentionally parked until the owner
+  has time for a real operator/user session. When resumed, start with a scoped
+  `REGION_MANAGER` walkthrough, add a sanitized feedback record, classify it as
+  `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`, then
+  open a targeted PR only if the feedback produces a concrete blocker or
+  same-surface P2 batch.
 - Security Launch Blocker PR Train V1 is closed for local implementation and
   guards through PR #689. Closeout evidence:
   `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`.
