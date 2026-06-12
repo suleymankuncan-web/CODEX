@@ -1374,7 +1374,11 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
   await page.goto('/store/home')
 
   await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
-  await expect(page.getByText('Mağaza operasyonu tek komuta yüzeyinden yönetilir.')).toBeVisible()
+  await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
+  await expect(page.getByText('Mağaza özet dashboard')).toBeVisible()
+  await expect(page.getByText('Mağaza özeti', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Dönem', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Ayarlar içinde', { exact: true })).toHaveCount(0)
   const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
   await expect(dailyBrief).toBeVisible()
   await expect(dailyBrief).toContainText('KPI takip adaylari')
@@ -1474,6 +1478,41 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   await expect.poll(() => mobileTodayRequests, { timeout: 1000 }).toBe(prefetchedMobileTodayRequests)
 })
 
+test('store home dashboard actions follow role-aware navigation for admin landing roles', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['HR_ADMIN'],
+          actionScope: {
+            assignedStoreIds: [],
+          },
+          assignedStoreIds: [],
+        },
+        scopeSummary: {
+          ...authSessionFixture.scopeSummary,
+          assignedStoreCount: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/home')
+
+  await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
+  await expect(page.getByText('Bölge özet dashboard')).toBeVisible()
+  await expect(page.locator('a[href="/store/feed"]').first()).toBeVisible()
+  await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/kpis"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/targets"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/approvals"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/checklists"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/tasks"]')).toHaveCount(0)
+})
+
 test('store personnel sidebar only exposes personnel surfaces', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {
@@ -1533,6 +1572,7 @@ test('store personnel daily command brief stays personal and read-only', async (
   await expect(dailyBrief.locator('a[href="/store/feed"]')).toBeVisible()
   await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveCount(0)
   await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/kpis"]')).toHaveCount(0)
 })
 
 test('store personnel cannot open tasks by direct route', async ({ page }) => {
@@ -1749,7 +1789,9 @@ test('store home switches to English copy and persists locale', async ({ page })
   const storeSidebar = page.locator('.store-command-sidebar')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Store Management Panel/i })).toBeVisible()
-  await expect(page.getByText('Store operations run from one command surface.')).toBeVisible()
+  await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
+  await expect(page.getByText('Store summary dashboard')).toBeVisible()
+  await expect(page.getByText('Store operations run from one command surface.')).toHaveCount(0)
   await expect(page.getByText('Store performance and requests share one entry.')).toHaveCount(0)
   await expect(storeNav.getByRole('link', { name: 'Store KPIs', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Rankings', exact: true })).toBeVisible()
