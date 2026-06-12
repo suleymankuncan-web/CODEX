@@ -79,6 +79,17 @@ Current maintenance baseline:
   `docs/plans/project-control-board-v1.md`, `docs/plans/decision-registry-v1.md`,
   `docs/plans/project-growth-execution-roadmap-v1.md`, and
   `docs/domains/readiness-ops.md` as reference.
+- Store Home Dashboard Parity V1 runtime work is merged through PR #696 to
+  PR #698, with final closeout evidence recorded at
+  `docs/evidence/store-home-dashboard-parity-v1-closeout-2026-06-12.md`. The
+  locked Store Manager and Region Manager Store Home prototypes are tracked in
+  `docs/prototypes/README.md`; the Store/Admin sidebar nav body now follows the
+  prototype rhythm while keeping the Lufian header/brand area unchanged; and
+  `/store` plus `/store/home` now render dashboard-summary Store Home surfaces
+  for Store Manager and Region Manager using existing auth, workflow, checklist,
+  and role-aware navigation sources only. API shape, DB schema, auth/permission
+  semantics, scoring/ranking/checklist weights, queue/import behavior, and
+  business workflows remained unchanged.
 - Project Health Uplift PR Train V1 is closed through PR #679. Plan:
   `docs/plans/project-health-uplift-pr-train-v1.md`. PR #674 consolidated
   request-intake/process links without creating a new policy; PR #675 added the
