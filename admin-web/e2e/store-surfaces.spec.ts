@@ -1345,7 +1345,7 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByRole('main', { name: 'Mağaza çalışma alanı' })).toBeVisible()
   await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
-  await expect(storeNav.getByRole('link', { name: 'Talepler / Onaylar', exact: true })).toBeVisible()
+  await expect(storeNav.getByRole('link', { name: 'Talep Merkezi', exact: true })).toBeVisible()
   await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
   const checklistCard = page.getByTestId('store-home-checklist-card')
   await expect(checklistCard).toBeVisible()
@@ -1750,7 +1750,7 @@ test('store personnel cannot open approvals by direct route', async ({ page }) =
 
   await expect(page.getByRole('heading', { name: /rota kullan/i })).toBeVisible()
   await expect(page.getByText('/store/me')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Talepler / Onaylar' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Talep Merkezi' })).toHaveCount(0)
   expect(targetDistributionRequests).toBe(0)
 })
 
@@ -1853,7 +1853,7 @@ test('store home switches to English copy and persists locale', async ({ page })
   await expect(page.getByText('Store performance and requests share one entry.')).toHaveCount(0)
   await expect(storeNav.getByRole('link', { name: 'Store KPIs', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Rankings', exact: true })).toBeVisible()
-  await expect(storeNav.getByRole('link', { name: 'Requests / Approvals', exact: true })).toBeVisible()
+  await expect(storeNav.getByRole('link', { name: 'Request Center', exact: true })).toBeVisible()
   await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
   await expect(page.getByText('Mağaza alanı')).toHaveCount(0)
   await expect(page.getByText('Mağaza ana sayfa Faz 1')).toHaveCount(0)
@@ -1974,7 +1974,7 @@ test('store sidebar transitions across visible manager pages without requiring m
     ready: page.getByRole('heading', { name: 'Sıralamalar' }),
   })
   await verifyStoreNavTransition(page, storeNav, {
-    linkName: 'Talepler / Onaylar',
+    linkName: 'Talep Merkezi',
     path: '/store/approvals',
     ready: page.getByRole('heading', { name: 'Talep Merkezi' }),
   })

@@ -247,7 +247,6 @@ function useStoreChecklistsPageContent(input: {
       const result = await completeMobileChecklistInstance({
         checklistInstanceId: variables.checklistInstanceId,
       })
-      showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
       return result
     },
     onSuccess: (_result, variables) => {
@@ -260,9 +259,6 @@ function useStoreChecklistsPageContent(input: {
         checklistInstanceId: variables.checklistInstanceId,
         rowKey: variables.rowKey,
       })
-    },
-    onError: (error) => {
-      showCommandNotice(getErrorMessage(error))
     },
   })
   const queueResponseAutoSave = (draft: ChecklistResponseDraft) => {
@@ -614,7 +610,10 @@ function useStoreChecklistsPageContent(input: {
                 vmOnlyVisitScope,
               }}
               errors={{
-                complete: completeVisitMutation.isError ? completeVisitMutation.error : null,
+                complete:
+                  completeVisitMutation.isError && !selectedSession
+                    ? completeVisitMutation.error
+                    : null,
                 save: saveResponseMutation.isError ? saveResponseMutation.error : null,
                 start: startVisitMutation.isError ? startVisitMutation.error : null,
               }}
@@ -672,6 +671,7 @@ function useStoreChecklistsPageContent(input: {
         selectedSession={selectedSession}
         t={t}
         visitState={{
+          completeError: completeVisitMutation.isError ? completeVisitMutation.error : null,
           completing: completeVisitMutation.isPending,
           saving: saveResponseMutation.isPending,
           starting: startVisitMutation.isPending,
@@ -701,8 +701,6 @@ function useStoreChecklistsPageContent(input: {
         }}
         onCompleteVisit={(checklistInstanceId) => {
           if (!selectedSession) return
-          showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
-          dispatchPageState({ type: 'completeVisitSubmitted' })
           completeVisitMutation.mutate({
             checklistInstanceId,
             responses: buildChecklistResponseDrafts({

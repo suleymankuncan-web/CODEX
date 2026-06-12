@@ -9,7 +9,7 @@ export const storeApprovalsTr = {
   'storeApprovals.heroCopy':
     'Mağaza müdürü hedef dağıtımını, satıcı kodu talebini ve personel çıkışını tek yüzeyden hazırlar; karar ve kontrol adımları ilgili onay kuyruğuna akar.',
   'storeApprovals.ledgerEyebrow': 'Mağaza iş akışı',
-  'storeApprovals.ledgerTitle': 'Talepler / Onaylar',
+  'storeApprovals.ledgerTitle': 'Talep Merkezi',
   'storeApprovals.storeManagerSubtitle':
     'Hedef dağıtımı, satıcı kodu ve personel çıkış talepleri mağaza tarafında kompakt talep akışında yönetilir.',
   'storeApprovals.regionManagerSubtitle':
@@ -266,7 +266,7 @@ export const storeApprovalsEn: Record<keyof typeof storeApprovalsTr, string> = {
   'storeApprovals.heroCopy':
     'The store manager prepares target distribution, seller code, and employee exit requests from one surface; decision and control steps flow to the right approval queue.',
   'storeApprovals.ledgerEyebrow': 'Store workflow',
-  'storeApprovals.ledgerTitle': 'Requests / Approvals',
+  'storeApprovals.ledgerTitle': 'Request Center',
   'storeApprovals.storeManagerSubtitle':
     'Target distribution, seller code, and employee exit requests are managed in one compact store request flow.',
   'storeApprovals.regionManagerSubtitle':

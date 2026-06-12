@@ -1,4 +1,16 @@
 .store-checklist-modal {
+  --checklist-plum: var(--store-command-plum, #7c3aed);
+  --checklist-blue: var(--store-command-blue, #3765ea);
+  --checklist-cyan: var(--store-command-cyan, #13a7b3);
+  --checklist-mint: var(--store-command-mint, #10b981);
+  --checklist-amber: var(--store-command-warning, #f59e0b);
+  --checklist-danger: var(--store-command-danger, #e11d48);
+  --checklist-plum-soft: var(--store-command-plum-soft, rgba(124, 58, 237, 0.12));
+  --checklist-cyan-soft: var(--store-command-cyan-soft, rgba(19, 167, 179, 0.12));
+  --checklist-ink: var(--store-command-ink, #171421);
+  --checklist-muted: var(--store-command-muted, #6c6478);
+  --checklist-line: var(--store-command-line, rgba(36, 28, 50, 0.1));
+  --checklist-soft-line: rgba(36, 28, 50, 0.075);
   width: min(1120px, calc(100vw - 2.3rem));
   max-height: min(90vh, 840px);
   overflow: auto;
@@ -51,6 +63,83 @@
 
 .store-checklist-result-summary {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.store-checklists-fact {
+  display: grid;
+  min-width: 0;
+  gap: 0.22rem;
+  align-content: start;
+}
+
+.store-checklists-fact span,
+.store-checklists-scorebar span {
+  min-width: 0;
+  color: var(--checklist-muted);
+  font-size: 0.72rem;
+  font-weight: 680;
+  line-height: 1.25;
+}
+
+.store-checklists-fact strong,
+.store-checklists-scorebar strong {
+  min-width: 0;
+  color: var(--surface-ink, var(--checklist-ink));
+  font-size: 0.9rem;
+  font-weight: 760;
+  line-height: 1.24;
+  overflow-wrap: anywhere;
+}
+
+.store-checklists-scorebar {
+  display: grid;
+  min-width: 0;
+  gap: 0.42rem;
+}
+
+.store-checklists-scorebar > div {
+  display: grid;
+  gap: 0.22rem;
+}
+
+.store-checklists-scorebar i {
+  display: block;
+  width: 100%;
+  height: 0.38rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(36, 28, 50, 0.08);
+}
+
+.store-checklists-scorebar i > b {
+  display: block;
+  height: 100%;
+  min-width: 0;
+  border-radius: inherit;
+}
+
+.store-checklists-scorebar i > b.store-checklists-tone-calm {
+  background: linear-gradient(90deg, var(--checklist-mint), var(--checklist-cyan));
+}
+
+.store-checklists-scorebar i > b.store-checklists-tone-warning {
+  background: linear-gradient(90deg, var(--checklist-amber), var(--checklist-danger));
+}
+
+.store-checklists-scorebar i > b.store-checklists-tone-danger {
+  background: var(--checklist-danger);
+}
+
+.store-checklists-scorebar i > b.store-checklists-tone-accent {
+  background: linear-gradient(90deg, var(--checklist-plum), var(--checklist-blue));
+}
+
+.store-checklists-scorebar i > b.store-checklists-tone-neutral {
+  background: rgba(108, 100, 120, 0.24);
+}
+
+.store-checklists-scorebar-empty i {
+  background: rgba(36, 28, 50, 0.06);
 }
 
 .store-checklist-modal-layout {

@@ -1,16 +1,19 @@
 /* Checklist flow prototype alignment. Session modal styles above remain unchanged. */
 .store-checklists-command-page {
-  --checklist-plum: #6d35f4;
-  --checklist-blue: #1f7af8;
-  --checklist-cyan: #16b8c4;
-  --checklist-mint: #10b981;
-  --checklist-amber: #f59e0b;
-  --checklist-danger: #f0445d;
-  --checklist-ink: #071432;
-  --checklist-muted: #65708c;
-  --checklist-soft: #f7f9fd;
-  --checklist-line: rgba(7, 20, 50, 0.11);
-  --checklist-soft-line: rgba(7, 20, 50, 0.075);
+  --checklist-plum: var(--store-command-plum, #7c3aed);
+  --checklist-blue: var(--store-command-blue, #3765ea);
+  --checklist-cyan: var(--store-command-cyan, #13a7b3);
+  --checklist-mint: var(--store-command-mint, #10b981);
+  --checklist-amber: var(--store-command-warning, #f59e0b);
+  --checklist-danger: var(--store-command-danger, #e11d48);
+  --checklist-plum-soft: var(--store-command-plum-soft, rgba(124, 58, 237, 0.12));
+  --checklist-cyan-soft: var(--store-command-cyan-soft, rgba(19, 167, 179, 0.12));
+  --checklist-danger-soft: rgba(225, 29, 72, 0.1);
+  --checklist-ink: var(--store-command-ink, #171421);
+  --checklist-muted: var(--store-command-muted, #6c6478);
+  --checklist-soft: var(--store-command-surface-soft, rgba(255, 255, 255, 0.68));
+  --checklist-line: var(--store-command-line, rgba(36, 28, 50, 0.1));
+  --checklist-soft-line: rgba(36, 28, 50, 0.075);
   display: grid;
   gap: 18px;
   color: var(--checklist-ink);
@@ -43,7 +46,7 @@
 
 .store-checklists-hero-copy p {
   margin: 8px 0 0;
-  color: #4c5875;
+  color: var(--checklist-muted);
   font-size: 13px;
   font-weight: 430;
   line-height: 1.45;
@@ -56,8 +59,7 @@
   flex: 0 0 auto;
 }
 
-.store-checklists-period-pill,
-.store-checklists-icon-button {
+.store-checklists-period-pill {
   border: 1px solid var(--checklist-line);
   background: rgba(255, 255, 255, 0.9);
   color: var(--checklist-ink);
@@ -79,32 +81,7 @@
 .store-checklists-period-pill svg {
   width: 15px;
   height: 15px;
-  color: #24304d;
-}
-
-.store-checklists-icon-button {
-  position: relative;
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border-radius: 999px;
-}
-
-.store-checklists-icon-button > span {
-  position: absolute;
-  top: 8px;
-  right: 9px;
-  width: 7px;
-  height: 7px;
-  border: 2px solid #fff;
-  border-radius: 999px;
-  background: var(--checklist-plum);
-}
-
-.store-checklists-icon-button svg {
-  width: 16px;
-  height: 16px;
+  color: var(--checklist-ink);
 }
 
 .store-checklists-command-metrics {
@@ -136,7 +113,7 @@
 }
 
 .store-checklists-metric.store-checklists-tone-accent .store-checklists-metric-icon {
-  background: rgba(109, 53, 244, 0.13);
+  background: var(--checklist-plum-soft);
   color: var(--checklist-plum);
 }
 
@@ -151,7 +128,7 @@
 }
 
 .store-checklists-metric.store-checklists-tone-neutral .store-checklists-metric-icon {
-  background: rgba(31, 122, 248, 0.12);
+  background: var(--checklist-cyan-soft);
   color: var(--checklist-blue);
 }
 
@@ -183,7 +160,7 @@
 }
 
 .store-checklists-metric small {
-  color: #526080;
+  color: var(--checklist-muted);
   font-size: 12px;
   font-weight: 470;
 }
@@ -225,7 +202,7 @@
 }
 
 .store-checklists-filter span {
-  color: #6f7891;
+  color: var(--checklist-muted);
   font-size: 10px;
   font-weight: 540;
   letter-spacing: 0;
@@ -265,7 +242,7 @@
 .store-checklists-search-shell svg {
   width: 15px;
   height: 15px;
-  color: #8190ad;
+  color: var(--store-command-quiet, #9e93aa);
 }
 
 .store-checklists-reset-button {
@@ -305,7 +282,7 @@
   border-right: 1px solid var(--checklist-line);
   border-radius: 0;
   background: transparent;
-  color: #344160;
+  color: var(--checklist-ink);
   padding: 0 14px;
   font-size: 13px;
   font-weight: 640;
@@ -337,14 +314,14 @@
   height: 24px;
   place-items: center;
   border-radius: 999px;
-  background: rgba(109, 53, 244, 0.11);
+  background: var(--checklist-plum-soft);
   color: var(--checklist-plum);
   font-size: 11px;
   font-weight: 680;
 }
 
 .store-checklists-tab[aria-selected="true"] {
-  background: linear-gradient(90deg, rgba(109, 53, 244, 0.04), rgba(31, 122, 248, 0.03));
+  background: linear-gradient(90deg, var(--checklist-plum-soft), rgba(255, 255, 255, 0.55));
   color: var(--checklist-plum);
   box-shadow: none;
 }
@@ -353,22 +330,22 @@
   position: absolute;
   inset: auto 0 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--checklist-plum), #873cff);
+  background: linear-gradient(90deg, var(--checklist-plum), var(--checklist-blue));
   content: "";
 }
 
 .store-checklists-tab-inbox {
-  color: #1f63da;
+  color: var(--checklist-blue);
 }
 
 .store-checklists-tab-inbox small {
-  background: rgba(31, 122, 248, 0.11);
-  color: #1f63da;
+  background: var(--checklist-cyan-soft);
+  color: var(--checklist-blue);
 }
 
 .store-checklists-tab-inbox[aria-selected="true"] {
-  background: linear-gradient(90deg, rgba(31, 122, 248, 0.075), rgba(255, 255, 255, 0.55));
-  color: #1f63da;
+  background: linear-gradient(90deg, var(--checklist-cyan-soft), rgba(255, 255, 255, 0.55));
+  color: var(--checklist-blue);
 }
 
 .store-checklists-tab-inbox[aria-selected="true"]::after {
@@ -376,22 +353,22 @@
 }
 
 .store-checklists-tab-incomplete {
-  background: rgba(240, 68, 93, 0.055);
-  color: #b4233a;
+  background: var(--checklist-danger-soft);
+  color: var(--checklist-danger);
 }
 
 .store-checklists-tab-incomplete small {
-  background: rgba(240, 68, 93, 0.12);
-  color: #c72340;
+  background: var(--checklist-danger-soft);
+  color: var(--checklist-danger);
 }
 
 .store-checklists-tab-incomplete[aria-selected="true"] {
-  background: linear-gradient(90deg, rgba(240, 68, 93, 0.09), rgba(255, 255, 255, 0.55));
-  color: #c72340;
+  background: linear-gradient(90deg, var(--checklist-danger-soft), rgba(255, 255, 255, 0.55));
+  color: var(--checklist-danger);
 }
 
 .store-checklists-tab-incomplete[aria-selected="true"]::after {
-  background: linear-gradient(90deg, var(--checklist-danger), #ff7085);
+  background: linear-gradient(90deg, var(--checklist-danger), var(--checklist-plum));
 }
 
 .store-checklists-command-card {
@@ -441,7 +418,7 @@
 
 .store-checklists-section-head p {
   margin: 8px 0 0;
-  color: #5a6683;
+  color: var(--checklist-muted);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -478,7 +455,7 @@
 
 .store-checklists-sort-button,
 .store-checklists-table-head > span {
-  color: #5d6885;
+  color: var(--checklist-muted);
   font-size: 11px;
   font-weight: 640;
   letter-spacing: 0;

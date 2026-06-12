@@ -39,7 +39,11 @@ export function ChecklistResultModal(input: {
   const lowScoreResponses = getLowScoreResponses(input.item.responses)
   const sections = groupChecklistResultResponses(input.item.responses)
   const hasAcknowledgement = input.item.acknowledgement !== null
-  const scorePercent = input.item.totalScore ?? Math.round((input.item.complianceRate ?? 0) * 100)
+  const scorePercent =
+    input.item.totalScore ??
+    (typeof input.item.complianceRate === 'number'
+      ? Math.round(input.item.complianceRate * 100)
+      : null)
   const digest = getChecklistResultDigest(input.t, input.locale, input.item)
 
   return (
@@ -66,8 +70,8 @@ export function ChecklistResultModal(input: {
           <ChecklistFact label={input.t('storeChecklists.templateType')} value={formatChecklistTemplateType(input.t, input.item.templateType)} />
           <ChecklistScoreBar
             label={input.t('storeChecklists.score')}
-            percent={scorePercent}
-            tone={scorePercent >= 70 ? 'calm' : 'warning'}
+            percent={scorePercent ?? 0}
+            tone={scorePercent === null ? 'neutral' : scorePercent >= 70 ? 'calm' : 'warning'}
             value={formatScoreValue(input.t, input.item.totalScore)}
           />
           <ChecklistFact
