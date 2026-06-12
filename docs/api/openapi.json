@@ -4383,7 +4383,14 @@
         "parameters": [],
         "responses": {
           "201": {
-            "description": ""
+            "description": "Browser session cookie bootstrap response with CSRF nonce.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserSessionCreateResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -4395,12 +4402,20 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Browser session cookie clear response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrowserSessionClearResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
           "AuthSession"
-        ]
+        ],
+        "security": []
       }
     }
   },
@@ -18290,6 +18305,41 @@
           "note": {
             "type": "string",
             "maxLength": 2000
+          }
+        }
+      },
+      "BrowserSessionCreateResponse": {
+        "type": "object",
+        "required": [
+          "csrfToken",
+          "expiresAt",
+          "sessionId",
+          "session"
+        ],
+        "properties": {
+          "csrfToken": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "sessionId": {
+            "type": "string"
+          },
+          "session": {
+            "$ref": "#/components/schemas/AuthSessionResponse"
+          }
+        }
+      },
+      "BrowserSessionClearResponse": {
+        "type": "object",
+        "required": [
+          "cleared"
+        ],
+        "properties": {
+          "cleared": {
+            "type": "boolean"
           }
         }
       }
