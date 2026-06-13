@@ -37,6 +37,8 @@ test('protected capacity runbook requires clear pass and blocked criteria', () =
   assert.match(runbook, /Any required token env var is absent/)
   assert.match(runbook, /Endpoint calls for blocked profiles are `0`/)
   assert.match(runbook, /protected capacity remains unproven/i)
+  assert.match(runbook, /Record the run as `failed` \/ No-Go, not `blocked`/)
+  assert.match(runbook, /does not reach concurrency `25` after any protected endpoint call/)
 })
 
 test('protected capacity runbook ships no raw auth material or broad launch claims', () => {

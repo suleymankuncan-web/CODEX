@@ -80,14 +80,14 @@ Record the run as blocked when any of these are true:
 - Result status is `blocked`.
 - Any requested profile is not runnable.
 - Endpoint calls for blocked profiles are `0`.
-- The output does not reach concurrency `25`.
 
 Blocked means protected capacity remains unproven. It is not a failed load test
 and it is not a pass.
 
-## Stop Criteria
+## Failed / No-Go Criteria
 
-Stop and keep the gate blocked if any measured level reports:
+Record the run as `failed` / No-Go, not `blocked`, if measurement starts and any
+level reports:
 
 - `429`.
 - Any `5xx`.
@@ -97,6 +97,8 @@ Stop and keep the gate blocked if any measured level reports:
 - p95 above the profile budget.
 
 Do not continue to a higher concurrency level after a stop criterion appears.
+If the output does not reach concurrency `25` after any protected endpoint call,
+the protected capacity gate is failed / No-Go for this run.
 
 ## Evidence Rules
 
