@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
+import { expectChecklistResultModalNoScoreContract, expectChecklistResultModalVisualContract } from './checklist-result-modal-assertions'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
@@ -53,14 +54,11 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
   await setupChecklistPage(page, ['STORE_MANAGER'], { requests })
   await page.goto('/store/checklists')
 
-  await page
-    .locator('.store-checklists-history-row')
-    .filter({ hasText: 'BM Result' })
-    .getByRole('button', { name: 'Detayı gör' })
-    .click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByText('Checklist sonucu', { exact: true })).toBeVisible()
-  await expect(page.getByText('Dikkat isteyen maddeler')).toBeVisible()
+  await page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' }).getByRole('button', { name: 'Detayı gör' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expectChecklistResultModalVisualContract(dialog)
+  await expectNoElementHorizontalOverflow(dialog)
   await expect(page.getByText('Eksik manken')).toBeVisible()
   await page.getByLabel('Kabul notu').fill('Mağaza sonucu gördü')
   await expect(page.getByText('Kabul ettim')).toBeVisible()
@@ -470,7 +468,8 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
   await resultRow.getByRole('button', { name: 'View details' }).click()
   const resultDialog = page.getByRole('dialog')
   await expect(resultDialog).toBeVisible()
-  await expect(resultDialog.getByText('Result summary')).toBeVisible()
+  await expect(resultDialog.getByText('Checklist result', { exact: true })).toBeVisible()
+  await expect(resultDialog.getByText('Color meaning', { exact: true })).toBeVisible()
   await page.getByLabel('Acknowledgement note').fill('Store acknowledged VM visit')
   await page.getByRole('button', { name: 'I acknowledge' }).click()
 
@@ -576,17 +575,7 @@ test('store manager checklist result treats unavailable score as neutral', async
 
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
-  await expect(dialog.locator('.store-checklist-modal-summary').getByText('No score').first()).toBeVisible()
-  await expect(dialog.locator('.store-checklist-modal-summary .store-checklists-fact').first()).toHaveCSS('display', 'grid')
-  await expect(
-    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar > div').first(),
-  ).toHaveCSS('display', 'grid')
-  await expect(
-    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar b.store-checklists-tone-neutral'),
-  ).toHaveCount(1)
-  await expect(
-    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar b.store-checklists-tone-warning'),
-  ).toHaveCount(0)
+  await expectChecklistResultModalNoScoreContract(dialog)
 })
 
 test('store manager checklist result modal stays usable on mobile width', async ({ page }) => {
@@ -599,6 +588,7 @@ test('store manager checklist result modal stays usable on mobile width', async 
   await expect(dialog.locator('.store-checklist-result-overview')).toBeVisible()
   await expect(dialog.locator('.store-checklist-result-findings')).toBeVisible()
   await expect(dialog.locator('.store-checklist-result-action-card')).toBeVisible()
+  await expectChecklistResultModalVisualContract(dialog)
   await expect(page.getByLabel(/Kabul notu|Acknowledgement note/)).toBeVisible()
   await expectNoElementHorizontalOverflow(dialog)
 })
@@ -1127,9 +1117,20 @@ function createChecklistAcknowledgementsFixture(
           commentText: fixtureLowScoreComment,
         },
         {
+          templateItemId: '55555555-5555-4555-8555-555555555557',
+          sectionName: 'Vitrin',
+          itemNo: 2,
+          itemText: 'Vitrin kampanya etiketi doğru',
+          responseType: 'score',
+          weight: 20,
+          maxScore: 10,
+          scoreValue: options.resultWithoutScore ? null : 7,
+          commentText: 'Takipte kalacak etiket düzeni',
+        },
+        {
           templateItemId: '55555555-5555-4555-8555-555555555556',
           sectionName: 'Kasa',
-          itemNo: 2,
+          itemNo: 3,
           itemText: 'Kasa alanı düzenli',
           responseType: 'score',
           weight: 40,

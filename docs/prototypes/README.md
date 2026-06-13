@@ -30,6 +30,9 @@ implemented and verified.
   Store Home dashboard visual contract for the Store Manager persona.
 - `docs/prototypes/store-home-region-manager-standard-v1.html` is the locked
   Store Home dashboard visual contract for the Region Manager persona.
+- `docs/prototypes/store-checklist-result-modal-v1.html` is the draft
+  checklist result modal visual prototype for Store Manager acknowledgement and
+  Region Manager review contexts.
 
 ## Locked Prototype Contracts
 
