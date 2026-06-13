@@ -71,6 +71,12 @@ test('operations control tower composes read-only readiness signals', async ({ p
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(main.getByText('Operations Control Tower')).toBeVisible()
+  const capacityPanel = page.getByTestId('operations-capacity-readiness')
+  await expect(capacityPanel).toBeVisible()
+  await expect(capacityPanel).toContainText('Public staging baseline')
+  await expect(capacityPanel).toContainText('Protected role baseline')
+  await expect(capacityPanel).toContainText('Blocked')
+  await expect(page.locator('body')).not.toContainText(/production ready|broad launch approved/i)
   await expect(main.getByRole('heading', { name: 'Pilot confidence signals should be visible in one place.' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Operator action list' })).toBeVisible()
   await expect(main.getByText('Open import queue')).toBeVisible()
@@ -149,6 +155,48 @@ test('operations route stays super-admin scoped', async ({ page }) => {
 
   await expect(page.getByRole('navigation', { name: 'Birincil' }).getByRole('link', { name: 'Operasyon' })).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Bu rol için rota kullanılamaz' })).toBeVisible()
+})
+
+test('operations capacity evidence expires on the documented boundary', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.clock.setFixedTime(new Date('2026-06-27T10:00:00.000Z'))
+  await page.goto('/admin/operations')
+
+  const capacityPanel = page.getByTestId('operations-capacity-readiness')
+  await expect(capacityPanel).toContainText('Passed')
+
+  await page.clock.setFixedTime(new Date('2026-06-28T10:00:00.000Z'))
+  await page.reload()
+
+  await expect(capacityPanel).toContainText('Stale')
+  await expect(capacityPanel).toContainText(
+    'Refresh public capacity evidence before using it for the controlled pilot decision.',
+  )
+  await expect(capacityPanel).not.toContainText(
+    'Controlled pilot can continue only under limited concurrency assumptions.',
+  )
+  await expect(capacityPanel).toContainText('Protected role baseline')
+  await expect(capacityPanel).toContainText('Blocked')
+})
+
+test('operations capacity panel refreshes without reload at the stale boundary', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.clock.install({ time: new Date('2026-06-27T23:59:59.000Z') })
+  await page.goto('/admin/operations')
+
+  const capacityPanel = page.getByTestId('operations-capacity-readiness')
+  await expect(capacityPanel).toContainText('Passed')
+  await expect(capacityPanel).toContainText('Controlled pilot can continue only under limited concurrency assumptions.')
+
+  await page.clock.runFor(1200)
+
+  await expect(capacityPanel).toContainText('Stale')
+  await expect(capacityPanel).toContainText(
+    'Refresh public capacity evidence before using it for the controlled pilot decision.',
+  )
+  await expect(capacityPanel).not.toContainText(
+    'Controlled pilot can continue only under limited concurrency assumptions.',
+  )
 })
 
 test('operations readiness treats queue preview failures as attention', async ({ page }) => {

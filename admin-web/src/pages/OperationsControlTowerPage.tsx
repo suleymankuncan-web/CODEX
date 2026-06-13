@@ -34,6 +34,7 @@ import { formatDateTime, getErrorMessage, mapHealthTone } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { DataQualitySignalPanel, type DataQualitySnapshot } from './operations-data-quality-signal-panel'
 import { OperationsApiFailureSnapshotPanel } from './operations-api-failure-snapshot-panel'
+import { OperationsCapacityReadinessPanel } from './operations-capacity-readiness-panel'
 import { OperationsHero, OperationsReadinessStrip, type SignalStatus } from './operations-hero'
 import { buildOperatorActions } from './operations-operator-action-model'
 import { OperatorActionListPanel } from './operations-operator-action-list'
@@ -441,10 +442,8 @@ export function OperationsControlTowerPage() {
 
       <OperatorActionListPanel actions={operatorActions} t={t} />
 
-      <OperationsReadinessStrip
-        operationalPressure={operationalPressure} providerBlockerCount={providerBlockers.length} readiness={readiness} t={t}
-      />
-
+      <OperationsReadinessStrip operationalPressure={operationalPressure} providerBlockerCount={providerBlockers.length} readiness={readiness} t={t} />
+      <OperationsCapacityReadinessPanel t={t} />
       <AdminMetricStrip
         items={summaryCards.map((card): AdminMetricStripItem => ({
           description: card.note,
