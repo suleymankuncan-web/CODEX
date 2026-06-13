@@ -8,6 +8,10 @@
 
 **Tech Stack:** React, TypeScript, shadcn/ui Dialog/Button/Textarea, Tailwind v4 utility class sistemi, lucide-react iconlari, Playwright e2e.
 
+**Implementation Status:** Completed in PR #712 on 2026-06-13. This document is
+now the implementation contract and closeout reference, not an open runtime
+task list.
+
 ---
 
 ## Design Read

@@ -4,8 +4,9 @@ Date: 2026-06-13
 
 Plan: `docs/plans/store-persona-polish-pr-train-v1.md`
 
-Status: runtime PR train closed; final staging evidence partially closed by
-available persona input.
+Status: runtime PR train closed; checklist result modal prototype parity
+follow-up closed; final staging evidence partially closed by available persona
+input.
 
 ## Merged PRs
 
@@ -17,6 +18,10 @@ available persona input.
   2026-06-13T00:52:54Z.
 - PR #710, `codex/store-visual-polish-copy`, merged
   2026-06-13T01:24:09Z.
+- PR #711, `docs: record store persona polish closeout`, merged
+  2026-06-13T01:31:16Z.
+- PR #712, `codex/store-checklist-result-modal-prototype-parity`, merged
+  2026-06-13T09:24:37Z.
 
 GitHub check evidence after merge:
 
@@ -27,6 +32,9 @@ GitHub check evidence after merge:
 - PR #709: `frontend-release-check`, `release-check`, `release-rehearsal`,
   `Vercel`, and `Vercel Preview Comments` all succeeded.
 - PR #710: `frontend-release-check`, `release-check`, `release-rehearsal`,
+  `Vercel`, and `Vercel Preview Comments` all succeeded.
+- PR #711: docs closeout merge succeeded.
+- PR #712: `frontend-release-check`, `release-check`, `release-rehearsal`,
   `Vercel`, and `Vercel Preview Comments` all succeeded.
 
 ## User Finding Status
@@ -44,6 +52,9 @@ GitHub check evidence after merge:
 10. Below-norm start date and duration remain parked because the current
     frontend workforce/headcount response does not carry a real shortage-start
     timestamp. No date or duration was fabricated.
+11. Checklist result modal prototype parity is closed: the approved prototype
+    is now production-backed with the centered score ring, color legend, item
+    tones, and removed old summary/attention bands.
 
 ## Contract Impact
 
@@ -52,6 +63,30 @@ API shape, DB schema, auth/permission semantics, scoring/ranking/checklist
 weights, queue/import/provider behavior, and business workflows are unchanged.
 
 The Lufian/header brand area was not changed.
+
+## Checklist Result Modal Prototype Parity Addendum
+
+Prototype: `docs/prototypes/store-checklist-result-modal-v1.html`
+
+Plan: `docs/plans/store-checklist-result-modal-prototype-implementation-v1.md`
+
+Merged implementation PR: #712.
+
+Local verification before push:
+
+- `git diff --check`
+- `npm.cmd --prefix admin-web run lint`
+- `npm.cmd --prefix admin-web run build`
+- `node --test scripts/backend-architecture-boundary-guard.test.mjs scripts/file-size-guard.test.mjs`
+- `npm.cmd --prefix admin-web run test:e2e -- checklist-today-surfaces.spec.ts --grep "acknowledgement language|result modal stays usable|unavailable score"`
+- `npm.cmd --prefix admin-web run test:e2e -- checklist-today-surfaces.spec.ts --grep "visual merchandiser completed checklist"`
+- `npm.cmd --prefix admin-web run test:e2e -- store-action-plans.spec.ts --grep "checklist remediation"`
+- `npm.cmd run check:release`
+
+Result: all passed. The first local root `check:release` run exposed one stale
+English e2e expectation for `Result summary`; it was updated to the new
+`Checklist result` / `Color meaning` modal contract, then the full root release
+gate passed.
 
 ## Final Staging Persona Smoke
 
@@ -99,5 +134,6 @@ Limitations:
 
 ## Final Local State
 
-At closeout, local `main` is aligned with `origin/main` at
-`7eab4f34 fix: soften store action surfaces (#710)` with a clean working tree.
+After PR #712, local `main` is aligned with `origin/main` at
+`c26d7b48 [codex] Store checklist result modal prototype parity (#712)` with a
+clean working tree.

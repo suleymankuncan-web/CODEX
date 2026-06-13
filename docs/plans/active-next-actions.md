@@ -98,6 +98,20 @@ Current execution loop under Tier A:
   `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence-blocked.md`.
   Do not claim broad production readiness from this train.
 
+2026-06-13 Store UI polish state:
+
+- Store Persona Polish PR Train V1 runtime fixes are closed through PR #707 to
+  PR #710, with docs closeout PR #711.
+- Checklist result modal prototype parity is closed by PR #712. The approved
+  `docs/prototypes/store-checklist-result-modal-v1.html` reference is now
+  implemented in the production Store checklist result modal.
+- This did not change API shape, DB schema, auth/permission semantics,
+  scoring/ranking/checklist weights, queue/import/provider behavior, checklist
+  remediation/task generation, or the Lufian/header brand area.
+- Do not open another Store UI polish PR from this train unless a fresh pilot
+  session or owner review produces a concrete P0/P1 blocker or same-surface P2
+  batch.
+
 Tier B - broad-production/operational hardening:
 
 Controlled-pilot versions of Redis/BullMQ, alerting, and logical recovery are
