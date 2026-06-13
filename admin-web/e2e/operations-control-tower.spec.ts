@@ -179,6 +179,26 @@ test('operations capacity evidence expires on the documented boundary', async ({
   await expect(capacityPanel).toContainText('Blocked')
 })
 
+test('operations capacity panel refreshes without reload at the stale boundary', async ({ page }) => {
+  await setInitialLocale(page, 'en')
+  await page.clock.install({ time: new Date('2026-06-27T23:59:59.000Z') })
+  await page.goto('/admin/operations')
+
+  const capacityPanel = page.getByTestId('operations-capacity-readiness')
+  await expect(capacityPanel).toContainText('Passed')
+  await expect(capacityPanel).toContainText('Controlled pilot can continue only under limited concurrency assumptions.')
+
+  await page.clock.runFor(1200)
+
+  await expect(capacityPanel).toContainText('Stale')
+  await expect(capacityPanel).toContainText(
+    'Refresh public capacity evidence before using it for the controlled pilot decision.',
+  )
+  await expect(capacityPanel).not.toContainText(
+    'Controlled pilot can continue only under limited concurrency assumptions.',
+  )
+})
+
 test('operations readiness treats queue preview failures as attention', async ({ page }) => {
   await setInitialLocale(page, 'en')
   await page.unroute('**/api/integrations/import-batches/needs-action?**')

@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from 'react'
+
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import {
   getCapacityReadinessSnapshot,
@@ -13,8 +15,20 @@ import {
 } from './operations-surface-primitives'
 
 function OperationsCapacityReadinessPanel({ t }: { t: TranslateFunction }) {
-  const items = getCapacityReadinessSnapshot()
+  const [now, setNow] = useState(() => new Date())
+  const items = useMemo(() => getCapacityReadinessSnapshot(now), [now])
   const panelStatus = resolvePanelStatus(items)
+
+  useEffect(() => {
+    const nextRefreshAt = getNextStaleBoundaryTime(items, now)
+    if (!nextRefreshAt) return
+
+    const timeoutId = window.setTimeout(() => {
+      setNow(new Date())
+    }, Math.max(0, nextRefreshAt - now.getTime()) + 100)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [items, now])
 
   return (
     <OperationsPanel
@@ -108,6 +122,28 @@ function resolvePilotDecisionKey(items: CapacityReadinessItem[]): TranslationKey
   return items.some((item) => item.decisionImpact === 'pilot_refresh_required')
     ? 'operations.capacity.decision.pilot_refresh_required'
     : 'operations.capacity.decision.pilot_allowed_with_limits'
+}
+
+function getNextStaleBoundaryTime(items: CapacityReadinessItem[], now: Date): number | null {
+  const nowTime = now.getTime()
+  const nextBoundary = items
+    .flatMap((item) => {
+      if (item.status === 'stale' || !item.staleOnOrAfter) return []
+      return [getUtcDateStartTime(item.staleOnOrAfter)]
+    })
+    .filter((time) => time > nowTime)
+    .sort((left, right) => left - right)[0]
+
+  return nextBoundary ?? null
+}
+
+function getUtcDateStartTime(utcDate: string): number {
+  const [yearText, monthText, dayText] = utcDate.split('-')
+  if (!yearText || !monthText || !dayText) {
+    throw new Error(`Invalid UTC date: ${utcDate}`)
+  }
+
+  return Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText))
 }
 
 export { OperationsCapacityReadinessPanel }
