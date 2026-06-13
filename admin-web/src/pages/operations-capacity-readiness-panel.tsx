@@ -24,7 +24,7 @@ function OperationsCapacityReadinessPanel({ t }: { t: TranslateFunction }) {
       badge={<OperationsStatusBadge tone={panelStatus.tone}>{t(panelStatus.labelKey)}</OperationsStatusBadge>}
     >
       <OperationsInlineState tone="warning">
-        <span className="tw:block">{t('operations.capacity.decision.pilot_allowed_with_limits')}</span>
+        <span className="tw:block">{t(resolvePilotDecisionKey(items))}</span>
         <span className="tw:mt-1 tw:block">{t('operations.capacity.decision.broad_launch_blocked')}</span>
       </OperationsInlineState>
       <OperationsQueueList
@@ -97,8 +97,17 @@ function getDecisionKey(decisionImpact: CapacityDecisionImpact): TranslationKey 
   if (decisionImpact === 'pilot_allowed_with_limits') {
     return 'operations.capacity.decision.pilot_allowed_with_limits'
   }
+  if (decisionImpact === 'pilot_refresh_required') {
+    return 'operations.capacity.decision.pilot_refresh_required'
+  }
 
   return 'operations.capacity.decision.broad_launch_blocked'
+}
+
+function resolvePilotDecisionKey(items: CapacityReadinessItem[]): TranslationKey {
+  return items.some((item) => item.decisionImpact === 'pilot_refresh_required')
+    ? 'operations.capacity.decision.pilot_refresh_required'
+    : 'operations.capacity.decision.pilot_allowed_with_limits'
 }
 
 export { OperationsCapacityReadinessPanel }

@@ -2,7 +2,7 @@ import type { TranslationKey } from '../features/localization/dictionary'
 
 export type CapacityEvidenceStatus = 'passed' | 'blocked' | 'stale'
 export type CapacityEvidenceTone = 'calm' | 'warning'
-export type CapacityDecisionImpact = 'pilot_allowed_with_limits' | 'broad_launch_blocked'
+export type CapacityDecisionImpact = 'pilot_allowed_with_limits' | 'pilot_refresh_required' | 'broad_launch_blocked'
 
 export type CapacityReadinessItem = {
   id: 'public-staging-baseline' | 'protected-role-baseline'
@@ -73,8 +73,16 @@ function toReadinessItem(
     staleOnOrAfter: item.staleOnOrAfter,
     summaryKey: item.summaryKey,
     nextActionKey: item.nextActionKey,
-    decisionImpact: item.decisionImpact,
+    decisionImpact: resolveDecisionImpact(item.decisionImpact, status),
   }
+}
+
+function resolveDecisionImpact(
+  decisionImpact: CapacityDecisionImpact,
+  status: CapacityEvidenceStatus,
+): CapacityDecisionImpact {
+  if (decisionImpact === 'pilot_allowed_with_limits' && status === 'stale') return 'pilot_refresh_required'
+  return decisionImpact
 }
 
 function resolveStatus(
@@ -102,4 +110,3 @@ function isOnOrAfterUtcDate(now: Date, utcDate: string): boolean {
 
   return now.getTime() >= Date.UTC(year, month - 1, day)
 }
-

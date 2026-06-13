@@ -19,6 +19,8 @@ export const adminOperationsCapacityTr = {
   'operations.capacity.status.stale': 'Eski kanıt',
   'operations.capacity.decision.pilot_allowed_with_limits':
     'Kontrollü pilot sınırlı eşzamanlılık varsayımıyla devam edebilir.',
+  'operations.capacity.decision.pilot_refresh_required':
+    'Kontrollü pilot kararı için public kapasite kanıtı yenilenmelidir.',
   'operations.capacity.decision.broad_launch_blocked':
     'Geniş lansman, protected role kapasite kanıtı temiz geçmeden bloklu kalır.',
 } as const
@@ -44,7 +46,8 @@ export const adminOperationsCapacityEn: Record<keyof typeof adminOperationsCapac
   'operations.capacity.status.stale': 'Stale',
   'operations.capacity.decision.pilot_allowed_with_limits':
     'Controlled pilot can continue only under limited concurrency assumptions.',
+  'operations.capacity.decision.pilot_refresh_required':
+    'Refresh public capacity evidence before using it for the controlled pilot decision.',
   'operations.capacity.decision.broad_launch_blocked':
     'Broad launch remains blocked until protected-role capacity evidence passes cleanly.',
 }
-

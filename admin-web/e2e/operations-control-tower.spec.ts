@@ -169,6 +169,12 @@ test('operations capacity evidence expires on the documented boundary', async ({
   await page.reload()
 
   await expect(capacityPanel).toContainText('Stale')
+  await expect(capacityPanel).toContainText(
+    'Refresh public capacity evidence before using it for the controlled pilot decision.',
+  )
+  await expect(capacityPanel).not.toContainText(
+    'Controlled pilot can continue only under limited concurrency assumptions.',
+  )
   await expect(capacityPanel).toContainText('Protected role baseline')
   await expect(capacityPanel).toContainText('Blocked')
 })
