@@ -317,6 +317,32 @@
   color: var(--store-command-plum-deep);
 }
 
+.store-command-soft-action {
+  border-color: rgba(124, 58, 237, 0.2);
+  background: linear-gradient(135deg, var(--store-command-plum-soft), var(--store-command-cyan-soft));
+  box-shadow: 0 12px 26px rgba(32, 24, 48, 0.08);
+  color: var(--store-command-plum-deep);
+}
+
+.store-command-soft-action:hover,
+.store-command-soft-action:focus-visible {
+  border-color: rgba(124, 58, 237, 0.25);
+  color: var(--store-command-plum-deep);
+}
+
+.store-command-muted-action {
+  border-color: var(--store-command-line);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: none;
+  color: var(--store-command-muted);
+}
+
+.store-command-muted-action:hover,
+.store-command-muted-action:focus-visible {
+  border-color: var(--store-command-line-strong);
+  color: var(--store-command-plum-deep);
+}
+
 .store-command-home [data-slot='button']:focus-visible,
 .store-command-home [data-slot='badge']:focus-visible {
   outline: 4px solid var(--store-command-focus);

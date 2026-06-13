@@ -271,10 +271,12 @@ function RequestAction(input: { row: RequestCenterRow }) {
     <Button
       asChild
       size="sm"
-      variant={input.row.actionPrimary ? 'default' : 'outline'}
+      variant="outline"
       className={cn(
         'tw:h-9 tw:rounded-xl tw:px-3 tw:text-xs tw:font-semibold',
-        input.row.actionPrimary ? 'tw:shadow-[0_12px_24px_rgba(109,71,255,0.22)]' : undefined,
+        input.row.actionPrimary
+          ? 'store-command-soft-action'
+          : 'store-command-muted-action',
       )}
     >
       <Link to={input.row.actionTo}>

@@ -25,6 +25,8 @@ import { StoreEmptyState, StoreSurfacePage } from './store-surface-primitives'
 const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR'] as const
 const rowGridClass =
   'tw:grid tw:grid-cols-[minmax(220px,0.88fr)_52px_repeat(4,minmax(70px,0.26fr))_minmax(92px,0.28fr)_minmax(92px,0.28fr)_minmax(62px,auto)] tw:items-center tw:gap-2.5'
+const regionStoreActionClass =
+  'store-command-soft-action tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-xl tw:border tw:px-3 tw:text-sm tw:font-semibold tw:transition'
 
 export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
   const summary = buildRegionSummary(model)
@@ -311,7 +313,7 @@ function RegionStoreRow({ model, row }: { model: StoreKpiHighlightsPageModel; ro
       <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
       <Link
         aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
-        className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-xl tw:bg-[#6d4cff] tw:px-3 tw:text-sm tw:font-semibold tw:text-white tw:shadow-[0_12px_24px_rgba(109,76,255,0.22)] tw:transition hover:tw:bg-[#5d3ef2]"
+        className={regionStoreActionClass}
         to={model.getRegionStoreDetailPath(row.storeId)}
       >
         {model.t('storeKpis.regionOpenAction')}
@@ -349,7 +351,7 @@ function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageMo
       </div>
       <Link
         aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
-        className="tw:col-start-3 tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-xl tw:bg-[#6d4cff] tw:px-3 tw:text-sm tw:font-semibold tw:text-white tw:shadow-[0_12px_24px_rgba(109,76,255,0.22)] tw:transition hover:tw:bg-[#5d3ef2]"
+        className={`tw:col-start-3 ${regionStoreActionClass}`}
         to={model.getRegionStoreDetailPath(row.storeId)}
       >
         {model.t('storeKpis.regionOpenAction')}

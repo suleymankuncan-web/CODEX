@@ -414,7 +414,7 @@ function WorkbenchRowView(input: {
             t={input.t}
             onCreated={input.onActionPlanCreated}
             triggerLabel={input.t('storeTasks.rowPlanAction')}
-            triggerClassName="tw:border-0 tw:bg-gradient-to-r tw:from-[#6847f5] tw:to-[#4f7cf7] tw:text-white tw:shadow-[0_15px_30px_rgba(84,75,224,0.22)] hover:tw:text-white"
+            triggerClassName={softPlumActionClass}
           />
         ) : null}
         {!plan && input.row.workflowItem ? (
@@ -470,11 +470,11 @@ function SourceLink(input: {
     <Button
       asChild
       size="sm"
-      variant={variant === 'secondary' ? 'outline' : 'default'}
+      variant="outline"
       className={cn(
         variant === 'primary'
-          ? 'tw:border-0 tw:bg-gradient-to-r tw:from-[#6847f5] tw:to-[#4f7cf7] tw:text-white tw:shadow-[0_15px_30px_rgba(84,75,224,0.22)] hover:tw:text-white'
-          : 'tw:border-[#dbe5f2] tw:bg-white/88 tw:text-[#1d2a4a] hover:tw:bg-white hover:tw:text-[#1d2a4a]',
+          ? softPlumActionClass
+          : 'store-command-muted-action hover:tw:bg-white',
       )}
     >
       <Link to={safePath}>
@@ -505,6 +505,8 @@ const toneSurfaceClasses: Record<StoreSurfaceTone, string> = {
   neutral: 'tw:border-[#dbe5f2] tw:bg-white/80 tw:text-[#071631]',
   warning: 'tw:border-[#f59e0b]/25 tw:bg-[#fff4df] tw:text-[#925900]',
 }
+
+const softPlumActionClass = 'store-command-soft-action'
 
 const summaryIconClasses: Record<StoreSurfaceTone, string> = {
   accent: 'tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:text-[#08798d]',
