@@ -115,12 +115,26 @@ export function formatWorkflowPrimaryActionLabel(t: TranslateFunction, item: Wor
       return t('storeTasks.primary.kpiDetail')
     case 'store_action_plan':
       if (item.inboxStatus === 'informational') {
-        return item.primaryActionLabel
+        return formatStoreActionPlanSourceActionLabel(t, item)
       }
       return t('storeTasks.primary.actionPlan')
     default:
       return item.primaryActionLabel
   }
+}
+
+function formatStoreActionPlanSourceActionLabel(t: TranslateFunction, item: WorkflowInboxItem) {
+  if (item.deepLink.startsWith('/store/checklists')) {
+    return t('storeTasks.sourceAction.checklist')
+  }
+  if (item.deepLink.startsWith('/store/kpis')) {
+    return t('storeTasks.sourceAction.kpi')
+  }
+  if (item.deepLink.startsWith('/store/approvals') || item.deepLink.startsWith('/store/targets')) {
+    return t('storeTasks.sourceAction.target')
+  }
+
+  return t('storeTasks.secondary.actionPlan')
 }
 
 export function formatWorkflowInboxStatusLabel(t: TranslateFunction, status: WorkflowInboxItem['inboxStatus']) {
