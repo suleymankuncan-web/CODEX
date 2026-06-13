@@ -169,6 +169,64 @@ Result: `blocked`
 | `region-manager` | blocked | no bearer token available | 0 |
 | `admin` | blocked | no bearer token available | 0 |
 
+## Protected Capacity Runbook Refresh - 2026-06-13
+
+Runbook:
+
+- `docs/plans/protected-capacity-runbook-v1.md`
+
+Token presence check, values not printed:
+
+| Required env | Present in current shell | Present by name in `admin-web/.env.local` |
+| --- | --- | --- |
+| `CAPACITY_STORE_MANAGER_TOKEN` | no | no |
+| `CAPACITY_REGION_MANAGER_TOKEN` | no | no |
+| `CAPACITY_SUPER_ADMIN_TOKEN` | no | no |
+
+Blocked documentation command:
+
+```powershell
+$env:CAPACITY_PROFILES='store-manager,region-manager,admin'
+$env:CAPACITY_LEVELS='1,5,10,25'
+$env:CAPACITY_MAX_LEVEL='25'
+$env:CAPACITY_TIMEOUT_MS='45000'
+$env:CAPACITY_ALLOW_BLOCKED='true'
+npm.cmd run capacity:read
+```
+
+Result: `blocked`
+
+Sanitized summary:
+
+| Field | Value |
+| --- | --- |
+| Environment | `staging` |
+| API | `https://api-staging.hr-axis.com/api` |
+| Requested profiles | `store-manager`, `region-manager`, `admin` |
+| Requested levels | `1`, `5`, `10`, `25` |
+| Runnable profiles | `0` |
+| Blocked profiles | `3` |
+| Measured levels | `0` |
+| Failed levels | `0` |
+| Max measured concurrency | `0` |
+
+Profile result:
+
+| Profile | Status | Endpoint Calls | Reason |
+| --- | --- | ---: | --- |
+| `store-manager` | blocked | 0 | no fresh role-specific bearer token available |
+| `region-manager` | blocked | 0 | no fresh role-specific bearer token available |
+| `admin` | blocked | 0 | no fresh super-admin bearer token available |
+
+Interpretation:
+
+- Protected route capacity remains blocked and unproven.
+- No protected endpoint call was executed for this blocked run.
+- The blocked command is evidence that missing tokens remain fail-closed; it is
+  not an acceptance pass.
+- Public health capacity evidence is still separate from protected role
+  capacity evidence.
+
 Required token env names for the next protected run:
 
 - Store manager: `CAPACITY_STORE_MANAGER_TOKEN`,
