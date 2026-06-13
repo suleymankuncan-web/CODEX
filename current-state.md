@@ -113,6 +113,14 @@ Current maintenance baseline:
   Manager staging cookie-session smoke passed; Store Manager smoke remains
   input-blocked because no separate Store Manager persona env exists in the
   local ignored env file.
+- Capacity 700 User Baseline V1 evidence is recorded at
+  `docs/evidence/readiness/2026-06-13-capacity-700-user-baseline.md`.
+  The repeatable read-only harness is `npm.cmd run capacity:read`; public
+  staging health passed through concurrency `25`, while protected
+  store-manager/region-manager/admin capacity remains blocked until fresh
+  role-specific bearer tokens are available. This evidence supports only
+  controlled-pilot/registered-user plausibility, not a 700-concurrent protected
+  user approval.
 - Project Health Uplift PR Train V1 is closed through PR #679. Plan:
   `docs/plans/project-health-uplift-pr-train-v1.md`. PR #674 consolidated
   request-intake/process links without creating a new policy; PR #675 added the
