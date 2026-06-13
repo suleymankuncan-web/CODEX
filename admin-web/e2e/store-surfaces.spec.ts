@@ -1262,6 +1262,8 @@ test('region manager store KPI overview waits for selected store before loading 
   await expect(page.getByRole('heading', { name: 'Bölge Performansı' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
   await expect(page.getByText('Bölge KPI değerleri')).toBeVisible()
+  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /BM Checklist/ })).toBeVisible()
+  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /VM Checklist/ })).toBeVisible()
   await expect(
     page.getByTestId('store-kpis-region-overview').getByText('Region Store 9').first(),
   ).toBeVisible()
@@ -3203,7 +3205,8 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
   await expect(page.locator('td[data-label="KPI summary"]')).toHaveCount(0)
   await expect(rankingTable.locator('thead')).toContainText('BM Checklist')
   await expect(rankingTable.locator('thead')).toContainText('VM Checklist')
-  await expect(rankingTable.locator('thead')).not.toContainText('CR')
+  await expect(rankingTable.locator('thead')).toContainText('CR')
+  await expect(rankingTable.locator('tbody')).toContainText('19,70%')
   await expect(rankingTable.locator('tbody')).toContainText('371,09%')
   await expect(rankingTable.locator('tbody')).not.toContainText('371.088.457%')
   await expect(rankingTable.locator('tbody')).toContainText('Yapılmadı')

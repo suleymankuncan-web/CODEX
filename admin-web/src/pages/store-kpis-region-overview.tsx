@@ -24,7 +24,7 @@ import { StoreEmptyState, StoreSurfacePage } from './store-surface-primitives'
 
 const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR'] as const
 const rowGridClass =
-  'tw:grid tw:grid-cols-[minmax(220px,0.88fr)_52px_repeat(4,minmax(70px,0.26fr))_minmax(118px,0.34fr)_minmax(34px,1fr)_minmax(62px,auto)] tw:items-center tw:gap-2.5'
+  'tw:grid tw:grid-cols-[minmax(220px,0.88fr)_52px_repeat(4,minmax(70px,0.26fr))_minmax(92px,0.28fr)_minmax(92px,0.28fr)_minmax(62px,auto)] tw:items-center tw:gap-2.5'
 
 export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
   const summary = buildRegionSummary(model)
@@ -129,8 +129,8 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
                   <RegionSortButton label="UPT" model={model} sortKey="UPT" centered />
                   <RegionSortButton label="ATV" model={model} sortKey="ATV" centered />
                   <RegionSortButton label="CR" model={model} sortKey="CR" centered />
-                  <RegionSortButton label={model.t('storeKpis.regionChecklistColumn')} model={model} sortKey="BM_CHECKLIST" centered />
-                  <span aria-hidden="true" />
+                  <RegionSortButton label="BM Checklist" model={model} sortKey="BM_CHECKLIST" centered />
+                  <RegionSortButton label="VM Checklist" model={model} sortKey="VM_CHECKLIST" centered />
                   <span className="tw:text-center">{model.t('storeKpis.regionActionColumn')}</span>
                 </div>
                 <div className="tw:grid tw:px-3.5 tw:pb-3">
@@ -307,11 +307,8 @@ function RegionStoreRow({ model, row }: { model: StoreKpiHighlightsPageModel; ro
           noData={noData}
         />
       ))}
-      <div className="tw:flex tw:flex-wrap tw:justify-center tw:gap-1.5">
-        <ChecklistChip label="BM" metric={getMetricByCode(row.metrics, 'BM_CHECKLIST')} model={model} />
-        <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
-      </div>
-      <span aria-hidden="true" />
+      <ChecklistChip label="BM" metric={getMetricByCode(row.metrics, 'BM_CHECKLIST')} model={model} />
+      <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
       <Link
         aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
         className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-xl tw:bg-[#6d4cff] tw:px-3 tw:text-sm tw:font-semibold tw:text-white tw:shadow-[0_12px_24px_rgba(109,76,255,0.22)] tw:transition hover:tw:bg-[#5d3ef2]"
@@ -386,14 +383,14 @@ function ChecklistChip(input: {
 
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return (
-      <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:rounded-full tw:bg-[#ffe6ee] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#c52d54]">
+      <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[#ffe6ee] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#c52d54]">
         {input.label} {input.model.t('storeKpis.regionChecklistPassive')}
       </span>
     )
   }
 
   return (
-    <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:rounded-full tw:bg-[#ddf8ed] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#087751]">
+    <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[#ddf8ed] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#087751]">
       {input.label} <b className="tw:ml-1 tw:font-semibold">{formatNumber(input.model.locale, value, input.model.t('common.noData'), 0)}</b>
     </span>
   )
