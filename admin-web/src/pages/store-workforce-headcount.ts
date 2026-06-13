@@ -2,6 +2,8 @@ import type { StoreHeadcountGap } from '../features/workforce/api'
 import { formatNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 
+export type NormStaffingStatusKind = 'short' | 'balanced' | 'over' | 'notConfigured'
+
 export function getMonthRange(now: Date) {
   const year = now.getFullYear()
   const month = now.getMonth()
@@ -32,6 +34,29 @@ export function formatNormActualLabel(input: {
 export function hasPlannedHeadcount(input: StoreHeadcountGap | null) {
   const plannedHeadcount = toFiniteNumber(input?.plannedHeadcount)
   return plannedHeadcount !== null && plannedHeadcount > 0
+}
+
+export function interpretNormStaffingStatus(input: {
+  actualFallback: number
+  headcountGap: StoreHeadcountGap | null
+}): NormStaffingStatusKind {
+  const plannedHeadcount = toFiniteNumber(input.headcountGap?.plannedHeadcount)
+  const activeHeadcount = toFiniteNumber(input.headcountGap?.activeHeadcount) ?? input.actualFallback
+  if (plannedHeadcount === null || plannedHeadcount <= 0 || !Number.isFinite(activeHeadcount)) return 'notConfigured'
+  if (plannedHeadcount > activeHeadcount) return 'short'
+  if (activeHeadcount > plannedHeadcount) return 'over'
+  return 'balanced'
+}
+
+export function formatNormStaffingStatusLabel(input: {
+  kind: NormStaffingStatusKind
+  locale: AppLocale
+  notConfiguredLabel: string
+}) {
+  if (input.kind === 'short') return input.locale === 'en' ? 'Short' : 'Eksik'
+  if (input.kind === 'balanced') return input.locale === 'en' ? 'Balanced' : 'Tam'
+  if (input.kind === 'over') return input.locale === 'en' ? 'Over' : 'Fazla'
+  return input.notConfiguredLabel
 }
 
 function formatDateOnly(date: Date) {
