@@ -426,7 +426,7 @@
   position: relative;
   z-index: 10;
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(6, minmax(70px, 1fr));
+  grid-template-columns: minmax(220px, 1.4fr) repeat(7, minmax(70px, 1fr));
   gap: 8px;
   align-items: center;
   max-width: 1180px;
