@@ -94,6 +94,20 @@ Current maintenance baseline:
   computed-style e2e guards for future drift. API shape, DB schema,
   auth/permission semantics, scoring/ranking/checklist weights, queue/import
   behavior, and business workflows remained unchanged.
+- Store Persona Polish PR Train V1 is closed through PR #707 to PR #710. Plan:
+  `docs/plans/store-persona-polish-pr-train-v1.md`; closeout evidence:
+  `docs/evidence/store-persona-polish-pr-train-v1-closeout-2026-06-13.md`.
+  PR #707 kept cancelled checklist drafts out of visit dates and redesigned the
+  checklist result detail modal; PR #708 interpreted Norm Kadro as
+  `Eksik`/`Tam`/`Fazla` and parked below-norm date/duration until a real
+  shortage-start timestamp exists; PR #709 added Rankings `CR` and split Region
+  Manager `BM Checklist`/`VM Checklist`; PR #710 softened Store action surfaces
+  and normalized Store task source copy. API shape, DB schema, auth/permission
+  semantics, scoring/ranking/checklist weights, queue/import/provider behavior,
+  business workflows, and the Lufian/header brand area remained unchanged. Final
+  Region Manager staging cookie-session smoke passed; Store Manager smoke
+  remains input-blocked because no separate Store Manager persona env exists in
+  the local ignored env file.
 - Project Health Uplift PR Train V1 is closed through PR #679. Plan:
   `docs/plans/project-health-uplift-pr-train-v1.md`. PR #674 consolidated
   request-intake/process links without creating a new policy; PR #675 added the
