@@ -58,9 +58,27 @@ test('store manager checklist surface keeps acknowledgement language', async ({ 
     .filter({ hasText: 'BM Result' })
     .getByRole('button', { name: 'Detayı gör' })
     .click()
-  await expect(page.getByRole('dialog')).toBeVisible()
-  await expect(page.getByText('Checklist sonucu', { exact: true })).toBeVisible()
-  await expect(page.getByText('Dikkat isteyen maddeler')).toBeVisible()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('Kontrol listesi sonucu', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('Sonuç özeti')).toHaveCount(0)
+  await expect(dialog.getByText('Dikkat isteyen maddeler')).toHaveCount(0)
+  const legend = dialog.getByLabel('Renk anlamı')
+  await expect(legend.getByText('Renk anlamı', { exact: true })).toBeVisible()
+  await expect(legend.getByText('Düşük', { exact: true })).toBeVisible()
+  await expect(legend.getByText('Takip', { exact: true })).toBeVisible()
+  await expect(legend.getByText('İyi', { exact: true })).toBeVisible()
+  await expect(dialog.locator('.store-checklist-result-item-danger')).toHaveCount(1)
+  await expect(dialog.locator('.store-checklist-result-item-warning')).toHaveCount(1)
+  await expect(dialog.locator('.store-checklist-result-item-success')).toHaveCount(1)
+  const scoreCenterDelta = await dialog.locator('.store-checklist-result-score-ring').evaluate((element) => {
+    const ring = element.getBoundingClientRect()
+    const score = element.querySelector('strong')?.getBoundingClientRect()
+    if (!score) return 999
+    return Math.abs((score.left + score.width / 2) - (ring.left + ring.width / 2))
+  })
+  expect(scoreCenterDelta).toBeLessThanOrEqual(1)
+  await expectNoElementHorizontalOverflow(dialog)
   await expect(page.getByText('Eksik manken')).toBeVisible()
   await page.getByLabel('Kabul notu').fill('Mağaza sonucu gördü')
   await expect(page.getByText('Kabul ettim')).toBeVisible()
@@ -576,17 +594,11 @@ test('store manager checklist result treats unavailable score as neutral', async
 
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
-  await expect(dialog.locator('.store-checklist-modal-summary').getByText('No score').first()).toBeVisible()
+  await expect(dialog.locator('.store-checklist-result-score-ring').getByText('No score')).toBeVisible()
+  await expect(dialog.locator('.store-checklist-result-score-card-neutral')).toBeVisible()
   await expect(dialog.locator('.store-checklist-modal-summary .store-checklists-fact').first()).toHaveCSS('display', 'grid')
-  await expect(
-    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar > div').first(),
-  ).toHaveCSS('display', 'grid')
-  await expect(
-    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar b.store-checklists-tone-neutral'),
-  ).toHaveCount(1)
-  await expect(
-    dialog.locator('.store-checklist-modal-summary .store-checklists-scorebar b.store-checklists-tone-warning'),
-  ).toHaveCount(0)
+  await expect(dialog.locator('.store-checklist-result-item-neutral')).toHaveCount(3)
+  await expect(dialog.locator('.store-checklist-result-item-warning')).toHaveCount(0)
 })
 
 test('store manager checklist result modal stays usable on mobile width', async ({ page }) => {
@@ -599,6 +611,9 @@ test('store manager checklist result modal stays usable on mobile width', async 
   await expect(dialog.locator('.store-checklist-result-overview')).toBeVisible()
   await expect(dialog.locator('.store-checklist-result-findings')).toBeVisible()
   await expect(dialog.locator('.store-checklist-result-action-card')).toBeVisible()
+  await expect(dialog.getByText('Renk anlamı', { exact: true })).toBeVisible()
+  await expect(dialog.locator('.store-checklist-result-score-ring')).toBeVisible()
+  await expect(dialog.getByText('Dikkat isteyen maddeler')).toHaveCount(0)
   await expect(page.getByLabel(/Kabul notu|Acknowledgement note/)).toBeVisible()
   await expectNoElementHorizontalOverflow(dialog)
 })
@@ -1127,9 +1142,20 @@ function createChecklistAcknowledgementsFixture(
           commentText: fixtureLowScoreComment,
         },
         {
+          templateItemId: '55555555-5555-4555-8555-555555555557',
+          sectionName: 'Vitrin',
+          itemNo: 2,
+          itemText: 'Vitrin kampanya etiketi doğru',
+          responseType: 'score',
+          weight: 20,
+          maxScore: 10,
+          scoreValue: options.resultWithoutScore ? null : 7,
+          commentText: 'Takipte kalacak etiket düzeni',
+        },
+        {
           templateItemId: '55555555-5555-4555-8555-555555555556',
           sectionName: 'Kasa',
-          itemNo: 2,
+          itemNo: 3,
           itemText: 'Kasa alanı düzenli',
           responseType: 'score',
           weight: 40,

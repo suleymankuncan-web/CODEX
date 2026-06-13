@@ -96,6 +96,29 @@ export function getResponseRatio(item: ChecklistAcknowledgementItem['responses']
   return Math.round((item.scoreValue / item.maxScore) * 100)
 }
 
+export type ChecklistResultItemTone = 'danger' | 'warning' | 'success' | 'neutral'
+
+export function getChecklistResultItemTone(item: ChecklistAcknowledgementItem['responses'][number]): ChecklistResultItemTone {
+  const ratio = getResponseRatio(item)
+  if (ratio === null) return 'neutral'
+  if (ratio < 70) return 'danger'
+  if (ratio < 80) return 'warning'
+  return 'success'
+}
+
+export function getChecklistResultItemToneLabel(t: TranslateFunction, tone: ChecklistResultItemTone) {
+  switch (tone) {
+    case 'danger':
+      return t('storeChecklists.resultTone.low')
+    case 'warning':
+      return t('storeChecklists.resultTone.follow')
+    case 'success':
+      return t('storeChecklists.resultTone.good')
+    case 'neutral':
+      return t('storeChecklists.resultTone.noScore')
+  }
+}
+
 export function getCoverageRowKey(storeId: string, checklistTemplateId: string) {
   return `${storeId}:${checklistTemplateId}`
 }
