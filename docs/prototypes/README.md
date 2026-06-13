@@ -30,9 +30,9 @@ implemented and verified.
   Store Home dashboard visual contract for the Store Manager persona.
 - `docs/prototypes/store-home-region-manager-standard-v1.html` is the locked
   Store Home dashboard visual contract for the Region Manager persona.
-- `docs/prototypes/store-checklist-result-modal-v1.html` is the draft
-  checklist result modal visual prototype for Store Manager acknowledgement and
-  Region Manager review contexts.
+- `docs/prototypes/store-checklist-result-modal-v1.html` is the locked and
+  implemented checklist result modal visual contract for Store Manager
+  acknowledgement and Region Manager review contexts.
 
 ## Locked Prototype Contracts
 
@@ -47,6 +47,7 @@ constraint requires a deviation.
 | `docs/prototypes/store-approvals-request-center-v1.html` | `/store/approvals` request center | `F122E2A80F1E9AFFDCCF2942F6E3F609942409527047B5452B50874E8AE2CABD` |
 | `docs/prototypes/store-home-store-manager-standard-v1.html` | `/store/home` Store Manager dashboard | `B36442A7244FCF4FE85954E4F08C88E2A3684055DD03D854F3C54DA629022E37` |
 | `docs/prototypes/store-home-region-manager-standard-v1.html` | `/store/home` Region Manager dashboard | `DF4E1583D39588FFA2B150937DAC3556983A59F781960C8DC986ED396B4A1E81` |
+| `docs/prototypes/store-checklist-result-modal-v1.html` | `/store/checklists` result modal | `110EAD19449A59EBB1C84666FC4F66AC9067DEAF7CCF1BF8990917BDFD2DC8B9` |
 
 ## Prototype Implementation Evidence
 
