@@ -9,7 +9,7 @@ import { getAssignedStoreIds, getReadRegionIds, getReadStoreIds } from '../featu
 import { useLocalization } from '../features/localization/useLocalization'
 import { getOrgStores, getStoreEmployees, getStoreHeadcountGap } from '../features/workforce/api'
 import { formatNumber } from '../lib/format'
-import { formatNormActualLabel, getMonthRange } from './store-workforce-headcount'
+import { formatNormActualLabel, formatNormStaffingStatusLabel, getMonthRange, interpretNormStaffingStatus, type NormStaffingStatusKind } from './store-workforce-headcount'
 import { deriveWorkforceSummary } from './store-workforce-model'
 import {
   ModalPersonnelPane,
@@ -327,6 +327,7 @@ export function RegionWorkforceView(input: {
       </div>
 
       <RegionStoreDetailDialog
+        locale={locale}
         row={selectedStore}
         onClose={() => setSelectedStoreId(null)}
         t={t}
@@ -442,13 +443,13 @@ function RegionStoreTable(input: {
       <div className="tw:hidden tw:md:block">
         <table className="tw:w-full tw:table-fixed tw:border-collapse">
           <colgroup>
-            <col style={{ width: '25%' }} />
-            <col style={{ width: '9%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '15%' }} />
-            <col style={{ width: '13%' }} />
+            <col style={{ width: '23%' }} />
+            <col style={{ width: '8%' }} />
             <col style={{ width: '12%' }} />
-            <col style={{ width: '13%' }} />
+            <col style={{ width: '14%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '12%' }} />
+            <col style={{ width: '20%' }} />
           </colgroup>
           <thead>
             <tr>
@@ -486,6 +487,7 @@ function RegionStoreTable(input: {
       <div className="tw:grid tw:gap-2.5 tw:p-3 tw:md:hidden" data-testid="store-workforce-region-rows">
         {input.rows.map((row) => (
           <RegionStoreMobileCard
+            locale={input.locale}
             key={row.storeId}
             row={row}
             onSelectStore={input.onSelectStore}
@@ -518,12 +520,7 @@ function RegionStoreDesktopRow(input: {
           locale: input.locale,
           notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
         })
-  const statusTone = input.row.isError ? 'rose' : input.row.isLoading ? 'amber' : 'cyan'
-  const statusLabel = input.row.isError
-    ? input.t('storeWorkforce.valueNotConfigured')
-    : input.row.isLoading
-      ? input.t('storeWorkforce.sourceWaitingShort')
-      : input.t('storeWorkforce.realDataBadge')
+  const status = getRegionStoreStatus(input.row, input.locale, input.t)
 
   return (
     <tr data-testid="store-workforce-region-row">
@@ -553,9 +550,9 @@ function RegionStoreDesktopRow(input: {
         <MiniBars inactive={input.row.isEmployeeLoading || input.row.employees.length === 0} />
       </td>
       <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
-        <Status tone={statusTone}>{statusLabel}</Status>
+        <Status tone={status.tone}>{status.label}</Status>
       </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px] tw:text-right">
+      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px] tw:text-left">
         <DetailButton onClick={() => input.onSelectStore(input.row.storeId)}>
           {input.t('storeWorkforce.detailAction')}
         </DetailButton>
@@ -565,6 +562,7 @@ function RegionStoreDesktopRow(input: {
 }
 
 function RegionStoreMobileCard(input: {
+  locale: ReturnType<typeof useLocalization>['locale']
   row: RegionStoreRow
   onSelectStore: (storeId: string) => void
   t: ReturnType<typeof useLocalization>['t']
@@ -574,12 +572,7 @@ function RegionStoreMobileCard(input: {
     : input.row.isEmployeeError
       ? input.t('storeWorkforce.valueNotConfigured')
     : input.row.employees.length.toString()
-  const statusTone = input.row.isError ? 'rose' : input.row.isLoading ? 'amber' : 'cyan'
-  const statusLabel = input.row.isError
-    ? input.t('storeWorkforce.valueNotConfigured')
-    : input.row.isLoading
-      ? input.t('storeWorkforce.sourceWaitingShort')
-      : input.t('storeWorkforce.realDataBadge')
+  const status = getRegionStoreStatus(input.row, input.locale, input.t)
 
   return (
     <article
@@ -588,7 +581,7 @@ function RegionStoreMobileCard(input: {
     >
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
         <StoreIdentity row={input.row} />
-        <Status tone={statusTone}>{statusLabel}</Status>
+        <Status tone={status.tone}>{status.label}</Status>
       </div>
       <div className="tw:grid tw:grid-cols-2 tw:gap-2">
         <MiniValue label={input.t('storeWorkforce.personnelColumn')} value={personnelValue} />
@@ -722,12 +715,14 @@ function EmptyPrototypeState(input: { description: string; title: string }) {
 }
 
 function RegionStoreDetailDialog(input: {
+  locale: ReturnType<typeof useLocalization>['locale']
   row: RegionStoreRow | null
   onClose: () => void
   t: ReturnType<typeof useLocalization>['t']
 }) {
   const open = Boolean(input.row)
   const [activeTab, setActiveTab] = useState<DetailTab>('people')
+  const status = input.row ? getRegionStoreStatus(input.row, input.locale, input.t) : null
 
   return (
     <Dialog
@@ -758,13 +753,7 @@ function RegionStoreDetailDialog(input: {
             </DialogDescription>
           </div>
           <div className="tw:flex tw:shrink-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
-            <Pill tone={input.row?.isError ? 'rose' : input.row?.isLoading ? 'amber' : 'cyan'}>
-              {input.row?.isError
-                ? input.t('storeWorkforce.valueNotConfigured')
-                : input.row?.isLoading
-                  ? input.t('storeWorkforce.sourceWaitingShort')
-                  : input.t('storeWorkforce.realDataBadge')}
-            </Pill>
+            <Pill tone={status?.tone ?? 'cyan'}>{status?.label ?? input.t('storeWorkforce.valueNotConfigured')}</Pill>
             <button
               type="button"
               aria-label={input.t('storeWorkforce.closeDetail')}
@@ -889,6 +878,22 @@ function Status(input: { children: ReactNode; tone: Tone }) {
   )
 }
 
-function getUniqueIds(ids: string[]) {
-  return Array.from(new Set(ids.filter(Boolean))).sort((left, right) => left.localeCompare(right))
+function getRegionStoreStatus(
+  row: RegionStoreRow,
+  locale: ReturnType<typeof useLocalization>['locale'],
+  t: ReturnType<typeof useLocalization>['t'],
+) {
+  if (row.isError) return { label: t('storeWorkforce.valueNotConfigured'), tone: 'rose' as const }
+  if (row.isLoading) return { label: t('storeWorkforce.sourceWaitingShort'), tone: 'amber' as const }
+  const kind = interpretNormStaffingStatus({ actualFallback: row.employees.length, headcountGap: row.headcountGap })
+  return {
+    label: formatNormStaffingStatusLabel({ kind, locale, notConfiguredLabel: t('storeWorkforce.valueNotConfigured') }),
+    tone: getNormStatusTone(kind),
+  }
 }
+
+function getNormStatusTone(kind: NormStaffingStatusKind): Tone {
+  return kind === 'short' ? 'amber' : kind === 'balanced' ? 'green' : kind === 'over' ? 'blue' : 'cyan'
+}
+
+function getUniqueIds(ids: string[]) { return Array.from(new Set(ids.filter(Boolean))).sort((left, right) => left.localeCompare(right)) }
