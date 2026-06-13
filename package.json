@@ -6,6 +6,7 @@
     "system-flow:generate": "node scripts/generate-system-flow.mjs",
     "perf:public": "node scripts/public-performance-baseline.mjs",
     "perf:protected": "node scripts/protected-performance-baseline.mjs",
+    "capacity:read": "node scripts/capacity-read-baseline.mjs",
     "smoke:backend-readiness-load": "node scripts/backend-readiness-load-smoke.mjs",
     "smoke:migration:fresh-db": "node scripts/migration-fresh-db-smoke.mjs",
     "smoke:deployed-readiness": "node scripts/deployed-readiness-smoke.mjs",
