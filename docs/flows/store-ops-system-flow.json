@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-12T00:41:27.133Z",
+  "generatedAt": "2026-06-16T18:59:17.421Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -1365,7 +1365,7 @@
       "exportedFunction": "getChecklistAcknowledgements",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 161
+        "line": 165
       }
     },
     {
@@ -1380,7 +1380,7 @@
       "exportedFunction": "createAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 168
+        "line": 172
       }
     },
     {
@@ -1395,7 +1395,7 @@
       "exportedFunction": "publishAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 178
+        "line": 182
       }
     },
     {
@@ -1410,7 +1410,7 @@
       "exportedFunction": "acknowledgeChecklist",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 194
+        "line": 198
       }
     },
     {

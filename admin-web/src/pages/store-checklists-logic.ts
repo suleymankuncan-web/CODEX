@@ -523,8 +523,7 @@ export function getCoverageStatus(row: ChecklistCoverageRow): ChecklistStatusFil
 }
 
 export function getCoverageScore(row: ChecklistCoverageRow) {
-  if (!row.summary) return row.completedScore
-  return row.summary.averageScore ?? row.localCompletedScore
+  return row.summary ? (row.summary.averageScore ?? row.localCompletedScore) : row.completedScore
 }
 
 export function sortCoverageRows(rows: ChecklistCoverageRow[], sort: ChecklistSort, locale: AppLocale) {
