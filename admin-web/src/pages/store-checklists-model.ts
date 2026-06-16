@@ -23,7 +23,7 @@ export type ChecklistStatusFilter = 'all' | 'missing' | 'draft' | 'completed' | 
 export type ChecklistSortKey = 'priority' | 'store' | 'score' | 'date' | 'status'
 export type ChecklistSortDirection = 'asc' | 'desc'
 export type ChecklistSort = { key: ChecklistSortKey; direction: ChecklistSortDirection }
-export type ChecklistTab = 'visits' | 'inbox' | 'incomplete' | 'history'
+export type ChecklistTab = 'visits' | 'plan' | 'inbox' | 'incomplete' | 'history'
 export type ChecklistActiveInstance = MobileChecklistToday['activeInstances'][number]
 export type ChecklistTabOption = {
   key: ChecklistTab
@@ -307,7 +307,11 @@ export function buildChecklistSearch(
 
 function resolveChecklistTabFromSearch(search: string): ChecklistTab {
   const tab = new URLSearchParams(search).get('tab')
-  return tab === 'inbox' || tab === 'history' || tab === 'incomplete' || tab === 'visits'
+  return tab === 'inbox' ||
+    tab === 'history' ||
+    tab === 'incomplete' ||
+    tab === 'plan' ||
+    tab === 'visits'
     ? tab
     : 'visits'
 }

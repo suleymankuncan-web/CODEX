@@ -3,6 +3,7 @@ import {
   Archive,
   History,
   ListChecks,
+  MapPinned,
   RefreshCw,
   Search,
 } from 'lucide-react'
@@ -207,5 +208,6 @@ function ChecklistTabIcon(input: { tab: ChecklistTab }) {
   if (input.tab === 'inbox') return <Archive aria-hidden="true" />
   if (input.tab === 'incomplete') return <AlertTriangle aria-hidden="true" />
   if (input.tab === 'history') return <History aria-hidden="true" />
+  if (input.tab === 'plan') return <MapPinned aria-hidden="true" />
   return <ListChecks aria-hidden="true" />
 }
