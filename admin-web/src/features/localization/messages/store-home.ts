@@ -97,6 +97,15 @@ export const storeHomeTr = {
     'Hedef akışı mevcut hedef sayfasından takip edilir.',
   'storeHome.dashboard.regionReportsCopy':
     'Bölge raporları rapor sayfasından açılır.',
+  'storeHome.visitPriority.title': 'Bu hafta ziyaret önceliği',
+  'storeHome.visitPriority.copy':
+    '{count} yüksek riskli mağaza var; ilk mağazalar ziyaret planında görünüyor.',
+  'storeHome.visitPriority.emptyCopy':
+    'Yüksek riskli mağaza yok; plan yine checklist sayfasında izlenir.',
+  'storeHome.visitPriority.loadingCopy': 'Checklist verisi yükleniyor.',
+  'storeHome.visitPriority.unavailableCopy':
+    'Checklist verisi okunamadı; ziyaret planı checklist sayfasında tekrar denenir.',
+  'storeHome.visitPriority.action': 'Planı aç',
   'storeHome.dashboard.kpiSnapshotCopy':
     'Bu sayfa yalnızca KPI durumunu özetler; detay Store KPI sayfasındadır.',
   'storeHome.dashboard.kpiSnapshotStatus': 'KPI durumu',
@@ -351,6 +360,15 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
     'Target flow is tracked from the existing targets page.',
   'storeHome.dashboard.regionReportsCopy':
     'Region reports open from the reports page.',
+  'storeHome.visitPriority.title': 'This week visit priority',
+  'storeHome.visitPriority.copy':
+    '{count} high-risk stores are visible; the first stores are listed in the visit plan.',
+  'storeHome.visitPriority.emptyCopy':
+    'No high-risk stores; the plan remains available from the checklist page.',
+  'storeHome.visitPriority.loadingCopy': 'Checklist data is loading.',
+  'storeHome.visitPriority.unavailableCopy':
+    'Checklist data could not be read; retry the visit plan from the checklist page.',
+  'storeHome.visitPriority.action': 'Open plan',
   'storeHome.dashboard.kpiSnapshotCopy':
     'This page only summarizes KPI status; detail stays on the Store KPI page.',
   'storeHome.dashboard.kpiSnapshotStatus': 'KPI status',
