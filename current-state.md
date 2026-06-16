@@ -113,6 +113,15 @@ Current maintenance baseline:
   Manager staging cookie-session smoke passed; Store Manager smoke remains
   input-blocked because no separate Store Manager persona env exists in the
   local ignored env file.
+- Risk Based Visit Plan V1 is closed through PR #717 and PR #718. Plan:
+  `docs/superpowers/plans/2026-06-16-risk-based-visit-plan-v1.md`; closeout
+  evidence:
+  `docs/evidence/risk-based-visit-plan-v1-closeout-2026-06-16.md`. PR #717
+  added the read-only `/store/checklists` `Ziyaret Plani` tab and deterministic
+  checklist-bound visit-priority model; PR #718 added the Region Manager Store
+  Home priority summary. The feature uses existing checklist data only and does
+  not add API shape, DB schema, auth/permission, checklist scoring, Store
+  Action/task generation, notification, calendar, or route-planning changes.
 - Capacity 700 User Baseline V1 evidence is recorded at
   `docs/evidence/readiness/2026-06-13-capacity-700-user-baseline.md`.
   The repeatable read-only harness is `npm.cmd run capacity:read`; public
