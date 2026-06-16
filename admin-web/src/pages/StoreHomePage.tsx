@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Activity, ArrowRight, ClipboardCheck, Inbox, ListChecks, Store, Target, Trophy } from 'lucide-react'
+import { Activity, ArrowRight, ClipboardCheck, Inbox, ListChecks, MapPinned, Store, Target, Trophy } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,10 @@ import {
   StoreSurfacePage,
   type StoreSurfaceTone,
 } from './store-surface-primitives'
+import {
+  buildVisitPriorityHomeSummary,
+  type VisitPriorityHomeSummary,
+} from './store-home-visit-priority'
 
 type HomeMetric = {
   labelKey: TranslationKey
@@ -49,6 +53,7 @@ type HomeMetric = {
 type HomeDashboardRow = {
   actionLabel: string
   copy: string
+  details?: HomeDashboardRowDetail[]
   href: string
   icon: ReactNode
   id: string
@@ -56,6 +61,12 @@ type HomeDashboardRow = {
   title: string
   tone: StoreSurfaceTone
   value: string
+}
+
+type HomeDashboardRowDetail = {
+  id: string
+  label: string
+  note: string
 }
 
 type HomeConfig = {
@@ -279,6 +290,18 @@ export function StoreHomePage(input: {
     storeScopeValue,
     t,
   })
+  const visitPrioritySummary = canManageChecklistVisits && availablePaths.has('/store/checklists')
+    ? buildVisitPriorityHomeSummary({
+        acknowledgementItems: checklistAcknowledgementsQuery.data?.items ?? [],
+        authSummary: input.authSummary,
+        isUnavailable: mobileChecklistQuery.isError || checklistAcknowledgementsQuery.isError,
+        isLoading: checklistAcknowledgementsQuery.isLoading || mobileChecklistQuery.isLoading,
+        mobileToday: mobileChecklistQuery.data?.data ?? null,
+        pendingValue,
+        persona,
+        t,
+      })
+    : null
   const checklistCount = parseHomeCount(checklistSummary?.metricValue)
   const requestCount =
     canUseWorkflowInbox && !workflowInboxQuery.isLoading && !workflowInboxQuery.isError
@@ -319,6 +342,7 @@ export function StoreHomePage(input: {
     pendingWorkValue,
     persona,
     t,
+    visitPrioritySummary,
   })
   const dashboardTitleKey =
     persona === 'regionManager'
@@ -446,6 +470,7 @@ function buildHomeDashboardRows(input: {
   pendingWorkValue: string
   persona: StorePersona
   t: ReturnType<typeof useLocalization>['t']
+  visitPrioritySummary: VisitPriorityHomeSummary | null
 }): HomeDashboardRow[] {
   const rows: HomeDashboardRow[] = []
   const checklistRow = input.checklistSummary && input.availablePaths.has('/store/checklists')
@@ -506,6 +531,24 @@ function buildHomeDashboardRows(input: {
 
   if (input.persona === 'regionManager') {
     if (checklistRow) rows.push(checklistRow)
+    if (input.visitPrioritySummary && input.availablePaths.has('/store/checklists')) {
+      rows.push({
+        actionLabel: input.visitPrioritySummary.actionLabel,
+        copy: input.visitPrioritySummary.copy,
+        details: input.visitPrioritySummary.topStores.map((store) => ({
+          id: store.storeId,
+          label: store.storeName,
+          note: input.t(`storeChecklists.visitPlanReason.${store.primaryReason.code}` as TranslationKey),
+        })),
+        href: '/store/checklists?tab=plan',
+        icon: <MapPinned data-icon="inline-start" />,
+        id: 'visit-priority',
+        testId: 'store-home-visit-priority-card',
+        title: input.visitPrioritySummary.title,
+        tone: input.visitPrioritySummary.tone,
+        value: input.visitPrioritySummary.value,
+      })
+    }
     if (input.availablePaths.has('/store/kpis')) {
       rows.push({
         actionLabel: input.t('storeHome.dashboard.open'),
@@ -581,6 +624,19 @@ function HomeDashboardRowCard(input: { row: HomeDashboardRow }) {
             <span className="tw:mt-1 tw:block tw:text-sm tw:leading-6 tw:text-muted-foreground">
               {input.row.copy}
             </span>
+            {input.row.details?.length ? (
+              <ul className="tw:mt-3 tw:grid tw:gap-1.5">
+                {input.row.details.map((detail) => (
+                  <li
+                    key={detail.id}
+                    className="tw:flex tw:flex-wrap tw:items-center tw:gap-x-2 tw:gap-y-1 tw:text-xs tw:leading-5"
+                  >
+                    <b className="tw:font-semibold tw:text-foreground">{detail.label}</b>
+                    <span className="tw:text-muted-foreground">{detail.note}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </span>
         </div>
         <div className="tw:flex tw:shrink-0 tw:items-center tw:gap-3 tw:lg:justify-end">

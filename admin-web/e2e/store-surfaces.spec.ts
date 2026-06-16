@@ -1359,6 +1359,8 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   )
   await expect(page.getByText('Ön izleme', { exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Prototip rol seçimi')).toHaveCount(0)
+  await expect(page.getByTestId('store-home-visit-priority-card')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/checklists?tab=plan"]')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('STORE_PERSONNEL')
   await expect(page.locator('body')).not.toContainText('STORE_MANAGER')
   await expect(page.getByText('offline_access')).toHaveCount(0)
@@ -1520,6 +1522,17 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   await expect(checklistCard).toContainText('1')
   const checklistLink = checklistCard.getByRole('link', { name: /Checklist saha turu/i })
   await expect(checklistLink).toHaveAttribute('href', '/store/checklists')
+  const visitPriorityCard = page.getByTestId('store-home-visit-priority-card')
+  await expect(visitPriorityCard).toBeVisible()
+  await expect(visitPriorityCard).toContainText('Bu hafta ziyaret')
+  await expect(visitPriorityCard).toContainText('2')
+  await expect(visitPriorityCard).toContainText('IstinyePark Demo Store')
+  await expect(visitPriorityCard).toContainText('Marmara Park Demo Store')
+  await expect(visitPriorityCard).toContainText('Bu ay ziyaret yok')
+  await expect(visitPriorityCard.getByRole('link', { name: /Bu hafta ziyaret/i })).toHaveAttribute(
+    'href',
+    '/store/checklists?tab=plan',
+  )
   const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
   await expect(dailyBrief).toBeVisible()
   await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveText('2')
@@ -1537,6 +1550,82 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   await expect(page.getByRole('heading', { name: 'Atanmış mağaza checklist ziyaretleri' })).toBeVisible()
   await expect.poll(() => acknowledgementRequests, { timeout: 1000 }).toBe(prefetchedAcknowledgementRequests)
   await expect.poll(() => mobileTodayRequests, { timeout: 1000 }).toBe(prefetchedMobileTodayRequests)
+})
+
+test('region manager visit priority card stays pending when checklist data fails', async ({ page }) => {
+  let mobileTodayErrorRequests = 0
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/checklists/acknowledgements/list')
+  await page.unroute('**/api/mobile/checklists/today')
+  await page.context().unroute('**/api/mobile/checklists/today')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: createStoreAuthSession({
+        roleCodes: ['REGION_MANAGER'],
+        readStoreIds: [demoStoreId, regionSecondStoreId],
+        scopeStoreIds: [demoStoreId, regionSecondStoreId],
+        actionStoreIds: [demoStoreId, regionSecondStoreId],
+        legacyAssignedStoreIds: [demoStoreId, regionSecondStoreId],
+      }),
+    })
+  })
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    await route.fulfill({ json: checklistAcknowledgementsFixture })
+  })
+  await page.context().route('**/api/mobile/checklists/today**', async (route) => {
+    mobileTodayErrorRequests += 1
+    await route.fulfill({
+      status: 503,
+      json: { message: 'Checklist data unavailable' },
+    })
+  })
+
+  await page.goto('/store/home')
+
+  const visitPriorityCard = page.getByTestId('store-home-visit-priority-card')
+  await expect(visitPriorityCard).toBeVisible()
+  await expect.poll(() => mobileTodayErrorRequests).toBeGreaterThanOrEqual(1)
+  await expect(visitPriorityCard).toContainText('Bekliyor')
+  await expect(visitPriorityCard).toContainText('Checklist verisi okunamadı')
+  await expect(visitPriorityCard).not.toContainText('Yüksek riskli mağaza yok')
+})
+
+test('report viewer store home does not advertise the visit plan link', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REPORT_VIEWER'],
+    readStoreIds: [demoStoreId],
+    scopeStoreIds: [demoStoreId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+
+  await page.goto('/store/home')
+
+  await expect(page.locator('.store-command-nav').locator('a[href="/store/checklists"]')).toBeVisible()
+  await expect(page.getByTestId('store-home-visit-priority-card')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/checklists?tab=plan"]')).toHaveCount(0)
+})
+
+test('region manager home translates visit priority reasons in English', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REGION_MANAGER'],
+    readStoreIds: [demoStoreId, regionSecondStoreId],
+    scopeStoreIds: [demoStoreId, regionSecondStoreId],
+    actionStoreIds: [demoStoreId, regionSecondStoreId],
+    legacyAssignedStoreIds: [demoStoreId, regionSecondStoreId],
+  }))
+
+  await page.goto('/store/home')
+
+  const visitPriorityCard = page.getByTestId('store-home-visit-priority-card')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(visitPriorityCard).toBeVisible()
+  await expect(visitPriorityCard).toContainText('This week visit priority')
+  await expect(visitPriorityCard).toContainText('No visit this month')
+  await expect(visitPriorityCard).not.toContainText('Bu ay ziyaret yok')
 })
 
 test('store home dashboard actions follow role-aware navigation for admin landing roles', async ({ page }) => {
