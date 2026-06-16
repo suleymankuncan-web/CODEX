@@ -390,24 +390,68 @@ async function throwApiError(
   context: ApiRequestContext,
 ): Promise<never> {
   const fallbackText = await response.text()
-  const message = fallbackText || `Request failed with status ${response.status}`
+  const message = extractApiErrorMessage(fallbackText, response.status)
 
   emitResponseFailureDiagnostic(response, path, context, 'http', `Request failed with status ${response.status}`)
 
-  if (response.status === 401 && session.mode === 'bearer' && typeof window !== 'undefined') {
-    clearClientBearerSession()
-    window.dispatchEvent(
-      new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
-        detail: {
-          path,
-          message,
-          status: response.status,
-        },
-      }),
-    )
+  if (shouldRecoverSessionFromApiError(response.status, session, message)) {
+    dispatchSessionExpired(path, message, response.status)
   }
 
   throw new ApiError(response.status, message)
+}
+
+function extractApiErrorMessage(rawBody: string, status: number) {
+  const trimmed = rawBody.trim()
+  if (!trimmed) {
+    return `Request failed with status ${status}`
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as { message?: unknown }
+    if (typeof parsed.message === 'string' && parsed.message.trim()) {
+      return parsed.message.trim()
+    }
+    if (Array.isArray(parsed.message)) {
+      const joined = parsed.message.filter((item): item is string => typeof item === 'string').join(' ')
+      if (joined.trim()) {
+        return joined.trim()
+      }
+    }
+  } catch {
+    return trimmed
+  }
+
+  return trimmed
+}
+
+function shouldRecoverSessionFromApiError(status: number, session: SessionState, message: string) {
+  if (session.mode !== 'bearer' || typeof window === 'undefined') {
+    return false
+  }
+
+  if (status === 401) {
+    return true
+  }
+
+  return status === 403 && isCookieBrowserSession(session) && isCsrfFailureMessage(message)
+}
+
+function isCsrfFailureMessage(message: string) {
+  return message.toLowerCase().includes('csrf token is required')
+}
+
+function dispatchSessionExpired(path: string, message: string, status: number) {
+  clearClientBearerSession()
+  window.dispatchEvent(
+    new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
+      detail: {
+        path,
+        message,
+        status,
+      },
+    }),
+  )
 }
 
 async function parseJsonResponse<T>(

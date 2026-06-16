@@ -55,7 +55,7 @@ class RouteErrorBoundary extends Component<RouteErrorBoundaryProps, RouteErrorBo
   }
 
   componentDidCatch(error: unknown) {
-    if (isRouteChunkLoadError(error) && markRouteChunkReloadAttempt(this.props.resetKey)) {
+    if (isRouteChunkLoadError(error) && markRouteChunkReloadAttempt()) {
       window.location.reload()
     }
   }
@@ -95,17 +95,22 @@ function isRouteChunkLoadError(error: unknown) {
   ].some((marker) => normalized.includes(marker))
 }
 
-function markRouteChunkReloadAttempt(resetKey: string) {
+function markRouteChunkReloadAttempt() {
   if (typeof window === 'undefined') return false
 
   try {
-    const storageKey = `${routeChunkReloadKeyPrefix}${resetKey}`
+    const storageKey = `${routeChunkReloadKeyPrefix}${getCurrentBundleId()}`
     if (window.sessionStorage.getItem(storageKey)) return false
     window.sessionStorage.setItem(storageKey, '1')
     return true
   } catch {
     return false
   }
+}
+
+function getCurrentBundleId() {
+  const scriptSrc = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src
+  return scriptSrc || 'unknown-bundle'
 }
 
 function RouteRecoveryState(input: {
