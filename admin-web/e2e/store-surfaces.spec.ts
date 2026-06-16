@@ -2153,25 +2153,32 @@ test('store utility pages show honest preferences and stay mobile-safe', async (
   await expect(page.getByText('Metrics needing action')).toBeVisible()
 })
 
-test('store route transitions show a loading layer and hide stale page content', async ({ page }) => {
+test('store route navigation does not blank the shell with a global transition layer', async ({ page }) => {
   const storeNav = page.locator('.store-command-nav')
   await page.goto('/store/home')
 
   await expect(page.locator('.store-command-home')).toBeVisible()
 
-  const transitionLayer = page.getByTestId('route-transition')
-  const transitionVisible = expect(transitionLayer).toBeVisible()
+  await page.evaluate(() => {
+    const marker = '__storeRouteTransitionSeen'
+    ;(window as Window & Record<typeof marker, boolean>)[marker] = Boolean(
+      document.querySelector('[data-testid="route-transition"]'),
+    )
+    const observer = new MutationObserver(() => {
+      if (document.querySelector('[data-testid="route-transition"]')) {
+        ;(window as Window & Record<typeof marker, boolean>)[marker] = true
+      }
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+  })
 
   await storeNav.getByRole('link', { name: 'Duyurular', exact: true }).click()
 
-  await transitionVisible
-  await expect(transitionLayer).toBeVisible()
-  await expect(transitionLayer.locator('.route-transition-compact')).toBeVisible()
-  await expect(transitionLayer.locator('.route-transition-card')).toHaveCount(0)
-  await expect(page.locator('.store-command-home')).toBeHidden()
   await expect(page).toHaveURL(/\/store\/feed$/)
-  await expect(transitionLayer).toHaveCount(0)
   await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expect.poll(() =>
+    page.evaluate(() => (window as Window & { __storeRouteTransitionSeen?: boolean }).__storeRouteTransitionSeen ?? false),
+  ).toBe(false)
   await expectHealthyStoreTransition(page)
 })
 
@@ -3495,10 +3502,7 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   await page.getByRole('link', { name: 'I acknowledge' }).click()
 
   await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox&result=checklist-instance-bm-1$/)
-  await expect(page.getByRole('tab', { name: /Checklist inbox/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(
-    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
-  ).toBeVisible()
+  await expect(page.locator('#store-checklist-tab-inbox')).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('Checklist result')
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
@@ -3507,6 +3511,9 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
 
   await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox$/)
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
+  ).toBeVisible()
 
   await page.getByRole('button', { name: 'View details' }).click()
 
