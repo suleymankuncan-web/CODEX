@@ -1,6 +1,13 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 import { expectChecklistResultModalNoScoreContract, expectChecklistResultModalVisualContract } from './checklist-result-modal-assertions'
+import { buildChecklistCoverageRows } from '../src/pages/store-checklists-coverage-model'
+import { buildChecklistStoreVisitRows } from '../src/pages/store-checklists-logic'
+import {
+  buildVisitPlanRows,
+  getVisitPlanCurrentMonthKey,
+  resolveVisitPlanEvaluationMonth,
+} from '../src/pages/store-visit-plan-model'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
@@ -352,6 +359,413 @@ test('region manager visit flow reads VM score but starts BM checklist only', as
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 })
 
+test('visit plan prioritizes region manager stores and does not start checklist', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  const stores = [
+    { storeId: 'aaaaaaaa-0000-4000-8000-000000000001', storeName: 'Ankara Risk' },
+    { storeId: 'aaaaaaaa-0000-4000-8000-000000000002', storeName: 'Bursa Takip' },
+    { storeId: 'aaaaaaaa-0000-4000-8000-000000000003', storeName: 'Izmir Temiz' },
+    { storeId: 'aaaaaaaa-0000-4000-8000-000000000004', storeName: 'Konya Sinyal' },
+  ]
+
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [],
+    activeInstances: [
+      {
+        checklistInstanceId: 'bbbbbbbb-0000-4000-8000-000000000002',
+        checklistTemplateId: templateId,
+        storeId: stores[1].storeId,
+        status: 'in_progress',
+        startedAt: '2026-05-20T08:00:00.000Z',
+        updatedAt: '2026-05-20T08:10:00.000Z',
+      },
+    ],
+    completedThisMonth: [
+      {
+        acknowledgedAt: null,
+        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000001',
+        checklistTemplateId: vmTemplateId,
+        completedAt: '2026-05-08T09:00:00.000Z',
+        storeId: stores[0].storeId,
+        totalScore: 92,
+      },
+      {
+        acknowledgedAt: null,
+        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000002',
+        checklistTemplateId: templateId,
+        completedAt: '2026-05-10T09:00:00.000Z',
+        storeId: stores[1].storeId,
+        totalScore: 78,
+      },
+      {
+        acknowledgedAt: null,
+        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000003',
+        checklistTemplateId: templateId,
+        completedAt: '2026-05-18T09:00:00.000Z',
+        storeId: stores[2].storeId,
+        totalScore: 90,
+      },
+      {
+        acknowledgedAt: null,
+        checklistInstanceId: 'dddddddd-0000-4000-8000-000000000003',
+        checklistTemplateId: vmTemplateId,
+        completedAt: '2026-05-18T10:00:00.000Z',
+        storeId: stores[2].storeId,
+        totalScore: 92,
+      },
+      {
+        acknowledgedAt: null,
+        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000004',
+        checklistTemplateId: templateId,
+        completedAt: '2026-05-12T09:00:00.000Z',
+        storeId: stores[3].storeId,
+        totalScore: 0,
+      },
+    ],
+    includeVmTemplate: true,
+    monthlySummaries: [
+      {
+        averageScore: 92,
+        checklistTemplateId: vmTemplateId,
+        completedCount: 1,
+        monthStart: '2026-05-01',
+        storeId: stores[0].storeId,
+      },
+      {
+        averageScore: 78,
+        checklistTemplateId: templateId,
+        completedCount: 1,
+        monthStart: '2026-05-01',
+        storeId: stores[1].storeId,
+      },
+      {
+        averageScore: 90,
+        checklistTemplateId: templateId,
+        completedCount: 1,
+        monthStart: '2026-05-01',
+        storeId: stores[2].storeId,
+      },
+      {
+        averageScore: 92,
+        checklistTemplateId: vmTemplateId,
+        completedCount: 1,
+        monthStart: '2026-05-01',
+        storeId: stores[2].storeId,
+      },
+      {
+        averageScore: null,
+        checklistTemplateId: templateId,
+        completedCount: 1,
+        monthStart: '2026-05-01',
+        storeId: stores[3].storeId,
+      },
+    ],
+    requests,
+    stores,
+  })
+  await page.goto('/store/checklists?tab=plan')
+
+  await expect(page.getByRole('tab', { name: /Ziyaret Planı/ })).toHaveAttribute('aria-selected', 'true')
+  const rows = page.locator('.store-checklists-plan-row')
+  await expect(rows).toHaveCount(4)
+  await expect(rows.nth(0)).toContainText('Ankara Risk')
+  await expect(rows.nth(0)).toContainText('Yüksek')
+  await expect(rows.nth(0)).toContainText('Bu ay ziyaret yok')
+  await expect(rows.nth(0)).toContainText('VM')
+  await expect(rows.nth(0)).toContainText('92')
+
+  const mediumRow = rows.filter({ hasText: 'Bursa Takip' })
+  await expect(mediumRow).toContainText('Takip')
+  await expect(mediumRow).toContainText('Aktif taslak var')
+  await expect(mediumRow).toContainText('Takipte checklist sonucu')
+
+  const nullScoreRow = rows.filter({ hasText: 'Konya Sinyal' })
+  await expect(nullScoreRow).toContainText('Sinyal yetersiz')
+  await expect(nullScoreRow).not.toContainText('Plan temiz')
+
+  const lowRow = rows.filter({ hasText: 'Izmir Temiz' })
+  await expect(lowRow).toContainText('Plan temiz')
+  await expect(lowRow).toContainText('Skor güçlü')
+  await expect(lowRow).toContainText('BM')
+  await expect(lowRow).toContainText('90')
+  await expect(lowRow).toContainText('VM')
+  await expect(lowRow).toContainText('92')
+
+  await rows.nth(0).getByRole('button', { name: 'Ziyaret akışına git' }).click()
+  await expect(page).toHaveURL(/tab=visits/)
+  await expect(page.getByRole('tab', { name: /Ziyaret akışı/ })).toHaveAttribute('aria-selected', 'true')
+  await expect.poll(() => requests.starts).toEqual([])
+})
+
+test('visit plan keeps visual merchandiser scope to VM signals', async ({ page }) => {
+  await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
+    acknowledgementItems: [],
+    activeInstances: [],
+    monthlySummaries: [],
+    stores: [{ storeId, storeName: 'Marmara Park' }],
+    templateCode: 'VM_VISIT_V1',
+    templateName: 'VM Visit',
+    templateType: 'VM_STORE_VISIT',
+  })
+  await page.goto('/store/checklists?tab=plan')
+
+  await expect(page.getByRole('tab', { name: /Ziyaret Planı/ })).toBeVisible()
+  const planRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
+  await expect(planRow).toContainText('Bu ay ziyaret yok')
+  await expect(planRow).toContainText('Yüksek')
+  await expect(planRow.getByText('BM', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('BM + VM')).toHaveCount(0)
+})
+
+test('visit plan is not exposed to store manager and plan URL falls back', async ({ page }) => {
+  await setupChecklistPage(page, ['STORE_MANAGER'])
+  await page.goto('/store/checklists?tab=plan')
+
+  await expect(page.getByRole('tab', { name: /Ziyaret Planı/ })).toHaveCount(0)
+  await expect(page.locator('#store-checklist-panel-plan')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Mağaza kabulü bekleyen tamamlanmış checklistler' })).toBeVisible()
+})
+
+test('visit plan evaluates all-period filter against current month', async ({ page }) => {
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [],
+    activeInstances: [],
+    completedThisMonth: [
+      {
+        acknowledgedAt: null,
+        checklistInstanceId: 'eeeeeeee-0000-4000-8000-000000000001',
+        checklistTemplateId: templateId,
+        completedAt: '2026-04-15T09:00:00.000Z',
+        storeId,
+        totalScore: 92,
+      },
+    ],
+    monthlySummaries: [
+      {
+        averageScore: 92,
+        checklistTemplateId: templateId,
+        completedCount: 1,
+        monthStart: '2026-04-01',
+        storeId,
+      },
+    ],
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
+  await page.getByRole('option', { name: 'Tüm aylar' }).click()
+  await page.getByRole('tab', { name: /Ziyaret Planı/ }).click()
+
+  const planRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
+  await expect(planRow).toContainText('Yüksek')
+  await expect(planRow).toContainText('Bu ay ziyaret yok')
+  await expect(planRow).not.toContainText('Plan temiz')
+})
+
+test('visit plan keeps missing stores visible for a selected past month', async ({ page }) => {
+  const stores = [
+    { storeId: 'aaaaaaaa-0000-4000-8000-000000000011', storeName: 'Nisan Eksik' },
+    { storeId: 'aaaaaaaa-0000-4000-8000-000000000012', storeName: 'Nisan Tamam' },
+  ]
+
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [],
+    activeInstances: [],
+    completedThisMonth: [],
+    monthlySummaries: [
+      {
+        averageScore: 91,
+        checklistTemplateId: templateId,
+        completedCount: 1,
+        monthStart: '2026-04-01',
+        storeId: stores[1].storeId,
+      },
+    ],
+    stores,
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
+  await page.getByRole('option', { name: 'Nisan 2026' }).click()
+  await page.getByRole('tab', { name: /Ziyaret Plan/ }).click()
+
+  const missingRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Nisan Eksik' })
+  await expect(missingRow).toBeVisible()
+  await expect(missingRow).toHaveClass(/store-checklists-plan-row-high/)
+  await expect(missingRow).toContainText('Bu ay ziyaret yok')
+})
+
+test('visit plan uses acknowledgement scores for a selected historical month across template versions', async ({ page }) => {
+  const historicalItem = createChecklistAcknowledgementsFixture(['REGION_MANAGER'], {
+    acknowledgementCompletedAt: '2026-04-12T09:00:00.000Z',
+    handoffState: { acknowledged: true, completed: true },
+  }).items[0]
+  const oldTemplateId = 'bbbbbbbb-0000-4000-8000-000000000071'
+
+  if (!historicalItem) throw new Error('historical checklist fixture is required')
+
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [
+      {
+        ...historicalItem,
+        checklistTemplateId: oldTemplateId,
+        complianceRate: 0.62,
+        totalScore: 62,
+      },
+    ],
+    activeInstances: [],
+    completedThisMonth: [],
+    monthlySummaries: [],
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
+  await page.getByRole('option', { name: 'Nisan 2026' }).click()
+  await page.getByRole('tab', { name: /Ziyaret Plan/ }).click()
+
+  const lowScoreRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
+  await expect(lowScoreRow).toBeVisible()
+  await expect(lowScoreRow).toHaveClass(/store-checklists-plan-row-high/)
+  await expect(lowScoreRow).toContainText('62')
+  await expect(lowScoreRow).not.toContainText('Bu ay ziyaret yok')
+  await expect(lowScoreRow.locator('.store-checklists-plan-reason-high').filter({ hasText: 'checklist' })).toBeVisible()
+})
+
+test('visit plan applies pending status after deriving acknowledgement reasons', async ({ page }) => {
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    activeInstances: [],
+    completedThisMonth: [
+      {
+        acknowledgedAt: null,
+        checklistInstanceId: 'eeeeeeee-0000-4000-8000-000000000021',
+        checklistTemplateId: templateId,
+        completedAt: '2026-05-14T09:00:00.000Z',
+        storeId,
+        totalScore: 86,
+      },
+    ],
+    monthlySummaries: [
+      {
+        averageScore: 86,
+        checklistTemplateId: templateId,
+        completedCount: 1,
+        monthStart: '2026-05-01',
+        storeId,
+      },
+    ],
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('combobox', { name: 'Durum' }).click()
+  await page.getByRole('option', { name: 'Kabul bekliyor' }).click()
+  await page.getByRole('tab', { name: /Ziyaret Plan/ }).click()
+
+  const pendingRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
+  await expect(pendingRow).toBeVisible()
+  await expect(pendingRow.locator('.store-checklists-plan-reason').filter({ hasText: 'Kabul' })).toBeVisible()
+})
+
+test('visit plan shows explicit empty states', async ({ page }) => {
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [],
+    activeInstances: [],
+    monthlySummaries: [],
+    stores: [],
+  })
+  await page.goto('/store/checklists?tab=plan')
+  await expect(page.getByText('Atanmış mağaza yok')).toBeVisible()
+
+  await page.unroute('**/api/mobile/checklists/today')
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/checklists/acknowledgements/list')
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [],
+    activeInstances: [],
+    monthlySummaries: [],
+    omitTemplates: true,
+  })
+  await page.goto('/store/checklists?tab=plan')
+  await expect(page.getByText('Yayınlanmış ziyaret şablonu yok')).toBeVisible()
+})
+
+test('visit plan handles 200 stores without extra tab-switch network', async ({ page }) => {
+  const stores = Array.from({ length: 200 }, (_, index) => ({
+    storeId: `ffffffff-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    storeName: `Plan Magaza ${String(index + 1).padStart(3, '0')}`,
+  }))
+  const monthlySummaries = stores.map((storeFixture) => ({
+    averageScore: 90,
+    checklistTemplateId: templateId,
+    completedCount: 1,
+    monthStart: '2026-05-01',
+    storeId: storeFixture.storeId,
+  }))
+  const fixtureOptions: ChecklistFixtureOptions = {
+    acknowledgementItems: [],
+    activeInstances: [],
+    monthlySummaries,
+    stores,
+  }
+  const fixture = createMobileChecklistTodayFixture(fixtureOptions).data
+  const currentMonth = getVisitPlanCurrentMonthKey(checklistFixtureNow)
+  const evaluationMonth = resolveVisitPlanEvaluationMonth('all', currentMonth)
+  const coverageRows = buildChecklistCoverageRows({
+    acknowledgementItems: [],
+    localActiveInstances: {},
+    localCompletedRows: {},
+    mobileToday: fixture,
+    month: evaluationMonth,
+  })
+  const startedAt = performance.now()
+  const planRows = buildVisitPlanRows({
+    acknowledgementItems: [],
+    authSummary: createAuthSessionFixture(['REGION_MANAGER'], fixtureOptions),
+    currentMonth,
+    evaluationMonth,
+    requiresCombinedVisitTemplates: true,
+    rows: buildChecklistStoreVisitRows(coverageRows),
+    selectedMonth: 'all',
+  })
+  const duration = performance.now() - startedAt
+  expect(planRows).toHaveLength(200)
+  expect(duration).toBeLessThan(50)
+
+  const apiRequests: string[] = []
+  page.on('request', (request) => {
+    const url = request.url()
+    if (
+      url.includes('/api/mobile/checklists/today') ||
+      url.includes('/api/checklists/acknowledgements/list') ||
+      url.includes('/api/mobile/checklists/instances')
+    ) {
+      apiRequests.push(`${request.method()} ${url}`)
+    }
+  })
+  await setupChecklistPage(page, ['REGION_MANAGER'], fixtureOptions)
+  await page.goto('/store/checklists')
+  await expect(page.getByRole('tab', { name: /Ziyaret Planı/ })).toBeVisible()
+  const requestCountBeforePlanTab = apiRequests.length
+
+  await page.getByRole('tab', { name: /Ziyaret Planı/ }).click()
+  await expect(page.locator('.store-checklists-plan-row')).toHaveCount(200)
+  await expect.poll(() => apiRequests.length).toBe(requestCountBeforePlanTab)
+})
+
+test('visit plan stays usable on mobile width', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 844 })
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [],
+    activeInstances: [],
+    longCopy: true,
+    monthlySummaries: [],
+  })
+  await page.goto('/store/checklists?tab=plan')
+
+  await expect(page.getByRole('combobox', { name: 'Checklist bölümleri' })).toBeVisible()
+  await expect(page.locator('.store-checklists-plan-row')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+})
+
 test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
@@ -493,6 +907,10 @@ test('store checklist surface switches to English copy and persists locale', asy
   ).toBeVisible()
   await expect(page.getByRole('button', { name: 'Notifications' })).toHaveCount(0)
   await expect(page.getByRole('tab', { name: /Visit flow/ })).toBeVisible()
+  await page.getByRole('tab', { name: /Visit plan/ }).click()
+  await expect(page.getByRole('button', { name: 'Open visit flow' })).toBeVisible()
+  await expect(page.locator('#store-checklist-panel-plan')).not.toContainText('Ziyaret ak')
+  await page.getByRole('tab', { name: /Visit flow/ }).click()
   await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
   await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Assigned stores', { exact: true })).toBeVisible()
@@ -617,6 +1035,7 @@ test('checklist visit surface stays usable on mobile width', async ({ page }) =>
 })
 
 type ChecklistFixtureOptions = {
+  acknowledgementItems?: ChecklistAcknowledgementFixture[]
   templateType?: string
   templateCode?: string
   templateName?: string
@@ -624,6 +1043,7 @@ type ChecklistFixtureOptions = {
   longCopy?: boolean
   acknowledgementCompletedAt?: string
   omitTemplates?: boolean
+  stores?: ChecklistStoreFixture[]
   activeInstances?: ChecklistActiveInstanceFixture[]
   monthlySummaries?: ChecklistMonthlySummaryFixture[]
   requests?: ChecklistRequestLog
@@ -635,6 +1055,11 @@ type ChecklistFixtureOptions = {
   completeFailureMessage?: string
   resultWithoutScore?: boolean
   completedThisMonth?: ChecklistCompletedThisMonthFixture[]
+}
+
+type ChecklistStoreFixture = {
+  storeId: string
+  storeName: string
 }
 
 type ChecklistActiveInstanceFixture = {
@@ -666,6 +1091,38 @@ type ChecklistCompletedThisMonthFixture = {
   completedAt: string
   totalScore: number
   acknowledgedAt: string | null
+}
+
+type ChecklistAcknowledgementFixture = {
+  acknowledgement: {
+    acknowledgedAt: string
+    acknowledgedByUserId: string
+    acknowledgementNote: string | null
+    checklistAcknowledgementId: string
+  } | null
+  category: string
+  checklistInstanceId: string
+  checklistTemplateId: string
+  completedAt: string
+  completedByUserId: string
+  complianceRate: number | null
+  responses: Array<{
+    commentText: string | null
+    itemNo: number
+    itemText: string
+    maxScore: number
+    responseType: string
+    scoreValue: number | null
+    sectionName: string
+    templateItemId: string
+    weight: number
+  }>
+  status: string
+  storeId: string
+  storeName: string
+  templateName: string
+  templateType: string
+  totalScore: number | null
 }
 
 type ChecklistRequestLog = {
@@ -794,7 +1251,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
   let startedInstanceVisible = false
 
   await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({ json: createAuthSessionFixture(options.roleState?.current ?? roleCodes) })
+    await route.fulfill({ json: createAuthSessionFixture(options.roleState?.current ?? roleCodes, options) })
   })
 
   await page.route('**/api/mobile/checklists/today', async (route) => {
@@ -932,7 +1389,11 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
   })
 }
 
-function createAuthSessionFixture(roleCodes: string[]) {
+function createAuthSessionFixture(roleCodes: string[], options: ChecklistFixtureOptions = {}) {
+  const storeIds = (options.stores ?? [{ storeId, storeName: 'Marmara Park' }]).map(
+    (store) => store.storeId,
+  )
+
   return {
     authMode: 'mock',
     authenticated: true,
@@ -942,23 +1403,23 @@ function createAuthSessionFixture(roleCodes: string[]) {
       scope: {
         companyIds: ['00000000-0000-0000-0000-000000000001'],
         regionIds: ['12121212-1212-4121-8121-121212121212'],
-        storeIds: [storeId],
+        storeIds,
       },
       readScope: {
         companyIds: ['00000000-0000-0000-0000-000000000001'],
         regionIds: ['12121212-1212-4121-8121-121212121212'],
-        storeIds: [storeId],
+        storeIds,
       },
       actionScope: {
-        assignedStoreIds: [storeId],
+        assignedStoreIds: storeIds,
       },
-      assignedStoreIds: [storeId],
+      assignedStoreIds: storeIds,
     },
     scopeSummary: {
       companyCount: 1,
       regionCount: 1,
-      storeCount: 1,
-      assignedStoreCount: 1,
+      storeCount: storeIds.length,
+      assignedStoreCount: storeIds.length,
     },
   }
 }
@@ -972,6 +1433,7 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
   const fixtureStoreName = options.longCopy
     ? 'IstinyePark Cadde Uzeri Sezon Sonu Denetim Noktasi - Uzun Magaza Adi'
     : 'Marmara Park'
+  const stores = options.stores ?? [{ storeId, storeName: fixtureStoreName }]
   const fixtureItemText = options.longCopy
     ? 'Vitrin standartlara uygun ve kampanya etiketleri tum ana kategori bloklarinda hizali'
     : 'Vitrin standartlara uygun'
@@ -1034,7 +1496,7 @@ function createMobileChecklistTodayFixture(options: ChecklistFixtureOptions = {}
 
   return {
   data: {
-    stores: [{ storeId, storeName: fixtureStoreName }],
+    stores,
     templates: visibleTemplates,
     activeInstances: (
       options.activeInstances ?? [
@@ -1090,7 +1552,7 @@ function createChecklistAcknowledgementsFixture(
         acknowledgedAt: '2026-05-20T11:00:00.000Z',
       }
     : null
-  const items = [
+  const items: ChecklistAcknowledgementFixture[] = options.acknowledgementItems ?? [
     {
       checklistInstanceId: '44444444-4444-4444-8444-444444444444',
       checklistTemplateId: templateId,

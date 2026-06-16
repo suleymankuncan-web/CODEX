@@ -373,6 +373,7 @@
 
   .store-checklists-visit-table .store-checklists-visit-row,
   .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row,
+  .store-checklists-plan-row,
   .store-checklists-result-table .store-checklists-result-row {
     grid-template-columns: minmax(0, 1fr) minmax(96px, auto);
     gap: 10px 14px;
@@ -391,6 +392,15 @@
 
   .store-checklists-action-button {
     justify-self: end;
+  }
+
+  .store-checklists-plan-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .store-checklists-plan-scores,
+  .store-checklists-plan-reasons {
+    grid-column: 1 / -1;
   }
 }
 
@@ -502,6 +512,7 @@
 
   .store-checklists-visit-table .store-checklists-visit-row,
   .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row,
+  .store-checklists-plan-row,
   .store-checklists-result-table .store-checklists-result-row {
     grid-template-columns: 1fr;
     padding: 12px;
@@ -527,6 +538,21 @@
     width: fit-content;
     min-width: 116px;
     justify-self: start;
+  }
+
+  .store-checklists-plan-summary {
+    grid-template-columns: 1fr;
+    padding: 0 10px 12px;
+  }
+
+  .store-checklists-plan-list {
+    padding: 0 10px 12px;
+  }
+
+  .store-checklists-plan-score,
+  .store-checklists-plan-date,
+  .store-checklists-plan-reason {
+    max-width: 100%;
   }
 
   .store-checklists-pagination {

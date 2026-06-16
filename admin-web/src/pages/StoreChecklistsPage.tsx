@@ -28,18 +28,15 @@ import {
   createInitialStoreChecklistsState,
   storeChecklistCommandNotice,
   storeChecklistsReducer,
-  type ChecklistCoverageRow,
   type ChecklistResponseDraft,
   type ChecklistTab,
   type ChecklistTabOption,
-  mergeChecklistActiveInstanceOverlay,
   upsertChecklistActiveResponse,
 } from './store-checklists-model'
 import {
   buildChecklistResponseDrafts,
   buildChecklistStoreVisitRows,
   buildMonthOptions,
-  compareDate,
   doesChecklistItemMatchFilters,
   doesCoverageRowMatchFilters,
   formatMonthKey,
@@ -48,7 +45,6 @@ import {
   getChecklistTypeFilterOptions,
   getCoverageRowKey,
   getCoverageRowKeyFromRow,
-  getMonthKey,
   getStaticCopy,
   getStoreVisitScore,
   isIncompleteStoreVisitRow,
@@ -59,10 +55,18 @@ import {
   sortStoreVisitRows,
 } from './store-checklists-logic'
 import { StoreChecklistsAcknowledgementPanels } from './store-checklists-acknowledgement-panels'
+import { buildChecklistCoverageRows } from './store-checklists-coverage-model'
 import { ChecklistTabs, ChecklistToolbar } from './store-checklists-controls'
 import { StoreChecklistsHero } from './store-checklists-hero'
 import { StoreChecklistsModals } from './store-checklists-modals'
+import { StoreChecklistsVisitPlan } from './store-checklists-visit-plan'
 import { StoreChecklistsVisitPanel } from './store-checklists-visit-panel'
+import {
+  buildVisitPlanRows,
+  doesVisitPlanRowMatchStatusFilter,
+  getVisitPlanCurrentMonthKey,
+  resolveVisitPlanEvaluationMonth,
+} from './store-visit-plan-model'
 import {
   StoreErrorState,
   StoreLoadingState,
@@ -91,52 +95,6 @@ function mergeSavedResponseIntoMobileToday(
       ...current.data,
       activeInstances,
     },
-  }
-}
-
-function getCoverageCompletedSource(input: {
-  acknowledgementItems: ChecklistAcknowledgementItem[]
-  checklistTemplateId: string
-  mobileToday: MobileChecklistToday | undefined
-  month: string
-  storeId: string
-}) {
-  const completedByInstance = new Map<string, string>()
-  const addCompletedSource = (source: {
-    checklistInstanceId: string
-    checklistTemplateId: string
-    completedAt: string | null
-    storeId: string
-  }) => {
-    if (
-      source.storeId !== input.storeId ||
-      source.checklistTemplateId !== input.checklistTemplateId ||
-      !source.completedAt
-    ) {
-      return
-    }
-    if (input.month !== 'all' && getMonthKey(source.completedAt) !== input.month) return
-
-    const current = completedByInstance.get(source.checklistInstanceId)
-    if (!current || compareDate(source.completedAt, current) > 0) {
-      completedByInstance.set(source.checklistInstanceId, source.completedAt)
-    }
-  }
-
-  for (const item of input.mobileToday?.completedThisMonth ?? []) {
-    addCompletedSource(item)
-  }
-  for (const item of input.mobileToday?.pendingAcknowledgements ?? []) {
-    addCompletedSource(item)
-  }
-  for (const item of input.acknowledgementItems) {
-    addCompletedSource(item)
-  }
-
-  const completedDates = [...completedByInstance.values()]
-  return {
-    completedAt: completedDates.toSorted((left, right) => compareDate(right, left))[0] ?? null,
-    completedCount: completedByInstance.size,
   }
 }
 
@@ -369,46 +327,13 @@ function useStoreChecklistsPageContent(input: {
   const acknowledgedItems = items.filter((item) => item.acknowledgement !== null)
   const selectedResult = items.find((item) => item.checklistInstanceId === selectedResultId) ?? null
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
-  const coverageRows: ChecklistCoverageRow[] = (mobileToday?.stores ?? []).flatMap((store) =>
-    (mobileToday?.templates ?? []).map((template) => {
-      const rowKey = getCoverageRowKey(store.storeId, template.checklistTemplateId)
-      const queryActive = mobileToday?.activeInstances.find(
-        (item) =>
-          item.storeId === store.storeId &&
-          item.checklistTemplateId === template.checklistTemplateId,
-      )
-      const active = mergeChecklistActiveInstanceOverlay(queryActive, localActiveInstances[rowKey])
-      const matchingSummaries = (mobileToday?.monthlySummaries ?? []).filter(
-        (item) =>
-          item.storeId === store.storeId &&
-          item.checklistTemplateId === template.checklistTemplateId,
-      )
-      const summary =
-        selectedMonth === 'all'
-          ? matchingSummaries[0]
-          : matchingSummaries.find((item) => getMonthKey(item.monthStart) === selectedMonth)
-      const completedSource = getCoverageCompletedSource({
-        acknowledgementItems: items,
-        checklistTemplateId: template.checklistTemplateId,
-        mobileToday,
-        month: selectedMonth,
-        storeId: store.storeId,
-      })
-
-      return {
-        store,
-        template,
-        active,
-        summary,
-        completedAt: completedSource.completedAt,
-        completedCount: Math.max(
-          summary?.completedCount ?? 0,
-          completedSource.completedCount,
-          localCompletedRows[rowKey] ?? 0,
-        ),
-      }
-    }),
-  )
+  const coverageRows = buildChecklistCoverageRows({
+    acknowledgementItems: items,
+    localActiveInstances,
+    localCompletedRows,
+    mobileToday,
+    month: selectedMonth,
+  })
   const monthOptions = buildMonthOptions(
     coverageRows,
     items,
@@ -470,6 +395,33 @@ function useStoreChecklistsPageContent(input: {
   const incompleteVisitStoreRows = visitStoreRows.filter((row) =>
     isIncompleteStoreVisitRow(row, requiresCombinedVisitTemplates),
   )
+  const currentMonth = getVisitPlanCurrentMonthKey()
+  const evaluationMonth = resolveVisitPlanEvaluationMonth(selectedMonth, currentMonth)
+  const visitPlanCoverageRows = buildChecklistCoverageRows({
+    acknowledgementItems: items,
+    localActiveInstances,
+    localCompletedRows,
+    mobileToday,
+    month: evaluationMonth,
+  })
+  const filteredVisitPlanCoverageRows = visitPlanCoverageRows.filter((row) =>
+    doesCoverageRowMatchFilters(row, {
+      month: 'all',
+      query: searchQuery,
+      status: 'all',
+      type: effectiveTypeFilter,
+    }),
+  )
+  const visitPlanStoreRows = buildChecklistStoreVisitRows(filteredVisitPlanCoverageRows)
+  const visitPlanRows = buildVisitPlanRows({
+    acknowledgementItems: items,
+    authSummary: input.authSummary,
+    currentMonth,
+    evaluationMonth,
+    requiresCombinedVisitTemplates,
+    rows: visitPlanStoreRows,
+    selectedMonth,
+  }).filter((row) => doesVisitPlanRowMatchStatusFilter(row, statusFilter))
   const pendingVisitStoreCount = incompleteVisitStoreRows.length
   const heroScoreValues = (canManageVisits
     ? visitStoreRows.map(getStoreVisitScore)
@@ -501,6 +453,12 @@ function useStoreChecklistsPageContent(input: {
             label: t('storeChecklists.visitEyebrow'),
             count: visitStoreRows.length,
             tone: activeVisitCount > 0 ? 'warning' as const : 'accent' as const,
+          },
+          {
+            key: 'plan' as const,
+            label: t('storeChecklists.visitPlanEyebrow'),
+            count: visitPlanRows.length,
+            tone: visitPlanRows.some((row) => row.riskLevel === 'high') ? 'danger' as const : 'calm' as const,
           },
         ]
       : []),
@@ -541,6 +499,17 @@ function useStoreChecklistsPageContent(input: {
 
   const selectChecklistTab = (tab: ChecklistTab) => {
     dispatchPageState({ type: 'selectTab', tab })
+  }
+
+  const openVisitWorkflowFromPlan = () => {
+    dispatchPageState({ type: 'selectTab', tab: 'visits' })
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildChecklistSearch(location.search, { tab: 'visits' }),
+      },
+      { replace: true },
+    )
   }
 
   const openChecklistResult = (item: ChecklistAcknowledgementItem) => {
@@ -657,42 +626,56 @@ function useStoreChecklistsPageContent(input: {
           {commandNotice ? <p className="store-checklists-inline-notice">{commandNotice}</p> : null}
 
           {canManageVisits ? (
-            <StoreChecklistsVisitPanel
-              activeVisitCount={activeVisitCount}
-              assignedStoreIds={assignedStoreIds}
-              assignedVisitStoreCount={assignedVisitStoreCount}
-              authSummary={input.authSummary}
-              display={{
-                requiresCombinedVisitTemplates,
-                showBmVisitScore,
-                showVmVisitScore,
-                vmOnlyVisitScope,
-              }}
-              errors={{
-                complete:
-                  completeVisitMutation.isError && !selectedSession
-                    ? completeVisitMutation.error
-                    : null,
-                save: saveResponseMutation.isError ? saveResponseMutation.error : null,
-                start: startVisitMutation.isError ? startVisitMutation.error : null,
-              }}
-              hydrateActiveResponseDrafts={hydrateActiveResponseDrafts}
-              incompleteVisitStoreRows={incompleteVisitStoreRows}
-              locale={locale}
-              mobileToday={mobileToday}
-              selectedTab={selectedTab}
-              startVisitIsPending={startVisitMutation.isPending}
-              startVisitVariables={startVisitMutation.variables}
-              t={t}
-              visitSort={visitSort}
-              visitStoreRows={visitStoreRows}
-              onOpenSession={(rowKey, drafts) =>
-                dispatchPageState({ type: 'openSession', rowKey, ...drafts })
-              }
-              onResetSessionDrafts={() => dispatchPageState({ type: 'resetSessionDrafts' })}
-              onStartVisit={(variables) => startVisitMutation.mutate(variables)}
-              onToggleVisitSort={(key) => dispatchPageState({ type: 'toggleVisitSort', key })}
-            />
+            <>
+              <StoreChecklistsVisitPanel
+                activeVisitCount={activeVisitCount}
+                assignedStoreIds={assignedStoreIds}
+                assignedVisitStoreCount={assignedVisitStoreCount}
+                authSummary={input.authSummary}
+                display={{
+                  requiresCombinedVisitTemplates,
+                  showBmVisitScore,
+                  showVmVisitScore,
+                  vmOnlyVisitScope,
+                }}
+                errors={{
+                  complete:
+                    completeVisitMutation.isError && !selectedSession
+                      ? completeVisitMutation.error
+                      : null,
+                  save: saveResponseMutation.isError ? saveResponseMutation.error : null,
+                  start: startVisitMutation.isError ? startVisitMutation.error : null,
+                }}
+                hydrateActiveResponseDrafts={hydrateActiveResponseDrafts}
+                incompleteVisitStoreRows={incompleteVisitStoreRows}
+                locale={locale}
+                mobileToday={mobileToday}
+                selectedTab={selectedTab}
+                startVisitIsPending={startVisitMutation.isPending}
+                startVisitVariables={startVisitMutation.variables}
+                t={t}
+                visitSort={visitSort}
+                visitStoreRows={visitStoreRows}
+                onOpenSession={(rowKey, drafts) =>
+                  dispatchPageState({ type: 'openSession', rowKey, ...drafts })
+                }
+                onResetSessionDrafts={() => dispatchPageState({ type: 'resetSessionDrafts' })}
+                onStartVisit={(variables) => startVisitMutation.mutate(variables)}
+                onToggleVisitSort={(key) => dispatchPageState({ type: 'toggleVisitSort', key })}
+              />
+              {selectedTab === 'plan' ? (
+                <StoreChecklistsVisitPlan
+                  assignedVisitStoreCount={assignedVisitStoreCount}
+                  evaluationMonth={evaluationMonth}
+                  locale={locale}
+                  rows={visitPlanRows}
+                  selectedMonth={selectedMonth}
+                  t={t}
+                  visibleTemplateCount={mobileToday?.templates.length ?? 0}
+                  onOpenVisits={openVisitWorkflowFromPlan}
+                />
+              ) : null}
+            </>
           ) : null}
 
           {canUseAcknowledgements ? (
