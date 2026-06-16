@@ -56,6 +56,64 @@ test('region manager checklist surface shows assigned store visit workflow', asy
   await expect(page.getByText('Başarıyla Tamamlandı')).toBeVisible()
 })
 
+test('continued checklist closes after successful completion', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  await answerChecklistScoreQuestion(page, '8', 'Continued checklist should close')
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Tamamla', exact: true }).click()
+
+  await expect.poll(() => requests.completes).toEqual([
+    { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
+  ])
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('continued checklist with saved draft responses completes without another edit', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    acknowledgementItems: [],
+    activeInstances: [
+      {
+        checklistInstanceId: '33333333-3333-4333-8333-333333333333',
+        checklistTemplateId: templateId,
+        storeId,
+        status: 'in_progress',
+        startedAt: '2026-05-20T10:00:00.000Z',
+        updatedAt: '2026-05-20T10:05:00.000Z',
+        responses: [
+          {
+            templateItemId: '55555555-5555-4555-8555-555555555555',
+            scoreValue: 8,
+            commentText: 'Saved before completion',
+          },
+        ],
+      },
+    ],
+    monthlySummaries: [],
+    requests,
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('button', { name: 'Devam et' }).click()
+  await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
+  page.once('dialog', (dialog) => dialog.accept())
+  await page.getByRole('button', { name: 'Tamamla', exact: true }).click()
+
+  await expect.poll(() => requests.saves).toEqual([])
+  await expect.poll(() => requests.completes).toEqual([
+    { checklistInstanceId: '33333333-3333-4333-8333-333333333333' },
+  ])
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('.store-checklists-template-score-bm')).toHaveAttribute(
+    'aria-label',
+    /80 \/ 100/,
+  )
+})
+
 test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['STORE_MANAGER'], { requests })
@@ -712,6 +770,7 @@ test('visit plan handles 200 stores without extra tab-switch network', async ({ 
   const coverageRows = buildChecklistCoverageRows({
     acknowledgementItems: [],
     localActiveInstances: {},
+    localCompletedInstances: {},
     localCompletedRows: {},
     mobileToday: fixture,
     month: evaluationMonth,
@@ -1356,6 +1415,10 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
           checklistInstance: {
             checklist_instance_id: match?.[1] ?? '33333333-3333-4333-8333-333333333333',
             status: 'completed',
+            total_score: '80.00',
+            compliance_rate: '1.0000',
+            completed_at: '2026-05-20T10:30:00.000Z',
+            locked_at: '2026-05-20T10:30:00.000Z',
           },
         },
       },

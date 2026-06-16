@@ -60,6 +60,7 @@ export function buildVisitPriorityHomeSummary(input: {
   const visitRows = buildChecklistVisitRows({
     acknowledgementItems: input.acknowledgementItems,
     localActiveInstances: {},
+    localCompletedInstances: {},
     localCompletedRows: {},
     mobileToday: input.mobileToday ?? undefined,
     month: currentMonth,

@@ -28,6 +28,7 @@ import {
   createInitialStoreChecklistsState,
   storeChecklistCommandNotice,
   storeChecklistsReducer,
+  type ChecklistCompletedInstance,
   type ChecklistResponseDraft,
   type ChecklistTab,
   type ChecklistTabOption,
@@ -72,6 +73,7 @@ import {
   StoreLoadingState,
   StoreSurfacePage,
 } from './store-surface-primitives'
+import { mergeCompletedInstanceIntoMobileToday } from './store-checklists-cache-model'
 
 function mergeSavedResponseIntoMobileToday(
   current: MobileChecklistTodayResponse | undefined,
@@ -126,6 +128,7 @@ function useStoreChecklistsPageContent(input: {
     resultSort,
     localActiveInstances,
     localCompletedRows,
+    localCompletedInstances,
     sessionDirty,
   } = pageState
   const autoSaveTimersRef = useRef<Record<string, number>>({})
@@ -245,8 +248,10 @@ function useStoreChecklistsPageContent(input: {
   const completeVisitMutation = useMutation({
     mutationFn: async (variables: {
       checklistInstanceId: string
+      checklistTemplateId: string
       responses: ChecklistResponseDraft[]
       rowKey: string
+      storeId: string
     }) => {
       await savePendingSessionResponses(variables.checklistInstanceId, variables.responses)
       const result = await completeMobileChecklistInstance({
@@ -254,14 +259,30 @@ function useStoreChecklistsPageContent(input: {
       })
       return result
     },
-    onSuccess: (_result, variables) => {
+    onSuccess: (result, variables) => {
+      const completedInstance = result.data.checklistInstance
+      const totalScore =
+        completedInstance.total_score === null || completedInstance.total_score === undefined
+          ? null
+          : Number(completedInstance.total_score)
+      const completedChecklistInstance: ChecklistCompletedInstance = {
+        checklistInstanceId: variables.checklistInstanceId,
+        checklistTemplateId: variables.checklistTemplateId,
+        completedAt: completedInstance.completed_at ?? null,
+        storeId: variables.storeId,
+        totalScore: totalScore === null || Number.isFinite(totalScore) ? totalScore : null,
+      }
+      queryClient.setQueryData<MobileChecklistTodayResponse>(
+        ['mobile-checklists-today'],
+        (current) => mergeCompletedInstanceIntoMobileToday(current, completedChecklistInstance),
+      )
       showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
       void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
       dispatchPageState({
         type: 'completeVisitSucceeded',
-        checklistInstanceId: variables.checklistInstanceId,
+        completedInstance: completedChecklistInstance,
         rowKey: variables.rowKey,
       })
     },
@@ -330,6 +351,7 @@ function useStoreChecklistsPageContent(input: {
   const coverageRows = buildChecklistCoverageRows({
     acknowledgementItems: items,
     localActiveInstances,
+    localCompletedInstances,
     localCompletedRows,
     mobileToday,
     month: selectedMonth,
@@ -400,6 +422,7 @@ function useStoreChecklistsPageContent(input: {
   const visitPlanCoverageRows = buildChecklistCoverageRows({
     acknowledgementItems: items,
     localActiveInstances,
+    localCompletedInstances,
     localCompletedRows,
     mobileToday,
     month: evaluationMonth,
@@ -745,6 +768,7 @@ function useStoreChecklistsPageContent(input: {
           if (!selectedSession) return
           completeVisitMutation.mutate({
             checklistInstanceId,
+            checklistTemplateId: selectedSession.template.checklistTemplateId,
             responses: buildChecklistResponseDrafts({
               checklistInstanceId,
               comments,
@@ -752,6 +776,7 @@ function useStoreChecklistsPageContent(input: {
               session: selectedSession,
             }),
             rowKey: getCoverageRowKeyFromRow(selectedSession),
+            storeId: selectedSession.store.storeId,
           })
         }}
         onNoteChange={(note) => {
