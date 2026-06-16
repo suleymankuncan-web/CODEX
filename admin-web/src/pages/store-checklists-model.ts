@@ -7,6 +7,8 @@ export type ChecklistCoverageRow = {
   summary: MobileChecklistToday['monthlySummaries'][number] | undefined
   completedAt: string | null
   completedCount: number
+  completedScore: number | null
+  localCompletedScore: number | null
 }
 
 export type ChecklistStoreVisitRow = {
@@ -25,6 +27,13 @@ export type ChecklistSortDirection = 'asc' | 'desc'
 export type ChecklistSort = { key: ChecklistSortKey; direction: ChecklistSortDirection }
 export type ChecklistTab = 'visits' | 'plan' | 'inbox' | 'incomplete' | 'history'
 export type ChecklistActiveInstance = MobileChecklistToday['activeInstances'][number]
+export type ChecklistCompletedInstance = {
+  checklistInstanceId: string
+  checklistTemplateId: string
+  completedAt: string | null
+  storeId: string
+  totalScore: number | null
+}
 export type ChecklistTabOption = {
   key: ChecklistTab
   label: string
@@ -64,6 +73,7 @@ export type StoreChecklistsState = {
   resultSort: ChecklistSort
   localActiveInstances: Record<string, ChecklistActiveInstance>
   localCompletedRows: Record<string, number>
+  localCompletedInstances: Record<string, ChecklistCompletedInstance>
   sessionDirty: boolean
 }
 
@@ -76,7 +86,11 @@ export type StoreChecklistsAction =
       draft: ChecklistResponseDraft
       updatedAt: string | null
     }
-  | { type: 'completeVisitSucceeded'; checklistInstanceId: string; rowKey: string }
+  | {
+      type: 'completeVisitSucceeded'
+      completedInstance: ChecklistCompletedInstance
+      rowKey: string
+    }
   | {
       type: 'openSession'
       rowKey: string
@@ -116,6 +130,7 @@ export function createInitialStoreChecklistsState(search: string): StoreChecklis
     resultSort: { key: 'date', direction: 'desc' },
     localActiveInstances: {},
     localCompletedRows: {},
+    localCompletedInstances: {},
     sessionDirty: false,
   }
 }
@@ -210,12 +225,17 @@ export function storeChecklistsReducer(
         ...state,
         localActiveInstances: Object.fromEntries(
           Object.entries(state.localActiveInstances).filter(
-            ([, instance]) => instance.checklistInstanceId !== action.checklistInstanceId,
+            ([, instance]) =>
+              instance.checklistInstanceId !== action.completedInstance.checklistInstanceId,
           ),
         ),
         localCompletedRows: {
           ...state.localCompletedRows,
           [action.rowKey]: Math.max((state.localCompletedRows[action.rowKey] ?? 0) + 1, 1),
+        },
+        localCompletedInstances: {
+          ...state.localCompletedInstances,
+          [action.completedInstance.checklistInstanceId]: action.completedInstance,
         },
         selectedSessionKey: null,
         sessionDirty: false,

@@ -28,6 +28,7 @@ import {
   createInitialStoreChecklistsState,
   storeChecklistCommandNotice,
   storeChecklistsReducer,
+  type ChecklistCompletedInstance,
   type ChecklistResponseDraft,
   type ChecklistTab,
   type ChecklistTabOption,
@@ -45,6 +46,7 @@ import {
   getChecklistTypeFilterOptions,
   getCoverageRowKey,
   getCoverageRowKeyFromRow,
+  getMonthKey,
   getStaticCopy,
   getStoreVisitScore,
   isIncompleteStoreVisitRow,
@@ -98,6 +100,101 @@ function mergeSavedResponseIntoMobileToday(
   }
 }
 
+function mergeCompletedInstanceIntoMobileToday(
+  current: MobileChecklistTodayResponse | undefined,
+  input: ChecklistCompletedInstance,
+) {
+  if (!current) return current
+
+  const completedAt = input.completedAt ?? new Date().toISOString()
+  const monthKey = getMonthKey(completedAt)
+  const monthStart = monthKey ? `${monthKey}-01` : completedAt.slice(0, 10)
+  const existingCompleted = current.data.completedThisMonth.some(
+    (item) => item.checklistInstanceId === input.checklistInstanceId,
+  )
+  const completedRow = {
+    acknowledgedAt: null,
+    checklistInstanceId: input.checklistInstanceId,
+    checklistTemplateId: input.checklistTemplateId,
+    completedAt,
+    storeId: input.storeId,
+    totalScore: input.totalScore ?? 0,
+  }
+  const monthlySummaries = current.data.monthlySummaries.filter(
+    (summary) =>
+      !(
+        summary.storeId === input.storeId &&
+        summary.checklistTemplateId === input.checklistTemplateId &&
+        getMonthKey(summary.monthStart) === monthKey
+      ),
+  )
+  const existingSummary = current.data.monthlySummaries.find(
+    (summary) =>
+      summary.storeId === input.storeId &&
+      summary.checklistTemplateId === input.checklistTemplateId &&
+      getMonthKey(summary.monthStart) === monthKey,
+  )
+  const previousCount = existingSummary?.completedCount ?? 0
+  const nextCount = existingCompleted ? Math.max(previousCount, 1) : previousCount + 1
+  const nextAverage =
+    input.totalScore === null
+      ? (existingSummary?.averageScore ?? null)
+      : existingSummary?.averageScore === null || existingSummary?.averageScore === undefined || existingCompleted
+        ? input.totalScore
+        : Math.round(
+            (((existingSummary.averageScore * previousCount) + input.totalScore) / Math.max(nextCount, 1)) * 100,
+          ) / 100
+
+  return {
+    ...current,
+    data: {
+      ...current.data,
+      activeInstances: current.data.activeInstances.filter(
+        (instance) => instance.checklistInstanceId !== input.checklistInstanceId,
+      ),
+      completedThisMonth: existingCompleted
+        ? current.data.completedThisMonth.map((item) =>
+            item.checklistInstanceId === input.checklistInstanceId ? completedRow : item,
+          )
+        : [completedRow, ...current.data.completedThisMonth],
+      monthlySummaries: [
+        ...monthlySummaries,
+        {
+          averageScore: nextAverage,
+          checklistTemplateId: input.checklistTemplateId,
+          completedCount: nextCount,
+          monthStart,
+          storeId: input.storeId,
+        },
+      ],
+      pendingAcknowledgements: current.data.pendingAcknowledgements.some(
+        (item) => item.checklistInstanceId === input.checklistInstanceId,
+      )
+        ? current.data.pendingAcknowledgements.map((item) =>
+            item.checklistInstanceId === input.checklistInstanceId
+              ? {
+                  checklistInstanceId: input.checklistInstanceId,
+                  checklistTemplateId: input.checklistTemplateId,
+                  completedAt,
+                  storeId: input.storeId,
+                  totalScore: input.totalScore ?? 0,
+                }
+              : item,
+          )
+        : [
+            {
+              checklistInstanceId: input.checklistInstanceId,
+              checklistTemplateId: input.checklistTemplateId,
+              completedAt,
+              storeId: input.storeId,
+              totalScore: input.totalScore ?? 0,
+            },
+            ...current.data.pendingAcknowledgements,
+          ],
+    },
+  }
+}
+
 function useStoreChecklistsPageContent(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -126,6 +223,7 @@ function useStoreChecklistsPageContent(input: {
     resultSort,
     localActiveInstances,
     localCompletedRows,
+    localCompletedInstances,
     sessionDirty,
   } = pageState
   const autoSaveTimersRef = useRef<Record<string, number>>({})
@@ -245,8 +343,10 @@ function useStoreChecklistsPageContent(input: {
   const completeVisitMutation = useMutation({
     mutationFn: async (variables: {
       checklistInstanceId: string
+      checklistTemplateId: string
       responses: ChecklistResponseDraft[]
       rowKey: string
+      storeId: string
     }) => {
       await savePendingSessionResponses(variables.checklistInstanceId, variables.responses)
       const result = await completeMobileChecklistInstance({
@@ -254,14 +354,30 @@ function useStoreChecklistsPageContent(input: {
       })
       return result
     },
-    onSuccess: (_result, variables) => {
+    onSuccess: (result, variables) => {
+      const completedInstance = result.data.checklistInstance
+      const totalScore =
+        completedInstance.total_score === null || completedInstance.total_score === undefined
+          ? null
+          : Number(completedInstance.total_score)
+      const completedChecklistInstance: ChecklistCompletedInstance = {
+        checklistInstanceId: variables.checklistInstanceId,
+        checklistTemplateId: variables.checklistTemplateId,
+        completedAt: completedInstance.completed_at ?? null,
+        storeId: variables.storeId,
+        totalScore: totalScore === null || Number.isFinite(totalScore) ? totalScore : null,
+      }
+      queryClient.setQueryData<MobileChecklistTodayResponse>(
+        ['mobile-checklists-today'],
+        (current) => mergeCompletedInstanceIntoMobileToday(current, completedChecklistInstance),
+      )
       showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
       void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
       void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
       void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
       dispatchPageState({
         type: 'completeVisitSucceeded',
-        checklistInstanceId: variables.checklistInstanceId,
+        completedInstance: completedChecklistInstance,
         rowKey: variables.rowKey,
       })
     },
@@ -330,6 +446,7 @@ function useStoreChecklistsPageContent(input: {
   const coverageRows = buildChecklistCoverageRows({
     acknowledgementItems: items,
     localActiveInstances,
+    localCompletedInstances,
     localCompletedRows,
     mobileToday,
     month: selectedMonth,
@@ -400,6 +517,7 @@ function useStoreChecklistsPageContent(input: {
   const visitPlanCoverageRows = buildChecklistCoverageRows({
     acknowledgementItems: items,
     localActiveInstances,
+    localCompletedInstances,
     localCompletedRows,
     mobileToday,
     month: evaluationMonth,
@@ -745,6 +863,7 @@ function useStoreChecklistsPageContent(input: {
           if (!selectedSession) return
           completeVisitMutation.mutate({
             checklistInstanceId,
+            checklistTemplateId: selectedSession.template.checklistTemplateId,
             responses: buildChecklistResponseDrafts({
               checklistInstanceId,
               comments,
@@ -752,6 +871,7 @@ function useStoreChecklistsPageContent(input: {
               session: selectedSession,
             }),
             rowKey: getCoverageRowKeyFromRow(selectedSession),
+            storeId: selectedSession.store.storeId,
           })
         }}
         onNoteChange={(note) => {

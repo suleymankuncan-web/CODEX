@@ -148,7 +148,11 @@ export async function completeMobileChecklistInstance(input: {
     CommandResponse<{
       checklistInstance: {
         checklist_instance_id: string
+        completed_at?: string | null
+        compliance_rate?: string | number | null
+        locked_at?: string | null
         status: MobileChecklistInstanceStatus
+        total_score?: string | number | null
       }
     }>
   >(`/mobile/checklists/instances/${input.checklistInstanceId}/complete`, {
