@@ -792,7 +792,7 @@ CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_projection (
     CHECK (period_timezone = 'Europe/Istanbul'),
     CHECK (store_type = 'company'),
     CHECK (calculation_status IN ('projected', 'no_source', 'blocked', 'closed')),
-    CHECK (calculation_status NOT IN ('blocked', 'no_source') OR blocked_reason IS NOT NULL),
+    CHECK (calculation_status <> 'blocked' OR blocked_reason IS NOT NULL),
     CHECK (store_target_amount IS NULL OR store_target_amount > 0),
     CHECK (manager_rate IS NULL OR manager_rate >= 0)
 );
@@ -826,7 +826,7 @@ CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_projection_row (
     CHECK (normalized_from_position_code IS NULL OR normalized_from_position_code = 'SHIFT_LEAD'),
     CHECK (participant_type IN ('store_manager', 'personnel')),
     CHECK (calculation_status IN ('projected', 'no_source', 'blocked')),
-    CHECK (calculation_status NOT IN ('blocked', 'no_source') OR blocked_reason IS NOT NULL),
+    CHECK (calculation_status <> 'blocked' OR blocked_reason IS NOT NULL),
     CHECK (personnel_target_amount IS NULL OR personnel_target_amount > 0),
     CHECK (personnel_positive_sales_amount IS NULL OR personnel_positive_sales_amount >= 0),
     CHECK (applied_rate IS NULL OR applied_rate >= 0)

@@ -64,6 +64,12 @@ function expectSalesTargetIncentiveProjectionTables(sql: string): void {
     "CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_projection_row",
   );
   expect(sql).toContain(
+    "CHECK (calculation_status <> 'blocked' OR blocked_reason IS NOT NULL)",
+  );
+  expect(sql).not.toContain(
+    "calculation_status NOT IN ('blocked', 'no_source')",
+  );
+  expect(sql).toContain(
     "personnel_target_reference_id UUID REFERENCES ops.personnel_target_reference(personnel_target_reference_id)",
   );
   expect(sql).toContain("position_code TEXT NOT NULL");
