@@ -395,19 +395,25 @@ export class SalesTargetIncentiveReadRepository {
     },
     params: unknown[],
   ) {
+    const clauses: string[] = [];
+
     if (input.storeIds && input.storeIds.length > 0) {
       params.push(input.storeIds);
-      return [`s.store_id = ANY($${params.length}::uuid[])`];
+      clauses.push(`s.store_id = ANY($${params.length}::uuid[])`);
     }
 
     if (input.regionIds && input.regionIds.length > 0) {
       params.push(input.regionIds);
-      return [`s.region_id = ANY($${params.length}::uuid[])`];
+      clauses.push(`s.region_id = ANY($${params.length}::uuid[])`);
     }
 
     if (input.companyIds && input.companyIds.length > 0) {
       params.push(input.companyIds);
-      return [`s.company_id = ANY($${params.length}::uuid[])`];
+      clauses.push(`s.company_id = ANY($${params.length}::uuid[])`);
+    }
+
+    if (clauses.length > 0) {
+      return clauses;
     }
 
     return input.allowGlobalScope ? ["TRUE"] : ["FALSE"];

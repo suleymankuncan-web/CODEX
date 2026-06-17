@@ -59,6 +59,8 @@ describe("SalesTargetIncentiveReadRepository", () => {
     const text = String(sql);
 
     expect(text).toContain("s.store_type = 'company'");
+    expect(text).toContain("s.store_id = ANY($4::uuid[])");
+    expect(text).toContain("s.company_id = ANY($5::uuid[])");
     expect(text).toContain("p.position_code IN");
     expect(text).toContain("'ASSISTANT_MANAGER'");
     expect(text).toContain("'SENIOR_SALES_CONSULTANT'");
@@ -84,6 +86,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
       "2026-05-31",
       "2026-05-10",
       ["00000000-0000-4000-8000-000000000201"],
+      ["00000000-0000-4000-8000-000000000001"],
     ]);
   });
 
