@@ -81,6 +81,15 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.scope_type = 'employee'");
     expect(text).toContain("ka.employee_id = assignment.employee_id");
     expect(text).toContain("ka.store_id = assignment.store_id");
+    expect(text).toContain("FROM stg.kpi_raw kr");
+    expect(text).toContain(
+      "employee_map.internal_id = assignment.employee_id",
+    );
+    expect(text).toContain("store_map.internal_id = assignment.store_id");
+    expect(text).toContain("kr.payload_json ->> 'scopeType' = 'employee'");
+    expect(text).toContain(
+      "kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'",
+    );
     expect(text.match(/ka\.period_type = 'monthly'/g)).toHaveLength(2);
     expect(text).toContain("ka.period_start = $1::date");
     expect(text).toContain("ka.period_end = $2::date");
