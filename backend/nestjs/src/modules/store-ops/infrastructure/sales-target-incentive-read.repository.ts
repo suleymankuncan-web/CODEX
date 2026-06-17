@@ -298,6 +298,7 @@ export class SalesTargetIncentiveReadRepository {
           LEFT JOIN ops.personnel_target_reference ptr
             ON ptr.employee_id = assignment.employee_id
            AND ptr.store_id = assignment.store_id
+           AND ptr.source_request_id = store_target.target_distribution_request_id
            AND ptr.period_start = $1::date
            AND ptr.period_end = $2::date
            AND ptr.target_type = 'monthly_sales_target'

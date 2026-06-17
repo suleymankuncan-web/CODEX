@@ -67,6 +67,9 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).not.toContain("'CASHIER'");
     expect(text).toContain("ptr.status = 'approved'");
     expect(text).toContain("ptr.target_type = 'monthly_sales_target'");
+    expect(text).toContain(
+      "ptr.source_request_id = store_target.target_distribution_request_id",
+    );
     expect(text).toContain("kd.kpi_code = 'NET_SALES'");
     expect(text).toContain("ka.scope_type = 'employee'");
     expect(text).toContain("ka.employee_id = assignment.employee_id");

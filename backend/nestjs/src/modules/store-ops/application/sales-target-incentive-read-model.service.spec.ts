@@ -204,4 +204,25 @@ describe("SalesTargetIncentiveReadModelService", () => {
     );
     expect(result.blockingImports).toHaveLength(1);
   });
+
+  it("blocks close readiness when projection calculations are incomplete", async () => {
+    const { service } = createService({
+      storeRows: [{ ...storeSource, store_target_amount: null }],
+      personnelRows: [],
+    });
+
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05",
+      companyIds: ["company-1"],
+      nowIso: "2026-06-01T02:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "blocked_by_calculation",
+        canClose: false,
+      }),
+    );
+  });
 });

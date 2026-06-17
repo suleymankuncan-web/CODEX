@@ -63,7 +63,11 @@ export type SalesTargetIncentiveCloseReadiness = {
   periodStart: string;
   periodEnd: string;
   canClose: boolean;
-  status: "ready" | "not_due" | "blocked_by_imports";
+  status:
+    | "ready"
+    | "not_due"
+    | "blocked_by_imports"
+    | "blocked_by_calculation";
   blockingImports: SalesTargetIncentiveCloseBlockingImportRow[];
 };
 
@@ -160,6 +164,24 @@ export class SalesTargetIncentiveReadModelService {
         periodEnd: period.periodEnd,
         canClose: false,
         status: "blocked_by_imports",
+        blockingImports,
+      };
+    }
+
+    const projection = await this.buildCurrentProjection({
+      periodKey: input.periodKey,
+      companyIds: input.companyIds,
+      regionIds: [],
+      storeIds: [],
+    });
+
+    if (hasIncompleteCloseCalculation(projection)) {
+      return {
+        periodKey: input.periodKey,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        canClose: false,
+        status: "blocked_by_calculation",
         blockingImports,
       };
     }
@@ -318,4 +340,21 @@ function formatDateInSalesTargetIncentiveTimezone(date: Date) {
 
 function formatDisplayName(firstName: string | null, lastName: string | null) {
   return [firstName, lastName].filter(Boolean).join(" ").trim();
+}
+
+function hasIncompleteCloseCalculation(
+  projection: SalesTargetIncentiveProjectionReadModel,
+) {
+  return projection.stores.some((store) => {
+    const participants = [
+      ...(store.manager ? [store.manager] : []),
+      ...store.personnel,
+    ];
+
+    return participants.some(
+      (participant) =>
+        participant.calculation.status === "blocked" ||
+        participant.calculation.status === "no_source",
+    );
+  });
 }
