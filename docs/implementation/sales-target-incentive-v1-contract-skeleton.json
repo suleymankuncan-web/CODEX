@@ -1,0 +1,152 @@
+{
+  "name": "sales-target-incentive-v1-contract-skeleton",
+  "status": "active-pr1-skeleton",
+  "ruleVersionCode": "sales-target-incentive-v1.0.0",
+  "periodTimezone": "Europe/Istanbul",
+  "currencyPrecision": {
+    "rawScaleMinimum": 6,
+    "payableScale": 2,
+    "subKurusPolicy": "truncate_toward_zero"
+  },
+  "rateBracketPolicy": {
+    "achievementBasis": "exact_decimal_actual_div_target_times_100",
+    "comparison": "lower_inclusive_upper_exclusive",
+    "roundBeforeLookup": false,
+    "displayRangesAreNonAuthoritative": true,
+    "thresholdsPct": [
+      "80.0000",
+      "85.0000",
+      "90.0000",
+      "95.0000",
+      "100.0000",
+      "110.0000"
+    ],
+    "edgeFixtures": [
+      {
+        "achievementPct": "84.9999",
+        "expectedManagerRate": "0.0020",
+        "expectedPersonnelRate": "0.0050"
+      },
+      {
+        "achievementPct": "85.0000",
+        "expectedManagerRate": "0.0030",
+        "expectedPersonnelRate": "0.0050"
+      },
+      {
+        "achievementPct": "89.9600",
+        "expectedManagerRate": "0.0030",
+        "expectedPersonnelRate": "0.0050"
+      },
+      {
+        "achievementPct": "89.9999",
+        "expectedManagerRate": "0.0030",
+        "expectedPersonnelRate": "0.0050"
+      },
+      {
+        "achievementPct": "90.0000",
+        "expectedManagerRate": "0.0040",
+        "expectedPersonnelRate": "0.0065"
+      },
+      {
+        "achievementPct": "109.9999",
+        "expectedManagerRate": "0.0070",
+        "expectedPersonnelRate": "0.0150"
+      },
+      {
+        "achievementPct": "110.0000",
+        "expectedManagerRate": "0.0100",
+        "expectedPersonnelRate": "0.0165"
+      }
+    ]
+  },
+  "approvedTargetPolicy": {
+    "source": "existing_target_workflow_approved_state",
+    "acceptedApproverRoles": [
+      "REGION_MANAGER",
+      "SUPER_ADMIN"
+    ],
+    "doNotReinterpretApprovalByRole": true
+  },
+  "visibilityScenarios": [
+    {
+      "id": "eligible_personnel_own_company_store",
+      "role": "STORE_PERSONNEL",
+      "storeOwnershipType": "company",
+      "positionCode": "SALES_ASSOCIATE",
+      "expectedApiVisibility": "own_projection_only",
+      "expectedUiVisibility": "store_me_incentive_card"
+    },
+    {
+      "id": "cashier_hidden",
+      "role": "STORE_PERSONNEL",
+      "storeOwnershipType": "company",
+      "positionCode": "CASHIER",
+      "expectedApiVisibility": "none",
+      "expectedUiVisibility": "none"
+    },
+    {
+      "id": "franchise_hidden",
+      "role": "STORE_MANAGER",
+      "storeOwnershipType": "franchise",
+      "positionCode": "STORE_MANAGER",
+      "expectedApiVisibility": "none",
+      "expectedUiVisibility": "none"
+    },
+    {
+      "id": "operator_hidden",
+      "role": "STORE_MANAGER",
+      "storeOwnershipType": "operator",
+      "positionCode": "STORE_MANAGER",
+      "expectedApiVisibility": "none",
+      "expectedUiVisibility": "none"
+    },
+    {
+      "id": "store_manager_own_company_store",
+      "role": "STORE_MANAGER",
+      "storeOwnershipType": "company",
+      "positionCode": "STORE_MANAGER",
+      "expectedApiVisibility": "own_store_manager_and_eligible_personnel",
+      "expectedUiVisibility": "store_incentives_store_manager"
+    },
+    {
+      "id": "region_manager_assigned_company_stores",
+      "role": "REGION_MANAGER",
+      "storeOwnershipType": "company",
+      "positionCode": null,
+      "expectedApiVisibility": "assigned_company_stores_only",
+      "expectedUiVisibility": "store_incentives_region_manager"
+    },
+    {
+      "id": "admin_all_company_stores",
+      "role": "SUPER_ADMIN",
+      "storeOwnershipType": "company",
+      "positionCode": null,
+      "expectedApiVisibility": "all_company_store_eligible_records",
+      "expectedUiVisibility": "admin_incentives"
+    }
+  ],
+  "calculationStates": [
+    "projected",
+    "no_source",
+    "blocked",
+    "closed",
+    "corrected",
+    "adjusted"
+  ],
+  "blockedReasons": [
+    "missing_store_target",
+    "invalid_store_target",
+    "missing_personnel_target",
+    "invalid_personnel_target",
+    "missing_store_sales_source",
+    "missing_personnel_sales_source",
+    "pending_target_revision",
+    "ambiguous_source_period"
+  ],
+  "sourcePolicies": {
+    "managerSalesSource": "store_net_sales",
+    "personnelSalesSource": "personnel_positive_gross_sales",
+    "negativePersonnelRows": "reconciliation_only",
+    "periodAssignment": "source_sales_date_or_source_period"
+  }
+}

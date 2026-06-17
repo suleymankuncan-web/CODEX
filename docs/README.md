@@ -43,6 +43,7 @@ Use this directory like an operating library, not a diary.
 | Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` | Feedback intake, P0/P1/P2/P3 triage, PR sequence, autonomy limits, and closeout criteria. |
 | Check launch browser-session evidence | `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md` and `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md` | Local implementation is guarded and real Region Manager staging cookie-session proof passed; rerun with `npm.cmd --prefix admin-web run smoke:auth:staging:cookie-session`; broad production remains `No-Go`. |
 | Add a future feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Source-of-truth, auth, API, DB, workflow, operations, and rollback gates. |
+| Execute Sales Target Incentive V1 | `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md` and `docs/implementation/sales-target-incentive-v1-fixtures.md` | Active prim PR train, locked money/period/rule fixtures, and visibility contract skeleton. |
 | Modernize Store/Admin UI | `docs/process/product-experience-principles.md` | Product-quality standard for clean but premium, operationally honest UI work. |
 | Split Store workforce from approvals | `docs/plans/store-workforce-and-approvals-split-v1-plan.md` | Active plan for `/store/workforce`, Norm Kadro ownership, and approvals becoming a request center. |
 | Inspect the system map | `docs/flows/README.md` | Generated frontend route, API, controller, and OpenAPI flow map. |
@@ -117,6 +118,8 @@ Use for project shape, growth rules, API contracts, and system boundaries.
 - `docs/plans/new-module-template.md`
 - `docs/plans/technical-debt-resolution-roadmap-v1.md`
 - `docs/plans/refactor-completion-inventory-v1.md`
+- `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`
+- `docs/implementation/sales-target-incentive-v1-fixtures.md`
 - `docs/plans/api-contract-drift-plan.md`
 - `docs/plans/rules-config-boundary-decision-v1.md`
 - `docs/flows/README.md`

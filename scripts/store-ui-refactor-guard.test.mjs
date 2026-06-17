@@ -4,10 +4,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const storeRedesignPlanPath = 'docs/plans/store-surfaces-redesign-implementation-plan-v1.md'
-const parkedStoreRouteFiles = new Set([
+const incentiveTrainOwnedStoreRouteFiles = [
   'admin-web/src/pages/StoreIncentivesPage.tsx',
   'admin-web/src/features/localization/messages/store-incentives.ts',
-])
+]
 
 const activeStoreUiPathspecs = [
   'admin-web/src/pages/Store*.tsx',
@@ -64,7 +64,6 @@ function trackedStoreUiFiles() {
   return git(['ls-files', ...activeStoreUiPathspecs])
     .split(/\r?\n/)
     .filter(Boolean)
-    .filter((path) => !parkedStoreRouteFiles.has(path))
 }
 
 function activeStoreViolations(files = trackedStoreUiFiles()) {
@@ -89,7 +88,7 @@ function requireText(text, expected) {
   assert.match(text, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
 }
 
-test('Store redesign plan keeps stack, data, role, and parked-route guardrails explicit', () => {
+test('Store redesign plan keeps stack, data, role, and incentive ownership guardrails explicit', () => {
   const text = readFileSync(storeRedesignPlanPath, 'utf8')
 
   for (const expected of [
@@ -98,8 +97,10 @@ test('Store redesign plan keeps stack, data, role, and parked-route guardrails e
     'lucide-icons/lucide',
     'Do not invent data',
     'Keep role-aware navigation and direct-route availability aligned',
-    '/store/incentives` is parked',
-    'Do not productize it',
+    '/store/incentives` is owned by Sales Target Incentive V1',
+    'Do not productize',
+    'it through Store redesign work',
+    'before Sales Target Incentive V1 PR-6',
   ]) {
     requireText(text, expected)
   }
@@ -107,6 +108,14 @@ test('Store redesign plan keeps stack, data, role, and parked-route guardrails e
 
 test('active Store UI files do not reintroduce legacy classes, debug copy, or fake data language', () => {
   assert.deepEqual(activeStoreViolations(), [])
+})
+
+test('Sales Target Incentive V1 owned Store files stay inside the active Store UI scan', () => {
+  const files = new Set(trackedStoreUiFiles())
+
+  for (const path of incentiveTrainOwnedStoreRouteFiles) {
+    assert.equal(files.has(path), true)
+  }
 })
 
 test('Store UI guard rejects a synthetic fake-data and legacy-class violation', () => {

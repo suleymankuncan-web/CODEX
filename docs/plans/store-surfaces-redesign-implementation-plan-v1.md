@@ -4,8 +4,9 @@ Date: 2026-05-26
 
 Status: active intent matrix for the multi-PR Store UI refactor line.
 
-Scope: all active `/store/*` routes, with `/store/incentives` explicitly parked
-as a future product-expansion intake surface.
+Scope: all active `/store/*` routes. `/store/incentives` is owned by Sales
+Target Incentive V1 and must not be productized by this generic Store UI
+refactor line.
 
 This plan supersedes the earlier ten-page redesign note by adding the full
 Store Page Intent Matrix required before implementation. It extends the Store
@@ -32,8 +33,10 @@ Me reference line and the merged Store UI stack decision:
   status, restrained visual energy, no generic admin-table feel.
 - Do not confuse premium with decorative. Every visible module must help the
   user understand status or act.
-- `/store/incentives` is parked for later product shaping. Do not productize it,
-  add it to toolbar navigation, or infer incentive calculations in this line.
+- `/store/incentives` is owned by Sales Target Incentive V1. Do not productize
+  it through Store redesign work, add it to toolbar navigation before the
+  incentive PR-6 route/UI slice, or infer incentive calculations outside the
+  incentive train.
 
 ## Source Evidence
 
@@ -337,21 +340,27 @@ Reference UI/data evidence:
 
 ### `/store/incentives`
 
-- Intent: parked product expansion intake/foundation, not a live incentive
-  engine.
-- Persona: direct route can render for Store shell users, but it is intentionally
-  not a toolbar item in this line.
-- Toolbar: do not add.
-- Real sources: auth session and role labels only; no payout, rule lookup,
-  approval outcome, recalculation, or incentive summary API exists.
-- Main action: none for this refactor line; keep existing route stable for
-  future shaping.
-- States: locale/foundation behavior covered by existing Store e2e.
+- Intent: Sales Target Incentive V1 product surface, not a generic Store UI
+  refactor shortcut.
+- Persona: store manager and region manager when the incentive train reaches
+  PR-6; direct route stability remains guarded before that.
+- Toolbar: do not add before Sales Target Incentive V1 PR-6 wires role-aware
+  navigation from the backend-owned read API.
+- Real sources: Sales Target Incentive V1 API projections, rule version,
+  rate-table version, target, sales source, assignment, correction, and close
+  evidence once the train reaches the relevant PRs.
+- Main action: none for this Store refactor line; product actions are owned by
+  the incentive train.
+- States: hidden-persona, loading, no-source, blocked, projected, corrected,
+  adjusted, and closed states are defined in the incentive plan and fixtures.
 - Fake-data risk: very high. Do not infer payouts, rewards, formulas, badges,
-  or progress.
-- Current UI risk: old UI remnant remains by explicit product exception.
-- Store Me pattern: not applied until incentives are scoped as a product slice.
-- Do not change: route existence, parked classification, or toolbar absence.
+  progress, eligibility, or empty states outside Sales Target Incentive V1.
+- Current UI risk: old UI remnant remains until the incentive PR-6 Store UI
+  projection slice replaces it with real API-backed content.
+- Store Me pattern: applies only inside Sales Target Incentive V1 PR-6 after
+  API and visibility contracts exist.
+- Do not change: route behavior, toolbar absence before PR-6, or incentive
+  business/API/auth semantics in this Store refactor line.
 
 ## Batch PR Plan
 
@@ -427,6 +436,7 @@ Stop and ask for product scope before:
 - changing auth/permission or route-guard semantics,
 - changing KPI scoring, ranking sort, checklist weight, target approval, or
   workforce request behavior,
-- turning `/store/incentives` into a live product surface,
+- turning `/store/incentives` into a live product surface outside Sales Target
+  Incentive V1,
 - adding motivational/coaching copy that is not derived from real KPI/action
   state.
