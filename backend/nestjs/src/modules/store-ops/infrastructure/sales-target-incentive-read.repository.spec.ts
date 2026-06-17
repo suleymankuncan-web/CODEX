@@ -37,6 +37,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.period_end = $2::date");
     expect(text).toContain("eah.start_date <= $3::date");
     expect(text).toContain("eah.end_date >= $3::date");
+    expect(text).not.toContain("eah.assignment_status = 'active'");
     expect(text).toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
@@ -80,6 +81,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.period_end = $2::date");
     expect(text).toContain("eah.start_date <= $3::date");
     expect(text).toContain("eah.end_date >= $3::date");
+    expect(text).not.toContain("eah.assignment_status = 'active'");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
       "2026-05-01",

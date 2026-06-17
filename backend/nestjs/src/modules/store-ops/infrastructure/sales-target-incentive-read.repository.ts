@@ -136,7 +136,6 @@ export class SalesTargetIncentiveReadRepository {
               ON p.position_id = eah.position_id
              AND p.position_code = 'STORE_MANAGER'
             WHERE eah.store_id = s.store_id
-              AND eah.assignment_status = 'active'
               AND eah.is_primary_assignment = TRUE
               AND eah.start_date <= $3::date
               AND (eah.end_date IS NULL OR eah.end_date >= $3::date)
@@ -224,8 +223,7 @@ export class SalesTargetIncentiveReadRepository {
                'SALES_ASSOCIATE',
                'SHIFT_LEAD'
              )
-            WHERE eah.assignment_status = 'active'
-              AND eah.is_primary_assignment = TRUE
+            WHERE eah.is_primary_assignment = TRUE
               AND eah.start_date <= $3::date
               AND (eah.end_date IS NULL OR eah.end_date >= $3::date)
             ORDER BY eah.employee_id, eah.start_date DESC, eah.created_at DESC, eah.assignment_id DESC
