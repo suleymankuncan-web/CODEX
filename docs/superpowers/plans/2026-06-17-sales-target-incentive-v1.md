@@ -558,20 +558,20 @@ Risk class: R4 data/source semantics.
 
 Tracking issue: https://github.com/suleymankuncan-web/CODEX/issues/726
 
-- [ ] Add repository/service layer that reads approved targets, approved revisions, current assignments, store net sales, and personnel positive sales.
-- [ ] Bind store manager calculation to store net sales source.
-- [ ] Bind personnel calculation to positive personnel gross sales source.
-- [ ] Apply company-store, cashier, franchise/operator, and role-scope filtering before DTO construction.
-- [ ] Add tests for missing source states and close-blocking states.
-- [ ] Add tests proving returns/exchanges from other stores do not reduce the original seller's personnel source.
-- [ ] Add tests proving source period/date, not upload timestamp, controls period assignment.
+- [x] Add repository/service layer that reads approved targets, approved revisions, current assignments, store net sales, and personnel positive sales.
+- [x] Bind store manager calculation to store net sales source.
+- [x] Bind personnel calculation to positive personnel gross sales source.
+- [x] Apply company-store, cashier, franchise/operator, and role-scope filtering before DTO construction.
+- [x] Add tests for missing source states and close-blocking states.
+- [x] Add tests proving returns/exchanges from other stores do not reduce the original seller's personnel source.
+- [x] Add tests proving source period/date, not upload timestamp, controls period assignment.
 
 Verification:
 
-- [ ] backend repository/service tests
-- [ ] PowerBI source-policy regression tests where touched
-- [ ] `npm.cmd run test:scripts`
-- [ ] `git diff --check`
+- [x] backend repository/service tests
+- [x] PowerBI source-policy regression tests where touched
+- [x] `npm.cmd run test:scripts`
+- [x] `git diff --check`
 
 ### PR-5: Read API And Authorization `[blocked: PR-4]` `[issue-required]`
 

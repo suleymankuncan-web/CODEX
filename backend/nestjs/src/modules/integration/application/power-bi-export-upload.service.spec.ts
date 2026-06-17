@@ -516,6 +516,12 @@ describe("PowerBiExportUploadService", () => {
         PUPT: "",
       },
       {
+        Adi: "Ali Can",
+        MagazaAdi: "Kadikoy",
+        PSatisAdeti: -1,
+        SatisTutari: -1000,
+      },
+      {
         Adi: "E-Store",
         MagazaAdi: "Istanbul Marmara Park Avm",
         PSatisAdeti: -1,
@@ -536,9 +542,9 @@ describe("PowerBiExportUploadService", () => {
     const rows = (integrationService.createImportBatch.mock.calls[0][0].rows ??
       []) as Array<Record<string, unknown>>;
     expect(response.data.summary).toMatchObject({
-      personnelRowsRead: 3,
+      personnelRowsRead: 4,
       personnelGrossSalesRows: 1,
-      negativePersonnelRowsIgnored: 2,
+      negativePersonnelRowsIgnored: 3,
       canonicalRowCount: 5,
     });
     expect(rows).toEqual(
@@ -566,6 +572,12 @@ describe("PowerBiExportUploadService", () => {
           scopeType: "employee",
           sourceRow: expect.objectContaining({
             SatisTutari: -2000,
+          }),
+        }),
+        expect.objectContaining({
+          scopeType: "employee",
+          sourceRow: expect.objectContaining({
+            SatisTutari: -1000,
           }),
         }),
       ]),
