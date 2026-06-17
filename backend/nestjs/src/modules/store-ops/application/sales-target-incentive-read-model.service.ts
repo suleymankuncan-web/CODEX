@@ -20,6 +20,7 @@ export type SalesTargetIncentiveReadModelScope = {
   regionIds: string[];
   storeIds: string[];
   allowGlobalScope?: boolean;
+  assignmentAsOfDate?: string;
 };
 
 export type SalesTargetIncentiveParticipantProjection = {
@@ -84,6 +85,9 @@ export class SalesTargetIncentiveReadModelService {
     input: SalesTargetIncentiveReadModelScope,
   ): Promise<SalesTargetIncentiveProjectionReadModel> {
     const period = resolveSalesTargetIncentiveMonthlyBounds(input.periodKey);
+    const assignmentAsOfDate =
+      input.assignmentAsOfDate ??
+      resolveCurrentProjectionAssignmentAsOfDate(period.periodStart, period.periodEnd);
     const repositoryInput = {
       companyIds: input.companyIds,
       regionIds: input.regionIds,
@@ -91,6 +95,7 @@ export class SalesTargetIncentiveReadModelService {
       allowGlobalScope: input.allowGlobalScope ?? false,
       periodStart: period.periodStart,
       periodEnd: period.periodEnd,
+      assignmentAsOfDate,
     };
     const [storeRows, personnelRows] = await Promise.all([
       this.repository.listStoreProjectionSources(repositoryInput),
@@ -274,6 +279,41 @@ function resolveSalesTargetIncentiveMonthlyBounds(periodKey: string) {
     periodStart: `${periodKey}-01`,
     periodEnd: `${periodKey}-${String(lastDay).padStart(2, "0")}`,
   };
+}
+
+function resolveCurrentProjectionAssignmentAsOfDate(
+  periodStart: string,
+  periodEnd: string,
+) {
+  const today = formatDateInSalesTargetIncentiveTimezone(new Date());
+
+  if (today < periodStart) {
+    return periodStart;
+  }
+
+  if (today > periodEnd) {
+    return periodEnd;
+  }
+
+  return today;
+}
+
+function formatDateInSalesTargetIncentiveTimezone(date: Date) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: SALES_TARGET_INCENTIVE_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) {
+    throw new Error("Unable to resolve incentive assignment date");
+  }
+
+  return `${year}-${month}-${day}`;
 }
 
 function formatDisplayName(firstName: string | null, lastName: string | null) {

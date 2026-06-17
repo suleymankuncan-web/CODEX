@@ -17,6 +17,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     storeIds: [],
     periodStart: "2026-05-01",
     periodEnd: "2026-05-31",
+    assignmentAsOfDate: "2026-05-10",
   };
 
   it("binds store manager projection sources to approved store target and store NET_SALES period", async () => {
@@ -34,11 +35,14 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.scope_type = 'store'");
     expect(text).toContain("ka.period_start = $1::date");
     expect(text).toContain("ka.period_end = $2::date");
+    expect(text).toContain("eah.start_date <= $3::date");
+    expect(text).toContain("eah.end_date >= $3::date");
     expect(text).toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
       "2026-05-01",
       "2026-05-31",
+      "2026-05-10",
       ["00000000-0000-4000-8000-000000000001"],
     ]);
   });
@@ -69,10 +73,13 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.store_id = assignment.store_id");
     expect(text).toContain("ka.period_start = $1::date");
     expect(text).toContain("ka.period_end = $2::date");
+    expect(text).toContain("eah.start_date <= $3::date");
+    expect(text).toContain("eah.end_date >= $3::date");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
       "2026-05-01",
       "2026-05-31",
+      "2026-05-10",
       ["00000000-0000-4000-8000-000000000201"],
     ]);
   });

@@ -71,6 +71,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
       companyIds: ["company-1"],
       regionIds: [],
       storeIds: [],
+      assignmentAsOfDate: "2026-05-10",
     });
 
     expect(repository.listStoreProjectionSources).toHaveBeenCalledWith({
@@ -80,6 +81,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
       allowGlobalScope: false,
       periodStart: "2026-05-01",
       periodEnd: "2026-05-31",
+      assignmentAsOfDate: "2026-05-10",
     });
     expect(result.stores[0].manager?.calculation).toEqual(
       expect.objectContaining({

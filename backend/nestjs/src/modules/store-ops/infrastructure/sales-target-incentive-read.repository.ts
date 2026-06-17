@@ -12,6 +12,7 @@ export type SalesTargetIncentiveReadScopeInput = {
   allowGlobalScope?: boolean;
   periodStart: string;
   periodEnd: string;
+  assignmentAsOfDate: string;
 };
 
 export type SalesTargetIncentiveStoreSourceRow = {
@@ -67,7 +68,11 @@ export class SalesTargetIncentiveReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
   async listStoreProjectionSources(input: SalesTargetIncentiveReadScopeInput) {
-    const params: unknown[] = [input.periodStart, input.periodEnd];
+    const params: unknown[] = [
+      input.periodStart,
+      input.periodEnd,
+      input.assignmentAsOfDate,
+    ];
     const clauses = this.buildStoreScopeClauses(input, params);
 
     const result =
@@ -133,8 +138,8 @@ export class SalesTargetIncentiveReadRepository {
             WHERE eah.store_id = s.store_id
               AND eah.assignment_status = 'active'
               AND eah.is_primary_assignment = TRUE
-              AND eah.start_date <= $2::date
-              AND (eah.end_date IS NULL OR eah.end_date >= $2::date)
+              AND eah.start_date <= $3::date
+              AND (eah.end_date IS NULL OR eah.end_date >= $3::date)
             ORDER BY eah.start_date DESC, eah.created_at DESC, eah.assignment_id DESC
             LIMIT 1
           ) manager ON TRUE
@@ -175,7 +180,11 @@ export class SalesTargetIncentiveReadRepository {
   }
 
   async listPersonnelProjectionSources(input: SalesTargetIncentiveReadScopeInput) {
-    const params: unknown[] = [input.periodStart, input.periodEnd];
+    const params: unknown[] = [
+      input.periodStart,
+      input.periodEnd,
+      input.assignmentAsOfDate,
+    ];
     const clauses = this.buildStoreScopeClauses(input, params);
 
     const result =
@@ -217,8 +226,8 @@ export class SalesTargetIncentiveReadRepository {
              )
             WHERE eah.assignment_status = 'active'
               AND eah.is_primary_assignment = TRUE
-              AND eah.start_date <= $2::date
-              AND (eah.end_date IS NULL OR eah.end_date >= $2::date)
+              AND eah.start_date <= $3::date
+              AND (eah.end_date IS NULL OR eah.end_date >= $3::date)
             ORDER BY eah.employee_id, eah.start_date DESC, eah.created_at DESC, eah.assignment_id DESC
           )
           SELECT
