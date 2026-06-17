@@ -100,7 +100,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     ]);
   });
 
-  it("uses source sales window, not upload timestamp, to find close-blocking imports", async () => {
+  it("uses source sales window and close cutoff to find close-blocking imports", async () => {
     const { query, repository } = createRepository();
 
     await repository.listCloseBlockingKpiImports({
@@ -117,8 +117,10 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ib.source_window_ended_at IS NULL");
     expect(text).toContain("ib.source_window_started_at::date <= $2::date");
     expect(text).toContain("ib.source_window_ended_at::date >= $1::date");
+    expect(text).toContain("COALESCE(ib.finished_at, ib.started_at) <= $4::timestamptz");
     expect(text).toContain("ib.status IN ('pending', 'processing', 'queued', 'failed')");
-    expect(text).not.toContain("ib.started_at");
+    expect(text).not.toContain("ib.finished_at > $4::timestamptz");
+    expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.created_at");
     expect(params).toEqual([
       "2026-05-01",

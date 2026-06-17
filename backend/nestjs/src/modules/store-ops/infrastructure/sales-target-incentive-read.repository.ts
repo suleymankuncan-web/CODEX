@@ -376,13 +376,8 @@ export class SalesTargetIncentiveReadRepository {
               )
             )
             AND ib.company_ids && $3::uuid[]
-            AND (
-              ib.status IN ('pending', 'processing', 'queued', 'failed')
-              OR (
-                ib.status IN ('completed', 'completed_with_errors')
-                AND ib.finished_at > $4::timestamptz
-              )
-            )
+            AND COALESCE(ib.finished_at, ib.started_at) <= $4::timestamptz
+            AND ib.status IN ('pending', 'processing', 'queued', 'failed')
           ORDER BY ib.source_window_started_at ASC, ib.import_batch_id ASC
         `,
         [
