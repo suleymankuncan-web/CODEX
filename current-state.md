@@ -480,11 +480,14 @@ small PR rhythm:
   `release-check`, `release-rehearsal`, Vercel, and Vercel Preview Comments
   were green.
 - `/store/incentives` is now explicitly scoped by Sales Target Incentive V1.
-  PR-1 merged as #731 from
-  `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`; PR-2 is the
-  active calculation-kernel slice on `codex/incentives-v1-pr2` and must stay
-  pure TypeScript with no DB/API/UI wiring. `/store/incentives` must not be
-  productized or added to the Store toolbar outside that incentive PR train.
+  PR-1 merged as #731 and PR-2 merged as #732 from
+  `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`; PR-3 is the
+  active data-model/migration slice on `codex/incentives-v1-pr3`. PR-3 adds
+  only additive schema, immutable final snapshot foundations, exact
+  lower-inclusive/upper-exclusive rate bracket reference rows, and source
+  evidence pointers; it does not add API, repository, UI, or fake incentive
+  result data. `/store/incentives` must not be productized or added to the
+  Store toolbar outside that incentive PR train.
 
 Store Me is the active reference pattern for the next page refactor pilots,
 not because every page should look identical, but because the work established

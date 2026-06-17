@@ -12,7 +12,7 @@
 
 ## Metadata
 
-- Status: PR-1 merged in #731; PR-2 calculation kernel in progress
+- Status: PR-1 merged in #731; PR-2 calculation kernel merged in #732; PR-3 data model and migration slice implemented for PR closeout
 - Date: 2026-06-17
 - Author: Codex
 - Owner: Store Ops product flow
@@ -31,7 +31,7 @@ This plan follows the VS Code iteration-plan style, adapted to this repo's PR/sl
 - Planned train: 8 PRs
 - Endgame begins after PR-7 merges.
 - Endgame is done only after PR-8 passes persona smoke, admin smoke, root release gate, and close/correction evidence.
-- PR-2 is open after PR-1 merged with concrete GitHub tracking issues for the remaining train and locked currency precision, period cutoff, and rule-version behavior.
+- PR-3 follows the merged PR-2 calculation kernel with concrete GitHub tracking issues for the remaining train and locked currency precision, period cutoff, rule-version behavior, and exact bracket persistence.
 
 Tracking issues:
 
@@ -538,19 +538,19 @@ Risk class: R4 migration/schema.
 
 Tracking issue: https://github.com/suleymankuncan-web/CODEX/issues/725
 
-- [ ] Add or explicitly reuse schema for rule versions, rate brackets, projections/final snapshots, assignment snapshots, rule-version snapshots, close runs, and corrections/adjustments. Any reuse must prove ownership boundaries, immutable evidence pointers, and final snapshot separation in PR evidence.
-- [ ] Keep raw imported sales immutable; new tables point to evidence instead of copying source rows blindly.
-- [ ] Add migration tests or schema smoke evidence according to repo migration discipline.
-- [ ] Add seed/reference rows only for rule versions/rate brackets, not fake incentive results.
-- [ ] Ensure final snapshots persist `ruleVersionId`, period key, timezone, close cutoff, and source evidence pointers.
+- [x] Add or explicitly reuse schema for rule versions, rate brackets, projections/final snapshots, assignment snapshots, rule-version snapshots, close runs, and corrections/adjustments. Any reuse must prove ownership boundaries, immutable evidence pointers, and final snapshot separation in PR evidence.
+- [x] Keep raw imported sales immutable; new tables point to evidence instead of copying source rows blindly.
+- [x] Add migration tests or schema smoke evidence according to repo migration discipline.
+- [x] Add seed/reference rows only for rule versions/rate brackets, not fake incentive results.
+- [x] Ensure final snapshots persist `ruleVersionId`, period key, timezone, close cutoff, and source evidence pointers.
 
 Verification:
 
-- [ ] backend migration/schema targeted tests
-- [ ] `npm.cmd run test:scripts`
-- [ ] `npm.cmd run smoke:migration:fresh-db`
-- [ ] `git diff --check`
-- [ ] migration smoke evidence attached to PR
+- [x] backend migration/schema targeted tests
+- [x] `npm.cmd run test:scripts`
+- [x] `npm.cmd run smoke:migration:fresh-db`
+- [x] `git diff --check`
+- [x] migration smoke evidence attached to PR
 
 ### PR-4: Read Model Repository And Source Binding `[blocked: PR-3]` `[issue-required]`
 

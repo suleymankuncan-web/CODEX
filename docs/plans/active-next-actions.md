@@ -122,11 +122,16 @@ Current execution loop under Tier A:
   Supporting fixtures live at
   `docs/implementation/sales-target-incentive-v1-fixtures.md` and
   `docs/implementation/sales-target-incentive-v1-contract-skeleton.json`.
-- PR-2 is the active calculation-kernel slice on
-  `codex/incentives-v1-pr2`: pure TypeScript manager/personnel formulas,
-  BigInt-backed decimal money math, exact lower-inclusive/upper-exclusive rate
-  brackets, period/cutoff helpers, cashier/non-company exclusions, and no
-  DB/API/UI wiring.
+- PR-2 merged as #732 with the pure TypeScript calculation kernel:
+  manager/personnel formulas, BigInt-backed decimal money math, exact
+  lower-inclusive/upper-exclusive rate brackets, period/cutoff helpers,
+  cashier/non-company exclusions, and no DB/API/UI wiring.
+- PR-3 is the current data-model/migration slice on
+  `codex/incentives-v1-pr3`: additive `ops` and `rpt` tables for rule
+  versions, exact rate brackets, projections, close runs, immutable final
+  snapshots, assignment/rule snapshots, and audited adjustments. The new
+  migration seeds only the V1 rule/rate reference rows; it does not add fake
+  incentive result data.
 - `/store/incentives` is no longer only a generic parked Store UI route; it is
   owned by the Sales Target Incentive V1 train and must not be productized
   outside that train.
