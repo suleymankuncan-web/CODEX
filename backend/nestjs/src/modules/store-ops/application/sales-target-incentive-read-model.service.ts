@@ -10,6 +10,7 @@ import {
 import {
   SalesTargetIncentiveReadRepository,
   type SalesTargetIncentiveCloseBlockingImportRow,
+  type SalesTargetIncentiveCloseBlockingTargetRevisionRow,
   type SalesTargetIncentivePersonnelSourceRow,
   type SalesTargetIncentiveStoreSourceRow,
 } from "../infrastructure/sales-target-incentive-read.repository";
@@ -67,8 +68,10 @@ export type SalesTargetIncentiveCloseReadiness = {
     | "ready"
     | "not_due"
     | "blocked_by_imports"
+    | "blocked_by_target_revision"
     | "blocked_by_calculation";
   blockingImports: SalesTargetIncentiveCloseBlockingImportRow[];
+  blockingTargetRevisions: SalesTargetIncentiveCloseBlockingTargetRevisionRow[];
 };
 
 const READ_MODEL_PERSONNEL_POSITIONS = new Set<SalesTargetIncentiveInputPositionCode>([
@@ -154,6 +157,7 @@ export class SalesTargetIncentiveReadModelService {
         canClose: false,
         status: "not_due",
         blockingImports,
+        blockingTargetRevisions: [],
       };
     }
 
@@ -165,6 +169,25 @@ export class SalesTargetIncentiveReadModelService {
         canClose: false,
         status: "blocked_by_imports",
         blockingImports,
+        blockingTargetRevisions: [],
+      };
+    }
+
+    const blockingTargetRevisions =
+      await this.repository.listCloseBlockingTargetRevisions({
+        companyIds: input.companyIds,
+        periodStart: period.periodStart,
+      });
+
+    if (blockingTargetRevisions.length > 0) {
+      return {
+        periodKey: input.periodKey,
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        canClose: false,
+        status: "blocked_by_target_revision",
+        blockingImports,
+        blockingTargetRevisions,
       };
     }
 
@@ -183,6 +206,7 @@ export class SalesTargetIncentiveReadModelService {
         canClose: false,
         status: "blocked_by_calculation",
         blockingImports,
+        blockingTargetRevisions,
       };
     }
 
@@ -193,6 +217,7 @@ export class SalesTargetIncentiveReadModelService {
       canClose: true,
       status: "ready",
       blockingImports,
+      blockingTargetRevisions,
     };
   }
 

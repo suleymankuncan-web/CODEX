@@ -46,12 +46,16 @@ function createService(input?: {
   storeRows?: unknown[];
   personnelRows?: unknown[];
   closeBlockingImports?: unknown[];
+  closeBlockingTargetRevisions?: unknown[];
 }) {
   const repository = {
     listStoreProjectionSources: jest.fn(async () => input?.storeRows ?? [storeSource]),
     listPersonnelProjectionSources: jest.fn(async () => input?.personnelRows ?? [personnelSource]),
     listCloseBlockingKpiImports: jest.fn(
       async () => input?.closeBlockingImports ?? [],
+    ),
+    listCloseBlockingTargetRevisions: jest.fn(
+      async () => input?.closeBlockingTargetRevisions ?? [],
     ),
   };
   const service = new SalesTargetIncentiveReadModelService(
@@ -203,6 +207,45 @@ describe("SalesTargetIncentiveReadModelService", () => {
       }),
     );
     expect(result.blockingImports).toHaveLength(1);
+    expect(repository.listCloseBlockingTargetRevisions).not.toHaveBeenCalled();
+  });
+
+  it("blocks close readiness when target revisions are pending approval", async () => {
+    const { repository, service } = createService({
+      closeBlockingTargetRevisions: [
+        {
+          target_distribution_request_id: "target-request-pending-1",
+          company_id: "company-1",
+          region_id: "region-1",
+          store_id: "store-1",
+          request_status: "pending_region_approval",
+          updated_at: "2026-05-31T18:00:00.000Z",
+        },
+      ],
+    });
+
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05",
+      companyIds: ["company-1"],
+      nowIso: "2026-06-01T02:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(repository.listCloseBlockingTargetRevisions).toHaveBeenCalledWith({
+      companyIds: ["company-1"],
+      periodStart: "2026-05-01",
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "blocked_by_target_revision",
+        canClose: false,
+        blockingTargetRevisions: [expect.objectContaining({
+          request_status: "pending_region_approval",
+        })],
+      }),
+    );
+    expect(repository.listStoreProjectionSources).not.toHaveBeenCalled();
+    expect(repository.listPersonnelProjectionSources).not.toHaveBeenCalled();
   });
 
   it("blocks close readiness when projection calculations are incomplete", async () => {

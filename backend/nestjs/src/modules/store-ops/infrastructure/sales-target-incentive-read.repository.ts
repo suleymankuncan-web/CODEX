@@ -63,6 +63,15 @@ export type SalesTargetIncentiveCloseBlockingImportRow = {
   source_window_ended_at: string | null;
 };
 
+export type SalesTargetIncentiveCloseBlockingTargetRevisionRow = {
+  target_distribution_request_id: string;
+  company_id: string;
+  region_id: string;
+  store_id: string;
+  request_status: string;
+  updated_at: string | null;
+};
+
 @Injectable()
 export class SalesTargetIncentiveReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -382,6 +391,36 @@ export class SalesTargetIncentiveReadRepository {
           input.companyIds,
           input.closeCutoffAt,
         ],
+      );
+
+    return result.rows;
+  }
+
+  async listCloseBlockingTargetRevisions(input: {
+    companyIds: string[];
+    periodStart: string;
+  }) {
+    const result =
+      await this.databaseService.query<SalesTargetIncentiveCloseBlockingTargetRevisionRow>(
+        `
+          SELECT
+            tdr.target_distribution_request_id::text AS target_distribution_request_id,
+            tdr.company_id::text AS company_id,
+            tdr.region_id::text AS region_id,
+            tdr.store_id::text AS store_id,
+            tdr.request_status,
+            tdr.updated_at::text AS updated_at
+          FROM ops.target_distribution_request tdr
+          INNER JOIN ops.store s
+            ON s.store_id = tdr.store_id
+           AND s.status = 'active'
+           AND s.store_type = 'company'
+          WHERE tdr.request_status = 'pending_region_approval'
+            AND tdr.request_month = $1::date
+            AND tdr.company_id = ANY($2::uuid[])
+          ORDER BY tdr.updated_at ASC, tdr.target_distribution_request_id ASC
+        `,
+        [input.periodStart, input.companyIds],
       );
 
     return result.rows;

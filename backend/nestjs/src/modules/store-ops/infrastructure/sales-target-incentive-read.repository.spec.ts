@@ -127,4 +127,27 @@ describe("SalesTargetIncentiveReadRepository", () => {
       "2026-06-01T02:00:00.000+03:00",
     ]);
   });
+
+  it("finds pending company-store target revisions that block incentive close", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listCloseBlockingTargetRevisions({
+      companyIds: scopeInput.companyIds,
+      periodStart: scopeInput.periodStart,
+    });
+
+    const [sql, params] = query.mock.calls[0];
+    const text = String(sql);
+
+    expect(text).toContain("FROM ops.target_distribution_request tdr");
+    expect(text).toContain("INNER JOIN ops.store s");
+    expect(text).toContain("s.store_type = 'company'");
+    expect(text).toContain("tdr.request_status = 'pending_region_approval'");
+    expect(text).toContain("tdr.request_month = $1::date");
+    expect(text).toContain("tdr.company_id = ANY($2::uuid[])");
+    expect(params).toEqual([
+      "2026-05-01",
+      ["00000000-0000-4000-8000-000000000001"],
+    ]);
+  });
 });
