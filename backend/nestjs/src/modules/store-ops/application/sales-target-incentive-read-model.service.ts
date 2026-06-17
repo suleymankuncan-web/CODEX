@@ -346,6 +346,10 @@ function hasIncompleteCloseCalculation(
   projection: SalesTargetIncentiveProjectionReadModel,
 ) {
   return projection.stores.some((store) => {
+    if (!store.storeTargetRequestId || !store.storeNetSalesSourceBatchId) {
+      return true;
+    }
+
     const participants = [
       ...(store.manager ? [store.manager] : []),
       ...store.personnel,

@@ -155,7 +155,7 @@ export class SalesTargetIncentiveReadRepository {
               ON kd.kpi_id = ka.kpi_id
              AND kd.kpi_code = 'NET_SALES'
              AND kd.is_active = TRUE
-            LEFT JOIN stg.import_batch ib
+            INNER JOIN stg.import_batch ib
               ON ib.source_batch_id = ka.source_batch_id
              AND ib.entity_type = 'kpi'
              AND ib.status IN ('completed', 'completed_with_errors')
@@ -166,7 +166,7 @@ export class SalesTargetIncentiveReadRepository {
               AND ka.period_end = $2::date
               AND ka.source_type = 'integration'
               AND COALESCE(ka.source_type, '') <> 'demo_seed'
-              AND (ka.source_batch_id IS NULL OR ib.import_batch_id IS NOT NULL)
+              AND ka.source_batch_id IS NOT NULL
             ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
             LIMIT 1
           ) store_sales ON TRUE
@@ -278,7 +278,7 @@ export class SalesTargetIncentiveReadRepository {
               ON kd.kpi_id = ka.kpi_id
              AND kd.kpi_code = 'NET_SALES'
              AND kd.is_active = TRUE
-            LEFT JOIN stg.import_batch ib
+            INNER JOIN stg.import_batch ib
               ON ib.source_batch_id = ka.source_batch_id
              AND ib.entity_type = 'kpi'
              AND ib.status IN ('completed', 'completed_with_errors')
@@ -289,7 +289,7 @@ export class SalesTargetIncentiveReadRepository {
               AND ka.period_end = $2::date
               AND ka.source_type = 'integration'
               AND COALESCE(ka.source_type, '') <> 'demo_seed'
-              AND (ka.source_batch_id IS NULL OR ib.import_batch_id IS NOT NULL)
+              AND ka.source_batch_id IS NOT NULL
             ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
             LIMIT 1
           ) store_sales ON TRUE
@@ -312,7 +312,7 @@ export class SalesTargetIncentiveReadRepository {
               ON kd.kpi_id = ka.kpi_id
              AND kd.kpi_code = 'NET_SALES'
              AND kd.is_active = TRUE
-            LEFT JOIN stg.import_batch ib
+            INNER JOIN stg.import_batch ib
               ON ib.source_batch_id = ka.source_batch_id
              AND ib.entity_type = 'kpi'
              AND ib.status IN ('completed', 'completed_with_errors')
@@ -324,7 +324,7 @@ export class SalesTargetIncentiveReadRepository {
               AND ka.period_end = $2::date
               AND ka.source_type = 'integration'
               AND COALESCE(ka.source_type, '') <> 'demo_seed'
-              AND (ka.source_batch_id IS NULL OR ib.import_batch_id IS NOT NULL)
+              AND ka.source_batch_id IS NOT NULL
             ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
             LIMIT 1
           ) personnel_sales ON TRUE

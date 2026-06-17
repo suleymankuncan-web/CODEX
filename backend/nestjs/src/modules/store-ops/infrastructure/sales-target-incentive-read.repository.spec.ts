@@ -38,6 +38,9 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("eah.start_date <= $3::date");
     expect(text).toContain("eah.end_date >= $3::date");
     expect(text).not.toContain("eah.assignment_status = 'active'");
+    expect(text).toContain("INNER JOIN stg.import_batch ib");
+    expect(text).toContain("ka.source_batch_id IS NOT NULL");
+    expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
@@ -82,6 +85,9 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("eah.start_date <= $3::date");
     expect(text).toContain("eah.end_date >= $3::date");
     expect(text).not.toContain("eah.assignment_status = 'active'");
+    expect(text).toContain("INNER JOIN stg.import_batch ib");
+    expect(text.match(/ka\.source_batch_id IS NOT NULL/g)).toHaveLength(2);
+    expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
       "2026-05-01",
