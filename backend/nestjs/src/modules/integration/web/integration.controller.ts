@@ -596,7 +596,7 @@ export class IntegrationController {
     ], {
       limits: {
         fileSize: POWER_BI_EXPORT_MAX_FILE_BYTES,
-        files: 2,
+        files: 2, ...({ fieldNestingDepth: 1 } as Record<string, number>),
       },
       fileFilter: (_request, file: { originalname?: string }, callback) => {
         if (!isSupportedPowerBiExportFileName(file.originalname ?? "")) {
