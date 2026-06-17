@@ -181,6 +181,96 @@ VALUES
     ('60000000-0000-0000-0000-000000000009', '70000000-0000-0000-0000-000000000014')
 ON CONFLICT DO NOTHING;
 
+WITH rule AS (
+    INSERT INTO ops.sales_target_incentive_rule_version (
+        sales_target_incentive_rule_version_id,
+        rule_version_code,
+        status,
+        effective_from,
+        period_timezone,
+        bracket_boundary_policy,
+        round_before_lookup,
+        raw_amount_minimum_scale,
+        payable_amount_scale,
+        sub_kurus_policy
+    )
+    VALUES (
+        '81000000-0000-0000-0000-000000000001',
+        'sales-target-incentive-v1.0.0',
+        'active',
+        DATE '2026-01-01',
+        'Europe/Istanbul',
+        'lower_inclusive_upper_exclusive',
+        FALSE,
+        6,
+        2,
+        'truncate_toward_zero'
+    )
+    ON CONFLICT (rule_version_code) DO UPDATE
+    SET
+        status = EXCLUDED.status,
+        effective_from = EXCLUDED.effective_from,
+        period_timezone = EXCLUDED.period_timezone,
+        bracket_boundary_policy = EXCLUDED.bracket_boundary_policy,
+        round_before_lookup = EXCLUDED.round_before_lookup,
+        raw_amount_minimum_scale = EXCLUDED.raw_amount_minimum_scale,
+        payable_amount_scale = EXCLUDED.payable_amount_scale,
+        sub_kurus_policy = EXCLUDED.sub_kurus_policy
+    RETURNING sales_target_incentive_rule_version_id AS rule_version_id
+)
+INSERT INTO ops.sales_target_incentive_rate_bracket (
+    rule_version_id,
+    rate_table_version,
+    audience,
+    min_achievement_pct,
+    max_achievement_pct,
+    rate,
+    display_label,
+    sort_order
+)
+SELECT
+    bracket.rule_version_id,
+    bracket.rate_table_version,
+    bracket.audience,
+    bracket.min_achievement_pct,
+    bracket.max_achievement_pct,
+    bracket.rate,
+    bracket.display_label,
+    bracket.sort_order
+FROM rule
+CROSS JOIN LATERAL (VALUES
+    (rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', NULL, 80.0000, 0.0000, '< 80.0000%', 10),
+    (rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', 80.0000, 85.0000, 0.0020, '>= 80.0000% and < 85.0000%', 20),
+    (rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', 85.0000, 90.0000, 0.0030, '>= 85.0000% and < 90.0000%', 30),
+    (rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', 90.0000, 95.0000, 0.0040, '>= 90.0000% and < 95.0000%', 40),
+    (rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', 95.0000, 100.0000, 0.0050, '>= 95.0000% and < 100.0000%', 50),
+    (rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', 100.0000, 110.0000, 0.0070, '>= 100.0000% and < 110.0000%', 60),
+    (rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', 110.0000, NULL, 0.0100, '>= 110.0000%', 70),
+    (rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', NULL, 80.0000, 0.0000, '< 80.0000%', 10),
+    (rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', 80.0000, 85.0000, 0.0050, '>= 80.0000% and < 85.0000%', 20),
+    (rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', 85.0000, 90.0000, 0.0050, '>= 85.0000% and < 90.0000%', 30),
+    (rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', 90.0000, 95.0000, 0.0065, '>= 90.0000% and < 95.0000%', 40),
+    (rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', 95.0000, 100.0000, 0.0075, '>= 95.0000% and < 100.0000%', 50),
+    (rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', 100.0000, 110.0000, 0.0150, '>= 100.0000% and < 110.0000%', 60),
+    (rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', 110.0000, NULL, 0.0165, '>= 110.0000%', 70)
+) AS bracket(
+    rule_version_id,
+    rate_table_version,
+    audience,
+    min_achievement_pct,
+    max_achievement_pct,
+    rate,
+    display_label,
+    sort_order
+)
+ON CONFLICT (rule_version_id, rate_table_version, audience, sort_order) DO UPDATE
+SET
+    min_achievement_pct = EXCLUDED.min_achievement_pct,
+    max_achievement_pct = EXCLUDED.max_achievement_pct,
+    rate = EXCLUDED.rate,
+    display_label = EXCLUDED.display_label,
+    sort_order = EXCLUDED.sort_order;
+
 INSERT INTO ops.competition_team_template (
     competition_team_template_id,
     template_code,
