@@ -12,7 +12,7 @@
 
 ## Metadata
 
-- Status: PR-1 implementation in progress; PR-2+ blocked until PR-1 merges
+- Status: PR-1 merged in #731; PR-2 calculation kernel in progress
 - Date: 2026-06-17
 - Author: Codex
 - Owner: Store Ops product flow
@@ -31,7 +31,7 @@ This plan follows the VS Code iteration-plan style, adapted to this repo's PR/sl
 - Planned train: 8 PRs
 - Endgame begins after PR-7 merges.
 - Endgame is done only after PR-8 passes persona smoke, admin smoke, root release gate, and close/correction evidence.
-- PR-2 and later are blocked until PR-1 merges with concrete GitHub tracking issues for the remaining train and locked currency precision, period cutoff, and rule-version behavior.
+- PR-2 is open after PR-1 merged with concrete GitHub tracking issues for the remaining train and locked currency precision, period cutoff, and rule-version behavior.
 
 Tracking issues:
 
@@ -506,31 +506,31 @@ Risk class: R0 docs/process plus guard fixture only.
 
 Verification:
 
-- [ ] `npm.cmd run test:scripts`
-- [ ] `git diff --check`
+- [x] `npm.cmd run test:scripts`
+- [x] `git diff --check`
 
-### PR-2: Calculation Kernel `[blocked: PR-1]` `[issue-required]`
+### PR-2: Calculation Kernel `[ready]` `[issue-required]`
 
 Risk class: R3 business calculation.
 
 Tracking issue: https://github.com/suleymankuncan-web/CODEX/issues/724
 
-- [ ] Add pure TypeScript calculation service for manager and personnel formulas.
-- [ ] Add decimal-safe calculation helpers; JS floating point money math must fail review.
-- [ ] Add rate bracket fixtures for manager and personnel.
-- [ ] Add tests for all bracket edges and near-threshold values: `79.9999`, `80.0000`, `84.9999`, `85.0000`, `89.9600`, `89.9999`, `90.0000`, `94.9999`, `95.0000`, `99.9999`, `100.0000`, `109.9999`, `110.0000`, and above.
-- [ ] Add tests for missing target, zero target, missing import, zero actual sales, negative store net sales, store gate fail/pass, no cap, and locked currency precision.
-- [ ] Add tests for period boundary, timezone, close cutoff, and late-import exclusion behavior.
-- [ ] Add tests proving a calculation binds the expected rule version/rate table version.
-- [ ] Add tests for `SHIFT_LEAD` normalization to `ASSISTANT_MANAGER`.
-- [ ] Add tests proving `CASHIER` is excluded from V1 calculation.
-- [ ] Keep the service isolated from database and UI.
+- [x] Add pure TypeScript calculation service for manager and personnel formulas.
+- [x] Add decimal-safe calculation helpers; JS floating point money math must fail review.
+- [x] Add rate bracket fixtures for manager and personnel.
+- [x] Add tests for all bracket edges and near-threshold values: `79.9999`, `80.0000`, `84.9999`, `85.0000`, `89.9600`, `89.9999`, `90.0000`, `94.9999`, `95.0000`, `99.9999`, `100.0000`, `109.9999`, `110.0000`, and above.
+- [x] Add tests for missing target, zero target, missing import, zero actual sales, negative store net sales, store gate fail/pass, no cap, and locked currency precision.
+- [x] Add tests for period boundary, timezone, close cutoff, and late-import exclusion behavior.
+- [x] Add tests proving a calculation binds the expected rule version/rate table version.
+- [x] Add tests for `SHIFT_LEAD` normalization to `ASSISTANT_MANAGER`.
+- [x] Add tests proving `CASHIER` is excluded from V1 calculation.
+- [x] Keep the service isolated from database and UI.
 
 Verification:
 
-- [ ] backend targeted unit tests
-- [ ] `npm.cmd run test:scripts`
-- [ ] `git diff --check`
+- [x] backend targeted unit tests
+- [x] `npm.cmd run test:scripts`
+- [x] `git diff --check`
 
 ### PR-3: Data Model And Migrations `[blocked: PR-2]` `[issue-required]`
 

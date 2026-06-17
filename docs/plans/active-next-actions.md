@@ -117,10 +117,16 @@ Current execution loop under Tier A:
 - The owner explicitly reopened the prim/incentive module as an autonomous PR
   train. The authoritative plan is
   `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`.
-- PR-1 locks tracking, fixtures, precision, period/cutoff, and rule-version
-  decisions before calculation code starts. Supporting fixtures live at
+- PR-1 merged as #731 and locks tracking, fixtures, precision,
+  period/cutoff, and rule-version decisions before calculation code starts.
+  Supporting fixtures live at
   `docs/implementation/sales-target-incentive-v1-fixtures.md` and
   `docs/implementation/sales-target-incentive-v1-contract-skeleton.json`.
+- PR-2 is the active calculation-kernel slice on
+  `codex/incentives-v1-pr2`: pure TypeScript manager/personnel formulas,
+  BigInt-backed decimal money math, exact lower-inclusive/upper-exclusive rate
+  brackets, period/cutoff helpers, cashier/non-company exclusions, and no
+  DB/API/UI wiring.
 - `/store/incentives` is no longer only a generic parked Store UI route; it is
   owned by the Sales Target Incentive V1 train and must not be productized
   outside that train.
