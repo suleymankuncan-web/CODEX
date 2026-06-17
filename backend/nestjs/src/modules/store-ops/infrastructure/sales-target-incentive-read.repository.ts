@@ -162,6 +162,7 @@ export class SalesTargetIncentiveReadRepository {
              AND ib.company_ids && ARRAY[s.company_id]::uuid[]
             WHERE ka.store_id = s.store_id
               AND ka.scope_type = 'store'
+              AND ka.period_type = 'monthly'
               AND ka.period_start = $1::date
               AND ka.period_end = $2::date
               AND ka.source_type = 'integration'
@@ -285,6 +286,7 @@ export class SalesTargetIncentiveReadRepository {
              AND ib.company_ids && ARRAY[s.company_id]::uuid[]
             WHERE ka.store_id = s.store_id
               AND ka.scope_type = 'store'
+              AND ka.period_type = 'monthly'
               AND ka.period_start = $1::date
               AND ka.period_end = $2::date
               AND ka.source_type = 'integration'
@@ -320,6 +322,7 @@ export class SalesTargetIncentiveReadRepository {
             WHERE ka.store_id = assignment.store_id
               AND ka.employee_id = assignment.employee_id
               AND ka.scope_type = 'employee'
+              AND ka.period_type = 'monthly'
               AND ka.period_start = $1::date
               AND ka.period_end = $2::date
               AND ka.source_type = 'integration'
