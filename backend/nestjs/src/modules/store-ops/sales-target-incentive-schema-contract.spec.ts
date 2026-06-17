@@ -3,6 +3,10 @@ import { join } from "node:path";
 
 const root = join(__dirname, "../../../../..");
 const schemaSql = readFileSync(join(root, "db/schema.sql"), "utf8");
+const seedSql = readFileSync(
+  join(root, "db/seeds/001_reference_seed.sql"),
+  "utf8",
+);
 const migrationPath = join(
   root,
   "db/migrations/052_sales_target_incentive_v1.sql",
@@ -147,6 +151,19 @@ describe("sales target incentive schema contract", () => {
       expect(sql).toContain("before_amount NUMERIC(18,2)");
       expect(sql).toContain("after_amount NUMERIC(18,2)");
       expect(sql).toContain("evidence JSONB NOT NULL DEFAULT '{}'::jsonb");
+      expect(sql).toContain(
+        "OR (adjustment_scope = 'final_snapshot' AND projection_row_id IS NULL AND final_row_id IS NOT NULL)",
+      );
     }
+  });
+
+  it("seeds the same V1 rule and bracket references for schema reset paths", () => {
+    expect(seedSql).toContain("'sales-target-incentive-v1.0.0'");
+    expect(seedSql).toContain("'manager-sales-target-v1.0.0'");
+    expect(seedSql).toContain("'personnel-sales-target-v1.0.0'");
+    expect(seedSql).toContain("(rule.rule_version_id, 'manager-sales-target-v1.0.0', 'manager', NULL, 80.0000, 0.0000");
+    expect(seedSql).toContain("(rule.rule_version_id, 'personnel-sales-target-v1.0.0', 'personnel', NULL, 80.0000, 0.0000");
+    expect(seedSql).not.toContain("85.9");
+    expect(seedSql).not.toContain("89.9");
   });
 });

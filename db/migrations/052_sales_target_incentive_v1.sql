@@ -274,7 +274,7 @@ CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_adjustment (
     CHECK (status <> 'approved' OR (approved_by_user_id IS NOT NULL AND approved_at IS NOT NULL)),
     CHECK (
         (adjustment_scope = 'projection' AND projection_row_id IS NOT NULL AND final_row_id IS NULL)
-        OR (adjustment_scope = 'final_snapshot' AND final_row_id IS NOT NULL)
+        OR (adjustment_scope = 'final_snapshot' AND projection_row_id IS NULL AND final_row_id IS NOT NULL)
     )
 );
 
