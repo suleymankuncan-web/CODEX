@@ -187,7 +187,8 @@ Current maintenance baseline:
 - Architecture Hardening V4 PR-7 added a Store UI refactor guard foundation in
   `scripts/store-ui-refactor-guard.test.mjs`. The guard keeps the Store redesign
   plan's `shadcn/ui` + Tailwind v4 + lucide, real-data-only, role-aware
-  navigation, and `/store/incentives` parked-route rules test-covered, and scans
+  navigation, and `/store/incentives` incentive-train ownership rules
+  test-covered, and scans
   active Store UI source for selected legacy class/debug/fake-data regressions.
   It does not touch runtime Store UI behavior.
 - Architecture Hardening V4 closeout evidence is recorded at
@@ -478,8 +479,10 @@ small PR rhythm:
   `13ab1bbb29bd46ba9c802dc965429fb172870e8e` after `frontend-release-check`,
   `release-check`, `release-rehearsal`, Vercel, and Vercel Preview Comments
   were green.
-- `/store/incentives` remains a parked exception and must not be productized or
-  added to the Store toolbar until the user explicitly scopes it.
+- `/store/incentives` is now explicitly scoped by Sales Target Incentive V1,
+  with PR-1 starting from
+  `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`. It must not
+  be productized or added to the Store toolbar outside that incentive PR train.
 
 Store Me is the active reference pattern for the next page refactor pilots,
 not because every page should look identical, but because the work established

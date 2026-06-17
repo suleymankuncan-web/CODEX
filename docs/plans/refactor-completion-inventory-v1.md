@@ -131,8 +131,9 @@ Closed V4 sequence:
    assertions. Runtime app code and Store UI behavior stayed untouched.
 6. Done: Store UI refactor guard foundation. The new
    `scripts/store-ui-refactor-guard.test.mjs` keeps Store redesign stack,
-   real-data-only, role-aware navigation, parked `/store/incentives`, and
-   selected active-source legacy/debug/fake-data regressions under script guard.
+   real-data-only, role-aware navigation, Sales Target Incentive V1 ownership
+   for `/store/incentives`, and selected active-source
+   legacy/debug/fake-data regressions under script guard.
    No Store screen redesign or runtime UI behavior changed.
 7. Done: V4 closeout evidence recorded at
    `docs/evidence/architecture-hardening-v4-closeout-2026-05-31.md`.

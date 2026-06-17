@@ -112,6 +112,19 @@ Current execution loop under Tier A:
   session or owner review produces a concrete P0/P1 blocker or same-surface P2
   batch.
 
+2026-06-17 Sales Target Incentive V1 state:
+
+- The owner explicitly reopened the prim/incentive module as an autonomous PR
+  train. The authoritative plan is
+  `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`.
+- PR-1 locks tracking, fixtures, precision, period/cutoff, and rule-version
+  decisions before calculation code starts. Supporting fixtures live at
+  `docs/implementation/sales-target-incentive-v1-fixtures.md` and
+  `docs/implementation/sales-target-incentive-v1-contract-skeleton.json`.
+- `/store/incentives` is no longer only a generic parked Store UI route; it is
+  owned by the Sales Target Incentive V1 train and must not be productized
+  outside that train.
+
 Tier B - broad-production/operational hardening:
 
 Controlled-pilot versions of Redis/BullMQ, alerting, and logical recovery are
