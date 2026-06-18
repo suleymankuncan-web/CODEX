@@ -52,12 +52,21 @@ test('super admin reads incentive projections and submits an audited correction'
   const personnelRow = page.getByTestId('admin-incentive-row').filter({ hasText: 'Ali Can' })
   await expect(personnelRow.getByRole('cell', { name: 'Marmara Park' })).toBeVisible()
   await expect(personnelRow.getByRole('cell', { name: 'Ali Can' })).toBeVisible()
+  await expect(personnelRow.getByRole('cell', { name: '200.000,00 TL' })).toBeVisible()
+  await expect(personnelRow.getByRole('cell', { name: '240.000,00 TL' })).toBeVisible()
+  await expect(personnelRow.getByRole('cell', { name: '%120,00' })).toBeVisible()
   await expect(personnelRow.getByRole('cell', { name: '3.960,00 TL' }).first()).toBeVisible()
   await expect(personnelRow.getByText('Düzeltme', { exact: true })).toBeVisible()
   await expect(personnelRow.getByText('125,25 TL')).toBeVisible()
   await expect(personnelRow.getByText('Kapanış', { exact: true })).toBeVisible()
   await expect(personnelRow.getByText('-50,00 TL')).toBeVisible()
   await expect(personnelRow.getByRole('cell', { name: '4.035,25 TL' })).toBeVisible()
+  await expect(page.getByTestId('admin-metric-personnel-sales-source')).toContainText('1/1')
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: "Excel'e aktar" }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('prim-raporu-2026-05.xls')
 
   await personnelRow.getByRole('button', { name: 'Seç' }).click()
   await page.getByLabel('Düzeltme tutarı').fill('125.25')
@@ -76,7 +85,7 @@ test('super admin reads incentive projections and submits an audited correction'
   })
 })
 
-test('admin incentive period filter waits for a complete period value', async ({ page }) => {
+test('admin incentive period filter requests the selected year and month', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
       'store-ops-admin-session',
@@ -106,14 +115,58 @@ test('admin incentive period filter waits for a complete period value', async ({
   await expect(page.getByTestId('admin-incentives-page')).toBeVisible()
 
   requestedUrls.length = 0
-  await page.locator('#admin-incentive-period').fill('2')
-  await page.waitForTimeout(300)
+  await page.getByRole('combobox', { name: 'Yıl' }).click()
+  await page.getByRole('option', { name: '2025' }).click()
+  await page.getByRole('combobox', { name: 'Yıl' }).click()
+  await page.getByRole('option', { name: '2026' }).click()
+  await page.getByRole('combobox', { name: 'Ay' }).click()
+  await page.getByRole('option', { name: 'Mayıs' }).click()
+  await expect.poll(() => requestedUrls.some((url) => url.includes('period=2026-05'))).toBe(true)
+  await expect(page.getByTestId('admin-incentive-period-summary')).toContainText('Mayıs 2026')
+})
 
-  expect(requestedUrls.some((url) => url.includes('period=2'))).toBe(false)
+test('admin incentive default period follows Istanbul month boundary', async ({ page }) => {
+  await page.addInitScript(() => {
+    const fixedNow = new Date('2026-05-31T21:30:00.000Z').valueOf()
+    const OriginalDate = Date
+    class FixedDate extends OriginalDate {
+      constructor(...args: ConstructorParameters<DateConstructor>) {
+        super(...(args.length > 0 ? args : [fixedNow]))
+      }
+
+      static now() {
+        return fixedNow
+      }
+    }
+    window.Date = FixedDate as DateConstructor
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'admin-incentive-user',
+        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+  })
+  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR']))
+
+  const requestedUrls: string[] = []
+  await page.route('**/api/admin/incentives**', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+
+    requestedUrls.push(route.request().url())
+    await route.fulfill({ json: adminIncentivesFixture })
+  })
+
+  await page.goto('/admin/incentives')
   await expect(page.getByTestId('admin-incentives-page')).toBeVisible()
 
-  await page.locator('#admin-incentive-period').fill('2026-05')
-  await expect.poll(() => requestedUrls.some((url) => url.includes('period=2026-05'))).toBe(true)
+  expect(requestedUrls.some((url) => url.includes('period=2026-06'))).toBe(true)
 })
 
 test('non super admin does not see admin incentive navigation', async ({ page }) => {
