@@ -134,6 +134,13 @@ export class SalesTargetIncentiveCorrectionRepository {
             regionId: input.store.regionId,
             storeId: input.store.storeId,
           };
+      await this.lockCorrectionTarget(client, {
+        periodKey: input.periodKey,
+        storeId: adjustmentContext.storeId,
+        employeeId: input.participant.employeeId,
+        participantType: input.participant.participantType,
+        adjustmentScope,
+      });
       const projectionRowId = finalRow
         ? null
         : await this.upsertProjectionRow(client, {
@@ -213,6 +220,13 @@ export class SalesTargetIncentiveCorrectionRepository {
         return null;
       }
 
+      await this.lockCorrectionTarget(client, {
+        periodKey: input.periodKey,
+        storeId: finalRow.store_id,
+        employeeId: input.employeeId,
+        participantType: input.participantType,
+        adjustmentScope: "final_snapshot",
+      });
       const currentAmount = await this.resolveCurrentAmount(client, {
         periodKey: input.periodKey,
         storeId: finalRow.store_id,
@@ -260,6 +274,7 @@ export class SalesTargetIncentiveCorrectionRepository {
   async listApprovedAdjustmentSummaries(input: {
     periodKey: string;
     storeIds: string[];
+    includeFinalRows?: boolean;
   }) {
     if (input.storeIds.length === 0) {
       return [];
@@ -268,6 +283,7 @@ export class SalesTargetIncentiveCorrectionRepository {
     const result =
       await this.databaseService.query<SalesTargetIncentiveAdjustmentSummaryRow>(
         `
+          WITH adjustment_summary AS (
           SELECT
             adjustment.store_id::text AS store_id,
             adjustment.employee_id::text AS employee_id,
@@ -303,6 +319,44 @@ export class SalesTargetIncentiveCorrectionRepository {
             AND adjustment.store_id = ANY($2::uuid[])
             AND adjustment.status = 'approved'
           GROUP BY adjustment.store_id, adjustment.employee_id, COALESCE(projection_row.participant_type, final_row.participant_type)
+          )
+          SELECT *
+          FROM adjustment_summary
+          ${input.includeFinalRows ? `
+          UNION ALL
+          SELECT
+            snapshot.store_id::text AS store_id,
+            final_row.employee_id::text AS employee_id,
+            final_row.participant_type,
+            NULLIF(TRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), '') AS employee_display_name,
+            final_row.position_code::text AS position_code,
+            final_row.normalized_from_position_code::text AS normalized_from_position_code,
+            final_row.rate_table_version::text AS rate_table_version,
+            final_row.target_amount::text AS target_amount,
+            final_row.actual_sales_amount::text AS actual_sales_amount,
+            final_row.achievement_pct::text AS achievement_pct,
+            final_row.applied_rate::text AS applied_rate,
+            final_row.raw_earned_amount::text AS raw_earned_amount,
+            final_row.payable_amount::text AS payable_amount,
+            final_row.calculation_status::text AS calculation_status,
+            '0'::text AS correction_amount,
+            '0'::text AS adjustment_amount,
+            final_row.final_amount::text AS final_amount
+          FROM rpt.sales_target_incentive_final_row final_row
+          INNER JOIN rpt.sales_target_incentive_final_snapshot snapshot
+            ON snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
+          LEFT JOIN ops.employee employee
+            ON employee.employee_id = final_row.employee_id
+          WHERE snapshot.period_key = $1
+            AND snapshot.store_id = ANY($2::uuid[])
+            AND NOT EXISTS (
+              SELECT 1
+              FROM adjustment_summary summary
+              WHERE summary.store_id = snapshot.store_id::text
+                AND summary.employee_id = final_row.employee_id::text
+                AND summary.participant_type = final_row.participant_type
+            )
+          ` : ""}
         `,
         [input.periodKey, input.storeIds],
       );
@@ -379,6 +433,33 @@ export class SalesTargetIncentiveCorrectionRepository {
     );
 
     return result.rows[0] ?? null;
+  }
+
+  private async lockCorrectionTarget(
+    client: CorrectionClient,
+    input: {
+      periodKey: string;
+      storeId: string;
+      employeeId: string;
+      participantType: "store_manager" | "personnel";
+      adjustmentScope: "projection" | "final_snapshot";
+    },
+  ) {
+    await client.query(
+      `
+        SELECT pg_advisory_xact_lock(hashtext($1)::bigint)
+      `,
+      [
+        [
+          "sales_target_incentive_adjustment",
+          input.periodKey,
+          input.storeId,
+          input.employeeId,
+          input.participantType,
+          input.adjustmentScope,
+        ].join(":"),
+      ],
+    );
   }
 
   private async hasClosedStorePeriod(

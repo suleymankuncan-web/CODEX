@@ -273,6 +273,7 @@ export class SalesTargetIncentiveApiService {
       await this.correctionRepository.listApprovedAdjustmentSummaries({
         periodKey: input.projection.periodKey,
         storeIds: input.stores.map((store) => store.storeId),
+        includeFinalRows: input.roleScope === "admin",
       });
 
     return {

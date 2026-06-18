@@ -79,6 +79,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       .mockResolvedValueOnce({ rows: [{ rule_version_id: ruleVersionId }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ projection_id: projectionId }] })
       .mockResolvedValueOnce({ rows: [{ projection_row_id: projectionRowId }] })
       .mockResolvedValueOnce({ rows: [{ current_amount: "3960.00" }] })
@@ -108,13 +109,14 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
 
     expect(withTransaction).toHaveBeenCalledTimes(1);
     expect(String(query.mock.calls[2][0])).toContain("rpt.sales_target_incentive_final_snapshot");
-    expect(String(query.mock.calls[3][0])).toContain("INSERT INTO ops.sales_target_incentive_projection");
-    expect(String(query.mock.calls[4][0])).toContain("INSERT INTO ops.sales_target_incentive_projection_row");
-    expect(query.mock.calls[3][1][20]).toEqual([]);
-    expect(query.mock.calls[4][1][15]).toEqual([]);
-    expect(String(query.mock.calls[5][0])).toContain("FROM ops.sales_target_incentive_adjustment adjustment");
-    expect(String(query.mock.calls[6][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
-    expect(query.mock.calls[6][1]).toEqual(
+    expect(String(query.mock.calls[3][0])).toContain("pg_advisory_xact_lock");
+    expect(String(query.mock.calls[4][0])).toContain("INSERT INTO ops.sales_target_incentive_projection");
+    expect(String(query.mock.calls[5][0])).toContain("INSERT INTO ops.sales_target_incentive_projection_row");
+    expect(query.mock.calls[4][1][20]).toEqual([]);
+    expect(query.mock.calls[5][1][15]).toEqual([]);
+    expect(String(query.mock.calls[6][0])).toContain("FROM ops.sales_target_incentive_adjustment adjustment");
+    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
+    expect(query.mock.calls[7][1]).toEqual(
       expect.arrayContaining([
         "projection",
         "correction",
@@ -125,9 +127,9 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
         actorUserId,
       ]),
     );
-    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO audit.event_log");
-    expect(query.mock.calls[7][1][1]).toBe(adjustmentId);
-    expect(JSON.parse(query.mock.calls[7][1][5] as string)).toMatchObject({
+    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO audit.event_log");
+    expect(query.mock.calls[8][1][1]).toBe(adjustmentId);
+    expect(JSON.parse(query.mock.calls[8][1][5] as string)).toMatchObject({
       actorUserId,
       periodKey: "2026-05",
       phase: "pre_close",
@@ -190,6 +192,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ current_amount: "4100.00" }] })
       .mockResolvedValueOnce({
         rows: [
@@ -215,9 +218,10 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       actorUserId,
     });
 
-    expect(String(query.mock.calls[3][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
-    expect(String(query.mock.calls[3][0])).not.toContain("INSERT INTO ops.sales_target_incentive_projection_row");
-    expect(query.mock.calls[3][1].slice(0, 8)).toEqual([
+    expect(String(query.mock.calls[2][0])).toContain("pg_advisory_xact_lock");
+    expect(String(query.mock.calls[4][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
+    expect(String(query.mock.calls[4][0])).not.toContain("INSERT INTO ops.sales_target_incentive_projection_row");
+    expect(query.mock.calls[4][1].slice(0, 8)).toEqual([
       finalCompanyId,
       finalRegionId,
       storeId,
@@ -227,10 +231,10 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       finalRuleVersionId,
       "2026-05",
     ]);
-    expect(query.mock.calls[3][1]).toEqual(
+    expect(query.mock.calls[4][1]).toEqual(
       expect.arrayContaining(["final_snapshot", "manual_adjustment", "-50.00", "4100.00"]),
     );
-    expect(query.mock.calls[4][1].slice(2, 5)).toEqual([finalCompanyId, finalRegionId, storeId]);
+    expect(query.mock.calls[5][1].slice(2, 5)).toEqual([finalCompanyId, finalRegionId, storeId]);
     expect(result).toMatchObject({
       phase: "post_close",
       adjustmentScope: "final_snapshot",
@@ -256,6 +260,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ current_amount: "4085.25" }] })
       .mockResolvedValueOnce({
         rows: [
@@ -298,11 +303,12 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       [],
       [],
     ]);
-    expect(String(query.mock.calls[2][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
-    expect(query.mock.calls[2][1]).toEqual(
+    expect(String(query.mock.calls[1][0])).toContain("pg_advisory_xact_lock");
+    expect(String(query.mock.calls[3][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
+    expect(query.mock.calls[3][1]).toEqual(
       expect.arrayContaining(["final_snapshot", "manual_adjustment", "-50.00", "4085.25"]),
     );
-    expect(String(query.mock.calls[3][0])).toContain("INSERT INTO audit.event_log");
+    expect(String(query.mock.calls[4][0])).toContain("INSERT INTO audit.event_log");
     expect(result).toMatchObject({
       phase: "post_close",
       adjustmentScope: "final_snapshot",
@@ -315,6 +321,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     const { query, repository } = createHarness();
     query
       .mockResolvedValueOnce({ rows: [{ rule_version_id: ruleVersionId }] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ projection_id: projectionId }] })
@@ -344,7 +351,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       actorUserId,
     });
 
-    expect(query.mock.calls[5][1]).toEqual([
+    expect(query.mock.calls[6][1]).toEqual([
       "2026-05",
       storeId,
       employeeId,
@@ -353,7 +360,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       "projection",
       "correction",
     ]);
-    expect(query.mock.calls[6][1]).toEqual(
+    expect(query.mock.calls[7][1]).toEqual(
       expect.arrayContaining(["projection", "correction", "-35.00", "4085.25"]),
     );
     expect(result).toMatchObject({
@@ -367,6 +374,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     const { query, repository } = createHarness();
     query
       .mockResolvedValueOnce({ rows: [{ rule_version_id: ruleVersionId }] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ projection_id: projectionId }] })
@@ -401,5 +409,22 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     expect(sql).not.toMatch(/DELETE\s+FROM\s+stg\./i);
     expect(sql).not.toMatch(/UPDATE\s+ops\.kpi_actual/i);
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
+  });
+
+  it("can include unadjusted final rows in admin adjustment summaries", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({ rows: [] });
+
+    await repository.listApprovedAdjustmentSummaries({
+      periodKey: "2026-05",
+      storeIds: [storeId],
+      includeFinalRows: true,
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("WITH adjustment_summary AS");
+    expect(sql).toContain("UNION ALL");
+    expect(sql).toContain("FROM rpt.sales_target_incentive_final_row final_row");
+    expect(sql).toContain("NOT EXISTS");
   });
 });
