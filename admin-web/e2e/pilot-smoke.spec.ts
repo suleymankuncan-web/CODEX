@@ -14,6 +14,15 @@ type SmokeRoute = {
   heading: Locator
 }
 
+type PilotApiFailureDiagnostic = {
+  method: string
+  path: string
+  status: unknown
+  errorCategory: string
+  errorMessage: string
+  occurredAt: string
+}
+
 test.beforeEach(async ({ context, page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
@@ -184,12 +193,22 @@ async function waitForStoreIncentivesRequest(page: Page) {
 function watchPilotFailures(page: Page) {
   const failedRequests: string[] = []
   const failedResponses: string[] = []
-  const apiFailureDiagnostics: string[] = []
+  const navigationAbortKeys = new Map<string, number>()
+  const apiFailureDiagnostics: PilotApiFailureDiagnostic[] = []
+  const apiFailureDiagnosticReads: Array<Promise<void>> = []
   const pageErrors: string[] = []
 
   page.on('requestfailed', (request) => {
     if (request.url().includes('/api/')) {
-      failedRequests.push(`${request.method()} ${request.url()}`)
+      const failureText = request.failure()?.errorText ?? ''
+      if (request.method() === 'GET' && isNavigationAbort(failureText)) {
+        incrementMapCount(navigationAbortKeys, buildApiRequestKey(request.method(), request.url()))
+        return
+      }
+
+      failedRequests.push(
+        `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
+      )
     }
   })
   page.on('response', (response) => {
@@ -198,9 +217,26 @@ function watchPilotFailures(page: Page) {
     }
   })
   page.on('console', (message) => {
-    if (message.type() === 'warning' && message.text().includes('[store-ops:api-failure]')) {
-      apiFailureDiagnostics.push(message.text())
+    if (message.type() !== 'warning' || !message.text().includes('[store-ops:api-failure]')) {
+      return
     }
+
+    const diagnosticArg = message.args()[1]
+    if (!diagnosticArg) {
+      apiFailureDiagnostics.push(normalizePilotConsoleFailure(message.text()))
+      return
+    }
+
+    apiFailureDiagnosticReads.push(
+      diagnosticArg
+        .jsonValue()
+        .then((failure) => {
+          apiFailureDiagnostics.push(normalizePilotApiFailure(failure))
+        })
+        .catch(() => {
+          apiFailureDiagnostics.push(normalizePilotConsoleFailure(message.text()))
+        }),
+    )
   })
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
@@ -208,28 +244,150 @@ function watchPilotFailures(page: Page) {
 
   return {
     async expectClean() {
+      await Promise.all(apiFailureDiagnosticReads)
       const bufferedApiFailures = await page.evaluate(() => {
         const typedWindow = window as Window & {
           __STORE_OPS_API_FAILURES__?: Array<Record<string, unknown>>
         }
 
-        return (typedWindow.__STORE_OPS_API_FAILURES__ ?? []).map((failure) =>
+        return typedWindow.__STORE_OPS_API_FAILURES__ ?? []
+      })
+      const blockingApiFailures = uniquePilotApiFailures([
+        ...apiFailureDiagnostics,
+        ...bufferedApiFailures.map(normalizePilotApiFailure),
+      ])
+        .filter((failure) => !consumeNavigationAbort(navigationAbortKeys, failure))
+        .map((failure) =>
           [
-            String(failure.method ?? 'UNKNOWN'),
-            String(failure.path ?? 'unknown-path'),
-            String(failure.status ?? 'no-status'),
-            String(failure.errorCategory ?? 'unknown-category'),
+            failure.method,
+            failure.path,
+            failure.status ?? 'no-status',
+            failure.errorCategory,
+            failure.errorMessage,
           ].join(' '),
         )
-      })
 
       expect(failedRequests, 'API requests should not fail at the network layer').toEqual([])
       expect(failedResponses, 'API responses should not return error status codes').toEqual([])
-      expect(apiFailureDiagnostics, 'Pilot smoke routes should not emit API failure diagnostics').toEqual([])
-      expect(bufferedApiFailures, 'Pilot smoke routes should not buffer API failure diagnostics').toEqual([])
+      expect(blockingApiFailures, 'Pilot smoke routes should not buffer API failure diagnostics').toEqual([])
       expect(pageErrors, 'Pilot smoke routes should not raise page errors').toEqual([])
     },
   }
+}
+
+function normalizePilotApiFailure(failure: unknown): PilotApiFailureDiagnostic {
+  const record =
+    typeof failure === 'object' && failure !== null ? (failure as Record<string, unknown>) : {}
+
+  return {
+    method: String(record.method ?? 'UNKNOWN'),
+    path: String(record.path ?? 'unknown-path'),
+    status: record.status ?? null,
+    errorCategory: String(record.errorCategory ?? 'unknown-category'),
+    errorMessage: String(record.errorMessage ?? ''),
+    occurredAt: String(record.occurredAt ?? ''),
+  }
+}
+
+function normalizePilotConsoleFailure(message: string): PilotApiFailureDiagnostic {
+  return {
+    method: parseConsoleField(message, 'method') ?? 'UNKNOWN',
+    path: parseConsoleField(message, 'path') ?? 'unknown-path',
+    status: parseConsoleStatus(message),
+    errorCategory: parseConsoleField(message, 'errorCategory') ?? 'network',
+    errorMessage: message,
+    occurredAt: parseConsoleField(message, 'occurredAt') ?? '',
+  }
+}
+
+function parseConsoleField(message: string, field: string) {
+  const match = message.match(new RegExp(`\\b${field}:\\s*([^,}]+)`))
+  return match?.[1]?.trim()
+}
+
+function parseConsoleStatus(message: string) {
+  const value = parseConsoleField(message, 'status')
+  if (!value || value === 'null') {
+    return null
+  }
+
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : null
+}
+
+function uniquePilotApiFailures(failures: PilotApiFailureDiagnostic[]) {
+  const seen = new Set<string>()
+
+  return failures.filter((failure) => {
+    const key = [
+      failure.method,
+      failure.path,
+      failure.status ?? 'no-status',
+      failure.errorCategory,
+      failure.errorMessage,
+      failure.occurredAt,
+    ].join('\0')
+    if (seen.has(key)) {
+      return false
+    }
+
+    seen.add(key)
+    return true
+  })
+}
+
+function isNavigationAbort(failureText: string) {
+  const normalizedFailureText = failureText.toLowerCase()
+
+  return (
+    normalizedFailureText.includes('err_aborted') ||
+    normalizedFailureText.includes('aborted') ||
+    normalizedFailureText.includes('cancelled') ||
+    normalizedFailureText.includes('canceled')
+  )
+}
+
+function buildApiRequestKey(method: string, value: string) {
+  const parsedUrl = new URL(value, 'https://store-ops.local')
+  const apiPath = parsedUrl.pathname.replace(/^\/api(?=\/|$)/, '')
+
+  return `${method.toUpperCase()} ${apiPath}`
+}
+
+function incrementMapCount(map: Map<string, number>, key: string) {
+  map.set(key, (map.get(key) ?? 0) + 1)
+}
+
+function consumeNavigationAbort(
+  navigationAbortKeys: Map<string, number>,
+  failure: {
+    method: string
+    path: string
+    status: unknown
+    errorCategory: string
+  },
+) {
+  if (
+    failure.method.toUpperCase() !== 'GET' ||
+    failure.status !== null ||
+    failure.errorCategory !== 'network'
+  ) {
+    return false
+  }
+
+  const key = buildApiRequestKey(failure.method, failure.path)
+  const count = navigationAbortKeys.get(key) ?? 0
+  if (count <= 0) {
+    return false
+  }
+
+  if (count === 1) {
+    navigationAbortKeys.delete(key)
+  } else {
+    navigationAbortKeys.set(key, count - 1)
+  }
+
+  return true
 }
 
 async function routePilotSmokeApi(context: BrowserContext) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AdminShell } from './app/admin-shell'
@@ -57,7 +57,7 @@ function App() {
     staleTime: 30_000,
   })
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const handleSessionExpired = (event: Event) => {
       const detail = (event as CustomEvent<SessionExpiredDetail>).detail
       expireSession()

@@ -17,6 +17,7 @@ import {
   normalizeSession,
   persistClientSession,
   readClientSession,
+  writeBrowserSessionCsrfToken,
   writeClientBearerSession,
   type SessionState,
 } from './session-storage'
@@ -82,6 +83,8 @@ export function SessionProvider(input: { children: ReactNode }) {
 
   const expireSession = useCallback(() => {
     if (sessionRef.current.browserSessionTransport === 'cookie') {
+      writeBrowserSessionCsrfToken('')
+      clearClientBearerSession()
       void clearBrowserSessionCookie().catch(() => undefined)
     } else {
       clearClientBearerSession()

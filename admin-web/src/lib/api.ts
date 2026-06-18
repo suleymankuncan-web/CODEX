@@ -443,6 +443,7 @@ function isCsrfFailureMessage(message: string) {
 
 function dispatchSessionExpired(path: string, message: string, status: number) {
   clearClientBearerSession()
+  writeBrowserSessionCsrfToken('')
   window.dispatchEvent(
     new CustomEvent<SessionExpiredDetail>(SESSION_EXPIRED_EVENT, {
       detail: {
