@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const standardPath = 'docs/process/ui-surface-standard-v1.md'
+const recipesPath = 'docs/process/ui-surface-recipes-v1.md'
 const disciplinePath = 'discipline.md'
 const productExperiencePath = 'docs/process/product-experience-principles.md'
 const docsReadmePath = 'docs/README.md'
@@ -157,9 +158,14 @@ function requireText(text, expected) {
 
 test('UI surface standard is discoverable from operating docs', () => {
   const standard = readText(standardPath)
+  const recipes = readText(recipesPath)
 
   for (const text of [readText(disciplinePath), readText(productExperiencePath), readText(docsReadmePath)]) {
     requireText(text, standardPath)
+  }
+
+  for (const text of [standard, readText(productExperiencePath), readText(docsReadmePath)]) {
+    requireText(text, recipesPath)
   }
 
   for (const expected of [
@@ -175,6 +181,21 @@ test('UI surface standard is discoverable from operating docs', () => {
     '## Done Criteria',
   ]) {
     requireText(standard, expected)
+  }
+
+  for (const expected of [
+    '# UI Surface Recipes V1',
+    '## Date Filter',
+    '## Period Filter',
+    '## Table Toolbar',
+    '## Data Table',
+    '## Detail Drawer',
+    '## Action Dialog',
+    '## Empty State',
+    '## Error State',
+    '## Prototype To Product Checklist',
+  ]) {
+    requireText(recipes, expected)
   }
 })
 
