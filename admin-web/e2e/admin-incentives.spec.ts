@@ -53,6 +53,11 @@ test('super admin reads incentive projections and submits an audited correction'
   await expect(personnelRow.getByRole('cell', { name: 'Marmara Park' })).toBeVisible()
   await expect(personnelRow.getByRole('cell', { name: 'Ali Can' })).toBeVisible()
   await expect(personnelRow.getByRole('cell', { name: '3.960,00 TL' }).first()).toBeVisible()
+  await expect(personnelRow.getByText('Düzeltme', { exact: true })).toBeVisible()
+  await expect(personnelRow.getByText('125,25 TL')).toBeVisible()
+  await expect(personnelRow.getByText('Kapanış', { exact: true })).toBeVisible()
+  await expect(personnelRow.getByText('-50,00 TL')).toBeVisible()
+  await expect(personnelRow.getByRole('cell', { name: '4.035,25 TL' })).toBeVisible()
 
   await personnelRow.getByRole('button', { name: 'Seç' }).click()
   await page.getByLabel('Düzeltme tutarı').fill('125.25')
@@ -206,10 +211,10 @@ const adminIncentivesFixture = {
             rate: '0.0165',
             rawEarnedAmount: '3960.000000',
             payableAmount: '3960.00',
-            correctionAmount: null,
-            adjustmentAmount: null,
-            finalAmount: null,
-            status: 'projected',
+            correctionAmount: '125.25',
+            adjustmentAmount: '-50.00',
+            finalAmount: '4035.25',
+            status: 'adjusted',
             blockedReason: null,
             rateTableVersion: 'personnel-sales-target-v1.0.0',
             explanation: 'Güncel hedef ve satış kaynağına göre hesaplandı.',

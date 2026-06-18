@@ -235,7 +235,9 @@ export function AdminIncentivesPage() {
                         <TableCell className="tw:min-w-36">{getIncentivePositionLabel(item.row.positionCode)}</TableCell>
                         <TableCell className="tw:text-right">{formatPercentValue(item.row.achievementPct, locale)}</TableCell>
                         <TableCell className="tw:text-right tw:font-semibold">{formatMoneyValue(item.row.payableAmount, locale)}</TableCell>
-                        <TableCell className="tw:text-right">{formatMoneyValue(item.row.correctionAmount ?? item.row.adjustmentAmount, locale)}</TableCell>
+                        <TableCell className="tw:text-right">
+                          <AdjustmentAmountsCell row={item.row} locale={locale} />
+                        </TableCell>
                         <TableCell className="tw:text-right tw:font-semibold">{formatMoneyValue(item.row.finalAmount ?? item.row.payableAmount, locale)}</TableCell>
                         <TableCell>
                           <AdminSurfaceBadge tone={statusTone[item.row.status]}>
@@ -338,6 +340,35 @@ function SelectedRowSummary(input: {
         <SummaryValue label="Hak ediş" value={formatMoneyValue(input.item.row.payableAmount, input.locale)} />
         <SummaryValue label="Nihai" value={formatMoneyValue(input.item.row.finalAmount ?? input.item.row.payableAmount, input.locale)} />
       </div>
+    </div>
+  )
+}
+
+function AdjustmentAmountsCell(input: {
+  row: SalesTargetIncentiveRow
+  locale: AppLocale
+}) {
+  const values = [
+    input.row.correctionAmount
+      ? { id: 'correction', label: 'Düzeltme', amount: input.row.correctionAmount }
+      : null,
+    input.row.adjustmentAmount
+      ? { id: 'adjustment', label: 'Kapanış', amount: input.row.adjustmentAmount }
+      : null,
+  ].filter((value): value is { id: string; label: string; amount: string } => value !== null)
+
+  if (values.length === 0) {
+    return <>{formatMoneyValue(null, input.locale)}</>
+  }
+
+  return (
+    <div className="tw:grid tw:gap-1">
+      {values.map((value) => (
+        <div key={value.id} className="tw:grid tw:gap-0.5">
+          <span className="tw:text-[11px] tw:font-medium tw:text-muted-foreground">{value.label}</span>
+          <span className="tw:font-medium">{formatMoneyValue(value.amount, input.locale)}</span>
+        </div>
+      ))}
     </div>
   )
 }
