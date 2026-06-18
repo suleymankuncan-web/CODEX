@@ -538,6 +538,51 @@ describe("SalesTargetIncentiveApiService", () => {
     );
   });
 
+  it("uses final snapshot values for visible current rows when a final amount exists", async () => {
+    const { correctionRepository, service } = createService();
+    correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([
+      {
+        store_id: storeId,
+        employee_id: employeeId,
+        participant_type: "personnel",
+        employee_display_name: "Ali Can",
+        position_code: "SALES_ASSOCIATE",
+        normalized_from_position_code: null,
+        rate_table_version: "personnel-sales-target-v1.0.0",
+        target_amount: "210000.0000",
+        actual_sales_amount: "230000.0000",
+        achievement_pct: "109.5238",
+        applied_rate: "0.0150",
+        raw_earned_amount: "3450.0000000000",
+        payable_amount: "3450.00",
+        calculation_status: "finalized",
+        correction_amount: "0",
+        adjustment_amount: "0",
+        final_amount: "3450.00",
+      },
+    ]);
+
+    const result = await service.getAdminProjection({
+      actor: buildAuthenticatedUser({
+        userId: "admin-user",
+        roleCodes: ["SUPER_ADMIN"],
+        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      }),
+      periodKey: "2026-05",
+    });
+
+    const row = result.data.projections[0].rows.find((candidate) => candidate.employeeId === employeeId);
+    expect(row).toMatchObject({
+      target: "210000.0000",
+      actualPositiveSales: "230000.0000",
+      achievementPct: "109.5238",
+      rate: "0.0150",
+      rawEarnedAmount: "3450.0000000000",
+      payableAmount: "3450.00",
+      finalAmount: "3450.00",
+    });
+  });
+
   it("overlays approved corrections on Store Me reads for visible personnel", async () => {
     const { correctionRepository, service } = createService();
     correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([

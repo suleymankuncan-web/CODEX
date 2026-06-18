@@ -371,6 +371,7 @@ export class SalesTargetIncentiveApiService {
       adjustmentSummary && !isZeroMoney(adjustmentSummary.adjustment_amount)
         ? formatMoney2(adjustmentSummary.adjustment_amount)
         : null;
+    const usesFinalSnapshot = adjustmentSummary?.final_amount != null;
     const finalAmount = resolveFinalAmount({
       payableAmount: calculation.payableAmount,
       correctionAmount,
@@ -378,34 +379,54 @@ export class SalesTargetIncentiveApiService {
       persistedFinalAmount: adjustmentSummary?.final_amount ?? null,
     });
     const canApplyCorrectionStatus =
-      calculation.payableAmount !== null || adjustmentSummary?.final_amount !== null;
+      calculation.payableAmount !== null || adjustmentSummary?.final_amount != null;
     const status: SalesTargetIncentiveApiRow["status"] = canApplyCorrectionStatus && adjustmentAmount
       ? "adjusted"
       : canApplyCorrectionStatus && correctionAmount
         ? "corrected"
         : calculation.status;
+    const snapshotPositionCode = resolveApiPositionCode(
+      adjustmentSummary?.position_code,
+      participant.positionCode,
+    );
+    const snapshotNormalizedFromPositionCode =
+      adjustmentSummary?.normalized_from_position_code === "SHIFT_LEAD" ? "SHIFT_LEAD" : null;
 
     return {
       employeeId: participant.employeeId,
-      displayName: participant.displayName,
+      displayName: usesFinalSnapshot
+        ? adjustmentSummary?.employee_display_name ?? participant.displayName
+        : participant.displayName,
       participantType: participant.participantType,
-      positionCode: participant.positionCode,
-      normalizedFromPositionCode: participant.normalizedFromPositionCode,
-      target: participant.targetAmount,
-      actualPositiveSales: participant.actualAmount,
-      achievementPct: calculation.achievementPct,
-      storeAchievementPct: calculation.storeAchievementPct,
-      storeGatePassed: calculation.storeGatePassed,
-      rate: calculation.rate,
-      rawEarnedAmount: calculation.rawEarnedAmount,
-      payableAmount: calculation.payableAmount,
+      positionCode: usesFinalSnapshot ? snapshotPositionCode : participant.positionCode,
+      normalizedFromPositionCode: usesFinalSnapshot
+        ? snapshotNormalizedFromPositionCode
+        : participant.normalizedFromPositionCode,
+      target: usesFinalSnapshot ? adjustmentSummary?.target_amount ?? null : participant.targetAmount,
+      actualPositiveSales: usesFinalSnapshot
+        ? adjustmentSummary?.actual_sales_amount ?? null
+        : participant.actualAmount,
+      achievementPct: usesFinalSnapshot
+        ? adjustmentSummary?.achievement_pct ?? null
+        : calculation.achievementPct,
+      storeAchievementPct: usesFinalSnapshot ? null : calculation.storeAchievementPct,
+      storeGatePassed: usesFinalSnapshot ? null : calculation.storeGatePassed,
+      rate: usesFinalSnapshot ? adjustmentSummary?.applied_rate ?? null : calculation.rate,
+      rawEarnedAmount: usesFinalSnapshot
+        ? adjustmentSummary?.raw_earned_amount ?? null
+        : calculation.rawEarnedAmount,
+      payableAmount: usesFinalSnapshot ? adjustmentSummary?.payable_amount ?? null : calculation.payableAmount,
       correctionAmount,
       adjustmentAmount,
       finalAmount,
       status,
       blockedReason: calculation.blockedReason,
-      rateTableVersion: calculation.rateTableVersion,
-      explanation: this.resolveExplanation(calculation.status, calculation.blockedReason),
+      rateTableVersion: usesFinalSnapshot
+        ? adjustmentSummary?.rate_table_version ?? calculation.rateTableVersion
+        : calculation.rateTableVersion,
+      explanation: usesFinalSnapshot
+        ? "Kapali donem final satirina gore gosteriliyor."
+        : this.resolveExplanation(calculation.status, calculation.blockedReason),
     };
   }
 
@@ -431,7 +452,10 @@ export class SalesTargetIncentiveApiService {
       employeeId: adjustmentSummary.employee_id,
       displayName: adjustmentSummary.employee_display_name ?? adjustmentSummary.employee_id,
       participantType: adjustmentSummary.participant_type,
-      positionCode: adjustmentSummary.position_code as SalesTargetIncentiveApiRow["positionCode"],
+      positionCode: resolveApiPositionCode(
+        adjustmentSummary.position_code,
+        adjustmentSummary.participant_type === "store_manager" ? "STORE_MANAGER" : "SALES_ASSOCIATE",
+      ),
       normalizedFromPositionCode:
         adjustmentSummary.normalized_from_position_code === "SHIFT_LEAD"
           ? "SHIFT_LEAD"
@@ -524,6 +548,18 @@ export class SalesTargetIncentiveApiService {
 
 function isZeroMoney(value: string) {
   return parseMoneyCents(value) === 0n;
+}
+
+function resolveApiPositionCode(
+  value: string | null | undefined,
+  fallback: SalesTargetIncentiveApiRow["positionCode"],
+) {
+  return value === "STORE_MANAGER" ||
+    value === "ASSISTANT_MANAGER" ||
+    value === "SENIOR_SALES_CONSULTANT" ||
+    value === "SALES_ASSOCIATE"
+    ? value
+    : fallback;
 }
 
 function resolveFinalAmount(input: {
