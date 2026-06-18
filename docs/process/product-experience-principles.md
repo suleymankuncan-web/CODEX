@@ -55,8 +55,9 @@ Store/Admin product UI uses:
 - `design-taste-frontend` / taste-skill as an anti-slop quality pass.
 
 The concrete component, button, icon, color, copy, and page-anatomy rules live
-in `docs/process/ui-surface-standard-v1.md`. Use that standard whenever a
-surface is created, refactored, or moved from prototype to product.
+in `docs/process/ui-surface-standard-v1.md`. Reusable implementation recipes
+live in `docs/process/ui-surface-recipes-v1.md`. Use both whenever a surface is
+created, refactored, or moved from prototype to product.
 
 Taste-skill output is not a product decision by itself. Adapt it to operational
 product UI: no marketing hero defaults, decorative-only premium elements, fake

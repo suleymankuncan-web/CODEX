@@ -13,6 +13,9 @@ After reading, they should be able to:
 - keep lucide icons useful rather than decorative,
 - verify that a page refactor is standard-compliant before PR.
 
+Companion implementation recipes live in
+`docs/process/ui-surface-recipes-v1.md`.
+
 ## Scope
 
 This standard applies to:
@@ -248,6 +251,8 @@ production.
 The guard:
 
 - keeps this document linked from the operating UI docs,
+- keeps `docs/process/ui-surface-recipes-v1.md` discoverable from this standard
+  and the docs library,
 - freezes the current product-copy debt baseline so new "Her satir ...",
   "gercek veri", "guvenli veri kaynagi", "oturumdaki yetkili", and similar
   phrases cannot grow silently,
