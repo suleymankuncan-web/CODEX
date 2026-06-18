@@ -240,6 +240,24 @@ A standalone HTML prototype is not production-ready if it relies on separate
 hard-coded styling instead of the same component/token logic expected in
 production.
 
+## Guard
+
+`scripts/ui-surface-standard-guard.test.mjs` protects this standard in
+`npm.cmd run test:scripts`.
+
+The guard:
+
+- keeps this document linked from the operating UI docs,
+- freezes the current product-copy debt baseline so new "Her satir ...",
+  "gercek veri", "guvenli veri kaynagi", "oturumdaki yetkili", and similar
+  phrases cannot grow silently,
+- includes strict synthetic negative cases for raw hex Tailwind colors and
+  legacy route-specific button classes.
+
+The first guard does not clean every existing legacy UI surface. Page-by-page
+revizyon PRs should reduce the baseline and move changed surfaces toward the
+strict scanner.
+
 ## Done Criteria
 
 A UI surface refactor is done only when:
