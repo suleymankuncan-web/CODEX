@@ -14,6 +14,7 @@ export type StoreNavIconId =
   | 'checklist'
   | 'feed'
   | 'home'
+  | 'incentives'
   | 'kpi'
   | 'me'
   | 'rankings'
@@ -154,6 +155,12 @@ const managerNavigation: StoreNavigationItem[] = [
     icon: 'targets',
   },
   {
+    id: 'incentives',
+    labelKey: 'storeHome.nav.incentives',
+    path: '/store/incentives',
+    icon: 'incentives',
+  },
+  {
     id: 'workforce',
     labelKey: 'storeHome.nav.workforce',
     path: '/store/workforce',
@@ -218,6 +225,12 @@ const regionManagerNavigation: StoreNavigationItem[] = [
     icon: 'targets',
   },
   {
+    id: 'incentives',
+    labelKey: 'storeHome.nav.incentives',
+    path: '/store/incentives',
+    icon: 'incentives',
+  },
+  {
     id: 'workforce',
     labelKey: 'storeHome.nav.workforce',
     path: '/store/workforce',
@@ -272,6 +285,10 @@ export function getStoreNavigation(persona: StorePersona) {
   return [...personnelNavigation, settingsNavigationItem]
 }
 
+export function canOpenStoreIncentives(authSummary: AuthSessionSummary | null) {
+  return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER'])
+}
+
 function isStoreNavigationItemAllowed(
   item: StoreNavigationItem,
   authSummary: AuthSessionSummary | null,
@@ -294,6 +311,8 @@ function isStoreNavigationItemAllowed(
       return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])
     case 'targets':
       return hasAnyRole(authSummary, ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'])
+    case 'incentives':
+      return canOpenStoreIncentives(authSummary)
     case 'workforce':
       return canOpenStoreWorkforce(authSummary)
     case 'reports':

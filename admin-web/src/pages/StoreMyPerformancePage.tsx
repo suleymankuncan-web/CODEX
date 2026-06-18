@@ -1,6 +1,11 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { useEffect, useReducer } from 'react'
 import type { AuthSessionSummary } from '../features/auth/api'
+import {
+  getMySalesTargetIncentives,
+  mySalesTargetIncentivesQueryKey,
+  type SalesTargetIncentiveProjection,
+} from '../features/incentives/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -30,6 +35,7 @@ import {
   StoreMyPerformanceTopbar,
 } from './store-my-performance-sections'
 import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
+import { StoreMeIncentiveCard } from './store-incentives-widgets'
 import {
   StoreErrorState,
   StoreLoadingState,
@@ -51,6 +57,10 @@ function canUsePersonnelPerformance(authSummary: AuthSessionSummary | null) {
   )
 }
 
+function canUseOwnIncentiveProjection(authSummary: AuthSessionSummary | null) {
+  return authSummary?.user.roleCodes.includes('STORE_PERSONNEL') ?? false
+}
+
 type StoreMyPerformanceViewModel = ReturnType<typeof buildStoreMyPerformanceViewModel>
 type StoreMyPerformancePeriodHandlers = ReturnType<typeof createStoreMyPerformancePeriodHandlers>
 
@@ -58,6 +68,7 @@ type StoreMyPerformancePageExperienceProps = {
   activeClosedSnapshotRunId: string
   isDateFilterOpen: boolean
   isKpiDetailOpen: boolean
+  locale: ReturnType<typeof useLocalization>['locale']
   onCloseKpiDetails: () => void
   onOpenKpiDetails: () => void
   onSelectClosedSnapshotRun: (snapshotRunId: string) => void
@@ -65,6 +76,7 @@ type StoreMyPerformancePageExperienceProps = {
   onToggleDateFilter: () => void
   periodHandlers: StoreMyPerformancePeriodHandlers
   performanceEmployeeName: string
+  incentiveProjection: SalesTargetIncentiveProjection | null
   selectedClosedSnapshotRunId: string
   selectedLivePeriodType: LivePeriodType
   sourceMode: StorePerformanceSourceMode
@@ -135,6 +147,13 @@ export function StoreMyPerformancePage(input: {
         offset: 0,
       }),
     enabled: enabled && usesClosedSnapshotMode && sourceMode === 'closed',
+    ...transientQueryRetryOptions,
+  })
+
+  const incentiveQuery = useQuery({
+    queryKey: mySalesTargetIncentivesQueryKey(),
+    queryFn: () => getMySalesTargetIncentives(),
+    enabled: profileMode === 'self' && canUseOwnIncentiveProjection(input.authSummary),
     ...transientQueryRetryOptions,
   })
 
@@ -326,12 +345,17 @@ export function StoreMyPerformancePage(input: {
     sourceMode,
     t,
   })
+  const incentiveProjection =
+    incentiveQuery.isSuccess
+      ? (incentiveQuery.data.data.projections[0] ?? null)
+      : null
 
   return (
     <StoreMyPerformancePageExperience
       activeClosedSnapshotRunId={activeClosedSnapshotRun?.snapshotRunId ?? ''}
       isDateFilterOpen={isDateFilterOpen}
       isKpiDetailOpen={isKpiDetailOpen}
+      locale={locale}
       onCloseKpiDetails={() => dispatch({ type: 'setKpiDetailOpen', open: false })}
       onOpenKpiDetails={() => dispatch({ type: 'setKpiDetailOpen', open: true })}
       onSelectClosedSnapshotRun={(snapshotRunId) =>
@@ -341,6 +365,7 @@ export function StoreMyPerformancePage(input: {
       onToggleDateFilter={() => dispatch({ type: 'toggleDateFilter' })}
       periodHandlers={periodHandlers}
       performanceEmployeeName={performance.employee.displayName}
+      incentiveProjection={incentiveProjection}
       selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
       selectedLivePeriodType={selectedLivePeriodType}
       sourceMode={sourceMode}
@@ -355,6 +380,7 @@ function StoreMyPerformancePageExperience({
   activeClosedSnapshotRunId,
   isDateFilterOpen,
   isKpiDetailOpen,
+  locale,
   onCloseKpiDetails,
   onOpenKpiDetails,
   onSelectClosedSnapshotRun,
@@ -362,6 +388,7 @@ function StoreMyPerformancePageExperience({
   onToggleDateFilter,
   periodHandlers,
   performanceEmployeeName,
+  incentiveProjection,
   selectedClosedSnapshotRunId,
   selectedLivePeriodType,
   sourceMode,
@@ -445,6 +472,13 @@ function StoreMyPerformancePageExperience({
             pendingNormalizationLabels={pendingNormalizationLabels}
             t={t}
           />
+
+          {incentiveProjection ? (
+            <StoreMeIncentiveCard
+              locale={locale}
+              projection={incentiveProjection}
+            />
+          ) : null}
 
           <StoreMyPerformancePlumDashboard
             actualSalesLabel={actualSalesLabel}

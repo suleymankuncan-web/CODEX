@@ -34,7 +34,7 @@ import {
   isVisualMerchandiserOnly,
   type ShellState,
 } from './shell-state'
-import { resolveStorePersona } from './store-navigation'
+import { canOpenStoreIncentives, resolveStorePersona } from './store-navigation'
 import { StoreSidebar } from './store-sidebar'
 import { StoreErrorState, StoreSurfacePage } from '../pages/store-surface-primitives'
 
@@ -52,6 +52,7 @@ export function StoreShell(input: {
   const storeTasksAllowed = storePersona !== 'personnel'
   const storeTargetsAllowed = canListTargetDistributionRequests(input.authSummary)
   const storeWorkforceAllowed = canOpenStoreWorkforce(input.authSummary)
+  const storeIncentivesAllowed = canOpenStoreIncentives(input.authSummary)
   const location = useLocation()
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
@@ -189,7 +190,13 @@ export function StoreShell(input: {
             />
             <Route
               path="/store/incentives"
-              element={storeRoute(<StoreIncentivesPage authSummary={input.authSummary} />)}
+              element={storeRoute(
+                <StoreIncentivesPage authSummary={input.authSummary} />,
+                {
+                  allowed: storeIncentivesAllowed,
+                  firstAllowedPath: input.firstAllowedPath,
+                },
+              )}
             />
             <Route
               path="/store/settings"

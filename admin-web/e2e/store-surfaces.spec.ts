@@ -3702,22 +3702,18 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
 test('store incentives page switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/incentives')
 
-  await expect(page.getByRole('heading', { name: /Mağaza prim görünürlüğü/i })).toBeVisible()
-  await expect(page.getByText('Prim görünümü')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Canlı ödeme' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Mağaza prim görünümü/i })).toBeVisible()
+  await expect(page.getByText('Prim görünümü', { exact: true })).toBeVisible()
+  await expect(page.getByText('Toplam hak ediş')).toBeVisible()
   await expect(page.getByText('Store Incentives')).toHaveCount(0)
 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store incentive visibility/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store incentive view/i })).toBeVisible()
   await expect(page.getByText('Incentive view', { exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Live payouts' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Store tasks' })).toBeVisible()
-  await expect(
-    page.getByLabel('Store incentive visibility').getByRole('link', { name: 'Request Center' }),
-  ).toBeVisible()
-  await expect(page.getByText('Mağaza prim görünürlüğü')).toHaveCount(0)
+  await expect(page.getByText('Entitlements are read from the current month sales target')).toBeVisible()
+  await expect(page.getByText('Mağaza prim görünümü')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
@@ -3725,7 +3721,7 @@ test('store incentives page switches to English copy and persists locale', async
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store incentive visibility/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Store incentive view/i })).toBeVisible()
 })
 
 test('store competitions page renders scoped contribution details', async ({ page }) => {
@@ -4388,6 +4384,14 @@ async function routeStoreSurfaceApi(page: Page) {
     })
   })
 
+  await page.route('**/api/store/me/incentives**', async (route) => {
+    await route.fulfill({ json: ownIncentivesFixture })
+  })
+
+  await page.route('**/api/store/incentives**', async (route) => {
+    await route.fulfill({ json: storeIncentivesFixture })
+  })
+
   await page.route('**/api/reports/personnel-performance/**', async (route) => {
     const requestUrl = new URL(route.request().url())
     const baseFixture =
@@ -4993,6 +4997,104 @@ const myPerformanceFixture = {
       status: 'reported',
     },
   ],
+}
+
+const ownIncentivesFixture = {
+  data: {
+    period: '2026-06',
+    periodStart: '2026-06-01',
+    periodEnd: '2026-06-30',
+    periodTimezone: 'Europe/Istanbul',
+    roleScope: 'own',
+    projections: [
+      {
+        period: '2026-06',
+        periodTimezone: 'Europe/Istanbul',
+        closeCutoffAt: null,
+        ruleVersionId: 'sales-target-incentive-v1.0.0',
+        storeId: demoStoreId,
+        storeName: 'IstinyePark Demo Store',
+        storeOwnershipType: 'company',
+        roleScope: 'own',
+        storeTarget: '1000000.00',
+        storeActualNetSales: '1000000.00',
+        storeAchievementPct: '100.0000',
+        storeGatePassed: true,
+        calculationState: 'projected',
+        blockedReason: null,
+        lastImportAt: '2026-06-18T08:00:00.000Z',
+        rows: [
+          {
+            employeeId: demoEmployeeId,
+            displayName: 'Store Personnel',
+            participantType: 'personnel',
+            positionCode: 'SALES_ASSOCIATE',
+            normalizedFromPositionCode: null,
+            target: '1000000.00',
+            actualPositiveSales: '820000.00',
+            achievementPct: '82.0000',
+            storeAchievementPct: '100.0000',
+            storeGatePassed: true,
+            rate: '0.0150',
+            rawEarnedAmount: '12300.000000',
+            payableAmount: '12300.00',
+            correctionAmount: null,
+            adjustmentAmount: null,
+            finalAmount: null,
+            status: 'projected',
+            blockedReason: null,
+            rateTableVersion: 'personnel-sales-target-v1.0.0',
+            explanation: 'Fixture projection.',
+          },
+        ],
+      },
+    ],
+  },
+}
+
+const storeIncentivesFixture = {
+  data: {
+    ...ownIncentivesFixture.data,
+    roleScope: 'store',
+    projections: [
+      {
+        ...ownIncentivesFixture.data.projections[0],
+        roleScope: 'store',
+        rows: [
+          {
+            employeeId: 'manager-1',
+            displayName: 'Store Manager',
+            participantType: 'store_manager',
+            positionCode: 'STORE_MANAGER',
+            normalizedFromPositionCode: null,
+            target: '1000000.00',
+            actualPositiveSales: '1500000.00',
+            achievementPct: '150.0000',
+            storeAchievementPct: '150.0000',
+            storeGatePassed: null,
+            rate: '0.0100',
+            rawEarnedAmount: '15000.000000',
+            payableAmount: '15000.00',
+            correctionAmount: null,
+            adjustmentAmount: null,
+            finalAmount: null,
+            status: 'projected',
+            blockedReason: null,
+            rateTableVersion: 'manager-sales-target-v1.0.0',
+            explanation: 'Fixture projection.',
+          },
+          {
+            ...ownIncentivesFixture.data.projections[0].rows[0],
+            actualPositiveSales: '1000000.00',
+            achievementPct: '100.0000',
+            rawEarnedAmount: '16500.000000',
+            payableAmount: '16500.00',
+            rate: '0.0165',
+          },
+        ],
+      },
+    ],
+  },
 }
 
 const myPerformanceMayFixture = {

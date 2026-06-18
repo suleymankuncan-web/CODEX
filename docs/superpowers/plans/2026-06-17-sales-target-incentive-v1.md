@@ -604,23 +604,23 @@ Tracking issue: https://github.com/suleymankuncan-web/CODEX/issues/728
 
 Frontend package note: Store and Admin surfaces currently live in `admin-web`; Store UI verification therefore uses `npm.cmd --prefix admin-web ...`.
 
-- [ ] Add `/store/me` incentive card for eligible non-cashier company-store personnel.
-- [ ] Hide incentive card/navigation for cashier, franchise, and operator users.
-- [ ] Add `/store/incentives` store manager view.
-- [ ] Add `/store/incentives` region manager view.
-- [ ] Add manager and personnel rate tables in Turkish.
-- [ ] Show gate, target, actual, achievement, rate, earned amount, last import, and revision state.
-- [ ] Use existing Store surface primitives and current toolbar/sidebar patterns.
-- [ ] Add loading, empty, error, unauthorized, blocked, and no-source states.
-- [ ] Add responsive screenshots for eligible and hidden personas.
+- [x] Add `/store/me` incentive card for eligible non-cashier company-store personnel.
+- [x] Hide incentive card/navigation for cashier, franchise, and operator users.
+- [x] Add `/store/incentives` store manager view.
+- [x] Add `/store/incentives` region manager view.
+- [x] Add manager and personnel rate tables in Turkish.
+- [x] Show gate, target, actual, achievement, rate, earned amount, last import, and revision state.
+- [x] Use existing Store surface primitives and current toolbar/sidebar patterns.
+- [x] Add loading, empty, error, unauthorized, blocked, and no-source states.
+- [x] Add responsive screenshots for eligible and hidden personas.
 
 Verification:
 
-- [ ] `npm.cmd --prefix admin-web run lint`
-- [ ] `npm.cmd --prefix admin-web run build`
-- [ ] targeted Store Playwright route smoke for eligible, cashier, franchise/operator, store manager, and region manager
-- [ ] `npm.cmd run test:scripts`
-- [ ] `git diff --check`
+- [x] `npm.cmd --prefix admin-web run lint`
+- [x] `npm.cmd --prefix admin-web run build`
+- [x] targeted Store Playwright route smoke for eligible, cashier, franchise/operator, store manager, and region manager
+- [x] `npm.cmd run test:scripts`
+- [x] `git diff --check`
 
 ### PR-7: Admin Read, Audit, And Manual Correction `[blocked: PR-5]` `[issue-required]`
 

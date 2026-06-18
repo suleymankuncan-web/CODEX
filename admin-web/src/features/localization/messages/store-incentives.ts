@@ -5,6 +5,15 @@ export const storeIncentivesTr = {
   'storeIncentives.foundation': 'Hazırlık',
 
   'storeIncentives.heroEyebrow': 'Prim görünümü',
+  'storeIncentives.routeUnavailableTitle': 'Rota kullanılamıyor',
+  'storeIncentives.routeUnavailableCopy': 'Bu mağaza alanı mevcut oturum için açık değil.',
+  'storeIncentives.loadingTitle': 'Prim görünümü yükleniyor',
+  'storeIncentives.loadingCopy': 'Güncel satış hedefi ve prim satırları hazırlanıyor.',
+  'storeIncentives.errorTitle': 'Prim görünümü açılamadı',
+  'storeIncentives.storeProjectionTitle': 'Mağaza prim görünümü',
+  'storeIncentives.regionProjectionTitle': 'Bölge prim görünümü',
+  'storeIncentives.projectionCopy':
+    'Hak edişler mevcut ay satış hedefi, gerçekleşen satış ve V1 prim oranlarıyla okunur.',
   'storeIncentives.title': 'Mağaza prim görünürlüğü okunabilir sonuç olarak gelmeli.',
   'storeIncentives.heroCopy':
     'Bu sayfa prim işi için gelecekteki mağaza görünümünü ayırır. Amaç mağaza kullanıcısını sonuç, durum ve sınırlı aksiyon odağında tutmaktır.',
@@ -91,6 +100,15 @@ export const storeIncentivesEn: Record<keyof typeof storeIncentivesTr, string> =
   'storeIncentives.foundation': 'Setup',
 
   'storeIncentives.heroEyebrow': 'Incentive view',
+  'storeIncentives.routeUnavailableTitle': 'Route not available',
+  'storeIncentives.routeUnavailableCopy': 'This store area is not available for the current session.',
+  'storeIncentives.loadingTitle': 'Loading incentive view',
+  'storeIncentives.loadingCopy': 'Current sales targets and incentive rows are being prepared.',
+  'storeIncentives.errorTitle': 'Incentive view could not load',
+  'storeIncentives.storeProjectionTitle': 'Store incentive view',
+  'storeIncentives.regionProjectionTitle': 'Region incentive view',
+  'storeIncentives.projectionCopy':
+    'Entitlements are read from the current month sales target, actual sales, and V1 incentive rates.',
   'storeIncentives.title': 'Store incentive visibility should arrive as readable outcomes.',
   'storeIncentives.heroCopy':
     'This page reserves the future store incentive view. Store users should stay focused on result, status, and limited action when the payout model is ready.',
