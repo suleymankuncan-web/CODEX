@@ -493,6 +493,51 @@ describe("SalesTargetIncentiveApiService", () => {
     );
   });
 
+  it("keeps frozen final amounts when final rows also carry projection corrections", async () => {
+    const { correctionRepository, service } = createService();
+    correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([
+      {
+        store_id: storeId,
+        employee_id: finalOnlyEmployeeId,
+        participant_type: "personnel",
+        employee_display_name: "Zeynep Kaya",
+        position_code: "SALES_ASSOCIATE",
+        normalized_from_position_code: null,
+        rate_table_version: "personnel-sales-target-v1.0.0",
+        target_amount: "200000.0000",
+        actual_sales_amount: "240000.0000",
+        achievement_pct: "120.0000",
+        applied_rate: "0.0165",
+        raw_earned_amount: "3960.0000000000",
+        payable_amount: "3960.00",
+        calculation_status: "finalized",
+        correction_amount: "125.25",
+        adjustment_amount: "0",
+        final_amount: "4100.00",
+      },
+    ]);
+
+    const result = await service.getAdminProjection({
+      actor: buildAuthenticatedUser({
+        userId: "admin-user",
+        roleCodes: ["SUPER_ADMIN"],
+        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      }),
+      periodKey: "2026-05",
+    });
+
+    expect(result.data.projections[0].rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          employeeId: finalOnlyEmployeeId,
+          correctionAmount: "125.25",
+          finalAmount: "4100.00",
+          status: "corrected",
+        }),
+      ]),
+    );
+  });
+
   it("overlays approved corrections on Store Me reads for visible personnel", async () => {
     const { correctionRepository, service } = createService();
     correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([

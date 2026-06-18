@@ -422,7 +422,10 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     });
 
     const sql = String(query.mock.calls[0][0]);
-    expect(sql).toContain("WITH adjustment_summary AS");
+    expect(sql).toContain("adjustment_summary AS");
+    expect(sql).toContain("latest_final_snapshot AS");
+    expect(sql).toContain("DISTINCT ON (snapshot.period_key, snapshot.store_id)");
+    expect(sql).toContain("LEFT JOIN adjustment_summary");
     expect(sql).toContain("UNION ALL");
     expect(sql).toContain("FROM rpt.sales_target_incentive_final_row final_row");
     expect(sql).toContain("NOT EXISTS");

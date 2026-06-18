@@ -283,7 +283,21 @@ export class SalesTargetIncentiveCorrectionRepository {
     const result =
       await this.databaseService.query<SalesTargetIncentiveAdjustmentSummaryRow>(
         `
-          WITH adjustment_summary AS (
+          WITH latest_final_snapshot AS (
+            SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
+              snapshot.sales_target_incentive_final_snapshot_id,
+              snapshot.period_key,
+              snapshot.store_id
+            FROM rpt.sales_target_incentive_final_snapshot snapshot
+            WHERE snapshot.period_key = $1
+              AND snapshot.store_id = ANY($2::uuid[])
+            ORDER BY
+              snapshot.period_key,
+              snapshot.store_id,
+              snapshot.close_cutoff_at DESC,
+              snapshot.sales_target_incentive_final_snapshot_id DESC
+          ),
+          adjustment_summary AS (
           SELECT
             adjustment.store_id::text AS store_id,
             adjustment.employee_id::text AS employee_id,
@@ -323,6 +337,17 @@ export class SalesTargetIncentiveCorrectionRepository {
           SELECT *
           FROM adjustment_summary
           ${input.includeFinalRows ? `
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM latest_final_snapshot latest_snapshot
+            INNER JOIN rpt.sales_target_incentive_final_row latest_row
+              ON latest_row.final_snapshot_id = latest_snapshot.sales_target_incentive_final_snapshot_id
+            WHERE latest_snapshot.store_id::text = adjustment_summary.store_id
+              AND latest_row.employee_id::text = adjustment_summary.employee_id
+              AND latest_row.participant_type = adjustment_summary.participant_type
+          )
+          ` : ""}
+          ${input.includeFinalRows ? `
           UNION ALL
           SELECT
             snapshot.store_id::text AS store_id,
@@ -339,23 +364,18 @@ export class SalesTargetIncentiveCorrectionRepository {
             final_row.raw_earned_amount::text AS raw_earned_amount,
             final_row.payable_amount::text AS payable_amount,
             final_row.calculation_status::text AS calculation_status,
-            '0'::text AS correction_amount,
-            '0'::text AS adjustment_amount,
+            COALESCE(adjustment_summary.correction_amount, final_row.correction_amount::text) AS correction_amount,
+            COALESCE(adjustment_summary.adjustment_amount, '0') AS adjustment_amount,
             final_row.final_amount::text AS final_amount
           FROM rpt.sales_target_incentive_final_row final_row
-          INNER JOIN rpt.sales_target_incentive_final_snapshot snapshot
+          INNER JOIN latest_final_snapshot snapshot
             ON snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
           LEFT JOIN ops.employee employee
             ON employee.employee_id = final_row.employee_id
-          WHERE snapshot.period_key = $1
-            AND snapshot.store_id = ANY($2::uuid[])
-            AND NOT EXISTS (
-              SELECT 1
-              FROM adjustment_summary summary
-              WHERE summary.store_id = snapshot.store_id::text
-                AND summary.employee_id = final_row.employee_id::text
-                AND summary.participant_type = final_row.participant_type
-            )
+          LEFT JOIN adjustment_summary
+            ON adjustment_summary.store_id = snapshot.store_id::text
+           AND adjustment_summary.employee_id = final_row.employee_id::text
+           AND adjustment_summary.participant_type = final_row.participant_type
           ` : ""}
         `,
         [input.periodKey, input.storeIds],
