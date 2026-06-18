@@ -10,6 +10,7 @@ import {
   AdminChecklistTemplatesPage,
   AdminFeedPage,
   AdminInboxPage,
+  AdminIncentivesPage,
   AdminKpiConfigPage,
   AdminDataQualityCenterPage,
   AdminPilotFeedbackPage,
@@ -152,6 +153,10 @@ export function AdminShell(input: {
             <Route
               path="/admin/targets"
               element={adminRoute(['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'], <TargetApprovalQueuePage authSummary={input.authSummary} />)}
+            />
+            <Route
+              path="/admin/incentives"
+              element={adminRoute(['SUPER_ADMIN'], <AdminIncentivesPage />)}
             />
             <Route
               path="/admin/kpi-config"

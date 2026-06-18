@@ -1,4 +1,5 @@
 import { fetchOpenApiJson } from '../../lib/openapi-client'
+import { sendJson } from '../../lib/api'
 
 export type SalesTargetIncentiveRoleScope = 'own' | 'store' | 'region' | 'admin'
 
@@ -63,6 +64,33 @@ export type SalesTargetIncentiveResponse = {
   }
 }
 
+export type AdminSalesTargetIncentiveCorrectionInput = {
+  period: string
+  storeId: string
+  employeeId: string
+  participantType: 'store_manager' | 'personnel'
+  adjustmentAmount: string
+  reasonCode: string
+  reasonNote: string
+}
+
+export type AdminSalesTargetIncentiveCorrectionResponse = {
+  data: {
+    adjustmentId: string
+    phase: 'pre_close' | 'post_close'
+    adjustmentScope: 'projection' | 'final_snapshot'
+    adjustmentType: 'correction' | 'manual_adjustment'
+    periodKey: string
+    storeId: string
+    employeeId: string
+    participantType: 'store_manager' | 'personnel'
+    beforeAmount: string
+    adjustmentAmount: string
+    afterAmount: string
+    status: 'approved'
+  }
+}
+
 function buildPeriodQuery(period?: string) {
   if (!period?.trim()) {
     return undefined
@@ -76,6 +104,9 @@ export const mySalesTargetIncentivesQueryKey = (period?: string) =>
 
 export const storeSalesTargetIncentivesQueryKey = (period?: string) =>
   ['store-sales-target-incentives', period ?? 'current'] as const
+
+export const adminSalesTargetIncentivesQueryKey = (period?: string) =>
+  ['admin-sales-target-incentives', period ?? 'current'] as const
 
 export async function getMySalesTargetIncentives(input?: { period?: string }) {
   const query = buildPeriodQuery(input?.period)
@@ -91,4 +122,24 @@ export async function getStoreSalesTargetIncentives(input?: { period?: string })
     '/api/store/incentives',
     query ? { query } : undefined,
   ) as Promise<SalesTargetIncentiveResponse>
+}
+
+export async function getAdminSalesTargetIncentives(input?: { period?: string }) {
+  const query = buildPeriodQuery(input?.period)
+  return fetchOpenApiJson(
+    '/api/admin/incentives',
+    query ? { query } : undefined,
+  ) as Promise<SalesTargetIncentiveResponse>
+}
+
+export async function createAdminSalesTargetIncentiveCorrection(
+  input: AdminSalesTargetIncentiveCorrectionInput,
+) {
+  return sendJson<AdminSalesTargetIncentiveCorrectionResponse>(
+    '/admin/incentives/corrections',
+    {
+      method: 'POST',
+      body: input,
+    },
+  )
 }

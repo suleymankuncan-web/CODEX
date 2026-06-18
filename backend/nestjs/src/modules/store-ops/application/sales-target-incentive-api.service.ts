@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import {
   SALES_TARGET_INCENTIVE_RULE_VERSION,
@@ -11,6 +11,11 @@ import {
   type SalesTargetIncentiveProjectionReadModel,
   type SalesTargetIncentiveProjectionStore,
 } from "./sales-target-incentive-read-model.service";
+import {
+  SalesTargetIncentiveCorrectionRepository,
+  type SalesTargetIncentiveAdjustmentSummaryRow,
+  type SalesTargetIncentiveCorrectionResult,
+} from "../infrastructure/sales-target-incentive-correction.repository";
 
 export type SalesTargetIncentiveRoleScope =
   | "own"
@@ -35,7 +40,7 @@ export type SalesTargetIncentiveApiRow = {
   correctionAmount: string | null;
   adjustmentAmount: string | null;
   finalAmount: string | null;
-  status: Exclude<SalesTargetIncentiveCalculationStatus, "excluded">;
+  status: Exclude<SalesTargetIncentiveCalculationStatus, "excluded"> | "corrected" | "adjusted";
   blockedReason: string | null;
   rateTableVersion: string;
   explanation: string;
@@ -75,6 +80,7 @@ export type SalesTargetIncentiveApiResponse = {
 export class SalesTargetIncentiveApiService {
   constructor(
     private readonly readModelService: SalesTargetIncentiveReadModelService,
+    private readonly correctionRepository: SalesTargetIncentiveCorrectionRepository,
   ) {}
 
   async getOwnStoreMeProjection(input: {
@@ -161,11 +167,85 @@ export class SalesTargetIncentiveApiService {
     });
   }
 
-  private toApiResponse(input: {
+  async applyAdminCorrection(input: {
+    actor: AuthenticatedUser;
+    periodKey: string;
+    storeId: string;
+    employeeId: string;
+    participantType: "store_manager" | "personnel";
+    adjustmentAmount: string;
+    reasonCode: string;
+    reasonNote: string;
+  }): Promise<{ data: SalesTargetIncentiveCorrectionResult }> {
+    if (!input.actor.roleCodes.includes("SUPER_ADMIN")) {
+      throw new ForbiddenException("Incentive correction is not available");
+    }
+
+    if (isZeroMoney(input.adjustmentAmount)) {
+      throw new BadRequestException("Correction amount must not be zero");
+    }
+
+    const adminScope = this.resolveSuperAdminReadScope(input.actor);
+    const projection = await this.readModelService.buildCurrentProjection({
+      periodKey: this.resolvePeriodKey(input.periodKey),
+      companyIds: adminScope.companyIds,
+      regionIds: adminScope.companyIds.length
+        ? []
+        : adminScope.regionIds,
+      storeIds:
+        adminScope.companyIds.length || adminScope.regionIds.length
+          ? []
+          : adminScope.storeIds,
+      allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
+    });
+    const store = projection.stores.find((candidate) => candidate.storeId === input.storeId);
+    const participant = store
+      ? [
+          ...(store.manager ? [store.manager] : []),
+          ...store.personnel,
+        ].find(
+          (row) =>
+            row.employeeId === input.employeeId &&
+            row.participantType === input.participantType,
+        )
+      : null;
+
+    if (!store || !participant) {
+      throw new NotFoundException("Incentive projection is not available");
+    }
+
+    if (participant.calculation.payableAmount === null) {
+      throw new BadRequestException("Correction target is not payable");
+    }
+
+    const result = await this.correctionRepository.applyAdminCorrection({
+      periodKey: projection.periodKey,
+      periodStart: projection.periodStart,
+      periodEnd: projection.periodEnd,
+      store,
+      participant,
+      adjustmentAmount: input.adjustmentAmount,
+      reasonCode: input.reasonCode,
+      reasonNote: input.reasonNote,
+      actorUserId: input.actor.userId,
+    });
+
+    return { data: result };
+  }
+
+  private async toApiResponse(input: {
     projection: SalesTargetIncentiveProjectionReadModel;
     stores: SalesTargetIncentiveProjectionStore[];
     roleScope: SalesTargetIncentiveRoleScope;
-  }): SalesTargetIncentiveApiResponse {
+  }): Promise<SalesTargetIncentiveApiResponse> {
+    const adjustmentSummaries =
+      input.roleScope === "admin"
+        ? await this.correctionRepository.listApprovedAdjustmentSummaries({
+            periodKey: input.projection.periodKey,
+            storeIds: input.stores.map((store) => store.storeId),
+          })
+        : [];
+
     return {
       data: {
         period: input.projection.periodKey,
@@ -174,7 +254,12 @@ export class SalesTargetIncentiveApiService {
         periodTimezone: input.projection.timezone,
         roleScope: input.roleScope,
         projections: input.stores.map((store) =>
-          this.toApiProjection(store, input.projection.periodKey, input.roleScope),
+          this.toApiProjection(
+            store,
+            input.projection.periodKey,
+            input.roleScope,
+            adjustmentSummaries,
+          ),
         ),
       },
     };
@@ -184,11 +269,22 @@ export class SalesTargetIncentiveApiService {
     store: SalesTargetIncentiveProjectionStore,
     period: string,
     roleScope: SalesTargetIncentiveRoleScope,
+    adjustmentSummaries: SalesTargetIncentiveAdjustmentSummaryRow[],
   ): SalesTargetIncentiveApiProjection {
     const rows = [
       ...(store.manager ? [store.manager] : []),
       ...store.personnel,
-    ].map((participant) => this.toApiRow(participant));
+    ].map((participant) =>
+      this.toApiRow(
+        participant,
+        adjustmentSummaries.find(
+          (summary) =>
+            summary.store_id === store.storeId &&
+            summary.employee_id === participant.employeeId &&
+            summary.participant_type === participant.participantType,
+        ) ?? null,
+      ),
+    );
     const primaryCalculation = store.manager?.calculation ?? store.personnel[0]?.calculation;
 
     return {
@@ -215,12 +311,33 @@ export class SalesTargetIncentiveApiService {
 
   private toApiRow(
     participant: SalesTargetIncentiveParticipantProjection,
+    adjustmentSummary: SalesTargetIncentiveAdjustmentSummaryRow | null,
   ): SalesTargetIncentiveApiRow {
     const calculation = participant.calculation;
 
     if (calculation.status === "excluded") {
       throw new NotFoundException("Incentive projection is not available");
     }
+
+    const correctionAmount =
+      adjustmentSummary && !isZeroMoney(adjustmentSummary.correction_amount)
+        ? formatMoney2(adjustmentSummary.correction_amount)
+        : null;
+    const adjustmentAmount =
+      adjustmentSummary && !isZeroMoney(adjustmentSummary.adjustment_amount)
+        ? formatMoney2(adjustmentSummary.adjustment_amount)
+        : null;
+    const finalAmount = resolveFinalAmount({
+      payableAmount: calculation.payableAmount,
+      correctionAmount,
+      adjustmentAmount,
+      persistedFinalAmount: adjustmentSummary?.final_amount ?? null,
+    });
+    const status: SalesTargetIncentiveApiRow["status"] = adjustmentAmount
+      ? "adjusted"
+      : correctionAmount
+        ? "corrected"
+        : calculation.status;
 
     return {
       employeeId: participant.employeeId,
@@ -236,10 +353,10 @@ export class SalesTargetIncentiveApiService {
       rate: calculation.rate,
       rawEarnedAmount: calculation.rawEarnedAmount,
       payableAmount: calculation.payableAmount,
-      correctionAmount: null,
-      adjustmentAmount: null,
-      finalAmount: null,
-      status: calculation.status,
+      correctionAmount,
+      adjustmentAmount,
+      finalAmount,
+      status,
       blockedReason: calculation.blockedReason,
       rateTableVersion: calculation.rateTableVersion,
       explanation: this.resolveExplanation(calculation.status, calculation.blockedReason),
@@ -312,4 +429,56 @@ export class SalesTargetIncentiveApiService {
 
     return `${year}-${month}`;
   }
+}
+
+function isZeroMoney(value: string) {
+  return parseMoneyCents(value) === 0n;
+}
+
+function resolveFinalAmount(input: {
+  payableAmount: string | null;
+  correctionAmount: string | null;
+  adjustmentAmount: string | null;
+  persistedFinalAmount: string | null;
+}) {
+  if (input.persistedFinalAmount !== null) {
+    const adjusted = input.adjustmentAmount
+      ? parseMoneyCents(input.persistedFinalAmount) + parseMoneyCents(input.adjustmentAmount)
+      : parseMoneyCents(input.persistedFinalAmount);
+    return formatCents(adjusted);
+  }
+
+  if (!input.correctionAmount && !input.adjustmentAmount) {
+    return null;
+  }
+
+  const base = input.payableAmount ? parseMoneyCents(input.payableAmount) : 0n;
+  const correction = input.correctionAmount ? parseMoneyCents(input.correctionAmount) : 0n;
+  const adjustment = input.adjustmentAmount ? parseMoneyCents(input.adjustmentAmount) : 0n;
+  return formatCents(base + correction + adjustment);
+}
+
+function formatMoney2(value: string) {
+  return formatCents(parseMoneyCents(value));
+}
+
+function parseMoneyCents(value: string) {
+  const trimmed = value.trim();
+  const match = /^(-?)(\d+)(?:\.(\d{1,2}))?$/.exec(trimmed);
+
+  if (!match) {
+    throw new Error("Invalid money value");
+  }
+
+  const [, sign, whole, fraction = ""] = match;
+  const cents = BigInt(whole) * 100n + BigInt(fraction.padEnd(2, "0"));
+  return sign === "-" ? -cents : cents;
+}
+
+function formatCents(cents: bigint) {
+  const sign = cents < 0n ? "-" : "";
+  const absolute = cents < 0n ? -cents : cents;
+  const whole = absolute / 100n;
+  const fraction = absolute % 100n;
+  return `${sign}${whole.toString()}.${fraction.toString().padStart(2, "0")}`;
 }

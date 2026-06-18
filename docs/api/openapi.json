@@ -4480,6 +4480,37 @@
           "AdminSalesTargetIncentive"
         ]
       }
+    },
+    "/api/admin/incentives/corrections": {
+      "post": {
+        "operationId": "AdminSalesTargetIncentiveController_createAdminIncentiveCorrection",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminSalesTargetIncentive"
+        ]
+      }
     }
   },
   "info": {

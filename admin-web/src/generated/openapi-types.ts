@@ -3528,6 +3528,22 @@ export type paths = {
       }
     }
   }
+  "/api/admin/incentives/corrections": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': Record<string, unknown>
+        }
+      }
+      responses: {
+        "201": {
+          content: {
+            'application/json': Record<string, unknown>
+          }
+        }
+      }
+    }
+  }
   "/api/target-distributions/coverage": {
     get: {
       responses: {

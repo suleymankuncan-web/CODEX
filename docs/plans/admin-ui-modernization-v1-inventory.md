@@ -46,55 +46,504 @@ route/navigation parity guard.
 ```json
 {
   "routes": [
-    { "path": "/admin/session", "page": "SessionReadinessPage", "roles": [], "navId": "session", "navVisible": true },
-    { "path": "/admin/operations", "page": "OperationsControlTowerPage", "roles": ["SUPER_ADMIN"], "navId": "operations", "navVisible": true },
-    { "path": "/admin/data-quality", "page": "AdminDataQualityCenterPage", "roles": ["SUPER_ADMIN"], "navId": "dataQuality", "navVisible": true },
-    { "path": "/admin/integrations", "page": "IntegrationDashboardPage", "roles": ["SUPER_ADMIN", "INTEGRATION_ADMIN"], "navId": "integrations", "navVisible": true },
-    { "path": "/admin/integrations/:batchId", "page": "ImportBatchDetailPage", "roles": ["SUPER_ADMIN", "INTEGRATION_ADMIN"], "navId": null, "navVisible": false },
-    { "path": "/admin/master-data", "page": "MasterDataBootstrapPage", "roles": ["SUPER_ADMIN", "HR_ADMIN", "INTEGRATION_ADMIN"], "navId": "masterData", "navVisible": true },
-    { "path": "/admin/master-data/:batchId", "page": "MasterDataBootstrapPage", "roles": ["SUPER_ADMIN", "HR_ADMIN", "INTEGRATION_ADMIN"], "navId": null, "navVisible": false },
-    { "path": "/admin/snapshots", "page": "SnapshotsDashboardPage", "roles": ["SUPER_ADMIN", "SNAPSHOT_OPERATOR"], "navId": "snapshots", "navVisible": true },
-    { "path": "/admin/snapshots/:snapshotRunId", "page": "SnapshotRunDetailPage", "roles": ["SUPER_ADMIN", "SNAPSHOT_OPERATOR"], "navId": null, "navVisible": false },
-    { "path": "/admin/inbox", "page": "AdminInboxPage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER", "HR_ADMIN"], "navId": "inbox", "navVisible": true },
-    { "path": "/admin/feed", "page": "AdminFeedPage", "roles": ["SUPER_ADMIN", "HR_ADMIN", "REGION_MANAGER"], "navId": "feed", "navVisible": true },
-    { "path": "/admin/checklists", "page": "AdminChecklistTemplatesPage", "roles": ["SUPER_ADMIN", "HR_ADMIN"], "navId": "checklists", "navVisible": true },
-    { "path": "/admin/competitions", "page": "CompetitionDashboardPage", "roles": ["SUPER_ADMIN", "HR_ADMIN", "REPORT_VIEWER", "REGION_MANAGER"], "navId": "competitions", "navVisible": true },
-    { "path": "/admin/reports", "page": "ReportsSummaryPage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER"], "navId": "reports", "navVisible": true },
-    { "path": "/admin/reports/snapshot-runs", "page": "ReportsSnapshotRunsPage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER"], "navId": null, "navVisible": false },
-    { "path": "/admin/reports/workforce/:snapshotRunId", "page": "ReportsWorkforcePage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER"], "navId": null, "navVisible": false },
-    { "path": "/admin/reports/kpis/:snapshotRunId", "page": "ReportsKpisPage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER"], "navId": null, "navVisible": false },
-    { "path": "/admin/reports/checklists/:snapshotRunId", "page": "ReportsChecklistsPage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER"], "navId": null, "navVisible": false },
-    { "path": "/admin/reports/turnover/:snapshotRunId", "page": "ReportsTurnoverPage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER"], "navId": null, "navVisible": false },
-    { "path": "/admin/targets", "page": "TargetApprovalQueuePage", "roles": ["SUPER_ADMIN", "REPORT_VIEWER", "REGION_MANAGER"], "navId": "targets", "navVisible": true },
-    { "path": "/admin/kpi-config", "page": "AdminKpiConfigPage", "roles": ["SUPER_ADMIN"], "navId": "kpiConfig", "navVisible": true },
-    { "path": "/admin/pilot-feedback", "page": "AdminPilotFeedbackPage", "roles": ["SUPER_ADMIN"], "navId": "pilotFeedback", "navVisible": true },
-    { "path": "/admin/auth", "page": "AuthDashboardPage", "roles": ["SUPER_ADMIN"], "navId": "auth", "navVisible": true },
-    { "path": "/admin/auth/catalog", "page": "AuthCatalogPage", "roles": ["SUPER_ADMIN"], "navId": null, "navVisible": false },
-    { "path": "/admin/auth/users/:userId/audit", "page": "AuthUserAuditPage", "roles": ["SUPER_ADMIN"], "navId": null, "navVisible": false },
-    { "path": "/admin/auth/role-assignments/:assignmentId/audit", "page": "AuthAssignmentAuditPage", "roles": ["SUPER_ADMIN"], "navId": null, "navVisible": false },
-    { "path": "/admin/auth/action-store-assignments/:assignmentId/audit", "page": "AuthActionStoreAssignmentAuditPage", "roles": ["SUPER_ADMIN"], "navId": null, "navVisible": false },
-    { "path": "/admin/audit", "page": "AuditCenterPage", "roles": ["SUPER_ADMIN", "AUDITOR"], "navId": "audit", "navVisible": true },
-    { "path": "/admin/audit/users/:userId/audit", "page": "AuthUserAuditPage", "roles": ["SUPER_ADMIN", "AUDITOR"], "navId": null, "navVisible": false },
-    { "path": "/admin/audit/role-assignments/:assignmentId/audit", "page": "AuthAssignmentAuditPage", "roles": ["SUPER_ADMIN", "AUDITOR"], "navId": null, "navVisible": false },
-    { "path": "/admin/audit/action-store-assignments/:assignmentId/audit", "page": "AuthActionStoreAssignmentAuditPage", "roles": ["SUPER_ADMIN", "AUDITOR"], "navId": null, "navVisible": false }
+    {
+      "navId": "audit",
+      "navVisible": true,
+      "page": "AuditCenterPage",
+      "path": "/admin/audit",
+      "roles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "AuthActionStoreAssignmentAuditPage",
+      "path": "/admin/audit/action-store-assignments/:assignmentId/audit",
+      "roles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "AuthAssignmentAuditPage",
+      "path": "/admin/audit/role-assignments/:assignmentId/audit",
+      "roles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "AuthUserAuditPage",
+      "path": "/admin/audit/users/:userId/audit",
+      "roles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "auth",
+      "navVisible": true,
+      "page": "AuthDashboardPage",
+      "path": "/admin/auth",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "AuthActionStoreAssignmentAuditPage",
+      "path": "/admin/auth/action-store-assignments/:assignmentId/audit",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "AuthCatalogPage",
+      "path": "/admin/auth/catalog",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "AuthAssignmentAuditPage",
+      "path": "/admin/auth/role-assignments/:assignmentId/audit",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "AuthUserAuditPage",
+      "path": "/admin/auth/users/:userId/audit",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "checklists",
+      "navVisible": true,
+      "page": "AdminChecklistTemplatesPage",
+      "path": "/admin/checklists",
+      "roles": [
+        "HR_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "competitions",
+      "navVisible": true,
+      "page": "CompetitionDashboardPage",
+      "path": "/admin/competitions",
+      "roles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "dataQuality",
+      "navVisible": true,
+      "page": "AdminDataQualityCenterPage",
+      "path": "/admin/data-quality",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "feed",
+      "navVisible": true,
+      "page": "AdminFeedPage",
+      "path": "/admin/feed",
+      "roles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "inbox",
+      "navVisible": true,
+      "page": "AdminInboxPage",
+      "path": "/admin/inbox",
+      "roles": [
+        "HR_ADMIN",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "incentives",
+      "navVisible": true,
+      "page": "AdminIncentivesPage",
+      "path": "/admin/incentives",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "integrations",
+      "navVisible": true,
+      "page": "IntegrationDashboardPage",
+      "path": "/admin/integrations",
+      "roles": [
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "ImportBatchDetailPage",
+      "path": "/admin/integrations/:batchId",
+      "roles": [
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "kpiConfig",
+      "navVisible": true,
+      "page": "AdminKpiConfigPage",
+      "path": "/admin/kpi-config",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "masterData",
+      "navVisible": true,
+      "page": "MasterDataBootstrapPage",
+      "path": "/admin/master-data",
+      "roles": [
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "MasterDataBootstrapPage",
+      "path": "/admin/master-data/:batchId",
+      "roles": [
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "operations",
+      "navVisible": true,
+      "page": "OperationsControlTowerPage",
+      "path": "/admin/operations",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "pilotFeedback",
+      "navVisible": true,
+      "page": "AdminPilotFeedbackPage",
+      "path": "/admin/pilot-feedback",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "reports",
+      "navVisible": true,
+      "page": "ReportsSummaryPage",
+      "path": "/admin/reports",
+      "roles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "ReportsChecklistsPage",
+      "path": "/admin/reports/checklists/:snapshotRunId",
+      "roles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "ReportsKpisPage",
+      "path": "/admin/reports/kpis/:snapshotRunId",
+      "roles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "ReportsSnapshotRunsPage",
+      "path": "/admin/reports/snapshot-runs",
+      "roles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "ReportsTurnoverPage",
+      "path": "/admin/reports/turnover/:snapshotRunId",
+      "roles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "ReportsWorkforcePage",
+      "path": "/admin/reports/workforce/:snapshotRunId",
+      "roles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "session",
+      "navVisible": true,
+      "page": "SessionReadinessPage",
+      "path": "/admin/session",
+      "roles": [],
+      "rolesMode": "unguarded"
+    },
+    {
+      "navId": "snapshots",
+      "navVisible": true,
+      "page": "SnapshotsDashboardPage",
+      "path": "/admin/snapshots",
+      "roles": [
+        "SNAPSHOT_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": null,
+      "navVisible": false,
+      "page": "SnapshotRunDetailPage",
+      "path": "/admin/snapshots/:snapshotRunId",
+      "roles": [
+        "SNAPSHOT_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    },
+    {
+      "navId": "targets",
+      "navVisible": true,
+      "page": "TargetApprovalQueuePage",
+      "path": "/admin/targets",
+      "roles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "guarded"
+    }
   ],
   "navigation": [
-    { "id": "operations", "to": "/admin/operations", "roles": ["SUPER_ADMIN"] },
-    { "id": "dataQuality", "to": "/admin/data-quality", "roles": ["SUPER_ADMIN"] },
-    { "id": "integrations", "to": "/admin/integrations", "roles": ["SUPER_ADMIN", "INTEGRATION_ADMIN"] },
-    { "id": "masterData", "to": "/admin/master-data", "roles": ["SUPER_ADMIN", "HR_ADMIN", "INTEGRATION_ADMIN"] },
-    { "id": "snapshots", "to": "/admin/snapshots", "roles": ["SUPER_ADMIN", "SNAPSHOT_OPERATOR"] },
-    { "id": "inbox", "to": "/admin/inbox", "roles": ["SUPER_ADMIN", "REPORT_VIEWER", "HR_ADMIN"] },
-    { "id": "feed", "to": "/admin/feed", "roles": ["SUPER_ADMIN", "HR_ADMIN", "REGION_MANAGER"] },
-    { "id": "checklists", "to": "/admin/checklists", "roles": ["SUPER_ADMIN", "HR_ADMIN"] },
-    { "id": "competitions", "to": "/admin/competitions", "roles": ["SUPER_ADMIN", "HR_ADMIN", "REPORT_VIEWER", "REGION_MANAGER"] },
-    { "id": "reports", "to": "/admin/reports", "roles": ["SUPER_ADMIN", "REPORT_VIEWER"] },
-    { "id": "targets", "to": "/admin/targets", "roles": ["SUPER_ADMIN", "REPORT_VIEWER", "REGION_MANAGER"] },
-    { "id": "kpiConfig", "to": "/admin/kpi-config", "roles": ["SUPER_ADMIN"] },
-    { "id": "pilotFeedback", "to": "/admin/pilot-feedback", "roles": ["SUPER_ADMIN"] },
-    { "id": "auth", "to": "/admin/auth", "roles": ["SUPER_ADMIN"] },
-    { "id": "audit", "to": "/admin/audit", "roles": ["SUPER_ADMIN", "AUDITOR"] },
-    { "id": "session", "to": "/admin/session", "roles": [] }
+    {
+      "id": "audit",
+      "roles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/audit"
+    },
+    {
+      "id": "auth",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/auth"
+    },
+    {
+      "id": "checklists",
+      "roles": [
+        "HR_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/checklists"
+    },
+    {
+      "id": "competitions",
+      "roles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/competitions"
+    },
+    {
+      "id": "dataQuality",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/data-quality"
+    },
+    {
+      "id": "feed",
+      "roles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/feed"
+    },
+    {
+      "id": "inbox",
+      "roles": [
+        "HR_ADMIN",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/inbox"
+    },
+    {
+      "id": "incentives",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/incentives"
+    },
+    {
+      "id": "integrations",
+      "roles": [
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/integrations"
+    },
+    {
+      "id": "kpiConfig",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/kpi-config"
+    },
+    {
+      "id": "masterData",
+      "roles": [
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/master-data"
+    },
+    {
+      "id": "operations",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/operations"
+    },
+    {
+      "id": "pilotFeedback",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/pilot-feedback"
+    },
+    {
+      "id": "reports",
+      "roles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/reports"
+    },
+    {
+      "id": "session",
+      "roles": [],
+      "rolesMode": "omitted",
+      "to": "/admin/session"
+    },
+    {
+      "id": "snapshots",
+      "roles": [
+        "SNAPSHOT_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/snapshots"
+    },
+    {
+      "id": "targets",
+      "roles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "rolesMode": "declared",
+      "to": "/admin/targets"
+    }
   ],
   "rolesForParityMatrix": [
     "SUPER_ADMIN",
@@ -105,6 +554,1658 @@ route/navigation parity guard.
     "REGION_MANAGER",
     "AUDITOR",
     "NO_SPECIAL_ADMIN_ROLE"
+  ],
+  "routeVisibility": [
+    {
+      "role": "SUPER_ADMIN",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/auth",
+          "visible": true
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": true
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": true
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": true
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": true
+        },
+        {
+          "id": "/admin/feed",
+          "visible": true
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": true
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": true
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": true
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": true
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": true
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": true
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": true
+        },
+        {
+          "id": "/admin/operations",
+          "visible": true
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/targets",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "role": "HR_ADMIN",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": true
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": true
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": false
+        },
+        {
+          "id": "/admin/feed",
+          "visible": true
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": true
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": true
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": true
+        },
+        {
+          "id": "/admin/operations",
+          "visible": false
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": false
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "INTEGRATION_ADMIN",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": false
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": false
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": false
+        },
+        {
+          "id": "/admin/feed",
+          "visible": false
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": false
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": true
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": true
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": true
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": true
+        },
+        {
+          "id": "/admin/operations",
+          "visible": false
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": false
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "SNAPSHOT_OPERATOR",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": false
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": false
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": false
+        },
+        {
+          "id": "/admin/feed",
+          "visible": false
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": false
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/operations",
+          "visible": false
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "REPORT_VIEWER",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": false
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": true
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": false
+        },
+        {
+          "id": "/admin/feed",
+          "visible": false
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": true
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/operations",
+          "visible": false
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": true
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": false
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/targets",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "role": "REGION_MANAGER",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": false
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": true
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": false
+        },
+        {
+          "id": "/admin/feed",
+          "visible": true
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": false
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/operations",
+          "visible": false
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": false
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/targets",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "role": "AUDITOR",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": true
+        },
+        {
+          "id": "/admin/auth",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": false
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": false
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": false
+        },
+        {
+          "id": "/admin/feed",
+          "visible": false
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": false
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/operations",
+          "visible": false
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": false
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "NO_SPECIAL_ADMIN_ROLE",
+      "visible": [
+        {
+          "id": "/admin/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/audit/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/action-store-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/catalog",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/role-assignments/:assignmentId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/auth/users/:userId/audit",
+          "visible": false
+        },
+        {
+          "id": "/admin/checklists",
+          "visible": false
+        },
+        {
+          "id": "/admin/competitions",
+          "visible": false
+        },
+        {
+          "id": "/admin/data-quality",
+          "visible": false
+        },
+        {
+          "id": "/admin/feed",
+          "visible": false
+        },
+        {
+          "id": "/admin/inbox",
+          "visible": false
+        },
+        {
+          "id": "/admin/incentives",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations",
+          "visible": false
+        },
+        {
+          "id": "/admin/integrations/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/kpi-config",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data",
+          "visible": false
+        },
+        {
+          "id": "/admin/master-data/:batchId",
+          "visible": false
+        },
+        {
+          "id": "/admin/operations",
+          "visible": false
+        },
+        {
+          "id": "/admin/pilot-feedback",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/checklists/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/kpis/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/snapshot-runs",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/turnover/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/reports/workforce/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/session",
+          "visible": true
+        },
+        {
+          "id": "/admin/snapshots",
+          "visible": false
+        },
+        {
+          "id": "/admin/snapshots/:snapshotRunId",
+          "visible": false
+        },
+        {
+          "id": "/admin/targets",
+          "visible": false
+        }
+      ]
+    }
+  ],
+  "navigationVisibility": [
+    {
+      "role": "SUPER_ADMIN",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": true
+        },
+        {
+          "id": "auth",
+          "visible": true
+        },
+        {
+          "id": "checklists",
+          "visible": true
+        },
+        {
+          "id": "competitions",
+          "visible": true
+        },
+        {
+          "id": "dataQuality",
+          "visible": true
+        },
+        {
+          "id": "feed",
+          "visible": true
+        },
+        {
+          "id": "inbox",
+          "visible": true
+        },
+        {
+          "id": "incentives",
+          "visible": true
+        },
+        {
+          "id": "integrations",
+          "visible": true
+        },
+        {
+          "id": "kpiConfig",
+          "visible": true
+        },
+        {
+          "id": "masterData",
+          "visible": true
+        },
+        {
+          "id": "operations",
+          "visible": true
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": true
+        },
+        {
+          "id": "reports",
+          "visible": true
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": true
+        },
+        {
+          "id": "targets",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "role": "HR_ADMIN",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": false
+        },
+        {
+          "id": "auth",
+          "visible": false
+        },
+        {
+          "id": "checklists",
+          "visible": true
+        },
+        {
+          "id": "competitions",
+          "visible": true
+        },
+        {
+          "id": "dataQuality",
+          "visible": false
+        },
+        {
+          "id": "feed",
+          "visible": true
+        },
+        {
+          "id": "inbox",
+          "visible": true
+        },
+        {
+          "id": "incentives",
+          "visible": false
+        },
+        {
+          "id": "integrations",
+          "visible": false
+        },
+        {
+          "id": "kpiConfig",
+          "visible": false
+        },
+        {
+          "id": "masterData",
+          "visible": true
+        },
+        {
+          "id": "operations",
+          "visible": false
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": false
+        },
+        {
+          "id": "reports",
+          "visible": false
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": false
+        },
+        {
+          "id": "targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "INTEGRATION_ADMIN",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": false
+        },
+        {
+          "id": "auth",
+          "visible": false
+        },
+        {
+          "id": "checklists",
+          "visible": false
+        },
+        {
+          "id": "competitions",
+          "visible": false
+        },
+        {
+          "id": "dataQuality",
+          "visible": false
+        },
+        {
+          "id": "feed",
+          "visible": false
+        },
+        {
+          "id": "inbox",
+          "visible": false
+        },
+        {
+          "id": "incentives",
+          "visible": false
+        },
+        {
+          "id": "integrations",
+          "visible": true
+        },
+        {
+          "id": "kpiConfig",
+          "visible": false
+        },
+        {
+          "id": "masterData",
+          "visible": true
+        },
+        {
+          "id": "operations",
+          "visible": false
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": false
+        },
+        {
+          "id": "reports",
+          "visible": false
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": false
+        },
+        {
+          "id": "targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "SNAPSHOT_OPERATOR",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": false
+        },
+        {
+          "id": "auth",
+          "visible": false
+        },
+        {
+          "id": "checklists",
+          "visible": false
+        },
+        {
+          "id": "competitions",
+          "visible": false
+        },
+        {
+          "id": "dataQuality",
+          "visible": false
+        },
+        {
+          "id": "feed",
+          "visible": false
+        },
+        {
+          "id": "inbox",
+          "visible": false
+        },
+        {
+          "id": "incentives",
+          "visible": false
+        },
+        {
+          "id": "integrations",
+          "visible": false
+        },
+        {
+          "id": "kpiConfig",
+          "visible": false
+        },
+        {
+          "id": "masterData",
+          "visible": false
+        },
+        {
+          "id": "operations",
+          "visible": false
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": false
+        },
+        {
+          "id": "reports",
+          "visible": false
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": true
+        },
+        {
+          "id": "targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "REPORT_VIEWER",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": false
+        },
+        {
+          "id": "auth",
+          "visible": false
+        },
+        {
+          "id": "checklists",
+          "visible": false
+        },
+        {
+          "id": "competitions",
+          "visible": true
+        },
+        {
+          "id": "dataQuality",
+          "visible": false
+        },
+        {
+          "id": "feed",
+          "visible": false
+        },
+        {
+          "id": "inbox",
+          "visible": true
+        },
+        {
+          "id": "incentives",
+          "visible": false
+        },
+        {
+          "id": "integrations",
+          "visible": false
+        },
+        {
+          "id": "kpiConfig",
+          "visible": false
+        },
+        {
+          "id": "masterData",
+          "visible": false
+        },
+        {
+          "id": "operations",
+          "visible": false
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": false
+        },
+        {
+          "id": "reports",
+          "visible": true
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": false
+        },
+        {
+          "id": "targets",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "role": "REGION_MANAGER",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": false
+        },
+        {
+          "id": "auth",
+          "visible": false
+        },
+        {
+          "id": "checklists",
+          "visible": false
+        },
+        {
+          "id": "competitions",
+          "visible": true
+        },
+        {
+          "id": "dataQuality",
+          "visible": false
+        },
+        {
+          "id": "feed",
+          "visible": true
+        },
+        {
+          "id": "inbox",
+          "visible": false
+        },
+        {
+          "id": "incentives",
+          "visible": false
+        },
+        {
+          "id": "integrations",
+          "visible": false
+        },
+        {
+          "id": "kpiConfig",
+          "visible": false
+        },
+        {
+          "id": "masterData",
+          "visible": false
+        },
+        {
+          "id": "operations",
+          "visible": false
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": false
+        },
+        {
+          "id": "reports",
+          "visible": false
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": false
+        },
+        {
+          "id": "targets",
+          "visible": true
+        }
+      ]
+    },
+    {
+      "role": "AUDITOR",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": true
+        },
+        {
+          "id": "auth",
+          "visible": false
+        },
+        {
+          "id": "checklists",
+          "visible": false
+        },
+        {
+          "id": "competitions",
+          "visible": false
+        },
+        {
+          "id": "dataQuality",
+          "visible": false
+        },
+        {
+          "id": "feed",
+          "visible": false
+        },
+        {
+          "id": "inbox",
+          "visible": false
+        },
+        {
+          "id": "incentives",
+          "visible": false
+        },
+        {
+          "id": "integrations",
+          "visible": false
+        },
+        {
+          "id": "kpiConfig",
+          "visible": false
+        },
+        {
+          "id": "masterData",
+          "visible": false
+        },
+        {
+          "id": "operations",
+          "visible": false
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": false
+        },
+        {
+          "id": "reports",
+          "visible": false
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": false
+        },
+        {
+          "id": "targets",
+          "visible": false
+        }
+      ]
+    },
+    {
+      "role": "NO_SPECIAL_ADMIN_ROLE",
+      "visible": [
+        {
+          "id": "audit",
+          "visible": false
+        },
+        {
+          "id": "auth",
+          "visible": false
+        },
+        {
+          "id": "checklists",
+          "visible": false
+        },
+        {
+          "id": "competitions",
+          "visible": false
+        },
+        {
+          "id": "dataQuality",
+          "visible": false
+        },
+        {
+          "id": "feed",
+          "visible": false
+        },
+        {
+          "id": "inbox",
+          "visible": false
+        },
+        {
+          "id": "incentives",
+          "visible": false
+        },
+        {
+          "id": "integrations",
+          "visible": false
+        },
+        {
+          "id": "kpiConfig",
+          "visible": false
+        },
+        {
+          "id": "masterData",
+          "visible": false
+        },
+        {
+          "id": "operations",
+          "visible": false
+        },
+        {
+          "id": "pilotFeedback",
+          "visible": false
+        },
+        {
+          "id": "reports",
+          "visible": false
+        },
+        {
+          "id": "session",
+          "visible": true
+        },
+        {
+          "id": "snapshots",
+          "visible": false
+        },
+        {
+          "id": "targets",
+          "visible": false
+        }
+      ]
+    }
   ]
 }
 ```

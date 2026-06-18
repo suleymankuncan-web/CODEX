@@ -628,23 +628,23 @@ Risk class: R4 admin workflow plus compensation-adjacent data.
 
 Tracking issue: https://github.com/suleymankuncan-web/CODEX/issues/729
 
-- [ ] Add `/admin/incentives` read surface or existing-pattern admin location.
-- [ ] Add admin-only manual correction workflow.
-- [ ] Add audit trail for corrections.
-- [ ] Add projected/corrected/final/adjusted amount distinction.
-- [ ] Enforce pre-close correction versus post-close adjustment semantics.
-- [ ] Add tests proving corrections do not mutate raw sales/import evidence.
-- [ ] Add privacy-safe error/log behavior for correction failures.
+- [x] Add `/admin/incentives` read surface or existing-pattern admin location.
+- [x] Add admin-only manual correction workflow.
+- [x] Add audit trail for corrections.
+- [x] Add projected/corrected/final/adjusted amount distinction.
+- [x] Enforce pre-close correction versus post-close adjustment semantics.
+- [x] Add tests proving corrections do not mutate raw sales/import evidence.
+- [x] Add privacy-safe error/log behavior for correction failures.
 
 Verification:
 
-- [ ] backend correction tests
-- [ ] admin UI tests for correction permissions
-- [ ] audit evidence checks
-- [ ] `npm.cmd --prefix admin-web run lint`
-- [ ] `npm.cmd --prefix admin-web run build`
-- [ ] `npm.cmd run test:scripts`
-- [ ] `git diff --check`
+- [x] backend correction tests
+- [x] admin UI tests for correction permissions
+- [x] audit evidence checks
+- [x] `npm.cmd --prefix admin-web run lint`
+- [x] `npm.cmd --prefix admin-web run build`
+- [x] `npm.cmd run test:scripts`
+- [x] `git diff --check`
 
 ### PR-8: Period Close And Endgame Evidence `[blocked: PR-7]` `[issue-required]`
 

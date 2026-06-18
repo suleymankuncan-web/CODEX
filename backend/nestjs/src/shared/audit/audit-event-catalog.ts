@@ -204,6 +204,13 @@ export const AUDIT_EVENT_CATALOG = [
     "Controlled pilot feedback was classified for pilot readiness triage.",
     "feature_audit",
   ),
+  auditEvent(
+    "sales_target_incentive_adjustment.approved",
+    "ops.sales_target_incentive_adjustment",
+    "store_ops",
+    "Sales target incentive correction or post-close adjustment was approved.",
+    "feature_audit",
+  ),
 
   auditEvent("competition.created", "ops.competition", "competition", "Competition was created."),
   auditEvent("competition_stage.created", "ops.competition_stage", "competition", "Competition stage was created."),

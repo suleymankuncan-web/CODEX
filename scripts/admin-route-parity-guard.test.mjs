@@ -138,8 +138,8 @@ function diffCount(left, right) {
 const baseline = extractInventoryBaseline()
 
 test('admin UI inventory JSON baseline is parseable and complete', () => {
-  assert.equal(baseline.routes.length, 31)
-  assert.equal(baseline.navigation.length, 16)
+  assert.equal(baseline.routes.length, 32)
+  assert.equal(baseline.navigation.length, 17)
   assert.deepEqual(baseline.rolesForParityMatrix, [
     'SUPER_ADMIN',
     'HR_ADMIN',
