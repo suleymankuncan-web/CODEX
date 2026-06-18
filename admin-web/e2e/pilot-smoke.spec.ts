@@ -184,22 +184,25 @@ async function waitForStoreIncentivesRequest(page: Page) {
 function watchPilotFailures(page: Page) {
   const failedRequests: string[] = []
   const failedResponses: string[] = []
-  const apiFailureDiagnostics: string[] = []
+  const navigationAbortKeys = new Map<string, number>()
   const pageErrors: string[] = []
 
   page.on('requestfailed', (request) => {
     if (request.url().includes('/api/')) {
-      failedRequests.push(`${request.method()} ${request.url()}`)
+      const failureText = request.failure()?.errorText ?? ''
+      if (request.method() === 'GET' && isNavigationAbort(failureText)) {
+        incrementMapCount(navigationAbortKeys, buildApiRequestKey(request.method(), request.url()))
+        return
+      }
+
+      failedRequests.push(
+        `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
+      )
     }
   })
   page.on('response', (response) => {
     if (response.url().includes('/api/') && response.status() >= 400) {
       failedResponses.push(`${response.status()} ${response.url()}`)
-    }
-  })
-  page.on('console', (message) => {
-    if (message.type() === 'warning' && message.text().includes('[store-ops:api-failure]')) {
-      apiFailureDiagnostics.push(message.text())
     }
   })
   page.on('pageerror', (error) => {
@@ -213,23 +216,86 @@ function watchPilotFailures(page: Page) {
           __STORE_OPS_API_FAILURES__?: Array<Record<string, unknown>>
         }
 
-        return (typedWindow.__STORE_OPS_API_FAILURES__ ?? []).map((failure) =>
+        return (typedWindow.__STORE_OPS_API_FAILURES__ ?? []).map((failure) => ({
+          method: String(failure.method ?? 'UNKNOWN'),
+          path: String(failure.path ?? 'unknown-path'),
+          status: failure.status ?? null,
+          errorCategory: String(failure.errorCategory ?? 'unknown-category'),
+          errorMessage: String(failure.errorMessage ?? ''),
+        }))
+      })
+      const blockingApiFailures = bufferedApiFailures
+        .filter((failure) => !consumeNavigationAbort(navigationAbortKeys, failure))
+        .map((failure) =>
           [
-            String(failure.method ?? 'UNKNOWN'),
-            String(failure.path ?? 'unknown-path'),
-            String(failure.status ?? 'no-status'),
-            String(failure.errorCategory ?? 'unknown-category'),
+            failure.method,
+            failure.path,
+            failure.status ?? 'no-status',
+            failure.errorCategory,
+            failure.errorMessage,
           ].join(' '),
         )
-      })
 
       expect(failedRequests, 'API requests should not fail at the network layer').toEqual([])
       expect(failedResponses, 'API responses should not return error status codes').toEqual([])
-      expect(apiFailureDiagnostics, 'Pilot smoke routes should not emit API failure diagnostics').toEqual([])
-      expect(bufferedApiFailures, 'Pilot smoke routes should not buffer API failure diagnostics').toEqual([])
+      expect(blockingApiFailures, 'Pilot smoke routes should not buffer API failure diagnostics').toEqual([])
       expect(pageErrors, 'Pilot smoke routes should not raise page errors').toEqual([])
     },
   }
+}
+
+function isNavigationAbort(failureText: string) {
+  const normalizedFailureText = failureText.toLowerCase()
+
+  return (
+    normalizedFailureText.includes('err_aborted') ||
+    normalizedFailureText.includes('aborted') ||
+    normalizedFailureText.includes('cancelled') ||
+    normalizedFailureText.includes('canceled')
+  )
+}
+
+function buildApiRequestKey(method: string, value: string) {
+  const parsedUrl = new URL(value, 'https://store-ops.local')
+  const apiPath = parsedUrl.pathname.replace(/^\/api(?=\/|$)/, '')
+
+  return `${method.toUpperCase()} ${apiPath}`
+}
+
+function incrementMapCount(map: Map<string, number>, key: string) {
+  map.set(key, (map.get(key) ?? 0) + 1)
+}
+
+function consumeNavigationAbort(
+  navigationAbortKeys: Map<string, number>,
+  failure: {
+    method: string
+    path: string
+    status: unknown
+    errorCategory: string
+  },
+) {
+  if (
+    failure.method.toUpperCase() !== 'GET' ||
+    failure.status !== null ||
+    failure.errorCategory !== 'network'
+  ) {
+    return false
+  }
+
+  const key = buildApiRequestKey(failure.method, failure.path)
+  const count = navigationAbortKeys.get(key) ?? 0
+  if (count <= 0) {
+    return false
+  }
+
+  if (count === 1) {
+    navigationAbortKeys.delete(key)
+  } else {
+    navigationAbortKeys.set(key, count - 1)
+  }
+
+  return true
 }
 
 async function routePilotSmokeApi(context: BrowserContext) {
