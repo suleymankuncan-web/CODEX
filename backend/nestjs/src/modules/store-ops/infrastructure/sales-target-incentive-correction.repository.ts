@@ -96,7 +96,6 @@ export class SalesTargetIncentiveCorrectionRepository {
     actorUserId: string;
   }): Promise<SalesTargetIncentiveCorrectionResult> {
     return this.databaseService.withTransaction(async (client) => {
-      const ruleVersionId = await this.resolveRuleVersionId(client);
       const finalRow = await this.findFinalRow(client, {
         periodKey: input.periodKey,
         storeId: input.store.storeId,
@@ -121,6 +120,7 @@ export class SalesTargetIncentiveCorrectionRepository {
 
       const adjustmentScope = finalRow ? "final_snapshot" : "projection";
       const adjustmentType = finalRow ? "manual_adjustment" : "correction";
+      const ruleVersionId = finalRow ? finalRow.rule_version_id : await this.resolveRuleVersionId(client);
       const adjustmentContext = finalRow
         ? {
             ruleVersionId: finalRow.rule_version_id,
@@ -332,6 +332,13 @@ export class SalesTargetIncentiveCorrectionRepository {
           WHERE adjustment.period_key = $1
             AND adjustment.store_id = ANY($2::uuid[])
             AND adjustment.status = 'approved'
+            AND (
+              adjustment.adjustment_scope <> 'final_snapshot'
+              OR final_row.final_snapshot_id IN (
+                SELECT latest_snapshot.sales_target_incentive_final_snapshot_id
+                FROM latest_final_snapshot latest_snapshot
+              )
+            )
           GROUP BY adjustment.store_id, adjustment.employee_id, COALESCE(projection_row.participant_type, final_row.participant_type)
           )
           SELECT *
