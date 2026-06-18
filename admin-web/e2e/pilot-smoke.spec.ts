@@ -223,7 +223,7 @@ function watchPilotFailures(page: Page) {
 
     const diagnosticArg = message.args()[1]
     if (!diagnosticArg) {
-      apiFailureDiagnostics.push(normalizePilotApiFailure({ errorMessage: message.text() }))
+      apiFailureDiagnostics.push(normalizePilotConsoleFailure(message.text()))
       return
     }
 
@@ -234,7 +234,7 @@ function watchPilotFailures(page: Page) {
           apiFailureDiagnostics.push(normalizePilotApiFailure(failure))
         })
         .catch(() => {
-          apiFailureDiagnostics.push(normalizePilotApiFailure({ errorMessage: message.text() }))
+          apiFailureDiagnostics.push(normalizePilotConsoleFailure(message.text()))
         }),
     )
   })
@@ -287,6 +287,32 @@ function normalizePilotApiFailure(failure: unknown): PilotApiFailureDiagnostic {
     errorMessage: String(record.errorMessage ?? ''),
     occurredAt: String(record.occurredAt ?? ''),
   }
+}
+
+function normalizePilotConsoleFailure(message: string): PilotApiFailureDiagnostic {
+  return {
+    method: parseConsoleField(message, 'method') ?? 'UNKNOWN',
+    path: parseConsoleField(message, 'path') ?? 'unknown-path',
+    status: parseConsoleStatus(message),
+    errorCategory: parseConsoleField(message, 'errorCategory') ?? 'network',
+    errorMessage: message,
+    occurredAt: parseConsoleField(message, 'occurredAt') ?? '',
+  }
+}
+
+function parseConsoleField(message: string, field: string) {
+  const match = message.match(new RegExp(`\\b${field}:\\s*([^,}]+)`))
+  return match?.[1]?.trim()
+}
+
+function parseConsoleStatus(message: string) {
+  const value = parseConsoleField(message, 'status')
+  if (!value || value === 'null') {
+    return null
+  }
+
+  const numericValue = Number(value)
+  return Number.isFinite(numericValue) ? numericValue : null
 }
 
 function uniquePilotApiFailures(failures: PilotApiFailureDiagnostic[]) {
