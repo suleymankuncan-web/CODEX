@@ -230,7 +230,7 @@ const largeTrackedSourceAllowlist = new Map([
 ])
 
 const storeOpsModuleGraphLimits = new Map([
-  ['backend/nestjs/src/modules/store-ops/store-ops.module.ts', { controllers: 0, providers: 0, exports: 4 }],
+  ['backend/nestjs/src/modules/store-ops/store-ops.module.ts', { controllers: 0, providers: 0, exports: 5 }],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-checklist.module.ts',
     { controllers: 3, providers: 4, exports: 1 },
@@ -238,6 +238,10 @@ const storeOpsModuleGraphLimits = new Map([
   [
     'backend/nestjs/src/modules/store-ops/store-ops-competition.module.ts',
     { controllers: 1, providers: 6, exports: 1 },
+  ],
+  [
+    'backend/nestjs/src/modules/store-ops/store-ops-incentive.module.ts',
+    { controllers: 2, providers: 4, exports: 1 },
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-reporting.module.ts',

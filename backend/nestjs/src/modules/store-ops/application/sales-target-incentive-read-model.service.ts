@@ -31,6 +31,8 @@ export type SalesTargetIncentiveParticipantProjection = {
   positionCode: SalesTargetIncentiveEligiblePositionCode;
   normalizedFromPositionCode: "SHIFT_LEAD" | null;
   targetReferenceId: string | null;
+  targetAmount: string | null;
+  actualAmount: string | null;
   calculation: SalesTargetIncentiveCalculationResult;
   source: {
     storeTargetRequestId: string | null;
@@ -46,7 +48,10 @@ export type SalesTargetIncentiveProjectionStore = {
   storeName: string;
   storeType: "company";
   storeTargetRequestId: string | null;
+  storeTargetAmount: string | null;
+  storeNetSalesAmount: string | null;
   storeNetSalesSourceBatchId: string | null;
+  storeNetSalesLastSyncedAt: string | null;
   manager: SalesTargetIncentiveParticipantProjection | null;
   personnel: SalesTargetIncentiveParticipantProjection[];
 };
@@ -124,7 +129,10 @@ export class SalesTargetIncentiveReadModelService {
           storeName: row.store_name,
           storeType: "company" as const,
           storeTargetRequestId: row.store_target_request_id,
+          storeTargetAmount: row.store_target_amount,
+          storeNetSalesAmount: row.store_net_sales_amount,
           storeNetSalesSourceBatchId: row.store_net_sales_source_batch_id,
+          storeNetSalesLastSyncedAt: row.store_net_sales_last_synced_at,
           manager: this.mapManager(row),
           personnel: personnelByStore.get(row.store_id) ?? [],
         })),
@@ -241,6 +249,8 @@ export class SalesTargetIncentiveReadModelService {
       positionCode: "STORE_MANAGER",
       normalizedFromPositionCode: null,
       targetReferenceId: null,
+      targetAmount: row.store_target_amount,
+      actualAmount: row.store_net_sales_amount,
       calculation,
       source: {
         storeTargetRequestId: row.store_target_request_id,
@@ -277,6 +287,8 @@ export class SalesTargetIncentiveReadModelService {
       positionCode: calculation.positionCode,
       normalizedFromPositionCode: calculation.normalizedFromPositionCode,
       targetReferenceId: row.personnel_target_reference_id,
+      targetAmount: row.personnel_target_amount,
+      actualAmount: row.personnel_positive_sales_amount,
       calculation,
       source: {
         storeTargetRequestId: row.store_target_request_id,

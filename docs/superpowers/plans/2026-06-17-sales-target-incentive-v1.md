@@ -579,22 +579,22 @@ Risk class: R4 auth/API contract.
 
 Tracking issue: https://github.com/suleymankuncan-web/CODEX/issues/727
 
-- [ ] Add `/store/me` incentive read endpoint for eligible own-user projection.
-- [ ] Add `/store/incentives` read endpoint for store manager and region manager scopes.
-- [ ] Add admin read endpoint for all eligible company-store incentive records; admin mutation remains later.
-- [ ] Add tests for franchise/operator invisibility.
-- [ ] Add tests for cashier invisibility.
-- [ ] Add tests for store manager, region manager, personnel, and admin scoping.
-- [ ] Add tests proving API error/log paths do not expose raw personnel sales or raw incentive amounts.
-- [ ] Add generated OpenAPI/client updates for the new endpoints, or record the repo-specific no-generation decision in the PR evidence.
+- [x] Add `/store/me` incentive read endpoint for eligible own-user projection.
+- [x] Add `/store/incentives` read endpoint for store manager and region manager scopes.
+- [x] Add admin read endpoint for all eligible company-store incentive records; admin mutation remains later.
+- [x] Add tests for franchise/operator invisibility.
+- [x] Add tests for cashier invisibility.
+- [x] Add tests for store manager, region manager, personnel, and admin scoping.
+- [x] Add tests proving API error/log paths do not expose raw personnel sales or raw incentive amounts.
+- [x] Add generated OpenAPI/client updates for the new endpoints, or record the repo-specific no-generation decision in the PR evidence.
 
 Verification:
 
-- [ ] backend integration tests for auth/store filters
-- [ ] backend targeted incentive API tests
-- [ ] OpenAPI/client parity checks or documented no-generation decision
-- [ ] `npm.cmd run test:scripts`
-- [ ] `git diff --check`
+- [x] backend integration tests for auth/store filters
+- [x] backend targeted incentive API tests
+- [x] OpenAPI/client parity checks or documented no-generation decision
+- [x] `npm.cmd run test:scripts`
+- [x] `git diff --check`
 
 ### PR-6: Store UI Projection `[blocked: PR-5]` `[issue-required]`
 

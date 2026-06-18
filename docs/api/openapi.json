@@ -4417,6 +4417,69 @@
         ],
         "security": []
       }
+    },
+    "/api/store/me/incentives": {
+      "get": {
+        "operationId": "StoreSalesTargetIncentiveController_getOwnIncentiveProjection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreSalesTargetIncentive"
+        ]
+      }
+    },
+    "/api/store/incentives": {
+      "get": {
+        "operationId": "StoreSalesTargetIncentiveController_getStoreIncentiveProjection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreSalesTargetIncentive"
+        ]
+      }
+    },
+    "/api/admin/incentives": {
+      "get": {
+        "operationId": "AdminSalesTargetIncentiveController_getAdminIncentiveProjection",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminSalesTargetIncentive"
+        ]
+      }
     }
   },
   "info": {
