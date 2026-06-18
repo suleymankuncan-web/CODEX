@@ -652,20 +652,20 @@ Risk class: R5 close/finalization.
 
 Tracking issue: https://github.com/suleymankuncan-web/CODEX/issues/730
 
-- [ ] Add close run inspection and close status.
-- [ ] Add close-run validation for imports, targets, revisions, assignment snapshot, rule-version snapshot, close cutoff, and calculation completeness.
-- [ ] Freeze final snapshots separately from current projections.
-- [ ] Ensure corrections after close create adjustments rather than rewriting closed calculations.
-- [ ] Add endgame evidence covering eligible personnel, store manager, region manager, admin, cashier hidden, franchise/operator hidden, and missing-source blocked states.
-- [ ] Update current-state/handoff only if the implementation changes active project state.
+- [x] Add close run inspection and close status.
+- [x] Add close-run validation for imports, targets, revisions, assignment snapshot, rule-version snapshot, close cutoff, and calculation completeness.
+- [x] Freeze final snapshots separately from current projections.
+- [x] Ensure corrections after close create adjustments rather than rewriting closed calculations.
+- [x] Add endgame evidence covering eligible personnel, store manager, region manager, admin, cashier hidden, franchise/operator hidden, and missing-source blocked states.
+- [x] Update current-state/handoff only if the implementation changes active project state.
 
 Verification:
 
-- [ ] backend close-run tests
-- [ ] period close integration tests
-- [ ] targeted persona Playwright smoke
-- [ ] root `npm.cmd run check:release`
-- [ ] `git diff --check`
+- [x] backend close-run tests
+- [x] period close integration tests
+- [x] targeted persona Playwright smoke
+- [x] root `npm.cmd run check:release`
+- [x] `git diff --check`
 
 ## Acceptance And Verification Matrix
 

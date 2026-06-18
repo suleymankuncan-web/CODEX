@@ -4490,7 +4490,59 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "$ref": "#/components/schemas/CreateSalesTargetIncentiveCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminSalesTargetIncentive"
+        ]
+      }
+    },
+    "/api/admin/incentives/close-status": {
+      "get": {
+        "operationId": "AdminSalesTargetIncentiveController_getAdminIncentiveCloseStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AdminSalesTargetIncentive"
+        ]
+      }
+    },
+    "/api/admin/incentives/close-runs": {
+      "post": {
+        "operationId": "AdminSalesTargetIncentiveController_createAdminIncentiveCloseRun",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSalesTargetIncentiveCloseRunDto"
               }
             }
           }
@@ -18436,6 +18488,62 @@
             "type": "boolean"
           }
         }
+      },
+      "CreateSalesTargetIncentiveCloseRunDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "closeCutoffAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period"
+        ]
+      },
+      "CreateSalesTargetIncentiveCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "participantType": {
+            "enum": [
+              "store_manager",
+              "personnel"
+            ],
+            "type": "string"
+          },
+          "adjustmentAmount": {
+            "type": "string",
+            "pattern": "^-?(?:0|[1-9]\\d{0,11})(?:\\.\\d{1,2})$"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "reasonNote": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "storeId",
+          "employeeId",
+          "participantType",
+          "adjustmentAmount",
+          "reasonCode",
+          "reasonNote"
+        ]
       }
     }
   },

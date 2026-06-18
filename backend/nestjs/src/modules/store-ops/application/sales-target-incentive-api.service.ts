@@ -7,6 +7,7 @@ import {
 } from "./sales-target-incentive-calculator.service";
 import {
   SalesTargetIncentiveReadModelService,
+  type SalesTargetIncentiveCloseReadiness,
   type SalesTargetIncentiveParticipantProjection,
   type SalesTargetIncentiveProjectionReadModel,
   type SalesTargetIncentiveProjectionStore,
@@ -17,6 +18,10 @@ import {
   type SalesTargetIncentiveAdjustmentSummaryRow,
   type SalesTargetIncentiveCorrectionResult,
 } from "../infrastructure/sales-target-incentive-correction.repository";
+import {
+  SalesTargetIncentiveCloseRepository,
+  type SalesTargetIncentiveCloseRunSummary,
+} from "../infrastructure/sales-target-incentive-close.repository";
 
 export type SalesTargetIncentiveRoleScope =
   | "own"
@@ -77,11 +82,38 @@ export type SalesTargetIncentiveApiResponse = {
   };
 };
 
+export type SalesTargetIncentiveCloseStatusResponse = {
+  data: {
+    period: string;
+    periodStart: string;
+    periodEnd: string;
+    periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
+    closeCutoffAt: string;
+    readiness: SalesTargetIncentiveCloseReadiness;
+    closeRuns: SalesTargetIncentiveCloseRunSummary[];
+  };
+};
+
+export type SalesTargetIncentiveCloseRunResponse = {
+  data: {
+    period: string;
+    periodStart: string;
+    periodEnd: string;
+    periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
+    closeCutoffAt: string;
+    readiness: SalesTargetIncentiveCloseReadiness;
+    closeRuns: SalesTargetIncentiveCloseRunSummary[];
+    finalSnapshotCount: number;
+    finalRowCount: number;
+  };
+};
+
 @Injectable()
 export class SalesTargetIncentiveApiService {
   constructor(
     private readonly readModelService: SalesTargetIncentiveReadModelService,
     private readonly correctionRepository: SalesTargetIncentiveCorrectionRepository,
+    private readonly closeRepository: SalesTargetIncentiveCloseRepository,
   ) {}
 
   async getOwnStoreMeProjection(input: {
@@ -166,6 +198,117 @@ export class SalesTargetIncentiveApiService {
       stores: projection.stores,
       roleScope: "admin",
     });
+  }
+
+  async getAdminCloseStatus(input: {
+    actor: AuthenticatedUser;
+    periodKey?: string;
+    closeCutoffAt?: string;
+  }): Promise<SalesTargetIncentiveCloseStatusResponse> {
+    if (!input.actor.roleCodes.includes("SUPER_ADMIN")) {
+      throw new ForbiddenException("Incentive close is not available");
+    }
+
+    const periodKey = this.resolvePeriodKey(input.periodKey);
+    const closeCutoffAt = input.closeCutoffAt ?? new Date().toISOString();
+    const companyIds = this.resolveCloseCompanyIds(input.actor);
+    const [readiness, closeRuns] = await Promise.all([
+      this.readModelService.getCloseReadiness({
+        periodKey,
+        companyIds,
+        nowIso: closeCutoffAt,
+        closeCutoffAt,
+      }),
+      this.closeRepository.listCloseRuns({
+        periodKey,
+        companyIds,
+      }),
+    ]);
+
+    return {
+      data: {
+        period: periodKey,
+        periodStart: readiness.periodStart,
+        periodEnd: readiness.periodEnd,
+        periodTimezone: SALES_TARGET_INCENTIVE_TIMEZONE,
+        closeCutoffAt,
+        readiness,
+        closeRuns,
+      },
+    };
+  }
+
+  async runAdminClose(input: {
+    actor: AuthenticatedUser;
+    periodKey: string;
+    closeCutoffAt?: string;
+  }): Promise<SalesTargetIncentiveCloseRunResponse> {
+    if (!input.actor.roleCodes.includes("SUPER_ADMIN")) {
+      throw new ForbiddenException("Incentive close is not available");
+    }
+
+    const periodKey = this.resolvePeriodKey(input.periodKey);
+    const closeCutoffAt = input.closeCutoffAt ?? new Date().toISOString();
+    const companyIds = this.resolveCloseCompanyIds(input.actor);
+    const readiness = await this.readModelService.getCloseReadiness({
+      periodKey,
+      companyIds,
+      nowIso: closeCutoffAt,
+      closeCutoffAt,
+    });
+
+    if (!readiness.canClose) {
+      throw new BadRequestException(`Incentive close is ${readiness.status}`);
+    }
+
+    const projection = await this.readModelService.buildCurrentProjection({
+      periodKey,
+      companyIds,
+      regionIds: [],
+      storeIds: [],
+      assignmentAsOfDate: readiness.periodEnd,
+      closeCutoffAt,
+    });
+    const storesByCompany = groupStoresByCompany(projection.stores);
+
+    if (storesByCompany.size === 0) {
+      throw new BadRequestException("No company-store incentive projections are available to close");
+    }
+
+    const closeRuns: SalesTargetIncentiveCloseRunSummary[] = [];
+    for (const [companyId, stores] of storesByCompany) {
+      closeRuns.push(
+        await this.closeRepository.createSucceededCloseRun({
+          companyId,
+          periodKey: projection.periodKey,
+          periodStart: projection.periodStart,
+          periodEnd: projection.periodEnd,
+          closeCutoffAt,
+          actorUserId: input.actor.userId,
+          stores,
+        }),
+      );
+    }
+
+    return {
+      data: {
+        period: projection.periodKey,
+        periodStart: projection.periodStart,
+        periodEnd: projection.periodEnd,
+        periodTimezone: projection.timezone,
+        closeCutoffAt,
+        readiness,
+        closeRuns,
+        finalSnapshotCount: closeRuns.reduce(
+          (total, run) => total + run.finalSnapshotCount,
+          0,
+        ),
+        finalRowCount: closeRuns.reduce(
+          (total, run) => total + run.finalRowCount,
+          0,
+        ),
+      },
+    };
   }
 
   async applyAdminCorrection(input: {
@@ -534,6 +677,16 @@ export class SalesTargetIncentiveApiService {
     return actor.roleScopes?.SUPER_ADMIN ?? actor.readScope;
   }
 
+  private resolveCloseCompanyIds(actor: AuthenticatedUser) {
+    const adminScope = this.resolveSuperAdminReadScope(actor);
+
+    if (adminScope.companyIds.length === 0) {
+      throw new BadRequestException("Incentive close requires company scope");
+    }
+
+    return adminScope.companyIds;
+  }
+
   private resolvePeriodKey(periodKey?: string) {
     if (periodKey) {
       return periodKey;
@@ -553,6 +706,16 @@ export class SalesTargetIncentiveApiService {
 
     return `${year}-${month}`;
   }
+}
+
+function groupStoresByCompany(stores: SalesTargetIncentiveProjectionStore[]) {
+  const grouped = new Map<string, SalesTargetIncentiveProjectionStore[]>();
+
+  for (const store of stores) {
+    grouped.set(store.companyId, [...(grouped.get(store.companyId) ?? []), store]);
+  }
+
+  return grouped;
 }
 
 function isZeroMoney(value: string) {

@@ -3,6 +3,7 @@ import { buildAuthenticatedUser } from "../../auth/auth-context.service";
 import { REQUIRED_ROLES_KEY } from "../../auth/decorators/roles.decorator";
 import { REQUIRED_SCOPE_KEY } from "../../auth/decorators/scope.decorator";
 import { AdminSalesTargetIncentiveController } from "./admin-sales-target-incentive.controller";
+import { CreateSalesTargetIncentiveCloseRunDto } from "./dto/create-sales-target-incentive-close-run.dto";
 import { CreateSalesTargetIncentiveCorrectionDto } from "./dto/create-sales-target-incentive-correction.dto";
 import { StoreSalesTargetIncentiveController } from "./store-sales-target-incentive.controller";
 
@@ -11,6 +12,8 @@ function createHarness() {
     getOwnStoreMeProjection: jest.fn(async () => ({ data: { projections: [] } })),
     getStoreProjection: jest.fn(async () => ({ data: { projections: [] } })),
     getAdminProjection: jest.fn(async () => ({ data: { projections: [] } })),
+    getAdminCloseStatus: jest.fn(async () => ({ data: { closeRuns: [] } })),
+    runAdminClose: jest.fn(async () => ({ data: { closeRuns: [] } })),
     applyAdminCorrection: jest.fn(async () => ({ data: { adjustmentId: "adjustment-1" } })),
   };
 
@@ -68,6 +71,37 @@ describe("SalesTargetIncentive controllers", () => {
     });
   });
 
+  it("delegates admin incentive close status reads with cutoff context", async () => {
+    const { adminController, apiService } = createHarness();
+
+    await adminController.getAdminIncentiveCloseStatus(request, {
+      period: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(apiService.getAdminCloseStatus).toHaveBeenCalledWith({
+      actor: request.user,
+      periodKey: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+  });
+
+  it("delegates admin incentive close runs with actor context", async () => {
+    const { adminController, apiService } = createHarness();
+    const body = {
+      period: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    };
+
+    await adminController.createAdminIncentiveCloseRun(request, body);
+
+    expect(apiService.runAdminClose).toHaveBeenCalledWith({
+      actor: request.user,
+      periodKey: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+  });
+
   it("delegates admin incentive corrections with actor context", async () => {
     const { adminController, apiService } = createHarness();
     const body = {
@@ -108,6 +142,15 @@ describe("SalesTargetIncentive controllers", () => {
     await expect(validate(body)).resolves.toHaveLength(0);
   });
 
+  it("accepts ISO close cutoffs for admin incentive close runs", async () => {
+    const body = Object.assign(new CreateSalesTargetIncentiveCloseRunDto(), {
+      period: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    await expect(validate(body)).resolves.toHaveLength(0);
+  });
+
   it("keeps role visibility narrow for V1 read endpoints", () => {
     expect(
       Reflect.getMetadata(
@@ -125,6 +168,18 @@ describe("SalesTargetIncentive controllers", () => {
       Reflect.getMetadata(
         REQUIRED_ROLES_KEY,
         AdminSalesTargetIncentiveController.prototype.getAdminIncentiveProjection,
+      ),
+    ).toEqual(["SUPER_ADMIN"]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_ROLES_KEY,
+        AdminSalesTargetIncentiveController.prototype.getAdminIncentiveCloseStatus,
+      ),
+    ).toEqual(["SUPER_ADMIN"]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_ROLES_KEY,
+        AdminSalesTargetIncentiveController.prototype.createAdminIncentiveCloseRun,
       ),
     ).toEqual(["SUPER_ADMIN"]);
     expect(
@@ -152,6 +207,18 @@ describe("SalesTargetIncentive controllers", () => {
       Reflect.getMetadata(
         REQUIRED_SCOPE_KEY,
         AdminSalesTargetIncentiveController.prototype.getAdminIncentiveProjection,
+      ),
+    ).toBe("authenticated");
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_SCOPE_KEY,
+        AdminSalesTargetIncentiveController.prototype.getAdminIncentiveCloseStatus,
+      ),
+    ).toBe("authenticated");
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_SCOPE_KEY,
+        AdminSalesTargetIncentiveController.prototype.createAdminIncentiveCloseRun,
       ),
     ).toBe("authenticated");
     expect(

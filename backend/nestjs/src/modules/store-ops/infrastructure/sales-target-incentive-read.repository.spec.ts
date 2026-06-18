@@ -40,6 +40,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("eah.end_date >= $3::date");
     expect(text).not.toContain("eah.assignment_status = 'active'");
     expect(text).toContain("INNER JOIN stg.import_batch ib");
+    expect(text).toContain("ib.import_batch_id::text AS import_batch_id");
     expect(text).toContain("ka.source_batch_id IS NOT NULL");
     expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).toContain("ib.status IN ('completed', 'completed_with_errors')");
@@ -48,6 +49,31 @@ describe("SalesTargetIncentiveReadRepository", () => {
       "2026-05-01",
       "2026-05-31",
       "2026-05-10",
+      ["00000000-0000-4000-8000-000000000001"],
+    ]);
+  });
+
+  it("filters store projection sales sources at the close cutoff", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listStoreProjectionSources({
+      ...scopeInput,
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    const [sql, params] = query.mock.calls[0];
+    const text = String(sql);
+
+    expect(text).toContain("manager_user.user_id::text AS manager_user_id");
+    expect(text).toContain("manager.assignment_id::text AS manager_assignment_id");
+    expect(text).toContain("manager.start_date::text AS manager_assignment_started_on");
+    expect(text).toContain("COALESCE(ib.finished_at, ib.started_at) <= $4::timestamptz");
+    expect(text).toContain("s.company_id = ANY($5::uuid[])");
+    expect(params).toEqual([
+      "2026-05-01",
+      "2026-05-31",
+      "2026-05-10",
+      "2026-06-01T02:00:00.000+03:00",
       ["00000000-0000-4000-8000-000000000001"],
     ]);
   });
@@ -97,6 +123,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("eah.end_date >= $3::date");
     expect(text).not.toContain("eah.assignment_status = 'active'");
     expect(text).toContain("INNER JOIN stg.import_batch ib");
+    expect(text.match(/ib\.import_batch_id::text AS import_batch_id/g)).toHaveLength(2);
     expect(text.match(/ka\.source_batch_id IS NOT NULL/g)).toHaveLength(2);
     expect(text).not.toContain("ka.source_batch_id IS NULL");
     expect(text).not.toContain("ib.started_at");
@@ -104,6 +131,34 @@ describe("SalesTargetIncentiveReadRepository", () => {
       "2026-05-01",
       "2026-05-31",
       "2026-05-10",
+      ["00000000-0000-4000-8000-000000000201"],
+      ["00000000-0000-4000-8000-000000000001"],
+    ]);
+  });
+
+  it("filters personnel projection sales sources at the close cutoff", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listPersonnelProjectionSources({
+      ...scopeInput,
+      storeIds: ["00000000-0000-4000-8000-000000000201"],
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    const [sql, params] = query.mock.calls[0];
+    const text = String(sql);
+
+    expect(text).toContain("personnel_user.user_id::text AS user_id");
+    expect(text).toContain("assignment.assignment_id::text AS assignment_id");
+    expect(text).toContain("assignment.start_date::text AS assignment_started_on");
+    expect(text.match(/COALESCE\(ib\.finished_at, ib\.started_at\) <= \$4::timestamptz/g)).toHaveLength(2);
+    expect(text).toContain("s.store_id = ANY($5::uuid[])");
+    expect(text).toContain("s.company_id = ANY($6::uuid[])");
+    expect(params).toEqual([
+      "2026-05-01",
+      "2026-05-31",
+      "2026-05-10",
+      "2026-06-01T02:00:00.000+03:00",
       ["00000000-0000-4000-8000-000000000201"],
       ["00000000-0000-4000-8000-000000000001"],
     ]);

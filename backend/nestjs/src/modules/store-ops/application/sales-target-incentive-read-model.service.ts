@@ -22,11 +22,17 @@ export type SalesTargetIncentiveReadModelScope = {
   storeIds: string[];
   allowGlobalScope?: boolean;
   assignmentAsOfDate?: string;
+  closeCutoffAt?: string;
 };
 
 export type SalesTargetIncentiveParticipantProjection = {
   participantType: "store_manager" | "personnel";
   employeeId: string;
+  userId: string | null;
+  assignmentId: string | null;
+  assignmentStartedOn: string | null;
+  assignmentEndedOn: string | null;
+  positionId: string | null;
   displayName: string;
   positionCode: SalesTargetIncentiveEligiblePositionCode;
   normalizedFromPositionCode: "SHIFT_LEAD" | null;
@@ -37,7 +43,9 @@ export type SalesTargetIncentiveParticipantProjection = {
   source: {
     storeTargetRequestId: string | null;
     storeNetSalesSourceBatchId: string | null;
+    storeNetSalesImportBatchId: string | null;
     personnelSalesSourceBatchId: string | null;
+    personnelSalesImportBatchId: string | null;
   };
 };
 
@@ -51,6 +59,7 @@ export type SalesTargetIncentiveProjectionStore = {
   storeTargetAmount: string | null;
   storeNetSalesAmount: string | null;
   storeNetSalesSourceBatchId: string | null;
+  storeNetSalesImportBatchId: string | null;
   storeNetSalesLastSyncedAt: string | null;
   manager: SalesTargetIncentiveParticipantProjection | null;
   personnel: SalesTargetIncentiveParticipantProjection[];
@@ -109,6 +118,9 @@ export class SalesTargetIncentiveReadModelService {
       periodEnd: period.periodEnd,
       assignmentAsOfDate,
     };
+    if (input.closeCutoffAt) {
+      Object.assign(repositoryInput, { closeCutoffAt: input.closeCutoffAt });
+    }
     const [storeRows, personnelRows] = await Promise.all([
       this.repository.listStoreProjectionSources(repositoryInput),
       this.repository.listPersonnelProjectionSources(repositoryInput),
@@ -132,6 +144,7 @@ export class SalesTargetIncentiveReadModelService {
           storeTargetAmount: row.store_target_amount,
           storeNetSalesAmount: row.store_net_sales_amount,
           storeNetSalesSourceBatchId: row.store_net_sales_source_batch_id,
+          storeNetSalesImportBatchId: row.store_net_sales_import_batch_id,
           storeNetSalesLastSyncedAt: row.store_net_sales_last_synced_at,
           manager: this.mapManager(row),
           personnel: personnelByStore.get(row.store_id) ?? [],
@@ -204,6 +217,8 @@ export class SalesTargetIncentiveReadModelService {
       companyIds: input.companyIds,
       regionIds: [],
       storeIds: [],
+      assignmentAsOfDate: period.periodEnd,
+      closeCutoffAt: input.closeCutoffAt,
     });
 
     if (hasIncompleteCloseCalculation(projection)) {
@@ -245,6 +260,11 @@ export class SalesTargetIncentiveReadModelService {
     return {
       participantType: "store_manager",
       employeeId: row.manager_employee_id,
+      userId: row.manager_user_id,
+      assignmentId: row.manager_assignment_id,
+      assignmentStartedOn: row.manager_assignment_started_on,
+      assignmentEndedOn: row.manager_assignment_ended_on,
+      positionId: row.manager_position_id,
       displayName: formatDisplayName(row.manager_first_name, row.manager_last_name),
       positionCode: "STORE_MANAGER",
       normalizedFromPositionCode: null,
@@ -255,7 +275,9 @@ export class SalesTargetIncentiveReadModelService {
       source: {
         storeTargetRequestId: row.store_target_request_id,
         storeNetSalesSourceBatchId: row.store_net_sales_source_batch_id,
+        storeNetSalesImportBatchId: row.store_net_sales_import_batch_id,
         personnelSalesSourceBatchId: null,
+        personnelSalesImportBatchId: null,
       },
     };
   }
@@ -283,6 +305,11 @@ export class SalesTargetIncentiveReadModelService {
     return {
       participantType: "personnel",
       employeeId: row.employee_id,
+      userId: row.user_id,
+      assignmentId: row.assignment_id,
+      assignmentStartedOn: row.assignment_started_on,
+      assignmentEndedOn: row.assignment_ended_on,
+      positionId: row.position_id,
       displayName: formatDisplayName(row.first_name, row.last_name),
       positionCode: calculation.positionCode,
       normalizedFromPositionCode: calculation.normalizedFromPositionCode,
@@ -293,7 +320,9 @@ export class SalesTargetIncentiveReadModelService {
       source: {
         storeTargetRequestId: row.store_target_request_id,
         storeNetSalesSourceBatchId: row.store_net_sales_source_batch_id,
+        storeNetSalesImportBatchId: row.store_net_sales_import_batch_id,
         personnelSalesSourceBatchId: row.personnel_sales_source_batch_id,
+        personnelSalesImportBatchId: row.personnel_sales_import_batch_id,
       },
     };
   }
@@ -383,7 +412,7 @@ function hasIncompleteCloseCalculation(
   projection: SalesTargetIncentiveProjectionReadModel,
 ) {
   return projection.stores.some((store) => {
-    if (!store.storeTargetRequestId || !store.storeNetSalesSourceBatchId) {
+    if (!store.storeTargetRequestId || !store.storeNetSalesImportBatchId) {
       return true;
     }
 
