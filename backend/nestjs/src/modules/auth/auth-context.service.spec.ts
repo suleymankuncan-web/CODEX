@@ -92,6 +92,18 @@ describe("AuthContextService", () => {
         regionIds: ["region-1"],
         storeIds: [],
       },
+      roleScopes: {
+        INTEGRATION_ADMIN: {
+          companyIds: ["company-1"],
+          regionIds: [],
+          storeIds: [],
+        },
+        REPORT_VIEWER: {
+          companyIds: ["company-1"],
+          regionIds: ["region-1"],
+          storeIds: [],
+        },
+      },
       actionScope: {
         assignedStoreIds: [],
       },
@@ -162,6 +174,18 @@ describe("AuthContextService", () => {
         regionIds: ["region-1"],
         storeIds: ["store-1"],
       },
+      roleScopes: {
+        REGION_MANAGER: {
+          companyIds: ["company-1"],
+          regionIds: ["region-1"],
+          storeIds: [],
+        },
+        STORE_MANAGER: {
+          companyIds: ["company-1"],
+          regionIds: ["region-1"],
+          storeIds: ["store-1"],
+        },
+      },
       actionScope: {
         assignedStoreIds: ["store-1"],
       },
@@ -219,6 +243,13 @@ describe("AuthContextService", () => {
         companyIds: ["company-1"],
         regionIds: ["region-1"],
         storeIds: [],
+      },
+      roleScopes: {
+        REGION_MANAGER: {
+          companyIds: ["company-1"],
+          regionIds: ["region-1"],
+          storeIds: [],
+        },
       },
       actionScope: {
         assignedStoreIds: ["store-1", "store-2"],

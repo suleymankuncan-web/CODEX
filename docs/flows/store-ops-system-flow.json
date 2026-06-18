@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-16T18:59:17.421Z",
+  "generatedAt": "2026-06-18T00:02:46.514Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 175,
-    "backendEndpointsWithoutFrontendCallCount": 34,
-    "controllerCount": 20,
+    "backendEndpointCount": 178,
+    "backendEndpointsWithoutFrontendCallCount": 37,
+    "controllerCount": 22,
     "frontendApiCallCount": 141,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 141,
-    "openApiEndpointCount": 175,
+    "openApiEndpointCount": 178,
     "routeApiEdgeCount": 211,
     "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0
@@ -3192,6 +3192,20 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/admin/incentives",
+      "method": "GET",
+      "path": "/api/admin/incentives",
+      "rawControllerPath": "admin/incentives",
+      "rawMethodPath": "",
+      "controller": "admin-sales-target-incentive",
+      "domain": "admin",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
+        "line": 18
+      }
+    },
+    {
       "id": "endpoint:POST:/api/admin/migrations/run",
       "method": "POST",
       "path": "/api/admin/migrations/run",
@@ -5236,6 +5250,34 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/store/incentives",
+      "method": "GET",
+      "path": "/api/store/incentives",
+      "rawControllerPath": "store",
+      "rawMethodPath": "incentives",
+      "controller": "store-sales-target-incentive",
+      "domain": "store",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts",
+        "line": 31
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/store/me/incentives",
+      "method": "GET",
+      "path": "/api/store/me/incentives",
+      "rawControllerPath": "store",
+      "rawMethodPath": "me/incentives",
+      "controller": "store-sales-target-incentive",
+      "domain": "store",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts",
+        "line": 18
+      }
+    },
+    {
       "id": "endpoint:GET:/api/target-distributions/coverage",
       "method": "GET",
       "path": "/api/target-distributions/coverage",
@@ -5569,6 +5611,12 @@
       "id": "openapi:POST:/api/admin/feed/{feedPostId}/unpin",
       "method": "POST",
       "path": "/api/admin/feed/{feedPostId}/unpin",
+      "domain": "admin"
+    },
+    {
+      "id": "openapi:GET:/api/admin/incentives",
+      "method": "GET",
+      "path": "/api/admin/incentives",
       "domain": "admin"
     },
     {
@@ -6446,6 +6494,18 @@
       "method": "PATCH",
       "path": "/api/store-actions/plans/{actionPlanId}/status",
       "domain": "store-actions"
+    },
+    {
+      "id": "openapi:GET:/api/store/incentives",
+      "method": "GET",
+      "path": "/api/store/incentives",
+      "domain": "store"
+    },
+    {
+      "id": "openapi:GET:/api/store/me/incentives",
+      "method": "GET",
+      "path": "/api/store/me/incentives",
+      "domain": "store"
     },
     {
       "id": "openapi:GET:/api/target-distributions/coverage",
@@ -8637,12 +8697,27 @@
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 0
+      },
+      {
+        "id": "controller:store-sales-target-incentive",
+        "controller": "store-sales-target-incentive",
+        "domain": "store",
+        "endpointCount": 2,
+        "frontendCallCount": 0
+      },
+      {
+        "id": "controller:admin-sales-target-incentive",
+        "controller": "admin-sales-target-incentive",
+        "domain": "admin",
+        "endpointCount": 1,
+        "frontendCallCount": 0
       }
     ]
   },
   "risks": {
     "backendEndpointsWithoutFrontendCalls": [
       "endpoint:PUT:/api/admin/feed/{feedPostId}",
+      "endpoint:GET:/api/admin/incentives",
       "endpoint:POST:/api/admin/migrations/run",
       "endpoint:GET:/api/admin/migrations/status",
       "endpoint:DELETE:/api/auth/browser-session",
@@ -8675,7 +8750,9 @@
       "endpoint:GET:/api/snapshots/lookups",
       "endpoint:GET:/api/snapshots/runs",
       "endpoint:POST:/api/snapshots/runs",
-      "endpoint:GET:/api/snapshots/runs/summary"
+      "endpoint:GET:/api/snapshots/runs/summary",
+      "endpoint:GET:/api/store/incentives",
+      "endpoint:GET:/api/store/me/incentives"
     ],
     "routesWithoutApiCalls": [
       "route:store:/store/incentives",

@@ -20,6 +20,7 @@ export interface AuthenticatedUser {
   readScope: AuthReadScope;
   actionScope: AuthActionScope;
   assignedStoreIds: string[];
+  roleScopes?: Record<string, AuthReadScope>;
 }
 
 export interface AuthReadScope {
@@ -40,6 +41,7 @@ export function buildAuthenticatedUser(input: {
   readScope?: AuthReadScope;
   actionScope?: AuthActionScope;
   assignedStoreIds?: string[];
+  roleScopes?: Record<string, AuthReadScope>;
 }): AuthenticatedUser {
   const readScope = normalizeReadScope(input.readScope ?? input.scope);
   const assignedStoreIds = uniqueStrings(
@@ -56,6 +58,9 @@ export function buildAuthenticatedUser(input: {
       assignedStoreIds,
     },
     assignedStoreIds,
+    ...(input.roleScopes
+      ? { roleScopes: normalizeRoleScopes(input.roleScopes) }
+      : {}),
   };
 }
 
@@ -69,6 +74,15 @@ function normalizeReadScope(scope?: AuthReadScope): AuthReadScope {
 
 function uniqueStrings(values: string[]) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function normalizeRoleScopes(roleScopes: Record<string, AuthReadScope>) {
+  return Object.fromEntries(
+    Object.entries(roleScopes).map(([roleCode, scope]) => [
+      roleCode,
+      normalizeReadScope(scope),
+    ]),
+  );
 }
 
 @Injectable()
@@ -285,6 +299,7 @@ export class AuthContextService {
         ),
       ],
     };
+    const roleScopes = this.buildRoleScopes(assignments);
 
     return buildAuthenticatedUser({
       ...appUser,
@@ -293,11 +308,44 @@ export class AuthContextService {
       actionScope: {
         assignedStoreIds,
       },
+      roleScopes,
     });
   }
 
   private safeErrorMessage(error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return String(redactSensitiveLogValue(message));
+  }
+
+  private buildRoleScopes(
+    assignments: Awaited<
+      ReturnType<AuthAuthorizationRepository["getActiveRoleAssignments"]>
+    >,
+  ) {
+    const roleScopes: Record<string, AuthReadScope> = {};
+
+    for (const assignment of assignments) {
+      const scope = roleScopes[assignment.role_code] ?? {
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+      };
+
+      if (assignment.company_id) {
+        scope.companyIds.push(assignment.company_id);
+      }
+
+      if (assignment.region_id) {
+        scope.regionIds.push(assignment.region_id);
+      }
+
+      if (assignment.store_id) {
+        scope.storeIds.push(assignment.store_id);
+      }
+
+      roleScopes[assignment.role_code] = scope;
+    }
+
+    return roleScopes;
   }
 }

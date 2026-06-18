@@ -3495,6 +3495,39 @@ export type paths = {
       }
     }
   }
+  "/api/store/me/incentives": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': Record<string, unknown>
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': Record<string, unknown>
+          }
+        }
+      }
+    }
+  }
+  "/api/admin/incentives": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': Record<string, unknown>
+          }
+        }
+      }
+    }
+  }
   "/api/target-distributions/coverage": {
     get: {
       responses: {
