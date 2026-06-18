@@ -239,12 +239,10 @@ export class SalesTargetIncentiveApiService {
     roleScope: SalesTargetIncentiveRoleScope;
   }): Promise<SalesTargetIncentiveApiResponse> {
     const adjustmentSummaries =
-      input.roleScope === "admin"
-        ? await this.correctionRepository.listApprovedAdjustmentSummaries({
-            periodKey: input.projection.periodKey,
-            storeIds: input.stores.map((store) => store.storeId),
-          })
-        : [];
+      await this.correctionRepository.listApprovedAdjustmentSummaries({
+        periodKey: input.projection.periodKey,
+        storeIds: input.stores.map((store) => store.storeId),
+      });
 
     return {
       data: {

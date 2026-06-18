@@ -48,6 +48,10 @@ type FinalRowLookup = {
   final_amount: string;
 };
 
+type CurrentAmountLookup = {
+  current_amount: string;
+};
+
 @Injectable()
 export class SalesTargetIncentiveCorrectionRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -77,6 +81,8 @@ export class SalesTargetIncentiveCorrectionRepository {
         throw new Error("Correction target is not payable");
       }
 
+      const adjustmentScope = finalRow ? "final_snapshot" : "projection";
+      const adjustmentType = finalRow ? "manual_adjustment" : "correction";
       const projectionRowId = finalRow
         ? null
         : await this.upsertProjectionRow(client, {
@@ -87,6 +93,15 @@ export class SalesTargetIncentiveCorrectionRepository {
             store: input.store,
             participant: input.participant,
           });
+      const currentAmount = await this.resolveCurrentAmount(client, {
+        periodKey: input.periodKey,
+        storeId: input.store.storeId,
+        employeeId: input.participant.employeeId,
+        participantType: input.participant.participantType,
+        adjustmentScope,
+        adjustmentType,
+        baseAmount,
+      });
 
       const adjustment = await this.insertApprovedAdjustment(client, {
         ruleVersionId,
@@ -95,10 +110,10 @@ export class SalesTargetIncentiveCorrectionRepository {
         participant: input.participant,
         projectionRowId,
         finalRowId: finalRow?.final_row_id ?? null,
-        adjustmentScope: finalRow ? "final_snapshot" : "projection",
-        adjustmentType: finalRow ? "manual_adjustment" : "correction",
+        adjustmentScope,
+        adjustmentType,
         adjustmentAmount: input.adjustmentAmount,
-        beforeAmount: baseAmount,
+        beforeAmount: currentAmount,
         reasonCode: input.reasonCode,
         reasonNote: input.reasonNote,
         actorUserId: input.actorUserId,
@@ -209,6 +224,50 @@ export class SalesTargetIncentiveCorrectionRepository {
     );
 
     return result.rows[0] ?? null;
+  }
+
+  private async resolveCurrentAmount(
+    client: CorrectionClient,
+    input: {
+      periodKey: string;
+      storeId: string;
+      employeeId: string;
+      participantType: "store_manager" | "personnel";
+      adjustmentScope: "projection" | "final_snapshot";
+      adjustmentType: "correction" | "manual_adjustment";
+      baseAmount: string;
+    },
+  ) {
+    const result = await client.query<CurrentAmountLookup>(
+      `
+        SELECT (
+          $5::numeric + COALESCE(SUM(adjustment.adjustment_amount), 0)
+        )::text AS current_amount
+        FROM ops.sales_target_incentive_adjustment adjustment
+        LEFT JOIN ops.sales_target_incentive_projection_row projection_row
+          ON projection_row.sales_target_incentive_projection_row_id = adjustment.projection_row_id
+        LEFT JOIN rpt.sales_target_incentive_final_row final_row
+          ON final_row.sales_target_incentive_final_row_id = adjustment.final_row_id
+        WHERE adjustment.period_key = $1
+          AND adjustment.store_id = $2::uuid
+          AND adjustment.employee_id = $3::uuid
+          AND COALESCE(projection_row.participant_type, final_row.participant_type) = $4
+          AND adjustment.adjustment_scope = $6
+          AND adjustment.adjustment_type = $7
+          AND adjustment.status = 'approved'
+      `,
+      [
+        input.periodKey,
+        input.storeId,
+        input.employeeId,
+        input.participantType,
+        input.baseAmount,
+        input.adjustmentScope,
+        input.adjustmentType,
+      ],
+    );
+
+    return result.rows[0]?.current_amount ?? input.baseAmount;
   }
 
   private async upsertProjectionRow(

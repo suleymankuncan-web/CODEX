@@ -341,6 +341,41 @@ describe("SalesTargetIncentiveApiService", () => {
     });
   });
 
+  it("overlays approved corrections on Store Me reads for visible personnel", async () => {
+    const { correctionRepository, service } = createService();
+    correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([
+      {
+        store_id: storeId,
+        employee_id: employeeId,
+        participant_type: "personnel",
+        correction_amount: "125.25",
+        adjustment_amount: "0",
+        final_amount: null,
+      },
+    ]);
+
+    const result = await service.getOwnStoreMeProjection({
+      actor: buildAuthenticatedUser({
+        userId: "personnel-user",
+        employeeId,
+        roleCodes: ["STORE_PERSONNEL"],
+        readScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [storeId] },
+      }),
+      periodKey: "2026-05",
+    });
+
+    expect(correctionRepository.listApprovedAdjustmentSummaries).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      storeIds: [storeId],
+    });
+    expect(result.data.projections[0].rows[0]).toMatchObject({
+      payableAmount: "3960.00",
+      correctionAmount: "125.25",
+      finalAmount: "4085.25",
+      status: "corrected",
+    });
+  });
+
   it("applies admin corrections only for eligible visible incentive rows", async () => {
     const { correctionRepository, readModelService, service } = createService();
     const actor = buildAuthenticatedUser({
