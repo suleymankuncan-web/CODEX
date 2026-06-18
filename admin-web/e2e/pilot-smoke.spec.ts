@@ -14,6 +14,15 @@ type SmokeRoute = {
   heading: Locator
 }
 
+type PilotApiFailureDiagnostic = {
+  method: string
+  path: string
+  status: unknown
+  errorCategory: string
+  errorMessage: string
+  occurredAt: string
+}
+
 test.beforeEach(async ({ context, page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
@@ -185,6 +194,8 @@ function watchPilotFailures(page: Page) {
   const failedRequests: string[] = []
   const failedResponses: string[] = []
   const navigationAbortKeys = new Map<string, number>()
+  const apiFailureDiagnostics: PilotApiFailureDiagnostic[] = []
+  const apiFailureDiagnosticReads: Array<Promise<void>> = []
   const pageErrors: string[] = []
 
   page.on('requestfailed', (request) => {
@@ -205,26 +216,46 @@ function watchPilotFailures(page: Page) {
       failedResponses.push(`${response.status()} ${response.url()}`)
     }
   })
+  page.on('console', (message) => {
+    if (message.type() !== 'warning' || !message.text().includes('[store-ops:api-failure]')) {
+      return
+    }
+
+    const diagnosticArg = message.args()[1]
+    if (!diagnosticArg) {
+      apiFailureDiagnostics.push(normalizePilotApiFailure({ errorMessage: message.text() }))
+      return
+    }
+
+    apiFailureDiagnosticReads.push(
+      diagnosticArg
+        .jsonValue()
+        .then((failure) => {
+          apiFailureDiagnostics.push(normalizePilotApiFailure(failure))
+        })
+        .catch(() => {
+          apiFailureDiagnostics.push(normalizePilotApiFailure({ errorMessage: message.text() }))
+        }),
+    )
+  })
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
   })
 
   return {
     async expectClean() {
+      await Promise.all(apiFailureDiagnosticReads)
       const bufferedApiFailures = await page.evaluate(() => {
         const typedWindow = window as Window & {
           __STORE_OPS_API_FAILURES__?: Array<Record<string, unknown>>
         }
 
-        return (typedWindow.__STORE_OPS_API_FAILURES__ ?? []).map((failure) => ({
-          method: String(failure.method ?? 'UNKNOWN'),
-          path: String(failure.path ?? 'unknown-path'),
-          status: failure.status ?? null,
-          errorCategory: String(failure.errorCategory ?? 'unknown-category'),
-          errorMessage: String(failure.errorMessage ?? ''),
-        }))
+        return typedWindow.__STORE_OPS_API_FAILURES__ ?? []
       })
-      const blockingApiFailures = bufferedApiFailures
+      const blockingApiFailures = uniquePilotApiFailures([
+        ...apiFailureDiagnostics,
+        ...bufferedApiFailures.map(normalizePilotApiFailure),
+      ])
         .filter((failure) => !consumeNavigationAbort(navigationAbortKeys, failure))
         .map((failure) =>
           [
@@ -242,6 +273,41 @@ function watchPilotFailures(page: Page) {
       expect(pageErrors, 'Pilot smoke routes should not raise page errors').toEqual([])
     },
   }
+}
+
+function normalizePilotApiFailure(failure: unknown): PilotApiFailureDiagnostic {
+  const record =
+    typeof failure === 'object' && failure !== null ? (failure as Record<string, unknown>) : {}
+
+  return {
+    method: String(record.method ?? 'UNKNOWN'),
+    path: String(record.path ?? 'unknown-path'),
+    status: record.status ?? null,
+    errorCategory: String(record.errorCategory ?? 'unknown-category'),
+    errorMessage: String(record.errorMessage ?? ''),
+    occurredAt: String(record.occurredAt ?? ''),
+  }
+}
+
+function uniquePilotApiFailures(failures: PilotApiFailureDiagnostic[]) {
+  const seen = new Set<string>()
+
+  return failures.filter((failure) => {
+    const key = [
+      failure.method,
+      failure.path,
+      failure.status ?? 'no-status',
+      failure.errorCategory,
+      failure.errorMessage,
+      failure.occurredAt,
+    ].join('\0')
+    if (seen.has(key)) {
+      return false
+    }
+
+    seen.add(key)
+    return true
+  })
 }
 
 function isNavigationAbort(failureText: string) {
