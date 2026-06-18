@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bell,
   ClipboardList,
+  CircleDollarSign,
   Home,
   Megaphone,
   ReceiptText,
@@ -14,12 +15,18 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { NavLink } from 'react-router-dom'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { useLocalization } from '../features/localization/useLocalization'
 import {
+  getStoreSalesTargetIncentives,
+  storeSalesTargetIncentivesQueryKey,
+} from '../features/incentives/api'
+import { useLocalization } from '../features/localization/useLocalization'
+import { transientQueryRetryOptions } from '../lib/query-retry'
+import {
+  canOpenStoreIncentives,
   getRoleAwareStoreNavigation,
   getStorePersonaLabelKey,
   resolveStorePersona,
@@ -32,6 +39,7 @@ const iconById: Record<StoreNavIconId, LucideIcon> = {
   checklist: ClipboardList,
   feed: Megaphone,
   home: Home,
+  incentives: CircleDollarSign,
   kpi: TrendingUp,
   me: UserRound,
   rankings: Trophy,
@@ -57,7 +65,19 @@ export function StoreSidebar(input: {
   const queryClient = useQueryClient()
   const persona = resolveStorePersona(input.authSummary)
   const personaLabel = t(getStorePersonaLabelKey(persona))
-  const navItems = getRoleAwareStoreNavigation(input.authSummary)
+  const incentivesNavQuery = useQuery({
+    queryKey: storeSalesTargetIncentivesQueryKey(),
+    queryFn: () => getStoreSalesTargetIncentives(),
+    enabled: canOpenStoreIncentives(input.authSummary),
+    ...transientQueryRetryOptions,
+  })
+  const hasStoreIncentiveRows = (incentivesNavQuery.data?.data.projections.length ?? 0) > 0
+  const shouldShowIncentivesNav =
+    canOpenStoreIncentives(input.authSummary) &&
+    hasStoreIncentiveRows
+  const navItems = getRoleAwareStoreNavigation(input.authSummary).filter((item) =>
+    item.id === 'incentives' ? shouldShowIncentivesNav : true,
+  )
   const identityLabel = getIdentityLabel(input.authSummary)
   const assignedStoreCount = input.authSummary?.scopeSummary.assignedStoreCount ?? 0
   const scopedStoreCount =

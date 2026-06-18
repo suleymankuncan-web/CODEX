@@ -227,6 +227,17 @@ const targetCoverage = (url: URL) => ({
   },
 })
 
+const emptyStoreIncentives = (roleScope: 'own' | 'store' | 'region') => ({
+  data: {
+    period: '2026-06',
+    periodStart: '2026-06-01',
+    periodEnd: '2026-06-30',
+    periodTimezone: 'Europe/Istanbul',
+    roleScope,
+    projections: [],
+  },
+})
+
 function resolveE2eApiFallback(method: string, url: URL): JsonBody | null {
   const path = url.pathname.replace(/^\/api/, '')
 
@@ -296,6 +307,14 @@ function resolveE2eApiFallback(method: string, url: URL): JsonBody | null {
 
   if (method === 'GET' && path === '/target-distributions/coverage') {
     return targetCoverage(url)
+  }
+
+  if (method === 'GET' && path === '/store/me/incentives') {
+    return emptyStoreIncentives('own')
+  }
+
+  if (method === 'GET' && path === '/store/incentives') {
+    return emptyStoreIncentives('store')
   }
 
   return null
@@ -380,6 +399,14 @@ const apiFallbackRoutes: ApiFallbackRoute[] = [
   },
   {
     pattern: '**/api/target-distributions/coverage**',
+    resolve: resolveE2eApiFallback,
+  },
+  {
+    pattern: '**/api/store/me/incentives',
+    resolve: resolveE2eApiFallback,
+  },
+  {
+    pattern: '**/api/store/incentives',
     resolve: resolveE2eApiFallback,
   },
 ]

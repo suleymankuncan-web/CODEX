@@ -14,6 +14,10 @@ import {
 import { listCompetitions } from '../features/competitions/api'
 import { getAdminFeedPosts, getVisibleFeedPosts } from '../features/feed/api'
 import {
+  getStoreSalesTargetIncentives,
+  storeSalesTargetIncentivesQueryKey,
+} from '../features/incentives/api'
+import {
   getImportOverview,
   getImportPayloadTemplate,
   getIntegrationLookups,
@@ -41,6 +45,7 @@ import {
 } from '../features/workforce/api'
 import { getWorkflowInbox } from '../features/workflow/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
+import { canOpenStoreIncentives } from './store-navigation'
 
 type RouteDataPrefetchInput = {
   queryClient: QueryClient
@@ -134,6 +139,10 @@ function resolveRoutePrefetchTasks(
     return getStoreApprovalsPrefetchTasks(authSummary)
   }
 
+  if (pathname === '/store/incentives') {
+    return getStoreIncentivesPrefetchTasks(authSummary)
+  }
+
   if (pathname === '/store/targets') {
     return getStoreTargetsPrefetchTasks(authSummary)
   }
@@ -171,6 +180,16 @@ function resolveRoutePrefetchTasks(
   }
 
   return []
+}
+
+function getStoreIncentivesPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  return [
+    {
+      queryKey: storeSalesTargetIncentivesQueryKey(),
+      queryFn: () => getStoreSalesTargetIncentives(),
+      enabled: canOpenStoreIncentives(authSummary),
+    },
+  ]
 }
 
 function getStoreHomePrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {

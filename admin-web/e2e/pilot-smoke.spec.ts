@@ -118,7 +118,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/incentives',
       urlPattern: /\/store\/incentives$/,
-      heading: page.getByRole('heading', { name: /Mağaza prim görünürlüğü/i }),
+      heading: page.getByRole('heading', { name: /Mağaza prim görünümü/i }),
     },
     {
       path: '/store/approvals',
@@ -136,7 +136,9 @@ test('protected route refresh returns to the same route', async ({ page }) => {
   const monitor = watchPilotFailures(page)
 
   await page.goto('/store/rankings')
+  await waitForStoreIncentivesRequest(page)
   await page.reload()
+  await waitForStoreIncentivesRequest(page)
 
   await expect(page).toHaveURL(/\/store\/rankings$/)
   await expect(page.getByRole('heading', { name: 'Sıralamalar' })).toBeVisible()
@@ -168,6 +170,15 @@ async function verifyPilotRoute(page: Page, route: SmokeRoute) {
   await expect(page).toHaveURL(route.urlPattern)
   await expect(route.heading).toBeVisible()
   await expectHealthySurface(page)
+}
+
+async function waitForStoreIncentivesRequest(page: Page) {
+  await page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/store/incentives') &&
+      response.status() < 400,
+    { timeout: 5_000 },
+  ).catch(() => undefined)
 }
 
 function watchPilotFailures(page: Page) {
@@ -368,6 +379,11 @@ async function routePilotSmokeApi(context: BrowserContext) {
 
     if (pathname.endsWith('/api/reports/my-performance')) {
       await route.fulfill({ json: myPerformanceFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/store/incentives')) {
+      await route.fulfill({ json: storeIncentivesFixture })
       return
     }
 
@@ -959,6 +975,59 @@ const myPerformanceFixture = {
       status: 'reported',
     },
   ],
+}
+
+const storeIncentivesFixture = {
+  data: {
+    period: '2026-06',
+    periodStart: '2026-06-01',
+    periodEnd: '2026-06-30',
+    periodTimezone: 'Europe/Istanbul',
+    roleScope: 'store',
+    projections: [
+      {
+        period: '2026-06',
+        periodTimezone: 'Europe/Istanbul',
+        closeCutoffAt: null,
+        ruleVersionId: 'sales-target-incentive-v1.0.0',
+        storeId,
+        storeName: 'Pilot Store',
+        storeOwnershipType: 'company',
+        roleScope: 'store',
+        storeTarget: '1000000.00',
+        storeActualNetSales: '1000000.00',
+        storeAchievementPct: '100.0000',
+        storeGatePassed: true,
+        calculationState: 'projected',
+        blockedReason: null,
+        lastImportAt: '2026-06-18T08:00:00.000Z',
+        rows: [
+          {
+            employeeId,
+            displayName: 'Pilot Store Manager',
+            participantType: 'store_manager',
+            positionCode: 'STORE_MANAGER',
+            normalizedFromPositionCode: null,
+            target: '1000000.00',
+            actualPositiveSales: '1000000.00',
+            achievementPct: '100.0000',
+            storeAchievementPct: '100.0000',
+            storeGatePassed: null,
+            rate: '0.0070',
+            rawEarnedAmount: '7000.000000',
+            payableAmount: '7000.00',
+            correctionAmount: null,
+            adjustmentAmount: null,
+            finalAmount: null,
+            status: 'projected',
+            blockedReason: null,
+            rateTableVersion: 'manager-sales-target-v1.0.0',
+            explanation: 'Pilot fixture projection.',
+          },
+        ],
+      },
+    ],
+  },
 }
 
 const storeKpiHighlightsFixture = {
