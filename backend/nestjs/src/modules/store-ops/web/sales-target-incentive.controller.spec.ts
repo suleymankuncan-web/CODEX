@@ -1,7 +1,9 @@
+import { validate } from "class-validator";
 import { buildAuthenticatedUser } from "../../auth/auth-context.service";
 import { REQUIRED_ROLES_KEY } from "../../auth/decorators/roles.decorator";
 import { REQUIRED_SCOPE_KEY } from "../../auth/decorators/scope.decorator";
 import { AdminSalesTargetIncentiveController } from "./admin-sales-target-incentive.controller";
+import { CreateSalesTargetIncentiveCorrectionDto } from "./dto/create-sales-target-incentive-correction.dto";
 import { StoreSalesTargetIncentiveController } from "./store-sales-target-incentive.controller";
 
 function createHarness() {
@@ -9,6 +11,7 @@ function createHarness() {
     getOwnStoreMeProjection: jest.fn(async () => ({ data: { projections: [] } })),
     getStoreProjection: jest.fn(async () => ({ data: { projections: [] } })),
     getAdminProjection: jest.fn(async () => ({ data: { projections: [] } })),
+    applyAdminCorrection: jest.fn(async () => ({ data: { adjustmentId: "adjustment-1" } })),
   };
 
   return {
@@ -65,6 +68,46 @@ describe("SalesTargetIncentive controllers", () => {
     });
   });
 
+  it("delegates admin incentive corrections with actor context", async () => {
+    const { adminController, apiService } = createHarness();
+    const body = {
+      period: "2026-05",
+      storeId: "00000000-0000-4000-8000-000000000201",
+      employeeId: "00000000-0000-4000-8000-000000000501",
+      participantType: "personnel" as const,
+      adjustmentAmount: "125.25",
+      reasonCode: "manual_review",
+      reasonNote: "Admin onayli duzeltme",
+    };
+
+    await adminController.createAdminIncentiveCorrection(request, body);
+
+    expect(apiService.applyAdminCorrection).toHaveBeenCalledWith({
+      actor: request.user,
+      periodKey: "2026-05",
+      storeId: body.storeId,
+      employeeId: body.employeeId,
+      participantType: body.participantType,
+      adjustmentAmount: body.adjustmentAmount,
+      reasonCode: body.reasonCode,
+      reasonNote: body.reasonNote,
+    });
+  });
+
+  it("accepts PostgreSQL UUID target ids for admin incentive corrections", async () => {
+    const body = Object.assign(new CreateSalesTargetIncentiveCorrectionDto(), {
+      period: "2026-05",
+      storeId: "00000000-0000-0000-0000-000000000201",
+      employeeId: "00000000-0000-0000-0000-000000000501",
+      participantType: "personnel",
+      adjustmentAmount: "125.25",
+      reasonCode: "manual_review",
+      reasonNote: "Admin onayli duzeltme",
+    });
+
+    await expect(validate(body)).resolves.toHaveLength(0);
+  });
+
   it("keeps role visibility narrow for V1 read endpoints", () => {
     expect(
       Reflect.getMetadata(
@@ -82,6 +125,12 @@ describe("SalesTargetIncentive controllers", () => {
       Reflect.getMetadata(
         REQUIRED_ROLES_KEY,
         AdminSalesTargetIncentiveController.prototype.getAdminIncentiveProjection,
+      ),
+    ).toEqual(["SUPER_ADMIN"]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_ROLES_KEY,
+        AdminSalesTargetIncentiveController.prototype.createAdminIncentiveCorrection,
       ),
     ).toEqual(["SUPER_ADMIN"]);
   });
@@ -103,6 +152,12 @@ describe("SalesTargetIncentive controllers", () => {
       Reflect.getMetadata(
         REQUIRED_SCOPE_KEY,
         AdminSalesTargetIncentiveController.prototype.getAdminIncentiveProjection,
+      ),
+    ).toBe("authenticated");
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_SCOPE_KEY,
+        AdminSalesTargetIncentiveController.prototype.createAdminIncentiveCorrection,
       ),
     ).toBe("authenticated");
   });

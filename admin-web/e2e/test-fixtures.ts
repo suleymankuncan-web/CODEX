@@ -227,7 +227,7 @@ const targetCoverage = (url: URL) => ({
   },
 })
 
-const emptyStoreIncentives = (roleScope: 'own' | 'store' | 'region') => ({
+const emptyStoreIncentives = (roleScope: 'own' | 'store' | 'region' | 'admin') => ({
   data: {
     period: '2026-06',
     periodStart: '2026-06-01',
@@ -243,6 +243,10 @@ function resolveE2eApiFallback(method: string, url: URL): JsonBody | null {
 
   if (method === 'GET' && path === '/auth/session') {
     return authSessionFallback
+  }
+
+  if (method === 'GET' && path === '/competitions') {
+    return emptyList(url)
   }
 
   if (method === 'GET' && path === '/integrations/import-batches/overview') {
@@ -317,12 +321,39 @@ function resolveE2eApiFallback(method: string, url: URL): JsonBody | null {
     return emptyStoreIncentives('store')
   }
 
+  if (method === 'GET' && path === '/admin/incentives') {
+    return emptyStoreIncentives('admin')
+  }
+
+  if (method === 'POST' && path === '/admin/incentives/corrections') {
+    return {
+      data: {
+        adjustmentId: 'e2e-fallback-adjustment',
+        phase: 'pre_close',
+        adjustmentScope: 'projection',
+        adjustmentType: 'correction',
+        periodKey: '2026-06',
+        storeId: 'e2e-store',
+        employeeId: 'e2e-employee',
+        participantType: 'personnel',
+        beforeAmount: '0.00',
+        adjustmentAmount: '0.01',
+        afterAmount: '0.01',
+        status: 'approved',
+      },
+    }
+  }
+
   return null
 }
 
 const apiFallbackRoutes: ApiFallbackRoute[] = [
   {
     pattern: '**/api/auth/session',
+    resolve: resolveE2eApiFallback,
+  },
+  {
+    pattern: '**/api/competitions',
     resolve: resolveE2eApiFallback,
   },
   {
@@ -407,6 +438,10 @@ const apiFallbackRoutes: ApiFallbackRoute[] = [
   },
   {
     pattern: '**/api/store/incentives',
+    resolve: resolveE2eApiFallback,
+  },
+  {
+    pattern: '**/api/admin/incentives**',
     resolve: resolveE2eApiFallback,
   },
 ]

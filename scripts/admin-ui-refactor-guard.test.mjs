@@ -11,6 +11,7 @@ const pageFileByComponent = new Map([
   ['AdminDataQualityCenterPage', 'admin-web/src/pages/AdminDataQualityCenterPage.tsx'],
   ['AdminFeedPage', 'admin-web/src/pages/AdminFeedPage.tsx'],
   ['AdminInboxPage', 'admin-web/src/pages/AdminInboxPage.tsx'],
+  ['AdminIncentivesPage', 'admin-web/src/pages/AdminIncentivesPage.tsx'],
   ['AdminPilotFeedbackPage', 'admin-web/src/pages/AdminPilotFeedbackPage.tsx'],
   ['AuditCenterPage', 'admin-web/src/pages/AuditCenterPage.tsx'],
   ['AuthActionStoreAssignmentAuditPage', 'admin-web/src/pages/AuthActionStoreAssignmentAuditPage.tsx'],
@@ -128,6 +129,11 @@ const migratedAdminSurfaces = [
     id: 'targets',
     pageFile: 'admin-web/src/pages/TargetApprovalQueuePage.tsx',
     checkedFiles: ['admin-web/src/pages/TargetApprovalQueuePage.tsx'],
+  },
+  {
+    id: 'incentives',
+    pageFile: 'admin-web/src/pages/AdminIncentivesPage.tsx',
+    checkedFiles: ['admin-web/src/pages/AdminIncentivesPage.tsx'],
   },
   {
     id: 'kpi-config',

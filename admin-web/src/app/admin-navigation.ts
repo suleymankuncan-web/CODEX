@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   ClipboardList,
+  CircleDollarSign,
   DatabaseZap,
   Fingerprint,
   KeyRound,
@@ -35,6 +36,7 @@ type AdminNavIconId =
   | 'dataQuality'
   | 'feed'
   | 'inbox'
+  | 'incentives'
   | 'integrations'
   | 'kpiConfig'
   | 'masterData'
@@ -122,6 +124,13 @@ export const adminNavDefinitions: NavDefinition[] = [
     icon: Target,
     labelKey: 'adminShell.nav.targets',
     roles: ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER'],
+  },
+  {
+    id: 'incentives',
+    to: '/admin/incentives',
+    icon: CircleDollarSign,
+    labelKey: 'adminShell.nav.incentives',
+    roles: ['SUPER_ADMIN'],
   },
   {
     id: 'kpiConfig',

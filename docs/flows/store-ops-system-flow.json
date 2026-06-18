@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-06-18T01:06:42.879Z",
+  "generatedAt": "2026-06-18T05:31:12.137Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 178,
-    "backendEndpointsWithoutFrontendCallCount": 35,
+    "backendEndpointCount": 179,
+    "backendEndpointsWithoutFrontendCallCount": 34,
     "controllerCount": 22,
-    "frontendApiCallCount": 143,
-    "frontendRouteCount": 54,
-    "matchedFrontendApiCallCount": 143,
-    "openApiEndpointCount": 178,
-    "routeApiEdgeCount": 214,
+    "frontendApiCallCount": 145,
+    "frontendRouteCount": 55,
+    "matchedFrontendApiCallCount": 145,
+    "openApiEndpointCount": 179,
+    "routeApiEdgeCount": 216,
     "routesWithoutApiCallCount": 2,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -29,7 +29,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 200
+        "line": 205
       }
     },
     {
@@ -74,7 +74,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 78
+        "line": 79
       }
     },
     {
@@ -92,7 +92,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 196
+        "line": 201
       }
     },
     {
@@ -110,7 +110,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 192
+        "line": 197
       }
     },
     {
@@ -128,7 +128,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 188
+        "line": 193
       }
     },
     {
@@ -146,7 +146,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 184
+        "line": 189
       }
     },
     {
@@ -163,7 +163,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 164
+        "line": 169
       }
     },
     {
@@ -180,7 +180,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 180
+        "line": 185
       }
     },
     {
@@ -197,7 +197,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 168
+        "line": 173
       }
     },
     {
@@ -214,7 +214,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 176
+        "line": 181
       }
     },
     {
@@ -231,7 +231,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 172
+        "line": 177
       }
     },
     {
@@ -249,7 +249,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 120
+        "line": 121
       }
     },
     {
@@ -269,7 +269,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 124
+        "line": 125
       }
     },
     {
@@ -286,7 +286,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 84
+        "line": 85
       }
     },
     {
@@ -305,7 +305,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 116
+        "line": 117
       }
     },
     {
@@ -324,7 +324,24 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 112
+        "line": 113
+      }
+    },
+    {
+      "id": "route:admin:/admin/incentives",
+      "path": "/admin/incentives",
+      "surface": "admin",
+      "domain": "incentives",
+      "kind": "page",
+      "component": "AdminIncentivesPage",
+      "componentFile": "admin-web/src/pages/AdminIncentivesPage.tsx",
+      "guard": "AdminRouteGuard",
+      "roles": [
+        "SUPER_ADMIN"
+      ],
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 157
       }
     },
     {
@@ -342,7 +359,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 88
+        "line": 89
       }
     },
     {
@@ -360,7 +377,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 92
+        "line": 93
       }
     },
     {
@@ -377,7 +394,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 156
+        "line": 161
       }
     },
     {
@@ -396,7 +413,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 96
+        "line": 97
       }
     },
     {
@@ -415,7 +432,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 100
+        "line": 101
       }
     },
     {
@@ -432,7 +449,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 80
+        "line": 81
       }
     },
     {
@@ -449,7 +466,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 160
+        "line": 165
       }
     },
     {
@@ -467,7 +484,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 128
+        "line": 129
       }
     },
     {
@@ -485,7 +502,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 144
+        "line": 145
       }
     },
     {
@@ -503,7 +520,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 140
+        "line": 141
       }
     },
     {
@@ -521,7 +538,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 132
+        "line": 133
       }
     },
     {
@@ -539,7 +556,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 148
+        "line": 149
       }
     },
     {
@@ -557,7 +574,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 136
+        "line": 137
       }
     },
     {
@@ -572,7 +589,7 @@
       "roles": [],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 79
+        "line": 80
       }
     },
     {
@@ -590,7 +607,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 104
+        "line": 105
       }
     },
     {
@@ -608,7 +625,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 108
+        "line": 109
       }
     },
     {
@@ -627,7 +644,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/admin-shell.tsx",
-        "line": 152
+        "line": 153
       }
     },
     {
@@ -1860,7 +1877,7 @@
       "exportedFunction": "getMySalesTargetIncentives",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 82
+        "line": 113
       }
     },
     {
@@ -1875,11 +1892,41 @@
       "exportedFunction": "getStoreSalesTargetIncentives",
       "source": {
         "file": "admin-web/src/features/incentives/api.ts",
-        "line": 90
+        "line": 121
       }
     },
     {
       "id": "api:63",
+      "client": "openapi-generated",
+      "functionName": "fetchOpenApiJson",
+      "method": "GET",
+      "rawPath": "/api/admin/incentives",
+      "path": "/api/admin/incentives",
+      "backendEndpointId": "endpoint:GET:/api/admin/incentives",
+      "openApiCovered": true,
+      "exportedFunction": "getAdminSalesTargetIncentives",
+      "source": {
+        "file": "admin-web/src/features/incentives/api.ts",
+        "line": 129
+      }
+    },
+    {
+      "id": "api:64",
+      "client": "legacy-json",
+      "functionName": "sendJson",
+      "method": "POST",
+      "rawPath": "/admin/incentives/corrections",
+      "path": "/api/admin/incentives/corrections",
+      "backendEndpointId": "endpoint:POST:/api/admin/incentives/corrections",
+      "openApiCovered": true,
+      "exportedFunction": "createAdminSalesTargetIncentiveCorrection",
+      "source": {
+        "file": "admin-web/src/features/incentives/api.ts",
+        "line": 138
+      }
+    },
+    {
+      "id": "api:65",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -1894,7 +1941,7 @@
       }
     },
     {
-      "id": "api:64",
+      "id": "api:66",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -1909,7 +1956,7 @@
       }
     },
     {
-      "id": "api:65",
+      "id": "api:67",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -1924,7 +1971,7 @@
       }
     },
     {
-      "id": "api:66",
+      "id": "api:68",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -1939,7 +1986,7 @@
       }
     },
     {
-      "id": "api:67",
+      "id": "api:69",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -1954,7 +2001,7 @@
       }
     },
     {
-      "id": "api:68",
+      "id": "api:70",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -1969,7 +2016,7 @@
       }
     },
     {
-      "id": "api:69",
+      "id": "api:71",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -1984,7 +2031,7 @@
       }
     },
     {
-      "id": "api:70",
+      "id": "api:72",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -1999,7 +2046,7 @@
       }
     },
     {
-      "id": "api:71",
+      "id": "api:73",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2014,7 +2061,7 @@
       }
     },
     {
-      "id": "api:72",
+      "id": "api:74",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2029,7 +2076,7 @@
       }
     },
     {
-      "id": "api:73",
+      "id": "api:75",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2044,7 +2091,7 @@
       }
     },
     {
-      "id": "api:74",
+      "id": "api:76",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2059,7 +2106,7 @@
       }
     },
     {
-      "id": "api:75",
+      "id": "api:77",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -2074,7 +2121,7 @@
       }
     },
     {
-      "id": "api:76",
+      "id": "api:78",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2089,7 +2136,7 @@
       }
     },
     {
-      "id": "api:77",
+      "id": "api:79",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2104,7 +2151,7 @@
       }
     },
     {
-      "id": "api:78",
+      "id": "api:80",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -2119,7 +2166,7 @@
       }
     },
     {
-      "id": "api:79",
+      "id": "api:81",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2134,7 +2181,7 @@
       }
     },
     {
-      "id": "api:80",
+      "id": "api:82",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2149,7 +2196,7 @@
       }
     },
     {
-      "id": "api:81",
+      "id": "api:83",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2164,7 +2211,7 @@
       }
     },
     {
-      "id": "api:82",
+      "id": "api:84",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2179,7 +2226,7 @@
       }
     },
     {
-      "id": "api:83",
+      "id": "api:85",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2194,7 +2241,7 @@
       }
     },
     {
-      "id": "api:84",
+      "id": "api:86",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2209,7 +2256,7 @@
       }
     },
     {
-      "id": "api:85",
+      "id": "api:87",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2224,7 +2271,7 @@
       }
     },
     {
-      "id": "api:86",
+      "id": "api:88",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2239,7 +2286,7 @@
       }
     },
     {
-      "id": "api:87",
+      "id": "api:89",
       "client": "form-data",
       "functionName": "sendFormData",
       "method": "POST",
@@ -2254,7 +2301,7 @@
       }
     },
     {
-      "id": "api:88",
+      "id": "api:90",
       "client": "legacy-json",
       "functionName": "fetchJson",
       "method": "GET",
@@ -2269,7 +2316,7 @@
       }
     },
     {
-      "id": "api:89",
+      "id": "api:91",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "POST",
@@ -2284,7 +2331,7 @@
       }
     },
     {
-      "id": "api:90",
+      "id": "api:92",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2299,7 +2346,7 @@
       }
     },
     {
-      "id": "api:91",
+      "id": "api:93",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "PATCH",
@@ -2314,7 +2361,7 @@
       }
     },
     {
-      "id": "api:92",
+      "id": "api:94",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2329,7 +2376,7 @@
       }
     },
     {
-      "id": "api:93",
+      "id": "api:95",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2344,7 +2391,7 @@
       }
     },
     {
-      "id": "api:94",
+      "id": "api:96",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2359,7 +2406,7 @@
       }
     },
     {
-      "id": "api:95",
+      "id": "api:97",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2374,7 +2421,7 @@
       }
     },
     {
-      "id": "api:96",
+      "id": "api:98",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2389,7 +2436,7 @@
       }
     },
     {
-      "id": "api:97",
+      "id": "api:99",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2404,7 +2451,7 @@
       }
     },
     {
-      "id": "api:98",
+      "id": "api:100",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "PATCH",
@@ -2419,7 +2466,7 @@
       }
     },
     {
-      "id": "api:99",
+      "id": "api:101",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "PATCH",
@@ -2434,7 +2481,7 @@
       }
     },
     {
-      "id": "api:100",
+      "id": "api:102",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2449,7 +2496,7 @@
       }
     },
     {
-      "id": "api:101",
+      "id": "api:103",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2464,7 +2511,7 @@
       }
     },
     {
-      "id": "api:102",
+      "id": "api:104",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2479,7 +2526,7 @@
       }
     },
     {
-      "id": "api:103",
+      "id": "api:105",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2494,7 +2541,7 @@
       }
     },
     {
-      "id": "api:104",
+      "id": "api:106",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2509,7 +2556,7 @@
       }
     },
     {
-      "id": "api:105",
+      "id": "api:107",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2524,7 +2571,7 @@
       }
     },
     {
-      "id": "api:106",
+      "id": "api:108",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2539,7 +2586,7 @@
       }
     },
     {
-      "id": "api:107",
+      "id": "api:109",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2554,7 +2601,7 @@
       }
     },
     {
-      "id": "api:108",
+      "id": "api:110",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2569,7 +2616,7 @@
       }
     },
     {
-      "id": "api:109",
+      "id": "api:111",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2584,7 +2631,7 @@
       }
     },
     {
-      "id": "api:110",
+      "id": "api:112",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2599,7 +2646,7 @@
       }
     },
     {
-      "id": "api:111",
+      "id": "api:113",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2614,7 +2661,7 @@
       }
     },
     {
-      "id": "api:112",
+      "id": "api:114",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2629,7 +2676,7 @@
       }
     },
     {
-      "id": "api:113",
+      "id": "api:115",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2644,7 +2691,7 @@
       }
     },
     {
-      "id": "api:114",
+      "id": "api:116",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2659,7 +2706,7 @@
       }
     },
     {
-      "id": "api:115",
+      "id": "api:117",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2674,7 +2721,7 @@
       }
     },
     {
-      "id": "api:116",
+      "id": "api:118",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2689,7 +2736,7 @@
       }
     },
     {
-      "id": "api:117",
+      "id": "api:119",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2704,7 +2751,7 @@
       }
     },
     {
-      "id": "api:118",
+      "id": "api:120",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2719,7 +2766,7 @@
       }
     },
     {
-      "id": "api:119",
+      "id": "api:121",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "POST",
@@ -2734,7 +2781,7 @@
       }
     },
     {
-      "id": "api:120",
+      "id": "api:122",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "PATCH",
@@ -2749,7 +2796,7 @@
       }
     },
     {
-      "id": "api:121",
+      "id": "api:123",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "PATCH",
@@ -2764,7 +2811,7 @@
       }
     },
     {
-      "id": "api:122",
+      "id": "api:124",
       "client": "openapi-generated",
       "functionName": "sendOpenApiJson",
       "method": "PATCH",
@@ -2779,7 +2826,7 @@
       }
     },
     {
-      "id": "api:123",
+      "id": "api:125",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2794,7 +2841,7 @@
       }
     },
     {
-      "id": "api:124",
+      "id": "api:126",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2809,7 +2856,7 @@
       }
     },
     {
-      "id": "api:125",
+      "id": "api:127",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2824,7 +2871,7 @@
       }
     },
     {
-      "id": "api:126",
+      "id": "api:128",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -2839,7 +2886,7 @@
       }
     },
     {
-      "id": "api:127",
+      "id": "api:129",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -2854,7 +2901,7 @@
       }
     },
     {
-      "id": "api:128",
+      "id": "api:130",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2869,7 +2916,7 @@
       }
     },
     {
-      "id": "api:129",
+      "id": "api:131",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2884,7 +2931,7 @@
       }
     },
     {
-      "id": "api:130",
+      "id": "api:132",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2899,7 +2946,7 @@
       }
     },
     {
-      "id": "api:131",
+      "id": "api:133",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -2914,7 +2961,7 @@
       }
     },
     {
-      "id": "api:132",
+      "id": "api:134",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -2929,7 +2976,7 @@
       }
     },
     {
-      "id": "api:133",
+      "id": "api:135",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -2944,7 +2991,7 @@
       }
     },
     {
-      "id": "api:134",
+      "id": "api:136",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2959,7 +3006,7 @@
       }
     },
     {
-      "id": "api:135",
+      "id": "api:137",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -2974,7 +3021,7 @@
       }
     },
     {
-      "id": "api:136",
+      "id": "api:138",
       "client": "legacy-json",
       "functionName": "fetchJson",
       "method": "GET",
@@ -2989,7 +3036,7 @@
       }
     },
     {
-      "id": "api:137",
+      "id": "api:139",
       "client": "legacy-json",
       "functionName": "fetchJson",
       "method": "GET",
@@ -3004,7 +3051,7 @@
       }
     },
     {
-      "id": "api:138",
+      "id": "api:140",
       "client": "openapi-generated",
       "functionName": "fetchOpenApiJson",
       "method": "GET",
@@ -3019,7 +3066,7 @@
       }
     },
     {
-      "id": "api:139",
+      "id": "api:141",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -3034,7 +3081,7 @@
       }
     },
     {
-      "id": "api:140",
+      "id": "api:142",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "POST",
@@ -3049,7 +3096,7 @@
       }
     },
     {
-      "id": "api:141",
+      "id": "api:143",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3064,7 +3111,7 @@
       }
     },
     {
-      "id": "api:142",
+      "id": "api:144",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3079,7 +3126,7 @@
       }
     },
     {
-      "id": "api:143",
+      "id": "api:145",
       "client": "legacy-json",
       "functionName": "sendJson",
       "method": "PATCH",
@@ -3232,7 +3279,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
-        "line": 18
+        "line": 19
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/admin/incentives/corrections",
+      "method": "POST",
+      "path": "/api/admin/incentives/corrections",
+      "rawControllerPath": "admin/incentives",
+      "rawMethodPath": "corrections",
+      "controller": "admin-sales-target-incentive",
+      "domain": "admin",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
+        "line": 32
       }
     },
     {
@@ -5650,6 +5711,12 @@
       "domain": "admin"
     },
     {
+      "id": "openapi:POST:/api/admin/incentives/corrections",
+      "method": "POST",
+      "path": "/api/admin/incentives/corrections",
+      "domain": "admin"
+    },
+    {
       "id": "openapi:POST:/api/admin/migrations/run",
       "method": "POST",
       "path": "/api/admin/migrations/run",
@@ -6661,9 +6728,9 @@
   "edges": {
     "routeToApi": [
       {
-        "id": "edge:route:admin:/admin/audit:api:110",
+        "id": "edge:route:admin:/admin/audit:api:112",
         "routeId": "route:admin:/admin/audit",
-        "apiCallId": "api:110"
+        "apiCallId": "api:112"
       },
       {
         "id": "edge:route:admin:/admin/audit:api:21",
@@ -6681,9 +6748,9 @@
         "apiCallId": "api:6"
       },
       {
-        "id": "edge:route:admin:/admin/audit:api:65",
+        "id": "edge:route:admin:/admin/audit:api:67",
         "routeId": "route:admin:/admin/audit",
-        "apiCallId": "api:65"
+        "apiCallId": "api:67"
       },
       {
         "id": "edge:route:admin:/admin/audit:api:7",
@@ -6936,14 +7003,9 @@
         "apiCallId": "api:53"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:105",
+        "id": "edge:route:admin:/admin/data-quality:api:107",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:105"
-      },
-      {
-        "id": "edge:route:admin:/admin/data-quality:api:108",
-        "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:108"
+        "apiCallId": "api:107"
       },
       {
         "id": "edge:route:admin:/admin/data-quality:api:110",
@@ -6951,19 +7013,19 @@
         "apiCallId": "api:110"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:130",
+        "id": "edge:route:admin:/admin/data-quality:api:112",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:130"
+        "apiCallId": "api:112"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:138",
+        "id": "edge:route:admin:/admin/data-quality:api:132",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:138"
+        "apiCallId": "api:132"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:63",
+        "id": "edge:route:admin:/admin/data-quality:api:140",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:63"
+        "apiCallId": "api:140"
       },
       {
         "id": "edge:route:admin:/admin/data-quality:api:65",
@@ -6971,9 +7033,14 @@
         "apiCallId": "api:65"
       },
       {
-        "id": "edge:route:admin:/admin/data-quality:api:96",
+        "id": "edge:route:admin:/admin/data-quality:api:67",
         "routeId": "route:admin:/admin/data-quality",
-        "apiCallId": "api:96"
+        "apiCallId": "api:67"
+      },
+      {
+        "id": "edge:route:admin:/admin/data-quality:api:98",
+        "routeId": "route:admin:/admin/data-quality",
+        "apiCallId": "api:98"
       },
       {
         "id": "edge:route:admin:/admin/feed:api:1",
@@ -7011,16 +7078,6 @@
         "apiCallId": "api:60"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:128",
-        "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:128"
-      },
-      {
-        "id": "edge:route:admin:/admin/inbox:api:129",
-        "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:129"
-      },
-      {
         "id": "edge:route:admin:/admin/inbox:api:130",
         "routeId": "route:admin:/admin/inbox",
         "apiCallId": "api:130"
@@ -7036,28 +7093,38 @@
         "apiCallId": "api:132"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:138",
+        "id": "edge:route:admin:/admin/inbox:api:133",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:138"
+        "apiCallId": "api:133"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:141",
+        "id": "edge:route:admin:/admin/inbox:api:134",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:141"
+        "apiCallId": "api:134"
       },
       {
-        "id": "edge:route:admin:/admin/inbox:api:142",
+        "id": "edge:route:admin:/admin/inbox:api:140",
         "routeId": "route:admin:/admin/inbox",
-        "apiCallId": "api:142"
+        "apiCallId": "api:140"
       },
       {
-        "id": "edge:route:admin:/admin/integrations:api:63",
-        "routeId": "route:admin:/admin/integrations",
+        "id": "edge:route:admin:/admin/inbox:api:143",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:143"
+      },
+      {
+        "id": "edge:route:admin:/admin/inbox:api:144",
+        "routeId": "route:admin:/admin/inbox",
+        "apiCallId": "api:144"
+      },
+      {
+        "id": "edge:route:admin:/admin/incentives:api:63",
+        "routeId": "route:admin:/admin/incentives",
         "apiCallId": "api:63"
       },
       {
-        "id": "edge:route:admin:/admin/integrations:api:64",
-        "routeId": "route:admin:/admin/integrations",
+        "id": "edge:route:admin:/admin/incentives:api:64",
+        "routeId": "route:admin:/admin/incentives",
         "apiCallId": "api:64"
       },
       {
@@ -7066,19 +7133,19 @@
         "apiCallId": "api:65"
       },
       {
-        "id": "edge:route:admin:/admin/integrations:api:70",
+        "id": "edge:route:admin:/admin/integrations:api:66",
         "routeId": "route:admin:/admin/integrations",
-        "apiCallId": "api:70"
+        "apiCallId": "api:66"
       },
       {
-        "id": "edge:route:admin:/admin/integrations:api:85",
+        "id": "edge:route:admin:/admin/integrations:api:67",
         "routeId": "route:admin:/admin/integrations",
-        "apiCallId": "api:85"
+        "apiCallId": "api:67"
       },
       {
-        "id": "edge:route:admin:/admin/integrations:api:86",
+        "id": "edge:route:admin:/admin/integrations:api:72",
         "routeId": "route:admin:/admin/integrations",
-        "apiCallId": "api:86"
+        "apiCallId": "api:72"
       },
       {
         "id": "edge:route:admin:/admin/integrations:api:87",
@@ -7086,14 +7153,14 @@
         "apiCallId": "api:87"
       },
       {
-        "id": "edge:route:admin:/admin/integrations/:batchId:api:66",
-        "routeId": "route:admin:/admin/integrations/:batchId",
-        "apiCallId": "api:66"
+        "id": "edge:route:admin:/admin/integrations:api:88",
+        "routeId": "route:admin:/admin/integrations",
+        "apiCallId": "api:88"
       },
       {
-        "id": "edge:route:admin:/admin/integrations/:batchId:api:67",
-        "routeId": "route:admin:/admin/integrations/:batchId",
-        "apiCallId": "api:67"
+        "id": "edge:route:admin:/admin/integrations:api:89",
+        "routeId": "route:admin:/admin/integrations",
+        "apiCallId": "api:89"
       },
       {
         "id": "edge:route:admin:/admin/integrations/:batchId:api:68",
@@ -7121,34 +7188,34 @@
         "apiCallId": "api:72"
       },
       {
+        "id": "edge:route:admin:/admin/integrations/:batchId:api:73",
+        "routeId": "route:admin:/admin/integrations/:batchId",
+        "apiCallId": "api:73"
+      },
+      {
+        "id": "edge:route:admin:/admin/integrations/:batchId:api:74",
+        "routeId": "route:admin:/admin/integrations/:batchId",
+        "apiCallId": "api:74"
+      },
+      {
         "id": "edge:route:admin:/admin/kpi-config:api:100",
         "routeId": "route:admin:/admin/kpi-config",
         "apiCallId": "api:100"
       },
       {
-        "id": "edge:route:admin:/admin/kpi-config:api:97",
+        "id": "edge:route:admin:/admin/kpi-config:api:101",
         "routeId": "route:admin:/admin/kpi-config",
-        "apiCallId": "api:97"
+        "apiCallId": "api:101"
       },
       {
-        "id": "edge:route:admin:/admin/kpi-config:api:98",
+        "id": "edge:route:admin:/admin/kpi-config:api:102",
         "routeId": "route:admin:/admin/kpi-config",
-        "apiCallId": "api:98"
+        "apiCallId": "api:102"
       },
       {
         "id": "edge:route:admin:/admin/kpi-config:api:99",
         "routeId": "route:admin:/admin/kpi-config",
         "apiCallId": "api:99"
-      },
-      {
-        "id": "edge:route:admin:/admin/master-data:api:73",
-        "routeId": "route:admin:/admin/master-data",
-        "apiCallId": "api:73"
-      },
-      {
-        "id": "edge:route:admin:/admin/master-data:api:74",
-        "routeId": "route:admin:/admin/master-data",
-        "apiCallId": "api:74"
       },
       {
         "id": "edge:route:admin:/admin/master-data:api:75",
@@ -7201,14 +7268,14 @@
         "apiCallId": "api:84"
       },
       {
-        "id": "edge:route:admin:/admin/master-data/:batchId:api:73",
-        "routeId": "route:admin:/admin/master-data/:batchId",
-        "apiCallId": "api:73"
+        "id": "edge:route:admin:/admin/master-data:api:85",
+        "routeId": "route:admin:/admin/master-data",
+        "apiCallId": "api:85"
       },
       {
-        "id": "edge:route:admin:/admin/master-data/:batchId:api:74",
-        "routeId": "route:admin:/admin/master-data/:batchId",
-        "apiCallId": "api:74"
+        "id": "edge:route:admin:/admin/master-data:api:86",
+        "routeId": "route:admin:/admin/master-data",
+        "apiCallId": "api:86"
       },
       {
         "id": "edge:route:admin:/admin/master-data/:batchId:api:75",
@@ -7261,14 +7328,19 @@
         "apiCallId": "api:84"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:105",
-        "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:105"
+        "id": "edge:route:admin:/admin/master-data/:batchId:api:85",
+        "routeId": "route:admin:/admin/master-data/:batchId",
+        "apiCallId": "api:85"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:108",
+        "id": "edge:route:admin:/admin/master-data/:batchId:api:86",
+        "routeId": "route:admin:/admin/master-data/:batchId",
+        "apiCallId": "api:86"
+      },
+      {
+        "id": "edge:route:admin:/admin/operations:api:107",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:108"
+        "apiCallId": "api:107"
       },
       {
         "id": "edge:route:admin:/admin/operations:api:110",
@@ -7276,9 +7348,9 @@
         "apiCallId": "api:110"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:128",
+        "id": "edge:route:admin:/admin/operations:api:112",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:128"
+        "apiCallId": "api:112"
       },
       {
         "id": "edge:route:admin:/admin/operations:api:130",
@@ -7286,14 +7358,14 @@
         "apiCallId": "api:130"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:138",
+        "id": "edge:route:admin:/admin/operations:api:132",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:138"
+        "apiCallId": "api:132"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:63",
+        "id": "edge:route:admin:/admin/operations:api:140",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:63"
+        "apiCallId": "api:140"
       },
       {
         "id": "edge:route:admin:/admin/operations:api:65",
@@ -7301,59 +7373,64 @@
         "apiCallId": "api:65"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:88",
+        "id": "edge:route:admin:/admin/operations:api:67",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:88"
+        "apiCallId": "api:67"
       },
       {
-        "id": "edge:route:admin:/admin/operations:api:96",
+        "id": "edge:route:admin:/admin/operations:api:90",
         "routeId": "route:admin:/admin/operations",
-        "apiCallId": "api:96"
-      },
-      {
-        "id": "edge:route:admin:/admin/pilot-feedback:api:90",
-        "routeId": "route:admin:/admin/pilot-feedback",
         "apiCallId": "api:90"
       },
       {
-        "id": "edge:route:admin:/admin/pilot-feedback:api:91",
-        "routeId": "route:admin:/admin/pilot-feedback",
-        "apiCallId": "api:91"
+        "id": "edge:route:admin:/admin/operations:api:98",
+        "routeId": "route:admin:/admin/operations",
+        "apiCallId": "api:98"
       },
       {
-        "id": "edge:route:admin:/admin/reports:api:92",
-        "routeId": "route:admin:/admin/reports",
+        "id": "edge:route:admin:/admin/pilot-feedback:api:92",
+        "routeId": "route:admin:/admin/pilot-feedback",
         "apiCallId": "api:92"
       },
       {
-        "id": "edge:route:admin:/admin/reports:api:93",
-        "routeId": "route:admin:/admin/reports",
+        "id": "edge:route:admin:/admin/pilot-feedback:api:93",
+        "routeId": "route:admin:/admin/pilot-feedback",
         "apiCallId": "api:93"
       },
       {
-        "id": "edge:route:admin:/admin/reports/checklists/:snapshotRunId:api:106",
-        "routeId": "route:admin:/admin/reports/checklists/:snapshotRunId",
-        "apiCallId": "api:106"
+        "id": "edge:route:admin:/admin/reports:api:94",
+        "routeId": "route:admin:/admin/reports",
+        "apiCallId": "api:94"
       },
       {
-        "id": "edge:route:admin:/admin/reports/kpis/:snapshotRunId:api:95",
-        "routeId": "route:admin:/admin/reports/kpis/:snapshotRunId",
+        "id": "edge:route:admin:/admin/reports:api:95",
+        "routeId": "route:admin:/admin/reports",
         "apiCallId": "api:95"
       },
       {
-        "id": "edge:route:admin:/admin/reports/snapshot-runs:api:93",
+        "id": "edge:route:admin:/admin/reports/checklists/:snapshotRunId:api:108",
+        "routeId": "route:admin:/admin/reports/checklists/:snapshotRunId",
+        "apiCallId": "api:108"
+      },
+      {
+        "id": "edge:route:admin:/admin/reports/kpis/:snapshotRunId:api:97",
+        "routeId": "route:admin:/admin/reports/kpis/:snapshotRunId",
+        "apiCallId": "api:97"
+      },
+      {
+        "id": "edge:route:admin:/admin/reports/snapshot-runs:api:95",
         "routeId": "route:admin:/admin/reports/snapshot-runs",
-        "apiCallId": "api:93"
+        "apiCallId": "api:95"
       },
       {
-        "id": "edge:route:admin:/admin/reports/turnover/:snapshotRunId:api:107",
+        "id": "edge:route:admin:/admin/reports/turnover/:snapshotRunId:api:109",
         "routeId": "route:admin:/admin/reports/turnover/:snapshotRunId",
-        "apiCallId": "api:107"
+        "apiCallId": "api:109"
       },
       {
-        "id": "edge:route:admin:/admin/reports/workforce/:snapshotRunId:api:94",
+        "id": "edge:route:admin:/admin/reports/workforce/:snapshotRunId:api:96",
         "routeId": "route:admin:/admin/reports/workforce/:snapshotRunId",
-        "apiCallId": "api:94"
+        "apiCallId": "api:96"
       },
       {
         "id": "edge:route:admin:/admin/session:api:4",
@@ -7361,39 +7438,29 @@
         "apiCallId": "api:4"
       },
       {
-        "id": "edge:route:admin:/admin/snapshots:api:108",
-        "routeId": "route:admin:/admin/snapshots",
-        "apiCallId": "api:108"
-      },
-      {
-        "id": "edge:route:admin:/admin/snapshots:api:109",
-        "routeId": "route:admin:/admin/snapshots",
-        "apiCallId": "api:109"
-      },
-      {
         "id": "edge:route:admin:/admin/snapshots:api:110",
         "routeId": "route:admin:/admin/snapshots",
         "apiCallId": "api:110"
       },
       {
-        "id": "edge:route:admin:/admin/snapshots:api:115",
+        "id": "edge:route:admin:/admin/snapshots:api:111",
         "routeId": "route:admin:/admin/snapshots",
-        "apiCallId": "api:115"
-      },
-      {
-        "id": "edge:route:admin:/admin/snapshots:api:116",
-        "routeId": "route:admin:/admin/snapshots",
-        "apiCallId": "api:116"
-      },
-      {
-        "id": "edge:route:admin:/admin/snapshots/:snapshotRunId:api:111",
-        "routeId": "route:admin:/admin/snapshots/:snapshotRunId",
         "apiCallId": "api:111"
       },
       {
-        "id": "edge:route:admin:/admin/snapshots/:snapshotRunId:api:112",
-        "routeId": "route:admin:/admin/snapshots/:snapshotRunId",
+        "id": "edge:route:admin:/admin/snapshots:api:112",
+        "routeId": "route:admin:/admin/snapshots",
         "apiCallId": "api:112"
+      },
+      {
+        "id": "edge:route:admin:/admin/snapshots:api:117",
+        "routeId": "route:admin:/admin/snapshots",
+        "apiCallId": "api:117"
+      },
+      {
+        "id": "edge:route:admin:/admin/snapshots:api:118",
+        "routeId": "route:admin:/admin/snapshots",
+        "apiCallId": "api:118"
       },
       {
         "id": "edge:route:admin:/admin/snapshots/:snapshotRunId:api:113",
@@ -7411,14 +7478,24 @@
         "apiCallId": "api:115"
       },
       {
-        "id": "edge:route:admin:/admin/targets:api:124",
-        "routeId": "route:admin:/admin/targets",
-        "apiCallId": "api:124"
+        "id": "edge:route:admin:/admin/snapshots/:snapshotRunId:api:116",
+        "routeId": "route:admin:/admin/snapshots/:snapshotRunId",
+        "apiCallId": "api:116"
       },
       {
-        "id": "edge:route:admin:/admin/targets:api:127",
+        "id": "edge:route:admin:/admin/snapshots/:snapshotRunId:api:117",
+        "routeId": "route:admin:/admin/snapshots/:snapshotRunId",
+        "apiCallId": "api:117"
+      },
+      {
+        "id": "edge:route:admin:/admin/targets:api:126",
         "routeId": "route:admin:/admin/targets",
-        "apiCallId": "api:127"
+        "apiCallId": "api:126"
+      },
+      {
+        "id": "edge:route:admin:/admin/targets:api:129",
+        "routeId": "route:admin:/admin/targets",
+        "apiCallId": "api:129"
       },
       {
         "id": "edge:route:auth:/auth/callback:api:5",
@@ -7436,9 +7513,9 @@
         "apiCallId": "api:5"
       },
       {
-        "id": "edge:route:store:/store:api:128",
+        "id": "edge:route:store:/store:api:130",
         "routeId": "route:store:/store",
-        "apiCallId": "api:128"
+        "apiCallId": "api:130"
       },
       {
         "id": "edge:route:store:/store:api:24",
@@ -7451,14 +7528,14 @@
         "apiCallId": "api:28"
       },
       {
-        "id": "edge:route:store:/store/approvals:api:130",
+        "id": "edge:route:store:/store/approvals:api:132",
         "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:130"
+        "apiCallId": "api:132"
       },
       {
-        "id": "edge:route:store:/store/approvals:api:138",
+        "id": "edge:route:store:/store/approvals:api:140",
         "routeId": "route:store:/store/approvals",
-        "apiCallId": "api:138"
+        "apiCallId": "api:140"
       },
       {
         "id": "edge:route:store:/store/checklists:api:24",
@@ -7506,9 +7583,9 @@
         "apiCallId": "api:54"
       },
       {
-        "id": "edge:route:store:/store/home:api:128",
+        "id": "edge:route:store:/store/home:api:130",
         "routeId": "route:store:/store/home",
-        "apiCallId": "api:128"
+        "apiCallId": "api:130"
       },
       {
         "id": "edge:route:store:/store/home:api:24",
@@ -7526,24 +7603,19 @@
         "apiCallId": "api:62"
       },
       {
-        "id": "edge:route:store:/store/kpis:api:103",
-        "routeId": "route:store:/store/kpis",
-        "apiCallId": "api:103"
-      },
-      {
-        "id": "edge:route:store:/store/kpis:api:104",
-        "routeId": "route:store:/store/kpis",
-        "apiCallId": "api:104"
-      },
-      {
         "id": "edge:route:store:/store/kpis:api:105",
         "routeId": "route:store:/store/kpis",
         "apiCallId": "api:105"
       },
       {
-        "id": "edge:route:store:/store/kpis:api:93",
+        "id": "edge:route:store:/store/kpis:api:106",
         "routeId": "route:store:/store/kpis",
-        "apiCallId": "api:93"
+        "apiCallId": "api:106"
+      },
+      {
+        "id": "edge:route:store:/store/kpis:api:107",
+        "routeId": "route:store:/store/kpis",
+        "apiCallId": "api:107"
       },
       {
         "id": "edge:route:store:/store/kpis:api:95",
@@ -7551,19 +7623,24 @@
         "apiCallId": "api:95"
       },
       {
-        "id": "edge:route:store:/store/kpis:api:96",
+        "id": "edge:route:store:/store/kpis:api:97",
         "routeId": "route:store:/store/kpis",
-        "apiCallId": "api:96"
+        "apiCallId": "api:97"
       },
       {
-        "id": "edge:route:store:/store/me:api:101",
-        "routeId": "route:store:/store/me",
-        "apiCallId": "api:101"
+        "id": "edge:route:store:/store/kpis:api:98",
+        "routeId": "route:store:/store/kpis",
+        "apiCallId": "api:98"
       },
       {
-        "id": "edge:route:store:/store/me:api:102",
+        "id": "edge:route:store:/store/me:api:103",
         "routeId": "route:store:/store/me",
-        "apiCallId": "api:102"
+        "apiCallId": "api:103"
+      },
+      {
+        "id": "edge:route:store:/store/me:api:104",
+        "routeId": "route:store:/store/me",
+        "apiCallId": "api:104"
       },
       {
         "id": "edge:route:store:/store/me:api:61",
@@ -7571,24 +7648,24 @@
         "apiCallId": "api:61"
       },
       {
-        "id": "edge:route:store:/store/me:api:93",
+        "id": "edge:route:store:/store/me:api:95",
         "routeId": "route:store:/store/me",
-        "apiCallId": "api:93"
+        "apiCallId": "api:95"
       },
       {
-        "id": "edge:route:store:/store/me:api:96",
+        "id": "edge:route:store:/store/me:api:98",
         "routeId": "route:store:/store/me",
-        "apiCallId": "api:96"
+        "apiCallId": "api:98"
       },
       {
-        "id": "edge:route:store:/store/personnel/:employeeId:api:101",
+        "id": "edge:route:store:/store/personnel/:employeeId:api:103",
         "routeId": "route:store:/store/personnel/:employeeId",
-        "apiCallId": "api:101"
+        "apiCallId": "api:103"
       },
       {
-        "id": "edge:route:store:/store/personnel/:employeeId:api:102",
+        "id": "edge:route:store:/store/personnel/:employeeId:api:104",
         "routeId": "route:store:/store/personnel/:employeeId",
-        "apiCallId": "api:102"
+        "apiCallId": "api:104"
       },
       {
         "id": "edge:route:store:/store/personnel/:employeeId:api:61",
@@ -7596,29 +7673,24 @@
         "apiCallId": "api:61"
       },
       {
-        "id": "edge:route:store:/store/personnel/:employeeId:api:93",
+        "id": "edge:route:store:/store/personnel/:employeeId:api:95",
         "routeId": "route:store:/store/personnel/:employeeId",
-        "apiCallId": "api:93"
+        "apiCallId": "api:95"
       },
       {
-        "id": "edge:route:store:/store/personnel/:employeeId:api:96",
+        "id": "edge:route:store:/store/personnel/:employeeId:api:98",
         "routeId": "route:store:/store/personnel/:employeeId",
-        "apiCallId": "api:96"
+        "apiCallId": "api:98"
       },
       {
-        "id": "edge:route:store:/store/rankings:api:105",
+        "id": "edge:route:store:/store/rankings:api:107",
         "routeId": "route:store:/store/rankings",
-        "apiCallId": "api:105"
+        "apiCallId": "api:107"
       },
       {
-        "id": "edge:route:store:/store/targets:api:123",
+        "id": "edge:route:store:/store/targets:api:125",
         "routeId": "route:store:/store/targets",
-        "apiCallId": "api:123"
-      },
-      {
-        "id": "edge:route:store:/store/targets:api:124",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:124"
+        "apiCallId": "api:125"
       },
       {
         "id": "edge:route:store:/store/targets:api:126",
@@ -7626,19 +7698,14 @@
         "apiCallId": "api:126"
       },
       {
-        "id": "edge:route:store:/store/targets:api:127",
+        "id": "edge:route:store:/store/targets:api:128",
         "routeId": "route:store:/store/targets",
-        "apiCallId": "api:127"
+        "apiCallId": "api:128"
       },
       {
-        "id": "edge:route:store:/store/tasks:api:117",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:117"
-      },
-      {
-        "id": "edge:route:store:/store/tasks:api:118",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:118"
+        "id": "edge:route:store:/store/targets:api:129",
+        "routeId": "route:store:/store/targets",
+        "apiCallId": "api:129"
       },
       {
         "id": "edge:route:store:/store/tasks:api:119",
@@ -7661,9 +7728,14 @@
         "apiCallId": "api:122"
       },
       {
-        "id": "edge:route:store:/store/tasks:api:128",
+        "id": "edge:route:store:/store/tasks:api:123",
         "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:128"
+        "apiCallId": "api:123"
+      },
+      {
+        "id": "edge:route:store:/store/tasks:api:124",
+        "routeId": "route:store:/store/tasks",
+        "apiCallId": "api:124"
       },
       {
         "id": "edge:route:store:/store/tasks:api:130",
@@ -7671,9 +7743,14 @@
         "apiCallId": "api:130"
       },
       {
-        "id": "edge:route:store:/store/tasks:api:138",
+        "id": "edge:route:store:/store/tasks:api:132",
         "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:138"
+        "apiCallId": "api:132"
+      },
+      {
+        "id": "edge:route:store:/store/tasks:api:140",
+        "routeId": "route:store:/store/tasks",
+        "apiCallId": "api:140"
       },
       {
         "id": "edge:route:store:/store/tasks:api:28",
@@ -7681,19 +7758,9 @@
         "apiCallId": "api:28"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:130",
+        "id": "edge:route:store:/store/workforce:api:132",
         "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:130"
-      },
-      {
-        "id": "edge:route:store:/store/workforce:api:133",
-        "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:133"
-      },
-      {
-        "id": "edge:route:store:/store/workforce:api:134",
-        "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:134"
+        "apiCallId": "api:132"
       },
       {
         "id": "edge:route:store:/store/workforce:api:135",
@@ -7726,9 +7793,19 @@
         "apiCallId": "api:140"
       },
       {
-        "id": "edge:route:store:/store/workforce:api:143",
+        "id": "edge:route:store:/store/workforce:api:141",
         "routeId": "route:store:/store/workforce",
-        "apiCallId": "api:143"
+        "apiCallId": "api:141"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:142",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:142"
+      },
+      {
+        "id": "edge:route:store:/store/workforce:api:145",
+        "routeId": "route:store:/store/workforce",
+        "apiCallId": "api:145"
       }
     ],
     "apiToEndpoint": [
@@ -7743,54 +7820,54 @@
         "backendEndpointId": "endpoint:GET:/api/auth/permissions"
       },
       {
-        "id": "edge:api:100:endpoint:GET:/api/reports/kpi-config/audit",
+        "id": "edge:api:100:endpoint:PATCH:/api/reports/kpi-config",
         "apiCallId": "api:100",
+        "backendEndpointId": "endpoint:PATCH:/api/reports/kpi-config"
+      },
+      {
+        "id": "edge:api:101:endpoint:PATCH:/api/reports/kpi-config/publish",
+        "apiCallId": "api:101",
+        "backendEndpointId": "endpoint:PATCH:/api/reports/kpi-config/publish"
+      },
+      {
+        "id": "edge:api:102:endpoint:GET:/api/reports/kpi-config/audit",
+        "apiCallId": "api:102",
         "backendEndpointId": "endpoint:GET:/api/reports/kpi-config/audit"
       },
       {
-        "id": "edge:api:101:endpoint:GET:/api/reports/my-performance",
-        "apiCallId": "api:101",
+        "id": "edge:api:103:endpoint:GET:/api/reports/my-performance",
+        "apiCallId": "api:103",
         "backendEndpointId": "endpoint:GET:/api/reports/my-performance"
       },
       {
-        "id": "edge:api:102:endpoint:GET:/api/reports/personnel-performance/{employeeId}",
-        "apiCallId": "api:102",
+        "id": "edge:api:104:endpoint:GET:/api/reports/personnel-performance/{employeeId}",
+        "apiCallId": "api:104",
         "backendEndpointId": "endpoint:GET:/api/reports/personnel-performance/{employeeId}"
       },
       {
-        "id": "edge:api:103:endpoint:GET:/api/reports/store-kpi-highlights",
-        "apiCallId": "api:103",
+        "id": "edge:api:105:endpoint:GET:/api/reports/store-kpi-highlights",
+        "apiCallId": "api:105",
         "backendEndpointId": "endpoint:GET:/api/reports/store-kpi-highlights"
       },
       {
-        "id": "edge:api:104:endpoint:GET:/api/reports/store-score-breakdown",
-        "apiCallId": "api:104",
+        "id": "edge:api:106:endpoint:GET:/api/reports/store-score-breakdown",
+        "apiCallId": "api:106",
         "backendEndpointId": "endpoint:GET:/api/reports/store-score-breakdown"
       },
       {
-        "id": "edge:api:105:endpoint:GET:/api/reports/rankings",
-        "apiCallId": "api:105",
+        "id": "edge:api:107:endpoint:GET:/api/reports/rankings",
+        "apiCallId": "api:107",
         "backendEndpointId": "endpoint:GET:/api/reports/rankings"
       },
       {
-        "id": "edge:api:106:endpoint:GET:/api/reports/checklists",
-        "apiCallId": "api:106",
+        "id": "edge:api:108:endpoint:GET:/api/reports/checklists",
+        "apiCallId": "api:108",
         "backendEndpointId": "endpoint:GET:/api/reports/checklists"
       },
       {
-        "id": "edge:api:107:endpoint:GET:/api/reports/turnover",
-        "apiCallId": "api:107",
-        "backendEndpointId": "endpoint:GET:/api/reports/turnover"
-      },
-      {
-        "id": "edge:api:108:endpoint:GET:/api/snapshots/runs/overview",
-        "apiCallId": "api:108",
-        "backendEndpointId": "endpoint:GET:/api/snapshots/runs/overview"
-      },
-      {
-        "id": "edge:api:109:endpoint:GET:/api/snapshots/daily-closure",
+        "id": "edge:api:109:endpoint:GET:/api/reports/turnover",
         "apiCallId": "api:109",
-        "backendEndpointId": "endpoint:GET:/api/snapshots/daily-closure"
+        "backendEndpointId": "endpoint:GET:/api/reports/turnover"
       },
       {
         "id": "edge:api:11:endpoint:PATCH:/api/auth/role-assignments/{assignmentId}/deactivate",
@@ -7798,54 +7875,54 @@
         "backendEndpointId": "endpoint:PATCH:/api/auth/role-assignments/{assignmentId}/deactivate"
       },
       {
-        "id": "edge:api:110:endpoint:GET:/api/snapshots/runs/needs-action",
+        "id": "edge:api:110:endpoint:GET:/api/snapshots/runs/overview",
         "apiCallId": "api:110",
+        "backendEndpointId": "endpoint:GET:/api/snapshots/runs/overview"
+      },
+      {
+        "id": "edge:api:111:endpoint:GET:/api/snapshots/daily-closure",
+        "apiCallId": "api:111",
+        "backendEndpointId": "endpoint:GET:/api/snapshots/daily-closure"
+      },
+      {
+        "id": "edge:api:112:endpoint:GET:/api/snapshots/runs/needs-action",
+        "apiCallId": "api:112",
         "backendEndpointId": "endpoint:GET:/api/snapshots/runs/needs-action"
       },
       {
-        "id": "edge:api:111:endpoint:GET:/api/snapshots/runs/{snapshotRunId}",
-        "apiCallId": "api:111",
+        "id": "edge:api:113:endpoint:GET:/api/snapshots/runs/{snapshotRunId}",
+        "apiCallId": "api:113",
         "backendEndpointId": "endpoint:GET:/api/snapshots/runs/{snapshotRunId}"
       },
       {
-        "id": "edge:api:112:endpoint:GET:/api/snapshots/runs/{snapshotRunId}/dependencies",
-        "apiCallId": "api:112",
+        "id": "edge:api:114:endpoint:GET:/api/snapshots/runs/{snapshotRunId}/dependencies",
+        "apiCallId": "api:114",
         "backendEndpointId": "endpoint:GET:/api/snapshots/runs/{snapshotRunId}/dependencies"
       },
       {
-        "id": "edge:api:113:endpoint:GET:/api/snapshots/runs/{snapshotRunId}/lineage",
-        "apiCallId": "api:113",
+        "id": "edge:api:115:endpoint:GET:/api/snapshots/runs/{snapshotRunId}/lineage",
+        "apiCallId": "api:115",
         "backendEndpointId": "endpoint:GET:/api/snapshots/runs/{snapshotRunId}/lineage"
       },
       {
-        "id": "edge:api:114:endpoint:GET:/api/snapshots/runs/{snapshotRunId}/audit",
-        "apiCallId": "api:114",
+        "id": "edge:api:116:endpoint:GET:/api/snapshots/runs/{snapshotRunId}/audit",
+        "apiCallId": "api:116",
         "backendEndpointId": "endpoint:GET:/api/snapshots/runs/{snapshotRunId}/audit"
       },
       {
-        "id": "edge:api:115:endpoint:POST:/api/snapshots/runs/{snapshotRunId}/rerun",
-        "apiCallId": "api:115",
+        "id": "edge:api:117:endpoint:POST:/api/snapshots/runs/{snapshotRunId}/rerun",
+        "apiCallId": "api:117",
         "backendEndpointId": "endpoint:POST:/api/snapshots/runs/{snapshotRunId}/rerun"
       },
       {
-        "id": "edge:api:116:endpoint:POST:/api/snapshots/daily-closure/run",
-        "apiCallId": "api:116",
+        "id": "edge:api:118:endpoint:POST:/api/snapshots/daily-closure/run",
+        "apiCallId": "api:118",
         "backendEndpointId": "endpoint:POST:/api/snapshots/daily-closure/run"
       },
       {
-        "id": "edge:api:117:endpoint:GET:/api/store-actions/plans",
-        "apiCallId": "api:117",
-        "backendEndpointId": "endpoint:GET:/api/store-actions/plans"
-      },
-      {
-        "id": "edge:api:118:endpoint:GET:/api/store-actions/plans/{actionPlanId}",
-        "apiCallId": "api:118",
-        "backendEndpointId": "endpoint:GET:/api/store-actions/plans/{actionPlanId}"
-      },
-      {
-        "id": "edge:api:119:endpoint:POST:/api/store-actions/plans",
+        "id": "edge:api:119:endpoint:GET:/api/store-actions/plans",
         "apiCallId": "api:119",
-        "backendEndpointId": "endpoint:POST:/api/store-actions/plans"
+        "backendEndpointId": "endpoint:GET:/api/store-actions/plans"
       },
       {
         "id": "edge:api:12:endpoint:PATCH:/api/auth/action-store-assignments/{assignmentId}/deactivate",
@@ -7853,54 +7930,54 @@
         "backendEndpointId": "endpoint:PATCH:/api/auth/action-store-assignments/{assignmentId}/deactivate"
       },
       {
-        "id": "edge:api:120:endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/status",
+        "id": "edge:api:120:endpoint:GET:/api/store-actions/plans/{actionPlanId}",
         "apiCallId": "api:120",
+        "backendEndpointId": "endpoint:GET:/api/store-actions/plans/{actionPlanId}"
+      },
+      {
+        "id": "edge:api:121:endpoint:POST:/api/store-actions/plans",
+        "apiCallId": "api:121",
+        "backendEndpointId": "endpoint:POST:/api/store-actions/plans"
+      },
+      {
+        "id": "edge:api:122:endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/status",
+        "apiCallId": "api:122",
         "backendEndpointId": "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/status"
       },
       {
-        "id": "edge:api:121:endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/close",
-        "apiCallId": "api:121",
+        "id": "edge:api:123:endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/close",
+        "apiCallId": "api:123",
         "backendEndpointId": "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/close"
       },
       {
-        "id": "edge:api:122:endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/cancel",
-        "apiCallId": "api:122",
+        "id": "edge:api:124:endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/cancel",
+        "apiCallId": "api:124",
         "backendEndpointId": "endpoint:PATCH:/api/store-actions/plans/{actionPlanId}/cancel"
       },
       {
-        "id": "edge:api:123:endpoint:GET:/api/target-distributions/store-personnel",
-        "apiCallId": "api:123",
+        "id": "edge:api:125:endpoint:GET:/api/target-distributions/store-personnel",
+        "apiCallId": "api:125",
         "backendEndpointId": "endpoint:GET:/api/target-distributions/store-personnel"
       },
       {
-        "id": "edge:api:124:endpoint:GET:/api/target-distributions/coverage",
-        "apiCallId": "api:124",
+        "id": "edge:api:126:endpoint:GET:/api/target-distributions/coverage",
+        "apiCallId": "api:126",
         "backendEndpointId": "endpoint:GET:/api/target-distributions/coverage"
       },
       {
-        "id": "edge:api:125:endpoint:GET:/api/target-distributions/requests",
-        "apiCallId": "api:125",
+        "id": "edge:api:127:endpoint:GET:/api/target-distributions/requests",
+        "apiCallId": "api:127",
         "backendEndpointId": "endpoint:GET:/api/target-distributions/requests"
       },
       {
-        "id": "edge:api:126:endpoint:POST:/api/target-distributions/requests",
-        "apiCallId": "api:126",
+        "id": "edge:api:128:endpoint:POST:/api/target-distributions/requests",
+        "apiCallId": "api:128",
         "backendEndpointId": "endpoint:POST:/api/target-distributions/requests"
       },
       {
-        "id": "edge:api:127:endpoint:PATCH:/api/target-distributions/requests/{requestId}/approve",
-        "apiCallId": "api:127",
-        "backendEndpointId": "endpoint:PATCH:/api/target-distributions/requests/{requestId}/approve"
-      },
-      {
-        "id": "edge:api:128:endpoint:GET:/api/workflow/inbox",
-        "apiCallId": "api:128",
-        "backendEndpointId": "endpoint:GET:/api/workflow/inbox"
-      },
-      {
-        "id": "edge:api:129:endpoint:GET:/api/workforce/seller-code-reference",
+        "id": "edge:api:129:endpoint:PATCH:/api/target-distributions/requests/{requestId}/approve",
         "apiCallId": "api:129",
-        "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-reference"
+        "backendEndpointId": "endpoint:PATCH:/api/target-distributions/requests/{requestId}/approve"
       },
       {
         "id": "edge:api:13:endpoint:PATCH:/api/auth/users/{userId}/deactivate",
@@ -7908,54 +7985,54 @@
         "backendEndpointId": "endpoint:PATCH:/api/auth/users/{userId}/deactivate"
       },
       {
-        "id": "edge:api:130:endpoint:GET:/api/workforce/seller-code-requests",
+        "id": "edge:api:130:endpoint:GET:/api/workflow/inbox",
         "apiCallId": "api:130",
+        "backendEndpointId": "endpoint:GET:/api/workflow/inbox"
+      },
+      {
+        "id": "edge:api:131:endpoint:GET:/api/workforce/seller-code-reference",
+        "apiCallId": "api:131",
+        "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-reference"
+      },
+      {
+        "id": "edge:api:132:endpoint:GET:/api/workforce/seller-code-requests",
+        "apiCallId": "api:132",
         "backendEndpointId": "endpoint:GET:/api/workforce/seller-code-requests"
       },
       {
-        "id": "edge:api:131:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve",
-        "apiCallId": "api:131",
+        "id": "edge:api:133:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve",
+        "apiCallId": "api:133",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/approve"
       },
       {
-        "id": "edge:api:132:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject",
-        "apiCallId": "api:132",
+        "id": "edge:api:134:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject",
+        "apiCallId": "api:134",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/reject"
       },
       {
-        "id": "edge:api:133:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit",
-        "apiCallId": "api:133",
+        "id": "edge:api:135:endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit",
+        "apiCallId": "api:135",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/seller-code-requests/{requestId}/resubmit"
       },
       {
-        "id": "edge:api:134:endpoint:GET:/api/workforce/position-options",
-        "apiCallId": "api:134",
+        "id": "edge:api:136:endpoint:GET:/api/workforce/position-options",
+        "apiCallId": "api:136",
         "backendEndpointId": "endpoint:GET:/api/workforce/position-options"
       },
       {
-        "id": "edge:api:135:endpoint:GET:/api/workforce/store-employees",
-        "apiCallId": "api:135",
+        "id": "edge:api:137:endpoint:GET:/api/workforce/store-employees",
+        "apiCallId": "api:137",
         "backendEndpointId": "endpoint:GET:/api/workforce/store-employees"
       },
       {
-        "id": "edge:api:136:endpoint:GET:/api/workforce/headcount-gap",
-        "apiCallId": "api:136",
+        "id": "edge:api:138:endpoint:GET:/api/workforce/headcount-gap",
+        "apiCallId": "api:138",
         "backendEndpointId": "endpoint:GET:/api/workforce/headcount-gap"
       },
       {
-        "id": "edge:api:137:endpoint:GET:/api/org/stores",
-        "apiCallId": "api:137",
-        "backendEndpointId": "endpoint:GET:/api/org/stores"
-      },
-      {
-        "id": "edge:api:138:endpoint:GET:/api/workforce/offboarding-requests",
-        "apiCallId": "api:138",
-        "backendEndpointId": "endpoint:GET:/api/workforce/offboarding-requests"
-      },
-      {
-        "id": "edge:api:139:endpoint:POST:/api/workforce/seller-code-requests",
+        "id": "edge:api:139:endpoint:GET:/api/org/stores",
         "apiCallId": "api:139",
-        "backendEndpointId": "endpoint:POST:/api/workforce/seller-code-requests"
+        "backendEndpointId": "endpoint:GET:/api/org/stores"
       },
       {
         "id": "edge:api:14:endpoint:PATCH:/api/auth/users/{userId}/reactivate",
@@ -7963,23 +8040,33 @@
         "backendEndpointId": "endpoint:PATCH:/api/auth/users/{userId}/reactivate"
       },
       {
-        "id": "edge:api:140:endpoint:POST:/api/workforce/offboarding-requests",
+        "id": "edge:api:140:endpoint:GET:/api/workforce/offboarding-requests",
         "apiCallId": "api:140",
+        "backendEndpointId": "endpoint:GET:/api/workforce/offboarding-requests"
+      },
+      {
+        "id": "edge:api:141:endpoint:POST:/api/workforce/seller-code-requests",
+        "apiCallId": "api:141",
+        "backendEndpointId": "endpoint:POST:/api/workforce/seller-code-requests"
+      },
+      {
+        "id": "edge:api:142:endpoint:POST:/api/workforce/offboarding-requests",
+        "apiCallId": "api:142",
         "backendEndpointId": "endpoint:POST:/api/workforce/offboarding-requests"
       },
       {
-        "id": "edge:api:141:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
-        "apiCallId": "api:141",
+        "id": "edge:api:143:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve",
+        "apiCallId": "api:143",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/approve"
       },
       {
-        "id": "edge:api:142:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
-        "apiCallId": "api:142",
+        "id": "edge:api:144:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject",
+        "apiCallId": "api:144",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/reject"
       },
       {
-        "id": "edge:api:143:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
-        "apiCallId": "api:143",
+        "id": "edge:api:145:endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit",
+        "apiCallId": "api:145",
         "backendEndpointId": "endpoint:PATCH:/api/workforce/offboarding-requests/{requestId}/resubmit"
       },
       {
@@ -8248,39 +8335,39 @@
         "backendEndpointId": "endpoint:GET:/api/store/incentives"
       },
       {
-        "id": "edge:api:63:endpoint:GET:/api/integrations/import-batches/overview",
+        "id": "edge:api:63:endpoint:GET:/api/admin/incentives",
         "apiCallId": "api:63",
+        "backendEndpointId": "endpoint:GET:/api/admin/incentives"
+      },
+      {
+        "id": "edge:api:64:endpoint:POST:/api/admin/incentives/corrections",
+        "apiCallId": "api:64",
+        "backendEndpointId": "endpoint:POST:/api/admin/incentives/corrections"
+      },
+      {
+        "id": "edge:api:65:endpoint:GET:/api/integrations/import-batches/overview",
+        "apiCallId": "api:65",
         "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/overview"
       },
       {
-        "id": "edge:api:64:endpoint:GET:/api/integrations/lookups",
-        "apiCallId": "api:64",
+        "id": "edge:api:66:endpoint:GET:/api/integrations/lookups",
+        "apiCallId": "api:66",
         "backendEndpointId": "endpoint:GET:/api/integrations/lookups"
       },
       {
-        "id": "edge:api:65:endpoint:GET:/api/integrations/import-batches/needs-action",
-        "apiCallId": "api:65",
+        "id": "edge:api:67:endpoint:GET:/api/integrations/import-batches/needs-action",
+        "apiCallId": "api:67",
         "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/needs-action"
       },
       {
-        "id": "edge:api:66:endpoint:GET:/api/integrations/import-batches/{batchId}",
-        "apiCallId": "api:66",
+        "id": "edge:api:68:endpoint:GET:/api/integrations/import-batches/{batchId}",
+        "apiCallId": "api:68",
         "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/{batchId}"
       },
       {
-        "id": "edge:api:67:endpoint:GET:/api/integrations/import-batches/{batchId}/reconciliation",
-        "apiCallId": "api:67",
-        "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/{batchId}/reconciliation"
-      },
-      {
-        "id": "edge:api:68:endpoint:GET:/api/integrations/import-batches/{batchId}/errors",
-        "apiCallId": "api:68",
-        "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/{batchId}/errors"
-      },
-      {
-        "id": "edge:api:69:endpoint:GET:/api/integrations/import-batches/{batchId}/audit",
+        "id": "edge:api:69:endpoint:GET:/api/integrations/import-batches/{batchId}/reconciliation",
         "apiCallId": "api:69",
-        "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/{batchId}/audit"
+        "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/{batchId}/reconciliation"
       },
       {
         "id": "edge:api:7:endpoint:GET:/api/auth/role-assignments",
@@ -8288,54 +8375,54 @@
         "backendEndpointId": "endpoint:GET:/api/auth/role-assignments"
       },
       {
-        "id": "edge:api:70:endpoint:POST:/api/integrations/import-batches/{batchId}/retry",
+        "id": "edge:api:70:endpoint:GET:/api/integrations/import-batches/{batchId}/errors",
         "apiCallId": "api:70",
+        "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/{batchId}/errors"
+      },
+      {
+        "id": "edge:api:71:endpoint:GET:/api/integrations/import-batches/{batchId}/audit",
+        "apiCallId": "api:71",
+        "backendEndpointId": "endpoint:GET:/api/integrations/import-batches/{batchId}/audit"
+      },
+      {
+        "id": "edge:api:72:endpoint:POST:/api/integrations/import-batches/{batchId}/retry",
+        "apiCallId": "api:72",
         "backendEndpointId": "endpoint:POST:/api/integrations/import-batches/{batchId}/retry"
       },
       {
-        "id": "edge:api:71:endpoint:GET:/api/integrations/external-id-map-candidates",
-        "apiCallId": "api:71",
+        "id": "edge:api:73:endpoint:GET:/api/integrations/external-id-map-candidates",
+        "apiCallId": "api:73",
         "backendEndpointId": "endpoint:GET:/api/integrations/external-id-map-candidates"
       },
       {
-        "id": "edge:api:72:endpoint:POST:/api/integrations/external-id-maps",
-        "apiCallId": "api:72",
+        "id": "edge:api:74:endpoint:POST:/api/integrations/external-id-maps",
+        "apiCallId": "api:74",
         "backendEndpointId": "endpoint:POST:/api/integrations/external-id-maps"
       },
       {
-        "id": "edge:api:73:endpoint:GET:/api/integrations/store-master",
-        "apiCallId": "api:73",
+        "id": "edge:api:75:endpoint:GET:/api/integrations/store-master",
+        "apiCallId": "api:75",
         "backendEndpointId": "endpoint:GET:/api/integrations/store-master"
       },
       {
-        "id": "edge:api:74:endpoint:GET:/api/integrations/store-master-lookups",
-        "apiCallId": "api:74",
+        "id": "edge:api:76:endpoint:GET:/api/integrations/store-master-lookups",
+        "apiCallId": "api:76",
         "backendEndpointId": "endpoint:GET:/api/integrations/store-master-lookups"
       },
       {
-        "id": "edge:api:75:endpoint:PATCH:/api/integrations/store-master/{storeId}",
-        "apiCallId": "api:75",
+        "id": "edge:api:77:endpoint:PATCH:/api/integrations/store-master/{storeId}",
+        "apiCallId": "api:77",
         "backendEndpointId": "endpoint:PATCH:/api/integrations/store-master/{storeId}"
       },
       {
-        "id": "edge:api:76:endpoint:GET:/api/integrations/personnel-master",
-        "apiCallId": "api:76",
+        "id": "edge:api:78:endpoint:GET:/api/integrations/personnel-master",
+        "apiCallId": "api:78",
         "backendEndpointId": "endpoint:GET:/api/integrations/personnel-master"
       },
       {
-        "id": "edge:api:77:endpoint:GET:/api/integrations/personnel-master-lookups",
-        "apiCallId": "api:77",
-        "backendEndpointId": "endpoint:GET:/api/integrations/personnel-master-lookups"
-      },
-      {
-        "id": "edge:api:78:endpoint:PATCH:/api/integrations/personnel-master/{employeeId}",
-        "apiCallId": "api:78",
-        "backendEndpointId": "endpoint:PATCH:/api/integrations/personnel-master/{employeeId}"
-      },
-      {
-        "id": "edge:api:79:endpoint:GET:/api/integrations/master-data-bootstrap/batches",
+        "id": "edge:api:79:endpoint:GET:/api/integrations/personnel-master-lookups",
         "apiCallId": "api:79",
-        "backendEndpointId": "endpoint:GET:/api/integrations/master-data-bootstrap/batches"
+        "backendEndpointId": "endpoint:GET:/api/integrations/personnel-master-lookups"
       },
       {
         "id": "edge:api:8:endpoint:GET:/api/auth/action-store-assignments",
@@ -8343,54 +8430,54 @@
         "backendEndpointId": "endpoint:GET:/api/auth/action-store-assignments"
       },
       {
-        "id": "edge:api:80:endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}",
+        "id": "edge:api:80:endpoint:PATCH:/api/integrations/personnel-master/{employeeId}",
         "apiCallId": "api:80",
+        "backendEndpointId": "endpoint:PATCH:/api/integrations/personnel-master/{employeeId}"
+      },
+      {
+        "id": "edge:api:81:endpoint:GET:/api/integrations/master-data-bootstrap/batches",
+        "apiCallId": "api:81",
+        "backendEndpointId": "endpoint:GET:/api/integrations/master-data-bootstrap/batches"
+      },
+      {
+        "id": "edge:api:82:endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}",
+        "apiCallId": "api:82",
         "backendEndpointId": "endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}"
       },
       {
-        "id": "edge:api:81:endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness",
-        "apiCallId": "api:81",
+        "id": "edge:api:83:endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness",
+        "apiCallId": "api:83",
         "backendEndpointId": "endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}/promotion-readiness"
       },
       {
-        "id": "edge:api:82:endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/validate",
-        "apiCallId": "api:82",
+        "id": "edge:api:84:endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/validate",
+        "apiCallId": "api:84",
         "backendEndpointId": "endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/validate"
       },
       {
-        "id": "edge:api:83:endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/promote-stores",
-        "apiCallId": "api:83",
+        "id": "edge:api:85:endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/promote-stores",
+        "apiCallId": "api:85",
         "backendEndpointId": "endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/promote-stores"
       },
       {
-        "id": "edge:api:84:endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/promote-personnel",
-        "apiCallId": "api:84",
+        "id": "edge:api:86:endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/promote-personnel",
+        "apiCallId": "api:86",
         "backendEndpointId": "endpoint:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/promote-personnel"
       },
       {
-        "id": "edge:api:85:endpoint:GET:/api/integrations/import-payload-templates",
-        "apiCallId": "api:85",
+        "id": "edge:api:87:endpoint:GET:/api/integrations/import-payload-templates",
+        "apiCallId": "api:87",
         "backendEndpointId": "endpoint:GET:/api/integrations/import-payload-templates"
       },
       {
-        "id": "edge:api:86:endpoint:POST:/api/integrations/import-batches",
-        "apiCallId": "api:86",
+        "id": "edge:api:88:endpoint:POST:/api/integrations/import-batches",
+        "apiCallId": "api:88",
         "backendEndpointId": "endpoint:POST:/api/integrations/import-batches"
       },
       {
-        "id": "edge:api:87:endpoint:POST:/api/integrations/power-bi-export-upload",
-        "apiCallId": "api:87",
-        "backendEndpointId": "endpoint:POST:/api/integrations/power-bi-export-upload"
-      },
-      {
-        "id": "edge:api:88:endpoint:GET:/api/health",
-        "apiCallId": "api:88",
-        "backendEndpointId": "endpoint:GET:/api/health"
-      },
-      {
-        "id": "edge:api:89:endpoint:POST:/api/pilot-feedback",
+        "id": "edge:api:89:endpoint:POST:/api/integrations/power-bi-export-upload",
         "apiCallId": "api:89",
-        "backendEndpointId": "endpoint:POST:/api/pilot-feedback"
+        "backendEndpointId": "endpoint:POST:/api/integrations/power-bi-export-upload"
       },
       {
         "id": "edge:api:9:endpoint:GET:/api/auth/roles",
@@ -8398,54 +8485,54 @@
         "backendEndpointId": "endpoint:GET:/api/auth/roles"
       },
       {
-        "id": "edge:api:90:endpoint:GET:/api/admin/pilot-feedback",
+        "id": "edge:api:90:endpoint:GET:/api/health",
         "apiCallId": "api:90",
+        "backendEndpointId": "endpoint:GET:/api/health"
+      },
+      {
+        "id": "edge:api:91:endpoint:POST:/api/pilot-feedback",
+        "apiCallId": "api:91",
+        "backendEndpointId": "endpoint:POST:/api/pilot-feedback"
+      },
+      {
+        "id": "edge:api:92:endpoint:GET:/api/admin/pilot-feedback",
+        "apiCallId": "api:92",
         "backendEndpointId": "endpoint:GET:/api/admin/pilot-feedback"
       },
       {
-        "id": "edge:api:91:endpoint:PATCH:/api/admin/pilot-feedback/{feedbackId}/classification",
-        "apiCallId": "api:91",
+        "id": "edge:api:93:endpoint:PATCH:/api/admin/pilot-feedback/{feedbackId}/classification",
+        "apiCallId": "api:93",
         "backendEndpointId": "endpoint:PATCH:/api/admin/pilot-feedback/{feedbackId}/classification"
       },
       {
-        "id": "edge:api:92:endpoint:GET:/api/reports/summary",
-        "apiCallId": "api:92",
+        "id": "edge:api:94:endpoint:GET:/api/reports/summary",
+        "apiCallId": "api:94",
         "backendEndpointId": "endpoint:GET:/api/reports/summary"
       },
       {
-        "id": "edge:api:93:endpoint:GET:/api/reports/snapshot-runs",
-        "apiCallId": "api:93",
+        "id": "edge:api:95:endpoint:GET:/api/reports/snapshot-runs",
+        "apiCallId": "api:95",
         "backendEndpointId": "endpoint:GET:/api/reports/snapshot-runs"
       },
       {
-        "id": "edge:api:94:endpoint:GET:/api/reports/workforce",
-        "apiCallId": "api:94",
+        "id": "edge:api:96:endpoint:GET:/api/reports/workforce",
+        "apiCallId": "api:96",
         "backendEndpointId": "endpoint:GET:/api/reports/workforce"
       },
       {
-        "id": "edge:api:95:endpoint:GET:/api/reports/kpis",
-        "apiCallId": "api:95",
+        "id": "edge:api:97:endpoint:GET:/api/reports/kpis",
+        "apiCallId": "api:97",
         "backendEndpointId": "endpoint:GET:/api/reports/kpis"
       },
       {
-        "id": "edge:api:96:endpoint:GET:/api/reports/kpi-config",
-        "apiCallId": "api:96",
+        "id": "edge:api:98:endpoint:GET:/api/reports/kpi-config",
+        "apiCallId": "api:98",
         "backendEndpointId": "endpoint:GET:/api/reports/kpi-config"
       },
       {
-        "id": "edge:api:97:endpoint:GET:/api/reports/kpi-config/editor",
-        "apiCallId": "api:97",
-        "backendEndpointId": "endpoint:GET:/api/reports/kpi-config/editor"
-      },
-      {
-        "id": "edge:api:98:endpoint:PATCH:/api/reports/kpi-config",
-        "apiCallId": "api:98",
-        "backendEndpointId": "endpoint:PATCH:/api/reports/kpi-config"
-      },
-      {
-        "id": "edge:api:99:endpoint:PATCH:/api/reports/kpi-config/publish",
+        "id": "edge:api:99:endpoint:GET:/api/reports/kpi-config/editor",
         "apiCallId": "api:99",
-        "backendEndpointId": "endpoint:PATCH:/api/reports/kpi-config/publish"
+        "backendEndpointId": "endpoint:GET:/api/reports/kpi-config/editor"
       }
     ]
   },
@@ -8464,6 +8551,14 @@
         "method": "GET",
         "path": "/api/admin/feed",
         "controller": "feed",
+        "domain": "admin",
+        "frontendCallCount": 1
+      },
+      {
+        "endpointId": "endpoint:GET:/api/admin/incentives",
+        "method": "GET",
+        "path": "/api/admin/incentives",
+        "controller": "admin-sales-target-incentive",
         "domain": "admin",
         "frontendCallCount": 1
       },
@@ -8602,14 +8697,6 @@
         "controller": "competition",
         "domain": "competitions",
         "frontendCallCount": 1
-      },
-      {
-        "endpointId": "endpoint:GET:/api/competitions/stage-package-plans/{planId}/audit",
-        "method": "GET",
-        "path": "/api/competitions/stage-package-plans/{planId}/audit",
-        "controller": "competition",
-        "domain": "competitions",
-        "frontendCallCount": 1
       }
     ],
     "controllersByEndpointCount": [
@@ -8712,6 +8799,13 @@
         "frontendCallCount": 2
       },
       {
+        "id": "controller:admin-sales-target-incentive",
+        "controller": "admin-sales-target-incentive",
+        "domain": "admin",
+        "endpointCount": 2,
+        "frontendCallCount": 2
+      },
+      {
         "id": "controller:snapshot-scheduler",
         "controller": "snapshot-scheduler",
         "domain": "snapshots",
@@ -8759,20 +8853,12 @@
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 0
-      },
-      {
-        "id": "controller:admin-sales-target-incentive",
-        "controller": "admin-sales-target-incentive",
-        "domain": "admin",
-        "endpointCount": 1,
-        "frontendCallCount": 0
       }
     ]
   },
   "risks": {
     "backendEndpointsWithoutFrontendCalls": [
       "endpoint:PUT:/api/admin/feed/{feedPostId}",
-      "endpoint:GET:/api/admin/incentives",
       "endpoint:POST:/api/admin/migrations/run",
       "endpoint:GET:/api/admin/migrations/status",
       "endpoint:DELETE:/api/auth/browser-session",
