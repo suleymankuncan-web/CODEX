@@ -218,6 +218,8 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     });
 
     expect(String(query.mock.calls[1][0])).toContain("pg_advisory_xact_lock");
+    expect(String(query.mock.calls[2][0])).toContain("adjustment.final_row_id = $8::uuid");
+    expect(query.mock.calls[2][1][7]).toBe(finalRowId);
     expect(String(query.mock.calls[3][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
     expect(String(query.mock.calls[3][0])).not.toContain("INSERT INTO ops.sales_target_incentive_projection_row");
     expect(query.mock.calls[3][1].slice(0, 8)).toEqual([
@@ -358,6 +360,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       "3960.00",
       "projection",
       "correction",
+      null,
     ]);
     expect(query.mock.calls[7][1]).toEqual(
       expect.arrayContaining(["projection", "correction", "-35.00", "4085.25"]),

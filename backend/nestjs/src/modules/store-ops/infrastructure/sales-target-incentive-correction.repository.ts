@@ -159,6 +159,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         adjustmentScope,
         adjustmentType,
         baseAmount,
+        finalRowId: finalRow?.final_row_id ?? null,
       });
 
       const adjustment = await this.insertApprovedAdjustment(client, {
@@ -235,6 +236,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         adjustmentScope: "final_snapshot",
         adjustmentType: "manual_adjustment",
         baseAmount: finalRow.final_amount,
+        finalRowId: finalRow.final_row_id,
       });
       const adjustment = await this.insertApprovedAdjustment(client, {
         ruleVersionId: finalRow.rule_version_id,
@@ -520,6 +522,7 @@ export class SalesTargetIncentiveCorrectionRepository {
       adjustmentScope: "projection" | "final_snapshot";
       adjustmentType: "correction" | "manual_adjustment";
       baseAmount: string;
+      finalRowId: string | null;
     },
   ) {
     const result = await client.query<CurrentAmountLookup>(
@@ -539,6 +542,7 @@ export class SalesTargetIncentiveCorrectionRepository {
           AND adjustment.adjustment_scope = $6
           AND adjustment.adjustment_type = $7
           AND adjustment.status = 'approved'
+          AND ($8::uuid IS NULL OR adjustment.final_row_id = $8::uuid)
       `,
       [
         input.periodKey,
@@ -548,6 +552,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         input.baseAmount,
         input.adjustmentScope,
         input.adjustmentType,
+        input.finalRowId,
       ],
     );
 

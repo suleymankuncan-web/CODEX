@@ -380,11 +380,14 @@ export class SalesTargetIncentiveApiService {
     });
     const canApplyCorrectionStatus =
       calculation.payableAmount !== null || adjustmentSummary?.final_amount != null;
+    const baseStatus = usesFinalSnapshot
+      ? resolveFinalSnapshotApiStatus(adjustmentSummary?.calculation_status)
+      : calculation.status;
     const status: SalesTargetIncentiveApiRow["status"] = canApplyCorrectionStatus && adjustmentAmount
       ? "adjusted"
       : canApplyCorrectionStatus && correctionAmount
         ? "corrected"
-        : calculation.status;
+        : baseStatus;
     const snapshotPositionCode = resolveApiPositionCode(
       adjustmentSummary?.position_code,
       participant.positionCode,
@@ -420,7 +423,7 @@ export class SalesTargetIncentiveApiService {
       adjustmentAmount,
       finalAmount,
       status,
-      blockedReason: calculation.blockedReason,
+      blockedReason: usesFinalSnapshot ? null : calculation.blockedReason,
       rateTableVersion: usesFinalSnapshot
         ? adjustmentSummary?.rate_table_version ?? calculation.rateTableVersion
         : calculation.rateTableVersion,
@@ -560,6 +563,12 @@ function resolveApiPositionCode(
     value === "SALES_ASSOCIATE"
     ? value
     : fallback;
+}
+
+function resolveFinalSnapshotApiStatus(
+  status: string | null | undefined,
+): Exclude<SalesTargetIncentiveCalculationStatus, "excluded"> {
+  return status === "blocked" || status === "no_source" ? status : "projected";
 }
 
 function resolveFinalAmount(input: {

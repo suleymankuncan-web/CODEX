@@ -6,6 +6,7 @@ import {
   type SalesTargetIncentiveCorrectionResult,
 } from "../infrastructure/sales-target-incentive-correction.repository";
 import { SalesTargetIncentiveApiService } from "./sales-target-incentive-api.service";
+import type { SalesTargetIncentiveProjectionReadModel } from "./sales-target-incentive-read-model.service";
 
 const companyId = "00000000-0000-4000-8000-000000000001";
 const regionId = "00000000-0000-4000-8000-000000000101";
@@ -14,7 +15,7 @@ const otherStoreId = "00000000-0000-4000-8000-000000000202";
 const employeeId = "00000000-0000-4000-8000-000000000501";
 const finalOnlyEmployeeId = "00000000-0000-4000-8000-000000000599";
 
-const eligibleProjection = {
+const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
   periodKey: "2026-05",
   periodStart: "2026-05-01",
   periodEnd: "2026-05-31",
@@ -99,7 +100,7 @@ const eligibleProjection = {
   ],
 };
 
-function createService(projection = eligibleProjection) {
+function createService(projection: SalesTargetIncentiveProjectionReadModel = eligibleProjection) {
   const readModelService = {
     buildCurrentProjection: jest.fn(async () => projection),
   };
@@ -539,7 +540,26 @@ describe("SalesTargetIncentiveApiService", () => {
   });
 
   it("uses final snapshot values for visible current rows when a final amount exists", async () => {
-    const { correctionRepository, service } = createService();
+    const blockedCurrentProjection: SalesTargetIncentiveProjectionReadModel = {
+      ...eligibleProjection,
+      stores: [
+        {
+          ...eligibleProjection.stores[0],
+          personnel: [
+            {
+              ...eligibleProjection.stores[0].personnel[0],
+              calculation: {
+                ...eligibleProjection.stores[0].personnel[0].calculation,
+                status: "blocked" as const,
+                blockedReason: "missing_store_sales_source" as const,
+                payableAmount: null,
+              },
+            },
+          ],
+        },
+      ],
+    };
+    const { correctionRepository, service } = createService(blockedCurrentProjection);
     correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([
       {
         store_id: storeId,
@@ -580,6 +600,8 @@ describe("SalesTargetIncentiveApiService", () => {
       rawEarnedAmount: "3450.0000000000",
       payableAmount: "3450.00",
       finalAmount: "3450.00",
+      status: "projected",
+      blockedReason: null,
     });
   });
 
