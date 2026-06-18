@@ -1,7 +1,9 @@
+import { validate } from "class-validator";
 import { buildAuthenticatedUser } from "../../auth/auth-context.service";
 import { REQUIRED_ROLES_KEY } from "../../auth/decorators/roles.decorator";
 import { REQUIRED_SCOPE_KEY } from "../../auth/decorators/scope.decorator";
 import { AdminSalesTargetIncentiveController } from "./admin-sales-target-incentive.controller";
+import { CreateSalesTargetIncentiveCorrectionDto } from "./dto/create-sales-target-incentive-correction.dto";
 import { StoreSalesTargetIncentiveController } from "./store-sales-target-incentive.controller";
 
 function createHarness() {
@@ -90,6 +92,20 @@ describe("SalesTargetIncentive controllers", () => {
       reasonCode: body.reasonCode,
       reasonNote: body.reasonNote,
     });
+  });
+
+  it("accepts PostgreSQL UUID target ids for admin incentive corrections", async () => {
+    const body = Object.assign(new CreateSalesTargetIncentiveCorrectionDto(), {
+      period: "2026-05",
+      storeId: "00000000-0000-0000-0000-000000000201",
+      employeeId: "00000000-0000-0000-0000-000000000501",
+      participantType: "personnel",
+      adjustmentAmount: "125.25",
+      reasonCode: "manual_review",
+      reasonNote: "Admin onayli duzeltme",
+    });
+
+    await expect(validate(body)).resolves.toHaveLength(0);
   });
 
   it("keeps role visibility narrow for V1 read endpoints", () => {

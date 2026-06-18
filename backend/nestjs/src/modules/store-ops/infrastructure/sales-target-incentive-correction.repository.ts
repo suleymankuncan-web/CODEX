@@ -110,6 +110,19 @@ export class SalesTargetIncentiveCorrectionRepository {
 
       const adjustmentScope = finalRow ? "final_snapshot" : "projection";
       const adjustmentType = finalRow ? "manual_adjustment" : "correction";
+      const adjustmentContext = finalRow
+        ? {
+            ruleVersionId: finalRow.rule_version_id,
+            companyId: finalRow.company_id,
+            regionId: finalRow.region_id,
+            storeId: finalRow.store_id,
+          }
+        : {
+            ruleVersionId,
+            companyId: input.store.companyId,
+            regionId: input.store.regionId,
+            storeId: input.store.storeId,
+          };
       const projectionRowId = finalRow
         ? null
         : await this.upsertProjectionRow(client, {
@@ -131,11 +144,11 @@ export class SalesTargetIncentiveCorrectionRepository {
       });
 
       const adjustment = await this.insertApprovedAdjustment(client, {
-        ruleVersionId,
+        ruleVersionId: adjustmentContext.ruleVersionId,
         periodKey: input.periodKey,
-        companyId: input.store.companyId,
-        regionId: input.store.regionId,
-        storeId: input.store.storeId,
+        companyId: adjustmentContext.companyId,
+        regionId: adjustmentContext.regionId,
+        storeId: adjustmentContext.storeId,
         employeeId: input.participant.employeeId,
         participantType: input.participant.participantType,
         projectionRowId,
@@ -152,9 +165,9 @@ export class SalesTargetIncentiveCorrectionRepository {
       await this.insertAuditEvent(client, {
         actorUserId: input.actorUserId,
         adjustmentId: adjustment.adjustmentId,
-        companyId: input.store.companyId,
-        regionId: input.store.regionId,
-        storeId: input.store.storeId,
+        companyId: adjustmentContext.companyId,
+        regionId: adjustmentContext.regionId,
+        storeId: adjustmentContext.storeId,
         periodKey: input.periodKey,
         phase: adjustment.phase,
         participantType: input.participant.participantType,
@@ -518,7 +531,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         input.store.manager?.calculation.rate,
         input.store.manager?.calculation.rawEarnedAmount,
         input.store.manager?.calculation.payableAmount,
-        compactUuidArray([input.store.storeNetSalesSourceBatchId]),
+        [],
         JSON.stringify({
           source: "current_projection",
           storeNetSalesSourceBatchId: input.store.storeNetSalesSourceBatchId,
@@ -608,10 +621,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         input.participant.calculation.rate,
         input.participant.calculation.rawEarnedAmount,
         input.participant.calculation.payableAmount,
-        compactUuidArray([
-          input.participant.source.storeNetSalesSourceBatchId,
-          input.participant.source.personnelSalesSourceBatchId,
-        ]),
+        [],
         JSON.stringify({
           source: "current_projection",
           storeTargetRequestId: input.participant.source.storeTargetRequestId,
@@ -815,8 +825,4 @@ export class SalesTargetIncentiveCorrectionRepository {
       ],
     );
   }
-}
-
-function compactUuidArray(values: Array<string | null>) {
-  return values.filter((value): value is string => Boolean(value));
 }
