@@ -38,6 +38,17 @@ export type SalesTargetIncentiveAdjustmentSummaryRow = {
   store_id: string;
   employee_id: string;
   participant_type: "store_manager" | "personnel";
+  employee_display_name?: string | null;
+  position_code?: string | null;
+  normalized_from_position_code?: string | null;
+  rate_table_version?: string | null;
+  target_amount?: string | null;
+  actual_sales_amount?: string | null;
+  achievement_pct?: string | null;
+  applied_rate?: string | null;
+  raw_earned_amount?: string | null;
+  payable_amount?: string | null;
+  calculation_status?: string | null;
   correction_amount: string;
   adjustment_amount: string;
   final_amount: string | null;
@@ -261,6 +272,17 @@ export class SalesTargetIncentiveCorrectionRepository {
             adjustment.store_id::text AS store_id,
             adjustment.employee_id::text AS employee_id,
             COALESCE(projection_row.participant_type, final_row.participant_type) AS participant_type,
+            MAX(NULLIF(TRIM(CONCAT_WS(' ', employee.first_name, employee.last_name)), '')) AS employee_display_name,
+            MAX(final_row.position_code)::text AS position_code,
+            MAX(final_row.normalized_from_position_code)::text AS normalized_from_position_code,
+            MAX(final_row.rate_table_version)::text AS rate_table_version,
+            MAX(final_row.target_amount)::text AS target_amount,
+            MAX(final_row.actual_sales_amount)::text AS actual_sales_amount,
+            MAX(final_row.achievement_pct)::text AS achievement_pct,
+            MAX(final_row.applied_rate)::text AS applied_rate,
+            MAX(final_row.raw_earned_amount)::text AS raw_earned_amount,
+            MAX(final_row.payable_amount)::text AS payable_amount,
+            MAX(final_row.calculation_status)::text AS calculation_status,
             COALESCE(SUM(adjustment.adjustment_amount) FILTER (
               WHERE adjustment.adjustment_scope = 'projection'
                 AND adjustment.adjustment_type = 'correction'
@@ -275,6 +297,8 @@ export class SalesTargetIncentiveCorrectionRepository {
             ON projection_row.sales_target_incentive_projection_row_id = adjustment.projection_row_id
           LEFT JOIN rpt.sales_target_incentive_final_row final_row
             ON final_row.sales_target_incentive_final_row_id = adjustment.final_row_id
+          LEFT JOIN ops.employee employee
+            ON employee.employee_id = adjustment.employee_id
           WHERE adjustment.period_key = $1
             AND adjustment.store_id = ANY($2::uuid[])
             AND adjustment.status = 'approved'

@@ -314,6 +314,20 @@ export class SalesTargetIncentiveApiService {
         ) ?? null,
       ),
     );
+    const visibleRowKeys = new Set(
+      rows.map((row) => `${row.employeeId}:${row.participantType}`),
+    );
+    const finalOnlyRows = roleScope === "admin"
+      ? adjustmentSummaries
+          .filter(
+            (summary) =>
+              summary.store_id === store.storeId &&
+              summary.final_amount !== null &&
+              !visibleRowKeys.has(`${summary.employee_id}:${summary.participant_type}`),
+          )
+          .map((summary) => this.toFinalOnlyApiRow(summary))
+      : [];
+    const allRows = [...rows, ...finalOnlyRows];
     const primaryCalculation = store.manager?.calculation ?? store.personnel[0]?.calculation;
 
     return {
@@ -331,10 +345,10 @@ export class SalesTargetIncentiveApiService {
         primaryCalculation?.achievementPct ??
         null,
       storeGatePassed: store.personnel[0]?.calculation.storeGatePassed ?? null,
-      calculationState: this.resolveProjectionStatus(rows),
-      blockedReason: rows.find((row) => row.blockedReason)?.blockedReason ?? null,
+      calculationState: this.resolveProjectionStatus(allRows),
+      blockedReason: allRows.find((row) => row.blockedReason)?.blockedReason ?? null,
       lastImportAt: store.storeNetSalesLastSyncedAt,
-      rows,
+      rows: allRows,
     };
   }
 
@@ -389,6 +403,51 @@ export class SalesTargetIncentiveApiService {
       blockedReason: calculation.blockedReason,
       rateTableVersion: calculation.rateTableVersion,
       explanation: this.resolveExplanation(calculation.status, calculation.blockedReason),
+    };
+  }
+
+  private toFinalOnlyApiRow(
+    adjustmentSummary: SalesTargetIncentiveAdjustmentSummaryRow,
+  ): SalesTargetIncentiveApiRow {
+    const correctionAmount =
+      !isZeroMoney(adjustmentSummary.correction_amount)
+        ? formatMoney2(adjustmentSummary.correction_amount)
+        : null;
+    const adjustmentAmount =
+      !isZeroMoney(adjustmentSummary.adjustment_amount)
+        ? formatMoney2(adjustmentSummary.adjustment_amount)
+        : null;
+    const finalAmount = resolveFinalAmount({
+      payableAmount: adjustmentSummary.payable_amount ?? null,
+      correctionAmount,
+      adjustmentAmount,
+      persistedFinalAmount: adjustmentSummary.final_amount,
+    });
+
+    return {
+      employeeId: adjustmentSummary.employee_id,
+      displayName: adjustmentSummary.employee_display_name ?? adjustmentSummary.employee_id,
+      participantType: adjustmentSummary.participant_type,
+      positionCode: adjustmentSummary.position_code as SalesTargetIncentiveApiRow["positionCode"],
+      normalizedFromPositionCode:
+        adjustmentSummary.normalized_from_position_code === "SHIFT_LEAD"
+          ? "SHIFT_LEAD"
+          : null,
+      target: adjustmentSummary.target_amount ?? null,
+      actualPositiveSales: adjustmentSummary.actual_sales_amount ?? null,
+      achievementPct: adjustmentSummary.achievement_pct ?? null,
+      storeAchievementPct: null,
+      storeGatePassed: null,
+      rate: adjustmentSummary.applied_rate ?? null,
+      rawEarnedAmount: adjustmentSummary.raw_earned_amount ?? null,
+      payableAmount: adjustmentSummary.payable_amount ?? null,
+      correctionAmount,
+      adjustmentAmount,
+      finalAmount,
+      status: adjustmentAmount ? "adjusted" : correctionAmount ? "corrected" : "projected",
+      blockedReason: null,
+      rateTableVersion: adjustmentSummary.rate_table_version ?? SALES_TARGET_INCENTIVE_RULE_VERSION,
+      explanation: "Kapali donem final satirina gore gosteriliyor.",
     };
   }
 
