@@ -12,7 +12,7 @@
 
 ## Metadata
 
-- Status: PR-1 merged in #731; PR-2 calculation kernel merged in #732; PR-3 data model and migration slice implemented for PR closeout
+- Status: V1 PR train complete. PR-1 through PR-8 merged as #731, #732, #733, #734, #736, #737, #738, and #740.
 - Date: 2026-06-17
 - Author: Codex
 - Owner: Store Ops product flow
@@ -29,9 +29,9 @@ This plan follows the VS Code iteration-plan style, adapted to this repo's PR/sl
 - Milestone: Prim V1 Foundation
 - Scope unit: PR count, not calendar estimate
 - Planned train: 8 PRs
-- Endgame begins after PR-7 merges.
-- Endgame is done only after PR-8 passes persona smoke, admin smoke, root release gate, and close/correction evidence.
-- PR-3 follows the merged PR-2 calculation kernel with concrete GitHub tracking issues for the remaining train and locked currency precision, period cutoff, rule-version behavior, and exact bracket persistence.
+- Endgame began after PR-7 merged and completed with PR-8 in #740.
+- Endgame is done: PR-8 passed persona smoke, admin smoke, root release gate, and close/correction evidence.
+- The train followed the locked currency precision, period cutoff, rule-version behavior, and exact bracket persistence decisions from PR-1.
 
 Tracking issues:
 
