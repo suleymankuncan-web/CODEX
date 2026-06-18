@@ -41,7 +41,8 @@ isletim sistemi buradadir. Hizli navigasyon icin:
 - Verification: `Verification Ladder`, `External Evidence Disiplini`.
 - UI refactor: `UI/UX Disiplini`, `Prototype to Product`, Store Me
   refactorundan cikan tekrar kullanilabilir sayfa kurallari,
-  `docs/process/product-experience-principles.md` ve taste-skill kalite pass'i.
+  `docs/process/product-experience-principles.md`,
+  `docs/process/ui-surface-standard-v1.md` ve taste-skill kalite pass'i.
 - Mimari/refactor: `Hard Boundaries`, `Refactor Disiplini`,
   `Dosya Satir Prensipleri`.
 - Risk ve durma: `Regression Trap Register`, `Stop Rules`,
@@ -514,6 +515,11 @@ referansidir. Bu dosya her gorev icin besinci read-first dokumani degildir;
 sadece product experience, sayfa yapisi, interaction, mobil aksiyon veya gorsel
 kalite degistiren islerde okunur. Ana kural: clean but premium, decorative
 degil; visually strong ama operationally honest.
+
+Bu tur islerde `docs/process/ui-surface-standard-v1.md` de uygulanir. Bu
+standart shadcn-first component secimi, Button varyant anlamlari, lucide ikon
+sinirlari, semantic token kullanimi, product copy hijyeni ve sayfa anatomisini
+kalici UI sozlesmesi olarak tanimlar.
 
 UI/prototype/redesign/refactor islerinde `design-taste-frontend` / taste-skill
 zorunlu kalite pass'idir. Bu skill tek basina urun karari veya design system
