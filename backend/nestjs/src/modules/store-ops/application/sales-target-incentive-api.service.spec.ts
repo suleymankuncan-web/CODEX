@@ -1,6 +1,9 @@
 import { NotFoundException } from "@nestjs/common";
 import { buildAuthenticatedUser } from "../../auth/auth-context.service";
-import type { SalesTargetIncentiveAdjustmentSummaryRow } from "../infrastructure/sales-target-incentive-correction.repository";
+import type {
+  SalesTargetIncentiveAdjustmentSummaryRow,
+  SalesTargetIncentiveCorrectionResult,
+} from "../infrastructure/sales-target-incentive-correction.repository";
 import { SalesTargetIncentiveApiService } from "./sales-target-incentive-api.service";
 
 const companyId = "00000000-0000-4000-8000-000000000001";
@@ -113,6 +116,9 @@ function createService(projection = eligibleProjection) {
       afterAmount: "4085.25",
       status: "approved",
     })),
+    applyAdminFinalRowCorrection: jest.fn(
+      async (): Promise<SalesTargetIncentiveCorrectionResult | null> => null,
+    ),
     listApprovedAdjustmentSummaries: jest.fn(
       async (): Promise<SalesTargetIncentiveAdjustmentSummaryRow[]> => [],
     ),
@@ -413,7 +419,82 @@ describe("SalesTargetIncentiveApiService", () => {
         actorUserId: "admin-user",
       }),
     );
+    expect(correctionRepository.applyAdminFinalRowCorrection).not.toHaveBeenCalled();
     expect(result.data.afterAmount).toBe("4085.25");
+  });
+
+  it("allows post-close final-row corrections when the current projection is no longer payable", async () => {
+    const blockedProjection = {
+      ...eligibleProjection,
+      stores: [
+        {
+          ...eligibleProjection.stores[0],
+          personnel: [
+            {
+              ...eligibleProjection.stores[0].personnel[0],
+              calculation: {
+                ...eligibleProjection.stores[0].personnel[0].calculation,
+                status: "blocked",
+                payableAmount: null,
+                blockedReason: "current source is incomplete",
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as typeof eligibleProjection;
+    const { correctionRepository, service } = createService(blockedProjection);
+    correctionRepository.applyAdminFinalRowCorrection.mockResolvedValueOnce({
+      adjustmentId: "00000000-0000-4000-8000-000000000802",
+      phase: "post_close",
+      adjustmentScope: "final_snapshot",
+      adjustmentType: "manual_adjustment",
+      periodKey: "2026-05",
+      storeId,
+      employeeId,
+      participantType: "personnel",
+      beforeAmount: "4085.25",
+      adjustmentAmount: "-50.00",
+      afterAmount: "4035.25",
+      status: "approved",
+    });
+
+    const result = await service.applyAdminCorrection({
+      actor: buildAuthenticatedUser({
+        userId: "admin-user",
+        roleCodes: ["SUPER_ADMIN"],
+        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      }),
+      periodKey: "2026-05",
+      storeId,
+      employeeId,
+      participantType: "personnel",
+      adjustmentAmount: "-50.00",
+      reasonCode: "post_close_review",
+      reasonNote: "Kapanis sonrasi duzeltme",
+    });
+
+    expect(correctionRepository.applyAdminCorrection).not.toHaveBeenCalled();
+    expect(correctionRepository.applyAdminFinalRowCorrection).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      storeId,
+      employeeId,
+      participantType: "personnel",
+      adjustmentAmount: "-50.00",
+      reasonCode: "post_close_review",
+      reasonNote: "Kapanis sonrasi duzeltme",
+      actorUserId: "admin-user",
+      readScope: {
+        companyIds: [companyId],
+        regionIds: [],
+        storeIds: [],
+        allowGlobalScope: false,
+      },
+    });
+    expect(result.data).toMatchObject({
+      phase: "post_close",
+      afterAmount: "4035.25",
+    });
   });
 
   it("rejects admin corrections for hidden or unavailable incentive rows", async () => {

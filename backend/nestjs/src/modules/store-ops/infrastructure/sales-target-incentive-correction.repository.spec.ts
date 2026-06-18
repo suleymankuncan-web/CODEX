@@ -181,6 +181,77 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     });
   });
 
+  it("applies post-close corrections from scoped final rows without current projection payability", async () => {
+    const { query, repository, withTransaction } = createHarness();
+    const finalRowId = "00000000-0000-4000-8000-000000000714";
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            final_row_id: finalRowId,
+            company_id: companyId,
+            region_id: regionId,
+            store_id: storeId,
+            rule_version_id: ruleVersionId,
+            final_amount: "4085.25",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ current_amount: "4085.25" }] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            adjustment_id: adjustmentId,
+            before_amount: "4085.25",
+            adjustment_amount: "-50.00",
+            after_amount: "4035.25",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const result = await repository.applyAdminFinalRowCorrection({
+      periodKey: "2026-05",
+      storeId,
+      employeeId,
+      participantType: "personnel",
+      adjustmentAmount: "-50.00",
+      reasonCode: "post_close_review",
+      reasonNote: "Kapanis sonrasi duzeltme",
+      actorUserId,
+      readScope: {
+        companyIds: [companyId],
+        regionIds: [],
+        storeIds: [],
+        allowGlobalScope: false,
+      },
+    });
+
+    expect(withTransaction).toHaveBeenCalledTimes(1);
+    expect(String(query.mock.calls[0][0])).toContain("rpt.sales_target_incentive_final_row");
+    expect(query.mock.calls[0][1]).toEqual([
+      "2026-05",
+      storeId,
+      employeeId,
+      "personnel",
+      false,
+      [companyId],
+      [],
+      [],
+    ]);
+    expect(String(query.mock.calls[2][0])).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
+    expect(query.mock.calls[2][1]).toEqual(
+      expect.arrayContaining(["final_snapshot", "manual_adjustment", "-50.00", "4085.25"]),
+    );
+    expect(String(query.mock.calls[3][0])).toContain("INSERT INTO audit.event_log");
+    expect(result).toMatchObject({
+      phase: "post_close",
+      adjustmentScope: "final_snapshot",
+      beforeAmount: "4085.25",
+      afterAmount: "4035.25",
+    });
+  });
+
   it("records cumulative before and after amounts for repeat pre-close corrections", async () => {
     const { query, repository } = createHarness();
     query

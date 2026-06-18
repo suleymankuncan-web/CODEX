@@ -210,11 +210,32 @@ export class SalesTargetIncentiveApiService {
         )
       : null;
 
-    if (!store || !participant) {
-      throw new NotFoundException("Incentive projection is not available");
-    }
+    if (!store || !participant || participant.calculation.payableAmount === null) {
+      const finalRowResult = await this.correctionRepository.applyAdminFinalRowCorrection({
+        periodKey: projection.periodKey,
+        storeId: input.storeId,
+        employeeId: input.employeeId,
+        participantType: input.participantType,
+        adjustmentAmount: input.adjustmentAmount,
+        reasonCode: input.reasonCode,
+        reasonNote: input.reasonNote,
+        actorUserId: input.actor.userId,
+        readScope: {
+          companyIds: adminScope.companyIds,
+          regionIds: adminScope.regionIds,
+          storeIds: adminScope.storeIds,
+          allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
+        },
+      });
 
-    if (participant.calculation.payableAmount === null) {
+      if (finalRowResult) {
+        return { data: finalRowResult };
+      }
+
+      if (!store || !participant) {
+        throw new NotFoundException("Incentive projection is not available");
+      }
+
       throw new BadRequestException("Correction target is not payable");
     }
 

@@ -45,11 +45,22 @@ export type SalesTargetIncentiveAdjustmentSummaryRow = {
 
 type FinalRowLookup = {
   final_row_id: string;
+  company_id: string;
+  region_id: string;
+  store_id: string;
+  rule_version_id: string;
   final_amount: string;
 };
 
 type CurrentAmountLookup = {
   current_amount: string;
+};
+
+type CorrectionReadScope = {
+  companyIds: string[];
+  regionIds: string[];
+  storeIds: string[];
+  allowGlobalScope: boolean;
 };
 
 @Injectable()
@@ -106,8 +117,11 @@ export class SalesTargetIncentiveCorrectionRepository {
       const adjustment = await this.insertApprovedAdjustment(client, {
         ruleVersionId,
         periodKey: input.periodKey,
-        store: input.store,
-        participant: input.participant,
+        companyId: input.store.companyId,
+        regionId: input.store.regionId,
+        storeId: input.store.storeId,
+        employeeId: input.participant.employeeId,
+        participantType: input.participant.participantType,
         projectionRowId,
         finalRowId: finalRow?.final_row_id ?? null,
         adjustmentScope,
@@ -128,6 +142,74 @@ export class SalesTargetIncentiveCorrectionRepository {
         periodKey: input.periodKey,
         phase: adjustment.phase,
         participantType: input.participant.participantType,
+        reasonCode: input.reasonCode,
+      });
+
+      return adjustment;
+    });
+  }
+
+  async applyAdminFinalRowCorrection(input: {
+    periodKey: string;
+    storeId: string;
+    employeeId: string;
+    participantType: "store_manager" | "personnel";
+    adjustmentAmount: string;
+    reasonCode: string;
+    reasonNote: string;
+    actorUserId: string;
+    readScope: CorrectionReadScope;
+  }): Promise<SalesTargetIncentiveCorrectionResult | null> {
+    return this.databaseService.withTransaction(async (client) => {
+      const finalRow = await this.findFinalRow(client, {
+        periodKey: input.periodKey,
+        storeId: input.storeId,
+        employeeId: input.employeeId,
+        participantType: input.participantType,
+        readScope: input.readScope,
+      });
+
+      if (!finalRow) {
+        return null;
+      }
+
+      const currentAmount = await this.resolveCurrentAmount(client, {
+        periodKey: input.periodKey,
+        storeId: finalRow.store_id,
+        employeeId: input.employeeId,
+        participantType: input.participantType,
+        adjustmentScope: "final_snapshot",
+        adjustmentType: "manual_adjustment",
+        baseAmount: finalRow.final_amount,
+      });
+      const adjustment = await this.insertApprovedAdjustment(client, {
+        ruleVersionId: finalRow.rule_version_id,
+        periodKey: input.periodKey,
+        companyId: finalRow.company_id,
+        regionId: finalRow.region_id,
+        storeId: finalRow.store_id,
+        employeeId: input.employeeId,
+        participantType: input.participantType,
+        projectionRowId: null,
+        finalRowId: finalRow.final_row_id,
+        adjustmentScope: "final_snapshot",
+        adjustmentType: "manual_adjustment",
+        adjustmentAmount: input.adjustmentAmount,
+        beforeAmount: currentAmount,
+        reasonCode: input.reasonCode,
+        reasonNote: input.reasonNote,
+        actorUserId: input.actorUserId,
+      });
+
+      await this.insertAuditEvent(client, {
+        actorUserId: input.actorUserId,
+        adjustmentId: adjustment.adjustmentId,
+        companyId: finalRow.company_id,
+        regionId: finalRow.region_id,
+        storeId: finalRow.store_id,
+        periodKey: input.periodKey,
+        phase: adjustment.phase,
+        participantType: input.participantType,
         reasonCode: input.reasonCode,
       });
 
@@ -203,12 +285,17 @@ export class SalesTargetIncentiveCorrectionRepository {
       storeId: string;
       employeeId: string;
       participantType: "store_manager" | "personnel";
+      readScope?: CorrectionReadScope;
     },
   ): Promise<FinalRowLookup | null> {
     const result = await client.query<FinalRowLookup>(
       `
         SELECT
           row.sales_target_incentive_final_row_id::text AS final_row_id,
+          snapshot.company_id::text AS company_id,
+          snapshot.region_id::text AS region_id,
+          snapshot.store_id::text AS store_id,
+          snapshot.rule_version_id::text AS rule_version_id,
           row.final_amount::text AS final_amount
         FROM rpt.sales_target_incentive_final_row row
         INNER JOIN rpt.sales_target_incentive_final_snapshot snapshot
@@ -217,10 +304,25 @@ export class SalesTargetIncentiveCorrectionRepository {
           AND snapshot.store_id = $2::uuid
           AND row.employee_id = $3::uuid
           AND row.participant_type = $4
+          AND (
+            $5::boolean
+            OR snapshot.company_id = ANY($6::uuid[])
+            OR snapshot.region_id = ANY($7::uuid[])
+            OR snapshot.store_id = ANY($8::uuid[])
+          )
         ORDER BY snapshot.close_cutoff_at DESC, row.created_at DESC
         LIMIT 1
       `,
-      [input.periodKey, input.storeId, input.employeeId, input.participantType],
+      [
+        input.periodKey,
+        input.storeId,
+        input.employeeId,
+        input.participantType,
+        input.readScope?.allowGlobalScope ?? true,
+        input.readScope?.companyIds ?? [],
+        input.readScope?.regionIds ?? [],
+        input.readScope?.storeIds ?? [],
+      ],
     );
 
     return result.rows[0] ?? null;
@@ -495,8 +597,11 @@ export class SalesTargetIncentiveCorrectionRepository {
     input: {
       ruleVersionId: string;
       periodKey: string;
-      store: SalesTargetIncentiveProjectionStore;
-      participant: SalesTargetIncentiveParticipantProjection;
+      companyId: string;
+      regionId: string;
+      storeId: string;
+      employeeId: string;
+      participantType: "store_manager" | "personnel";
       projectionRowId: string | null;
       finalRowId: string | null;
       adjustmentScope: "projection" | "final_snapshot";
@@ -572,10 +677,10 @@ export class SalesTargetIncentiveCorrectionRepository {
           after_amount::text AS after_amount
       `,
       [
-        input.store.companyId,
-        input.store.regionId,
-        input.store.storeId,
-        input.participant.employeeId,
+        input.companyId,
+        input.regionId,
+        input.storeId,
+        input.employeeId,
         input.projectionRowId,
         input.finalRowId,
         input.ruleVersionId,
@@ -591,7 +696,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         JSON.stringify({
           source: "admin_manual_correction_v1",
           phase,
-          participantType: input.participant.participantType,
+          participantType: input.participantType,
         }),
       ],
     );
@@ -607,9 +712,9 @@ export class SalesTargetIncentiveCorrectionRepository {
       adjustmentScope: input.adjustmentScope,
       adjustmentType: input.adjustmentType,
       periodKey: input.periodKey,
-      storeId: input.store.storeId,
-      employeeId: input.participant.employeeId,
-      participantType: input.participant.participantType,
+      storeId: input.storeId,
+      employeeId: input.employeeId,
+      participantType: input.participantType,
       beforeAmount: row.before_amount,
       adjustmentAmount: row.adjustment_amount,
       afterAmount: row.after_amount,
