@@ -140,17 +140,18 @@ export class SalesTargetIncentiveApiService {
     actor: AuthenticatedUser;
     periodKey?: string;
   }): Promise<SalesTargetIncentiveApiResponse> {
+    const adminScope = this.resolveSuperAdminReadScope(input.actor);
     const projection = await this.readModelService.buildCurrentProjection({
       periodKey: this.resolvePeriodKey(input.periodKey),
-      companyIds: input.actor.readScope.companyIds,
-      regionIds: input.actor.readScope.companyIds.length
+      companyIds: adminScope.companyIds,
+      regionIds: adminScope.companyIds.length
         ? []
-        : input.actor.readScope.regionIds,
+        : adminScope.regionIds,
       storeIds:
-        input.actor.readScope.companyIds.length || input.actor.readScope.regionIds.length
+        adminScope.companyIds.length || adminScope.regionIds.length
           ? []
-          : input.actor.readScope.storeIds,
-      allowGlobalScope: this.hasNoReadScope(input.actor),
+          : adminScope.storeIds,
+      allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
     });
 
     return this.toApiResponse({
@@ -280,12 +281,16 @@ export class SalesTargetIncentiveApiService {
       : actor.readScope.storeIds;
   }
 
-  private hasNoReadScope(actor: AuthenticatedUser) {
+  private hasNoReadScope(actor: { readScope: AuthenticatedUser["readScope"] }) {
     return (
       actor.readScope.companyIds.length === 0 &&
       actor.readScope.regionIds.length === 0 &&
       actor.readScope.storeIds.length === 0
     );
+  }
+
+  private resolveSuperAdminReadScope(actor: AuthenticatedUser) {
+    return actor.roleScopes?.SUPER_ADMIN ?? actor.readScope;
   }
 
   private resolvePeriodKey(periodKey?: string) {

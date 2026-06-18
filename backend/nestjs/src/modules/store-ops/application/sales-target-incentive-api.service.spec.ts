@@ -244,4 +244,41 @@ describe("SalesTargetIncentiveApiService", () => {
     expect(result.data.roleScope).toBe("admin");
     expect(result.data.projections[0].storeOwnershipType).toBe("company");
   });
+
+  it("limits admin reads to the actor's SUPER_ADMIN role scope when mixed roles widen read scope", async () => {
+    const { readModelService, service } = createService();
+
+    await service.getAdminProjection({
+      actor: buildAuthenticatedUser({
+        userId: "mixed-admin-user",
+        roleCodes: ["SUPER_ADMIN", "REGION_MANAGER"],
+        readScope: {
+          companyIds: [companyId, "00000000-0000-4000-8000-000000000099"],
+          regionIds: [regionId, "00000000-0000-4000-8000-000000000199"],
+          storeIds: [storeId, otherStoreId],
+        },
+        roleScopes: {
+          SUPER_ADMIN: {
+            companyIds: [companyId],
+            regionIds: [],
+            storeIds: [],
+          },
+          REGION_MANAGER: {
+            companyIds: ["00000000-0000-4000-8000-000000000099"],
+            regionIds: ["00000000-0000-4000-8000-000000000199"],
+            storeIds: [otherStoreId],
+          },
+        },
+      }),
+      periodKey: "2026-05",
+    });
+
+    expect(readModelService.buildCurrentProjection).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      companyIds: [companyId],
+      regionIds: [],
+      storeIds: [],
+      allowGlobalScope: false,
+    });
+  });
 });
