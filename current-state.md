@@ -480,13 +480,16 @@ small PR rhythm:
   `release-check`, `release-rehearsal`, Vercel, and Vercel Preview Comments
   were green.
 - `/store/incentives` is now explicitly scoped by Sales Target Incentive V1.
-  PR-1 through PR-7 merged as #731, #732, #733, #734, #736, #737, and #738 from
-  `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`. The active
-  PR-8 branch is `codex/incentives-v1-pr8-period-close`; it adds the
-  super-admin period close/status API, close-cutoff source binding, immutable
-  final/assignment/rule snapshots, and backend/endgame evidence. V1 remains
-  company-store only: cashier, franchise, and operator incentive visibility
-  stay hidden until separately scoped.
+  PR-1 through PR-8 merged as #731, #732, #733, #734, #736, #737, #738, and
+  #740 from `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`.
+  The final PR #740 merged as
+  `9e8256566b734f97495f7b89c9a85dd379008766` after local root
+  `npm.cmd run check:release`, GitHub `release-check`,
+  `frontend-release-check`, `release-rehearsal`, Vercel, and Vercel Preview
+  Comments were green. It adds the super-admin period close/status API,
+  close-cutoff source binding, immutable final/assignment/rule snapshots, and
+  backend/endgame evidence. V1 remains company-store only: cashier, franchise,
+  and operator incentive visibility stay hidden until separately scoped.
 
 Store Me is the active reference pattern for the next page refactor pilots,
 not because every page should look identical, but because the work established
