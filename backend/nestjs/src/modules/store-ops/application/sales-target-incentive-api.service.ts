@@ -252,6 +252,12 @@ export class SalesTargetIncentiveApiService {
         reasonCode: input.reasonCode,
         reasonNote: input.reasonNote,
         actorUserId: input.actor.userId,
+        readScope: {
+          companyIds: adminScope.companyIds,
+          regionIds: adminScope.regionIds,
+          storeIds: adminScope.storeIds,
+          allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
+        },
       });
     } catch (error) {
       if (error instanceof SalesTargetIncentiveClosedPeriodTargetError) {

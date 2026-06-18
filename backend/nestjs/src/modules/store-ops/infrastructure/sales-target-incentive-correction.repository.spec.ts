@@ -217,6 +217,7 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
       actorUserId,
     });
 
+    expect(query.mock.calls[0][1][4]).toBe(false);
     expect(String(query.mock.calls[1][0])).toContain("pg_advisory_xact_lock");
     expect(String(query.mock.calls[2][0])).toContain("adjustment.final_row_id = $8::uuid");
     expect(query.mock.calls[2][1][7]).toBe(finalRowId);

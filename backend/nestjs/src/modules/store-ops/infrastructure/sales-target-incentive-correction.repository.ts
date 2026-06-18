@@ -94,6 +94,7 @@ export class SalesTargetIncentiveCorrectionRepository {
     reasonCode: string;
     reasonNote: string;
     actorUserId: string;
+    readScope?: CorrectionReadScope;
   }): Promise<SalesTargetIncentiveCorrectionResult> {
     return this.databaseService.withTransaction(async (client) => {
       const finalRow = await this.findFinalRow(client, {
@@ -101,6 +102,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         storeId: input.store.storeId,
         employeeId: input.participant.employeeId,
         participantType: input.participant.participantType,
+        readScope: input.readScope,
       });
 
       if (
@@ -454,7 +456,7 @@ export class SalesTargetIncentiveCorrectionRepository {
         input.storeId,
         input.employeeId,
         input.participantType,
-        input.readScope?.allowGlobalScope ?? true,
+        input.readScope?.allowGlobalScope ?? false,
         input.readScope?.companyIds ?? [],
         input.readScope?.regionIds ?? [],
         input.readScope?.storeIds ?? [],

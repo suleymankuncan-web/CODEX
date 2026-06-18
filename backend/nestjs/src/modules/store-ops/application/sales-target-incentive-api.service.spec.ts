@@ -714,6 +714,12 @@ describe("SalesTargetIncentiveApiService", () => {
         reasonCode: "manual_review",
         reasonNote: "Admin onayli duzeltme",
         actorUserId: "admin-user",
+        readScope: {
+          companyIds: [companyId],
+          regionIds: [],
+          storeIds: [],
+          allowGlobalScope: false,
+        },
       }),
     );
     expect(correctionRepository.applyAdminFinalRowCorrection).not.toHaveBeenCalled();
