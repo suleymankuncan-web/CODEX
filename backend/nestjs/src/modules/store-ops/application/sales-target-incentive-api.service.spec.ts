@@ -1,8 +1,9 @@
 import { NotFoundException } from "@nestjs/common";
 import { buildAuthenticatedUser } from "../../auth/auth-context.service";
-import type {
-  SalesTargetIncentiveAdjustmentSummaryRow,
-  SalesTargetIncentiveCorrectionResult,
+import {
+  SalesTargetIncentiveClosedPeriodTargetError,
+  type SalesTargetIncentiveAdjustmentSummaryRow,
+  type SalesTargetIncentiveCorrectionResult,
 } from "../infrastructure/sales-target-incentive-correction.repository";
 import { SalesTargetIncentiveApiService } from "./sales-target-incentive-api.service";
 
@@ -421,6 +422,30 @@ describe("SalesTargetIncentiveApiService", () => {
     );
     expect(correctionRepository.applyAdminFinalRowCorrection).not.toHaveBeenCalled();
     expect(result.data.afterAmount).toBe("4085.25");
+  });
+
+  it("maps closed-period projection correction targets to a safe bad request", async () => {
+    const { correctionRepository, service } = createService();
+    correctionRepository.applyAdminCorrection.mockRejectedValueOnce(
+      new SalesTargetIncentiveClosedPeriodTargetError(),
+    );
+
+    await expect(
+      service.applyAdminCorrection({
+        actor: buildAuthenticatedUser({
+          userId: "admin-user",
+          roleCodes: ["SUPER_ADMIN"],
+          readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+        }),
+        periodKey: "2026-05",
+        storeId,
+        employeeId,
+        participantType: "personnel",
+        adjustmentAmount: "125.25",
+        reasonCode: "manual_review",
+        reasonNote: "Admin onayli duzeltme",
+      }),
+    ).rejects.toThrow("Correction target is closed for this period");
   });
 
   it("allows post-close final-row corrections when the current projection is no longer payable", async () => {

@@ -63,6 +63,12 @@ type CorrectionReadScope = {
   allowGlobalScope: boolean;
 };
 
+export class SalesTargetIncentiveClosedPeriodTargetError extends Error {
+  constructor() {
+    super("Incentive period is closed for this store");
+  }
+}
+
 @Injectable()
 export class SalesTargetIncentiveCorrectionRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -86,6 +92,16 @@ export class SalesTargetIncentiveCorrectionRepository {
         employeeId: input.participant.employeeId,
         participantType: input.participant.participantType,
       });
+
+      if (
+        !finalRow &&
+        (await this.hasClosedStorePeriod(client, {
+          periodKey: input.periodKey,
+          storeId: input.store.storeId,
+        }))
+      ) {
+        throw new SalesTargetIncentiveClosedPeriodTargetError();
+      }
 
       const baseAmount = finalRow?.final_amount ?? input.participant.calculation.payableAmount;
       if (baseAmount === null) {
@@ -326,6 +342,27 @@ export class SalesTargetIncentiveCorrectionRepository {
     );
 
     return result.rows[0] ?? null;
+  }
+
+  private async hasClosedStorePeriod(
+    client: CorrectionClient,
+    input: {
+      periodKey: string;
+      storeId: string;
+    },
+  ) {
+    const result = await client.query<{ closed_period_exists: number }>(
+      `
+        SELECT 1 AS closed_period_exists
+        FROM rpt.sales_target_incentive_final_snapshot snapshot
+        WHERE snapshot.period_key = $1
+          AND snapshot.store_id = $2::uuid
+        LIMIT 1
+      `,
+      [input.periodKey, input.storeId],
+    );
+
+    return result.rows.length > 0;
   }
 
   private async resolveCurrentAmount(

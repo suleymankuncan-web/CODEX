@@ -12,6 +12,7 @@ import {
   type SalesTargetIncentiveProjectionStore,
 } from "./sales-target-incentive-read-model.service";
 import {
+  SalesTargetIncentiveClosedPeriodTargetError,
   SalesTargetIncentiveCorrectionRepository,
   type SalesTargetIncentiveAdjustmentSummaryRow,
   type SalesTargetIncentiveCorrectionResult,
@@ -239,17 +240,26 @@ export class SalesTargetIncentiveApiService {
       throw new BadRequestException("Correction target is not payable");
     }
 
-    const result = await this.correctionRepository.applyAdminCorrection({
-      periodKey: projection.periodKey,
-      periodStart: projection.periodStart,
-      periodEnd: projection.periodEnd,
-      store,
-      participant,
-      adjustmentAmount: input.adjustmentAmount,
-      reasonCode: input.reasonCode,
-      reasonNote: input.reasonNote,
-      actorUserId: input.actor.userId,
-    });
+    let result: SalesTargetIncentiveCorrectionResult;
+    try {
+      result = await this.correctionRepository.applyAdminCorrection({
+        periodKey: projection.periodKey,
+        periodStart: projection.periodStart,
+        periodEnd: projection.periodEnd,
+        store,
+        participant,
+        adjustmentAmount: input.adjustmentAmount,
+        reasonCode: input.reasonCode,
+        reasonNote: input.reasonNote,
+        actorUserId: input.actor.userId,
+      });
+    } catch (error) {
+      if (error instanceof SalesTargetIncentiveClosedPeriodTargetError) {
+        throw new BadRequestException("Correction target is closed for this period");
+      }
+
+      throw error;
+    }
 
     return { data: result };
   }
