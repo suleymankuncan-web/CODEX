@@ -58,16 +58,40 @@ test('admin Power BI upload routes stale cookie-session CSRF failures to session
       }),
     })
   })
-
   await page.goto('/admin/integrations')
   await page.locator('input[type="file"]').first().setInputFiles({
     name: 'personnel.xlsx',
     mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     buffer: Buffer.from('safe-test-upload'),
   })
+  const sessionExpired = page.evaluate(
+    () =>
+      new Promise<{ path: string; status: number }>((resolve) => {
+        window.addEventListener(
+          'store-ops-session-expired',
+          (event) => {
+            const detail = (event as CustomEvent<{ path: string; status: number }>).detail
+            resolve({ path: detail.path, status: detail.status })
+          },
+          { once: true },
+        )
+      }),
+  )
   await page.getByRole('button', { name: /Power BI export/i }).click()
 
   await expect.poll(() => uploadCsrfHeader).toBe(csrfToken)
+  await expect(sessionExpired).resolves.toEqual({
+    path: '/integrations/power-bi-export-upload',
+    status: 403,
+  })
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => (window as Window & { __storeOpsBrowserSessionCsrfToken?: string })
+          .__storeOpsBrowserSessionCsrfToken ?? 'not-cleared',
+      ),
+    )
+    .toBe('')
   await expect(page).toHaveURL(/\/auth\/login/)
 })
 
