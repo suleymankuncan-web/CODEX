@@ -51,7 +51,7 @@ test('persisted cookie sessions are not ready without CSRF memory', () => {
 test('Clerk refresh handler preserves bearer fallback token refresh', () => {
   assert.match(
     clerkSession,
-    /await startProviderSession\(token\)[\s\S]*?return \{ refreshed: true, bearerToken: token \}/,
+    /await startProviderSession\(token, null, resolveProviderSessionStartOptions\(\)\)[\s\S]*?return \{ refreshed: true, bearerToken: token \}/,
     'bearer transport rollback must return the refreshed Clerk token to the API refresh path',
   )
 })
@@ -89,7 +89,7 @@ test('saving away from cookie transport clears the HttpOnly browser-session cook
   )
 })
 
-test('cookie shell sessions use a non-token cache key instead of the shared token-missing key', () => {
+test('cookie shell sessions create a non-token cache key for explicit provider login', () => {
   assert.match(
     sessionStorage,
     /browserSessionKey: string/,
@@ -97,12 +97,40 @@ test('cookie shell sessions use a non-token cache key instead of the shared toke
   )
   assert.match(
     sessionContext,
-    /browserSessionKey: createBrowserSessionCacheKey\(\)/,
-    'cookie provider sessions must rotate the cache key after browser-session creation',
+    /options\?\.intent === 'renew'[\s\S]*?current\.browserSessionKey\.trim\(\) \|\| createBrowserSessionCacheKey\(\)[\s\S]*?: createBrowserSessionCacheKey\(\)/,
+    'cookie provider sessions must preserve the cache key only for explicit same-session renewal',
+  )
+  assert.match(
+    sessionContext,
+    /const browserSession = await createBrowserSession\(token\)[\s\S]*?createStableAuthorizationFingerprint\(browserSession\.session\)/,
+    'cookie provider sessions must inspect the returned app authorization context before preserving cache state',
+  )
+  assert.match(
+    sessionContext,
+    /options\?\.intent === 'renew'[\s\S]*?authorizationFingerprint[\s\S]*?browserSessionAuthorizationFingerprintRef\.current === authorizationFingerprint/,
+    'cookie provider sessions must renew the cache key only when the app authorization fingerprint is unchanged',
   )
   assert.match(
     app,
     /const shellBearerSessionKey = isCookieBrowserSession\(session\) \? cookieSessionKey : bearerSessionKey[\s\S]*?shellBearerSessionKey/,
     'shell auth query key must distinguish cookie session identities without using a bearer token',
+  )
+})
+
+test('Clerk same-session token sync renews cookie sessions without rotating the cache key', () => {
+  assert.match(
+    clerkSession,
+    /const providerSessionKey = isSignedIn \? `\$\{userId \?\? 'unknown-user'\}:\$\{sessionId \?\? 'unknown-session'\}` : null/,
+    'Clerk bridge must include userId and sessionId when deciding whether a provider sync is same-session renewal',
+  )
+  assert.match(
+    clerkSession,
+    /lastProviderSessionRef\.current === providerSessionKey[\s\S]*?\? 'renew'[\s\S]*?: 'replace'/,
+    'Clerk bridge must renew only when the provider user/session identity is unchanged',
+  )
+  assert.match(
+    clerkSession,
+    /await startProviderSession\(token, null, resolveProviderSessionStartOptions\(\)\)/,
+    'Clerk bridge must pass provider session intent into startProviderSession',
   )
 })

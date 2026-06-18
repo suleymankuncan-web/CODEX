@@ -1,10 +1,14 @@
 import { expect, test } from './test-fixtures'
 
 const accessToken = 'synthetic-access-token-for-cookie-transport'
+const refreshedAccessToken = 'synthetic-refreshed-access-token-for-cookie-transport'
 const idToken = 'synthetic-id-token-that-must-not-be-stored'
 const csrfToken = 'synthetic-csrf-nonce'
+const refreshedCsrfToken = 'synthetic-refreshed-csrf-nonce'
 const pkceState = 'synthetic-pkce-state'
+const refreshedPkceState = 'synthetic-refreshed-pkce-state'
 const codeVerifier = 'synthetic-code-verifier'
+const refreshedCodeVerifier = 'synthetic-refreshed-code-verifier'
 const companyId = '00000000-0000-0000-0000-000000000001'
 
 const cookieTransportSession = {
@@ -302,4 +306,162 @@ test('PKCE callback creates cookie session without storing provider tokens', asy
 
   await page.goto('/auth/logout')
   await expect.poll(() => browserSessionClearCount).toBe(2)
+})
+
+test('cookie callback re-login rotates the browser-session cache key', async ({ page }) => {
+  let browserSessionCreateCount = 0
+
+  await page.route('**/api/auth/bootstrap', async (route) => {
+    await route.fulfill({
+      json: {
+        auth: {
+          mode: 'bearer',
+          scope: 'openid profile email',
+          responseType: 'code',
+          audience: null,
+          callbackPath: '/auth/callback',
+          tokenUrl: '/oidc/token',
+          logoutUrl: null,
+          postLogoutRedirectPath: '/auth/login',
+        },
+        provider: {
+          configured: true,
+          authorizationUrl: '/oidc/authorize',
+          clientId: 'synthetic-client',
+          scope: 'openid profile email',
+          responseType: 'code',
+          audience: null,
+          callbackPath: '/auth/callback',
+          tokenUrl: '/oidc/token',
+          logoutUrl: null,
+          postLogoutRedirectPath: '/auth/login',
+        },
+      },
+    })
+  })
+
+  await page.route('**/oidc/token', async (route) => {
+    const body = route.request().postData() ?? ''
+    const isRefresh = body.includes('code=synthetic-refresh-code')
+
+    expect(body).toContain(
+      `code_verifier=${isRefresh ? refreshedCodeVerifier : codeVerifier}`,
+    )
+    await route.fulfill({
+      json: {
+        access_token: isRefresh ? refreshedAccessToken : accessToken,
+        id_token: idToken,
+      },
+    })
+  })
+
+  await page.route('**/api/auth/browser-session', async (route) => {
+    browserSessionCreateCount += 1
+    await route.fulfill({
+      headers: {
+        'Set-Cookie': 'store_ops_app_session=synthetic-cookie; Path=/; HttpOnly; SameSite=Lax',
+      },
+      json: {
+        csrfToken: browserSessionCreateCount > 1 ? refreshedCsrfToken : csrfToken,
+        expiresAt: '2026-06-12T02:00:00.000Z',
+        sessionId: 'synthetic-session-id',
+        session: authSession,
+      },
+    })
+  })
+
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({ json: authSession })
+  })
+
+  await page.addInitScript(
+    ({ session, state, verifier }) => {
+      if (!window.localStorage.getItem('store-ops-admin-session')) {
+        window.localStorage.setItem('store-ops-admin-session', JSON.stringify(session))
+      }
+
+      if (!window.sessionStorage.getItem('store-ops-admin-pkce-login')) {
+        window.sessionStorage.setItem(
+          'store-ops-admin-pkce-login',
+          JSON.stringify({
+            state,
+            codeVerifier: verifier,
+            returnTo: '/admin/session',
+            createdAt: Date.now(),
+          }),
+        )
+      }
+    },
+    {
+      session: cookieTransportSession,
+      state: pkceState,
+      verifier: codeVerifier,
+    },
+  )
+
+  await page.goto(`/auth/callback?code=synthetic-code&state=${pkceState}`)
+  await expect(page).toHaveURL(/\/admin\/session/)
+  await expect.poll(() => browserSessionCreateCount).toBe(1)
+
+  const firstProof = await page.evaluate(() => {
+    const session = JSON.parse(
+      window.localStorage.getItem('store-ops-admin-session') ?? '{}',
+    ) as { browserSessionKey?: string }
+
+    return {
+      browserSessionKey: session.browserSessionKey ?? '',
+      csrfToken: window.__storeOpsBrowserSessionCsrfToken ?? '',
+    }
+  })
+
+  expect(firstProof.browserSessionKey).not.toBe('')
+  expect(firstProof.csrfToken).toBe(csrfToken)
+
+  await page.evaluate(
+    ({ state, verifier }) => {
+      window.sessionStorage.setItem(
+        'store-ops-admin-pkce-login',
+        JSON.stringify({
+          state,
+          codeVerifier: verifier,
+          returnTo: '/admin/session',
+          createdAt: Date.now(),
+        }),
+      )
+    },
+    {
+      state: refreshedPkceState,
+      verifier: refreshedCodeVerifier,
+    },
+  )
+
+  await page.evaluate(
+    ({ state }) => {
+      window.history.pushState(
+        null,
+        '',
+        `/auth/callback?code=synthetic-refresh-code&state=${state}`,
+      )
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    },
+    {
+      state: refreshedPkceState,
+    },
+  )
+  await expect(page).toHaveURL(/\/admin\/session/)
+  await expect.poll(() => browserSessionCreateCount).toBe(2)
+
+  const renewedProof = await page.evaluate(() => {
+    const session = JSON.parse(
+      window.localStorage.getItem('store-ops-admin-session') ?? '{}',
+    ) as { browserSessionKey?: string }
+
+    return {
+      browserSessionKey: session.browserSessionKey ?? '',
+      csrfToken: window.__storeOpsBrowserSessionCsrfToken ?? '',
+    }
+  })
+
+  expect(renewedProof.browserSessionKey).not.toBe(firstProof.browserSessionKey)
+  expect(renewedProof.csrfToken).toBe(refreshedCsrfToken)
 })

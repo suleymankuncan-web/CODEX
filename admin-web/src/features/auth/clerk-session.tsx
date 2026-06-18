@@ -153,9 +153,11 @@ function ClerkSessionBridge() {
     startProviderSession,
     setProviderSessionHydrating,
   } = useSession()
-  const { getToken, isLoaded, isSignedIn } = useAuth()
+  const { getToken, isLoaded, isSignedIn, sessionId, userId } = useAuth()
   const lastTokenRef = useRef<string | null>(null)
+  const lastProviderSessionRef = useRef<string | null>(null)
   const template = (import.meta.env.VITE_CLERK_JWT_TEMPLATE ?? '').trim() || undefined
+  const providerSessionKey = isSignedIn ? `${userId ?? 'unknown-user'}:${sessionId ?? 'unknown-session'}` : null
   const getClerkToken = useCallback((input?: { skipCache?: boolean }) => {
     const options: { template?: string; skipCache?: boolean } = {}
     if (template) {
@@ -167,6 +169,14 @@ function ClerkSessionBridge() {
 
     return getToken(Object.keys(options).length > 0 ? options : undefined)
   }, [getToken, template])
+  const resolveProviderSessionStartOptions = useCallback(() => {
+    const intent: 'replace' | 'renew' = providerSessionKey && lastProviderSessionRef.current === providerSessionKey
+      ? 'renew'
+      : 'replace'
+
+    lastProviderSessionRef.current = providerSessionKey
+    return { intent }
+  }, [providerSessionKey])
 
   useEffect(() => {
     if (!isLoaded) {
@@ -181,6 +191,7 @@ function ClerkSessionBridge() {
 
     if (!isSignedIn) {
       lastTokenRef.current = null
+      lastProviderSessionRef.current = null
       void clearProviderSession()
       setProviderSessionHydrating(false)
     }
@@ -198,10 +209,17 @@ function ClerkSessionBridge() {
       }
 
       lastTokenRef.current = token
-      await startProviderSession(token)
+      await startProviderSession(token, null, resolveProviderSessionStartOptions())
       return { refreshed: true, bearerToken: token }
     })
-  }, [getToken, getClerkToken, isLoaded, isSignedIn, startProviderSession])
+  }, [
+    getToken,
+    getClerkToken,
+    isLoaded,
+    isSignedIn,
+    resolveProviderSessionStartOptions,
+    startProviderSession,
+  ])
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
@@ -220,10 +238,11 @@ function ClerkSessionBridge() {
         }
 
         lastTokenRef.current = token
-        await startProviderSession(token)
+        await startProviderSession(token, null, resolveProviderSessionStartOptions())
       } catch {
         if (!cancelled) {
           lastTokenRef.current = null
+          lastProviderSessionRef.current = null
           void clearProviderSession()
         }
       } finally {
@@ -247,6 +266,7 @@ function ClerkSessionBridge() {
     getClerkToken,
     isLoaded,
     isSignedIn,
+    resolveProviderSessionStartOptions,
     setProviderSessionHydrating,
     startProviderSession,
   ])

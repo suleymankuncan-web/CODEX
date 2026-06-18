@@ -8,7 +8,11 @@ import {
 } from 'react'
 import { isClerkSessionProviderAvailable } from '../auth/clerk-config'
 import { clearBrowserSessionCookie, createBrowserSession } from '../../lib/api'
-import { SessionContext, type SessionContextValue } from './session-context-value'
+import {
+  SessionContext,
+  type ProviderSessionStartOptions,
+  type SessionContextValue,
+} from './session-context-value'
 import {
   clearClientBearerSession,
   defaultSession,
@@ -25,6 +29,7 @@ import {
 export function SessionProvider(input: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>(() => readClientSession())
   const sessionRef = useRef(session)
+  const browserSessionAuthorizationFingerprintRef = useRef('')
   const [isProviderSessionHydrating, setProviderSessionHydrating] = useState(() =>
     isClerkSessionProviderAvailable(),
   )
@@ -110,9 +115,21 @@ export function SessionProvider(input: { children: ReactNode }) {
     )
   }, [])
 
-  const startProviderSession = useCallback(async (token: string, providerIdToken?: string | null) => {
+  const startProviderSession = useCallback(async (
+    token: string,
+    providerIdToken?: string | null,
+    options?: ProviderSessionStartOptions,
+  ) => {
     if (sessionRef.current.browserSessionTransport === 'cookie') {
-      await createBrowserSession(token)
+      const browserSession = await createBrowserSession(token)
+      const authorizationFingerprint = createStableAuthorizationFingerprint(browserSession.session)
+      const shouldRenewBrowserSessionKey = Boolean(
+        options?.intent === 'renew' &&
+          authorizationFingerprint &&
+          browserSessionAuthorizationFingerprintRef.current === authorizationFingerprint,
+      )
+
+      browserSessionAuthorizationFingerprintRef.current = authorizationFingerprint
       const browserSessionTransport = sessionRef.current.browserSessionTransport
       setSession((current) =>
         normalizeSession({
@@ -120,7 +137,10 @@ export function SessionProvider(input: { children: ReactNode }) {
           mode: 'bearer',
           browserSessionTransport,
           bearerToken: '',
-          browserSessionKey: createBrowserSessionCacheKey(),
+          browserSessionKey:
+            shouldRenewBrowserSessionKey
+              ? current.browserSessionKey.trim() || createBrowserSessionCacheKey()
+              : createBrowserSessionCacheKey(),
         }),
       )
       return
@@ -141,6 +161,7 @@ export function SessionProvider(input: { children: ReactNode }) {
       clearClientBearerSession()
     }
 
+    browserSessionAuthorizationFingerprintRef.current = ''
     setSession((current) =>
       normalizeSession({
         ...current,
@@ -200,4 +221,27 @@ function createBrowserSessionCacheKey() {
   }
 
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+}
+
+function createStableAuthorizationFingerprint(value: unknown): string {
+  if (!value || typeof value !== 'object') {
+    return ''
+  }
+
+  return stableStringify(value)
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).sort().join(',')}]`
+  }
+
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
+      .join(',')}}`
+  }
+
+  return JSON.stringify(value) ?? 'null'
 }
