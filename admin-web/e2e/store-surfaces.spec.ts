@@ -1535,7 +1535,7 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   )
   const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
   await expect(dailyBrief).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveText('2')
+  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveText('1')
   await expect(dailyBrief.locator('a[href="/store/kpis"]')).toBeVisible()
   await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveCount(0)
   await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)

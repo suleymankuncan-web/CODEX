@@ -742,13 +742,7 @@ function buildChecklistHomeSummary(input: {
   const acknowledgedCount = visibleAcknowledgementItems.filter((item) => item.acknowledgement !== null).length
   const activeDraftCount = visibleMobileToday?.activeInstances.length ?? 0
   const completedVisitCount = visibleMobileToday?.completedThisMonth.length ?? acknowledgedCount
-  const expectedVisitCount = visibleMobileToday
-    ? visibleMobileToday.stores.length * Math.max(visibleMobileToday.templates.length, 1)
-    : null
-  const pendingVisitCount =
-    expectedVisitCount === null
-      ? pendingAcknowledgements
-      : Math.max(expectedVisitCount - completedVisitCount - activeDraftCount, 0)
+  const pendingVisitCount = visibleMobileToday ? activeDraftCount : pendingAcknowledgements
 
   if (input.persona === 'storeManager') {
     const value = input.isLoading ? input.pendingValue : String(pendingAcknowledgements)
