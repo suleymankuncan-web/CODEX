@@ -376,9 +376,11 @@ export class SalesTargetIncentiveApiService {
       adjustmentAmount,
       persistedFinalAmount: adjustmentSummary?.final_amount ?? null,
     });
-    const status: SalesTargetIncentiveApiRow["status"] = adjustmentAmount
+    const canApplyCorrectionStatus =
+      calculation.payableAmount !== null || adjustmentSummary?.final_amount !== null;
+    const status: SalesTargetIncentiveApiRow["status"] = canApplyCorrectionStatus && adjustmentAmount
       ? "adjusted"
-      : correctionAmount
+      : canApplyCorrectionStatus && correctionAmount
         ? "corrected"
         : calculation.status;
 
@@ -540,7 +542,11 @@ function resolveFinalAmount(input: {
     return null;
   }
 
-  const base = input.payableAmount ? parseMoneyCents(input.payableAmount) : 0n;
+  if (input.payableAmount === null) {
+    return null;
+  }
+
+  const base = parseMoneyCents(input.payableAmount);
   const correction = input.correctionAmount ? parseMoneyCents(input.correctionAmount) : 0n;
   const adjustment = input.adjustmentAmount ? parseMoneyCents(input.adjustmentAmount) : 0n;
   return formatCents(base + correction + adjustment);

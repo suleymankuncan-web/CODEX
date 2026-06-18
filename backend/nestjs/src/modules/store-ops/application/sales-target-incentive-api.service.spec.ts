@@ -349,6 +349,57 @@ describe("SalesTargetIncentiveApiService", () => {
     });
   });
 
+  it("does not turn non-payable current rows into payable rows through old corrections", async () => {
+    const blockedProjection = {
+      ...eligibleProjection,
+      stores: [
+        {
+          ...eligibleProjection.stores[0],
+          personnel: [
+            {
+              ...eligibleProjection.stores[0].personnel[0],
+              calculation: {
+                ...eligibleProjection.stores[0].personnel[0].calculation,
+                status: "blocked",
+                payableAmount: null,
+                blockedReason: "current source is incomplete",
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as typeof eligibleProjection;
+    const { correctionRepository, service } = createService(blockedProjection);
+    correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([
+      {
+        store_id: storeId,
+        employee_id: employeeId,
+        participant_type: "personnel",
+        correction_amount: "125.25",
+        adjustment_amount: "0",
+        final_amount: null,
+      },
+    ]);
+
+    const result = await service.getAdminProjection({
+      actor: buildAuthenticatedUser({
+        userId: "admin-user",
+        roleCodes: ["SUPER_ADMIN"],
+        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      }),
+      periodKey: "2026-05",
+    });
+
+    const row = result.data.projections[0].rows.find((candidate) => candidate.employeeId === employeeId);
+    expect(row).toMatchObject({
+      correctionAmount: "125.25",
+      finalAmount: null,
+      payableAmount: null,
+      status: "blocked",
+      blockedReason: "current source is incomplete",
+    });
+  });
+
   it("includes admin-visible final snapshot adjustment rows that are absent from the current projection", async () => {
     const { correctionRepository, service } = createService();
     correctionRepository.listApprovedAdjustmentSummaries.mockResolvedValueOnce([

@@ -61,9 +61,10 @@ export function AdminIncentivesPage() {
   const [adjustmentAmount, setAdjustmentAmount] = useState('')
   const [reasonNote, setReasonNote] = useState('')
   const trimmedPeriod = period.trim()
+  const completePeriod = resolveCompletePeriodFilter(trimmedPeriod)
   const incentivesQuery = useQuery({
-    queryKey: adminSalesTargetIncentivesQueryKey(trimmedPeriod || undefined),
-    queryFn: () => getAdminSalesTargetIncentives(trimmedPeriod ? { period: trimmedPeriod } : undefined),
+    queryKey: adminSalesTargetIncentivesQueryKey(completePeriod),
+    queryFn: () => getAdminSalesTargetIncentives(completePeriod ? { period: completePeriod } : undefined),
     ...transientQueryRetryOptions,
   })
   const correctionMutation = useMutation({
@@ -71,7 +72,7 @@ export function AdminIncentivesPage() {
     onSuccess: async () => {
       setAdjustmentAmount('')
       setReasonNote('')
-      await queryClient.invalidateQueries({ queryKey: adminSalesTargetIncentivesQueryKey(trimmedPeriod || undefined) })
+      await queryClient.invalidateQueries({ queryKey: adminSalesTargetIncentivesQueryKey(completePeriod) })
     },
   })
 
@@ -405,6 +406,10 @@ function sumMoney(values: Array<string | null>) {
   const integer = absolute / 100n
   const cents = absolute % 100n
   return `${sign}${integer.toString()}.${cents.toString().padStart(2, '0')}`
+}
+
+function resolveCompletePeriodFilter(value: string) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(value) ? value : undefined
 }
 
 function decimalStringToCents(value: string) {

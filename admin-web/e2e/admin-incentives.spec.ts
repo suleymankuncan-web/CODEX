@@ -76,6 +76,46 @@ test('super admin reads incentive projections and submits an audited correction'
   })
 })
 
+test('admin incentive period filter waits for a complete period value', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'admin-incentive-user',
+        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+  })
+  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR']))
+
+  const requestedUrls: string[] = []
+  await page.route('**/api/admin/incentives**', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback()
+      return
+    }
+
+    requestedUrls.push(route.request().url())
+    await route.fulfill({ json: adminIncentivesFixture })
+  })
+
+  await page.goto('/admin/incentives')
+  await expect(page.getByTestId('admin-incentives-page')).toBeVisible()
+
+  requestedUrls.length = 0
+  await page.locator('#admin-incentive-period').fill('2')
+  await page.waitForTimeout(300)
+
+  expect(requestedUrls.some((url) => url.includes('period=2'))).toBe(false)
+  await expect(page.getByTestId('admin-incentives-page')).toBeVisible()
+
+  await page.locator('#admin-incentive-period').fill('2026-05')
+  await expect.poll(() => requestedUrls.some((url) => url.includes('period=2026-05'))).toBe(true)
+})
+
 test('non super admin does not see admin incentive navigation', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
