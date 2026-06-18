@@ -1,9 +1,8 @@
 import { IsISO8601, IsOptional, Matches } from "class-validator";
 
-export class GetSalesTargetIncentiveQueryDto {
-  @IsOptional()
+export class CreateSalesTargetIncentiveCloseRunDto {
   @Matches(/^\d{4}-(0[1-9]|1[0-2])$/)
-  period?: string;
+  period!: string;
 
   @IsOptional()
   @IsISO8601()

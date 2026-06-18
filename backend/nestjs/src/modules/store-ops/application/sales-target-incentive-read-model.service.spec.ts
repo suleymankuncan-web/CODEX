@@ -11,9 +11,15 @@ const storeSource = {
   store_target_amount: "1000000.0000",
   store_net_sales_amount: "1150000.0000",
   store_net_sales_source_batch_id: "batch-store-1",
+  store_net_sales_import_batch_id: "00000000-0000-4000-8000-000000000601",
   store_net_sales_source_payload_hash: "hash-store-1",
   store_net_sales_last_synced_at: "2026-05-31T21:00:00.000Z",
   manager_employee_id: "manager-1",
+  manager_user_id: "manager-user-1",
+  manager_assignment_id: "manager-assignment-1",
+  manager_assignment_started_on: "2026-05-01",
+  manager_assignment_ended_on: null,
+  manager_position_id: "position-manager-1",
   manager_first_name: "Ada",
   manager_last_name: "Yilmaz",
   manager_position_code: "STORE_MANAGER",
@@ -29,13 +35,20 @@ const personnelSource = {
   store_target_amount: "1000000.0000",
   store_net_sales_amount: "1150000.0000",
   store_net_sales_source_batch_id: "batch-store-1",
+  store_net_sales_import_batch_id: "00000000-0000-4000-8000-000000000601",
   personnel_target_reference_id: "target-ref-1",
   personnel_target_amount: "200000.0000",
   personnel_positive_sales_amount: "240000.0000",
   personnel_sales_source_batch_id: "batch-personnel-1",
+  personnel_sales_import_batch_id: "00000000-0000-4000-8000-000000000602",
   personnel_sales_source_payload_hash: "hash-personnel-1",
   personnel_sales_last_synced_at: "2026-05-31T21:00:00.000Z",
   employee_id: "employee-1",
+  user_id: "personnel-user-1",
+  assignment_id: "personnel-assignment-1",
+  assignment_started_on: "2026-05-01",
+  assignment_ended_on: null,
+  position_id: "position-sales-1",
   first_name: "Ali",
   last_name: "Can",
   external_employee_ref: "FM123",
@@ -96,6 +109,19 @@ describe("SalesTargetIncentiveReadModelService", () => {
         payableAmount: "11500.00",
       }),
     );
+    expect(result.stores[0].manager).toEqual(
+      expect.objectContaining({
+        userId: "manager-user-1",
+        assignmentId: "manager-assignment-1",
+        assignmentStartedOn: "2026-05-01",
+        assignmentEndedOn: null,
+        positionId: "position-manager-1",
+        source: expect.objectContaining({
+          storeNetSalesSourceBatchId: "batch-store-1",
+          storeNetSalesImportBatchId: "00000000-0000-4000-8000-000000000601",
+        }),
+      }),
+    );
     expect(result.stores[0].personnel[0].calculation).toEqual(
       expect.objectContaining({
         status: "projected",
@@ -104,6 +130,21 @@ describe("SalesTargetIncentiveReadModelService", () => {
         achievementPct: "120.0000",
         rate: "0.0165",
         payableAmount: "3960.00",
+      }),
+    );
+    expect(result.stores[0].personnel[0]).toEqual(
+      expect.objectContaining({
+        userId: "personnel-user-1",
+        assignmentId: "personnel-assignment-1",
+        assignmentStartedOn: "2026-05-01",
+        assignmentEndedOn: null,
+        positionId: "position-sales-1",
+        source: expect.objectContaining({
+          storeNetSalesSourceBatchId: "batch-store-1",
+          storeNetSalesImportBatchId: "00000000-0000-4000-8000-000000000601",
+          personnelSalesSourceBatchId: "batch-personnel-1",
+          personnelSalesImportBatchId: "00000000-0000-4000-8000-000000000602",
+        }),
       }),
     );
   });
@@ -115,6 +156,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
           ...storeSource,
           store_net_sales_amount: null,
           store_net_sales_source_batch_id: null,
+          store_net_sales_import_batch_id: null,
         },
       ],
       personnelRows: [
@@ -123,6 +165,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
           store_net_sales_amount: null,
           personnel_positive_sales_amount: null,
           personnel_sales_source_batch_id: null,
+          personnel_sales_import_batch_id: null,
         },
       ],
     });
@@ -278,6 +321,7 @@ describe("SalesTargetIncentiveReadModelService", () => {
           store_target_amount: null,
           store_net_sales_amount: null,
           store_net_sales_source_batch_id: null,
+          store_net_sales_import_batch_id: null,
           manager_employee_id: null,
           manager_first_name: null,
           manager_last_name: null,
@@ -298,6 +342,40 @@ describe("SalesTargetIncentiveReadModelService", () => {
       expect.objectContaining({
         status: "blocked_by_calculation",
         canClose: false,
+      }),
+    );
+  });
+
+  it("checks final close calculations with period-end assignments and the close cutoff", async () => {
+    const { repository, service } = createService();
+
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05",
+      companyIds: ["company-1"],
+      nowIso: "2026-06-01T02:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(repository.listStoreProjectionSources).toHaveBeenCalledWith({
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: [],
+      allowGlobalScope: false,
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      assignmentAsOfDate: "2026-05-31",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+    expect(repository.listPersonnelProjectionSources).toHaveBeenCalledWith(
+      expect.objectContaining({
+        assignmentAsOfDate: "2026-05-31",
+        closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "ready",
+        canClose: true,
       }),
     );
   });

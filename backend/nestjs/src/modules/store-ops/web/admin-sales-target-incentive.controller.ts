@@ -3,6 +3,7 @@ import { AuthenticatedUser } from "../../auth/auth-context.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { SalesTargetIncentiveApiService } from "../application/sales-target-incentive-api.service";
+import { CreateSalesTargetIncentiveCloseRunDto } from "./dto/create-sales-target-incentive-close-run.dto";
 import { CreateSalesTargetIncentiveCorrectionDto } from "./dto/create-sales-target-incentive-correction.dto";
 import { GetSalesTargetIncentiveQueryDto } from "./dto/get-sales-target-incentive.query";
 
@@ -26,6 +27,34 @@ export class AdminSalesTargetIncentiveController {
     return this.salesTargetIncentiveApiService.getAdminProjection({
       actor: request.user,
       periodKey: query.period,
+    });
+  }
+
+  @Get("close-status")
+  @RequireScope("authenticated")
+  @RequireRoles("SUPER_ADMIN")
+  async getAdminIncentiveCloseStatus(
+    @Req() request: SalesTargetIncentiveRequest,
+    @Query() query: GetSalesTargetIncentiveQueryDto,
+  ) {
+    return this.salesTargetIncentiveApiService.getAdminCloseStatus({
+      actor: request.user,
+      periodKey: query.period,
+      closeCutoffAt: query.closeCutoffAt,
+    });
+  }
+
+  @Post("close-runs")
+  @RequireScope("authenticated")
+  @RequireRoles("SUPER_ADMIN")
+  async createAdminIncentiveCloseRun(
+    @Req() request: SalesTargetIncentiveRequest,
+    @Body() body: CreateSalesTargetIncentiveCloseRunDto,
+  ) {
+    return this.salesTargetIncentiveApiService.runAdminClose({
+      actor: request.user,
+      periodKey: body.period,
+      closeCutoffAt: body.closeCutoffAt,
     });
   }
 

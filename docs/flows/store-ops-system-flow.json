@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-18T05:31:12.137Z",
+  "generatedAt": "2026-06-18T12:51:30.221Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 179,
-    "backendEndpointsWithoutFrontendCallCount": 34,
+    "backendEndpointCount": 181,
+    "backendEndpointsWithoutFrontendCallCount": 36,
     "controllerCount": 22,
     "frontendApiCallCount": 145,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 145,
-    "openApiEndpointCount": 179,
+    "openApiEndpointCount": 181,
     "routeApiEdgeCount": 216,
     "routesWithoutApiCallCount": 2,
     "unmatchedFrontendApiCallCount": 0
@@ -3279,7 +3279,35 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
-        "line": 19
+        "line": 20
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/admin/incentives/close-runs",
+      "method": "POST",
+      "path": "/api/admin/incentives/close-runs",
+      "rawControllerPath": "admin/incentives",
+      "rawMethodPath": "close-runs",
+      "controller": "admin-sales-target-incentive",
+      "domain": "admin",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
+        "line": 47
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/admin/incentives/close-status",
+      "method": "GET",
+      "path": "/api/admin/incentives/close-status",
+      "rawControllerPath": "admin/incentives",
+      "rawMethodPath": "close-status",
+      "controller": "admin-sales-target-incentive",
+      "domain": "admin",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
+        "line": 33
       }
     },
     {
@@ -3293,7 +3321,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
-        "line": 32
+        "line": 61
       }
     },
     {
@@ -5708,6 +5736,18 @@
       "id": "openapi:GET:/api/admin/incentives",
       "method": "GET",
       "path": "/api/admin/incentives",
+      "domain": "admin"
+    },
+    {
+      "id": "openapi:POST:/api/admin/incentives/close-runs",
+      "method": "POST",
+      "path": "/api/admin/incentives/close-runs",
+      "domain": "admin"
+    },
+    {
+      "id": "openapi:GET:/api/admin/incentives/close-status",
+      "method": "GET",
+      "path": "/api/admin/incentives/close-status",
       "domain": "admin"
     },
     {
@@ -8785,6 +8825,13 @@
         "frontendCallCount": 2
       },
       {
+        "id": "controller:admin-sales-target-incentive",
+        "controller": "admin-sales-target-incentive",
+        "domain": "admin",
+        "endpointCount": 4,
+        "frontendCallCount": 2
+      },
+      {
         "id": "controller:auth-session",
         "controller": "auth-session",
         "domain": "auth",
@@ -8794,13 +8841,6 @@
       {
         "id": "controller:admin-checklist-template",
         "controller": "admin-checklist-template",
-        "domain": "admin",
-        "endpointCount": 2,
-        "frontendCallCount": 2
-      },
-      {
-        "id": "controller:admin-sales-target-incentive",
-        "controller": "admin-sales-target-incentive",
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 2
@@ -8859,6 +8899,8 @@
   "risks": {
     "backendEndpointsWithoutFrontendCalls": [
       "endpoint:PUT:/api/admin/feed/{feedPostId}",
+      "endpoint:POST:/api/admin/incentives/close-runs",
+      "endpoint:GET:/api/admin/incentives/close-status",
       "endpoint:POST:/api/admin/migrations/run",
       "endpoint:GET:/api/admin/migrations/status",
       "endpoint:DELETE:/api/auth/browser-session",

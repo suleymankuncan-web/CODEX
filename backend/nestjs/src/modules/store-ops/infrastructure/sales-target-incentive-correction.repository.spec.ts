@@ -26,6 +26,7 @@ const store = {
   storeTargetAmount: "1000000.0000",
   storeNetSalesAmount: "1150000.0000",
   storeNetSalesSourceBatchId: "00000000-0000-4000-8000-000000000401",
+  storeNetSalesImportBatchId: "00000000-0000-4000-8000-000000000411",
   storeNetSalesLastSyncedAt: "2026-05-31T21:00:00.000Z",
   manager: null,
   personnel: [],
@@ -34,6 +35,11 @@ const store = {
 const participant = {
   participantType: "personnel" as const,
   employeeId,
+  userId: "00000000-0000-4000-8000-000000000601",
+  assignmentId: "00000000-0000-4000-8000-000000000602",
+  assignmentStartedOn: "2026-05-01",
+  assignmentEndedOn: null,
+  positionId: "00000000-0000-4000-8000-000000000603",
   displayName: "Ali Can",
   positionCode: "SALES_ASSOCIATE" as const,
   normalizedFromPositionCode: null,
@@ -43,7 +49,9 @@ const participant = {
   source: {
     storeTargetRequestId: "00000000-0000-4000-8000-000000000301",
     storeNetSalesSourceBatchId: "00000000-0000-4000-8000-000000000401",
+    storeNetSalesImportBatchId: "00000000-0000-4000-8000-000000000411",
     personnelSalesSourceBatchId: "00000000-0000-4000-8000-000000000402",
+    personnelSalesImportBatchId: "00000000-0000-4000-8000-000000000412",
   },
   calculation: {
     status: "projected" as const,

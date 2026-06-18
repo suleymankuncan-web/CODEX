@@ -13,6 +13,7 @@ export type SalesTargetIncentiveReadScopeInput = {
   periodStart: string;
   periodEnd: string;
   assignmentAsOfDate: string;
+  closeCutoffAt?: string;
 };
 
 export type SalesTargetIncentiveStoreSourceRow = {
@@ -25,9 +26,15 @@ export type SalesTargetIncentiveStoreSourceRow = {
   store_target_amount: string | null;
   store_net_sales_amount: string | null;
   store_net_sales_source_batch_id: string | null;
+  store_net_sales_import_batch_id: string | null;
   store_net_sales_source_payload_hash: string | null;
   store_net_sales_last_synced_at: string | null;
   manager_employee_id: string | null;
+  manager_user_id: string | null;
+  manager_assignment_id: string | null;
+  manager_assignment_started_on: string | null;
+  manager_assignment_ended_on: string | null;
+  manager_position_id: string | null;
   manager_first_name: string | null;
   manager_last_name: string | null;
   manager_position_code: "STORE_MANAGER" | null;
@@ -43,13 +50,20 @@ export type SalesTargetIncentivePersonnelSourceRow = {
   store_target_amount: string | null;
   store_net_sales_amount: string | null;
   store_net_sales_source_batch_id: string | null;
+  store_net_sales_import_batch_id: string | null;
   personnel_target_reference_id: string | null;
   personnel_target_amount: string | null;
   personnel_positive_sales_amount: string | null;
   personnel_sales_source_batch_id: string | null;
+  personnel_sales_import_batch_id: string | null;
   personnel_sales_source_payload_hash: string | null;
   personnel_sales_last_synced_at: string | null;
   employee_id: string;
+  user_id: string | null;
+  assignment_id: string;
+  assignment_started_on: string;
+  assignment_ended_on: string | null;
+  position_id: string;
   first_name: string;
   last_name: string;
   external_employee_ref: string | null;
@@ -82,6 +96,7 @@ export class SalesTargetIncentiveReadRepository {
       input.periodEnd,
       input.assignmentAsOfDate,
     ];
+    const closeCutoffClause = this.appendCloseCutoffClause(input, params, "ib");
     const clauses = this.buildStoreScopeClauses(input, params);
 
     const result =
@@ -109,9 +124,15 @@ export class SalesTargetIncentiveReadRepository {
             store_target.total_target_value::text AS store_target_amount,
             store_sales.actual_value::text AS store_net_sales_amount,
             store_sales.source_batch_id AS store_net_sales_source_batch_id,
+            store_sales.import_batch_id AS store_net_sales_import_batch_id,
             store_sales.source_payload_hash AS store_net_sales_source_payload_hash,
             store_sales.last_synced_at::text AS store_net_sales_last_synced_at,
             manager.employee_id::text AS manager_employee_id,
+            manager_user.user_id::text AS manager_user_id,
+            manager.assignment_id::text AS manager_assignment_id,
+            manager.start_date::text AS manager_assignment_started_on,
+            manager.end_date::text AS manager_assignment_ended_on,
+            manager.position_id::text AS manager_position_id,
             manager_employee.first_name AS manager_first_name,
             manager_employee.last_name AS manager_last_name,
             manager.position_code AS manager_position_code
@@ -136,6 +157,10 @@ export class SalesTargetIncentiveReadRepository {
           LEFT JOIN LATERAL (
             SELECT
               eah.employee_id,
+              eah.assignment_id,
+              eah.start_date,
+              eah.end_date,
+              eah.position_id,
               p.position_code
             FROM ops.employee_assignment_history eah
             INNER JOIN ops.employee e
@@ -154,9 +179,18 @@ export class SalesTargetIncentiveReadRepository {
           LEFT JOIN ops.employee manager_employee
             ON manager_employee.employee_id = manager.employee_id
           LEFT JOIN LATERAL (
+            SELECT ua.user_id
+            FROM ops.user_account ua
+            WHERE ua.employee_id = manager.employee_id
+              AND ua.is_active = TRUE
+            ORDER BY ua.created_at DESC, ua.user_id DESC
+            LIMIT 1
+          ) manager_user ON TRUE
+          LEFT JOIN LATERAL (
             SELECT
               ka.actual_value,
               ka.source_batch_id,
+              ib.import_batch_id::text AS import_batch_id,
               ka.source_payload_hash,
               ka.last_synced_at
             FROM ops.kpi_actual ka
@@ -169,6 +203,7 @@ export class SalesTargetIncentiveReadRepository {
              AND ib.entity_type = 'kpi'
              AND ib.status IN ('completed', 'completed_with_errors')
              AND ib.company_ids && ARRAY[s.company_id]::uuid[]
+             ${closeCutoffClause}
             WHERE ka.store_id = s.store_id
               AND ka.scope_type = 'store'
               AND ka.period_type = 'monthly'
@@ -194,6 +229,7 @@ export class SalesTargetIncentiveReadRepository {
       input.periodEnd,
       input.assignmentAsOfDate,
     ];
+    const closeCutoffClause = this.appendCloseCutoffClause(input, params, "ib");
     const clauses = this.buildStoreScopeClauses(input, params);
 
     const result =
@@ -214,6 +250,10 @@ export class SalesTargetIncentiveReadRepository {
           assignment AS (
             SELECT DISTINCT ON (eah.employee_id)
               eah.employee_id,
+              eah.assignment_id,
+              eah.start_date,
+              eah.end_date,
+              eah.position_id,
               eah.store_id,
               e.first_name,
               e.last_name,
@@ -248,13 +288,20 @@ export class SalesTargetIncentiveReadRepository {
             store_target.total_target_value::text AS store_target_amount,
             store_sales.actual_value::text AS store_net_sales_amount,
             store_sales.source_batch_id AS store_net_sales_source_batch_id,
+            store_sales.import_batch_id AS store_net_sales_import_batch_id,
             ptr.personnel_target_reference_id::text AS personnel_target_reference_id,
             ptr.target_value::text AS personnel_target_amount,
             personnel_sales.actual_value::text AS personnel_positive_sales_amount,
             personnel_sales.source_batch_id AS personnel_sales_source_batch_id,
+            personnel_sales.import_batch_id AS personnel_sales_import_batch_id,
             personnel_sales.source_payload_hash AS personnel_sales_source_payload_hash,
             personnel_sales.last_synced_at::text AS personnel_sales_last_synced_at,
             assignment.employee_id::text AS employee_id,
+            personnel_user.user_id::text AS user_id,
+            assignment.assignment_id::text AS assignment_id,
+            assignment.start_date::text AS assignment_started_on,
+            assignment.end_date::text AS assignment_ended_on,
+            assignment.position_id::text AS position_id,
             assignment.first_name,
             assignment.last_name,
             assignment.external_employee_ref,
@@ -282,7 +329,8 @@ export class SalesTargetIncentiveReadRepository {
           LEFT JOIN LATERAL (
             SELECT
               ka.actual_value,
-              ka.source_batch_id
+              ka.source_batch_id,
+              ib.import_batch_id::text AS import_batch_id
             FROM ops.kpi_actual ka
             INNER JOIN ops.kpi_definition kd
               ON kd.kpi_id = ka.kpi_id
@@ -293,6 +341,7 @@ export class SalesTargetIncentiveReadRepository {
              AND ib.entity_type = 'kpi'
              AND ib.status IN ('completed', 'completed_with_errors')
              AND ib.company_ids && ARRAY[s.company_id]::uuid[]
+             ${closeCutoffClause}
             WHERE ka.store_id = s.store_id
               AND ka.scope_type = 'store'
               AND ka.period_type = 'monthly'
@@ -316,6 +365,7 @@ export class SalesTargetIncentiveReadRepository {
             SELECT
               ka.actual_value,
               ka.source_batch_id,
+              ib.import_batch_id::text AS import_batch_id,
               ka.source_payload_hash,
               ka.last_synced_at
             FROM ops.kpi_actual ka
@@ -328,6 +378,7 @@ export class SalesTargetIncentiveReadRepository {
              AND ib.entity_type = 'kpi'
              AND ib.status IN ('completed', 'completed_with_errors')
              AND ib.company_ids && ARRAY[s.company_id]::uuid[]
+             ${closeCutoffClause}
             WHERE ka.store_id = assignment.store_id
               AND ka.employee_id = assignment.employee_id
               AND ka.scope_type = 'employee'
@@ -362,6 +413,14 @@ export class SalesTargetIncentiveReadRepository {
             ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
             LIMIT 1
           ) personnel_sales ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT ua.user_id
+            FROM ops.user_account ua
+            WHERE ua.employee_id = assignment.employee_id
+              AND ua.is_active = TRUE
+            ORDER BY ua.created_at DESC, ua.user_id DESC
+            LIMIT 1
+          ) personnel_user ON TRUE
           ORDER BY s.store_name ASC, assignment.first_name ASC, assignment.last_name ASC, assignment.employee_id ASC
         `,
         params,
@@ -474,5 +533,18 @@ export class SalesTargetIncentiveReadRepository {
     }
 
     return input.allowGlobalScope ? ["TRUE"] : ["FALSE"];
+  }
+
+  private appendCloseCutoffClause(
+    input: { closeCutoffAt?: string },
+    params: unknown[],
+    importAlias: string,
+  ) {
+    if (!input.closeCutoffAt) {
+      return "";
+    }
+
+    params.push(input.closeCutoffAt);
+    return `AND COALESCE(${importAlias}.finished_at, ${importAlias}.started_at) <= $${params.length}::timestamptz`;
   }
 }

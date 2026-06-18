@@ -31,10 +31,16 @@ const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
       storeTargetAmount: "1000000.0000",
       storeNetSalesAmount: "1150000.0000",
       storeNetSalesSourceBatchId: "batch-store-1",
+      storeNetSalesImportBatchId: "00000000-0000-4000-8000-000000000901",
       storeNetSalesLastSyncedAt: "2026-05-31T21:00:00.000Z",
       manager: {
         participantType: "store_manager",
         employeeId: "00000000-0000-4000-8000-000000000401",
+        userId: "00000000-0000-4000-8000-000000000601",
+        assignmentId: "00000000-0000-4000-8000-000000000701",
+        assignmentStartedOn: "2026-05-01",
+        assignmentEndedOn: null,
+        positionId: "00000000-0000-4000-8000-000000000801",
         displayName: "Ada Yilmaz",
         positionCode: "STORE_MANAGER",
         normalizedFromPositionCode: null,
@@ -44,7 +50,9 @@ const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
         source: {
           storeTargetRequestId: "target-request-1",
           storeNetSalesSourceBatchId: "batch-store-1",
+          storeNetSalesImportBatchId: "00000000-0000-4000-8000-000000000901",
           personnelSalesSourceBatchId: null,
+          personnelSalesImportBatchId: null,
         },
         calculation: {
           status: "projected",
@@ -67,6 +75,11 @@ const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
         {
           participantType: "personnel",
           employeeId,
+          userId: "00000000-0000-4000-8000-000000000602",
+          assignmentId: "00000000-0000-4000-8000-000000000702",
+          assignmentStartedOn: "2026-05-01",
+          assignmentEndedOn: null,
+          positionId: "00000000-0000-4000-8000-000000000802",
           displayName: "Ali Can",
           positionCode: "SALES_ASSOCIATE",
           normalizedFromPositionCode: null,
@@ -76,7 +89,9 @@ const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
           source: {
             storeTargetRequestId: "target-request-1",
             storeNetSalesSourceBatchId: "batch-store-1",
+            storeNetSalesImportBatchId: "00000000-0000-4000-8000-000000000901",
             personnelSalesSourceBatchId: "batch-personnel-1",
+            personnelSalesImportBatchId: "00000000-0000-4000-8000-000000000902",
           },
           calculation: {
             status: "projected",
@@ -103,6 +118,15 @@ const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
 function createService(projection: SalesTargetIncentiveProjectionReadModel = eligibleProjection) {
   const readModelService = {
     buildCurrentProjection: jest.fn(async () => projection),
+    getCloseReadiness: jest.fn(async (): Promise<unknown> => ({
+      periodKey: "2026-05",
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      canClose: true,
+      status: "ready",
+      blockingImports: [],
+      blockingTargetRevisions: [],
+    })),
   };
   const correctionRepository = {
     applyAdminCorrection: jest.fn(async () => ({
@@ -126,12 +150,31 @@ function createService(projection: SalesTargetIncentiveProjectionReadModel = eli
       async (): Promise<SalesTargetIncentiveAdjustmentSummaryRow[]> => [],
     ),
   };
+  const closeRepository = {
+    listCloseRuns: jest.fn(async (): Promise<unknown[]> => []),
+    createSucceededCloseRun: jest.fn(async (): Promise<unknown> => ({
+      closeRunId: "00000000-0000-4000-8000-000000000901",
+      companyId,
+      periodKey: "2026-05",
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      status: "succeeded",
+      startedAt: "2026-06-01T02:00:00.000+03:00",
+      completedAt: "2026-06-01T02:00:01.000+03:00",
+      failedReason: null,
+      sourceImportBatchIds: [],
+      finalSnapshotCount: 1,
+      finalRowCount: 2,
+    })),
+  };
   const service = new SalesTargetIncentiveApiService(
     readModelService as never,
     correctionRepository as never,
+    closeRepository as never,
   );
 
-  return { correctionRepository, readModelService, service };
+  return { closeRepository, correctionRepository, readModelService, service };
 }
 
 describe("SalesTargetIncentiveApiService", () => {
@@ -280,6 +323,142 @@ describe("SalesTargetIncentiveApiService", () => {
       storeIds: [storeId],
       includeFinalRows: true,
     });
+  });
+
+  it("returns admin close readiness and close-run history for a company scope", async () => {
+    const { closeRepository, readModelService, service } = createService();
+    closeRepository.listCloseRuns.mockResolvedValueOnce([
+      {
+        closeRunId: "00000000-0000-4000-8000-000000000901",
+        companyId,
+        periodKey: "2026-05",
+        periodStart: "2026-05-01",
+        periodEnd: "2026-05-31",
+        closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+        status: "succeeded",
+        startedAt: "2026-06-01T02:00:00.000+03:00",
+        completedAt: "2026-06-01T02:00:01.000+03:00",
+        failedReason: null,
+        sourceImportBatchIds: [],
+        finalSnapshotCount: 1,
+        finalRowCount: 2,
+      },
+    ]);
+
+    const result = await service.getAdminCloseStatus({
+      actor: buildAuthenticatedUser({
+        userId: "admin-user",
+        roleCodes: ["SUPER_ADMIN"],
+        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      }),
+      periodKey: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(readModelService.getCloseReadiness).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      companyIds: [companyId],
+      nowIso: "2026-06-01T02:00:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+    expect(closeRepository.listCloseRuns).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      companyIds: [companyId],
+    });
+    expect(result.data).toMatchObject({
+      period: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      readiness: expect.objectContaining({ status: "ready" }),
+      closeRuns: [expect.objectContaining({ status: "succeeded" })],
+    });
+  });
+
+  it("runs admin close only after readiness passes and freezes period-end assignments", async () => {
+    const { closeRepository, readModelService, service } = createService();
+
+    const result = await service.runAdminClose({
+      actor: buildAuthenticatedUser({
+        userId: "00000000-0000-4000-8000-000000000901",
+        roleCodes: ["SUPER_ADMIN"],
+        readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+      }),
+      periodKey: "2026-05",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(readModelService.getCloseReadiness).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      companyIds: [companyId],
+      nowIso: "2026-06-01T02:00:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+    expect(readModelService.buildCurrentProjection).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      companyIds: [companyId],
+      regionIds: [],
+      storeIds: [],
+      assignmentAsOfDate: "2026-05-31",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+    expect(closeRepository.createSucceededCloseRun).toHaveBeenCalledWith({
+      companyId,
+      periodKey: "2026-05",
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      actorUserId: "00000000-0000-4000-8000-000000000901",
+      stores: eligibleProjection.stores,
+    });
+    expect(result.data).toMatchObject({
+      finalSnapshotCount: 1,
+      finalRowCount: 2,
+    });
+  });
+
+  it("blocks admin close before final snapshot persistence when readiness is not ready", async () => {
+    const { closeRepository, readModelService, service } = createService();
+    readModelService.getCloseReadiness.mockResolvedValueOnce({
+      periodKey: "2026-05",
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      canClose: false,
+      status: "blocked_by_imports",
+      blockingImports: [{ import_batch_id: "batch-1" }],
+      blockingTargetRevisions: [],
+    });
+
+    await expect(
+      service.runAdminClose({
+        actor: buildAuthenticatedUser({
+          userId: "admin-user",
+          roleCodes: ["SUPER_ADMIN"],
+          readScope: { companyIds: [companyId], regionIds: [], storeIds: [] },
+        }),
+        periodKey: "2026-05",
+        closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      }),
+    ).rejects.toThrow("Incentive close is blocked_by_imports");
+
+    expect(readModelService.buildCurrentProjection).not.toHaveBeenCalled();
+    expect(closeRepository.createSucceededCloseRun).not.toHaveBeenCalled();
+  });
+
+  it("requires company scope for admin close because close runs are company-scoped", async () => {
+    const { closeRepository, readModelService, service } = createService();
+
+    await expect(
+      service.getAdminCloseStatus({
+        actor: buildAuthenticatedUser({
+          userId: "admin-user",
+          roleCodes: ["SUPER_ADMIN"],
+          readScope: { companyIds: [], regionIds: [regionId], storeIds: [] },
+        }),
+        periodKey: "2026-05",
+      }),
+    ).rejects.toThrow("Incentive close requires company scope");
+
+    expect(readModelService.getCloseReadiness).not.toHaveBeenCalled();
+    expect(closeRepository.listCloseRuns).not.toHaveBeenCalled();
   });
 
   it("limits admin reads to the actor's SUPER_ADMIN role scope when mixed roles widen read scope", async () => {

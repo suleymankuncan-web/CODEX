@@ -682,6 +682,15 @@ export type components = {
       "effectiveFrom"?: string
       "effectiveTo"?: string
     }
+    "CreateSalesTargetIncentiveCorrectionDto": {
+      "period": string
+      "storeId": string
+      "employeeId": string
+      "participantType": "store_manager" | "personnel"
+      "adjustmentAmount": string
+      "reasonCode": string
+      "reasonNote": string
+    }
     "CreateStoreActionPlanRequest": {
       "storeId": string
       "sourceType": "kpi_exception" | "checklist_remediation"
@@ -3532,7 +3541,7 @@ export type paths = {
     post: {
       requestBody: {
         content: {
-          'application/json': Record<string, unknown>
+          'application/json': components['schemas']["CreateSalesTargetIncentiveCorrectionDto"]
         }
       }
       responses: {
