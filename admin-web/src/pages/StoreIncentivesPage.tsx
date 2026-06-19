@@ -1,11 +1,18 @@
-import { useQuery } from '@tanstack/react-query'
-import { CalendarDays, ShieldCheck, Store as StoreIcon, WalletCards } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Target, TrendingUp, UsersRound, WalletCards } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { hasAnyRole } from '../features/auth/authorization'
 import {
+  createStoreSalesTargetIncentiveRegionCorrection,
   getStoreSalesTargetIncentives,
+  markStoreSalesTargetIncentiveReview,
   storeSalesTargetIncentivesQueryKey,
+  submitStoreSalesTargetIncentiveRegionPackage,
+  type SalesTargetIncentiveResponse,
+  voidStoreSalesTargetIncentiveRegionCorrection,
 } from '../features/incentives/api'
+import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import { useLocalization } from '../features/localization/useLocalization'
 import { ApiError } from '../lib/api'
 import { getErrorMessage } from '../lib/format'
@@ -13,19 +20,19 @@ import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   formatMoneyValue,
   formatPercentValue,
-  getIncentiveStatusLabel,
-  getIncentiveStatusTone,
   getManagerRow,
   getPersonnelRows,
   getPrimaryEarnedAmount,
+  getRevisionLabel,
 } from './store-incentives-model'
+import { PeriodPicker } from './store-incentives-period-picker'
+import { RegionManagerIncentivesView } from './store-incentives-region-manager-view'
 import {
   IncentiveRateTables,
   StoreIncentiveProjectionCard,
 } from './store-incentives-widgets'
 import {
   StoreErrorState,
-  StoreLoadingState,
   StoreMetricCard,
   StoreMetricGrid,
   StoreSurfaceHeader,
@@ -40,12 +47,54 @@ export function StoreIncentivesPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
+  const queryClient = useQueryClient()
   const enabled = canReadStoreIncentives(input.authSummary)
+  const [period, setPeriod] = useState<string | undefined>(undefined)
+  const [periodWasSelected, setPeriodWasSelected] = useState(false)
+  const handlePeriodChange = (nextPeriod: string) => {
+    setPeriod(nextPeriod)
+    setPeriodWasSelected(true)
+  }
+  const incentivesQueryIdentity = useMemo(
+    () => getSalesTargetIncentiveQueryIdentity(input.authSummary),
+    [input.authSummary],
+  )
+  const incentivesQueryKey = useMemo(
+    () => storeSalesTargetIncentivesQueryKey(period, incentivesQueryIdentity),
+    [period, incentivesQueryIdentity],
+  )
+  const currentIncentivesQueryKey = useMemo(
+    () => storeSalesTargetIncentivesQueryKey(undefined, incentivesQueryIdentity),
+    [incentivesQueryIdentity],
+  )
   const incentivesQuery = useQuery({
-    queryKey: storeSalesTargetIncentivesQueryKey(),
-    queryFn: () => getStoreSalesTargetIncentives(),
+    queryKey: incentivesQueryKey,
+    queryFn: () => getStoreSalesTargetIncentives(period ? { period } : undefined),
     enabled,
     ...transientQueryRetryOptions,
+  })
+  const invalidateCurrentQuery = () => {
+    queryClient.invalidateQueries({ queryKey: incentivesQueryKey, exact: true })
+    if (period) {
+      queryClient.invalidateQueries({ queryKey: currentIncentivesQueryKey, exact: true })
+    }
+  }
+
+  const reviewMutation = useMutation({
+    mutationFn: markStoreSalesTargetIncentiveReview,
+    onSuccess: invalidateCurrentQuery,
+  })
+  const correctionMutation = useMutation({
+    mutationFn: createStoreSalesTargetIncentiveRegionCorrection,
+    onSuccess: invalidateCurrentQuery,
+  })
+  const voidCorrectionMutation = useMutation({
+    mutationFn: voidStoreSalesTargetIncentiveRegionCorrection,
+    onSuccess: invalidateCurrentQuery,
+  })
+  const submitPackageMutation = useMutation({
+    mutationFn: submitStoreSalesTargetIncentiveRegionPackage,
+    onSuccess: invalidateCurrentQuery,
   })
 
   if (!enabled) {
@@ -61,7 +110,7 @@ export function StoreIncentivesPage(input: {
 
   if (incentivesQuery.isLoading) {
     return (
-      <StoreLoadingState
+      <StoreLoadingShell
         title={t('storeIncentives.loadingTitle')}
         description={t('storeIncentives.loadingCopy')}
       />
@@ -86,7 +135,7 @@ export function StoreIncentivesPage(input: {
   const response = incentivesQuery.data
   if (!response) {
     return (
-      <StoreLoadingState
+      <StoreLoadingShell
         title={t('storeIncentives.loadingTitle')}
         description={t('storeIncentives.loadingCopy')}
       />
@@ -94,86 +143,168 @@ export function StoreIncentivesPage(input: {
   }
 
   const data = response.data
-  const projections = data.projections
+  if (data.projections.length === 0) {
+    const canBrowseEmptyPeriod = data.roleScope === 'region' || periodWasSelected
+    if (!canBrowseEmptyPeriod) {
+      return (
+        <StoreSurfacePage ariaLabel={t('storeIncentives.heroEyebrow')}>
+          <StoreErrorState
+            title={t('storeIncentives.routeUnavailableTitle')}
+            description={t('storeIncentives.routeUnavailableCopy')}
+          />
+        </StoreSurfacePage>
+      )
+    }
+
+    return (
+      <StoreIncentivesEmptyPeriod
+        onPeriodChange={handlePeriodChange}
+        period={period ?? data.period}
+      />
+    )
+  }
+
+  if (data.roleScope === 'region') {
+    return (
+      <RegionManagerIncentivesView
+        data={data}
+        locale={locale}
+        mutationState={{
+          reviewMutation,
+          correctionMutation,
+          voidCorrectionMutation,
+          submitPackageMutation,
+        }}
+        onPeriodChange={handlePeriodChange}
+        selectedPeriod={period ?? data.period}
+      />
+    )
+  }
+
+  return (
+    <StoreManagerIncentivesView
+      data={data}
+      locale={locale}
+      onPeriodChange={handlePeriodChange}
+      selectedPeriod={period ?? data.period}
+      t={t}
+    />
+  )
+}
+
+function StoreIncentivesEmptyPeriod(input: {
+  period: string
+  onPeriodChange: (period: string) => void
+}) {
+  return (
+    <StoreSurfacePage
+      ariaLabel="Primler"
+      className="tw:mx-auto tw:w-full tw:max-w-7xl"
+      testId="store-incentives-page"
+    >
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:md:flex-row tw:md:items-start tw:md:justify-between">
+        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1">
+          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Primler</span>
+          <h1 className="tw:text-xl tw:font-semibold tw:leading-tight tw:text-foreground tw:md:text-2xl">
+            Dönem primleri
+          </h1>
+          <p className="tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
+            Seçili dönem için prim kaydı bulunamadı.
+          </p>
+        </div>
+        <PeriodPicker
+          period={input.period}
+          onChange={input.onPeriodChange}
+        />
+      </div>
+      <StoreErrorState
+        title="Prim kaydı bulunamadı"
+        description="Başka bir dönem seçerek kayıtları görüntüleyebilirsiniz."
+      />
+    </StoreSurfacePage>
+  )
+}
+
+function StoreManagerIncentivesView(input: {
+  data: SalesTargetIncentiveResponse['data']
+  locale: ReturnType<typeof useLocalization>['locale']
+  selectedPeriod: string
+  onPeriodChange: (period: string) => void
+  t: ReturnType<typeof useLocalization>['t']
+}) {
+  const projections = input.data.projections
   const managerRows = projections.map(getManagerRow).filter((row) => row !== null)
   const personnelRows = projections.flatMap(getPersonnelRows)
   const payableTotal = sumMoney([
     ...managerRows.map(getPrimaryEarnedAmount),
     ...personnelRows.map(getPrimaryEarnedAmount),
   ])
-  const blockedCount = projections.filter((projection) => projection.calculationState === 'blocked').length
-  const noSourceCount = projections.filter((projection) => projection.calculationState === 'no_source').length
   const firstProjection = projections[0] ?? null
-
-  if (projections.length === 0) {
-    return (
-      <StoreSurfacePage ariaLabel={t('storeIncentives.heroEyebrow')}>
-        <StoreErrorState
-          title={t('storeIncentives.routeUnavailableTitle')}
-          description={t('storeIncentives.routeUnavailableCopy')}
-        />
-      </StoreSurfacePage>
-    )
-  }
 
   return (
     <StoreSurfacePage
-      ariaLabel={t('storeIncentives.heroEyebrow')}
+      ariaLabel={input.t('storeIncentives.storeManagerAria')}
       className="tw:mx-auto tw:w-full tw:max-w-7xl"
       testId="store-incentives-page"
     >
-      <StoreSurfaceHeader
-        eyebrow={t('storeIncentives.heroEyebrow')}
-        title={data.roleScope === 'region' ? t('storeIncentives.regionProjectionTitle') : t('storeIncentives.storeProjectionTitle')}
-        description={t('storeIncentives.projectionCopy')}
-        badges={[
-          { label: `Dönem: ${data.period}`, tone: 'neutral' },
-          { label: `Kapsam: ${projections.length} mağaza`, tone: 'accent' },
-          {
-            label: `Durum: ${getIncentiveStatusLabel(firstProjection?.calculationState ?? 'projected')}`,
-            tone: getIncentiveStatusTone(firstProjection?.calculationState ?? 'projected'),
-          },
-        ]}
-      />
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:md:flex-row tw:md:items-start tw:md:justify-between">
+        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1">
+          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {input.t('storeIncentives.storeManagerEyebrow')}
+          </span>
+          <h1 className="tw:text-xl tw:font-semibold tw:leading-tight tw:text-foreground tw:md:text-2xl">
+            {input.t('storeIncentives.storeManagerTitle')}
+          </h1>
+          <p className="tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
+            {input.t('storeIncentives.storeManagerCopy')}
+          </p>
+        </div>
+        <PeriodPicker
+          period={input.selectedPeriod}
+          onChange={input.onPeriodChange}
+        />
+      </div>
 
-      <StoreMetricGrid ariaLabel="Prim üst özeti">
+      <StoreMetricGrid ariaLabel={input.t('storeIncentives.storeManagerSummaryAria')}>
         <StoreMetricCard
-          title="Toplam hak ediş"
-          value={formatMoneyValue(payableTotal, locale)}
-          note="Projeksiyon kapanıştan önce değişebilir."
+          title={input.t('storeIncentives.storeManagerTotalTitle')}
+          value={formatMoneyValue(payableTotal, input.locale)}
+          note={input.t('storeIncentives.storeManagerTotalNote')}
           icon={<WalletCards size={18} />}
           tone="calm"
         />
         <StoreMetricCard
-          title="Mağaza gerçekleşmesi"
-          value={formatPercentValue(firstProjection?.storeAchievementPct, locale)}
-          note={firstProjection?.storeGatePassed ? '%80 kapısı geçildi.' : '%80 kapısı bekliyor.'}
-          icon={<ShieldCheck size={18} />}
+          title={input.t('storeIncentives.storeManagerAchievementTitle')}
+          value={formatPercentValue(firstProjection?.storeAchievementPct, input.locale)}
+          note={firstProjection?.storeGatePassed
+            ? input.t('storeIncentives.storeManagerGatePassed')
+            : input.t('storeIncentives.storeManagerGateWaiting')}
+          icon={<TrendingUp size={18} />}
           tone={firstProjection?.storeGatePassed ? 'calm' : 'warning'}
         />
         <StoreMetricCard
-          title="Kapsamdaki personel"
+          title={input.t('storeIncentives.storeManagerPersonnelTitle')}
           value={personnelRows.length}
-          note="Kasa sorumlusu V1 kapsamına dahil değildir."
-          icon={<StoreIcon size={18} />}
+          note={input.t('storeIncentives.storeManagerPersonnelNote')}
+          icon={<UsersRound size={18} />}
           tone="accent"
         />
         <StoreMetricCard
-          title="Kaynak durumu"
-          value={blockedCount + noSourceCount}
-          note="Bloke veya kaynak bekleyen mağaza sayısı."
-          icon={<CalendarDays size={18} />}
-          tone={blockedCount + noSourceCount > 0 ? 'warning' : 'calm'}
+          title={input.t('storeIncentives.storeManagerTargetTitle')}
+          value={formatMoneyValue(firstProjection?.storeTarget, input.locale)}
+          note={firstProjection ? getRevisionLabel(firstProjection) : input.t('storeIncentives.storeManagerTargetWaiting')}
+          icon={<Target size={18} />}
+          tone={firstProjection?.storeTarget ? 'neutral' : 'warning'}
         />
       </StoreMetricGrid>
 
-      <section className="tw:grid tw:gap-4" aria-label="Mağaza prim kırılımları">
+      <section className="tw:grid tw:gap-4" aria-label={input.t('storeIncentives.storeManagerBreakdownAria')}>
         {projections.map((projection) => (
           <StoreIncentiveProjectionCard
             key={projection.storeId}
-            locale={locale}
+            locale={input.locale}
             projection={projection}
-            showStoreName={data.roleScope === 'region'}
+            showStoreName={false}
           />
         ))}
       </section>
@@ -183,7 +314,26 @@ export function StoreIncentivesPage(input: {
   )
 }
 
-function sumMoney(values: Array<string | null>) {
+function StoreLoadingShell(input: { title: string; description: string }) {
+  return (
+    <StoreSurfacePage>
+      <StoreSurfaceHeader title={input.title} description={input.description} />
+      <StoreMetricGrid>
+        {[0, 1, 2, 3].map((item) => (
+          <StoreMetricCard
+            icon={<WalletCards size={18} />}
+            key={item}
+            note="Yükleniyor"
+            title="Prim"
+            value="..."
+          />
+        ))}
+      </StoreMetricGrid>
+    </StoreSurfacePage>
+  )
+}
+
+function sumMoney(values: Array<string | null | undefined>) {
   let totalCents = 0n
 
   for (const value of values) {
@@ -199,7 +349,7 @@ function sumMoney(values: Array<string | null>) {
 }
 
 function decimalStringToCents(value: string) {
-  const trimmed = value.trim()
+  const trimmed = value.trim().replace(',', '.')
   const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(trimmed)
   if (!match) return 0n
   const integerText = match[2]

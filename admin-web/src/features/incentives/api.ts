@@ -178,7 +178,7 @@ export type StoreSalesTargetIncentivePackageResponse = {
   }
 }
 
-type IncentiveQueryIdentity = {
+export type SalesTargetIncentiveQueryIdentity = {
   actorUserId?: string | null
   roleScope?: SalesTargetIncentiveRoleScope | null
   assignedStoreIds?: readonly string[]
@@ -197,7 +197,7 @@ export const mySalesTargetIncentivesQueryKey = (period?: string) =>
 
 export const storeSalesTargetIncentivesQueryKey = (
   period?: string,
-  identity?: IncentiveQueryIdentity,
+  identity?: SalesTargetIncentiveQueryIdentity,
 ) =>
   [
     'store-sales-target-incentives',
@@ -209,7 +209,7 @@ export const storeSalesTargetIncentivesQueryKey = (
 
 export const adminSalesTargetIncentivesQueryKey = (
   period?: string,
-  identity?: IncentiveQueryIdentity,
+  identity?: SalesTargetIncentiveQueryIdentity,
 ) =>
   [
     'admin-sales-target-incentives',

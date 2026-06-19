@@ -17,6 +17,7 @@ import {
   getStoreSalesTargetIncentives,
   storeSalesTargetIncentivesQueryKey,
 } from '../features/incentives/api'
+import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import {
   getImportOverview,
   getImportPayloadTemplate,
@@ -183,9 +184,11 @@ function resolveRoutePrefetchTasks(
 }
 
 function getStoreIncentivesPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
+  const incentivesQueryIdentity = getSalesTargetIncentiveQueryIdentity(authSummary)
+
   return [
     {
-      queryKey: storeSalesTargetIncentivesQueryKey(),
+      queryKey: storeSalesTargetIncentivesQueryKey(undefined, incentivesQueryIdentity),
       queryFn: () => getStoreSalesTargetIncentives(),
       enabled: canOpenStoreIncentives(authSummary),
     },
