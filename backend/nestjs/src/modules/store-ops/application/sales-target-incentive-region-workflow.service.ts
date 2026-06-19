@@ -112,12 +112,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
           ),
         ]),
       ),
-      correctionsByRowKey: new Map(
-        workflow.corrections.map((correction) => [
-          correctionKey(correction.store_id, correction.employee_id, correction.participant_type),
-          this.toRegionCorrection(correction),
-        ]),
-      ),
+      correctionsByRowKey: this.buildCurrentCorrectionMap(workflow.corrections),
     };
   }
 
@@ -400,6 +395,22 @@ export class SalesTargetIncentiveRegionWorkflowService {
     };
   }
 
+  private buildCurrentCorrectionMap(rows: SalesTargetIncentiveRegionCorrectionRow[]) {
+    const selectedRows = new Map<string, SalesTargetIncentiveRegionCorrectionRow>();
+
+    for (const row of rows) {
+      const key = correctionKey(row.store_id, row.employee_id, row.participant_type);
+      const current = selectedRows.get(key);
+      if (!current || compareCorrectionRows(row, current) > 0) {
+        selectedRows.set(key, row);
+      }
+    }
+
+    return new Map(
+      Array.from(selectedRows, ([key, row]) => [key, this.toRegionCorrection(row)]),
+    );
+  }
+
   private toStoreReviewCommand(row: SalesTargetIncentiveStoreReviewRow) {
     return {
       period: row.period_key,
@@ -421,6 +432,33 @@ export class SalesTargetIncentiveRegionWorkflowService {
       reviewNote: row.review_note,
     };
   }
+}
+
+function compareCorrectionRows(
+  candidate: SalesTargetIncentiveRegionCorrectionRow,
+  current: SalesTargetIncentiveRegionCorrectionRow,
+) {
+  const priorityDelta =
+    correctionStatusPriority(candidate.correction_status) -
+    correctionStatusPriority(current.correction_status);
+
+  if (priorityDelta !== 0) {
+    return priorityDelta;
+  }
+
+  return Date.parse(candidate.created_at) - Date.parse(current.created_at);
+}
+
+function correctionStatusPriority(status: SalesTargetIncentiveRegionCorrectionRow["correction_status"]) {
+  if (status === "draft" || status === "submitted" || status === "admin_returned") {
+    return 2;
+  }
+
+  if (status === "admin_approved") {
+    return 1;
+  }
+
+  return 0;
 }
 
 export function correctionKey(

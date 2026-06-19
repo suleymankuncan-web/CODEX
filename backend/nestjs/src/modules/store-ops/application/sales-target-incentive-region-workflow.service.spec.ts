@@ -1,5 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import { buildAuthenticatedUser } from "../../auth/auth-context.service";
+import type { SalesTargetIncentiveRegionCorrectionRow } from "../infrastructure/sales-target-incentive-approval.repository";
 import { SalesTargetIncentiveRegionWorkflowService } from "./sales-target-incentive-region-workflow.service";
 import type { SalesTargetIncentiveProjectionReadModel } from "./sales-target-incentive-read-model.service";
 
@@ -48,9 +49,10 @@ function createService(input?: {
   closedStoreIds?: string[];
   reviewStatus?: "pending_review" | "reviewed";
   packageStatus?: "submitted" | "admin_approved" | "admin_returned" | null;
+  workflowCorrections?: SalesTargetIncentiveRegionCorrectionRow[];
 }) {
   const closedStoreIds = new Set(input?.closedStoreIds ?? [storeId]);
-  const draftCorrection = {
+  const draftCorrection: SalesTargetIncentiveRegionCorrectionRow = {
     sales_target_incentive_region_correction_id: correctionId,
     region_package_id: null,
     company_id: companyId,
@@ -122,9 +124,7 @@ function createService(input?: {
             },
           ]
         : [],
-      corrections: [
-        draftCorrection,
-      ],
+      corrections: input?.workflowCorrections ?? [draftCorrection],
       packages: [],
     })),
     listRegionPackagesForAdmin: jest.fn(async () =>
@@ -324,6 +324,66 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
     expect(context.correctionsByRowKey.get(`${storeId}:${employeeId}:personnel`)).toMatchObject({
       correctionId,
       finalAmount: "4000.00",
+    });
+  });
+
+  it("prefers the current open correction over approved history for the same row", async () => {
+    const approvedCorrection: SalesTargetIncentiveRegionCorrectionRow = {
+      sales_target_incentive_region_correction_id: "approved-correction",
+      region_package_id: packageId,
+      company_id: companyId,
+      region_id: regionId,
+      store_id: storeId,
+      employee_id: employeeId,
+      participant_type: "personnel",
+      final_row_id: finalRowId,
+      period_key: "2026-05",
+      before_amount: "3960.00",
+      final_amount: "3980.00",
+      adjustment_amount: "20.00",
+      reason_note: "Onceki admin onayi",
+      correction_status: "admin_approved",
+      created_by_user_id: "region-user",
+      submitted_by_user_id: "region-user",
+      submitted_at: "2026-06-01T08:10:00.000Z",
+      reviewed_by_user_id: "admin-user",
+      reviewed_at: "2026-06-01T09:00:00.000Z",
+      review_note: null,
+      approved_adjustment_id: "approved-adjustment",
+      created_at: "2026-06-01T08:05:00.000Z",
+      updated_at: "2026-06-01T09:00:00.000Z",
+    };
+    const currentDraft: SalesTargetIncentiveRegionCorrectionRow = {
+      ...approvedCorrection,
+      sales_target_incentive_region_correction_id: correctionId,
+      region_package_id: null,
+      final_amount: "4100.00",
+      adjustment_amount: "140.00",
+      reason_note: "Yeni BM duzeltmesi",
+      correction_status: "draft",
+      submitted_by_user_id: null,
+      submitted_at: null,
+      reviewed_by_user_id: null,
+      reviewed_at: null,
+      approved_adjustment_id: null,
+      created_at: "2026-06-02T08:05:00.000Z",
+      updated_at: "2026-06-02T08:05:00.000Z",
+    };
+    const { service } = createService({
+      closedStoreIds: [storeId],
+      workflowCorrections: [currentDraft, approvedCorrection],
+    });
+
+    const context = await service.getWorkflowContext({
+      periodKey: "2026-05",
+      stores: projection.stores,
+      roleScope: "region",
+    });
+
+    expect(context.correctionsByRowKey.get(`${storeId}:${employeeId}:personnel`)).toMatchObject({
+      correctionId,
+      status: "draft",
+      finalAmount: "4100.00",
     });
   });
 
