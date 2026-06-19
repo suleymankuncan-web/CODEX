@@ -566,7 +566,7 @@ export class SalesTargetIncentiveApprovalRepository {
             AND region_id = $4
             AND (
               (store_id = ANY($5::uuid[]) AND correction_status IN ('draft', 'admin_returned'))
-              OR (region_package_id = $1 AND correction_status IN ('submitted', 'admin_returned') AND NOT (store_id = ANY($5::uuid[])))
+              OR (NOT (store_id = ANY($5::uuid[])) AND correction_status IN ('draft', 'admin_returned', 'submitted'))
             )
         `,
         [
