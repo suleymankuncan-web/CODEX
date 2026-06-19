@@ -105,14 +105,21 @@ export class SalesTargetIncentiveRegionWorkflowService {
     return {
       regionWorkflow,
       reviewsByStoreId: new Map(
-        input.stores.map((store) => [
-          store.storeId,
-          this.toStoreReviewState(
-            workflow.reviews.find((review) => review.store_id === store.storeId) ?? null,
-            closedSnapshotsByStoreId.get(store.storeId) ?? null,
-            lockedReason,
-          ),
-        ]),
+        input.stores.map((store) => {
+          const latestFinalSnapshotId = closedSnapshotsByStoreId.get(store.storeId) ?? null;
+          const review = latestFinalSnapshotId
+            ? workflow.reviews.find(
+                (candidate) =>
+                  candidate.store_id === store.storeId &&
+                  candidate.final_snapshot_id === latestFinalSnapshotId,
+              ) ?? null
+            : null;
+
+          return [
+            store.storeId,
+            this.toStoreReviewState(review, latestFinalSnapshotId, lockedReason),
+          ];
+        }),
       ),
       correctionsByRowKey: this.buildCurrentCorrectionMap(workflow.corrections),
     };
@@ -369,15 +376,10 @@ export class SalesTargetIncentiveRegionWorkflowService {
     latestFinalSnapshotId: string | null,
     lockedReason: string | null,
   ): SalesTargetIncentiveStoreReviewApiState {
-    const currentReview =
-      row && latestFinalSnapshotId && row.final_snapshot_id === latestFinalSnapshotId
-        ? row
-        : null;
-
     return {
-      storeReviewStatus: currentReview?.review_status ?? "pending_review",
-      reviewedByUserId: currentReview?.reviewed_by_user_id ?? null,
-      reviewedAt: currentReview?.reviewed_at ?? null,
+      storeReviewStatus: row?.review_status ?? "pending_review",
+      reviewedByUserId: row?.reviewed_by_user_id ?? null,
+      reviewedAt: row?.reviewed_at ?? null,
       periodCloseStatus: latestFinalSnapshotId ? "closed" : "projection_only",
       workflowLockedReason: latestFinalSnapshotId ? lockedReason : "period_not_closed",
     };
