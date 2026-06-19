@@ -187,6 +187,7 @@ export function StoreIncentivesPage(input: {
       locale={locale}
       onPeriodChange={handlePeriodChange}
       selectedPeriod={period ?? data.period}
+      t={t}
     />
   )
 }
@@ -229,6 +230,7 @@ function StoreManagerIncentivesView(input: {
   locale: ReturnType<typeof useLocalization>['locale']
   selectedPeriod: string
   onPeriodChange: (period: string) => void
+  t: ReturnType<typeof useLocalization>['t']
 }) {
   const projections = input.data.projections
   const managerRows = projections.map(getManagerRow).filter((row) => row !== null)
@@ -241,18 +243,20 @@ function StoreManagerIncentivesView(input: {
 
   return (
     <StoreSurfacePage
-      ariaLabel="Primler"
+      ariaLabel={input.t('storeIncentives.storeManagerAria')}
       className="tw:mx-auto tw:w-full tw:max-w-7xl"
       testId="store-incentives-page"
     >
       <div className="tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:md:flex-row tw:md:items-start tw:md:justify-between">
         <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1">
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Primler</span>
+          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+            {input.t('storeIncentives.storeManagerEyebrow')}
+          </span>
           <h1 className="tw:text-xl tw:font-semibold tw:leading-tight tw:text-foreground tw:md:text-2xl">
-            Mağaza primleri
+            {input.t('storeIncentives.storeManagerTitle')}
           </h1>
           <p className="tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-            Hakedişlerin, mağaza gerçekleşmesi ve prim oranların.
+            {input.t('storeIncentives.storeManagerCopy')}
           </p>
         </div>
         <PeriodPicker
@@ -261,38 +265,40 @@ function StoreManagerIncentivesView(input: {
         />
       </div>
 
-      <StoreMetricGrid ariaLabel="Mağaza prim özeti">
+      <StoreMetricGrid ariaLabel={input.t('storeIncentives.storeManagerSummaryAria')}>
         <StoreMetricCard
-          title="Toplam hakediş"
+          title={input.t('storeIncentives.storeManagerTotalTitle')}
           value={formatMoneyValue(payableTotal, input.locale)}
-          note="Ay kapanışı sonrası kesinleşir."
+          note={input.t('storeIncentives.storeManagerTotalNote')}
           icon={<WalletCards size={18} />}
           tone="calm"
         />
         <StoreMetricCard
-          title="Mağaza gerçekleşmesi"
+          title={input.t('storeIncentives.storeManagerAchievementTitle')}
           value={formatPercentValue(firstProjection?.storeAchievementPct, input.locale)}
-          note={firstProjection?.storeGatePassed ? '%80 eşiği geçildi.' : '%80 eşiği bekliyor.'}
+          note={firstProjection?.storeGatePassed
+            ? input.t('storeIncentives.storeManagerGatePassed')
+            : input.t('storeIncentives.storeManagerGateWaiting')}
           icon={<TrendingUp size={18} />}
           tone={firstProjection?.storeGatePassed ? 'calm' : 'warning'}
         />
         <StoreMetricCard
-          title="Kapsamdaki personel"
+          title={input.t('storeIncentives.storeManagerPersonnelTitle')}
           value={personnelRows.length}
-          note="Satış ekibi ve müdür yardımcısı."
+          note={input.t('storeIncentives.storeManagerPersonnelNote')}
           icon={<UsersRound size={18} />}
           tone="accent"
         />
         <StoreMetricCard
-          title="Mağaza hedefi"
+          title={input.t('storeIncentives.storeManagerTargetTitle')}
           value={formatMoneyValue(firstProjection?.storeTarget, input.locale)}
-          note={firstProjection ? getRevisionLabel(firstProjection) : 'Hedef bekleniyor.'}
+          note={firstProjection ? getRevisionLabel(firstProjection) : input.t('storeIncentives.storeManagerTargetWaiting')}
           icon={<Target size={18} />}
           tone={firstProjection?.storeTarget ? 'neutral' : 'warning'}
         />
       </StoreMetricGrid>
 
-      <section className="tw:grid tw:gap-4" aria-label="Mağaza prim kırılımları">
+      <section className="tw:grid tw:gap-4" aria-label={input.t('storeIncentives.storeManagerBreakdownAria')}>
         {projections.map((projection) => (
           <StoreIncentiveProjectionCard
             key={projection.storeId}
