@@ -180,14 +180,26 @@ function createService(projection: SalesTargetIncentiveProjectionReadModel = eli
     voidRegionCorrection: jest.fn(async () => ({ data: { correctionId, status: "voided" } })),
     submitRegionPackage: jest.fn(async () => ({ data: { regionPackageStatus: "submitted" } })),
   };
+  const adminPackageWorkflowService = {
+    listRegionPackages: jest.fn(async (): Promise<unknown[]> => []),
+    reviewRegionPackage: jest.fn(async () => ({ data: { status: "admin_approved" } })),
+  };
   const service = new SalesTargetIncentiveApiService(
     readModelService as never,
     correctionRepository as never,
     closeRepository as never,
     regionWorkflowService as never,
+    adminPackageWorkflowService as never,
   );
 
-  return { closeRepository, correctionRepository, readModelService, regionWorkflowService, service };
+  return {
+    adminPackageWorkflowService,
+    closeRepository,
+    correctionRepository,
+    readModelService,
+    regionWorkflowService,
+    service,
+  };
 }
 
 describe("SalesTargetIncentiveApiService", () => {
@@ -395,7 +407,12 @@ describe("SalesTargetIncentiveApiService", () => {
   });
 
   it("allows super admin reads across company scope and only as company-store projections", async () => {
-    const { correctionRepository, readModelService, service } = createService();
+    const {
+      adminPackageWorkflowService,
+      correctionRepository,
+      readModelService,
+      service,
+    } = createService();
     const result = await service.getAdminProjection({
       actor: buildAuthenticatedUser({
         userId: "admin-user",
@@ -414,6 +431,11 @@ describe("SalesTargetIncentiveApiService", () => {
     });
     expect(result.data.roleScope).toBe("admin");
     expect(result.data.projections[0].storeOwnershipType).toBe("company");
+    expect(result.data.regionPackages).toEqual([]);
+    expect(adminPackageWorkflowService.listRegionPackages).toHaveBeenCalledWith({
+      actor: expect.objectContaining({ userId: "admin-user" }),
+      periodKey: "2026-05",
+    });
     expect(correctionRepository.listApprovedAdjustmentSummaries).toHaveBeenCalledWith({
       periodKey: "2026-05",
       storeIds: [storeId],

@@ -52,6 +52,8 @@ export type SalesTargetIncentiveRegionCorrectionApiState = {
   reasonNote: string;
   createdByUserId: string;
   createdAt: string;
+  submittedByUserId: string | null;
+  submittedByName: string | null;
   submittedAt: string | null;
   reviewedAt: string | null;
   reviewNote: string | null;
@@ -75,7 +77,10 @@ export class SalesTargetIncentiveRegionWorkflowService {
     stores: SalesTargetIncentiveProjectionStore[];
     roleScope: "own" | "store" | "region" | "admin";
   }): Promise<SalesTargetIncentiveRegionWorkflowContext> {
-    if (input.roleScope !== "region" || input.stores.length === 0) {
+    if (
+      (input.roleScope !== "region" && input.roleScope !== "admin") ||
+      input.stores.length === 0
+    ) {
       return this.emptyContext();
     }
 
@@ -91,6 +96,22 @@ export class SalesTargetIncentiveRegionWorkflowService {
       }),
     ]);
     const regionIds = unique(input.stores.map((store) => store.regionId));
+    const corrections = input.roleScope === "admin"
+      ? workflow.corrections.filter((correction) =>
+          correction.correction_status === "submitted" ||
+          correction.correction_status === "admin_approved" ||
+          correction.correction_status === "admin_returned",
+        )
+      : workflow.corrections;
+
+    if (input.roleScope === "admin") {
+      return {
+        regionWorkflow: null,
+        reviewsByStoreId: new Map(),
+        correctionsByRowKey: this.buildCurrentCorrectionMap(corrections),
+      };
+    }
+
     const packageRow = regionIds.length === 1
       ? workflow.packages.find((candidate) => candidate.region_id === regionIds[0]) ?? null
       : null;
@@ -121,7 +142,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
           ];
         }),
       ),
-      correctionsByRowKey: this.buildCurrentCorrectionMap(workflow.corrections),
+      correctionsByRowKey: this.buildCurrentCorrectionMap(corrections),
     };
   }
 
@@ -399,6 +420,8 @@ export class SalesTargetIncentiveRegionWorkflowService {
       reasonNote: row.reason_note,
       createdByUserId: row.created_by_user_id,
       createdAt: row.created_at,
+      submittedByUserId: row.submitted_by_user_id,
+      submittedByName: null,
       submittedAt: row.submitted_at,
       reviewedAt: row.reviewed_at,
       reviewNote: row.review_note,

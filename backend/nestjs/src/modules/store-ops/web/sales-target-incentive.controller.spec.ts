@@ -7,6 +7,7 @@ import { CreateSalesTargetIncentiveCloseRunDto } from "./dto/create-sales-target
 import { CreateSalesTargetIncentiveCorrectionDto } from "./dto/create-sales-target-incentive-correction.dto";
 import { CreateSalesTargetIncentiveRegionCorrectionDto } from "./dto/create-sales-target-incentive-region-correction.dto";
 import { MarkSalesTargetIncentiveStoreReviewDto } from "./dto/mark-sales-target-incentive-store-review.dto";
+import { ReviewSalesTargetIncentiveRegionPackageDto } from "./dto/review-sales-target-incentive-region-package.dto";
 import { SubmitSalesTargetIncentiveRegionPackageDto } from "./dto/submit-sales-target-incentive-region-package.dto";
 import { VoidSalesTargetIncentiveRegionCorrectionDto } from "./dto/void-sales-target-incentive-region-correction.dto";
 import { StoreSalesTargetIncentiveController } from "./store-sales-target-incentive.controller";
@@ -19,6 +20,7 @@ function createHarness() {
     getAdminCloseStatus: jest.fn(async () => ({ data: { closeRuns: [] } })),
     runAdminClose: jest.fn(async () => ({ data: { closeRuns: [] } })),
     applyAdminCorrection: jest.fn(async () => ({ data: { adjustmentId: "adjustment-1" } })),
+    reviewRegionPackage: jest.fn(async () => ({ data: { status: "admin_approved" } })),
     markStoreReview: jest.fn(async () => ({ data: { reviewStatus: "reviewed" } })),
     createRegionCorrection: jest.fn(async () => ({ data: { correctionId: "correction-1" } })),
     voidRegionCorrection: jest.fn(async () => ({ data: { correctionId: "correction-1" } })),
@@ -133,6 +135,26 @@ describe("SalesTargetIncentive controllers", () => {
       adjustmentAmount: body.adjustmentAmount,
       reasonCode: body.reasonCode,
       reasonNote: body.reasonNote,
+    });
+  });
+
+  it("delegates admin Region Manager package reviews with actor context", async () => {
+    const { adminController, apiService } = createHarness();
+    const body = {
+      period: "2026-05",
+      regionId: "00000000-0000-4000-8000-000000000101",
+      decision: "return" as const,
+      reviewNote: "Eksik kontrol notu",
+    };
+
+    await adminController.reviewRegionPackage(request, body);
+
+    expect(apiService.reviewRegionPackage).toHaveBeenCalledWith({
+      actor: request.user,
+      periodKey: body.period,
+      regionId: body.regionId,
+      decision: body.decision,
+      reviewNote: body.reviewNote,
     });
   });
 
@@ -265,6 +287,23 @@ describe("SalesTargetIncentive controllers", () => {
     await expect(validate(submitBody)).resolves.toHaveLength(0);
   });
 
+  it("accepts admin Region Manager package review DTO payloads", async () => {
+    const approveBody = Object.assign(new ReviewSalesTargetIncentiveRegionPackageDto(), {
+      period: "2026-05",
+      regionId: "00000000-0000-0000-0000-000000000101",
+      decision: "approve",
+    });
+    const returnBody = Object.assign(new ReviewSalesTargetIncentiveRegionPackageDto(), {
+      period: "2026-05",
+      regionId: "00000000-0000-0000-0000-000000000101",
+      decision: "return",
+      reviewNote: "Revizyon gerekli",
+    });
+
+    await expect(validate(approveBody)).resolves.toHaveLength(0);
+    await expect(validate(returnBody)).resolves.toHaveLength(0);
+  });
+
   it("rejects invalid Region Manager workflow DTO payloads", async () => {
     const invalidReview = Object.assign(new MarkSalesTargetIncentiveStoreReviewDto(), {
       period: "2026-99",
@@ -321,6 +360,12 @@ describe("SalesTargetIncentive controllers", () => {
         AdminSalesTargetIncentiveController.prototype.createAdminIncentiveCorrection,
       ),
     ).toEqual(["SUPER_ADMIN"]);
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_ROLES_KEY,
+        AdminSalesTargetIncentiveController.prototype.reviewRegionPackage,
+      ),
+    ).toEqual(["SUPER_ADMIN"]);
     for (const handler of [
       StoreSalesTargetIncentiveController.prototype.markStoreReview,
       StoreSalesTargetIncentiveController.prototype.createRegionCorrection,
@@ -366,6 +411,12 @@ describe("SalesTargetIncentive controllers", () => {
       Reflect.getMetadata(
         REQUIRED_SCOPE_KEY,
         AdminSalesTargetIncentiveController.prototype.createAdminIncentiveCorrection,
+      ),
+    ).toBe("authenticated");
+    expect(
+      Reflect.getMetadata(
+        REQUIRED_SCOPE_KEY,
+        AdminSalesTargetIncentiveController.prototype.reviewRegionPackage,
       ),
     ).toBe("authenticated");
     for (const handler of [

@@ -106,6 +106,7 @@ const selectedOperations = [
   { path: '/api/store/incentives/submissions', method: 'post' },
   { path: '/api/admin/incentives', method: 'get' },
   { path: '/api/admin/incentives/corrections', method: 'post' },
+  { path: '/api/admin/incentives/region-packages/reviews', method: 'post' },
   { path: '/api/target-distributions/coverage', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'get' },
   { path: '/api/target-distributions/store-personnel', method: 'get' },

@@ -30,6 +30,11 @@ import {
   type SalesTargetIncentiveRegionWorkflowContext,
   type SalesTargetIncentiveStoreReviewApiState,
 } from "./sales-target-incentive-region-workflow.service";
+import {
+  SalesTargetIncentiveAdminPackageWorkflowService,
+  resolveSalesTargetIncentivePeriodKey,
+  type SalesTargetIncentiveAdminRegionPackageSummary,
+} from "./sales-target-incentive-admin-package-workflow.service";
 
 export type SalesTargetIncentiveRoleScope =
   | "own"
@@ -89,6 +94,7 @@ export type SalesTargetIncentiveApiResponse = {
     periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
     roleScope: SalesTargetIncentiveRoleScope;
     regionWorkflow: SalesTargetIncentiveRegionWorkflowApiState | null;
+    regionPackages?: SalesTargetIncentiveAdminRegionPackageSummary[];
     projections: SalesTargetIncentiveApiProjection[];
   };
 };
@@ -126,6 +132,7 @@ export class SalesTargetIncentiveApiService {
     private readonly correctionRepository: SalesTargetIncentiveCorrectionRepository,
     private readonly closeRepository: SalesTargetIncentiveCloseRepository,
     private readonly regionWorkflowService: SalesTargetIncentiveRegionWorkflowService,
+    private readonly adminPackageWorkflowService: SalesTargetIncentiveAdminPackageWorkflowService,
   ) {}
 
   async getOwnStoreMeProjection(input: {
@@ -192,23 +199,44 @@ export class SalesTargetIncentiveApiService {
     periodKey?: string;
   }): Promise<SalesTargetIncentiveApiResponse> {
     const adminScope = this.resolveSuperAdminReadScope(input.actor);
-    const projection = await this.readModelService.buildCurrentProjection({
-      periodKey: this.resolvePeriodKey(input.periodKey),
-      companyIds: adminScope.companyIds,
-      regionIds: adminScope.companyIds.length
-        ? []
-        : adminScope.regionIds,
-      storeIds:
-        adminScope.companyIds.length || adminScope.regionIds.length
+    const periodKey = this.resolvePeriodKey(input.periodKey);
+    const [projection, regionPackages] = await Promise.all([
+      this.readModelService.buildCurrentProjection({
+        periodKey,
+        companyIds: adminScope.companyIds,
+        regionIds: adminScope.companyIds.length
           ? []
-          : adminScope.storeIds,
-      allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
-    });
+          : adminScope.regionIds,
+        storeIds:
+          adminScope.companyIds.length || adminScope.regionIds.length
+            ? []
+            : adminScope.storeIds,
+        allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
+      }),
+      this.adminPackageWorkflowService.listRegionPackages({
+        actor: input.actor,
+        periodKey,
+      }),
+    ]);
 
     return this.toApiResponse({
       projection,
       stores: projection.stores,
       roleScope: "admin",
+      regionPackages,
+    });
+  }
+
+  async reviewRegionPackage(input: {
+    actor: AuthenticatedUser;
+    periodKey: string;
+    regionId: string;
+    decision: "approve" | "return";
+    reviewNote?: string | null;
+  }) {
+    return this.adminPackageWorkflowService.reviewRegionPackage({
+      ...input,
+      periodKey: this.resolvePeriodKey(input.periodKey),
     });
   }
 
@@ -479,6 +507,7 @@ export class SalesTargetIncentiveApiService {
     projection: SalesTargetIncentiveProjectionReadModel;
     stores: SalesTargetIncentiveProjectionStore[];
     roleScope: SalesTargetIncentiveRoleScope;
+    regionPackages?: SalesTargetIncentiveAdminRegionPackageSummary[];
   }): Promise<SalesTargetIncentiveApiResponse> {
     const [adjustmentSummaries, workflowContext] = await Promise.all([
       this.correctionRepository.listApprovedAdjustmentSummaries({
@@ -501,6 +530,7 @@ export class SalesTargetIncentiveApiService {
         periodTimezone: input.projection.timezone,
         roleScope: input.roleScope,
         regionWorkflow: workflowContext.regionWorkflow,
+        ...(input.regionPackages ? { regionPackages: input.regionPackages } : {}),
         projections: input.stores.map((store) =>
           this.toApiProjection(
             store,
@@ -779,23 +809,7 @@ export class SalesTargetIncentiveApiService {
   }
 
   private resolvePeriodKey(periodKey?: string) {
-    if (periodKey) {
-      return periodKey;
-    }
-
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: SALES_TARGET_INCENTIVE_TIMEZONE,
-      year: "numeric",
-      month: "2-digit",
-    }).formatToParts(new Date());
-    const year = parts.find((part) => part.type === "year")?.value;
-    const month = parts.find((part) => part.type === "month")?.value;
-
-    if (!year || !month) {
-      throw new Error("Unable to resolve incentive period");
-    }
-
-    return `${year}-${month}`;
+    return resolveSalesTargetIncentivePeriodKey(periodKey);
   }
 }
 

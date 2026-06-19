@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { SalesTargetIncentiveApiService } from "./application/sales-target-incentive-api.service";
 import { SalesTargetIncentiveCloseRepository } from "./infrastructure/sales-target-incentive-close.repository";
 import { SalesTargetIncentiveCorrectionRepository } from "./infrastructure/sales-target-incentive-correction.repository";
+import { StoreOpsIncentiveAdminPackageWorkflowModule } from "./store-ops-incentive-admin-package-workflow.module";
 import { StoreOpsIncentiveApprovalModule } from "./store-ops-incentive-approval.module";
 import { StoreOpsIncentiveProjectionModule } from "./store-ops-incentive-projection.module";
 import { StoreOpsIncentiveWorkflowModule } from "./store-ops-incentive-workflow.module";
@@ -10,6 +11,7 @@ import { StoreSalesTargetIncentiveController } from "./web/store-sales-target-in
 
 @Module({
   imports: [
+    StoreOpsIncentiveAdminPackageWorkflowModule,
     StoreOpsIncentiveApprovalModule,
     StoreOpsIncentiveProjectionModule,
     StoreOpsIncentiveWorkflowModule,
