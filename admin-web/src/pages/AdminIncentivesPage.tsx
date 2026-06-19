@@ -1,19 +1,31 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CircleDollarSign, Download, RefreshCcw, ShieldCheck, SlidersHorizontal, Store, TrendingUp } from 'lucide-react'
+import {
+  CircleDollarSign,
+  Download,
+  RefreshCcw,
+  ShieldCheck,
+  SlidersHorizontal,
+  Store,
+  TrendingUp,
+} from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
 import { Textarea } from '../components/ui/textarea'
+import type { AuthSessionSummary } from '../features/auth/api'
 import {
   adminSalesTargetIncentivesQueryKey,
   createAdminSalesTargetIncentiveCorrection,
   getAdminSalesTargetIncentives,
+  reviewAdminSalesTargetIncentiveRegionPackage,
+  type SalesTargetIncentiveAdminRegionPackageSummary,
   type SalesTargetIncentiveProjection,
   type SalesTargetIncentiveRow,
   type SalesTargetIncentiveStatus,
 } from '../features/incentives/api'
+import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
@@ -38,6 +50,7 @@ import {
   AdminSurfaceSkeleton,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import { AdminRegionPackageReviewSection } from './admin-incentive-region-packages'
 
 type AdminIncentiveRow = {
   id: string
@@ -56,18 +69,24 @@ const statusTone: Record<SalesTargetIncentiveStatus, AdminSurfaceTone> = {
 
 const INCENTIVE_TIMEZONE = 'Europe/Istanbul'
 
-export function AdminIncentivesPage() {
+export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | null }) {
   const { locale } = useLocalization()
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState(() => resolveCurrentPeriodKey())
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
   const [adjustmentAmount, setAdjustmentAmount] = useState('')
   const [reasonNote, setReasonNote] = useState('')
+  const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null)
+  const [returnNotes, setReturnNotes] = useState<Record<string, string>>({})
   const selectedYear = period.slice(0, 4)
   const selectedMonth = period.slice(5, 7)
   const yearOptions = useMemo(() => buildYearOptions(), [])
+  const queryIdentity = useMemo(
+    () => getSalesTargetIncentiveQueryIdentity(input.authSummary),
+    [input.authSummary],
+  )
   const incentivesQuery = useQuery({
-    queryKey: adminSalesTargetIncentivesQueryKey(period),
+    queryKey: adminSalesTargetIncentivesQueryKey(period, queryIdentity),
     queryFn: () => getAdminSalesTargetIncentives({ period }),
     ...transientQueryRetryOptions,
   })
@@ -76,7 +95,19 @@ export function AdminIncentivesPage() {
     onSuccess: async () => {
       setAdjustmentAmount('')
       setReasonNote('')
-      await queryClient.invalidateQueries({ queryKey: adminSalesTargetIncentivesQueryKey(period) })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-sales-target-incentives'] }),
+        queryClient.invalidateQueries({ queryKey: ['store-sales-target-incentives'] }),
+      ])
+    },
+  })
+  const packageReviewMutation = useMutation({
+    mutationFn: reviewAdminSalesTargetIncentiveRegionPackage,
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['admin-sales-target-incentives'] }),
+        queryClient.invalidateQueries({ queryKey: ['store-sales-target-incentives'] }),
+      ])
     },
   })
 
@@ -86,6 +117,7 @@ export function AdminIncentivesPage() {
   const personnelRows = rows.filter((item) => item.row.participantType === 'personnel')
   const personnelSalesSourceCount = personnelRows.filter((item) => item.row.actualPositiveSales).length
   const correctedRows = rows.filter((item) => item.row.correctionAmount || item.row.adjustmentAmount)
+  const regionPackages = data?.regionPackages ?? []
   const payableTotal = sumMoney(rows.map((item) => getPrimaryEarnedAmount(item.row)))
   const blockedCount = rows.filter((item) => item.row.status === 'blocked' || item.row.status === 'no_source').length
   const displayedPeriod = data?.period ?? period
@@ -123,6 +155,22 @@ export function AdminIncentivesPage() {
       period: displayedPeriod,
       periodLabel: displayedPeriodLabel,
       rows,
+    })
+  }
+
+  function submitPackageReview(
+    packageSummary: SalesTargetIncentiveAdminRegionPackageSummary,
+    decision: 'approve' | 'return',
+  ) {
+    if (packageReviewMutation.isPending) return
+    const reviewNote = returnNotes[packageSummary.regionId]?.trim() ?? ''
+    if (decision === 'return' && !reviewNote) return
+
+    packageReviewMutation.mutate({
+      period: displayedPeriod,
+      regionId: packageSummary.regionId,
+      decision,
+      ...(reviewNote ? { reviewNote } : {}),
     })
   }
 
@@ -249,6 +297,22 @@ export function AdminIncentivesPage() {
               tone: correctedRows.length > 0 ? 'accent' : 'neutral',
             },
           ]}
+        />
+
+        <AdminRegionPackageReviewSection
+          expandedRegionId={expandedRegionId}
+          locale={locale}
+          mutation={packageReviewMutation}
+          onReview={submitPackageReview}
+          onReturnNoteChange={(regionId, note) =>
+            setReturnNotes((current) => ({ ...current, [regionId]: note }))
+          }
+          onToggleRegion={(regionId) =>
+            setExpandedRegionId((current) => current === regionId ? null : regionId)
+          }
+          packages={regionPackages}
+          projections={data?.projections ?? []}
+          returnNotes={returnNotes}
         />
 
         {rows.length === 0 ? (

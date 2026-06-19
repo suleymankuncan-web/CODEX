@@ -2,6 +2,8 @@ import { expect, test, type Page } from './test-fixtures'
 
 const companyId = '00000000-0000-0000-0000-000000000001'
 const regionId = '00000000-0000-0000-0000-000000000010'
+const approvalRegionId = '00000000-0000-0000-0000-000000000011'
+const pendingRegionId = '00000000-0000-0000-0000-000000000012'
 const storeId = '00000000-0000-0000-0000-000000000100'
 const managerEmployeeId = '00000000-0000-0000-0000-000000000201'
 const personnelEmployeeId = '00000000-0000-0000-0000-000000000202'
@@ -23,6 +25,7 @@ test('super admin reads incentive projections and submits an audited correction'
   await routeAdminIncentives(page)
 
   let correctionBody: Record<string, unknown> | null = null
+  const packageReviewBodies: Array<Record<string, unknown>> = []
   await page.route('**/api/admin/incentives/corrections', async (route) => {
     correctionBody = route.request().postDataJSON() as Record<string, unknown>
     await route.fulfill({
@@ -44,11 +47,58 @@ test('super admin reads incentive projections and submits an audited correction'
       },
     })
   })
+  await page.route('**/api/admin/incentives/region-packages/reviews', async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>
+    packageReviewBodies.push(body)
+    await route.fulfill({
+      json: {
+        data: {
+          period: body.period,
+          regionId: body.regionId,
+          regionPackageId: '00000000-0000-0000-0000-000000000901',
+          status: body.decision === 'approve' ? 'admin_approved' : 'admin_returned',
+          reviewedByUserId: 'admin-incentive-user',
+          reviewedAt: '2026-06-02T10:00:00.000Z',
+          reviewNote: body.reviewNote ?? null,
+        },
+      },
+    })
+  })
 
   await page.goto('/admin/incentives')
 
   await expect(page.getByTestId('admin-incentives-page')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Prim yönetimi' })).toBeVisible()
+  const submittedPackage = page.getByTestId('admin-incentive-region-package').filter({ hasText: 'Eda Doğanay' })
+  await expect(submittedPackage.getByText('Bölge müdürü tarafından onaya gönderildi')).toBeVisible()
+  await expect(submittedPackage.getByText('2 mağaza')).toBeVisible()
+  await submittedPackage.getByRole('button', { name: /Eda Doğanay/ }).click()
+  await expect(submittedPackage.getByText('Bölge kontrolü sonrası final prim düzeltmesi')).toBeVisible()
+  await expect(submittedPackage.getByText('4.085,25 TL')).toBeVisible()
+  await expect(submittedPackage.getByRole('button', { name: 'Revizyon iste' })).toBeDisabled()
+  await submittedPackage.getByLabel(/revizyon notu/i).fill('Final prim tutarı tekrar kontrol edilmeli')
+  await submittedPackage.getByRole('button', { name: 'Revizyon iste' }).click()
+  await expect.poll(() => packageReviewBodies.length).toBe(1)
+  expect(packageReviewBodies[0]).toMatchObject({
+    period: '2026-05',
+    regionId,
+    decision: 'return',
+    reviewNote: 'Final prim tutarı tekrar kontrol edilmeli',
+  })
+  const approvalPackage = page.getByTestId('admin-incentive-region-package').filter({ hasText: 'Levent Yılmaz' })
+  await expect(approvalPackage.getByText('Bölge müdürü tarafından onaya gönderildi')).toBeVisible()
+  await approvalPackage.getByRole('button', { name: /Levent Yılmaz/ }).click()
+  await approvalPackage.getByRole('button', { name: 'Onayla' }).click()
+  await expect.poll(() => packageReviewBodies.length).toBe(2)
+  expect(packageReviewBodies[1]).toMatchObject({
+    period: '2026-05',
+    regionId: approvalRegionId,
+    decision: 'approve',
+  })
+  await expect(
+    page.getByTestId('admin-incentive-region-package').filter({ hasText: 'Onur Kaytan' }).getByText('Onaya gönderilmedi'),
+  ).toBeVisible()
+
   const personnelRow = page.getByTestId('admin-incentive-row').filter({ hasText: 'Ali Can' })
   await expect(personnelRow.getByRole('cell', { name: 'Marmara Park' })).toBeVisible()
   await expect(personnelRow.getByRole('cell', { name: 'Ali Can' })).toBeVisible()
@@ -250,12 +300,73 @@ const adminIncentivesFixture = {
     periodEnd: '2026-05-31',
     periodTimezone: 'Europe/Istanbul',
     roleScope: 'admin',
+    regionWorkflow: null,
+    regionPackages: [
+      {
+        regionId,
+        regionName: 'Eda Doğanay Bölgesi',
+        regionManagerUserId: 'region-manager-user',
+        regionManagerName: 'Eda Doğanay',
+        submittedByUserId: 'region-manager-user',
+        submittedByName: 'Eda Doğanay',
+        submittedAt: '2026-06-01T09:00:00.000Z',
+        reviewedByUserId: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewNote: null,
+        status: 'submitted',
+        storeCount: 3,
+        reviewedStoreCount: 2,
+        submittedStoreCount: 2,
+        draftCorrectionCount: 0,
+        submittedCorrectionCount: 1,
+      },
+      {
+        regionId: approvalRegionId,
+        regionName: 'Levent Yılmaz Bölgesi',
+        regionManagerUserId: 'region-manager-levent',
+        regionManagerName: 'Levent Yılmaz',
+        submittedByUserId: 'region-manager-levent',
+        submittedByName: 'Levent Yılmaz',
+        submittedAt: '2026-06-01T10:00:00.000Z',
+        reviewedByUserId: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewNote: null,
+        status: 'submitted',
+        storeCount: 2,
+        reviewedStoreCount: 2,
+        submittedStoreCount: 2,
+        draftCorrectionCount: 0,
+        submittedCorrectionCount: 0,
+      },
+      {
+        regionId: pendingRegionId,
+        regionName: 'Onur Kaytan Bölgesi',
+        regionManagerUserId: 'region-manager-onur',
+        regionManagerName: 'Onur Kaytan',
+        submittedByUserId: null,
+        submittedByName: null,
+        submittedAt: null,
+        reviewedByUserId: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewNote: null,
+        status: 'not_submitted',
+        storeCount: 4,
+        reviewedStoreCount: 0,
+        submittedStoreCount: 0,
+        draftCorrectionCount: 0,
+        submittedCorrectionCount: 0,
+      },
+    ],
     projections: [
       {
         period: '2026-05',
         periodTimezone: 'Europe/Istanbul',
         closeCutoffAt: null,
         ruleVersionId: 'sales-target-incentive-v1.0.0',
+        regionId,
         storeId,
         storeName: 'Marmara Park',
         storeOwnershipType: 'company',
@@ -289,6 +400,7 @@ const adminIncentivesFixture = {
             blockedReason: null,
             rateTableVersion: 'manager-sales-target-v1.0.0',
             explanation: 'Güncel hedef ve satış kaynağına göre hesaplandı.',
+            regionCorrection: null,
           },
           {
             employeeId: personnelEmployeeId,
@@ -311,6 +423,20 @@ const adminIncentivesFixture = {
             blockedReason: null,
             rateTableVersion: 'personnel-sales-target-v1.0.0',
             explanation: 'Güncel hedef ve satış kaynağına göre hesaplandı.',
+            regionCorrection: {
+              correctionId: '00000000-0000-0000-0000-000000000902',
+              status: 'submitted',
+              targetScope: 'final_snapshot',
+              beforeAmount: '3960.00',
+              adjustmentAmount: '125.25',
+              finalAmount: '4085.25',
+              reasonNote: 'Bölge kontrolü sonrası final prim düzeltmesi',
+              createdByUserId: 'region-manager-user',
+              createdAt: '2026-06-01T08:30:00.000Z',
+              submittedAt: '2026-06-01T09:00:00.000Z',
+              reviewedAt: null,
+              reviewNote: null,
+            },
           },
         ],
       },
