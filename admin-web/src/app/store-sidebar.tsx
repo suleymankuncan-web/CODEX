@@ -23,6 +23,7 @@ import {
   getStoreSalesTargetIncentives,
   storeSalesTargetIncentivesQueryKey,
 } from '../features/incentives/api'
+import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import { useLocalization } from '../features/localization/useLocalization'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
@@ -65,8 +66,9 @@ export function StoreSidebar(input: {
   const queryClient = useQueryClient()
   const persona = resolveStorePersona(input.authSummary)
   const personaLabel = t(getStorePersonaLabelKey(persona))
+  const incentivesQueryIdentity = getSalesTargetIncentiveQueryIdentity(input.authSummary)
   const incentivesNavQuery = useQuery({
-    queryKey: storeSalesTargetIncentivesQueryKey(),
+    queryKey: storeSalesTargetIncentivesQueryKey(undefined, incentivesQueryIdentity),
     queryFn: () => getStoreSalesTargetIncentives(),
     enabled: canOpenStoreIncentives(input.authSummary),
     ...transientQueryRetryOptions,

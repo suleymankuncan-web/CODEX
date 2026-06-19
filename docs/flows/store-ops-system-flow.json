@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-19T18:03:34.415Z",
+  "generatedAt": "2026-06-19T18:58:56.916Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 149,
     "openApiEndpointCount": 186,
-    "routeApiEdgeCount": 216,
+    "routeApiEdgeCount": 220,
     "routesWithoutApiCallCount": 2,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -7801,6 +7801,26 @@
         "id": "edge:route:store:/store/incentives:api:62",
         "routeId": "route:store:/store/incentives",
         "apiCallId": "api:62"
+      },
+      {
+        "id": "edge:route:store:/store/incentives:api:65",
+        "routeId": "route:store:/store/incentives",
+        "apiCallId": "api:65"
+      },
+      {
+        "id": "edge:route:store:/store/incentives:api:66",
+        "routeId": "route:store:/store/incentives",
+        "apiCallId": "api:66"
+      },
+      {
+        "id": "edge:route:store:/store/incentives:api:67",
+        "routeId": "route:store:/store/incentives",
+        "apiCallId": "api:67"
+      },
+      {
+        "id": "edge:route:store:/store/incentives:api:68",
+        "routeId": "route:store:/store/incentives",
+        "apiCallId": "api:68"
       },
       {
         "id": "edge:route:store:/store/kpis:api:101",
