@@ -10,6 +10,17 @@ import { SALES_TARGET_INCENTIVE_TIMEZONE } from "../application/sales-target-inc
 
 type ApprovalClient = Pick<PoolClient, "query">;
 
+const latestFinalSnapshotCte = `
+  WITH latest_final_snapshot AS (
+    SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
+      snapshot.sales_target_incentive_final_snapshot_id, snapshot.period_key, snapshot.store_id
+    FROM rpt.sales_target_incentive_final_snapshot snapshot
+    WHERE snapshot.period_key = $1 AND snapshot.store_id = ANY($2::uuid[])
+    ORDER BY snapshot.period_key, snapshot.store_id, snapshot.close_cutoff_at DESC,
+      snapshot.sales_target_incentive_final_snapshot_id DESC
+  )
+`;
+
 export type SalesTargetIncentiveStoreReviewStatus =
   | "pending_review"
   | "reviewed";
@@ -630,6 +641,7 @@ export class SalesTargetIncentiveApprovalRepository {
     const result =
       await this.databaseService.query<SalesTargetIncentiveClosedFinalSnapshotTargetRow>(
         `
+          ${latestFinalSnapshotCte}
           SELECT
             final_row.sales_target_incentive_final_row_id AS final_row_id,
             snapshot.company_id,
@@ -649,6 +661,8 @@ export class SalesTargetIncentiveApprovalRepository {
             COALESCE(SUM(adjustment.adjustment_amount) FILTER (WHERE adjustment.status = 'approved'), 0)::numeric(18,2) AS approved_adjustment_amount,
             (final_row.final_amount + COALESCE(SUM(adjustment.adjustment_amount) FILTER (WHERE adjustment.status = 'approved'), 0))::numeric(18,2) AS current_amount
           FROM rpt.sales_target_incentive_final_row final_row
+          INNER JOIN latest_final_snapshot latest_snapshot
+            ON latest_snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
           INNER JOIN rpt.sales_target_incentive_final_snapshot snapshot
             ON snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
           INNER JOIN ops.store store
@@ -656,8 +670,6 @@ export class SalesTargetIncentiveApprovalRepository {
           LEFT JOIN ops.sales_target_incentive_adjustment adjustment
             ON adjustment.final_row_id = final_row.sales_target_incentive_final_row_id
             AND adjustment.adjustment_scope = 'final_snapshot'
-          WHERE snapshot.period_key = $1
-            AND snapshot.store_id = ANY($2::uuid[])
           GROUP BY
             final_row.sales_target_incentive_final_row_id,
             snapshot.company_id,
@@ -801,6 +813,7 @@ export class SalesTargetIncentiveApprovalRepository {
     const result =
       await client.query<SalesTargetIncentiveClosedFinalSnapshotTargetRow>(
         `
+          ${latestFinalSnapshotCte}
           SELECT
             final_row.sales_target_incentive_final_row_id AS final_row_id,
             snapshot.company_id,
@@ -820,6 +833,8 @@ export class SalesTargetIncentiveApprovalRepository {
             COALESCE(SUM(adjustment.adjustment_amount) FILTER (WHERE adjustment.status = 'approved'), 0)::numeric(18,2) AS approved_adjustment_amount,
             (final_row.final_amount + COALESCE(SUM(adjustment.adjustment_amount) FILTER (WHERE adjustment.status = 'approved'), 0))::numeric(18,2) AS current_amount
           FROM rpt.sales_target_incentive_final_row final_row
+          INNER JOIN latest_final_snapshot latest_snapshot
+            ON latest_snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
           INNER JOIN rpt.sales_target_incentive_final_snapshot snapshot
             ON snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
           INNER JOIN ops.store store
@@ -827,9 +842,7 @@ export class SalesTargetIncentiveApprovalRepository {
           LEFT JOIN ops.sales_target_incentive_adjustment adjustment
             ON adjustment.final_row_id = final_row.sales_target_incentive_final_row_id
             AND adjustment.adjustment_scope = 'final_snapshot'
-          WHERE snapshot.period_key = $1
-            AND snapshot.store_id = $2
-            AND final_row.employee_id = $3
+          WHERE final_row.employee_id = $3
             AND final_row.participant_type = $4
           GROUP BY
             final_row.sales_target_incentive_final_row_id,
@@ -838,7 +851,7 @@ export class SalesTargetIncentiveApprovalRepository {
             snapshot.store_id,
             store.store_name
         `,
-        [input.periodKey, input.storeId, input.employeeId, input.participantType],
+        [input.periodKey, [input.storeId], input.employeeId, input.participantType],
       );
     return result.rows[0] ?? null;
   }

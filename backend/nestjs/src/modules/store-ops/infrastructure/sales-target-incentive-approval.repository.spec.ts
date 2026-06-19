@@ -149,12 +149,32 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
 
     const sql = query.mock.calls.map((call) => String(call[0])).join("\n");
     expect(sql).toContain("rpt.sales_target_incentive_final_row");
+    expect(sql).toContain("WITH latest_final_snapshot");
+    expect(sql).toContain("snapshot.close_cutoff_at DESC");
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_region_correction");
     expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");
     expect(query.mock.calls[3][1]).toEqual(
       expect.arrayContaining([finalRowId, "2026-05", "1980.00", "2100.25"]),
     );
     expect(result.correction_status).toBe("draft");
+  });
+
+  it("lists closed final targets from the latest close snapshot per store period", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({ rows: [] });
+
+    await repository.listClosedFinalSnapshotTargets({
+      periodKey: "2026-05",
+      storeIds: [storeId, secondStoreId],
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("WITH latest_final_snapshot");
+    expect(sql).toContain("SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)");
+    expect(sql).toContain("snapshot.close_cutoff_at DESC");
+    expect(sql).toContain(
+      "latest_snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id",
+    );
   });
 
   it("submits a package with a submitted store-set snapshot and submitted corrections", async () => {
