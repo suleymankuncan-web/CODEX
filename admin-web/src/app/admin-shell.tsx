@@ -156,7 +156,7 @@ export function AdminShell(input: {
             />
             <Route
               path="/admin/incentives"
-              element={adminRoute(['SUPER_ADMIN'], <AdminIncentivesPage />)}
+              element={adminRoute(['SUPER_ADMIN'], <AdminIncentivesPage authSummary={input.authSummary} />)}
             />
             <Route
               path="/admin/kpi-config"

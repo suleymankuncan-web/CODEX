@@ -1,5 +1,4 @@
 import { fetchOpenApiJson, sendOpenApiJson } from '../../lib/openapi-client'
-import { sendJson } from '../../lib/api'
 
 export type SalesTargetIncentiveRoleScope = 'own' | 'store' | 'region' | 'admin'
 
@@ -72,6 +71,7 @@ export type SalesTargetIncentiveProjection = {
   periodTimezone: 'Europe/Istanbul'
   closeCutoffAt: string | null
   ruleVersionId: string
+  regionId: string
   storeId: string
   storeName: string
   storeOwnershipType: 'company'
@@ -95,8 +95,29 @@ export type SalesTargetIncentiveResponse = {
     periodTimezone: 'Europe/Istanbul'
     roleScope: SalesTargetIncentiveRoleScope
     regionWorkflow: SalesTargetIncentiveRegionWorkflow | null
+    regionPackages?: SalesTargetIncentiveAdminRegionPackageSummary[]
     projections: SalesTargetIncentiveProjection[]
   }
+}
+
+export type SalesTargetIncentiveAdminRegionPackageSummary = {
+  regionId: string
+  regionName: string | null
+  regionManagerUserId: string | null
+  regionManagerName: string | null
+  submittedByUserId: string | null
+  submittedByName: string | null
+  submittedAt: string | null
+  reviewedByUserId: string | null
+  reviewedByName: string | null
+  reviewedAt: string | null
+  reviewNote: string | null
+  status: 'not_submitted' | 'submitted' | 'admin_approved' | 'admin_returned'
+  storeCount: number
+  reviewedStoreCount: number
+  submittedStoreCount: number
+  draftCorrectionCount: number
+  submittedCorrectionCount: number
 }
 
 export type AdminSalesTargetIncentiveCorrectionInput = {
@@ -123,6 +144,25 @@ export type AdminSalesTargetIncentiveCorrectionResponse = {
     adjustmentAmount: string
     afterAmount: string
     status: 'approved'
+  }
+}
+
+export type AdminSalesTargetIncentiveRegionPackageReviewInput = {
+  period: string
+  regionId: string
+  decision: 'approve' | 'return'
+  reviewNote?: string
+}
+
+export type AdminSalesTargetIncentiveRegionPackageReviewResponse = {
+  data: {
+    period: string
+    regionId: string
+    regionPackageId: string
+    status: 'submitted' | 'admin_approved' | 'admin_returned'
+    reviewedByUserId: string | null
+    reviewedAt: string | null
+    reviewNote: string | null
   }
 }
 
@@ -245,13 +285,19 @@ export async function getAdminSalesTargetIncentives(input?: { period?: string })
 export async function createAdminSalesTargetIncentiveCorrection(
   input: AdminSalesTargetIncentiveCorrectionInput,
 ) {
-  return sendJson<AdminSalesTargetIncentiveCorrectionResponse>(
-    '/admin/incentives/corrections',
-    {
-      method: 'POST',
-      body: input,
-    },
-  )
+  return sendOpenApiJson('/api/admin/incentives/corrections', {
+    method: 'POST',
+    body: input,
+  }) as Promise<AdminSalesTargetIncentiveCorrectionResponse>
+}
+
+export async function reviewAdminSalesTargetIncentiveRegionPackage(
+  input: AdminSalesTargetIncentiveRegionPackageReviewInput,
+) {
+  return sendOpenApiJson('/api/admin/incentives/region-packages/reviews', {
+    method: 'POST',
+    body: input,
+  }) as Promise<AdminSalesTargetIncentiveRegionPackageReviewResponse>
 }
 
 export async function markStoreSalesTargetIncentiveReview(

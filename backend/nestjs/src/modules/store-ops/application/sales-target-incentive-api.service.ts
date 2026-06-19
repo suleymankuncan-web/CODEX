@@ -71,6 +71,7 @@ export type SalesTargetIncentiveApiProjection = {
   periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
   closeCutoffAt: string | null;
   ruleVersionId: typeof SALES_TARGET_INCENTIVE_RULE_VERSION;
+  regionId: string;
   storeId: string;
   storeName: string;
   storeOwnershipType: "company";
@@ -588,6 +589,7 @@ export class SalesTargetIncentiveApiService {
       periodTimezone: SALES_TARGET_INCENTIVE_TIMEZONE,
       closeCutoffAt: null,
       ruleVersionId: SALES_TARGET_INCENTIVE_RULE_VERSION,
+      regionId: store.regionId,
       storeId: store.storeId,
       storeName: store.storeName,
       storeOwnershipType: "company",
