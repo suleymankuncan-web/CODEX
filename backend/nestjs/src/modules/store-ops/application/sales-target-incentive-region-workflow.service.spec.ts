@@ -268,6 +268,26 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
     expect(approvalRepository.submitRegionPackage).not.toHaveBeenCalled();
   });
 
+  it("voids the requested correction id rather than any current row correction", async () => {
+    const { approvalRepository, service } = createService();
+
+    await service.voidRegionCorrection({
+      actor: actor(),
+      periodKey: "2026-05",
+      correctionId,
+    });
+
+    expect(approvalRepository.voidDraftCorrection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodKey: "2026-05",
+        correctionId,
+        storeId,
+        employeeId,
+        participantType: "personnel",
+      }),
+    );
+  });
+
   it("keeps submitted package retries idempotent", async () => {
     const { approvalRepository, service } = createService({
       closedStoreIds: [storeId],

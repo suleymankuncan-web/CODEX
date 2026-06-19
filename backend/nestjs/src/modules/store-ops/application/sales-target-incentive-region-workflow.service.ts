@@ -193,6 +193,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
 
     const voidedCorrection = await this.approvalRepository.voidDraftCorrection({
       periodKey: input.periodKey,
+      correctionId: input.correctionId,
       storeId: correction.store_id,
       employeeId: correction.employee_id,
       participantType: correction.participant_type,

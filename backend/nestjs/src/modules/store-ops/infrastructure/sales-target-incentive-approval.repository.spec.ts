@@ -12,6 +12,7 @@ const actorUserId = "00000000-0000-4000-8000-000000000901";
 const finalRowId = "00000000-0000-4000-8000-000000000701";
 const finalSnapshotId = "00000000-0000-4000-8000-000000000711";
 const packageId = "00000000-0000-4000-8000-000000000801";
+const correctionId = "00000000-0000-4000-8000-000000000951";
 
 const store: SalesTargetIncentiveApprovalStore = {
   companyId,
@@ -211,6 +212,32 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(result).toEqual([
       { store_id: storeId, final_snapshot_id: finalSnapshotId },
       { store_id: secondStoreId, final_snapshot_id: "snapshot-2" },
+    ]);
+  });
+
+  it("voids only the requested draft correction id", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
+      rows: [{ sales_target_incentive_region_correction_id: "current-draft" }],
+    });
+
+    await repository.voidDraftCorrection({
+      periodKey: "2026-05",
+      correctionId,
+      storeId,
+      employeeId,
+      participantType: "personnel",
+      actorUserId,
+    });
+
+    const sql = String(query.mock.calls[1][0]);
+    expect(sql).toContain("sales_target_incentive_region_correction_id = $5");
+    expect(query.mock.calls[1][1]).toEqual([
+      "2026-05",
+      storeId,
+      employeeId,
+      "personnel",
+      correctionId,
     ]);
   });
 

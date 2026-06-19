@@ -375,6 +375,7 @@ export class SalesTargetIncentiveApprovalRepository {
 
   async voidDraftCorrection(input: {
     periodKey: string;
+    correctionId: string;
     storeId: string;
     employeeId: string;
     participantType: SalesTargetIncentiveParticipantType;
@@ -398,6 +399,7 @@ export class SalesTargetIncentiveApprovalRepository {
             AND store_id = $2
             AND employee_id = $3
             AND participant_type = $4
+            AND sales_target_incentive_region_correction_id = $5
             AND correction_status IN ('draft', 'admin_returned')
           RETURNING *
         `,
@@ -406,6 +408,7 @@ export class SalesTargetIncentiveApprovalRepository {
           input.storeId,
           input.employeeId,
           input.participantType,
+          input.correctionId,
         ],
       );
 
@@ -992,7 +995,5 @@ export class SalesTargetIncentiveApprovalRepository {
     ]);
   }
 
-  private isSameAmount(left: string, right: string): boolean {
-    return Number(left).toFixed(2) === Number(right).toFixed(2);
-  }
+  private isSameAmount(left: string, right: string): boolean { return Number(left).toFixed(2) === Number(right).toFixed(2); }
 }
