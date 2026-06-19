@@ -10,11 +10,19 @@ export const latestFinalSnapshotCte = `
 `;
 
 export const ensureSubmittedCorrectionsApprovableSql = `
-  WITH submitted_correction AS (
-    SELECT *
-    FROM ops.sales_target_incentive_region_correction
+  WITH package_store AS (
+    SELECT period_key, store_id
+    FROM ops.sales_target_incentive_region_package_store
     WHERE region_package_id = $1
-      AND correction_status = 'submitted'
+  ),
+  submitted_correction AS (
+    SELECT correction.*
+    FROM ops.sales_target_incentive_region_correction correction
+    INNER JOIN package_store
+      ON package_store.period_key = correction.period_key
+      AND package_store.store_id = correction.store_id
+    WHERE correction.region_package_id = $1
+      AND correction.correction_status = 'submitted'
   ),
   correction_lock AS (
     SELECT pg_advisory_xact_lock(hashtext(
@@ -104,11 +112,19 @@ export const ensurePackageStoresCurrentSql = `
 `;
 
 export const approveSubmittedCorrectionsSql = `
-  WITH submitted_correction AS (
-    SELECT *
-    FROM ops.sales_target_incentive_region_correction
+  WITH package_store AS (
+    SELECT period_key, store_id
+    FROM ops.sales_target_incentive_region_package_store
     WHERE region_package_id = $1
-      AND correction_status = 'submitted'
+  ),
+  submitted_correction AS (
+    SELECT correction.*
+    FROM ops.sales_target_incentive_region_correction correction
+    INNER JOIN package_store
+      ON package_store.period_key = correction.period_key
+      AND package_store.store_id = correction.store_id
+    WHERE correction.region_package_id = $1
+      AND correction.correction_status = 'submitted'
   ),
   correction_lock AS (
     SELECT pg_advisory_xact_lock(hashtext(

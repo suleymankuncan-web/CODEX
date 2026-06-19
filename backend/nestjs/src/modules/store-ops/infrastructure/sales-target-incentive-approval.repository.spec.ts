@@ -286,6 +286,8 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     const sql = query.mock.calls.map((call) => String(call[0])).join("\n");
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
     expect(sql).toContain("package_store.final_snapshot_id");
+    expect(sql).toContain("FROM ops.sales_target_incentive_region_package_store");
+    expect(sql).toContain("package_store.store_id = correction.store_id");
     expect(sql).toContain("sales_target_incentive_adjustment");
     expect(sql).toContain("pg_advisory_xact_lock");
     expect(sql).toContain("INSERT INTO audit.event_log");
