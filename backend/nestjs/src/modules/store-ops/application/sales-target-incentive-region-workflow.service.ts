@@ -80,12 +80,12 @@ export class SalesTargetIncentiveRegionWorkflowService {
     }
 
     const storeIds = input.stores.map((store) => store.storeId);
-    const [workflow, closedTargets] = await Promise.all([
+    const [workflow, closedStores] = await Promise.all([
       this.approvalRepository.listWorkflowState({
         periodKey: input.periodKey,
         storeIds,
       }),
-      this.approvalRepository.listClosedFinalSnapshotTargets({
+      this.approvalRepository.listClosedFinalSnapshotStores({
         periodKey: input.periodKey,
         storeIds,
       }),
@@ -98,7 +98,7 @@ export class SalesTargetIncentiveRegionWorkflowService {
       ? this.toRegionWorkflow(regionIds[0], packageRow)
       : null;
     const lockedReason = regionWorkflow?.workflowLockedReason ?? null;
-    const closedStoreIds = new Set(closedTargets.map((target) => target.store_id));
+    const closedStoreIds = new Set(closedStores.map((store) => store.store_id));
 
     return {
       regionWorkflow,
@@ -320,11 +320,11 @@ export class SalesTargetIncentiveRegionWorkflowService {
     stores: SalesTargetIncentiveProjectionStore[];
     missingMessage: string;
   }) {
-    const closedTargets = await this.approvalRepository.listClosedFinalSnapshotTargets({
+    const closedStores = await this.approvalRepository.listClosedFinalSnapshotStores({
       periodKey: input.periodKey,
       storeIds: input.stores.map((store) => store.storeId),
     });
-    const closedStoreIds = new Set(closedTargets.map((target) => target.store_id));
+    const closedStoreIds = new Set(closedStores.map((store) => store.store_id));
     const missingStoreIds = input.stores
       .map((store) => store.storeId)
       .filter((storeId) => !closedStoreIds.has(storeId));

@@ -187,6 +187,10 @@ function createIncentiveDatabaseMock() {
       return { rowCount: 0, rows: [] };
     }
 
+    if (sql.includes("SELECT store_id FROM latest_final_snapshot")) {
+      return { rowCount: 1, rows: [{ store_id: storeId }] };
+    }
+
     if (
       sql.includes("FROM rpt.sales_target_incentive_final_row final_row") &&
       sql.includes("current_amount")

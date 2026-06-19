@@ -17,21 +17,11 @@ import {
 
 type ApprovalClient = Pick<PoolClient, "query">;
 
-export type SalesTargetIncentiveStoreReviewStatus =
-  | "pending_review"
-  | "reviewed";
+export type SalesTargetIncentiveStoreReviewStatus = "pending_review" | "reviewed";
 
-export type SalesTargetIncentiveRegionPackageStatus =
-  | "submitted"
-  | "admin_approved"
-  | "admin_returned";
+export type SalesTargetIncentiveRegionPackageStatus = "submitted" | "admin_approved" | "admin_returned";
 
-export type SalesTargetIncentiveRegionCorrectionStatus =
-  | "draft"
-  | "submitted"
-  | "admin_approved"
-  | "admin_returned"
-  | "voided";
+export type SalesTargetIncentiveRegionCorrectionStatus = "draft" | "submitted" | "admin_approved" | "admin_returned" | "voided";
 
 export type SalesTargetIncentiveParticipantType = "store_manager" | "personnel";
 
@@ -121,6 +111,8 @@ export type SalesTargetIncentiveClosedFinalSnapshotTargetRow = {
   approved_adjustment_amount: string;
   current_amount: string;
 };
+
+export type SalesTargetIncentiveClosedFinalSnapshotStoreRow = { store_id: string };
 
 @Injectable()
 export class SalesTargetIncentiveApprovalRepository {
@@ -714,6 +706,13 @@ export class SalesTargetIncentiveApprovalRepository {
       );
     return result.rows;
   }
+
+  async listClosedFinalSnapshotStores(input: { periodKey: string; storeIds: string[] }): Promise<SalesTargetIncentiveClosedFinalSnapshotStoreRow[]> {
+    if (input.storeIds.length === 0) return [];
+    const result = await this.databaseService.query<SalesTargetIncentiveClosedFinalSnapshotStoreRow>(`${latestFinalSnapshotCte} SELECT store_id FROM latest_final_snapshot`, [input.periodKey, input.storeIds]);
+    return result.rows;
+  }
+
   async listRegionPackagesForAdmin(input: {
     periodKey: string;
     companyIds?: string[];

@@ -79,28 +79,31 @@ function createService(input?: {
     buildCurrentProjection: jest.fn(async () => projection),
   };
   const approvalRepository = {
-    listClosedFinalSnapshotTargets: jest.fn(async ({ storeIds }: { storeIds: string[] }) =>
+    listClosedFinalSnapshotStores: jest.fn(async ({ storeIds }: { storeIds: string[] }) =>
       storeIds
         .filter((candidate) => closedStoreIds.has(candidate))
-        .map((candidate) => ({
-          final_row_id: finalRowId,
-          company_id: companyId,
-          region_id: regionId,
-          store_id: candidate,
-          store_name: "Marmara Park",
-          employee_id: employeeId,
-          user_id: null,
-          participant_type: "personnel",
-          position_code: "SALES_ASSOCIATE",
-          target_amount: "200000.0000",
-          actual_sales_amount: "240000.0000",
-          achievement_pct: "120.0000",
-          applied_rate: "0.0165",
-          payable_amount: "3960.00",
-          final_amount: "3960.00",
-          approved_adjustment_amount: "0.00",
-          current_amount: "3960.00",
-        })),
+        .map((candidate) => ({ store_id: candidate })),
+    ),
+    listClosedFinalSnapshotTargets: jest.fn(async ({ storeIds }: { storeIds: string[] }) =>
+      storeIds.map((candidate) => ({
+        final_row_id: finalRowId,
+        company_id: companyId,
+        region_id: regionId,
+        store_id: candidate,
+        store_name: "Marmara Park",
+        employee_id: employeeId,
+        user_id: null,
+        participant_type: "personnel",
+        position_code: "SALES_ASSOCIATE",
+        target_amount: "200000.0000",
+        actual_sales_amount: "240000.0000",
+        achievement_pct: "120.0000",
+        applied_rate: "0.0165",
+        payable_amount: "3960.00",
+        final_amount: "3960.00",
+        approved_adjustment_amount: "0.00",
+        current_amount: "3960.00",
+      })),
     ),
     listWorkflowState: jest.fn(async () => ({
       reviews: input?.reviewStatus
@@ -198,6 +201,11 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
       actorUserId: "region-user",
       reviewStatus: "reviewed",
     });
+    expect(approvalRepository.listClosedFinalSnapshotStores).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      storeIds: [storeId],
+    });
+    expect(approvalRepository.listClosedFinalSnapshotTargets).not.toHaveBeenCalled();
     expect(result.data).toMatchObject({ storeId, reviewStatus: "reviewed" });
   });
 

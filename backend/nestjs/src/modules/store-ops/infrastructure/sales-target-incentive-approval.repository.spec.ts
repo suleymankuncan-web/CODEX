@@ -186,6 +186,28 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     );
   });
 
+  it("lists closed final snapshot stores without requiring incentive rows", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({
+      rows: [{ store_id: storeId }, { store_id: secondStoreId }],
+    });
+
+    const result = await repository.listClosedFinalSnapshotStores({
+      periodKey: "2026-05",
+      storeIds: [storeId, secondStoreId],
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("WITH latest_final_snapshot");
+    expect(sql).toContain("SELECT store_id FROM latest_final_snapshot");
+    expect(sql).not.toContain("sales_target_incentive_final_row");
+    expect(query.mock.calls[0][1]).toEqual([
+      "2026-05",
+      [storeId, secondStoreId],
+    ]);
+    expect(result).toEqual([{ store_id: storeId }, { store_id: secondStoreId }]);
+  });
+
   it("submits a package with a submitted store-set snapshot and submitted corrections", async () => {
     const { query, repository, withTransaction } = createHarness();
     query
