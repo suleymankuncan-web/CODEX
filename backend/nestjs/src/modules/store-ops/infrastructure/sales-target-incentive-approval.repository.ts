@@ -449,7 +449,6 @@ export class SalesTargetIncentiveApprovalRepository {
       });
       await this.ensureClosedSnapshotsExist(client, input);
       await this.ensureStoresReviewed(client, input);
-
       const packageResult = await client.query<SalesTargetIncentiveRegionPackageRow>(
         `
           INSERT INTO ops.sales_target_incentive_region_package (
@@ -489,7 +488,6 @@ export class SalesTargetIncentiveApprovalRepository {
       if (!packageRow) {
         throw new ConflictException("Approved packages cannot be resubmitted");
       }
-
       await client.query(
         `
           DELETE FROM ops.sales_target_incentive_region_package_store
@@ -497,7 +495,7 @@ export class SalesTargetIncentiveApprovalRepository {
         `,
         [packageRow.sales_target_incentive_region_package_id],
       );
-      await client.query(
+      const storeSnapshotResult = await client.query(
         `
           WITH latest_final_snapshot AS (
             SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
@@ -540,6 +538,7 @@ export class SalesTargetIncentiveApprovalRepository {
             AND review.region_id = $3
             AND review.store_id = ANY($4::uuid[])
             AND review.review_status = 'reviewed'
+          RETURNING store_id
         `,
         [
           packageRow.sales_target_incentive_region_package_id,
@@ -548,6 +547,9 @@ export class SalesTargetIncentiveApprovalRepository {
           input.storeIds,
         ],
       );
+      if (storeSnapshotResult.rowCount !== input.storeIds.length) {
+        throw new ConflictException("Submitted package store snapshot is incomplete");
+      }
       await client.query(
         `
           UPDATE ops.sales_target_incentive_region_correction
@@ -575,7 +577,6 @@ export class SalesTargetIncentiveApprovalRepository {
           input.storeIds,
         ],
       );
-
       return packageRow;
     });
   }
@@ -714,7 +715,6 @@ export class SalesTargetIncentiveApprovalRepository {
       );
     return result.rows;
   }
-
   async listRegionPackagesForAdmin(input: {
     periodKey: string;
     companyIds?: string[];

@@ -211,7 +211,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
         ],
       })
       .mockResolvedValueOnce({ rows: [] })
-      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [], rowCount: 2 })
       .mockResolvedValueOnce({ rows: [] });
 
     const result = await repository.submitRegionPackage({
@@ -230,6 +230,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_region_package");
     expect(sql).toContain("DELETE FROM ops.sales_target_incentive_region_package_store");
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_region_package_store");
+    expect(sql).toContain("RETURNING store_id");
     expect(sql).toContain("review.final_snapshot_id");
     expect(sql).toContain("latest_snapshot.sales_target_incentive_final_snapshot_id = review.final_snapshot_id");
     expect(sql).toContain("THEN 'submitted'");
