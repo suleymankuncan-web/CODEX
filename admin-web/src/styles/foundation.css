@@ -1,39 +1,43 @@
 :root {
-  --bg: #f8f5fb;
-  --bg-strong: #edf7f6;
-  --surface: rgba(255, 255, 255, 0.88);
-  --surface-strong: #ffffff;
-  --surface-card: #ffffff;
-  --surface-ink: #171421;
-  --surface-muted: #6c6478;
-  --line: rgba(36, 28, 50, 0.1);
-  --line-strong: rgba(36, 28, 50, 0.18);
-  --accent: #7c3aed;
-  --accent-strong: #4c2aa5;
-  --accent-soft: rgba(124, 58, 237, 0.12);
-  --glacier-accent: #13a7b3;
-  --glacier-accent-soft: rgba(19, 167, 179, 0.12);
-  --blue-accent: #3765ea;
-  --warning: #f59e0b;
-  --warning-soft: rgba(245, 158, 11, 0.14);
-  --danger: #e11d48;
-  --danger-soft: rgba(225, 29, 72, 0.12);
-  --calm: #10b981;
-  --calm-soft: rgba(16, 185, 129, 0.12);
-  --neutral-soft: rgba(36, 28, 50, 0.08);
-  --focus-ring: rgba(124, 58, 237, 0.22);
-  --shadow: 0 18px 48px rgba(32, 24, 48, 0.08);
-  --radius-xl: 28px;
-  --radius-lg: 20px;
-  --radius-md: 14px;
-  --font-sans: 'Manrope', 'Segoe UI', sans-serif;
-  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
-  color: var(--surface-ink);
+  /*
+   * Legacy foundation variables are intentionally namespaced.
+   * shadcn-tailwind.css owns semantic tokens such as --accent and --radius-*.
+   */
+  --legacy-bg: #f8f5fb;
+  --legacy-bg-strong: #edf7f6;
+  --legacy-surface: rgba(255, 255, 255, 0.88);
+  --legacy-surface-strong: #ffffff;
+  --legacy-surface-card: #ffffff;
+  --legacy-surface-ink: #171421;
+  --legacy-surface-muted: #6c6478;
+  --legacy-line: rgba(36, 28, 50, 0.1);
+  --legacy-line-strong: rgba(36, 28, 50, 0.18);
+  --legacy-accent: #7c3aed;
+  --legacy-accent-strong: #4c2aa5;
+  --legacy-accent-soft: rgba(124, 58, 237, 0.12);
+  --legacy-glacier-accent: #13a7b3;
+  --legacy-glacier-accent-soft: rgba(19, 167, 179, 0.12);
+  --legacy-blue-accent: #3765ea;
+  --legacy-warning: #f59e0b;
+  --legacy-warning-soft: rgba(245, 158, 11, 0.14);
+  --legacy-danger: #e11d48;
+  --legacy-danger-soft: rgba(225, 29, 72, 0.12);
+  --legacy-calm: #10b981;
+  --legacy-calm-soft: rgba(16, 185, 129, 0.12);
+  --legacy-neutral-soft: rgba(36, 28, 50, 0.08);
+  --legacy-focus-ring: rgba(124, 58, 237, 0.22);
+  --legacy-shadow: 0 18px 48px rgba(32, 24, 48, 0.08);
+  --legacy-radius-xl: 28px;
+  --legacy-radius-lg: 20px;
+  --legacy-radius-md: 14px;
+  --legacy-font-sans: 'Manrope', 'Segoe UI', sans-serif;
+  --legacy-font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+  color: var(--legacy-surface-ink);
   background:
     radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 28rem),
     radial-gradient(circle at top right, rgba(19, 167, 179, 0.12), transparent 24rem),
     linear-gradient(135deg, #f8f5fb 0%, #ffffff 48%, #edf7f6 100%);
-  font-family: var(--font-sans);
+  font-family: var(--legacy-font-sans);
   line-height: 1.5;
   font-weight: 500;
   font-synthesis: none;
@@ -70,7 +74,7 @@ a {
 }
 
 code {
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   background: rgba(36, 28, 50, 0.06);
   padding: 0.2rem 0.45rem;
   border-radius: 0.5rem;

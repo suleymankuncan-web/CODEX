@@ -19,7 +19,7 @@
   border: 1px solid rgba(124, 58, 237, 0.24);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.96);
-  color: var(--accent-strong);
+  color: var(--legacy-accent-strong);
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.16);
   cursor: pointer;
   font-weight: 800;
@@ -36,7 +36,7 @@
 
 .pilot-feedback-trigger:focus-visible,
 .pilot-feedback-close:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 3px solid var(--legacy-focus-ring);
   border-color: rgba(124, 58, 237, 0.44);
 }
 
@@ -45,7 +45,7 @@
   border-radius: 999px;
   background: rgba(236, 253, 245, 0.96);
   padding: 0.45rem 0.75rem;
-  color: var(--calm);
+  color: var(--legacy-calm);
   font-size: 0.82rem;
   font-weight: 800;
 }
@@ -67,9 +67,9 @@
   width: min(520px, 100%);
   max-height: calc(100vh - 2rem);
   overflow: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 8px;
-  background: var(--surface-card);
+  background: var(--legacy-surface-card);
   box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
   padding: 1rem;
 }
@@ -88,7 +88,7 @@
 
 .pilot-feedback-dialog-head p {
   margin-top: 0.35rem;
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
 }
 
 .pilot-feedback-dialog .key-item {

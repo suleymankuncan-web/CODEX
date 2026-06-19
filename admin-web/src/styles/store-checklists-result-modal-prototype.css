@@ -106,7 +106,7 @@
 }
 
 .store-checklist-result-status-legend strong {
-  color: var(--surface-ink, var(--checklist-ink));
+  color: var(--legacy-surface-ink, var(--checklist-ink));
 }
 
 .store-checklist-result-legend-dot {
@@ -151,7 +151,7 @@
 
 .store-checklist-result-action-context div strong {
   min-width: 0;
-  color: var(--surface-ink, var(--checklist-ink));
+  color: var(--legacy-surface-ink, var(--checklist-ink));
   font-size: 0.84rem;
   font-weight: 760;
   overflow-wrap: anywhere;
@@ -165,7 +165,7 @@
 }
 
 .store-checklist-result-section-head strong {
-  color: var(--surface-ink, var(--checklist-ink));
+  color: var(--legacy-surface-ink, var(--checklist-ink));
 }
 
 .store-checklist-result-item {

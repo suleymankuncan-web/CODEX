@@ -75,7 +75,7 @@
 
 .master-data-command-chip code {
   color: var(--admin-command-plum);
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
 }
 
 .master-data-command-primary-button,
@@ -118,7 +118,7 @@
 .master-data-command-history-row span {
   display: block;
   color: var(--admin-command-muted);
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -127,7 +127,7 @@
 
 .master-data-command-table th {
   color: var(--admin-command-muted);
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -207,7 +207,7 @@
   background: rgba(124, 58, 237, 0.1);
   color: var(--admin-command-plum);
   padding: 0.16rem 0.42rem;
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   font-size: 0.72rem;
 }
 
@@ -419,7 +419,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   font-size: 0.78rem;
   font-weight: 900;
 }
@@ -438,7 +438,7 @@
   justify-content: space-between;
   margin-top: 0.9rem;
   color: var(--admin-command-muted);
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   font-size: 0.78rem;
   font-weight: 900;
 }

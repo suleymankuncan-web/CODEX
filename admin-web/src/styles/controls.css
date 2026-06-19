@@ -1,15 +1,15 @@
 .search-field input {
   width: min(100%, 360px);
   min-height: 46px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.88);
   padding: 0 1rem;
-  color: var(--surface-ink);
+  color: var(--legacy-surface-ink);
 }
 
 .search-field input:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 3px solid var(--legacy-focus-ring);
   border-color: rgba(124, 58, 237, 0.44);
 }
 
@@ -25,10 +25,10 @@
 .control-input,
 .control-button {
   min-height: 46px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.88);
-  color: var(--surface-ink);
+  color: var(--legacy-surface-ink);
 }
 
 .control-select select {
@@ -47,7 +47,7 @@
 .control-select select:focus-visible,
 .control-input:focus-visible,
 .control-button:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 3px solid var(--legacy-focus-ring);
   border-color: rgba(124, 58, 237, 0.44);
 }
 
@@ -67,7 +67,7 @@
 }
 
 .field-block span {
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   font-size: 0.84rem;
 }
 
@@ -75,17 +75,17 @@
 .field-block select,
 .field-textarea {
   min-height: 46px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.88);
   padding: 0 0.9rem;
-  color: var(--surface-ink);
+  color: var(--legacy-surface-ink);
 }
 
 .field-block input:focus-visible,
 .field-block select:focus-visible,
 .field-textarea:focus-visible {
-  outline: 3px solid var(--focus-ring);
+  outline: 3px solid var(--legacy-focus-ring);
   border-color: rgba(124, 58, 237, 0.44);
 }
 
@@ -107,18 +107,18 @@
   min-width: 0;
   align-items: center;
   gap: 0.6rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.68);
   padding: 0.75rem 0.85rem;
-  color: var(--surface-ink);
+  color: var(--legacy-surface-ink);
   font-size: 0.9rem;
 }
 
 .store-checkbox input {
   width: 18px;
   height: 18px;
-  accent-color: var(--accent);
+  accent-color: var(--legacy-accent);
 }
 
 .store-checkbox span {
@@ -128,24 +128,24 @@
 
 .validation-copy {
   margin: 0;
-  color: var(--warning);
+  color: var(--legacy-warning);
   font-size: 0.9rem;
 }
 
 .segmented-button {
   min-height: 46px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.72);
   padding: 0 1rem;
   cursor: pointer;
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
 }
 
 .segmented-button-active {
   border-color: rgba(124, 58, 237, 0.44);
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: var(--legacy-accent-soft);
+  color: var(--legacy-accent-strong);
 }
 
 @media (max-width: 760px) {

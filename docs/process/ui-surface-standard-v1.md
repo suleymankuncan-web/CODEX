@@ -177,6 +177,19 @@ Do not introduce route-specific color recipes or hard-coded TSX colors such as:
 Route-specific CSS may handle layout or complex responsive structure; it must
 not invent a parallel button, badge, card, or status color language.
 
+Token ownership:
+
+- `admin-web/src/styles/shadcn-tailwind.css` owns shadcn semantic tokens such as
+  `--background`, `--foreground`, `--card`, `--primary`, `--accent`,
+  `--border`, `--input`, `--ring`, and `--radius-*`.
+- `admin-web/src/styles/foundation.css` may keep old shell/surface values only
+  behind `--legacy-*` names.
+- New or refactored Store/Admin UI must not define unprefixed legacy tokens like
+  `--accent`, `--surface-ink`, `--line`, `--shadow`, or `--radius-md` outside
+  the shadcn token file.
+- If an old surface still needs old Plum Glacier values, bind it to the
+  `--legacy-*` variable explicitly and treat the page as not fully migrated.
+
 ## Product Copy Standard
 
 User-facing copy must sound like product language, not implementation notes,
@@ -229,6 +242,26 @@ Microcopy rules:
 ## Prototype To Product
 
 Approved prototypes are implementation contracts for the scoped surface.
+
+Before creating a production-bound Store/Admin prototype:
+
+- choose the deliverable type intentionally. If the surface depends on shadcn
+  controls such as `Calendar`, `Popover`, `Sheet`, `Dialog`, `Table`, `Select`,
+  `Field`, `Button`, `Badge`, `Sidebar`, or `Tabs`, prefer a real React/shadcn
+  prototype slice inside the app. Use standalone HTML only when every visible
+  control has a clear project-component mapping,
+- write the component map first: navigation, filters, table/list, form,
+  overlay, status, empty/error, and primary actions,
+- plan a small setup slice when a required shadcn primitive is missing instead
+  of imitating the primitive with page-local HTML/CSS,
+- use an external shadcn lab only as a reference for component APIs,
+  composition, providers, and examples. Do not import from the lab or copy lab
+  source blindly into production,
+- keep Store/Admin prototypes compact: small title, one toolbar, at most one
+  decision-oriented metric strip, one main table/list/form area, and one
+  detail/edit overlay,
+- avoid custom controls that merely look like shadcn `Button`, `Select`,
+  `Calendar`, `Sheet`, `Table`, `Badge`, or `Card`.
 
 When moving prototype to product:
 

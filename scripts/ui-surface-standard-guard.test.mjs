@@ -8,6 +8,39 @@ const recipesPath = 'docs/process/ui-surface-recipes-v1.md'
 const disciplinePath = 'discipline.md'
 const productExperiencePath = 'docs/process/product-experience-principles.md'
 const docsReadmePath = 'docs/README.md'
+const shadcnTokenPath = 'admin-web/src/styles/shadcn-tailwind.css'
+
+const forbiddenLegacyTokenNames = [
+  '--bg',
+  '--bg-strong',
+  '--surface',
+  '--surface-strong',
+  '--surface-card',
+  '--surface-ink',
+  '--surface-muted',
+  '--line',
+  '--line-strong',
+  '--accent',
+  '--accent-strong',
+  '--accent-soft',
+  '--glacier-accent',
+  '--glacier-accent-soft',
+  '--blue-accent',
+  '--warning',
+  '--warning-soft',
+  '--danger',
+  '--danger-soft',
+  '--calm',
+  '--calm-soft',
+  '--neutral-soft',
+  '--focus-ring',
+  '--shadow',
+  '--radius-xl',
+  '--radius-lg',
+  '--radius-md',
+  '--font-sans',
+  '--font-mono',
+]
 
 const allowedCurrentProductCopyMatches = new Map([
   ['admin-web/src/features/localization/messages/store-home.ts::real-data copy', 2],
@@ -111,6 +144,13 @@ function trackedUiSourceFiles() {
     .filter((path) => /\.(ts|tsx)$/.test(path))
 }
 
+function trackedStyleFiles() {
+  return git(['ls-files', 'admin-web/src/styles'])
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .filter((path) => /\.css$/.test(path))
+}
+
 function countPatternMatches(text, pattern) {
   return [...text.matchAll(new RegExp(pattern, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`))]
     .length
@@ -152,6 +192,38 @@ function strictSurfaceViolations(files = trackedUiSourceFiles(), reader = readTe
   return violations
 }
 
+function escapeRegExp(input) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function legacyTokenOwnershipViolations(files = trackedStyleFiles(), reader = readText) {
+  const violations = []
+
+  for (const file of files) {
+    if (file === shadcnTokenPath) {
+      continue
+    }
+
+    const text = reader(file, 'utf8')
+
+    for (const tokenName of forbiddenLegacyTokenNames) {
+      const escapedToken = escapeRegExp(tokenName)
+      const declarationPattern = new RegExp(`${escapedToken}\\s*:`, 'g')
+      const referencePattern = new RegExp(`var\\(${escapedToken}(?=[,)\\s])`, 'g')
+      const declarationCount = countPatternMatches(text, declarationPattern)
+      const referenceCount = countPatternMatches(text, referencePattern)
+
+      if (declarationCount > 0 || referenceCount > 0) {
+        violations.push(
+          `${file}: ${tokenName} is reserved for shadcn or legacy namespace cleanup; declarations ${declarationCount}, references ${referenceCount}`,
+        )
+      }
+    }
+  }
+
+  return violations
+}
+
 function requireText(text, expected) {
   assert.ok(text.includes(expected), `Missing expected text: ${expected}`)
 }
@@ -175,6 +247,7 @@ test('UI surface standard is discoverable from operating docs', () => {
     '## Icon Standard',
     '## Page Anatomy',
     '## Token And Color Standard',
+    'Token ownership:',
     '## Product Copy Standard',
     '## Prototype To Product',
     '## Guard',
@@ -205,6 +278,10 @@ test('active UI product copy does not exceed the explicit current baseline', () 
 
 test('active UI strict surface patterns do not exceed the explicit current baseline', () => {
   assert.deepEqual(strictSurfaceViolations(), [])
+})
+
+test('style token ownership keeps legacy foundation values namespaced', () => {
+  assert.deepEqual(legacyTokenOwnershipViolations(), [])
 })
 
 test('UI surface guard rejects synthetic product-copy violations beyond baseline', () => {
@@ -242,4 +319,22 @@ test('UI surface strict scanner rejects added strict matches in baseline files',
   })
 
   assert.ok(violations.some((violation) => violation.includes(`count ${currentAllowed + 1} exceeds allowed ${currentAllowed}`)))
+})
+
+test('style token ownership rejects unprefixed legacy tokens outside shadcn token file', () => {
+  const fakeFile = 'admin-web/src/styles/fake-legacy-surface.css'
+  const violations = legacyTokenOwnershipViolations([fakeFile], () => {
+    return [
+      ':root {',
+      '  --surface-ink: #171421;',
+      '}',
+      '.fake { --accent: #7c3aed; }',
+      '.fake { color: red; --radius-md: 14px; }',
+      '.fake { color: var(--surface-ink); }',
+    ].join('\n')
+  })
+
+  assert.ok(violations.some((violation) => violation.includes('--accent')))
+  assert.ok(violations.some((violation) => violation.includes('--radius-md')))
+  assert.ok(violations.some((violation) => violation.includes('--surface-ink')))
 })
