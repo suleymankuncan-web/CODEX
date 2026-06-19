@@ -14,6 +14,13 @@ const migrationPath = join(
 const migrationSql = existsSync(migrationPath)
   ? readFileSync(migrationPath, "utf8")
   : "";
+const approvalFlowMigrationPath = join(
+  root,
+  "db/migrations/053_sales_target_incentive_region_approval_flow.sql",
+);
+const approvalFlowMigrationSql = existsSync(approvalFlowMigrationPath)
+  ? readFileSync(approvalFlowMigrationPath, "utf8")
+  : "";
 
 function expectSalesTargetIncentiveCoreTables(sql: string): void {
   expect(sql).toContain(
@@ -105,9 +112,57 @@ function expectSalesTargetIncentiveCloseTables(sql: string): void {
   expect(sql).toContain("final_amount NUMERIC(18,2) NOT NULL DEFAULT 0");
 }
 
+function expectSalesTargetIncentiveApprovalFlowTables(sql: string): void {
+  expect(sql).toContain(
+    "CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_store_review",
+  );
+  expect(sql).toContain(
+    "CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_region_package",
+  );
+  expect(sql).toContain(
+    "CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_region_package_store",
+  );
+  expect(sql).toContain(
+    "CREATE TABLE IF NOT EXISTS ops.sales_target_incentive_region_correction",
+  );
+  expect(sql).toContain("CHECK (period_key ~ '^[0-9]{4}-(0[1-9]|1[0-2])$')");
+  expect(sql).toContain("CHECK (review_status IN ('pending_review', 'reviewed'))");
+  expect(sql).toContain(
+    "CHECK (package_status IN ('submitted', 'admin_approved', 'admin_returned'))",
+  );
+  expect(sql).toContain(
+    "CHECK (correction_status IN ('draft', 'submitted', 'admin_approved', 'admin_returned', 'voided'))",
+  );
+  expect(sql).toContain(
+    "approved_adjustment_id UUID REFERENCES ops.sales_target_incentive_adjustment",
+  );
+  expect(sql).toContain(
+    "adjustment_amount NUMERIC(18,2) GENERATED ALWAYS AS (final_amount - before_amount) STORED",
+  );
+  expect(sql).toContain(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_store_review_store_period",
+  );
+  expect(sql).toContain(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_region_package_region_period",
+  );
+  expect(sql).toContain(
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_sti_region_correction_open_unique",
+  );
+  expect(sql).toContain(
+    "WHERE correction_status IN ('draft', 'submitted', 'admin_returned')",
+  );
+  expect(sql).toContain(
+    "COMMENT ON TABLE ops.sales_target_incentive_region_package_store IS 'Immutable submitted store set snapshot",
+  );
+}
+
 describe("sales target incentive schema contract", () => {
   it("adds the dedicated migration file for PR-3", () => {
     expect(migrationSql).not.toBe("");
+  });
+
+  it("adds the dedicated migration file for region manager approval flow", () => {
+    expect(approvalFlowMigrationSql).not.toBe("");
   });
 
   it("keeps rule versions and exact rate brackets in canonical schema and migration", () => {
@@ -161,6 +216,16 @@ describe("sales target incentive schema contract", () => {
         "OR (adjustment_scope = 'final_snapshot' AND projection_row_id IS NULL AND final_row_id IS NOT NULL)",
       );
     }
+  });
+
+  it("separates region manager review, correction, package submit, and admin review state", () => {
+    for (const sql of [schemaSql, approvalFlowMigrationSql]) {
+      expectSalesTargetIncentiveApprovalFlowTables(sql);
+    }
+    expect(approvalFlowMigrationSql).toContain(
+      "COMMENT ON TABLE ops.sales_target_incentive_region_correction IS 'Region manager draft/submitted incentive corrections, converted to payable adjustments only after admin approval.'",
+    );
+    expect(approvalFlowMigrationSql).not.toContain("ops.sales_target_incentive_projection_row");
   });
 
   it("seeds the same V1 rule and bracket references for schema reset paths", () => {

@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { SalesTargetIncentiveApiService } from "./application/sales-target-incentive-api.service";
 import { SalesTargetIncentiveCalculatorService } from "./application/sales-target-incentive-calculator.service";
 import { SalesTargetIncentiveReadModelService } from "./application/sales-target-incentive-read-model.service";
+import { SalesTargetIncentiveApprovalRepository } from "./infrastructure/sales-target-incentive-approval.repository";
 import { SalesTargetIncentiveCloseRepository } from "./infrastructure/sales-target-incentive-close.repository";
 import { SalesTargetIncentiveCorrectionRepository } from "./infrastructure/sales-target-incentive-correction.repository";
 import { SalesTargetIncentiveReadRepository } from "./infrastructure/sales-target-incentive-read.repository";
@@ -19,6 +20,7 @@ import { StoreSalesTargetIncentiveController } from "./web/store-sales-target-in
     SalesTargetIncentiveCalculatorService,
     SalesTargetIncentiveReadRepository,
     SalesTargetIncentiveCorrectionRepository,
+    SalesTargetIncentiveApprovalRepository,
     SalesTargetIncentiveCloseRepository,
   ],
   exports: [SalesTargetIncentiveApiService],
