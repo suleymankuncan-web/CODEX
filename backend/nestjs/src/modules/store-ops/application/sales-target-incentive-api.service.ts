@@ -22,6 +22,14 @@ import {
   SalesTargetIncentiveCloseRepository,
   type SalesTargetIncentiveCloseRunSummary,
 } from "../infrastructure/sales-target-incentive-close.repository";
+import {
+  correctionKey,
+  SalesTargetIncentiveRegionWorkflowService,
+  type SalesTargetIncentiveRegionCorrectionApiState,
+  type SalesTargetIncentiveRegionWorkflowApiState,
+  type SalesTargetIncentiveRegionWorkflowContext,
+  type SalesTargetIncentiveStoreReviewApiState,
+} from "./sales-target-incentive-region-workflow.service";
 
 export type SalesTargetIncentiveRoleScope =
   | "own"
@@ -50,6 +58,7 @@ export type SalesTargetIncentiveApiRow = {
   blockedReason: string | null;
   rateTableVersion: string;
   explanation: string;
+  regionCorrection: SalesTargetIncentiveRegionCorrectionApiState | null;
 };
 
 export type SalesTargetIncentiveApiProjection = {
@@ -68,6 +77,7 @@ export type SalesTargetIncentiveApiProjection = {
   calculationState: Exclude<SalesTargetIncentiveCalculationStatus, "excluded">;
   blockedReason: string | null;
   lastImportAt: string | null;
+  review: SalesTargetIncentiveStoreReviewApiState | null;
   rows: SalesTargetIncentiveApiRow[];
 };
 
@@ -78,6 +88,7 @@ export type SalesTargetIncentiveApiResponse = {
     periodEnd: string;
     periodTimezone: typeof SALES_TARGET_INCENTIVE_TIMEZONE;
     roleScope: SalesTargetIncentiveRoleScope;
+    regionWorkflow: SalesTargetIncentiveRegionWorkflowApiState | null;
     projections: SalesTargetIncentiveApiProjection[];
   };
 };
@@ -114,6 +125,7 @@ export class SalesTargetIncentiveApiService {
     private readonly readModelService: SalesTargetIncentiveReadModelService,
     private readonly correctionRepository: SalesTargetIncentiveCorrectionRepository,
     private readonly closeRepository: SalesTargetIncentiveCloseRepository,
+    private readonly regionWorkflowService: SalesTargetIncentiveRegionWorkflowService,
   ) {}
 
   async getOwnStoreMeProjection(input: {
@@ -413,17 +425,73 @@ export class SalesTargetIncentiveApiService {
     return { data: result };
   }
 
+  async markStoreReview(input: {
+    actor: AuthenticatedUser;
+    periodKey: string;
+    storeId: string;
+    reviewStatus: "pending_review" | "reviewed";
+  }) {
+    return this.regionWorkflowService.markStoreReview({
+      ...input,
+      periodKey: this.resolvePeriodKey(input.periodKey),
+    });
+  }
+
+  async createRegionCorrection(input: {
+    actor: AuthenticatedUser;
+    periodKey: string;
+    storeId: string;
+    employeeId: string;
+    participantType: "store_manager" | "personnel";
+    finalAmount: string;
+    reasonNote: string;
+  }) {
+    return this.regionWorkflowService.createRegionCorrection({
+      ...input,
+      periodKey: this.resolvePeriodKey(input.periodKey),
+    });
+  }
+
+  async voidRegionCorrection(input: {
+    actor: AuthenticatedUser;
+    periodKey: string;
+    correctionId: string;
+  }) {
+    return this.regionWorkflowService.voidRegionCorrection({
+      ...input,
+      periodKey: this.resolvePeriodKey(input.periodKey),
+    });
+  }
+
+  async submitRegionPackage(input: {
+    actor: AuthenticatedUser;
+    periodKey: string;
+    regionId: string;
+    submissionNote?: string | null;
+  }) {
+    return this.regionWorkflowService.submitRegionPackage({
+      ...input,
+      periodKey: this.resolvePeriodKey(input.periodKey),
+    });
+  }
+
   private async toApiResponse(input: {
     projection: SalesTargetIncentiveProjectionReadModel;
     stores: SalesTargetIncentiveProjectionStore[];
     roleScope: SalesTargetIncentiveRoleScope;
   }): Promise<SalesTargetIncentiveApiResponse> {
-    const adjustmentSummaries =
-      await this.correctionRepository.listApprovedAdjustmentSummaries({
+    const [adjustmentSummaries, workflowContext] = await Promise.all([
+      this.correctionRepository.listApprovedAdjustmentSummaries({
         periodKey: input.projection.periodKey,
         storeIds: input.stores.map((store) => store.storeId),
-        includeFinalRows: input.roleScope === "admin",
-      });
+        includeFinalRows: input.roleScope === "admin" || input.roleScope === "region",
+      }),
+      this.regionWorkflowService.getWorkflowContext({
+        periodKey: input.projection.periodKey,
+        stores: input.stores,
+        roleScope: input.roleScope,
+      }),
+    ]);
 
     return {
       data: {
@@ -432,12 +500,14 @@ export class SalesTargetIncentiveApiService {
         periodEnd: input.projection.periodEnd,
         periodTimezone: input.projection.timezone,
         roleScope: input.roleScope,
+        regionWorkflow: workflowContext.regionWorkflow,
         projections: input.stores.map((store) =>
           this.toApiProjection(
             store,
             input.projection.periodKey,
             input.roleScope,
             adjustmentSummaries,
+            workflowContext,
           ),
         ),
       },
@@ -449,12 +519,14 @@ export class SalesTargetIncentiveApiService {
     period: string,
     roleScope: SalesTargetIncentiveRoleScope,
     adjustmentSummaries: SalesTargetIncentiveAdjustmentSummaryRow[],
+    workflowContext: SalesTargetIncentiveRegionWorkflowContext,
   ): SalesTargetIncentiveApiProjection {
     const rows = [
       ...(store.manager ? [store.manager] : []),
       ...store.personnel,
     ].map((participant) =>
       this.toApiRow(
+        store.storeId,
         participant,
         adjustmentSummaries.find(
           (summary) =>
@@ -462,12 +534,13 @@ export class SalesTargetIncentiveApiService {
             summary.employee_id === participant.employeeId &&
             summary.participant_type === participant.participantType,
         ) ?? null,
+        workflowContext,
       ),
     );
     const visibleRowKeys = new Set(
       rows.map((row) => `${row.employeeId}:${row.participantType}`),
     );
-    const finalOnlyRows = roleScope === "admin"
+    const finalOnlyRows = roleScope === "admin" || roleScope === "region"
       ? adjustmentSummaries
           .filter(
             (summary) =>
@@ -475,7 +548,7 @@ export class SalesTargetIncentiveApiService {
               summary.final_amount !== null &&
               !visibleRowKeys.has(`${summary.employee_id}:${summary.participant_type}`),
           )
-          .map((summary) => this.toFinalOnlyApiRow(summary))
+          .map((summary) => this.toFinalOnlyApiRow(summary, workflowContext))
       : [];
     const allRows = [...rows, ...finalOnlyRows];
     const primaryCalculation = store.manager?.calculation ?? store.personnel[0]?.calculation;
@@ -498,13 +571,16 @@ export class SalesTargetIncentiveApiService {
       calculationState: this.resolveProjectionStatus(allRows),
       blockedReason: allRows.find((row) => row.blockedReason)?.blockedReason ?? null,
       lastImportAt: store.storeNetSalesLastSyncedAt,
+      review: workflowContext.reviewsByStoreId.get(store.storeId) ?? null,
       rows: allRows,
     };
   }
 
   private toApiRow(
+    storeId: string,
     participant: SalesTargetIncentiveParticipantProjection,
     adjustmentSummary: SalesTargetIncentiveAdjustmentSummaryRow | null,
+    workflowContext: SalesTargetIncentiveRegionWorkflowContext,
   ): SalesTargetIncentiveApiRow {
     const calculation = participant.calculation;
 
@@ -579,11 +655,19 @@ export class SalesTargetIncentiveApiService {
       explanation: usesFinalSnapshot
         ? "Kapali donem final satirina gore gosteriliyor."
         : this.resolveExplanation(calculation.status, calculation.blockedReason),
+      regionCorrection: workflowContext.correctionsByRowKey.get(
+        correctionKey(
+          adjustmentSummary?.store_id ?? storeId,
+          participant.employeeId,
+          participant.participantType,
+        ),
+      ) ?? null,
     };
   }
 
   private toFinalOnlyApiRow(
     adjustmentSummary: SalesTargetIncentiveAdjustmentSummaryRow,
+    workflowContext: SalesTargetIncentiveRegionWorkflowContext,
   ): SalesTargetIncentiveApiRow {
     const correctionAmount =
       !isZeroMoney(adjustmentSummary.correction_amount)
@@ -627,6 +711,13 @@ export class SalesTargetIncentiveApiService {
       blockedReason: null,
       rateTableVersion: adjustmentSummary.rate_table_version ?? SALES_TARGET_INCENTIVE_RULE_VERSION,
       explanation: "Kapali donem final satirina gore gosteriliyor.",
+      regionCorrection: workflowContext.correctionsByRowKey.get(
+        correctionKey(
+          adjustmentSummary.store_id,
+          adjustmentSummary.employee_id,
+          adjustmentSummary.participant_type,
+        ),
+      ) ?? null,
     };
   }
 

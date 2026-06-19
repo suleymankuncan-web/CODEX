@@ -691,6 +691,14 @@ export type components = {
       "reasonCode": string
       "reasonNote": string
     }
+    "CreateSalesTargetIncentiveRegionCorrectionDto": {
+      "period": string
+      "storeId": string
+      "employeeId": string
+      "participantType": "store_manager" | "personnel"
+      "finalAmount": string
+      "reasonNote": string
+    }
     "CreateStoreActionPlanRequest": {
       "storeId": string
       "sourceType": "kpi_exception" | "checklist_remediation"
@@ -1024,6 +1032,11 @@ export type components = {
         "totalEntityTypes": number
         "totalActiveSources": number
       }
+    }
+    "MarkSalesTargetIncentiveStoreReviewDto": {
+      "period": string
+      "storeId": string
+      "reviewStatus": "pending_review" | "reviewed"
     }
     "MasterDataBootstrapBatchDetailResponse": {
       "summary": {
@@ -2385,6 +2398,11 @@ export type components = {
         "offset": number
       }
     }
+    "SubmitSalesTargetIncentiveRegionPackageDto": {
+      "period": string
+      "regionId": string
+      "submissionNote"?: string
+    }
     "TargetCoverageResponse": {
       "items": Array<{
           "storeId": string
@@ -2453,6 +2471,10 @@ export type components = {
     "UpdateStoreActionPlanStatusRequest": {
       "status": "open" | "in_progress" | "blocked"
       "note"?: string
+    }
+    "VoidSalesTargetIncentiveRegionCorrectionDto": {
+      "period": string
+      "correctionId": string
     }
     "WorkflowInboxResponse": {
       "items": Array<{
@@ -3522,6 +3544,62 @@ export type paths = {
           content: {
             'application/json': Record<string, unknown>
           }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/store-reviews": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["MarkSalesTargetIncentiveStoreReviewDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
+  "/api/store/incentives/corrections": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateSalesTargetIncentiveRegionCorrectionDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
+  "/api/store/incentives/corrections/void": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["VoidSalesTargetIncentiveRegionCorrectionDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
+  "/api/store/incentives/submissions": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["SubmitSalesTargetIncentiveRegionPackageDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: Record<string, never>
         }
       }
     }

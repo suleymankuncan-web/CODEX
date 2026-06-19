@@ -1,4 +1,4 @@
-import { fetchOpenApiJson } from '../../lib/openapi-client'
+import { fetchOpenApiJson, sendOpenApiJson } from '../../lib/openapi-client'
 import { sendJson } from '../../lib/api'
 
 export type SalesTargetIncentiveRoleScope = 'own' | 'store' | 'region' | 'admin'
@@ -32,6 +32,39 @@ export type SalesTargetIncentiveRow = {
   blockedReason: string | null
   rateTableVersion: string
   explanation: string
+  regionCorrection: SalesTargetIncentiveRegionCorrection | null
+}
+
+export type SalesTargetIncentiveRegionCorrection = {
+  correctionId: string
+  status: 'draft' | 'submitted' | 'admin_approved' | 'admin_returned' | 'voided'
+  targetScope: 'final_snapshot'
+  beforeAmount: string
+  adjustmentAmount: string
+  finalAmount: string
+  reasonNote: string
+  createdByUserId: string
+  createdAt: string
+  submittedAt: string | null
+  reviewedAt: string | null
+  reviewNote: string | null
+}
+
+export type SalesTargetIncentiveStoreReview = {
+  storeReviewStatus: 'pending_review' | 'reviewed'
+  reviewedByUserId: string | null
+  reviewedAt: string | null
+  periodCloseStatus: 'projection_only' | 'closed'
+  workflowLockedReason: string | null
+}
+
+export type SalesTargetIncentiveRegionWorkflow = {
+  regionId: string
+  regionPackageStatus: 'not_submitted' | 'submitted' | 'admin_approved' | 'admin_returned'
+  regionPackageId: string | null
+  submittedAt: string | null
+  reviewedAt: string | null
+  workflowLockedReason: string | null
 }
 
 export type SalesTargetIncentiveProjection = {
@@ -50,6 +83,7 @@ export type SalesTargetIncentiveProjection = {
   calculationState: SalesTargetIncentiveStatus
   blockedReason: string | null
   lastImportAt: string | null
+  review: SalesTargetIncentiveStoreReview | null
   rows: SalesTargetIncentiveRow[]
 }
 
@@ -60,6 +94,7 @@ export type SalesTargetIncentiveResponse = {
     periodEnd: string
     periodTimezone: 'Europe/Istanbul'
     roleScope: SalesTargetIncentiveRoleScope
+    regionWorkflow: SalesTargetIncentiveRegionWorkflow | null
     projections: SalesTargetIncentiveProjection[]
   }
 }
@@ -91,6 +126,64 @@ export type AdminSalesTargetIncentiveCorrectionResponse = {
   }
 }
 
+export type StoreSalesTargetIncentiveReviewInput = {
+  period: string
+  storeId: string
+  reviewStatus: 'pending_review' | 'reviewed'
+}
+
+export type StoreSalesTargetIncentiveRegionCorrectionInput = {
+  period: string
+  storeId: string
+  employeeId: string
+  participantType: 'store_manager' | 'personnel'
+  finalAmount: string
+  reasonNote: string
+}
+
+export type StoreSalesTargetIncentiveVoidCorrectionInput = {
+  period: string
+  correctionId: string
+}
+
+export type StoreSalesTargetIncentiveSubmitPackageInput = {
+  period: string
+  regionId: string
+  submissionNote?: string
+}
+
+export type StoreSalesTargetIncentiveReviewResponse = {
+  data: {
+    period: string
+    storeId: string
+    reviewStatus: 'pending_review' | 'reviewed'
+    reviewedByUserId: string | null
+    reviewedAt: string | null
+  }
+}
+
+export type StoreSalesTargetIncentiveCorrectionResponse = {
+  data: SalesTargetIncentiveRegionCorrection
+}
+
+export type StoreSalesTargetIncentivePackageResponse = {
+  data: {
+    period: string
+    regionId: string
+    regionPackageId: string
+    regionPackageStatus: 'submitted' | 'admin_approved' | 'admin_returned'
+    submittedAt: string
+    reviewedAt: string | null
+    reviewNote: string | null
+  }
+}
+
+type IncentiveQueryIdentity = {
+  actorUserId?: string | null
+  roleScope?: SalesTargetIncentiveRoleScope | null
+  assignedStoreIds?: readonly string[]
+}
+
 function buildPeriodQuery(period?: string) {
   if (!period?.trim()) {
     return undefined
@@ -102,11 +195,28 @@ function buildPeriodQuery(period?: string) {
 export const mySalesTargetIncentivesQueryKey = (period?: string) =>
   ['store-me-sales-target-incentives', period ?? 'current'] as const
 
-export const storeSalesTargetIncentivesQueryKey = (period?: string) =>
-  ['store-sales-target-incentives', period ?? 'current'] as const
+export const storeSalesTargetIncentivesQueryKey = (
+  period?: string,
+  identity?: IncentiveQueryIdentity,
+) =>
+  [
+    'store-sales-target-incentives',
+    period ?? 'current',
+    identity?.actorUserId ?? 'anonymous',
+    identity?.roleScope ?? 'unknown',
+    [...(identity?.assignedStoreIds ?? [])].sort().join(',') || 'no-assigned-store-scope',
+  ] as const
 
-export const adminSalesTargetIncentivesQueryKey = (period?: string) =>
-  ['admin-sales-target-incentives', period ?? 'current'] as const
+export const adminSalesTargetIncentivesQueryKey = (
+  period?: string,
+  identity?: IncentiveQueryIdentity,
+) =>
+  [
+    'admin-sales-target-incentives',
+    period ?? 'current',
+    identity?.actorUserId ?? 'anonymous',
+    identity?.roleScope ?? 'unknown',
+  ] as const
 
 export async function getMySalesTargetIncentives(input?: { period?: string }) {
   const query = buildPeriodQuery(input?.period)
@@ -142,4 +252,40 @@ export async function createAdminSalesTargetIncentiveCorrection(
       body: input,
     },
   )
+}
+
+export async function markStoreSalesTargetIncentiveReview(
+  input: StoreSalesTargetIncentiveReviewInput,
+) {
+  return sendOpenApiJson('/api/store/incentives/store-reviews', {
+    method: 'POST',
+    body: input,
+  }) as Promise<StoreSalesTargetIncentiveReviewResponse>
+}
+
+export async function createStoreSalesTargetIncentiveRegionCorrection(
+  input: StoreSalesTargetIncentiveRegionCorrectionInput,
+) {
+  return sendOpenApiJson('/api/store/incentives/corrections', {
+    method: 'POST',
+    body: input,
+  }) as Promise<StoreSalesTargetIncentiveCorrectionResponse>
+}
+
+export async function voidStoreSalesTargetIncentiveRegionCorrection(
+  input: StoreSalesTargetIncentiveVoidCorrectionInput,
+) {
+  return sendOpenApiJson('/api/store/incentives/corrections/void', {
+    method: 'POST',
+    body: input,
+  }) as Promise<StoreSalesTargetIncentiveCorrectionResponse>
+}
+
+export async function submitStoreSalesTargetIncentiveRegionPackage(
+  input: StoreSalesTargetIncentiveSubmitPackageInput,
+) {
+  return sendOpenApiJson('/api/store/incentives/submissions', {
+    method: 'POST',
+    body: input,
+  }) as Promise<StoreSalesTargetIncentivePackageResponse>
 }

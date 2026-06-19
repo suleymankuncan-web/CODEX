@@ -33,9 +33,7 @@ export type SalesTargetIncentiveRegionCorrectionStatus =
   | "admin_returned"
   | "voided";
 
-export type SalesTargetIncentiveParticipantType =
-  | "store_manager"
-  | "personnel";
+export type SalesTargetIncentiveParticipantType = "store_manager" | "personnel";
 
 export type SalesTargetIncentiveApprovalStore = {
   companyId: string;
@@ -100,6 +98,7 @@ export type SalesTargetIncentiveRegionCorrectionRow = {
   reviewed_at: string | null;
   review_note: string | null;
   approved_adjustment_id: string | null;
+  created_at: string;
   updated_at: string;
 };
 

@@ -4563,6 +4563,102 @@
           "AdminSalesTargetIncentive"
         ]
       }
+    },
+    "/api/store/incentives/store-reviews": {
+      "post": {
+        "operationId": "StoreSalesTargetIncentiveController_markStoreReview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkSalesTargetIncentiveStoreReviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StoreSalesTargetIncentive"
+        ]
+      }
+    },
+    "/api/store/incentives/corrections": {
+      "post": {
+        "operationId": "StoreSalesTargetIncentiveController_createRegionCorrection",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSalesTargetIncentiveRegionCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StoreSalesTargetIncentive"
+        ]
+      }
+    },
+    "/api/store/incentives/corrections/void": {
+      "post": {
+        "operationId": "StoreSalesTargetIncentiveController_voidRegionCorrection",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidSalesTargetIncentiveRegionCorrectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StoreSalesTargetIncentive"
+        ]
+      }
+    },
+    "/api/store/incentives/submissions": {
+      "post": {
+        "operationId": "StoreSalesTargetIncentiveController_submitRegionPackage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitSalesTargetIncentiveRegionPackageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "StoreSalesTargetIncentive"
+        ]
+      }
     }
   },
   "info": {
@@ -18543,6 +18639,107 @@
           "adjustmentAmount",
           "reasonCode",
           "reasonNote"
+        ]
+      },
+      "MarkSalesTargetIncentiveStoreReviewDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "reviewStatus": {
+            "enum": [
+              "pending_review",
+              "reviewed"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "storeId",
+          "reviewStatus"
+        ]
+      },
+      "CreateSalesTargetIncentiveRegionCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string"
+          },
+          "participantType": {
+            "enum": [
+              "store_manager",
+              "personnel"
+            ],
+            "type": "string"
+          },
+          "finalAmount": {
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d{1,2})?$"
+          },
+          "reasonNote": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 1000,
+            "pattern": "\\S"
+          }
+        },
+        "required": [
+          "period",
+          "storeId",
+          "employeeId",
+          "participantType",
+          "finalAmount",
+          "reasonNote"
+        ]
+      },
+      "VoidSalesTargetIncentiveRegionCorrectionDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "correctionId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "period",
+          "correctionId"
+        ]
+      },
+      "SubmitSalesTargetIncentiveRegionPackageDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "regionId": {
+            "type": "string"
+          },
+          "submissionNote": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "period",
+          "regionId"
         ]
       }
     }
