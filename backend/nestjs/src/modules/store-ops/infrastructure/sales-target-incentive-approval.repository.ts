@@ -12,7 +12,6 @@ import {
   approveSubmittedCorrectionsSql,
   ensureSubmittedCorrectionsApprovableSql,
   latestFinalSnapshotCte,
-  lockSubmittedCorrectionTargetsSql,
 } from "./sales-target-incentive-approval.sql";
 
 type ApprovalClient = Pick<PoolClient, "query">;
@@ -621,9 +620,6 @@ export class SalesTargetIncentiveApprovalRepository {
           ],
         );
       } else {
-        await this.lockSubmittedCorrectionTargets(client, {
-          packageId: packageRow.sales_target_incentive_region_package_id,
-        });
         await this.ensureSubmittedCorrectionsApprovable(client, {
           packageId: packageRow.sales_target_incentive_region_package_id,
         });
@@ -925,13 +921,6 @@ export class SalesTargetIncentiveApprovalRepository {
     if (Number(row?.already_current_count ?? 0) > 0) {
       throw new ConflictException("Submitted corrections must change the current final amount");
     }
-  }
-
-  private async lockSubmittedCorrectionTargets(
-    client: ApprovalClient,
-    input: { packageId: string },
-  ): Promise<void> {
-    await client.query(lockSubmittedCorrectionTargetsSql, [input.packageId]);
   }
 
   private async approveSubmittedCorrections(

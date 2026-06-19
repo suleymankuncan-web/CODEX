@@ -9,27 +9,6 @@ export const latestFinalSnapshotCte = `
   )
 `;
 
-export const lockSubmittedCorrectionTargetsSql = `
-  SELECT pg_advisory_xact_lock(hashtext(
-    CONCAT_WS(
-      ':',
-      'sales_target_incentive_adjustment',
-      correction.period_key,
-      correction.store_id,
-      correction.employee_id,
-      correction.participant_type,
-      correction.target_scope
-    )
-  )::bigint)
-  FROM (
-    SELECT *
-    FROM ops.sales_target_incentive_region_correction
-    WHERE region_package_id = $1
-      AND correction_status = 'submitted'
-    ORDER BY store_id ASC, employee_id ASC, participant_type ASC
-  ) correction
-`;
-
 export const ensureSubmittedCorrectionsApprovableSql = `
   WITH submitted_correction AS (
     SELECT *
@@ -37,11 +16,30 @@ export const ensureSubmittedCorrectionsApprovableSql = `
     WHERE region_package_id = $1
       AND correction_status = 'submitted'
   ),
+  correction_lock AS (
+    SELECT pg_advisory_xact_lock(hashtext(
+      CONCAT_WS(
+        ':',
+        'sales_target_incentive_adjustment',
+        correction.period_key,
+        correction.store_id,
+        correction.employee_id,
+        correction.participant_type,
+        correction.target_scope
+      )
+    )::bigint) AS lock_acquired
+    FROM (
+      SELECT *
+      FROM submitted_correction
+      ORDER BY store_id ASC, employee_id ASC, participant_type ASC
+    ) correction
+  ),
   locked_final_row AS (
     SELECT final_row.sales_target_incentive_final_row_id, final_row.final_snapshot_id, final_row.final_amount
     FROM rpt.sales_target_incentive_final_row final_row
     INNER JOIN submitted_correction correction
       ON correction.final_row_id = final_row.sales_target_incentive_final_row_id
+    CROSS JOIN (SELECT COUNT(*) AS lock_count FROM correction_lock) lock_barrier
     FOR UPDATE OF final_row
   ),
   latest_final_snapshot AS (
@@ -85,11 +83,30 @@ export const approveSubmittedCorrectionsSql = `
     WHERE region_package_id = $1
       AND correction_status = 'submitted'
   ),
+  correction_lock AS (
+    SELECT pg_advisory_xact_lock(hashtext(
+      CONCAT_WS(
+        ':',
+        'sales_target_incentive_adjustment',
+        correction.period_key,
+        correction.store_id,
+        correction.employee_id,
+        correction.participant_type,
+        correction.target_scope
+      )
+    )::bigint) AS lock_acquired
+    FROM (
+      SELECT *
+      FROM submitted_correction
+      ORDER BY store_id ASC, employee_id ASC, participant_type ASC
+    ) correction
+  ),
   locked_final_row AS (
     SELECT final_row.sales_target_incentive_final_row_id, final_row.final_snapshot_id, final_row.final_amount
     FROM rpt.sales_target_incentive_final_row final_row
     INNER JOIN submitted_correction correction
       ON correction.final_row_id = final_row.sales_target_incentive_final_row_id
+    CROSS JOIN (SELECT COUNT(*) AS lock_count FROM correction_lock) lock_barrier
     FOR UPDATE OF final_row
   ),
   latest_final_snapshot AS (

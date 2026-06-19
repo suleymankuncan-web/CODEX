@@ -253,7 +253,6 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [{ stale_snapshot_count: "0", already_current_count: "0" }],
       })
