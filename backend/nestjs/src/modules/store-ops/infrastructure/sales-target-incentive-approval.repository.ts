@@ -112,7 +112,7 @@ export type SalesTargetIncentiveClosedFinalSnapshotTargetRow = {
   current_amount: string;
 };
 
-export type SalesTargetIncentiveClosedFinalSnapshotStoreRow = { store_id: string };
+export type SalesTargetIncentiveClosedFinalSnapshotStoreRow = { store_id: string; final_snapshot_id: string };
 
 @Injectable()
 export class SalesTargetIncentiveApprovalRepository {
@@ -709,7 +709,7 @@ export class SalesTargetIncentiveApprovalRepository {
 
   async listClosedFinalSnapshotStores(input: { periodKey: string; storeIds: string[] }): Promise<SalesTargetIncentiveClosedFinalSnapshotStoreRow[]> {
     if (input.storeIds.length === 0) return [];
-    const result = await this.databaseService.query<SalesTargetIncentiveClosedFinalSnapshotStoreRow>(`${latestFinalSnapshotCte} SELECT store_id FROM latest_final_snapshot`, [input.periodKey, input.storeIds]);
+    const result = await this.databaseService.query<SalesTargetIncentiveClosedFinalSnapshotStoreRow>(`${latestFinalSnapshotCte} SELECT store_id, sales_target_incentive_final_snapshot_id AS final_snapshot_id FROM latest_final_snapshot`, [input.periodKey, input.storeIds]);
     return result.rows;
   }
 

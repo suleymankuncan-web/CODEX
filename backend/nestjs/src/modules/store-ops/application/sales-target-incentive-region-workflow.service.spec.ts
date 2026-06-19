@@ -47,6 +47,7 @@ function actor() {
 
 function createService(input?: {
   closedStoreIds?: string[];
+  closedSnapshotIds?: Record<string, string>;
   reviewStatus?: "pending_review" | "reviewed";
   packageStatus?: "submitted" | "admin_approved" | "admin_returned" | null;
   workflowCorrections?: SalesTargetIncentiveRegionCorrectionRow[];
@@ -84,7 +85,10 @@ function createService(input?: {
     listClosedFinalSnapshotStores: jest.fn(async ({ storeIds }: { storeIds: string[] }) =>
       storeIds
         .filter((candidate) => closedStoreIds.has(candidate))
-        .map((candidate) => ({ store_id: candidate })),
+        .map((candidate) => ({
+          store_id: candidate,
+          final_snapshot_id: input?.closedSnapshotIds?.[candidate] ?? "snapshot-1",
+        })),
     ),
     listClosedFinalSnapshotTargets: jest.fn(async ({ storeIds }: { storeIds: string[] }) =>
       storeIds.map((candidate) => ({
@@ -384,6 +388,27 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
       correctionId,
       status: "draft",
       finalAmount: "4100.00",
+    });
+  });
+
+  it("treats reviews from older final snapshots as pending", async () => {
+    const { service } = createService({
+      closedStoreIds: [storeId],
+      closedSnapshotIds: { [storeId]: "snapshot-2" },
+      reviewStatus: "reviewed",
+    });
+
+    const context = await service.getWorkflowContext({
+      periodKey: "2026-05",
+      stores: projection.stores,
+      roleScope: "region",
+    });
+
+    expect(context.reviewsByStoreId.get(storeId)).toMatchObject({
+      storeReviewStatus: "pending_review",
+      reviewedByUserId: null,
+      reviewedAt: null,
+      periodCloseStatus: "closed",
     });
   });
 

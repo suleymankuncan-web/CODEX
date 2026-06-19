@@ -187,8 +187,11 @@ function createIncentiveDatabaseMock() {
       return { rowCount: 0, rows: [] };
     }
 
-    if (sql.includes("SELECT store_id FROM latest_final_snapshot")) {
-      return { rowCount: 1, rows: [{ store_id: storeId }] };
+    if (sql.includes("sales_target_incentive_final_snapshot_id AS final_snapshot_id")) {
+      return {
+        rowCount: 1,
+        rows: [{ store_id: storeId, final_snapshot_id: finalSnapshotId }],
+      };
     }
 
     if (

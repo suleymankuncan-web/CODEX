@@ -189,7 +189,10 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
   it("lists closed final snapshot stores without requiring incentive rows", async () => {
     const { query, repository } = createHarness();
     query.mockResolvedValueOnce({
-      rows: [{ store_id: storeId }, { store_id: secondStoreId }],
+      rows: [
+        { store_id: storeId, final_snapshot_id: finalSnapshotId },
+        { store_id: secondStoreId, final_snapshot_id: "snapshot-2" },
+      ],
     });
 
     const result = await repository.listClosedFinalSnapshotStores({
@@ -199,13 +202,16 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("WITH latest_final_snapshot");
-    expect(sql).toContain("SELECT store_id FROM latest_final_snapshot");
+    expect(sql).toContain("sales_target_incentive_final_snapshot_id AS final_snapshot_id");
     expect(sql).not.toContain("sales_target_incentive_final_row");
     expect(query.mock.calls[0][1]).toEqual([
       "2026-05",
       [storeId, secondStoreId],
     ]);
-    expect(result).toEqual([{ store_id: storeId }, { store_id: secondStoreId }]);
+    expect(result).toEqual([
+      { store_id: storeId, final_snapshot_id: finalSnapshotId },
+      { store_id: secondStoreId, final_snapshot_id: "snapshot-2" },
+    ]);
   });
 
   it("submits a package with a submitted store-set snapshot and submitted corrections", async () => {
