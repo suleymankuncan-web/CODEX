@@ -14,6 +14,7 @@ const storeId = "00000000-0000-4000-8000-000000000201";
 const otherStoreId = "00000000-0000-4000-8000-000000000202";
 const employeeId = "00000000-0000-4000-8000-000000000501";
 const finalOnlyEmployeeId = "00000000-0000-4000-8000-000000000599";
+const correctionId = "00000000-0000-4000-8000-000000000951";
 
 const eligibleProjection: SalesTargetIncentiveProjectionReadModel = {
   periodKey: "2026-05",
@@ -168,13 +169,25 @@ function createService(projection: SalesTargetIncentiveProjectionReadModel = eli
       finalRowCount: 2,
     })),
   };
+  const regionWorkflowService = {
+    getWorkflowContext: jest.fn(async (): Promise<unknown> => ({
+      regionWorkflow: null,
+      reviewsByStoreId: new Map(),
+      correctionsByRowKey: new Map(),
+    })),
+    markStoreReview: jest.fn(async () => ({ data: { reviewStatus: "reviewed" } })),
+    createRegionCorrection: jest.fn(async () => ({ data: { correctionId } })),
+    voidRegionCorrection: jest.fn(async () => ({ data: { correctionId, status: "voided" } })),
+    submitRegionPackage: jest.fn(async () => ({ data: { regionPackageStatus: "submitted" } })),
+  };
   const service = new SalesTargetIncentiveApiService(
     readModelService as never,
     correctionRepository as never,
     closeRepository as never,
+    regionWorkflowService as never,
   );
 
-  return { closeRepository, correctionRepository, readModelService, service };
+  return { closeRepository, correctionRepository, readModelService, regionWorkflowService, service };
 }
 
 describe("SalesTargetIncentiveApiService", () => {
@@ -296,6 +309,89 @@ describe("SalesTargetIncentiveApiService", () => {
       regionIds: [],
       storeIds: [storeId],
     });
+  });
+
+  it("adds Region Manager workflow state without exposing it as store-period state", async () => {
+    const { correctionRepository, regionWorkflowService, service } = createService();
+    regionWorkflowService.getWorkflowContext.mockResolvedValueOnce({
+      regionWorkflow: {
+        regionId,
+        regionPackageStatus: "not_submitted",
+        regionPackageId: null,
+        submittedAt: null,
+        reviewedAt: null,
+        workflowLockedReason: null,
+      },
+      reviewsByStoreId: new Map([
+        [
+          storeId,
+          {
+            storeReviewStatus: "reviewed",
+            reviewedByUserId: "region-user",
+            reviewedAt: "2026-06-01T08:00:00.000Z",
+            periodCloseStatus: "closed",
+            workflowLockedReason: null,
+          },
+        ],
+      ]),
+      correctionsByRowKey: new Map([
+        [
+          `${storeId}:${employeeId}:personnel`,
+          {
+            correctionId,
+            status: "draft",
+            targetScope: "final_snapshot",
+            beforeAmount: "3960.00",
+            adjustmentAmount: "40.00",
+            finalAmount: "4000.00",
+            reasonNote: "Bolge kontrol duzeltmesi",
+            createdByUserId: "region-user",
+            createdAt: "2026-06-01T08:05:00.000Z",
+            submittedAt: null,
+            reviewedAt: null,
+            reviewNote: null,
+          },
+        ],
+      ]),
+    });
+
+    const result = await service.getStoreProjection({
+      actor: buildAuthenticatedUser({
+        userId: "region-user",
+        roleCodes: ["REGION_MANAGER"],
+        readScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [otherStoreId] },
+        actionScope: { assignedStoreIds: [storeId] },
+      }),
+      periodKey: "2026-05",
+    });
+
+    expect(correctionRepository.listApprovedAdjustmentSummaries).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      storeIds: [storeId],
+      includeFinalRows: true,
+    });
+    expect(regionWorkflowService.getWorkflowContext).toHaveBeenCalledWith({
+      periodKey: "2026-05",
+      stores: eligibleProjection.stores,
+      roleScope: "region",
+    });
+    expect(result.data.regionWorkflow).toEqual(
+      expect.objectContaining({ regionPackageStatus: "not_submitted" }),
+    );
+    expect(result.data.projections[0].review).toEqual(
+      expect.objectContaining({ storeReviewStatus: "reviewed", periodCloseStatus: "closed" }),
+    );
+    expect(result.data.projections[0].rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          employeeId,
+          regionCorrection: expect.objectContaining({
+            correctionId,
+            finalAmount: "4000.00",
+          }),
+        }),
+      ]),
+    );
   });
 
   it("allows super admin reads across company scope and only as company-store projections", async () => {

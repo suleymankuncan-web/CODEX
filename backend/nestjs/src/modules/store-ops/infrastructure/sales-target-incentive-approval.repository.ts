@@ -17,25 +17,13 @@ import {
 
 type ApprovalClient = Pick<PoolClient, "query">;
 
-export type SalesTargetIncentiveStoreReviewStatus =
-  | "pending_review"
-  | "reviewed";
+export type SalesTargetIncentiveStoreReviewStatus = "pending_review" | "reviewed";
 
-export type SalesTargetIncentiveRegionPackageStatus =
-  | "submitted"
-  | "admin_approved"
-  | "admin_returned";
+export type SalesTargetIncentiveRegionPackageStatus = "submitted" | "admin_approved" | "admin_returned";
 
-export type SalesTargetIncentiveRegionCorrectionStatus =
-  | "draft"
-  | "submitted"
-  | "admin_approved"
-  | "admin_returned"
-  | "voided";
+export type SalesTargetIncentiveRegionCorrectionStatus = "draft" | "submitted" | "admin_approved" | "admin_returned" | "voided";
 
-export type SalesTargetIncentiveParticipantType =
-  | "store_manager"
-  | "personnel";
+export type SalesTargetIncentiveParticipantType = "store_manager" | "personnel";
 
 export type SalesTargetIncentiveApprovalStore = {
   companyId: string;
@@ -100,6 +88,7 @@ export type SalesTargetIncentiveRegionCorrectionRow = {
   reviewed_at: string | null;
   review_note: string | null;
   approved_adjustment_id: string | null;
+  created_at: string;
   updated_at: string;
 };
 
@@ -122,6 +111,8 @@ export type SalesTargetIncentiveClosedFinalSnapshotTargetRow = {
   approved_adjustment_amount: string;
   current_amount: string;
 };
+
+export type SalesTargetIncentiveClosedFinalSnapshotStoreRow = { store_id: string; final_snapshot_id: string };
 
 @Injectable()
 export class SalesTargetIncentiveApprovalRepository {
@@ -384,6 +375,7 @@ export class SalesTargetIncentiveApprovalRepository {
 
   async voidDraftCorrection(input: {
     periodKey: string;
+    correctionId: string;
     storeId: string;
     employeeId: string;
     participantType: SalesTargetIncentiveParticipantType;
@@ -407,6 +399,7 @@ export class SalesTargetIncentiveApprovalRepository {
             AND store_id = $2
             AND employee_id = $3
             AND participant_type = $4
+            AND sales_target_incentive_region_correction_id = $5
             AND correction_status IN ('draft', 'admin_returned')
           RETURNING *
         `,
@@ -415,6 +408,7 @@ export class SalesTargetIncentiveApprovalRepository {
           input.storeId,
           input.employeeId,
           input.participantType,
+          input.correctionId,
         ],
       );
 
@@ -715,6 +709,13 @@ export class SalesTargetIncentiveApprovalRepository {
       );
     return result.rows;
   }
+
+  async listClosedFinalSnapshotStores(input: { periodKey: string; storeIds: string[] }): Promise<SalesTargetIncentiveClosedFinalSnapshotStoreRow[]> {
+    if (input.storeIds.length === 0) return [];
+    const result = await this.databaseService.query<SalesTargetIncentiveClosedFinalSnapshotStoreRow>(`${latestFinalSnapshotCte} SELECT store_id, sales_target_incentive_final_snapshot_id AS final_snapshot_id FROM latest_final_snapshot`, [input.periodKey, input.storeIds]);
+    return result.rows;
+  }
+
   async listRegionPackagesForAdmin(input: {
     periodKey: string;
     companyIds?: string[];
@@ -994,7 +995,5 @@ export class SalesTargetIncentiveApprovalRepository {
     ]);
   }
 
-  private isSameAmount(left: string, right: string): boolean {
-    return Number(left).toFixed(2) === Number(right).toFixed(2);
-  }
+  private isSameAmount(left: string, right: string): boolean { return Number(left).toFixed(2) === Number(right).toFixed(2); }
 }

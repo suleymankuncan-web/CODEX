@@ -12,6 +12,7 @@ const actorUserId = "00000000-0000-4000-8000-000000000901";
 const finalRowId = "00000000-0000-4000-8000-000000000701";
 const finalSnapshotId = "00000000-0000-4000-8000-000000000711";
 const packageId = "00000000-0000-4000-8000-000000000801";
+const correctionId = "00000000-0000-4000-8000-000000000951";
 
 const store: SalesTargetIncentiveApprovalStore = {
   companyId,
@@ -184,6 +185,60 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain(
       "latest_snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id",
     );
+  });
+
+  it("lists closed final snapshot stores without requiring incentive rows", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({
+      rows: [
+        { store_id: storeId, final_snapshot_id: finalSnapshotId },
+        { store_id: secondStoreId, final_snapshot_id: "snapshot-2" },
+      ],
+    });
+
+    const result = await repository.listClosedFinalSnapshotStores({
+      periodKey: "2026-05",
+      storeIds: [storeId, secondStoreId],
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("WITH latest_final_snapshot");
+    expect(sql).toContain("sales_target_incentive_final_snapshot_id AS final_snapshot_id");
+    expect(sql).not.toContain("sales_target_incentive_final_row");
+    expect(query.mock.calls[0][1]).toEqual([
+      "2026-05",
+      [storeId, secondStoreId],
+    ]);
+    expect(result).toEqual([
+      { store_id: storeId, final_snapshot_id: finalSnapshotId },
+      { store_id: secondStoreId, final_snapshot_id: "snapshot-2" },
+    ]);
+  });
+
+  it("voids only the requested draft correction id", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({
+      rows: [{ sales_target_incentive_region_correction_id: "current-draft" }],
+    });
+
+    await repository.voidDraftCorrection({
+      periodKey: "2026-05",
+      correctionId,
+      storeId,
+      employeeId,
+      participantType: "personnel",
+      actorUserId,
+    });
+
+    const sql = String(query.mock.calls[1][0]);
+    expect(sql).toContain("sales_target_incentive_region_correction_id = $5");
+    expect(query.mock.calls[1][1]).toEqual([
+      "2026-05",
+      storeId,
+      employeeId,
+      "personnel",
+      correctionId,
+    ]);
   });
 
   it("submits a package with a submitted store-set snapshot and submitted corrections", async () => {

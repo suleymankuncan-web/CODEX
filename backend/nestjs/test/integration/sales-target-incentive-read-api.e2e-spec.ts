@@ -187,6 +187,67 @@ function createIncentiveDatabaseMock() {
       return { rowCount: 0, rows: [] };
     }
 
+    if (sql.includes("sales_target_incentive_final_snapshot_id AS final_snapshot_id")) {
+      return {
+        rowCount: 1,
+        rows: [{ store_id: storeId, final_snapshot_id: finalSnapshotId }],
+      };
+    }
+
+    if (
+      sql.includes("FROM rpt.sales_target_incentive_final_row final_row") &&
+      sql.includes("current_amount")
+    ) {
+      return {
+        rowCount: 1,
+        rows: [
+          {
+            final_row_id: "00000000-0000-4000-8000-000000000803",
+            company_id: companyId,
+            region_id: regionId,
+            store_id: storeId,
+            store_name: "Marmara Park",
+            employee_id: employeeId,
+            user_id: "00000000-0000-4000-8000-000000000902",
+            participant_type: "personnel",
+            position_code: "SALES_ASSOCIATE",
+            target_amount: "200000.0000",
+            actual_sales_amount: "240000.0000",
+            achievement_pct: "120.0000",
+            applied_rate: "0.0165",
+            payable_amount: "3960.00",
+            final_amount: "3960.00",
+            approved_adjustment_amount: "0.00",
+            current_amount: "3960.00",
+          },
+        ],
+      };
+    }
+
+    if (sql.includes("FROM ops.sales_target_incentive_region_package")) {
+      return { rowCount: 0, rows: [] };
+    }
+
+    if (sql.includes("INSERT INTO ops.sales_target_incentive_store_review")) {
+      return {
+        rowCount: 1,
+        rows: [
+          {
+            sales_target_incentive_store_review_id: "00000000-0000-4000-8000-000000000804",
+            company_id: companyId,
+            region_id: regionId,
+            store_id: storeId,
+            final_snapshot_id: finalSnapshotId,
+            period_key: "2026-05",
+            review_status: "reviewed",
+            reviewed_by_user_id: actorUserId(),
+            reviewed_at: "2026-06-01T08:00:00.000Z",
+            updated_at: "2026-06-01T08:00:00.000Z",
+          },
+        ],
+      };
+    }
+
     if (sql.includes("INSERT INTO ops.sales_target_incentive_close_run")) {
       return { rowCount: 1, rows: [{ close_run_id: closeRunId }] };
     }
@@ -396,6 +457,32 @@ describe("Sales target incentive read API integration", () => {
     expect(incentiveQueries.every((call) =>
       call.sql.includes("COALESCE(ib.finished_at, ib.started_at) <="),
     )).toBe(true);
+
+    await app.close();
+  });
+
+  it("lets Region Managers mark assigned company stores reviewed after close", async () => {
+    const { databaseService } = createIncentiveDatabaseMock();
+    const app = await createIntegrationApp({ databaseService });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/store/incentives/store-reviews")
+      .send({
+        period: "2026-05",
+        storeId,
+        reviewStatus: "reviewed",
+      })
+      .set("x-user-id", actorUserId())
+      .set("x-role-codes", "REGION_MANAGER")
+      .set("x-assigned-store-ids", storeId);
+
+    expect(response.status).toBe(201);
+    expect(response.body.data).toMatchObject({
+      period: "2026-05",
+      storeId,
+      reviewStatus: "reviewed",
+      reviewedByUserId: actorUserId(),
+    });
 
     await app.close();
   });
