@@ -78,6 +78,7 @@ test('region manager sees assigned stores grouped by store with approval control
   await page.getByRole('button', { name: /Marmara Forum/ }).click()
   await expect(page.getByRole('button', { name: 'Second Store Personnel' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
+  await expect(page.getByRole('button', { name: /Excel/ })).toHaveCount(0)
   await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toHaveCount(2)
 })
 

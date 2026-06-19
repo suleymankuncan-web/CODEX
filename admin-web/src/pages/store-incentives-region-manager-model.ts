@@ -2,18 +2,10 @@ import type {
   SalesTargetIncentiveProjection,
   SalesTargetIncentiveRegionCorrection,
   SalesTargetIncentiveRegionWorkflow,
-  SalesTargetIncentiveResponse,
   SalesTargetIncentiveRow,
   SalesTargetIncentiveStoreReview,
 } from '../features/incentives/api'
-import type { AppLocale } from '../lib/i18n'
-import {
-  formatMoneyValue,
-  formatPercentValue,
-  formatRateValue,
-  getIncentivePositionLabel,
-  getPrimaryEarnedAmount,
-} from './store-incentives-model'
+import { getPrimaryEarnedAmount } from './store-incentives-model'
 import type { StoreSurfaceTone } from './store-surface-primitives'
 
 export type StoreStatusFilter = 'all' | 'earning' | 'no_earning' | 'corrected' | 'reviewed'
@@ -172,44 +164,6 @@ export function getRegionEffectiveEarnedAmount(row: SalesTargetIncentiveRow | nu
   }
 
   return getPrimaryEarnedAmount(row)
-}
-
-export function exportRegionIncentivesCsv(
-  data: SalesTargetIncentiveResponse['data'],
-  locale: AppLocale,
-) {
-  const rows = [
-    ['Dönem', 'Mağaza', 'Personel', 'Rol', 'Hedef', 'Gerçekleşen', 'Hedef %', 'Oran', 'Hesaplanan', 'Final prim', 'Düzeltme durumu'],
-    ...data.projections.flatMap((projection) =>
-      projection.rows.map((row) => [
-        data.period,
-        projection.storeName,
-        row.displayName,
-        getIncentivePositionLabel(row.positionCode),
-        formatMoneyValue(row.target, locale),
-        formatMoneyValue(row.actualPositiveSales, locale),
-        formatPercentValue(row.achievementPct, locale),
-        formatRateValue(row.rate, locale),
-        formatMoneyValue(row.payableAmount, locale),
-        formatMoneyValue(getRegionEffectiveEarnedAmount(row), locale),
-        row.regionCorrection ? getCorrectionLabel(row.regionCorrection) : 'Yok',
-      ]),
-    ),
-  ]
-  const csv = rows
-    .map((row) =>
-      row
-        .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
-        .join(';'),
-    )
-    .join('\n')
-  const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
-  const url = window.URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = `primler-${data.period}.csv`
-  anchor.click()
-  window.URL.revokeObjectURL(url)
 }
 
 export function sumMoney(values: Array<string | null | undefined>) {

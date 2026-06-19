@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   ChevronDown,
   CircleDollarSign,
-  Download,
   FileCheck2,
   RotateCcw,
   Search,
@@ -70,7 +69,6 @@ import { formatPeriodLabel } from './store-incentives-period-model'
 import { PeriodPicker } from './store-incentives-period-picker'
 import {
   canReviewProjection,
-  exportRegionIncentivesCsv,
   getCorrectionLabel,
   getCorrectionTone,
   getPackageStatus,
@@ -185,10 +183,6 @@ export function RegionManagerIncentivesView(input: {
               period={input.selectedPeriod}
               onChange={input.onPeriodChange}
             />
-            <Button type="button" variant="outline" onClick={() => exportRegionIncentivesCsv(input.data, input.locale)}>
-              <Download data-icon="inline-start" />
-              Excel dışa aktar
-            </Button>
             <Button
               type="button"
               disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
