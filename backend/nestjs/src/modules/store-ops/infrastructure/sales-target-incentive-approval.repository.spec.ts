@@ -253,6 +253,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [{ stale_store_count: "0" }] })
       .mockResolvedValueOnce({
         rows: [{ stale_snapshot_count: "0", already_current_count: "0" }],
       })
@@ -284,6 +285,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
 
     const sql = query.mock.calls.map((call) => String(call[0])).join("\n");
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
+    expect(sql).toContain("package_store.final_snapshot_id");
     expect(sql).toContain("sales_target_incentive_adjustment");
     expect(sql).toContain("pg_advisory_xact_lock");
     expect(sql).toContain("INSERT INTO audit.event_log");
@@ -295,6 +297,21 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("correction_status = 'admin_approved'");
     expect(sql).toContain("UPDATE ops.sales_target_incentive_region_package");
     expect(result.package_status).toBe("admin_approved");
+  });
+
+  it("filters admin package visibility without shrinking package aggregates", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({ rows: [] });
+
+    await repository.listRegionPackagesForAdmin({
+      periodKey: "2026-05",
+      storeIds: [storeId],
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("COUNT(DISTINCT package_store.store_id)");
+    expect(sql).toContain("OR EXISTS");
+    expect(sql).toContain("scoped_store.store_id = ANY($4::uuid[])");
   });
 
   it("returns a package without creating payable adjustments", async () => {

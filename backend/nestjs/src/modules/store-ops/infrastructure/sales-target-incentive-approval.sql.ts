@@ -76,6 +76,33 @@ export const ensureSubmittedCorrectionsApprovableSql = `
   FROM live_correction
 `;
 
+export const ensurePackageStoresCurrentSql = `
+  WITH package_store AS (
+    SELECT *
+    FROM ops.sales_target_incentive_region_package_store
+    WHERE region_package_id = $1
+  ),
+  latest_final_snapshot AS (
+    SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
+      snapshot.sales_target_incentive_final_snapshot_id, snapshot.period_key, snapshot.store_id
+    FROM rpt.sales_target_incentive_final_snapshot snapshot
+    INNER JOIN package_store
+      ON package_store.period_key = snapshot.period_key
+      AND package_store.store_id = snapshot.store_id
+    ORDER BY snapshot.period_key, snapshot.store_id, snapshot.close_cutoff_at DESC,
+      snapshot.sales_target_incentive_final_snapshot_id DESC
+  )
+  SELECT
+    COUNT(*) FILTER (
+      WHERE latest_snapshot.sales_target_incentive_final_snapshot_id IS NULL
+        OR latest_snapshot.sales_target_incentive_final_snapshot_id <> package_store.final_snapshot_id
+    )::text AS stale_store_count
+  FROM package_store
+  LEFT JOIN latest_final_snapshot latest_snapshot
+    ON latest_snapshot.period_key = package_store.period_key
+    AND latest_snapshot.store_id = package_store.store_id
+`;
+
 export const approveSubmittedCorrectionsSql = `
   WITH submitted_correction AS (
     SELECT *

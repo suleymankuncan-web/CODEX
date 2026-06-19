@@ -10,6 +10,7 @@ import { RequestContextStore } from "../../../shared/request-context";
 import { SALES_TARGET_INCENTIVE_TIMEZONE } from "../application/sales-target-incentive-calculator.service";
 import {
   approveSubmittedCorrectionsSql,
+  ensurePackageStoresCurrentSql,
   ensureSubmittedCorrectionsApprovableSql,
   latestFinalSnapshotCte,
 } from "./sales-target-incentive-approval.sql";
@@ -620,6 +621,9 @@ export class SalesTargetIncentiveApprovalRepository {
           ],
         );
       } else {
+        await this.ensurePackageStoresCurrent(client, {
+          packageId: packageRow.sales_target_incentive_region_package_id,
+        });
         await this.ensureSubmittedCorrectionsApprovable(client, {
           packageId: packageRow.sales_target_incentive_region_package_id,
         });
@@ -730,7 +734,15 @@ export class SalesTargetIncentiveApprovalRepository {
         WHERE package.period_key = $1
           AND ($2::uuid[] IS NULL OR package.company_id = ANY($2::uuid[]))
           AND ($3::uuid[] IS NULL OR package.region_id = ANY($3::uuid[]))
-          AND ($4::uuid[] IS NULL OR package_store.store_id = ANY($4::uuid[]))
+          AND (
+            $4::uuid[] IS NULL
+            OR EXISTS (
+              SELECT 1
+              FROM ops.sales_target_incentive_region_package_store scoped_store
+              WHERE scoped_store.region_package_id = package.sales_target_incentive_region_package_id
+                AND scoped_store.store_id = ANY($4::uuid[])
+            )
+          )
         GROUP BY package.sales_target_incentive_region_package_id
         ORDER BY package.submitted_at DESC
       `,
@@ -923,6 +935,19 @@ export class SalesTargetIncentiveApprovalRepository {
     }
   }
 
+  private async ensurePackageStoresCurrent(
+    client: ApprovalClient,
+    input: { packageId: string },
+  ): Promise<void> {
+    const result = await client.query<{ stale_store_count: string }>(
+      ensurePackageStoresCurrentSql,
+      [input.packageId],
+    );
+    if (Number(result.rows[0]?.stale_store_count ?? 0) > 0) {
+      throw new ConflictException("Submitted package stores must target the latest closed snapshot");
+    }
+  }
+
   private async approveSubmittedCorrections(
     client: ApprovalClient,
     input: { packageId: string; actorUserId: string },
@@ -962,13 +987,7 @@ export class SalesTargetIncentiveApprovalRepository {
     },
   ): Promise<void> {
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1)::bigint)", [
-      [
-        "sales-target-incentive-region-correction",
-        input.periodKey,
-        input.storeId,
-        input.employeeId,
-        input.participantType,
-      ].join(":"),
+      `sales-target-incentive-region-correction:${input.periodKey}:${input.storeId}:${input.employeeId}:${input.participantType}`,
     ]);
   }
 
