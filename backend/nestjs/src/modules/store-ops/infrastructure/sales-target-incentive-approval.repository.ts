@@ -552,18 +552,20 @@ export class SalesTargetIncentiveApprovalRepository {
         `
           UPDATE ops.sales_target_incentive_region_correction
           SET
-            region_package_id = $1,
-            correction_status = 'submitted',
-            submitted_by_user_id = $2,
-            submitted_at = NOW(),
+            region_package_id = CASE WHEN store_id = ANY($5::uuid[]) THEN $1 ELSE NULL END,
+            correction_status = CASE WHEN store_id = ANY($5::uuid[]) THEN 'submitted' ELSE 'voided' END,
+            submitted_by_user_id = CASE WHEN store_id = ANY($5::uuid[]) THEN $2 ELSE NULL END,
+            submitted_at = CASE WHEN store_id = ANY($5::uuid[]) THEN NOW() ELSE NULL END,
             reviewed_by_user_id = NULL,
             reviewed_at = NULL,
             review_note = NULL,
             updated_at = NOW()
           WHERE period_key = $3
             AND region_id = $4
-            AND store_id = ANY($5::uuid[])
-            AND correction_status IN ('draft', 'admin_returned')
+            AND (
+              (store_id = ANY($5::uuid[]) AND correction_status IN ('draft', 'admin_returned'))
+              OR (region_package_id = $1 AND correction_status = 'submitted' AND NOT (store_id = ANY($5::uuid[])))
+            )
         `,
         [
           packageRow.sales_target_incentive_region_package_id,

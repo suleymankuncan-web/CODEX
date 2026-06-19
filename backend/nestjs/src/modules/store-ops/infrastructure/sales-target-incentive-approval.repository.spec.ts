@@ -228,6 +228,8 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("review.final_snapshot_id");
     expect(sql).toContain("latest_snapshot.sales_target_incentive_final_snapshot_id = review.final_snapshot_id");
     expect(sql).toContain("correction_status = 'submitted'");
+    expect(sql).toContain("ELSE 'voided'");
+    expect(sql).toContain("region_package_id = $1 AND correction_status = 'submitted'");
     expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");
     expect(result.package_status).toBe("submitted");
   });
