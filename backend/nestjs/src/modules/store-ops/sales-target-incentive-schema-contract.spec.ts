@@ -137,6 +137,9 @@ function expectSalesTargetIncentiveApprovalFlowTables(sql: string): void {
     "approved_adjustment_id UUID REFERENCES ops.sales_target_incentive_adjustment",
   );
   expect(sql).toContain(
+    "final_snapshot_id UUID NOT NULL REFERENCES rpt.sales_target_incentive_final_snapshot",
+  );
+  expect(sql).toContain(
     "adjustment_amount NUMERIC(18,2) GENERATED ALWAYS AS (final_amount - before_amount) STORED",
   );
   expect(sql).toContain(

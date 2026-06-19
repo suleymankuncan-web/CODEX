@@ -7,19 +7,13 @@ import {
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 import { SALES_TARGET_INCENTIVE_TIMEZONE } from "../application/sales-target-incentive-calculator.service";
+import {
+  approveSubmittedCorrectionsSql,
+  ensureSubmittedCorrectionsApprovableSql,
+  latestFinalSnapshotCte,
+} from "./sales-target-incentive-approval.sql";
 
 type ApprovalClient = Pick<PoolClient, "query">;
-
-const latestFinalSnapshotCte = `
-  WITH latest_final_snapshot AS (
-    SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
-      snapshot.sales_target_incentive_final_snapshot_id, snapshot.period_key, snapshot.store_id
-    FROM rpt.sales_target_incentive_final_snapshot snapshot
-    WHERE snapshot.period_key = $1 AND snapshot.store_id = ANY($2::uuid[])
-    ORDER BY snapshot.period_key, snapshot.store_id, snapshot.close_cutoff_at DESC,
-      snapshot.sales_target_incentive_final_snapshot_id DESC
-  )
-`;
 
 export type SalesTargetIncentiveStoreReviewStatus =
   | "pending_review"
@@ -58,6 +52,7 @@ export type SalesTargetIncentiveStoreReviewRow = {
   company_id: string;
   region_id: string;
   store_id: string;
+  final_snapshot_id: string;
   period_key: string;
   review_status: SalesTargetIncentiveStoreReviewStatus;
   reviewed_by_user_id: string | null;
@@ -146,6 +141,7 @@ export class SalesTargetIncentiveApprovalRepository {
             company_id,
             region_id,
             store_id,
+            final_snapshot_id,
             period_key,
             review_status,
             reviewed_by_user_id,
@@ -205,29 +201,37 @@ export class SalesTargetIncentiveApprovalRepository {
 
       const result = await client.query<SalesTargetIncentiveStoreReviewRow>(
         `
+          ${latestFinalSnapshotCte}
           INSERT INTO ops.sales_target_incentive_store_review (
             company_id,
             region_id,
             store_id,
+            final_snapshot_id,
             period_key,
             period_timezone,
             review_status,
             reviewed_by_user_id,
             reviewed_at
           )
-          VALUES (
+          SELECT
+            snapshot.company_id,
+            snapshot.region_id,
+            snapshot.store_id,
+            snapshot.sales_target_incentive_final_snapshot_id,
             $1,
-            $2,
-            $3,
-            $4,
             $5,
             $6,
             CASE WHEN $6 = 'reviewed' THEN $7::uuid ELSE NULL END,
             CASE WHEN $6 = 'reviewed' THEN NOW() ELSE NULL END
-          )
+          FROM latest_final_snapshot latest_snapshot
+          INNER JOIN rpt.sales_target_incentive_final_snapshot snapshot
+            ON snapshot.sales_target_incentive_final_snapshot_id = latest_snapshot.sales_target_incentive_final_snapshot_id
+          WHERE snapshot.company_id = $3
+            AND snapshot.region_id = $4
           ON CONFLICT (store_id, period_key) DO UPDATE SET
             company_id = EXCLUDED.company_id,
             region_id = EXCLUDED.region_id,
+            final_snapshot_id = EXCLUDED.final_snapshot_id,
             review_status = EXCLUDED.review_status,
             reviewed_by_user_id = EXCLUDED.reviewed_by_user_id,
             reviewed_at = EXCLUDED.reviewed_at,
@@ -237,6 +241,7 @@ export class SalesTargetIncentiveApprovalRepository {
             company_id,
             region_id,
             store_id,
+            final_snapshot_id,
             period_key,
             review_status,
             reviewed_by_user_id,
@@ -244,10 +249,10 @@ export class SalesTargetIncentiveApprovalRepository {
             updated_at
         `,
         [
+          input.periodKey,
+          [input.store.storeId],
           input.store.companyId,
           input.store.regionId,
-          input.store.storeId,
-          input.periodKey,
           SALES_TARGET_INCENTIVE_TIMEZONE,
           input.reviewStatus,
           input.actorUserId,
@@ -492,12 +497,24 @@ export class SalesTargetIncentiveApprovalRepository {
       );
       await client.query(
         `
+          WITH latest_final_snapshot AS (
+            SELECT DISTINCT ON (snapshot.period_key, snapshot.store_id)
+              snapshot.sales_target_incentive_final_snapshot_id,
+              snapshot.period_key,
+              snapshot.store_id
+            FROM rpt.sales_target_incentive_final_snapshot snapshot
+            WHERE snapshot.period_key = $2
+              AND snapshot.store_id = ANY($4::uuid[])
+            ORDER BY snapshot.period_key, snapshot.store_id, snapshot.close_cutoff_at DESC,
+              snapshot.sales_target_incentive_final_snapshot_id DESC
+          )
           INSERT INTO ops.sales_target_incentive_region_package_store (
             region_package_id,
             store_review_id,
             company_id,
             region_id,
             store_id,
+            final_snapshot_id,
             period_key,
             reviewed_by_user_id,
             reviewed_at
@@ -508,10 +525,15 @@ export class SalesTargetIncentiveApprovalRepository {
             review.company_id,
             review.region_id,
             review.store_id,
+            review.final_snapshot_id,
             review.period_key,
             review.reviewed_by_user_id,
             review.reviewed_at
           FROM ops.sales_target_incentive_store_review review
+          INNER JOIN latest_final_snapshot latest_snapshot
+            ON latest_snapshot.store_id = review.store_id
+            AND latest_snapshot.period_key = review.period_key
+            AND latest_snapshot.sales_target_incentive_final_snapshot_id = review.final_snapshot_id
           WHERE review.period_key = $2
             AND review.region_id = $3
             AND review.store_id = ANY($4::uuid[])
@@ -597,6 +619,9 @@ export class SalesTargetIncentiveApprovalRepository {
           ],
         );
       } else {
+        await this.ensureSubmittedCorrectionsApprovable(client, {
+          packageId: packageRow.sales_target_incentive_region_package_id,
+        });
         await this.approveSubmittedCorrections(client, {
           packageId: packageRow.sales_target_incentive_region_package_id,
           actorUserId: input.actorUserId,
@@ -786,14 +811,19 @@ export class SalesTargetIncentiveApprovalRepository {
   ): Promise<void> {
     const result = await client.query<{ reviewed_store_count: string }>(
       `
-        SELECT COUNT(DISTINCT store_id)::text AS reviewed_store_count
-        FROM ops.sales_target_incentive_store_review
-        WHERE period_key = $1
-          AND region_id = $2
-          AND store_id = ANY($3::uuid[])
-          AND review_status = 'reviewed'
+        ${latestFinalSnapshotCte}
+        SELECT COUNT(DISTINCT review.store_id)::text AS reviewed_store_count
+        FROM ops.sales_target_incentive_store_review review
+        INNER JOIN latest_final_snapshot latest_snapshot
+          ON latest_snapshot.store_id = review.store_id
+          AND latest_snapshot.period_key = review.period_key
+          AND latest_snapshot.sales_target_incentive_final_snapshot_id = review.final_snapshot_id
+        WHERE review.period_key = $1
+          AND review.region_id = $3
+          AND review.store_id = ANY($2::uuid[])
+          AND review.review_status = 'reviewed'
       `,
-      [input.periodKey, input.regionId, input.storeIds],
+      [input.periodKey, input.storeIds, input.regionId],
     );
     const reviewedStoreCount = Number(result.rows[0]?.reviewed_store_count ?? 0);
     if (reviewedStoreCount !== input.storeIds.length) {
@@ -874,86 +904,32 @@ export class SalesTargetIncentiveApprovalRepository {
     return result.rows[0] ?? null;
   }
 
+  private async ensureSubmittedCorrectionsApprovable(
+    client: ApprovalClient,
+    input: { packageId: string },
+  ): Promise<void> {
+    const result = await client.query<{
+      stale_snapshot_count: string;
+      already_current_count: string;
+    }>(ensureSubmittedCorrectionsApprovableSql, [input.packageId]);
+
+    const row = result.rows[0];
+    if (Number(row?.stale_snapshot_count ?? 0) > 0) {
+      throw new ConflictException("Submitted corrections must target the latest closed snapshot");
+    }
+    if (Number(row?.already_current_count ?? 0) > 0) {
+      throw new ConflictException("Submitted corrections must change the current final amount");
+    }
+  }
+
   private async approveSubmittedCorrections(
     client: ApprovalClient,
     input: { packageId: string; actorUserId: string },
   ): Promise<void> {
-    await client.query(
-      `
-        WITH inserted_adjustment AS (
-          INSERT INTO ops.sales_target_incentive_adjustment (
-            company_id,
-            region_id,
-            store_id,
-            employee_id,
-            final_row_id,
-            rule_version_id,
-            period_key,
-            period_timezone,
-            adjustment_scope,
-            adjustment_type,
-            adjustment_amount,
-            before_amount,
-            after_amount,
-            reason_code,
-            reason_note,
-            status,
-            created_by_user_id,
-            approved_by_user_id,
-            approved_at,
-            evidence
-          )
-          SELECT
-            correction.company_id,
-            correction.region_id,
-            correction.store_id,
-            correction.employee_id,
-            correction.final_row_id,
-            final_snapshot.rule_version_id,
-            correction.period_key,
-            correction.period_timezone,
-            'final_snapshot',
-            'manual_adjustment',
-            correction.adjustment_amount,
-            correction.before_amount,
-            correction.final_amount,
-            'region_manager_package',
-            correction.reason_note,
-            'approved',
-            correction.created_by_user_id,
-            $2,
-            NOW(),
-            jsonb_build_object(
-              'source', 'region_manager_approval_package',
-              'regionPackageId', correction.region_package_id,
-              'regionCorrectionId', correction.sales_target_incentive_region_correction_id
-            )
-          FROM ops.sales_target_incentive_region_correction correction
-          INNER JOIN rpt.sales_target_incentive_final_row final_row
-            ON final_row.sales_target_incentive_final_row_id = correction.final_row_id
-          INNER JOIN rpt.sales_target_incentive_final_snapshot final_snapshot
-            ON final_snapshot.sales_target_incentive_final_snapshot_id = final_row.final_snapshot_id
-          WHERE correction.region_package_id = $1
-            AND correction.correction_status = 'submitted'
-          RETURNING
-            sales_target_incentive_adjustment_id,
-            final_row_id,
-            employee_id,
-            evidence ->> 'regionCorrectionId' AS region_correction_id
-        )
-        UPDATE ops.sales_target_incentive_region_correction correction
-        SET
-          correction_status = 'admin_approved',
-          reviewed_by_user_id = $2,
-          reviewed_at = NOW(),
-          review_note = NULL,
-          approved_adjustment_id = inserted_adjustment.sales_target_incentive_adjustment_id,
-          updated_at = NOW()
-        FROM inserted_adjustment
-        WHERE correction.sales_target_incentive_region_correction_id::text = inserted_adjustment.region_correction_id
-      `,
-      [input.packageId, input.actorUserId],
-    );
+    await client.query(approveSubmittedCorrectionsSql, [
+      input.packageId,
+      input.actorUserId,
+    ]);
   }
 
   private async lockStoreReview(
