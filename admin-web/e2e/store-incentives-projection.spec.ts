@@ -150,6 +150,22 @@ test('region manager cannot save an invalid final correction amount', async ({ p
   expect(requests).toHaveLength(0)
 })
 
+test('region manager cannot save a negative final correction amount', async ({ page }) => {
+  const requests: unknown[] = []
+  await routeAuthSession(page, createRegionManagerSession())
+  await routeStoreIncentives(page, regionAllReviewedFixture)
+  await routeRegionIncentiveMutations(page, { correctionRequests: requests })
+
+  await page.goto('/store/incentives')
+  await page.getByRole('button', { name: 'Store Personnel' }).click()
+  await page.getByLabel(/Final prim tutar/).fill('-1')
+  await page.getByLabel(/notu/).fill('BÃƒÂ¶lge kontrolÃƒÂ¼ sonrasÃ„Â± final prim dÃƒÂ¼zeltmesi')
+
+  await expect(page.getByText(/tutar girin/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
+  expect(requests).toHaveLength(0)
+})
+
 test('region manager cannot save an over-precision final correction amount', async ({ page }) => {
   const requests: unknown[] = []
   await routeAuthSession(page, createRegionManagerSession())
