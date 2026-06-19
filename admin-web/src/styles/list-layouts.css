@@ -25,7 +25,7 @@
   border-radius: 50%;
   width: 2.15rem;
   height: 2.15rem;
-  background: var(--neutral-soft);
+  background: var(--legacy-neutral-soft);
 }
 
 .detail-bottom-grid {
@@ -34,8 +34,8 @@
 
 .stacked-row,
 .timeline-item {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
+  border-radius: var(--legacy-radius-md);
+  border: 1px solid var(--legacy-line);
   background: rgba(255, 255, 255, 0.56);
   padding: 0.95rem 1rem;
 }

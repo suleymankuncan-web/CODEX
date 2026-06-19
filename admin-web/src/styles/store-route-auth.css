@@ -11,8 +11,8 @@
 }
 
 .store-route-card {
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--line);
+  border-radius: var(--legacy-radius-lg);
+  border: 1px solid var(--legacy-line);
   background: rgba(255, 255, 255, 0.72);
   padding: 1rem 1.05rem;
 }
@@ -42,22 +42,22 @@
 
 .store-route-card p {
   margin: 0;
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
 }
 
 .store-route-card-accent .store-route-card-icon {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--legacy-accent-soft);
+  color: var(--legacy-accent);
 }
 
 .store-route-card-calm .store-route-card-icon {
-  background: var(--calm-soft);
-  color: var(--calm);
+  background: var(--legacy-calm-soft);
+  color: var(--legacy-calm);
 }
 
 .store-route-card-warning .store-route-card-icon {
-  background: var(--warning-soft);
-  color: var(--warning);
+  background: var(--legacy-warning-soft);
+  color: var(--legacy-warning);
 }
 
 .auth-flow-shell {
@@ -79,7 +79,7 @@
 .auth-hero-panel {
   background:
     linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(237, 247, 246, 0.82)),
-    var(--surface);
+    var(--legacy-surface);
 }
 
 .auth-metric-grid {
@@ -100,7 +100,7 @@
   width: 100%;
   min-width: min(100%, 320px);
   border: 1px solid rgba(124, 58, 237, 0.22);
-  border-radius: var(--radius-md);
+  border-radius: var(--legacy-radius-md);
   background: rgba(255, 255, 255, 0.72);
   padding: 0.9rem 1rem;
 }

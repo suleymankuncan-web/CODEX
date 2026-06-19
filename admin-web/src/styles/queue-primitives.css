@@ -26,7 +26,7 @@
   gap: 0.85rem;
   grid-template-columns: minmax(180px, 1fr) minmax(0, 2fr);
   min-height: 76px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
   padding: 0.85rem 1rem;
@@ -57,16 +57,16 @@
   gap: 0.55rem;
   min-height: 42px;
   min-width: 128px;
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   font-size: 0.78rem;
   font-weight: 800;
-  color: var(--surface-ink);
+  color: var(--legacy-surface-ink);
 }
 
 .scope-toggle input {
   width: 1.1rem;
   height: 1.1rem;
-  accent-color: var(--accent);
+  accent-color: var(--legacy-accent);
 }
 
 .queue-row:hover,
@@ -98,7 +98,7 @@
 .queue-meta,
 .queue-reason,
 .timeline-item span {
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
 }
 
 .queue-meta {
@@ -110,5 +110,5 @@
 
 .queue-footer {
   font-weight: 700;
-  color: var(--accent-strong);
+  color: var(--legacy-accent-strong);
 }

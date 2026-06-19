@@ -1,10 +1,10 @@
 .import-detail-page .panel-copy {
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   line-height: 1.62;
 }
 
 .reports-detail-table-panel .panel-copy {
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   line-height: 1.62;
   max-width: 64ch;
 }
@@ -21,7 +21,7 @@
 }
 
 .lineage-chip span {
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -32,7 +32,7 @@
   gap: 0.75rem;
   margin-top: 0.85rem;
   padding-top: 0.85rem;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--legacy-line);
 }
 
 .mapping-targets,
@@ -59,7 +59,7 @@
 }
 
 .mapping-helper-error {
-  color: var(--danger);
+  color: var(--legacy-danger);
 }
 
 .lineage-code {
@@ -80,7 +80,7 @@
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--legacy-accent);
 }
 
 .empty-card {
@@ -113,21 +113,21 @@
 .shell-context-panel {
   background:
     linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(237, 247, 246, 0.78)),
-    var(--surface);
+    var(--legacy-surface);
 }
 
 .shell-notice {
   margin-top: 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
+  border-radius: var(--legacy-radius-md);
+  border: 1px solid var(--legacy-line);
   padding: 0.95rem 1rem;
   font-weight: 600;
 }
 
 .shell-notice-warning {
   border-color: rgba(245, 158, 11, 0.28);
-  background: var(--warning-soft);
-  color: var(--warning);
+  background: var(--legacy-warning-soft);
+  color: var(--legacy-warning);
 }
 
 @media (max-width: 720px) {

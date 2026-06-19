@@ -4,10 +4,10 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.25rem;
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--line);
+  border-radius: var(--legacy-radius-xl);
+  border: 1px solid var(--legacy-line);
   background: rgba(255, 255, 255, 0.82);
-  box-shadow: var(--shadow);
+  box-shadow: var(--legacy-shadow);
   padding: 1.35rem 1.4rem;
 }
 
@@ -27,7 +27,7 @@
 .store-hero-panel {
   background:
     linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(237, 247, 246, 0.88)),
-    var(--surface);
+    var(--legacy-surface);
 }
 
 .store-metric-grid {
@@ -46,7 +46,7 @@
   align-items: end;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(243, 238, 249, 0.78)),
-    var(--surface);
+    var(--legacy-surface);
 }
 
 .store-checklists-hero .hero-title {
@@ -71,13 +71,13 @@
 }
 
 .store-checklists-summary-pill span {
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   font-size: 0.76rem;
   font-weight: 850;
 }
 
 .store-checklists-summary-pill strong {
-  color: var(--surface-ink);
+  color: var(--legacy-surface-ink);
   font-size: 1.85rem;
   line-height: 0.95;
   letter-spacing: -0.04em;
@@ -85,17 +85,17 @@
 
 .store-checklists-summary-pill-calm {
   border-color: rgba(16, 185, 129, 0.2);
-  background: var(--calm-soft);
+  background: var(--legacy-calm-soft);
 }
 
 .store-checklists-summary-pill-warning {
   border-color: rgba(245, 158, 11, 0.22);
-  background: var(--warning-soft);
+  background: var(--legacy-warning-soft);
 }
 
 .store-checklists-summary-pill-accent {
   border-color: rgba(124, 58, 237, 0.2);
-  background: var(--accent-soft);
+  background: var(--legacy-accent-soft);
 }
 
 .store-checklists-summary-pill-neutral {
@@ -116,7 +116,7 @@
   grid-template-columns: minmax(240px, 1.35fr) minmax(150px, auto) minmax(260px, 0.95fr) auto;
   align-items: center;
   gap: 0.85rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--legacy-line);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.7);
   padding: 0.85rem;
@@ -136,7 +136,7 @@
 .store-checklists-ledger-main span {
   display: block;
   color: var(--checklist-plum);
-  font-family: var(--font-mono);
+  font-family: var(--legacy-font-mono);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -147,7 +147,7 @@
   display: block;
   margin-top: 0.15rem;
   overflow: hidden;
-  color: var(--surface-ink);
+  color: var(--legacy-surface-ink);
   font-size: 1rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -156,7 +156,7 @@
 .store-checklists-ledger-main p {
   margin: 0.18rem 0 0;
   overflow: hidden;
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   font-size: 0.84rem;
   text-overflow: ellipsis;
   white-space: nowrap;

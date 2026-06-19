@@ -10,10 +10,10 @@
 .screen-state,
 .queue-row,
 .empty-card {
-  border-radius: var(--radius-xl);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  border-radius: var(--legacy-radius-xl);
+  border: 1px solid var(--legacy-line);
+  background: var(--legacy-surface);
+  box-shadow: var(--legacy-shadow);
   backdrop-filter: blur(14px);
 }
 
@@ -29,7 +29,7 @@
   gap: 1.25rem;
   background:
     linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(237, 247, 246, 0.88)),
-    var(--surface);
+    var(--legacy-surface);
 }
 
 .hero-panel > div,
@@ -44,7 +44,7 @@
 .hero-panel-detail {
   background:
     linear-gradient(140deg, rgba(255, 255, 255, 0.96), rgba(248, 245, 251, 0.88)),
-    var(--surface);
+    var(--legacy-surface);
 }
 
 .hero-title {
@@ -54,7 +54,7 @@
 
 .hero-copy {
   max-width: 64ch;
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
 }
 
 .hero-metrics {
@@ -77,7 +77,7 @@
 }
 
 .accent-chip span {
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
 }
 
 .accent-chip strong {
@@ -112,7 +112,7 @@
 
 .metric-card p {
   margin: 0.35rem 0 0;
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   font-size: 0.92rem;
 }
 
@@ -126,39 +126,39 @@
 .status-pill-calm,
 .status-bar-fill-calm,
 .inline-state-calm {
-  background: var(--calm-soft);
-  color: var(--calm);
+  background: var(--legacy-calm-soft);
+  color: var(--legacy-calm);
 }
 
 .metric-card-warning .metric-icon,
 .status-pill-warning,
 .status-bar-fill-warning,
 .inline-state-warning {
-  background: var(--warning-soft);
-  color: var(--warning);
+  background: var(--legacy-warning-soft);
+  color: var(--legacy-warning);
 }
 
 .metric-card-accent .metric-icon,
 .status-pill-accent,
 .status-bar-fill-accent,
 .inline-state-accent {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: var(--legacy-accent-soft);
+  color: var(--legacy-accent);
 }
 
 .metric-card-danger .metric-icon,
 .status-pill-danger,
 .status-bar-fill-danger,
 .inline-state-danger {
-  background: var(--danger-soft);
-  color: var(--danger);
+  background: var(--legacy-danger-soft);
+  color: var(--legacy-danger);
 }
 
 .status-pill-neutral,
 .status-bar-fill-neutral,
 .inline-state-neutral {
-  background: var(--neutral-soft);
-  color: var(--surface-ink);
+  background: var(--legacy-neutral-soft);
+  color: var(--legacy-surface-ink);
 }
 
 .status-pill,
@@ -200,8 +200,8 @@
 .reconciliation-stat,
 .dependency-card,
 .detail-row {
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
+  border-radius: var(--legacy-radius-md);
+  border: 1px solid var(--legacy-line);
   background: rgba(255, 255, 255, 0.56);
   padding: 0.95rem 1rem;
 }
@@ -211,7 +211,7 @@
 .detail-row span,
 .dependency-card span {
   display: block;
-  color: var(--surface-muted);
+  color: var(--legacy-surface-muted);
   font-size: 0.84rem;
   margin-bottom: 0.25rem;
 }
@@ -241,7 +241,7 @@
 .status-bar-track {
   overflow: hidden;
   border-radius: 999px;
-  background: var(--neutral-soft);
+  background: var(--legacy-neutral-soft);
   height: 0.72rem;
 }
 

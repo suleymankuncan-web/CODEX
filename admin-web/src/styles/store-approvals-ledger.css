@@ -790,7 +790,7 @@
 .store-request-feedback-success {
   border-color: rgba(13, 148, 136, 0.24);
   background: rgba(236, 253, 245, 0.9);
-  color: var(--calm);
+  color: var(--legacy-calm);
 }
 
 .store-request-feedback-error {
