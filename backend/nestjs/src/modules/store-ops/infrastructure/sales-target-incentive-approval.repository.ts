@@ -6,11 +6,13 @@ import {
 } from "@nestjs/common";
 import type { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
+import { RequestContextStore } from "../../../shared/request-context";
 import { SALES_TARGET_INCENTIVE_TIMEZONE } from "../application/sales-target-incentive-calculator.service";
 import {
   approveSubmittedCorrectionsSql,
   ensureSubmittedCorrectionsApprovableSql,
   latestFinalSnapshotCte,
+  lockSubmittedCorrectionTargetsSql,
 } from "./sales-target-incentive-approval.sql";
 
 type ApprovalClient = Pick<PoolClient, "query">;
@@ -619,6 +621,9 @@ export class SalesTargetIncentiveApprovalRepository {
           ],
         );
       } else {
+        await this.lockSubmittedCorrectionTargets(client, {
+          packageId: packageRow.sales_target_incentive_region_package_id,
+        });
         await this.ensureSubmittedCorrectionsApprovable(client, {
           packageId: packageRow.sales_target_incentive_region_package_id,
         });
@@ -922,6 +927,13 @@ export class SalesTargetIncentiveApprovalRepository {
     }
   }
 
+  private async lockSubmittedCorrectionTargets(
+    client: ApprovalClient,
+    input: { packageId: string },
+  ): Promise<void> {
+    await client.query(lockSubmittedCorrectionTargetsSql, [input.packageId]);
+  }
+
   private async approveSubmittedCorrections(
     client: ApprovalClient,
     input: { packageId: string; actorUserId: string },
@@ -929,6 +941,7 @@ export class SalesTargetIncentiveApprovalRepository {
     await client.query(approveSubmittedCorrectionsSql, [
       input.packageId,
       input.actorUserId,
+      RequestContextStore.getCorrelationId(),
     ]);
   }
 

@@ -253,6 +253,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
           },
         ],
       })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [{ stale_snapshot_count: "0", already_current_count: "0" }],
       })
@@ -284,6 +285,10 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
 
     const sql = query.mock.calls.map((call) => String(call[0])).join("\n");
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_adjustment");
+    expect(sql).toContain("sales_target_incentive_adjustment");
+    expect(sql).toContain("pg_advisory_xact_lock");
+    expect(sql).toContain("INSERT INTO audit.event_log");
+    expect(sql).toContain("sales_target_incentive_adjustment.approved");
     expect(sql).toContain("'region_manager_package'");
     expect(sql).toContain("FOR UPDATE OF final_row");
     expect(sql).toContain("(correction.final_amount - correction.current_amount)::numeric(18,2)");

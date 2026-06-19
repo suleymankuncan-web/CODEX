@@ -9,6 +9,27 @@ export const latestFinalSnapshotCte = `
   )
 `;
 
+export const lockSubmittedCorrectionTargetsSql = `
+  SELECT pg_advisory_xact_lock(hashtext(
+    CONCAT_WS(
+      ':',
+      'sales_target_incentive_adjustment',
+      correction.period_key,
+      correction.store_id,
+      correction.employee_id,
+      correction.participant_type,
+      correction.target_scope
+    )
+  )::bigint)
+  FROM (
+    SELECT *
+    FROM ops.sales_target_incentive_region_correction
+    WHERE region_package_id = $1
+      AND correction_status = 'submitted'
+    ORDER BY store_id ASC, employee_id ASC, participant_type ASC
+  ) correction
+`;
+
 export const ensureSubmittedCorrectionsApprovableSql = `
   WITH submitted_correction AS (
     SELECT *
@@ -156,6 +177,41 @@ export const approveSubmittedCorrectionsSql = `
       final_row_id,
       employee_id,
       evidence ->> 'regionCorrectionId' AS region_correction_id
+  ),
+  audit_event AS (
+    INSERT INTO audit.event_log (
+      actor_user_id,
+      event_type,
+      entity_name,
+      entity_id,
+      scope_type,
+      company_id,
+      region_id,
+      store_id,
+      metadata_json
+    )
+    SELECT
+      $2::uuid,
+      'sales_target_incentive_adjustment.approved',
+      'ops.sales_target_incentive_adjustment',
+      inserted_adjustment.sales_target_incentive_adjustment_id,
+      'store',
+      correction.company_id,
+      correction.region_id,
+      correction.store_id,
+      jsonb_build_object(
+        'correlationId', $3::text,
+        'actorUserId', $2::text,
+        'periodKey', correction.period_key,
+        'phase', 'post_close',
+        'participantType', correction.participant_type,
+        'reasonCode', 'region_manager_package',
+        'regionPackageId', correction.region_package_id,
+        'regionCorrectionId', correction.sales_target_incentive_region_correction_id
+      )
+    FROM inserted_adjustment
+    INNER JOIN live_correction correction
+      ON correction.sales_target_incentive_region_correction_id::text = inserted_adjustment.region_correction_id
   )
   UPDATE ops.sales_target_incentive_region_correction correction
   SET
