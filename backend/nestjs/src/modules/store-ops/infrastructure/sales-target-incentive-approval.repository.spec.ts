@@ -323,6 +323,20 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("scoped_store.store_id = ANY($4::uuid[])");
   });
 
+  it("preserves empty admin scopes as no-visible-package filters", async () => {
+    const { query, repository } = createHarness();
+    query.mockResolvedValueOnce({ rows: [] });
+
+    await repository.listRegionPackagesForAdmin({
+      periodKey: "2026-05",
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+    });
+
+    expect(query.mock.calls[0][1]).toEqual(["2026-05", [], [], []]);
+  });
+
   it("returns a package without creating payable adjustments", async () => {
     const { query, repository } = createHarness();
     query

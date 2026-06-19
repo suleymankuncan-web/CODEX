@@ -750,9 +750,9 @@ export class SalesTargetIncentiveApprovalRepository {
       `,
       [
         input.periodKey,
-        input.companyIds?.length ? input.companyIds : null,
-        input.regionIds?.length ? input.regionIds : null,
-        input.storeIds?.length ? input.storeIds : null,
+        input.companyIds ?? null,
+        input.regionIds ?? null,
+        input.storeIds ?? null,
       ],
     );
     return result.rows;
