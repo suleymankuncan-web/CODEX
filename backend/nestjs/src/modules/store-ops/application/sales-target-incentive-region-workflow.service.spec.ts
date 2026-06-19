@@ -432,7 +432,62 @@ describe("SalesTargetIncentiveRegionWorkflowService", () => {
     });
   });
 
-  it("does not load workflow state for non-region scopes", async () => {
+  it("loads only submitted or reviewed corrections for admin context", async () => {
+    const submittedCorrection: SalesTargetIncentiveRegionCorrectionRow = {
+      sales_target_incentive_region_correction_id: "submitted-correction",
+      region_package_id: packageId,
+      company_id: companyId,
+      region_id: regionId,
+      store_id: storeId,
+      employee_id: employeeId,
+      participant_type: "personnel",
+      final_row_id: finalRowId,
+      period_key: "2026-05",
+      before_amount: "3960.00",
+      final_amount: "4000.00",
+      adjustment_amount: "40.00",
+      reason_note: "BM onaya gonderdi",
+      correction_status: "submitted",
+      created_by_user_id: "region-user",
+      submitted_by_user_id: "region-user",
+      submitted_at: "2026-06-01T08:10:00.000Z",
+      reviewed_by_user_id: null,
+      reviewed_at: null,
+      review_note: null,
+      approved_adjustment_id: null,
+      created_at: "2026-06-01T08:05:00.000Z",
+      updated_at: "2026-06-01T08:10:00.000Z",
+    };
+    const draftCorrection: SalesTargetIncentiveRegionCorrectionRow = {
+      ...submittedCorrection,
+      sales_target_incentive_region_correction_id: "draft-correction",
+      region_package_id: null,
+      correction_status: "draft",
+      submitted_by_user_id: null,
+      submitted_at: null,
+      created_at: "2026-06-02T08:05:00.000Z",
+      updated_at: "2026-06-02T08:05:00.000Z",
+    };
+    const { service } = createService({
+      workflowCorrections: [draftCorrection, submittedCorrection],
+    });
+
+    const context = await service.getWorkflowContext({
+      periodKey: "2026-05",
+      stores: projection.stores,
+      roleScope: "admin",
+    });
+
+    expect(context.regionWorkflow).toBeNull();
+    expect(context.reviewsByStoreId.size).toBe(0);
+    expect(context.correctionsByRowKey.get(`${storeId}:${employeeId}:personnel`)).toMatchObject({
+      correctionId: "submitted-correction",
+      status: "submitted",
+      submittedByUserId: "region-user",
+    });
+  });
+
+  it("does not load workflow state for non-region and non-admin scopes", async () => {
     const { approvalRepository, service } = createService();
 
     const context = await service.getWorkflowContext({

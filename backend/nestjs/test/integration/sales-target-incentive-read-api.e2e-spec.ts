@@ -194,6 +194,35 @@ function createIncentiveDatabaseMock() {
       };
     }
 
+    if (sql.includes("WITH scoped_current_store AS")) {
+      return {
+        rowCount: 1,
+        rows: [
+          {
+            company_id: companyId,
+            region_id: regionId,
+            region_name: "Eda Doganay Bolgesi",
+            region_manager_user_id: "region-user",
+            region_manager_name: "Eda Doganay",
+            region_package_id: "00000000-0000-4000-8000-000000000961",
+            package_status: "submitted",
+            submitted_by_user_id: "region-user",
+            submitted_by_name: "Eda Doganay",
+            submitted_at: "2026-06-01T08:00:00.000Z",
+            reviewed_by_user_id: null,
+            reviewed_by_name: null,
+            reviewed_at: null,
+            review_note: null,
+            store_count: "1",
+            reviewed_store_count: "1",
+            submitted_store_count: "1",
+            draft_correction_count: "0",
+            submitted_correction_count: "1",
+          },
+        ],
+      };
+    }
+
     if (
       sql.includes("FROM rpt.sales_target_incentive_final_row final_row") &&
       sql.includes("current_amount")
@@ -225,6 +254,42 @@ function createIncentiveDatabaseMock() {
     }
 
     if (sql.includes("FROM ops.sales_target_incentive_region_package")) {
+      if (sql.includes("package_status = 'submitted'")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              sales_target_incentive_region_package_id:
+                "00000000-0000-4000-8000-000000000961",
+              company_id: companyId,
+              region_id: regionId,
+              period_key: "2026-05",
+              package_status: "submitted",
+              submitted_by_user_id: "region-user",
+              submitted_at: "2026-06-01T08:00:00.000Z",
+              submission_note: null,
+              reviewed_by_user_id: null,
+              reviewed_at: null,
+              review_note: null,
+            },
+          ],
+        };
+      }
+      return { rowCount: 0, rows: [] };
+    }
+
+    if (sql.includes("stale_store_count")) {
+      return { rowCount: 1, rows: [{ stale_store_count: "0" }] };
+    }
+
+    if (sql.includes("stale_snapshot_count")) {
+      return {
+        rowCount: 1,
+        rows: [{ stale_snapshot_count: "0", already_current_count: "0" }],
+      };
+    }
+
+    if (sql.includes("approveSubmittedCorrectionsSql")) {
       return { rowCount: 0, rows: [] };
     }
 
@@ -298,6 +363,28 @@ function createIncentiveDatabaseMock() {
             ],
             final_snapshot_count: 1,
             final_row_count: 3,
+          },
+        ],
+      };
+    }
+
+    if (sql.includes("UPDATE ops.sales_target_incentive_region_package")) {
+      return {
+        rowCount: 1,
+        rows: [
+          {
+            sales_target_incentive_region_package_id:
+              "00000000-0000-4000-8000-000000000961",
+            company_id: companyId,
+            region_id: regionId,
+            period_key: "2026-05",
+            package_status: "admin_approved",
+            submitted_by_user_id: "region-user",
+            submitted_at: "2026-06-01T08:00:00.000Z",
+            submission_note: null,
+            reviewed_by_user_id: actorUserId(),
+            reviewed_at: "2026-06-01T09:00:00.000Z",
+            review_note: null,
           },
         ],
       };
@@ -419,6 +506,46 @@ describe("Sales target incentive read API integration", () => {
     expect(adminResponse.status).toBe(200);
     expect(adminResponse.body.data.roleScope).toBe("admin");
     expect(adminResponse.body.data.projections).toHaveLength(1);
+    expect(adminResponse.body.data.regionPackages).toEqual([
+      expect.objectContaining({
+        regionId,
+        regionName: "Eda Doganay Bolgesi",
+        status: "submitted",
+        storeCount: 1,
+        reviewedStoreCount: 1,
+        submittedStoreCount: 1,
+        submittedCorrectionCount: 1,
+      }),
+    ]);
+
+    await app.close();
+  });
+
+  it("lets admins approve a submitted Region Manager incentive package", async () => {
+    const { databaseService, withTransaction } = createIncentiveDatabaseMock();
+    const app = await createIntegrationApp({ databaseService });
+
+    const response = await request(app.getHttpServer())
+      .post("/api/admin/incentives/region-packages/reviews")
+      .send({
+        period: "2026-05",
+        regionId,
+        decision: "approve",
+      })
+      .set("x-user-id", actorUserId())
+      .set("x-role-codes", "SUPER_ADMIN")
+      .set("x-read-company-ids", companyId);
+
+    expect(response.status).toBe(201);
+    expect(response.body.data).toEqual(
+      expect.objectContaining({
+        period: "2026-05",
+        regionId,
+        status: "admin_approved",
+        reviewedByUserId: actorUserId(),
+      }),
+    );
+    expect(withTransaction).toHaveBeenCalledTimes(1);
 
     await app.close();
   });

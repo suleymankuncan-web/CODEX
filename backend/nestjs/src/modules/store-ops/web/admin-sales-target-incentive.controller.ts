@@ -6,6 +6,7 @@ import { SalesTargetIncentiveApiService } from "../application/sales-target-ince
 import { CreateSalesTargetIncentiveCloseRunDto } from "./dto/create-sales-target-incentive-close-run.dto";
 import { CreateSalesTargetIncentiveCorrectionDto } from "./dto/create-sales-target-incentive-correction.dto";
 import { GetSalesTargetIncentiveQueryDto } from "./dto/get-sales-target-incentive.query";
+import { ReviewSalesTargetIncentiveRegionPackageDto } from "./dto/review-sales-target-incentive-region-package.dto";
 
 type SalesTargetIncentiveRequest = {
   user: AuthenticatedUser;
@@ -74,6 +75,22 @@ export class AdminSalesTargetIncentiveController {
       adjustmentAmount: body.adjustmentAmount,
       reasonCode: body.reasonCode,
       reasonNote: body.reasonNote,
+    });
+  }
+
+  @Post("region-packages/reviews")
+  @RequireScope("authenticated")
+  @RequireRoles("SUPER_ADMIN")
+  async reviewRegionPackage(
+    @Req() request: SalesTargetIncentiveRequest,
+    @Body() body: ReviewSalesTargetIncentiveRegionPackageDto,
+  ) {
+    return this.salesTargetIncentiveApiService.reviewRegionPackage({
+      actor: request.user,
+      periodKey: body.period,
+      regionId: body.regionId,
+      decision: body.decision,
+      reviewNote: body.reviewNote,
     });
   }
 }

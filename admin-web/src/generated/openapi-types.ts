@@ -2115,6 +2115,12 @@ export type components = {
         "offset": number
       }
     }
+    "ReviewSalesTargetIncentiveRegionPackageDto": {
+      "period": string
+      "regionId": string
+      "decision": "approve" | "return"
+      "reviewNote"?: string
+    }
     "SnapshotNeedsActionResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -3627,6 +3633,20 @@ export type paths = {
           content: {
             'application/json': Record<string, unknown>
           }
+        }
+      }
+    }
+  }
+  "/api/admin/incentives/region-packages/reviews": {
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ReviewSalesTargetIncentiveRegionPackageDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: Record<string, never>
         }
       }
     }

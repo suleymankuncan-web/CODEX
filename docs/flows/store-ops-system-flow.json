@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-19T15:17:29.938Z",
+  "generatedAt": "2026-06-19T18:03:34.415Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 185,
-    "backendEndpointsWithoutFrontendCallCount": 36,
+    "backendEndpointCount": 186,
+    "backendEndpointsWithoutFrontendCallCount": 37,
     "controllerCount": 22,
     "frontendApiCallCount": 149,
     "frontendRouteCount": 55,
     "matchedFrontendApiCallCount": 149,
-    "openApiEndpointCount": 185,
+    "openApiEndpointCount": 186,
     "routeApiEdgeCount": 216,
     "routesWithoutApiCallCount": 2,
     "unmatchedFrontendApiCallCount": 0
@@ -3339,7 +3339,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
-        "line": 20
+        "line": 21
       }
     },
     {
@@ -3353,7 +3353,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
-        "line": 47
+        "line": 48
       }
     },
     {
@@ -3367,7 +3367,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
-        "line": 33
+        "line": 34
       }
     },
     {
@@ -3381,7 +3381,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
-        "line": 61
+        "line": 62
+      }
+    },
+    {
+      "id": "endpoint:POST:/api/admin/incentives/region-packages/reviews",
+      "method": "POST",
+      "path": "/api/admin/incentives/region-packages/reviews",
+      "rawControllerPath": "admin/incentives",
+      "rawMethodPath": "region-packages/reviews",
+      "controller": "admin-sales-target-incentive",
+      "domain": "admin",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/admin-sales-target-incentive.controller.ts",
+        "line": 81
       }
     },
     {
@@ -5870,6 +5884,12 @@
       "id": "openapi:POST:/api/admin/incentives/corrections",
       "method": "POST",
       "path": "/api/admin/incentives/corrections",
+      "domain": "admin"
+    },
+    {
+      "id": "openapi:POST:/api/admin/incentives/region-packages/reviews",
+      "method": "POST",
+      "path": "/api/admin/incentives/region-packages/reviews",
       "domain": "admin"
     },
     {
@@ -8985,17 +9005,17 @@
         "frontendCallCount": 3
       },
       {
-        "id": "controller:checklist",
-        "controller": "checklist",
-        "domain": "checklists",
+        "id": "controller:admin-sales-target-incentive",
+        "controller": "admin-sales-target-incentive",
+        "domain": "admin",
         "endpointCount": 5,
         "frontendCallCount": 2
       },
       {
-        "id": "controller:admin-sales-target-incentive",
-        "controller": "admin-sales-target-incentive",
-        "domain": "admin",
-        "endpointCount": 4,
+        "id": "controller:checklist",
+        "controller": "checklist",
+        "domain": "checklists",
+        "endpointCount": 5,
         "frontendCallCount": 2
       },
       {
@@ -9061,6 +9081,7 @@
       "endpoint:PUT:/api/admin/feed/{feedPostId}",
       "endpoint:POST:/api/admin/incentives/close-runs",
       "endpoint:GET:/api/admin/incentives/close-status",
+      "endpoint:POST:/api/admin/incentives/region-packages/reviews",
       "endpoint:POST:/api/admin/migrations/run",
       "endpoint:GET:/api/admin/migrations/status",
       "endpoint:DELETE:/api/auth/browser-session",
