@@ -50,6 +50,11 @@ export function StoreIncentivesPage(input: {
   const queryClient = useQueryClient()
   const enabled = canReadStoreIncentives(input.authSummary)
   const [period, setPeriod] = useState<string | undefined>(undefined)
+  const [periodWasSelected, setPeriodWasSelected] = useState(false)
+  const handlePeriodChange = (nextPeriod: string) => {
+    setPeriod(nextPeriod)
+    setPeriodWasSelected(true)
+  }
   const incentivesQueryIdentity = useMemo(
     () => getSalesTargetIncentiveQueryIdentity(input.authSummary),
     [input.authSummary],
@@ -139,9 +144,21 @@ export function StoreIncentivesPage(input: {
 
   const data = response.data
   if (data.projections.length === 0) {
+    const canBrowseEmptyPeriod = data.roleScope === 'region' || periodWasSelected
+    if (!canBrowseEmptyPeriod) {
+      return (
+        <StoreSurfacePage ariaLabel={t('storeIncentives.heroEyebrow')}>
+          <StoreErrorState
+            title={t('storeIncentives.routeUnavailableTitle')}
+            description={t('storeIncentives.routeUnavailableCopy')}
+          />
+        </StoreSurfacePage>
+      )
+    }
+
     return (
       <StoreIncentivesEmptyPeriod
-        onPeriodChange={setPeriod}
+        onPeriodChange={handlePeriodChange}
         period={period ?? data.period}
       />
     )
@@ -158,7 +175,7 @@ export function StoreIncentivesPage(input: {
           voidCorrectionMutation,
           submitPackageMutation,
         }}
-        onPeriodChange={setPeriod}
+        onPeriodChange={handlePeriodChange}
         selectedPeriod={period ?? data.period}
       />
     )
@@ -168,7 +185,7 @@ export function StoreIncentivesPage(input: {
     <StoreManagerIncentivesView
       data={data}
       locale={locale}
-      onPeriodChange={setPeriod}
+      onPeriodChange={handlePeriodChange}
       selectedPeriod={period ?? data.period}
     />
   )

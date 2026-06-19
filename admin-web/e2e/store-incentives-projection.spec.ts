@@ -150,6 +150,22 @@ test('region manager cannot save an invalid final correction amount', async ({ p
   expect(requests).toHaveLength(0)
 })
 
+test('region manager cannot save an over-precision final correction amount', async ({ page }) => {
+  const requests: unknown[] = []
+  await routeAuthSession(page, createRegionManagerSession())
+  await routeStoreIncentives(page, regionAllReviewedFixture)
+  await routeRegionIncentiveMutations(page, { correctionRequests: requests })
+
+  await page.goto('/store/incentives')
+  await page.getByRole('button', { name: 'Store Personnel' }).click()
+  await page.getByLabel(/Final prim tutar/).fill('17000.255')
+  await page.getByLabel(/notu/).fill('BÃ¶lge kontrolÃ¼ sonrasÄ± final prim dÃ¼zeltmesi')
+
+  await expect(page.getByText(/tutar girin/)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
+  expect(requests).toHaveLength(0)
+})
+
 test('store incentives empty period keeps the period picker available', async ({ page }) => {
   await routeAuthSession(page, createRegionManagerSession())
   await routeStoreIncentives(page, emptyRegionIncentiveFixture)
@@ -205,6 +221,12 @@ test('cashier and non-company store users do not see incentive surfaces', async 
   await page.goto('/store/home')
 
   await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toHaveCount(0)
+
+  await page.goto('/store/incentives')
+
+  await expect(page.getByText('Prim kaydÄ± bulunamadÄ±')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Haziran 2026' })).toHaveCount(0)
+  await expect(page.getByTestId('store-incentives-page')).toHaveCount(0)
 })
 
 test('captures responsive visual evidence for eligible incentive state', async ({ page }) => {

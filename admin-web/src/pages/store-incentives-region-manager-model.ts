@@ -160,6 +160,7 @@ export function getCorrectionTone(correction: SalesTargetIncentiveRegionCorrecti
 export function normalizeMoneyInput(value: string) {
   const normalized = normalizeLocalizedMoneyText(value)
   if (!normalized) return null
+  if (!/^-?\d+(?:\.\d{1,2})?$/.test(normalized)) return null
   const parsed = Number(normalized)
   if (!Number.isFinite(parsed)) return null
   return parsed.toFixed(2)
