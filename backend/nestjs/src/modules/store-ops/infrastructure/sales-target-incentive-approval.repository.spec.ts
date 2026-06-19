@@ -36,6 +36,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     query
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -66,18 +67,21 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(query.mock.calls[0][1][0]).toContain(
       `sales-target-incentive-store-review:2026-05:${storeId}`,
     );
-    expect(String(query.mock.calls[1][0])).toContain(
+    expect(query.mock.calls[1][1][0]).toContain(
+      `sales-target-incentive-region-package:2026-05:${regionId}`,
+    );
+    expect(String(query.mock.calls[2][0])).toContain(
       "package_status IN ('submitted', 'admin_approved')",
     );
-    expect(String(query.mock.calls[2][0])).toContain(
+    expect(String(query.mock.calls[3][0])).toContain(
       "INSERT INTO ops.sales_target_incentive_store_review",
     );
-    expect(String(query.mock.calls[2][0])).toContain("WITH latest_final_snapshot");
-    expect(String(query.mock.calls[2][0])).toContain("final_snapshot_id");
-    expect(String(query.mock.calls[2][0])).toContain(
+    expect(String(query.mock.calls[3][0])).toContain("WITH latest_final_snapshot");
+    expect(String(query.mock.calls[3][0])).toContain("final_snapshot_id");
+    expect(String(query.mock.calls[3][0])).toContain(
       "ON CONFLICT (store_id, period_key) DO UPDATE",
     );
-    expect(query.mock.calls[2][1]).toEqual(
+    expect(query.mock.calls[3][1]).toEqual(
       expect.arrayContaining(["2026-05", [storeId], companyId, regionId, actorUserId]),
     );
     expect(result.review_status).toBe("reviewed");
@@ -86,6 +90,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
   it("keeps region manager draft corrections outside payable adjustments", async () => {
     const { query, repository } = createHarness();
     query
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
@@ -157,7 +162,7 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("snapshot.close_cutoff_at DESC");
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_region_correction");
     expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");
-    expect(query.mock.calls[3][1]).toEqual(
+    expect(query.mock.calls[4][1]).toEqual(
       expect.arrayContaining([finalRowId, "2026-05", "1980.00", "2100.25"]),
     );
     expect(result.correction_status).toBe("draft");
@@ -227,9 +232,9 @@ describe("SalesTargetIncentiveApprovalRepository", () => {
     expect(sql).toContain("INSERT INTO ops.sales_target_incentive_region_package_store");
     expect(sql).toContain("review.final_snapshot_id");
     expect(sql).toContain("latest_snapshot.sales_target_incentive_final_snapshot_id = review.final_snapshot_id");
-    expect(sql).toContain("correction_status = 'submitted'");
+    expect(sql).toContain("THEN 'submitted'");
     expect(sql).toContain("ELSE 'voided'");
-    expect(sql).toContain("region_package_id = $1 AND correction_status = 'submitted'");
+    expect(sql).toContain("correction_status IN ('submitted', 'admin_returned')");
     expect(sql).not.toContain("INSERT INTO ops.sales_target_incentive_adjustment");
     expect(result.package_status).toBe("submitted");
   });

@@ -564,7 +564,7 @@ export class SalesTargetIncentiveApprovalRepository {
             AND region_id = $4
             AND (
               (store_id = ANY($5::uuid[]) AND correction_status IN ('draft', 'admin_returned'))
-              OR (region_package_id = $1 AND correction_status = 'submitted' AND NOT (store_id = ANY($5::uuid[])))
+              OR (region_package_id = $1 AND correction_status IN ('submitted', 'admin_returned') AND NOT (store_id = ANY($5::uuid[])))
             )
         `,
         [
@@ -762,6 +762,7 @@ export class SalesTargetIncentiveApprovalRepository {
     client: ApprovalClient,
     input: { periodKey: string; regionId: string },
   ): Promise<void> {
+    await this.lockRegionPackage(client, input);
     const result = await client.query<{ package_status: string }>(
       `
         SELECT package_status
