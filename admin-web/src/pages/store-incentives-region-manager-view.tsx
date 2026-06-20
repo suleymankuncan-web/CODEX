@@ -4,6 +4,7 @@ import {
   ClipboardCheck,
   CircleDollarSign,
   Download,
+  Loader2,
   RefreshCw,
   Search,
   Send,
@@ -335,6 +336,10 @@ export function RegionManagerIncentivesView(input: {
                 onSelectRow={(row) => setSelectedRow({ projection, row })}
                 projection={projection}
                 reviewDisabled={workflowLocked || !canReviewProjection(projection)}
+                reviewPending={
+                  input.mutationState.reviewMutation.isPending &&
+                  input.mutationState.reviewMutation.variables?.storeId === projection.storeId
+                }
               />
             ))}
           </Accordion>
@@ -441,6 +446,7 @@ function RegionStoreCard(input: {
   projection: SalesTargetIncentiveProjection
   locale: ReturnType<typeof useLocalization>['locale']
   reviewDisabled: boolean
+  reviewPending: boolean
   onSelectRow: (row: SalesTargetIncentiveRow) => void
   onReviewChange: (status: 'pending_review' | 'reviewed') => void
 }) {
@@ -451,6 +457,17 @@ function RegionStoreCard(input: {
   const personnelTotal = sumMoney(personnel.map(getRegionEffectiveEarnedAmount))
   const review = getReviewState(input.projection.review)
   const status = getProjectionWorkflowStatus(input.projection)
+  const isReviewed = review.storeReviewStatus === 'reviewed'
+  const reviewStatus = input.reviewPending
+    ? { label: t('storeIncentives.regionManagerReviewSaving'), tone: 'warning' as const }
+    : isReviewed
+      ? { label: t('storeIncentives.regionManagerReviewedCheckbox'), tone: 'calm' as const }
+      : status
+  const reviewActionLabel = input.reviewPending
+    ? t('storeIncentives.regionManagerReviewSaving')
+    : isReviewed
+      ? t('storeIncentives.regionManagerReviewedCheckbox')
+      : t('storeIncentives.regionManagerReviewAction')
   const achievementProgress = toProgressPercent(input.projection.storeAchievementPct) ?? 0
   const gate = getStoreGateState(input.projection)
   const gateLabel = getStoreGateLabel(input.projection)
@@ -507,21 +524,37 @@ function RegionStoreCard(input: {
             <StoreStatusBadge tone={gate.known ? (gate.passed ? 'calm' : 'danger') : 'neutral'}>
               {gateLabel}
             </StoreStatusBadge>
-            <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
+            <StoreStatusBadge tone={reviewStatus.tone}>{reviewStatus.label}</StoreStatusBadge>
           </div>
         </div>
       </AccordionTrigger>
       <AccordionContent className="tw:border-t tw:border-border tw:bg-muted/20 tw:p-3">
         <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
-          <label className="tw:inline-flex tw:min-h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/10 tw:px-3 tw:text-xs tw:font-semibold tw:text-chart-4">
-            <Checkbox
-              checked={review.storeReviewStatus === 'reviewed'}
-              disabled={input.reviewDisabled}
-              onCheckedChange={(checked) =>
-                input.onReviewChange(checked === true ? 'reviewed' : 'pending_review')
-              }
-            />
-            {t('storeIncentives.regionManagerReviewedCheckbox')}
+          <label
+            className={cn(
+              'tw:inline-flex tw:min-h-9 tw:w-fit tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-full tw:border tw:px-3 tw:text-xs tw:font-semibold tw:shadow-sm tw:transition-all tw:duration-150 tw:active:scale-[0.98]',
+              isReviewed
+                ? 'tw:border-emerald-500/25 tw:bg-emerald-500/10 tw:text-emerald-700'
+                : 'tw:border-chart-4/30 tw:bg-chart-4/10 tw:text-chart-4 tw:hover:border-primary/30 tw:hover:bg-primary/5 tw:hover:text-primary',
+              input.reviewPending && 'tw:cursor-wait tw:border-primary/25 tw:bg-primary/10 tw:text-primary',
+              input.reviewDisabled && 'tw:cursor-not-allowed tw:opacity-60',
+            )}
+          >
+            <span className="tw:grid tw:size-5 tw:place-items-center">
+              {input.reviewPending ? (
+                <Loader2 className="tw:size-4 tw:animate-spin" />
+              ) : (
+                <Checkbox
+                  checked={isReviewed}
+                  className="tw:size-5 tw:transition-transform tw:duration-150 tw:data-[state=checked]:scale-105"
+                  disabled={input.reviewDisabled}
+                  onCheckedChange={(checked) =>
+                    input.onReviewChange(checked === true ? 'reviewed' : 'pending_review')
+                  }
+                />
+              )}
+            </span>
+            {reviewActionLabel}
           </label>
           <div className="tw:flex tw:flex-wrap tw:gap-2">
             <StoreStatusBadge tone={rows.length > 0 ? 'calm' : 'neutral'}>

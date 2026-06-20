@@ -9,7 +9,11 @@ import {
   markStoreSalesTargetIncentiveReview,
   storeSalesTargetIncentivesQueryKey,
   submitStoreSalesTargetIncentiveRegionPackage,
+  type SalesTargetIncentiveRegionCorrection,
   type SalesTargetIncentiveResponse,
+  type SalesTargetIncentiveRow,
+  type StoreSalesTargetIncentiveRegionCorrectionInput,
+  type StoreSalesTargetIncentiveReviewInput,
   voidStoreSalesTargetIncentiveRegionCorrection,
 } from '../features/incentives/api'
 import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
@@ -51,6 +55,11 @@ function canReadStoreIncentives(authSummary: AuthSessionSummary | null) {
   return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER'])
 }
 
+type IncentiveQuerySnapshot = {
+  current: SalesTargetIncentiveResponse | undefined
+  selected: SalesTargetIncentiveResponse | undefined
+}
+
 export function StoreIncentivesPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -87,17 +96,76 @@ export function StoreIncentivesPage(input: {
       queryClient.invalidateQueries({ queryKey: currentIncentivesQueryKey, exact: true })
     }
   }
+  const captureIncentiveQueryData = () => ({
+    current: period ? queryClient.getQueryData<SalesTargetIncentiveResponse>(currentIncentivesQueryKey) : undefined,
+    selected: queryClient.getQueryData<SalesTargetIncentiveResponse>(incentivesQueryKey),
+  })
+  const restoreIncentiveQueryData = (snapshot?: IncentiveQuerySnapshot) => {
+    if (!snapshot) return
+    if (snapshot.selected) queryClient.setQueryData(incentivesQueryKey, snapshot.selected)
+    if (period && snapshot.current) queryClient.setQueryData(currentIncentivesQueryKey, snapshot.current)
+  }
+  const updateIncentiveQueryData = (
+    updater: (response: SalesTargetIncentiveResponse) => SalesTargetIncentiveResponse,
+  ) => {
+    queryClient.setQueryData<SalesTargetIncentiveResponse>(incentivesQueryKey, (current) =>
+      current ? updater(current) : current,
+    )
+    if (period) {
+      queryClient.setQueryData<SalesTargetIncentiveResponse>(currentIncentivesQueryKey, (current) =>
+        current ? updater(current) : current,
+      )
+    }
+  }
 
   const reviewMutation = useMutation({
     mutationFn: markStoreSalesTargetIncentiveReview,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: incentivesQueryKey, exact: true })
+      if (period) {
+        await queryClient.cancelQueries({ queryKey: currentIncentivesQueryKey, exact: true })
+      }
+      const snapshot = captureIncentiveQueryData()
+      updateIncentiveQueryData((response) =>
+        response.data.period === variables.period ? applyOptimisticStoreReview(response, variables) : response,
+      )
+      return snapshot
+    },
+    onError: (_error, _variables, snapshot) => restoreIncentiveQueryData(snapshot),
     onSuccess: invalidateCurrentQuery,
   })
   const correctionMutation = useMutation({
     mutationFn: createStoreSalesTargetIncentiveRegionCorrection,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: incentivesQueryKey, exact: true })
+      if (period) {
+        await queryClient.cancelQueries({ queryKey: currentIncentivesQueryKey, exact: true })
+      }
+      const snapshot = captureIncentiveQueryData()
+      updateIncentiveQueryData((response) =>
+        response.data.period === variables.period ? applyOptimisticRegionCorrection(response, variables) : response,
+      )
+      return snapshot
+    },
+    onError: (_error, _variables, snapshot) => restoreIncentiveQueryData(snapshot),
     onSuccess: invalidateCurrentQuery,
   })
   const voidCorrectionMutation = useMutation({
     mutationFn: voidStoreSalesTargetIncentiveRegionCorrection,
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: incentivesQueryKey, exact: true })
+      if (period) {
+        await queryClient.cancelQueries({ queryKey: currentIncentivesQueryKey, exact: true })
+      }
+      const snapshot = captureIncentiveQueryData()
+      updateIncentiveQueryData((response) =>
+        response.data.period === variables.period
+          ? applyOptimisticVoidRegionCorrection(response, variables.correctionId)
+          : response,
+      )
+      return snapshot
+    },
+    onError: (_error, _variables, snapshot) => restoreIncentiveQueryData(snapshot),
     onSuccess: invalidateCurrentQuery,
   })
   const submitPackageMutation = useMutation({
@@ -373,6 +441,115 @@ function StoreLoadingShell(input: { title: string; description: string }) {
       </StoreMetricGrid>
     </StoreSurfacePage>
   )
+}
+
+function applyOptimisticStoreReview(
+  response: SalesTargetIncentiveResponse,
+  input: StoreSalesTargetIncentiveReviewInput,
+): SalesTargetIncentiveResponse {
+  const reviewedAt = input.reviewStatus === 'reviewed' ? new Date().toISOString() : null
+
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      projections: response.data.projections.map((projection) => {
+        if (projection.storeId !== input.storeId) return projection
+
+        return {
+          ...projection,
+          review: {
+            storeReviewStatus: input.reviewStatus,
+            reviewedByUserId: projection.review?.reviewedByUserId ?? null,
+            reviewedAt,
+            periodCloseStatus: projection.review?.periodCloseStatus ?? 'closed',
+            workflowLockedReason: projection.review?.workflowLockedReason ?? null,
+          },
+        }
+      }),
+    },
+  }
+}
+
+function applyOptimisticRegionCorrection(
+  response: SalesTargetIncentiveResponse,
+  input: StoreSalesTargetIncentiveRegionCorrectionInput,
+): SalesTargetIncentiveResponse {
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      projections: response.data.projections.map((projection) => {
+        if (projection.storeId !== input.storeId) return projection
+
+        return {
+          ...projection,
+          rows: projection.rows.map((row) => {
+            if (row.employeeId !== input.employeeId || row.participantType !== input.participantType) return row
+
+            return {
+              ...row,
+              regionCorrection: buildOptimisticRegionCorrection(row, input),
+            }
+          }),
+        }
+      }),
+    },
+  }
+}
+
+function applyOptimisticVoidRegionCorrection(
+  response: SalesTargetIncentiveResponse,
+  correctionId: string,
+): SalesTargetIncentiveResponse {
+  return {
+    ...response,
+    data: {
+      ...response.data,
+      projections: response.data.projections.map((projection) => ({
+        ...projection,
+        rows: projection.rows.map((row) => {
+          if (row.regionCorrection?.correctionId !== correctionId) return row
+
+          return {
+            ...row,
+            regionCorrection: {
+              ...row.regionCorrection,
+              status: 'voided',
+            },
+          }
+        }),
+      })),
+    },
+  }
+}
+
+function buildOptimisticRegionCorrection(
+  row: SalesTargetIncentiveRow,
+  input: StoreSalesTargetIncentiveRegionCorrectionInput,
+): SalesTargetIncentiveRegionCorrection {
+  const beforeAmount = row.regionCorrection?.beforeAmount ?? row.payableAmount ?? row.finalAmount ?? row.rawEarnedAmount ?? '0.00'
+
+  return {
+    correctionId:
+      row.regionCorrection?.correctionId ??
+      `optimistic:${input.storeId}:${input.employeeId}:${input.participantType}`,
+    status: 'draft',
+    targetScope: 'final_snapshot',
+    beforeAmount,
+    adjustmentAmount: subtractMoney(input.finalAmount, beforeAmount),
+    finalAmount: input.finalAmount,
+    reasonNote: input.reasonNote,
+    createdByUserId: row.regionCorrection?.createdByUserId ?? 'optimistic',
+    createdAt: row.regionCorrection?.createdAt ?? new Date().toISOString(),
+    submittedAt: null,
+    reviewedAt: null,
+    reviewNote: null,
+  }
+}
+
+function subtractMoney(minuend: string, subtrahend: string) {
+  return sumMoney([minuend, `-${subtrahend}`])
 }
 
 function sumMoney(values: Array<string | null | undefined>) {
