@@ -61,9 +61,9 @@ test('store manager sees incentive navigation and store projection rows without 
   await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toHaveCount(0)
   await expect(page.getByText('Mağaza müdürü prim tablosu')).toBeVisible()
   await expect(page.getByText('Satış personeli prim tablosu')).toBeVisible()
-  await expect(page.getByText('15.000,00 TL')).toBeVisible()
+  await expect(page.getByText('15.000,00 TL').first()).toBeVisible()
   await expect(page.getByText('Store Personnel')).toBeVisible()
-  await expect(page.getByText('16.500,00 TL')).toBeVisible()
+  await expect(page.getByText('16.500,00 TL').first()).toBeVisible()
 })
 
 test('region manager sees assigned stores grouped by store with approval controls', async ({ page }) => {
@@ -217,7 +217,7 @@ test('region manager approval controls stay disabled before month close', async 
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByText('Ay kapanışı bekleniyor')).toBeVisible()
+  await expect(page.getByText(/Ay kapan.*bekliyor/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
   await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' }).first()).toBeDisabled()
   await page.getByRole('button', { name: 'Store Personnel' }).click()

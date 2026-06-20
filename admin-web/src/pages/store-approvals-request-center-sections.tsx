@@ -191,9 +191,13 @@ function RequestCenterMetric(input: {
 }) {
   const toneClass = {
     accent: 'tw:bg-primary/10 tw:text-primary',
+    amber: 'tw:bg-chart-4/15 tw:text-chart-4',
     calm: 'tw:bg-emerald-50 tw:text-emerald-700',
+    cyan: 'tw:bg-accent/10 tw:text-accent',
     danger: 'tw:bg-rose-50 tw:text-rose-600',
+    mint: 'tw:bg-emerald-500/10 tw:text-emerald-700',
     neutral: 'tw:bg-muted tw:text-muted-foreground',
+    plum: 'tw:bg-primary/10 tw:text-primary',
     warning: 'tw:bg-amber-50 tw:text-amber-600',
   } satisfies Record<StoreSurfaceTone, string>
 

@@ -267,8 +267,12 @@ function DetailLine(input: {
 
 const toneSurfaceClasses: Record<StoreSurfaceTone, string> = {
   accent: 'tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:text-[#08798d]',
+  amber: 'tw:border-chart-4/30 tw:bg-chart-4/15 tw:text-chart-4',
   calm: 'tw:border-[#10b981]/25 tw:bg-[#e8fbf3] tw:text-[#06784e]',
+  cyan: 'tw:border-accent/25 tw:bg-accent/10 tw:text-accent',
   danger: 'tw:border-[#ef426f]/25 tw:bg-[#ffe8ef] tw:text-[#d6244f]',
+  mint: 'tw:border-emerald-500/20 tw:bg-emerald-500/10 tw:text-emerald-700',
   neutral: 'tw:border-[#dbe5f2] tw:bg-white/80 tw:text-[#071631]',
+  plum: 'tw:border-primary/20 tw:bg-primary/10 tw:text-primary',
   warning: 'tw:border-[#f59e0b]/25 tw:bg-[#fff4df] tw:text-[#925900]',
 }
