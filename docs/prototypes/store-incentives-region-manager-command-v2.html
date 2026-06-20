@@ -1,0 +1,2325 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HR Axis Store Primler - Bölge Müdürü V2</title>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <!--
+      Locked prototype contract.
+      Status: locked on 2026-06-19.
+      Surface: /store/incentives Region Manager command center.
+      This file is the Store/Admin operational surface reference for compact
+      premium density, metric-card icon rhythm, shadcn-mapped controls,
+      store review state, right drawer editing, and package-submit dialog.
+      Do not change this prototype without explicit re-approval; production
+      deviations must be recorded with a concrete product or contract reason.
+    -->
+    <!--
+      Component map:
+      Sayfa: StoreSurfacePage + mevcut Store kabuğu.
+      Üst bölüm: StoreSurfaceHeader, Badge, Button.
+      Filtreler: Popover + dönem seçici, Input ve shadcn Select
+      (SelectTrigger, SelectContent, SelectGroup, SelectItem).
+      Metrikler: Card/StoreMetricCard, her kartta 1 lucide ikon.
+      Mağaza listesi: Accordion + Table, mobilde Card listesi.
+      Personel düzeltme: Sheet veya Drawer, Input, Textarea, Button.
+      Gönderim onayı: AlertDialog.
+      Durumlar: Badge.
+      Boş/yükleniyor/hata: ortak Store state bileşenleri.
+    -->
+    <style>
+      :root {
+        color-scheme: light;
+        --color-bg: #f8f5fb;
+        --color-bg-glacier: #edf7f6;
+        --color-surface: rgba(255, 255, 255, 0.88);
+        --color-surface-strong: #ffffff;
+        --color-surface-soft: rgba(255, 255, 255, 0.68);
+        --color-ink: #171421;
+        --color-muted: #6c6478;
+        --color-quiet: #9e93aa;
+        --color-line: rgba(36, 28, 50, 0.1);
+        --color-line-strong: rgba(36, 28, 50, 0.18);
+        --color-primary: #7c3aed;
+        --color-primary-deep: #4c2aa5;
+        --color-primary-soft: rgba(124, 58, 237, 0.12);
+        --color-blue: #3765ea;
+        --color-blue-soft: rgba(55, 101, 234, 0.12);
+        --color-accent: #13a7b3;
+        --color-accent-soft: rgba(19, 167, 179, 0.12);
+        --color-success: #10b981;
+        --color-success-soft: rgba(16, 185, 129, 0.13);
+        --color-warning: #f59e0b;
+        --color-warning-soft: rgba(245, 158, 11, 0.14);
+        --color-danger: #e11d48;
+        --color-danger-soft: rgba(225, 29, 72, 0.1);
+        --color-focus: rgba(124, 58, 237, 0.22);
+        --shadow-soft: 0 18px 48px rgba(32, 24, 48, 0.08);
+        --shadow-panel: 0 24px 80px rgba(32, 24, 48, 0.12);
+        --radius: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 20px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--color-bg);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 9% 0%, rgba(124, 58, 237, 0.12), transparent 28%),
+          radial-gradient(circle at 80% 2%, rgba(19, 167, 179, 0.16), transparent 30%),
+          linear-gradient(135deg, rgba(248, 245, 251, 0.98), rgba(237, 247, 246, 0.94)),
+          var(--color-bg);
+        color: var(--color-ink);
+        font-family:
+          "Segoe UI Variable",
+          "Segoe UI",
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      svg {
+        display: block;
+        flex: 0 0 auto;
+      }
+
+      .brand-mark,
+      .title-icon,
+      .metric-icon,
+      .store-icon,
+      .close {
+        line-height: 0;
+      }
+
+      .nav a svg,
+      .btn svg,
+      .pill svg,
+      .field svg,
+      .close svg {
+        align-self: center;
+        justify-self: center;
+      }
+
+      .title-icon svg,
+      .metric .metric-icon svg,
+      .store-name .store-icon svg,
+      .close svg {
+        margin: auto;
+      }
+
+      .app {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: 256px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        height: 100vh;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 20px;
+        border-right: 1px solid var(--color-line);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 18px;
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: flex;
+        min-height: 54px;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface-strong);
+        padding: 10px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .brand strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .brand span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 450;
+      }
+
+      .brand .brand-mark {
+        display: grid;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .nav {
+        display: grid;
+        gap: 4px;
+        margin-top: 14px;
+      }
+
+      .nav a {
+        display: flex;
+        min-height: 42px;
+        align-items: center;
+        gap: 12px;
+        border-radius: var(--radius);
+        color: var(--color-muted);
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 620;
+      }
+
+      .nav a.active {
+        background: linear-gradient(90deg, var(--color-primary-soft), var(--color-accent-soft));
+        color: var(--color-primary-deep);
+      }
+
+      .nav a svg {
+        width: 17px;
+        height: 17px;
+        min-width: 17px;
+        stroke-width: 2;
+      }
+
+      .sidebar-foot {
+        display: grid;
+        gap: 5px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.68);
+        padding: 12px;
+        color: var(--color-muted);
+        font-size: 11px;
+      }
+
+      .sidebar-foot strong {
+        color: var(--color-ink);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .main {
+        min-width: 0;
+        padding: 22px;
+      }
+
+      .workspace {
+        display: grid;
+        width: min(1420px, 100%);
+        gap: 16px;
+        margin: 0 auto;
+      }
+
+      .surface,
+      .metric,
+      .toolbar,
+      .panel,
+      .store-card,
+      .drawer,
+      .confirm {
+        border: 1px solid var(--color-line);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .topbar {
+        display: flex;
+        min-height: 42px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .topbar strong {
+        color: var(--color-ink);
+        font-weight: 650;
+      }
+
+      .top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .btn,
+      .pill {
+        display: inline-flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface-strong);
+        color: var(--color-ink);
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 620;
+        white-space: nowrap;
+      }
+
+      .btn svg,
+      .pill svg {
+        width: 15px;
+        height: 15px;
+        min-width: 15px;
+      }
+
+      .btn.primary {
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-blue), var(--color-accent));
+        color: #fff;
+        box-shadow: 0 18px 40px rgba(124, 58, 237, 0.18);
+      }
+
+      .btn.ghost {
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .page-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+        padding: 18px;
+      }
+
+      .title-row {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .title-icon {
+        display: grid;
+        width: 48px;
+        height: 48px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 15px;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+        color: #fff;
+        box-shadow: 0 14px 32px rgba(124, 58, 237, 0.16);
+      }
+
+      .title-icon svg {
+        width: 23px;
+        height: 23px;
+        min-width: 23px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        color: var(--color-ink);
+        font-size: clamp(26px, 2.4vw, 34px);
+        font-weight: 650;
+        letter-spacing: 0;
+        line-height: 1.08;
+      }
+
+      .subtitle {
+        margin-top: 5px;
+        color: var(--color-muted);
+        font-size: 13px;
+        font-weight: 430;
+      }
+
+      .head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .finance-strip {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 260px;
+        gap: 14px;
+        align-items: stretch;
+      }
+
+      .hero-amount {
+        display: grid;
+        gap: 14px;
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+        padding: 18px;
+        background:
+          linear-gradient(110deg, rgba(124, 58, 237, 0.13), rgba(19, 167, 179, 0.12)),
+          rgba(255, 255, 255, 0.86);
+      }
+
+      .hero-amount-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 14px;
+      }
+
+      .hero-amount span {
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 520;
+      }
+
+      .hero-amount strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--color-ink);
+        font-size: clamp(34px, 4vw, 52px);
+        font-weight: 680;
+        letter-spacing: 0;
+        line-height: 1;
+      }
+
+      .hero-amount p {
+        max-width: 68ch;
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 430;
+      }
+
+      .approval-card {
+        display: grid;
+        align-content: space-between;
+        gap: 14px;
+        border-radius: var(--radius-xl);
+        padding: 18px;
+      }
+
+      .approval-card h2 {
+        color: var(--color-ink);
+        font-size: 17px;
+        font-weight: 650;
+      }
+
+      .approval-card p {
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .approval-steps {
+        display: grid;
+        gap: 8px;
+      }
+
+      .approval-step {
+        display: flex;
+        min-height: 34px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 0 10px;
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 560;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        display: grid;
+        min-height: 112px;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 13px;
+        align-items: center;
+        border-radius: var(--radius-lg);
+        padding: 16px;
+      }
+
+      .metric-icon {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 13px;
+      }
+
+      .metric-icon svg {
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+      }
+
+      .metric-icon.plum {
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+      }
+
+      .metric-icon.mint {
+        background: var(--color-success-soft);
+        color: var(--color-success);
+      }
+
+      .metric-icon.amber {
+        background: var(--color-warning-soft);
+        color: var(--color-warning);
+      }
+
+      .metric-icon.cyan {
+        background: var(--color-accent-soft);
+        color: var(--color-accent);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 3px;
+        color: var(--color-ink);
+        font-size: clamp(22px, 1.7vw, 27px);
+        font-weight: 650;
+        letter-spacing: 0;
+        line-height: 1;
+      }
+
+      .metric small {
+        display: block;
+        margin-top: 7px;
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 430;
+      }
+
+      .metric .metric-icon {
+        display: grid;
+        place-items: center;
+        color: inherit;
+        font-size: 0;
+        line-height: 0;
+      }
+
+      .metric .metric-icon.plum {
+        color: var(--color-primary);
+      }
+
+      .metric .metric-icon.mint {
+        color: var(--color-success);
+      }
+
+      .metric .metric-icon.amber {
+        color: var(--color-warning);
+      }
+
+      .metric .metric-icon.cyan {
+        color: var(--color-accent);
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(280px, 0.95fr) minmax(260px, 1.2fr) minmax(210px, 0.85fr);
+        gap: 10px;
+        align-items: center;
+        border-radius: var(--radius-lg);
+        padding: 10px;
+      }
+
+      .field {
+        display: grid;
+        min-height: 48px;
+        gap: 3px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.78);
+        padding: 7px 10px;
+      }
+
+      .field label {
+        color: var(--color-muted);
+        font-size: 10px;
+        font-weight: 560;
+      }
+
+      .field .control {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+      }
+
+      .period-field {
+        position: relative;
+        z-index: 5;
+      }
+
+      .period-trigger {
+        width: 100%;
+        min-height: 28px;
+        justify-content: space-between;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: var(--color-ink);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .period-trigger > span {
+        display: inline-flex;
+        min-width: 0;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .period-trigger svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .period-chevron {
+        transition: transform 160ms ease;
+      }
+
+      .period-trigger[aria-expanded="true"] .period-chevron {
+        transform: rotate(180deg);
+      }
+
+      .period-popover {
+        display: none;
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        width: min(320px, calc(100vw - 44px));
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-strong);
+        box-shadow: var(--shadow-panel);
+        padding: 12px;
+      }
+
+      .period-field.open .period-popover {
+        display: block;
+      }
+
+      .period-popover::before {
+        position: absolute;
+        top: -6px;
+        left: 24px;
+        width: 10px;
+        height: 10px;
+        border-top: 1px solid var(--color-line);
+        border-left: 1px solid var(--color-line);
+        background: var(--color-surface-strong);
+        content: "";
+        transform: rotate(45deg);
+      }
+
+      .calendar-head {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .calendar-selects {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .calendar-select {
+        display: inline-flex;
+        min-height: 34px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border: 1px solid var(--color-line);
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.84);
+        padding: 0 10px;
+        color: var(--color-ink);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .calendar-nav {
+        display: inline-flex;
+        gap: 4px;
+      }
+
+      .calendar-icon-btn {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 1px solid var(--color-line);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--color-muted);
+      }
+
+      .period-months {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .period-month {
+        display: grid;
+        min-height: 36px;
+        place-items: center;
+        border: 1px solid var(--color-line);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.76);
+        color: var(--color-ink);
+        font-size: 12px;
+        font-weight: 580;
+      }
+
+      .period-month:hover {
+        border-color: rgba(124, 58, 237, 0.28);
+        background: rgba(255, 255, 255, 0.94);
+      }
+
+      .period-month.selected {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-blue));
+        border-color: transparent;
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18);
+      }
+
+      .calendar-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .period-note {
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 450;
+      }
+
+      .select-field {
+        position: relative;
+        z-index: 3;
+      }
+
+      .select-field.open {
+        z-index: 7;
+      }
+
+      .select-trigger {
+        display: flex;
+        width: 100%;
+        min-height: 28px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        color: var(--color-ink);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 650;
+        text-align: left;
+      }
+
+      .select-trigger svg {
+        width: 15px;
+        height: 15px;
+        color: var(--color-quiet);
+        transition: transform 160ms ease;
+      }
+
+      .select-trigger[aria-expanded="true"] .select-chevron {
+        transform: rotate(180deg);
+      }
+
+      .select-content {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 10px;
+        left: 10px;
+        gap: 2px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface-strong);
+        box-shadow: var(--shadow-soft);
+        padding: 4px;
+      }
+
+      .select-field.open .select-content {
+        display: grid;
+      }
+
+      .select-item {
+        display: flex;
+        min-height: 32px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        padding: 0 8px;
+        color: var(--color-ink);
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 560;
+        text-align: left;
+      }
+
+      .select-item:hover {
+        background: rgba(124, 58, 237, 0.06);
+      }
+
+      .select-item.selected {
+        background: rgba(124, 58, 237, 0.1);
+        color: var(--color-primary);
+      }
+
+      .select-item svg {
+        width: 14px;
+        height: 14px;
+        color: var(--color-primary);
+        opacity: 0;
+      }
+
+      .select-item.selected svg {
+        opacity: 1;
+      }
+
+      .field svg {
+        width: 15px;
+        height: 15px;
+        min-width: 15px;
+        color: var(--color-quiet);
+      }
+
+      .select-field .select-item svg {
+        width: 14px;
+        height: 14px;
+        min-width: 14px;
+        color: var(--color-primary);
+        opacity: 0;
+      }
+
+      .select-field .select-item.selected svg {
+        opacity: 1;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: var(--color-ink);
+        outline: none;
+        font-size: 13px;
+        font-weight: 560;
+      }
+
+      textarea {
+        min-height: 92px;
+        resize: vertical;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.78);
+        padding: 10px;
+      }
+
+      input::placeholder,
+      textarea::placeholder {
+        color: var(--color-quiet);
+      }
+
+      .panel {
+        display: grid;
+        gap: 0;
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+      }
+
+      .panel-head {
+        display: flex;
+        min-height: 72px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--color-line);
+        padding: 16px;
+      }
+
+      .panel-head h2 {
+        color: var(--color-ink);
+        font-size: 19px;
+        font-weight: 650;
+      }
+
+      .panel-head p {
+        margin-top: 3px;
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 430;
+      }
+
+      .store-stack {
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+      }
+
+      .store-card {
+        overflow: hidden;
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.8);
+      }
+
+      .store-card[open] {
+        box-shadow: var(--shadow-panel);
+      }
+
+      .store-card summary {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.1fr) repeat(5, minmax(120px, 0.72fr)) minmax(170px, auto);
+        gap: 12px;
+        align-items: center;
+        min-height: 82px;
+        padding: 14px;
+        list-style: none;
+        cursor: pointer;
+      }
+
+      .store-card summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .store-name {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .store-icon {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 12px;
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+      }
+
+      .store-icon svg {
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+      }
+
+      .store-name strong {
+        display: block;
+        color: var(--color-ink);
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .store-name span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 11px;
+      }
+
+      .store-name .store-icon {
+        display: grid;
+        place-items: center;
+        color: var(--color-primary);
+        font-size: 0;
+        line-height: 0;
+      }
+
+      .kv {
+        display: grid;
+        gap: 3px;
+        color: var(--color-muted);
+        font-size: 11px;
+      }
+
+      .kv strong {
+        color: var(--color-ink);
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .progress {
+        display: grid;
+        gap: 6px;
+      }
+
+      .bar {
+        overflow: hidden;
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(36, 28, 50, 0.08);
+      }
+
+      .bar b {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      }
+
+      .store-review-state {
+        display: grid;
+        justify-items: end;
+        gap: 7px;
+      }
+
+      .review-toggle {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid rgba(245, 158, 11, 0.28);
+        border-radius: 999px;
+        background: rgba(245, 158, 11, 0.12);
+        color: var(--color-warning);
+        cursor: pointer;
+        padding: 0 11px 0 8px;
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .review-box {
+        display: grid;
+        width: 18px;
+        height: 18px;
+        place-items: center;
+        border: 1px solid currentColor;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .review-box svg {
+        width: 12px;
+        height: 12px;
+        min-width: 12px;
+        color: var(--color-success);
+        opacity: 0;
+      }
+
+      .review-toggle.checked {
+        border-color: rgba(16, 185, 129, 0.28);
+        background: rgba(16, 185, 129, 0.13);
+        color: var(--color-success);
+      }
+
+      .review-toggle.checked .review-box svg {
+        opacity: 1;
+      }
+
+      .personnel {
+        border-top: 1px solid var(--color-line);
+        background: rgba(255, 255, 255, 0.64);
+        padding: 0 14px 14px;
+      }
+
+      .personnel-table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .personnel-table th,
+      .personnel-table td {
+        border-bottom: 1px solid var(--color-line);
+        padding: 11px 10px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      .personnel-table th {
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 620;
+      }
+
+      .personnel-table td {
+        color: var(--color-ink);
+        font-size: 12px;
+      }
+
+      .person-link {
+        border: 0;
+        background: transparent;
+        color: var(--color-primary-deep);
+        padding: 0;
+        font-weight: 650;
+        text-align: left;
+      }
+
+      .muted {
+        color: var(--color-muted);
+      }
+
+      .amount {
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .old-new {
+        display: grid;
+        gap: 2px;
+      }
+
+      .old-new s {
+        color: var(--color-muted);
+        font-size: 11px;
+      }
+
+      .badge {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .badge.good {
+        background: var(--color-success-soft);
+        color: #047857;
+      }
+
+      .badge.warn {
+        background: var(--color-warning-soft);
+        color: #a05a00;
+      }
+
+      .badge.danger {
+        background: var(--color-danger-soft);
+        color: #b4163b;
+      }
+
+      .badge.info {
+        background: var(--color-accent-soft);
+        color: #087f91;
+      }
+
+      .badge.neutral {
+        background: rgba(158, 147, 170, 0.12);
+        color: var(--color-muted);
+      }
+
+      .rate-cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 0 14px 14px;
+      }
+
+      .rate-card {
+        display: grid;
+        gap: 8px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 12px;
+      }
+
+      .rate-card h3 {
+        color: var(--color-ink);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .rate-row {
+        display: flex;
+        min-height: 26px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--color-muted);
+        font-size: 11px;
+      }
+
+      .rate-row strong {
+        color: var(--color-ink);
+        font-weight: 650;
+      }
+
+      .scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        background: rgba(23, 20, 33, 0.24);
+      }
+
+      .scrim.open {
+        display: block;
+      }
+
+      .drawer {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        bottom: 14px;
+        z-index: 30;
+        display: grid;
+        width: min(440px, calc(100vw - 28px));
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        overflow: hidden;
+        border-radius: 18px;
+        background: var(--color-surface-strong);
+        box-shadow: var(--shadow-panel);
+        transform: translateX(calc(100% + 24px));
+        transition: transform 160ms ease;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .drawer.open {
+        transform: translateX(0);
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      .drawer-head,
+      .drawer-foot {
+        padding: 18px;
+      }
+
+      .drawer-head {
+        display: grid;
+        gap: 10px;
+        border-bottom: 1px solid var(--color-line);
+      }
+
+      .drawer-title {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .drawer h3 {
+        color: var(--color-ink);
+        font-size: 20px;
+        font-weight: 650;
+      }
+
+      .drawer-body {
+        display: grid;
+        align-content: start;
+        gap: 12px;
+        overflow: auto;
+        padding: 16px 18px;
+      }
+
+      .drawer-section {
+        display: grid;
+        gap: 10px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 12px;
+      }
+
+      .drawer-section h4 {
+        margin: 0;
+        color: var(--color-ink);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .drawer-row {
+        display: flex;
+        min-height: 34px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .drawer-row strong {
+        color: var(--color-ink);
+        font-weight: 650;
+      }
+
+      .drawer-target {
+        display: grid;
+        gap: 8px;
+        border: 1px solid rgba(20, 173, 197, 0.2);
+        border-radius: 12px;
+        background: linear-gradient(135deg, rgba(124, 58, 237, 0.07), rgba(20, 173, 197, 0.07));
+        padding: 10px;
+      }
+
+      .drawer-target-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .drawer-target-head strong {
+        color: var(--color-ink);
+        font-size: 18px;
+        font-weight: 760;
+      }
+
+      .drawer-target-track {
+        height: 8px;
+        overflow: hidden;
+        border-radius: 999px;
+        background: rgba(16, 24, 40, 0.08);
+      }
+
+      .drawer-target-track span {
+        display: block;
+        width: var(--target-progress, 0%);
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+      }
+
+      .drawer-foot {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        border-top: 1px solid var(--color-line);
+      }
+
+      .close {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid var(--color-line);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--color-muted);
+      }
+
+      .close svg {
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+      }
+
+      .confirm {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 40;
+        display: none;
+        width: min(460px, calc(100vw - 28px));
+        transform: translate(-50%, -50%);
+        border-radius: 18px;
+        background: var(--color-surface-strong);
+        padding: 18px;
+        box-shadow: var(--shadow-panel);
+      }
+
+      .confirm.open {
+        display: grid;
+        gap: 14px;
+      }
+
+      .confirm h3 {
+        color: var(--color-ink);
+        font-size: 20px;
+        font-weight: 650;
+      }
+
+      .confirm p {
+        color: var(--color-muted);
+        font-size: 13px;
+      }
+
+      .confirm-grid {
+        display: grid;
+        gap: 8px;
+      }
+
+      .confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      @media (max-width: 1180px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          min-width: 0;
+          overflow: hidden;
+          border-right: 0;
+          border-bottom: 1px solid var(--color-line);
+        }
+
+        .sidebar > div:first-child {
+          min-width: 0;
+        }
+
+        .nav {
+          grid-auto-flow: column;
+          grid-auto-columns: max-content;
+          width: 100%;
+          max-width: 100%;
+          overflow-x: auto;
+          padding-bottom: 4px;
+        }
+
+        .nav a.active {
+          order: -1;
+        }
+
+        .sidebar-foot {
+          display: none;
+        }
+
+        .finance-strip {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .toolbar {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .store-card summary {
+          grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(120px, 0.7fr)) minmax(120px, auto);
+        }
+
+        .store-card summary .hide-md {
+          display: none;
+        }
+      }
+
+      @media (max-width: 820px) {
+        .main {
+          padding: 14px;
+        }
+
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .page-head {
+          grid-template-columns: 1fr;
+        }
+
+        .head-actions,
+        .top-actions {
+          justify-content: flex-start;
+        }
+
+        .metrics,
+        .toolbar,
+        .rate-cards {
+          grid-template-columns: 1fr;
+        }
+
+        .period-popover {
+          position: static;
+          width: 100%;
+          margin-top: 10px;
+          box-shadow: var(--shadow-soft);
+        }
+
+        .period-popover::before {
+          display: none;
+        }
+
+        .hero-amount-top,
+        .panel-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .store-card summary {
+          grid-template-columns: 1fr;
+          min-height: auto;
+        }
+
+        .store-review-state {
+          justify-items: start;
+        }
+
+        .store-card summary .hide-sm {
+          display: none;
+        }
+
+        .personnel {
+          overflow: hidden;
+          padding: 0 12px 12px;
+        }
+
+        .personnel-table,
+        .personnel-table tbody,
+        .personnel-table tr,
+        .personnel-table td {
+          display: block;
+          width: 100%;
+        }
+
+        .personnel-table thead {
+          display: none;
+        }
+
+        .personnel-table tr {
+          border-bottom: 1px solid var(--color-line);
+          padding: 12px 0;
+        }
+
+        .personnel-table td {
+          display: flex;
+          justify-content: space-between;
+          gap: 14px;
+          border-bottom: 0;
+          padding: 5px 0;
+          text-align: right;
+        }
+
+        .personnel-table td::before {
+          content: attr(data-label);
+          color: var(--color-muted);
+          font-size: 11px;
+          font-weight: 560;
+          text-align: left;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .btn,
+        .pill {
+          width: 100%;
+        }
+
+        .head-actions,
+        .top-actions,
+        .confirm-actions {
+          display: grid;
+          width: 100%;
+          grid-template-columns: 1fr;
+        }
+
+        .title-row {
+          align-items: flex-start;
+        }
+
+        .hero-amount strong {
+          font-size: 34px;
+        }
+
+        .drawer {
+          inset: auto 0 0;
+          width: 100%;
+          height: min(88vh, 740px);
+          border-radius: 18px 18px 0 0;
+          transform: translateY(calc(100% + 20px));
+        }
+
+        .drawer.open {
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Mağaza menüsü">
+        <div>
+          <div class="brand">
+            <span class="brand-mark">LF</span>
+            <div>
+              <strong>Lufian</strong>
+              <span>Bölge müdürü</span>
+            </div>
+          </div>
+          <nav class="nav">
+            <a href="#"><i data-lucide="home"></i>Ana Sayfa</a>
+            <a href="#"><i data-lucide="trophy"></i>Rankings</a>
+            <a href="#"><i data-lucide="activity"></i>KPI Özetleri</a>
+            <a href="#"><i data-lucide="clipboard-check"></i>Checklist</a>
+            <a href="#"><i data-lucide="inbox"></i>Talep Merkezi</a>
+            <a href="#"><i data-lucide="target"></i>Hedefler</a>
+            <a href="#"><i data-lucide="users"></i>Norm Kadro</a>
+            <a href="#"><i data-lucide="list-checks"></i>Görevler</a>
+            <a href="#"><i data-lucide="bar-chart-3"></i>Raporlar</a>
+            <a href="#" class="active"><i data-lucide="circle-dollar-sign"></i>Primler</a>
+          </nav>
+        </div>
+        <div class="sidebar-foot">
+          <strong>Ay kapanışı</strong>
+          <span>Düzeltmeleri kontrol et, dönem paketini onaya gönder.</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="workspace">
+          <div class="topbar">
+            <div>
+              <strong>Prim Merkezi</strong>
+              <span>Bölge hakediş kontrol ekranı</span>
+            </div>
+            <div class="top-actions">
+              <span class="pill"><i data-lucide="calendar-days"></i>Haziran 2026</span>
+              <button class="btn ghost" type="button"><i data-lucide="refresh-cw"></i>Yenile</button>
+            </div>
+          </div>
+
+          <header class="surface page-head">
+            <div class="title-row">
+              <span class="title-icon"><i data-lucide="circle-dollar-sign"></i></span>
+              <div>
+                <h1>Primler</h1>
+                <p class="subtitle">Mağaza ve personel hakedişleri, düzeltmeler ve onay süreci.</p>
+              </div>
+            </div>
+            <div class="head-actions">
+              <button class="btn" type="button"><i data-lucide="calendar-days"></i>Dönem seç</button>
+              <button class="btn" type="button"><i data-lucide="download"></i>Excel dışa aktar</button>
+              <button class="btn primary js-open-confirm" type="button"><i data-lucide="send"></i>Onaya gönder</button>
+            </div>
+          </header>
+
+          <section class="finance-strip" aria-label="Prim dönem özeti">
+            <article class="surface hero-amount">
+              <div class="hero-amount-top">
+                <div>
+                  <span>Haziran 2026 toplam hakediş</span>
+                  <strong>1.286.450,75 TL</strong>
+                </div>
+                <span class="badge warn" data-period-status>Kontrol edilmeli</span>
+              </div>
+              <p>24 şirket mağazası dönem paketinde. Kontrol tamamlanınca tek seferde onaya gönderilir.</p>
+            </article>
+            <aside class="surface approval-card">
+              <div>
+                <h2>Dönem gönderimi</h2>
+                <p>Mağaza mağaza onay yok; kontroller tamamlanınca paket gönderilir.</p>
+              </div>
+              <div class="approval-steps">
+                <div class="approval-step"><span>Mağaza kontrolü</span><strong data-review-count>0/24</strong></div>
+                <div class="approval-step"><span>Düzeltme notu</span><strong>7/7</strong></div>
+                <div class="approval-step"><span>Gönderim</span><strong data-send-state>Bekliyor</strong></div>
+              </div>
+            </aside>
+          </section>
+
+          <section class="metrics" aria-label="Prim üst özeti">
+            <article class="metric">
+              <span class="metric-icon plum"><i data-lucide="wallet-cards"></i></span>
+              <div>
+                <span>Toplam hakediş</span>
+                <strong>1.286.450,75 TL</strong>
+                <small>Mağaza müdürü ve ekip toplamı</small>
+              </div>
+            </article>
+            <article class="metric">
+              <span class="metric-icon mint"><i data-lucide="users"></i></span>
+              <div>
+                <span>Prim hakeden personel</span>
+                <strong>138</strong>
+                <small>%80 kapısı geçen mağazalarda</small>
+              </div>
+            </article>
+            <article class="metric">
+              <span class="metric-icon amber"><i data-lucide="sliders-horizontal"></i></span>
+              <div>
+                <span>Düzeltme yapılan kayıt</span>
+                <strong>7</strong>
+                <small>Notlu değişiklikler</small>
+              </div>
+            </article>
+            <article class="metric">
+              <span class="metric-icon cyan"><i data-lucide="clipboard-check"></i></span>
+              <div>
+                <span>Kontrol bekleyen mağaza</span>
+                <strong data-review-pending>24</strong>
+                <small>Gönderim öncesi kontrol</small>
+              </div>
+            </article>
+          </section>
+
+          <section class="toolbar" aria-label="Prim filtreleri">
+            <div class="field period-field">
+              <label id="period-label">Dönem</label>
+              <button class="period-trigger" type="button" aria-labelledby="period-label" aria-expanded="false">
+                <span><i data-lucide="calendar-days"></i><span class="period-value">Haziran 2026</span></span>
+                <i class="period-chevron" data-lucide="chevron-down"></i>
+              </button>
+              <div class="period-popover" role="dialog" aria-label="Dönem seçimi">
+                <div class="calendar-head">
+                  <div class="calendar-selects">
+                    <button class="calendar-select" type="button">2026 <i data-lucide="chevron-down"></i></button>
+                  </div>
+                  <div class="calendar-nav" aria-label="Yıl gezinme">
+                    <button class="calendar-icon-btn" type="button" aria-label="Önceki yıl">
+                      <i data-lucide="chevron-left"></i>
+                    </button>
+                    <button class="calendar-icon-btn" type="button" aria-label="Sonraki yıl">
+                      <i data-lucide="chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="period-months" aria-label="Ay seçimi">
+                  <button class="period-month" type="button">Ocak</button>
+                  <button class="period-month" type="button">Şubat</button>
+                  <button class="period-month" type="button">Mart</button>
+                  <button class="period-month" type="button">Nisan</button>
+                  <button class="period-month" type="button">Mayıs</button>
+                  <button class="period-month selected" type="button">Haziran</button>
+                  <button class="period-month" type="button">Temmuz</button>
+                  <button class="period-month" type="button">Ağustos</button>
+                  <button class="period-month" type="button">Eylül</button>
+                  <button class="period-month" type="button">Ekim</button>
+                  <button class="period-month" type="button">Kasım</button>
+                  <button class="period-month" type="button">Aralık</button>
+                </div>
+                <div class="calendar-foot">
+                  <span class="period-note">Seçili dönem: Haziran 2026</span>
+                  <button class="btn primary" type="button" data-close-period>Uygula</button>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label for="search">Mağaza ara</label>
+              <div class="control">
+                <i data-lucide="search"></i>
+                <input id="search" value="İstanbul" aria-label="Mağaza arama" />
+              </div>
+            </div>
+            <div class="field select-field">
+              <label id="status-label">Durum</label>
+              <button class="select-trigger" type="button" aria-labelledby="status-label" aria-expanded="false">
+                <span class="select-value">Tümü</span>
+                <i class="select-chevron" data-lucide="chevron-down"></i>
+              </button>
+              <div class="select-content" role="listbox" aria-label="Durum filtresi">
+                <button class="select-item selected" type="button" role="option" aria-selected="true">
+                  <span>Tümü</span>
+                  <i data-lucide="check"></i>
+                </button>
+                <button class="select-item" type="button" role="option" aria-selected="false">
+                  <span>Kontrol edilmeli</span>
+                  <i data-lucide="check"></i>
+                </button>
+                <button class="select-item" type="button" role="option" aria-selected="false">
+                  <span>Kontrol edildi</span>
+                  <i data-lucide="check"></i>
+                </button>
+                <button class="select-item" type="button" role="option" aria-selected="false">
+                  <span>Hakediş var</span>
+                  <i data-lucide="check"></i>
+                </button>
+                <button class="select-item" type="button" role="option" aria-selected="false">
+                  <span>Hakediş yok</span>
+                  <i data-lucide="check"></i>
+                </button>
+                <button class="select-item" type="button" role="option" aria-selected="false">
+                  <span>Düzeltildi</span>
+                  <i data-lucide="check"></i>
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel" aria-label="Mağaza prim hakedişleri">
+            <div class="panel-head">
+              <div>
+                <h2>Mağaza hakedişleri</h2>
+                <p>Mağazaya tıklayın, personel satırlarını kontrol edin.</p>
+              </div>
+              <span class="badge info">24 şirket mağazası</span>
+            </div>
+
+            <div class="store-stack">
+              <details class="store-card" open>
+                <summary>
+                  <div class="store-name">
+                    <span class="store-icon"><i data-lucide="store"></i></span>
+                    <div>
+                      <strong>Bağdat Caddesi</strong>
+                      <span>Şirket mağazası</span>
+                    </div>
+                  </div>
+                  <div class="kv hide-sm">
+                    <span>Mağaza hedefi</span>
+                    <strong>6.000.000 TL</strong>
+                  </div>
+                  <div class="kv hide-sm">
+                    <span>Gerçekleşen</span>
+                    <strong>6.920.000 TL</strong>
+                  </div>
+                  <div class="kv progress">
+                    <span>Hedef</span>
+                    <strong>%115,33</strong>
+                    <span class="bar"><b style="width: 96%"></b></span>
+                  </div>
+                  <div class="kv hide-md">
+                    <span>Müdür primi</span>
+                    <strong>69.200 TL</strong>
+                  </div>
+                  <div class="kv hide-md">
+                    <span>Ekip primi</span>
+                    <strong>84.300 TL</strong>
+                  </div>
+                  <div class="store-review-state">
+                    <span class="badge warn" data-store-review-badge>Kontrol edilmeli</span>
+                    <button class="review-toggle" type="button" data-store-review aria-pressed="false">
+                      <span class="review-box"><i data-lucide="check"></i></span>
+                      <span>Kontrol edildi</span>
+                    </button>
+                  </div>
+                </summary>
+                <div class="personnel">
+                  <table class="personnel-table">
+                    <thead>
+                      <tr>
+                        <th>Personel</th>
+                        <th>Rol</th>
+                        <th>Hedef</th>
+                        <th>Gerçekleşen</th>
+                        <th>Hedef %</th>
+                        <th>Oran</th>
+                        <th>Hesaplanan</th>
+                        <th>Final prim</th>
+                        <th>Not</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td data-label="Personel"><button class="person-link js-open-drawer" type="button" data-name="Mehmet Kaya" data-role="Mağaza müdürü" data-store="Bağdat Caddesi" data-target="6.000.000 TL" data-actual="6.920.000 TL" data-target-percent="%115,33" data-target-progress="100%" data-rate="0,0100" data-calculated="69.200 TL" data-final="69.200,00 TL" data-status="Düzeltme yok" data-status-tone="neutral" data-note="">Mehmet Kaya</button></td>
+                        <td data-label="Rol">Mağaza müdürü</td>
+                        <td data-label="Hedef">6.000.000 TL</td>
+                        <td data-label="Gerçekleşen">6.920.000 TL</td>
+                        <td data-label="Hedef %">%115,33</td>
+                        <td data-label="Oran">0,0100</td>
+                        <td data-label="Hesaplanan" class="amount">69.200 TL</td>
+                        <td data-label="Final prim" class="amount">69.200 TL</td>
+                        <td data-label="Not"><span class="badge neutral">Yok</span></td>
+                      </tr>
+                      <tr>
+                        <td data-label="Personel"><button class="person-link js-open-drawer" type="button" data-name="Ayşe Demir" data-role="Müdür yardımcısı" data-store="Bağdat Caddesi" data-target="1.500.000 TL" data-actual="1.780.000 TL" data-target-percent="%118,67" data-target-progress="100%" data-rate="0,0165" data-calculated="29.370 TL" data-final="31.000,00 TL" data-status="Düzeltildi" data-status-tone="warn" data-note="Bölge kontrolünde satış aktarımı eşleşmesi doğrulandı.">Ayşe Demir</button></td>
+                        <td data-label="Rol">Müdür yardımcısı</td>
+                        <td data-label="Hedef">1.500.000 TL</td>
+                        <td data-label="Gerçekleşen">1.780.000 TL</td>
+                        <td data-label="Hedef %">%118,67</td>
+                        <td data-label="Oran">0,0165</td>
+                        <td data-label="Hesaplanan" class="amount">29.370 TL</td>
+                        <td data-label="Final prim" class="old-new"><s>29.370 TL</s><strong>31.000 TL</strong></td>
+                        <td data-label="Not"><span class="badge warn">Düzeltildi</span></td>
+                      </tr>
+                      <tr>
+                        <td data-label="Personel"><button class="person-link js-open-drawer" type="button" data-name="Cem Aksoy" data-role="Satış danışmanı" data-store="Bağdat Caddesi" data-target="1.200.000 TL" data-actual="1.320.000 TL" data-target-percent="%110,00" data-target-progress="100%" data-rate="0,0165" data-calculated="21.780 TL" data-final="21.780,00 TL" data-status="Düzeltme yok" data-status-tone="neutral" data-note="">Cem Aksoy</button></td>
+                        <td data-label="Rol">Satış danışmanı</td>
+                        <td data-label="Hedef">1.200.000 TL</td>
+                        <td data-label="Gerçekleşen">1.320.000 TL</td>
+                        <td data-label="Hedef %">%110,00</td>
+                        <td data-label="Oran">0,0165</td>
+                        <td data-label="Hesaplanan" class="amount">21.780 TL</td>
+                        <td data-label="Final prim" class="amount">21.780 TL</td>
+                        <td data-label="Not"><span class="badge neutral">Yok</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+
+              <details class="store-card">
+                <summary>
+                  <div class="store-name">
+                    <span class="store-icon"><i data-lucide="store"></i></span>
+                    <div>
+                      <strong>Aqua Florya</strong>
+                      <span>Şirket mağazası</span>
+                    </div>
+                  </div>
+                  <div class="kv hide-sm">
+                    <span>Mağaza hedefi</span>
+                    <strong>4.800.000 TL</strong>
+                  </div>
+                  <div class="kv hide-sm">
+                    <span>Gerçekleşen</span>
+                    <strong>3.760.000 TL</strong>
+                  </div>
+                  <div class="kv progress">
+                    <span>Hedef</span>
+                    <strong>%78,33</strong>
+                    <span class="bar"><b style="width: 65%"></b></span>
+                  </div>
+                  <div class="kv hide-md">
+                    <span>Müdür primi</span>
+                    <strong>0 TL</strong>
+                  </div>
+                  <div class="kv hide-md">
+                    <span>Ekip primi</span>
+                    <strong>0 TL</strong>
+                  </div>
+                  <div class="store-review-state">
+                    <span class="badge warn" data-store-review-badge>Kontrol edilmeli</span>
+                    <button class="review-toggle" type="button" data-store-review aria-pressed="false">
+                      <span class="review-box"><i data-lucide="check"></i></span>
+                      <span>Kontrol edildi</span>
+                    </button>
+                  </div>
+                </summary>
+              </details>
+
+              <details class="store-card">
+                <summary>
+                  <div class="store-name">
+                    <span class="store-icon"><i data-lucide="store"></i></span>
+                    <div>
+                      <strong>İstinyePark</strong>
+                      <span>Şirket mağazası</span>
+                    </div>
+                  </div>
+                  <div class="kv hide-sm">
+                    <span>Mağaza hedefi</span>
+                    <strong>8.200.000 TL</strong>
+                  </div>
+                  <div class="kv hide-sm">
+                    <span>Gerçekleşen</span>
+                    <strong>8.640.000 TL</strong>
+                  </div>
+                  <div class="kv progress">
+                    <span>Hedef</span>
+                    <strong>%105,37</strong>
+                    <span class="bar"><b style="width: 88%"></b></span>
+                  </div>
+                  <div class="kv hide-md">
+                    <span>Müdür primi</span>
+                    <strong>60.480 TL</strong>
+                  </div>
+                  <div class="kv hide-md">
+                    <span>Ekip primi</span>
+                    <strong>112.760 TL</strong>
+                  </div>
+                  <div class="store-review-state">
+                    <span class="badge warn" data-store-review-badge>Kontrol edilmeli</span>
+                    <button class="review-toggle" type="button" data-store-review aria-pressed="false">
+                      <span class="review-box"><i data-lucide="check"></i></span>
+                      <span>Kontrol edildi</span>
+                    </button>
+                  </div>
+                </summary>
+              </details>
+            </div>
+
+            <div class="rate-cards">
+              <article class="rate-card">
+                <h3>Mağaza müdürü prim oranları</h3>
+                <div class="rate-row"><span>%80,0000 - %84,9999</span><strong>0,0020</strong></div>
+                <div class="rate-row"><span>%85,0000 - %89,9999</span><strong>0,0030</strong></div>
+                <div class="rate-row"><span>%90,0000 - %94,9999</span><strong>0,0040</strong></div>
+                <div class="rate-row"><span>%95,0000 - %99,9999</span><strong>0,0050</strong></div>
+                <div class="rate-row"><span>%100,0000 - %109,9999</span><strong>0,0070</strong></div>
+                <div class="rate-row"><span>%110,0000 ve üzeri</span><strong>0,0100</strong></div>
+              </article>
+              <article class="rate-card">
+                <h3>Satış ekibi prim oranları</h3>
+                <div class="rate-row"><span>%80,0000 - %89,9999</span><strong>0,0050</strong></div>
+                <div class="rate-row"><span>%90,0000 - %94,9999</span><strong>0,0065</strong></div>
+                <div class="rate-row"><span>%95,0000 - %99,9999</span><strong>0,0075</strong></div>
+                <div class="rate-row"><span>%100,0000 - %109,9999</span><strong>0,0150</strong></div>
+                <div class="rate-row"><span>%110,0000 ve üzeri</span><strong>0,0165</strong></div>
+                <div class="rate-row"><span>Mağaza kapısı</span><strong>%80</strong></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div class="scrim" data-close-layer></div>
+
+    <aside class="drawer" aria-label="Personel prim düzeltmesi" aria-hidden="true">
+      <div class="drawer-head">
+        <div class="drawer-title">
+          <div>
+            <h3 data-drawer-name>Ayşe Demir</h3>
+            <p class="subtitle" data-drawer-subtitle>Müdür yardımcısı, Bağdat Caddesi</p>
+          </div>
+          <button class="close" type="button" data-close-layer aria-label="Kapat">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div>
+          <span class="badge good" data-drawer-target-badge>Hedef %118,67</span>
+          <span class="badge warn" data-drawer-status>Düzeltildi</span>
+        </div>
+      </div>
+      <div class="drawer-body">
+        <section class="drawer-section">
+          <h4>Hakediş özeti</h4>
+          <div class="drawer-target">
+            <div class="drawer-target-head">
+              <span>Hedef gerçekleşme</span>
+              <strong data-drawer-target-percent>%118,67</strong>
+            </div>
+            <div class="drawer-target-track" aria-hidden="true">
+              <span data-drawer-target-bar style="--target-progress: 100%"></span>
+            </div>
+          </div>
+          <div class="drawer-row"><span>Hedef</span><strong data-drawer-target>1.500.000 TL</strong></div>
+          <div class="drawer-row"><span>Gerçekleşen</span><strong data-drawer-actual>1.780.000 TL</strong></div>
+          <div class="drawer-row"><span>Prim oranı</span><strong data-drawer-rate>0,0165</strong></div>
+          <div class="drawer-row"><span>Hesaplanan prim</span><strong data-drawer-calculated>29.370 TL</strong></div>
+        </section>
+        <section class="drawer-section">
+          <h4>Düzeltme</h4>
+          <div class="field">
+            <label for="finalAmount">Final prim tutarı</label>
+            <input id="finalAmount" value="31.000,00 TL" aria-label="Final prim tutarı" data-drawer-final />
+          </div>
+          <textarea aria-label="Düzeltme notu" data-drawer-note>Bölge kontrolünde satış aktarımı eşleşmesi doğrulandı.</textarea>
+        </section>
+      </div>
+      <div class="drawer-foot">
+        <button class="btn" type="button">Eski değere dön</button>
+        <button class="btn" type="button" data-close-layer>İptal</button>
+        <button class="btn primary" type="button" data-close-layer>Kaydet</button>
+      </div>
+    </aside>
+
+    <section class="confirm" aria-label="Prim gönderim onayı" aria-hidden="true">
+      <h3 data-confirm-title>Haziran primlerini onaya gönder</h3>
+      <p data-confirm-copy>24 mağaza, 138 personel ve 7 düzeltme admin kontrolüne gönderilecek.</p>
+      <div class="confirm-grid">
+        <div class="approval-step"><span>Toplam hakediş</span><strong>1.286.450,75 TL</strong></div>
+        <div class="approval-step"><span>Mağaza kontrolü</span><strong data-confirm-review>0/24</strong></div>
+        <div class="approval-step"><span>Düzeltme notu</span><strong>Tamam</strong></div>
+        <div class="approval-step"><span>Gönderim tipi</span><strong>Dönem paketi</strong></div>
+      </div>
+      <div class="confirm-actions">
+        <button class="btn" type="button" data-close-layer>Vazgeç</button>
+        <button class="btn primary" type="button" data-close-layer data-confirm-submit>Onaya gönder</button>
+      </div>
+    </section>
+
+    <script>
+      lucide.createIcons();
+
+      const scrim = document.querySelector(".scrim");
+      const drawer = document.querySelector(".drawer");
+      const confirmBox = document.querySelector(".confirm");
+      const periodField = document.querySelector(".period-field");
+      const periodTrigger = document.querySelector(".period-trigger");
+      const periodPopover = document.querySelector(".period-popover");
+      const periodValue = document.querySelector(".period-value");
+      const periodNote = document.querySelector(".period-note");
+      const periodYear = document.querySelector(".calendar-select");
+      const selectFields = document.querySelectorAll(".select-field");
+      const reviewTotal = 24;
+      const reviewButtons = document.querySelectorAll("[data-store-review]");
+      const reviewSummary = {
+        count: document.querySelector("[data-review-count]"),
+        pending: document.querySelector("[data-review-pending]"),
+        periodStatus: document.querySelector("[data-period-status]"),
+        sendState: document.querySelector("[data-send-state]"),
+        confirmTitle: document.querySelector("[data-confirm-title]"),
+        confirmReview: document.querySelector("[data-confirm-review]"),
+        confirmCopy: document.querySelector("[data-confirm-copy]"),
+        confirmSubmit: document.querySelector("[data-confirm-submit]"),
+      };
+      const drawerFields = {
+        name: document.querySelector("[data-drawer-name]"),
+        subtitle: document.querySelector("[data-drawer-subtitle]"),
+        targetBadge: document.querySelector("[data-drawer-target-badge]"),
+        status: document.querySelector("[data-drawer-status]"),
+        targetPercent: document.querySelector("[data-drawer-target-percent]"),
+        targetBar: document.querySelector("[data-drawer-target-bar]"),
+        target: document.querySelector("[data-drawer-target]"),
+        actual: document.querySelector("[data-drawer-actual]"),
+        rate: document.querySelector("[data-drawer-rate]"),
+        calculated: document.querySelector("[data-drawer-calculated]"),
+        final: document.querySelector("[data-drawer-final]"),
+        note: document.querySelector("[data-drawer-note]"),
+      };
+
+      function closeLayer() {
+        scrim.classList.remove("open");
+        drawer.classList.remove("open");
+        confirmBox.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+        confirmBox.setAttribute("aria-hidden", "true");
+      }
+
+      function closePeriod() {
+        periodField.classList.remove("open");
+        periodTrigger.setAttribute("aria-expanded", "false");
+      }
+
+      function closeSelects() {
+        selectFields.forEach((field) => {
+          field.classList.remove("open");
+          field.querySelector(".select-trigger").setAttribute("aria-expanded", "false");
+        });
+      }
+
+      function getReviewState() {
+        const reviewed = document.querySelectorAll("[data-store-review][aria-pressed='true']").length;
+        const pending = Math.max(reviewTotal - reviewed, 0);
+        return { reviewed, pending };
+      }
+
+      function updateReviewSummary() {
+        const { reviewed, pending } = getReviewState();
+        reviewSummary.count.textContent = `${reviewed}/${reviewTotal}`;
+        reviewSummary.pending.textContent = String(pending);
+        reviewSummary.confirmReview.textContent = `${reviewed}/${reviewTotal}`;
+
+        if (pending === 0) {
+          reviewSummary.confirmTitle.textContent = "Haziran primlerini onaya gönder";
+          reviewSummary.periodStatus.textContent = "Gönderime hazır";
+          reviewSummary.periodStatus.className = "badge good";
+          reviewSummary.sendState.textContent = "Hazır";
+          reviewSummary.confirmCopy.textContent = "Tüm mağazalar kontrol edildi; dönem paketi admin kontrolüne gönderilecek.";
+          reviewSummary.confirmSubmit.textContent = "Onaya gönder";
+          return;
+        }
+
+        reviewSummary.confirmTitle.textContent = "Kontrol tamamlanmadı";
+        reviewSummary.periodStatus.textContent = "Kontrol edilmeli";
+        reviewSummary.periodStatus.className = "badge warn";
+        reviewSummary.sendState.textContent = "Bekliyor";
+        reviewSummary.confirmCopy.textContent = `${reviewed} mağaza kontrol edildi, ${pending} mağaza kontrol bekliyor.`;
+        reviewSummary.confirmSubmit.textContent = "Kontrole dön";
+      }
+
+      function togglePeriod(event) {
+        event.stopPropagation();
+        closeSelects();
+        const willOpen = !periodField.classList.contains("open");
+        periodField.classList.toggle("open", willOpen);
+        periodTrigger.setAttribute("aria-expanded", String(willOpen));
+      }
+
+      function updateDrawer(source) {
+        const data = source.dataset;
+        drawerFields.name.textContent = data.name;
+        drawerFields.subtitle.textContent = `${data.role}, ${data.store}`;
+        drawerFields.targetBadge.textContent = `Hedef ${data.targetPercent}`;
+        drawerFields.status.textContent = data.status;
+        drawerFields.status.className = `badge ${data.statusTone || "neutral"}`;
+        drawerFields.targetPercent.textContent = data.targetPercent;
+        drawerFields.targetBar.style.setProperty("--target-progress", data.targetProgress);
+        drawerFields.target.textContent = data.target;
+        drawerFields.actual.textContent = data.actual;
+        drawerFields.rate.textContent = data.rate;
+        drawerFields.calculated.textContent = data.calculated;
+        drawerFields.final.value = data.final;
+        drawerFields.note.value = data.note || "";
+      }
+
+      function openDrawer(event) {
+        updateDrawer(event.currentTarget);
+        closePeriod();
+        closeSelects();
+        scrim.classList.add("open");
+        drawer.classList.add("open");
+        drawer.setAttribute("aria-hidden", "false");
+      }
+
+      function openConfirm() {
+        updateReviewSummary();
+        closePeriod();
+        closeSelects();
+        scrim.classList.add("open");
+        confirmBox.classList.add("open");
+        confirmBox.setAttribute("aria-hidden", "false");
+      }
+
+      periodTrigger.addEventListener("click", togglePeriod);
+      periodPopover.addEventListener("click", (event) => event.stopPropagation());
+
+      document.querySelectorAll(".period-month").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelectorAll(".period-month").forEach((month) => month.classList.remove("selected"));
+          button.classList.add("selected");
+          const nextPeriod = `${button.textContent.trim()} ${periodYear.textContent.trim()}`;
+          periodValue.textContent = nextPeriod;
+          periodNote.textContent = `Seçili dönem: ${nextPeriod}`;
+        });
+      });
+
+      document.querySelectorAll("[data-close-period]").forEach((button) => {
+        button.addEventListener("click", closePeriod);
+      });
+
+      reviewButtons.forEach((button) => {
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const checked = button.getAttribute("aria-pressed") !== "true";
+          const card = button.closest(".store-card");
+          const badge = card.querySelector("[data-store-review-badge]");
+          button.setAttribute("aria-pressed", String(checked));
+          button.classList.toggle("checked", checked);
+          badge.textContent = checked ? "Kontrol edildi" : "Kontrol edilmeli";
+          badge.className = checked ? "badge good" : "badge warn";
+          updateReviewSummary();
+        });
+      });
+
+      updateReviewSummary();
+
+      selectFields.forEach((field) => {
+        const trigger = field.querySelector(".select-trigger");
+        const content = field.querySelector(".select-content");
+        const value = field.querySelector(".select-value");
+
+        trigger.addEventListener("click", (event) => {
+          event.stopPropagation();
+          closePeriod();
+          const willOpen = !field.classList.contains("open");
+          closeSelects();
+          field.classList.toggle("open", willOpen);
+          trigger.setAttribute("aria-expanded", String(willOpen));
+        });
+
+        content.addEventListener("click", (event) => event.stopPropagation());
+
+        field.querySelectorAll(".select-item").forEach((item) => {
+          item.addEventListener("click", () => {
+            field.querySelectorAll(".select-item").forEach((option) => {
+              option.classList.remove("selected");
+              option.setAttribute("aria-selected", "false");
+            });
+            item.classList.add("selected");
+            item.setAttribute("aria-selected", "true");
+            value.textContent = item.querySelector("span").textContent.trim();
+            closeSelects();
+          });
+        });
+      });
+
+      document.querySelectorAll(".js-open-drawer").forEach((button) => {
+        button.addEventListener("click", openDrawer);
+      });
+
+      document.querySelectorAll(".js-open-confirm").forEach((button) => {
+        button.addEventListener("click", openConfirm);
+      });
+
+      document.querySelectorAll("[data-close-layer]").forEach((button) => {
+        button.addEventListener("click", closeLayer);
+      });
+
+      document.addEventListener("click", () => {
+        closePeriod();
+        closeSelects();
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeLayer();
+          closePeriod();
+          closeSelects();
+        }
+      });
+    </script>
+  </body>
+</html>

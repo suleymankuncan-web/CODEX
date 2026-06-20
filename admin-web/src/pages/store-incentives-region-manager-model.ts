@@ -8,7 +8,7 @@ import type {
 import { getPrimaryEarnedAmount } from './store-incentives-model'
 import type { StoreSurfaceTone } from './store-surface-primitives'
 
-export type StoreStatusFilter = 'all' | 'earning' | 'no_earning' | 'corrected' | 'reviewed'
+export type StoreStatusFilter = 'all' | 'pending_review' | 'reviewed' | 'earning' | 'no_earning' | 'corrected'
 
 export type SelectedIncentiveRow = {
   projection: SalesTargetIncentiveProjection
@@ -58,13 +58,16 @@ export function matchesStoreFilter(
   if (statusFilter === 'all') return true
   const storeTotal = sumMoney(projection.rows.map(getRegionEffectiveEarnedAmount))
 
+  if (statusFilter === 'pending_review') {
+    return getReviewState(projection.review).storeReviewStatus !== 'reviewed'
+  }
+  if (statusFilter === 'reviewed') {
+    return getReviewState(projection.review).storeReviewStatus === 'reviewed'
+  }
   if (statusFilter === 'earning') return isPositiveMoney(storeTotal)
   if (statusFilter === 'no_earning') return !isPositiveMoney(storeTotal)
   if (statusFilter === 'corrected') {
     return projection.rows.some((row) => row.regionCorrection && row.regionCorrection.status !== 'voided')
-  }
-  if (statusFilter === 'reviewed') {
-    return getReviewState(projection.review).storeReviewStatus === 'reviewed'
   }
 
   return true
