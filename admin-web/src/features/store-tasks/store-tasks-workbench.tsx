@@ -500,9 +500,13 @@ function renderFamilyIcon(family: WorkbenchRowFamily) {
 
 const toneSurfaceClasses: Record<StoreSurfaceTone, string> = {
   accent: 'tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:text-[#08798d]',
+  amber: 'tw:border-chart-4/30 tw:bg-chart-4/15 tw:text-chart-4',
   calm: 'tw:border-[#10b981]/25 tw:bg-[#e8fbf3] tw:text-[#06784e]',
+  cyan: 'tw:border-accent/25 tw:bg-accent/10 tw:text-accent',
   danger: 'tw:border-[#ef426f]/25 tw:bg-[#ffe8ef] tw:text-[#d6244f]',
+  mint: 'tw:border-emerald-500/20 tw:bg-emerald-500/10 tw:text-emerald-700',
   neutral: 'tw:border-[#dbe5f2] tw:bg-white/80 tw:text-[#071631]',
+  plum: 'tw:border-primary/20 tw:bg-primary/10 tw:text-primary',
   warning: 'tw:border-[#f59e0b]/25 tw:bg-[#fff4df] tw:text-[#925900]',
 }
 
@@ -510,32 +514,48 @@ const softPlumActionClass = 'store-command-soft-action'
 
 const summaryIconClasses: Record<StoreSurfaceTone, string> = {
   accent: 'tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:text-[#08798d]',
+  amber: 'tw:border-chart-4/30 tw:bg-chart-4/15 tw:text-chart-4',
   calm: 'tw:border-[#10b981]/25 tw:bg-[#e8fbf3] tw:text-[#06784e]',
+  cyan: 'tw:border-accent/25 tw:bg-accent/10 tw:text-accent',
   danger: 'tw:border-[#ef426f]/25 tw:bg-[#ffe8ef] tw:text-[#d6244f]',
+  mint: 'tw:border-emerald-500/20 tw:bg-emerald-500/10 tw:text-emerald-700',
   neutral: 'tw:border-[#6847f5]/20 tw:bg-[#eee9ff] tw:text-[#5a37df]',
+  plum: 'tw:border-primary/20 tw:bg-primary/10 tw:text-primary',
   warning: 'tw:border-[#f59e0b]/25 tw:bg-[#fff4df] tw:text-[#925900]',
 }
 
 const summaryBadgeClasses: Record<StoreSurfaceTone, string> = {
   accent: 'tw:border-[#10adc5]/25 tw:bg-[#e6fbff] tw:text-[#08798d]',
+  amber: 'tw:border-chart-4/30 tw:bg-chart-4/15 tw:text-chart-4',
   calm: 'tw:border-[#10b981]/25 tw:bg-[#e8fbf3] tw:text-[#06784e]',
+  cyan: 'tw:border-accent/25 tw:bg-accent/10 tw:text-accent',
   danger: 'tw:border-[#ef426f]/25 tw:bg-[#ffe8ef] tw:text-[#d6244f]',
+  mint: 'tw:border-emerald-500/20 tw:bg-emerald-500/10 tw:text-emerald-700',
   neutral: 'tw:border-[#dbe5f2] tw:bg-[#eef2f8] tw:text-[#62708a]',
+  plum: 'tw:border-primary/20 tw:bg-primary/10 tw:text-primary',
   warning: 'tw:border-[#f59e0b]/25 tw:bg-[#fff4df] tw:text-[#925900]',
 }
 
 const rowAccentClasses: Record<StoreSurfaceTone, string> = {
   accent: 'tw:bg-[#10adc5]',
+  amber: 'tw:bg-chart-4',
   calm: 'tw:bg-[#10b981]',
+  cyan: 'tw:bg-accent',
   danger: 'tw:bg-[#ef426f]',
+  mint: 'tw:bg-emerald-500',
   neutral: 'tw:bg-[#dbe5f2]',
+  plum: 'tw:bg-primary',
   warning: 'tw:bg-[#f59e0b]',
 }
 
 const rowBackgroundClasses: Record<StoreSurfaceTone, string> = {
   accent: 'tw:bg-[linear-gradient(90deg,rgba(16,173,197,0.07),rgba(255,255,255,0.62)_42%)]',
+  amber: 'tw:bg-chart-4/10',
   calm: 'tw:bg-white/60',
+  cyan: 'tw:bg-accent/5',
   danger: 'tw:bg-[linear-gradient(90deg,rgba(239,66,111,0.08),rgba(255,255,255,0.62)_42%)]',
+  mint: 'tw:bg-emerald-500/5',
   neutral: 'tw:bg-white/60',
+  plum: 'tw:bg-primary/5',
   warning: 'tw:bg-[linear-gradient(90deg,rgba(245,158,11,0.08),rgba(255,255,255,0.62)_42%)]',
 }

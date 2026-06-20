@@ -1,12 +1,10 @@
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 import { type UseMutationResult } from '@tanstack/react-query'
 import {
-  CalendarDays,
   ClipboardCheck,
   CircleDollarSign,
   Download,
   RefreshCw,
-  RotateCcw,
   Search,
   Send,
   SlidersHorizontal,
@@ -14,6 +12,12 @@ import {
   UsersRound,
   WalletCards,
 } from 'lucide-react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -24,25 +28,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group'
 import { Progress } from '@/components/ui/progress'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import {
   type SalesTargetIncentiveProjection,
@@ -60,7 +60,6 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
 import {
   formatMoneyValue,
-  formatPercentValue,
   formatRateValue,
   getIncentivePositionLabel,
   getManagerRow,
@@ -73,25 +72,38 @@ import {
   canReviewProjection,
   getCorrectionLabel,
   getCorrectionTone,
-  getPackageStatus,
   getProjectionWorkflowStatus,
   getRegionEffectiveEarnedAmount,
   getRegionSummary,
   getReviewState,
-  getSubmitDisabledReason,
   isPackageLocked,
   matchesStoreFilter,
-  normalizeMoneyInput,
   sumMoney,
   type SelectedIncentiveRow,
   type StoreStatusFilter,
 } from './store-incentives-region-manager-model'
+import {
+  formatAchievementState,
+  formatIncentiveMoneyValue,
+  formatSalesMoneyValue,
+  formatTargetMoneyValue,
+  getFinalChange,
+  getStoreGateLabel,
+  getStoreGateState,
+  regionManagerPrimaryActionClass,
+} from './store-incentives-region-manager-format'
+import { IncentiveCorrectionSheet } from './store-incentives-region-manager-sheet'
 import { IncentiveRateTables } from './store-incentives-widgets'
 import {
+  StoreCommandBar,
+  StoreCommandPersonLink,
   StoreEmptyState,
   StoreErrorState,
-  StoreInfoGrid,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSectionCard,
   StoreStatusBadge,
+  StoreSurfaceHeader,
   StoreSurfacePage,
 } from './store-surface-primitives'
 
@@ -123,6 +135,7 @@ export function RegionManagerIncentivesView(input: {
     >
   }
 }) {
+  const { t } = useLocalization()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('all')
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(
@@ -135,7 +148,6 @@ export function RegionManagerIncentivesView(input: {
   const visibleProjections = input.data.projections.filter((projection) =>
     matchesStoreFilter(projection, search, statusFilter),
   )
-  const packageStatus = getPackageStatus(workflow)
   const allStoresReviewed = summary.pendingReviewCount === 0
   const allStoresClosed = summary.projectionOnlyCount === 0
   const packageCanSubmit =
@@ -143,12 +155,6 @@ export function RegionManagerIncentivesView(input: {
     allStoresReviewed &&
     allStoresClosed &&
     !isPackageLocked(workflow)
-  const submitDisabledReason = getSubmitDisabledReason({
-    workflow,
-    allStoresReviewed,
-    allStoresClosed,
-  })
-  const sendStateLabel = submitDisabledReason ?? 'Gönderime hazır'
   const workflowLocked = isPackageLocked(workflow)
   const mutationError =
     input.mutationState.reviewMutation.error ??
@@ -158,194 +164,167 @@ export function RegionManagerIncentivesView(input: {
 
   return (
     <StoreSurfacePage
-      ariaLabel="Primler"
-      className="tw:mx-auto tw:w-full tw:max-w-[1420px]"
+      ariaLabel={t('storeIncentives.regionManagerAria')}
       testId="store-incentives-page"
     >
-      <div className="tw:flex tw:min-h-10 tw:flex-col tw:gap-3 tw:text-xs tw:text-muted-foreground tw:md:flex-row tw:md:items-center tw:md:justify-between">
-        <p>
-          <strong className="tw:text-foreground">Prim Merkezi</strong>{' '}
-          Bölge hakediş kontrol ekranı
-        </p>
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
-          <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
-          <Button type="button" variant="outline" onClick={() => undefined}>
-            <RefreshCw data-icon="inline-start" />
-            Yenile
-          </Button>
-        </div>
-      </div>
+      <StoreCommandBar
+        title={t('storeIncentives.regionManagerTitle')}
+        description={t('storeIncentives.regionManagerCommandDescription')}
+        end={(
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <Button type="button" variant="outline" onClick={() => undefined}>
+              <Download data-icon="inline-start" />
+              {t('storeIncentives.regionManagerExportExcel')}
+            </Button>
+            <Button
+              className={regionManagerPrimaryActionClass}
+              type="button"
+              disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
+              onClick={() => setSubmitDialogOpen(true)}
+            >
+              <Send data-icon="inline-start" />
+              {workflow?.regionPackageStatus === 'admin_returned'
+                ? t('storeIncentives.regionManagerResubmit')
+                : t('storeIncentives.regionManagerSubmit')}
+            </Button>
+          </div>
+        )}
+      />
 
-      <header className="tw:grid tw:gap-4 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-4 tw:shadow-sm tw:lg:grid-cols-[minmax(0,1fr)_auto] tw:lg:items-center">
-        <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
-          <span className="tw:flex tw:size-12 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-2xl tw:bg-gradient-to-br tw:from-primary tw:to-accent tw:text-primary-foreground tw:shadow-sm">
-            <CircleDollarSign size={23} />
-          </span>
-          <div className="tw:min-w-0">
-            <h1 className="tw:text-3xl tw:font-semibold tw:leading-none tw:text-foreground tw:md:text-4xl">
-              Primler
-            </h1>
-            <p className="tw:mt-1 tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              Mağaza ve personel hakedişleri, düzeltmeler ve onay süreci.
-            </p>
-          </div>
-        </div>
-        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:flex-wrap tw:sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => undefined}>
-            <CalendarDays data-icon="inline-start" />
-            Dönem seç
-          </Button>
-          <Button type="button" variant="outline" onClick={() => undefined}>
-            <Download data-icon="inline-start" />
-            Excel dışa aktar
-          </Button>
-          <Button type="button" disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending} onClick={() => setSubmitDialogOpen(true)}>
-            <Send data-icon="inline-start" />
-            {workflow?.regionPackageStatus === 'admin_returned' ? 'Tekrar gönder' : 'Onaya gönder'}
-          </Button>
-        </div>
-      </header>
+      <StoreSurfaceHeader
+        title={t('storeIncentives.regionManagerTitle')}
+        description={t('storeIncentives.regionManagerCopy')}
+        icon={<CircleDollarSign size={23} />}
+      />
 
-      <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_16.25rem]">
-        <section className="tw:grid tw:min-h-56 tw:content-between tw:gap-4 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-gradient-to-br tw:from-primary/10 tw:to-accent/10 tw:p-5 tw:shadow-sm">
-          <div className="tw:flex tw:items-start tw:justify-between tw:gap-4">
-            <div>
-              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
-                {formatPeriodLabel(input.data.period)} toplam hakediş
-              </span>
-              <strong className="tw:mt-3 tw:block tw:text-5xl tw:font-semibold tw:leading-none tw:text-foreground">
-                {formatMoneyValue(summary.payableTotal, input.locale)}
-              </strong>
-            </div>
-            <StoreStatusBadge tone={packageStatus.tone}>
-              {packageStatus.label}
-            </StoreStatusBadge>
-          </div>
-          <p className="tw:max-w-2xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-            {summary.storeCount} şirket mağazası dönem paketinde. Kontrol tamamlanınca tek seferde onaya gönderilir.
-          </p>
-        </section>
-        <section className="tw:grid tw:content-between tw:gap-4 tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-5 tw:shadow-sm">
-          <div>
-            <h2 className="tw:text-lg tw:font-semibold tw:text-foreground">Dönem gönderimi</h2>
-            <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
-              Mağaza mağaza onay yok; kontroller tamamlanınca paket gönderilir.
-            </p>
-          </div>
-          <div className="tw:grid tw:gap-2">
-            <ApprovalStep label="Mağaza kontrolü" value={`${summary.reviewedStoreCount}/${summary.storeCount}`} />
-            <ApprovalStep label="Düzeltme notu" value={summary.correctionCount > 0 ? `${summary.correctionCount}/${summary.correctionCount}` : 'Yok'} />
-            <ApprovalStep label="Gönderim" value={sendStateLabel} />
-          </div>
-        </section>
-      </div>
-
-      <section
-        aria-label="Bölge prim özeti"
-        className="tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
-      >
-        <RegionMetricCard
-          title="Toplam hakediş"
+      <StoreMetricGrid ariaLabel={t('storeIncentives.regionManagerSummaryAria')}>
+        <StoreMetricCard
+          title={t('storeIncentives.regionManagerTotalTitle')}
           value={formatMoneyValue(summary.payableTotal, input.locale)}
-          note="Mağaza müdürü ve ekip toplamı"
+          note={t('storeIncentives.regionManagerTotalNote')}
           icon={<WalletCards size={20} />}
           tone="plum"
         />
-        <RegionMetricCard
-          title="Prim hakeden personel"
+        <StoreMetricCard
+          title={t('storeIncentives.regionManagerEarningPersonnelTitle')}
           value={summary.earningPersonnelCount}
-          note="%80 kapısı geçen mağazalarda"
+          note={t('storeIncentives.regionManagerEarningPersonnelNote')}
           icon={<UsersRound size={20} />}
           tone="mint"
         />
-        <RegionMetricCard
-          title="Düzeltme yapılan kayıt"
+        <StoreMetricCard
+          title={t('storeIncentives.regionManagerCorrectionTitle')}
           value={summary.correctionCount}
-          note="Notlu değişiklikler"
+          note={t('storeIncentives.regionManagerCorrectionNote')}
           icon={<SlidersHorizontal size={20} />}
           tone="amber"
         />
-        <RegionMetricCard
-          title="Kontrol bekleyen mağaza"
+        <StoreMetricCard
+          title={t('storeIncentives.regionManagerPendingReviewTitle')}
           value={summary.pendingReviewCount}
-          note="Gönderim öncesi kontrol"
+          note={t('storeIncentives.regionManagerPendingReviewNote')}
           icon={<ClipboardCheck size={20} />}
           tone="cyan"
         />
-      </section>
+      </StoreMetricGrid>
 
       {mutationError ? (
         <StoreErrorState
-          title="İşlem tamamlanamadı"
+          title={t('storeIncentives.regionManagerMutationErrorTitle')}
           description={getErrorMessage(mutationError)}
         />
       ) : null}
 
-      <div className="tw:grid tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-3 tw:shadow-sm">
-        <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(18rem,0.95fr)_minmax(18rem,1.2fr)_minmax(13rem,0.85fr)]">
-          <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
-            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Dönem</span>
-            <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
-          </div>
-          <label className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
-            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Mağaza ara</span>
-            <span className="tw:relative tw:block">
-              <Search
-                size={16}
-                className="tw:pointer-events-none tw:absolute tw:left-0 tw:top-1/2 tw:-translate-y-1/2 tw:text-muted-foreground"
-              />
-              <Input aria-label="Mağaza ara" className="tw:h-8 tw:border-0 tw:bg-transparent tw:pl-7 tw:shadow-none tw:focus-visible:ring-0" onChange={(event) => setSearch(event.target.value)} placeholder="Mağaza ara" value={search} />
+      <section
+        aria-label="Prim filtreleri"
+        className="tw:rounded-2xl tw:border tw:border-border/80 tw:bg-card/80 tw:p-3 tw:shadow-sm"
+      >
+        <div className="tw:grid tw:gap-2 tw:lg:grid-cols-[minmax(13rem,0.75fr)_minmax(18rem,1.2fr)_minmax(12rem,0.75fr)_auto]">
+          <div className="tw:flex tw:h-11 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/80 tw:px-3">
+            <span className="tw:shrink-0 tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {t('storeIncentives.regionManagerPeriodField')}
             </span>
-          </label>
-          <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
-            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Durum</span>
+            <div className="tw:min-w-0 tw:flex-1">
+              <PeriodPicker
+                period={input.selectedPeriod}
+                onChange={input.onPeriodChange}
+                triggerClassName="tw:h-9 tw:w-full tw:justify-start tw:border-0 tw:bg-transparent tw:px-0 tw:font-semibold tw:shadow-none tw:hover:bg-transparent tw:focus-visible:ring-0"
+              />
+            </div>
+          </div>
+
+          <div className="tw:flex tw:h-11 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/80 tw:px-3">
+            <span className="tw:shrink-0 tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {t('storeIncentives.regionManagerSearchField').replace(' ara', '')}
+            </span>
+            <InputGroup className="tw:h-9 tw:flex-1 tw:border-0 tw:bg-transparent tw:shadow-none">
+              <InputGroupAddon className="tw:pl-0">
+                <Search />
+              </InputGroupAddon>
+              <InputGroupInput
+                aria-label={t('storeIncentives.regionManagerSearchField')}
+                className="tw:h-9 tw:px-0 tw:font-semibold"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('storeIncentives.regionManagerSearchPlaceholder')}
+                value={search}
+              />
+            </InputGroup>
+          </div>
+
+          <div className="tw:flex tw:h-11 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/80 tw:px-3">
+            <span className="tw:shrink-0 tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {t('storeIncentives.regionManagerStatusField')}
+            </span>
             <Select
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StoreStatusFilter)}
             >
-              <SelectTrigger aria-label="Durum filtresi" className="tw:h-8 tw:border-0 tw:bg-transparent tw:px-0 tw:shadow-none tw:focus:ring-0">
-                <SelectValue placeholder="Durum" />
+              <SelectTrigger aria-label={t('storeIncentives.regionManagerStatusField')} className="tw:h-9 tw:flex-1 tw:border-0 tw:bg-transparent tw:px-0 tw:font-semibold tw:shadow-none tw:focus:ring-0">
+                <SelectValue placeholder={t('storeIncentives.regionManagerStatusPlaceholder')} />
               </SelectTrigger>
               <SelectContent align="end">
-                <SelectItem value="all">Tümü</SelectItem>
-                <SelectItem value="pending_review">Kontrol edilmeli</SelectItem>
-                <SelectItem value="reviewed">Kontrol edildi</SelectItem>
-                <SelectItem value="earning">Hakediş var</SelectItem>
-                <SelectItem value="no_earning">Hakediş yok</SelectItem>
-                <SelectItem value="corrected">Düzeltildi</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="all">{t('storeIncentives.regionManagerStatusAll')}</SelectItem>
+                  <SelectItem value="pending_review">{t('storeIncentives.regionManagerStatusPendingReview')}</SelectItem>
+                  <SelectItem value="reviewed">{t('storeIncentives.regionManagerStatusReviewed')}</SelectItem>
+                  <SelectItem value="earning">{t('storeIncentives.regionManagerStatusEarning')}</SelectItem>
+                  <SelectItem value="no_earning">{t('storeIncentives.regionManagerStatusNoEarning')}</SelectItem>
+                  <SelectItem value="corrected">{t('storeIncentives.regionManagerStatusCorrected')}</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </div>
 
-      <section
-        aria-label="Mağaza prim hakedişleri"
-        className="tw:overflow-visible tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm"
-      >
-        <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:p-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-          <div>
-            <h2 className="tw:text-xl tw:font-semibold tw:leading-snug tw:text-foreground">
-              Mağaza hakedişleri
-            </h2>
-            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              Mağazaya tıklayın, personel satırlarını kontrol edin.
-            </p>
-          </div>
-          <StoreStatusBadge tone="accent">
-            {summary.storeCount} şirket mağazası
-          </StoreStatusBadge>
+          <Button
+            className="tw:h-11 tw:rounded-xl tw:border-border/80 tw:bg-background/80 tw:px-3 tw:font-semibold tw:shadow-none tw:hover:bg-muted/60"
+            type="button"
+            variant="outline"
+            onClick={() => undefined}
+          >
+            <RefreshCw data-icon="inline-start" />
+            {t('storeIncentives.regionManagerRefresh')}
+          </Button>
         </div>
+      </section>
+
+      <StoreSectionCard
+        ariaLabel={t('storeIncentives.regionManagerStoresAria')}
+        title={t('storeIncentives.regionManagerStoresTitle')}
+        description={t('storeIncentives.regionManagerStoresCopy')}
+        badge={{ label: t('storeIncentives.regionManagerCompanyStoreCount', { count: summary.storeCount }), tone: 'accent' }}
+      >
         {visibleProjections.length > 0 ? (
-          <div className="tw:flex tw:flex-col tw:gap-3 tw:p-3">
+          <Accordion
+            type="single"
+            collapsible
+            value={expandedStoreId ?? ''}
+            onValueChange={(value) => setExpandedStoreId(value || null)}
+            className="tw:gap-3"
+          >
             {visibleProjections.map((projection) => (
               <RegionStoreCard
-                expanded={expandedStoreId === projection.storeId}
                 key={projection.storeId}
                 locale={input.locale}
-                onOpenChange={() =>
-                  setExpandedStoreId(expandedStoreId === projection.storeId ? null : projection.storeId)
-                }
                 onReviewChange={(reviewStatus) =>
                   input.mutationState.reviewMutation.mutate({
                     period: input.data.period,
@@ -358,13 +337,11 @@ export function RegionManagerIncentivesView(input: {
                 reviewDisabled={workflowLocked || !canReviewProjection(projection)}
               />
             ))}
-          </div>
+          </Accordion>
         ) : (
-          <div className="tw:p-4">
-            <StoreEmptyState description="Bu filtrelerle eşleşen mağaza yok." />
-          </div>
+          <StoreEmptyState description={t('storeIncentives.regionManagerNoStoreMatch')} />
         )}
-      </section>
+      </StoreSectionCard>
 
       <IncentiveRateTables />
 
@@ -381,25 +358,64 @@ export function RegionManagerIncentivesView(input: {
       />
 
       <Dialog open={isSubmitDialogOpen} onOpenChange={setSubmitDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{formatPeriodLabel(input.data.period)} primlerini onaya gönder</DialogTitle>
-            <DialogDescription>
-              {summary.storeCount} mağaza ve {summary.correctionCount} düzeltme kaydı admin onayına gönderilecek.
-            </DialogDescription>
+        <DialogContent className="tw:w-[calc(100vw-64px)] tw:max-w-[30rem] tw:overflow-hidden tw:p-0 tw:sm:max-w-[30rem]">
+          <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/20 tw:p-5">
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <span className="tw:flex tw:size-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-2xl tw:bg-primary/10 tw:text-primary">
+                <Send size={18} />
+              </span>
+              <div>
+                <DialogTitle>
+                  {t('storeIncentives.regionManagerSubmitDialogTitle', { period: formatPeriodLabel(input.data.period) })}
+                </DialogTitle>
+                <DialogDescription className="tw:mt-1">
+                  Kontrol edilen dönem paketi admin onayına gönderilecek.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <StoreInfoGrid
-            className="tw:grid-cols-2"
-            items={[
-              { label: 'Toplam hakediş', value: formatMoneyValue(summary.payableTotal, input.locale), tone: 'calm' },
-              { label: 'Kontrol edilen mağaza', value: `${summary.reviewedStoreCount}/${summary.storeCount}`, tone: allStoresReviewed ? 'calm' : 'warning' },
-            ]}
-          />
-          <DialogFooter>
+          <div className="tw:grid tw:gap-3 tw:p-5">
+            <div className="tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:p-4">
+              <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
+                <span className="tw:text-sm tw:text-muted-foreground">{t('storeIncentives.regionManagerTotalTitle')}</span>
+                <strong className="tw:text-xl tw:font-semibold tw:text-foreground">
+                  {formatMoneyValue(summary.payableTotal, input.locale)}
+                </strong>
+              </div>
+              <div className="tw:mt-4 tw:grid tw:gap-2">
+                <DialogAmountLine
+                  label={t('storeIncentives.regionManagerReviewedStores')}
+                  value={`${summary.reviewedStoreCount}/${summary.storeCount}`}
+                />
+                <DialogAmountLine
+                  label={t('storeIncentives.regionManagerCorrectionTitle')}
+                  value={String(summary.correctionCount)}
+                />
+                <DialogAmountLine label="Gönderim tipi" value="Dönem paketi" />
+              </div>
+            </div>
+            <div className="tw:rounded-2xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
+              <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
+                <span className="tw:text-sm tw:font-medium tw:text-foreground">Kontrol ilerlemesi</span>
+                <StoreStatusBadge tone={allStoresReviewed ? 'calm' : 'warning'}>
+                  {allStoresReviewed ? 'Gönderime hazır' : `${summary.pendingReviewCount} mağaza bekliyor`}
+                </StoreStatusBadge>
+              </div>
+              <Progress
+                className="tw:mt-3"
+                value={summary.storeCount > 0 ? (summary.reviewedStoreCount / summary.storeCount) * 100 : 0}
+              />
+              <p className="tw:mt-3 tw:text-xs tw:leading-5 tw:text-muted-foreground">
+                Onaya gönderildiğinde paket dönem bazında tek kayıt olarak admin kontrolüne düşer.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="tw:mx-0 tw:mb-0 tw:flex-row tw:items-center tw:justify-end tw:border-t tw:border-border tw:bg-muted/20 tw:p-4">
             <Button type="button" variant="outline" onClick={() => setSubmitDialogOpen(false)}>
-              Vazgeç
+              {t('storeIncentives.regionManagerCancel')}
             </Button>
             <Button
+              className={regionManagerPrimaryActionClass}
               type="button"
               disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
               onClick={() => {
@@ -412,7 +428,7 @@ export function RegionManagerIncentivesView(input: {
               }}
             >
               <Send data-icon="inline-start" />
-              Onaya gönder
+              {t('storeIncentives.regionManagerSubmit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -421,110 +437,83 @@ export function RegionManagerIncentivesView(input: {
   )
 }
 
-function ApprovalStep(input: { label: string; value: string }) {
-  return (
-    <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-muted/30 tw:px-3 tw:py-2">
-      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
-      <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.value}</strong>
-    </div>
-  )
-}
-
-function RegionMetricCard(input: {
-  title: string
-  value: string | number
-  note: string
-  icon: ReactNode
-  tone: 'plum' | 'mint' | 'amber' | 'cyan'
-}) {
-  const toneClasses: Record<'plum' | 'mint' | 'amber' | 'cyan', string> = {
-    amber: 'tw:bg-chart-4/15 tw:text-chart-4',
-    cyan: 'tw:bg-accent/10 tw:text-accent',
-    mint: 'tw:bg-emerald-500/10 tw:text-emerald-600',
-    plum: 'tw:bg-primary/10 tw:text-primary',
-  }
-
-  return (
-    <article className="tw:grid tw:min-h-28 tw:grid-cols-[2.75rem_minmax(0,1fr)] tw:items-center tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card/95 tw:p-4 tw:shadow-sm">
-      <span
-        className={cn(
-          'tw:flex tw:size-11 tw:items-center tw:justify-center tw:rounded-xl',
-          toneClasses[input.tone],
-        )}
-      >
-        {input.icon}
-      </span>
-      <span className="tw:min-w-0">
-        <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.title}</span>
-        <strong className="tw:mt-1 tw:block tw:truncate tw:text-2xl tw:font-semibold tw:leading-none tw:text-foreground">
-          {input.value}
-        </strong>
-        <span className="tw:mt-2 tw:block tw:text-xs tw:leading-5 tw:text-muted-foreground">{input.note}</span>
-      </span>
-    </article>
-  )
-}
-
 function RegionStoreCard(input: {
   projection: SalesTargetIncentiveProjection
   locale: ReturnType<typeof useLocalization>['locale']
-  expanded: boolean
   reviewDisabled: boolean
-  onOpenChange: () => void
   onSelectRow: (row: SalesTargetIncentiveRow) => void
   onReviewChange: (status: 'pending_review' | 'reviewed') => void
 }) {
+  const { t } = useLocalization()
   const manager = getManagerRow(input.projection)
   const personnel = getPersonnelRows(input.projection)
+  const rows = [...(manager ? [manager] : []), ...personnel]
   const personnelTotal = sumMoney(personnel.map(getRegionEffectiveEarnedAmount))
   const review = getReviewState(input.projection.review)
   const status = getProjectionWorkflowStatus(input.projection)
   const achievementProgress = toProgressPercent(input.projection.storeAchievementPct) ?? 0
+  const gate = getStoreGateState(input.projection)
+  const gateLabel = getStoreGateLabel(input.projection)
 
   return (
-    <article
+    <AccordionItem
       className={cn(
-        'tw:overflow-hidden tw:rounded-xl tw:border tw:border-border tw:bg-card tw:shadow-sm tw:transition-colors',
-        input.expanded ? 'tw:ring-1 tw:ring-primary/15' : undefined,
+        'tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm tw:data-[state=open]:shadow-xl tw:data-[state=open]:ring-1 tw:data-[state=open]:ring-primary/15',
       )}
+      data-slot="card"
+      value={input.projection.storeId}
     >
-      <div className="tw:grid tw:gap-3 tw:p-3 tw:lg:grid-cols-[minmax(13rem,1.45fr)_repeat(5,minmax(7rem,0.72fr))_minmax(9rem,0.9fr)] tw:lg:items-center">
-        <div
-          aria-expanded={input.expanded}
-          className="tw:flex tw:min-w-0 tw:items-center tw:gap-3 tw:text-left"
-          onClick={input.onOpenChange}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault()
-              input.onOpenChange()
-            }
-          }}
-          role="button"
-          tabIndex={0}
+      <AccordionTrigger
+        className={cn(
+          'tw:relative tw:overflow-hidden tw:px-3.5 tw:py-3 tw:hover:no-underline',
+          gate.known
+            ? gate.passed
+              ? 'tw:bg-chart-2/10 tw:hover:bg-chart-2/15 tw:data-[state=open]:bg-chart-2/15'
+              : 'tw:bg-destructive/10 tw:hover:bg-destructive/15 tw:data-[state=open]:bg-destructive/15'
+            : 'tw:bg-muted/30 tw:hover:bg-muted/40 tw:data-[state=open]:bg-muted/40',
+        )}
         >
-          <span className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
-            <Store size={17} />
-          </span>
-          <span className="tw:min-w-0">
-            <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
-              {input.projection.storeName}
+        <div className="tw:grid tw:w-full tw:min-w-0 tw:gap-3 tw:pr-3 tw:lg:grid-cols-[minmax(14rem,1.1fr)_repeat(5,minmax(7.5rem,0.72fr))_minmax(8.5rem,auto)] tw:lg:items-center">
+          <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+            <span className="tw:flex tw:size-[38px] tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
+              <Store size={17} />
             </span>
-            <span className="tw:mt-0.5 tw:block tw:text-xs tw:text-muted-foreground">
-              Şirket mağazası
+            <span className="tw:min-w-0">
+              <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
+                {input.projection.storeName}
+              </span>
+              <span className="tw:mt-0.5 tw:block tw:text-xs tw:text-muted-foreground">
+                {t('storeIncentives.regionManagerStoreType')}
+              </span>
             </span>
-          </span>
+          </div>
+          <StoreKv label={t('storeIncentives.regionManagerStoreTarget')} value={formatTargetMoneyValue(input.projection.storeTarget, input.locale)} />
+          <StoreKv label={t('storeIncentives.regionManagerStoreActual')} value={formatSalesMoneyValue(input.projection.storeActualNetSales, input.locale)} />
+          <div className="tw:grid tw:gap-1">
+            <StoreKv
+              label={t('storeIncentives.regionManagerAchievement')}
+              value={formatAchievementState(
+                input.projection.storeAchievementPct,
+                input.projection.storeTarget,
+                input.projection.storeActualNetSales,
+                input.locale,
+              )}
+            />
+            <Progress value={achievementProgress} />
+          </div>
+          <StoreKv label={t('storeIncentives.regionManagerManagerIncentive')} value={formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(manager), input.locale)} />
+          <StoreKv label={t('storeIncentives.regionManagerTeamIncentive')} value={formatIncentiveMoneyValue(personnelTotal, input.locale)} />
+          <div className="tw:flex tw:flex-wrap tw:items-start tw:gap-2 tw:lg:justify-end">
+            <StoreStatusBadge tone={gate.known ? (gate.passed ? 'calm' : 'danger') : 'neutral'}>
+              {gateLabel}
+            </StoreStatusBadge>
+            <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
+          </div>
         </div>
-        <StoreKv label="Mağaza hedefi" value={formatMoneyValue(input.projection.storeTarget, input.locale)} />
-        <StoreKv label="Gerçekleşen" value={formatMoneyValue(input.projection.storeActualNetSales, input.locale)} />
-        <div className="tw:grid tw:gap-1">
-          <StoreKv label="Hedef" value={formatPercentValue(input.projection.storeAchievementPct, input.locale)} />
-          <Progress value={achievementProgress} />
-        </div>
-        <StoreKv label="Müdür primi" value={formatMoneyValue(getRegionEffectiveEarnedAmount(manager), input.locale)} />
-        <StoreKv label="Ekip primi" value={formatMoneyValue(personnelTotal, input.locale)} />
-        <div className="tw:flex tw:flex-col tw:items-start tw:gap-2 tw:lg:items-end">
-          <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
-          <label className="tw:inline-flex tw:min-h-9 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/10 tw:px-3 tw:text-sm tw:font-medium tw:text-chart-4">
+      </AccordionTrigger>
+      <AccordionContent className="tw:border-t tw:border-border tw:bg-muted/20 tw:p-3">
+        <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
+          <label className="tw:inline-flex tw:min-h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/10 tw:px-3 tw:text-xs tw:font-semibold tw:text-chart-4">
             <Checkbox
               checked={review.storeReviewStatus === 'reviewed'}
               disabled={input.reviewDisabled}
@@ -532,20 +521,24 @@ function RegionStoreCard(input: {
                 input.onReviewChange(checked === true ? 'reviewed' : 'pending_review')
               }
             />
-            Kontrol edildi
+            {t('storeIncentives.regionManagerReviewedCheckbox')}
           </label>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <StoreStatusBadge tone={rows.length > 0 ? 'calm' : 'neutral'}>
+              {rows.length > 0 ? 'Personel listesi hazır' : t('storeIncentives.regionManagerNoRows')}
+            </StoreStatusBadge>
+            <StoreStatusBadge tone={gate.known ? (gate.passed ? 'calm' : 'danger') : 'neutral'}>
+              {gateLabel}
+            </StoreStatusBadge>
+          </div>
         </div>
-      </div>
-      {input.expanded ? (
-        <div className="tw:border-t tw:border-border tw:bg-muted/20 tw:p-3">
-          <RegionPersonnelTable
-            locale={input.locale}
-            onSelectRow={input.onSelectRow}
-            rows={[...(manager ? [manager] : []), ...personnel]}
-          />
-        </div>
-      ) : null}
-    </article>
+        <RegionPersonnelTable
+          locale={input.locale}
+          onSelectRow={input.onSelectRow}
+          rows={rows}
+        />
+      </AccordionContent>
+    </AccordionItem>
   )
 }
 
@@ -563,8 +556,9 @@ function RegionPersonnelTable(input: {
   locale: ReturnType<typeof useLocalization>['locale']
   onSelectRow: (row: SalesTargetIncentiveRow) => void
 }) {
+  const { t } = useLocalization()
   if (input.rows.length === 0) {
-    return <StoreEmptyState description="Bu mağaza için prim satırı yok." />
+    return <StoreEmptyState description={t('storeIncentives.regionManagerNoRows')} />
   }
 
   return (
@@ -573,38 +567,40 @@ function RegionPersonnelTable(input: {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Personel</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Hedef</TableHead>
-              <TableHead>Gerçekleşen</TableHead>
-              <TableHead>Hedef %</TableHead>
-              <TableHead>Oran</TableHead>
-              <TableHead>Hesaplanan</TableHead>
-              <TableHead>Final prim</TableHead>
-              <TableHead>Not</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerPersonnelColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerRoleColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerTargetColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerActualColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerAchievementColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerRateColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerCalculatedColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerFinalColumn')}</TableHead>
+              <TableHead>Değişim</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerNoteColumn')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {input.rows.map((row) => (
               <TableRow key={`${row.employeeId}:${row.participantType}`}>
                 <TableCell>
-                  <Button
-                    className="tw:h-auto tw:justify-start tw:p-0 tw:text-left"
+                  <StoreCommandPersonLink
                     onClick={() => input.onSelectRow(row)}
                     type="button"
-                    variant="link"
                   >
                     {row.displayName}
-                  </Button>
+                  </StoreCommandPersonLink>
                 </TableCell>
                 <TableCell>{getIncentivePositionLabel(row.positionCode)}</TableCell>
-                <TableCell>{formatMoneyValue(row.target, input.locale)}</TableCell>
-                <TableCell>{formatMoneyValue(row.actualPositiveSales, input.locale)}</TableCell>
-                <TableCell>{formatPercentValue(row.achievementPct, input.locale)}</TableCell>
+                <TableCell>{formatTargetMoneyValue(row.target, input.locale)}</TableCell>
+                <TableCell>{formatSalesMoneyValue(row.actualPositiveSales, input.locale)}</TableCell>
+                <TableCell>{formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}</TableCell>
                 <TableCell>{formatRateValue(row.rate, input.locale)}</TableCell>
-                <TableCell>{formatMoneyValue(row.payableAmount, input.locale)}</TableCell>
+                <TableCell>{formatIncentiveMoneyValue(row.payableAmount, input.locale)}</TableCell>
                 <TableCell>
                   <FinalAmountCell locale={input.locale} row={row} />
+                </TableCell>
+                <TableCell>
+                  <ChangeCell locale={input.locale} row={row} />
                 </TableCell>
                 <TableCell>
                   {row.regionCorrection ? (
@@ -612,7 +608,7 @@ function RegionPersonnelTable(input: {
                       {getCorrectionLabel(row.regionCorrection)}
                     </StoreStatusBadge>
                   ) : (
-                    <span className="tw:text-muted-foreground">Yok</span>
+                    <span className="tw:text-muted-foreground">{t('storeIncentives.regionManagerNone')}</span>
                   )}
                 </TableCell>
               </TableRow>
@@ -636,17 +632,24 @@ function FinalAmountCell(input: {
   locale: ReturnType<typeof useLocalization>['locale']
 }) {
   const effectiveAmount = getRegionEffectiveEarnedAmount(input.row)
-  const hasCorrection = Boolean(input.row.regionCorrection && input.row.regionCorrection.status !== 'voided')
-
-  if (!hasCorrection || effectiveAmount === input.row.payableAmount) {
-    return <span>{formatMoneyValue(effectiveAmount, input.locale)}</span>
-  }
 
   return (
-    <span className="tw:flex tw:flex-col tw:gap-0.5">
-      <s className="tw:text-xs tw:text-muted-foreground">{formatMoneyValue(input.row.payableAmount, input.locale)}</s>
-      <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{formatMoneyValue(effectiveAmount, input.locale)}</strong>
-    </span>
+    <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
+      {formatIncentiveMoneyValue(effectiveAmount, input.locale)}
+    </strong>
+  )
+}
+
+function ChangeCell(input: {
+  row: SalesTargetIncentiveRow
+  locale: ReturnType<typeof useLocalization>['locale']
+}) {
+  const change = getFinalChange(input.row, input.locale)
+
+  return (
+    <StoreStatusBadge className="tw:font-semibold" tone={change.tone}>
+      {change.label}
+    </StoreStatusBadge>
   )
 }
 
@@ -666,17 +669,20 @@ function RegionPersonnelCards(input: {
         >
           <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{row.displayName}</span>
           <span className="tw:block tw:text-xs tw:text-muted-foreground">
-            {getIncentivePositionLabel(row.positionCode)} / {formatPercentValue(row.achievementPct, input.locale)}
+            {getIncentivePositionLabel(row.positionCode)} / {formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}
           </span>
           <span className="tw:mt-2 tw:flex tw:items-center tw:justify-between tw:gap-3">
             <span className="tw:text-sm tw:font-semibold tw:text-foreground">
-              {formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
+              {formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
             </span>
+            <ChangeCell locale={input.locale} row={row} />
+          </span>
+          <span className="tw:mt-2 tw:flex tw:justify-end">
             {row.regionCorrection ? (
-              <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
-                {getCorrectionLabel(row.regionCorrection)}
-              </StoreStatusBadge>
-            ) : null}
+                <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
+                  {getCorrectionLabel(row.regionCorrection)}
+                </StoreStatusBadge>
+              ) : null}
           </span>
         </button>
       ))}
@@ -684,208 +690,11 @@ function RegionPersonnelCards(input: {
   )
 }
 
-function IncentiveCorrectionSheet(input: {
-  selectedRow: SelectedIncentiveRow | null
-  locale: ReturnType<typeof useLocalization>['locale']
-  period: string
-  workflowLocked: boolean
-  onOpenChange: (open: boolean) => void
-  correctionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveRegionCorrectionInput
-  >
-  voidCorrectionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveVoidCorrectionInput
-  >
-}) {
-  const row = input.selectedRow?.row ?? null
-  const projection = input.selectedRow?.projection ?? null
-
-  if (!row || !projection) {
-    return <Sheet open={false} onOpenChange={input.onOpenChange} />
-  }
-
-  return (
-    <Sheet open={Boolean(input.selectedRow)} onOpenChange={input.onOpenChange}>
-      <IncentiveCorrectionSheetForm
-        correctionMutation={input.correctionMutation}
-        key={`${projection.storeId}:${row.employeeId}:${row.participantType}:${row.regionCorrection?.correctionId ?? 'base'}`}
-        locale={input.locale}
-        onOpenChange={input.onOpenChange}
-        period={input.period}
-        projection={projection}
-        row={row}
-        voidCorrectionMutation={input.voidCorrectionMutation}
-        workflowLocked={input.workflowLocked}
-      />
-    </Sheet>
-  )
-}
-
-function IncentiveCorrectionSheetForm(input: {
-  row: SalesTargetIncentiveRow
-  projection: SalesTargetIncentiveProjection
-  locale: ReturnType<typeof useLocalization>['locale']
-  period: string
-  workflowLocked: boolean
-  onOpenChange: (open: boolean) => void
-  correctionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveRegionCorrectionInput
-  >
-  voidCorrectionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveVoidCorrectionInput
-  >
-}) {
-  const { row, projection } = input
-  const [finalAmount, setFinalAmount] = useState(getRegionEffectiveEarnedAmount(row) ?? '0.00')
-  const [reasonNote, setReasonNote] = useState(row.regionCorrection?.reasonNote ?? '')
-  const progress = toProgressPercent(row.achievementPct) ?? 0
-  const projectionCanEdit = canReviewProjection(projection)
-  const canEdit =
-    projectionCanEdit &&
-    !input.workflowLocked &&
-    (!row.regionCorrection || row.regionCorrection.status === 'draft' || row.regionCorrection.status === 'admin_returned')
-  const canVoid =
-    projectionCanEdit &&
-    !input.workflowLocked &&
-    Boolean(row.regionCorrection) &&
-    (row.regionCorrection?.status === 'draft' || row.regionCorrection?.status === 'admin_returned')
-  const normalizedFinalAmount = normalizeMoneyInput(finalAmount)
-  const amountIsValid = normalizedFinalAmount !== null
-  const noteIsValid = reasonNote.trim().length >= 3
-
-  return (
-    <SheetContent closeLabel="Kapat" className="tw:max-w-xl tw:p-0">
-      <SheetHeader className="tw:border-b tw:border-border tw:p-4">
-        <SheetTitle>{row.displayName}</SheetTitle>
-        <SheetDescription>
-          {getIncentivePositionLabel(row.positionCode)}, {projection.storeName}
-        </SheetDescription>
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
-          <StoreStatusBadge tone={progress >= 80 ? 'calm' : 'warning'}>
-            Hedef {formatPercentValue(row.achievementPct, input.locale)}
-          </StoreStatusBadge>
-          {row.regionCorrection ? (
-            <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
-              {getCorrectionLabel(row.regionCorrection)}
-            </StoreStatusBadge>
-          ) : (
-            <StoreStatusBadge tone="neutral">Düzeltme yok</StoreStatusBadge>
-          )}
-        </div>
-      </SheetHeader>
-
-      <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-4 tw:overflow-y-auto tw:p-4">
-        <section className="tw:rounded-xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
-          <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">Hakediş özeti</h3>
-          <div className="tw:mt-3 tw:rounded-lg tw:border tw:border-border tw:bg-card tw:p-3">
-            <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-              <span className="tw:text-sm tw:font-medium tw:text-foreground">Hedef gerçekleşme</span>
-              <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
-                {formatPercentValue(row.achievementPct, input.locale)}
-              </strong>
-            </div>
-            <Progress className="tw:mt-3" value={progress} />
-          </div>
-          <div className="tw:mt-3 tw:grid tw:gap-2">
-            <AmountLine label="Hedef" value={formatMoneyValue(row.target, input.locale)} />
-            <AmountLine label="Gerçekleşen" value={formatMoneyValue(row.actualPositiveSales, input.locale)} />
-            <AmountLine label="Prim oranı" value={formatRateValue(row.rate, input.locale)} />
-            <AmountLine label="Hesaplanan prim" value={formatMoneyValue(row.payableAmount, input.locale)} />
-            <AmountLine label="Düzeltme" value={formatMoneyValue(row.regionCorrection?.adjustmentAmount ?? row.correctionAmount, input.locale)} />
-            <AmountLine label="Final prim" strong value={formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)} />
-          </div>
-        </section>
-
-        <section className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4">
-          <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">Düzeltme</h3>
-          <label className="tw:flex tw:flex-col tw:gap-1">
-            <span className="tw:text-sm tw:font-medium tw:text-foreground">Final prim tutarı</span>
-            <Input
-              disabled={!canEdit}
-              inputMode="decimal"
-              onChange={(event) => setFinalAmount(event.target.value)}
-              value={finalAmount}
-            />
-            {!amountIsValid ? (
-              <span className="tw:text-xs tw:text-destructive">Geçerli bir tutar girin.</span>
-            ) : null}
-          </label>
-
-          <label className="tw:flex tw:flex-col tw:gap-1">
-            <span className="tw:text-sm tw:font-medium tw:text-foreground">Düzeltme notu</span>
-            <Textarea
-              disabled={!canEdit}
-              onChange={(event) => setReasonNote(event.target.value)}
-              placeholder="Düzeltme nedenini yazın"
-              value={reasonNote}
-            />
-          </label>
-        </section>
-      </div>
-
-      <SheetFooter className="tw:mx-0 tw:mb-0">
-        <Button type="button" variant="outline" onClick={() => input.onOpenChange(false)}>
-          İptal
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={!canVoid || input.voidCorrectionMutation.isPending}
-          onClick={() => {
-            const correctionId = row.regionCorrection?.correctionId
-            if (!correctionId) {
-              setFinalAmount(row.payableAmount ?? '0.00')
-              setReasonNote('')
-              return
-            }
-            input.voidCorrectionMutation.mutate({
-              period: input.period,
-              correctionId,
-            })
-            input.onOpenChange(false)
-          }}
-        >
-          <RotateCcw data-icon="inline-start" />
-          Eski değere dön
-        </Button>
-        <Button
-          type="button"
-          disabled={!canEdit || !amountIsValid || !noteIsValid || input.correctionMutation.isPending}
-          onClick={() => {
-            if (!normalizedFinalAmount) return
-            input.correctionMutation.mutate({
-              period: input.period,
-              storeId: projection.storeId,
-              employeeId: row.employeeId,
-              participantType: row.participantType,
-              finalAmount: normalizedFinalAmount,
-              reasonNote: reasonNote.trim(),
-            })
-            input.onOpenChange(false)
-          }}
-        >
-          Kaydet
-        </Button>
-      </SheetFooter>
-    </SheetContent>
-  )
-}
-
-function AmountLine(input: { label: string; value: string; strong?: boolean }) {
+function DialogAmountLine(input: { label: string; value: string }) {
   return (
     <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
       <span className="tw:text-sm tw:text-muted-foreground">{input.label}</span>
-      <span className={cn('tw:text-sm tw:text-foreground', input.strong ? 'tw:font-semibold' : undefined)}>
-        {input.value}
-      </span>
+      <span className="tw:text-sm tw:text-foreground">{input.value}</span>
     </div>
   )
 }

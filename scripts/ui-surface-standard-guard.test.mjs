@@ -252,6 +252,9 @@ test('UI surface standard is discoverable from operating docs', () => {
     '## Prototype To Product',
     '## Guard',
     '## Done Criteria',
+    'production-bound prototypes must be built from the same runtime contract as',
+    'with custom CSS is only a concept sketch',
+    'the route shell, workspace width, font family, button variants, badge tones',
   ]) {
     requireText(standard, expected)
   }
@@ -269,6 +272,18 @@ test('UI surface standard is discoverable from operating docs', () => {
     '## Prototype To Product Checklist',
   ]) {
     requireText(recipes, expected)
+  }
+})
+
+test('prototype shelf distinguishes HTML visual contracts from production runtime parity', () => {
+  const prototypeReadme = readText('docs/prototypes/README.md')
+
+  for (const expected of [
+    'Standalone HTML files in this shelf are visual contracts, not production',
+    'React/shadcn slice inside the HR Axis app shell',
+    'move its typography, spacing, token, button, badge, table/list, drawer, and',
+  ]) {
+    requireText(prototypeReadme, expected)
   }
 })
 

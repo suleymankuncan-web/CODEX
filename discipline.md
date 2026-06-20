@@ -629,6 +629,13 @@ Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
 HTML/prototype begenilmis olsa bile product implementation sayilmaz. Product'a
 tasinmadan once su pass zorunludur:
 
+- Production-bound prototype runtime: Kullanici prototipi "birebir", "tam
+  implement" veya "sayfaya gecir" diyerek production beklentisine cevirdiyse
+  kabul artefakti standalone HTML olamaz. Store/Admin yuzeyleri icin kabul
+  edilecek prototip React + proje shadcn/ui + Tailwind v4 `tw:` + lucide +
+  AdminSurface/StoreSurface primitive katmani icinde uretilir. HTML sadece
+  konsept eskizidir; production parity claim'i icin once ayni rhythm shared
+  primitive veya app-ici slice'a tasinir.
 - Production-contract faithful prototype: UI prototipi varsayilan olarak yeni
   feature onerisi degildir; mevcut production route/component/API/query/model,
   role/scope, state ve workflow contract'inin daha iyi gorsellestirilmesidir.
