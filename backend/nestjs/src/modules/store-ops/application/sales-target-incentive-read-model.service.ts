@@ -450,7 +450,7 @@ function hasIncompleteCloseCalculation(
   projection: SalesTargetIncentiveProjectionReadModel,
 ) {
   return projection.stores.some((store) => {
-    if (!store.storeTargetRequestId || !store.storeNetSalesImportBatchId) {
+    if (!store.storeTargetAmount || !store.storeNetSalesImportBatchId) {
       return true;
     }
 
