@@ -31,6 +31,15 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("s.store_type = 'company'");
     expect(text).toContain("tdr.request_status = 'approved'");
     expect(text).toContain("tdr.request_month = $1::date");
+    expect(text).toContain(
+      "COALESCE(store_target.total_target_value, imported_store_target.target_value)::text AS store_target_amount",
+    );
+    expect(text).toContain("FROM ops.kpi_target kt");
+    expect(text).toContain("kd.kpi_code = 'TARGET_ACHIEVEMENT'");
+    expect(text).toContain("kt.scope_type = 'store'");
+    expect(text).toContain("kt.period_type = 'monthly'");
+    expect(text).toContain("kt.period_start = $1::date");
+    expect(text).toContain("kt.period_end = $2::date");
     expect(text).toContain("kd.kpi_code = 'NET_SALES'");
     expect(text).toContain("ka.scope_type = 'store'");
     expect(text).toContain("ka.period_type = 'monthly'");
@@ -72,6 +81,10 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("INNER JOIN ops.target_distribution_request tdr");
     expect(text).toContain("tdr.request_status = 'approved'");
     expect(text).toContain("FALSE AS has_sales");
+    expect(text).toContain("INNER JOIN ops.kpi_target kt");
+    expect(text).toContain("kt.scope_type = 'store'");
+    expect(text).toContain("kt.period_type = 'monthly'");
+    expect(text).toContain("kd_target.kpi_code = 'TARGET_ACHIEVEMENT'");
     expect(text).toContain("INNER JOIN ops.kpi_actual ka");
     expect(text).toContain("kd.kpi_code = 'NET_SALES'");
     expect(text).toContain("ka.scope_type IN ('store', 'employee')");
@@ -136,6 +149,15 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain(
       "ptr.source_request_id = store_target.target_distribution_request_id",
     );
+    expect(text).toContain(
+      "COALESCE(store_target.total_target_value, imported_store_target.target_value)::text AS store_target_amount",
+    );
+    expect(text).toContain("FROM ops.kpi_target kt");
+    expect(text).toContain("kd.kpi_code = 'TARGET_ACHIEVEMENT'");
+    expect(text).toContain("kt.scope_type = 'store'");
+    expect(text).toContain("kt.period_type = 'monthly'");
+    expect(text).toContain("kt.period_start = $1::date");
+    expect(text).toContain("kt.period_end = $2::date");
     expect(text).toContain("kd.kpi_code = 'NET_SALES'");
     expect(text).toContain("ka.scope_type = 'employee'");
     expect(text).toContain("ka.employee_id = assignment.employee_id");
