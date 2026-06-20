@@ -239,7 +239,8 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ib.source_window_started_at::date <= $2::date");
     expect(text).toContain("ib.source_window_ended_at::date >= $1::date");
     expect(text).toContain("COALESCE(ib.finished_at, ib.started_at) <= $4::timestamptz");
-    expect(text).toContain("ib.status IN ('pending', 'processing', 'queued', 'failed')");
+    expect(text).toContain("ib.status IN ('pending', 'processing', 'queued')");
+    expect(text).toContain("ib.status = 'failed'");
     expect(text).not.toContain("ib.finished_at > $4::timestamptz");
     expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
     expect(text).not.toContain("ib.created_at");
@@ -249,6 +250,28 @@ describe("SalesTargetIncentiveReadRepository", () => {
       ["00000000-0000-4000-8000-000000000001"],
       "2026-06-01T02:00:00.000+03:00",
     ]);
+  });
+
+  it("does not close-block failed KPI imports when only employee references are unresolved", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listCloseBlockingKpiImports({
+      companyIds: scopeInput.companyIds,
+      periodStart: scopeInput.periodStart,
+      periodEnd: scopeInput.periodEnd,
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    const [sql] = query.mock.calls[0];
+    const text = String(sql);
+
+    expect(text).toContain("stg.kpi_raw employee_unresolved_raw");
+    expect(text).toContain("stg.kpi_raw close_blocking_raw");
+    expect(text.match(/employee reference could not be resolved/g)).toHaveLength(2);
+    expect(text).toContain("COALESCE(close_blocking_raw.normalized_status, 'pending') <> 'processed'");
+    expect(text).toContain("COALESCE(employee_unresolved_raw.validation_error, '') ILIKE");
+    expect(text).toContain("COALESCE(close_blocking_raw.validation_error, '') ILIKE");
+    expect(text).toContain("NOT (");
   });
 
   it("finds pending company-store target revisions that block incentive close", async () => {

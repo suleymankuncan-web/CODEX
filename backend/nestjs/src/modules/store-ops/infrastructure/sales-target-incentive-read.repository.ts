@@ -570,7 +570,31 @@ export class SalesTargetIncentiveReadRepository {
             )
             AND ib.company_ids && $3::uuid[]
             AND COALESCE(ib.finished_at, ib.started_at) <= $4::timestamptz
-            AND ib.status IN ('pending', 'processing', 'queued', 'failed')
+            AND (
+              ib.status IN ('pending', 'processing', 'queued')
+              OR (
+                ib.status = 'failed'
+                AND (
+                  NOT EXISTS (
+                    SELECT 1
+                    FROM stg.kpi_raw employee_unresolved_raw
+                    WHERE employee_unresolved_raw.import_batch_id = ib.import_batch_id
+                      AND employee_unresolved_raw.normalized_status = 'retryable_error'
+                      AND COALESCE(employee_unresolved_raw.validation_error, '') ILIKE '%employee reference could not be resolved%'
+                  )
+                  OR EXISTS (
+                    SELECT 1
+                    FROM stg.kpi_raw close_blocking_raw
+                    WHERE close_blocking_raw.import_batch_id = ib.import_batch_id
+                      AND COALESCE(close_blocking_raw.normalized_status, 'pending') <> 'processed'
+                      AND NOT (
+                        close_blocking_raw.normalized_status = 'retryable_error'
+                        AND COALESCE(close_blocking_raw.validation_error, '') ILIKE '%employee reference could not be resolved%'
+                      )
+                  )
+                )
+              )
+            )
           ORDER BY ib.source_window_started_at ASC, ib.import_batch_id ASC
         `,
         [
