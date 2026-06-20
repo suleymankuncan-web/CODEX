@@ -70,6 +70,7 @@ function createService(input?: {
     listCloseBlockingTargetRevisions: jest.fn(
       async () => input?.closeBlockingTargetRevisions ?? [],
     ),
+    listAvailablePeriodKeys: jest.fn(async () => ["2026-05"]),
   };
   const service = new SalesTargetIncentiveReadModelService(
     repository as never,
@@ -147,6 +148,25 @@ describe("SalesTargetIncentiveReadModelService", () => {
         }),
       }),
     );
+  });
+
+  it("resolves the default period from the latest available scoped incentive source", async () => {
+    const { repository, service } = createService();
+
+    const result = await service.resolveDefaultPeriodKey({
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: ["store-1"],
+    });
+
+    expect(repository.listAvailablePeriodKeys).toHaveBeenCalledWith({
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: ["store-1"],
+      allowGlobalScope: false,
+      limit: 1,
+    });
+    expect(result).toBe("2026-05");
   });
 
   it("keeps missing sales source states explicit instead of inventing zero amounts", async () => {
