@@ -426,4 +426,83 @@ describe("SalesTargetIncentiveCloseRepository", () => {
       }),
     );
   });
+
+  it("does not finalize imported historical personnel without sales evidence as placeholders", async () => {
+    const { query, repository } = createHarness();
+    const importedTargetStore = {
+      ...storeProjection,
+      storeTargetRequestId: null,
+      manager: null,
+      personnel: storeProjection.personnel.map((participant) => ({
+        ...participant,
+        targetReferenceId: null,
+        targetAmount: null,
+        actualAmount: null,
+        source: {
+          ...participant.source,
+          storeTargetRequestId: null,
+          personnelSalesSourceBatchId: null,
+          personnelSalesImportBatchId: null,
+        },
+        calculation: {
+          ...participant.calculation,
+          status: "blocked" as const,
+          blockedReason: "missing_personnel_target" as const,
+          achievementPct: null,
+          personalRateBeforeGate: null,
+          rate: null,
+          rawEarnedAmount: null,
+          payableAmount: null,
+        },
+      })),
+    };
+
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            rule_version_id: ruleVersionId,
+            rule_version_code: "sales-target-incentive-v1.0.0",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
+      .mockResolvedValueOnce({ rows: [{ assignment_snapshot_id: personnelAssignmentSnapshotId }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            close_run_id: closeRunId,
+            company_id: companyId,
+            period_key: "2026-05",
+            period_start: "2026-05-01",
+            period_end: "2026-05-31",
+            close_cutoff_at: "2026-06-01T02:00:00.000+03:00",
+            status: "succeeded",
+            started_at: "2026-06-01T02:00:00.000+03:00",
+            completed_at: "2026-06-01T02:00:01.000+03:00",
+            failed_reason: null,
+            source_import_batch_ids: [storeImportBatchId],
+            final_snapshot_count: 1,
+            final_row_count: 1,
+          },
+        ],
+      });
+
+    await expect(
+      repository.createSucceededCloseRun({
+        companyId,
+        periodKey: "2026-05",
+        periodStart: "2026-05-01",
+        periodEnd: "2026-05-31",
+        closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+        actorUserId,
+        stores: [importedTargetStore],
+      }),
+    ).rejects.toThrow("Incentive participant is not finalizable");
+  });
 });

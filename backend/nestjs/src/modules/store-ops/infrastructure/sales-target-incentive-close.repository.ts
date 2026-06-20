@@ -722,6 +722,9 @@ function isImportedHistoricalPersonnelTargetPlaceholder(
     participant.assignmentStartedOn !== null &&
     participant.targetReferenceId === null &&
     participant.targetAmount === null &&
+    participant.actualAmount !== null &&
+    participant.source.personnelSalesSourceBatchId !== null &&
+    participant.source.personnelSalesImportBatchId !== null &&
     participant.calculation.status === "blocked" &&
     participant.calculation.blockedReason === "missing_personnel_target"
   );
