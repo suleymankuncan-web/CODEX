@@ -168,10 +168,7 @@ export function RegionManagerIncentivesView(input: {
           Bölge hakediş kontrol ekranı
         </p>
         <div className="tw:flex tw:flex-wrap tw:gap-2">
-          <PeriodPicker
-            period={input.selectedPeriod}
-            onChange={input.onPeriodChange}
-          />
+          <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
           <Button type="button" variant="outline" onClick={() => undefined}>
             <RefreshCw data-icon="inline-start" />
             Yenile
@@ -202,11 +199,7 @@ export function RegionManagerIncentivesView(input: {
             <Download data-icon="inline-start" />
             Excel dışa aktar
           </Button>
-          <Button
-            type="button"
-            disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
-            onClick={() => setSubmitDialogOpen(true)}
-          >
+          <Button type="button" disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending} onClick={() => setSubmitDialogOpen(true)}>
             <Send data-icon="inline-start" />
             {workflow?.regionPackageStatus === 'admin_returned' ? 'Tekrar gönder' : 'Onaya gönder'}
           </Button>
@@ -292,10 +285,7 @@ export function RegionManagerIncentivesView(input: {
         <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(18rem,0.95fr)_minmax(18rem,1.2fr)_minmax(13rem,0.85fr)]">
           <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
             <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Dönem</span>
-            <PeriodPicker
-              period={input.selectedPeriod}
-              onChange={input.onPeriodChange}
-            />
+            <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
           </div>
           <label className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
             <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Mağaza ara</span>
@@ -304,13 +294,7 @@ export function RegionManagerIncentivesView(input: {
                 size={16}
                 className="tw:pointer-events-none tw:absolute tw:left-0 tw:top-1/2 tw:-translate-y-1/2 tw:text-muted-foreground"
               />
-              <Input
-                aria-label="Mağaza ara"
-                className="tw:h-8 tw:border-0 tw:bg-transparent tw:pl-7 tw:shadow-none tw:focus-visible:ring-0"
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Mağaza ara"
-                value={search}
-              />
+              <Input aria-label="Mağaza ara" className="tw:h-8 tw:border-0 tw:bg-transparent tw:pl-7 tw:shadow-none tw:focus-visible:ring-0" onChange={(event) => setSearch(event.target.value)} placeholder="Mağaza ara" value={search} />
             </span>
           </label>
           <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
