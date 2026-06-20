@@ -600,12 +600,13 @@ const approvedWithRejectedNewerTargetRequestsFixture = {
   items: [
     {
       ...approvedTargetDistributionRequestsFixture.items[0],
+      requestMonth: '2026-05-01T00:00:00.000Z',
       updatedAt: '2026-05-20T08:00:00.000Z',
     },
     {
       ...approvedTargetDistributionRequestsFixture.items[0],
       requestId: '00000000-0000-4000-8000-000000000779',
-      requestMonth: '2026-06-01',
+      requestMonth: '2026-06-01T00:00:00.000Z',
       targetLabel: 'Haziran hedef dagitimi',
       status: 'rejected',
       approvedByUserId: null,

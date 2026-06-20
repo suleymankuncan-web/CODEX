@@ -327,7 +327,7 @@ export function createStoreRequestSummary(input: {
   const latestRequestByStore = new Map<string, TargetDistributionRequest>()
 
   for (const request of input.targetRequests) {
-    if (request.requestMonth !== input.requestMonthStart) {
+    if (getTargetRequestMonthStart(request.requestMonth) !== input.requestMonthStart) {
       continue
     }
 
@@ -360,6 +360,12 @@ export function createStoreRequestSummary(input: {
   }
 }
 
+function getTargetRequestMonthStart(value: string) {
+  const datePart = value.trim().slice(0, 10)
+
+  return /^\d{4}-\d{2}-\d{2}$/.test(datePart) ? datePart : value
+}
+
 function getRequestSortKey(request: TargetDistributionRequest) {
   return `${request.updatedAt ?? ''}|${request.createdAt ?? ''}|${request.requestId}`
 }
@@ -375,7 +381,7 @@ export function isTargetRequestInScope(input: {
   searchQuery: string
   statusFilter: TargetStatusFilter
 }) {
-  if (input.request.requestMonth !== input.requestMonthStart) {
+  if (getTargetRequestMonthStart(input.request.requestMonth) !== input.requestMonthStart) {
     return false
   }
 
