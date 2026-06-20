@@ -50,12 +50,14 @@ import {
 import {
   createAvailableTargetTabs,
   createEmptyCoverageSummary,
-  createStoreCoverageSummary,
   createStoreOptions,
+  createStoreRequestSummary,
   formatCoverageRate,
   formatMonthLabel,
   getCurrentMonthInput,
+  isTargetRequestWorkflowVisible,
   isTargetRequestInScope,
+  resolveDefaultTargetWorkflowTab,
   resolveTargetUserMode,
   targetCopy,
   type TargetAllocationDraft,
@@ -110,6 +112,7 @@ function getQueryWorkflowTab(value: string | null): TargetWorkflowTab | null {
 
 function getLatestTargetRequestMonth(requests: TargetDistributionRequest[]) {
   const months = requests
+    .filter(isTargetRequestWorkflowVisible)
     .map((request) => getQueryMonthInput(request.requestMonth))
     .filter((month): month is string => Boolean(month))
     .sort((left, right) => right.localeCompare(left))
@@ -299,10 +302,14 @@ export function StoreTargetsPage(input: {
     (request) => request.status === 'pending_region_approval',
   )
   const approvedRequests = scopedTargetRequests.filter((request) => request.status === 'approved')
-  const storeCoverageSummary = createStoreCoverageSummary(coverageRows)
   const storeOptions = createStoreOptions({
     assignedStoreIds,
     coverageRows,
+    targetRequests,
+  })
+  const storeRequestSummary = createStoreRequestSummary({
+    requestMonthStart: activeRequestMonthStart,
+    storeOptions,
     targetRequests,
   })
   const activeAllocations = (personnelQuery.data?.items ?? []).map((person) => {
@@ -340,7 +347,7 @@ export function StoreTargetsPage(input: {
   })
   const selectedTab: TargetWorkflowTab = activeTab && availableTabs.some((tab) => tab.id === activeTab)
     ? activeTab
-    : (availableTabs[0]?.id ?? 'approved')
+    : resolveDefaultTargetWorkflowTab(availableTabs)
 
   const submitTargetRequest = () => {
     if (!canSubmitTarget) {
@@ -464,27 +471,31 @@ export function StoreTargetsPage(input: {
             value={formatCoverageRate(coverageSummary.coverageRate)}
             note={`${coverageSummary.coveredEmployees} / ${coverageSummary.totalEmployees} ${copy.personnelWithTargets}`}
             tone="plum"
+            testId="store-targets-personnel-metric"
           />
           <TargetMetricTile
             icon={<Store data-icon="inline-start" />}
             label={copy.storeMetric}
-            value={formatCoverageRate(storeCoverageSummary.coverageRate)}
-            note={`${storeCoverageSummary.coveredStores} / ${storeCoverageSummary.totalStores} ${copy.storesWithTargets.toLowerCase()}`}
+            value={formatCoverageRate(storeRequestSummary.coverageRate)}
+            note={`${storeRequestSummary.approvedStores} / ${storeRequestSummary.totalStores} ${copy.storesWithTargets.toLowerCase()}`}
             tone="cyan"
+            testId="store-targets-store-metric"
           />
           <TargetMetricTile
             icon={<Clock3 data-icon="inline-start" />}
             label={copy.decisionMetric}
-            value={String(pendingRequests.length)}
+            value={String(storeRequestSummary.pendingStores)}
             note={copy.pendingStoreNote}
             tone="amber"
+            testId="store-targets-decision-metric"
           />
           <TargetMetricTile
             icon={<AlertTriangle data-icon="inline-start" />}
             label={copy.noRequestMetric}
-            value={String(storeCoverageSummary.missingStores)}
+            value={String(storeRequestSummary.missingStores)}
             note={copy.storesWithoutTargets}
             tone="rose"
+            testId="store-targets-no-request-metric"
           />
         </div>
       </header>

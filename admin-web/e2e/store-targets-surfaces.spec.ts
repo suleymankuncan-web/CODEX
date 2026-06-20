@@ -172,6 +172,56 @@ test('store targets page opens latest visible target request month when no month
   await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-06-01')
 })
 
+test('store targets page keeps region managers on latest approved or pending target month', async ({ page }) => {
+  const coverageUrls: URL[] = []
+
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.unroute('**/api/target-distributions/coverage**')
+  await page.unroute('**/api/target-distributions/store-personnel**')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['REGION_MANAGER'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId, nonPrimaryStoreId],
+          },
+          assignedStoreIds: [demoStoreId, nonPrimaryStoreId],
+        },
+        scopeSummary: {
+          ...authSessionFixture.scopeSummary,
+          storeCount: 2,
+          assignedStoreCount: 2,
+        },
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    await route.fulfill({ json: approvedWithRejectedNewerTargetRequestsFixture })
+  })
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    coverageUrls.push(new URL(route.request().url()))
+    await route.fulfill({ json: targetCoverageFixture })
+  })
+  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
+    await route.fulfill({ json: storeTargetingPersonnelFixture })
+  })
+
+  await page.goto('/store/targets')
+
+  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  await expect(page.getByLabel('Donem')).toHaveValue('2026-05')
+  await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-05-01')
+  await expect(page.getByRole('heading', { name: 'Onaylananlar' })).toBeVisible()
+  await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
+  await expect(page.getByTestId('store-targets-store-metric')).toContainText('1 / 2 magaza hedefli')
+  await expect(page.getByTestId('store-targets-decision-metric')).toContainText('0')
+  await expect(page.getByTestId('store-targets-no-request-metric')).toContainText('1')
+})
+
 test('store targets page honors query store id for multi-store managers', async ({ page }) => {
   const requestUrls: URL[] = []
   const coverageUrls: URL[] = []
@@ -324,8 +374,6 @@ test('store targets page lets region managers approve pending target requests in
   await page.getByRole('button', { name: 'Onayla' }).click()
 
   await expect(page.getByText('Target distribution request approved')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Onay akisi' })).toBeVisible()
-  await page.getByRole('radio', { name: /Onaylananlar/ }).click()
   await expect(page.getByRole('heading', { name: 'Onaylananlar' })).toBeVisible()
   await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
@@ -543,6 +591,33 @@ const approvedTargetDistributionRequestsFixture = {
   meta: {
     count: 1,
     total: 1,
+    limit: 30,
+    offset: 0,
+  },
+}
+
+const approvedWithRejectedNewerTargetRequestsFixture = {
+  items: [
+    {
+      ...approvedTargetDistributionRequestsFixture.items[0],
+      updatedAt: '2026-05-20T08:00:00.000Z',
+    },
+    {
+      ...approvedTargetDistributionRequestsFixture.items[0],
+      requestId: '00000000-0000-4000-8000-000000000779',
+      requestMonth: '2026-06-01',
+      targetLabel: 'Haziran hedef dagitimi',
+      status: 'rejected',
+      approvedByUserId: null,
+      approvedAt: null,
+      approvalNote: null,
+      createdAt: '2026-06-10T08:00:00.000Z',
+      updatedAt: '2026-06-18T08:00:00.000Z',
+    },
+  ],
+  meta: {
+    count: 2,
+    total: 2,
     limit: 30,
     offset: 0,
   },

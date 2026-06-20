@@ -9,11 +9,15 @@ export function TargetMetricTile(input: {
   icon: ReactNode
   label: string
   note: string
+  testId?: string
   tone: TargetMetricTileTone
   value: string
 }) {
   return (
-    <article className="tw:min-h-32 tw:rounded-lg tw:border tw:border-border/80 tw:bg-white/80 tw:p-4 tw:shadow-[0_14px_38px_rgba(23,30,58,0.06)] tw:backdrop-blur">
+    <article
+      data-testid={input.testId}
+      className="tw:min-h-32 tw:rounded-lg tw:border tw:border-border/80 tw:bg-white/80 tw:p-4 tw:shadow-[0_14px_38px_rgba(23,30,58,0.06)] tw:backdrop-blur"
+    >
       <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
         <span
           className={cn(

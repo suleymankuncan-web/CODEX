@@ -44,7 +44,7 @@ export const targetCopy = {
     noRequestMetric: 'Talep yok',
     personnelWithTargets: 'personel hedefli',
     storesWithTargets: 'Magaza hedefli',
-    storesWithoutTargets: 'Henuz talep gondermeyen magaza',
+    storesWithoutTargets: 'Aktif hedef kaydi olmayan magaza',
     pendingStoreNote: 'Onay bekleyen magaza',
     coveredPersonnel: 'Onayli personel',
     pendingRequests: 'Onay bekleyen talep',
@@ -149,7 +149,7 @@ export const targetCopy = {
     noRequestMetric: 'No request',
     personnelWithTargets: 'personnel targeted',
     storesWithTargets: 'Stores targeted',
-    storesWithoutTargets: 'Stores without request',
+    storesWithoutTargets: 'Stores without active target record',
     pendingStoreNote: 'Stores waiting for approval',
     coveredPersonnel: 'Approved personnel',
     pendingRequests: 'Pending requests',
@@ -318,6 +318,56 @@ export function createStoreCoverageSummary(coverageRows: TargetCoverageRow[]) {
   }
 }
 
+export function createStoreRequestSummary(input: {
+  requestMonthStart: string
+  storeOptions: Array<{ storeId: string; storeName: string }>
+  targetRequests: TargetDistributionRequest[]
+}) {
+  const storeIds = new Set(input.storeOptions.map((store) => store.storeId).filter(Boolean))
+  const latestRequestByStore = new Map<string, TargetDistributionRequest>()
+
+  for (const request of input.targetRequests) {
+    if (request.requestMonth !== input.requestMonthStart) {
+      continue
+    }
+
+    if (storeIds.size > 0 && !storeIds.has(request.storeId)) {
+      continue
+    }
+
+    const current = latestRequestByStore.get(request.storeId)
+
+    if (!current || getRequestSortKey(request) > getRequestSortKey(current)) {
+      latestRequestByStore.set(request.storeId, request)
+    }
+  }
+
+  const latestRequests = Array.from(latestRequestByStore.values())
+  const approvedStores = latestRequests.filter((request) => request.status === 'approved').length
+  const pendingStores = latestRequests.filter(
+    (request) => request.status === 'pending_region_approval',
+  ).length
+  const totalStores = Math.max(storeIds.size, latestRequestByStore.size)
+  const activeStores = approvedStores + pendingStores
+  const missingStores = Math.max(totalStores - activeStores, 0)
+
+  return {
+    totalStores,
+    approvedStores,
+    pendingStores,
+    missingStores,
+    coverageRate: totalStores > 0 ? approvedStores / totalStores : 0,
+  }
+}
+
+function getRequestSortKey(request: TargetDistributionRequest) {
+  return `${request.updatedAt ?? ''}|${request.createdAt ?? ''}|${request.requestId}`
+}
+
+export function isTargetRequestWorkflowVisible(request: TargetDistributionRequest) {
+  return request.status === 'approved' || request.status === 'pending_region_approval'
+}
+
 export function isTargetRequestInScope(input: {
   effectiveSelectedStoreId: string
   request: TargetDistributionRequest
@@ -401,6 +451,26 @@ export function createAvailableTargetTabs(input: {
   })
 
   return tabs
+}
+
+export function resolveDefaultTargetWorkflowTab(
+  availableTabs: Array<{ id: TargetWorkflowTab; count: number }>,
+) {
+  const pendingApprovalTab = availableTabs.find((tab) => tab.id === 'approval' && tab.count > 0)
+
+  if (pendingApprovalTab) {
+    return pendingApprovalTab.id
+  }
+
+  const distributionTab = availableTabs.find((tab) => tab.id === 'distribution')
+
+  if (distributionTab) {
+    return distributionTab.id
+  }
+
+  const approvedTab = availableTabs.find((tab) => tab.id === 'approved' && tab.count > 0)
+
+  return approvedTab?.id ?? availableTabs[0]?.id ?? 'approved'
 }
 
 export function getCurrentMonthInput() {
