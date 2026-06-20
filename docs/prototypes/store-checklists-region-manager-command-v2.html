@@ -1,0 +1,1488 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HR Axis Store Checklists - Bölge Müdürü V2</title>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <!--
+      Design read:
+      Bölge müdürü için compact operational checklist workspace. Visual rhythm
+      follows /store/kpis command deck, while the checklist workflow remains
+      store-first and action-first.
+
+      Production component map:
+      Shell/navigation: existing Store shell and sidebar. Lufian/header area is
+      preserved by production shell, not recreated in page code.
+      Page: StoreSurfacePage.
+      Header: compact header composition, Badge for period/status, Button for
+      primary action.
+      Filters: Input with Search icon, Select for month and status, ToggleGroup
+      for checklist type. Calendar/Popover can replace month select when the
+      production period picker is promoted.
+      Metrics: StoreMetricCard or Card composition, exactly one lucide icon per
+      metric.
+      Main view: Tabs for Visits, Approval, Plan. Table on desktop, Card list on
+      mobile.
+      Detail: Sheet/Drawer for selected store checklist detail.
+      Status: Badge tones mapped to success, warning, danger, neutral.
+      Empty/loading/error: shared StoreEmptyState, StoreLoadingState,
+      StoreErrorState.
+    -->
+    <style>
+      :root {
+        color-scheme: light;
+        --color-bg: #f8f5fb;
+        --color-bg-glacier: #edf7f6;
+        --color-surface: rgba(255, 255, 255, 0.88);
+        --color-surface-strong: #ffffff;
+        --color-surface-soft: rgba(255, 255, 255, 0.68);
+        --color-ink: #171421;
+        --color-muted: #6c6478;
+        --color-quiet: #9e93aa;
+        --color-line: rgba(36, 28, 50, 0.1);
+        --color-line-strong: rgba(36, 28, 50, 0.18);
+        --color-primary: #7c3aed;
+        --color-primary-deep: #4c2aa5;
+        --color-primary-soft: rgba(124, 58, 237, 0.12);
+        --color-blue: #3765ea;
+        --color-blue-soft: rgba(55, 101, 234, 0.12);
+        --color-accent: #13a7b3;
+        --color-accent-soft: rgba(19, 167, 179, 0.12);
+        --color-success: #10b981;
+        --color-success-soft: rgba(16, 185, 129, 0.13);
+        --color-warning: #f59e0b;
+        --color-warning-soft: rgba(245, 158, 11, 0.14);
+        --color-danger: #e11d48;
+        --color-danger-soft: rgba(225, 29, 72, 0.1);
+        --color-focus: rgba(124, 58, 237, 0.22);
+        --shadow-soft: 0 18px 48px rgba(32, 24, 48, 0.08);
+        --shadow-panel: 0 24px 80px rgba(32, 24, 48, 0.12);
+        --radius: 12px;
+        --radius-lg: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-width: 320px;
+        background: var(--color-bg);
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 8% 2%, rgba(124, 58, 237, 0.1), transparent 28%),
+          radial-gradient(circle at 78% 0%, rgba(19, 167, 179, 0.14), transparent 30%),
+          linear-gradient(135deg, rgba(248, 245, 251, 0.98), rgba(237, 247, 246, 0.94)),
+          var(--color-bg);
+        color: var(--color-ink);
+        font-family:
+          "Segoe UI Variable",
+          "Segoe UI",
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      svg {
+        display: block;
+      }
+
+      .app {
+        display: grid;
+        min-height: 100vh;
+        grid-template-columns: 256px minmax(0, 1fr);
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        display: flex;
+        height: 100vh;
+        flex-direction: column;
+        justify-content: space-between;
+        gap: 20px;
+        border-right: 1px solid var(--color-line);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 18px;
+        backdrop-filter: blur(18px);
+      }
+
+      .brand {
+        display: flex;
+        min-height: 54px;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface-strong);
+        padding: 10px;
+        box-shadow: var(--shadow-soft);
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+        color: #fff;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .brand strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .brand span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 450;
+      }
+
+      .nav {
+        display: grid;
+        gap: 4px;
+        margin-top: 14px;
+      }
+
+      .nav a {
+        display: flex;
+        min-height: 42px;
+        align-items: center;
+        gap: 12px;
+        border-radius: var(--radius);
+        color: var(--color-muted);
+        padding: 0 12px;
+        font-size: 13px;
+        font-weight: 620;
+      }
+
+      .nav a.active {
+        background: linear-gradient(90deg, var(--color-primary-soft), var(--color-accent-soft));
+        color: var(--color-primary-deep);
+      }
+
+      .nav a svg {
+        width: 17px;
+        height: 17px;
+        stroke-width: 2;
+      }
+
+      .sidebar-foot {
+        display: grid;
+        gap: 5px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.68);
+        padding: 12px;
+        color: var(--color-muted);
+        font-size: 11px;
+      }
+
+      .sidebar-foot strong {
+        color: var(--color-ink);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .main {
+        min-width: 0;
+        padding: 22px;
+      }
+
+      .workspace {
+        display: grid;
+        width: min(1380px, 100%);
+        gap: 16px;
+        margin: 0 auto;
+      }
+
+      .topbar {
+        display: flex;
+        min-height: 42px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .topbar strong {
+        color: var(--color-ink);
+        font-weight: 650;
+      }
+
+      .top-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .surface,
+      .metric,
+      .toolbar,
+      .panel,
+      .drawer {
+        border: 1px solid var(--color-line);
+        background: var(--color-surface);
+        box-shadow: var(--shadow-soft);
+      }
+
+      .page-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        border-radius: var(--radius-lg);
+        padding: 16px;
+      }
+
+      .title-row {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .title-icon {
+        display: grid;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+        color: #fff;
+        box-shadow: 0 14px 32px rgba(124, 58, 237, 0.16);
+      }
+
+      .title-icon svg {
+        width: 22px;
+        height: 22px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        color: var(--color-ink);
+        font-size: clamp(25px, 2.4vw, 32px);
+        font-weight: 650;
+        letter-spacing: 0;
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        margin-top: 5px;
+        color: var(--color-muted);
+        font-size: 13px;
+        font-weight: 430;
+      }
+
+      .head-actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .btn,
+      .pill,
+      .segmented button {
+        display: inline-flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: var(--color-surface-strong);
+        color: var(--color-ink);
+        padding: 0 12px;
+        font-size: 12px;
+        font-weight: 620;
+        white-space: nowrap;
+      }
+
+      .btn svg,
+      .pill svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      .btn.primary {
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-blue), var(--color-accent));
+        color: #fff;
+        box-shadow: 0 18px 40px rgba(124, 58, 237, 0.18);
+      }
+
+      .btn.ghost {
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .pill {
+        color: var(--color-muted);
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        display: grid;
+        min-height: 112px;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 13px;
+        align-items: center;
+        border-radius: var(--radius-lg);
+        padding: 16px;
+      }
+
+      .metric-icon {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 13px;
+      }
+
+      .metric-icon svg {
+        width: 20px;
+        height: 20px;
+      }
+
+      .metric-icon.plum {
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+      }
+
+      .metric-icon.mint {
+        background: var(--color-success-soft);
+        color: var(--color-success);
+      }
+
+      .metric-icon.amber {
+        background: var(--color-warning-soft);
+        color: var(--color-warning);
+      }
+
+      .metric-icon.cyan {
+        background: var(--color-accent-soft);
+        color: var(--color-accent);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 500;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 3px;
+        color: var(--color-ink);
+        font-size: 28px;
+        font-weight: 650;
+        letter-spacing: 0;
+        line-height: 1;
+      }
+
+      .metric small {
+        display: block;
+        margin-top: 7px;
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 430;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.2fr) minmax(146px, 0.7fr) minmax(250px, auto) minmax(160px, 0.7fr);
+        gap: 10px;
+        align-items: center;
+        border-radius: var(--radius-lg);
+        padding: 10px;
+      }
+
+      .field {
+        display: grid;
+        min-height: 48px;
+        gap: 3px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.78);
+        padding: 7px 10px;
+      }
+
+      .field label {
+        color: var(--color-muted);
+        font-size: 10px;
+        font-weight: 560;
+      }
+
+      .field .control {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 8px;
+        align-items: center;
+      }
+
+      .field svg {
+        width: 15px;
+        height: 15px;
+        color: var(--color-quiet);
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: var(--color-ink);
+        outline: none;
+        font-size: 13px;
+        font-weight: 560;
+      }
+
+      input::placeholder {
+        color: var(--color-quiet);
+      }
+
+      .segmented {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 4px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 4px;
+      }
+
+      .segmented button {
+        min-height: 38px;
+        border: 0;
+        background: transparent;
+        color: var(--color-muted);
+        padding: 0 10px;
+      }
+
+      .segmented button.active {
+        background: linear-gradient(90deg, var(--color-primary-soft), var(--color-accent-soft));
+        color: var(--color-primary-deep);
+      }
+
+      .panel {
+        overflow: hidden;
+        border-radius: var(--radius-lg);
+      }
+
+      .tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-bottom: 1px solid var(--color-line);
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .tab {
+        position: relative;
+        display: flex;
+        min-height: 58px;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        border: 0;
+        border-right: 1px solid var(--color-line);
+        background: transparent;
+        color: var(--color-muted);
+        font-size: 13px;
+        font-weight: 620;
+      }
+
+      .tab:last-child {
+        border-right: 0;
+      }
+
+      .tab svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .tab small {
+        display: grid;
+        min-width: 24px;
+        height: 24px;
+        place-items: center;
+        border-radius: 999px;
+        background: var(--color-surface-strong);
+        color: var(--color-primary);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .tab.active {
+        background: linear-gradient(90deg, var(--color-primary-soft), rgba(255, 255, 255, 0.58));
+        color: var(--color-primary-deep);
+      }
+
+      .tab.active::after {
+        position: absolute;
+        inset: auto 0 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
+        content: "";
+      }
+
+      .panel-head {
+        display: flex;
+        min-height: 68px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--color-line);
+        padding: 15px 16px;
+      }
+
+      .panel-head h2 {
+        color: var(--color-ink);
+        font-size: 18px;
+        font-weight: 650;
+        letter-spacing: 0;
+      }
+
+      .panel-head p {
+        margin-top: 3px;
+        color: var(--color-muted);
+        font-size: 12px;
+        font-weight: 430;
+      }
+
+      .table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      .table th,
+      .table td {
+        border-bottom: 1px solid var(--color-line);
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      .table th {
+        background: rgba(255, 255, 255, 0.58);
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 620;
+      }
+
+      .table tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .store-cell {
+        display: flex;
+        min-width: 210px;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .store-avatar {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        flex: 0 0 auto;
+        place-items: center;
+        border-radius: 11px;
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+      }
+
+      .store-avatar svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      .store-cell strong {
+        display: block;
+        color: var(--color-ink);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .store-cell span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 430;
+      }
+
+      .score-card {
+        display: grid;
+        min-width: 108px;
+        gap: 4px;
+      }
+
+      .score-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .score-top span {
+        color: var(--color-muted);
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .score-top strong {
+        color: var(--color-ink);
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .bar {
+        overflow: hidden;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(36, 28, 50, 0.08);
+      }
+
+      .bar b {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .bar.good b {
+        background: var(--color-success);
+      }
+
+      .bar.warn b {
+        background: var(--color-warning);
+      }
+
+      .bar.danger b {
+        background: var(--color-danger);
+      }
+
+      .bar.neutral b {
+        background: var(--color-quiet);
+      }
+
+      .badge {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 0 10px;
+        font-size: 11px;
+        font-weight: 650;
+        white-space: nowrap;
+      }
+
+      .badge.good {
+        background: var(--color-success-soft);
+        color: #047857;
+      }
+
+      .badge.warn {
+        background: var(--color-warning-soft);
+        color: #a05a00;
+      }
+
+      .badge.danger {
+        background: var(--color-danger-soft);
+        color: #b4163b;
+      }
+
+      .badge.neutral {
+        background: rgba(158, 147, 170, 0.12);
+        color: var(--color-muted);
+      }
+
+      .date-cell strong {
+        display: block;
+        color: var(--color-ink);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .date-cell span {
+        display: block;
+        color: var(--color-muted);
+        font-size: 11px;
+      }
+
+      .action-cell {
+        text-align: right;
+      }
+
+      .mobile-list {
+        display: none;
+      }
+
+      .drawer-scrim {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: none;
+        background: rgba(23, 20, 33, 0.24);
+        opacity: 0;
+      }
+
+      .drawer-scrim.open {
+        display: block;
+        opacity: 1;
+      }
+
+      .drawer {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        bottom: 14px;
+        z-index: 30;
+        display: grid;
+        width: min(430px, calc(100vw - 28px));
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        overflow: hidden;
+        border-radius: 18px;
+        box-shadow: var(--shadow-panel);
+        transform: translateX(calc(100% + 24px));
+        transition: transform 160ms ease;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .drawer.open {
+        transform: translateX(0);
+        visibility: visible;
+        pointer-events: auto;
+      }
+
+      .drawer-head {
+        display: grid;
+        gap: 10px;
+        border-bottom: 1px solid var(--color-line);
+        padding: 18px;
+      }
+
+      .drawer-title {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .drawer h3 {
+        color: var(--color-ink);
+        font-size: 20px;
+        font-weight: 650;
+      }
+
+      .drawer-body {
+        display: grid;
+        align-content: start;
+        gap: 12px;
+        overflow: auto;
+        padding: 16px 18px;
+      }
+
+      .drawer-section {
+        display: grid;
+        gap: 10px;
+        border: 1px solid var(--color-line);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 12px;
+      }
+
+      .drawer-section h4 {
+        margin: 0;
+        color: var(--color-ink);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .drawer-row {
+        display: flex;
+        min-height: 36px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .drawer-row strong {
+        color: var(--color-ink);
+        font-weight: 650;
+      }
+
+      .issue {
+        display: grid;
+        gap: 3px;
+        border-left: 3px solid var(--color-warning);
+        border-radius: 10px;
+        background: var(--color-warning-soft);
+        padding: 10px;
+      }
+
+      .issue.critical {
+        border-left-color: var(--color-danger);
+        background: var(--color-danger-soft);
+      }
+
+      .issue strong {
+        color: var(--color-ink);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .issue span {
+        color: var(--color-muted);
+        font-size: 12px;
+      }
+
+      .drawer-foot {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        border-top: 1px solid var(--color-line);
+        padding: 14px 18px;
+      }
+
+      .close {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--color-line);
+        border-radius: 10px;
+        background: #fff;
+        color: var(--color-muted);
+      }
+
+      .close svg {
+        width: 16px;
+        height: 16px;
+        margin: auto;
+      }
+
+      @media (max-width: 1120px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--color-line);
+        }
+
+        .sidebar > div:first-child {
+          display: grid;
+          gap: 10px;
+        }
+
+        .nav {
+          grid-auto-flow: column;
+          grid-auto-columns: max-content;
+          overflow-x: auto;
+          padding-bottom: 4px;
+        }
+
+        .nav a.active {
+          order: -1;
+        }
+
+        .sidebar-foot {
+          display: none;
+        }
+
+        .toolbar {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 820px) {
+        .main {
+          padding: 14px;
+        }
+
+        .topbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .page-head {
+          grid-template-columns: 1fr;
+        }
+
+        .head-actions {
+          justify-content: flex-start;
+        }
+
+        .toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .tabs {
+          grid-template-columns: 1fr;
+        }
+
+        .tab {
+          justify-content: flex-start;
+          min-height: 48px;
+          padding: 0 14px;
+          border-right: 0;
+          border-bottom: 1px solid var(--color-line);
+        }
+
+        .tab:last-child {
+          border-bottom: 0;
+        }
+
+        .desktop-table {
+          display: none;
+        }
+
+        .mobile-list {
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .mobile-card {
+          display: grid;
+          gap: 12px;
+          border: 1px solid var(--color-line);
+          border-radius: var(--radius);
+          background: rgba(255, 255, 255, 0.76);
+          padding: 12px;
+        }
+
+        .mobile-card-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .mobile-card h3 {
+          color: var(--color-ink);
+          font-size: 14px;
+          font-weight: 650;
+        }
+
+        .mobile-card p {
+          color: var(--color-muted);
+          font-size: 12px;
+        }
+
+        .mobile-scores {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .metrics {
+          grid-template-columns: 1fr;
+        }
+
+        .title-row {
+          align-items: flex-start;
+        }
+
+        .btn,
+        .pill {
+          width: 100%;
+        }
+
+        .head-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+        }
+
+        .panel-head {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .drawer {
+          inset: auto 0 0;
+          width: 100%;
+          height: min(86vh, 720px);
+          border-radius: 18px 18px 0 0;
+          transform: translateY(calc(100% + 20px));
+        }
+
+        .drawer.open {
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar" aria-label="Mağaza menüsü">
+        <div>
+          <div class="brand">
+            <span class="brand-mark">LF</span>
+            <div>
+              <strong>Lufian</strong>
+              <span>Bölge müdürü</span>
+            </div>
+          </div>
+          <nav class="nav">
+            <a href="#"><i data-lucide="home"></i>Ana Sayfa</a>
+            <a href="#"><i data-lucide="trophy"></i>Rankings</a>
+            <a href="#"><i data-lucide="activity"></i>KPI Özetleri</a>
+            <a href="#" class="active"><i data-lucide="clipboard-check"></i>Checklist</a>
+            <a href="#"><i data-lucide="inbox"></i>Talep Merkezi</a>
+            <a href="#"><i data-lucide="target"></i>Hedefler</a>
+            <a href="#"><i data-lucide="users"></i>Norm Kadro</a>
+            <a href="#"><i data-lucide="list-checks"></i>Görevler</a>
+            <a href="#"><i data-lucide="bar-chart-3"></i>Raporlar</a>
+            <a href="#"><i data-lucide="megaphone"></i>Duyurular</a>
+          </nav>
+        </div>
+        <div class="sidebar-foot">
+          <strong>Bugünkü odak</strong>
+          <span>Checklist bekleyen mağazalar ve kabul süreci.</span>
+        </div>
+      </aside>
+
+      <main class="main">
+        <div class="workspace">
+          <div class="topbar">
+            <div>
+              <strong>Store Command</strong>
+              <span>Checklist operasyon ekranı</span>
+            </div>
+            <div class="top-actions">
+              <span class="pill"><i data-lucide="calendar-days"></i>Haziran 2026</span>
+              <button class="btn ghost" type="button"><i data-lucide="refresh-cw"></i>Yenile</button>
+            </div>
+          </div>
+
+          <header class="surface page-head">
+            <div class="title-row">
+              <span class="title-icon"><i data-lucide="clipboard-check"></i></span>
+              <div>
+                <h1>Checklistler</h1>
+                <p class="subtitle">Mağaza ziyaretleri, kabul bekleyenler ve skor takibi.</p>
+              </div>
+            </div>
+            <div class="head-actions">
+              <button class="btn" type="button"><i data-lucide="calendar-days"></i>Dönem seç</button>
+              <button class="btn primary" type="button"><i data-lucide="arrow-right"></i>Checklisti aç</button>
+            </div>
+          </header>
+
+          <section class="metrics" aria-label="Checklist özeti">
+            <article class="metric">
+              <span class="metric-icon plum"><i data-lucide="store"></i></span>
+              <div>
+                <span>Sorumlu mağaza</span>
+                <strong>30</strong>
+                <small>Bölge görünümü</small>
+              </div>
+            </article>
+            <article class="metric">
+              <span class="metric-icon mint"><i data-lucide="check-square"></i></span>
+              <div>
+                <span>Bu ay yapılan</span>
+                <strong>18</strong>
+                <small>BM + VM toplamı</small>
+              </div>
+            </article>
+            <article class="metric">
+              <span class="metric-icon amber"><i data-lucide="clock-3"></i></span>
+              <div>
+                <span>Bekleyen checklist</span>
+                <strong>12</strong>
+                <small>Bu ay tamamlanacak</small>
+              </div>
+            </article>
+            <article class="metric">
+              <span class="metric-icon cyan"><i data-lucide="bar-chart-3"></i></span>
+              <div>
+                <span>Ortalama skor</span>
+                <strong>71,5</strong>
+                <small>Tamamlanan ziyaretler</small>
+              </div>
+            </article>
+          </section>
+
+          <section class="toolbar" aria-label="Checklist filtreleri">
+            <div class="field">
+              <label for="search">Arama</label>
+              <div class="control">
+                <i data-lucide="search"></i>
+                <input id="search" value="Bağdat" aria-label="Mağaza arama" />
+              </div>
+            </div>
+            <div class="field">
+              <label for="month">Ay</label>
+              <select id="month" aria-label="Ay filtresi">
+                <option>Haziran 2026</option>
+                <option>Mayıs 2026</option>
+                <option>Nisan 2026</option>
+              </select>
+            </div>
+            <div class="segmented" aria-label="Checklist türü">
+              <button class="active" type="button">Tümü</button>
+              <button type="button">BM Checklist</button>
+              <button type="button">VM Checklist</button>
+            </div>
+            <div class="field">
+              <label for="status">Durum</label>
+              <select id="status" aria-label="Durum filtresi">
+                <option>Tüm durumlar</option>
+                <option>Bekleyen</option>
+                <option>Tamamlandı</option>
+                <option>Kabul bekliyor</option>
+                <option>Takip var</option>
+              </select>
+            </div>
+          </section>
+
+          <section class="panel" aria-label="Checklist çalışma alanı">
+            <div class="tabs" role="tablist" aria-label="Checklist bölümleri">
+              <button class="tab active" type="button" role="tab" aria-selected="true">
+                <i data-lucide="store"></i>
+                Mağaza Ziyaretleri
+                <small>30</small>
+              </button>
+              <button class="tab" type="button" role="tab" aria-selected="false">
+                <i data-lucide="archive"></i>
+                Kabul Bekleyen
+                <small>6</small>
+              </button>
+              <button class="tab" type="button" role="tab" aria-selected="false">
+                <i data-lucide="map-pinned"></i>
+                Ziyaret Planı
+                <small>8</small>
+              </button>
+            </div>
+
+            <div class="panel-head">
+              <div>
+                <h2>Mağaza checklist durumu</h2>
+                <p>Önce bekleyen ve takip isteyen mağazalar.</p>
+              </div>
+              <span class="badge warn">12 bekleyen</span>
+            </div>
+
+            <div class="desktop-table">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Mağaza</th>
+                    <th>BM Checklist</th>
+                    <th>VM Checklist</th>
+                    <th>Son ziyaret</th>
+                    <th>Kabul</th>
+                    <th>Takip</th>
+                    <th>Aksiyon</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <div class="store-cell">
+                        <span class="store-avatar"><i data-lucide="store"></i></span>
+                        <div>
+                          <strong>Bağdat Caddesi</strong>
+                          <span>İstanbul Anadolu</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>BM</span><strong>86</strong></div>
+                        <span class="bar good"><b style="width: 86%"></b></span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>VM</span><strong>74</strong></div>
+                        <span class="bar warn"><b style="width: 74%"></b></span>
+                      </div>
+                    </td>
+                    <td class="date-cell"><strong>18 Haz</strong><span>11:20</span></td>
+                    <td><span class="badge warn">1 kabul</span></td>
+                    <td><span class="badge danger">2 madde</span></td>
+                    <td class="action-cell">
+                      <button class="btn js-open-drawer" type="button">İncele</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="store-cell">
+                        <span class="store-avatar"><i data-lucide="store"></i></span>
+                        <div>
+                          <strong>Aqua Florya</strong>
+                          <span>İstanbul Avrupa</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>BM</span><strong>-</strong></div>
+                        <span class="bar danger"><b style="width: 18%"></b></span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>VM</span><strong>82</strong></div>
+                        <span class="bar good"><b style="width: 82%"></b></span>
+                      </div>
+                    </td>
+                    <td class="date-cell"><strong>14 Haz</strong><span>16:45</span></td>
+                    <td><span class="badge neutral">Yok</span></td>
+                    <td><span class="badge warn">Bekliyor</span></td>
+                    <td class="action-cell">
+                      <button class="btn" type="button">Başlat</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="store-cell">
+                        <span class="store-avatar"><i data-lucide="store"></i></span>
+                        <div>
+                          <strong>İstinyePark</strong>
+                          <span>İstanbul Avrupa</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>BM</span><strong>91</strong></div>
+                        <span class="bar good"><b style="width: 91%"></b></span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>VM</span><strong>88</strong></div>
+                        <span class="bar good"><b style="width: 88%"></b></span>
+                      </div>
+                    </td>
+                    <td class="date-cell"><strong>12 Haz</strong><span>10:05</span></td>
+                    <td><span class="badge good">Onaylandı</span></td>
+                    <td><span class="badge neutral">Yok</span></td>
+                    <td class="action-cell">
+                      <button class="btn" type="button">Sonuç</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <div class="store-cell">
+                        <span class="store-avatar"><i data-lucide="store"></i></span>
+                        <div>
+                          <strong>Capacity Bakırköy</strong>
+                          <span>İstanbul Avrupa</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>BM</span><strong>68</strong></div>
+                        <span class="bar danger"><b style="width: 68%"></b></span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="score-card">
+                        <div class="score-top"><span>VM</span><strong>-</strong></div>
+                        <span class="bar neutral"><b style="width: 0%"></b></span>
+                      </div>
+                    </td>
+                    <td class="date-cell"><strong>9 Haz</strong><span>15:10</span></td>
+                    <td><span class="badge warn">Kabul bekliyor</span></td>
+                    <td><span class="badge danger">4 madde</span></td>
+                    <td class="action-cell">
+                      <button class="btn" type="button">İncele</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mobile-list" aria-label="Mobil checklist listesi">
+              <article class="mobile-card">
+                <div class="mobile-card-head">
+                  <div>
+                    <h3>Bağdat Caddesi</h3>
+                    <p>Son ziyaret: 18 Haz, 11:20</p>
+                  </div>
+                  <span class="badge danger">Takip var</span>
+                </div>
+                <div class="mobile-scores">
+                  <div class="score-card">
+                    <div class="score-top"><span>BM</span><strong>86</strong></div>
+                    <span class="bar good"><b style="width: 86%"></b></span>
+                  </div>
+                  <div class="score-card">
+                    <div class="score-top"><span>VM</span><strong>74</strong></div>
+                    <span class="bar warn"><b style="width: 74%"></b></span>
+                  </div>
+                </div>
+                <button class="btn js-open-drawer" type="button">İncele</button>
+              </article>
+
+              <article class="mobile-card">
+                <div class="mobile-card-head">
+                  <div>
+                    <h3>Aqua Florya</h3>
+                    <p>Son ziyaret: 14 Haz, 16:45</p>
+                  </div>
+                  <span class="badge warn">Bekliyor</span>
+                </div>
+                <div class="mobile-scores">
+                  <div class="score-card">
+                    <div class="score-top"><span>BM</span><strong>-</strong></div>
+                    <span class="bar danger"><b style="width: 18%"></b></span>
+                  </div>
+                  <div class="score-card">
+                    <div class="score-top"><span>VM</span><strong>82</strong></div>
+                    <span class="bar good"><b style="width: 82%"></b></span>
+                  </div>
+                </div>
+                <button class="btn" type="button">Başlat</button>
+              </article>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <div class="drawer-scrim" data-close-drawer></div>
+    <aside class="drawer" aria-label="Checklist detayı" aria-hidden="true">
+      <div class="drawer-head">
+        <div class="drawer-title">
+          <div>
+            <h3>Bağdat Caddesi</h3>
+            <p class="subtitle">VM checklist takip gerektiriyor.</p>
+          </div>
+          <button class="close" type="button" data-close-drawer aria-label="Detayı kapat">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div>
+          <span class="badge good">BM 86</span>
+          <span class="badge warn">VM 74</span>
+          <span class="badge danger">2 takip</span>
+        </div>
+      </div>
+      <div class="drawer-body">
+        <section class="drawer-section">
+          <h4>Özet</h4>
+          <div class="drawer-row"><span>Son ziyaret</span><strong>18 Haziran, 11:20</strong></div>
+          <div class="drawer-row"><span>Kabul durumu</span><strong>Mağaza müdürü bekliyor</strong></div>
+          <div class="drawer-row"><span>Ortalama skor</span><strong>80</strong></div>
+        </section>
+        <section class="drawer-section">
+          <h4>Dikkat isteyen başlıklar</h4>
+          <div class="issue critical">
+            <strong>Vitrin düzeni</strong>
+            <span>Görsel standart puanı düşük.</span>
+          </div>
+          <div class="issue">
+            <strong>Etiket kontrolü</strong>
+            <span>Takip edilmesi gereken ürün grubu var.</span>
+          </div>
+        </section>
+        <section class="drawer-section">
+          <h4>Checklist kırılımı</h4>
+          <div class="drawer-row"><span>Mağaza düzeni</span><strong>82</strong></div>
+          <div class="drawer-row"><span>Ürün sunumu</span><strong>76</strong></div>
+          <div class="drawer-row"><span>Operasyon hazırlığı</span><strong>88</strong></div>
+          <div class="drawer-row"><span>Görsel standart</span><strong>64</strong></div>
+        </section>
+      </div>
+      <div class="drawer-foot">
+        <button class="btn" type="button">Sonucu aç</button>
+        <button class="btn primary" type="button">Kabul detayına git</button>
+      </div>
+    </aside>
+
+    <script>
+      lucide.createIcons();
+
+      const drawer = document.querySelector(".drawer");
+      const scrim = document.querySelector(".drawer-scrim");
+      const openButtons = document.querySelectorAll(".js-open-drawer");
+      const closeButtons = document.querySelectorAll("[data-close-drawer]");
+
+      function openDrawer() {
+        drawer.classList.add("open");
+        scrim.classList.add("open");
+        drawer.setAttribute("aria-hidden", "false");
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove("open");
+        scrim.classList.remove("open");
+        drawer.setAttribute("aria-hidden", "true");
+      }
+
+      openButtons.forEach((button) => button.addEventListener("click", openDrawer));
+      closeButtons.forEach((button) => button.addEventListener("click", closeDrawer));
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeDrawer();
+      });
+    </script>
+  </body>
+</html>

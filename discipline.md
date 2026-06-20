@@ -521,6 +521,13 @@ standart shadcn-first component secimi, Button varyant anlamlari, lucide ikon
 sinirlari, semantic token kullanimi, product copy hijyeni ve sayfa anatomisini
 kalici UI sozlesmesi olarak tanimlar.
 
+Store/Admin operasyonel yuzeylerinde
+`docs/process/store-admin-surface-standardization-v1.md` de uygulanir. Guncel
+kanonik yuzey referansi Region Manager prim command-center prototipidir; bu
+referans her sayfayi prim sayfasina cevirmek icin degil, kompakt premium
+yogunluk, sakin tipografi, metrik karti ikon ritmi, shadcn toolbar, drawer,
+dialog, status copy ve mobile davranis kalite citasini sabitlemek icindir.
+
 UI/prototype/redesign/refactor islerinde `design-taste-frontend` / taste-skill
 zorunlu kalite pass'idir. Bu skill tek basina urun karari veya design system
 yerine gecmez; shadcn/ui, Tailwind v4, lucide, AdminSurface/Store primitive,
@@ -589,6 +596,11 @@ Taste-skill kullanilirken:
   yardimcilari ise kaldirilir. Gercek veri, role/scope, permission,
   accessibility, responsive davranis veya eksik backend contract nedeniyle
   sapma gerekiyorsa bu sapma evidence dosyasinda acikca yazilir.
+- Prototip copy'si production copy contract'idir. Prototipte temiz gorunen
+  baslik, filtre, status, metrik, drawer, empty/error ve confirmation metinleri
+  production'da internal/source/scope/debug diliyle degistirilemez. Rol,
+  permission, eksik veri veya backend contract nedeniyle fark gerekiyorsa bu
+  fark uygulama tamam denmeden once kayda gecirilir.
 - Prototype-to-product UI slice'i desktop ve mobile screenshot karsilastirmasi
   olmadan bitmis sayilmaz. Screenshot prototiple maddi olarak uyusmuyorsa
   "yaklasti" yeterli degildir; sayfa tekrar duzeltilir veya hangi urun/contract

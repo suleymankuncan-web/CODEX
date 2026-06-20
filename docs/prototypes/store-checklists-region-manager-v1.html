@@ -1,0 +1,1300 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HR Axis - Bölge Müdürü Checklistler</title>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <!--
+      Component map for production:
+      Page shell: StoreSurfacePage + existing Store shell and Lufian header.
+      Header: compact Store surface header, Button for primary/open checklist action.
+      Filters: Input, Select for month/status, ToggleGroup for BM/VM/all type.
+      Metrics: Card composition with one lucide icon per metric.
+      Desktop list: Table or existing checklist row primitives with separate BM/VM cells.
+      Mobile list: Card/accordion style composition using Button and Badge.
+      Detail panel: preferred shadcn Sheet/Drawer setup slice; current Dialog is fallback if Sheet is not installed yet.
+      Status: Badge with Store Command tones.
+    -->
+    <style>
+      :root {
+        --store-command-bg: #f8f5fb;
+        --store-command-bg-2: #edf7f6;
+        --store-command-ink: #171421;
+        --store-command-muted: #6c6478;
+        --store-command-quiet: #9e93aa;
+        --store-command-line: rgba(36, 28, 50, 0.1);
+        --store-command-line-strong: rgba(36, 28, 50, 0.18);
+        --store-command-surface: rgba(255, 255, 255, 0.88);
+        --store-command-surface-soft: rgba(255, 255, 255, 0.68);
+        --store-command-surface-strong: #ffffff;
+        --store-command-plum: #7c3aed;
+        --store-command-plum-deep: #4c2aa5;
+        --store-command-plum-soft: rgba(124, 58, 237, 0.12);
+        --store-command-blue: #3765ea;
+        --store-command-blue-soft: rgba(55, 101, 234, 0.12);
+        --store-command-cyan: #13a7b3;
+        --store-command-cyan-soft: rgba(19, 167, 179, 0.12);
+        --store-command-mint: #10b981;
+        --store-command-mint-soft: rgba(16, 185, 129, 0.13);
+        --store-command-warning: #f59e0b;
+        --store-command-warning-soft: rgba(245, 158, 11, 0.14);
+        --store-command-danger: #e11d48;
+        --store-command-danger-soft: rgba(225, 29, 72, 0.1);
+        --store-command-focus: rgba(124, 58, 237, 0.22);
+        --store-command-shadow: 0 24px 80px rgba(32, 24, 48, 0.12);
+        --store-command-soft-shadow: 0 18px 48px rgba(32, 24, 48, 0.08);
+        --radius-sm: 10px;
+        --radius-md: 12px;
+        --radius-lg: 15px;
+        --radius-xl: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          linear-gradient(135deg, rgba(248, 245, 251, 0.98), rgba(237, 247, 246, 0.94)),
+          var(--store-command-bg);
+        color: var(--store-command-ink);
+        font-family:
+          Manrope,
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      button,
+      input,
+      select {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .page {
+        display: grid;
+        gap: 16px;
+        width: min(1360px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 22px 0 42px;
+      }
+
+      .page-header,
+      .toolbar,
+      .metric,
+      .panel,
+      .mobile-card,
+      .drawer {
+        border: 1px solid var(--store-command-line);
+        background: var(--store-command-surface);
+        box-shadow: var(--store-command-soft-shadow);
+      }
+
+      .page-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        border-radius: var(--radius-xl);
+        padding: 17px 18px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(26px, 3vw, 34px);
+        font-weight: 680;
+        letter-spacing: 0;
+        line-height: 1.08;
+      }
+
+      .subtitle {
+        margin-top: 5px;
+        color: var(--store-command-muted);
+        font-size: 13px;
+        font-weight: 440;
+      }
+
+      .header-actions {
+        display: inline-flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .period-pill,
+      .badge,
+      .score-chip,
+      .filter-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+      }
+
+      .period-pill {
+        min-height: 38px;
+        gap: 9px;
+        border: 1px solid var(--store-command-line);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.9);
+        padding: 0 13px;
+        color: var(--store-command-ink);
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-md);
+        padding: 0 14px;
+        font-size: 13px;
+        font-weight: 650;
+        text-decoration: none;
+        transition:
+          transform 160ms ease,
+          border-color 160ms ease,
+          background 160ms ease;
+      }
+
+      .button:active {
+        transform: translateY(1px);
+      }
+
+      .button-primary {
+        background: linear-gradient(135deg, var(--store-command-plum), var(--store-command-cyan));
+        color: white;
+        box-shadow: 0 16px 34px rgba(76, 42, 165, 0.2);
+      }
+
+      .button-outline {
+        border-color: var(--store-command-line-strong);
+        background: rgba(255, 255, 255, 0.86);
+        color: var(--store-command-ink);
+      }
+
+      .button-ghost {
+        border-color: transparent;
+        background: transparent;
+        color: var(--store-command-muted);
+      }
+
+      .button:focus-visible,
+      input:focus,
+      select:focus {
+        outline: 3px solid var(--store-command-focus);
+        outline-offset: 2px;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.2fr) minmax(132px, 0.55fr) minmax(250px, 0.95fr) minmax(178px, 0.7fr) auto;
+        gap: 10px;
+        align-items: end;
+        border-radius: var(--radius-lg);
+        padding: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 5px;
+        min-width: 0;
+      }
+
+      .field label,
+      .filter-label {
+        color: var(--store-command-muted);
+        font-size: 11px;
+        font-weight: 620;
+      }
+
+      .search-shell,
+      .select-shell {
+        display: flex;
+        min-height: 40px;
+        align-items: center;
+        gap: 9px;
+        border: 1px solid var(--store-command-line);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.86);
+        padding: 0 11px;
+      }
+
+      .search-shell svg,
+      .period-pill svg,
+      .drawer-title svg {
+        width: 16px;
+        height: 16px;
+        color: var(--store-command-plum-deep);
+      }
+
+      input,
+      select {
+        width: 100%;
+        min-width: 0;
+        border: 0;
+        background: transparent;
+        color: var(--store-command-ink);
+        font-size: 13px;
+        font-weight: 520;
+        outline: 0;
+      }
+
+      .toggle-set {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        min-height: 40px;
+      }
+
+      .filter-button {
+        border: 1px solid var(--store-command-line);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.76);
+        color: var(--store-command-muted);
+        font-size: 12px;
+        font-weight: 640;
+      }
+
+      .filter-button.is-active {
+        border-color: transparent;
+        background: linear-gradient(135deg, var(--store-command-plum-soft), var(--store-command-cyan-soft));
+        color: var(--store-command-plum-deep);
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .metric {
+        display: grid;
+        grid-template-columns: 46px minmax(0, 1fr);
+        min-height: 100px;
+        align-items: center;
+        gap: 13px;
+        border-radius: var(--radius-lg);
+        padding: 15px;
+      }
+
+      .metric-icon,
+      .store-avatar,
+      .drawer-icon {
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+      }
+
+      .metric-icon {
+        position: relative;
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+      }
+
+      .metric-icon svg {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        display: block;
+        width: 20px;
+        height: 20px;
+        stroke-width: 2;
+        transform: translate(-50%, -50%);
+      }
+
+      .tone-plum .metric-icon {
+        background: var(--store-command-plum-soft);
+        color: var(--store-command-plum-deep);
+      }
+
+      .tone-mint .metric-icon {
+        background: var(--store-command-mint-soft);
+        color: var(--store-command-mint);
+      }
+
+      .tone-amber .metric-icon {
+        background: var(--store-command-warning-soft);
+        color: var(--store-command-warning);
+      }
+
+      .tone-blue .metric-icon {
+        background: var(--store-command-cyan-soft);
+        color: var(--store-command-blue);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--store-command-ink);
+        font-size: 12px;
+        font-weight: 660;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 5px;
+        color: var(--store-command-ink);
+        font-size: 29px;
+        font-weight: 690;
+        line-height: 1;
+      }
+
+      .metric small {
+        display: block;
+        margin-top: 6px;
+        color: var(--store-command-muted);
+        font-size: 12px;
+        font-weight: 470;
+      }
+
+      .panel {
+        overflow: hidden;
+        border-radius: var(--radius-xl);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        border-bottom: 1px solid var(--store-command-line);
+        padding: 15px 16px;
+      }
+
+      .panel-header h2 {
+        font-size: 17px;
+        font-weight: 680;
+      }
+
+      .panel-header p {
+        margin-top: 4px;
+        color: var(--store-command-muted);
+        font-size: 12px;
+      }
+
+      .table-wrap {
+        width: 100%;
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        min-width: 980px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--store-command-line);
+        padding: 12px 13px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        color: var(--store-command-muted);
+        font-size: 11px;
+        font-weight: 670;
+      }
+
+      td {
+        color: var(--store-command-ink);
+        font-size: 13px;
+        font-weight: 540;
+      }
+
+      tbody tr {
+        transition:
+          background 160ms ease,
+          transform 160ms ease;
+      }
+
+      tbody tr:hover {
+        background: rgba(124, 58, 237, 0.035);
+      }
+
+      .store-cell {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 11px;
+      }
+
+      .store-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        background: var(--store-command-plum-soft);
+        color: var(--store-command-plum-deep);
+      }
+
+      .store-avatar svg {
+        width: 17px;
+        height: 17px;
+      }
+
+      .store-name {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .store-name strong {
+        overflow: hidden;
+        color: var(--store-command-ink);
+        font-size: 13px;
+        font-weight: 690;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .store-name span {
+        color: var(--store-command-muted);
+        font-size: 11px;
+      }
+
+      .score-pair {
+        display: grid;
+        gap: 6px;
+        min-width: 120px;
+      }
+
+      .score-chip {
+        width: fit-content;
+        min-height: 25px;
+        gap: 6px;
+        border: 1px solid var(--store-command-line);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.78);
+        padding: 0 9px;
+        color: var(--store-command-ink);
+        font-size: 12px;
+        font-weight: 680;
+      }
+
+      .score-chip i {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .progress {
+        overflow: hidden;
+        width: 92px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(36, 28, 50, 0.1);
+      }
+
+      .progress b {
+        display: block;
+        height: 100%;
+        border-radius: inherit;
+      }
+
+      .score-good {
+        color: var(--store-command-mint);
+      }
+
+      .score-good b {
+        background: linear-gradient(90deg, var(--store-command-plum), var(--store-command-cyan));
+      }
+
+      .score-warn {
+        color: var(--store-command-warning);
+      }
+
+      .score-warn b {
+        background: linear-gradient(90deg, var(--store-command-warning), var(--store-command-plum));
+      }
+
+      .score-danger {
+        color: var(--store-command-danger);
+      }
+
+      .score-danger b {
+        background: linear-gradient(90deg, var(--store-command-danger), var(--store-command-plum));
+      }
+
+      .date-cell {
+        display: grid;
+        gap: 3px;
+      }
+
+      .date-cell strong {
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .date-cell small {
+        color: var(--store-command-muted);
+        font-size: 11px;
+      }
+
+      .badge {
+        width: fit-content;
+        max-width: 100%;
+        min-height: 25px;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 0 9px;
+        font-size: 11px;
+        font-weight: 680;
+      }
+
+      .badge-mint {
+        border-color: rgba(16, 185, 129, 0.16);
+        background: var(--store-command-mint-soft);
+        color: #047857;
+      }
+
+      .badge-amber {
+        border-color: rgba(245, 158, 11, 0.22);
+        background: var(--store-command-warning-soft);
+        color: #b45309;
+      }
+
+      .badge-danger {
+        border-color: rgba(225, 29, 72, 0.18);
+        background: var(--store-command-danger-soft);
+        color: #c72340;
+      }
+
+      .badge-blue {
+        border-color: rgba(19, 167, 179, 0.18);
+        background: var(--store-command-cyan-soft);
+        color: var(--store-command-blue);
+      }
+
+      .badge-muted {
+        border-color: var(--store-command-line);
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--store-command-muted);
+      }
+
+      .action-cell {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .mobile-list {
+        display: none;
+      }
+
+      .mobile-card {
+        display: grid;
+        gap: 13px;
+        border-radius: var(--radius-xl);
+        padding: 14px;
+      }
+
+      .mobile-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .mobile-card-title {
+        display: grid;
+        gap: 4px;
+      }
+
+      .mobile-card-title strong {
+        font-size: 15px;
+      }
+
+      .mobile-card-title span {
+        color: var(--store-command-muted);
+        font-size: 12px;
+      }
+
+      .mobile-card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .mobile-fact {
+        display: grid;
+        gap: 4px;
+        min-height: 58px;
+        border: 1px solid var(--store-command-line);
+        border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 9px;
+      }
+
+      .mobile-fact span {
+        color: var(--store-command-muted);
+        font-size: 11px;
+      }
+
+      .mobile-fact strong {
+        color: var(--store-command-ink);
+        font-size: 13px;
+      }
+
+      .drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: none;
+        background: rgba(23, 20, 33, 0.24);
+      }
+
+      .drawer-backdrop.is-open {
+        display: block;
+      }
+
+      .drawer {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        bottom: 16px;
+        z-index: 50;
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+        width: min(470px, calc(100vw - 32px));
+        background: var(--store-command-surface-strong);
+        transform: translateX(calc(100% + 24px));
+        border-radius: var(--radius-xl);
+        opacity: 0;
+        pointer-events: none;
+        transition:
+          transform 180ms ease,
+          opacity 180ms ease;
+      }
+
+      .drawer.is-open {
+        transform: translateX(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .drawer-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--store-command-line);
+        padding: 16px;
+      }
+
+      .drawer-title {
+        display: flex;
+        gap: 11px;
+        min-width: 0;
+      }
+
+      .drawer-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        background: var(--store-command-plum-soft);
+        color: var(--store-command-plum-deep);
+      }
+
+      .drawer-icon svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .drawer-title h3 {
+        font-size: 17px;
+        font-weight: 680;
+      }
+
+      .drawer-title p {
+        margin-top: 4px;
+        color: var(--store-command-muted);
+        font-size: 12px;
+      }
+
+      .drawer-body {
+        display: grid;
+        gap: 14px;
+        overflow: auto;
+        padding: 16px;
+      }
+
+      .drawer-section {
+        display: grid;
+        gap: 10px;
+      }
+
+      .drawer-section h4 {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .drawer-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .drawer-fact,
+      .drawer-item {
+        border: 1px solid var(--store-command-line);
+        border-radius: var(--radius-md);
+        background: var(--store-command-surface-strong);
+      }
+
+      .drawer-fact {
+        display: grid;
+        gap: 4px;
+        padding: 10px;
+      }
+
+      .drawer-fact span,
+      .drawer-item span {
+        color: var(--store-command-muted);
+        font-size: 11px;
+      }
+
+      .drawer-fact strong {
+        font-size: 15px;
+      }
+
+      .drawer-item {
+        display: grid;
+        gap: 6px;
+        padding: 11px;
+      }
+
+      .drawer-item strong {
+        font-size: 13px;
+      }
+
+      .drawer-item p {
+        color: var(--store-command-muted);
+        font-size: 12px;
+      }
+
+      .drawer-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        border-top: 1px solid var(--store-command-line);
+        padding: 14px 16px;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+      }
+
+      @media (max-width: 1180px) {
+        .toolbar {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .toolbar .button {
+          width: 100%;
+        }
+
+        .summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: min(100% - 20px, 430px);
+          padding-top: 10px;
+        }
+
+        .page-header {
+          grid-template-columns: 1fr;
+          padding: 15px;
+        }
+
+        .header-actions {
+          display: grid;
+          grid-template-columns: 1fr;
+          justify-content: stretch;
+        }
+
+        .header-actions .button,
+        .period-pill {
+          width: 100%;
+        }
+
+        .toolbar,
+        .summary {
+          grid-template-columns: 1fr;
+        }
+
+        .toggle-set {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .desktop-table {
+          display: none;
+        }
+
+        .mobile-list {
+          display: grid;
+          gap: 10px;
+          padding: 12px;
+        }
+
+        .panel-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .mobile-card-grid,
+        .drawer-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .drawer {
+          top: auto;
+          right: 0;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          max-height: 88vh;
+          border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+          transform: translateY(calc(100% + 24px));
+        }
+
+        .drawer.is-open {
+          transform: translateY(0);
+        }
+
+        .drawer-footer {
+          display: grid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <div>
+          <h1>Checklistler</h1>
+          <p class="subtitle">Mağaza ziyaretleri, bekleyen kabul ve skor takibi.</p>
+        </div>
+        <div class="header-actions">
+          <span class="period-pill"><i data-lucide="calendar-days"></i> Mayıs 2026</span>
+          <button class="button button-primary" type="button">
+            Checklisti aç
+            <i data-lucide="chevron-right" data-icon="inline-end"></i>
+          </button>
+        </div>
+      </header>
+
+      <section class="toolbar" aria-label="Checklist filtreleri">
+        <div class="field">
+          <label for="store-search">Mağaza arama</label>
+          <div class="search-shell">
+            <i data-lucide="search"></i>
+            <input id="store-search" type="search" placeholder="Mağaza adı yazın" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="month">Dönem</label>
+          <div class="select-shell">
+            <select id="month" aria-label="Dönem seçimi">
+              <option>Mayıs 2026</option>
+              <option>Nisan 2026</option>
+              <option>Mart 2026</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <span class="filter-label">Checklist türü</span>
+          <div class="toggle-set" aria-label="Checklist türü">
+            <button class="filter-button is-active" type="button">Tümü</button>
+            <button class="filter-button" type="button">BM Checklist</button>
+            <button class="filter-button" type="button">VM Checklist</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="status">Durum</label>
+          <div class="select-shell">
+            <select id="status" aria-label="Durum filtresi">
+              <option>Tümü</option>
+              <option>Bekleyen</option>
+              <option>Tamamlandı</option>
+              <option>Kabul bekliyor</option>
+              <option>Takip var</option>
+            </select>
+          </div>
+        </div>
+        <button class="button button-outline" type="button">
+          <i data-lucide="rotate-ccw" data-icon="inline-start"></i>
+          Sıfırla
+        </button>
+      </section>
+
+      <section class="summary" aria-label="Checklist özeti">
+        <article class="metric tone-plum">
+          <span class="metric-icon" aria-hidden="true"><i data-lucide="store"></i></span>
+          <div>
+            <span>Sorumlu mağaza</span>
+            <strong>30</strong>
+            <small>Bölgedeki aktif mağazalar</small>
+          </div>
+        </article>
+        <article class="metric tone-mint">
+          <span class="metric-icon" aria-hidden="true"><i data-lucide="check-square"></i></span>
+          <div>
+            <span>Bu ay yapılan</span>
+            <strong>18</strong>
+            <small>BM ve VM toplamı</small>
+          </div>
+        </article>
+        <article class="metric tone-amber">
+          <span class="metric-icon" aria-hidden="true"><i data-lucide="clock-3"></i></span>
+          <div>
+            <span>Bekleyen checklist</span>
+            <strong>12</strong>
+            <small>Aksiyon bekleyen mağaza</small>
+          </div>
+        </article>
+        <article class="metric tone-blue">
+          <span class="metric-icon" aria-hidden="true"><i data-lucide="bar-chart-3"></i></span>
+          <div>
+            <span>Ortalama skor</span>
+            <strong>81,4</strong>
+            <small>Son tamamlanan sonuçlar</small>
+          </div>
+        </article>
+      </section>
+
+      <section class="panel" aria-label="Mağaza checklist durumu">
+        <div class="panel-header">
+          <div>
+            <h2>Mağaza durumları</h2>
+            <p>Öncelik bekleyen mağazalar üstte görünür.</p>
+          </div>
+          <span class="badge badge-amber">4 takip</span>
+        </div>
+
+        <div class="table-wrap desktop-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Mağaza</th>
+                <th>Son ziyaret</th>
+                <th>BM Checklist</th>
+                <th>VM Checklist</th>
+                <th>Ortalama skor</th>
+                <th>Bekleyen kabul</th>
+                <th>Takip</th>
+                <th>Aksiyon</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-store="Lufian Akasya" data-status="Takip var">
+                <td>
+                  <div class="store-cell">
+                    <span class="store-avatar" aria-hidden="true"><i data-lucide="store"></i></span>
+                    <span class="store-name">
+                      <strong>Lufian Akasya</strong>
+                      <span>İstanbul Avrupa</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="date-cell"><strong>17 Mayıs</strong><small>14:20</small></span></td>
+                <td>
+                  <div class="score-pair">
+                    <span class="score-chip score-danger"><i></i> 62</span>
+                    <span class="progress"><b class="score-danger" style="width: 62%"></b></span>
+                  </div>
+                </td>
+                <td>
+                  <div class="score-pair">
+                    <span class="score-chip score-warn"><i></i> 74</span>
+                    <span class="progress"><b class="score-warn" style="width: 74%"></b></span>
+                  </div>
+                </td>
+                <td><span class="score-chip score-warn"><i></i> 68</span></td>
+                <td><span class="badge badge-blue">2 kayıt</span></td>
+                <td><span class="badge badge-danger">Takip var</span></td>
+                <td class="action-cell">
+                  <button class="button button-outline row-action" type="button">Detayı gör</button>
+                </td>
+              </tr>
+              <tr data-store="Lufian Hilltown" data-status="Bekleyen checklist">
+                <td>
+                  <div class="store-cell">
+                    <span class="store-avatar" aria-hidden="true"><i data-lucide="store"></i></span>
+                    <span class="store-name">
+                      <strong>Lufian Hilltown</strong>
+                      <span>İstanbul Anadolu</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="date-cell"><strong>9 Mayıs</strong><small>11:05</small></span></td>
+                <td>
+                  <div class="score-pair">
+                    <span class="score-chip score-good"><i></i> 86</span>
+                    <span class="progress"><b class="score-good" style="width: 86%"></b></span>
+                  </div>
+                </td>
+                <td><span class="badge badge-amber">Bekliyor</span></td>
+                <td><span class="score-chip score-good"><i></i> 86</span></td>
+                <td><span class="badge badge-muted">Yok</span></td>
+                <td><span class="badge badge-amber">Planla</span></td>
+                <td class="action-cell">
+                  <button class="button button-outline row-action" type="button">Detayı gör</button>
+                </td>
+              </tr>
+              <tr data-store="Lufian İstinye" data-status="Kabul bekliyor">
+                <td>
+                  <div class="store-cell">
+                    <span class="store-avatar" aria-hidden="true"><i data-lucide="store"></i></span>
+                    <span class="store-name">
+                      <strong>Lufian İstinye</strong>
+                      <span>İstanbul Avrupa</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="date-cell"><strong>21 Mayıs</strong><small>16:40</small></span></td>
+                <td>
+                  <div class="score-pair">
+                    <span class="score-chip score-good"><i></i> 91</span>
+                    <span class="progress"><b class="score-good" style="width: 91%"></b></span>
+                  </div>
+                </td>
+                <td>
+                  <div class="score-pair">
+                    <span class="score-chip score-good"><i></i> 88</span>
+                    <span class="progress"><b class="score-good" style="width: 88%"></b></span>
+                  </div>
+                </td>
+                <td><span class="score-chip score-good"><i></i> 89,5</span></td>
+                <td><span class="badge badge-blue">1 kayıt</span></td>
+                <td><span class="badge badge-mint">Temiz</span></td>
+                <td class="action-cell">
+                  <button class="button button-outline row-action" type="button">Detayı gör</button>
+                </td>
+              </tr>
+              <tr data-store="Lufian Nişantaşı" data-status="Tamamlandı">
+                <td>
+                  <div class="store-cell">
+                    <span class="store-avatar" aria-hidden="true"><i data-lucide="store"></i></span>
+                    <span class="store-name">
+                      <strong>Lufian Nişantaşı</strong>
+                      <span>İstanbul Avrupa</span>
+                    </span>
+                  </div>
+                </td>
+                <td><span class="date-cell"><strong>19 Mayıs</strong><small>10:15</small></span></td>
+                <td>
+                  <div class="score-pair">
+                    <span class="score-chip score-good"><i></i> 84</span>
+                    <span class="progress"><b class="score-good" style="width: 84%"></b></span>
+                  </div>
+                </td>
+                <td>
+                  <div class="score-pair">
+                    <span class="score-chip score-good"><i></i> 82</span>
+                    <span class="progress"><b class="score-good" style="width: 82%"></b></span>
+                  </div>
+                </td>
+                <td><span class="score-chip score-good"><i></i> 83</span></td>
+                <td><span class="badge badge-muted">Yok</span></td>
+                <td><span class="badge badge-mint">Temiz</span></td>
+                <td class="action-cell">
+                  <button class="button button-outline row-action" type="button">Detayı gör</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mobile-list" aria-label="Mağaza checklist kartları">
+          <article class="mobile-card" data-store="Lufian Akasya" data-status="Takip var">
+            <div class="mobile-card-head">
+              <div class="mobile-card-title">
+                <strong>Lufian Akasya</strong>
+                <span>Son ziyaret 17 Mayıs, 14:20</span>
+              </div>
+              <span class="badge badge-danger">Takip var</span>
+            </div>
+            <div class="mobile-card-grid">
+              <div class="mobile-fact"><span>BM Checklist</span><strong>62 / 100</strong></div>
+              <div class="mobile-fact"><span>VM Checklist</span><strong>74 / 100</strong></div>
+              <div class="mobile-fact"><span>Bekleyen kabul</span><strong>2 kayıt</strong></div>
+              <div class="mobile-fact"><span>Ortalama skor</span><strong>68</strong></div>
+            </div>
+            <button class="button button-outline row-action" type="button">Detayı gör</button>
+          </article>
+          <article class="mobile-card" data-store="Lufian Hilltown" data-status="VM Checklist bekliyor">
+            <div class="mobile-card-head">
+              <div class="mobile-card-title">
+                <strong>Lufian Hilltown</strong>
+                <span>Son ziyaret 9 Mayıs, 11:05</span>
+              </div>
+              <span class="badge badge-amber">Planla</span>
+            </div>
+            <div class="mobile-card-grid">
+              <div class="mobile-fact"><span>BM Checklist</span><strong>86 / 100</strong></div>
+              <div class="mobile-fact"><span>VM Checklist</span><strong>Bekliyor</strong></div>
+              <div class="mobile-fact"><span>Bekleyen kabul</span><strong>Yok</strong></div>
+              <div class="mobile-fact"><span>Ortalama skor</span><strong>86</strong></div>
+            </div>
+            <button class="button button-outline row-action" type="button">Detayı gör</button>
+          </article>
+          <article class="mobile-card" data-store="Lufian İstinye" data-status="Kabul bekliyor">
+            <div class="mobile-card-head">
+              <div class="mobile-card-title">
+                <strong>Lufian İstinye</strong>
+                <span>Son ziyaret 21 Mayıs, 16:40</span>
+              </div>
+              <span class="badge badge-blue">Kabul bekliyor</span>
+            </div>
+            <div class="mobile-card-grid">
+              <div class="mobile-fact"><span>BM Checklist</span><strong>91 / 100</strong></div>
+              <div class="mobile-fact"><span>VM Checklist</span><strong>88 / 100</strong></div>
+              <div class="mobile-fact"><span>Bekleyen kabul</span><strong>1 kayıt</strong></div>
+              <div class="mobile-fact"><span>Ortalama skor</span><strong>89,5</strong></div>
+            </div>
+            <button class="button button-outline row-action" type="button">Detayı gör</button>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <div class="drawer-backdrop" data-close-drawer></div>
+    <aside class="drawer" aria-labelledby="drawer-title" aria-modal="true" role="dialog">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span class="drawer-icon" aria-hidden="true"><i data-lucide="panel-right-open"></i></span>
+          <div>
+            <h3 id="drawer-title">Lufian Akasya</h3>
+            <p>BM Checklist düşük skor, VM Checklist takipte.</p>
+          </div>
+        </div>
+        <button class="button button-ghost" type="button" data-close-drawer aria-label="Kapat">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div class="drawer-body">
+        <section class="drawer-section">
+          <h4>Son durum</h4>
+          <div class="drawer-grid">
+            <div class="drawer-fact"><span>BM Checklist</span><strong>62 / 100</strong></div>
+            <div class="drawer-fact"><span>VM Checklist</span><strong>74 / 100</strong></div>
+            <div class="drawer-fact"><span>Bekleyen kabul</span><strong>2 kayıt</strong></div>
+            <div class="drawer-fact"><span>Son ziyaret</span><strong>17 Mayıs</strong></div>
+          </div>
+        </section>
+        <section class="drawer-section">
+          <h4>Dikkat isteyen başlıklar</h4>
+          <div class="drawer-item">
+            <span class="badge badge-danger">Düşük skor</span>
+            <strong>Görsel düzen ve ürün erişimi</strong>
+            <p>Raf düzeni ve ürün bulunurluğu tekrar kontrol edilmeli.</p>
+          </div>
+          <div class="drawer-item">
+            <span class="badge badge-amber">Takip</span>
+            <strong>Kasa arkası düzeni</strong>
+            <p>Bir sonraki ziyarette aynı başlık tekrar değerlendirilecek.</p>
+          </div>
+        </section>
+        <section class="drawer-section">
+          <h4>Bekleyen kabul</h4>
+          <div class="drawer-item">
+            <span class="badge badge-blue">Mağaza onayı</span>
+            <strong>2 checklist sonucu bekliyor</strong>
+            <p>Mağaza kabulünden sonra kayıt geçmişe taşınır.</p>
+          </div>
+        </section>
+      </div>
+      <div class="drawer-footer">
+        <button class="button button-outline" type="button">Sonucu aç</button>
+        <button class="button button-primary" type="button">Checklisti aç</button>
+      </div>
+    </aside>
+
+    <script>
+      const searchInput = document.querySelector('#store-search')
+      const drawer = document.querySelector('.drawer')
+      const backdrop = document.querySelector('.drawer-backdrop')
+      const title = document.querySelector('#drawer-title')
+      const titleCopy = document.querySelector('.drawer-title p')
+
+      function openDrawer(storeName, status) {
+        title.textContent = storeName || 'Mağaza detayı'
+        titleCopy.textContent = status || 'Checklist detayları.'
+        drawer.classList.add('is-open')
+        backdrop.classList.add('is-open')
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove('is-open')
+        backdrop.classList.remove('is-open')
+      }
+
+      document.querySelectorAll('.row-action, tbody tr').forEach((element) => {
+        element.addEventListener('click', (event) => {
+          const row = event.currentTarget.closest('[data-store]') || event.currentTarget
+          openDrawer(row.dataset.store, row.dataset.status)
+        })
+      })
+
+      document.querySelectorAll('[data-close-drawer]').forEach((element) => {
+        element.addEventListener('click', closeDrawer)
+      })
+
+      document.querySelectorAll('.filter-button').forEach((button) => {
+        button.addEventListener('click', () => {
+          button.parentElement.querySelectorAll('.filter-button').forEach((item) => {
+            item.classList.remove('is-active')
+          })
+          button.classList.add('is-active')
+        })
+      })
+
+      searchInput.addEventListener('input', () => {
+        const value = searchInput.value.toLocaleLowerCase('tr-TR').trim()
+        document.querySelectorAll('[data-store]').forEach((element) => {
+          const match = element.dataset.store.toLocaleLowerCase('tr-TR').includes(value)
+          element.style.display = match ? '' : 'none'
+        })
+      })
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeDrawer()
+      })
+
+      lucide.createIcons()
+    </script>
+  </body>
+</html>

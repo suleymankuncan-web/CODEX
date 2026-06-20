@@ -15,6 +15,7 @@ Before creating page-local markup, choose the closest recipe:
 
 | Need | Recipe |
 | --- | --- |
+| Premium Store/Admin operation page | Operational command surface |
 | Date filter | Date filter |
 | Month/year period | Period filter |
 | Table controls | Table toolbar |
@@ -27,6 +28,45 @@ Before creating page-local markup, choose the closest recipe:
 | Export or secondary commands | Command group |
 
 If no recipe fits, still start from shadcn primitives and semantic tokens.
+
+## Operational Command Surface
+
+Use this recipe for dense Store/Admin pages where the user reviews a period,
+store set, person set, or approval package before acting.
+
+Page order:
+
+1. Compact page header with one clear title and useful subtitle.
+2. Primary command group on the right.
+3. Optional decision band for total amount, period state, or package state.
+4. Two to four metric cards.
+5. Toolbar with period, search, and status filters.
+6. Main accordion/table/list area.
+7. Drawer or sheet for detail/edit.
+8. Dialog for package submit or blocking confirmation.
+9. Reference table only when it helps verify a rule.
+
+Surface rules:
+
+- Keep font weights calm. Do not make every label bold.
+- Metric cards use one small meaningful lucide icon.
+- Statuses use `Badge`; repeated action buttons are avoided.
+- Clickable object names open detail/edit when possible.
+- A boolean review state, such as `Kontrol edildi`, is separate from
+  correction or approval state.
+- The submit action is package-level when the workflow is package-level.
+- If required review is incomplete, confirmation explains what remains.
+- Mobile turns the main rows into readable cards without horizontal scroll.
+
+Product copy examples:
+
+- `Kontrol edilmeli`
+- `Kontrol edildi`
+- `Kontrol bekleyen mağaza`
+- `Dönem gönderimi`
+- `Kontrol tamamlanmadı`
+- `Onaya gönder`
+- `Kontrole dön`
 
 ## Date Filter
 
@@ -80,7 +120,8 @@ Standard order:
 5. Export or refresh.
 
 Use shadcn `Input`, `Select`, `Button`, `DropdownMenu`, `Popover`, and
-`Calendar` as needed.
+`Calendar` as needed. Single-choice toolbar filters such as `Durum`, `Rol`,
+`Mağaza türü`, and `Onay durumu` use shadcn `Select`, not native `<select>`.
 
 Avoid explanatory text such as row count prose or data-source notes. Put counts
 in the table footer: `1-15 / 42 kayit`.
@@ -175,13 +216,17 @@ Use a compact row of 2-4 data-backed metrics only when they help a decision.
 
 Each metric includes:
 
+- one meaningful lucide icon,
 - label,
 - value,
 - optional trend/status,
 - optional scope label if business-relevant.
 
-Avoid decorative metric cards and repeated icon boxes. If the metric does not
-change the user's next decision, remove it.
+The icon is mandatory for every prototype and production metric card. Keep it
+small, token-colored, and tied to the metric meaning.
+
+Avoid decorative metric cards, oversized icon boxes, and repeated status-like
+icons. If the metric does not change the user's next decision, remove it.
 
 ## Command Group
 
@@ -192,9 +237,9 @@ Group page commands by priority:
 - low-emphasis table or toolbar actions as `ghost`,
 - overflow actions in `DropdownMenu`.
 
-Use lucide icons only for fast recognition: export, refresh, filter, calendar,
-search, edit, delete, close, upload, download. Do not add icons just to fill
-space.
+Use lucide icons only for metric cards and fast recognition: export, refresh,
+filter, calendar, search, edit, delete, close, upload, download. Do not add
+icons just to fill space.
 
 ## Prototype To Product Checklist
 
