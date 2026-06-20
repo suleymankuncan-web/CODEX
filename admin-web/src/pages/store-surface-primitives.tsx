@@ -43,6 +43,14 @@ const toneClasses: Record<StoreSurfaceTone, string> = {
   warning: 'tw:border-chart-4/30 tw:bg-chart-4/10',
 }
 
+const toneIconClasses: Record<StoreSurfaceTone, string> = {
+  accent: 'tw:bg-primary/10 tw:text-primary',
+  calm: 'tw:bg-accent/10 tw:text-accent',
+  danger: 'tw:bg-destructive/10 tw:text-destructive',
+  neutral: 'tw:bg-muted tw:text-muted-foreground',
+  warning: 'tw:bg-chart-4/15 tw:text-chart-4',
+}
+
 export function StoreSurfacePage(input: {
   children: ReactNode
   className?: string
@@ -173,7 +181,10 @@ export function StoreMetricCard(input: {
         {input.icon ? (
           <span
             data-store-surface-icon
-            className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-secondary tw:text-primary"
+            className={cn(
+              'tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg',
+              toneIconClasses[input.tone ?? 'neutral'],
+            )}
           >
             {input.icon}
           </span>

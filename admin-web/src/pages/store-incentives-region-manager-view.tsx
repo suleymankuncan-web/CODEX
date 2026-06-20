@@ -1,13 +1,16 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { type UseMutationResult } from '@tanstack/react-query'
 import {
-  CheckCircle2,
-  ChevronDown,
+  CalendarDays,
+  ClipboardCheck,
   CircleDollarSign,
-  FileCheck2,
+  Download,
+  RefreshCw,
   RotateCcw,
   Search,
   Send,
+  SlidersHorizontal,
+  Store,
   UsersRound,
   WalletCards,
 } from 'lucide-react'
@@ -56,7 +59,6 @@ import {
 import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
 import {
-  formatDateTimeValue,
   formatMoneyValue,
   formatPercentValue,
   formatRateValue,
@@ -89,9 +91,6 @@ import {
   StoreEmptyState,
   StoreErrorState,
   StoreInfoGrid,
-  StoreMetricCard,
-  StoreMetricGrid,
-  StoreSectionCard,
   StoreStatusBadge,
   StoreSurfacePage,
 } from './store-surface-primitives'
@@ -149,6 +148,7 @@ export function RegionManagerIncentivesView(input: {
     allStoresReviewed,
     allStoresClosed,
   })
+  const sendStateLabel = submitDisabledReason ?? 'Gönderime hazır'
   const workflowLocked = isPackageLocked(workflow)
   const mutationError =
     input.mutationState.reviewMutation.error ??
@@ -159,95 +159,127 @@ export function RegionManagerIncentivesView(input: {
   return (
     <StoreSurfacePage
       ariaLabel="Primler"
-      className="tw:mx-auto tw:w-full tw:max-w-7xl"
+      className="tw:mx-auto tw:w-full tw:max-w-[1420px]"
       testId="store-incentives-page"
     >
-      <div className="tw:flex tw:flex-col tw:gap-4 tw:rounded-xl tw:border tw:border-border tw:bg-card/90 tw:p-4 tw:shadow-sm">
-        <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:flex-row tw:lg:items-start tw:lg:justify-between">
-          <div className="tw:flex tw:min-w-0 tw:gap-3">
-            <span className="tw:flex tw:size-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
-              <CircleDollarSign size={20} />
-            </span>
-            <div className="tw:min-w-0">
-              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Primler</span>
-              <h1 className="tw:text-xl tw:font-semibold tw:leading-tight tw:text-foreground tw:md:text-2xl">
-                Bölge primleri
-              </h1>
-              <p className="tw:mt-1 tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-                Mağaza ve personel hakedişleri, düzeltmeler ve onay süreci.
-              </p>
-            </div>
-          </div>
-          <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:flex-wrap tw:sm:justify-end">
-            <PeriodPicker
-              period={input.selectedPeriod}
-              onChange={input.onPeriodChange}
-            />
-            <Button
-              type="button"
-              disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
-              onClick={() => setSubmitDialogOpen(true)}
-            >
-              <Send data-icon="inline-start" />
-              {workflow?.regionPackageStatus === 'admin_returned' ? 'Tekrar gönder' : 'Onaya gönder'}
-            </Button>
-          </div>
-        </div>
-
-        <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_18rem]">
-          <div className="tw:rounded-xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
-            <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Dönem hakedişi</span>
-            <div className="tw:mt-2 tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-end tw:sm:justify-between">
-              <strong className="tw:text-3xl tw:font-semibold tw:leading-none tw:text-foreground tw:md:text-4xl">
-                {formatMoneyValue(summary.payableTotal, input.locale)}
-              </strong>
-              <StoreStatusBadge tone={packageStatus.tone}>
-                {packageStatus.label}
-              </StoreStatusBadge>
-            </div>
-          </div>
-          <div className="tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4">
-            <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Gönderim durumu</span>
-            <strong className="tw:mt-2 tw:block tw:text-base tw:font-semibold tw:text-foreground">
-              {submitDisabledReason ?? 'Gönderime hazır'}
-            </strong>
-            <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
-              {summary.reviewedStoreCount}/{summary.storeCount} mağaza kontrol edildi.
-            </p>
-          </div>
+      <div className="tw:flex tw:min-h-10 tw:flex-col tw:gap-3 tw:text-xs tw:text-muted-foreground tw:md:flex-row tw:md:items-center tw:md:justify-between">
+        <p>
+          <strong className="tw:text-foreground">Prim Merkezi</strong>{' '}
+          Bölge hakediş kontrol ekranı
+        </p>
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
+          <PeriodPicker
+            period={input.selectedPeriod}
+            onChange={input.onPeriodChange}
+          />
+          <Button type="button" variant="outline" onClick={() => undefined}>
+            <RefreshCw data-icon="inline-start" />
+            Yenile
+          </Button>
         </div>
       </div>
 
-      <StoreMetricGrid ariaLabel="Bölge prim özeti">
-        <StoreMetricCard
+      <header className="tw:grid tw:gap-4 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-4 tw:shadow-sm tw:lg:grid-cols-[minmax(0,1fr)_auto] tw:lg:items-center">
+        <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+          <span className="tw:flex tw:size-12 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-2xl tw:bg-gradient-to-br tw:from-primary tw:to-accent tw:text-primary-foreground tw:shadow-sm">
+            <CircleDollarSign size={23} />
+          </span>
+          <div className="tw:min-w-0">
+            <h1 className="tw:text-3xl tw:font-semibold tw:leading-none tw:text-foreground tw:md:text-4xl">
+              Primler
+            </h1>
+            <p className="tw:mt-1 tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              Mağaza ve personel hakedişleri, düzeltmeler ve onay süreci.
+            </p>
+          </div>
+        </div>
+        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:flex-wrap tw:sm:justify-end">
+          <Button type="button" variant="outline" onClick={() => undefined}>
+            <CalendarDays data-icon="inline-start" />
+            Dönem seç
+          </Button>
+          <Button type="button" variant="outline" onClick={() => undefined}>
+            <Download data-icon="inline-start" />
+            Excel dışa aktar
+          </Button>
+          <Button
+            type="button"
+            disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
+            onClick={() => setSubmitDialogOpen(true)}
+          >
+            <Send data-icon="inline-start" />
+            {workflow?.regionPackageStatus === 'admin_returned' ? 'Tekrar gönder' : 'Onaya gönder'}
+          </Button>
+        </div>
+      </header>
+
+      <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_16.25rem]">
+        <section className="tw:grid tw:min-h-56 tw:content-between tw:gap-4 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-gradient-to-br tw:from-primary/10 tw:to-accent/10 tw:p-5 tw:shadow-sm">
+          <div className="tw:flex tw:items-start tw:justify-between tw:gap-4">
+            <div>
+              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+                {formatPeriodLabel(input.data.period)} toplam hakediş
+              </span>
+              <strong className="tw:mt-3 tw:block tw:text-5xl tw:font-semibold tw:leading-none tw:text-foreground">
+                {formatMoneyValue(summary.payableTotal, input.locale)}
+              </strong>
+            </div>
+            <StoreStatusBadge tone={packageStatus.tone}>
+              {packageStatus.label}
+            </StoreStatusBadge>
+          </div>
+          <p className="tw:max-w-2xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
+            {summary.storeCount} şirket mağazası dönem paketinde. Kontrol tamamlanınca tek seferde onaya gönderilir.
+          </p>
+        </section>
+        <section className="tw:grid tw:content-between tw:gap-4 tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-5 tw:shadow-sm">
+          <div>
+            <h2 className="tw:text-lg tw:font-semibold tw:text-foreground">Dönem gönderimi</h2>
+            <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
+              Mağaza mağaza onay yok; kontroller tamamlanınca paket gönderilir.
+            </p>
+          </div>
+          <div className="tw:grid tw:gap-2">
+            <ApprovalStep label="Mağaza kontrolü" value={`${summary.reviewedStoreCount}/${summary.storeCount}`} />
+            <ApprovalStep label="Düzeltme notu" value={summary.correctionCount > 0 ? `${summary.correctionCount}/${summary.correctionCount}` : 'Yok'} />
+            <ApprovalStep label="Gönderim" value={sendStateLabel} />
+          </div>
+        </section>
+      </div>
+
+      <section
+        aria-label="Bölge prim özeti"
+        className="tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
+      >
+        <RegionMetricCard
           title="Toplam hakediş"
           value={formatMoneyValue(summary.payableTotal, input.locale)}
-          note={`${summary.storeCount} şirket mağazası`}
-          icon={<WalletCards size={18} />}
-          tone="calm"
+          note="Mağaza müdürü ve ekip toplamı"
+          icon={<WalletCards size={20} />}
+          tone="plum"
         />
-        <StoreMetricCard
+        <RegionMetricCard
           title="Prim hakeden personel"
           value={summary.earningPersonnelCount}
-          note="%80 eşiği geçen mağazalarda"
-          icon={<UsersRound size={18} />}
-          tone="accent"
+          note="%80 kapısı geçen mağazalarda"
+          icon={<UsersRound size={20} />}
+          tone="mint"
         />
-        <StoreMetricCard
-          title="Kontrol bekleyen mağaza"
-          value={summary.pendingReviewCount}
-          note={summary.projectionOnlyCount > 0 ? 'Ay kapanışı bekleyen mağaza var.' : 'Dönem kontrolüne hazır.'}
-          icon={<FileCheck2 size={18} />}
-          tone={summary.pendingReviewCount > 0 ? 'warning' : 'calm'}
-        />
-        <StoreMetricCard
+        <RegionMetricCard
           title="Düzeltme yapılan kayıt"
           value={summary.correctionCount}
-          note="Notla kaydedilen final prim düzeltmeleri"
-          icon={<CheckCircle2 size={18} />}
-          tone={summary.correctionCount > 0 ? 'warning' : 'neutral'}
+          note="Notlu değişiklikler"
+          icon={<SlidersHorizontal size={20} />}
+          tone="amber"
         />
-      </StoreMetricGrid>
+        <RegionMetricCard
+          title="Kontrol bekleyen mağaza"
+          value={summary.pendingReviewCount}
+          note="Gönderim öncesi kontrol"
+          icon={<ClipboardCheck size={20} />}
+          tone="cyan"
+        />
+      </section>
 
       {mutationError ? (
         <StoreErrorState
@@ -256,112 +288,99 @@ export function RegionManagerIncentivesView(input: {
         />
       ) : null}
 
-      <StoreSectionCard
-        title="Bölge mağazaları"
-        ariaLabel="Bölge mağazaları"
-        className="tw:overflow-visible"
-      >
-        <div className="tw:flex tw:flex-col tw:gap-3">
-          <div className="tw:grid tw:gap-2 tw:lg:grid-cols-[minmax(0,1fr)_12rem]">
-            <label className="tw:relative tw:block">
+      <div className="tw:grid tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-3 tw:shadow-sm">
+        <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(18rem,0.95fr)_minmax(18rem,1.2fr)_minmax(13rem,0.85fr)]">
+          <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
+            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Dönem</span>
+            <PeriodPicker
+              period={input.selectedPeriod}
+              onChange={input.onPeriodChange}
+            />
+          </div>
+          <label className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
+            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Mağaza ara</span>
+            <span className="tw:relative tw:block">
               <Search
                 size={16}
-                className="tw:pointer-events-none tw:absolute tw:left-2.5 tw:top-1/2 tw:-translate-y-1/2 tw:text-muted-foreground"
+                className="tw:pointer-events-none tw:absolute tw:left-0 tw:top-1/2 tw:-translate-y-1/2 tw:text-muted-foreground"
               />
               <Input
                 aria-label="Mağaza ara"
-                className="tw:pl-8"
+                className="tw:h-8 tw:border-0 tw:bg-transparent tw:pl-7 tw:shadow-none tw:focus-visible:ring-0"
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Mağaza ara"
                 value={search}
               />
-            </label>
+            </span>
+          </label>
+          <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
+            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Durum</span>
             <Select
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StoreStatusFilter)}
             >
-              <SelectTrigger aria-label="Durum filtresi" className="tw:w-full">
+              <SelectTrigger aria-label="Durum filtresi" className="tw:h-8 tw:border-0 tw:bg-transparent tw:px-0 tw:shadow-none tw:focus:ring-0">
                 <SelectValue placeholder="Durum" />
               </SelectTrigger>
               <SelectContent align="end">
                 <SelectItem value="all">Tümü</SelectItem>
+                <SelectItem value="pending_review">Kontrol edilmeli</SelectItem>
+                <SelectItem value="reviewed">Kontrol edildi</SelectItem>
                 <SelectItem value="earning">Hakediş var</SelectItem>
                 <SelectItem value="no_earning">Hakediş yok</SelectItem>
                 <SelectItem value="corrected">Düzeltildi</SelectItem>
-                <SelectItem value="reviewed">Kontrol edildi</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          {visibleProjections.length > 0 ? (
-            <>
-              <div className="tw:hidden tw:lg:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mağaza</TableHead>
-                      <TableHead>Hedef</TableHead>
-                      <TableHead>Gerçekleşen</TableHead>
-                      <TableHead>Hedef %</TableHead>
-                      <TableHead>Mağaza müdürü</TableHead>
-                      <TableHead>Personel primi</TableHead>
-                      <TableHead>Kontrol</TableHead>
-                      <TableHead className="tw:text-right">Durum</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {visibleProjections.map((projection) => (
-                      <RegionStoreTableRows
-                        expanded={expandedStoreId === projection.storeId}
-                        key={projection.storeId}
-                        locale={input.locale}
-                        onOpenChange={() =>
-                          setExpandedStoreId(expandedStoreId === projection.storeId ? null : projection.storeId)
-                        }
-                        onReviewChange={(reviewStatus) =>
-                          input.mutationState.reviewMutation.mutate({
-                            period: input.data.period,
-                            storeId: projection.storeId,
-                            reviewStatus,
-                          })
-                        }
-                        onSelectRow={(row) => setSelectedRow({ projection, row })}
-                        projection={projection}
-                        reviewDisabled={workflowLocked || !canReviewProjection(projection)}
-                      />
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:hidden">
-                {visibleProjections.map((projection) => (
-                  <RegionStoreMobileCard
-                    expanded={expandedStoreId === projection.storeId}
-                    key={projection.storeId}
-                    locale={input.locale}
-                    onOpenChange={() =>
-                      setExpandedStoreId(expandedStoreId === projection.storeId ? null : projection.storeId)
-                    }
-                    onReviewChange={(reviewStatus) =>
-                      input.mutationState.reviewMutation.mutate({
-                        period: input.data.period,
-                        storeId: projection.storeId,
-                        reviewStatus,
-                      })
-                    }
-                    onSelectRow={(row) => setSelectedRow({ projection, row })}
-                    projection={projection}
-                    reviewDisabled={workflowLocked || !canReviewProjection(projection)}
-                  />
-                ))}
-              </div>
-            </>
-          ) : (
-            <StoreEmptyState description="Bu filtrelerle eşleşen mağaza yok." />
-          )}
         </div>
-      </StoreSectionCard>
+      </div>
+
+      <section
+        aria-label="Mağaza prim hakedişleri"
+        className="tw:overflow-visible tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm"
+      >
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:p-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+          <div>
+            <h2 className="tw:text-xl tw:font-semibold tw:leading-snug tw:text-foreground">
+              Mağaza hakedişleri
+            </h2>
+            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
+              Mağazaya tıklayın, personel satırlarını kontrol edin.
+            </p>
+          </div>
+          <StoreStatusBadge tone="accent">
+            {summary.storeCount} şirket mağazası
+          </StoreStatusBadge>
+        </div>
+        {visibleProjections.length > 0 ? (
+          <div className="tw:flex tw:flex-col tw:gap-3 tw:p-3">
+            {visibleProjections.map((projection) => (
+              <RegionStoreCard
+                expanded={expandedStoreId === projection.storeId}
+                key={projection.storeId}
+                locale={input.locale}
+                onOpenChange={() =>
+                  setExpandedStoreId(expandedStoreId === projection.storeId ? null : projection.storeId)
+                }
+                onReviewChange={(reviewStatus) =>
+                  input.mutationState.reviewMutation.mutate({
+                    period: input.data.period,
+                    storeId: projection.storeId,
+                    reviewStatus,
+                  })
+                }
+                onSelectRow={(row) => setSelectedRow({ projection, row })}
+                projection={projection}
+                reviewDisabled={workflowLocked || !canReviewProjection(projection)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="tw:p-4">
+            <StoreEmptyState description="Bu filtrelerle eşleşen mağaza yok." />
+          </div>
+        )}
+      </section>
 
       <IncentiveRateTables />
 
@@ -418,7 +437,51 @@ export function RegionManagerIncentivesView(input: {
   )
 }
 
-function RegionStoreTableRows(input: {
+function ApprovalStep(input: { label: string; value: string }) {
+  return (
+    <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-muted/30 tw:px-3 tw:py-2">
+      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
+      <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.value}</strong>
+    </div>
+  )
+}
+
+function RegionMetricCard(input: {
+  title: string
+  value: string | number
+  note: string
+  icon: ReactNode
+  tone: 'plum' | 'mint' | 'amber' | 'cyan'
+}) {
+  const toneClasses: Record<'plum' | 'mint' | 'amber' | 'cyan', string> = {
+    amber: 'tw:bg-chart-4/15 tw:text-chart-4',
+    cyan: 'tw:bg-accent/10 tw:text-accent',
+    mint: 'tw:bg-emerald-500/10 tw:text-emerald-600',
+    plum: 'tw:bg-primary/10 tw:text-primary',
+  }
+
+  return (
+    <article className="tw:grid tw:min-h-28 tw:grid-cols-[2.75rem_minmax(0,1fr)] tw:items-center tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card/95 tw:p-4 tw:shadow-sm">
+      <span
+        className={cn(
+          'tw:flex tw:size-11 tw:items-center tw:justify-center tw:rounded-xl',
+          toneClasses[input.tone],
+        )}
+      >
+        {input.icon}
+      </span>
+      <span className="tw:min-w-0">
+        <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.title}</span>
+        <strong className="tw:mt-1 tw:block tw:truncate tw:text-2xl tw:font-semibold tw:leading-none tw:text-foreground">
+          {input.value}
+        </strong>
+        <span className="tw:mt-2 tw:block tw:text-xs tw:leading-5 tw:text-muted-foreground">{input.note}</span>
+      </span>
+    </article>
+  )
+}
+
+function RegionStoreCard(input: {
   projection: SalesTargetIncentiveProjection
   locale: ReturnType<typeof useLocalization>['locale']
   expanded: boolean
@@ -432,35 +495,52 @@ function RegionStoreTableRows(input: {
   const personnelTotal = sumMoney(personnel.map(getRegionEffectiveEarnedAmount))
   const review = getReviewState(input.projection.review)
   const status = getProjectionWorkflowStatus(input.projection)
+  const achievementProgress = toProgressPercent(input.projection.storeAchievementPct) ?? 0
 
   return (
-    <>
-      <TableRow aria-expanded={input.expanded}>
-        <TableCell>
-          <button
-            className="tw:flex tw:min-w-0 tw:flex-col tw:items-start tw:gap-1 tw:text-left"
-            onClick={input.onOpenChange}
-            type="button"
-          >
-            <span className="tw:flex tw:items-center tw:gap-2 tw:font-medium tw:text-foreground">
-              <ChevronDown
-                size={16}
-                className={cn('tw:transition-transform', input.expanded ? 'tw:rotate-180' : undefined)}
-              />
+    <article
+      className={cn(
+        'tw:overflow-hidden tw:rounded-xl tw:border tw:border-border tw:bg-card tw:shadow-sm tw:transition-colors',
+        input.expanded ? 'tw:ring-1 tw:ring-primary/15' : undefined,
+      )}
+    >
+      <div className="tw:grid tw:gap-3 tw:p-3 tw:lg:grid-cols-[minmax(13rem,1.45fr)_repeat(5,minmax(7rem,0.72fr))_minmax(9rem,0.9fr)] tw:lg:items-center">
+        <div
+          aria-expanded={input.expanded}
+          className="tw:flex tw:min-w-0 tw:items-center tw:gap-3 tw:text-left"
+          onClick={input.onOpenChange}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault()
+              input.onOpenChange()
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
+          <span className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
+            <Store size={17} />
+          </span>
+          <span className="tw:min-w-0">
+            <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
               {input.projection.storeName}
             </span>
-            <span className="tw:text-xs tw:text-muted-foreground">
-              {formatDateTimeValue(input.projection.lastImportAt, input.locale)}
+            <span className="tw:mt-0.5 tw:block tw:text-xs tw:text-muted-foreground">
+              Şirket mağazası
             </span>
-          </button>
-        </TableCell>
-        <TableCell>{formatMoneyValue(input.projection.storeTarget, input.locale)}</TableCell>
-        <TableCell>{formatMoneyValue(input.projection.storeActualNetSales, input.locale)}</TableCell>
-        <TableCell>{formatPercentValue(input.projection.storeAchievementPct, input.locale)}</TableCell>
-        <TableCell>{formatMoneyValue(getRegionEffectiveEarnedAmount(manager), input.locale)}</TableCell>
-        <TableCell>{formatMoneyValue(personnelTotal, input.locale)}</TableCell>
-        <TableCell>
-          <label className="tw:inline-flex tw:items-center tw:gap-2 tw:text-sm tw:text-foreground">
+          </span>
+        </div>
+        <StoreKv label="Mağaza hedefi" value={formatMoneyValue(input.projection.storeTarget, input.locale)} />
+        <StoreKv label="Gerçekleşen" value={formatMoneyValue(input.projection.storeActualNetSales, input.locale)} />
+        <div className="tw:grid tw:gap-1">
+          <StoreKv label="Hedef" value={formatPercentValue(input.projection.storeAchievementPct, input.locale)} />
+          <Progress value={achievementProgress} />
+        </div>
+        <StoreKv label="Müdür primi" value={formatMoneyValue(getRegionEffectiveEarnedAmount(manager), input.locale)} />
+        <StoreKv label="Ekip primi" value={formatMoneyValue(personnelTotal, input.locale)} />
+        <div className="tw:flex tw:flex-col tw:items-start tw:gap-2 tw:lg:items-end">
+          <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
+          <label className="tw:inline-flex tw:min-h-9 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/10 tw:px-3 tw:text-sm tw:font-medium tw:text-chart-4">
             <Checkbox
               checked={review.storeReviewStatus === 'reviewed'}
               disabled={input.reviewDisabled}
@@ -470,77 +550,11 @@ function RegionStoreTableRows(input: {
             />
             Kontrol edildi
           </label>
-        </TableCell>
-        <TableCell className="tw:text-right">
-          <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
-        </TableCell>
-      </TableRow>
-      {input.expanded ? (
-        <TableRow>
-          <TableCell className="tw:bg-muted/20 tw:p-3" colSpan={8}>
-            <RegionPersonnelTable
-              locale={input.locale}
-              onSelectRow={input.onSelectRow}
-              rows={[...(manager ? [manager] : []), ...personnel]}
-            />
-          </TableCell>
-        </TableRow>
-      ) : null}
-    </>
-  )
-}
-
-function RegionStoreMobileCard(input: {
-  projection: SalesTargetIncentiveProjection
-  locale: ReturnType<typeof useLocalization>['locale']
-  expanded: boolean
-  reviewDisabled: boolean
-  onOpenChange: () => void
-  onSelectRow: (row: SalesTargetIncentiveRow) => void
-  onReviewChange: (status: 'pending_review' | 'reviewed') => void
-}) {
-  const manager = getManagerRow(input.projection)
-  const personnel = getPersonnelRows(input.projection)
-  const status = getProjectionWorkflowStatus(input.projection)
-  const review = getReviewState(input.projection.review)
-
-  return (
-    <article className="tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-3">
-      <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
-        <button
-          className="tw:min-w-0 tw:text-left"
-          onClick={input.onOpenChange}
-          type="button"
-        >
-          <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
-            {input.projection.storeName}
-          </strong>
-          <span className="tw:text-xs tw:text-muted-foreground">
-            {formatPercentValue(input.projection.storeAchievementPct, input.locale)} hedef
-          </span>
-        </button>
-        <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
+        </div>
       </div>
-      <StoreInfoGrid
-        className="tw:mt-3 tw:grid-cols-2"
-        items={[
-          { label: 'Mağaza müdürü', value: formatMoneyValue(getRegionEffectiveEarnedAmount(manager), input.locale) },
-          { label: 'Personel primi', value: formatMoneyValue(sumMoney(personnel.map(getRegionEffectiveEarnedAmount)), input.locale) },
-        ]}
-      />
-      <label className="tw:mt-3 tw:inline-flex tw:items-center tw:gap-2 tw:text-sm tw:text-foreground">
-        <Checkbox
-          checked={review.storeReviewStatus === 'reviewed'}
-          disabled={input.reviewDisabled}
-          onCheckedChange={(checked) =>
-            input.onReviewChange(checked === true ? 'reviewed' : 'pending_review')
-          }
-        />
-        Kontrol edildi
-      </label>
       {input.expanded ? (
-        <div className="tw:mt-3">
-          <RegionPersonnelCards
+        <div className="tw:border-t tw:border-border tw:bg-muted/20 tw:p-3">
+          <RegionPersonnelTable
             locale={input.locale}
             onSelectRow={input.onSelectRow}
             rows={[...(manager ? [manager] : []), ...personnel]}
@@ -548,6 +562,15 @@ function RegionStoreMobileCard(input: {
         </div>
       ) : null}
     </article>
+  )
+}
+
+function StoreKv(input: { label: string; value: string }) {
+  return (
+    <div className="tw:min-w-0">
+      <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
+      <strong className="tw:mt-1 tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-foreground">{input.value}</strong>
+    </div>
   )
 }
 
@@ -561,53 +584,85 @@ function RegionPersonnelTable(input: {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Personel</TableHead>
-          <TableHead>Rol</TableHead>
-          <TableHead>Hedef</TableHead>
-          <TableHead>Gerçekleşen</TableHead>
-          <TableHead>Hedef %</TableHead>
-          <TableHead>Oran</TableHead>
-          <TableHead>Hesaplanan</TableHead>
-          <TableHead>Final prim</TableHead>
-          <TableHead>Not</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {input.rows.map((row) => (
-          <TableRow key={`${row.employeeId}:${row.participantType}`}>
-            <TableCell>
-              <Button
-                className="tw:h-auto tw:justify-start tw:p-0 tw:text-left"
-                onClick={() => input.onSelectRow(row)}
-                type="button"
-                variant="link"
-              >
-                {row.displayName}
-              </Button>
-            </TableCell>
-            <TableCell>{getIncentivePositionLabel(row.positionCode)}</TableCell>
-            <TableCell>{formatMoneyValue(row.target, input.locale)}</TableCell>
-            <TableCell>{formatMoneyValue(row.actualPositiveSales, input.locale)}</TableCell>
-            <TableCell>{formatPercentValue(row.achievementPct, input.locale)}</TableCell>
-            <TableCell>{formatRateValue(row.rate, input.locale)}</TableCell>
-            <TableCell>{formatMoneyValue(row.payableAmount, input.locale)}</TableCell>
-            <TableCell>{formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}</TableCell>
-            <TableCell>
-              {row.regionCorrection ? (
-                <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
-                  {getCorrectionLabel(row.regionCorrection)}
-                </StoreStatusBadge>
-              ) : (
-                <span className="tw:text-muted-foreground">Yok</span>
-              )}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <>
+      <div className="tw:hidden tw:lg:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Personel</TableHead>
+              <TableHead>Rol</TableHead>
+              <TableHead>Hedef</TableHead>
+              <TableHead>Gerçekleşen</TableHead>
+              <TableHead>Hedef %</TableHead>
+              <TableHead>Oran</TableHead>
+              <TableHead>Hesaplanan</TableHead>
+              <TableHead>Final prim</TableHead>
+              <TableHead>Not</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {input.rows.map((row) => (
+              <TableRow key={`${row.employeeId}:${row.participantType}`}>
+                <TableCell>
+                  <Button
+                    className="tw:h-auto tw:justify-start tw:p-0 tw:text-left"
+                    onClick={() => input.onSelectRow(row)}
+                    type="button"
+                    variant="link"
+                  >
+                    {row.displayName}
+                  </Button>
+                </TableCell>
+                <TableCell>{getIncentivePositionLabel(row.positionCode)}</TableCell>
+                <TableCell>{formatMoneyValue(row.target, input.locale)}</TableCell>
+                <TableCell>{formatMoneyValue(row.actualPositiveSales, input.locale)}</TableCell>
+                <TableCell>{formatPercentValue(row.achievementPct, input.locale)}</TableCell>
+                <TableCell>{formatRateValue(row.rate, input.locale)}</TableCell>
+                <TableCell>{formatMoneyValue(row.payableAmount, input.locale)}</TableCell>
+                <TableCell>
+                  <FinalAmountCell locale={input.locale} row={row} />
+                </TableCell>
+                <TableCell>
+                  {row.regionCorrection ? (
+                    <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
+                      {getCorrectionLabel(row.regionCorrection)}
+                    </StoreStatusBadge>
+                  ) : (
+                    <span className="tw:text-muted-foreground">Yok</span>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <div className="tw:lg:hidden">
+        <RegionPersonnelCards
+          locale={input.locale}
+          onSelectRow={input.onSelectRow}
+          rows={input.rows}
+        />
+      </div>
+    </>
+  )
+}
+
+function FinalAmountCell(input: {
+  row: SalesTargetIncentiveRow
+  locale: ReturnType<typeof useLocalization>['locale']
+}) {
+  const effectiveAmount = getRegionEffectiveEarnedAmount(input.row)
+  const hasCorrection = Boolean(input.row.regionCorrection && input.row.regionCorrection.status !== 'voided')
+
+  if (!hasCorrection || effectiveAmount === input.row.payableAmount) {
+    return <span>{formatMoneyValue(effectiveAmount, input.locale)}</span>
+  }
+
+  return (
+    <span className="tw:flex tw:flex-col tw:gap-0.5">
+      <s className="tw:text-xs tw:text-muted-foreground">{formatMoneyValue(input.row.payableAmount, input.locale)}</s>
+      <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{formatMoneyValue(effectiveAmount, input.locale)}</strong>
+    </span>
   )
 }
 
@@ -629,8 +684,15 @@ function RegionPersonnelCards(input: {
           <span className="tw:block tw:text-xs tw:text-muted-foreground">
             {getIncentivePositionLabel(row.positionCode)} / {formatPercentValue(row.achievementPct, input.locale)}
           </span>
-          <span className="tw:mt-2 tw:block tw:text-sm tw:font-semibold tw:text-foreground">
-            {formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
+          <span className="tw:mt-2 tw:flex tw:items-center tw:justify-between tw:gap-3">
+            <span className="tw:text-sm tw:font-semibold tw:text-foreground">
+              {formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
+            </span>
+            {row.regionCorrection ? (
+              <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
+                {getCorrectionLabel(row.regionCorrection)}
+              </StoreStatusBadge>
+            ) : null}
           </span>
         </button>
       ))}
@@ -716,69 +778,76 @@ function IncentiveCorrectionSheetForm(input: {
   const noteIsValid = reasonNote.trim().length >= 3
 
   return (
-    <SheetContent closeLabel="Kapat">
-      <SheetHeader>
+    <SheetContent closeLabel="Kapat" className="tw:max-w-xl tw:p-0">
+      <SheetHeader className="tw:border-b tw:border-border tw:p-4">
         <SheetTitle>{row.displayName}</SheetTitle>
         <SheetDescription>
-          {projection.storeName} / {getIncentivePositionLabel(row.positionCode)}
+          {getIncentivePositionLabel(row.positionCode)}, {projection.storeName}
         </SheetDescription>
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
+          <StoreStatusBadge tone={progress >= 80 ? 'calm' : 'warning'}>
+            Hedef {formatPercentValue(row.achievementPct, input.locale)}
+          </StoreStatusBadge>
+          {row.regionCorrection ? (
+            <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
+              {getCorrectionLabel(row.regionCorrection)}
+            </StoreStatusBadge>
+          ) : (
+            <StoreStatusBadge tone="neutral">Düzeltme yok</StoreStatusBadge>
+          )}
+        </div>
       </SheetHeader>
 
-      <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-4 tw:overflow-y-auto">
-        <StoreInfoGrid
-          className="tw:grid-cols-2"
-          items={[
-            { label: 'Hedef', value: formatMoneyValue(row.target, input.locale) },
-            { label: 'Gerçekleşen', value: formatMoneyValue(row.actualPositiveSales, input.locale) },
-            { label: 'Hedef %', value: formatPercentValue(row.achievementPct, input.locale), tone: progress >= 80 ? 'calm' : 'warning' },
-            { label: 'Prim oranı', value: formatRateValue(row.rate, input.locale) },
-          ]}
-        />
-
-        <div className="tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4">
-          <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-            <span className="tw:text-sm tw:font-medium tw:text-foreground">Hedef gerçekleşme</span>
-            <span className="tw:text-sm tw:font-semibold tw:text-foreground">
-              {formatPercentValue(row.achievementPct, input.locale)}
-            </span>
+      <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-4 tw:overflow-y-auto tw:p-4">
+        <section className="tw:rounded-xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
+          <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">Hakediş özeti</h3>
+          <div className="tw:mt-3 tw:rounded-lg tw:border tw:border-border tw:bg-card tw:p-3">
+            <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
+              <span className="tw:text-sm tw:font-medium tw:text-foreground">Hedef gerçekleşme</span>
+              <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
+                {formatPercentValue(row.achievementPct, input.locale)}
+              </strong>
+            </div>
+            <Progress className="tw:mt-3" value={progress} />
           </div>
-          <Progress className="tw:mt-3" value={progress} />
-        </div>
-
-        <div className="tw:rounded-xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Hakediş özeti</span>
           <div className="tw:mt-3 tw:grid tw:gap-2">
-            <AmountLine label="Hesaplanan" value={formatMoneyValue(row.payableAmount, input.locale)} />
+            <AmountLine label="Hedef" value={formatMoneyValue(row.target, input.locale)} />
+            <AmountLine label="Gerçekleşen" value={formatMoneyValue(row.actualPositiveSales, input.locale)} />
+            <AmountLine label="Prim oranı" value={formatRateValue(row.rate, input.locale)} />
+            <AmountLine label="Hesaplanan prim" value={formatMoneyValue(row.payableAmount, input.locale)} />
             <AmountLine label="Düzeltme" value={formatMoneyValue(row.regionCorrection?.adjustmentAmount ?? row.correctionAmount, input.locale)} />
             <AmountLine label="Final prim" strong value={formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)} />
           </div>
-        </div>
+        </section>
 
-        <label className="tw:flex tw:flex-col tw:gap-1">
-          <span className="tw:text-sm tw:font-medium tw:text-foreground">Final prim tutarı</span>
-          <Input
-            disabled={!canEdit}
-            inputMode="decimal"
-            onChange={(event) => setFinalAmount(event.target.value)}
-            value={finalAmount}
-          />
-          {!amountIsValid ? (
-            <span className="tw:text-xs tw:text-destructive">Geçerli bir tutar girin.</span>
-          ) : null}
-        </label>
+        <section className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4">
+          <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">Düzeltme</h3>
+          <label className="tw:flex tw:flex-col tw:gap-1">
+            <span className="tw:text-sm tw:font-medium tw:text-foreground">Final prim tutarı</span>
+            <Input
+              disabled={!canEdit}
+              inputMode="decimal"
+              onChange={(event) => setFinalAmount(event.target.value)}
+              value={finalAmount}
+            />
+            {!amountIsValid ? (
+              <span className="tw:text-xs tw:text-destructive">Geçerli bir tutar girin.</span>
+            ) : null}
+          </label>
 
-        <label className="tw:flex tw:flex-col tw:gap-1">
-          <span className="tw:text-sm tw:font-medium tw:text-foreground">Düzeltme notu</span>
-          <Textarea
-            disabled={!canEdit}
-            onChange={(event) => setReasonNote(event.target.value)}
-            placeholder="Düzeltme nedenini yazın"
-            value={reasonNote}
-          />
-        </label>
+          <label className="tw:flex tw:flex-col tw:gap-1">
+            <span className="tw:text-sm tw:font-medium tw:text-foreground">Düzeltme notu</span>
+            <Textarea
+              disabled={!canEdit}
+              onChange={(event) => setReasonNote(event.target.value)}
+              placeholder="Düzeltme nedenini yazın"
+              value={reasonNote}
+            />
+          </label>
+        </section>
       </div>
 
-      <SheetFooter>
+      <SheetFooter className="tw:mx-0 tw:mb-0">
         <Button type="button" variant="outline" onClick={() => input.onOpenChange(false)}>
           İptal
         </Button>

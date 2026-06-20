@@ -50,6 +50,10 @@
   font-weight: 800;
 }
 
+body:has([data-slot='sheet-content'][data-state='open']) .pilot-feedback-control {
+  display: none;
+}
+
 .pilot-feedback-backdrop {
   position: fixed;
   inset: 0;

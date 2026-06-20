@@ -72,13 +72,13 @@ test('region manager sees assigned stores grouped by store with approval control
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByRole('heading', { name: 'Bölge primleri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Primler' })).toBeVisible()
   await expect(page.getByRole('button', { name: /IstinyePark Demo Store/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Marmara Forum/ })).toBeVisible()
   await page.getByRole('button', { name: /Marmara Forum/ }).click()
   await expect(page.getByRole('button', { name: 'Second Store Personnel' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
-  await expect(page.getByRole('button', { name: /Excel/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Excel/i })).toBeVisible()
   await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toHaveCount(2)
 })
 
@@ -267,6 +267,40 @@ test('captures responsive visual evidence for eligible incentive state', async (
   await expectNoHorizontalOverflow(page)
   await page.screenshot({
     path: join(evidenceDir, 'store-incentives-manager-mobile-390.png'),
+    fullPage: true,
+  })
+})
+
+test('captures responsive visual evidence for region manager incentive command state', async ({ page }) => {
+  mkdirSync(evidenceDir, { recursive: true })
+
+  await routeAuthSession(page, createRegionManagerSession())
+  await routeStoreIncentives(page, regionIncentiveFixture)
+
+  await page.setViewportSize({ width: 1440, height: 1100 })
+  await page.goto('/store/incentives')
+  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({
+    path: join(evidenceDir, 'store-incentives-region-manager-desktop.png'),
+    fullPage: true,
+  })
+
+  await page.getByRole('button', { name: /Marmara Forum/ }).click()
+  await page.getByRole('button', { name: 'Second Store Personnel' }).click()
+  await expect(page.getByRole('dialog', { name: 'Second Store Personnel' })).toBeVisible()
+  await expect(page.locator('.pilot-feedback-control')).toBeHidden()
+  await page.screenshot({
+    path: join(evidenceDir, 'store-incentives-region-manager-sheet-desktop.png'),
+    fullPage: true,
+  })
+
+  await page.setViewportSize({ width: 390, height: 1200 })
+  await page.goto('/store/incentives')
+  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({
+    path: join(evidenceDir, 'store-incentives-region-manager-mobile-390.png'),
     fullPage: true,
   })
 })
