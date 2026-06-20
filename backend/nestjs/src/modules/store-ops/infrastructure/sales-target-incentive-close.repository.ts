@@ -169,6 +169,9 @@ export class SalesTargetIncentiveCloseRepository {
           ...store.personnel,
         ];
         for (const participant of participants) {
+          if (isSkippableImportedHistoricalPersonnel(store, participant)) {
+            continue;
+          }
           assertFinalizableParticipant(participant);
           const assignmentSnapshotId = await this.insertAssignmentSnapshot(client, {
             closeRunId,
@@ -680,13 +683,32 @@ export class SalesTargetIncentiveCloseRepository {
 }
 
 function assertFinalizableParticipant(participant: SalesTargetIncentiveParticipantProjection) {
-  if (
-    participant.calculation.status !== "projected" ||
-    participant.calculation.payableAmount === null ||
-    participant.assignmentStartedOn === null
-  ) {
+  if (!isFinalizableParticipant(participant)) {
     throw new Error("Incentive participant is not finalizable");
   }
+}
+
+function isFinalizableParticipant(participant: SalesTargetIncentiveParticipantProjection) {
+  return (
+    participant.calculation.status === "projected" &&
+    participant.calculation.payableAmount !== null &&
+    participant.assignmentStartedOn !== null
+  );
+}
+
+function isSkippableImportedHistoricalPersonnel(
+  store: SalesTargetIncentiveProjectionStore,
+  participant: SalesTargetIncentiveParticipantProjection,
+) {
+  return (
+    !store.storeTargetRequestId &&
+    store.storeTargetAmount !== null &&
+    participant.participantType === "personnel" &&
+    participant.targetReferenceId === null &&
+    participant.targetAmount === null &&
+    participant.calculation.status === "blocked" &&
+    participant.calculation.blockedReason === "missing_personnel_target"
+  );
 }
 
 function collectStoreSourceImportBatchIds(store: SalesTargetIncentiveProjectionStore) {

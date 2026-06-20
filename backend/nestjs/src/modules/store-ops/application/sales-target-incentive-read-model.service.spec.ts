@@ -332,6 +332,55 @@ describe("SalesTargetIncentiveReadModelService", () => {
     );
   });
 
+  it("allows imported store targets to satisfy close readiness without a target request id", async () => {
+    const { service } = createService({
+      storeRows: [{ ...storeSource, store_target_request_id: null }],
+      personnelRows: [],
+    });
+
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05",
+      companyIds: ["company-1"],
+      nowIso: "2026-06-01T02:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "ready",
+        canClose: true,
+      }),
+    );
+  });
+
+  it("does not block imported-target close readiness when historical personnel targets are absent", async () => {
+    const { service } = createService({
+      storeRows: [{ ...storeSource, store_target_request_id: null }],
+      personnelRows: [
+        {
+          ...personnelSource,
+          store_target_request_id: null,
+          personnel_target_reference_id: null,
+          personnel_target_amount: null,
+        },
+      ],
+    });
+
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05",
+      companyIds: ["company-1"],
+      nowIso: "2026-06-01T02:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "ready",
+        canClose: true,
+      }),
+    );
+  });
+
   it("blocks close readiness when a scoped store has no participants but missing store inputs", async () => {
     const { service } = createService({
       storeRows: [

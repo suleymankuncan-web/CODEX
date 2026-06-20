@@ -132,6 +132,19 @@ export class SalesTargetIncentiveReadRepository {
              AND tdr.request_status = 'approved'
             UNION ALL
             SELECT
+              kt.period_start::date AS period_start,
+              FALSE AS has_sales
+            FROM scoped_stores s
+            INNER JOIN ops.kpi_target kt
+              ON kt.store_id = s.store_id
+             AND kt.scope_type = 'store'
+             AND kt.period_type = 'monthly'
+            INNER JOIN ops.kpi_definition kd_target
+              ON kd_target.kpi_id = kt.kpi_id
+             AND kd_target.kpi_code = 'TARGET_ACHIEVEMENT'
+             AND kd_target.is_active = TRUE
+            UNION ALL
+            SELECT
               ka.period_start::date AS period_start,
               TRUE AS has_sales
             FROM scoped_stores s
@@ -194,7 +207,7 @@ export class SalesTargetIncentiveReadRepository {
             s.store_name,
             s.store_type,
             store_target.target_distribution_request_id::text AS store_target_request_id,
-            store_target.total_target_value::text AS store_target_amount,
+            COALESCE(store_target.total_target_value, imported_store_target.target_value)::text AS store_target_amount,
             store_sales.actual_value::text AS store_net_sales_amount,
             store_sales.source_batch_id AS store_net_sales_source_batch_id,
             store_sales.import_batch_id AS store_net_sales_import_batch_id,
@@ -227,6 +240,22 @@ export class SalesTargetIncentiveReadRepository {
               tdr.target_distribution_request_id DESC
             LIMIT 1
           ) store_target ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT
+              kt.target_value
+            FROM ops.kpi_target kt
+            INNER JOIN ops.kpi_definition kd
+              ON kd.kpi_id = kt.kpi_id
+             AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
+             AND kd.is_active = TRUE
+            WHERE kt.store_id = s.store_id
+              AND kt.scope_type = 'store'
+              AND kt.period_type = 'monthly'
+              AND kt.period_start = $1::date
+              AND kt.period_end = $2::date
+            ORDER BY kt.kpi_target_id DESC
+            LIMIT 1
+          ) imported_store_target ON TRUE
           LEFT JOIN LATERAL (
             SELECT
               eah.employee_id,
@@ -356,7 +385,7 @@ export class SalesTargetIncentiveReadRepository {
             s.store_name,
             s.store_type,
             store_target.target_distribution_request_id::text AS store_target_request_id,
-            store_target.total_target_value::text AS store_target_amount,
+            COALESCE(store_target.total_target_value, imported_store_target.target_value)::text AS store_target_amount,
             store_sales.actual_value::text AS store_net_sales_amount,
             store_sales.source_batch_id AS store_net_sales_source_batch_id,
             store_sales.import_batch_id AS store_net_sales_import_batch_id,
@@ -397,6 +426,22 @@ export class SalesTargetIncentiveReadRepository {
               tdr.target_distribution_request_id DESC
             LIMIT 1
           ) store_target ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT
+              kt.target_value
+            FROM ops.kpi_target kt
+            INNER JOIN ops.kpi_definition kd
+              ON kd.kpi_id = kt.kpi_id
+             AND kd.kpi_code = 'TARGET_ACHIEVEMENT'
+             AND kd.is_active = TRUE
+            WHERE kt.store_id = s.store_id
+              AND kt.scope_type = 'store'
+              AND kt.period_type = 'monthly'
+              AND kt.period_start = $1::date
+              AND kt.period_end = $2::date
+            ORDER BY kt.kpi_target_id DESC
+            LIMIT 1
+          ) imported_store_target ON TRUE
           LEFT JOIN LATERAL (
             SELECT
               ka.actual_value,
