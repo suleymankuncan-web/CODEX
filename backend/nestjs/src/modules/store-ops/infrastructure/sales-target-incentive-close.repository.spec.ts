@@ -286,4 +286,118 @@ describe("SalesTargetIncentiveCloseRepository", () => {
       }),
     );
   });
+
+  it("finalizes only projected participants when imported historical personnel targets are absent", async () => {
+    const { query, repository } = createHarness();
+    const importedTargetStore = {
+      ...storeProjection,
+      storeTargetRequestId: null,
+      manager: storeProjection.manager
+        ? {
+            ...storeProjection.manager,
+            source: {
+              ...storeProjection.manager.source,
+              storeTargetRequestId: null,
+            },
+          }
+        : null,
+      personnel: storeProjection.personnel.map((participant) => ({
+        ...participant,
+        targetReferenceId: null,
+        targetAmount: null,
+        source: {
+          ...participant.source,
+          storeTargetRequestId: null,
+        },
+        calculation: {
+          ...participant.calculation,
+          status: "blocked" as const,
+          blockedReason: "missing_personnel_target" as const,
+          achievementPct: null,
+          personalRateBeforeGate: null,
+          rate: null,
+          rawEarnedAmount: null,
+          payableAmount: null,
+        },
+      })),
+    };
+
+    query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            rule_version_id: ruleVersionId,
+            rule_version_code: "sales-target-incentive-v1.0.0",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            rate_table_version: "manager-sales-target-v1.0.0",
+            audience: "store_manager",
+            min_achievement_pct: "110.0000",
+            max_achievement_pct: null,
+            rate: "0.0100",
+            sort_order: 1,
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
+      .mockResolvedValueOnce({ rows: [{ assignment_snapshot_id: managerAssignmentSnapshotId }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            close_run_id: closeRunId,
+            company_id: companyId,
+            period_key: "2026-05",
+            period_start: "2026-05-01",
+            period_end: "2026-05-31",
+            close_cutoff_at: "2026-06-01T02:00:00.000+03:00",
+            status: "succeeded",
+            started_at: "2026-06-01T02:00:00.000+03:00",
+            completed_at: "2026-06-01T02:00:01.000+03:00",
+            failed_reason: null,
+            source_import_batch_ids: [storeImportBatchId, personnelImportBatchId],
+            final_snapshot_count: 1,
+            final_row_count: 1,
+          },
+        ],
+      });
+
+    const result = await repository.createSucceededCloseRun({
+      companyId,
+      periodKey: "2026-05",
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      actorUserId,
+      stores: [importedTargetStore],
+    });
+
+    expect(String(query.mock.calls[5][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
+    expect(query.mock.calls[5][1]).toEqual(
+      expect.arrayContaining([
+        null,
+        importedTargetStore.storeTargetAmount,
+        importedTargetStore.storeNetSalesAmount,
+      ]),
+    );
+    expect(String(query.mock.calls[6][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    expect(String(query.mock.calls[8][0])).toContain("SET status = 'succeeded'");
+    expect(query).toHaveBeenCalledTimes(9);
+    expect(result).toEqual(
+      expect.objectContaining({
+        closeRunId,
+        status: "succeeded",
+        finalSnapshotCount: 1,
+        finalRowCount: 1,
+      }),
+    );
+  });
 });

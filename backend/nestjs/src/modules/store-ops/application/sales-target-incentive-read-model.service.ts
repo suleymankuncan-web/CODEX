@@ -454,6 +454,8 @@ function hasIncompleteCloseCalculation(
       return true;
     }
 
+    const hasImportedStoreTargetOnly =
+      !store.storeTargetRequestId && Boolean(store.storeTargetAmount);
     const participants = [
       ...(store.manager ? [store.manager] : []),
       ...store.personnel,
@@ -461,8 +463,28 @@ function hasIncompleteCloseCalculation(
 
     return participants.some(
       (participant) =>
-        participant.calculation.status === "blocked" ||
-        participant.calculation.status === "no_source",
+        isCloseBlockingParticipantCalculation(participant, {
+          hasImportedStoreTargetOnly,
+        }),
     );
   });
+}
+
+function isCloseBlockingParticipantCalculation(
+  participant: SalesTargetIncentiveParticipantProjection,
+  input: { hasImportedStoreTargetOnly: boolean },
+) {
+  if (
+    input.hasImportedStoreTargetOnly &&
+    participant.participantType === "personnel" &&
+    participant.calculation.status === "blocked" &&
+    participant.calculation.blockedReason === "missing_personnel_target"
+  ) {
+    return false;
+  }
+
+  return (
+    participant.calculation.status === "blocked" ||
+    participant.calculation.status === "no_source"
+  );
 }
