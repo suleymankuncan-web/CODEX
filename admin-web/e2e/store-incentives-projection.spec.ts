@@ -121,7 +121,7 @@ test('region manager marks a store reviewed with period and store id', async ({ 
   await routeRegionIncentiveMutations(page, { reviewRequests: requests })
 
   await page.goto('/store/incentives')
-  await page.getByRole('checkbox', { name: 'Kontrol edildi' }).first().click()
+  await page.getByRole('checkbox', { name: 'Kontrol et' }).first().click()
 
   await expect.poll(() => requests.length).toBe(1)
   expect(requests[0]).toMatchObject({
@@ -252,7 +252,7 @@ test('region manager approval controls stay disabled before month close', async 
 
   await expect(page.getByText(/Ay kapan.*bekliyor/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
-  await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' }).first()).toBeDisabled()
+  await expect(page.getByRole('checkbox', { name: 'Kontrol et' }).first()).toBeDisabled()
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await expect(page.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
 })

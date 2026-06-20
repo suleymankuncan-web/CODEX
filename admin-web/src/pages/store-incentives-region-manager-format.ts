@@ -131,15 +131,6 @@ function parseMoneyInput(rawValue: string): { integer: string; fraction?: string
     return { integer: compact.replace(/\./g, '').replace(/^0+(?=\d)/, ''), invalid: false }
   }
 
-  if (lastComma === -1 && compact.includes('.')) {
-    const dotParts = compact.split('.')
-    const lastGroup = dotParts[dotParts.length - 1] ?? ''
-    const dotOnlyDigits = dotParts.join('')
-    if (/^\d+$/.test(dotOnlyDigits) && lastGroup.length > 2) {
-      return { integer: dotOnlyDigits.replace(/^0+(?=\d)/, ''), invalid: false }
-    }
-  }
-
   const decimalSeparator = lastDot > lastComma ? '.' : ','
   const groupingSeparator = decimalSeparator === '.' ? ',' : '.'
   const separatorIndex = decimalSeparator === '.' ? lastDot : lastComma
