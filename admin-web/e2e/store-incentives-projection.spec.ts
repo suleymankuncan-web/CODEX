@@ -66,6 +66,38 @@ test('store manager sees incentive navigation and store projection rows without 
   await expect(page.getByText('16.500,00 TL').first()).toBeVisible()
 })
 
+test('region manager sees incentive navigation before incentive rows resolve', async ({ page }) => {
+  let releaseIncentives!: () => void
+  const incentivesDeferred = new Promise<void>((resolve) => {
+    releaseIncentives = resolve
+  })
+
+  await routeAuthSession(page, createRegionManagerSession())
+  await page.unroute('**/api/store/incentives**')
+  await page.route('**/api/store/incentives**', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    if (request.method() !== 'GET' || url.pathname !== '/api/store/incentives') {
+      await route.fallback()
+      return
+    }
+
+    await incentivesDeferred
+    await route.fulfill({ json: regionIncentiveFixture })
+  })
+
+  try {
+    await page.goto('/store/home')
+
+    await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
+    await expect(
+      page.locator('.store-command-nav').getByRole('link', { name: 'Primler' }),
+    ).toBeVisible({ timeout: 1_000 })
+  } finally {
+    releaseIncentives()
+  }
+})
+
 test('region manager sees assigned stores grouped by store with approval controls', async ({ page }) => {
   await routeAuthSession(page, createRegionManagerSession())
   await routeStoreIncentives(page, regionIncentiveFixture)

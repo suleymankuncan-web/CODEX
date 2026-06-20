@@ -76,7 +76,7 @@ export function StoreSidebar(input: {
   const hasStoreIncentiveRows = (incentivesNavQuery.data?.data.projections.length ?? 0) > 0
   const shouldShowIncentivesNav =
     canOpenStoreIncentives(input.authSummary) &&
-    hasStoreIncentiveRows
+    (incentivesQueryIdentity.roleScope === 'region' || hasStoreIncentiveRows)
   const navItems = getRoleAwareStoreNavigation(input.authSummary).filter((item) =>
     item.id === 'incentives' ? shouldShowIncentivesNav : true,
   )
