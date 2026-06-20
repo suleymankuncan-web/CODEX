@@ -14,7 +14,9 @@ After reading, they should be able to:
 - verify that a page refactor is standard-compliant before PR.
 
 Companion implementation recipes live in
-`docs/process/ui-surface-recipes-v1.md`.
+`docs/process/ui-surface-recipes-v1.md`. The Store/Admin operational surface
+standardization process lives in
+`docs/process/store-admin-surface-standardization-v1.md`.
 
 ## Scope
 
@@ -76,6 +78,7 @@ Common mappings:
 | Date range | `Calendar mode="range"` in `Popover`, `Sheet`, or `Drawer` |
 | Month/year period | explicit month/year controls, not raw `202605` input |
 | Form | `Field`, `Input`, `InputGroup`, `Textarea`, `Select`, `Checkbox`, `Switch`, `RadioGroup`, `Slider`, `InputOTP` |
+| Dropdown/status filter | `Select` with `SelectTrigger`, `SelectValue`, `SelectContent`, `SelectGroup`, `SelectItem` |
 | 2-7 choices | `ToggleGroup` |
 | View sections | `Tabs` |
 | Status | `Badge` |
@@ -89,6 +92,11 @@ Common mappings:
 
 `className` on shadcn components is for layout and small composition. Do not
 override component color, typography, radius, or shadow page by page.
+
+Native `<select>` should not appear in Store/Admin production surfaces unless a
+browser-native exception is documented in the PR. Toolbar filters such as
+`Durum`, `Mağaza türü`, `Rol`, and similar single-choice controls use shadcn
+`Select`.
 
 ## Button Standard
 
@@ -127,20 +135,26 @@ Good icon use:
 - icon-only buttons with accessible labels/tooltips,
 - recognizable actions such as search, calendar/date, filter, export, refresh,
   upload, download, edit, delete, close, and external link,
+- exactly one restrained lucide icon in every metric card or metric strip item,
 - one supporting icon in alert, empty, error, success, or loading states,
 - dense table/action-menu contexts where text would be too wide.
 
 Avoid:
 
 - icons on every card heading,
-- decorative large icon boxes in metric cards,
+- decorative or oversized metric-card icon boxes,
 - icons in every table cell or every status badge,
 - icons on buttons where the text is already clear,
 - repeating the same signal with both icon and badge color,
 - using icons to make a sparse page look fuller.
 
+Metric-card rule: every prototype and production Store/Admin page that uses a
+metric card must include one meaningful lucide icon per metric. The icon should
+be small, token-colored, and tied to the metric meaning; it must not become a
+large decorative tile or a second status badge.
+
 Decision rule: if the icon does not make the action faster to recognize or the
-state easier to scan, leave it out.
+state easier to scan, leave it out, except for the mandatory metric-card icon.
 
 ## Page Anatomy
 
@@ -149,13 +163,41 @@ Store/Admin pages should feel like one product family. Prefer this anatomy:
 1. Product shell and role-aware navigation.
 2. Compact page header with clear title and optional useful subtitle.
 3. Necessary status/filter row.
-4. Summary metrics only when data-backed and decision-relevant.
+4. Summary metrics only when data-backed and decision-relevant, with one
+   meaningful lucide icon per metric card.
 5. Main table/list/form/workbench.
 6. Clear loading, empty, error, access, and recovery states.
 7. Detail drawer/dialog only when evidence or action controls need focus.
 
 Avoid operational hero pages, nested cards, oversized headings, decorative
 gradients, repeated summary cards, and filler explanation blocks.
+
+## Canonical Surface Reference
+
+The Region Manager incentives command-center prototype is the current canonical
+reference for Store/Admin operational surface rhythm.
+
+Use it as the default benchmark for:
+
+- compact premium layout,
+- calm font weights,
+- small meaningful metric-card icons,
+- controlled metric-card size,
+- shadcn-like filters and commands,
+- accordion/table main work area,
+- right-side drawer for detail or adjustment,
+- confirmation dialog for package submit,
+- product copy that can be promoted into production unchanged,
+- mobile card rhythm without horizontal scroll.
+
+This reference does not change every page into an incentives page. It defines
+the expected quality bar and surface discipline for future Store/Admin
+prototypes and refactors.
+
+Prototype copy and production copy must not diverge silently. If production
+requires different labels, statuses, helper text, or confirmation copy because
+of role, permission, missing data, or backend contract, record that deviation
+before calling the page complete.
 
 ## Token And Color Standard
 
@@ -327,9 +369,12 @@ A UI surface refactor is done only when:
 - shadcn-eligible controls use shadcn components or have an explicit exception,
 - buttons, badges, inputs, overlays, date controls, empty/loading/error states,
   and toolbars follow this standard,
-- icon use is intentional and restrained,
+- icon use is intentional and restrained, and every metric card has one
+  meaningful lucide icon,
 - section titles, helper text, empty states, badges, and buttons use product
   language,
+- prototype and production labels, statuses, toolbar controls, drawer copy, and
+  confirmation copy match unless a deviation is documented,
 - raw hex and route-local styling are absent from changed production UI unless
   explicitly justified,
 - desktop/mobile states are checked when layout-sensitive,

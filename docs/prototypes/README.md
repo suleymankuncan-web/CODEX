@@ -33,6 +33,20 @@ implemented and verified.
 - `docs/prototypes/store-checklist-result-modal-v1.html` is the locked and
   implemented checklist result modal visual contract for Store Manager
   acknowledgement and Region Manager review contexts.
+- `docs/prototypes/store-checklists-region-manager-v1.html` is the draft
+  Region Manager `/store/checklists` page prototype for the store-first
+  checklist operation view. It is not locked until explicitly approved.
+- `docs/prototypes/store-checklists-region-manager-command-v2.html` is the
+  draft Region Manager `/store/checklists` command-deck prototype that uses the
+  `/store/kpis` Store Manager rhythm while preserving the checklist operation
+  flow. It is not locked until explicitly approved.
+- `docs/prototypes/store-incentives-region-manager-v1.html` is the draft Region
+  Manager incentives page prototype. It is not locked until explicitly approved.
+- `docs/prototypes/store-incentives-region-manager-command-v2.html` is the
+  locked Region Manager `/store/incentives` premium command-center prototype
+  and the canonical Store/Admin operational surface reference for compact
+  premium density, metric cards, period filters, store review toggles,
+  accordion/table rhythm, right drawer, and package-submit dialog.
 
 ## Locked Prototype Contracts
 
@@ -62,6 +76,7 @@ Important production boundary:
 | `docs/prototypes/store-home-store-manager-standard-v1.html` | `/store/home` Store Manager dashboard | `B36442A7244FCF4FE85954E4F08C88E2A3684055DD03D854F3C54DA629022E37` |
 | `docs/prototypes/store-home-region-manager-standard-v1.html` | `/store/home` Region Manager dashboard | `DF4E1583D39588FFA2B150937DAC3556983A59F781960C8DC986ED396B4A1E81` |
 | `docs/prototypes/store-checklist-result-modal-v1.html` | `/store/checklists` result modal | `110EAD19449A59EBB1C84666FC4F66AC9067DEAF7CCF1BF8990917BDFD2DC8B9` |
+| `docs/prototypes/store-incentives-region-manager-command-v2.html` | `/store/incentives` Region Manager command center and Store/Admin surface standard reference | `B18107107BB91332179F00A93166ECF04038CA6E6878E14DFE8DD2FBECA5BF87` |
 
 ## Prototype Implementation Evidence
 
@@ -71,6 +86,8 @@ must stay short but complete. Record:
 - approved prototype path, source screenshot, or spec reference,
 - route, persona, role visibility, and scope matrix,
 - real data source for every visible metric, status, row, and action,
+- for Store/Admin command surfaces, prototype labels, statuses, toolbar
+  controls, drawer copy, and confirmation copy carried into production,
 - loading, empty, error, access, and partial-data states,
 - desktop and mobile screenshot comparison against the locked prototype,
 - intentional production deviations with reasons,

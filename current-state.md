@@ -490,6 +490,19 @@ small PR rhythm:
   close-cutoff source binding, immutable final/assignment/rule snapshots, and
   backend/endgame evidence. V1 remains company-store only: cashier, franchise,
   and operator incentive visibility stay hidden until separately scoped.
+- Sales Target Incentive Region Manager Approval Flow V1 is closed through
+  #749 to #756. The merged line added the separate Region Manager review,
+  correction, package submission, admin approve/return workflow, admin package
+  review surface, and `/store/incentives` Region Manager command surface without
+  changing incentive formulas, sales import, month close, auth/scope,
+  company-store-only filtering, or cashier exclusion. Closeout evidence is
+  `docs/evidence/sales-target-incentive-region-approval-flow-v1-closeout-2026-06-19.md`.
+  The canonical Store/Admin operational surface reference is the locked
+  `docs/prototypes/store-incentives-region-manager-command-v2.html` prototype;
+  future Store/Admin UI work should use
+  `docs/process/store-admin-surface-standardization-v1.md` together with
+  `docs/process/ui-surface-standard-v1.md` and
+  `docs/process/ui-surface-recipes-v1.md`.
 
 Store Me is the active reference pattern for the next page refactor pilots,
 not because every page should look identical, but because the work established

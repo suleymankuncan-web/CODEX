@@ -1,0 +1,1279 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HR Axis - Bölge Müdürü Primler</title>
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <style>
+      :root {
+        --background: oklch(0.985 0.01 300);
+        --foreground: oklch(0.18 0.02 286);
+        --card: oklch(1 0 0);
+        --card-foreground: oklch(0.18 0.02 286);
+        --primary: oklch(0.48 0.18 292);
+        --primary-foreground: oklch(0.99 0.01 300);
+        --secondary: oklch(0.93 0.03 286);
+        --secondary-foreground: oklch(0.22 0.04 286);
+        --muted: oklch(0.94 0.02 286);
+        --muted-foreground: oklch(0.48 0.03 286);
+        --accent: oklch(0.68 0.12 205);
+        --accent-foreground: oklch(0.16 0.03 220);
+        --success: oklch(0.62 0.16 145);
+        --success-soft: oklch(0.94 0.05 145);
+        --warning: oklch(0.72 0.16 80);
+        --warning-soft: oklch(0.96 0.06 80);
+        --danger: oklch(0.58 0.22 25);
+        --danger-soft: oklch(0.95 0.05 25);
+        --border: oklch(0.88 0.02 286);
+        --input: oklch(0.88 0.02 286);
+        --ring: oklch(0.58 0.13 292);
+        --store-command-plum: #7c3aed;
+        --store-command-plum-deep: #4c2aa5;
+        --store-command-plum-soft: rgba(124, 58, 237, 0.12);
+        --store-command-blue: #3765ea;
+        --store-command-blue-soft: rgba(55, 101, 234, 0.12);
+        --store-command-cyan: #13a7b3;
+        --store-command-cyan-soft: rgba(19, 167, 179, 0.12);
+        --store-command-mint: #10b981;
+        --store-command-mint-soft: rgba(16, 185, 129, 0.13);
+        --store-command-warning: #f59e0b;
+        --store-command-warning-soft: rgba(245, 158, 11, 0.14);
+        --radius: 0.625rem;
+        --radius-sm: calc(var(--radius) * 0.7);
+        --radius-md: calc(var(--radius) * 1.1);
+        --radius-lg: calc(var(--radius) * 1.6);
+        --radius-xl: calc(var(--radius) * 2.2);
+        --shadow: 0 20px 50px oklch(0.2 0.03 286 / 0.08);
+        --shadow-soft: 0 10px 28px oklch(0.2 0.03 286 / 0.06);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 10% 0%, oklch(0.9 0.05 292 / 0.62), transparent 28rem),
+          radial-gradient(circle at 92% 0%, oklch(0.92 0.05 205 / 0.58), transparent 28rem),
+          var(--background);
+        color: var(--foreground);
+        font-family:
+          Manrope,
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      .page {
+        display: grid;
+        gap: 18px;
+        width: min(1440px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 22px 0 40px;
+      }
+
+      .page-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        background: oklch(1 0 0 / 0.84);
+        box-shadow: var(--shadow-soft);
+        padding: 18px;
+      }
+
+      .title-group {
+        display: grid;
+        gap: 4px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(26px, 3vw, 36px);
+        font-weight: 680;
+        letter-spacing: 0;
+        line-height: 1.08;
+      }
+
+      .subtitle {
+        max-width: 56ch;
+        color: var(--muted-foreground);
+        font-size: 14px;
+        font-weight: 450;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .button {
+        display: inline-flex;
+        min-height: 38px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid transparent;
+        border-radius: var(--radius-md);
+        padding: 0 14px;
+        font-size: 13px;
+        font-weight: 620;
+        text-decoration: none;
+        transition:
+          transform 160ms ease,
+          border-color 160ms ease,
+          background 160ms ease;
+      }
+
+      .button:active {
+        transform: translateY(1px);
+      }
+
+      .button-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        box-shadow: 0 12px 24px oklch(0.48 0.18 292 / 0.22);
+      }
+
+      .button-outline {
+        border-color: var(--border);
+        background: var(--card);
+        color: var(--foreground);
+      }
+
+      .button-ghost {
+        border-color: var(--border);
+        background: var(--muted);
+        color: var(--secondary-foreground);
+      }
+
+      .button:focus-visible,
+      .field input:focus,
+      .field select:focus,
+      textarea:focus {
+        outline: 3px solid oklch(0.58 0.13 292 / 0.22);
+        outline-offset: 2px;
+      }
+
+      .filter-bar {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(150px, 1fr));
+        gap: 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: oklch(1 0 0 / 0.72);
+        padding: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 5px;
+      }
+
+      .field label {
+        color: var(--muted-foreground);
+        font-size: 11px;
+        font-weight: 620;
+      }
+
+      .field input,
+      .field select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--input);
+        border-radius: var(--radius-md);
+        background: var(--card);
+        color: var(--foreground);
+        padding: 9px 10px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .metric {
+        --metric-icon-bg: var(--secondary);
+        --metric-icon-color: var(--primary);
+        --metric-icon-border: var(--border);
+        min-height: 82px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: oklch(1 0 0 / 0.78);
+        padding: 13px 14px;
+      }
+
+      .metric-tone-plum {
+        --metric-icon-bg: var(--store-command-plum-soft);
+        --metric-icon-color: var(--store-command-plum-deep);
+        --metric-icon-border: transparent;
+      }
+
+      .metric-tone-mint {
+        --metric-icon-bg: var(--store-command-mint-soft);
+        --metric-icon-color: var(--store-command-mint);
+        --metric-icon-border: transparent;
+      }
+
+      .metric-tone-blue {
+        --metric-icon-bg: var(--store-command-blue-soft);
+        --metric-icon-color: var(--store-command-blue);
+        --metric-icon-border: transparent;
+      }
+
+      .metric-tone-amber {
+        --metric-icon-bg: var(--store-command-warning-soft);
+        --metric-icon-color: var(--store-command-warning);
+        --metric-icon-border: transparent;
+      }
+
+      .metric-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .metric-icon {
+        position: relative;
+        display: inline-grid;
+        width: 28px;
+        height: 28px;
+        flex: 0 0 auto;
+        place-items: center;
+        border: 1px solid var(--metric-icon-border);
+        border-radius: var(--radius-md);
+        background: var(--metric-icon-bg);
+        color: var(--metric-icon-color);
+      }
+
+      .metric-icon svg {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        display: block;
+        width: 15px;
+        height: 15px;
+        stroke-width: 2;
+        transform: translate(-50%, -50%);
+      }
+
+      .metric span:not(.metric-icon) {
+        display: block;
+        color: var(--muted-foreground);
+        font-size: 12px;
+        font-weight: 560;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 6px;
+        color: var(--card-foreground);
+        font-size: 24px;
+        font-weight: 680;
+        line-height: 1;
+      }
+
+      .metric small {
+        display: block;
+        margin-top: 7px;
+        color: var(--muted-foreground);
+        font-size: 11px;
+        font-weight: 450;
+      }
+
+      .panel {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        background: oklch(1 0 0 / 0.88);
+        box-shadow: var(--shadow);
+      }
+
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        border-bottom: 1px solid var(--border);
+        padding: 14px 16px;
+      }
+
+      .panel-header h2 {
+        font-size: 16px;
+        font-weight: 660;
+      }
+
+      .panel-header p {
+        color: var(--muted-foreground);
+        font-size: 12px;
+      }
+
+      .badge {
+        display: inline-flex;
+        min-height: 24px;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 0 8px;
+        font-size: 11px;
+        font-weight: 620;
+      }
+
+      .badge-neutral {
+        border-color: var(--border);
+        background: var(--muted);
+        color: var(--muted-foreground);
+      }
+
+      .badge-success {
+        background: var(--success-soft);
+        color: oklch(0.36 0.12 145);
+      }
+
+      .badge-warning {
+        background: var(--warning-soft);
+        color: oklch(0.44 0.11 80);
+      }
+
+      .badge-danger {
+        background: var(--danger-soft);
+        color: oklch(0.42 0.16 25);
+      }
+
+      .badge-accent {
+        background: oklch(0.94 0.05 205);
+        color: var(--accent-foreground);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      table {
+        width: 100%;
+        min-width: 1120px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--border);
+        padding: 11px 12px;
+        text-align: left;
+        vertical-align: middle;
+      }
+
+      th {
+        color: var(--muted-foreground);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      td {
+        color: var(--foreground);
+        font-size: 13px;
+        font-weight: 520;
+      }
+
+      .number {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .store-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        background: transparent;
+        color: var(--foreground);
+        padding: 0;
+        font-size: 13px;
+        font-weight: 660;
+      }
+
+      .chevron {
+        display: grid;
+        width: 22px;
+        height: 22px;
+        place-items: center;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        color: var(--muted-foreground);
+        font-size: 13px;
+      }
+
+      .store-row[aria-expanded="true"] .chevron {
+        background: var(--secondary);
+        color: var(--primary);
+      }
+
+      .personnel-block {
+        background: oklch(0.985 0.01 286);
+      }
+
+      .personnel-table {
+        width: 100%;
+        min-width: 940px;
+      }
+
+      .personnel-table th {
+        background: oklch(0.97 0.015 286);
+      }
+
+      .person-name {
+        border: 0;
+        background: transparent;
+        color: var(--primary);
+        padding: 0;
+        font-size: 13px;
+        font-weight: 660;
+        text-align: left;
+      }
+
+      .person-name:hover {
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      .delta-positive {
+        color: oklch(0.4 0.13 145);
+      }
+
+      .delta-negative {
+        color: oklch(0.46 0.17 25);
+      }
+
+      .mobile-list {
+        display: none;
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .store-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--card);
+      }
+
+      .store-card summary {
+        cursor: pointer;
+        list-style: none;
+        padding: 14px;
+      }
+
+      .store-card summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .card-line {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .card-title {
+        display: grid;
+        gap: 3px;
+      }
+
+      .card-title strong {
+        font-size: 14px;
+        font-weight: 670;
+      }
+
+      .card-title span {
+        color: var(--muted-foreground);
+        font-size: 12px;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding: 0 14px 14px;
+      }
+
+      .fact {
+        display: grid;
+        gap: 2px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--background);
+        padding: 9px;
+      }
+
+      .fact span {
+        color: var(--muted-foreground);
+        font-size: 11px;
+      }
+
+      .fact strong {
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .mobile-personnel {
+        display: grid;
+        gap: 8px;
+        border-top: 1px solid var(--border);
+        padding: 12px 14px 14px;
+      }
+
+      .person-card {
+        display: grid;
+        gap: 8px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 10px;
+      }
+
+      .drawer-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: none;
+        background: oklch(0.18 0.02 286 / 0.32);
+      }
+
+      .drawer-backdrop.is-open {
+        display: block;
+      }
+
+      .drawer {
+        position: fixed;
+        inset: 0 0 0 auto;
+        z-index: 50;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        width: min(460px, 100%);
+        max-width: 100%;
+        transform: translateX(100%);
+        border-left: 1px solid var(--border);
+        background: var(--card);
+        box-shadow: -24px 0 56px oklch(0.2 0.03 286 / 0.14);
+        transition: transform 180ms ease;
+      }
+
+      .drawer.is-open {
+        transform: translateX(0);
+      }
+
+      .drawer-head,
+      .drawer-foot {
+        border-bottom: 1px solid var(--border);
+        padding: 16px;
+      }
+
+      .drawer-foot {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        border-top: 1px solid var(--border);
+        border-bottom: 0;
+      }
+
+      .drawer-title {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .drawer-title h2 {
+        font-size: 18px;
+        font-weight: 680;
+      }
+
+      .drawer-title p {
+        color: var(--muted-foreground);
+        font-size: 13px;
+      }
+
+      .close {
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--card);
+        color: var(--foreground);
+        font-size: 18px;
+      }
+
+      .drawer-body {
+        display: grid;
+        align-content: start;
+        gap: 14px;
+        overflow-y: auto;
+        padding: 16px;
+      }
+
+      .sheet-section {
+        display: grid;
+        gap: 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--background);
+        padding: 12px;
+      }
+
+      .sheet-section h3 {
+        font-size: 13px;
+        font-weight: 670;
+      }
+
+      .sheet-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .error-text {
+        display: none;
+        color: var(--danger);
+        font-size: 12px;
+        font-weight: 560;
+      }
+
+      .error-text.is-visible {
+        display: block;
+      }
+
+      .empty-state {
+        display: none;
+        gap: 4px;
+        justify-items: center;
+        padding: 34px 16px;
+        text-align: center;
+      }
+
+      .empty-state.is-visible {
+        display: grid;
+      }
+
+      .empty-state h2 {
+        font-size: 17px;
+        font-weight: 660;
+      }
+
+      .empty-state p {
+        max-width: 36ch;
+        color: var(--muted-foreground);
+        font-size: 13px;
+      }
+
+      .skeleton-state {
+        display: none;
+        gap: 10px;
+        padding: 14px;
+      }
+
+      .skeleton-line {
+        height: 44px;
+        border-radius: var(--radius-md);
+        background: linear-gradient(
+          90deg,
+          var(--muted),
+          oklch(0.97 0.015 286),
+          var(--muted)
+        );
+      }
+
+      @media (max-width: 1100px) {
+        .summary {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .filter-bar {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          width: min(100% - 20px, 100%);
+          padding-top: 10px;
+        }
+
+        .page-header {
+          grid-template-columns: 1fr;
+          padding: 14px;
+        }
+
+        .actions {
+          justify-content: stretch;
+        }
+
+        .actions .button {
+          flex: 1;
+        }
+
+        .filter-bar,
+        .summary {
+          grid-template-columns: 1fr;
+        }
+
+        .desktop-table {
+          display: none;
+        }
+
+        .mobile-list {
+          display: grid;
+        }
+
+        .panel-header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+
+        .drawer {
+          width: 100%;
+          border-left: 0;
+        }
+
+        .drawer-foot {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .sheet-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <div class="title-group">
+          <h1>Primler</h1>
+          <p class="subtitle">Mağaza ve personel hakedişlerini kontrol edin.</p>
+        </div>
+        <div class="actions" aria-label="Sayfa aksiyonları">
+          <button class="button button-outline" type="button">Excel dışa aktar</button>
+          <button class="button button-primary" type="button">Admin onayına gönder</button>
+        </div>
+      </header>
+
+      <section class="filter-bar" aria-label="Prim filtreleri">
+        <div class="field">
+          <label for="year">Yıl</label>
+          <select id="year" aria-label="Yıl seçimi">
+            <option>2026</option>
+            <option>2025</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="month">Ay</label>
+          <select id="month" aria-label="Ay seçimi">
+            <option>Mayıs</option>
+            <option>Nisan</option>
+            <option>Mart</option>
+            <option>Şubat</option>
+            <option>Ocak</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="status">Durum</label>
+          <select id="status" aria-label="Durum filtresi">
+            <option>Tümü</option>
+            <option>Taslak</option>
+            <option>Düzeltme var</option>
+            <option>Onaya gönderildi</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="search">Mağaza arama</label>
+          <input id="search" type="search" placeholder="Mağaza adı yazın" />
+        </div>
+      </section>
+
+      <section class="summary" aria-label="Prim özeti">
+        <article class="metric metric-tone-plum">
+          <div class="metric-head">
+            <span class="metric-icon" aria-hidden="true"><i data-lucide="store"></i></span>
+            <span>Toplam şirket mağazası</span>
+          </div>
+          <strong>24</strong>
+          <small>Bu dönem kapsamındaki mağazalar</small>
+        </article>
+        <article class="metric metric-tone-mint">
+          <div class="metric-head">
+            <span class="metric-icon" aria-hidden="true"><i data-lucide="users-round"></i></span>
+            <span>Prim hakeden personel</span>
+          </div>
+          <strong>138</strong>
+          <small>%80 eşiği geçen mağazalarda</small>
+        </article>
+        <article class="metric metric-tone-blue">
+          <div class="metric-head">
+            <span class="metric-icon" aria-hidden="true"><i data-lucide="wallet-cards"></i></span>
+            <span>Toplam hesaplanan prim</span>
+          </div>
+          <strong>1.286.450,75 TL</strong>
+          <small>Mağaza müdürü ve ekip toplamı</small>
+        </article>
+        <article class="metric metric-tone-amber">
+          <div class="metric-head">
+            <span class="metric-icon" aria-hidden="true"><i data-lucide="file-pen-line"></i></span>
+            <span>Düzeltme bekleyen kayıt</span>
+          </div>
+          <strong>7</strong>
+          <small>Notla taslak kaydedilecek satırlar</small>
+        </article>
+      </section>
+
+      <section class="panel" aria-label="Mağaza prim hakedişleri">
+        <div class="panel-header">
+          <div>
+            <h2>Mağaza hakedişleri</h2>
+            <p>Sorumlu olduğunuz mağazaların prim kontrolü.</p>
+          </div>
+          <span class="badge badge-accent">Mayıs 2026</span>
+        </div>
+
+        <div class="table-wrap desktop-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Mağaza</th>
+                <th class="number">Mağaza hedefi</th>
+                <th class="number">Gerçekleşen ciro</th>
+                <th class="number">Gerçekleşme</th>
+                <th>%80 eşiği</th>
+                <th class="number">Müdür primi</th>
+                <th class="number">Personel toplamı</th>
+                <th>Düzeltme</th>
+                <th>Onay durumu</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="store-row" aria-expanded="true" data-store-row data-store-name="Lufian Akasya">
+                <td>
+                  <button class="store-toggle" type="button" data-store-toggle="akasya">
+                    <span class="chevron">−</span>
+                    Lufian Akasya
+                  </button>
+                </td>
+                <td class="number">6.000.000,00 TL</td>
+                <td class="number">6.920.450,20 TL</td>
+                <td class="number">%115,34</td>
+                <td><span class="badge badge-success">Geçildi</span></td>
+                <td class="number">69.204,50 TL</td>
+                <td class="number">183.420,15 TL</td>
+                <td><span class="badge badge-warning">3 taslak</span></td>
+                <td><span class="badge badge-neutral">Taslak</span></td>
+              </tr>
+              <tr class="personnel-block" data-personnel-for="akasya">
+                <td colspan="9">
+                  <table class="personnel-table" aria-label="Lufian Akasya personel hakedişleri">
+                    <thead>
+                      <tr>
+                        <th>Personel</th>
+                        <th>Görev</th>
+                        <th class="number">Hedef</th>
+                        <th class="number">Satış</th>
+                        <th class="number">Hedef oranı</th>
+                        <th class="number">Hesaplanan</th>
+                        <th class="number">Düzeltilmiş</th>
+                        <th class="number">Fark</th>
+                        <th>Not</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <button class="person-name" type="button" data-person="Aylin Demir" data-store="Lufian Akasya" data-role="Satış danışmanı" data-target="1.500.000,00 TL" data-sales="1.740.250,60 TL" data-rate="%116,02" data-system="28.714,13 TL" data-adjusted="30.000,00 TL">Aylin Demir</button>
+                        </td>
+                        <td>Satış danışmanı</td>
+                        <td class="number">1.500.000,00 TL</td>
+                        <td class="number">1.740.250,60 TL</td>
+                        <td class="number">%116,02</td>
+                        <td class="number">28.714,13 TL</td>
+                        <td class="number">30.000,00 TL</td>
+                        <td class="number delta-positive">+1.285,87 TL</td>
+                        <td><span class="badge badge-success">Not var</span></td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <button class="person-name" type="button" data-person="Mert Kaya" data-store="Lufian Akasya" data-role="Müdür yardımcısı" data-target="1.800.000,00 TL" data-sales="1.630.000,00 TL" data-rate="%90,55" data-system="10.595,00 TL" data-adjusted="10.595,00 TL">Mert Kaya</button>
+                        </td>
+                        <td>Müdür yardımcısı</td>
+                        <td class="number">1.800.000,00 TL</td>
+                        <td class="number">1.630.000,00 TL</td>
+                        <td class="number">%90,55</td>
+                        <td class="number">10.595,00 TL</td>
+                        <td class="number">10.595,00 TL</td>
+                        <td class="number">0,00 TL</td>
+                        <td><span class="badge badge-neutral">Not yok</span></td>
+                      </tr>
+                      <tr>
+                        <td>
+                          <button class="person-name" type="button" data-person="Seda Arslan" data-store="Lufian Akasya" data-role="Kıdemli satış danışmanı" data-target="1.350.000,00 TL" data-sales="1.470.400,00 TL" data-rate="%108,92" data-system="22.056,00 TL" data-adjusted="20.500,00 TL">Seda Arslan</button>
+                        </td>
+                        <td>Kıdemli satış danışmanı</td>
+                        <td class="number">1.350.000,00 TL</td>
+                        <td class="number">1.470.400,00 TL</td>
+                        <td class="number">%108,92</td>
+                        <td class="number">22.056,00 TL</td>
+                        <td class="number">20.500,00 TL</td>
+                        <td class="number delta-negative">−1.556,00 TL</td>
+                        <td><span class="badge badge-warning">Not bekliyor</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+
+              <tr class="store-row" aria-expanded="false" data-store-row data-store-name="Lufian Hilltown">
+                <td>
+                  <button class="store-toggle" type="button" data-store-toggle="hilltown">
+                    <span class="chevron">+</span>
+                    Lufian Hilltown
+                  </button>
+                </td>
+                <td class="number">5.400.000,00 TL</td>
+                <td class="number">4.285.000,00 TL</td>
+                <td class="number">%79,35</td>
+                <td><span class="badge badge-warning">Bekliyor</span></td>
+                <td class="number">0,00 TL</td>
+                <td class="number">0,00 TL</td>
+                <td><span class="badge badge-neutral">0</span></td>
+                <td><span class="badge badge-neutral">Taslak</span></td>
+              </tr>
+              <tr class="personnel-block" data-personnel-for="hilltown" hidden>
+                <td colspan="9">
+                  <table class="personnel-table" aria-label="Lufian Hilltown personel hakedişleri">
+                    <thead>
+                      <tr>
+                        <th>Personel</th>
+                        <th>Görev</th>
+                        <th class="number">Hedef</th>
+                        <th class="number">Satış</th>
+                        <th class="number">Hedef oranı</th>
+                        <th class="number">Hesaplanan</th>
+                        <th class="number">Düzeltilmiş</th>
+                        <th class="number">Fark</th>
+                        <th>Not</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <button class="person-name" type="button" data-person="Ece Yıldız" data-store="Lufian Hilltown" data-role="Satış danışmanı" data-target="1.400.000,00 TL" data-sales="1.820.000,00 TL" data-rate="%130,00" data-system="0,00 TL" data-adjusted="0,00 TL">Ece Yıldız</button>
+                        </td>
+                        <td>Satış danışmanı</td>
+                        <td class="number">1.400.000,00 TL</td>
+                        <td class="number">1.820.000,00 TL</td>
+                        <td class="number">%130,00</td>
+                        <td class="number">0,00 TL</td>
+                        <td class="number">0,00 TL</td>
+                        <td class="number">0,00 TL</td>
+                        <td><span class="badge badge-warning">Mağaza eşiği</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+
+              <tr class="store-row" aria-expanded="false" data-store-row data-store-name="Lufian İstinye">
+                <td>
+                  <button class="store-toggle" type="button" data-store-toggle="istinye">
+                    <span class="chevron">+</span>
+                    Lufian İstinye
+                  </button>
+                </td>
+                <td class="number">7.200.000,00 TL</td>
+                <td class="number">7.470.800,40 TL</td>
+                <td class="number">%103,76</td>
+                <td><span class="badge badge-success">Geçildi</span></td>
+                <td class="number">52.295,60 TL</td>
+                <td class="number">211.630,40 TL</td>
+                <td><span class="badge badge-accent">Onaya hazır</span></td>
+                <td><span class="badge badge-success">Onaya gönderildi</span></td>
+              </tr>
+              <tr class="personnel-block" data-personnel-for="istinye" hidden>
+                <td colspan="9">
+                  <table class="personnel-table" aria-label="Lufian İstinye personel hakedişleri">
+                    <thead>
+                      <tr>
+                        <th>Personel</th>
+                        <th>Görev</th>
+                        <th class="number">Hedef</th>
+                        <th class="number">Satış</th>
+                        <th class="number">Hedef oranı</th>
+                        <th class="number">Hesaplanan</th>
+                        <th class="number">Düzeltilmiş</th>
+                        <th class="number">Fark</th>
+                        <th>Not</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>
+                          <button class="person-name" type="button" data-person="Can Ergin" data-store="Lufian İstinye" data-role="Satış danışmanı" data-target="1.650.000,00 TL" data-sales="1.720.400,00 TL" data-rate="%104,27" data-system="25.806,00 TL" data-adjusted="25.806,00 TL">Can Ergin</button>
+                        </td>
+                        <td>Satış danışmanı</td>
+                        <td class="number">1.650.000,00 TL</td>
+                        <td class="number">1.720.400,00 TL</td>
+                        <td class="number">%104,27</td>
+                        <td class="number">25.806,00 TL</td>
+                        <td class="number">25.806,00 TL</td>
+                        <td class="number">0,00 TL</td>
+                        <td><span class="badge badge-success">Not var</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mobile-list" aria-label="Mağaza prim kartları">
+          <details class="store-card" open data-mobile-store data-store-name="Lufian Akasya">
+            <summary>
+              <div class="card-line">
+                <div class="card-title">
+                  <strong>Lufian Akasya</strong>
+                  <span>%115,34 gerçekleşme</span>
+                </div>
+                <span class="badge badge-warning">3 taslak</span>
+              </div>
+            </summary>
+            <div class="card-grid">
+              <div class="fact"><span>Hedef</span><strong>6.000.000,00 TL</strong></div>
+              <div class="fact"><span>Ciro</span><strong>6.920.450,20 TL</strong></div>
+              <div class="fact"><span>Müdür primi</span><strong>69.204,50 TL</strong></div>
+              <div class="fact"><span>Personel</span><strong>183.420,15 TL</strong></div>
+            </div>
+            <div class="mobile-personnel">
+              <div class="person-card">
+                <div class="card-line">
+                  <button class="person-name" type="button" data-person="Aylin Demir" data-store="Lufian Akasya" data-role="Satış danışmanı" data-target="1.500.000,00 TL" data-sales="1.740.250,60 TL" data-rate="%116,02" data-system="28.714,13 TL" data-adjusted="30.000,00 TL">Aylin Demir</button>
+                  <span class="badge badge-success">Not var</span>
+                </div>
+                <div class="card-grid">
+                  <div class="fact"><span>Hedef oranı</span><strong>%116,02</strong></div>
+                  <div class="fact"><span>Düzeltilmiş</span><strong>30.000,00 TL</strong></div>
+                </div>
+              </div>
+              <div class="person-card">
+                <div class="card-line">
+                  <button class="person-name" type="button" data-person="Seda Arslan" data-store="Lufian Akasya" data-role="Kıdemli satış danışmanı" data-target="1.350.000,00 TL" data-sales="1.470.400,00 TL" data-rate="%108,92" data-system="22.056,00 TL" data-adjusted="20.500,00 TL">Seda Arslan</button>
+                  <span class="badge badge-warning">Not bekliyor</span>
+                </div>
+                <div class="card-grid">
+                  <div class="fact"><span>Hedef oranı</span><strong>%108,92</strong></div>
+                  <div class="fact"><span>Düzeltilmiş</span><strong>20.500,00 TL</strong></div>
+                </div>
+              </div>
+            </div>
+          </details>
+
+          <details class="store-card" data-mobile-store data-store-name="Lufian Hilltown">
+            <summary>
+              <div class="card-line">
+                <div class="card-title">
+                  <strong>Lufian Hilltown</strong>
+                  <span>%79,35 gerçekleşme</span>
+                </div>
+                <span class="badge badge-warning">Bekliyor</span>
+              </div>
+            </summary>
+            <div class="card-grid">
+              <div class="fact"><span>Hedef</span><strong>5.400.000,00 TL</strong></div>
+              <div class="fact"><span>Ciro</span><strong>4.285.000,00 TL</strong></div>
+              <div class="fact"><span>Müdür primi</span><strong>0,00 TL</strong></div>
+              <div class="fact"><span>Personel</span><strong>0,00 TL</strong></div>
+            </div>
+            <div class="mobile-personnel">
+              <div class="person-card">
+                <div class="card-line">
+                  <button class="person-name" type="button" data-person="Ece Yıldız" data-store="Lufian Hilltown" data-role="Satış danışmanı" data-target="1.400.000,00 TL" data-sales="1.820.000,00 TL" data-rate="%130,00" data-system="0,00 TL" data-adjusted="0,00 TL">Ece Yıldız</button>
+                  <span class="badge badge-warning">Mağaza eşiği</span>
+                </div>
+                <div class="card-grid">
+                  <div class="fact"><span>Hedef oranı</span><strong>%130,00</strong></div>
+                  <div class="fact"><span>Düzeltilmiş</span><strong>0,00 TL</strong></div>
+                </div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <h2>Veri bulunamadı</h2>
+          <p>Filtreleri değiştirerek tekrar deneyin.</p>
+        </div>
+        <div class="skeleton-state" aria-hidden="true">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="drawer-backdrop" id="drawerBackdrop"></div>
+    <aside class="drawer" id="editDrawer" aria-label="Personel prim düzeltmesi" aria-hidden="true">
+      <header class="drawer-head">
+        <div class="drawer-title">
+          <div>
+            <h2 id="drawerPerson">Personel</h2>
+            <p id="drawerMeta">Mağaza ve görev</p>
+          </div>
+          <button class="close" type="button" id="closeDrawer" aria-label="Kapat">×</button>
+        </div>
+      </header>
+      <div class="drawer-body">
+        <section class="sheet-section" aria-label="Hakediş özeti">
+          <h3>Hakediş özeti</h3>
+          <div class="sheet-grid">
+            <div class="fact"><span>Hedef</span><strong id="drawerTarget">0,00 TL</strong></div>
+            <div class="fact"><span>Satış</span><strong id="drawerSales">0,00 TL</strong></div>
+            <div class="fact"><span>Hedef oranı</span><strong id="drawerRate">%0,00</strong></div>
+            <div class="fact"><span>Sistem hesabı</span><strong id="drawerSystem">0,00 TL</strong></div>
+          </div>
+        </section>
+        <section class="sheet-section" aria-label="Düzeltme">
+          <h3>Düzeltme</h3>
+          <div class="field">
+            <label for="adjustedAmount">Düzeltilmiş tutar</label>
+            <input id="adjustedAmount" inputmode="decimal" value="0,00 TL" />
+          </div>
+          <div class="field">
+            <label for="adjustmentNote">Açıklama</label>
+            <textarea id="adjustmentNote" rows="5" placeholder="Düzeltme gerekçesini yazın"></textarea>
+            <span class="error-text" id="noteError">Açıklama zorunludur.</span>
+          </div>
+        </section>
+      </div>
+      <footer class="drawer-foot">
+        <button class="button button-outline" type="button" id="cancelDrawer">Vazgeç</button>
+        <button class="button button-ghost" type="button" id="saveDraft">Taslak kaydet</button>
+      </footer>
+    </aside>
+
+    <script>
+      const drawer = document.querySelector("#editDrawer");
+      const backdrop = document.querySelector("#drawerBackdrop");
+      const closeDrawer = document.querySelector("#closeDrawer");
+      const cancelDrawer = document.querySelector("#cancelDrawer");
+      const saveDraft = document.querySelector("#saveDraft");
+      const noteError = document.querySelector("#noteError");
+      const note = document.querySelector("#adjustmentNote");
+      const adjustedAmount = document.querySelector("#adjustedAmount");
+      const search = document.querySelector("#search");
+      const emptyState = document.querySelector("#emptyState");
+
+      document.querySelectorAll("[data-store-toggle]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const key = button.dataset.storeToggle;
+          const row = button.closest(".store-row");
+          const block = document.querySelector(`[data-personnel-for="${key}"]`);
+          const expanded = row.getAttribute("aria-expanded") === "true";
+
+          row.setAttribute("aria-expanded", String(!expanded));
+          block.hidden = expanded;
+          button.querySelector(".chevron").textContent = expanded ? "+" : "−";
+        });
+      });
+
+      document.querySelectorAll(".person-name").forEach((button) => {
+        button.addEventListener("click", () => {
+          document.querySelector("#drawerPerson").textContent = button.dataset.person;
+          document.querySelector("#drawerMeta").textContent = `${button.dataset.store} · ${button.dataset.role}`;
+          document.querySelector("#drawerTarget").textContent = button.dataset.target;
+          document.querySelector("#drawerSales").textContent = button.dataset.sales;
+          document.querySelector("#drawerRate").textContent = button.dataset.rate;
+          document.querySelector("#drawerSystem").textContent = button.dataset.system;
+          adjustedAmount.value = button.dataset.adjusted;
+          note.value = "";
+          noteError.classList.remove("is-visible");
+          drawer.classList.add("is-open");
+          backdrop.classList.add("is-open");
+          drawer.setAttribute("aria-hidden", "false");
+        });
+      });
+
+      function closeSheet() {
+        drawer.classList.remove("is-open");
+        backdrop.classList.remove("is-open");
+        drawer.setAttribute("aria-hidden", "true");
+      }
+
+      closeDrawer.addEventListener("click", closeSheet);
+      cancelDrawer.addEventListener("click", closeSheet);
+      backdrop.addEventListener("click", closeSheet);
+
+      saveDraft.addEventListener("click", () => {
+        if (!note.value.trim()) {
+          noteError.classList.add("is-visible");
+          note.focus();
+          return;
+        }
+        closeSheet();
+      });
+
+      search.addEventListener("input", () => {
+        const query = search.value.trim().toLocaleLowerCase("tr-TR");
+        let visibleCount = 0;
+
+        document.querySelectorAll("[data-store-row]").forEach((row) => {
+          const match = row.dataset.storeName.toLocaleLowerCase("tr-TR").includes(query);
+          const key = row.querySelector("[data-store-toggle]").dataset.storeToggle;
+          const block = document.querySelector(`[data-personnel-for="${key}"]`);
+          row.hidden = !match;
+          if (!match) {
+            block.hidden = true;
+          }
+          if (match) visibleCount += 1;
+        });
+
+        document.querySelectorAll("[data-mobile-store]").forEach((card) => {
+          const match = card.dataset.storeName.toLocaleLowerCase("tr-TR").includes(query);
+          card.hidden = !match;
+        });
+
+        emptyState.classList.toggle("is-visible", visibleCount === 0);
+      });
+
+      lucide.createIcons();
+    </script>
+  </body>
+</html>

@@ -43,8 +43,8 @@ Use this directory like an operating library, not a diary.
 | Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` | Feedback intake, P0/P1/P2/P3 triage, PR sequence, autonomy limits, and closeout criteria. |
 | Check launch browser-session evidence | `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md` and `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md` | Local implementation is guarded and real Region Manager staging cookie-session proof passed; rerun with `npm.cmd --prefix admin-web run smoke:auth:staging:cookie-session`; broad production remains `No-Go`. |
 | Add a future feature safely | `docs/plans/feature-integration-spine-v1.md` and `docs/plans/new-module-template.md` | Source-of-truth, auth, API, DB, workflow, operations, and rollback gates. |
-| Execute Sales Target Incentive V1 | `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md` and `docs/implementation/sales-target-incentive-v1-fixtures.md` | Active prim PR train, locked money/period/rule fixtures, and visibility contract skeleton. |
-| Modernize Store/Admin UI | `docs/process/product-experience-principles.md`, `docs/process/ui-surface-standard-v1.md`, and `docs/process/ui-surface-recipes-v1.md` | Product-quality standard plus concrete component, token, icon, copy, page-anatomy, and reusable page recipe rules. |
+| Review Sales Target Incentive V1 | `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`, `docs/superpowers/plans/2026-06-19-incentive-region-manager-approval-flow-v1.md`, `docs/implementation/sales-target-incentive-v1-fixtures.md`, and `docs/evidence/sales-target-incentive-region-approval-flow-v1-closeout-2026-06-19.md` | Closed prim formula/snapshot line plus Region Manager approval-flow plan/closeout, locked money/period/rule fixtures, and visibility contract skeleton. |
+| Modernize Store/Admin UI | `docs/process/product-experience-principles.md`, `docs/process/ui-surface-standard-v1.md`, `docs/process/ui-surface-recipes-v1.md`, and `docs/process/store-admin-surface-standardization-v1.md` | Product-quality standard plus concrete component, token, icon, copy, page-anatomy, reusable page recipe, and approved operational surface rhythm rules. |
 | Split Store workforce from approvals | `docs/plans/store-workforce-and-approvals-split-v1-plan.md` | Active plan for `/store/workforce`, Norm Kadro ownership, and approvals becoming a request center. |
 | Inspect the system map | `docs/flows/README.md` | Generated frontend route, API, controller, and OpenAPI flow map. |
 | Continue UI pilot prototypes | `docs/prototypes/README.md` | Prototype shelf, Plum Glacier token set, login pilot references, and visual boundary rules. |
@@ -65,6 +65,7 @@ Use for daily direction and working discipline.
 - `docs/process/product-experience-principles.md`
 - `docs/process/ui-surface-standard-v1.md`
 - `docs/process/ui-surface-recipes-v1.md`
+- `docs/process/store-admin-surface-standardization-v1.md`
 - `docs/plans/project-growth-execution-roadmap-v1.md`
 - `docs/plans/active-next-actions.md`
 - `docs/plans/project-debt-ledger.md`
