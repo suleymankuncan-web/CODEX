@@ -287,7 +287,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
     );
   });
 
-  it("finalizes only projected participants when imported historical personnel targets are absent", async () => {
+  it("finalizes imported historical personnel without targets as zero-amount rows", async () => {
     const { query, repository } = createHarness();
     const importedTargetStore = {
       ...storeProjection,
@@ -349,6 +349,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
       .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
       .mockResolvedValueOnce({ rows: [{ assignment_snapshot_id: managerAssignmentSnapshotId }] })
       .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ assignment_snapshot_id: personnelAssignmentSnapshotId }] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -364,7 +366,7 @@ describe("SalesTargetIncentiveCloseRepository", () => {
             failed_reason: null,
             source_import_batch_ids: [storeImportBatchId, personnelImportBatchId],
             final_snapshot_count: 1,
-            final_row_count: 1,
+            final_row_count: 2,
           },
         ],
       });
@@ -389,14 +391,38 @@ describe("SalesTargetIncentiveCloseRepository", () => {
     );
     expect(String(query.mock.calls[6][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
     expect(String(query.mock.calls[7][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    expect(String(query.mock.calls[8][0])).toContain("SET status = 'succeeded'");
-    expect(query).toHaveBeenCalledTimes(9);
+    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    const personnelFinalRowArgs = query.mock.calls[9][1] as unknown[];
+    expect(personnelFinalRowArgs).toEqual(
+      expect.arrayContaining([
+        personnelAssignmentSnapshotId,
+        personnelEmployeeId,
+        "personnel",
+        "personnel-sales-target-v1.0.0",
+        "240000.0000",
+        "0.000000",
+        "0.00",
+      ]),
+    );
+    expect(personnelFinalRowArgs[8]).toBeNull();
+    expect(personnelFinalRowArgs[9]).toBeNull();
+    expect(personnelFinalRowArgs[11]).toBeNull();
+    expect(personnelFinalRowArgs[12]).toBeNull();
+    expect(personnelFinalRowArgs[15]).toBe("0.00");
+    expect(JSON.parse(String(personnelFinalRowArgs[17]))).toEqual(
+      expect.objectContaining({
+        importedHistoricalPersonnelTargetMissing: true,
+      }),
+    );
+    expect(String(query.mock.calls[10][0])).toContain("SET status = 'succeeded'");
+    expect(query).toHaveBeenCalledTimes(11);
     expect(result).toEqual(
       expect.objectContaining({
         closeRunId,
         status: "succeeded",
         finalSnapshotCount: 1,
-        finalRowCount: 1,
+        finalRowCount: 2,
       }),
     );
   });
