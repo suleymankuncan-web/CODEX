@@ -78,12 +78,15 @@ function getQueryMonthInput(value: string | null) {
     return null
   }
 
-  if (/^\d{4}-\d{2}$/.test(value)) {
-    return value
+  const normalizedValue = value.trim()
+  const datePart = normalizedValue.slice(0, 10)
+
+  if (/^\d{4}-\d{2}$/.test(normalizedValue)) {
+    return normalizedValue
   }
 
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return value.slice(0, 7)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+    return datePart.slice(0, 7)
   }
 
   return null
