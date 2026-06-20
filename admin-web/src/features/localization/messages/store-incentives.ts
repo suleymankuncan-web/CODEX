@@ -149,9 +149,9 @@ export const storeIncentivesTr = {
 
   'storeIncentives.notImplemented': 'Henüz uygulanmadı',
   'storeIncentives.notPretendTitle': 'Bu sayfa neyi yapıyormuş gibi görünmemeli',
-  'storeIncentives.emptyTitle': 'Sahte prim motoru yok',
+  'storeIncentives.emptyTitle': 'Prim kaydı bulunamadı',
   'storeIncentives.emptyCopy':
-    'Bu sayfanın arkasında henüz canlı ödeme hesaplama, onay sonucu, kural okuma veya yeniden hesaplama akışı yok. Prim görünürlüğü hazır olana kadar sonuç üretilmez.',
+    'Seçili dönem için prim kaydı yok. Dönemi değiştirerek geçmiş kayıtları kontrol edebilirsin.',
 
   'storeIncentives.nextEvolution': 'Sonraki evrim',
   'storeIncentives.nextTitle': 'Bu temelden sonra ne yapılmalı',
@@ -333,9 +333,9 @@ export const storeIncentivesEn: Record<keyof typeof storeIncentivesTr, string> =
 
   'storeIncentives.notImplemented': 'Not implemented yet',
   'storeIncentives.notPretendTitle': 'What this page should not pretend to do',
-  'storeIncentives.emptyTitle': 'No fake incentive engine',
+  'storeIncentives.emptyTitle': 'No incentive records found',
   'storeIncentives.emptyCopy':
-    'There is no live payout calculation, approval outcome, rule lookup, or recalculation flow behind this page yet. No payout result is produced until incentive visibility is ready.',
+    'There are no incentive records for the selected period. Change the period to check past records.',
 
   'storeIncentives.nextEvolution': 'Next evolution',
   'storeIncentives.nextTitle': 'What should be built after this foundation',

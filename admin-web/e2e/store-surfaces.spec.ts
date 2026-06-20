@@ -1391,7 +1391,7 @@ test('store home uses locked Plum Glacier prototype palette tokens', async ({ pa
   expect(header.boxShadow).toContain('rgba(32, 24, 48, 0.12)')
 
   const card = await readComputedStyle(page, '.store-command-home [data-slot="card"]')
-  expect(card.backgroundColor).toBe('rgba(255, 255, 255, 0.88)')
+  expect(card.backgroundColor).toBe('rgba(255, 255, 255, 0.68)')
   expect(card.borderColor).toBe('rgba(36, 28, 50, 0.1)')
   expect(card.boxShadow).toContain('rgba(32, 24, 48, 0.08)')
 

@@ -37,6 +37,7 @@ import {
 import {
   StoreErrorState,
   StoreCommandBar,
+  StoreEmptyState,
   StoreFinanceBand,
   StoreMetricCard,
   StoreMetricGrid,
@@ -220,7 +221,7 @@ function StoreIncentivesEmptyPeriod(input: {
         description={input.t('storeIncentives.storeManagerCopy')}
         icon={<CircleDollarSign size={23} />}
       />
-      <StoreErrorState
+      <StoreEmptyState
         title={input.t('storeIncentives.emptyTitle')}
         description={input.t('storeIncentives.emptyCopy')}
       />
@@ -275,7 +276,7 @@ function StoreManagerIncentivesView(input: {
       />
 
       <StoreFinanceBand
-        label={`${formatPeriodLabel(input.data.period)} toplam hakediş`}
+        label={`${formatPeriodLabel(input.data.period)} hakediş özeti`}
         value={formatMoneyValue(payableTotal, input.locale)}
         description="Mağaza müdürü ve ekip hakedişi aynı dönem üzerinden gösterilir."
         badge={{

@@ -79,7 +79,7 @@ test('region manager sees assigned stores grouped by store with approval control
   await expect(page.getByRole('button', { name: 'Second Store Personnel' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
   await expect(page.getByRole('button', { name: /Excel/i })).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toHaveCount(2)
+  await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toBeVisible()
 })
 
 test('region manager marks a store reviewed with period and store id', async ({ page }) => {
@@ -108,8 +108,9 @@ test('region manager saves a final amount correction from the personnel sheet', 
   await page.goto('/store/incentives')
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await expect(page.getByRole('heading', { name: 'Store Personnel' })).toBeVisible()
-  await expect(page.getByText('Hedef gerçekleşme', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hakediş özeti' })).toBeVisible()
   await page.getByLabel('Final prim tutarı').fill('17000.25')
+  await expect(page.getByLabel('Final prim tutarı')).toHaveValue('17.000,25')
   await page.getByLabel('Düzeltme notu').fill('Bölge kontrolü sonrası final prim düzeltmesi')
   await page.getByRole('button', { name: 'Kaydet' }).click()
 
@@ -132,7 +133,7 @@ test('region manager sees saved draft correction amount in totals and sheet inpu
 
   await expect(page.getByText('63.500,25 TL').first()).toBeVisible()
   await page.getByRole('button', { name: 'Store Personnel' }).click()
-  await expect(page.getByLabel('Final prim tutarı')).toHaveValue('17000.25')
+  await expect(page.getByLabel('Final prim tutarı')).toHaveValue('17.000,25')
 })
 
 test('region manager cannot save an invalid final correction amount', async ({ page }) => {

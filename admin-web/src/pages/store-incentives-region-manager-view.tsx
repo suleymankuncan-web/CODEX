@@ -5,8 +5,6 @@ import {
   CircleDollarSign,
   Download,
   RefreshCw,
-  RotateCcw,
-  Save,
   Search,
   Send,
   SlidersHorizontal,
@@ -31,19 +29,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from '@/components/ui/input-group'
 import { Progress } from '@/components/ui/progress'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
@@ -52,15 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Sheet,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import {
   type SalesTargetIncentiveProjection,
@@ -78,7 +60,6 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { getErrorMessage } from '../lib/format'
 import {
   formatMoneyValue,
-  formatPercentValue,
   formatRateValue,
   getIncentivePositionLabel,
   getManagerRow,
@@ -97,16 +78,25 @@ import {
   getReviewState,
   isPackageLocked,
   matchesStoreFilter,
-  normalizeMoneyInput,
   sumMoney,
   type SelectedIncentiveRow,
   type StoreStatusFilter,
 } from './store-incentives-region-manager-model'
+import {
+  formatAchievementState,
+  formatIncentiveMoneyValue,
+  formatSalesMoneyValue,
+  formatTargetMoneyValue,
+  getFinalChange,
+  getStoreGateLabel,
+  getStoreGateState,
+  regionManagerPrimaryActionClass,
+} from './store-incentives-region-manager-format'
+import { IncentiveCorrectionSheet } from './store-incentives-region-manager-sheet'
 import { IncentiveRateTables } from './store-incentives-widgets'
 import {
   StoreCommandBar,
   StoreCommandPersonLink,
-  StoreCommandSheetContent,
   StoreEmptyState,
   StoreErrorState,
   StoreMetricCard,
@@ -116,9 +106,6 @@ import {
   StoreSurfaceHeader,
   StoreSurfacePage,
 } from './store-surface-primitives'
-
-const prototypePrimaryActionClass =
-  'tw:bg-gradient-to-r tw:from-primary tw:to-accent tw:text-primary-foreground tw:shadow-lg tw:shadow-primary/20 tw:hover:from-primary/90 tw:hover:to-accent/90'
 
 export function RegionManagerIncentivesView(input: {
   data: SalesTargetIncentiveResponse['data']
@@ -190,7 +177,7 @@ export function RegionManagerIncentivesView(input: {
               {t('storeIncentives.regionManagerExportExcel')}
             </Button>
             <Button
-              className={prototypePrimaryActionClass}
+              className={regionManagerPrimaryActionClass}
               type="button"
               disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
               onClick={() => setSubmitDialogOpen(true)}
@@ -428,7 +415,7 @@ export function RegionManagerIncentivesView(input: {
               {t('storeIncentives.regionManagerCancel')}
             </Button>
             <Button
-              className={prototypePrimaryActionClass}
+              className={regionManagerPrimaryActionClass}
               type="button"
               disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
               onClick={() => {
@@ -703,265 +690,6 @@ function RegionPersonnelCards(input: {
   )
 }
 
-function IncentiveCorrectionSheet(input: {
-  selectedRow: SelectedIncentiveRow | null
-  locale: ReturnType<typeof useLocalization>['locale']
-  period: string
-  workflowLocked: boolean
-  onOpenChange: (open: boolean) => void
-  correctionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveRegionCorrectionInput
-  >
-  voidCorrectionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveVoidCorrectionInput
-  >
-}) {
-  const row = input.selectedRow?.row ?? null
-  const projection = input.selectedRow?.projection ?? null
-
-  if (!row || !projection) {
-    return <Sheet open={false} onOpenChange={input.onOpenChange} />
-  }
-
-  return (
-    <Sheet open={Boolean(input.selectedRow)} onOpenChange={input.onOpenChange}>
-      <IncentiveCorrectionSheetForm
-        correctionMutation={input.correctionMutation}
-        key={`${projection.storeId}:${row.employeeId}:${row.participantType}:${row.regionCorrection?.correctionId ?? 'base'}`}
-        locale={input.locale}
-        onOpenChange={input.onOpenChange}
-        period={input.period}
-        projection={projection}
-        row={row}
-        voidCorrectionMutation={input.voidCorrectionMutation}
-        workflowLocked={input.workflowLocked}
-      />
-    </Sheet>
-  )
-}
-
-function IncentiveCorrectionSheetForm(input: {
-  row: SalesTargetIncentiveRow
-  projection: SalesTargetIncentiveProjection
-  locale: ReturnType<typeof useLocalization>['locale']
-  period: string
-  workflowLocked: boolean
-  onOpenChange: (open: boolean) => void
-  correctionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveRegionCorrectionInput
-  >
-  voidCorrectionMutation: UseMutationResult<
-    StoreSalesTargetIncentiveCorrectionResponse,
-    Error,
-    StoreSalesTargetIncentiveVoidCorrectionInput
-  >
-}) {
-  const { row, projection } = input
-  const { t } = useLocalization()
-  const [finalAmount, setFinalAmount] = useState(() =>
-    formatMoneyDisplayValue(formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)),
-  )
-  const [reasonNote, setReasonNote] = useState(row.regionCorrection?.reasonNote ?? '')
-  const progress = toProgressPercent(row.achievementPct) ?? 0
-  const projectionCanEdit = canReviewProjection(projection)
-  const canEdit =
-    projectionCanEdit &&
-    !input.workflowLocked &&
-    (!row.regionCorrection || row.regionCorrection.status === 'draft' || row.regionCorrection.status === 'admin_returned')
-  const canVoid =
-    projectionCanEdit &&
-    !input.workflowLocked &&
-    Boolean(row.regionCorrection) &&
-    (row.regionCorrection?.status === 'draft' || row.regionCorrection?.status === 'admin_returned')
-  const normalizedFinalAmount = normalizeMoneyInput(toMoneyEditValue(finalAmount))
-  const amountIsValid = normalizedFinalAmount !== null
-  const savedFinalChange = getFinalChange(row, input.locale)
-  const finalChange = amountIsValid
-    ? getFinalChangeFromAmounts(
-        row.regionCorrection?.beforeAmount ?? row.payableAmount,
-        normalizedFinalAmount,
-        input.locale,
-      )
-    : savedFinalChange
-  const noteIsValid = reasonNote.trim().length >= 3
-
-  return (
-    <StoreCommandSheetContent
-      className="tw:flex tw:max-h-[calc(100dvh-28px)] tw:flex-col tw:overflow-hidden"
-      closeLabel={t('storeIncentives.regionManagerClose')}
-    >
-      <SheetHeader className="tw:border-b tw:border-border tw:bg-gradient-to-br tw:from-primary/5 tw:via-card tw:to-accent/10 tw:p-4">
-        <div className="tw:flex tw:items-start tw:justify-between tw:gap-4 tw:pr-8">
-          <div className="tw:min-w-0">
-            <SheetTitle className="tw:text-base tw:font-semibold tw:tracking-normal">{row.displayName}</SheetTitle>
-            <SheetDescription className="tw:mt-1 tw:text-sm">
-              {getIncentivePositionLabel(row.positionCode)}, {projection.storeName}
-            </SheetDescription>
-            <div className="tw:mt-3 tw:flex tw:flex-wrap tw:gap-2">
-              {row.regionCorrection ? (
-                <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
-                  {getCorrectionLabel(row.regionCorrection)}
-                </StoreStatusBadge>
-              ) : (
-                <StoreStatusBadge tone="neutral">{t('storeIncentives.regionManagerNoCorrection')}</StoreStatusBadge>
-              )}
-              <StoreStatusBadge tone={progress >= 80 ? 'calm' : 'warning'}>
-                {t('storeIncentives.regionManagerGoalBadge', {
-                  value: formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale),
-                })}
-              </StoreStatusBadge>
-            </div>
-          </div>
-        </div>
-        <div className="tw:mt-4 tw:grid tw:grid-cols-3 tw:gap-2">
-          <SheetStat
-            label={t('storeIncentives.regionManagerAchievement')}
-            value={formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}
-          />
-          <SheetStat
-            label={t('storeIncentives.regionManagerFinalLine')}
-            value={formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
-          />
-          <SheetStat label="Değişim" value={finalChange.label} />
-        </div>
-      </SheetHeader>
-
-      <ScrollArea className="tw:min-h-0 tw:flex-1">
-        <div className="tw:flex tw:flex-col tw:gap-3 tw:px-4 tw:py-3">
-          <section className="tw:rounded-2xl tw:border tw:border-primary/15 tw:bg-card/95 tw:p-3.5 tw:shadow-sm">
-            <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-              <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">{t('storeIncentives.regionManagerEarningSummaryTitle')}</h3>
-              <span className="tw:text-sm tw:font-semibold tw:text-foreground">
-                {formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}
-              </span>
-            </div>
-            <Progress className="tw:mt-3" value={progress} />
-            <div className="tw:mt-3 tw:grid tw:gap-2 tw:sm:grid-cols-2">
-              <SheetStat label={t('storeIncentives.regionManagerTargetColumn')} value={formatTargetMoneyValue(row.target, input.locale)} />
-              <SheetStat label={t('storeIncentives.regionManagerActualColumn')} value={formatSalesMoneyValue(row.actualPositiveSales, input.locale)} />
-              <SheetStat label={t('storeIncentives.regionManagerRateLine')} value={formatRateValue(row.rate, input.locale)} />
-              <SheetStat label={t('storeIncentives.regionManagerCalculatedLine')} value={formatIncentiveMoneyValue(row.payableAmount, input.locale)} />
-            </div>
-          </section>
-
-          <section className="tw:rounded-2xl tw:border tw:border-border tw:bg-card/95 tw:p-3.5 tw:shadow-sm">
-            <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-              <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">{t('storeIncentives.regionManagerCorrectionSectionTitle')}</h3>
-              <StoreStatusBadge tone={finalChange.tone}>{finalChange.label}</StoreStatusBadge>
-            </div>
-            <FieldGroup className="tw:mt-4 tw:gap-4">
-              <Field>
-                <FieldLabel htmlFor="region-final-incentive">
-                  {t('storeIncentives.regionManagerFinalAmountField')}
-                </FieldLabel>
-                <Input
-                  className="tw:h-11 tw:px-3 tw:text-base tw:font-semibold tw:tracking-normal"
-                  disabled={!canEdit}
-                  id="region-final-incentive"
-                  inputMode="decimal"
-                  onBlur={() => setFinalAmount(formatMoneyDisplayValue(finalAmount))}
-                  onChange={(event) => setFinalAmount(formatMoneyEditValue(event.target.value))}
-                  onFocus={(event) => {
-                    const inputElement = event.currentTarget
-                    setFinalAmount(toMoneyEditValue(finalAmount))
-                    window.requestAnimationFrame(() => inputElement.select())
-                  }}
-                  value={finalAmount}
-                />
-                <FieldDescription>Kaydedilen tutar admin onayına bu notla gider.</FieldDescription>
-                {!amountIsValid ? (
-                  <span className="tw:text-xs tw:text-destructive">{t('storeIncentives.regionManagerInvalidAmount')}</span>
-                ) : null}
-              </Field>
-              <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2">
-                <SheetStat label={t('storeIncentives.regionManagerCalculatedLine')} value={formatIncentiveMoneyValue(row.payableAmount, input.locale)} />
-                <SheetStat label="Değişim" value={finalChange.label} />
-              </div>
-              <Field>
-                <FieldLabel htmlFor="region-correction-note">
-                  {t('storeIncentives.regionManagerCorrectionNoteField')}
-                </FieldLabel>
-                <Textarea
-                  className="tw:min-h-20 tw:resize-y"
-                  disabled={!canEdit}
-                  id="region-correction-note"
-                  onChange={(event) => setReasonNote(event.target.value)}
-                  placeholder={t('storeIncentives.regionManagerCorrectionNotePlaceholder')}
-                  value={reasonNote}
-                />
-              </Field>
-            </FieldGroup>
-          </section>
-        </div>
-      </ScrollArea>
-
-      <SheetFooter className="tw:mx-0 tw:mb-0 tw:border-t tw:border-border tw:bg-muted/25 tw:p-3">
-        <div className="tw:flex tw:w-full tw:flex-row tw:items-center tw:justify-end tw:gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={!canVoid || input.voidCorrectionMutation.isPending}
-            onClick={() => {
-              const correctionId = row.regionCorrection?.correctionId
-              if (!correctionId) {
-                setFinalAmount(formatMoneyDisplayValue(formatIncentiveMoneyValue(row.payableAmount, input.locale)))
-                setReasonNote('')
-                return
-              }
-              input.voidCorrectionMutation.mutate({
-                period: input.period,
-                correctionId,
-              })
-              input.onOpenChange(false)
-            }}
-          >
-            <RotateCcw data-icon="inline-start" />
-            {t('storeIncentives.regionManagerRevert')}
-          </Button>
-          <Button type="button" variant="outline" onClick={() => input.onOpenChange(false)}>
-            {t('storeIncentives.regionManagerCancel')}
-          </Button>
-          <Button
-            className={prototypePrimaryActionClass}
-            type="button"
-            disabled={!canEdit || !amountIsValid || !noteIsValid || input.correctionMutation.isPending}
-            onClick={() => {
-              if (!normalizedFinalAmount) return
-              input.correctionMutation.mutate({
-                period: input.period,
-                storeId: projection.storeId,
-                employeeId: row.employeeId,
-                participantType: row.participantType,
-                finalAmount: normalizedFinalAmount,
-                reasonNote: reasonNote.trim(),
-              })
-              input.onOpenChange(false)
-            }}
-          >
-            <Save data-icon="inline-start" />
-            {t('storeIncentives.regionManagerSave')}
-          </Button>
-        </div>
-      </SheetFooter>
-    </StoreCommandSheetContent>
-  )
-}
-
-function SheetStat(input: { label: string; value: string }) {
-  return (
-    <div className="tw:min-w-0 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/70 tw:px-3 tw:py-2">
-      <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
-      <strong className="tw:mt-1 tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-foreground">{input.value}</strong>
-    </div>
-  )
-}
-
 function DialogAmountLine(input: { label: string; value: string }) {
   return (
     <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
@@ -969,140 +697,4 @@ function DialogAmountLine(input: { label: string; value: string }) {
       <span className="tw:text-sm tw:text-foreground">{input.value}</span>
     </div>
   )
-}
-
-function getStoreGateState(projection: SalesTargetIncentiveProjection) {
-  if (projection.storeGatePassed !== null) {
-    return { known: true, passed: projection.storeGatePassed }
-  }
-
-  const achievement = parseDecimalNumber(projection.storeAchievementPct)
-  if (achievement !== null) {
-    return { known: true, passed: achievement >= 80 }
-  }
-
-  return { known: false, passed: false }
-}
-
-function getStoreGateLabel(projection: SalesTargetIncentiveProjection) {
-  const gate = getStoreGateState(projection)
-  if (gate.known) return gate.passed ? '%80 kapısı geçildi' : '%80 kapısı bekliyor'
-  if (!projection.storeTarget && projection.storeActualNetSales) return 'Hedef bekliyor'
-  if (projection.storeTarget && !projection.storeActualNetSales) return 'Satış bekliyor'
-  return 'Hedef bekliyor'
-}
-
-function formatTargetMoneyValue(
-  value: string | null | undefined,
-  locale: ReturnType<typeof useLocalization>['locale'],
-) {
-  return value ? formatMoneyValue(value, locale) : 'Hedef yok'
-}
-
-function formatSalesMoneyValue(
-  value: string | null | undefined,
-  locale: ReturnType<typeof useLocalization>['locale'],
-) {
-  return value ? formatMoneyValue(value, locale) : 'Satış verisi yok'
-}
-
-function formatIncentiveMoneyValue(
-  value: string | null | undefined,
-  locale: ReturnType<typeof useLocalization>['locale'],
-) {
-  return value ? formatMoneyValue(value, locale) : formatMoneyValue('0.00', locale)
-}
-
-function formatAchievementState(
-  achievementPct: string | null | undefined,
-  target: string | null | undefined,
-  actual: string | null | undefined,
-  locale: ReturnType<typeof useLocalization>['locale'],
-) {
-  if (achievementPct) return formatPercentValue(achievementPct, locale)
-  if (!target && actual) return 'Hedef bekliyor'
-  if (target && !actual) return 'Satış bekliyor'
-  if (!target) return 'Hedef yok'
-  return 'Bekliyor'
-}
-
-function getFinalChange(
-  row: SalesTargetIncentiveRow,
-  locale: ReturnType<typeof useLocalization>['locale'],
-) {
-  return getFinalChangeFromAmounts(
-    row.regionCorrection?.beforeAmount ?? row.payableAmount,
-    getRegionEffectiveEarnedAmount(row),
-    locale,
-  )
-}
-
-function getFinalChangeFromAmounts(
-  beforeAmount: string | null | undefined,
-  finalAmount: string | null | undefined,
-  locale: ReturnType<typeof useLocalization>['locale'],
-): { label: string; tone: 'neutral' | 'warning' | 'danger' } {
-  const beforeCents = decimalStringToCents(beforeAmount ?? '0.00')
-  const finalCents = decimalStringToCents(finalAmount ?? '0.00')
-  const delta = finalCents - beforeCents
-
-  if (delta === 0n) return { label: 'Yok', tone: 'neutral' }
-
-  const sign = delta > 0n ? '+' : '-'
-  const absolute = delta > 0n ? delta : -delta
-
-  return {
-    label: `${sign}${formatMoneyValue(centsToDecimalString(absolute), locale)}`,
-    tone: delta > 0n ? 'warning' : 'danger',
-  }
-}
-
-function toMoneyEditValue(rawValue: string) {
-  return formatMoneyEditValue(rawValue).replace(/\s*TL\s*$/i, '')
-}
-
-function formatMoneyEditValue(rawValue: string) {
-  const withoutCurrency = rawValue.replace(/\s*TL\s*$/i, '')
-  const [integerRaw = '', fractionRaw] = withoutCurrency.split(',', 2)
-  const integerDigits = integerRaw.replace(/\D/g, '')
-  const integerValue = integerDigits.replace(/^0+(?=\d)/, '')
-  const groupedInteger = integerValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-
-  if (fractionRaw !== undefined) {
-    const fractionDigits = fractionRaw.replace(/\D/g, '').slice(0, 2)
-    return `${groupedInteger || '0'},${fractionDigits}`
-  }
-
-  return groupedInteger
-}
-
-function formatMoneyDisplayValue(rawValue: string) {
-  const editValue = formatMoneyEditValue(rawValue)
-  const [integerText = '', fractionText = ''] = editValue.split(',', 2)
-  const normalizedInteger = integerText || '0'
-  const normalizedFraction = fractionText.padEnd(2, '0').slice(0, 2)
-
-  return `${normalizedInteger},${normalizedFraction} TL`
-}
-
-function parseDecimalNumber(value: string | null | undefined) {
-  if (!value) return null
-  const parsed = Number(value.replace(',', '.'))
-  return Number.isFinite(parsed) ? parsed : null
-}
-
-function decimalStringToCents(value: string) {
-  const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(value.trim().replace(',', '.'))
-  if (!match) return 0n
-  const integerText = match[2]
-  if (!integerText) return 0n
-  const sign = match[1] ? -1n : 1n
-  const fraction = (match[3] ?? '').padEnd(2, '0').slice(0, 2)
-  return sign * ((BigInt(integerText) * 100n) + BigInt(fraction || '0'))
-}
-
-function centsToDecimalString(cents: bigint) {
-  const integer = cents / 100n
-  const fraction = cents % 100n
-  return `${integer.toString()}.${fraction.toString().padStart(2, '0')}`
 }
