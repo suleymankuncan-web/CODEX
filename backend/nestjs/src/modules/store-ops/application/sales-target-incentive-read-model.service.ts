@@ -478,7 +478,8 @@ function isCloseBlockingParticipantCalculation(
     input.hasImportedStoreTargetOnly &&
     participant.participantType === "personnel" &&
     participant.calculation.status === "blocked" &&
-    participant.calculation.blockedReason === "missing_personnel_target"
+    participant.calculation.blockedReason === "missing_personnel_target" &&
+    hasHistoricalPersonnelSalesEvidence(participant)
   ) {
     return false;
   }
@@ -486,5 +487,15 @@ function isCloseBlockingParticipantCalculation(
   return (
     participant.calculation.status === "blocked" ||
     participant.calculation.status === "no_source"
+  );
+}
+
+function hasHistoricalPersonnelSalesEvidence(
+  participant: SalesTargetIncentiveParticipantProjection,
+) {
+  return (
+    participant.actualAmount !== null &&
+    participant.source.personnelSalesSourceBatchId !== null &&
+    participant.source.personnelSalesImportBatchId !== null
   );
 }
