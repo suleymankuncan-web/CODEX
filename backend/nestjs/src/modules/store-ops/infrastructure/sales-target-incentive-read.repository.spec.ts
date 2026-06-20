@@ -43,7 +43,8 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ib.import_batch_id::text AS import_batch_id");
     expect(text).toContain("ka.source_batch_id IS NOT NULL");
     expect(text).not.toContain("ka.source_batch_id IS NULL");
-    expect(text).toContain("ib.status IN ('completed', 'completed_with_errors')");
+    expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
+    expect(text).not.toContain("ib.company_ids && ARRAY[s.company_id]::uuid[]");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
       "2026-05-01",
@@ -76,7 +77,8 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.scope_type IN ('store', 'employee')");
     expect(text).toContain("ka.period_type = 'monthly'");
     expect(text).toContain("TRUE AS has_sales");
-    expect(text).toContain("ib.status IN ('completed', 'completed_with_errors')");
+    expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
+    expect(text).not.toContain("ib.company_ids && ARRAY[s.company_id]::uuid[]");
     expect(text).toContain("to_char(period_start, 'YYYY-MM') AS period_key");
     expect(text).toContain("GROUP BY period_start");
     expect(text).toContain("ORDER BY bool_or(has_sales) DESC, period_start DESC");
@@ -157,6 +159,8 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text.match(/ib\.import_batch_id::text AS import_batch_id/g)).toHaveLength(2);
     expect(text.match(/ka\.source_batch_id IS NOT NULL/g)).toHaveLength(2);
     expect(text).not.toContain("ka.source_batch_id IS NULL");
+    expect(text).not.toContain("ib.status IN ('completed', 'completed_with_errors')");
+    expect(text).not.toContain("ib.company_ids && ARRAY[s.company_id]::uuid[]");
     expect(text).not.toContain("ib.started_at");
     expect(params).toEqual([
       "2026-05-01",

@@ -149,8 +149,6 @@ export class SalesTargetIncentiveReadRepository {
             INNER JOIN stg.import_batch ib
               ON ib.source_batch_id = ka.source_batch_id
              AND ib.entity_type = 'kpi'
-             AND ib.status IN ('completed', 'completed_with_errors')
-             AND ib.company_ids && ARRAY[s.company_id]::uuid[]
           )
           SELECT to_char(period_start, 'YYYY-MM') AS period_key
           FROM available_periods
@@ -276,8 +274,6 @@ export class SalesTargetIncentiveReadRepository {
             INNER JOIN stg.import_batch ib
               ON ib.source_batch_id = ka.source_batch_id
              AND ib.entity_type = 'kpi'
-             AND ib.status IN ('completed', 'completed_with_errors')
-             AND ib.company_ids && ARRAY[s.company_id]::uuid[]
              ${closeCutoffClause}
             WHERE ka.store_id = s.store_id
               AND ka.scope_type = 'store'
@@ -414,8 +410,6 @@ export class SalesTargetIncentiveReadRepository {
             INNER JOIN stg.import_batch ib
               ON ib.source_batch_id = ka.source_batch_id
              AND ib.entity_type = 'kpi'
-             AND ib.status IN ('completed', 'completed_with_errors')
-             AND ib.company_ids && ARRAY[s.company_id]::uuid[]
              ${closeCutoffClause}
             WHERE ka.store_id = s.store_id
               AND ka.scope_type = 'store'
@@ -451,8 +445,6 @@ export class SalesTargetIncentiveReadRepository {
             INNER JOIN stg.import_batch ib
               ON ib.source_batch_id = ka.source_batch_id
              AND ib.entity_type = 'kpi'
-             AND ib.status IN ('completed', 'completed_with_errors')
-             AND ib.company_ids && ARRAY[s.company_id]::uuid[]
              ${closeCutoffClause}
             WHERE ka.store_id = assignment.store_id
               AND ka.employee_id = assignment.employee_id
