@@ -16,10 +16,15 @@ import { getAuthSession } from './features/auth/api'
 import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
+import { StoreIncentivesPrototypeShell } from './prototypes/store-incentives-prototype-shell'
 
 function App() {
   const location = useLocation()
   const pathname = location.pathname
+  const isStoreIncentivesPrototype =
+    import.meta.env.DEV &&
+    pathname === '/store/incentives' &&
+    new URLSearchParams(location.search).get('prototype') === 'command-v2'
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
@@ -52,7 +57,7 @@ function App() {
             session.mockReadRegionIds,
           ],
     queryFn: getAuthSession,
-    enabled: isReady,
+    enabled: isReady && !isStoreIncentivesPrototype,
     retry: false,
     staleTime: 30_000,
   })
@@ -118,19 +123,22 @@ function App() {
   })
 
   useEffect(() => {
+    if (isStoreIncentivesPrototype) return
     if (pathname.startsWith('/auth')) return
 
     preloadRouteModule(pathname)
-  }, [pathname])
+  }, [isStoreIncentivesPrototype, pathname])
 
   useEffect(() => {
+    if (isStoreIncentivesPrototype) return
     if (shellState.mode !== 'ready') return
 
     preloadRouteModule(firstAllowedPath)
     preloadRouteModule(pathname)
-  }, [firstAllowedPath, pathname, shellState.mode])
+  }, [firstAllowedPath, isStoreIncentivesPrototype, pathname, shellState.mode])
 
   useEffect(() => {
+    if (isStoreIncentivesPrototype) return
     if (shellState.mode !== 'ready') return
 
     let cancelled = false
@@ -154,7 +162,11 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [authSummary, firstAllowedPath, pathname, queryClient, shellState.mode])
+  }, [authSummary, firstAllowedPath, isStoreIncentivesPrototype, pathname, queryClient, shellState.mode])
+
+  if (isStoreIncentivesPrototype) {
+    return <StoreIncentivesPrototypeShell />
+  }
 
   if (pathname.startsWith('/auth')) {
     return <AuthFlowShell shellState={shellState} firstAllowedPath={firstAllowedPath} />

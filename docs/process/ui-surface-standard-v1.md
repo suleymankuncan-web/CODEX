@@ -245,6 +245,11 @@ Approved prototypes are implementation contracts for the scoped surface.
 
 Before creating a production-bound Store/Admin prototype:
 
+- production-bound prototypes must be built from the same runtime contract as
+  production. For HR Axis Store/Admin surfaces this means React, project
+  shadcn/ui components, Tailwind v4 `tw:` utilities, lucide icons, and the
+  shared Admin/Store surface primitives inside the app shell. Standalone HTML
+  with custom CSS is only a concept sketch, even when it looks approved,
 - choose the deliverable type intentionally. If the surface depends on shadcn
   controls such as `Calendar`, `Popover`, `Sheet`, `Dialog`, `Table`, `Select`,
   `Field`, `Button`, `Badge`, `Sidebar`, or `Tabs`, prefer a real React/shadcn
@@ -263,6 +268,22 @@ Before creating a production-bound Store/Admin prototype:
 - avoid custom controls that merely look like shadcn `Button`, `Select`,
   `Calendar`, `Sheet`, `Table`, `Badge`, or `Card`.
 
+Production-bound acceptance rule:
+
+- if the user says "birebir", "tam implement", or "sayfaya gecir", the
+  accepted artifact must be a production-runtime slice or a shared primitive
+  contract. A standalone HTML file may be used for early visual direction, but
+  it cannot be the final parity source for a PR that claims production
+  implementation,
+- when a standalone HTML sketch is promoted, first convert its visible rhythm
+  into shared primitives and route-shell tokens, then rebuild the page from
+  those primitives. Do not translate the HTML page by page with near-match
+  Tailwind classes,
+- the route shell, workspace width, font family, button variants, badge tones,
+  table row rhythm, detail drawer, and person-row click affordance are part of
+  the parity contract. They cannot be silently inherited from a different
+  route or shadcn default when that changes the approved surface.
+
 When moving prototype to product:
 
 - preserve layout, palette, density, row/card rhythm, status tones, modal/drawer
@@ -274,7 +295,8 @@ When moving prototype to product:
 
 A standalone HTML prototype is not production-ready if it relies on separate
 hard-coded styling instead of the same component/token logic expected in
-production.
+production. In that case the PR must report `Prototype parity: BLOCKED` or
+first produce a production-runtime prototype slice and get that slice accepted.
 
 ## Guard
 

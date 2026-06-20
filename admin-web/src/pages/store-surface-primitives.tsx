@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { Link, type LinkProps } from 'react-router-dom'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -10,6 +10,7 @@ import {
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { SheetContent } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 
 export type StoreSurfaceTone =
@@ -79,6 +80,7 @@ export function StoreSurfacePage(input: {
     <section
       aria-label={input.ariaLabel}
       aria-labelledby={input.ariaLabelledBy}
+      data-store-command-surface
       data-testid={input.testId}
       className={cn('tw:mx-auto tw:flex tw:w-full tw:max-w-[1420px] tw:flex-col tw:gap-4 tw:py-1', input.className)}
     >
@@ -204,6 +206,33 @@ export function StoreSurfaceActionButton(input: { action: StoreSurfaceAction }) 
   )
 }
 
+export function StoreCommandPersonLink(input: Omit<ComponentProps<typeof Button>, 'variant' | 'size'>) {
+  return (
+    <Button
+      {...input}
+      data-store-person-link
+      size="sm"
+      variant="ghost"
+      className={cn(
+        'tw:h-auto tw:justify-start tw:rounded-none tw:border-0 tw:bg-transparent tw:p-0 tw:text-left tw:text-xs tw:font-semibold tw:text-primary tw:shadow-none tw:hover:bg-transparent tw:hover:text-primary tw:hover:underline tw:focus-visible:ring-2',
+        input.className,
+      )}
+    />
+  )
+}
+
+export function StoreCommandSheetContent(input: ComponentProps<typeof SheetContent>) {
+  return (
+    <SheetContent
+      {...input}
+      className={cn(
+        'tw:inset-x-0 tw:bottom-0 tw:top-auto tw:h-[min(88vh,740px)] tw:max-w-none tw:rounded-b-none tw:rounded-t-[18px] tw:bg-card tw:p-0 tw:shadow-xl tw:sm:inset-x-auto tw:sm:bottom-3.5 tw:sm:right-3.5 tw:sm:top-3.5 tw:sm:h-auto tw:sm:w-[min(440px,calc(100vw-28px))] tw:sm:rounded-[18px]',
+        input.className,
+      )}
+    />
+  )
+}
+
 export function StoreSurfacePanel(input: {
   children: ReactNode
   className?: string
@@ -308,7 +337,9 @@ export function StoreMetricCard(input: {
 
   return (
     <article
+      data-slot="card"
       data-store-tone={input.tone ?? 'neutral'}
+      data-size="sm"
       className="tw:grid tw:min-h-28 tw:grid-cols-[2.75rem_minmax(0,1fr)] tw:items-center tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card/95 tw:p-4 tw:shadow-sm"
     >
       {input.icon ? (
@@ -350,6 +381,7 @@ export function StoreSectionCard(input: {
     <section
       aria-label={input.ariaLabel}
       aria-labelledby={input.ariaLabelledBy}
+      data-slot="card"
       data-store-section-card
       data-testid={input.testId}
       className={cn('tw:overflow-visible tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm', input.className)}
@@ -427,6 +459,7 @@ export function StoreStackedRow(input: {
   return (
     <article
       aria-label={input.ariaLabel}
+      data-slot="card"
       data-store-tone={input.tone ?? 'neutral'}
       data-testid={input.testId}
       className={cn(

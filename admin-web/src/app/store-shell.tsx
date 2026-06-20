@@ -57,6 +57,7 @@ export function StoreShell(input: {
   const storeMeRoute = location.pathname === '/store/me'
   const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
   const storeChecklistRoute = location.pathname === '/store/checklists'
+  const storeIncentivesRoute = location.pathname === '/store/incentives'
   const checklistOnlyRoute = storeChecklistRoute && checklistOnly
   const storeRoute = (element: ReactNode, options?: {
     allowVm?: boolean
@@ -103,6 +104,8 @@ export function StoreShell(input: {
         storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''
       }${
         checklistOnlyRoute ? ' store-shell-store-checklists' : ''
+      }${
+        storeIncentivesRoute ? ' store-shell-store-incentives' : ''
       }`}
     >
       {checklistOnlyRoute ? null : (

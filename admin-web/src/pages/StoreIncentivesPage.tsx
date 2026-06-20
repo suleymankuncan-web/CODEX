@@ -167,6 +167,7 @@ export function StoreIncentivesPage(input: {
       <StoreIncentivesEmptyPeriod
         onPeriodChange={handlePeriodChange}
         period={period ?? data.period}
+        t={t}
       />
     )
   }
@@ -202,25 +203,26 @@ export function StoreIncentivesPage(input: {
 function StoreIncentivesEmptyPeriod(input: {
   period: string
   onPeriodChange: (period: string) => void
+  t: ReturnType<typeof useLocalization>['t']
 }) {
   return (
     <StoreSurfacePage
-      ariaLabel="Primler"
+      ariaLabel={input.t('storeIncentives.storeManagerAria')}
       testId="store-incentives-page"
     >
       <StoreCommandBar
-        title="Prim Merkezi"
-        description="Dönem hakediş ekranı"
+        title={input.t('storeIncentives.storeManagerEyebrow')}
+        description={input.t('storeIncentives.storeManagerCopy')}
         end={<PeriodPicker period={input.period} onChange={input.onPeriodChange} />}
       />
       <StoreSurfaceHeader
-        title="Dönem primleri"
-        description="Seçili dönem için prim kaydı bulunamadı."
+        title={input.t('storeIncentives.storeManagerTitle')}
+        description={input.t('storeIncentives.storeManagerCopy')}
         icon={<CircleDollarSign size={23} />}
       />
       <StoreErrorState
-        title="Prim kaydı bulunamadı"
-        description="Başka bir dönem seçerek kayıtları görüntüleyebilirsiniz."
+        title={input.t('storeIncentives.emptyTitle')}
+        description={input.t('storeIncentives.emptyCopy')}
       />
     </StoreSurfacePage>
   )
@@ -253,8 +255,8 @@ function StoreManagerIncentivesView(input: {
       testId="store-incentives-page"
     >
       <StoreCommandBar
-        title="Prim Merkezi"
-        description="Mağaza hakediş ekranı"
+        title={input.t('storeIncentives.storeManagerEyebrow')}
+        description={input.t('storeIncentives.storeManagerCopy')}
         end={<PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />}
       />
 
@@ -264,7 +266,7 @@ function StoreManagerIncentivesView(input: {
         icon={<CircleDollarSign size={23} />}
         actions={[
           {
-            label: 'Dönem seç',
+            label: input.t('storeIncentives.regionManagerSelectPeriod'),
             icon: <CalendarDays data-icon="inline-start" />,
             onClick: () => undefined,
             variant: 'outline',

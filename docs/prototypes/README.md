@@ -41,6 +41,20 @@ implemented, layout, palette, density, status tones, row rhythm, modal/drawer
 model, labels, and interaction flow must match unless a documented production
 constraint requires a deviation.
 
+Important production boundary:
+
+- Standalone HTML files in this shelf are visual contracts, not production
+  runtime contracts. They may lock the target rhythm, but they do not prove that
+  the same rhythm can be copy-pasted into the app.
+- A prototype that the user expects to see "birebir" in production must be
+  accepted as a React/shadcn slice inside the HR Axis app shell or as a shared
+  Admin/Store primitive contract. HTML-only acceptance is a concept acceptance,
+  not a production-bound parity acceptance.
+- If an HTML visual contract is promoted, the first implementation step is to
+  move its typography, spacing, token, button, badge, table/list, drawer, and
+  route-shell rhythm into shared primitives. Page-local near-match conversion is
+  not enough to claim parity.
+
 | Prototype | Surface | SHA-256 |
 | --- | --- | --- |
 | `docs/prototypes/store-workforce-prototype-v1.html` | `/store/workforce` | `93390D1705B9DFEC74E3ACF084320FC91B1F31580E45C6FE8A26B479EDCD031F` |

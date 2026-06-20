@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { type UseMutationResult } from '@tanstack/react-query'
 import {
-  CalendarDays,
   ClipboardCheck,
   CircleDollarSign,
   Download,
   RefreshCw,
   RotateCcw,
+  Save,
   Search,
   Send,
   SlidersHorizontal,
@@ -14,6 +14,12 @@ import {
   UsersRound,
   WalletCards,
 } from 'lucide-react'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -24,18 +30,30 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Field,
+  FieldDescription,
+  FieldGroup,
+  FieldLabel,
+} from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from '@/components/ui/input-group'
 import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
 import {
   Sheet,
-  SheetContent,
   SheetDescription,
   SheetFooter,
   SheetHeader,
@@ -87,18 +105,20 @@ import {
 import { IncentiveRateTables } from './store-incentives-widgets'
 import {
   StoreCommandBar,
+  StoreCommandPersonLink,
+  StoreCommandSheetContent,
   StoreEmptyState,
   StoreErrorState,
-  StoreInfoGrid,
   StoreMetricCard,
   StoreMetricGrid,
   StoreSectionCard,
   StoreStatusBadge,
   StoreSurfaceHeader,
   StoreSurfacePage,
-  StoreToolbar,
-  StoreToolbarField,
 } from './store-surface-primitives'
+
+const prototypePrimaryActionClass =
+  'tw:bg-gradient-to-r tw:from-primary tw:to-accent tw:text-primary-foreground tw:shadow-lg tw:shadow-primary/20 tw:hover:from-primary/90 tw:hover:to-accent/90'
 
 export function RegionManagerIncentivesView(input: {
   data: SalesTargetIncentiveResponse['data']
@@ -128,6 +148,7 @@ export function RegionManagerIncentivesView(input: {
     >
   }
 }) {
+  const { t } = useLocalization()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('all')
   const [expandedStoreId, setExpandedStoreId] = useState<string | null>(
@@ -156,75 +177,65 @@ export function RegionManagerIncentivesView(input: {
 
   return (
     <StoreSurfacePage
-      ariaLabel="Primler"
+      ariaLabel={t('storeIncentives.regionManagerAria')}
       testId="store-incentives-page"
     >
       <StoreCommandBar
-        title="Prim Merkezi"
-        description="Bölge hakediş kontrol ekranı"
+        title={t('storeIncentives.regionManagerTitle')}
+        description={t('storeIncentives.regionManagerCommandDescription')}
         end={(
           <div className="tw:flex tw:flex-wrap tw:gap-2">
-            <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
             <Button type="button" variant="outline" onClick={() => undefined}>
-              <RefreshCw data-icon="inline-start" />
-              Yenile
+              <Download data-icon="inline-start" />
+              {t('storeIncentives.regionManagerExportExcel')}
+            </Button>
+            <Button
+              className={prototypePrimaryActionClass}
+              type="button"
+              disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
+              onClick={() => setSubmitDialogOpen(true)}
+            >
+              <Send data-icon="inline-start" />
+              {workflow?.regionPackageStatus === 'admin_returned'
+                ? t('storeIncentives.regionManagerResubmit')
+                : t('storeIncentives.regionManagerSubmit')}
             </Button>
           </div>
         )}
       />
 
       <StoreSurfaceHeader
-        title="Primler"
-        description="Mağaza ve personel hakedişleri, düzeltmeler ve onay süreci."
+        title={t('storeIncentives.regionManagerTitle')}
+        description={t('storeIncentives.regionManagerCopy')}
         icon={<CircleDollarSign size={23} />}
-        actions={[
-          {
-            label: 'Dönem seç',
-            icon: <CalendarDays data-icon="inline-start" />,
-            onClick: () => undefined,
-            variant: 'outline',
-          },
-          {
-            label: 'Excel dışa aktar',
-            icon: <Download data-icon="inline-start" />,
-            onClick: () => undefined,
-            variant: 'outline',
-          },
-          {
-            label: workflow?.regionPackageStatus === 'admin_returned' ? 'Tekrar gönder' : 'Onaya gönder',
-            icon: <Send data-icon="inline-start" />,
-            disabled: !packageCanSubmit || input.mutationState.submitPackageMutation.isPending,
-            onClick: () => setSubmitDialogOpen(true),
-          },
-        ]}
       />
 
-      <StoreMetricGrid ariaLabel="Bölge prim özeti">
+      <StoreMetricGrid ariaLabel={t('storeIncentives.regionManagerSummaryAria')}>
         <StoreMetricCard
-          title="Toplam hakediş"
+          title={t('storeIncentives.regionManagerTotalTitle')}
           value={formatMoneyValue(summary.payableTotal, input.locale)}
-          note="Mağaza müdürü ve ekip toplamı"
+          note={t('storeIncentives.regionManagerTotalNote')}
           icon={<WalletCards size={20} />}
           tone="plum"
         />
         <StoreMetricCard
-          title="Prim hakeden personel"
+          title={t('storeIncentives.regionManagerEarningPersonnelTitle')}
           value={summary.earningPersonnelCount}
-          note="%80 kapısı geçen mağazalarda"
+          note={t('storeIncentives.regionManagerEarningPersonnelNote')}
           icon={<UsersRound size={20} />}
           tone="mint"
         />
         <StoreMetricCard
-          title="Düzeltme yapılan kayıt"
+          title={t('storeIncentives.regionManagerCorrectionTitle')}
           value={summary.correctionCount}
-          note="Notlu değişiklikler"
+          note={t('storeIncentives.regionManagerCorrectionNote')}
           icon={<SlidersHorizontal size={20} />}
           tone="amber"
         />
         <StoreMetricCard
-          title="Kontrol bekleyen mağaza"
+          title={t('storeIncentives.regionManagerPendingReviewTitle')}
           value={summary.pendingReviewCount}
-          note="Gönderim öncesi kontrol"
+          note={t('storeIncentives.regionManagerPendingReviewNote')}
           icon={<ClipboardCheck size={20} />}
           tone="cyan"
         />
@@ -232,62 +243,101 @@ export function RegionManagerIncentivesView(input: {
 
       {mutationError ? (
         <StoreErrorState
-          title="İşlem tamamlanamadı"
+          title={t('storeIncentives.regionManagerMutationErrorTitle')}
           description={getErrorMessage(mutationError)}
         />
       ) : null}
 
-      <StoreToolbar>
-        <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(18rem,0.95fr)_minmax(18rem,1.2fr)_minmax(13rem,0.85fr)]">
-          <StoreToolbarField label="Dönem">
-            <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
-          </StoreToolbarField>
-          <StoreToolbarField label="Mağaza ara">
-            <span className="tw:relative tw:block">
-              <Search
-                size={16}
-                className="tw:pointer-events-none tw:absolute tw:left-0 tw:top-1/2 tw:-translate-y-1/2 tw:text-muted-foreground"
-              />
-              <Input aria-label="Mağaza ara" className="tw:h-8 tw:border-0 tw:bg-transparent tw:pl-7 tw:shadow-none tw:focus-visible:ring-0" onChange={(event) => setSearch(event.target.value)} placeholder="Mağaza ara" value={search} />
+      <section
+        aria-label="Prim filtreleri"
+        className="tw:rounded-2xl tw:border tw:border-border/80 tw:bg-card/80 tw:p-3 tw:shadow-sm"
+      >
+        <div className="tw:grid tw:gap-2 tw:lg:grid-cols-[minmax(13rem,0.75fr)_minmax(18rem,1.2fr)_minmax(12rem,0.75fr)_auto]">
+          <div className="tw:flex tw:h-11 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/80 tw:px-3">
+            <span className="tw:shrink-0 tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {t('storeIncentives.regionManagerPeriodField')}
             </span>
-          </StoreToolbarField>
-          <StoreToolbarField label="Durum">
+            <div className="tw:min-w-0 tw:flex-1">
+              <PeriodPicker
+                period={input.selectedPeriod}
+                onChange={input.onPeriodChange}
+                triggerClassName="tw:h-9 tw:w-full tw:justify-start tw:border-0 tw:bg-transparent tw:px-0 tw:font-semibold tw:shadow-none tw:hover:bg-transparent tw:focus-visible:ring-0"
+              />
+            </div>
+          </div>
+
+          <div className="tw:flex tw:h-11 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/80 tw:px-3">
+            <span className="tw:shrink-0 tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {t('storeIncentives.regionManagerSearchField').replace(' ara', '')}
+            </span>
+            <InputGroup className="tw:h-9 tw:flex-1 tw:border-0 tw:bg-transparent tw:shadow-none">
+              <InputGroupAddon className="tw:pl-0">
+                <Search />
+              </InputGroupAddon>
+              <InputGroupInput
+                aria-label={t('storeIncentives.regionManagerSearchField')}
+                className="tw:h-9 tw:px-0 tw:font-semibold"
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder={t('storeIncentives.regionManagerSearchPlaceholder')}
+                value={search}
+              />
+            </InputGroup>
+          </div>
+
+          <div className="tw:flex tw:h-11 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/80 tw:px-3">
+            <span className="tw:shrink-0 tw:text-xs tw:font-medium tw:text-muted-foreground">
+              {t('storeIncentives.regionManagerStatusField')}
+            </span>
             <Select
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StoreStatusFilter)}
             >
-              <SelectTrigger aria-label="Durum filtresi" className="tw:h-8 tw:border-0 tw:bg-transparent tw:px-0 tw:shadow-none tw:focus:ring-0">
-                <SelectValue placeholder="Durum" />
+              <SelectTrigger aria-label={t('storeIncentives.regionManagerStatusField')} className="tw:h-9 tw:flex-1 tw:border-0 tw:bg-transparent tw:px-0 tw:font-semibold tw:shadow-none tw:focus:ring-0">
+                <SelectValue placeholder={t('storeIncentives.regionManagerStatusPlaceholder')} />
               </SelectTrigger>
               <SelectContent align="end">
-                <SelectItem value="all">Tümü</SelectItem>
-                <SelectItem value="pending_review">Kontrol edilmeli</SelectItem>
-                <SelectItem value="reviewed">Kontrol edildi</SelectItem>
-                <SelectItem value="earning">Hakediş var</SelectItem>
-                <SelectItem value="no_earning">Hakediş yok</SelectItem>
-                <SelectItem value="corrected">Düzeltildi</SelectItem>
+                <SelectGroup>
+                  <SelectItem value="all">{t('storeIncentives.regionManagerStatusAll')}</SelectItem>
+                  <SelectItem value="pending_review">{t('storeIncentives.regionManagerStatusPendingReview')}</SelectItem>
+                  <SelectItem value="reviewed">{t('storeIncentives.regionManagerStatusReviewed')}</SelectItem>
+                  <SelectItem value="earning">{t('storeIncentives.regionManagerStatusEarning')}</SelectItem>
+                  <SelectItem value="no_earning">{t('storeIncentives.regionManagerStatusNoEarning')}</SelectItem>
+                  <SelectItem value="corrected">{t('storeIncentives.regionManagerStatusCorrected')}</SelectItem>
+                </SelectGroup>
               </SelectContent>
             </Select>
-          </StoreToolbarField>
+          </div>
+
+          <Button
+            className="tw:h-11 tw:rounded-xl tw:border-border/80 tw:bg-background/80 tw:px-3 tw:font-semibold tw:shadow-none tw:hover:bg-muted/60"
+            type="button"
+            variant="outline"
+            onClick={() => undefined}
+          >
+            <RefreshCw data-icon="inline-start" />
+            {t('storeIncentives.regionManagerRefresh')}
+          </Button>
         </div>
-      </StoreToolbar>
+      </section>
 
       <StoreSectionCard
-        ariaLabel="Mağaza prim hakedişleri"
-        title="Mağaza hakedişleri"
-        description="Mağazaya tıklayın, personel satırlarını kontrol edin."
-        badge={{ label: `${summary.storeCount} şirket mağazası`, tone: 'accent' }}
+        ariaLabel={t('storeIncentives.regionManagerStoresAria')}
+        title={t('storeIncentives.regionManagerStoresTitle')}
+        description={t('storeIncentives.regionManagerStoresCopy')}
+        badge={{ label: t('storeIncentives.regionManagerCompanyStoreCount', { count: summary.storeCount }), tone: 'accent' }}
       >
         {visibleProjections.length > 0 ? (
-          <div className="tw:flex tw:flex-col tw:gap-3">
+          <Accordion
+            type="single"
+            collapsible
+            value={expandedStoreId ?? ''}
+            onValueChange={(value) => setExpandedStoreId(value || null)}
+            className="tw:gap-3"
+          >
             {visibleProjections.map((projection) => (
               <RegionStoreCard
-                expanded={expandedStoreId === projection.storeId}
                 key={projection.storeId}
                 locale={input.locale}
-                onOpenChange={() =>
-                  setExpandedStoreId(expandedStoreId === projection.storeId ? null : projection.storeId)
-                }
                 onReviewChange={(reviewStatus) =>
                   input.mutationState.reviewMutation.mutate({
                     period: input.data.period,
@@ -300,9 +350,9 @@ export function RegionManagerIncentivesView(input: {
                 reviewDisabled={workflowLocked || !canReviewProjection(projection)}
               />
             ))}
-          </div>
+          </Accordion>
         ) : (
-          <StoreEmptyState description="Bu filtrelerle eşleşen mağaza yok." />
+          <StoreEmptyState description={t('storeIncentives.regionManagerNoStoreMatch')} />
         )}
       </StoreSectionCard>
 
@@ -321,25 +371,64 @@ export function RegionManagerIncentivesView(input: {
       />
 
       <Dialog open={isSubmitDialogOpen} onOpenChange={setSubmitDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{formatPeriodLabel(input.data.period)} primlerini onaya gönder</DialogTitle>
-            <DialogDescription>
-              {summary.storeCount} mağaza ve {summary.correctionCount} düzeltme kaydı admin onayına gönderilecek.
-            </DialogDescription>
+        <DialogContent className="tw:w-[calc(100vw-64px)] tw:max-w-[30rem] tw:overflow-hidden tw:p-0 tw:sm:max-w-[30rem]">
+          <DialogHeader className="tw:border-b tw:border-border tw:bg-muted/20 tw:p-5">
+            <div className="tw:flex tw:items-start tw:gap-3">
+              <span className="tw:flex tw:size-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-2xl tw:bg-primary/10 tw:text-primary">
+                <Send size={18} />
+              </span>
+              <div>
+                <DialogTitle>
+                  {t('storeIncentives.regionManagerSubmitDialogTitle', { period: formatPeriodLabel(input.data.period) })}
+                </DialogTitle>
+                <DialogDescription className="tw:mt-1">
+                  Kontrol edilen dönem paketi admin onayına gönderilecek.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <StoreInfoGrid
-            className="tw:grid-cols-2"
-            items={[
-              { label: 'Toplam hakediş', value: formatMoneyValue(summary.payableTotal, input.locale), tone: 'calm' },
-              { label: 'Kontrol edilen mağaza', value: `${summary.reviewedStoreCount}/${summary.storeCount}`, tone: allStoresReviewed ? 'calm' : 'warning' },
-            ]}
-          />
-          <DialogFooter>
+          <div className="tw:grid tw:gap-3 tw:p-5">
+            <div className="tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:p-4">
+              <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
+                <span className="tw:text-sm tw:text-muted-foreground">{t('storeIncentives.regionManagerTotalTitle')}</span>
+                <strong className="tw:text-xl tw:font-semibold tw:text-foreground">
+                  {formatMoneyValue(summary.payableTotal, input.locale)}
+                </strong>
+              </div>
+              <div className="tw:mt-4 tw:grid tw:gap-2">
+                <DialogAmountLine
+                  label={t('storeIncentives.regionManagerReviewedStores')}
+                  value={`${summary.reviewedStoreCount}/${summary.storeCount}`}
+                />
+                <DialogAmountLine
+                  label={t('storeIncentives.regionManagerCorrectionTitle')}
+                  value={String(summary.correctionCount)}
+                />
+                <DialogAmountLine label="Gönderim tipi" value="Dönem paketi" />
+              </div>
+            </div>
+            <div className="tw:rounded-2xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
+              <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
+                <span className="tw:text-sm tw:font-medium tw:text-foreground">Kontrol ilerlemesi</span>
+                <StoreStatusBadge tone={allStoresReviewed ? 'calm' : 'warning'}>
+                  {allStoresReviewed ? 'Gönderime hazır' : `${summary.pendingReviewCount} mağaza bekliyor`}
+                </StoreStatusBadge>
+              </div>
+              <Progress
+                className="tw:mt-3"
+                value={summary.storeCount > 0 ? (summary.reviewedStoreCount / summary.storeCount) * 100 : 0}
+              />
+              <p className="tw:mt-3 tw:text-xs tw:leading-5 tw:text-muted-foreground">
+                Onaya gönderildiğinde paket dönem bazında tek kayıt olarak admin kontrolüne düşer.
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="tw:mx-0 tw:mb-0 tw:flex-row tw:items-center tw:justify-end tw:border-t tw:border-border tw:bg-muted/20 tw:p-4">
             <Button type="button" variant="outline" onClick={() => setSubmitDialogOpen(false)}>
-              Vazgeç
+              {t('storeIncentives.regionManagerCancel')}
             </Button>
             <Button
+              className={prototypePrimaryActionClass}
               type="button"
               disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
               onClick={() => {
@@ -352,7 +441,7 @@ export function RegionManagerIncentivesView(input: {
               }}
             >
               <Send data-icon="inline-start" />
-              Onaya gönder
+              {t('storeIncentives.regionManagerSubmit')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -364,62 +453,79 @@ export function RegionManagerIncentivesView(input: {
 function RegionStoreCard(input: {
   projection: SalesTargetIncentiveProjection
   locale: ReturnType<typeof useLocalization>['locale']
-  expanded: boolean
   reviewDisabled: boolean
-  onOpenChange: () => void
   onSelectRow: (row: SalesTargetIncentiveRow) => void
   onReviewChange: (status: 'pending_review' | 'reviewed') => void
 }) {
+  const { t } = useLocalization()
   const manager = getManagerRow(input.projection)
   const personnel = getPersonnelRows(input.projection)
+  const rows = [...(manager ? [manager] : []), ...personnel]
   const personnelTotal = sumMoney(personnel.map(getRegionEffectiveEarnedAmount))
   const review = getReviewState(input.projection.review)
   const status = getProjectionWorkflowStatus(input.projection)
   const achievementProgress = toProgressPercent(input.projection.storeAchievementPct) ?? 0
+  const gate = getStoreGateState(input.projection)
+  const gateLabel = getStoreGateLabel(input.projection)
 
   return (
-    <article
+    <AccordionItem
       className={cn(
-        'tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm tw:transition-colors',
-        input.expanded ? 'tw:shadow-xl tw:ring-1 tw:ring-primary/15' : undefined,
+        'tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm tw:data-[state=open]:shadow-xl tw:data-[state=open]:ring-1 tw:data-[state=open]:ring-primary/15',
       )}
+      data-slot="card"
+      value={input.projection.storeId}
     >
-      <div className="tw:grid tw:min-h-[82px] tw:gap-3 tw:p-3.5 tw:lg:grid-cols-[minmax(13.75rem,1.1fr)_repeat(5,minmax(7.5rem,0.72fr))_minmax(10.5rem,auto)] tw:lg:items-center">
-        <div
-          aria-expanded={input.expanded}
-          className="tw:flex tw:min-w-0 tw:items-center tw:gap-3 tw:text-left"
-          onClick={input.onOpenChange}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-              event.preventDefault()
-              input.onOpenChange()
-            }
-          }}
-          role="button"
-          tabIndex={0}
+      <AccordionTrigger
+        className={cn(
+          'tw:relative tw:overflow-hidden tw:px-3.5 tw:py-3 tw:hover:no-underline',
+          gate.known
+            ? gate.passed
+              ? 'tw:bg-chart-2/10 tw:hover:bg-chart-2/15 tw:data-[state=open]:bg-chart-2/15'
+              : 'tw:bg-destructive/10 tw:hover:bg-destructive/15 tw:data-[state=open]:bg-destructive/15'
+            : 'tw:bg-muted/30 tw:hover:bg-muted/40 tw:data-[state=open]:bg-muted/40',
+        )}
         >
-          <span className="tw:flex tw:size-[38px] tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
-            <Store size={17} />
-          </span>
-          <span className="tw:min-w-0">
-            <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
-              {input.projection.storeName}
+        <div className="tw:grid tw:w-full tw:min-w-0 tw:gap-3 tw:pr-3 tw:lg:grid-cols-[minmax(14rem,1.1fr)_repeat(5,minmax(7.5rem,0.72fr))_minmax(8.5rem,auto)] tw:lg:items-center">
+          <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+            <span className="tw:flex tw:size-[38px] tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
+              <Store size={17} />
             </span>
-            <span className="tw:mt-0.5 tw:block tw:text-xs tw:text-muted-foreground">
-              Şirket mağazası
+            <span className="tw:min-w-0">
+              <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
+                {input.projection.storeName}
+              </span>
+              <span className="tw:mt-0.5 tw:block tw:text-xs tw:text-muted-foreground">
+                {t('storeIncentives.regionManagerStoreType')}
+              </span>
             </span>
-          </span>
+          </div>
+          <StoreKv label={t('storeIncentives.regionManagerStoreTarget')} value={formatTargetMoneyValue(input.projection.storeTarget, input.locale)} />
+          <StoreKv label={t('storeIncentives.regionManagerStoreActual')} value={formatSalesMoneyValue(input.projection.storeActualNetSales, input.locale)} />
+          <div className="tw:grid tw:gap-1">
+            <StoreKv
+              label={t('storeIncentives.regionManagerAchievement')}
+              value={formatAchievementState(
+                input.projection.storeAchievementPct,
+                input.projection.storeTarget,
+                input.projection.storeActualNetSales,
+                input.locale,
+              )}
+            />
+            <Progress value={achievementProgress} />
+          </div>
+          <StoreKv label={t('storeIncentives.regionManagerManagerIncentive')} value={formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(manager), input.locale)} />
+          <StoreKv label={t('storeIncentives.regionManagerTeamIncentive')} value={formatIncentiveMoneyValue(personnelTotal, input.locale)} />
+          <div className="tw:flex tw:flex-wrap tw:items-start tw:gap-2 tw:lg:justify-end">
+            <StoreStatusBadge tone={gate.known ? (gate.passed ? 'calm' : 'danger') : 'neutral'}>
+              {gateLabel}
+            </StoreStatusBadge>
+            <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
+          </div>
         </div>
-        <StoreKv label="Mağaza hedefi" value={formatMoneyValue(input.projection.storeTarget, input.locale)} />
-        <StoreKv label="Gerçekleşen" value={formatMoneyValue(input.projection.storeActualNetSales, input.locale)} />
-        <div className="tw:grid tw:gap-1">
-          <StoreKv label="Hedef" value={formatPercentValue(input.projection.storeAchievementPct, input.locale)} />
-          <Progress value={achievementProgress} />
-        </div>
-        <StoreKv label="Müdür primi" value={formatMoneyValue(getRegionEffectiveEarnedAmount(manager), input.locale)} />
-        <StoreKv label="Ekip primi" value={formatMoneyValue(personnelTotal, input.locale)} />
-        <div className="tw:flex tw:flex-col tw:items-start tw:gap-2 tw:lg:items-end">
-          <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
+      </AccordionTrigger>
+      <AccordionContent className="tw:border-t tw:border-border tw:bg-muted/20 tw:p-3">
+        <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
           <label className="tw:inline-flex tw:min-h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/10 tw:px-3 tw:text-xs tw:font-semibold tw:text-chart-4">
             <Checkbox
               checked={review.storeReviewStatus === 'reviewed'}
@@ -428,20 +534,24 @@ function RegionStoreCard(input: {
                 input.onReviewChange(checked === true ? 'reviewed' : 'pending_review')
               }
             />
-            Kontrol edildi
+            {t('storeIncentives.regionManagerReviewedCheckbox')}
           </label>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <StoreStatusBadge tone={rows.length > 0 ? 'calm' : 'neutral'}>
+              {rows.length > 0 ? 'Personel listesi hazır' : t('storeIncentives.regionManagerNoRows')}
+            </StoreStatusBadge>
+            <StoreStatusBadge tone={gate.known ? (gate.passed ? 'calm' : 'danger') : 'neutral'}>
+              {gateLabel}
+            </StoreStatusBadge>
+          </div>
         </div>
-      </div>
-      {input.expanded ? (
-        <div className="tw:border-t tw:border-border tw:bg-muted/20 tw:p-3">
-          <RegionPersonnelTable
-            locale={input.locale}
-            onSelectRow={input.onSelectRow}
-            rows={[...(manager ? [manager] : []), ...personnel]}
-          />
-        </div>
-      ) : null}
-    </article>
+        <RegionPersonnelTable
+          locale={input.locale}
+          onSelectRow={input.onSelectRow}
+          rows={rows}
+        />
+      </AccordionContent>
+    </AccordionItem>
   )
 }
 
@@ -459,8 +569,9 @@ function RegionPersonnelTable(input: {
   locale: ReturnType<typeof useLocalization>['locale']
   onSelectRow: (row: SalesTargetIncentiveRow) => void
 }) {
+  const { t } = useLocalization()
   if (input.rows.length === 0) {
-    return <StoreEmptyState description="Bu mağaza için prim satırı yok." />
+    return <StoreEmptyState description={t('storeIncentives.regionManagerNoRows')} />
   }
 
   return (
@@ -469,38 +580,40 @@ function RegionPersonnelTable(input: {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Personel</TableHead>
-              <TableHead>Rol</TableHead>
-              <TableHead>Hedef</TableHead>
-              <TableHead>Gerçekleşen</TableHead>
-              <TableHead>Hedef %</TableHead>
-              <TableHead>Oran</TableHead>
-              <TableHead>Hesaplanan</TableHead>
-              <TableHead>Final prim</TableHead>
-              <TableHead>Not</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerPersonnelColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerRoleColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerTargetColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerActualColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerAchievementColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerRateColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerCalculatedColumn')}</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerFinalColumn')}</TableHead>
+              <TableHead>Değişim</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerNoteColumn')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {input.rows.map((row) => (
               <TableRow key={`${row.employeeId}:${row.participantType}`}>
                 <TableCell>
-                  <Button
-                    className="tw:h-auto tw:justify-start tw:p-0 tw:text-left"
+                  <StoreCommandPersonLink
                     onClick={() => input.onSelectRow(row)}
                     type="button"
-                    variant="link"
                   >
                     {row.displayName}
-                  </Button>
+                  </StoreCommandPersonLink>
                 </TableCell>
                 <TableCell>{getIncentivePositionLabel(row.positionCode)}</TableCell>
-                <TableCell>{formatMoneyValue(row.target, input.locale)}</TableCell>
-                <TableCell>{formatMoneyValue(row.actualPositiveSales, input.locale)}</TableCell>
-                <TableCell>{formatPercentValue(row.achievementPct, input.locale)}</TableCell>
+                <TableCell>{formatTargetMoneyValue(row.target, input.locale)}</TableCell>
+                <TableCell>{formatSalesMoneyValue(row.actualPositiveSales, input.locale)}</TableCell>
+                <TableCell>{formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}</TableCell>
                 <TableCell>{formatRateValue(row.rate, input.locale)}</TableCell>
-                <TableCell>{formatMoneyValue(row.payableAmount, input.locale)}</TableCell>
+                <TableCell>{formatIncentiveMoneyValue(row.payableAmount, input.locale)}</TableCell>
                 <TableCell>
                   <FinalAmountCell locale={input.locale} row={row} />
+                </TableCell>
+                <TableCell>
+                  <ChangeCell locale={input.locale} row={row} />
                 </TableCell>
                 <TableCell>
                   {row.regionCorrection ? (
@@ -508,7 +621,7 @@ function RegionPersonnelTable(input: {
                       {getCorrectionLabel(row.regionCorrection)}
                     </StoreStatusBadge>
                   ) : (
-                    <span className="tw:text-muted-foreground">Yok</span>
+                    <span className="tw:text-muted-foreground">{t('storeIncentives.regionManagerNone')}</span>
                   )}
                 </TableCell>
               </TableRow>
@@ -532,17 +645,24 @@ function FinalAmountCell(input: {
   locale: ReturnType<typeof useLocalization>['locale']
 }) {
   const effectiveAmount = getRegionEffectiveEarnedAmount(input.row)
-  const hasCorrection = Boolean(input.row.regionCorrection && input.row.regionCorrection.status !== 'voided')
-
-  if (!hasCorrection || effectiveAmount === input.row.payableAmount) {
-    return <span>{formatMoneyValue(effectiveAmount, input.locale)}</span>
-  }
 
   return (
-    <span className="tw:flex tw:flex-col tw:gap-0.5">
-      <s className="tw:text-xs tw:text-muted-foreground">{formatMoneyValue(input.row.payableAmount, input.locale)}</s>
-      <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{formatMoneyValue(effectiveAmount, input.locale)}</strong>
-    </span>
+    <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
+      {formatIncentiveMoneyValue(effectiveAmount, input.locale)}
+    </strong>
+  )
+}
+
+function ChangeCell(input: {
+  row: SalesTargetIncentiveRow
+  locale: ReturnType<typeof useLocalization>['locale']
+}) {
+  const change = getFinalChange(input.row, input.locale)
+
+  return (
+    <StoreStatusBadge className="tw:font-semibold" tone={change.tone}>
+      {change.label}
+    </StoreStatusBadge>
   )
 }
 
@@ -562,17 +682,20 @@ function RegionPersonnelCards(input: {
         >
           <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{row.displayName}</span>
           <span className="tw:block tw:text-xs tw:text-muted-foreground">
-            {getIncentivePositionLabel(row.positionCode)} / {formatPercentValue(row.achievementPct, input.locale)}
+            {getIncentivePositionLabel(row.positionCode)} / {formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}
           </span>
           <span className="tw:mt-2 tw:flex tw:items-center tw:justify-between tw:gap-3">
             <span className="tw:text-sm tw:font-semibold tw:text-foreground">
-              {formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
+              {formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
             </span>
+            <ChangeCell locale={input.locale} row={row} />
+          </span>
+          <span className="tw:mt-2 tw:flex tw:justify-end">
             {row.regionCorrection ? (
-              <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
-                {getCorrectionLabel(row.regionCorrection)}
-              </StoreStatusBadge>
-            ) : null}
+                <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
+                  {getCorrectionLabel(row.regionCorrection)}
+                </StoreStatusBadge>
+              ) : null}
           </span>
         </button>
       ))}
@@ -640,7 +763,10 @@ function IncentiveCorrectionSheetForm(input: {
   >
 }) {
   const { row, projection } = input
-  const [finalAmount, setFinalAmount] = useState(getRegionEffectiveEarnedAmount(row) ?? '0.00')
+  const { t } = useLocalization()
+  const [finalAmount, setFinalAmount] = useState(() =>
+    formatMoneyDisplayValue(formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)),
+  )
   const [reasonNote, setReasonNote] = useState(row.regionCorrection?.reasonNote ?? '')
   const progress = toProgressPercent(row.achievementPct) ?? 0
   const projectionCanEdit = canReviewProjection(projection)
@@ -653,142 +779,330 @@ function IncentiveCorrectionSheetForm(input: {
     !input.workflowLocked &&
     Boolean(row.regionCorrection) &&
     (row.regionCorrection?.status === 'draft' || row.regionCorrection?.status === 'admin_returned')
-  const normalizedFinalAmount = normalizeMoneyInput(finalAmount)
+  const normalizedFinalAmount = normalizeMoneyInput(toMoneyEditValue(finalAmount))
   const amountIsValid = normalizedFinalAmount !== null
+  const savedFinalChange = getFinalChange(row, input.locale)
+  const finalChange = amountIsValid
+    ? getFinalChangeFromAmounts(
+        row.regionCorrection?.beforeAmount ?? row.payableAmount,
+        normalizedFinalAmount,
+        input.locale,
+      )
+    : savedFinalChange
   const noteIsValid = reasonNote.trim().length >= 3
-  const adjustmentAmount = row.regionCorrection?.adjustmentAmount ?? row.correctionAmount
 
   return (
-    <SheetContent
-      closeLabel="Kapat"
-      className="tw:inset-x-0 tw:bottom-0 tw:top-auto tw:h-[min(88vh,740px)] tw:max-w-none tw:rounded-b-none tw:rounded-t-[18px] tw:bg-card tw:p-0 tw:shadow-xl tw:sm:inset-x-auto tw:sm:bottom-3.5 tw:sm:right-3.5 tw:sm:top-3.5 tw:sm:h-auto tw:sm:w-[min(440px,calc(100vw-28px))] tw:sm:rounded-[18px]"
+    <StoreCommandSheetContent
+      className="tw:flex tw:max-h-[calc(100dvh-28px)] tw:flex-col tw:overflow-hidden"
+      closeLabel={t('storeIncentives.regionManagerClose')}
     >
-      <SheetHeader className="tw:border-b tw:border-border tw:p-[18px]">
-        <SheetTitle>{row.displayName}</SheetTitle>
-        <SheetDescription>
-          {getIncentivePositionLabel(row.positionCode)}, {projection.storeName}
-        </SheetDescription>
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
-          <StoreStatusBadge tone={progress >= 80 ? 'calm' : 'warning'}>
-            Hedef {formatPercentValue(row.achievementPct, input.locale)}
-          </StoreStatusBadge>
-          {row.regionCorrection ? (
-            <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
-              {getCorrectionLabel(row.regionCorrection)}
-            </StoreStatusBadge>
-          ) : (
-            <StoreStatusBadge tone="neutral">Düzeltme yok</StoreStatusBadge>
-          )}
+      <SheetHeader className="tw:border-b tw:border-border tw:bg-gradient-to-br tw:from-primary/5 tw:via-card tw:to-accent/10 tw:p-4">
+        <div className="tw:flex tw:items-start tw:justify-between tw:gap-4 tw:pr-8">
+          <div className="tw:min-w-0">
+            <SheetTitle className="tw:text-base tw:font-semibold tw:tracking-normal">{row.displayName}</SheetTitle>
+            <SheetDescription className="tw:mt-1 tw:text-sm">
+              {getIncentivePositionLabel(row.positionCode)}, {projection.storeName}
+            </SheetDescription>
+            <div className="tw:mt-3 tw:flex tw:flex-wrap tw:gap-2">
+              {row.regionCorrection ? (
+                <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
+                  {getCorrectionLabel(row.regionCorrection)}
+                </StoreStatusBadge>
+              ) : (
+                <StoreStatusBadge tone="neutral">{t('storeIncentives.regionManagerNoCorrection')}</StoreStatusBadge>
+              )}
+              <StoreStatusBadge tone={progress >= 80 ? 'calm' : 'warning'}>
+                {t('storeIncentives.regionManagerGoalBadge', {
+                  value: formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale),
+                })}
+              </StoreStatusBadge>
+            </div>
+          </div>
+        </div>
+        <div className="tw:mt-4 tw:grid tw:grid-cols-3 tw:gap-2">
+          <SheetStat
+            label={t('storeIncentives.regionManagerAchievement')}
+            value={formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}
+          />
+          <SheetStat
+            label={t('storeIncentives.regionManagerFinalLine')}
+            value={formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
+          />
+          <SheetStat label="Değişim" value={finalChange.label} />
         </div>
       </SheetHeader>
 
-      <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-3 tw:overflow-y-auto tw:px-[18px] tw:py-4">
-        <section className="tw:rounded-xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
-          <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">Hakediş özeti</h3>
-          <div className="tw:mt-3 tw:rounded-lg tw:border tw:border-border tw:bg-card tw:p-3">
+      <ScrollArea className="tw:min-h-0 tw:flex-1">
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:px-4 tw:py-3">
+          <section className="tw:rounded-2xl tw:border tw:border-primary/15 tw:bg-card/95 tw:p-3.5 tw:shadow-sm">
             <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-              <span className="tw:text-sm tw:font-medium tw:text-foreground">Hedef gerçekleşme</span>
-              <strong className="tw:text-sm tw:font-semibold tw:text-foreground">
-                {formatPercentValue(row.achievementPct, input.locale)}
-              </strong>
+              <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">{t('storeIncentives.regionManagerEarningSummaryTitle')}</h3>
+              <span className="tw:text-sm tw:font-semibold tw:text-foreground">
+                {formatAchievementState(row.achievementPct, row.target, row.actualPositiveSales, input.locale)}
+              </span>
             </div>
             <Progress className="tw:mt-3" value={progress} />
-          </div>
-          <div className="tw:mt-3 tw:grid tw:gap-2">
-            <AmountLine label="Hedef" value={formatMoneyValue(row.target, input.locale)} />
-            <AmountLine label="Gerçekleşen" value={formatMoneyValue(row.actualPositiveSales, input.locale)} />
-            <AmountLine label="Prim oranı" value={formatRateValue(row.rate, input.locale)} />
-            <AmountLine label="Hesaplanan prim" value={formatMoneyValue(row.payableAmount, input.locale)} />
-            <AmountLine
-              label="Düzeltme"
-              value={adjustmentAmount ? formatMoneyValue(adjustmentAmount, input.locale) : 'Yok'}
-            />
-            <AmountLine label="Final prim" strong value={formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)} />
-          </div>
-        </section>
+            <div className="tw:mt-3 tw:grid tw:gap-2 tw:sm:grid-cols-2">
+              <SheetStat label={t('storeIncentives.regionManagerTargetColumn')} value={formatTargetMoneyValue(row.target, input.locale)} />
+              <SheetStat label={t('storeIncentives.regionManagerActualColumn')} value={formatSalesMoneyValue(row.actualPositiveSales, input.locale)} />
+              <SheetStat label={t('storeIncentives.regionManagerRateLine')} value={formatRateValue(row.rate, input.locale)} />
+              <SheetStat label={t('storeIncentives.regionManagerCalculatedLine')} value={formatIncentiveMoneyValue(row.payableAmount, input.locale)} />
+            </div>
+          </section>
 
-        <section className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-4">
-          <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">Düzeltme</h3>
-          <label className="tw:flex tw:flex-col tw:gap-1">
-            <span className="tw:text-sm tw:font-medium tw:text-foreground">Final prim tutarı</span>
-            <Input
-              disabled={!canEdit}
-              inputMode="decimal"
-              onChange={(event) => setFinalAmount(event.target.value)}
-              value={finalAmount}
-            />
-            {!amountIsValid ? (
-              <span className="tw:text-xs tw:text-destructive">Geçerli bir tutar girin.</span>
-            ) : null}
-          </label>
+          <section className="tw:rounded-2xl tw:border tw:border-border tw:bg-card/95 tw:p-3.5 tw:shadow-sm">
+            <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
+              <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">{t('storeIncentives.regionManagerCorrectionSectionTitle')}</h3>
+              <StoreStatusBadge tone={finalChange.tone}>{finalChange.label}</StoreStatusBadge>
+            </div>
+            <FieldGroup className="tw:mt-4 tw:gap-4">
+              <Field>
+                <FieldLabel htmlFor="region-final-incentive">
+                  {t('storeIncentives.regionManagerFinalAmountField')}
+                </FieldLabel>
+                <Input
+                  className="tw:h-11 tw:px-3 tw:text-base tw:font-semibold tw:tracking-normal"
+                  disabled={!canEdit}
+                  id="region-final-incentive"
+                  inputMode="decimal"
+                  onBlur={() => setFinalAmount(formatMoneyDisplayValue(finalAmount))}
+                  onChange={(event) => setFinalAmount(formatMoneyEditValue(event.target.value))}
+                  onFocus={(event) => {
+                    const inputElement = event.currentTarget
+                    setFinalAmount(toMoneyEditValue(finalAmount))
+                    window.requestAnimationFrame(() => inputElement.select())
+                  }}
+                  value={finalAmount}
+                />
+                <FieldDescription>Kaydedilen tutar admin onayına bu notla gider.</FieldDescription>
+                {!amountIsValid ? (
+                  <span className="tw:text-xs tw:text-destructive">{t('storeIncentives.regionManagerInvalidAmount')}</span>
+                ) : null}
+              </Field>
+              <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2">
+                <SheetStat label={t('storeIncentives.regionManagerCalculatedLine')} value={formatIncentiveMoneyValue(row.payableAmount, input.locale)} />
+                <SheetStat label="Değişim" value={finalChange.label} />
+              </div>
+              <Field>
+                <FieldLabel htmlFor="region-correction-note">
+                  {t('storeIncentives.regionManagerCorrectionNoteField')}
+                </FieldLabel>
+                <Textarea
+                  className="tw:min-h-20 tw:resize-y"
+                  disabled={!canEdit}
+                  id="region-correction-note"
+                  onChange={(event) => setReasonNote(event.target.value)}
+                  placeholder={t('storeIncentives.regionManagerCorrectionNotePlaceholder')}
+                  value={reasonNote}
+                />
+              </Field>
+            </FieldGroup>
+          </section>
+        </div>
+      </ScrollArea>
 
-          <label className="tw:flex tw:flex-col tw:gap-1">
-            <span className="tw:text-sm tw:font-medium tw:text-foreground">Düzeltme notu</span>
-            <Textarea
-              disabled={!canEdit}
-              onChange={(event) => setReasonNote(event.target.value)}
-              placeholder="Düzeltme nedenini yazın"
-              value={reasonNote}
-            />
-          </label>
-        </section>
-      </div>
-
-      <SheetFooter className="tw:mx-0 tw:mb-0">
-        <Button type="button" variant="outline" onClick={() => input.onOpenChange(false)}>
-          İptal
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={!canVoid || input.voidCorrectionMutation.isPending}
-          onClick={() => {
-            const correctionId = row.regionCorrection?.correctionId
-            if (!correctionId) {
-              setFinalAmount(row.payableAmount ?? '0.00')
-              setReasonNote('')
-              return
-            }
-            input.voidCorrectionMutation.mutate({
-              period: input.period,
-              correctionId,
-            })
-            input.onOpenChange(false)
-          }}
-        >
-          <RotateCcw data-icon="inline-start" />
-          Eski değere dön
-        </Button>
-        <Button
-          type="button"
-          disabled={!canEdit || !amountIsValid || !noteIsValid || input.correctionMutation.isPending}
-          onClick={() => {
-            if (!normalizedFinalAmount) return
-            input.correctionMutation.mutate({
-              period: input.period,
-              storeId: projection.storeId,
-              employeeId: row.employeeId,
-              participantType: row.participantType,
-              finalAmount: normalizedFinalAmount,
-              reasonNote: reasonNote.trim(),
-            })
-            input.onOpenChange(false)
-          }}
-        >
-          Kaydet
-        </Button>
+      <SheetFooter className="tw:mx-0 tw:mb-0 tw:border-t tw:border-border tw:bg-muted/25 tw:p-3">
+        <div className="tw:flex tw:w-full tw:flex-row tw:items-center tw:justify-end tw:gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!canVoid || input.voidCorrectionMutation.isPending}
+            onClick={() => {
+              const correctionId = row.regionCorrection?.correctionId
+              if (!correctionId) {
+                setFinalAmount(formatMoneyDisplayValue(formatIncentiveMoneyValue(row.payableAmount, input.locale)))
+                setReasonNote('')
+                return
+              }
+              input.voidCorrectionMutation.mutate({
+                period: input.period,
+                correctionId,
+              })
+              input.onOpenChange(false)
+            }}
+          >
+            <RotateCcw data-icon="inline-start" />
+            {t('storeIncentives.regionManagerRevert')}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => input.onOpenChange(false)}>
+            {t('storeIncentives.regionManagerCancel')}
+          </Button>
+          <Button
+            className={prototypePrimaryActionClass}
+            type="button"
+            disabled={!canEdit || !amountIsValid || !noteIsValid || input.correctionMutation.isPending}
+            onClick={() => {
+              if (!normalizedFinalAmount) return
+              input.correctionMutation.mutate({
+                period: input.period,
+                storeId: projection.storeId,
+                employeeId: row.employeeId,
+                participantType: row.participantType,
+                finalAmount: normalizedFinalAmount,
+                reasonNote: reasonNote.trim(),
+              })
+              input.onOpenChange(false)
+            }}
+          >
+            <Save data-icon="inline-start" />
+            {t('storeIncentives.regionManagerSave')}
+          </Button>
+        </div>
       </SheetFooter>
-    </SheetContent>
+    </StoreCommandSheetContent>
   )
 }
 
-function AmountLine(input: { label: string; value: string; strong?: boolean }) {
+function SheetStat(input: { label: string; value: string }) {
+  return (
+    <div className="tw:min-w-0 tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/70 tw:px-3 tw:py-2">
+      <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
+      <strong className="tw:mt-1 tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-foreground">{input.value}</strong>
+    </div>
+  )
+}
+
+function DialogAmountLine(input: { label: string; value: string }) {
   return (
     <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
       <span className="tw:text-sm tw:text-muted-foreground">{input.label}</span>
-      <span className={cn('tw:text-sm tw:text-foreground', input.strong ? 'tw:font-semibold' : undefined)}>
-        {input.value}
-      </span>
+      <span className="tw:text-sm tw:text-foreground">{input.value}</span>
     </div>
   )
+}
+
+function getStoreGateState(projection: SalesTargetIncentiveProjection) {
+  if (projection.storeGatePassed !== null) {
+    return { known: true, passed: projection.storeGatePassed }
+  }
+
+  const achievement = parseDecimalNumber(projection.storeAchievementPct)
+  if (achievement !== null) {
+    return { known: true, passed: achievement >= 80 }
+  }
+
+  return { known: false, passed: false }
+}
+
+function getStoreGateLabel(projection: SalesTargetIncentiveProjection) {
+  const gate = getStoreGateState(projection)
+  if (gate.known) return gate.passed ? '%80 kapısı geçildi' : '%80 kapısı bekliyor'
+  if (!projection.storeTarget && projection.storeActualNetSales) return 'Hedef bekliyor'
+  if (projection.storeTarget && !projection.storeActualNetSales) return 'Satış bekliyor'
+  return 'Hedef bekliyor'
+}
+
+function formatTargetMoneyValue(
+  value: string | null | undefined,
+  locale: ReturnType<typeof useLocalization>['locale'],
+) {
+  return value ? formatMoneyValue(value, locale) : 'Hedef yok'
+}
+
+function formatSalesMoneyValue(
+  value: string | null | undefined,
+  locale: ReturnType<typeof useLocalization>['locale'],
+) {
+  return value ? formatMoneyValue(value, locale) : 'Satış verisi yok'
+}
+
+function formatIncentiveMoneyValue(
+  value: string | null | undefined,
+  locale: ReturnType<typeof useLocalization>['locale'],
+) {
+  return value ? formatMoneyValue(value, locale) : formatMoneyValue('0.00', locale)
+}
+
+function formatAchievementState(
+  achievementPct: string | null | undefined,
+  target: string | null | undefined,
+  actual: string | null | undefined,
+  locale: ReturnType<typeof useLocalization>['locale'],
+) {
+  if (achievementPct) return formatPercentValue(achievementPct, locale)
+  if (!target && actual) return 'Hedef bekliyor'
+  if (target && !actual) return 'Satış bekliyor'
+  if (!target) return 'Hedef yok'
+  return 'Bekliyor'
+}
+
+function getFinalChange(
+  row: SalesTargetIncentiveRow,
+  locale: ReturnType<typeof useLocalization>['locale'],
+) {
+  return getFinalChangeFromAmounts(
+    row.regionCorrection?.beforeAmount ?? row.payableAmount,
+    getRegionEffectiveEarnedAmount(row),
+    locale,
+  )
+}
+
+function getFinalChangeFromAmounts(
+  beforeAmount: string | null | undefined,
+  finalAmount: string | null | undefined,
+  locale: ReturnType<typeof useLocalization>['locale'],
+): { label: string; tone: 'neutral' | 'warning' | 'danger' } {
+  const beforeCents = decimalStringToCents(beforeAmount ?? '0.00')
+  const finalCents = decimalStringToCents(finalAmount ?? '0.00')
+  const delta = finalCents - beforeCents
+
+  if (delta === 0n) return { label: 'Yok', tone: 'neutral' }
+
+  const sign = delta > 0n ? '+' : '-'
+  const absolute = delta > 0n ? delta : -delta
+
+  return {
+    label: `${sign}${formatMoneyValue(centsToDecimalString(absolute), locale)}`,
+    tone: delta > 0n ? 'warning' : 'danger',
+  }
+}
+
+function toMoneyEditValue(rawValue: string) {
+  return formatMoneyEditValue(rawValue).replace(/\s*TL\s*$/i, '')
+}
+
+function formatMoneyEditValue(rawValue: string) {
+  const withoutCurrency = rawValue.replace(/\s*TL\s*$/i, '')
+  const [integerRaw = '', fractionRaw] = withoutCurrency.split(',', 2)
+  const integerDigits = integerRaw.replace(/\D/g, '')
+  const integerValue = integerDigits.replace(/^0+(?=\d)/, '')
+  const groupedInteger = integerValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+  if (fractionRaw !== undefined) {
+    const fractionDigits = fractionRaw.replace(/\D/g, '').slice(0, 2)
+    return `${groupedInteger || '0'},${fractionDigits}`
+  }
+
+  return groupedInteger
+}
+
+function formatMoneyDisplayValue(rawValue: string) {
+  const editValue = formatMoneyEditValue(rawValue)
+  const [integerText = '', fractionText = ''] = editValue.split(',', 2)
+  const normalizedInteger = integerText || '0'
+  const normalizedFraction = fractionText.padEnd(2, '0').slice(0, 2)
+
+  return `${normalizedInteger},${normalizedFraction} TL`
+}
+
+function parseDecimalNumber(value: string | null | undefined) {
+  if (!value) return null
+  const parsed = Number(value.replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function decimalStringToCents(value: string) {
+  const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(value.trim().replace(',', '.'))
+  if (!match) return 0n
+  const integerText = match[2]
+  if (!integerText) return 0n
+  const sign = match[1] ? -1n : 1n
+  const fraction = (match[3] ?? '').padEnd(2, '0').slice(0, 2)
+  return sign * ((BigInt(integerText) * 100n) + BigInt(fraction || '0'))
+}
+
+function centsToDecimalString(cents: bigint) {
+  const integer = cents / 100n
+  const fraction = cents % 100n
+  return `${integer.toString()}.${fraction.toString().padStart(2, '0')}`
 }
