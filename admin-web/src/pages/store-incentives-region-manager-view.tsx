@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 import { type UseMutationResult } from '@tanstack/react-query'
 import {
   CalendarDays,
@@ -73,12 +73,10 @@ import {
   canReviewProjection,
   getCorrectionLabel,
   getCorrectionTone,
-  getPackageStatus,
   getProjectionWorkflowStatus,
   getRegionEffectiveEarnedAmount,
   getRegionSummary,
   getReviewState,
-  getSubmitDisabledReason,
   isPackageLocked,
   matchesStoreFilter,
   normalizeMoneyInput,
@@ -88,11 +86,18 @@ import {
 } from './store-incentives-region-manager-model'
 import { IncentiveRateTables } from './store-incentives-widgets'
 import {
+  StoreCommandBar,
   StoreEmptyState,
   StoreErrorState,
   StoreInfoGrid,
+  StoreMetricCard,
+  StoreMetricGrid,
+  StoreSectionCard,
   StoreStatusBadge,
+  StoreSurfaceHeader,
   StoreSurfacePage,
+  StoreToolbar,
+  StoreToolbarField,
 } from './store-surface-primitives'
 
 export function RegionManagerIncentivesView(input: {
@@ -135,7 +140,6 @@ export function RegionManagerIncentivesView(input: {
   const visibleProjections = input.data.projections.filter((projection) =>
     matchesStoreFilter(projection, search, statusFilter),
   )
-  const packageStatus = getPackageStatus(workflow)
   const allStoresReviewed = summary.pendingReviewCount === 0
   const allStoresClosed = summary.projectionOnlyCount === 0
   const packageCanSubmit =
@@ -143,12 +147,6 @@ export function RegionManagerIncentivesView(input: {
     allStoresReviewed &&
     allStoresClosed &&
     !isPackageLocked(workflow)
-  const submitDisabledReason = getSubmitDisabledReason({
-    workflow,
-    allStoresReviewed,
-    allStoresClosed,
-  })
-  const sendStateLabel = submitDisabledReason ?? 'Gönderime hazır'
   const workflowLocked = isPackageLocked(workflow)
   const mutationError =
     input.mutationState.reviewMutation.error ??
@@ -159,120 +157,78 @@ export function RegionManagerIncentivesView(input: {
   return (
     <StoreSurfacePage
       ariaLabel="Primler"
-      className="tw:mx-auto tw:w-full tw:max-w-[1420px]"
       testId="store-incentives-page"
     >
-      <div className="tw:flex tw:min-h-10 tw:flex-col tw:gap-3 tw:text-xs tw:text-muted-foreground tw:md:flex-row tw:md:items-center tw:md:justify-between">
-        <p>
-          <strong className="tw:text-foreground">Prim Merkezi</strong>{' '}
-          Bölge hakediş kontrol ekranı
-        </p>
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
-          <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
-          <Button type="button" variant="outline" onClick={() => undefined}>
-            <RefreshCw data-icon="inline-start" />
-            Yenile
-          </Button>
-        </div>
-      </div>
+      <StoreCommandBar
+        title="Prim Merkezi"
+        description="Bölge hakediş kontrol ekranı"
+        end={(
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
+            <Button type="button" variant="outline" onClick={() => undefined}>
+              <RefreshCw data-icon="inline-start" />
+              Yenile
+            </Button>
+          </div>
+        )}
+      />
 
-      <header className="tw:grid tw:gap-4 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-4 tw:shadow-sm tw:lg:grid-cols-[minmax(0,1fr)_auto] tw:lg:items-center">
-        <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
-          <span className="tw:flex tw:size-12 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-2xl tw:bg-gradient-to-br tw:from-primary tw:to-accent tw:text-primary-foreground tw:shadow-sm">
-            <CircleDollarSign size={23} />
-          </span>
-          <div className="tw:min-w-0">
-            <h1 className="tw:text-3xl tw:font-semibold tw:leading-none tw:text-foreground tw:md:text-4xl">
-              Primler
-            </h1>
-            <p className="tw:mt-1 tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              Mağaza ve personel hakedişleri, düzeltmeler ve onay süreci.
-            </p>
-          </div>
-        </div>
-        <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:flex-wrap tw:sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => undefined}>
-            <CalendarDays data-icon="inline-start" />
-            Dönem seç
-          </Button>
-          <Button type="button" variant="outline" onClick={() => undefined}>
-            <Download data-icon="inline-start" />
-            Excel dışa aktar
-          </Button>
-          <Button type="button" disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending} onClick={() => setSubmitDialogOpen(true)}>
-            <Send data-icon="inline-start" />
-            {workflow?.regionPackageStatus === 'admin_returned' ? 'Tekrar gönder' : 'Onaya gönder'}
-          </Button>
-        </div>
-      </header>
+      <StoreSurfaceHeader
+        title="Primler"
+        description="Mağaza ve personel hakedişleri, düzeltmeler ve onay süreci."
+        icon={<CircleDollarSign size={23} />}
+        actions={[
+          {
+            label: 'Dönem seç',
+            icon: <CalendarDays data-icon="inline-start" />,
+            onClick: () => undefined,
+            variant: 'outline',
+          },
+          {
+            label: 'Excel dışa aktar',
+            icon: <Download data-icon="inline-start" />,
+            onClick: () => undefined,
+            variant: 'outline',
+          },
+          {
+            label: workflow?.regionPackageStatus === 'admin_returned' ? 'Tekrar gönder' : 'Onaya gönder',
+            icon: <Send data-icon="inline-start" />,
+            disabled: !packageCanSubmit || input.mutationState.submitPackageMutation.isPending,
+            onClick: () => setSubmitDialogOpen(true),
+          },
+        ]}
+      />
 
-      <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_16.25rem]">
-        <section className="tw:grid tw:min-h-56 tw:content-between tw:gap-4 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-gradient-to-br tw:from-primary/10 tw:to-accent/10 tw:p-5 tw:shadow-sm">
-          <div className="tw:flex tw:items-start tw:justify-between tw:gap-4">
-            <div>
-              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
-                {formatPeriodLabel(input.data.period)} toplam hakediş
-              </span>
-              <strong className="tw:mt-3 tw:block tw:text-5xl tw:font-semibold tw:leading-none tw:text-foreground">
-                {formatMoneyValue(summary.payableTotal, input.locale)}
-              </strong>
-            </div>
-            <StoreStatusBadge tone={packageStatus.tone}>
-              {packageStatus.label}
-            </StoreStatusBadge>
-          </div>
-          <p className="tw:max-w-2xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-            {summary.storeCount} şirket mağazası dönem paketinde. Kontrol tamamlanınca tek seferde onaya gönderilir.
-          </p>
-        </section>
-        <section className="tw:grid tw:content-between tw:gap-4 tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-5 tw:shadow-sm">
-          <div>
-            <h2 className="tw:text-lg tw:font-semibold tw:text-foreground">Dönem gönderimi</h2>
-            <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
-              Mağaza mağaza onay yok; kontroller tamamlanınca paket gönderilir.
-            </p>
-          </div>
-          <div className="tw:grid tw:gap-2">
-            <ApprovalStep label="Mağaza kontrolü" value={`${summary.reviewedStoreCount}/${summary.storeCount}`} />
-            <ApprovalStep label="Düzeltme notu" value={summary.correctionCount > 0 ? `${summary.correctionCount}/${summary.correctionCount}` : 'Yok'} />
-            <ApprovalStep label="Gönderim" value={sendStateLabel} />
-          </div>
-        </section>
-      </div>
-
-      <section
-        aria-label="Bölge prim özeti"
-        className="tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
-      >
-        <RegionMetricCard
+      <StoreMetricGrid ariaLabel="Bölge prim özeti">
+        <StoreMetricCard
           title="Toplam hakediş"
           value={formatMoneyValue(summary.payableTotal, input.locale)}
           note="Mağaza müdürü ve ekip toplamı"
           icon={<WalletCards size={20} />}
           tone="plum"
         />
-        <RegionMetricCard
+        <StoreMetricCard
           title="Prim hakeden personel"
           value={summary.earningPersonnelCount}
           note="%80 kapısı geçen mağazalarda"
           icon={<UsersRound size={20} />}
           tone="mint"
         />
-        <RegionMetricCard
+        <StoreMetricCard
           title="Düzeltme yapılan kayıt"
           value={summary.correctionCount}
           note="Notlu değişiklikler"
           icon={<SlidersHorizontal size={20} />}
           tone="amber"
         />
-        <RegionMetricCard
+        <StoreMetricCard
           title="Kontrol bekleyen mağaza"
           value={summary.pendingReviewCount}
           note="Gönderim öncesi kontrol"
           icon={<ClipboardCheck size={20} />}
           tone="cyan"
         />
-      </section>
+      </StoreMetricGrid>
 
       {mutationError ? (
         <StoreErrorState
@@ -281,14 +237,12 @@ export function RegionManagerIncentivesView(input: {
         />
       ) : null}
 
-      <div className="tw:grid tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:p-3 tw:shadow-sm">
+      <StoreToolbar>
         <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(18rem,0.95fr)_minmax(18rem,1.2fr)_minmax(13rem,0.85fr)]">
-          <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
-            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Dönem</span>
+          <StoreToolbarField label="Dönem">
             <PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />
-          </div>
-          <label className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
-            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Mağaza ara</span>
+          </StoreToolbarField>
+          <StoreToolbarField label="Mağaza ara">
             <span className="tw:relative tw:block">
               <Search
                 size={16}
@@ -296,9 +250,8 @@ export function RegionManagerIncentivesView(input: {
               />
               <Input aria-label="Mağaza ara" className="tw:h-8 tw:border-0 tw:bg-transparent tw:pl-7 tw:shadow-none tw:focus-visible:ring-0" onChange={(event) => setSearch(event.target.value)} placeholder="Mağaza ara" value={search} />
             </span>
-          </label>
-          <div className="tw:grid tw:min-h-16 tw:gap-1 tw:rounded-xl tw:border tw:border-border tw:bg-background/70 tw:px-3 tw:py-2">
-            <span className="tw:text-[0.7rem] tw:font-medium tw:text-muted-foreground">Durum</span>
+          </StoreToolbarField>
+          <StoreToolbarField label="Durum">
             <Select
               value={statusFilter}
               onValueChange={(value) => setStatusFilter(value as StoreStatusFilter)}
@@ -315,29 +268,18 @@ export function RegionManagerIncentivesView(input: {
                 <SelectItem value="corrected">Düzeltildi</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </StoreToolbarField>
         </div>
-      </div>
+      </StoreToolbar>
 
-      <section
-        aria-label="Mağaza prim hakedişleri"
-        className="tw:overflow-visible tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm"
+      <StoreSectionCard
+        ariaLabel="Mağaza prim hakedişleri"
+        title="Mağaza hakedişleri"
+        description="Mağazaya tıklayın, personel satırlarını kontrol edin."
+        badge={{ label: `${summary.storeCount} şirket mağazası`, tone: 'accent' }}
       >
-        <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:p-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-          <div>
-            <h2 className="tw:text-xl tw:font-semibold tw:leading-snug tw:text-foreground">
-              Mağaza hakedişleri
-            </h2>
-            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              Mağazaya tıklayın, personel satırlarını kontrol edin.
-            </p>
-          </div>
-          <StoreStatusBadge tone="accent">
-            {summary.storeCount} şirket mağazası
-          </StoreStatusBadge>
-        </div>
         {visibleProjections.length > 0 ? (
-          <div className="tw:flex tw:flex-col tw:gap-3 tw:p-3">
+          <div className="tw:flex tw:flex-col tw:gap-3">
             {visibleProjections.map((projection) => (
               <RegionStoreCard
                 expanded={expandedStoreId === projection.storeId}
@@ -360,11 +302,9 @@ export function RegionManagerIncentivesView(input: {
             ))}
           </div>
         ) : (
-          <div className="tw:p-4">
-            <StoreEmptyState description="Bu filtrelerle eşleşen mağaza yok." />
-          </div>
+          <StoreEmptyState description="Bu filtrelerle eşleşen mağaza yok." />
         )}
-      </section>
+      </StoreSectionCard>
 
       <IncentiveRateTables />
 
@@ -421,50 +361,6 @@ export function RegionManagerIncentivesView(input: {
   )
 }
 
-function ApprovalStep(input: { label: string; value: string }) {
-  return (
-    <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-muted/30 tw:px-3 tw:py-2">
-      <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
-      <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.value}</strong>
-    </div>
-  )
-}
-
-function RegionMetricCard(input: {
-  title: string
-  value: string | number
-  note: string
-  icon: ReactNode
-  tone: 'plum' | 'mint' | 'amber' | 'cyan'
-}) {
-  const toneClasses: Record<'plum' | 'mint' | 'amber' | 'cyan', string> = {
-    amber: 'tw:bg-chart-4/15 tw:text-chart-4',
-    cyan: 'tw:bg-accent/10 tw:text-accent',
-    mint: 'tw:bg-emerald-500/10 tw:text-emerald-600',
-    plum: 'tw:bg-primary/10 tw:text-primary',
-  }
-
-  return (
-    <article className="tw:grid tw:min-h-28 tw:grid-cols-[2.75rem_minmax(0,1fr)] tw:items-center tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card/95 tw:p-4 tw:shadow-sm">
-      <span
-        className={cn(
-          'tw:flex tw:size-11 tw:items-center tw:justify-center tw:rounded-xl',
-          toneClasses[input.tone],
-        )}
-      >
-        {input.icon}
-      </span>
-      <span className="tw:min-w-0">
-        <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.title}</span>
-        <strong className="tw:mt-1 tw:block tw:truncate tw:text-2xl tw:font-semibold tw:leading-none tw:text-foreground">
-          {input.value}
-        </strong>
-        <span className="tw:mt-2 tw:block tw:text-xs tw:leading-5 tw:text-muted-foreground">{input.note}</span>
-      </span>
-    </article>
-  )
-}
-
 function RegionStoreCard(input: {
   projection: SalesTargetIncentiveProjection
   locale: ReturnType<typeof useLocalization>['locale']
@@ -484,11 +380,11 @@ function RegionStoreCard(input: {
   return (
     <article
       className={cn(
-        'tw:overflow-hidden tw:rounded-xl tw:border tw:border-border tw:bg-card tw:shadow-sm tw:transition-colors',
-        input.expanded ? 'tw:ring-1 tw:ring-primary/15' : undefined,
+        'tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm tw:transition-colors',
+        input.expanded ? 'tw:shadow-xl tw:ring-1 tw:ring-primary/15' : undefined,
       )}
     >
-      <div className="tw:grid tw:gap-3 tw:p-3 tw:lg:grid-cols-[minmax(13rem,1.45fr)_repeat(5,minmax(7rem,0.72fr))_minmax(9rem,0.9fr)] tw:lg:items-center">
+      <div className="tw:grid tw:min-h-[82px] tw:gap-3 tw:p-3.5 tw:lg:grid-cols-[minmax(13.75rem,1.1fr)_repeat(5,minmax(7.5rem,0.72fr))_minmax(10.5rem,auto)] tw:lg:items-center">
         <div
           aria-expanded={input.expanded}
           className="tw:flex tw:min-w-0 tw:items-center tw:gap-3 tw:text-left"
@@ -502,7 +398,7 @@ function RegionStoreCard(input: {
           role="button"
           tabIndex={0}
         >
-          <span className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
+          <span className="tw:flex tw:size-[38px] tw:shrink-0 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
             <Store size={17} />
           </span>
           <span className="tw:min-w-0">
@@ -524,7 +420,7 @@ function RegionStoreCard(input: {
         <StoreKv label="Ekip primi" value={formatMoneyValue(personnelTotal, input.locale)} />
         <div className="tw:flex tw:flex-col tw:items-start tw:gap-2 tw:lg:items-end">
           <StoreStatusBadge tone={status.tone}>{status.label}</StoreStatusBadge>
-          <label className="tw:inline-flex tw:min-h-9 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/10 tw:px-3 tw:text-sm tw:font-medium tw:text-chart-4">
+          <label className="tw:inline-flex tw:min-h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/10 tw:px-3 tw:text-xs tw:font-semibold tw:text-chart-4">
             <Checkbox
               checked={review.storeReviewStatus === 'reviewed'}
               disabled={input.reviewDisabled}
@@ -760,10 +656,14 @@ function IncentiveCorrectionSheetForm(input: {
   const normalizedFinalAmount = normalizeMoneyInput(finalAmount)
   const amountIsValid = normalizedFinalAmount !== null
   const noteIsValid = reasonNote.trim().length >= 3
+  const adjustmentAmount = row.regionCorrection?.adjustmentAmount ?? row.correctionAmount
 
   return (
-    <SheetContent closeLabel="Kapat" className="tw:max-w-xl tw:p-0">
-      <SheetHeader className="tw:border-b tw:border-border tw:p-4">
+    <SheetContent
+      closeLabel="Kapat"
+      className="tw:inset-x-0 tw:bottom-0 tw:top-auto tw:h-[min(88vh,740px)] tw:max-w-none tw:rounded-b-none tw:rounded-t-[18px] tw:bg-card tw:p-0 tw:shadow-xl tw:sm:inset-x-auto tw:sm:bottom-3.5 tw:sm:right-3.5 tw:sm:top-3.5 tw:sm:h-auto tw:sm:w-[min(440px,calc(100vw-28px))] tw:sm:rounded-[18px]"
+    >
+      <SheetHeader className="tw:border-b tw:border-border tw:p-[18px]">
         <SheetTitle>{row.displayName}</SheetTitle>
         <SheetDescription>
           {getIncentivePositionLabel(row.positionCode)}, {projection.storeName}
@@ -782,7 +682,7 @@ function IncentiveCorrectionSheetForm(input: {
         </div>
       </SheetHeader>
 
-      <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-4 tw:overflow-y-auto tw:p-4">
+      <div className="tw:flex tw:flex-1 tw:flex-col tw:gap-3 tw:overflow-y-auto tw:px-[18px] tw:py-4">
         <section className="tw:rounded-xl tw:border tw:border-border tw:bg-muted/30 tw:p-4">
           <h3 className="tw:text-sm tw:font-semibold tw:text-foreground">Hakediş özeti</h3>
           <div className="tw:mt-3 tw:rounded-lg tw:border tw:border-border tw:bg-card tw:p-3">
@@ -799,7 +699,10 @@ function IncentiveCorrectionSheetForm(input: {
             <AmountLine label="Gerçekleşen" value={formatMoneyValue(row.actualPositiveSales, input.locale)} />
             <AmountLine label="Prim oranı" value={formatRateValue(row.rate, input.locale)} />
             <AmountLine label="Hesaplanan prim" value={formatMoneyValue(row.payableAmount, input.locale)} />
-            <AmountLine label="Düzeltme" value={formatMoneyValue(row.regionCorrection?.adjustmentAmount ?? row.correctionAmount, input.locale)} />
+            <AmountLine
+              label="Düzeltme"
+              value={adjustmentAmount ? formatMoneyValue(adjustmentAmount, input.locale) : 'Yok'}
+            />
             <AmountLine label="Final prim" strong value={formatMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)} />
           </div>
         </section>

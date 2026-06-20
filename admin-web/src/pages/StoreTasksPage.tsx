@@ -636,8 +636,12 @@ function sortRowsForWorkbench(rows: readonly WorkbenchRow[]) {
   const toneRank = {
     danger: 0,
     warning: 1,
+    amber: 1,
     accent: 2,
+    cyan: 2,
+    plum: 2,
     calm: 3,
+    mint: 3,
     neutral: 4,
   }
 

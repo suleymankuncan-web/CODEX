@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Target, TrendingUp, UsersRound, WalletCards } from 'lucide-react'
+import { CalendarDays, CircleDollarSign, Target, TrendingUp, UsersRound, WalletCards } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { hasAnyRole } from '../features/auth/authorization'
 import {
@@ -23,8 +23,11 @@ import {
   getManagerRow,
   getPersonnelRows,
   getPrimaryEarnedAmount,
+  getIncentiveStatusLabel,
+  getIncentiveStatusTone,
   getRevisionLabel,
 } from './store-incentives-model'
+import { formatPeriodLabel } from './store-incentives-period-model'
 import { PeriodPicker } from './store-incentives-period-picker'
 import { RegionManagerIncentivesView } from './store-incentives-region-manager-view'
 import {
@@ -33,10 +36,14 @@ import {
 } from './store-incentives-widgets'
 import {
   StoreErrorState,
+  StoreCommandBar,
+  StoreFinanceBand,
   StoreMetricCard,
   StoreMetricGrid,
+  StoreStepList,
   StoreSurfaceHeader,
   StoreSurfacePage,
+  StoreSurfacePanel,
 } from './store-surface-primitives'
 
 function canReadStoreIncentives(authSummary: AuthSessionSummary | null) {
@@ -199,24 +206,18 @@ function StoreIncentivesEmptyPeriod(input: {
   return (
     <StoreSurfacePage
       ariaLabel="Primler"
-      className="tw:mx-auto tw:w-full tw:max-w-7xl"
       testId="store-incentives-page"
     >
-      <div className="tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:md:flex-row tw:md:items-start tw:md:justify-between">
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1">
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">Primler</span>
-          <h1 className="tw:text-xl tw:font-semibold tw:leading-tight tw:text-foreground tw:md:text-2xl">
-            Dönem primleri
-          </h1>
-          <p className="tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-            Seçili dönem için prim kaydı bulunamadı.
-          </p>
-        </div>
-        <PeriodPicker
-          period={input.period}
-          onChange={input.onPeriodChange}
-        />
-      </div>
+      <StoreCommandBar
+        title="Prim Merkezi"
+        description="Dönem hakediş ekranı"
+        end={<PeriodPicker period={input.period} onChange={input.onPeriodChange} />}
+      />
+      <StoreSurfaceHeader
+        title="Dönem primleri"
+        description="Seçili dönem için prim kaydı bulunamadı."
+        icon={<CircleDollarSign size={23} />}
+      />
       <StoreErrorState
         title="Prim kaydı bulunamadı"
         description="Başka bir dönem seçerek kayıtları görüntüleyebilirsiniz."
@@ -235,35 +236,68 @@ function StoreManagerIncentivesView(input: {
   const projections = input.data.projections
   const managerRows = projections.map(getManagerRow).filter((row) => row !== null)
   const personnelRows = projections.flatMap(getPersonnelRows)
+  const managerTotal = sumMoney(managerRows.map(getPrimaryEarnedAmount))
+  const personnelTotal = sumMoney(personnelRows.map(getPrimaryEarnedAmount))
   const payableTotal = sumMoney([
-    ...managerRows.map(getPrimaryEarnedAmount),
-    ...personnelRows.map(getPrimaryEarnedAmount),
+    managerTotal,
+    personnelTotal,
   ])
   const firstProjection = projections[0] ?? null
+  const projectionStatusLabel = firstProjection
+    ? getIncentiveStatusLabel(firstProjection.calculationState)
+    : input.t('storeIncentives.storeManagerTargetWaiting')
 
   return (
     <StoreSurfacePage
       ariaLabel={input.t('storeIncentives.storeManagerAria')}
-      className="tw:mx-auto tw:w-full tw:max-w-7xl"
       testId="store-incentives-page"
     >
-      <div className="tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/85 tw:p-4 tw:shadow-sm tw:md:flex-row tw:md:items-start tw:md:justify-between">
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-1">
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">
-            {input.t('storeIncentives.storeManagerEyebrow')}
-          </span>
-          <h1 className="tw:text-xl tw:font-semibold tw:leading-tight tw:text-foreground tw:md:text-2xl">
-            {input.t('storeIncentives.storeManagerTitle')}
-          </h1>
-          <p className="tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-            {input.t('storeIncentives.storeManagerCopy')}
-          </p>
-        </div>
-        <PeriodPicker
-          period={input.selectedPeriod}
-          onChange={input.onPeriodChange}
-        />
-      </div>
+      <StoreCommandBar
+        title="Prim Merkezi"
+        description="Mağaza hakediş ekranı"
+        end={<PeriodPicker period={input.selectedPeriod} onChange={input.onPeriodChange} />}
+      />
+
+      <StoreSurfaceHeader
+        title={input.t('storeIncentives.storeManagerTitle')}
+        description={input.t('storeIncentives.storeManagerCopy')}
+        icon={<CircleDollarSign size={23} />}
+        actions={[
+          {
+            label: 'Dönem seç',
+            icon: <CalendarDays data-icon="inline-start" />,
+            onClick: () => undefined,
+            variant: 'outline',
+          },
+        ]}
+      />
+
+      <StoreFinanceBand
+        label={`${formatPeriodLabel(input.data.period)} toplam hakediş`}
+        value={formatMoneyValue(payableTotal, input.locale)}
+        description="Mağaza müdürü ve ekip hakedişi aynı dönem üzerinden gösterilir."
+        badge={{
+          label: projectionStatusLabel,
+          tone: firstProjection ? getIncentiveStatusTone(firstProjection.calculationState) : 'neutral',
+        }}
+        side={(
+          <StoreSurfacePanel className="tw:grid tw:content-between tw:gap-4">
+            <div>
+              <h2 className="tw:text-lg tw:font-semibold tw:text-foreground">Dönem özeti</h2>
+              <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
+                Hakediş ay kapanışı sonrası kesinleşir.
+              </p>
+            </div>
+            <StoreStepList
+              items={[
+                { label: 'Mağaza gerçekleşmesi', value: formatPercentValue(firstProjection?.storeAchievementPct, input.locale) },
+                { label: 'Müdür hakedişi', value: managerTotal ? formatMoneyValue(managerTotal, input.locale) : '0,00 TL' },
+                { label: 'Ekip hakedişi', value: personnelTotal ? formatMoneyValue(personnelTotal, input.locale) : '0,00 TL' },
+              ]}
+            />
+          </StoreSurfacePanel>
+        )}
+      />
 
       <StoreMetricGrid ariaLabel={input.t('storeIncentives.storeManagerSummaryAria')}>
         <StoreMetricCard
@@ -317,7 +351,12 @@ function StoreManagerIncentivesView(input: {
 function StoreLoadingShell(input: { title: string; description: string }) {
   return (
     <StoreSurfacePage>
-      <StoreSurfaceHeader title={input.title} description={input.description} />
+      <StoreCommandBar title="Prim Merkezi" description="Hakediş ekranı hazırlanıyor" />
+      <StoreSurfaceHeader
+        title={input.title}
+        description={input.description}
+        icon={<CircleDollarSign size={23} />}
+      />
       <StoreMetricGrid>
         {[0, 1, 2, 3].map((item) => (
           <StoreMetricCard
