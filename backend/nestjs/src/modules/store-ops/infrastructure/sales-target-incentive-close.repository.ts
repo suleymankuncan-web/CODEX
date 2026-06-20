@@ -169,10 +169,11 @@ export class SalesTargetIncentiveCloseRepository {
           ...store.personnel,
         ];
         for (const participant of participants) {
-          if (isSkippableImportedHistoricalPersonnel(store, participant)) {
-            continue;
-          }
-          assertFinalizableParticipant(participant);
+          const isImportedHistoricalPersonnelPlaceholder =
+            isImportedHistoricalPersonnelTargetPlaceholder(store, participant);
+          assertFinalizableParticipant(participant, {
+            isImportedHistoricalPersonnelPlaceholder,
+          });
           const assignmentSnapshotId = await this.insertAssignmentSnapshot(client, {
             closeRunId,
             periodKey: input.periodKey,
@@ -183,6 +184,7 @@ export class SalesTargetIncentiveCloseRepository {
             finalSnapshotId,
             assignmentSnapshotId,
             participant,
+            isImportedHistoricalPersonnelPlaceholder,
           });
           finalRowCount += 1;
         }
@@ -556,9 +558,16 @@ export class SalesTargetIncentiveCloseRepository {
       finalSnapshotId: string;
       assignmentSnapshotId: string;
       participant: SalesTargetIncentiveParticipantProjection;
+      isImportedHistoricalPersonnelPlaceholder: boolean;
     },
   ) {
     const calculation = input.participant.calculation;
+    const rawEarnedAmount = input.isImportedHistoricalPersonnelPlaceholder
+      ? "0.000000"
+      : calculation.rawEarnedAmount;
+    const payableAmount = input.isImportedHistoricalPersonnelPlaceholder
+      ? "0.00"
+      : calculation.payableAmount;
     const sourceImportBatchIds = uniqueStrings([
       input.participant.source.storeNetSalesImportBatchId,
       input.participant.source.personnelSalesImportBatchId,
@@ -628,9 +637,9 @@ export class SalesTargetIncentiveCloseRepository {
         input.participant.actualAmount,
         calculation.achievementPct,
         calculation.rate,
-        calculation.rawEarnedAmount,
-        calculation.payableAmount,
-        calculation.payableAmount,
+        rawEarnedAmount,
+        payableAmount,
+        payableAmount,
         sourceImportBatchIds,
         toJson({
           storeTargetRequestId: input.participant.source.storeTargetRequestId,
@@ -638,6 +647,9 @@ export class SalesTargetIncentiveCloseRepository {
           storeNetSalesImportBatchId: input.participant.source.storeNetSalesImportBatchId,
           personnelSalesSourceBatchId: input.participant.source.personnelSalesSourceBatchId,
           personnelSalesImportBatchId: input.participant.source.personnelSalesImportBatchId,
+          ...(input.isImportedHistoricalPersonnelPlaceholder
+            ? { importedHistoricalPersonnelTargetMissing: true }
+            : {}),
         }),
       ],
     );
@@ -682,8 +694,11 @@ export class SalesTargetIncentiveCloseRepository {
   }
 }
 
-function assertFinalizableParticipant(participant: SalesTargetIncentiveParticipantProjection) {
-  if (!isFinalizableParticipant(participant)) {
+function assertFinalizableParticipant(
+  participant: SalesTargetIncentiveParticipantProjection,
+  input?: { isImportedHistoricalPersonnelPlaceholder?: boolean },
+) {
+  if (!isFinalizableParticipant(participant) && !input?.isImportedHistoricalPersonnelPlaceholder) {
     throw new Error("Incentive participant is not finalizable");
   }
 }
@@ -696,7 +711,7 @@ function isFinalizableParticipant(participant: SalesTargetIncentiveParticipantPr
   );
 }
 
-function isSkippableImportedHistoricalPersonnel(
+function isImportedHistoricalPersonnelTargetPlaceholder(
   store: SalesTargetIncentiveProjectionStore,
   participant: SalesTargetIncentiveParticipantProjection,
 ) {
@@ -704,6 +719,7 @@ function isSkippableImportedHistoricalPersonnel(
     !store.storeTargetRequestId &&
     store.storeTargetAmount !== null &&
     participant.participantType === "personnel" &&
+    participant.assignmentStartedOn !== null &&
     participant.targetReferenceId === null &&
     participant.targetAmount === null &&
     participant.calculation.status === "blocked" &&
