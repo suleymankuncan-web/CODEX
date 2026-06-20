@@ -143,12 +143,13 @@ export class SalesTargetIncentiveApiService {
     if (!input.actor.employeeId) {
       throw new NotFoundException("Incentive projection is not available");
     }
+    const storeIds = this.resolveAssignedOrReadStores(input.actor);
 
     const projection = await this.readModelService.buildCurrentProjection({
-      periodKey: this.resolvePeriodKey(input.periodKey),
+      periodKey: input.periodKey,
       companyIds: input.actor.readScope.companyIds,
       regionIds: [],
-      storeIds: this.resolveAssignedOrReadStores(input.actor),
+      storeIds,
     });
     const stores = projection.stores
       .map((store) => ({
@@ -182,7 +183,7 @@ export class SalesTargetIncentiveApiService {
       ? input.actor.assignedStoreIds
       : this.resolveAssignedOrReadStores(input.actor);
     const projection = await this.readModelService.buildCurrentProjection({
-      periodKey: this.resolvePeriodKey(input.periodKey),
+      periodKey: input.periodKey,
       companyIds: [],
       regionIds: [],
       storeIds,
@@ -200,25 +201,22 @@ export class SalesTargetIncentiveApiService {
     periodKey?: string;
   }): Promise<SalesTargetIncentiveApiResponse> {
     const adminScope = this.resolveSuperAdminReadScope(input.actor);
-    const periodKey = this.resolvePeriodKey(input.periodKey);
-    const [projection, regionPackages] = await Promise.all([
-      this.readModelService.buildCurrentProjection({
-        periodKey,
-        companyIds: adminScope.companyIds,
-        regionIds: adminScope.companyIds.length
+    const projection = await this.readModelService.buildCurrentProjection({
+      periodKey: input.periodKey,
+      companyIds: adminScope.companyIds,
+      regionIds: adminScope.companyIds.length
+        ? []
+        : adminScope.regionIds,
+      storeIds:
+        adminScope.companyIds.length || adminScope.regionIds.length
           ? []
-          : adminScope.regionIds,
-        storeIds:
-          adminScope.companyIds.length || adminScope.regionIds.length
-            ? []
-            : adminScope.storeIds,
-        allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
-      }),
-      this.adminPackageWorkflowService.listRegionPackages({
-        actor: input.actor,
-        periodKey,
-      }),
-    ]);
+          : adminScope.storeIds,
+      allowGlobalScope: this.hasNoReadScope({ readScope: adminScope }),
+    });
+    const regionPackages = await this.adminPackageWorkflowService.listRegionPackages({
+      actor: input.actor,
+      periodKey: projection.periodKey,
+    });
 
     return this.toApiResponse({
       projection,

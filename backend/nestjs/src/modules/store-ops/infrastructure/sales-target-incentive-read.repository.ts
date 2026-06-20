@@ -86,9 +86,84 @@ export type SalesTargetIncentiveCloseBlockingTargetRevisionRow = {
   updated_at: string | null;
 };
 
+export type SalesTargetIncentiveAvailablePeriodRow = {
+  period_key: string;
+};
+
 @Injectable()
 export class SalesTargetIncentiveReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async listAvailablePeriodKeys(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    allowGlobalScope?: boolean;
+    limit?: number;
+  }) {
+    const params: unknown[] = [];
+    const clauses = this.buildStoreScopeClauses(input, params);
+    const limit = Math.max(1, Math.min(input.limit ?? 12, 36));
+    params.push(limit);
+
+    const result =
+      await this.databaseService.query<SalesTargetIncentiveAvailablePeriodRow>(
+        `
+          WITH scoped_stores AS (
+            SELECT
+              s.company_id,
+              s.region_id,
+              s.store_id,
+              s.store_type
+            FROM ops.store s
+            WHERE s.status = 'active'
+              AND s.store_type = 'company'
+              AND ${clauses.join(" AND ")}
+          ),
+          available_periods AS (
+            SELECT
+              tdr.request_month::date AS period_start,
+              FALSE AS has_sales
+            FROM scoped_stores s
+            INNER JOIN ops.target_distribution_request tdr
+              ON tdr.company_id = s.company_id
+             AND tdr.region_id = s.region_id
+             AND tdr.store_id = s.store_id
+             AND tdr.request_status = 'approved'
+            UNION ALL
+            SELECT
+              ka.period_start::date AS period_start,
+              TRUE AS has_sales
+            FROM scoped_stores s
+            INNER JOIN ops.kpi_actual ka
+              ON ka.store_id = s.store_id
+             AND ka.period_type = 'monthly'
+             AND ka.scope_type IN ('store', 'employee')
+             AND ka.source_type = 'integration'
+             AND COALESCE(ka.source_type, '') <> 'demo_seed'
+             AND ka.source_batch_id IS NOT NULL
+            INNER JOIN ops.kpi_definition kd
+              ON kd.kpi_id = ka.kpi_id
+             AND kd.kpi_code = 'NET_SALES'
+             AND kd.is_active = TRUE
+            INNER JOIN stg.import_batch ib
+              ON ib.source_batch_id = ka.source_batch_id
+             AND ib.entity_type = 'kpi'
+             AND ib.status IN ('completed', 'completed_with_errors')
+             AND ib.company_ids && ARRAY[s.company_id]::uuid[]
+          )
+          SELECT to_char(period_start, 'YYYY-MM') AS period_key
+          FROM available_periods
+          WHERE period_start IS NOT NULL
+          GROUP BY period_start
+          ORDER BY bool_or(has_sales) DESC, period_start DESC
+          LIMIT $${params.length}
+        `,
+        params,
+      );
+
+    return result.rows.map((row) => row.period_key);
+  }
 
   async listStoreProjectionSources(input: SalesTargetIncentiveReadScopeInput) {
     const params: unknown[] = [

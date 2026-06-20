@@ -16,13 +16,20 @@ import {
 } from "../infrastructure/sales-target-incentive-read.repository";
 
 export type SalesTargetIncentiveReadModelScope = {
-  periodKey: string;
+  periodKey?: string;
   companyIds: string[];
   regionIds: string[];
   storeIds: string[];
   allowGlobalScope?: boolean;
   assignmentAsOfDate?: string;
   closeCutoffAt?: string;
+};
+
+export type SalesTargetIncentiveReadModelPeriodScope = {
+  companyIds: string[];
+  regionIds: string[];
+  storeIds: string[];
+  allowGlobalScope?: boolean;
 };
 
 export type SalesTargetIncentiveParticipantProjection = {
@@ -102,10 +109,25 @@ export class SalesTargetIncentiveReadModelService {
     private readonly calculator: SalesTargetIncentiveCalculatorService,
   ) {}
 
+  async resolveDefaultPeriodKey(
+    input: SalesTargetIncentiveReadModelPeriodScope,
+  ) {
+    const [latestPeriodKey] = await this.repository.listAvailablePeriodKeys({
+      companyIds: input.companyIds,
+      regionIds: input.regionIds,
+      storeIds: input.storeIds,
+      allowGlobalScope: input.allowGlobalScope ?? false,
+      limit: 1,
+    });
+
+    return latestPeriodKey ?? resolveCurrentSalesTargetIncentivePeriodKey();
+  }
+
   async buildCurrentProjection(
     input: SalesTargetIncentiveReadModelScope,
   ): Promise<SalesTargetIncentiveProjectionReadModel> {
-    const period = resolveSalesTargetIncentiveMonthlyBounds(input.periodKey);
+    const periodKey = input.periodKey ?? await this.resolveDefaultPeriodKey(input);
+    const period = resolveSalesTargetIncentiveMonthlyBounds(periodKey);
     const assignmentAsOfDate =
       input.assignmentAsOfDate ??
       resolveCurrentProjectionAssignmentAsOfDate(period.periodStart, period.periodEnd);
@@ -128,7 +150,7 @@ export class SalesTargetIncentiveReadModelService {
     const personnelByStore = this.groupPersonnelByStore(personnelRows);
 
     return {
-      periodKey: input.periodKey,
+      periodKey,
       periodStart: period.periodStart,
       periodEnd: period.periodEnd,
       timezone: SALES_TARGET_INCENTIVE_TIMEZONE,
@@ -367,6 +389,22 @@ function resolveSalesTargetIncentiveMonthlyBounds(periodKey: string) {
     periodStart: `${periodKey}-01`,
     periodEnd: `${periodKey}-${String(lastDay).padStart(2, "0")}`,
   };
+}
+
+function resolveCurrentSalesTargetIncentivePeriodKey() {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: SALES_TARGET_INCENTIVE_TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+
+  if (!year || !month) {
+    throw new Error("Unable to resolve incentive period");
+  }
+
+  return `${year}-${month}`;
 }
 
 function resolveCurrentProjectionAssignmentAsOfDate(

@@ -53,6 +53,37 @@ describe("SalesTargetIncentiveReadRepository", () => {
     ]);
   });
 
+  it("lists latest available incentive periods from scoped target and sales sources", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listAvailablePeriodKeys({
+      companyIds: scopeInput.companyIds,
+      regionIds: [],
+      storeIds: [],
+      allowGlobalScope: false,
+      limit: 1,
+    });
+
+    const [sql, params] = query.mock.calls[0];
+    const text = String(sql);
+
+    expect(text).toContain("s.store_type = 'company'");
+    expect(text).toContain("INNER JOIN ops.target_distribution_request tdr");
+    expect(text).toContain("tdr.request_status = 'approved'");
+    expect(text).toContain("FALSE AS has_sales");
+    expect(text).toContain("INNER JOIN ops.kpi_actual ka");
+    expect(text).toContain("kd.kpi_code = 'NET_SALES'");
+    expect(text).toContain("ka.scope_type IN ('store', 'employee')");
+    expect(text).toContain("ka.period_type = 'monthly'");
+    expect(text).toContain("TRUE AS has_sales");
+    expect(text).toContain("ib.status IN ('completed', 'completed_with_errors')");
+    expect(text).toContain("to_char(period_start, 'YYYY-MM') AS period_key");
+    expect(text).toContain("GROUP BY period_start");
+    expect(text).toContain("ORDER BY bool_or(has_sales) DESC, period_start DESC");
+    expect(text).toContain("LIMIT $2");
+    expect(params).toEqual([scopeInput.companyIds, 1]);
+  });
+
   it("filters store projection sales sources at the close cutoff", async () => {
     const { query, repository } = createRepository();
 
