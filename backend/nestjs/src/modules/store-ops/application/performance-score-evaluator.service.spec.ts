@@ -1,4 +1,5 @@
 import type { KpiScoreProfile } from "./kpi-config.contract";
+import { storeKpiScoreProfile } from "./kpi-config.contract";
 import { PerformanceScoreEvaluator } from "./performance-score-evaluator.service";
 
 describe("PerformanceScoreEvaluator", () => {
@@ -162,5 +163,83 @@ describe("PerformanceScoreEvaluator", () => {
         useStoreChecklistFallback: false,
       }).scoreValue,
     ).toBe(60);
+  });
+
+  it("scores GSM_ONAY with achievementRate while keeping display percentage", () => {
+    const result = evaluator.evaluate({
+      profile: storeKpiScoreProfile,
+      benchmarkFallback: "matched-or-canonical",
+      useStoreChecklistFallback: true,
+      benchmarkLookup: new Map([
+        ["CR", 0.2],
+        ["ATV", 1500],
+        ["UPT", 4],
+      ]),
+      values: new Map([
+        [
+          "TARGET_ACHIEVEMENT",
+          { label: "Target achievement", actualValue: 100, targetValue: 100 },
+        ],
+        ["CR", { label: "CR", actualValue: 0.2, targetValue: null }],
+        ["ATV", { label: "ATV", actualValue: 1500, targetValue: null }],
+        ["UPT", { label: "UPT", actualValue: 4, targetValue: null }],
+        ["BM_CHECKLIST", { label: "BM checklist", actualValue: 80, targetValue: null }],
+        ["VM_CHECKLIST", { label: "VM checklist", actualValue: 100, targetValue: null }],
+        [
+          "GSM_ONAY",
+          {
+            label: "GSM Onay",
+            actualValue: 91.2052,
+            scoreValue: 0.912052,
+            targetValue: null,
+          },
+        ],
+      ]),
+    });
+
+    expect(result.scoreValue).toBe(98.56);
+    expect(result.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "GSM_ONAY",
+          actualValue: 91.2052,
+          contributionValue: 4.5603,
+        }),
+      ]),
+    );
+  });
+
+  it("keeps missing GSM_ONAY visible without inventing score contribution", () => {
+    const result = evaluator.evaluate({
+      profile: storeKpiScoreProfile,
+      benchmarkFallback: "matched-or-canonical",
+      useStoreChecklistFallback: true,
+      benchmarkLookup: new Map([
+        ["CR", 0.2],
+        ["ATV", 1500],
+        ["UPT", 4],
+      ]),
+      values: new Map([
+        [
+          "TARGET_ACHIEVEMENT",
+          { label: "Target achievement", actualValue: 100, targetValue: 100 },
+        ],
+        ["CR", { label: "CR", actualValue: 0.2, targetValue: null }],
+        ["ATV", { label: "ATV", actualValue: 1500, targetValue: null }],
+        ["UPT", { label: "UPT", actualValue: 4, targetValue: null }],
+        ["BM_CHECKLIST", { label: "BM checklist", actualValue: 80, targetValue: null }],
+        ["VM_CHECKLIST", { label: "VM checklist", actualValue: 100, targetValue: null }],
+      ]),
+    });
+
+    expect(result.metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "GSM_ONAY",
+          actualValue: null,
+          contributionValue: null,
+        }),
+      ]),
+    );
   });
 });

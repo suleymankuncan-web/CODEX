@@ -17,6 +17,10 @@ import {
   type UploadFile,
 } from "./power-bi-export-parser.service";
 import { PowerBiExportNormalizerService } from "./power-bi-export-normalizer.service";
+import {
+  GSM_ONAY_KPI_CODE,
+  normalizeGsmOnayValue,
+} from "./gsm-onay-normalization";
 
 export {
   POWER_BI_EXPORT_MAX_FILE_BYTES,
@@ -38,7 +42,9 @@ type PeriodBounds = {
 type CanonicalKpiRow = {
   kpiCode: string;
   sourceMetricId: string;
-  actualValue: number;
+  actualValue: number | null;
+  achievementRate?: number | null;
+  validationError?: string | null;
   targetValue?: number | null;
   scopeType: "store" | "employee";
   storeExternalRef: string;
@@ -130,9 +136,12 @@ export class PowerBiExportUploadService {
       });
       const storeScope = this.buildKpiImportStoreScope(scopedStoreRefs);
 
+      const storeCanonicalRows = this.hasGsmApprovalRows(storeRows)
+        ? this.mapGsmApprovalRows(storeRows, periodBounds, sourceCapturedAt, storeScope)
+        : this.mapStoreRows(storeRows, periodBounds, sourceCapturedAt, storeScope);
       const canonicalRows = [
         ...this.mapPersonnelRows(personnelRows, periodBounds, sourceCapturedAt, storeScope),
-        ...this.mapStoreRows(storeRows, periodBounds, sourceCapturedAt, storeScope),
+        ...storeCanonicalRows,
       ];
 
       if (canonicalRows.length === 0) {
@@ -450,6 +459,50 @@ export class PowerBiExportUploadService {
     });
   }
 
+  private mapGsmApprovalRows(
+    rows: ExportRow[],
+    period: PeriodBounds,
+    sourceCapturedAt: string,
+    storeScope: KpiImportStoreScope,
+  ): CanonicalKpiRow[] {
+    return rows.map((row, index) => {
+      const storeCode = this.getStoreCode(row);
+      const storeName = this.getStoreName(row);
+      const storeExternalRef = storeCode ?? storeName ?? `gsm-row-${index + 1}`;
+      const rawValue = this.getGsmApprovalRawValue(row);
+      const gsmValue = normalizeGsmOnayValue(rawValue);
+      const validationError =
+        !storeCode && !storeName
+          ? "GSM_ONAY store reference is required"
+          : !this.isStoreInKpiImportScope(storeExternalRef, storeScope) &&
+              (!storeName || !this.isStoreInKpiImportScope(storeName, storeScope))
+            ? `GSM_ONAY store reference is not mapped: ${storeExternalRef}`
+            : gsmValue.validationError;
+
+      return {
+        kpiCode: GSM_ONAY_KPI_CODE,
+        sourceMetricId: GSM_ONAY_KPI_CODE,
+        actualValue: gsmValue.actualValue,
+        achievementRate: gsmValue.achievementRate,
+        validationError,
+        scopeType: "store",
+        storeExternalRef,
+        employeeExternalRef: null,
+        periodType: "monthly",
+        periodStart: period.periodStart,
+        periodEnd: period.periodEnd,
+        sourceCapturedAt,
+        sourceRow: {
+          sourceKind: "gsm_onay",
+          storeCode,
+          storeName,
+          gsmOnayRawValue: rawValue ?? null,
+          sourceRow: row,
+        },
+      };
+    });
+  }
+
 
   private buildEmployeeMetricRow(
     kpiCode: string,
@@ -671,6 +724,30 @@ export class PowerBiExportUploadService {
     return this.powerBiExportNormalizerService.getText(row, ["MagazaAdi", "Magaza Adi", "Mağaza Adı"]);
   }
 
+  private getStoreCode(row: ExportRow) {
+    return this.powerBiExportNormalizerService.getText(row, [
+      "MagazaKodu",
+      "Magaza Kodu",
+      "Mağaza Kodu",
+      "storeCode",
+      "sourceStoreId",
+    ]);
+  }
+
+  private hasGsmApprovalRows(rows: ExportRow[]) {
+    return rows.some((row) => this.getGsmApprovalRawValue(row) !== undefined);
+  }
+
+  private getGsmApprovalRawValue(row: ExportRow) {
+    return this.getRawValue(row, [
+      "Gsm Onay %",
+      "gsmOnay",
+      "gsmOnayYuzde",
+      "gsmApproval",
+      "gsmApprovalRate",
+    ]);
+  }
+
   private getStoreNetSales(row: ExportRow) {
     return this.powerBiExportNormalizerService.getNumber(row, ["Ciro"]);
   }
@@ -697,6 +774,20 @@ export class PowerBiExportUploadService {
 
   private getPersonnelItemCount(row: ExportRow) {
     return this.powerBiExportNormalizerService.getNumber(row, ["PSatisAdeti", "P. Satis Adeti", "P. Satış Adeti"]);
+  }
+
+  private getRawValue(row: ExportRow, aliases: string[]) {
+    const aliasSet = new Set(
+      aliases.map((alias) => this.powerBiExportNormalizerService.normalizeKey(alias)),
+    );
+
+    for (const [key, value] of Object.entries(row)) {
+      if (aliasSet.has(this.powerBiExportNormalizerService.normalizeKey(key))) {
+        return value;
+      }
+    }
+
+    return undefined;
   }
 
   private derivePersonnelTicketCount(row: ExportRow) {

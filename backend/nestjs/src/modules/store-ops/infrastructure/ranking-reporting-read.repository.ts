@@ -120,6 +120,7 @@ export class RankingReportingReadRepository {
       kpi_code: string;
       kpi_name: string | null;
       actual_value: string | null;
+      achievement_rate: string | null;
       target_value: string | null;
     }>(
       `
@@ -133,6 +134,7 @@ export class RankingReportingReadRepository {
           kd.kpi_code,
           kd.kpi_name,
           ka.actual_value::text AS actual_value,
+          ka.achievement_rate::text AS achievement_rate,
           kt.target_value::text AS target_value
         FROM ops.kpi_actual ka
         INNER JOIN ops.kpi_definition kd

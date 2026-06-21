@@ -551,6 +551,7 @@ CREATE TABLE ops.kpi_actual (
     period_start DATE NOT NULL,
     period_end DATE NOT NULL,
     actual_value NUMERIC(18,4) NOT NULL,
+    achievement_rate NUMERIC(18,6),
     calculated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     source_batch_id TEXT,
     source_payload_hash TEXT,
@@ -1118,7 +1119,7 @@ CREATE TABLE rpt.store_kpi_snapshot (
     period_end DATE NOT NULL,
     target_value NUMERIC(18,4),
     actual_value NUMERIC(18,4),
-    achievement_rate NUMERIC(18,4),
+    achievement_rate NUMERIC(18,6),
     status_band TEXT,
     PRIMARY KEY (snapshot_run_id, store_id, kpi_id)
 );

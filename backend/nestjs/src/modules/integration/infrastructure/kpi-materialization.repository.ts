@@ -86,6 +86,7 @@ export class KpiMaterializationRepository {
     periodStart: string;
     periodEnd: string;
     actualValue: number;
+    achievementRate: number | null;
     batchEnvelope: KpiBatchEnvelope;
   }) {
     await this.databaseService.query(
@@ -102,6 +103,7 @@ export class KpiMaterializationRepository {
           period_start,
           period_end,
           actual_value,
+          achievement_rate,
           calculated_at,
           source_batch_id,
           source_payload_hash,
@@ -120,10 +122,11 @@ export class KpiMaterializationRepository {
           $6::date,
           $7::date,
           $8::numeric,
+          $9::numeric,
           NOW(),
-          $9,
           $10,
-          COALESCE($11::timestamptz, NOW()),
+          $11,
+          COALESCE($12::timestamptz, NOW()),
           'integration'
         )
         ON CONFLICT (kpi_id, store_id, period_type, period_start, period_end)
@@ -132,6 +135,7 @@ export class KpiMaterializationRepository {
           company_id = EXCLUDED.company_id,
           region_id = EXCLUDED.region_id,
           actual_value = EXCLUDED.actual_value,
+          achievement_rate = EXCLUDED.achievement_rate,
           calculated_at = NOW(),
           source_batch_id = EXCLUDED.source_batch_id,
           source_payload_hash = EXCLUDED.source_payload_hash,
@@ -147,6 +151,7 @@ export class KpiMaterializationRepository {
         input.periodStart,
         input.periodEnd,
         input.actualValue,
+        input.achievementRate,
         input.batchEnvelope.sourceBatchId,
         input.batchEnvelope.sourcePayloadHash,
         input.batchEnvelope.sourceCapturedAt,
@@ -242,6 +247,7 @@ export class KpiMaterializationRepository {
     periodStart: string;
     periodEnd: string;
     actualValue: number;
+    achievementRate: number | null;
     batchEnvelope: KpiBatchEnvelope;
   }) {
     await this.databaseService.query(
@@ -258,6 +264,7 @@ export class KpiMaterializationRepository {
           period_start,
           period_end,
           actual_value,
+          achievement_rate,
           calculated_at,
           source_batch_id,
           source_payload_hash,
@@ -276,10 +283,11 @@ export class KpiMaterializationRepository {
           $7::date,
           $8::date,
           $9::numeric,
+          $10::numeric,
           NOW(),
-          $10,
           $11,
-          COALESCE($12::timestamptz, NOW()),
+          $12,
+          COALESCE($13::timestamptz, NOW()),
           'integration'
         )
         ON CONFLICT (kpi_id, employee_id, period_type, period_start, period_end)
@@ -289,6 +297,7 @@ export class KpiMaterializationRepository {
           region_id = EXCLUDED.region_id,
           store_id = EXCLUDED.store_id,
           actual_value = EXCLUDED.actual_value,
+          achievement_rate = EXCLUDED.achievement_rate,
           calculated_at = NOW(),
           source_batch_id = EXCLUDED.source_batch_id,
           source_payload_hash = EXCLUDED.source_payload_hash,
@@ -305,6 +314,7 @@ export class KpiMaterializationRepository {
         input.periodStart,
         input.periodEnd,
         input.actualValue,
+        input.achievementRate,
         input.batchEnvelope.sourceBatchId,
         input.batchEnvelope.sourcePayloadHash,
         input.batchEnvelope.sourceCapturedAt,

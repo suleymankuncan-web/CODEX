@@ -24,6 +24,7 @@ describe("RankingService", () => {
         kpi_code: "TARGET_ACHIEVEMENT",
         kpi_name: "Hedef gerceklestirme orani",
         actual_value: String(106 - ordinal),
+        achievement_rate: null,
         target_value: "100",
       };
     });
@@ -50,6 +51,7 @@ describe("RankingService", () => {
         kpi_code: "TARGET_ACHIEVEMENT",
         kpi_name: "Hedef gerceklestirme orani",
         actual_value: String(106 - ordinal),
+        achievement_rate: null,
         target_value: "100",
       };
     });
@@ -57,11 +59,11 @@ describe("RankingService", () => {
 
   type StoreRankingFixtureRow = Omit<
     ReturnType<typeof createStoreRows>[number],
-    "target_value"
-  > & { target_value: string | null };
+    "target_value" | "achievement_rate"
+  > & { target_value: string | null; achievement_rate?: string | null };
 
   function createRepositoryMock(input?: {
-    storeRows?: ReturnType<typeof createStoreRows>;
+    storeRows?: StoreRankingFixtureRow[];
     storeChecklistRows?: StoreRankingFixtureRow[];
     personnelRows?: ReturnType<typeof createPersonnelRows>;
     period?: typeof period;
@@ -597,6 +599,65 @@ describe("RankingService", () => {
     );
   });
 
+  it("accepts GSM_ONAY as a store ranking sort key and scores from achievement rate", async () => {
+    const baseStoreRow = createStoreRows(1)[0];
+    const storeRows = [
+      {
+        ...baseStoreRow,
+        store_id: "store-high-gsm",
+        store_name: "High GSM Store",
+        kpi_code: "GSM_ONAY",
+        kpi_name: "GSM Onay",
+        actual_value: "91.2052",
+        achievement_rate: "0.912052",
+        target_value: null,
+      },
+      {
+        ...baseStoreRow,
+        store_id: "store-low-gsm",
+        store_name: "Low GSM Store",
+        kpi_code: "GSM_ONAY",
+        kpi_name: "GSM Onay",
+        actual_value: "50",
+        achievement_rate: "0.5",
+        target_value: null,
+      },
+    ];
+    const repository = createRepositoryMock({
+      storeRows,
+      personnelRows: [],
+    });
+    const service = createService(repository, createKpiConfigRepositoryMock());
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+      sortKey: "GSM_ONAY",
+      sortDirection: "asc",
+      limit: 2,
+      offset: 0,
+    });
+
+    expect(result.storeLeaderboard.items.map((item) => item.storeId)).toEqual([
+      "store-low-gsm",
+      "store-high-gsm",
+    ]);
+    expect(result.storeLeaderboard.items[1].metrics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "GSM_ONAY",
+          actualValue: 91.2052,
+          contributionValue: 4.5603,
+        }),
+      ]),
+    );
+  });
+
   it("returns Turkey reference metrics even when low roles receive summary-only ranking rows", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository, createKpiConfigRepositoryMock());
@@ -681,7 +742,7 @@ describe("RankingService", () => {
     expect(result.storeLeaderboard.items[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
-        scoreValue: 100,
+        scoreValue: 94.44,
       }),
     );
   });
@@ -764,7 +825,7 @@ describe("RankingService", () => {
     expect(result.storeLeaderboard.items[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
-        scoreValue: 99,
+        scoreValue: 94,
         metrics: expect.arrayContaining([
           expect.objectContaining({
             code: "BM_CHECKLIST",

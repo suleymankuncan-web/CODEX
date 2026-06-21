@@ -196,6 +196,12 @@ export class ReportingStoreKpiReadService {
         row?.actual_value !== null && row?.actual_value !== undefined
           ? Number(row.actual_value)
           : null;
+      const rawAchievementRate =
+        row && "achievement_rate" in row ? row.achievement_rate : null;
+      const importedAchievementRate =
+        rawAchievementRate !== null && rawAchievementRate !== undefined
+          ? Number(rawAchievementRate)
+          : null;
       const isChecklistMetric = storeChecklistMetricCodes.has(metric.code);
       const targetValue =
         isChecklistMetric && actualValue !== null
@@ -203,19 +209,28 @@ export class ReportingStoreKpiReadService {
           : row?.target_value !== null && row?.target_value !== undefined
             ? Number(row.target_value)
             : null;
+      const scoringActualValue =
+        metric.code === "GSM_ONAY" && importedAchievementRate !== null
+          ? importedAchievementRate
+          : actualValue;
+      const scoringTargetValue =
+        metric.code === "GSM_ONAY" && importedAchievementRate !== null
+          ? 1
+          : targetValue;
       const benchmarkSource =
         isChecklistMetric
           ? "TARGET"
-          : metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+          : metric.benchmarkSource ??
+            (scoringTargetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
       const benchmarkValue =
         !isChecklistMetric && benchmarkSource === "TURKEY_AVERAGE" && row
           ? benchmarkLookup.get(row.kpi_code) ?? null
           : null;
       const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
         metricCode: metric.code,
-        actualValue,
+        actualValue: scoringActualValue,
         benchmarkValue,
-        targetValue,
+        targetValue: scoringTargetValue,
         weightPercent: metric.weightPercent,
         direction: metric.direction ?? "HIGHER_IS_BETTER",
         benchmarkSource,

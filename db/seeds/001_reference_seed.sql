@@ -340,7 +340,8 @@ VALUES
     ('b0000000-0000-0000-0000-000000000016', 'VM_CHECKLIST', 'VM Checklist', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE),
     ('b0000000-0000-0000-0000-000000000017', 'ITEM_COUNT', 'Item Count', 'count', 'count', 'sum', 'multi_scope', NULL, 'higher_is_better', TRUE),
     ('b0000000-0000-0000-0000-000000000018', 'TICKET_COUNT', 'Ticket Count', 'count', 'count', 'sum', 'multi_scope', NULL, 'higher_is_better', TRUE),
-    ('b0000000-0000-0000-0000-000000000019', 'FF', 'Footfall', 'count', 'count', 'sum', 'store', NULL, 'higher_is_better', TRUE)
+    ('b0000000-0000-0000-0000-000000000019', 'FF', 'Footfall', 'count', 'count', 'sum', 'store', NULL, 'higher_is_better', TRUE),
+    ('b0000000-0000-0000-0000-000000000020', 'GSM_ONAY', 'GSM Onay', 'percentage', 'ratio', 'avg', 'store', NULL, 'higher_is_better', TRUE)
 ON CONFLICT (kpi_code) DO NOTHING;
 
 WITH demo_live_personnel_scoring_actual (employee_id, store_id, kpi_code, actual_value) AS (

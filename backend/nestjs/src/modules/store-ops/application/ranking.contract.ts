@@ -8,7 +8,8 @@ export type RankingSortKey =
   | "CR"
   | "TARGET_ACHIEVEMENT"
   | "BM_CHECKLIST"
-  | "VM_CHECKLIST";
+  | "VM_CHECKLIST"
+  | "GSM_ONAY";
 export type RankingSortDirection = "asc" | "desc";
 
 export type RankingMetricValue = {

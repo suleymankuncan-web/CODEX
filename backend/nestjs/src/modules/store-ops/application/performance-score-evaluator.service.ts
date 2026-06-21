@@ -17,8 +17,13 @@ export class PerformanceScoreEvaluator {
       const matchedMetric = matchedCode ? input.values.get(matchedCode) : undefined;
       const actualValue = matchedMetric?.actualValue ?? null;
       const targetValue = matchedMetric?.targetValue ?? null;
+      const scoringActualValue = matchedMetric?.scoreValue ?? actualValue;
+      const scoringTargetValue =
+        metric.code === "GSM_ONAY" && matchedMetric?.scoreValue !== null && matchedMetric?.scoreValue !== undefined
+          ? 1
+          : targetValue;
       const benchmarkSource =
-        metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+        metric.benchmarkSource ?? (scoringTargetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
       const benchmarkValue =
         benchmarkSource === "TURKEY_AVERAGE" && matchedCode
           ? this.resolveBenchmarkValue({
@@ -37,9 +42,9 @@ export class PerformanceScoreEvaluator {
           }
         : this.kpiBenchmarkScoringService.scoreMetric({
             metricCode: metric.code,
-            actualValue,
+            actualValue: scoringActualValue,
             benchmarkValue,
-            targetValue,
+            targetValue: scoringTargetValue,
             weightPercent: metric.weightPercent,
             direction: metric.direction ?? "HIGHER_IS_BETTER",
             benchmarkSource,

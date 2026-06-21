@@ -529,14 +529,16 @@ describe("CompetitionRepository", () => {
     expect(storeSnapshotDeleteIndex).toBeGreaterThan(teamSnapshotDeleteIndex);
     expect(sql).toContain("FROM rpt.snapshot_run run");
     expect(sql).toContain("run.period_start = run.period_end");
-    expect(sql).toContain("('TARGET_ACHIEVEMENT', 40::numeric)");
+    expect(sql).toContain("('TARGET_ACHIEVEMENT', 35::numeric)");
     expect(sql).toContain("('CR', 20::numeric)");
     expect(sql).toContain("('ATV', 15::numeric)");
     expect(sql).toContain("('UPT', 15::numeric)");
     expect(sql).toContain("('BM_CHECKLIST', 5::numeric)");
     expect(sql).toContain("('VM_CHECKLIST', 5::numeric)");
+    expect(sql).toContain("('GSM_ONAY', 5::numeric)");
     expect(sql).toContain("'BM_CHECKLIST'");
     expect(sql).toContain("'VM_CHECKLIST'");
+    expect(sql).toContain("'GSM_ONAY'");
     expect(sql).toContain("CASE WHEN has_daily_data THEN score_value ELSE NULL END");
     expect(sql).toContain("SUM(CASE WHEN actual_value IS NULL AND achievement_rate IS NULL THEN 0 ELSE weight_percent END)");
     expect(sql).toContain("competition_stage_store_score_snapshot");

@@ -960,12 +960,12 @@ export class CompetitionRepository {
           metric_weights AS (
               SELECT *
               FROM (VALUES
-                  ('TARGET_ACHIEVEMENT', 40::numeric),
+                  ('TARGET_ACHIEVEMENT', 35::numeric),
                   ('CR', 20::numeric),
                   ('ATV', 15::numeric),
                   ('UPT', 15::numeric),
                   ('BM_CHECKLIST', 5::numeric),
-                  ('VM_CHECKLIST', 5::numeric)
+                  ('VM_CHECKLIST', 5::numeric), ('GSM_ONAY', 5::numeric)
               ) AS weights(kpi_code, weight_percent)
           ),
           store_day_matrix AS (
@@ -999,7 +999,7 @@ export class CompetitionRepository {
                        AND snapshot.period_start = matrix.snapshot_date
                        AND snapshot.period_end = matrix.snapshot_date)
                       OR
-                      (weights.kpi_code IN ('BM_CHECKLIST', 'VM_CHECKLIST')
+                      (weights.kpi_code IN ('BM_CHECKLIST', 'VM_CHECKLIST', 'GSM_ONAY')
                        AND snapshot.period_start <= matrix.snapshot_date
                        AND snapshot.period_end >= matrix.snapshot_date)
                  )

@@ -62,6 +62,7 @@ export function buildImportPayloadTemplate(input?: {
             {
               storeCode: "M-10",
               conversionRate: 0.15,
+              gsmOnay: 0.912052,
             },
           ],
         }
@@ -122,6 +123,8 @@ export function buildCanonicalKpiContract() {
       "storeExternalRef",
       "employeeExternalRef",
       "actualValue",
+      "achievementRate",
+      "validationError",
       "targetValue",
       "periodType",
       "periodStart",
@@ -139,6 +142,7 @@ export function buildCanonicalKpiContract() {
       "UPT",
       "ATV",
       "CR",
+      "GSM_ONAY",
     ],
     derivedMetricCodes: [
       "TARGET_ACHIEVEMENT",

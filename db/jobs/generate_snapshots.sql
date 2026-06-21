@@ -91,6 +91,7 @@ SELECT
     target.target_value,
     actual.actual_value,
     CASE
+        WHEN actual.achievement_rate IS NOT NULL THEN actual.achievement_rate
         WHEN target.target_value IS NULL OR target.target_value = 0 THEN NULL
         ELSE actual.actual_value / target.target_value
     END AS achievement_rate,
@@ -101,7 +102,11 @@ SELECT
         ELSE 'red'
     END AS status_band
 FROM (
-    SELECT ka.store_id, ka.kpi_id, SUM(ka.actual_value)::NUMERIC(18,4) AS actual_value
+    SELECT
+        ka.store_id,
+        ka.kpi_id,
+        SUM(ka.actual_value)::NUMERIC(18,4) AS actual_value,
+        AVG(ka.achievement_rate)::NUMERIC(18,6) AS achievement_rate
     FROM ops.kpi_actual ka
     WHERE ka.period_start >= p_period_start
       AND ka.period_end <= p_period_end
