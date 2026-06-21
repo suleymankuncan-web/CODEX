@@ -140,6 +140,7 @@ test('store workforce page shows only region manager read-scope rows and opens d
   ])
 
   const firstRow = page.getByTestId('store-workforce-region-row').filter({ hasText: 'IstinyePark Demo Store' })
+  await expect(firstRow).not.toHaveAttribute('role', 'button')
   await firstRow.getByRole('button', { name: /Detay|Open detail/i }).click()
 
   const detail = page.getByTestId('store-workforce-region-detail-dialog')
@@ -3423,7 +3424,7 @@ test('store rankings removes signal chrome while preserving weighted score rows'
   await page.goto('/store/rankings')
 
   const rows = page.locator('.store-rankings-table tbody tr')
-  await expect(rows.nth(0)).toContainText('Weighted Score Leader')
+  await expect(rows.nth(0)).toContainText('Weighted Score Leader With Long Store Name')
   await expect(rows.nth(0).locator('.store-rankings-scorebar')).toContainText('112,30')
   await expect(rows.nth(1)).toContainText('Raw Delta Trap')
   await expect(rows.nth(1).locator('.store-rankings-scorebar')).toContainText('104,20')
@@ -5663,7 +5664,7 @@ const rankingsPrivilegedMissingChecklistStoreRow = {
 const scoreDisplayLeaderStoreRow = {
   ...rankingsPrivilegedDetailStoreRow,
   storeId: 'store-score-display-leader',
-  storeName: 'Weighted Score Leader',
+  storeName: 'Weighted Score Leader With Long Store Name',
   rank: 1,
   scoreValue: 112.3,
   metrics: [

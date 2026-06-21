@@ -515,7 +515,7 @@ function RankingEntity(input: {
       <span className={`store-rankings-entity-icon store-rankings-entity-${tone}`}>
         <Icon aria-hidden="true" />
       </span>
-      <span className="store-rankings-entity-copy">
+      <span className={`store-rankings-entity-copy store-rankings-entity-copy-${input.kind}`}>
         <strong>{input.label}</strong>
         {input.detail ? <span className="store-rankings-entity-detail">{input.detail}</span> : null}
       </span>
