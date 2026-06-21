@@ -17,7 +17,6 @@ import {
 import { getErrorMessage } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
-import { RankingDetailDrawer } from './store-rankings-detail-panel'
 import {
   type ActiveRankingList,
   type RankingSortDirection,
@@ -70,7 +69,6 @@ export function StoreRankingsPage(input: {
     activeList,
     sortKey,
     sortDirection,
-    selectedDetail,
   } = pageState
   const limit = 100
   const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
@@ -247,9 +245,6 @@ export function StoreRankingsPage(input: {
         onActiveListChange={(nextList) =>
           dispatchPageState({ type: 'setActiveList', value: nextList })
         }
-        onOpenStoreDetail={(row) =>
-          dispatchPageState({ type: 'setSelectedDetail', value: { type: 'store', row } })
-        }
         onOpenPersonnelProfile={openPersonnelProfile}
         onOffsetChange={(value) => dispatchPageState({ type: 'setOffset', value })}
         hasNextPage={Boolean(hasNextPage)}
@@ -259,12 +254,6 @@ export function StoreRankingsPage(input: {
         t={t}
       />
 
-      <RankingDetailDrawer
-        selection={selectedDetail}
-        locale={locale}
-        t={t}
-        onClose={() => dispatchPageState({ type: 'setSelectedDetail', value: null })}
-      />
     </StoreSurfacePage>
   )
 }

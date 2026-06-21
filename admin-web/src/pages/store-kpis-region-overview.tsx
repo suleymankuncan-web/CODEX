@@ -22,9 +22,9 @@ import {
 } from './store-rankings-page-model'
 import { StoreEmptyState, StoreSurfacePage } from './store-surface-primitives'
 
-const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR'] as const
+const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'GSM_ONAY'] as const
 const rowGridClass =
-  'tw:grid tw:grid-cols-[minmax(220px,0.88fr)_52px_repeat(4,minmax(70px,0.26fr))_minmax(92px,0.28fr)_minmax(92px,0.28fr)_minmax(62px,auto)] tw:items-center tw:gap-2.5'
+  'tw:grid tw:grid-cols-[minmax(240px,0.9fr)_52px_repeat(5,minmax(70px,0.24fr))_minmax(92px,0.28fr)_minmax(92px,0.28fr)_minmax(62px,auto)] tw:items-center tw:gap-2.5'
 const regionStoreActionClass =
   'store-command-soft-action tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-xl tw:border tw:px-3 tw:text-sm tw:font-semibold tw:transition'
 
@@ -84,7 +84,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-[#7a839f]">
               {model.t('storeKpis.regionKpiAverageTitle')}
             </p>
-            <div className="tw:mt-3 tw:grid tw:grid-cols-2 tw:gap-1.5 tw:md:grid-cols-4">
+            <div className="tw:mt-3 tw:grid tw:grid-cols-2 tw:gap-1.5 tw:md:grid-cols-5">
               {regionMetricCodes.map((code) => (
                 <div
                   key={code}
@@ -121,7 +121,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
           {model.regionOverviewRows.length > 0 ? (
             <>
             <div className="tw:hidden tw:overflow-x-auto tw:md:block">
-              <div className="tw:min-w-[900px]">
+              <div className="tw:min-w-[980px]">
                 <div
                   className={`${rowGridClass} tw:border-b tw:border-[#dce4f1] tw:px-3.5 tw:py-3 tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.035em] tw:text-[#667194]`}
                 >
@@ -131,6 +131,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
                   <RegionSortButton label="UPT" model={model} sortKey="UPT" centered />
                   <RegionSortButton label="ATV" model={model} sortKey="ATV" centered />
                   <RegionSortButton label="CR" model={model} sortKey="CR" centered />
+                  <RegionSortButton label="GSM Onayı" model={model} sortKey="GSM_ONAY" centered />
                   <RegionSortButton label="BM Checklist" model={model} sortKey="BM_CHECKLIST" centered />
                   <RegionSortButton label="VM Checklist" model={model} sortKey="VM_CHECKLIST" centered />
                   <span className="tw:text-center">{model.t('storeKpis.regionActionColumn')}</span>
@@ -449,6 +450,7 @@ function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
 
 function getRegionMetricLabel(code: (typeof regionMetricCodes)[number]) {
   if (code === 'TARGET_ACHIEVEMENT') return 'HG%'
+  if (code === 'GSM_ONAY') return 'GSM Onayı'
   return code
 }
 
@@ -473,6 +475,10 @@ function formatRegionMetricValue(
 
   if (code === 'TARGET_ACHIEVEMENT' || code === 'CR') {
     return `%${formatNumber(locale, value * 100, noData, 1)}`
+  }
+
+  if (code === 'GSM_ONAY') {
+    return `%${formatNumber(locale, value, noData, 1)}`
   }
 
   if (code === 'ATV') {
