@@ -42,7 +42,7 @@ const expectedRouteIds = [
 ]
 
 function getRouteBlocks() {
-  return [...registrySource.matchAll(/\n  \{\n    id: '([^']+)'[\s\S]*?\n  \},/g)]
+  return [...registrySource.matchAll(/\r?\n  \{\r?\n    id: '([^']+)'[\s\S]*?\r?\n  \},/g)]
     .map((match) => ({
       id: match[1],
       source: match[0],

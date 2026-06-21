@@ -162,6 +162,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
   it("creates a succeeded close run with rule, assignment, store, and final-row snapshots", async () => {
     const { query, repository, withTransaction } = createHarness();
     query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -182,7 +184,6 @@ describe("SalesTargetIncentiveCloseRepository", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
@@ -221,12 +222,14 @@ describe("SalesTargetIncentiveCloseRepository", () => {
     });
 
     expect(withTransaction).toHaveBeenCalledTimes(1);
-    expect(String(query.mock.calls[2][0])).toContain("pg_advisory_xact_lock");
-    expect(query.mock.calls[2][1]).toEqual([
+    expect(String(query.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
+    expect(query.mock.calls[0][1]).toEqual([
       ["sales_target_incentive_close", companyId, "2026-05"].join(":"),
     ]);
-    expect(String(query.mock.calls[3][0])).toContain("INSERT INTO ops.sales_target_incentive_close_run");
-    expect(query.mock.calls[3][1]).toEqual(
+    expect(String(query.mock.calls[1][0])).toContain("FROM ops.sales_target_incentive_close_run run");
+    expect(query.mock.calls[1][1]).toEqual([companyId, "2026-05", [storeId]]);
+    expect(String(query.mock.calls[4][0])).toContain("INSERT INTO ops.sales_target_incentive_close_run");
+    expect(query.mock.calls[4][1]).toEqual(
       expect.arrayContaining([
         companyId,
         "2026-05",
@@ -236,9 +239,19 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         [storeImportBatchId, personnelImportBatchId],
       ]),
     );
-    expect(String(query.mock.calls[4][0])).toContain("INSERT INTO rpt.sales_target_incentive_rule_snapshot");
-    expect(String(query.mock.calls[5][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
-    expect(query.mock.calls[5][1]).toEqual(
+    expect(JSON.parse(String((query.mock.calls[4][1] as unknown[])[9]))).toEqual(
+      expect.objectContaining({
+        sourceType: "admin_period_close",
+        sourceMode: "historical_imported_backfill",
+        actorUserId,
+        periodKey: "2026-05",
+        affectedStoreCount: 1,
+        storeIds: [storeId],
+      }),
+    );
+    expect(String(query.mock.calls[5][0])).toContain("INSERT INTO rpt.sales_target_incentive_rule_snapshot");
+    expect(String(query.mock.calls[6][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
+    expect(query.mock.calls[6][1]).toEqual(
       expect.arrayContaining([
         storeProjection.storeTargetRequestId,
         storeProjection.storeTargetAmount,
@@ -247,8 +260,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         true,
       ]),
     );
-    expect(String(query.mock.calls[6][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
-    expect(query.mock.calls[6][1]).toEqual(
+    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(query.mock.calls[7][1]).toEqual(
       expect.arrayContaining([
         managerEmployeeId,
         storeProjection.manager?.assignmentId,
@@ -256,8 +269,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         "2026-05-01",
       ]),
     );
-    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    expect(query.mock.calls[7][1]).toEqual(
+    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    expect(query.mock.calls[8][1]).toEqual(
       expect.arrayContaining([
         managerAssignmentSnapshotId,
         managerEmployeeId,
@@ -266,8 +279,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         "11500.00",
       ]),
     );
-    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    expect(query.mock.calls[9][1]).toEqual(
+    expect(String(query.mock.calls[10][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    expect(query.mock.calls[10][1]).toEqual(
       expect.arrayContaining([
         personnelAssignmentSnapshotId,
         personnelEmployeeId,
@@ -276,7 +289,62 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         "3960.00",
       ]),
     );
-    expect(String(query.mock.calls[10][0])).toContain("SET status = 'succeeded'");
+    expect(String(query.mock.calls[11][0])).toContain("SET status = 'succeeded'");
+    expect(result).toEqual(
+      expect.objectContaining({
+        closeRunId,
+        status: "succeeded",
+        finalSnapshotCount: 1,
+        finalRowCount: 2,
+      }),
+    );
+  });
+
+  it("returns an existing succeeded close run for the same period and store set", async () => {
+    const { query, repository } = createHarness();
+    query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            close_run_id: closeRunId,
+            company_id: companyId,
+            period_key: "2026-05",
+            period_start: "2026-05-01",
+            period_end: "2026-05-31",
+            close_cutoff_at: "2026-06-01T02:00:00.000+03:00",
+            status: "succeeded",
+            started_at: "2026-06-01T02:00:00.000+03:00",
+            completed_at: "2026-06-01T02:00:01.000+03:00",
+            failed_reason: null,
+            source_import_batch_ids: [storeImportBatchId, personnelImportBatchId],
+            final_snapshot_count: 1,
+            final_row_count: 2,
+          },
+        ],
+      });
+
+    const result = await repository.createSucceededCloseRun({
+      companyId,
+      periodKey: "2026-05",
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      actorUserId,
+      stores: [storeProjection],
+    });
+
+    expect(String(query.mock.calls[0][0])).toContain("pg_advisory_xact_lock");
+    expect(String(query.mock.calls[1][0])).toContain("FROM ops.sales_target_incentive_close_run run");
+    expect(query.mock.calls.some(([sql]) =>
+      String(sql).includes("sales_target_incentive_rule_version"),
+    )).toBe(false);
+    expect(query.mock.calls.some(([sql]) =>
+      String(sql).includes("INSERT INTO ops.sales_target_incentive_close_run"),
+    )).toBe(false);
+    expect(query.mock.calls.some(([sql]) =>
+      String(sql).includes("INSERT INTO rpt.sales_target_incentive_final_snapshot"),
+    )).toBe(false);
     expect(result).toEqual(
       expect.objectContaining({
         closeRunId,
@@ -323,6 +391,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
     };
 
     query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -343,7 +413,6 @@ describe("SalesTargetIncentiveCloseRepository", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
@@ -381,19 +450,19 @@ describe("SalesTargetIncentiveCloseRepository", () => {
       stores: [importedTargetStore],
     });
 
-    expect(String(query.mock.calls[5][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
-    expect(query.mock.calls[5][1]).toEqual(
+    expect(String(query.mock.calls[6][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_snapshot");
+    expect(query.mock.calls[6][1]).toEqual(
       expect.arrayContaining([
         null,
         importedTargetStore.storeTargetAmount,
         importedTargetStore.storeNetSalesAmount,
       ]),
     );
-    expect(String(query.mock.calls[6][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
-    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
-    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
-    const personnelFinalRowArgs = query.mock.calls[9][1] as unknown[];
+    expect(String(query.mock.calls[7][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(String(query.mock.calls[8][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    expect(String(query.mock.calls[9][0])).toContain("INSERT INTO rpt.sales_target_incentive_assignment_snapshot");
+    expect(String(query.mock.calls[10][0])).toContain("INSERT INTO rpt.sales_target_incentive_final_row");
+    const personnelFinalRowArgs = query.mock.calls[10][1] as unknown[];
     expect(personnelFinalRowArgs).toEqual(
       expect.arrayContaining([
         personnelAssignmentSnapshotId,
@@ -415,8 +484,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
         importedHistoricalPersonnelTargetMissing: true,
       }),
     );
-    expect(String(query.mock.calls[10][0])).toContain("SET status = 'succeeded'");
-    expect(query).toHaveBeenCalledTimes(11);
+    expect(String(query.mock.calls[11][0])).toContain("SET status = 'succeeded'");
+    expect(query).toHaveBeenCalledTimes(12);
     expect(result).toEqual(
       expect.objectContaining({
         closeRunId,
@@ -458,6 +527,8 @@ describe("SalesTargetIncentiveCloseRepository", () => {
     };
 
     query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -466,7 +537,6 @@ describe("SalesTargetIncentiveCloseRepository", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
       .mockResolvedValueOnce({ rows: [] })

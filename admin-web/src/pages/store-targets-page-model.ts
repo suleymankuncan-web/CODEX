@@ -55,7 +55,7 @@ export const targetCopy = {
       'Bolge ve super admin rolleri, yalnizca karar yetkisi olan magazalar icin onay aksiyonu alir.',
     coverageTitle: 'Hedef referanslari',
     coverageCopy:
-      'Skorlamaya girecek hedef referanslari bu listeden takip edilir. Eksik hedef icin sistem tahmin uretmez.',
+      'Aktif donem hedefleri bu listeden takip edilir. Eksik hedef icin tahmin uretilmez.',
     targetRequestTitle: 'Personel hedef dagitimi',
     targetRequestCopy:
       'Magaza muduru toplam hedefi aktif personele dagitir. Toplam tutar eslesmeden istek gonderilemez.',
@@ -160,7 +160,7 @@ export const targetCopy = {
       'Region and super admin roles can approve only stores covered by their decision authority.',
     coverageTitle: 'Target references',
     coverageCopy:
-      'Target references used by scoring are tracked here. The system does not guess missing targets.',
+      'Active period targets are tracked here. Missing targets are not guessed.',
     targetRequestTitle: 'Personnel target distribution',
     targetRequestCopy:
       'The store manager distributes the store total across active personnel. Submission stays blocked until totals match.',
@@ -308,6 +308,44 @@ export function createStoreCoverageSummary(coverageRows: TargetCoverageRow[]) {
   const coveredStores = storeStates.filter((store) => store.approved).length
   const pendingStores = storeStates.filter((store) => !store.approved && store.pending).length
   const missingStores = storeStates.filter((store) => !store.approved && !store.pending).length
+
+  return {
+    totalStores,
+    coveredStores,
+    pendingStores,
+    missingStores,
+    coverageRate: totalStores > 0 ? coveredStores / totalStores : 0,
+  }
+}
+
+export function createStoreTargetReferenceSummary(input: {
+  coverageRows: TargetCoverageRow[]
+  storeOptions: Array<{ storeId: string; storeName: string }>
+}) {
+  const stores = new Map<string, { covered: boolean; pending: boolean }>()
+
+  for (const store of input.storeOptions) {
+    if (store.storeId) {
+      stores.set(store.storeId, { covered: false, pending: false })
+    }
+  }
+
+  for (const row of input.coverageRows) {
+    const current = stores.get(row.storeId) ?? { covered: false, pending: false }
+    stores.set(row.storeId, {
+      covered: current.covered || row.targetStatus === 'approved',
+      pending:
+        current.pending ||
+        row.targetStatus === 'pending_region_approval' ||
+        row.targetStatus === 'pending_change_conflict',
+    })
+  }
+
+  const storeStates = Array.from(stores.values())
+  const totalStores = storeStates.length
+  const coveredStores = storeStates.filter((store) => store.covered).length
+  const pendingStores = storeStates.filter((store) => !store.covered && store.pending).length
+  const missingStores = storeStates.filter((store) => !store.covered && !store.pending).length
 
   return {
     totalStores,
