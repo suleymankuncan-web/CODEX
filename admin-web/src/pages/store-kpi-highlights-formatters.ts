@@ -22,7 +22,7 @@ const metricLabelKeyByCode: Record<string, TranslationKey> = {
   ATV: 'storeKpis.metric.atv',
   UPT: 'storeKpis.metric.upt',
   CR: 'storeKpis.metric.cr',
-  GSM_ONAY: 'storeKpis.metric.gsmOnay',
+  gsm_approval: 'storeKpis.metric.gsmOnay',
   BM_CHECKLIST: 'storeKpis.metric.bmChecklist',
   VM_CHECKLIST: 'storeKpis.metric.vmChecklist',
 }
@@ -133,7 +133,7 @@ export function formatOwnerRole(t: TranslateFunction, role: KpiOwnerRole) {
 }
 
 export function formatMetricValue(locale: AppLocale, t: TranslateFunction, input: string | null, kpiCode?: string) {
-  if (kpiCode?.trim().toUpperCase() === 'GSM_ONAY') {
+  if (kpiCode?.trim().toLowerCase() === 'gsm_approval' || kpiCode?.trim().toUpperCase() === 'GSM_ONAY') {
     const value = input === null ? null : Number(input)
 
     return value === null || !Number.isFinite(value)

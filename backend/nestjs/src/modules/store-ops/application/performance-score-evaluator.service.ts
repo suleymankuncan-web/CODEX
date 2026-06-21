@@ -1,4 +1,5 @@
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
+import { isGsmApprovalKpiCode } from "./kpi-config.contract";
 import type {
   PerformanceScoreEvaluationInput,
   PerformanceScoreEvaluationMetric,
@@ -19,7 +20,9 @@ export class PerformanceScoreEvaluator {
       const targetValue = matchedMetric?.targetValue ?? null;
       const scoringActualValue = matchedMetric?.scoreValue ?? actualValue;
       const scoringTargetValue =
-        metric.code === "GSM_ONAY" && matchedMetric?.scoreValue !== null && matchedMetric?.scoreValue !== undefined
+        isGsmApprovalKpiCode(metric.code) &&
+        matchedMetric?.scoreValue !== null &&
+        matchedMetric?.scoreValue !== undefined
           ? 1
           : targetValue;
       const benchmarkSource =

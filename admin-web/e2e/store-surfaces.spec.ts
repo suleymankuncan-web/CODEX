@@ -1362,7 +1362,7 @@ test('region manager store KPI overview waits for selected store before loading 
   expect(highlightRequests).toHaveLength(0)
 
   await page.getByRole('button', { name: 'GSM Onayı sütununa göre sırala' }).click()
-  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('GSM_ONAY')
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('gsm_approval')
 
   await page.getByRole('link', { name: 'Region Store 9 KPI sayfasına git' }).click()
 
@@ -5288,8 +5288,8 @@ const storeKpiHighlightsFixture = {
       scoreStatus: 'scored',
     },
     {
-      code: 'GSM_ONAY',
-      label: 'GSM Onay',
+      code: 'gsm_approval',
+      label: 'GSM Onayı',
       weightPercent: 5,
       actualValue: 91.2052,
       targetValue: null,
@@ -5616,8 +5616,8 @@ const rankingsPrivilegedDetailStoreRow = {
       contributionValue: 40,
     },
     {
-      code: 'GSM_ONAY',
-      label: 'GSM Onay',
+      code: 'gsm_approval',
+      label: 'GSM Onayı',
       actualValue: 91.2052,
       contributionValue: 4.56,
     },
@@ -5657,7 +5657,7 @@ const rankingsPrivilegedLowHgStoreRow = {
 const rankingsPrivilegedMissingChecklistStoreRow = {
   ...rankingsPrivilegedDetailStoreRow,
   metrics: rankingsPrivilegedDetailStoreRow.metrics.filter(
-    (metric) => metric.code !== 'BM_CHECKLIST' && metric.code !== 'GSM_ONAY',
+    (metric) => metric.code !== 'BM_CHECKLIST' && metric.code !== 'gsm_approval',
   ),
 }
 
@@ -5697,8 +5697,8 @@ const scoreDisplayLeaderStoreRow = {
       contributionValue: 40,
     },
     {
-      code: 'GSM_ONAY',
-      label: 'GSM Onay',
+      code: 'gsm_approval',
+      label: 'GSM Onayı',
       actualValue: 96.4,
       contributionValue: 4.8,
     },
@@ -5753,8 +5753,8 @@ const scoreDisplayFollowerStoreRow = {
       contributionValue: 40,
     },
     {
-      code: 'GSM_ONAY',
-      label: 'GSM Onay',
+      code: 'gsm_approval',
+      label: 'GSM Onayı',
       actualValue: 88.3,
       contributionValue: 4.4,
     },
@@ -5811,7 +5811,7 @@ const rankingsPrivilegedDetailFixture = {
         { code: 'ATV', label: 'ATV', value: 1320 },
         { code: 'CR', label: 'CR', value: 0.185 },
         { code: 'TARGET_ACHIEVEMENT', label: 'Target Achievement', value: 0.94 },
-        { code: 'GSM_ONAY', label: 'GSM Onay', value: 91.2 },
+        { code: 'gsm_approval', label: 'GSM Onayı', value: 91.2 },
         { code: 'BM_CHECKLIST', label: 'BM Checklist', value: 81 },
         { code: 'VM_CHECKLIST', label: 'VM Checklist', value: 84 },
       ],

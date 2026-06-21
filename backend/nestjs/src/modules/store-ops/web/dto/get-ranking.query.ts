@@ -44,7 +44,7 @@ export class GetRankingQueryDto {
     "TARGET_ACHIEVEMENT",
     "BM_CHECKLIST",
     "VM_CHECKLIST",
-    "GSM_ONAY",
+    "gsm_approval",
   ])
   sortKey?:
     | "score"
@@ -54,7 +54,7 @@ export class GetRankingQueryDto {
     | "TARGET_ACHIEVEMENT"
     | "BM_CHECKLIST"
     | "VM_CHECKLIST"
-    | "GSM_ONAY";
+    | "gsm_approval";
 
   @IsOptional()
   @IsIn(["asc", "desc"])

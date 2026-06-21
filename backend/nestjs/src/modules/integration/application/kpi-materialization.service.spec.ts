@@ -195,7 +195,7 @@ describe("KpiMaterializationService", () => {
     );
   });
 
-  it("materializes GSM_ONAY actuals with achievement rate", async () => {
+  it("materializes gsm_approval actuals with achievement rate", async () => {
     const { databaseService, service } = createService(async (sql, params) => {
       if (sql.includes("FROM stg.kpi_raw")) {
         return {
@@ -204,7 +204,7 @@ describe("KpiMaterializationService", () => {
             {
               stg_kpi_raw_id: "00000000-0000-0000-0000-000000000370",
               payload_json: {
-                kpiCode: "GSM_ONAY",
+                kpiCode: "gsm_approval",
                 scopeType: "store",
                 sourceStoreId: "SM182",
                 periodType: "monthly",
@@ -219,7 +219,7 @@ describe("KpiMaterializationService", () => {
       }
 
       if (sql.includes("FROM ops.kpi_definition")) {
-        expect(params).toEqual(["GSM_ONAY"]);
+        expect(params).toEqual(["gsm_approval"]);
         return {
           rowCount: 1,
           rows: [{ kpi_id: "00000000-0000-0000-0000-000000000371" }],
@@ -320,13 +320,13 @@ describe("KpiMaterializationService", () => {
             {
               stg_kpi_raw_id: "00000000-0000-0000-0000-000000000372",
               payload_json: {
-                kpiCode: "GSM_ONAY",
+                kpiCode: "gsm_approval",
                 scopeType: "store",
                 sourceStoreId: "SM183",
                 periodStart: "2026-01-01",
                 periodEnd: "2026-01-31",
                 actualValue: 0,
-                validationError: "GSM_ONAY value is required",
+                validationError: "gsm_approval value is required",
               },
             },
           ],
@@ -350,7 +350,7 @@ describe("KpiMaterializationService", () => {
     expect(databaseService.query).toHaveBeenCalledWith(
       expect.stringContaining("normalized_status = 'validation_failed'"),
       [
-        "GSM_ONAY value is required",
+        "gsm_approval value is required",
         "00000000-0000-0000-0000-000000000372",
       ],
     );

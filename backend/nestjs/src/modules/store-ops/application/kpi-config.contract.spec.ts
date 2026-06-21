@@ -1,4 +1,5 @@
 import {
+  isGsmApprovalKpiCode,
   kpiOwnershipMatrix,
   storeKpiScoreProfile,
   type KpiScoreProfileMetric,
@@ -12,7 +13,7 @@ function assertStoreWeightTotal(metrics: Pick<KpiScoreProfileMetric, "weightPerc
 }
 
 describe("kpi config contract", () => {
-  it("keeps the default store score profile weights aligned with GSM_ONAY", () => {
+  it("keeps the default store score profile weights aligned with gsm_approval", () => {
     const weights = new Map(
       storeKpiScoreProfile.metrics.map((metric) => [metric.code, metric.weightPercent]),
     );
@@ -25,7 +26,7 @@ describe("kpi config contract", () => {
         ["UPT", 15],
         ["BM_CHECKLIST", 5],
         ["VM_CHECKLIST", 5],
-        ["GSM_ONAY", 5],
+        ["gsm_approval", 5],
       ]),
     );
     expect(() => assertStoreWeightTotal(storeKpiScoreProfile.metrics)).not.toThrow();
@@ -40,16 +41,23 @@ describe("kpi config contract", () => {
     ).toThrow("Store KPI score profile total must be 100");
   });
 
-  it("exposes GSM_ONAY to store-level operators without making it a task source", () => {
+  it("exposes gsm_approval to store-level operators without making it a task source", () => {
     expect(kpiOwnershipMatrix).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "GSM_ONAY",
+          code: "gsm_approval",
           visibleTo: ["DEPUTY_GM", "REGION_MANAGER", "STORE_MANAGER"],
           contributesTo: ["store"],
           taskCandidate: false,
         }),
       ]),
     );
+  });
+
+  it("recognizes legacy GSM approval codes for versioned snapshot compatibility", () => {
+    expect(isGsmApprovalKpiCode("gsm_approval")).toBe(true);
+    expect(isGsmApprovalKpiCode("GSM_ONAY")).toBe(true);
+    expect(isGsmApprovalKpiCode("gsm_onay")).toBe(true);
+    expect(isGsmApprovalKpiCode("CR")).toBe(false);
   });
 });

@@ -39,7 +39,7 @@ const metricColors: Record<string, string> = {
   UPT: '#6d4df7',
   ATV: '#f59e0b',
   CR: '#f43f72',
-  GSM_ONAY: '#18bfd0',
+  gsm_approval: '#18bfd0',
   BM_CHECKLIST: '#3878ff',
   VM_CHECKLIST: '#13a779',
 }
@@ -49,12 +49,12 @@ const metricIcons: Record<string, typeof Target> = {
   UPT: PackagePlus,
   ATV: Receipt,
   CR: MousePointerClick,
-  GSM_ONAY: BadgeCheck,
+  gsm_approval: BadgeCheck,
   BM_CHECKLIST: ClipboardCheck,
   VM_CHECKLIST: ClipboardX,
 }
 
-const storeMetricOrder = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'GSM_ONAY', 'BM_CHECKLIST', 'VM_CHECKLIST']
+const storeMetricOrder = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'gsm_approval', 'BM_CHECKLIST', 'VM_CHECKLIST']
 
 export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageModel }) {
   const [activeTab, setActiveTab] = useState<StoreKpiCommandTab>('store')

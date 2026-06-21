@@ -8,6 +8,10 @@ describe("KPI config versioning schema contract", () => {
     join(root, "db/migrations/026_kpi_config_versioning.sql"),
     "utf8",
   );
+  const gsmCanonicalMigrationSql = readFileSync(
+    join(root, "db/migrations/055_gsm_approval_canonical_code.sql"),
+    "utf8",
+  );
 
   it("defines immutable KPI config versions in ops", () => {
     expect(schemaSql).toContain("CREATE TABLE ops.kpi_config_version");
@@ -31,5 +35,13 @@ describe("KPI config versioning schema contract", () => {
     expect(migrationSql).toContain("INSERT INTO ops.kpi_config_version");
     expect(migrationSql).toContain("ALTER TABLE rpt.snapshot_run");
     expect(migrationSql).toContain("ADD COLUMN IF NOT EXISTS kpi_config_version_id UUID");
+  });
+
+  it("ships a canonical GSM approval KPI migration with legacy alias support", () => {
+    expect(gsmCanonicalMigrationSql).toContain("kpi_code = 'gsm_approval'");
+    expect(gsmCanonicalMigrationSql).toContain("kpi_code = 'GSM_ONAY'");
+    expect(gsmCanonicalMigrationSql).toContain("'aliases', jsonb_build_array('GSM_ONAY', 'gsm_onay')");
+    expect(gsmCanonicalMigrationSql).toContain("INSERT INTO ops.kpi_config_version");
+    expect(gsmCanonicalMigrationSql).toContain("change_summary @> '{\"added\":[\"gsm_approval\"]}'::jsonb");
   });
 });

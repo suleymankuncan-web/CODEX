@@ -167,7 +167,7 @@ describe("KpiImportNormalizationService", () => {
     ]);
   });
 
-  it("normalizes GSM Onay report rows as store-scoped ratio metrics", () => {
+  it("normalizes GSM Onayı report rows as store-scoped ratio metrics", () => {
     const rows = service.normalize({
       sourceSystem: "power_bi",
       sourceWindowStartedAt: "2026-01-01T00:00:00.000Z",
@@ -176,15 +176,15 @@ describe("KpiImportNormalizationService", () => {
         {
           "Mağaza Kodu": "SM182",
           "Mağaza Adı": "Balıkesir 10 Burda AVM",
-          "Gsm Onay %": 0.9120521172638436,
+          "% GSM Onayi": 0.9120521172638436,
         },
       ],
     });
 
     expect(rows).toEqual([
       expect.objectContaining({
-        kpiCode: "GSM_ONAY",
-        sourceMetricId: "GSM_ONAY",
+        kpiCode: "gsm_approval",
+        sourceMetricId: "gsm_approval",
         actualValue: 91.2052,
         achievementRate: 0.912052,
         scopeType: "store",
@@ -192,6 +192,33 @@ describe("KpiImportNormalizationService", () => {
         storeExternalRef: "SM182",
         periodStart: "2026-01-01",
         periodEnd: "2026-01-31",
+      }),
+    ]);
+  });
+
+  it("canonicalizes legacy GSM_ONAY KPI rows before materialization", () => {
+    const rows = service.normalize({
+      sourceSystem: "manual",
+      rows: [
+        {
+          kpiCode: "GSM_ONAY",
+          actualValue: "91,20",
+          storeExternalRef: "SM182",
+          periodType: "monthly",
+          periodStart: "2026-01-01",
+          periodEnd: "2026-01-31",
+        },
+      ],
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        kpiCode: "gsm_approval",
+        sourceMetricId: "GSM_ONAY",
+        actualValue: 91.2,
+        achievementRate: 0.912,
+        scopeType: "store",
+        storeExternalRef: "SM182",
       }),
     ]);
   });

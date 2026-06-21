@@ -599,15 +599,15 @@ describe("RankingService", () => {
     );
   });
 
-  it("accepts GSM_ONAY as a store ranking sort key and scores from achievement rate", async () => {
+  it("accepts gsm_approval as a store ranking sort key and scores from achievement rate", async () => {
     const baseStoreRow = createStoreRows(1)[0];
     const storeRows = [
       {
         ...baseStoreRow,
         store_id: "store-high-gsm",
         store_name: "High GSM Store",
-        kpi_code: "GSM_ONAY",
-        kpi_name: "GSM Onay",
+        kpi_code: "gsm_approval",
+        kpi_name: "GSM Onayı",
         actual_value: "91.2052",
         achievement_rate: "0.912052",
         target_value: null,
@@ -616,8 +616,8 @@ describe("RankingService", () => {
         ...baseStoreRow,
         store_id: "store-low-gsm",
         store_name: "Low GSM Store",
-        kpi_code: "GSM_ONAY",
-        kpi_name: "GSM Onay",
+        kpi_code: "gsm_approval",
+        kpi_name: "GSM Onayı",
         actual_value: "50",
         achievement_rate: "0.5",
         target_value: null,
@@ -637,7 +637,7 @@ describe("RankingService", () => {
       storeIds: [],
       assignedStoreIds: [],
       periodType: "monthly",
-      sortKey: "GSM_ONAY",
+      sortKey: "gsm_approval",
       sortDirection: "asc",
       limit: 2,
       offset: 0,
@@ -650,7 +650,7 @@ describe("RankingService", () => {
     expect(result.storeLeaderboard.items[1].metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "GSM_ONAY",
+          code: "gsm_approval",
           actualValue: 91.2052,
           contributionValue: 4.5603,
         }),

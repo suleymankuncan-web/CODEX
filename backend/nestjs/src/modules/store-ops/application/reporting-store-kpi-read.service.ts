@@ -1,5 +1,5 @@
 import { ForbiddenException } from "@nestjs/common";
-import { KpiScoreProfile } from "./kpi-config.contract";
+import { KpiScoreProfile, isGsmApprovalKpiCode } from "./kpi-config.contract";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { StoreScoreBlendService } from "./store-score-blend.service";
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
@@ -8,7 +8,7 @@ import { StoreScoreReportingReadRepository } from "../infrastructure/store-score
 
 const storeChecklistMetricCodes = new Set(["BM_CHECKLIST", "VM_CHECKLIST"]);
 
-type StoreKpiConfigProvider = () => Promise<{
+type StoreKpiConfigProvider = (input?: { snapshotRunId?: string }) => Promise<{
   storeProfile: KpiScoreProfile;
 }>;
 
@@ -210,11 +210,11 @@ export class ReportingStoreKpiReadService {
             ? Number(row.target_value)
             : null;
       const scoringActualValue =
-        metric.code === "GSM_ONAY" && importedAchievementRate !== null
+        isGsmApprovalKpiCode(metric.code) && importedAchievementRate !== null
           ? importedAchievementRate
           : actualValue;
       const scoringTargetValue =
-        metric.code === "GSM_ONAY" && importedAchievementRate !== null
+        isGsmApprovalKpiCode(metric.code) && importedAchievementRate !== null
           ? 1
           : targetValue;
       const benchmarkSource =
@@ -338,7 +338,7 @@ export class ReportingStoreKpiReadService {
     }
 
     const [config, kpiRows, bmChecklist, vmChecklist] = await Promise.all([
-      this.getKpiConfig(),
+      this.getKpiConfig({ snapshotRunId: input.snapshotRunId }),
       this.storeScoreReportingReadRepository.getStoreKpiSnapshotRowsForScore({
         snapshotRunId: input.snapshotRunId,
         storeId: input.storeId,

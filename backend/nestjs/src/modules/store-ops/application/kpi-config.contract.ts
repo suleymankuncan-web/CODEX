@@ -59,6 +59,23 @@ export const personnelTargetAchievementAliases = [
   "SALES_TARGET_ACHIEVEMENT",
 ];
 
+export const gsmApprovalKpiCode = "gsm_approval";
+export const legacyGsmOnayKpiCode = "GSM_ONAY";
+export const gsmApprovalKpiAliases = [legacyGsmOnayKpiCode, "gsm_onay"];
+
+export function isGsmApprovalKpiCode(code: string | null | undefined) {
+  const normalized = code?.trim();
+  if (!normalized) {
+    return false;
+  }
+
+  return (
+    normalized === gsmApprovalKpiCode ||
+    normalized === legacyGsmOnayKpiCode ||
+    normalized.toLowerCase() === "gsm_onay"
+  );
+}
+
 export function normalizeKpiScoreProfile(profile: KpiScoreProfile): KpiScoreProfile {
   if (profile.profileCode !== "personnel") {
     return profile;
@@ -150,14 +167,15 @@ export const storeKpiScoreProfile: KpiScoreProfile = {
         "Visual teams may produce the data, but the store manager carries the score outcome.",
     },
     {
-      code: "GSM_ONAY",
-      label: "GSM Onay",
+      code: gsmApprovalKpiCode,
+      label: "GSM Onayı",
       weightPercent: 5,
       ownerRole: "STORE_MANAGER",
       scoreBehavior: "warning_first",
       direction: "HIGHER_IS_BETTER",
       benchmarkSource: "TARGET",
       capRatio: 1,
+      aliases: gsmApprovalKpiAliases,
       notes: "Monthly store-level GSM approval contributor.",
     },
   ],
@@ -278,8 +296,8 @@ export const kpiOwnershipMatrix: KpiOwnershipMatrixRow[] = [
     taskCandidate: true,
   },
   {
-    code: "GSM_ONAY",
-    label: "GSM Onay",
+    code: gsmApprovalKpiCode,
+    label: "GSM Onayı",
     visibleTo: ["DEPUTY_GM", "REGION_MANAGER", "STORE_MANAGER"],
     operationalOwner: "STORE_MANAGER",
     contributesTo: ["store"],

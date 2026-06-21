@@ -1,9 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import {
-  GSM_ONAY_KPI_CODE,
+  GSM_APPROVAL_KPI_CODE,
+  LEGACY_GSM_ONAY_KPI_CODE,
+  normalizeGsmApprovalKpiCode,
   normalizeGsmOnayValue,
-} from "./gsm-onay-normalization";
+} from "./gsm-approval-normalization";
 
 type KpiImportSourceSystem = "nebim_v3" | "power_bi" | "manual" | "other";
 
@@ -68,8 +70,21 @@ const KPI_METRIC_CANDIDATES: MetricCandidate[] = [
     defaultScopeType: "store",
   },
   {
-    code: GSM_ONAY_KPI_CODE,
-    aliases: ["gsmOnay", "gsmOnayYuzde", "gsmApproval", "gsmApprovalRate", "Gsm Onay %"],
+    code: GSM_APPROVAL_KPI_CODE,
+    aliases: [
+      "GSM Onayı",
+      "% GSM Onayı",
+      "GSM Onayi",
+      "% GSM Onayi",
+      "GSM ONAYI",
+      "% GSM ONAYI",
+      "gsmOnay",
+      "gsmOnayYuzde",
+      "gsmApproval",
+      "gsmApprovalRate",
+      "Gsm Onay %",
+      LEGACY_GSM_ONAY_KPI_CODE,
+    ],
     defaultScopeType: "store",
   },
 ];
@@ -109,12 +124,12 @@ export class KpiImportNormalizationService {
     const periodStart = this.resolvePeriodStart(row, input);
     const periodEnd = this.resolvePeriodEnd(row, input, periodStart);
     const sourceMetricId = this.resolveMetricCode(row);
-    const kpiCode = this.resolveKpiCode(row, sourceMetricId);
+    const kpiCode = normalizeGsmApprovalKpiCode(this.resolveKpiCode(row, sourceMetricId));
     const actualValue = this.resolveNumericValue(row);
     const existingValidationError = this.getString(row, ["validationError"]);
     const existingAchievementRate = this.getNumber(row, ["achievementRate"]);
     const gsmValue =
-      kpiCode === GSM_ONAY_KPI_CODE
+      kpiCode === GSM_APPROVAL_KPI_CODE
         ? existingValidationError
           ? {
               actualValue,
@@ -173,7 +188,7 @@ export class KpiImportNormalizationService {
 
     return KPI_METRIC_CANDIDATES.flatMap((metric) => {
       const rawMetricValue = this.getValue(row, metric.aliases);
-      if (metric.code === GSM_ONAY_KPI_CODE && rawMetricValue !== undefined) {
+      if (metric.code === GSM_APPROVAL_KPI_CODE && rawMetricValue !== undefined) {
         const gsmValue = normalizeGsmOnayValue(rawMetricValue);
         const normalizedRow = {
           kpiCode: metric.code,
