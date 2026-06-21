@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-21T20:07:41.170Z",
+  "generatedAt": "2026-06-21T21:53:53.693Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -9,7 +9,7 @@
     "backendEndpointsWithoutFrontendCallCount": 36,
     "controllerCount": 22,
     "frontendApiCallCount": 150,
-    "frontendRouteCount": 55,
+    "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 150,
     "openApiEndpointCount": 186,
     "routeApiEdgeCount": 221,
@@ -45,21 +45,6 @@
       "source": {
         "file": "admin-web/src/app/auth-flow-shell.tsx",
         "line": 33
-      }
-    },
-    {
-      "id": "route:store:*",
-      "path": "*",
-      "surface": "store",
-      "domain": "*",
-      "kind": "redirect",
-      "component": "Navigate",
-      "componentFile": null,
-      "guard": "none",
-      "roles": [],
-      "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 230
       }
     },
     {
@@ -700,11 +685,13 @@
       "kind": "page",
       "component": "StoreHomePage",
       "componentFile": "admin-web/src/pages/StoreHomePage.tsx",
-      "guard": "none",
-      "roles": [],
+      "guard": "StoreRouteGuard",
+      "roles": [
+        "STORE_ACCESS"
+      ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 123
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 158
       }
     },
     {
@@ -720,8 +707,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 184
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 255
       }
     },
     {
@@ -738,8 +725,8 @@
         "VISUAL_MERCHANDISER"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 139
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 170
       }
     },
     {
@@ -755,8 +742,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 180
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 248
       }
     },
     {
@@ -773,8 +760,8 @@
         "VISUAL_MERCHANDISER"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 176
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 236
       }
     },
     {
@@ -785,11 +772,13 @@
       "kind": "page",
       "component": "StoreHomePage",
       "componentFile": "admin-web/src/pages/StoreHomePage.tsx",
-      "guard": "none",
-      "roles": [],
+      "guard": "StoreRouteGuard",
+      "roles": [
+        "STORE_ACCESS"
+      ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 131
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 157
       }
     },
     {
@@ -805,8 +794,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 194
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 266
       }
     },
     {
@@ -822,8 +811,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 160
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 195
       }
     },
     {
@@ -839,8 +828,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 164
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 206
       }
     },
     {
@@ -856,8 +845,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 168
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 217
       }
     },
     {
@@ -873,8 +862,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 172
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 225
       }
     },
     {
@@ -890,8 +879,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 226
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 313
       }
     },
     {
@@ -908,8 +897,8 @@
         "VISUAL_MERCHANDISER"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 204
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 277
       }
     },
     {
@@ -925,8 +914,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 208
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 289
       }
     },
     {
@@ -942,8 +931,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 150
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 184
       }
     },
     {
@@ -959,8 +948,8 @@
         "STORE_ACCESS"
       ],
       "source": {
-        "file": "admin-web/src/app/store-shell.tsx",
-        "line": 217
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 302
       }
     }
   ],

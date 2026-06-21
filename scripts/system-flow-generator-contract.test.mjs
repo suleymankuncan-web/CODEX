@@ -85,8 +85,16 @@ test('system flow route IDs and source lines keep route shells distinct', () => 
 
   for (const route of flow.frontendRoutes) {
     const sourceLine = readText(route.source.file).split(/\r?\n/)[route.source.line - 1] ?? ''
-    assert.match(sourceLine, /<Route(?:\s|\/|>|$)/, `${route.id} should point at a concrete Route tag`)
-    assert.doesNotMatch(sourceLine, /<Routes|<RouteTransitionFrame/, `${route.id} should not point at a route wrapper`)
+    if (route.source.file === 'admin-web/src/app/store-route-registry.ts') {
+      assert.match(
+        sourceLine,
+        /\b(?:routePath|aliases)\s*:/,
+        `${route.id} should point at a concrete store route registry entry`,
+      )
+    } else {
+      assert.match(sourceLine, /<Route(?:\s|\/|>|$)/, `${route.id} should point at a concrete Route tag`)
+      assert.doesNotMatch(sourceLine, /<Routes|<RouteTransitionFrame/, `${route.id} should not point at a route wrapper`)
+    }
   }
 })
 

@@ -1,13 +1,7 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { parseStoreRouteRegistryRoutes } from './system-flow-store-route-registry.mjs'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const defaultRootDir = path.resolve(scriptDir, '..')
@@ -652,6 +646,7 @@ function parseFrontendRoutes(rootDir, routeLoaders) {
   const routes = []
 
   for (const shell of shells) {
+    if (shell.surface === 'store') { routes.push(...parseStoreRouteRegistryRoutes(rootDir)); continue }
     const text = readFileSync(path.join(rootDir, shell.file), 'utf8')
     const shellLocalComponents = parseShellLocalComponentImports(rootDir, shell.file, text)
     for (const block of collectRouteBlocks(text)) {
