@@ -208,10 +208,14 @@ test('store workforce region command layout stays aligned on compact desktop', a
     const root = document.documentElement.getBoundingClientRect()
     const icon = document.querySelector('.swc-metric-icon')?.getBoundingClientRect()
     const svg = document.querySelector('.swc-metric-icon svg')?.getBoundingClientRect()
+    const row = document.querySelector('.swc-store-row')?.getBoundingClientRect()
+    const action = document.querySelector('.swc-row-action')?.getBoundingClientRect()
 
     return {
       hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       ledgerFits: ledger ? ledger.left >= root.left && ledger.right <= root.right : false,
+      rowActionFits: row && action ? action.left >= row.left && action.right <= row.right : false,
+      rowActionFitsViewport: action ? action.left >= root.left && action.right <= root.right : false,
       metricIconCentered: icon && svg
         ? Math.abs((icon.left + icon.width / 2) - (svg.left + svg.width / 2)) <= 1
           && Math.abs((icon.top + icon.height / 2) - (svg.top + svg.height / 2)) <= 1
@@ -220,6 +224,8 @@ test('store workforce region command layout stays aligned on compact desktop', a
   })
   expect(layout.hasHorizontalOverflow).toBe(false)
   expect(layout.ledgerFits).toBe(true)
+  expect(layout.rowActionFits).toBe(true)
+  expect(layout.rowActionFitsViewport).toBe(true)
   expect(layout.metricIconCentered).toBe(true)
 
   await page

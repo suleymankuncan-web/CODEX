@@ -40,7 +40,6 @@ import {
   formatAchievementState,
   formatIncentiveMoneyValue,
   formatMoneyDisplayValue,
-  formatMoneyEditValue,
   formatSalesMoneyValue,
   formatTargetMoneyValue,
   getFinalChange,
@@ -216,7 +215,7 @@ function IncentiveCorrectionSheetForm(input: {
                   id="region-final-incentive"
                   inputMode="decimal"
                   onBlur={() => setFinalAmount(formatMoneyDisplayValue(finalAmount))}
-                  onChange={(event) => setFinalAmount(formatMoneyEditValue(event.target.value))}
+                  onChange={(event) => setFinalAmount(event.target.value)}
                   onFocus={(event) => {
                     const inputElement = event.currentTarget
                     setFinalAmount(toMoneyEditValue(finalAmount))
