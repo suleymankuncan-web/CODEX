@@ -6,6 +6,10 @@
   align-items: start;
 }
 
+.swc-content-grid > * {
+  min-width: 0;
+}
+
 .swc-ledger,
 .swc-insight-panel,
 .swc-dossier-modal {
@@ -17,12 +21,13 @@
 .swc-ledger {
   border-radius: 22px;
   overflow: hidden;
+  min-width: 0;
 }
 
 .swc-ledger-head,
 .swc-store-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) 82px 78px 70px 100px 84px 76px;
+  grid-template-columns: minmax(180px, 1fr) minmax(72px, 0.42fr) minmax(92px, 0.5fr) minmax(82px, 0.42fr) minmax(104px, 0.5fr) minmax(82px, 0.42fr) minmax(96px, auto);
   align-items: center;
   gap: 10px;
 }
@@ -499,5 +504,34 @@
   margin-top: 8px;
   color: var(--swc-muted);
   font-size: 13px;
+}
+
+@media (max-width: 1180px) and (min-width: 861px) {
+  .swc-ledger-head,
+  .swc-store-row {
+    grid-template-columns: minmax(150px, 1fr) 54px 66px 64px 78px 72px 68px;
+    gap: 6px;
+  }
+
+  .swc-ledger-head {
+    padding: 0 12px;
+  }
+
+  .swc-store-row {
+    padding: 0 12px;
+  }
+
+  .swc-column-filter-trigger {
+    padding: 0 4px;
+  }
+
+  .swc-row-action[data-slot="button"] {
+    padding: 0 6px;
+    font-size: 11px;
+  }
+
+  .swc-turnover-cell {
+    width: 56px;
+  }
 }
 

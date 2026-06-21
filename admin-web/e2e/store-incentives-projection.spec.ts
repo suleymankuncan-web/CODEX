@@ -141,8 +141,11 @@ test('region manager saves a final amount correction from the personnel sheet', 
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await expect(page.getByRole('heading', { name: 'Store Personnel' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Hakediş özeti' })).toBeVisible()
-  await page.getByLabel('Final prim tutarı').fill('17000.25')
-  await expect(page.getByLabel('Final prim tutarı')).toHaveValue('17.000,25')
+  const finalAmountInput = page.getByLabel('Final prim tutarı')
+  await finalAmountInput.fill('17000.25')
+  await expect(finalAmountInput).toHaveValue('17000.25')
+  await finalAmountInput.blur()
+  await expect(finalAmountInput).toHaveValue('17.000,25 TL')
   await page.getByLabel('Düzeltme notu').fill('Bölge kontrolü sonrası final prim düzeltmesi')
   await page.getByRole('button', { name: 'Kaydet' }).click()
 
@@ -166,6 +169,31 @@ test('region manager sees saved draft correction amount in totals and sheet inpu
   await expect(page.getByText('63.500,25 TL').first()).toBeVisible()
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await expect(page.getByLabel('Final prim tutarı')).toHaveValue('17.000,25')
+})
+
+test('region manager can type a large final correction amount without live grouping corruption', async ({ page }) => {
+  const requests: unknown[] = []
+  await routeAuthSession(page, createRegionManagerSession())
+  await routeStoreIncentives(page, regionAllReviewedFixture)
+  await routeRegionIncentiveMutations(page, { correctionRequests: requests })
+
+  await page.goto('/store/incentives')
+  await page.getByRole('button', { name: 'Store Personnel' }).click()
+
+  const finalAmountInput = page.getByLabel('Final prim tutarı')
+  await finalAmountInput.fill('1500000')
+  await expect(finalAmountInput).toHaveValue('1500000')
+  await expect(finalAmountInput).not.toHaveValue('1.500000')
+  await finalAmountInput.blur()
+  await expect(finalAmountInput).toHaveValue('1.500.000,00 TL')
+
+  await page.getByLabel('Düzeltme notu').fill('Bölge kontrolü sonrası final prim düzeltmesi')
+  await page.getByRole('button', { name: 'Kaydet' }).click()
+
+  await expect.poll(() => requests.length).toBe(1)
+  expect(requests[0]).toMatchObject({
+    finalAmount: '1500000.00',
+  })
 })
 
 test('region manager cannot save an invalid final correction amount', async ({ page }) => {

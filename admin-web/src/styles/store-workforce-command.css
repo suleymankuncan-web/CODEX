@@ -198,12 +198,15 @@
 
 .swc-row-action[data-slot="button"] {
   min-height: 34px;
+  width: 100%;
+  min-width: 0;
   justify-self: center;
   padding: 0 9px;
   border-color: rgba(103, 66, 232, 0.22);
   color: var(--swc-plum);
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .swc-outline-button[data-slot="button"]:active,
