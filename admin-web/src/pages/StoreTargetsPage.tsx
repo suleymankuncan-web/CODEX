@@ -44,6 +44,7 @@ import { getErrorMessage } from '../lib/format'
 import {
   TargetApprovalQueue,
   TargetApprovedRequestsPanel,
+  TargetCoveragePanel,
   TargetDistributionForm,
   TargetRevisionPanel,
 } from './store-targets-contract-sections'
@@ -51,7 +52,7 @@ import {
   createAvailableTargetTabs,
   createEmptyCoverageSummary,
   createStoreOptions,
-  createStoreRequestSummary,
+  createStoreTargetReferenceSummary,
   formatCoverageRate,
   formatMonthLabel,
   getCurrentMonthInput,
@@ -310,10 +311,9 @@ export function StoreTargetsPage(input: {
     coverageRows,
     targetRequests,
   })
-  const storeRequestSummary = createStoreRequestSummary({
-    requestMonthStart: activeRequestMonthStart,
+  const storeTargetReferenceSummary = createStoreTargetReferenceSummary({
+    coverageRows,
     storeOptions,
-    targetRequests,
   })
   const activeAllocations = (personnelQuery.data?.items ?? []).map((person) => {
     const draft = allocationDrafts[person.employeeId]
@@ -479,15 +479,15 @@ export function StoreTargetsPage(input: {
           <TargetMetricTile
             icon={<Store data-icon="inline-start" />}
             label={copy.storeMetric}
-            value={formatCoverageRate(storeRequestSummary.coverageRate)}
-            note={`${storeRequestSummary.approvedStores} / ${storeRequestSummary.totalStores} ${copy.storesWithTargets.toLowerCase()}`}
+            value={formatCoverageRate(storeTargetReferenceSummary.coverageRate)}
+            note={`${storeTargetReferenceSummary.coveredStores} / ${storeTargetReferenceSummary.totalStores} ${copy.storesWithTargets.toLowerCase()}`}
             tone="cyan"
             testId="store-targets-store-metric"
           />
           <TargetMetricTile
             icon={<Clock3 data-icon="inline-start" />}
             label={copy.decisionMetric}
-            value={String(storeRequestSummary.pendingStores)}
+            value={String(storeTargetReferenceSummary.pendingStores)}
             note={copy.pendingStoreNote}
             tone="amber"
             testId="store-targets-decision-metric"
@@ -495,7 +495,7 @@ export function StoreTargetsPage(input: {
           <TargetMetricTile
             icon={<AlertTriangle data-icon="inline-start" />}
             label={copy.noRequestMetric}
-            value={String(storeRequestSummary.missingStores)}
+            value={String(storeTargetReferenceSummary.missingStores)}
             note={copy.storesWithoutTargets}
             tone="rose"
             testId="store-targets-no-request-metric"
@@ -696,11 +696,21 @@ export function StoreTargetsPage(input: {
       ) : null}
 
       {selectedTab === 'approved' ? (
-        <TargetApprovedRequestsPanel
-          approvedRequests={approvedRequests}
-          copy={copy}
-          locale={locale}
-        />
+        <div className="tw:flex tw:flex-col tw:gap-3">
+          {coverageRows.length > 0 ? (
+            <TargetCoveragePanel
+              copy={copy}
+              coverageRows={coverageRows}
+              locale={locale}
+              summary={coverageSummary}
+            />
+          ) : null}
+          <TargetApprovedRequestsPanel
+            approvedRequests={approvedRequests}
+            copy={copy}
+            locale={locale}
+          />
+        </div>
       ) : null}
 
       {formNotice ? (

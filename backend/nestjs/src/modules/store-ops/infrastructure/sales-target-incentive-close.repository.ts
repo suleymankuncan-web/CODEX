@@ -125,20 +125,33 @@ export class SalesTargetIncentiveCloseRepository {
     stores: SalesTargetIncentiveProjectionStore[];
   }): Promise<SalesTargetIncentiveCloseRunSummary> {
     return this.databaseService.withTransaction(async (client) => {
+      const canonicalStoreIds = uniqueStrings(
+        input.stores.map((store) => store.storeId),
+      );
+      await this.lockCloseRun(client, {
+        companyId: input.companyId,
+        periodKey: input.periodKey,
+      });
+      const existingCloseRun = await this.findSucceededCloseRunByStoreSet(client, {
+        companyId: input.companyId,
+        periodKey: input.periodKey,
+        storeIds: canonicalStoreIds,
+      });
+      if (existingCloseRun) {
+        return existingCloseRun;
+      }
+
       const ruleVersion = await this.resolveRuleVersion(client);
       const rateBrackets = await this.listRateBrackets(client, ruleVersion.rule_version_id);
       const sourceImportBatchIds = uniqueStrings(
         input.stores.flatMap((store) => collectStoreSourceImportBatchIds(store)),
       );
 
-      await this.lockCloseRun(client, {
-        companyId: input.companyId,
-        periodKey: input.periodKey,
-      });
       const closeRunId = await this.insertCloseRun(client, {
         ...input,
         ruleVersionId: ruleVersion.rule_version_id,
         sourceImportBatchIds,
+        canonicalStoreIds,
       });
 
       await this.insertRuleSnapshot(client, {
@@ -273,6 +286,7 @@ export class SalesTargetIncentiveCloseRepository {
       actorUserId: string;
       ruleVersionId: string;
       sourceImportBatchIds: string[];
+      canonicalStoreIds: string[];
       stores: SalesTargetIncentiveProjectionStore[];
     },
   ) {
@@ -319,13 +333,76 @@ export class SalesTargetIncentiveCloseRepository {
         input.actorUserId,
         input.sourceImportBatchIds,
         toJson({
-          storeIds: input.stores.map((store) => store.storeId),
+          sourceType: "admin_period_close",
+          sourceMode: "historical_imported_backfill",
+          actorUserId: input.actorUserId,
+          periodKey: input.periodKey,
+          affectedStoreCount: input.canonicalStoreIds.length,
+          closedAt: new Date().toISOString(),
+          storeIds: input.canonicalStoreIds,
           sourceImportBatchIds: input.sourceImportBatchIds,
         }),
       ],
     );
 
     return result.rows[0].close_run_id;
+  }
+
+  private async findSucceededCloseRunByStoreSet(
+    client: CloseClient,
+    input: {
+      companyId: string;
+      periodKey: string;
+      storeIds: string[];
+    },
+  ): Promise<SalesTargetIncentiveCloseRunSummary | null> {
+    const result = await client.query<CloseRunDbRow>(
+      `
+        SELECT
+          run.sales_target_incentive_close_run_id::text AS close_run_id,
+          run.company_id::text AS company_id,
+          run.period_key::text AS period_key,
+          run.period_start::text AS period_start,
+          run.period_end::text AS period_end,
+          run.close_cutoff_at::text AS close_cutoff_at,
+          run.status,
+          run.started_at::text AS started_at,
+          run.completed_at::text AS completed_at,
+          run.failed_reason,
+          ARRAY(
+            SELECT source_batch_id::text
+            FROM unnest(run.source_import_batch_ids) AS source_batch_id
+          ) AS source_import_batch_ids,
+          (
+            SELECT COUNT(*)::int
+            FROM rpt.sales_target_incentive_final_snapshot snapshot
+            WHERE snapshot.close_run_id = run.sales_target_incentive_close_run_id
+          ) AS final_snapshot_count,
+          (
+            SELECT COUNT(*)::int
+            FROM rpt.sales_target_incentive_final_row row
+            INNER JOIN rpt.sales_target_incentive_final_snapshot snapshot
+              ON snapshot.sales_target_incentive_final_snapshot_id = row.final_snapshot_id
+            WHERE snapshot.close_run_id = run.sales_target_incentive_close_run_id
+          ) AS final_row_count
+        FROM ops.sales_target_incentive_close_run run
+        WHERE run.company_id = $1::uuid
+          AND run.period_key = $2
+          AND run.status = 'succeeded'
+          AND ARRAY(
+            SELECT store_id.value
+            FROM jsonb_array_elements_text(
+              COALESCE(run.source_evidence -> 'storeIds', '[]'::jsonb)
+            ) AS store_id(value)
+            ORDER BY store_id.value
+          ) = $3::text[]
+        ORDER BY run.close_cutoff_at DESC, run.created_at DESC
+        LIMIT 1
+      `,
+      [input.companyId, input.periodKey, input.storeIds],
+    );
+
+    return result.rows[0] ? mapCloseRunRow(result.rows[0]) : null;
   }
 
   private async insertRuleSnapshot(
@@ -752,7 +829,7 @@ function collectParticipantSourceImportBatchIds(
 function uniqueStrings(values: Array<string | null | undefined>) {
   return Array.from(
     new Set(values.filter((value): value is string => Boolean(value))),
-  );
+  ).sort((left, right) => left.localeCompare(right));
 }
 
 function mapCloseRunRow(row: CloseRunDbRow): SalesTargetIncentiveCloseRunSummary {
