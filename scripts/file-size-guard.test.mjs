@@ -8,7 +8,7 @@ const trackedExtensions = new Set(['.css', '.js', '.jsx', '.mjs', '.ts', '.tsx']
 const generatedPrefixes = ['admin-web/src/generated/']
 
 const oversizedBaseline = new Map([
-  ['backend/nestjs/src/openapi/generate-openapi.ts', 5169],
+  ['backend/nestjs/src/openapi/generate-openapi.ts', 5167],
   ['admin-web/src/pages/MasterDataBootstrapPage.tsx', 1568],
   ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1265],
   ['scripts/generate-system-flow.mjs', 1438],

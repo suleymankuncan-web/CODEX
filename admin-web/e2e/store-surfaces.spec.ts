@@ -4292,6 +4292,7 @@ function createStoreAuthSession(input: {
   scopeRegionIds?: string[]
   actionStoreIds: string[]
   legacyAssignedStoreIds: string[]
+  assignedStoreTypes?: Array<'company' | 'franchise' | 'operator'>
 }) {
   return {
     ...authSessionFixture,
@@ -4310,6 +4311,7 @@ function createStoreAuthSession(input: {
       },
       actionScope: {
         assignedStoreIds: input.actionStoreIds,
+        assignedStoreTypes: input.assignedStoreTypes ?? [],
       },
       assignedStoreIds: input.legacyAssignedStoreIds,
     },
@@ -4722,6 +4724,7 @@ const authSessionFixture = {
     },
     actionScope: {
       assignedStoreIds: [demoStoreId],
+      assignedStoreTypes: ['company'],
     },
     assignedStoreIds: [demoStoreId],
   },

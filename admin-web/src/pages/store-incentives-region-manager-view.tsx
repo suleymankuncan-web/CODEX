@@ -134,6 +134,8 @@ export function RegionManagerIncentivesView(input: {
       Error,
       StoreSalesTargetIncentiveSubmitPackageInput
     >
+    pendingReviewStoreIds: ReadonlySet<string>
+    pendingCorrectionKeys: ReadonlySet<string>
   }
 }) {
   const { t } = useLocalization()
@@ -335,11 +337,9 @@ export function RegionManagerIncentivesView(input: {
                 }
                 onSelectRow={(row) => setSelectedRow({ projection, row })}
                 projection={projection}
+                pendingCorrectionKeys={input.mutationState.pendingCorrectionKeys}
                 reviewDisabled={workflowLocked || !canReviewProjection(projection)}
-                reviewPending={
-                  input.mutationState.reviewMutation.isPending &&
-                  input.mutationState.reviewMutation.variables?.storeId === projection.storeId
-                }
+                reviewPending={input.mutationState.pendingReviewStoreIds.has(projection.storeId)}
               />
             ))}
           </Accordion>
@@ -447,6 +447,7 @@ function RegionStoreCard(input: {
   locale: ReturnType<typeof useLocalization>['locale']
   reviewDisabled: boolean
   reviewPending: boolean
+  pendingCorrectionKeys: ReadonlySet<string>
   onSelectRow: (row: SalesTargetIncentiveRow) => void
   onReviewChange: (status: 'pending_review' | 'reviewed') => void
 }) {
@@ -568,6 +569,8 @@ function RegionStoreCard(input: {
         <RegionPersonnelTable
           locale={input.locale}
           onSelectRow={input.onSelectRow}
+          pendingCorrectionKeys={input.pendingCorrectionKeys}
+          projection={input.projection}
           rows={rows}
         />
       </AccordionContent>
@@ -586,7 +589,9 @@ function StoreKv(input: { label: string; value: string }) {
 
 function RegionPersonnelTable(input: {
   rows: SalesTargetIncentiveRow[]
+  projection: SalesTargetIncentiveProjection
   locale: ReturnType<typeof useLocalization>['locale']
+  pendingCorrectionKeys: ReadonlySet<string>
   onSelectRow: (row: SalesTargetIncentiveRow) => void
 }) {
   const { t } = useLocalization()
@@ -608,7 +613,7 @@ function RegionPersonnelTable(input: {
               <TableHead>{t('storeIncentives.regionManagerRateColumn')}</TableHead>
               <TableHead>{t('storeIncentives.regionManagerCalculatedColumn')}</TableHead>
               <TableHead>{t('storeIncentives.regionManagerFinalColumn')}</TableHead>
-              <TableHead>Değişim</TableHead>
+              <TableHead>{t('storeIncentives.regionManagerChangeColumn')}</TableHead>
               <TableHead>{t('storeIncentives.regionManagerNoteColumn')}</TableHead>
             </TableRow>
           </TableHeader>
@@ -636,7 +641,11 @@ function RegionPersonnelTable(input: {
                   <ChangeCell locale={input.locale} row={row} />
                 </TableCell>
                 <TableCell>
-                  {row.regionCorrection ? (
+                  {input.pendingCorrectionKeys.has(getPendingCorrectionKey(input.projection, row)) ? (
+                    <StoreStatusBadge tone="warning">
+                      {t('storeIncentives.regionManagerReviewSaving')}
+                    </StoreStatusBadge>
+                  ) : row.regionCorrection ? (
                     <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
                       {getCorrectionLabel(row.regionCorrection)}
                     </StoreStatusBadge>
@@ -653,6 +662,8 @@ function RegionPersonnelTable(input: {
         <RegionPersonnelCards
           locale={input.locale}
           onSelectRow={input.onSelectRow}
+          pendingCorrectionKeys={input.pendingCorrectionKeys}
+          projection={input.projection}
           rows={input.rows}
         />
       </div>
@@ -688,9 +699,13 @@ function ChangeCell(input: {
 
 function RegionPersonnelCards(input: {
   rows: SalesTargetIncentiveRow[]
+  projection: SalesTargetIncentiveProjection
   locale: ReturnType<typeof useLocalization>['locale']
+  pendingCorrectionKeys: ReadonlySet<string>
   onSelectRow: (row: SalesTargetIncentiveRow) => void
 }) {
+  const { t } = useLocalization()
+
   return (
     <div className="tw:flex tw:flex-col tw:gap-2">
       {input.rows.map((row) => (
@@ -711,7 +726,11 @@ function RegionPersonnelCards(input: {
             <ChangeCell locale={input.locale} row={row} />
           </span>
           <span className="tw:mt-2 tw:flex tw:justify-end">
-            {row.regionCorrection ? (
+            {input.pendingCorrectionKeys.has(getPendingCorrectionKey(input.projection, row)) ? (
+              <StoreStatusBadge tone="warning">
+                {t('storeIncentives.regionManagerReviewSaving')}
+              </StoreStatusBadge>
+            ) : row.regionCorrection ? (
                 <StoreStatusBadge tone={getCorrectionTone(row.regionCorrection)}>
                   {getCorrectionLabel(row.regionCorrection)}
                 </StoreStatusBadge>
@@ -721,6 +740,13 @@ function RegionPersonnelCards(input: {
       ))}
     </div>
   )
+}
+
+function getPendingCorrectionKey(
+  projection: SalesTargetIncentiveProjection,
+  row: SalesTargetIncentiveRow,
+) {
+  return `${projection.storeId}:${row.employeeId}:${row.participantType}`
 }
 
 function DialogAmountLine(input: { label: string; value: string }) {

@@ -15,19 +15,12 @@ import {
   UserRound,
   UsersRound,
 } from 'lucide-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { NavLink } from 'react-router-dom'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
-import {
-  getStoreSalesTargetIncentives,
-  storeSalesTargetIncentivesQueryKey,
-} from '../features/incentives/api'
-import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import { useLocalization } from '../features/localization/useLocalization'
-import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
-  canOpenStoreIncentives,
   getRoleAwareStoreNavigation,
   getStorePersonaLabelKey,
   resolveStorePersona,
@@ -66,20 +59,7 @@ export function StoreSidebar(input: {
   const queryClient = useQueryClient()
   const persona = resolveStorePersona(input.authSummary)
   const personaLabel = t(getStorePersonaLabelKey(persona))
-  const incentivesQueryIdentity = getSalesTargetIncentiveQueryIdentity(input.authSummary)
-  const incentivesNavQuery = useQuery({
-    queryKey: storeSalesTargetIncentivesQueryKey(undefined, incentivesQueryIdentity),
-    queryFn: () => getStoreSalesTargetIncentives(),
-    enabled: canOpenStoreIncentives(input.authSummary),
-    ...transientQueryRetryOptions,
-  })
-  const hasStoreIncentiveRows = (incentivesNavQuery.data?.data.projections.length ?? 0) > 0
-  const shouldShowIncentivesNav =
-    canOpenStoreIncentives(input.authSummary) &&
-    (incentivesQueryIdentity.roleScope === 'region' || hasStoreIncentiveRows)
-  const navItems = getRoleAwareStoreNavigation(input.authSummary).filter((item) =>
-    item.id === 'incentives' ? shouldShowIncentivesNav : true,
-  )
+  const navItems = getRoleAwareStoreNavigation(input.authSummary)
   const identityLabel = getIdentityLabel(input.authSummary)
   const assignedStoreCount = input.authSummary?.scopeSummary.assignedStoreCount ?? 0
   const scopedStoreCount =

@@ -14985,13 +14985,25 @@
               "actionScope": {
                 "type": "object",
                 "required": [
-                  "assignedStoreIds"
+                  "assignedStoreIds",
+                  "assignedStoreTypes"
                 ],
                 "properties": {
                   "assignedStoreIds": {
                     "type": "array",
                     "items": {
                       "type": "string"
+                    }
+                  },
+                  "assignedStoreTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "company",
+                        "franchise",
+                        "operator"
+                      ]
                     }
                   }
                 }

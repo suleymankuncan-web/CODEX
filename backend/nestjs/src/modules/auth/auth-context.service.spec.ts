@@ -8,7 +8,7 @@ describe("AuthContextService", () => {
     roleAssignments?: Awaited<
       ReturnType<AuthAuthorizationRepository["getActiveRoleAssignments"]>
     >;
-    actionStoreAssignments?: Array<{ store_id: string }>;
+    actionStoreAssignments?: Array<{ store_id: string; store_type?: string | null }>;
     mappedProviderUser?: {
       user_id: string;
       employee_id: string | null;
@@ -256,6 +256,52 @@ describe("AuthContextService", () => {
       },
       assignedStoreIds: ["store-1", "store-2"],
     });
+  });
+
+  it("exposes assigned store types for shell-level company store eligibility", async () => {
+    const service = new AuthContextService(
+      { authMode: "mock", allowMockAuth: true } as never,
+      buildAuthorizationRepository({
+        roleAssignments: [
+          {
+            role_code: "STORE_MANAGER",
+            scope_type: "store",
+            company_id: "company-1",
+            region_id: "region-1",
+            store_id: "store-1",
+            store_type: "company",
+          },
+        ],
+        actionStoreAssignments: [
+          { store_id: "store-1", store_type: "company" },
+          { store_id: "store-2", store_type: "franchise" },
+        ],
+      }),
+      {
+        resolveUser: jest.fn(async () => ({
+          userId: "user-1",
+          roleCodes: ["STORE_MANAGER"],
+          readScope: {
+            companyIds: [],
+            regionIds: [],
+            storeIds: [],
+          },
+          actionScope: {
+            assignedStoreIds: [],
+          },
+        })),
+      } as never,
+      { resolveUser: jest.fn() } as never,
+    );
+
+    const user = await service.resolveUser({
+      headers: {
+        "x-user-id": "user-1",
+      },
+    });
+
+    expect(user?.actionScope.assignedStoreTypes).toEqual(["company", "franchise"]);
+    expect(user?.assignedStoreTypes).toEqual(["company", "franchise"]);
   });
 
   it("maps JWT subject to internal user account before DB role lookup", async () => {

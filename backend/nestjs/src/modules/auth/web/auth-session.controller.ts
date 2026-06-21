@@ -161,6 +161,7 @@ export class AuthSessionController {
         },
         actionScope: {
           assignedStoreIds: user.actionScope.assignedStoreIds,
+          assignedStoreTypes: user.actionScope.assignedStoreTypes ?? [],
         },
         assignedStoreIds: user.assignedStoreIds,
       },

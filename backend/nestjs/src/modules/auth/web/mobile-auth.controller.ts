@@ -88,6 +88,7 @@ function mapAuthenticatedUser(user: AuthenticatedUser) {
     },
     actionScope: {
       assignedStoreIds: user.actionScope.assignedStoreIds,
+      assignedStoreTypes: user.actionScope.assignedStoreTypes ?? [],
     },
     assignedStoreIds: user.assignedStoreIds,
   };

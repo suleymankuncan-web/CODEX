@@ -23,6 +23,7 @@ function createUser() {
     },
     actionScope: {
       assignedStoreIds: ["store-1"],
+      assignedStoreTypes: ["company"],
     },
   });
 }
@@ -47,7 +48,9 @@ describe("BrowserSessionService", () => {
       },
       actionScope: {
         assignedStoreIds: ["store-1"],
+        assignedStoreTypes: ["company"],
       },
+      assignedStoreTypes: ["company"],
     });
     expect(service.verifyCsrfToken(issued.cookieValue, issued.csrfNonce)).toBe(true);
   });

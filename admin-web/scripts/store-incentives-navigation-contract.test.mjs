@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict'
+import { readFile } from 'node:fs/promises'
+import { test } from 'node:test'
+
+const sidebarSource = await readFile(
+  new URL('../src/app/store-sidebar.tsx', import.meta.url),
+  'utf8',
+)
+const navigationSource = await readFile(
+  new URL('../src/app/store-navigation.ts', import.meta.url),
+  'utf8',
+)
+
+test('store incentives sidebar visibility is not gated by incentive query data', () => {
+  assert.doesNotMatch(sidebarSource, /getStoreSalesTargetIncentives/u)
+  assert.doesNotMatch(sidebarSource, /storeSalesTargetIncentivesQueryKey/u)
+  assert.doesNotMatch(sidebarSource, /shouldShowIncentivesNav/u)
+  assert.doesNotMatch(sidebarSource, /hasStoreIncentiveRows/u)
+})
+
+test('store incentives route visibility uses role and company store eligibility', () => {
+  assert.match(navigationSource, /function canOpenStoreIncentives/u)
+  assert.match(navigationSource, /canOpenCompanyStoreIncentives\(authSummary\)/u)
+  assert.match(navigationSource, /hasAnyRole\(authSummary, \['REGION_MANAGER'\]\)/u)
+  assert.match(navigationSource, /getAssignedStoreTypes\(authSummary\)\.includes\('company'\)/u)
+})

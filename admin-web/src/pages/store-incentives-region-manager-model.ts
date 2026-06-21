@@ -7,6 +7,7 @@ import type {
 } from '../features/incentives/api'
 import { getPrimaryEarnedAmount } from './store-incentives-model'
 import type { StoreSurfaceTone } from './store-surface-primitives'
+export { normalizeMoneyInput } from './store-incentives-money-input'
 
 export type StoreStatusFilter = 'all' | 'pending_review' | 'reviewed' | 'earning' | 'no_earning' | 'corrected'
 
@@ -152,15 +153,6 @@ export function getCorrectionTone(correction: SalesTargetIncentiveRegionCorrecti
   return 'warning'
 }
 
-export function normalizeMoneyInput(value: string) {
-  const normalized = normalizeLocalizedMoneyText(value)
-  if (!normalized) return null
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) return null
-  const parsed = Number(normalized)
-  if (!Number.isFinite(parsed)) return null
-  return parsed.toFixed(2)
-}
-
 export function getRegionEffectiveEarnedAmount(row: SalesTargetIncentiveRow | null) {
   if (row?.regionCorrection && row.regionCorrection.status !== 'voided') {
     return row.regionCorrection.finalAmount
@@ -187,34 +179,6 @@ export function sumMoney(values: Array<string | null | undefined>) {
 function isPositiveMoney(value: string | null | undefined) {
   if (!value) return false
   return decimalStringToCents(value) > 0n
-}
-
-function normalizeLocalizedMoneyText(value: string) {
-  const compact = value.trim().replace(/\s+/g, '')
-  if (!compact) return ''
-
-  const lastDot = compact.lastIndexOf('.')
-  const lastComma = compact.lastIndexOf(',')
-
-  if (lastDot >= 0 && lastComma >= 0) {
-    const decimalSeparator = lastDot > lastComma ? '.' : ','
-    const groupingSeparator = decimalSeparator === '.' ? ',' : '.'
-    return compact.split(groupingSeparator).join('').replace(decimalSeparator, '.')
-  }
-
-  if (lastComma >= 0) {
-    return compact.replace(/\./g, '').replace(',', '.')
-  }
-
-  if (lastDot >= 0) {
-    if (/^-?\d{1,3}(?:\.\d{3})+$/.test(compact)) {
-      return compact.replace(/\./g, '')
-    }
-
-    return compact
-  }
-
-  return compact
 }
 
 function decimalStringToCents(value: string) {
