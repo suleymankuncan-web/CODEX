@@ -5,6 +5,22 @@ import { DatabaseService } from "../../../shared/database/database.service";
 export class StoreScoreReportingReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  async getSnapshotRunKpiConfigVersionId(input: { snapshotRunId: string }) {
+    const result = await this.databaseService.query<{
+      kpi_config_version_id: string | null;
+    }>(
+      `
+        SELECT kpi_config_version_id::text AS kpi_config_version_id
+        FROM rpt.snapshot_run
+        WHERE snapshot_run_id = $1::uuid
+        LIMIT 1
+      `,
+      [input.snapshotRunId],
+    );
+
+    return result.rows[0]?.kpi_config_version_id ?? null;
+  }
+
   async getStoreKpiSnapshotRowsForScore(input: {
     snapshotRunId: string;
     storeId: string;

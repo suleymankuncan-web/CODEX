@@ -1,4 +1,19 @@
-export const GSM_ONAY_KPI_CODE = "GSM_ONAY";
+export const GSM_APPROVAL_KPI_CODE = "gsm_approval";
+export const LEGACY_GSM_ONAY_KPI_CODE = "GSM_ONAY";
+
+export function normalizeGsmApprovalKpiCode(value: unknown): string {
+  const rawCode = String(value ?? "").trim();
+  const normalizedCode = rawCode
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+
+  return normalizedCode === "gsm_onay" || normalizedCode === GSM_APPROVAL_KPI_CODE
+    ? GSM_APPROVAL_KPI_CODE
+    : rawCode;
+}
 
 export type NormalizedGsmOnayValue = {
   actualValue: number;
@@ -15,7 +30,7 @@ export function normalizeGsmOnayValue(rawValue: unknown): NormalizedGsmOnayValue
     return {
       actualValue: 0,
       achievementRate: null,
-      validationError: "GSM_ONAY value is required",
+      validationError: "gsm_approval value is required",
     };
   }
 
@@ -34,7 +49,7 @@ export function normalizeGsmOnayValue(rawValue: unknown): NormalizedGsmOnayValue
     return {
       actualValue: 0,
       achievementRate: null,
-      validationError: "GSM_ONAY value must be numeric",
+      validationError: "gsm_approval value must be numeric",
     };
   }
 
@@ -42,7 +57,7 @@ export function normalizeGsmOnayValue(rawValue: unknown): NormalizedGsmOnayValue
     return {
       actualValue: numericValue,
       achievementRate: null,
-      validationError: "GSM_ONAY value must be between 0 and 100",
+      validationError: "gsm_approval value must be between 0 and 100",
     };
   }
 

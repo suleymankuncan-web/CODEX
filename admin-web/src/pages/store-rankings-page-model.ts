@@ -11,7 +11,7 @@ import type { AppLocale } from '../lib/i18n'
 
 export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
 export const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
-export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'GSM_ONAY', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
+export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'gsm_approval', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
 export const personnelMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const
 
 export type ActiveRankingList = 'stores' | 'personnel'
@@ -69,7 +69,7 @@ const metricLabelKeyByCode: Record<string, TranslationKey> = {
   ATV: 'storeRankings.metric.atv',
   UPT: 'storeRankings.metric.upt',
   CR: 'storeRankings.metric.cr',
-  GSM_ONAY: 'storeRankings.metric.gsmOnay',
+  gsm_approval: 'storeRankings.metric.gsmOnay',
   BM_CHECKLIST: 'storeRankings.metric.bmChecklist',
   VM_CHECKLIST: 'storeRankings.metric.vmChecklist',
 }
@@ -124,7 +124,7 @@ export function formatMetricValue(
       ? getMetricComparableValue(input, code)
       : input
 
-  if (code === 'GSM_ONAY') {
+  if (code === 'gsm_approval') {
     return value === null || value === undefined || !Number.isFinite(Number(value))
       ? t('common.noData')
       : `%${formatNumber(locale, t, value)}`

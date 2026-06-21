@@ -3,12 +3,7 @@ import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { buildListResponse } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
 import { KpiScoreProfile } from "./kpi-config.contract";
-import {
-  getDefaultKpiConfig,
-  mapKpiConfigVersionMetadata,
-  resolveKpiConfigFromRows,
-  validateKpiConfigInput,
-} from "./reporting-kpi-config.helpers";
+import { createSnapshotKpiConfigProvider, getDefaultKpiConfig, mapKpiConfigVersionMetadata, resolveKpiConfigFromRows, validateKpiConfigInput } from "./reporting-kpi-config.helpers";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ClosedRankingService } from "./closed-ranking.service";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
@@ -37,7 +32,11 @@ export class ReportingService {
     private readonly rankingReportingReadRepository: RankingReportingReadRepository,
   ) {
     this.storeKpiReadService = new ReportingStoreKpiReadService(
-      () => this.getKpiConfig(),
+      createSnapshotKpiConfigProvider(
+        () => this.getKpiConfig(),
+        this.storeScoreReportingReadRepository,
+        this.kpiConfigRepository,
+      ),
       this.storeScoreReportingReadRepository,
       this.storePerformanceReportingReadRepository,
       this.rankingReportingReadRepository,

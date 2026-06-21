@@ -2,6 +2,11 @@ import { Injectable, Logger } from "@nestjs/common";
 import { logStructuredError, redactSensitiveLogValue } from "../../../shared/structured-log";
 import { KpiMaterializationRepository } from "../infrastructure/kpi-materialization.repository";
 import { ExternalIdMappingService } from "./external-id-mapping.service";
+import {
+  GSM_APPROVAL_KPI_CODE,
+  LEGACY_GSM_ONAY_KPI_CODE,
+  normalizeGsmApprovalKpiCode,
+} from "./gsm-approval-normalization";
 
 export type MaterializationStats = {
   processedCount: number;
@@ -184,16 +189,16 @@ export class KpiMaterializationService {
       return "periodEnd is required";
     }
 
-    const kpiCode = payload["kpiCode"] ?? payload["sourceMetricId"];
-    if (kpiCode === "GSM_ONAY") {
+    const kpiCode = normalizeGsmApprovalKpiCode(payload["kpiCode"] ?? payload["sourceMetricId"]);
+    if (kpiCode === GSM_APPROVAL_KPI_CODE) {
       const actualValue = Number(payload["actualValue"]);
       if (!Number.isFinite(actualValue) || actualValue < 0 || actualValue > 100) {
-        return "GSM_ONAY actualValue must be between 0 and 100";
+        return "gsm_approval actualValue must be between 0 and 100";
       }
 
       const achievementRate = Number(payload["achievementRate"]);
       if (!Number.isFinite(achievementRate) || achievementRate < 0 || achievementRate > 1) {
-        return "GSM_ONAY achievementRate must be between 0 and 1";
+        return "gsm_approval achievementRate must be between 0 and 1";
       }
     }
 
@@ -205,7 +210,7 @@ export class KpiMaterializationService {
       return String(payload["kpiId"]);
     }
 
-    const kpiCode = payload["kpiCode"] ?? payload["sourceMetricId"];
+    const kpiCode = normalizeGsmApprovalKpiCode(payload["kpiCode"] ?? payload["sourceMetricId"]);
     if (!kpiCode) {
       throw new Error("kpi definition could not be resolved");
     }
@@ -215,6 +220,17 @@ export class KpiMaterializationService {
     );
 
     if (!kpiId) {
+      const legacyKpiId =
+        kpiCode === GSM_APPROVAL_KPI_CODE
+          ? await this.kpiMaterializationRepository.findKpiDefinitionIdByCode(
+              LEGACY_GSM_ONAY_KPI_CODE,
+            )
+          : null;
+
+      if (legacyKpiId) {
+        return legacyKpiId;
+      }
+
       throw new Error(`kpi definition could not be resolved for code: ${String(kpiCode)}`);
     }
 

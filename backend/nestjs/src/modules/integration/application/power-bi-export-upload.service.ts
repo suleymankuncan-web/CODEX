@@ -18,9 +18,9 @@ import {
 } from "./power-bi-export-parser.service";
 import { PowerBiExportNormalizerService } from "./power-bi-export-normalizer.service";
 import {
-  GSM_ONAY_KPI_CODE,
+  GSM_APPROVAL_KPI_CODE,
   normalizeGsmOnayValue,
-} from "./gsm-onay-normalization";
+} from "./gsm-approval-normalization";
 
 export {
   POWER_BI_EXPORT_MAX_FILE_BYTES,
@@ -473,15 +473,15 @@ export class PowerBiExportUploadService {
       const gsmValue = normalizeGsmOnayValue(rawValue);
       const validationError =
         !storeCode && !storeName
-          ? "GSM_ONAY store reference is required"
+          ? "gsm_approval store reference is required"
           : !this.isStoreInKpiImportScope(storeExternalRef, storeScope) &&
               (!storeName || !this.isStoreInKpiImportScope(storeName, storeScope))
-            ? `GSM_ONAY store reference is not mapped: ${storeExternalRef}`
+            ? `gsm_approval store reference is not mapped: ${storeExternalRef}`
             : gsmValue.validationError;
 
       return {
-        kpiCode: GSM_ONAY_KPI_CODE,
-        sourceMetricId: GSM_ONAY_KPI_CODE,
+        kpiCode: GSM_APPROVAL_KPI_CODE,
+        sourceMetricId: GSM_APPROVAL_KPI_CODE,
         actualValue: gsmValue.actualValue,
         achievementRate: gsmValue.achievementRate,
         validationError,
@@ -741,6 +741,12 @@ export class PowerBiExportUploadService {
   private getGsmApprovalRawValue(row: ExportRow) {
     return this.getRawValue(row, [
       "Gsm Onay %",
+      "GSM Onayı",
+      "% GSM Onayı",
+      "GSM Onayi",
+      "% GSM Onayi",
+      "GSM ONAYI",
+      "% GSM ONAYI",
       "gsmOnay",
       "gsmOnayYuzde",
       "gsmApproval",

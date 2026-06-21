@@ -165,7 +165,7 @@ describe("PerformanceScoreEvaluator", () => {
     ).toBe(60);
   });
 
-  it("scores GSM_ONAY with achievementRate while keeping display percentage", () => {
+  it("scores gsm_approval with achievementRate while keeping display percentage", () => {
     const result = evaluator.evaluate({
       profile: storeKpiScoreProfile,
       benchmarkFallback: "matched-or-canonical",
@@ -186,9 +186,9 @@ describe("PerformanceScoreEvaluator", () => {
         ["BM_CHECKLIST", { label: "BM checklist", actualValue: 80, targetValue: null }],
         ["VM_CHECKLIST", { label: "VM checklist", actualValue: 100, targetValue: null }],
         [
-          "GSM_ONAY",
+          "gsm_approval",
           {
-            label: "GSM Onay",
+            label: "GSM Onayı",
             actualValue: 91.2052,
             scoreValue: 0.912052,
             targetValue: null,
@@ -201,7 +201,7 @@ describe("PerformanceScoreEvaluator", () => {
     expect(result.metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "GSM_ONAY",
+          code: "gsm_approval",
           actualValue: 91.2052,
           contributionValue: 4.5603,
         }),
@@ -209,7 +209,55 @@ describe("PerformanceScoreEvaluator", () => {
     );
   });
 
-  it("keeps missing GSM_ONAY visible without inventing score contribution", () => {
+  it("scores legacy GSM_ONAY profile versions with the imported achievement rate", () => {
+    const profile: KpiScoreProfile = {
+      profileCode: "store",
+      title: "Legacy GSM profile",
+      summary: "Versioned profile before canonical rename",
+      futureMetricRule: "versioned",
+      metrics: [
+        {
+          code: "GSM_ONAY",
+          label: "GSM Onay",
+          ownerRole: "STORE_MANAGER",
+          weightPercent: 100,
+          scoreBehavior: "score_only",
+          direction: "HIGHER_IS_BETTER",
+          benchmarkSource: "TARGET",
+          capRatio: 1,
+        },
+      ],
+    };
+
+    const result = evaluator.evaluate({
+      profile,
+      benchmarkFallback: "matched-or-canonical",
+      useStoreChecklistFallback: false,
+      benchmarkLookup: new Map(),
+      values: new Map([
+        [
+          "GSM_ONAY",
+          {
+            label: "GSM Onay",
+            actualValue: 91.2052,
+            scoreValue: 0.912052,
+            targetValue: null,
+          },
+        ],
+      ]),
+    });
+
+    expect(result.scoreValue).toBe(91.21);
+    expect(result.metrics[0]).toEqual(
+      expect.objectContaining({
+        code: "GSM_ONAY",
+        actualValue: 91.2052,
+        contributionValue: 91.2052,
+      }),
+    );
+  });
+
+  it("keeps missing gsm_approval visible without inventing score contribution", () => {
     const result = evaluator.evaluate({
       profile: storeKpiScoreProfile,
       benchmarkFallback: "matched-or-canonical",
@@ -235,7 +283,7 @@ describe("PerformanceScoreEvaluator", () => {
     expect(result.metrics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          code: "GSM_ONAY",
+          code: "gsm_approval",
           actualValue: null,
           contributionValue: null,
         }),

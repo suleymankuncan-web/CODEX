@@ -403,7 +403,7 @@ describe("PowerBiExportUploadService", () => {
     );
   });
 
-  it("imports GSM Onay reports by store code and keeps empty or unmatched rows visible", async () => {
+  it("imports GSM Onayı reports by store code and keeps empty or unmatched rows visible", async () => {
     const { kpiImportStoreReadRepository, integrationService, service } = createService();
     kpiImportStoreReadRepository.listKpiImportStoreExternalRefs.mockResolvedValue([
       { external_ref: "SM182" },
@@ -413,17 +413,17 @@ describe("PowerBiExportUploadService", () => {
       {
         "Mağaza Kodu": "SM182",
         "Mağaza Adı": "Balıkesir 10 Burda AVM",
-        "Gsm Onay %": 0.9120521172638436,
+        "% GSM Onayi": 0.9120521172638436,
       },
       {
         "Mağaza Kodu": "SM183",
         "Mağaza Adı": "Boş GSM Mağazası",
-        "Gsm Onay %": null,
+        "% GSM Onayi": null,
       },
       {
         "Mağaza Kodu": "SM999",
         "Mağaza Adı": "Eşleşmeyen Mağaza",
-        "Gsm Onay %": 0.5,
+        "% GSM Onayi": 0.5,
       },
     ]);
 
@@ -449,7 +449,7 @@ describe("PowerBiExportUploadService", () => {
     expect(rows).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          kpiCode: "GSM_ONAY",
+          kpiCode: "gsm_approval",
           storeExternalRef: "SM182",
           actualValue: 91.2052,
           achievementRate: 0.912052,
@@ -459,18 +459,18 @@ describe("PowerBiExportUploadService", () => {
           periodEnd: "2026-01-31",
         }),
         expect.objectContaining({
-          kpiCode: "GSM_ONAY",
+          kpiCode: "gsm_approval",
           storeExternalRef: "SM183",
           actualValue: 0,
           achievementRate: null,
-          validationError: "GSM_ONAY value is required",
+          validationError: "gsm_approval value is required",
         }),
         expect.objectContaining({
-          kpiCode: "GSM_ONAY",
+          kpiCode: "gsm_approval",
           storeExternalRef: "SM999",
           actualValue: 50,
           achievementRate: 0.5,
-          validationError: "GSM_ONAY store reference is not mapped: SM999",
+          validationError: "gsm_approval store reference is not mapped: SM999",
         }),
       ]),
     );

@@ -18,13 +18,13 @@ import {
 import type { DisplayKpiRow } from './store-kpi-highlights-model'
 
 const metricLabelKeyByCode: Record<string, TranslationKey> = {
-  TARGET_ACHIEVEMENT: 'storeKpis.metric.targetAchievement',
-  ATV: 'storeKpis.metric.atv',
-  UPT: 'storeKpis.metric.upt',
-  CR: 'storeKpis.metric.cr',
-  GSM_ONAY: 'storeKpis.metric.gsmOnay',
-  BM_CHECKLIST: 'storeKpis.metric.bmChecklist',
-  VM_CHECKLIST: 'storeKpis.metric.vmChecklist',
+  target_achievement: 'storeKpis.metric.targetAchievement',
+  atv: 'storeKpis.metric.atv',
+  upt: 'storeKpis.metric.upt',
+  cr: 'storeKpis.metric.cr',
+  gsm_approval: 'storeKpis.metric.gsmOnay',
+  bm_checklist: 'storeKpis.metric.bmChecklist',
+  vm_checklist: 'storeKpis.metric.vmChecklist',
 }
 
 const ownerRoleLabelKeyByCode: Record<KpiOwnerRole, TranslationKey> = {
@@ -133,7 +133,7 @@ export function formatOwnerRole(t: TranslateFunction, role: KpiOwnerRole) {
 }
 
 export function formatMetricValue(locale: AppLocale, t: TranslateFunction, input: string | null, kpiCode?: string) {
-  if (kpiCode?.trim().toUpperCase() === 'GSM_ONAY') {
+  if (kpiCode?.trim().toLowerCase() === 'gsm_approval' || kpiCode?.trim().toUpperCase() === 'GSM_ONAY') {
     const value = input === null ? null : Number(input)
 
     return value === null || !Number.isFinite(value)
@@ -158,7 +158,7 @@ export function formatAchievementValue(locale: AppLocale, t: TranslateFunction, 
 }
 
 export function formatKpiMetricLabel(t: TranslateFunction, code: string, fallback: string) {
-  const key = metricLabelKeyByCode[code.trim().toUpperCase()]
+  const key = metricLabelKeyByCode[code.trim().toLowerCase()]
   return key ? t(key) : fallback
 }
 

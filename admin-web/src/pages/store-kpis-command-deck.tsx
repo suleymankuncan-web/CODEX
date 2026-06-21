@@ -39,7 +39,7 @@ const metricColors: Record<string, string> = {
   UPT: '#6d4df7',
   ATV: '#f59e0b',
   CR: '#f43f72',
-  GSM_ONAY: '#18bfd0',
+  gsm_approval: '#18bfd0',
   BM_CHECKLIST: '#3878ff',
   VM_CHECKLIST: '#13a779',
 }
@@ -49,12 +49,12 @@ const metricIcons: Record<string, typeof Target> = {
   UPT: PackagePlus,
   ATV: Receipt,
   CR: MousePointerClick,
-  GSM_ONAY: BadgeCheck,
+  gsm_approval: BadgeCheck,
   BM_CHECKLIST: ClipboardCheck,
   VM_CHECKLIST: ClipboardX,
 }
 
-const storeMetricOrder = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'GSM_ONAY', 'BM_CHECKLIST', 'VM_CHECKLIST']
+const storeMetricOrder = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'gsm_approval', 'BM_CHECKLIST', 'VM_CHECKLIST']
 
 export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageModel }) {
   const [activeTab, setActiveTab] = useState<StoreKpiCommandTab>('store')
@@ -207,7 +207,7 @@ function ScoreOrbit(input: {
 }) {
   const gradient = buildScoreGradient(input.model)
   const activeContribution = input.activeDot
-    ? input.model.weightedScore.contributions.find((item) => item.metric.code === input.activeDot)
+    ? findContribution(input.model, input.activeDot)
     : null
 
   return (
@@ -348,7 +348,7 @@ function KpiContributionTable({ model, rows, className = '' }: { model: StoreKpi
 
 function ContributionRow({ model, code, row }: { model: StoreKpiHighlightsPageModel; code: string; row: DisplayKpiRow | undefined }) {
   const Icon = metricIcons[code] ?? Target
-  const contribution = model.weightedScore.contributions.find((item) => item.metric.code === code)
+  const contribution = findContribution(model, code)
   const checklistMissing = code.includes('CHECKLIST') && (!row || row.scoreStatus !== 'scored')
 
   return (
@@ -575,8 +575,8 @@ function PersonnelRow({ model, row }: { model: StoreKpiHighlightsPageModel; row:
 
 function ScoreSourceCard({ model, missingChecklistCodes }: { model: StoreKpiHighlightsPageModel; missingChecklistCodes: string[] }) {
   const kpiContribution = model.weightedScore.contributions.filter((item) => !item.metric.code.includes('CHECKLIST')).reduce((sum, item) => sum + item.weightedContribution * 100, 0)
-  const bmContribution = model.weightedScore.contributions.find((item) => item.metric.code === 'BM_CHECKLIST')?.weightedContribution ?? null
-  const vmContribution = model.weightedScore.contributions.find((item) => item.metric.code === 'VM_CHECKLIST')?.weightedContribution ?? null
+  const bmContribution = findContribution(model, 'BM_CHECKLIST')?.weightedContribution ?? null
+  const vmContribution = findContribution(model, 'VM_CHECKLIST')?.weightedContribution ?? null
 
   return (
     <aside className="tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:p-4 tw:shadow-sm">
@@ -607,7 +607,17 @@ function StatusPill({ tone, label }: { tone: MetricTone; label: string }) {
 }
 
 function findMetricRow(rows: DisplayKpiRow[], code: string) {
-  return rows.find((row) => row.kpiCode.toUpperCase() === code)
+  return rows.find((row) => normalizeKpiCode(row.kpiCode) === normalizeKpiCode(code))
+}
+
+function findContribution(model: StoreKpiHighlightsPageModel, code: string) {
+  return model.weightedScore.contributions.find(
+    (item) => normalizeKpiCode(item.metric.code) === normalizeKpiCode(code),
+  )
+}
+
+function normalizeKpiCode(input: string) {
+  return input.trim().toLowerCase()
 }
 
 function emptyRow(code: string): DisplayKpiRow {

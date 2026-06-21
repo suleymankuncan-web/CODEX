@@ -535,10 +535,10 @@ describe("CompetitionRepository", () => {
     expect(sql).toContain("('UPT', 15::numeric)");
     expect(sql).toContain("('BM_CHECKLIST', 5::numeric)");
     expect(sql).toContain("('VM_CHECKLIST', 5::numeric)");
-    expect(sql).toContain("('GSM_ONAY', 5::numeric)");
+    expect(sql).toContain("('gsm_approval', 5::numeric)");
     expect(sql).toContain("'BM_CHECKLIST'");
     expect(sql).toContain("'VM_CHECKLIST'");
-    expect(sql).toContain("'GSM_ONAY'");
+    expect(sql).toContain("'gsm_approval'");
     expect(sql).toContain("CASE WHEN has_daily_data THEN score_value ELSE NULL END");
     expect(sql).toContain("SUM(CASE WHEN actual_value IS NULL AND achievement_rate IS NULL THEN 0 ELSE weight_percent END)");
     expect(sql).toContain("competition_stage_store_score_snapshot");

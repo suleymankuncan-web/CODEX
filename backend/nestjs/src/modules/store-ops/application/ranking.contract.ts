@@ -9,7 +9,7 @@ export type RankingSortKey =
   | "TARGET_ACHIEVEMENT"
   | "BM_CHECKLIST"
   | "VM_CHECKLIST"
-  | "GSM_ONAY";
+  | "gsm_approval";
 export type RankingSortDirection = "asc" | "desc";
 
 export type RankingMetricValue = {
