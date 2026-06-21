@@ -60,7 +60,7 @@ export function deriveWorkforceSummary(
       averageTenureMonths === null
         ? locale === 'en'
           ? 'Cannot calculate'
-          : 'Hesaplanamadi'
+          : 'Hesaplanamadı'
         : formatTenureLabel(Math.round(averageTenureMonths), locale),
     missingTenureCount,
     positionRows: Array.from(positionCounts.entries())
@@ -69,8 +69,8 @@ export function deriveWorkforceSummary(
     tenureBuckets: [
       { key: '0-3', label: '0-3 ay', count: zeroToThreeMonths },
       { key: '3-12', label: '3-12 ay', count: threeToTwelveMonths },
-      { key: '1-3', label: '1-3 yil', count: oneToThreeYears },
-      { key: '3+', label: '3+ yil', count: threePlusYears },
+      { key: '1-3', label: '1-3 yıl', count: oneToThreeYears },
+      { key: '3+', label: '3+ yıl', count: threePlusYears },
     ],
   }
 }
@@ -105,7 +105,7 @@ export function getTenureFromDate(value: string, now: Date, locale: AppLocale = 
   const startDate = parseDateOnly(value)
   if (!startDate) {
     return {
-      label: locale === 'en' ? 'Cannot calculate' : 'Hesaplanamadi',
+      label: locale === 'en' ? 'Cannot calculate' : 'Hesaplanamadı',
       months: null,
     }
   }
@@ -146,10 +146,10 @@ function formatTenureLabel(months: number, locale: AppLocale = 'tr') {
   const years = Math.floor(months / 12)
   const remainingMonths = months % 12
   if (remainingMonths === 0) {
-    return locale === 'en' ? `${years} yr` : `${years} yil`
+    return locale === 'en' ? `${years} yr` : `${years} yıl`
   }
 
   return locale === 'en'
     ? `${years} yr ${remainingMonths} mo`
-    : `${years} yil ${remainingMonths} ay`
+    : `${years} yıl ${remainingMonths} ay`
 }

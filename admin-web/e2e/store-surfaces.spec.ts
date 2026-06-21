@@ -132,7 +132,7 @@ test('store workforce page shows only region manager read-scope rows and opens d
   await expect(page.getByText('IstinyePark Demo Store').first()).toBeVisible()
   await expect(page.getByText('Marmara Forum').first()).toBeVisible()
   await expect(page.getByText(outsideStoreId)).toHaveCount(0)
-  await expect(page.getByText('Magazaya git yok')).toBeVisible()
+  await expect(page.getByText('Mağaza dosyasını aç')).toBeVisible()
   await expect(page.getByText('5 / 1').first()).toBeVisible()
   expect(workforceCalls).toEqual([
     demoStoreId,
@@ -145,6 +145,7 @@ test('store workforce page shows only region manager read-scope rows and opens d
   const detail = page.getByTestId('store-workforce-region-detail-dialog')
   await expect(detail).toBeVisible()
   await expect(detail).toContainText('IstinyePark Demo Store')
+  await detail.getByRole('button', { name: 'Personel' }).click()
   await expect(detail).toContainText('Store Personnel')
   await expect(page).toHaveURL(/\/store\/workforce$/)
   expect(workforceCalls).toEqual([
@@ -169,7 +170,7 @@ test('store workforce region detail stays usable on mobile', async ({ page }) =>
 
   await page.goto('/store/workforce')
   await page
-    .getByRole('article')
+    .getByTestId('store-workforce-region-row')
     .filter({ hasText: 'IstinyePark Demo Store' })
     .getByRole('button', { name: /Detay|Open detail/i })
     .click()
