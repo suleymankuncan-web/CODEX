@@ -35,7 +35,7 @@ test('region workforce norm status uses planned and active headcount without fak
 })
 
 async function expectStatus(page: Page, storeName: string, status: string) {
-  const row = page.locator('tr[data-testid="store-workforce-region-row"]').filter({ hasText: storeName })
+  const row = page.getByTestId('store-workforce-region-row').filter({ hasText: storeName })
   await expect(row).toBeVisible()
   await expect(row).toContainText(status)
   await expect(row).not.toContainText('Gercek veri')

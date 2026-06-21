@@ -1,75 +1,81 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
+import { DropdownMenu } from 'radix-ui'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { cn } from '@/lib/utils'
-import { CalendarClock, ChevronRight, Inbox, Search, Store, Users, UsersRound, X } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  ArrowRight,
+  CalendarDays,
+  CheckCircle2,
+  CircleSlash2,
+  Clock3,
+  Download,
+  Filter,
+  RefreshCw,
+  Search,
+  Store,
+  TrendingUp,
+  UserRound,
+  UsersRound,
+  X,
+} from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { getAssignedStoreIds, getReadRegionIds, getReadStoreIds } from '../features/auth/authorization'
-import { useLocalization } from '../features/localization/useLocalization'
 import { getOrgStores, getStoreEmployees, getStoreHeadcountGap } from '../features/workforce/api'
 import { formatNumber } from '../lib/format'
-import { formatNormActualLabel, formatNormStaffingStatusLabel, getMonthRange, interpretNormStaffingStatus, type NormStaffingStatusKind } from './store-workforce-headcount'
-import { deriveWorkforceSummary } from './store-workforce-model'
+import type { AppLocale } from '../lib/i18n'
+import { getMonthRange, interpretNormStaffingStatus } from './store-workforce-headcount'
+import { deriveWorkforceSummary, getTenureFromDate } from './store-workforce-model'
 import {
-  ModalPersonnelPane,
-  ModalPositionPane,
-  ModalRequestsPlaceholder,
-} from './store-workforce-region-detail-panes'
-import { MiniBars, MiniMetric, MiniValue } from './store-workforce-region-metrics'
-import type { RegionStoreRow } from './store-workforce-region-model'
-
-type DetailTab = 'people' | 'positions' | 'requests'
-type Tone = 'cyan' | 'purple' | 'green' | 'amber' | 'rose' | 'blue'
-
-const surfaceShadow = 'tw:shadow-[0_24px_70px_rgba(58,75,118,0.16)]'
-const glassPanel =
-  'tw:border tw:border-[#b4c1db]/70 tw:bg-white/85 tw:backdrop-blur-[22px]'
-const textInk = 'tw:text-[#071333]'
-const textMuted = 'tw:text-[#647194]'
-
-const toneClasses: Record<Tone, {
-  icon: string
-  pill: string
-  status: string
-}> = {
-  amber: {
-    icon: 'tw:bg-[#fff1d9] tw:text-[#f59e0b]',
-    pill: 'tw:bg-[#fff1d9] tw:text-[#a35a00]',
-    status: 'tw:bg-[#fff1d9] tw:text-[#a35a00]',
-  },
-  blue: {
-    icon: 'tw:bg-[#e7efff] tw:text-[#3477f6]',
-    pill: 'tw:bg-[#e7efff] tw:text-[#245ed4]',
-    status: 'tw:bg-[#e7efff] tw:text-[#245ed4]',
-  },
-  cyan: {
-    icon: 'tw:bg-[#ddfbff] tw:text-[#20bfd3]',
-    pill: 'tw:bg-[#ddfbff] tw:text-[#00889b]',
-    status: 'tw:bg-[#ddfbff] tw:text-[#00889b]',
-  },
-  green: {
-    icon: 'tw:bg-[#def9ec] tw:text-[#12a873]',
-    pill: 'tw:bg-[#def9ec] tw:text-[#087a51]',
-    status: 'tw:bg-[#def9ec] tw:text-[#087a51]',
-  },
-  purple: {
-    icon: 'tw:bg-[#efe9ff] tw:text-[#6847ff]',
-    pill: 'tw:bg-[#efe9ff] tw:text-[#5534e6]',
-    status: 'tw:bg-[#efe9ff] tw:text-[#5534e6]',
-  },
-  rose: {
-    icon: 'tw:bg-[#ffe4ec] tw:text-[#f43f6d]',
-    pill: 'tw:bg-[#ffe4ec] tw:text-[#be1645]',
-    status: 'tw:bg-[#ffe4ec] tw:text-[#be1645]',
-  },
-}
+  compareRows,
+  copy,
+  downloadCsv,
+  formatDateLabel,
+  formatGapLabel,
+  formatNormLabel,
+  formatNullableNumber,
+  formatShortage,
+  formatTurnover,
+  getAverageTenureMonths,
+  getUniqueIds,
+  getYearOptions,
+  resolveManagerName,
+  statusCopy,
+  toFiniteNumber,
+  type ColumnFilterOption,
+  type DetailTab,
+  type RegionStoreViewModel,
+  type SortDirection,
+  type SortKey,
+  type StatusFilter,
+} from './store-workforce-region-view-model'
 
 export function RegionWorkforceView(input: {
   authSummary: AuthSessionSummary | null
 }) {
-  const { locale, t } = useLocalization()
+  const locale: AppLocale = 'tr'
   const now = useMemo(() => new Date(), [])
+  const [query, setQuery] = useState('')
+  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()))
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [sort, setSort] = useState<{ direction: SortDirection; key: SortKey }>({ direction: 'asc', key: 'status' })
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
+  const [detailStoreId, setDetailStoreId] = useState<string | null>(null)
+  const [detailTab, setDetailTab] = useState<DetailTab>('summary')
   const currentMonthRange = useMemo(() => getMonthRange(now), [now])
   const explicitReadStoreIds = useMemo(() => getUniqueIds(getReadStoreIds(input.authSummary)), [input.authSummary])
   const assignedStoreIds = useMemo(() => getUniqueIds(getAssignedStoreIds(input.authSummary)), [input.authSummary])
@@ -79,8 +85,8 @@ export function RegionWorkforceView(input: {
   )
   const readRegionIds = useMemo(() => getUniqueIds(getReadRegionIds(input.authSummary)), [input.authSummary])
   const orgStoresQuery = useQuery({
-    queryKey: ['store-workforce-region-org-stores', fallbackStoreIds.join('|'), readRegionIds.join('|')],
     queryFn: getOrgStores,
+    queryKey: ['store-workforce-region-org-stores', fallbackStoreIds.join('|'), readRegionIds.join('|')],
   })
   const scopedStores = useMemo(
     () => {
@@ -106,13 +112,19 @@ export function RegionWorkforceView(input: {
   )
   const storeEmployeeQueries = useQueries({
     queries: scopedStores.map((store) => ({
-      queryKey: ['workforce-store-employees', 'store-workforce-region', store.storeId],
-      queryFn: () => getStoreEmployees(store.storeId),
       enabled: Boolean(store.storeId),
+      queryFn: () => getStoreEmployees(store.storeId),
+      queryKey: ['workforce-store-employees', 'store-workforce-region', store.storeId],
     })),
   })
   const storeHeadcountQueries = useQueries({
     queries: scopedStores.map((store) => ({
+      enabled: Boolean(store.storeId),
+      queryFn: () => getStoreHeadcountGap({
+        periodEnd: currentMonthRange.periodEnd,
+        periodStart: currentMonthRange.periodStart,
+        storeId: store.storeId,
+      }),
       queryKey: [
         'workforce-headcount-gap',
         'store-workforce-region',
@@ -120,609 +132,474 @@ export function RegionWorkforceView(input: {
         currentMonthRange.periodStart,
         currentMonthRange.periodEnd,
       ],
-      queryFn: () => getStoreHeadcountGap({
-        storeId: store.storeId,
-        periodStart: currentMonthRange.periodStart,
-        periodEnd: currentMonthRange.periodEnd,
-      }),
-      enabled: Boolean(store.storeId),
     })),
   })
-  const scopedRows = useMemo(
+  const rows = useMemo<RegionStoreViewModel[]>(
     () =>
       scopedStores.map((store, index) => {
-        const query = storeEmployeeQueries[index]
+        const employeeQuery = storeEmployeeQueries[index]
         const headcountQuery = storeHeadcountQueries[index]
-        const employees = query?.data?.items ?? []
+        const employees = employeeQuery?.data?.items ?? []
+        const headcountGap = headcountQuery?.data ?? null
+        const summary = deriveWorkforceSummary(employees, now, locale)
+        const actualHeadcount = toFiniteNumber(headcountGap?.activeHeadcount) ?? employees.length
+        const rawPlannedHeadcount = toFiniteNumber(headcountGap?.plannedHeadcount)
+        const plannedHeadcount = rawPlannedHeadcount === null || rawPlannedHeadcount <= 0 ? null : rawPlannedHeadcount
+        const status = interpretNormStaffingStatus({ actualFallback: employees.length, headcountGap })
+        const openHeadcount = plannedHeadcount === null ? null : Math.max(0, plannedHeadcount - actualHeadcount)
+        const overHeadcount = plannedHeadcount === null ? null : Math.max(0, actualHeadcount - plannedHeadcount)
 
         return {
           ...store,
+          activeHeadcount: actualHeadcount,
+          averageTenureMonths: getAverageTenureMonths(employees, now),
           employees,
-          headcountGap: headcountQuery?.data ?? null,
-          isLoading: (query?.isLoading ?? false) || (headcountQuery?.isLoading ?? false),
-          isError: (query?.isError ?? false) || (headcountQuery?.isError ?? false),
-          isEmployeeLoading: query?.isLoading ?? false,
-          isHeadcountLoading: headcountQuery?.isLoading ?? false,
-          isEmployeeError: query?.isError ?? false,
+          headcountGap,
+          isEmployeeError: employeeQuery?.isError ?? false,
+          isEmployeeLoading: employeeQuery?.isLoading ?? false,
+          isError: (employeeQuery?.isError ?? false) || (headcountQuery?.isError ?? false),
           isHeadcountError: headcountQuery?.isError ?? false,
-          summary: deriveWorkforceSummary(employees, now, locale),
+          isHeadcountLoading: headcountQuery?.isLoading ?? false,
+          isLoading: (employeeQuery?.isLoading ?? false) || (headcountQuery?.isLoading ?? false),
+          managerName: resolveManagerName(employees),
+          normLabel: formatNormLabel({ actual: actualHeadcount, locale, planned: plannedHeadcount }),
+          openHeadcount,
+          overHeadcount,
+          plannedHeadcount,
+          shortageDays: null,
+          status,
+          summary,
+          turnover: null,
         }
       }),
     [locale, now, scopedStores, storeEmployeeQueries, storeHeadcountQueries],
   )
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
-  const selectedStore = scopedRows.find((row) => row.storeId === selectedStoreId) ?? null
-  const hasStoreRows = scopedRows.length > 0
-  const hasRegionScopeOnly = !hasStoreRows && readRegionIds.length > 0
-  const allEmployees = useMemo(
-    () => scopedRows.flatMap((row) => row.employees),
-    [scopedRows],
+  const visibleRows = useMemo(
+    () => {
+      const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
+      const filtered = rows.filter((row) => {
+        const haystack = [
+          row.storeLabel,
+          row.managerName ?? '',
+        ].join(' ').toLocaleLowerCase('tr-TR')
+        const matchesQuery = normalizedQuery === '' || haystack.includes(normalizedQuery)
+        const matchesStatus = statusFilter === 'all' || row.status === statusFilter
+        return matchesQuery && matchesStatus
+      })
+
+      return filtered.sort((left, right) => {
+        const result = compareRows(left, right, sort.key)
+        return sort.direction === 'asc' ? result : -result
+      })
+    },
+    [query, rows, sort.direction, sort.key, statusFilter],
   )
-  const regionSummary = useMemo(
-    () => deriveWorkforceSummary(allEmployees, now, locale),
-    [allEmployees, locale, now],
-  )
-  const isAnyStoreLoading = scopedRows.some((row) => row.isEmployeeLoading)
+  const selectedStore = rows.find((row) => row.storeId === selectedStoreId) ?? visibleRows[0] ?? rows[0] ?? null
+  const detailStore = rows.find((row) => row.storeId === detailStoreId) ?? null
+  const shortStoreCount = rows.filter((row) => row.status === 'short').length
+  const totalOpenHeadcount = rows.reduce((sum, row) => sum + (row.openHeadcount ?? 0), 0)
+  const allEmployees = useMemo(() => rows.flatMap((row) => row.employees), [rows])
+  const regionSummary = useMemo(() => deriveWorkforceSummary(allEmployees, now, locale), [allEmployees, locale, now])
+  const isLoading = orgStoresQuery.isLoading || rows.some((row) => row.isLoading)
+
+  const refresh = () => {
+    void orgStoresQuery.refetch()
+    for (const queryResult of [...storeEmployeeQueries, ...storeHeadcountQueries]) {
+      void queryResult.refetch()
+    }
+  }
+
+  const exportRows = () => {
+    const headers = ['Mağaza', 'Aktif personel', 'Norm / Fiili', 'Durum', 'Eksik gün', 'Turnover']
+    const csvRows = visibleRows.map((row) => [
+      row.storeLabel,
+      formatNullableNumber(row.activeHeadcount, locale),
+      row.normLabel,
+      statusCopy[row.status].label,
+      formatShortage(row),
+      formatTurnover(row.turnover),
+    ])
+    downloadCsv(`norm-kadro-${selectedYear}.csv`, [headers, ...csvRows])
+  }
 
   return (
     <section
-      aria-label={t('storeWorkforce.title')}
       aria-labelledby="store-workforce-title"
+      className="store-workforce-command"
       data-testid="store-workforce-page"
-      className="tw:mx-auto tw:w-full tw:max-w-[1440px] tw:px-0 tw:pb-8"
     >
-      <div
-        className="tw:rounded-[28px] tw:p-4 tw:md:p-6"
-        style={{
-          background:
-            'radial-gradient(circle at 6% 4%, rgba(104,71,255,.16), transparent 28%), radial-gradient(circle at 86% 9%, rgba(32,191,211,.22), transparent 30%), linear-gradient(135deg, #f7f8ff 0%, #edf7fb 48%, #f8fbff 100%)',
-        }}
-      >
-        <header className="tw:mb-5 tw:flex tw:flex-col tw:gap-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
-          <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
-            <div className="tw:grid tw:size-[45px] tw:place-items-center tw:rounded-[15px] tw:bg-[linear-gradient(135deg,#6847ff,#20bfd3)] tw:text-white tw:shadow-[0_18px_34px_rgba(104,71,255,0.24)]">
-              <UsersRound className="tw:size-[18px]" />
-            </div>
-            <div className="tw:min-w-0">
-              <h1
-                id="store-workforce-title"
-                className={cn('tw:m-0 tw:text-[clamp(26px,3vw,40px)] tw:font-bold tw:leading-none', textInk)}
-              >
-                {t('storeWorkforce.title')}
-              </h1>
-              <p className={cn('tw:mt-2 tw:max-w-3xl tw:text-sm tw:leading-6', textMuted)}>
-                {t('storeWorkforce.regionManagerDescription')}
-              </p>
-            </div>
+      <header className="swc-hero">
+        <div className="swc-hero-copy">
+          <div className="swc-kicker">
+            <span>{copy.pageTitle}</span>
+            <b>{selectedYear}</b>
+            <b>{copy.managerBadge}</b>
           </div>
-          <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-            <Pill tone="purple">{t('storeWorkforce.regionBadge')}</Pill>
-            <Pill tone="cyan">{t('storeWorkforce.realDataBadge')}</Pill>
-            <Pill tone="amber">{t('storeWorkforce.regionForbiddenActionValue')}</Pill>
+          <div className="swc-title-row">
+            <span className="swc-title-icon" aria-hidden="true">
+              <UsersRound />
+            </span>
+            <h1 id="store-workforce-title">{copy.pageTitle}</h1>
           </div>
-        </header>
-
-        <MetricGrid ariaLabel={t('storeWorkforce.regionSummaryAria')}>
-          <MetricCard
-            icon={<Users className="tw:size-[18px]" />}
-            iconTone="cyan"
-            label={t('storeWorkforce.regionTotalScope')}
-            value={isAnyStoreLoading ? t('storeWorkforce.sourceWaitingShort') : formatNumber(allEmployees.length, locale)}
-            note={t('storeWorkforce.regionPersonnelContractNote')}
-          />
-          <MetricCard
-            icon={<CalendarClock className="tw:size-[18px]" />}
-            iconTone="purple"
-            label={t('storeWorkforce.regionAverageTenure')}
-            value={isAnyStoreLoading ? t('storeWorkforce.sourceWaitingShort') : regionSummary.averageTenureLabel}
-            note={t('storeWorkforce.regionTenureContractNote')}
-          />
-          <MetricCard
-            icon={<Store className="tw:size-[18px]" />}
-            iconTone="green"
-            label={t('storeWorkforce.regionStoreScope')}
-            value={hasStoreRows ? formatNumber(scopedRows.length, locale) : t('storeWorkforce.valueNotConfigured')}
-            note={
-              hasStoreRows
-                ? t('storeWorkforce.regionStoreScopeNote')
-                : t('storeWorkforce.regionStoreScopeUnavailableNote')
-            }
-          />
-          <MetricCard
-            icon={<Inbox className="tw:size-[18px]" />}
-            iconTone="amber"
-            label={t('storeWorkforce.openMovements')}
-            value={t('storeWorkforce.valueContractShort')}
-            note={t('storeWorkforce.regionMovementContractNote')}
-          />
-        </MetricGrid>
-
-        <div className="tw:grid tw:items-start tw:gap-4 tw:xl:grid-cols-[minmax(0,1fr)_minmax(280px,300px)]">
-          <div className="tw:min-w-0">
-            <FilterBar t={t} />
-
-            <section
-              className={cn('tw:overflow-hidden tw:rounded-[22px]', glassPanel, surfaceShadow)}
-              data-testid="store-workforce-region-list"
-            >
-              <div className="tw:flex tw:items-start tw:justify-between tw:gap-4 tw:border-b tw:border-[#dfe6f3] tw:p-[18px]">
-                <div className="tw:min-w-0">
-                  <h2 className={cn('tw:text-[19px] tw:font-bold tw:leading-tight', textInk)}>
-                    {t('storeWorkforce.regionStoreListTitle')}
-                  </h2>
-                  <p className={cn('tw:mt-1.5 tw:text-[13px] tw:leading-5', textMuted)}>
-                    {t('storeWorkforce.regionStoreListDescription')}
-                  </p>
-                </div>
-                <Pill tone={hasStoreRows ? 'cyan' : 'amber'}>
-                  {hasStoreRows
-                    ? t('storeWorkforce.regionStoreListBadge', { count: scopedRows.length })
-                    : t('storeWorkforce.valueNotConfigured')}
-                </Pill>
-              </div>
-
-              {hasStoreRows ? (
-                <RegionStoreTable rows={scopedRows} locale={locale} onSelectStore={setSelectedStoreId} t={t} />
-              ) : (
-                <div className="tw:p-4">
-                  <EmptyPrototypeState
-                    title={
-                      hasRegionScopeOnly
-                        ? t('storeWorkforce.regionStoreListContractTitle')
-                        : t('storeWorkforce.regionStoreListEmptyTitle')
-                    }
-                    description={
-                      hasRegionScopeOnly
-                        ? t('storeWorkforce.regionStoreListContractCopy')
-                        : t('storeWorkforce.regionStoreListEmptyCopy')
-                    }
-                  />
-                </div>
-              )}
-            </section>
-          </div>
-
-          <aside className="tw:grid tw:gap-4">
-            <SidePanel
-              title={t('storeWorkforce.regionPositionTotalsTitle')}
-              description={t('storeWorkforce.regionPositionTotalsDescription')}
-              badge={t('storeWorkforce.valueContractShort')}
-              badgeTone="cyan"
-            >
-              <UnavailableList
-                rows={
-                  regionSummary.positionRows.length > 0
-                    ? regionSummary.positionRows.slice(0, 5).map((row) => `${row.label}: ${formatNumber(row.count, locale)}`)
-                    : [t('storeWorkforce.sourceWaitingShort')]
-                }
-              />
-            </SidePanel>
-
-            <SidePanel
-              title={t('storeWorkforce.regionTenureSignalTitle')}
-              description={t('storeWorkforce.regionTenureSignalDescription')}
-              badge={t('storeWorkforce.valueContractShort')}
-              badgeTone="purple"
-            >
-              <div className="tw:grid tw:grid-cols-2 tw:gap-2 tw:md:grid-cols-4 tw:xl:grid-cols-2">
-                {[
-                  ...regionSummary.tenureBuckets,
-                ].map((bucket) => (
-                  <div
-                    key={bucket.key}
-                    className="tw:min-h-[78px] tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/65 tw:p-3"
-                  >
-                    <strong className={cn('tw:block tw:text-sm tw:font-bold', textInk)}>
-                      {isAnyStoreLoading ? t('storeWorkforce.sourceWaitingShort') : formatNumber(bucket.count, locale)}
-                    </strong>
-                    <span className={cn('tw:mt-1 tw:block tw:text-xs tw:font-semibold', textMuted)}>
-                      {bucket.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </SidePanel>
-          </aside>
+          <p>{copy.pageSubtitle}</p>
         </div>
-      </div>
+        <div className="swc-hero-actions">
+          <Button type="button" variant="outline" className="swc-outline-button" onClick={exportRows}>
+            <Download data-icon="inline-start" />
+            {copy.exportAction}
+          </Button>
+          <Button type="button" className="swc-primary-button" disabled={isLoading} onClick={refresh}>
+            <RefreshCw data-icon="inline-start" />
+            {copy.refreshAction}
+          </Button>
+        </div>
+      </header>
 
-      <RegionStoreDetailDialog
+      <section className="swc-metric-grid" aria-label="Norm kadro özetleri">
+        <MetricCard icon={<Store />} label={copy.totalStoresMetric} note="Aktif bölge portföyü" value={formatNumber(rows.length, locale)} />
+        <MetricCard
+          icon={<CircleSlash2 />}
+          label={copy.gapMetric}
+          note={`${formatNumber(totalOpenHeadcount, locale)} açık pozisyon`}
+          tone="danger"
+          value={formatNumber(shortStoreCount, locale)}
+        />
+        <MetricCard
+          icon={<TrendingUp />}
+          label={copy.turnoverMetric}
+          note="Ayrılık geçmişi yok"
+          tone="watch"
+          value="Veri yok"
+        />
+        <MetricCard
+          icon={<UsersRound />}
+          label={copy.averageTenureMetric}
+          note="Aktif personel"
+          value={isLoading ? 'Yükleniyor' : regionSummary.averageTenureLabel}
+        />
+      </section>
+
+      <section className="swc-toolbar" aria-label="Norm kadro filtreleri">
+        <label className="swc-search-field">
+          <Search aria-hidden="true" />
+          <Input
+            aria-label={copy.searchAria}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={copy.searchPlaceholder}
+            value={query}
+          />
+        </label>
+        <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+          <SelectTrigger aria-label="Durum filtresi" className="swc-select-trigger">
+            <Filter aria-hidden="true" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="start" position="popper">
+            <SelectItem value="all">{copy.allStatuses}</SelectItem>
+            <SelectItem value="short">Eksik kadro</SelectItem>
+            <SelectItem value="balanced">Tam kadro</SelectItem>
+            <SelectItem value="over">Fazla kadro</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={selectedYear} onValueChange={setSelectedYear}>
+          <SelectTrigger aria-label={copy.yearAria} className="swc-select-trigger">
+            <CalendarDays aria-hidden="true" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="start" position="popper">
+            {getYearOptions(now).map((year) => (
+              <SelectItem key={year} value={year}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </section>
+
+      <section className="swc-content-grid">
+        <div className="swc-ledger">
+          <div className="swc-ledger-head">
+            <ColumnFilter
+              active={sort.key === 'name'}
+              label={copy.storeColumn}
+              onSort={setSort}
+              options={[
+                { direction: 'asc', key: 'name', label: 'A-Z sırala' },
+                { direction: 'desc', key: 'name', label: 'Z-A sırala' },
+              ]}
+            />
+            <ColumnFilter
+              active={sort.key === 'active'}
+              label={copy.activeColumn}
+              onSort={setSort}
+              options={[
+                { direction: 'desc', key: 'active', label: 'Çoktan aza' },
+                { direction: 'asc', key: 'active', label: 'Azdan çoğa' },
+              ]}
+            />
+            <ColumnFilter
+              active={sort.key === 'norm' || statusFilter !== 'all'}
+              label={copy.normActualColumn}
+              onSort={setSort}
+              options={[
+                { action: () => setStatusFilter('short'), label: 'Eksikleri göster' },
+                { action: () => setStatusFilter('balanced'), label: 'Tamları göster' },
+                { action: () => setStatusFilter('over'), label: 'Fazlaları göster' },
+                { direction: 'desc', key: 'norm', label: 'Eksik önce' },
+                { direction: 'asc', key: 'norm', label: 'Fazla önce' },
+              ]}
+            />
+            <ColumnFilter
+              active={sort.key === 'status' || statusFilter !== 'all'}
+              label={copy.statusColumn}
+              onSort={setSort}
+              options={[
+                { action: () => setStatusFilter('all'), label: 'Tüm durumlar' },
+                { action: () => setStatusFilter('short'), label: 'Sadece Eksik' },
+                { action: () => setStatusFilter('balanced'), label: 'Sadece Tam' },
+                { action: () => setStatusFilter('over'), label: 'Sadece Fazla' },
+                { direction: 'asc', key: 'status', label: 'Eksik, Tam, Fazla' },
+                { direction: 'desc', key: 'status', label: 'Fazla, Tam, Eksik' },
+              ]}
+            />
+            <ColumnFilter
+              active={sort.key === 'shortage' || statusFilter === 'short'}
+              label={copy.shortageColumn}
+              onSort={setSort}
+              options={[
+                { action: () => setStatusFilter('short'), label: 'Eksik günü olanlar' },
+                { action: () => setStatusFilter('all'), label: 'Tüm mağazalar' },
+                { direction: 'desc', key: 'shortage', label: 'En uzun önce' },
+                { direction: 'asc', key: 'shortage', label: 'En kısa önce' },
+              ]}
+            />
+            <ColumnFilter
+              active={sort.key === 'turnover'}
+              label={copy.turnoverColumn}
+              onSort={setSort}
+              options={[
+                { direction: 'desc', key: 'turnover', label: 'Yüksek önce' },
+                { direction: 'asc', key: 'turnover', label: 'Düşük önce' },
+              ]}
+            />
+            <span>{copy.actionColumn}</span>
+          </div>
+
+          {visibleRows.length > 0 ? (
+            <div className="swc-ledger-list" data-testid="store-workforce-region-rows">
+              {visibleRows.map((row, index) => (
+                <StoreRow
+                  index={index}
+                  isSelected={selectedStore?.storeId === row.storeId}
+                  key={row.storeId}
+                  locale={locale}
+                  onDetail={() => {
+                    setDetailStoreId(row.storeId)
+                    setDetailTab('summary')
+                  }}
+                  onSelect={() => setSelectedStoreId(row.storeId)}
+                  row={row}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="swc-empty-state">
+              <strong>{copy.emptyTitle}</strong>
+              <p>{copy.emptyCopy}</p>
+            </div>
+          )}
+        </div>
+
+        <InsightPanel
+          locale={locale}
+          onOpenDetail={() => {
+            if (selectedStore) {
+              setDetailStoreId(selectedStore.storeId)
+              setDetailTab('summary')
+            }
+          }}
+          row={selectedStore}
+        />
+      </section>
+
+      <StoreDossier
+        activeTab={detailTab}
         locale={locale}
-        row={selectedStore}
-        onClose={() => setSelectedStoreId(null)}
-        t={t}
+        onClose={() => setDetailStoreId(null)}
+        row={detailStore}
+        setActiveTab={setDetailTab}
       />
-    </section>
-  )
-}
-
-function MetricGrid(input: { ariaLabel: string; children: ReactNode }) {
-  return (
-    <section
-      aria-label={input.ariaLabel}
-      className="tw:mb-4 tw:grid tw:gap-3.5 tw:md:grid-cols-2 tw:xl:grid-cols-4"
-    >
-      {input.children}
     </section>
   )
 }
 
 function MetricCard(input: {
   icon: ReactNode
-  iconTone: Tone
   label: string
   note: string
+  tone?: 'danger' | 'default' | 'watch'
   value: string
 }) {
   return (
-    <article
-      className={cn(
-        'tw:grid tw:min-h-28 tw:grid-cols-[43px_minmax(0,1fr)] tw:items-center tw:gap-3 tw:rounded-[20px] tw:p-[17px]',
-        glassPanel,
-        surfaceShadow,
-      )}
-    >
-      <div className={cn('tw:grid tw:size-[43px] tw:place-items-center tw:rounded-[14px]', toneClasses[input.iconTone].icon)}>
-        {input.icon}
-      </div>
-      <div className="tw:min-w-0">
-        <span className={cn('tw:text-xs tw:leading-5', textMuted)}>{input.label}</span>
-        <strong className={cn('tw:my-1 tw:block tw:text-[22px] tw:font-bold tw:leading-tight', textInk)}>
-          {input.value}
-        </strong>
-        <small className="tw:block tw:text-xs tw:font-semibold tw:leading-5 tw:text-[#596789]">
-          {input.note}
-        </small>
+    <article className={`swc-metric-card ${input.tone ?? 'default'}`}>
+      <span className="swc-metric-icon" aria-hidden="true">{input.icon}</span>
+      <div>
+        <span>{input.label}</span>
+        <b>{input.value}</b>
+        <small>{input.note}</small>
       </div>
     </article>
   )
 }
 
-function FilterBar(input: { t: ReturnType<typeof useLocalization>['t'] }) {
-  return (
-    <div
-      className={cn(
-        'tw:mb-3.5 tw:grid tw:gap-2.5 tw:rounded-[20px] tw:p-3 tw:md:grid-cols-[minmax(280px,1fr)_minmax(160px,.35fr)_minmax(160px,.35fr)]',
-        glassPanel,
-        surfaceShadow,
-      )}
-    >
-      <label className="tw:relative tw:flex tw:items-center">
-        <Search className="tw:pointer-events-none tw:absolute tw:left-3 tw:size-[18px] tw:text-[#667397]" />
-        <input
-          aria-label={input.t('storeWorkforce.regionSearchAria')}
-          className={cn(
-            'tw:h-[42px] tw:w-full tw:rounded-[13px] tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:pr-3.5 tw:pl-10 tw:text-sm tw:font-medium tw:outline-none',
-            textInk,
-          )}
-          placeholder={input.t('storeWorkforce.regionSearchPlaceholder')}
-          readOnly
-        />
-      </label>
-      <FilterSelect
-        ariaLabel={input.t('storeWorkforce.regionStatusFilterAria')}
-        values={[input.t('storeWorkforce.regionAllStatuses'), input.t('storeWorkforce.sourceWaiting')]}
-      />
-      <FilterSelect
-        ariaLabel={input.t('storeWorkforce.regionSortAria')}
-        values={[
-          input.t('storeWorkforce.regionSortPersonnelScope'),
-          input.t('storeWorkforce.regionSortAverageTenure'),
-          input.t('storeWorkforce.regionSortPendingRequests'),
-        ]}
-      />
-    </div>
-  )
-}
-
-function FilterSelect(input: { ariaLabel: string; values: string[] }) {
-  return (
-    <select
-      aria-label={input.ariaLabel}
-      className={cn(
-        'tw:h-[42px] tw:w-full tw:rounded-[13px] tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:px-3.5 tw:text-sm tw:font-medium tw:outline-none',
-        textInk,
-      )}
-      defaultValue={input.values[0]}
-    >
-      {input.values.map((value) => (
-        <option key={value}>{value}</option>
-      ))}
-    </select>
-  )
-}
-
-function RegionStoreTable(input: {
-  locale: ReturnType<typeof useLocalization>['locale']
-  rows: RegionStoreRow[]
-  onSelectStore: (storeId: string) => void
-  t: ReturnType<typeof useLocalization>['t']
+function StoreRow(input: {
+  index: number
+  isSelected: boolean
+  locale: AppLocale
+  onDetail: () => void
+  onSelect: () => void
+  row: RegionStoreViewModel
 }) {
-  return (
-    <>
-      <div className="tw:hidden tw:md:block">
-        <table className="tw:w-full tw:table-fixed tw:border-collapse">
-          <colgroup>
-            <col style={{ width: '23%' }} />
-            <col style={{ width: '8%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '20%' }} />
-          </colgroup>
-          <thead>
-            <tr>
-              {[
-                input.t('storeWorkforce.storeColumn'),
-                input.t('storeWorkforce.personnelColumn'),
-                input.t('storeWorkforce.averageTenure'),
-                input.t('storeWorkforce.normActual'),
-                input.t('storeWorkforce.positionBalanceColumn'),
-                input.t('storeWorkforce.statusColumn'),
-                input.t('storeWorkforce.actionColumn'),
-              ].map((heading) => (
-                <th
-                  key={heading}
-                  className="tw:border-b tw:border-[#dfe6f3] tw:bg-[#f4f7fc]/85 tw:px-3 tw:py-3 tw:text-left tw:text-[11px] tw:font-bold tw:tracking-[0.02em] tw:text-[#687395] tw:uppercase"
-                >
-                  {heading}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody data-testid="store-workforce-region-rows">
-            {input.rows.map((row) => (
-              <RegionStoreDesktopRow
-                key={row.storeId}
-                locale={input.locale}
-                row={row}
-                onSelectStore={input.onSelectStore}
-                t={input.t}
-              />
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="tw:grid tw:gap-2.5 tw:p-3 tw:md:hidden" data-testid="store-workforce-region-rows">
-        {input.rows.map((row) => (
-          <RegionStoreMobileCard
-            locale={input.locale}
-            key={row.storeId}
-            row={row}
-            onSelectStore={input.onSelectStore}
-            t={input.t}
-          />
-        ))}
-      </div>
-    </>
-  )
-}
-
-function RegionStoreDesktopRow(input: {
-  locale: ReturnType<typeof useLocalization>['locale']
-  row: RegionStoreRow
-  onSelectStore: (storeId: string) => void
-  t: ReturnType<typeof useLocalization>['t']
-}) {
-  const personnelValue = input.row.isEmployeeLoading
-    ? input.t('storeWorkforce.sourceWaitingShort')
-    : input.row.isEmployeeError
-      ? input.t('storeWorkforce.valueNotConfigured')
-      : input.row.employees.length.toString()
-  const normActualValue = input.row.isHeadcountLoading
-    ? input.t('storeWorkforce.sourceWaitingShort')
-    : input.row.isHeadcountError
-      ? input.t('storeWorkforce.valueNotConfigured')
-      : formatNormActualLabel({
-          actualFallback: input.row.employees.length,
-          headcountGap: input.row.headcountGap,
-          locale: input.locale,
-          notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
-        })
-  const status = getRegionStoreStatus(input.row, input.locale, input.t)
-
-  return (
-    <tr data-testid="store-workforce-region-row">
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
-        <StoreIdentity row={input.row} />
-      </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
-        <span className={cn('tw:text-sm tw:font-semibold tw:whitespace-nowrap', textInk)}>
-          {personnelValue}
-        </span>
-      </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
-        <span className={cn('tw:text-sm tw:font-medium tw:whitespace-nowrap', textMuted)}>
-          {input.row.isEmployeeLoading
-            ? input.t('storeWorkforce.sourceWaitingShort')
-            : input.row.isEmployeeError
-              ? input.t('storeWorkforce.valueNotConfigured')
-              : input.row.summary.averageTenureLabel}
-        </span>
-      </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
-        <span className={cn('tw:block tw:max-w-[130px] tw:truncate tw:text-sm tw:font-semibold tw:whitespace-nowrap', textInk)} title={normActualValue}>
-          {normActualValue}
-        </span>
-      </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
-        <MiniBars inactive={input.row.isEmployeeLoading || input.row.employees.length === 0} />
-      </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px]">
-        <Status tone={status.tone}>{status.label}</Status>
-      </td>
-      <td className="tw:border-b tw:border-[#dae2f0]/90 tw:px-3 tw:py-[11px] tw:text-left">
-        <DetailButton onClick={() => input.onSelectStore(input.row.storeId)}>
-          {input.t('storeWorkforce.detailAction')}
-        </DetailButton>
-      </td>
-    </tr>
-  )
-}
-
-function RegionStoreMobileCard(input: {
-  locale: ReturnType<typeof useLocalization>['locale']
-  row: RegionStoreRow
-  onSelectStore: (storeId: string) => void
-  t: ReturnType<typeof useLocalization>['t']
-}) {
-  const personnelValue = input.row.isEmployeeLoading
-    ? input.t('storeWorkforce.sourceWaitingShort')
-    : input.row.isEmployeeError
-      ? input.t('storeWorkforce.valueNotConfigured')
-    : input.row.employees.length.toString()
-  const status = getRegionStoreStatus(input.row, input.locale, input.t)
+  const status = statusCopy[input.row.status]
+  const activeValue = input.row.isEmployeeLoading ? '...' : formatNullableNumber(input.row.activeHeadcount, input.locale)
 
   return (
     <article
-      className="tw:grid tw:gap-3 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:p-3"
+      className={`swc-store-row ${input.row.status} ${input.isSelected ? 'selected' : ''}`}
       data-testid="store-workforce-region-row"
+      onClick={input.onSelect}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          input.onSelect()
+        }
+      }}
+      role="button"
+      style={{ '--row-index': input.index } as CSSProperties}
+      tabIndex={0}
     >
-      <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-        <StoreIdentity row={input.row} />
-        <Status tone={status.tone}>{status.label}</Status>
+      <div className="swc-store-name">
+        <span aria-hidden="true">
+          <Store />
+        </span>
+        <div>
+          <b>{input.row.storeLabel}</b>
+          <small>{input.row.managerName ?? 'Müdür bilgisi yok'}</small>
+        </div>
       </div>
-      <div className="tw:grid tw:grid-cols-2 tw:gap-2">
-        <MiniValue label={input.t('storeWorkforce.personnelColumn')} value={personnelValue} />
-        <MiniValue
-          label={input.t('storeWorkforce.averageTenure')}
-          value={
-            input.row.isEmployeeLoading
-              ? input.t('storeWorkforce.sourceWaitingShort')
-              : input.row.isEmployeeError
-              ? input.t('storeWorkforce.valueNotConfigured')
-              : input.row.summary.averageTenureLabel
-          }
-        />
-        <MiniValue
-          label={input.t('storeWorkforce.normActual')}
-          value={
-            input.row.isHeadcountLoading
-              ? input.t('storeWorkforce.sourceWaitingShort')
-              : input.row.isHeadcountError
-                ? input.t('storeWorkforce.valueNotConfigured')
-              : formatNormActualLabel({
-                  actualFallback: input.row.employees.length,
-                  headcountGap: input.row.headcountGap,
-                  notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
-                })
-          }
-        />
+      <div className="swc-count-cell">
+        <b>{activeValue}</b>
+        <span>aktif</span>
       </div>
-      <DetailButton primary onClick={() => input.onSelectStore(input.row.storeId)}>
-        {input.t('storeWorkforce.detailAction')}
-      </DetailButton>
+      <div className="swc-count-cell">
+        <b>{input.row.isHeadcountLoading ? '...' : input.row.normLabel}</b>
+        <span>{formatGapLabel(input.row)}</span>
+      </div>
+      <Pill tone={status.tone}>{status.label}</Pill>
+      <div className={`swc-days-cell ${input.row.status === 'short' ? 'hot' : ''}`}>
+        <Clock3 />
+        <b>{formatShortage(input.row)}</b>
+      </div>
+      <div className="swc-turnover-cell">
+        <span>{formatTurnover(input.row.turnover)}</span>
+        <i aria-hidden="true">
+          <em style={{ width: input.row.turnover === null ? '0%' : `${Math.min(input.row.turnover * 2.3, 100)}%` }} />
+        </i>
+      </div>
+      <Button
+        className="swc-row-action"
+        onClick={(event) => {
+          event.stopPropagation()
+          input.onDetail()
+        }}
+        type="button"
+        variant="outline"
+      >
+        {copy.detailAction}
+        <ArrowRight data-icon="inline-end" />
+      </Button>
     </article>
   )
 }
 
-function StoreIdentity(input: { row: RegionStoreRow }) {
-  return (
-    <div className="tw:flex tw:w-full tw:min-w-0 tw:max-w-full tw:items-center tw:gap-2.5">
-      <div className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-[13px] tw:bg-[#efe9ff] tw:text-[#5534e6]">
-        <Store className="tw:size-[18px]" />
-      </div>
-      <div className="tw:min-w-0">
-        <strong
-          className={cn(
-            'tw:block tw:max-w-[180px] tw:truncate tw:text-sm tw:font-semibold tw:leading-tight tw:md:max-w-[170px] tw:xl:max-w-[155px]',
-            textInk,
-          )}
-          title={input.row.storeLabel}
-        >
-          {input.row.storeLabel}
-        </strong>
-      </div>
-    </div>
-  )
-}
-
-function DetailButton(input: {
-  children: ReactNode
-  onClick: () => void
-  primary?: boolean
+function InsightPanel(input: {
+  locale: AppLocale
+  onOpenDetail: () => void
+  row: RegionStoreViewModel | null
 }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className={cn(
-        'tw:h-8 tw:rounded-[12px] tw:border-[#6847ff]/20 tw:px-2.5 tw:text-xs tw:font-bold tw:whitespace-nowrap tw:text-[#5534e6] tw:shadow-none',
-        input.primary
-          ? 'tw:w-full tw:border-transparent tw:bg-[linear-gradient(135deg,#6847ff,#355cff)] tw:text-white tw:shadow-[0_12px_24px_rgba(104,71,255,0.22)]'
-          : 'tw:bg-white',
-      )}
-      onClick={input.onClick}
-    >
-      {input.children}
-      <ChevronRight className="tw:size-3.5" />
-    </Button>
-  )
-}
-
-function SidePanel(input: {
-  badge: string
-  badgeTone: Tone
-  children: ReactNode
-  description: string
-  title: string
-}) {
-  return (
-    <section className={cn('tw:overflow-hidden tw:rounded-[22px]', glassPanel, surfaceShadow)}>
-      <div className="tw:flex tw:items-start tw:justify-between tw:gap-4 tw:border-b tw:border-[#dfe6f3] tw:p-[18px]">
-        <div className="tw:min-w-0">
-          <h3 className={cn('tw:text-base tw:font-bold tw:leading-tight', textInk)}>
-            {input.title}
-          </h3>
-          <p className={cn('tw:mt-1.5 tw:text-[13px] tw:leading-5', textMuted)}>
-            {input.description}
-          </p>
+  if (!input.row) {
+    return (
+      <aside className="swc-insight-panel">
+        <div className="swc-panel-top">
+          <div>
+            <small>Seçili mağaza</small>
+            <h2>Mağaza yok</h2>
+            <p>Liste yüklenince detay açılır.</p>
+          </div>
         </div>
-        <Pill tone={input.badgeTone}>{input.badge}</Pill>
+      </aside>
+    )
+  }
+
+  const status = statusCopy[input.row.status]
+  const positionRows = input.row.summary.positionRows
+  const maxPositionCount = Math.max(...positionRows.map((row) => row.count), 1)
+
+  return (
+    <aside className="swc-insight-panel">
+      <div className="swc-panel-top">
+        <div>
+          <small>Seçili mağaza</small>
+          <h2>{input.row.storeLabel}</h2>
+          <p>{status.helper}</p>
+        </div>
+        <Pill tone={status.tone}>{status.label}</Pill>
       </div>
-      <div className="tw:p-4">{input.children}</div>
-    </section>
-  )
-}
 
-function UnavailableList(input: { rows: string[] }) {
-  return (
-    <div className="tw:grid tw:gap-3">
-      {input.rows.map((row) => (
-        <div
-          key={row}
-          className="tw:flex tw:items-start tw:gap-2 tw:rounded-2xl tw:bg-[#fff1d9] tw:px-3 tw:py-2.5 tw:text-[#a35a00]"
-        >
-          <span className="tw:mt-1.5 tw:size-[7px] tw:shrink-0 tw:rounded-full tw:bg-current" />
-          <span className="tw:min-w-0 tw:text-xs tw:font-semibold tw:leading-5">
-            {row}
-          </span>
+      <div className="swc-panel-facts">
+        <Fact label="Norm / fiili" value={input.row.normLabel} />
+        <Fact label="Eksik kadro" value={formatGapLabel(input.row)} />
+        <Fact label="Eksik süre" value={formatShortage(input.row)} />
+        <Fact label="Turnover" value={formatTurnover(input.row.turnover)} />
+      </div>
+
+      <div className="swc-role-stack">
+        <div className="swc-section-title">
+          <b>Pozisyon dengesi</b>
+          <span>{formatNumber(positionRows.length, input.locale)} rol</span>
         </div>
-      ))}
-    </div>
+        {positionRows.length > 0 ? (
+          positionRows.slice(0, 6).map((row) => (
+            <div className="swc-role-row" key={row.label}>
+              <span>{row.label}</span>
+              <b>{formatNumber(row.count, input.locale)} aktif</b>
+              <i aria-hidden="true">
+                <em style={{ width: `${Math.max(8, (row.count / maxPositionCount) * 100)}%` }} />
+              </i>
+            </div>
+          ))
+        ) : (
+          <p className="swc-muted-copy">Pozisyon dağılımı yok.</p>
+        )}
+      </div>
+
+      <Button className="swc-panel-button" onClick={input.onOpenDetail} type="button">
+        Mağaza dosyasını aç
+        <ArrowRight data-icon="inline-end" />
+      </Button>
+    </aside>
   )
 }
 
-function EmptyPrototypeState(input: { description: string; title: string }) {
-  return (
-    <div className="tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/75 tw:p-4">
-      <strong className={cn('tw:block tw:text-sm tw:font-bold', textInk)}>{input.title}</strong>
-      <p className={cn('tw:mt-1.5 tw:text-sm tw:leading-6', textMuted)}>{input.description}</p>
-    </div>
-  )
-}
-
-function RegionStoreDetailDialog(input: {
-  locale: ReturnType<typeof useLocalization>['locale']
-  row: RegionStoreRow | null
+function StoreDossier(input: {
+  activeTab: DetailTab
+  locale: AppLocale
   onClose: () => void
-  t: ReturnType<typeof useLocalization>['t']
+  row: RegionStoreViewModel | null
+  setActiveTab: (tab: DetailTab) => void
 }) {
   const open = Boolean(input.row)
-  const [activeTab, setActiveTab] = useState<DetailTab>('people')
-  const status = input.row ? getRegionStoreStatus(input.row, input.locale, input.t) : null
+  const status = input.row ? statusCopy[input.row.status] : statusCopy.notConfigured
 
   return (
     <Dialog
@@ -732,168 +609,242 @@ function RegionStoreDetailDialog(input: {
       }}
     >
       <DialogContent
-        closeLabel={input.t('storeWorkforce.closeDetail')}
+        closeLabel={copy.close}
         showCloseButton={false}
+        className="swc-dossier-modal"
         data-testid="store-workforce-region-detail-dialog"
-        className={cn(
-          'tw:top-auto tw:bottom-0 tw:left-0 tw:max-h-[92dvh] tw:max-w-full tw:translate-x-0 tw:translate-y-0 tw:gap-0 tw:overflow-y-auto tw:rounded-b-none tw:rounded-t-[24px] tw:border-[#b4c1db]/70 tw:bg-[radial-gradient(circle_at_100%_0%,rgba(32,191,211,.13),transparent_36%),rgba(255,255,255,.94)] tw:p-0 tw:shadow-[0_24px_70px_rgba(58,75,118,0.16)] tw:sm:top-1/2 tw:sm:bottom-auto tw:sm:left-1/2 tw:sm:max-h-[min(86vh,820px)] tw:sm:max-w-[1000px] tw:sm:-translate-x-1/2 tw:sm:-translate-y-1/2 tw:sm:rounded-[26px]',
-        )}
       >
-        <div className="tw:flex tw:items-start tw:justify-between tw:gap-4 tw:border-b tw:border-[#dfe6f3] tw:p-5">
-          <div className="tw:min-w-0">
-            <DialogTitle className={cn('tw:text-[22px] tw:font-bold tw:leading-tight', textInk)}>
-              {input.row
-                ? input.t('storeWorkforce.regionDetailTitleWithStore', {
-                    store: input.row.storeLabel,
-                  })
-                : input.t('storeWorkforce.regionDetailTitle')}
-            </DialogTitle>
-            <DialogDescription className={cn('tw:mt-1 tw:text-sm', textMuted)}>
-              {input.t('storeWorkforce.regionDetailModalCopy')}
+        <div className="swc-modal-orbit" aria-hidden="true" />
+        <header className="swc-modal-header">
+          <div>
+            <div className="swc-kicker compact">
+              <span>{input.row?.managerName ?? 'Müdür bilgisi yok'}</span>
+              <b>{status.label}</b>
+            </div>
+            <DialogTitle>{input.row ? `${input.row.storeLabel} Norm Kadro dosyası` : 'Norm Kadro dosyası'}</DialogTitle>
+            <DialogDescription>
+              Mağaza norm dengesi, aktif personel ve pozisyon görünümü.
             </DialogDescription>
           </div>
-          <div className="tw:flex tw:shrink-0 tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
-            <Pill tone={status?.tone ?? 'cyan'}>{status?.label ?? input.t('storeWorkforce.valueNotConfigured')}</Pill>
-            <button
-              type="button"
-              aria-label={input.t('storeWorkforce.closeDetail')}
-              className={cn('tw:grid tw:size-[38px] tw:place-items-center tw:rounded-[13px] tw:border tw:border-[#dfe6f3] tw:bg-white', textInk)}
-              onClick={input.onClose}
-            >
-              <X className="tw:size-[18px]" />
-            </button>
-          </div>
+          <button aria-label={copy.close} className="swc-close-button" onClick={input.onClose} type="button">
+            <X />
+          </button>
+        </header>
+
+        <div className="swc-modal-summary">
+          <Fact label="Norm / fiili" value={input.row?.normLabel ?? '-'} />
+          <Fact label="Eksik süre" value={input.row ? formatShortage(input.row) : '-'} />
+          <Fact label="Yıl turnover" value={input.row ? formatTurnover(input.row.turnover) : '-'} />
+          <Fact label="Ortalama kıdem" value={input.row?.summary.averageTenureLabel ?? '-'} />
         </div>
 
-        <div className="tw:grid tw:gap-4 tw:p-4 tw:sm:p-[18px]">
-          <div className="tw:grid tw:grid-cols-2 tw:gap-2.5 tw:sm:grid-cols-4">
-            <MiniMetric label={input.t('storeWorkforce.storeColumn')} value={input.row?.storeLabel ?? input.t('storeWorkforce.valueNotConfigured')} />
-            <MiniMetric
-              label={input.t('storeWorkforce.personnelColumn')}
-              value={
-                input.row && !input.row.isEmployeeError
-                  ? input.row.employees.length.toString()
-                  : input.t('storeWorkforce.valueNotConfigured')
-              }
-            />
-            <MiniMetric
-              label={input.t('storeWorkforce.averageTenure')}
-              value={
-                input.row
-                  ? input.row.isEmployeeLoading
-                    ? input.t('storeWorkforce.sourceWaitingShort')
-                    : input.row.isEmployeeError
-                      ? input.t('storeWorkforce.valueNotConfigured')
-                      : input.row.summary.averageTenureLabel
-                  : input.t('storeWorkforce.valueNotConfigured')
-              }
-            />
-            <MiniMetric
-              label={input.t('storeWorkforce.normActual')}
-              value={
-                input.row
-                  ? input.row.isHeadcountLoading
-                    ? input.t('storeWorkforce.sourceWaitingShort')
-                    : input.row.isHeadcountError
-                    ? input.t('storeWorkforce.valueNotConfigured')
-                    : formatNormActualLabel({
-                      actualFallback: input.row.employees.length,
-                      headcountGap: input.row.headcountGap,
-                      notConfiguredLabel: input.t('storeWorkforce.valueNotConfigured'),
-                    })
-                  : input.t('storeWorkforce.valueNotConfigured')
-              }
-            />
-            <MiniMetric label={input.t('storeWorkforce.openMovements')} value={input.t('storeWorkforce.valueContractShort')} />
-          </div>
-
-          <div className="tw:inline-flex tw:w-full tw:gap-1.5 tw:rounded-[15px] tw:border tw:border-[#6847ff]/15 tw:bg-white/70 tw:p-1.5 tw:sm:w-fit">
-            <ModalTab active={activeTab === 'people'} onClick={() => setActiveTab('people')}>
-              {input.t('storeWorkforce.regionDetailPeopleTab')}
-            </ModalTab>
-            <ModalTab active={activeTab === 'positions'} onClick={() => setActiveTab('positions')}>
-              {input.t('storeWorkforce.regionDetailPositionsTab')}
-            </ModalTab>
-            <ModalTab active={activeTab === 'requests'} onClick={() => setActiveTab('requests')}>
-              {input.t('storeWorkforce.regionDetailRequestsTab')}
-            </ModalTab>
-          </div>
-
-          {activeTab === 'people' ? (
-            <ModalPersonnelPane row={input.row} t={input.t} />
-          ) : null}
-          {activeTab === 'positions' ? (
-            <ModalPositionPane row={input.row} t={input.t} />
-          ) : null}
-          {activeTab === 'requests' ? (
-            <ModalRequestsPlaceholder t={input.t} />
-          ) : null}
+        <div className="swc-modal-tabs">
+          <button className={input.activeTab === 'summary' ? 'active' : ''} onClick={() => input.setActiveTab('summary')} type="button">
+            Özet
+          </button>
+          <button className={input.activeTab === 'people' ? 'active' : ''} onClick={() => input.setActiveTab('people')} type="button">
+            Personel
+          </button>
+          <button className={input.activeTab === 'positions' ? 'active' : ''} onClick={() => input.setActiveTab('positions')} type="button">
+            Pozisyon
+          </button>
+          <button className={input.activeTab === 'requests' ? 'active' : ''} onClick={() => input.setActiveTab('requests')} type="button">
+            Talep
+          </button>
         </div>
+
+        <div className="swc-modal-body">
+          {input.activeTab === 'summary' ? <SummaryPane locale={input.locale} row={input.row} /> : null}
+          {input.activeTab === 'people' ? <PeoplePane locale={input.locale} row={input.row} /> : null}
+          {input.activeTab === 'positions' ? <PositionsPane locale={input.locale} row={input.row} /> : null}
+          {input.activeTab === 'requests' ? <RequestsPane /> : null}
+        </div>
+
+        <DialogFooter className="swc-modal-footer">
+          <Button type="button" variant="outline" className="swc-outline-button" onClick={input.onClose}>
+            {copy.close}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
 
-function ModalTab(input: { active: boolean; children: ReactNode; onClick: () => void }) {
+function SummaryPane(input: { locale: AppLocale; row: RegionStoreViewModel | null }) {
+  if (!input.row) return null
+  const positionRows = input.row.summary.positionRows
+
   return (
-    <button
-      type="button"
-      className={cn(
-        'tw:h-8 tw:flex-1 tw:rounded-[11px] tw:px-2 tw:text-xs tw:font-bold tw:sm:flex-none tw:sm:px-3',
-        input.active
-          ? 'tw:bg-[#efe9ff] tw:text-[#5534e6]'
-          : 'tw:bg-transparent tw:text-[#52607f]',
-      )}
-      onClick={input.onClick}
-    >
-      {input.children}
-    </button>
+    <div className="swc-overview-grid">
+      <section className="swc-timeline-card">
+        <div className="swc-section-title">
+          <b>Eksik kadro kronolojisi</b>
+          <span>{input.row.status === 'short' ? formatShortage(input.row) : 'Kapalı'}</span>
+        </div>
+        <div className="swc-timeline">
+          <TimelineItem icon={<UsersRound />} label="Norm durumu" tone={input.row.status === 'short' ? 'danger' : 'calm'} value={statusCopy[input.row.status].label} />
+          <TimelineItem icon={<CircleSlash2 />} label="Açık pozisyon" tone={input.row.status === 'short' ? 'danger' : 'calm'} value={formatGapLabel(input.row)} />
+          <TimelineItem icon={<CheckCircle2 />} label="Aksiyon" tone="calm" value="Aksiyon yok" />
+        </div>
+      </section>
+
+      <section className="swc-position-map">
+        <div className="swc-section-title">
+          <b>Pozisyon haritası</b>
+          <span>{formatNumber(positionRows.length, input.locale)} rol</span>
+        </div>
+        {positionRows.length > 0 ? (
+          positionRows.map((row) => (
+            <div className="swc-position-row" key={row.label}>
+              <div>
+                <span>{row.label}</span>
+                <b>{formatNumber(row.count, input.locale)} aktif personel</b>
+              </div>
+              <Pill tone="neutral">Aktif</Pill>
+            </div>
+          ))
+        ) : (
+          <p className="swc-muted-copy">Pozisyon dağılımı yok.</p>
+        )}
+      </section>
+    </div>
   )
 }
 
-function Pill(input: { children: ReactNode; tone: Tone }) {
-  return (
-    <span
-      className={cn(
-        'tw:inline-flex tw:min-h-[30px] tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-full tw:px-3 tw:text-xs tw:font-bold tw:whitespace-nowrap',
-        toneClasses[input.tone].pill,
-      )}
-    >
-      {input.children}
-    </span>
-  )
-}
+function PeoplePane(input: { locale: AppLocale; row: RegionStoreViewModel | null }) {
+  const employees = input.row?.employees ?? []
+  const now = useMemo(() => new Date(), [])
 
-function Status(input: { children: ReactNode; tone: Tone }) {
-  return (
-    <span
-      className={cn(
-        'tw:inline-flex tw:min-h-[25px] tw:max-w-[96px] tw:items-center tw:gap-1.5 tw:rounded-full tw:px-2 tw:text-[11px] tw:font-bold tw:whitespace-nowrap',
-        toneClasses[input.tone].status,
-      )}
-    >
-      <span className="tw:size-1.5 tw:shrink-0 tw:rounded-full tw:bg-current" />
-      <span className="tw:min-w-0 tw:truncate">{input.children}</span>
-    </span>
-  )
-}
-
-function getRegionStoreStatus(
-  row: RegionStoreRow,
-  locale: ReturnType<typeof useLocalization>['locale'],
-  t: ReturnType<typeof useLocalization>['t'],
-) {
-  if (row.isError) return { label: t('storeWorkforce.valueNotConfigured'), tone: 'rose' as const }
-  if (row.isLoading) return { label: t('storeWorkforce.sourceWaitingShort'), tone: 'amber' as const }
-  const kind = interpretNormStaffingStatus({ actualFallback: row.employees.length, headcountGap: row.headcountGap })
-  return {
-    label: formatNormStaffingStatusLabel({ kind, locale, notConfiguredLabel: t('storeWorkforce.valueNotConfigured') }),
-    tone: getNormStatusTone(kind),
+  if (employees.length === 0) {
+    return (
+      <div className="swc-empty-state compact">
+        <strong>Personel yok</strong>
+        <p>Bu mağazada aktif personel görünmüyor.</p>
+      </div>
+    )
   }
+
+  return (
+    <div className="swc-people-table">
+      <div className="swc-people-head">
+        <span>Personel</span>
+        <span>Pozisyon</span>
+        <span>Kıdem</span>
+        <span>Başlangıç</span>
+      </div>
+      {employees.map((employee) => (
+        <div className="swc-people-row" key={employee.employeeId}>
+          <div>
+            <b>{employee.displayName}</b>
+            <small>{employee.externalEmployeeRef ?? employee.employeeId}</small>
+          </div>
+          <span>{employee.positionName || 'Pozisyon bilgisi yok'}</span>
+          <span>{getTenureFromDate(employee.assignmentStartDate, now, input.locale).label}</span>
+          <span>{formatDateLabel(employee.assignmentStartDate)}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
-function getNormStatusTone(kind: NormStaffingStatusKind): Tone {
-  return kind === 'short' ? 'amber' : kind === 'balanced' ? 'green' : kind === 'over' ? 'blue' : 'cyan'
+function PositionsPane(input: { locale: AppLocale; row: RegionStoreViewModel | null }) {
+  const rows = input.row?.summary.positionRows ?? []
+
+  if (rows.length === 0) {
+    return (
+      <div className="swc-empty-state compact">
+        <strong>Pozisyon yok</strong>
+        <p>Aktif personel pozisyonu bulunamadı.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="swc-position-board">
+      {rows.map((row) => (
+        <article className="swc-position-card ok" key={row.label}>
+          <div>
+            <b>{row.label}</b>
+            <span>{formatNumber(row.count, input.locale)} aktif personel</span>
+          </div>
+          <strong>{formatNumber(row.count, input.locale)}</strong>
+        </article>
+      ))}
+    </div>
+  )
 }
 
-function getUniqueIds(ids: string[]) { return Array.from(new Set(ids.filter(Boolean))).sort((left, right) => left.localeCompare(right)) }
+function RequestsPane() {
+  return (
+    <div className="swc-request-flow">
+      <TimelineItem icon={<UserRound />} label="Personel talebi" tone="calm" value="Aksiyon yok" />
+      <TimelineItem icon={<CalendarDays />} label="Son revizyon" tone="calm" value="Veri yok" />
+    </div>
+  )
+}
+
+function ColumnFilter(input: {
+  active: boolean
+  label: string
+  onSort: (value: { direction: SortDirection; key: SortKey }) => void
+  options: ColumnFilterOption[]
+}) {
+  return (
+    <DropdownMenu.Root>
+      <DropdownMenu.Trigger className={`swc-column-filter-trigger ${input.active ? 'active' : ''}`}>
+        <span>{input.label}</span>
+        <Filter />
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content align="start" className="swc-column-filter-content" sideOffset={7}>
+          {input.options.map((option) => (
+            <DropdownMenu.Item
+              className="swc-column-filter-item"
+              key={`${option.label}-${option.key ?? 'action'}-${option.direction ?? ''}`}
+              onSelect={() => {
+                if (option.action) {
+                  option.action()
+                  return
+                }
+                if (option.key && option.direction) {
+                  input.onSort({ direction: option.direction, key: option.key })
+                }
+              }}
+            >
+              <CheckCircle2 />
+              <span>{option.label}</span>
+            </DropdownMenu.Item>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  )
+}
+
+function Pill(input: { children: ReactNode; tone: 'blue' | 'mint' | 'neutral' | 'rose' }) {
+  return <span className={`swc-pill ${input.tone}`}>{input.children}</span>
+}
+
+function Fact(input: { label: string; value: string }) {
+  return (
+    <div className="swc-fact">
+      <span>{input.label}</span>
+      <b>{input.value}</b>
+    </div>
+  )
+}
+
+function TimelineItem(input: {
+  icon: ReactNode
+  label: string
+  tone: 'calm' | 'danger' | 'watch'
+  value: string
+}) {
+  return (
+    <div className={`swc-timeline-item ${input.tone}`}>
+      <i>{input.icon}</i>
+      <span>{input.label}</span>
+      <b>{input.value}</b>
+    </div>
+  )
+}
