@@ -27,7 +27,14 @@
 .swc-ledger-head,
 .swc-store-row {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) minmax(72px, 0.42fr) minmax(92px, 0.5fr) minmax(82px, 0.42fr) minmax(104px, 0.5fr) minmax(82px, 0.42fr) minmax(96px, auto);
+  grid-template-columns:
+    minmax(220px, 1.35fr)
+    minmax(84px, 0.55fr)
+    minmax(96px, 0.65fr)
+    minmax(86px, 0.55fr)
+    minmax(112px, 0.65fr)
+    minmax(96px, 0.55fr)
+    minmax(112px, auto);
   align-items: center;
   gap: 10px;
 }
@@ -140,7 +147,6 @@
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82)),
     var(--swc-panel);
-  cursor: pointer;
   transition: background 160ms ease, box-shadow 160ms ease;
   animation: swc-row-in 360ms ease both;
   animation-delay: calc(var(--row-index) * 32ms);
@@ -507,31 +513,43 @@
 }
 
 @media (max-width: 1180px) and (min-width: 861px) {
-  .swc-ledger-head,
-  .swc-store-row {
-    grid-template-columns: minmax(150px, 1fr) 54px 66px 64px 78px 72px 68px;
-    gap: 6px;
+  .swc-ledger {
+    overflow: visible;
   }
 
   .swc-ledger-head {
-    padding: 0 12px;
+    display: none;
+  }
+
+  .swc-ledger-list {
+    max-height: none;
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+    background: #fff;
   }
 
   .swc-store-row {
-    padding: 0 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    min-height: auto;
+    border: 1px solid var(--swc-line);
+    border-radius: 18px;
+    padding: 14px;
   }
 
-  .swc-column-filter-trigger {
-    padding: 0 4px;
+  .swc-store-row::before {
+    width: 100%;
+    height: 4px;
+    inset: 0 0 auto;
+  }
+
+  .swc-store-name,
+  .swc-row-action[data-slot="button"] {
+    grid-column: 1 / -1;
   }
 
   .swc-row-action[data-slot="button"] {
-    padding: 0 6px;
-    font-size: 11px;
-  }
-
-  .swc-turnover-cell {
-    width: 56px;
+    width: 100%;
   }
 }
-

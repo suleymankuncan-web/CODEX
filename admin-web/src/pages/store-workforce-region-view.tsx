@@ -390,14 +390,13 @@ export function RegionWorkforceView(input: {
               {visibleRows.map((row, index) => (
                 <StoreRow
                   index={index}
-                  isSelected={selectedStore?.storeId === row.storeId}
                   key={row.storeId}
                   locale={locale}
                   onDetail={() => {
+                    setSelectedStoreId(row.storeId)
                     setDetailStoreId(row.storeId)
                     setDetailTab('summary')
                   }}
-                  onSelect={() => setSelectedStoreId(row.storeId)}
                   row={row}
                 />
               ))}
@@ -454,10 +453,8 @@ function MetricCard(input: {
 
 function StoreRow(input: {
   index: number
-  isSelected: boolean
   locale: AppLocale
   onDetail: () => void
-  onSelect: () => void
   row: RegionStoreViewModel
 }) {
   const status = statusCopy[input.row.status]
@@ -465,18 +462,9 @@ function StoreRow(input: {
 
   return (
     <article
-      className={`swc-store-row ${input.row.status} ${input.isSelected ? 'selected' : ''}`}
+      className={`swc-store-row ${input.row.status}`}
       data-testid="store-workforce-region-row"
-      onClick={input.onSelect}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault()
-          input.onSelect()
-        }
-      }}
-      role="button"
       style={{ '--row-index': input.index } as CSSProperties}
-      tabIndex={0}
     >
       <div className="swc-store-name">
         <span aria-hidden="true">
@@ -508,10 +496,7 @@ function StoreRow(input: {
       </div>
       <Button
         className="swc-row-action"
-        onClick={(event) => {
-          event.stopPropagation()
-          input.onDetail()
-        }}
+        onClick={input.onDetail}
         type="button"
         variant="outline"
       >
