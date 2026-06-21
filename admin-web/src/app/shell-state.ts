@@ -1,5 +1,9 @@
 import type { AuthSessionSummary } from '../features/auth/api'
 import { ApiError } from '../lib/api'
+import {
+  getStoreLandingPath,
+  isStoreVisualMerchandiserOnly,
+} from './store-route-registry'
 
 export type ShellState = {
   mode: 'setup-required' | 'verifying' | 'rejected' | 'ready'
@@ -101,16 +105,16 @@ export function resolveLandingPath(authSummary: AuthSessionSummary | null, isRea
     return '/admin/auth'
   }
 
-  if (isVisualMerchandiserOnly(authSummary)) {
-    return '/store/checklists'
+  if (isStoreVisualMerchandiserOnly(authSummary)) {
+    return getStoreLandingPath(authSummary)
   }
 
   if (hasAnyRole(roles, ['STORE_PERSONNEL']) && !hasAnyRole(roles, ['STORE_MANAGER', 'REGION_MANAGER'])) {
-    return '/store/me'
+    return getStoreLandingPath(authSummary)
   }
 
   if (hasAnyRole(roles, ['REGION_MANAGER', 'STORE_MANAGER', 'VISUAL_MERCHANDISER'])) {
-    return '/store/home'
+    return getStoreLandingPath(authSummary)
   }
 
   return '/store/home'
@@ -135,9 +139,7 @@ function resolveAuthErrorCopy(error: unknown) {
 }
 
 export function isVisualMerchandiserOnly(authSummary: AuthSessionSummary | null) {
-  const roles = authSummary?.user.roleCodes ?? []
-  const broadRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL']
-  return roles.includes('VISUAL_MERCHANDISER') && !hasAnyRole(roles, broadRoles)
+  return isStoreVisualMerchandiserOnly(authSummary)
 }
 
 export function hasAnyRole(userRoles: string[], requiredRoles: string[]) {

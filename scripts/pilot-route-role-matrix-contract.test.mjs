@@ -19,6 +19,7 @@ const appRouteSource = [
   readText('admin-web/src/app/admin-navigation.ts'),
   readText('admin-web/src/app/admin-shell.tsx'),
   readText('admin-web/src/app/store-shell.tsx'),
+  readText('admin-web/src/app/store-route-registry.ts'),
 ].join('\n')
 
 const requiredRoutes = [
