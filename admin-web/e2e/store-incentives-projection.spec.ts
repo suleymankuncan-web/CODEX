@@ -46,7 +46,7 @@ test('store personnel sees own incentive card on My Performance without store in
 })
 
 test('store manager sees incentive navigation and store projection rows without approval flow', async ({ page }) => {
-  await routeAuthSession(page, createAuthSession(['STORE_MANAGER']))
+  await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['company'] }))
   await routeStoreIncentives(page, storeIncentiveFixture)
 
   await page.goto('/store/home')
@@ -168,7 +168,10 @@ test('region manager sees saved draft correction amount in totals and sheet inpu
 
   await expect(page.getByText('63.500,25 TL').first()).toBeVisible()
   await page.getByRole('button', { name: 'Store Personnel' }).click()
-  await expect(page.getByLabel('Final prim tutarı')).toHaveValue('17.000,25')
+  const finalAmountInput = page.getByLabel('Final prim tutarı')
+  await expect(finalAmountInput).toHaveValue('17000,25')
+  await finalAmountInput.blur()
+  await expect(finalAmountInput).toHaveValue('17.000,25 TL')
 })
 
 test('region manager can type a large final correction amount without live grouping corruption', async ({ page }) => {
@@ -295,7 +298,7 @@ test('cashier and non-company store users do not see incentive surfaces', async 
   await expect(page.getByTestId('store-me-incentive-card')).toHaveCount(0)
   await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toHaveCount(0)
 
-  await routeAuthSession(page, createAuthSession(['STORE_MANAGER']))
+  await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['franchise'] }))
   await page.goto('/store/home')
 
   await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toHaveCount(0)
@@ -310,7 +313,7 @@ test('cashier and non-company store users do not see incentive surfaces', async 
 test('captures responsive visual evidence for eligible incentive state', async ({ page }) => {
   mkdirSync(evidenceDir, { recursive: true })
 
-  await routeAuthSession(page, createAuthSession(['STORE_MANAGER']))
+  await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['company'] }))
   await routeStoreIncentives(page, storeIncentiveFixture)
 
   await page.setViewportSize({ width: 1440, height: 1100 })
@@ -369,7 +372,7 @@ test('captures responsive visual evidence for region manager incentive command s
 test('captures responsive visual evidence for hidden incentive state', async ({ page }) => {
   mkdirSync(evidenceDir, { recursive: true })
 
-  await routeAuthSession(page, createAuthSession(['STORE_MANAGER']))
+  await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['franchise'] }))
   await routeStoreIncentives(page, emptyIncentiveFixture)
 
   await page.setViewportSize({ width: 1440, height: 1100 })
@@ -523,6 +526,7 @@ function createAuthSession(
     readRegionIds?: string[]
     scopeRegionIds?: string[]
     actionStoreIds?: string[]
+    assignedStoreTypes?: Array<'company' | 'franchise' | 'operator'>
   },
 ) {
   const readStoreIds = input?.readStoreIds ?? [demoStoreId]
@@ -548,6 +552,7 @@ function createAuthSession(
       },
       actionScope: {
         assignedStoreIds: actionStoreIds,
+        assignedStoreTypes: input?.assignedStoreTypes ?? [],
       },
       assignedStoreIds: actionStoreIds,
     },

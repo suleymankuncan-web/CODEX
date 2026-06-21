@@ -222,6 +222,7 @@ export type SalesTargetIncentiveQueryIdentity = {
   actorUserId?: string | null
   roleScope?: SalesTargetIncentiveRoleScope | null
   assignedStoreIds?: readonly string[]
+  assignedStoreTypes?: readonly string[]
 }
 
 function buildPeriodQuery(period?: string) {
@@ -245,6 +246,7 @@ export const storeSalesTargetIncentivesQueryKey = (
     identity?.actorUserId ?? 'anonymous',
     identity?.roleScope ?? 'unknown',
     [...(identity?.assignedStoreIds ?? [])].sort().join(',') || 'no-assigned-store-scope',
+    [...(identity?.assignedStoreTypes ?? [])].sort().join(',') || 'no-assigned-store-type-scope',
   ] as const
 
 export const adminSalesTargetIncentivesQueryKey = (

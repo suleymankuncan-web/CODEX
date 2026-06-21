@@ -1074,12 +1074,10 @@ const authScopeIdListSchema = {
 
 const authActionScopeSchema = {
   type: "object",
-  required: ["assignedStoreIds"],
+  required: ["assignedStoreIds", "assignedStoreTypes"],
   properties: {
-    assignedStoreIds: {
-      type: "array",
-      items: { type: "string" },
-    },
+    assignedStoreIds: { type: "array", items: { type: "string" } },
+    assignedStoreTypes: { type: "array", items: { type: "string", enum: ["company", "franchise", "operator"] } },
   },
 };
 

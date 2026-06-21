@@ -349,6 +349,7 @@ export type components = {
         }
         "actionScope": {
           "assignedStoreIds": string[]
+          "assignedStoreTypes": Array<"company" | "franchise" | "operator">
         }
         "assignedStoreIds": string[]
       }

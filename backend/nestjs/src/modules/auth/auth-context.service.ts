@@ -20,6 +20,7 @@ export interface AuthenticatedUser {
   readScope: AuthReadScope;
   actionScope: AuthActionScope;
   assignedStoreIds: string[];
+  assignedStoreTypes?: string[];
   roleScopes?: Record<string, AuthReadScope>;
 }
 
@@ -31,6 +32,7 @@ export interface AuthReadScope {
 
 export interface AuthActionScope {
   assignedStoreIds: string[];
+  assignedStoreTypes?: string[];
 }
 
 export function buildAuthenticatedUser(input: {
@@ -41,11 +43,15 @@ export function buildAuthenticatedUser(input: {
   readScope?: AuthReadScope;
   actionScope?: AuthActionScope;
   assignedStoreIds?: string[];
+  assignedStoreTypes?: string[];
   roleScopes?: Record<string, AuthReadScope>;
 }): AuthenticatedUser {
   const readScope = normalizeReadScope(input.readScope ?? input.scope);
   const assignedStoreIds = uniqueStrings(
     input.actionScope?.assignedStoreIds ?? input.assignedStoreIds ?? [],
+  );
+  const assignedStoreTypes = uniqueStrings(
+    input.actionScope?.assignedStoreTypes ?? input.assignedStoreTypes ?? [],
   );
 
   return {
@@ -56,8 +62,10 @@ export function buildAuthenticatedUser(input: {
     readScope,
     actionScope: {
       assignedStoreIds,
+      ...(assignedStoreTypes.length > 0 ? { assignedStoreTypes } : {}),
     },
     assignedStoreIds,
+    ...(assignedStoreTypes.length > 0 ? { assignedStoreTypes } : {}),
     ...(input.roleScopes
       ? { roleScopes: normalizeRoleScopes(input.roleScopes) }
       : {}),
@@ -253,6 +261,15 @@ export class AuthContextService {
         .filter((value): value is string => Boolean(value)),
       ...actionStoreAssignments.map((assignment) => assignment.store_id),
     ]);
+    const assignedStoreTypes = uniqueStrings([
+      ...assignments
+        .filter((assignment) => Boolean(assignment.store_id))
+        .map((assignment) => assignment.store_type)
+        .filter((value): value is string => Boolean(value)),
+      ...actionStoreAssignments
+        .map((assignment) => assignment.store_type)
+        .filter((value): value is string => Boolean(value)),
+    ]);
 
     if (assignments.length === 0) {
       if (
@@ -269,6 +286,7 @@ export class AuthContextService {
           ...appUser,
           actionScope: {
             assignedStoreIds,
+            assignedStoreTypes,
           },
         });
       }
@@ -307,6 +325,7 @@ export class AuthContextService {
       readScope,
       actionScope: {
         assignedStoreIds,
+        assignedStoreTypes,
       },
       roleScopes,
     });

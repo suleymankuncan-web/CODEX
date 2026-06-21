@@ -13,7 +13,7 @@ export interface BrowserSessionEnvelope {
   iat: number;
   sid: string;
   user: {
-    actionScope: { assignedStoreIds: string[] };
+    actionScope: { assignedStoreIds: string[]; assignedStoreTypes?: string[] };
     employeeId?: string;
     readScope: {
       companyIds: string[];
@@ -50,6 +50,7 @@ export class BrowserSessionService {
       user: {
         actionScope: {
           assignedStoreIds: user.actionScope.assignedStoreIds,
+          assignedStoreTypes: user.actionScope.assignedStoreTypes ?? [],
         },
         employeeId: user.employeeId,
         readScope: user.readScope,
@@ -78,6 +79,11 @@ export class BrowserSessionService {
       throw new UnauthorizedException("Invalid browser session");
     }
 
+    const actionScope = {
+      assignedStoreIds: envelope.user.actionScope.assignedStoreIds,
+      assignedStoreTypes: envelope.user.actionScope.assignedStoreTypes ?? [],
+    };
+
     return {
       envelope,
       user: {
@@ -86,8 +92,9 @@ export class BrowserSessionService {
         roleCodes: envelope.user.roleCodes,
         scope: envelope.user.readScope,
         readScope: envelope.user.readScope,
-        actionScope: envelope.user.actionScope,
-        assignedStoreIds: envelope.user.actionScope.assignedStoreIds,
+        actionScope,
+        assignedStoreIds: actionScope.assignedStoreIds,
+        assignedStoreTypes: actionScope.assignedStoreTypes,
       },
     };
   }

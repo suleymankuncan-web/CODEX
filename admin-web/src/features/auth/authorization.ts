@@ -34,6 +34,10 @@ export function getAssignedStoreIds(authSummary: AuthSessionSummary | null) {
   )
 }
 
+export function getAssignedStoreTypes(authSummary: AuthSessionSummary | null) {
+  return authSummary?.user.actionScope.assignedStoreTypes ?? []
+}
+
 export function getActionStoreIds(authSummary: AuthSessionSummary | null) {
   return (
     authSummary?.user.actionScope.assignedStoreIds ??

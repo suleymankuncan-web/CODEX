@@ -45,6 +45,7 @@ export class AuthAuthorizationRepository {
       company_id: string | null;
       region_id: string | null;
       store_id: string | null;
+      store_type?: string | null;
     }>(
       `
         SELECT
@@ -52,7 +53,8 @@ export class AuthAuthorizationRepository {
           ura.scope_type,
           ura.company_id,
           ura.region_id,
-          ura.store_id
+          ura.store_id,
+          store.store_type
         FROM ops.user_account ua
         INNER JOIN ops.user_role_assignment ura
           ON ura.user_id = ua.user_id
@@ -99,9 +101,12 @@ export class AuthAuthorizationRepository {
 
     const result = await this.databaseService.query<{
       store_id: string;
+      store_type?: string | null;
     }>(
       `
-        SELECT uasa.store_id
+        SELECT
+          uasa.store_id,
+          s.store_type
         FROM ops.user_account ua
         INNER JOIN ops.user_action_store_assignment uasa
           ON uasa.user_id = ua.user_id

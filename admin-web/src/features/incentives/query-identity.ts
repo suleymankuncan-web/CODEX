@@ -1,5 +1,5 @@
 import type { AuthSessionSummary } from '../auth/api'
-import { getAssignedStoreIds, hasAnyRole } from '../auth/authorization'
+import { getAssignedStoreIds, getAssignedStoreTypes, hasAnyRole } from '../auth/authorization'
 import type {
   SalesTargetIncentiveQueryIdentity,
   SalesTargetIncentiveRoleScope,
@@ -12,6 +12,7 @@ export function getSalesTargetIncentiveQueryIdentity(
     actorUserId: authSummary?.user.userId ?? null,
     roleScope: getSalesTargetIncentiveRoleScope(authSummary),
     assignedStoreIds: getAssignedStoreIds(authSummary),
+    assignedStoreTypes: getAssignedStoreTypes(authSummary),
   }
 }
 

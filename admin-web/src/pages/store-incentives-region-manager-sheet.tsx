@@ -45,7 +45,7 @@ import {
   getFinalChange,
   getFinalChangeFromAmounts,
   regionManagerPrimaryActionClass,
-  toMoneyEditValue,
+  toMoneyInputBuffer,
 } from './store-incentives-region-manager-format'
 import {
   StoreCommandSheetContent,
@@ -114,8 +114,9 @@ function IncentiveCorrectionSheetForm(input: {
   const { row, projection } = input
   const { t } = useLocalization()
   const [finalAmount, setFinalAmount] = useState(() =>
-    formatMoneyDisplayValue(formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)),
+    toMoneyInputBuffer(formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)),
   )
+  const [finalAmountFocused, setFinalAmountFocused] = useState(false)
   const [reasonNote, setReasonNote] = useState(row.regionCorrection?.reasonNote ?? '')
   const progress = toProgressPercent(row.achievementPct) ?? 0
   const projectionCanEdit = canReviewProjection(projection)
@@ -128,7 +129,7 @@ function IncentiveCorrectionSheetForm(input: {
     !input.workflowLocked &&
     Boolean(row.regionCorrection) &&
     (row.regionCorrection?.status === 'draft' || row.regionCorrection?.status === 'admin_returned')
-  const normalizedFinalAmount = normalizeMoneyInput(toMoneyEditValue(finalAmount))
+  const normalizedFinalAmount = normalizeMoneyInput(finalAmount)
   const amountIsValid = normalizedFinalAmount !== null
   const savedFinalChange = getFinalChange(row, input.locale)
   const finalChange = amountIsValid
@@ -177,7 +178,7 @@ function IncentiveCorrectionSheetForm(input: {
             label={t('storeIncentives.regionManagerFinalLine')}
             value={formatIncentiveMoneyValue(getRegionEffectiveEarnedAmount(row), input.locale)}
           />
-          <SheetStat label="Değişim" value={finalChange.label} />
+          <SheetStat label={t('storeIncentives.regionManagerChangeColumn')} value={finalChange.label} />
         </div>
       </SheetHeader>
 
@@ -214,23 +215,27 @@ function IncentiveCorrectionSheetForm(input: {
                   disabled={!canEdit}
                   id="region-final-incentive"
                   inputMode="decimal"
-                  onBlur={() => setFinalAmount(formatMoneyDisplayValue(finalAmount))}
+                  onBlur={() => {
+                    setFinalAmount(toMoneyInputBuffer(finalAmount))
+                    setFinalAmountFocused(false)
+                  }}
                   onChange={(event) => setFinalAmount(event.target.value)}
                   onFocus={(event) => {
                     const inputElement = event.currentTarget
-                    setFinalAmount(toMoneyEditValue(finalAmount))
+                    setFinalAmount(toMoneyInputBuffer(finalAmount))
+                    setFinalAmountFocused(true)
                     window.requestAnimationFrame(() => inputElement.select())
                   }}
-                  value={finalAmount}
+                  value={finalAmountFocused ? finalAmount : formatMoneyDisplayValue(finalAmount)}
                 />
-                <FieldDescription>Kaydedilen tutar admin onayına bu notla gider.</FieldDescription>
+                <FieldDescription>{t('storeIncentives.regionManagerFinalAmountDescription')}</FieldDescription>
                 {!amountIsValid ? (
                   <span className="tw:text-xs tw:text-destructive">{t('storeIncentives.regionManagerInvalidAmount')}</span>
                 ) : null}
               </Field>
               <div className="tw:grid tw:gap-2 tw:sm:grid-cols-2">
                 <SheetStat label={t('storeIncentives.regionManagerCalculatedLine')} value={formatIncentiveMoneyValue(row.payableAmount, input.locale)} />
-                <SheetStat label="Değişim" value={finalChange.label} />
+                <SheetStat label={t('storeIncentives.regionManagerChangeColumn')} value={finalChange.label} />
               </div>
               <Field>
                 <FieldLabel htmlFor="region-correction-note">
@@ -259,7 +264,7 @@ function IncentiveCorrectionSheetForm(input: {
             onClick={() => {
               const correctionId = row.regionCorrection?.correctionId
               if (!correctionId) {
-                setFinalAmount(formatMoneyDisplayValue(formatIncentiveMoneyValue(row.payableAmount, input.locale)))
+                setFinalAmount(toMoneyInputBuffer(formatIncentiveMoneyValue(row.payableAmount, input.locale)))
                 setReasonNote('')
                 return
               }
@@ -281,7 +286,7 @@ function IncentiveCorrectionSheetForm(input: {
             type="button"
             disabled={!canEdit || !amountIsValid || !noteIsValid || input.correctionMutation.isPending}
             onClick={() => {
-              if (!normalizedFinalAmount) return
+              if (normalizedFinalAmount === null) return
               input.correctionMutation.mutate({
                 period: input.period,
                 storeId: projection.storeId,

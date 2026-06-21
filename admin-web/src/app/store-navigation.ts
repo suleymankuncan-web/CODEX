@@ -3,6 +3,7 @@ import {
   canListTargetDistributionRequests,
   canOpenStoreWorkforce,
   canOpenStoreChecklists,
+  getAssignedStoreTypes,
   hasAnyRole,
 } from '../features/auth/authorization'
 import type { TranslationKey } from '../features/localization/dictionary'
@@ -286,7 +287,20 @@ export function getStoreNavigation(persona: StorePersona) {
 }
 
 export function canOpenStoreIncentives(authSummary: AuthSessionSummary | null) {
-  return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER'])
+  return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER']) &&
+    canOpenCompanyStoreIncentives(authSummary)
+}
+
+export function canOpenCompanyStoreIncentives(authSummary: AuthSessionSummary | null) {
+  if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
+    return true
+  }
+
+  if (!hasAnyRole(authSummary, ['STORE_MANAGER'])) {
+    return false
+  }
+
+  return getAssignedStoreTypes(authSummary).includes('company')
 }
 
 function isStoreNavigationItemAllowed(
