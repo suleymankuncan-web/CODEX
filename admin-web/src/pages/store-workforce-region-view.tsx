@@ -443,7 +443,7 @@ function MetricCard(input: {
   return (
     <article className={`swc-metric-card ${input.tone ?? 'default'}`}>
       <span className="swc-metric-icon" aria-hidden="true">{input.icon}</span>
-      <div>
+      <div className="swc-metric-copy">
         <span>{input.label}</span>
         <b>{input.value}</b>
         <small>{input.note}</small>
@@ -639,16 +639,36 @@ function StoreDossier(input: {
         </div>
 
         <div className="swc-modal-tabs">
-          <button className={input.activeTab === 'summary' ? 'active' : ''} onClick={() => input.setActiveTab('summary')} type="button">
+          <button
+            aria-selected={input.activeTab === 'summary'}
+            className={`swc-tab-trigger ${input.activeTab === 'summary' ? 'active' : ''}`}
+            onClick={() => input.setActiveTab('summary')}
+            type="button"
+          >
             Özet
           </button>
-          <button className={input.activeTab === 'people' ? 'active' : ''} onClick={() => input.setActiveTab('people')} type="button">
+          <button
+            aria-selected={input.activeTab === 'people'}
+            className={`swc-tab-trigger ${input.activeTab === 'people' ? 'active' : ''}`}
+            onClick={() => input.setActiveTab('people')}
+            type="button"
+          >
             Personel
           </button>
-          <button className={input.activeTab === 'positions' ? 'active' : ''} onClick={() => input.setActiveTab('positions')} type="button">
+          <button
+            aria-selected={input.activeTab === 'positions'}
+            className={`swc-tab-trigger ${input.activeTab === 'positions' ? 'active' : ''}`}
+            onClick={() => input.setActiveTab('positions')}
+            type="button"
+          >
             Pozisyon
           </button>
-          <button className={input.activeTab === 'requests' ? 'active' : ''} onClick={() => input.setActiveTab('requests')} type="button">
+          <button
+            aria-selected={input.activeTab === 'requests'}
+            className={`swc-tab-trigger ${input.activeTab === 'requests' ? 'active' : ''}`}
+            onClick={() => input.setActiveTab('requests')}
+            type="button"
+          >
             Talep
           </button>
         </div>
