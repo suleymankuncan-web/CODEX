@@ -1,11 +1,6 @@
 import { Suspense, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
-import {
-  canListTargetDistributionRequests,
-  canOpenStoreWorkforce,
-  canOpenStoreChecklists,
-} from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
 import { PilotFeedbackControl } from '../features/pilot-feedback/PilotFeedbackControl'
 import {
@@ -34,7 +29,13 @@ import {
   isVisualMerchandiserOnly,
   type ShellState,
 } from './shell-state'
-import { canOpenStoreIncentives, resolveStorePersona } from './store-navigation'
+import {
+  findStoreRouteDefinition,
+  getStoreRouteDefinitions,
+  isStoreRouteAllowed,
+  type StoreRouteDefinition,
+  type StoreRouteId,
+} from './store-route-registry'
 import { StoreSidebar } from './store-sidebar'
 import { StoreErrorState, StoreSurfacePage } from '../pages/store-surface-primitives'
 
@@ -45,30 +46,19 @@ export function StoreShell(input: {
 }) {
   const { t } = useLocalization()
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
-  const storePersona = resolveStorePersona(input.authSummary)
-  const storeChecklistAllowed =
-    storePersona !== 'personnel' &&
-    canOpenStoreChecklists(input.authSummary)
-  const storeTasksAllowed = storePersona !== 'personnel'
-  const storeTargetsAllowed = canListTargetDistributionRequests(input.authSummary)
-  const storeWorkforceAllowed = canOpenStoreWorkforce(input.authSummary)
-  const storeIncentivesAllowed = canOpenStoreIncentives(input.authSummary)
   const location = useLocation()
-  const storeMeRoute = location.pathname === '/store/me'
-  const storePersonnelRoute = location.pathname.startsWith('/store/personnel/')
-  const storeChecklistRoute = location.pathname === '/store/checklists'
-  const storeIncentivesRoute = location.pathname === '/store/incentives'
+  const activeStoreRoute = findStoreRouteDefinition(location.pathname)
+  const storeMeRoute = activeStoreRoute?.id === 'me'
+  const storePersonnelRoute = activeStoreRoute?.id === 'personnel'
+  const storeChecklistRoute = activeStoreRoute?.id === 'checklists'
+  const storeIncentivesRoute = activeStoreRoute?.id === 'incentives'
   const checklistOnlyRoute = storeChecklistRoute && checklistOnly
-  const storeRoute = (element: ReactNode, options?: {
-    allowVm?: boolean
-    allowed?: boolean
-    firstAllowedPath?: string
-  }) => (
+  const storeRoute = (route: StoreRouteDefinition, element: ReactNode) => (
     <StoreRouteGuard
       authSummary={input.authSummary}
-      {...(options?.allowVm === undefined ? {} : { allowVm: options.allowVm })}
-      {...(options?.allowed === undefined ? {} : { allowed: options.allowed })}
-      {...(options?.firstAllowedPath === undefined ? {} : { firstAllowedPath: options.firstAllowedPath })}
+      {...(route.allowVisualMerchandiser === undefined ? {} : { allowVm: route.allowVisualMerchandiser })}
+      allowed={isStoreRouteAllowed(route, input.authSummary)}
+      firstAllowedPath={input.firstAllowedPath}
     >
       {element}
     </StoreRouteGuard>
@@ -120,113 +110,20 @@ export function StoreShell(input: {
           <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
             <Suspense fallback={<RouteLoadingState />}>
               <Routes>
-            <Route
-              path="/store"
-              element={checklistOnly ? (
-                <Navigate to="/store/checklists" replace />
-              ) : (
-                <StoreHomePage authSummary={input.authSummary} />
-              )}
-            />
-            <Route
-              path="/store/home"
-              element={checklistOnly ? (
-                <Navigate to="/store/checklists" replace />
-              ) : (
-                <StoreHomePage authSummary={input.authSummary} />
-              )}
-            />
-            <Route
-              path="/store/checklists"
-              element={storeRoute(
-                <StoreChecklistsPage authSummary={input.authSummary} />,
-                {
-                  allowVm: true,
-                  allowed: storeChecklistAllowed,
-                  firstAllowedPath: input.firstAllowedPath,
-                },
-              )}
-            />
-            <Route
-              path="/store/tasks"
-              element={storeRoute(
-                <StoreTasksPage authSummary={input.authSummary} />,
-                {
-                  allowed: storeTasksAllowed,
-                  firstAllowedPath: input.firstAllowedPath,
-                },
-              )}
-            />
-            <Route
-              path="/store/kpis"
-              element={storeRoute(<StoreKpiHighlightsPage authSummary={input.authSummary} />)}
-            />
-            <Route
-              path="/store/me"
-              element={storeRoute(<StoreMyPerformancePage authSummary={input.authSummary} />)}
-            />
-            <Route
-              path="/store/personnel/:employeeId"
-              element={storeRoute(<StorePersonnelPerformancePage authSummary={input.authSummary} />)}
-            />
-            <Route
-              path="/store/rankings"
-              element={storeRoute(<StoreRankingsPage authSummary={input.authSummary} />)}
-            />
-            <Route
-              path="/store/feed"
-              element={storeRoute(<StoreFeedPage authSummary={input.authSummary} />, { allowVm: true })}
-            />
-            <Route
-              path="/store/competitions"
-              element={storeRoute(<StoreCompetitionsPage authSummary={input.authSummary} />)}
-            />
-            <Route
-              path="/store/approvals"
-              element={storeRoute(
-                <StoreApprovalsPage authSummary={input.authSummary} />,
-                {
-                  allowed: canListTargetDistributionRequests(input.authSummary),
-                  firstAllowedPath: input.firstAllowedPath,
-                },
-              )}
-            />
-            <Route
-              path="/store/incentives"
-              element={storeRoute(
-                <StoreIncentivesPage authSummary={input.authSummary} />,
-                {
-                  allowed: storeIncentivesAllowed,
-                  firstAllowedPath: input.firstAllowedPath,
-                },
-              )}
-            />
-            <Route
-              path="/store/settings"
-              element={storeRoute(<StoreSettingsPage />, { allowVm: true })}
-            />
-            <Route path="/store/targets"
-              element={storeRoute(
-                <StoreTargetsPage authSummary={input.authSummary} />,
-                {
-                  allowed: storeTargetsAllowed,
-                  firstAllowedPath: input.firstAllowedPath,
-                },
-              )}
-            />
-            <Route path="/store/workforce"
-              element={storeRoute(
-                <StoreWorkforcePage authSummary={input.authSummary} />,
-                {
-                  allowed: storeWorkforceAllowed,
-                  firstAllowedPath: input.firstAllowedPath,
-                },
-              )}
-            />
-            <Route
-              path="/store/reports"
-              element={storeRoute(<StoreReportsPage />)}
-            />
+                {getStoreRouteDefinitions().flatMap((route) =>
+                  [route.routePath, ...(route.aliases ?? [])].map((path) => (
+                    <Route
+                      path={path}
+                      key={`${route.id}:${path}`}
+                      element={renderStoreRoute({
+                        authSummary: input.authSummary,
+                        checklistOnly,
+                        route,
+                        storeRoute,
+                      })}
+                    />
+                  )),
+                )}
                 <Route path="*" element={<Navigate to="/store" replace />} />
               </Routes>
             </Suspense>
@@ -235,4 +132,54 @@ export function StoreShell(input: {
       </main>
     </div>
   )
+}
+
+function renderStoreRoute(input: {
+  authSummary: AuthSessionSummary | null
+  checklistOnly: boolean
+  route: StoreRouteDefinition
+  storeRoute: (route: StoreRouteDefinition, element: ReactNode) => ReactNode
+}) {
+  if (input.route.id === 'home' && input.checklistOnly) {
+    return <Navigate to="/store/checklists" replace />
+  }
+
+  return input.storeRoute(input.route, getStoreRouteElement(input.route.id, input.authSummary))
+}
+
+function getStoreRouteElement(routeId: StoreRouteId, authSummary: AuthSessionSummary | null) {
+  switch (routeId) {
+    case 'home':
+      return <StoreHomePage authSummary={authSummary} />
+    case 'checklists':
+      return <StoreChecklistsPage authSummary={authSummary} />
+    case 'tasks':
+      return <StoreTasksPage authSummary={authSummary} />
+    case 'kpis':
+      return <StoreKpiHighlightsPage authSummary={authSummary} />
+    case 'me':
+      return <StoreMyPerformancePage authSummary={authSummary} />
+    case 'personnel':
+      return <StorePersonnelPerformancePage authSummary={authSummary} />
+    case 'rankings':
+      return <StoreRankingsPage authSummary={authSummary} />
+    case 'feed':
+      return <StoreFeedPage authSummary={authSummary} />
+    case 'competitions':
+      return <StoreCompetitionsPage authSummary={authSummary} />
+    case 'approvals':
+      return <StoreApprovalsPage authSummary={authSummary} />
+    case 'incentives':
+      return <StoreIncentivesPage authSummary={authSummary} />
+    case 'settings':
+      return <StoreSettingsPage />
+    case 'targets':
+      return <StoreTargetsPage authSummary={authSummary} />
+    case 'workforce':
+      return <StoreWorkforcePage authSummary={authSummary} />
+    case 'reports':
+      return <StoreReportsPage />
+    default:
+      return <Navigate to="/store" replace />
+  }
 }

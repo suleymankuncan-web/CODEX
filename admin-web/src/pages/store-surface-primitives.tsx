@@ -473,24 +473,101 @@ export function StoreStackedRow(input: {
   )
 }
 
+export type StoreRouteStateKind =
+  | 'empty'
+  | 'error'
+  | 'forbidden'
+  | 'loading'
+  | 'preview'
+  | 'unavailable'
+
+const routeStateToneByKind: Record<StoreRouteStateKind, StoreSurfaceTone> = {
+  empty: 'neutral',
+  error: 'danger',
+  forbidden: 'warning',
+  loading: 'cyan',
+  preview: 'plum',
+  unavailable: 'neutral',
+}
+
+export function StoreRouteState(input: {
+  kind: StoreRouteStateKind
+  title?: string
+  titleAsHeading?: boolean
+  description: string
+  action?: StoreSurfaceAction
+  className?: string
+  technicalDescription?: string
+}) {
+  if (input.kind === 'error') {
+    return (
+      <Alert variant="destructive" className={input.className}>
+        {input.title ? (
+          <AlertTitle role="heading" aria-level={2}>
+            {input.title}
+          </AlertTitle>
+        ) : null}
+        <AlertDescription className="tw:flex tw:flex-col tw:gap-3">
+          <span>{input.description}</span>
+          {import.meta.env.DEV && input.technicalDescription ? (
+            <details className="tw:text-xs tw:text-muted-foreground">
+              <summary>Teknik ayrinti</summary>
+              <span>{input.technicalDescription}</span>
+            </details>
+          ) : null}
+          {input.action ? <StoreSurfaceActionButton action={input.action} /> : null}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
+  if (input.kind === 'loading') {
+    return (
+      <Card className={input.className}>
+        <CardContent className="tw:flex tw:flex-col tw:gap-3">
+          <Skeleton className="tw:h-8 tw:w-1/3" />
+          <Skeleton className="tw:h-24 tw:w-full" />
+          <Skeleton className="tw:h-24 tw:w-full" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div
+      data-store-route-state={input.kind}
+      className={cn(
+        'tw:flex tw:min-h-28 tw:flex-col tw:items-start tw:justify-center tw:gap-3 tw:rounded-xl tw:border tw:border-dashed tw:p-4',
+        toneClasses[routeStateToneByKind[input.kind]],
+        input.className,
+      )}
+    >
+      {input.title && input.titleAsHeading !== false ? (
+        <h2 className="tw:text-sm tw:font-semibold tw:text-foreground">{input.title}</h2>
+      ) : null}
+      {input.title && input.titleAsHeading === false ? (
+        <strong className="tw:text-sm tw:text-foreground">{input.title}</strong>
+      ) : null}
+      <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.description}</p>
+      {input.action ? <StoreSurfaceActionButton action={input.action} /> : null}
+    </div>
+  )
+}
+
 export function StoreEmptyState(input: {
   title?: string
   titleAsHeading?: boolean
   description: string
   action?: StoreSurfaceAction
 }) {
-  const title = input.titleAsHeading ? (
-    <h2 className="tw:text-sm tw:font-semibold tw:text-foreground">{input.title}</h2>
-  ) : (
-    <strong className="tw:text-sm tw:text-foreground">{input.title}</strong>
-  )
-
   return (
-    <div className="tw:flex tw:min-h-28 tw:flex-col tw:items-start tw:justify-center tw:gap-3 tw:rounded-xl tw:border tw:border-dashed tw:border-border tw:bg-muted/30 tw:p-4">
-      {input.title ? title : null}
-      <p className="tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.description}</p>
-      {input.action ? <StoreSurfaceActionButton action={input.action} /> : null}
-    </div>
+    <StoreRouteState
+      kind="empty"
+      titleAsHeading={input.titleAsHeading ?? false}
+      description={input.description}
+      {...(input.title === undefined ? {} : { title: input.title })}
+      {...(input.action === undefined ? {} : { action: input.action })}
+    />
   )
 }
 
@@ -498,13 +575,7 @@ export function StoreLoadingState(input: { title: string; description: string })
   return (
     <StoreSurfacePage>
       <StoreSurfaceHeader title={input.title} description={input.description} />
-      <Card>
-        <CardContent className="tw:flex tw:flex-col tw:gap-3">
-          <Skeleton className="tw:h-8 tw:w-1/3" />
-          <Skeleton className="tw:h-24 tw:w-full" />
-          <Skeleton className="tw:h-24 tw:w-full" />
-        </CardContent>
-      </Card>
+      <StoreRouteState kind="loading" description={input.description} />
     </StoreSurfacePage>
   )
 }
@@ -515,15 +586,12 @@ export function StoreErrorState(input: {
   action?: StoreSurfaceAction
 }) {
   return (
-    <Alert variant="destructive">
-      <AlertTitle role="heading" aria-level={2}>
-        {input.title}
-      </AlertTitle>
-      <AlertDescription className="tw:flex tw:flex-col tw:gap-3">
-        <span>{input.description}</span>
-        {input.action ? <StoreSurfaceActionButton action={input.action} /> : null}
-      </AlertDescription>
-    </Alert>
+    <StoreRouteState
+      kind="error"
+      title={input.title}
+      description={input.description}
+      {...(input.action === undefined ? {} : { action: input.action })}
+    />
   )
 }
 

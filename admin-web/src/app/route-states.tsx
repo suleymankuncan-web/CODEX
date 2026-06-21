@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { ScreenState } from '../components/dashboard-primitives'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
-import { StoreEmptyState, StoreSurfacePage } from '../pages/store-surface-primitives'
+import { StoreRouteState, StoreSurfacePage } from '../pages/store-surface-primitives'
 import { SessionReadinessPage } from './route-loaders'
 import { hasAnyRole, isVisualMerchandiserOnly, type ShellState } from './shell-state'
 
@@ -122,7 +122,8 @@ function StoreForbiddenRoute(input: { firstAllowedPath: string }) {
 
   return (
     <StoreSurfacePage ariaLabel={t('adminShell.forbiddenTitle')}>
-      <StoreEmptyState
+      <StoreRouteState
+        kind="forbidden"
         title={t('adminShell.forbiddenTitle')}
         titleAsHeading
         description={t('adminShell.forbiddenCopy', { firstAllowedPath: input.firstAllowedPath })}

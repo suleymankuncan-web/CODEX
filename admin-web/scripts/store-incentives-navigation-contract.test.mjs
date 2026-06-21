@@ -7,7 +7,7 @@ const sidebarSource = await readFile(
   'utf8',
 )
 const navigationSource = await readFile(
-  new URL('../src/app/store-navigation.ts', import.meta.url),
+  new URL('../src/app/store-route-registry.ts', import.meta.url),
   'utf8',
 )
 

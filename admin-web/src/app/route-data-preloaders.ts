@@ -46,7 +46,11 @@ import {
 } from '../features/workforce/api'
 import { getWorkflowInbox } from '../features/workflow/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
-import { canOpenStoreIncentives } from './store-navigation'
+import {
+  canOpenStoreIncentives,
+  findStoreRouteDefinition,
+  type StoreRouteId,
+} from './store-route-registry'
 
 type RouteDataPrefetchInput = {
   queryClient: QueryClient
@@ -100,52 +104,9 @@ function resolveRoutePrefetchTasks(
   pathname: string,
   authSummary: AuthSessionSummary | null,
 ): PrefetchTask[] {
-  if (pathname === '/store' || pathname === '/store/home') {
-    return getStoreHomePrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/me') {
-    return getStoreMePrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/kpis') {
-    return getStoreKpiPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/rankings') {
-    return getStoreRankingsPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/checklists') {
-    return getStoreChecklistsPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/feed') {
-    return getStoreFeedPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/competitions') {
-    return getStoreCompetitionsPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/tasks') {
-    return getStoreTasksPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/approvals') {
-    if (!canListTargetDistributionRequests(authSummary)) {
-      return []
-    }
-
-    return getStoreApprovalsPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/incentives') {
-    return getStoreIncentivesPrefetchTasks(authSummary)
-  }
-
-  if (pathname === '/store/targets') {
-    return getStoreTargetsPrefetchTasks(authSummary)
+  const storeRoute = findStoreRouteDefinition(pathname)
+  if (storeRoute) {
+    return getStoreRoutePrefetchTasks(storeRoute.id, authSummary)
   }
 
   if (pathname === '/admin/integrations') {
@@ -181,6 +142,45 @@ function resolveRoutePrefetchTasks(
   }
 
   return []
+}
+
+function getStoreRoutePrefetchTasks(
+  routeId: StoreRouteId,
+  authSummary: AuthSessionSummary | null,
+): PrefetchTask[] {
+  switch (routeId) {
+    case 'home':
+      return getStoreHomePrefetchTasks(authSummary)
+    case 'me':
+      return getStoreMePrefetchTasks(authSummary)
+    case 'kpis':
+      return getStoreKpiPrefetchTasks(authSummary)
+    case 'rankings':
+      return getStoreRankingsPrefetchTasks(authSummary)
+    case 'checklists':
+      return getStoreChecklistsPrefetchTasks(authSummary)
+    case 'feed':
+      return getStoreFeedPrefetchTasks(authSummary)
+    case 'competitions':
+      return getStoreCompetitionsPrefetchTasks(authSummary)
+    case 'tasks':
+      return getStoreTasksPrefetchTasks(authSummary)
+    case 'approvals':
+      return canListTargetDistributionRequests(authSummary)
+        ? getStoreApprovalsPrefetchTasks(authSummary)
+        : []
+    case 'incentives':
+      return getStoreIncentivesPrefetchTasks(authSummary)
+    case 'targets':
+      return getStoreTargetsPrefetchTasks(authSummary)
+    case 'personnel':
+    case 'reports':
+    case 'settings':
+    case 'workforce':
+      return []
+    default:
+      return []
+  }
 }
 
 function getStoreIncentivesPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
