@@ -186,6 +186,58 @@ test('store workforce region detail stays usable on mobile', async ({ page }) =>
   ])
 })
 
+test('store workforce region command layout stays aligned on compact desktop', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 })
+  const workforceCalls: string[] = []
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REGION_MANAGER'],
+    readStoreIds: [demoStoreId, regionSecondStoreId],
+    readRegionIds: [demoRegionId],
+    scopeStoreIds: [],
+    scopeRegionIds: [demoRegionId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+  await routeRegionWorkforceReadCalls(page, workforceCalls)
+
+  await page.goto('/store/workforce')
+
+  await expect(page.getByTestId('store-workforce-region-rows')).toBeVisible()
+  const layout = await page.evaluate(() => {
+    const ledger = document.querySelector('.swc-ledger')?.getBoundingClientRect()
+    const root = document.documentElement.getBoundingClientRect()
+    const icon = document.querySelector('.swc-metric-icon')?.getBoundingClientRect()
+    const svg = document.querySelector('.swc-metric-icon svg')?.getBoundingClientRect()
+
+    return {
+      hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+      ledgerFits: ledger ? ledger.left >= root.left && ledger.right <= root.right : false,
+      metricIconCentered: icon && svg
+        ? Math.abs((icon.left + icon.width / 2) - (svg.left + svg.width / 2)) <= 1
+          && Math.abs((icon.top + icon.height / 2) - (svg.top + svg.height / 2)) <= 1
+        : false,
+    }
+  })
+  expect(layout.hasHorizontalOverflow).toBe(false)
+  expect(layout.ledgerFits).toBe(true)
+  expect(layout.metricIconCentered).toBe(true)
+
+  await page
+    .getByTestId('store-workforce-region-row')
+    .filter({ hasText: 'IstinyePark Demo Store' })
+    .getByRole('button', { name: /Detay|Open detail/i })
+    .click()
+
+  await expect(page.getByTestId('store-workforce-region-detail-dialog')).toBeVisible()
+  const activeTab = await readComputedStyle(page, '.swc-modal-tabs .swc-tab-trigger.active')
+  expect(activeTab.backgroundImage).not.toBe('none')
+  expect(activeTab.color).not.toBe('rgb(255, 255, 255)')
+  expect(workforceCalls).toEqual([
+    demoStoreId,
+    regionSecondStoreId,
+  ])
+})
+
 test('store workforce route stays hidden for store personnel', async ({ page }) => {
   await routeAuthSession(page, createStoreAuthSession({
     roleCodes: ['STORE_PERSONNEL'],

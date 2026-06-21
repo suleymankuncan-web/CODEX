@@ -248,9 +248,11 @@
   justify-content: center;
   color: var(--swc-plum);
   background: var(--swc-plum-soft);
+  line-height: 0;
 }
 
 .swc-metric-icon svg {
+  display: block;
   width: 20px;
   height: 20px;
 }
@@ -265,12 +267,12 @@
   background: var(--swc-amber-soft);
 }
 
-.swc-metric-card span,
+.swc-metric-copy span,
 .swc-metric-card small {
   display: block;
 }
 
-.swc-metric-card span {
+.swc-metric-copy span {
   color: var(--swc-muted);
   font-size: 12px;
   font-weight: 620;
