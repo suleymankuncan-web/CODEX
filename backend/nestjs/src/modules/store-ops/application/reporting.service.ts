@@ -2,13 +2,8 @@ import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/com
 import { ReportingRepository } from "../infrastructure/reporting.repository";
 import { buildListResponse } from "../../../shared/http/response-builders";
 import { mapAuditEvent } from "../../../shared/audit/audit-event.mapper";
-import { KpiScoreProfile, normalizeKpiScoreProfile } from "./kpi-config.contract";
-import {
-  getDefaultKpiConfig,
-  mapKpiConfigVersionMetadata,
-  resolveKpiConfigFromRows,
-  validateKpiConfigInput,
-} from "./reporting-kpi-config.helpers";
+import { KpiScoreProfile } from "./kpi-config.contract";
+import { createSnapshotKpiConfigProvider, getDefaultKpiConfig, mapKpiConfigVersionMetadata, resolveKpiConfigFromRows, validateKpiConfigInput } from "./reporting-kpi-config.helpers";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ClosedRankingService } from "./closed-ranking.service";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
@@ -37,45 +32,15 @@ export class ReportingService {
     private readonly rankingReportingReadRepository: RankingReportingReadRepository,
   ) {
     this.storeKpiReadService = new ReportingStoreKpiReadService(
-      ({ snapshotRunId } = {}) => this.getKpiConfigForSnapshot(snapshotRunId),
+      createSnapshotKpiConfigProvider(
+        () => this.getKpiConfig(),
+        this.storeScoreReportingReadRepository,
+        this.kpiConfigRepository,
+      ),
       this.storeScoreReportingReadRepository,
       this.storePerformanceReportingReadRepository,
       this.rankingReportingReadRepository,
     );
-  }
-
-  private async getKpiConfigForSnapshot(snapshotRunId?: string) {
-    if (!snapshotRunId) {
-      return this.getKpiConfig();
-    }
-
-    const kpiConfigVersionId =
-      await this.storeScoreReportingReadRepository.getSnapshotRunKpiConfigVersionId({
-        snapshotRunId,
-      });
-
-    if (!kpiConfigVersionId) {
-      return this.getKpiConfig();
-    }
-
-    const version =
-      await this.kpiConfigRepository.getKpiConfigVersionById(kpiConfigVersionId);
-    const payload = version?.config_payload;
-
-    if (!payload?.storeProfile) {
-      return this.getKpiConfig();
-    }
-
-    const defaults = getDefaultKpiConfig();
-    return {
-      ...defaults,
-      storeProfile: normalizeKpiScoreProfile(payload.storeProfile as KpiScoreProfile),
-      personnelProfile: payload.personnelProfile
-        ? normalizeKpiScoreProfile(payload.personnelProfile as KpiScoreProfile)
-        : defaults.personnelProfile,
-      ownershipMatrix: payload.ownershipMatrix ?? defaults.ownershipMatrix,
-      gradingBands: payload.gradingBands ?? defaults.gradingBands,
-    };
   }
 
   private mapSnapshotRun(item: {

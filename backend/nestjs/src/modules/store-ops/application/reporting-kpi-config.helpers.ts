@@ -64,6 +64,79 @@ export function getDefaultKpiConfig() {
   };
 }
 
+export async function resolveKpiConfigForSnapshot(input: {
+  snapshotRunId?: string;
+  getCurrentKpiConfig: () => Promise<ReturnType<typeof getDefaultKpiConfig>>;
+  getSnapshotRunKpiConfigVersionId: (snapshotRunId: string) => Promise<string | null>;
+  getKpiConfigVersionById: (kpiConfigVersionId: string) => Promise<{
+    config_payload?: {
+      storeProfile?: unknown;
+      personnelProfile?: unknown;
+      ownershipMatrix?: unknown;
+      gradingBands?: unknown;
+    } | null;
+  } | null>;
+}) {
+  if (!input.snapshotRunId) {
+    return input.getCurrentKpiConfig();
+  }
+
+  const kpiConfigVersionId = await input.getSnapshotRunKpiConfigVersionId(
+    input.snapshotRunId,
+  );
+
+  if (!kpiConfigVersionId) {
+    return input.getCurrentKpiConfig();
+  }
+
+  const version = await input.getKpiConfigVersionById(kpiConfigVersionId);
+  const payload = version?.config_payload;
+
+  if (!payload?.storeProfile) {
+    return input.getCurrentKpiConfig();
+  }
+
+  const defaults = getDefaultKpiConfig();
+  return {
+    ...defaults,
+    storeProfile: normalizeKpiScoreProfile(payload.storeProfile as KpiScoreProfile),
+    personnelProfile: payload.personnelProfile
+      ? normalizeKpiScoreProfile(payload.personnelProfile as KpiScoreProfile)
+      : defaults.personnelProfile,
+    ownershipMatrix: payload.ownershipMatrix ?? defaults.ownershipMatrix,
+    gradingBands: payload.gradingBands ?? defaults.gradingBands,
+  };
+}
+
+export function createSnapshotKpiConfigProvider(
+  getCurrentKpiConfig: () => Promise<ReturnType<typeof getDefaultKpiConfig>>,
+  storeScoreReportingReadRepository: {
+    getSnapshotRunKpiConfigVersionId(input: { snapshotRunId: string }): Promise<string | null>;
+  },
+  kpiConfigRepository: {
+    getKpiConfigVersionById(kpiConfigVersionId: string): Promise<{
+      config_payload?: {
+        storeProfile?: unknown;
+        personnelProfile?: unknown;
+        ownershipMatrix?: unknown;
+        gradingBands?: unknown;
+      } | null;
+    } | null>;
+  },
+) {
+  return ({ snapshotRunId }: { snapshotRunId?: string } = {}) =>
+    resolveKpiConfigForSnapshot({
+      snapshotRunId,
+      getCurrentKpiConfig,
+      getSnapshotRunKpiConfigVersionId: (snapshotRunId) =>
+        storeScoreReportingReadRepository.getSnapshotRunKpiConfigVersionId({
+          snapshotRunId,
+        }),
+      getKpiConfigVersionById: (kpiConfigVersionId) =>
+        kpiConfigRepository.getKpiConfigVersionById(kpiConfigVersionId),
+    });
+}
+
 export function validateKpiConfigInput(input: {
   storeProfile: unknown;
   personnelProfile: unknown;
