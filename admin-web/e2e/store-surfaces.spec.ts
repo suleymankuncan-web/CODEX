@@ -1053,6 +1053,7 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('104,6').first()).toBeVisible()
   await expect(page.getByText(/KPI config/)).toBeVisible()
   await expect(page.getByText('Takip gerekli')).toBeVisible()
+  await expect(page.getByText('GSM Onayı').first()).toBeVisible()
   await expect(page.getByText(/Problem/)).toBeVisible()
   await expect(page.getByText(/Hedef/).first()).toBeVisible()
   await expect(page.getByText('BM checklist').first()).toBeVisible()
@@ -1323,6 +1324,7 @@ test('region manager store KPI overview waits for selected store before loading 
   await expect(page.getByText('Bölge KPI değerleri')).toBeVisible()
   await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /BM Checklist/ })).toBeVisible()
   await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /VM Checklist/ })).toBeVisible()
+  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /GSM Onayı/ })).toBeVisible()
   await expect(
     page.getByTestId('store-kpis-region-overview').getByText('Region Store 9').first(),
   ).toBeVisible()
@@ -1357,6 +1359,9 @@ test('region manager store KPI overview waits for selected store before loading 
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('asc')
   expect(rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('UPT')
   expect(highlightRequests).toHaveLength(0)
+
+  await page.getByRole('button', { name: 'GSM Onayı sütununa göre sırala' }).click()
+  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('GSM_ONAY')
 
   await page.getByRole('link', { name: 'Region Store 9 KPI sayfasına git' }).click()
 
@@ -3361,7 +3366,10 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
   await expect(page.locator('td[data-label="KPI summary"]')).toHaveCount(0)
   await expect(rankingTable.locator('thead')).toContainText('BM Checklist')
   await expect(rankingTable.locator('thead')).toContainText('VM Checklist')
+  await expect(rankingTable.locator('thead')).toContainText('GSM Onayı')
   await expect(rankingTable.locator('thead')).toContainText('CR')
+  await expect(rankingTable.getByRole('columnheader', { name: 'Aksiyon' })).toHaveCount(0)
+  await expect(rankingTable.getByRole('button', { name: 'Detay aç' })).toHaveCount(0)
   await expect(rankingTable.locator('tbody')).toContainText('19,70%')
   await expect(rankingTable.locator('tbody')).toContainText('371,09%')
   await expect(rankingTable.locator('tbody')).not.toContainText('371.088.457%')
@@ -3376,6 +3384,7 @@ test('store rankings uses Turkey reference, checklist metrics, normalized HG, an
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('TARGET_ACHIEVEMENT')
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('asc')
   await expect(page.getByText('Low HG Store')).toBeVisible()
+  await expect(rankingTable.locator('tbody')).toContainText('%91,21')
 })
 
 test('store rankings removes signal chrome while preserving weighted score rows', async ({ page }) => {
@@ -3420,11 +3429,9 @@ test('store rankings removes signal chrome while preserving weighted score rows'
   await expect(rows.nth(1).locator('.store-rankings-scorebar')).toContainText('104,20')
   await expect(page.getByText('Sinyal')).toHaveCount(0)
 
-  await rows.nth(0).getByRole('button', { name: 'Detay aç' }).click()
-
-  await expect(page.locator('.store-rankings-drawer')).toBeVisible()
-  await expect(page.locator('.store-rankings-drawer')).not.toContainText('Detaya git')
-  await expect(page.locator('.store-rankings-drawer')).toContainText('112,30')
+  await expect(page.getByRole('columnheader', { name: 'Aksiyon' })).toHaveCount(0)
+  await expect(rows.nth(0).getByRole('button', { name: 'Detay aç' })).toHaveCount(0)
+  await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
 })
 
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
@@ -5276,6 +5283,17 @@ const storeKpiHighlightsFixture = {
       dataStatus: 'reported',
       scoreStatus: 'scored',
     },
+    {
+      code: 'GSM_ONAY',
+      label: 'GSM Onay',
+      weightPercent: 5,
+      actualValue: 91.2052,
+      targetValue: null,
+      achievementRate: 0.912052,
+      statusBand: 'on_track',
+      dataStatus: 'reported',
+      scoreStatus: 'scored',
+    },
   ],
 }
 
@@ -5594,6 +5612,12 @@ const rankingsPrivilegedDetailStoreRow = {
       contributionValue: 40,
     },
     {
+      code: 'GSM_ONAY',
+      label: 'GSM Onay',
+      actualValue: 91.2052,
+      contributionValue: 4.56,
+    },
+    {
       code: 'BM_CHECKLIST',
       label: 'BM Checklist',
       actualValue: 86,
@@ -5628,7 +5652,9 @@ const rankingsPrivilegedLowHgStoreRow = {
 
 const rankingsPrivilegedMissingChecklistStoreRow = {
   ...rankingsPrivilegedDetailStoreRow,
-  metrics: rankingsPrivilegedDetailStoreRow.metrics.filter((metric) => metric.code !== 'BM_CHECKLIST'),
+  metrics: rankingsPrivilegedDetailStoreRow.metrics.filter(
+    (metric) => metric.code !== 'BM_CHECKLIST' && metric.code !== 'GSM_ONAY',
+  ),
 }
 
 const scoreDisplayLeaderStoreRow = {
@@ -5665,6 +5691,12 @@ const scoreDisplayLeaderStoreRow = {
       actualValue: 1000000,
       targetValue: 1000000,
       contributionValue: 40,
+    },
+    {
+      code: 'GSM_ONAY',
+      label: 'GSM Onay',
+      actualValue: 96.4,
+      contributionValue: 4.8,
     },
     {
       code: 'BM_CHECKLIST',
@@ -5715,6 +5747,12 @@ const scoreDisplayFollowerStoreRow = {
       actualValue: 1000000,
       targetValue: 1000000,
       contributionValue: 40,
+    },
+    {
+      code: 'GSM_ONAY',
+      label: 'GSM Onay',
+      actualValue: 88.3,
+      contributionValue: 4.4,
     },
     {
       code: 'BM_CHECKLIST',
@@ -5769,6 +5807,7 @@ const rankingsPrivilegedDetailFixture = {
         { code: 'ATV', label: 'ATV', value: 1320 },
         { code: 'CR', label: 'CR', value: 0.185 },
         { code: 'TARGET_ACHIEVEMENT', label: 'Target Achievement', value: 0.94 },
+        { code: 'GSM_ONAY', label: 'GSM Onay', value: 91.2 },
         { code: 'BM_CHECKLIST', label: 'BM Checklist', value: 81 },
         { code: 'VM_CHECKLIST', label: 'VM Checklist', value: 84 },
       ],

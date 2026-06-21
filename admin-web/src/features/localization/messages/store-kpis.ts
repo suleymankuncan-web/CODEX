@@ -211,6 +211,7 @@ export const storeKpisTr = {
   'storeKpis.metric.atv': 'Ortalama sepet',
   'storeKpis.metric.upt': 'Fiş başı ürün',
   'storeKpis.metric.cr': 'CR',
+  'storeKpis.metric.gsmOnay': 'GSM Onayı',
   'storeKpis.metric.bmChecklist': 'BM checklist',
   'storeKpis.metric.vmChecklist': 'VM checklist',
 
@@ -486,6 +487,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.metric.atv': 'Average ticket value',
   'storeKpis.metric.upt': 'Units per ticket',
   'storeKpis.metric.cr': 'CR',
+  'storeKpis.metric.gsmOnay': 'GSM approval',
   'storeKpis.metric.bmChecklist': 'BM checklist',
   'storeKpis.metric.vmChecklist': 'VM checklist',
 

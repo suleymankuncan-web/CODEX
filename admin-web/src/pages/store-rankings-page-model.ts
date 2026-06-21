@@ -5,20 +5,18 @@ import type {
   RankingMetricValue,
   RankingReferenceGroup,
   RankingSummary,
-  StoreRankingRow,
 } from '../features/reports/api'
 import { formatDate, formatNumber as formatIntlNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 
 export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
 export const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
-export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
+export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'GSM_ONAY', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
 export const personnelMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const
 
 export type ActiveRankingList = 'stores' | 'personnel'
 export type RankingSortKey = 'score' | typeof storeMetricCodes[number]
 export type RankingSortDirection = 'asc' | 'desc'
-export type RankingDetailSelection = { type: 'store'; row: StoreRankingRow } | null
 
 export type StoreRankingsPageState = {
   periodStart: string
@@ -31,7 +29,6 @@ export type StoreRankingsPageState = {
   activeList: ActiveRankingList
   sortKey: RankingSortKey
   sortDirection: RankingSortDirection
-  selectedDetail: RankingDetailSelection
 }
 
 export type StoreRankingsTextFilter =
@@ -48,7 +45,6 @@ export type StoreRankingsPageAction =
   | { type: 'clearFilters' }
   | { type: 'setActiveList'; value: ActiveRankingList }
   | { type: 'setSort'; value: RankingSortKey }
-  | { type: 'setSelectedDetail'; value: RankingDetailSelection }
 
 export type SortableRankingRow = {
   scoreValue: number
@@ -66,7 +62,6 @@ export const initialStoreRankingsPageState: StoreRankingsPageState = {
   activeList: 'stores',
   sortKey: 'score',
   sortDirection: 'desc',
-  selectedDetail: null,
 }
 
 const metricLabelKeyByCode: Record<string, TranslationKey> = {
@@ -74,6 +69,7 @@ const metricLabelKeyByCode: Record<string, TranslationKey> = {
   ATV: 'storeRankings.metric.atv',
   UPT: 'storeRankings.metric.upt',
   CR: 'storeRankings.metric.cr',
+  GSM_ONAY: 'storeRankings.metric.gsmOnay',
   BM_CHECKLIST: 'storeRankings.metric.bmChecklist',
   VM_CHECKLIST: 'storeRankings.metric.vmChecklist',
 }
@@ -127,6 +123,12 @@ export function formatMetricValue(
     typeof input === 'object' && input !== null
       ? getMetricComparableValue(input, code)
       : input
+
+  if (code === 'GSM_ONAY') {
+    return value === null || value === undefined || !Number.isFinite(Number(value))
+      ? t('common.noData')
+      : `%${formatNumber(locale, t, value)}`
+  }
 
   if (code === 'CR' || code === 'TARGET_ACHIEVEMENT') {
     return formatPercent(locale, t, value)
@@ -255,7 +257,7 @@ export function storeRankingsPageReducer(
         offset: 0,
       }
     case 'setActiveList':
-      return { ...state, activeList: action.value, selectedDetail: null }
+      return { ...state, activeList: action.value }
     case 'setSort':
       return state.sortKey === action.value
         ? {
@@ -269,8 +271,6 @@ export function storeRankingsPageReducer(
             sortKey: action.value,
             sortDirection: 'desc',
           }
-    case 'setSelectedDetail':
-      return { ...state, selectedDetail: action.value }
     default:
       return state
   }

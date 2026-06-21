@@ -28,7 +28,7 @@
 
 .store-rankings-table {
   width: 100%;
-  min-width: 1040px;
+  min-width: 1020px;
   border-collapse: collapse;
 }
 
@@ -37,7 +37,7 @@
 }
 
 .store-rankings-col-entity {
-  width: 220px;
+  width: 258px;
 }
 
 .store-rankings-col-store {

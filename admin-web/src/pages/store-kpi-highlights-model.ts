@@ -68,6 +68,7 @@ export type StoreKpisRegionSortKey =
   | 'UPT'
   | 'ATV'
   | 'CR'
+  | 'GSM_ONAY'
   | 'BM_CHECKLIST'
   | 'VM_CHECKLIST'
 

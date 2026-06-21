@@ -30,7 +30,6 @@ export function RankingWorkspace(input: {
   sortDirection: RankingSortDirection
   onSortChange: (value: RankingSortKey) => void
   onActiveListChange: (value: ActiveRankingList) => void
-  onOpenStoreDetail: (row: StoreRankingRow) => void
   onOpenPersonnelProfile: (employeeId: string) => void
   onOffsetChange: (value: number) => void
   hasNextPage: boolean
@@ -134,7 +133,6 @@ export function RankingWorkspace(input: {
                 sortKey={input.sortKey}
                 sortDirection={input.sortDirection}
                 onSortChange={input.onSortChange}
-                onOpenStoreDetail={input.onOpenStoreDetail}
                 locale={input.locale}
                 t={input.t}
               />
@@ -203,7 +201,6 @@ function StoreRankingTable(input: {
   sortKey: RankingSortKey
   sortDirection: RankingSortDirection
   onSortChange: (value: RankingSortKey) => void
-  onOpenStoreDetail: (row: StoreRankingRow) => void
   locale: AppLocale
   t: TranslateFunction
 }) {
@@ -216,7 +213,6 @@ function StoreRankingTable(input: {
         {input.canSeeDetails
           ? storeMetricCodes.map((code) => <col key={code} className="store-rankings-col-kpi" />)
           : null}
-        <col className="store-rankings-col-action" />
       </colgroup>
       <TableHeader>
         <TableRow>
@@ -253,7 +249,6 @@ function StoreRankingTable(input: {
                 </TableHead>
               ))
             : null}
-          <TableHead>{input.t('storeRankings.action')}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -266,12 +261,11 @@ function StoreRankingTable(input: {
               canSeeDetails={input.canSeeDetails}
               locale={input.locale}
               t={input.t}
-              onOpenStoreDetail={input.onOpenStoreDetail}
             />
           ))
         ) : (
           <EmptyRankingRow
-            colSpan={input.canSeeDetails ? storeMetricCodes.length + 4 : 4}
+            colSpan={input.canSeeDetails ? storeMetricCodes.length + 3 : 3}
             description={input.t('storeRankings.noStores')}
           />
         )}
@@ -400,7 +394,6 @@ function StoreRankingTableRow(input: {
   canSeeDetails: boolean
   locale: AppLocale
   t: TranslateFunction
-  onOpenStoreDetail: (row: StoreRankingRow) => void
 }) {
   const row = input.row
 
@@ -427,23 +420,6 @@ function StoreRankingTableRow(input: {
             </TableCell>
           ))
         : null}
-      <TableCell className="store-rankings-cell-action" data-label={input.t('storeRankings.action')}>
-        {input.canSeeDetails ? (
-          <Button
-            type="button"
-            size="sm"
-            className="store-rankings-primary-button"
-            onClick={() => input.onOpenStoreDetail(row)}
-          >
-            {input.t('storeRankings.openStoreDetail')}
-            <ArrowRight data-icon="inline-end" aria-hidden="true" />
-          </Button>
-        ) : (
-          <span className="store-rankings-action-empty" aria-hidden="true">
-            {input.t('storeRankings.summaryAccess')}
-          </span>
-        )}
-      </TableCell>
     </TableRow>
   )
 }
