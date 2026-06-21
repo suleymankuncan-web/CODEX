@@ -106,6 +106,7 @@ describe("KpiMaterializationService", () => {
         "2026-04-01",
         "2026-04-30",
         92,
+        null,
         "PBI-2026-04",
         "hash-1",
         "2026-04-30T12:00:00.000Z",
@@ -189,6 +190,83 @@ describe("KpiMaterializationService", () => {
         null,
         null,
         null,
+        null,
+      ],
+    );
+  });
+
+  it("materializes GSM_ONAY actuals with achievement rate", async () => {
+    const { databaseService, service } = createService(async (sql, params) => {
+      if (sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              stg_kpi_raw_id: "00000000-0000-0000-0000-000000000370",
+              payload_json: {
+                kpiCode: "GSM_ONAY",
+                scopeType: "store",
+                sourceStoreId: "SM182",
+                periodType: "monthly",
+                periodStart: "2026-01-01",
+                periodEnd: "2026-01-31",
+                actualValue: 91.2052,
+                achievementRate: 0.912052,
+              },
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("FROM ops.kpi_definition")) {
+        expect(params).toEqual(["GSM_ONAY"]);
+        return {
+          rowCount: 1,
+          rows: [{ kpi_id: "00000000-0000-0000-0000-000000000371" }],
+        };
+      }
+
+      if (sql.includes("SELECT company_id, region_id") && sql.includes("FROM ops.store")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              company_id: "00000000-0000-0000-0000-000000000354",
+              region_id: "00000000-0000-0000-0000-000000000355",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const stats = await service.materializeKpis({
+      batchId,
+      integrationSourceId,
+      batchEnvelope,
+    });
+
+    expect(stats).toEqual({
+      processedCount: 1,
+      errorCount: 0,
+      hasRetryableFailure: false,
+    });
+    expect(databaseService.query).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT INTO ops.kpi_actual"),
+      [
+        "00000000-0000-0000-0000-000000000371",
+        "00000000-0000-0000-0000-000000000354",
+        "00000000-0000-0000-0000-000000000355",
+        "00000000-0000-0000-0000-000000000352",
+        "monthly",
+        "2026-01-01",
+        "2026-01-31",
+        91.2052,
+        0.912052,
+        "PBI-2026-04",
+        "hash-1",
+        "2026-04-30T12:00:00.000Z",
       ],
     );
   });
@@ -229,6 +307,51 @@ describe("KpiMaterializationService", () => {
       [
         "kpiId, kpiCode, or sourceMetricId is required",
         "00000000-0000-0000-0000-000000000350",
+      ],
+    );
+  });
+
+  it("marks GSM rows with adapter validation errors as validation_failed", async () => {
+    const { databaseService, service } = createService(async (sql) => {
+      if (sql.includes("FROM stg.kpi_raw")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              stg_kpi_raw_id: "00000000-0000-0000-0000-000000000372",
+              payload_json: {
+                kpiCode: "GSM_ONAY",
+                scopeType: "store",
+                sourceStoreId: "SM183",
+                periodStart: "2026-01-01",
+                periodEnd: "2026-01-31",
+                actualValue: 0,
+                validationError: "GSM_ONAY value is required",
+              },
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 1, rows: [] };
+    });
+
+    const stats = await service.materializeKpis({
+      batchId,
+      integrationSourceId,
+      batchEnvelope,
+    });
+
+    expect(stats).toEqual({
+      processedCount: 0,
+      errorCount: 1,
+      hasRetryableFailure: false,
+    });
+    expect(databaseService.query).toHaveBeenCalledWith(
+      expect.stringContaining("normalized_status = 'validation_failed'"),
+      [
+        "GSM_ONAY value is required",
+        "00000000-0000-0000-0000-000000000372",
       ],
     );
   });

@@ -52,6 +52,7 @@ type RawStoreRankingKpiRow = {
   kpi_code: string;
   kpi_name: string | null;
   actual_value: string | null;
+  achievement_rate?: string | null;
   target_value: string | null;
 };
 
@@ -542,6 +543,7 @@ export class RankingService {
             label: string;
             actualValue: number | null;
             targetValue: number | null;
+            scoreValue?: number | null;
           }
         >;
       }
@@ -560,6 +562,7 @@ export class RankingService {
         label: row.kpi_name ?? row.kpi_code,
         actualValue: toFiniteNumber(row.actual_value),
         targetValue: toFiniteNumber(row.target_value),
+        scoreValue: toFiniteNumber(row.achievement_rate ?? null),
       });
       grouped.set(row.store_id, current);
     });

@@ -88,7 +88,7 @@ export const storeKpiScoreProfile: KpiScoreProfile = {
     {
       code: "TARGET_ACHIEVEMENT",
       label: "Hedef gerceklestirme orani",
-      weightPercent: 40,
+      weightPercent: 35,
       ownerRole: "STORE_MANAGER",
       scoreBehavior: "task_candidate",
       direction: "HIGHER_IS_BETTER",
@@ -148,6 +148,17 @@ export const storeKpiScoreProfile: KpiScoreProfile = {
       scoreBehavior: "task_candidate",
       notes:
         "Visual teams may produce the data, but the store manager carries the score outcome.",
+    },
+    {
+      code: "GSM_ONAY",
+      label: "GSM Onay",
+      weightPercent: 5,
+      ownerRole: "STORE_MANAGER",
+      scoreBehavior: "warning_first",
+      direction: "HIGHER_IS_BETTER",
+      benchmarkSource: "TARGET",
+      capRatio: 1,
+      notes: "Monthly store-level GSM approval contributor.",
     },
   ],
   futureMetricRule:
@@ -265,6 +276,14 @@ export const kpiOwnershipMatrix: KpiOwnershipMatrixRow[] = [
     operationalOwner: "STORE_MANAGER",
     contributesTo: ["store"],
     taskCandidate: true,
+  },
+  {
+    code: "GSM_ONAY",
+    label: "GSM Onay",
+    visibleTo: ["DEPUTY_GM", "REGION_MANAGER", "STORE_MANAGER"],
+    operationalOwner: "STORE_MANAGER",
+    contributesTo: ["store"],
+    taskCandidate: false,
   },
 ];
 

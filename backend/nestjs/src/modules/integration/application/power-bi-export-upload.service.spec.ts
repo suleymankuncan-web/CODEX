@@ -403,6 +403,79 @@ describe("PowerBiExportUploadService", () => {
     );
   });
 
+  it("imports GSM Onay reports by store code and keeps empty or unmatched rows visible", async () => {
+    const { kpiImportStoreReadRepository, integrationService, service } = createService();
+    kpiImportStoreReadRepository.listKpiImportStoreExternalRefs.mockResolvedValue([
+      { external_ref: "SM182" },
+      { external_ref: "SM183" },
+    ]);
+    const buffer = createWorkbookBuffer([
+      {
+        "Mağaza Kodu": "SM182",
+        "Mağaza Adı": "Balıkesir 10 Burda AVM",
+        "Gsm Onay %": 0.9120521172638436,
+      },
+      {
+        "Mağaza Kodu": "SM183",
+        "Mağaza Adı": "Boş GSM Mağazası",
+        "Gsm Onay %": null,
+      },
+      {
+        "Mağaza Kodu": "SM999",
+        "Mağaza Adı": "Eşleşmeyen Mağaza",
+        "Gsm Onay %": 0.5,
+      },
+    ]);
+
+    const response = await service.upload({
+      sourceCode: "POWER_BI",
+      periodMonth: "2026-01",
+      actorUserId: "user-1",
+      storeFile: {
+        originalname: "ocak-gsm.xlsx",
+        buffer,
+      },
+    });
+
+    const rows = (integrationService.createImportBatch.mock.calls[0][0].rows ??
+      []) as Array<Record<string, unknown>>;
+
+    expect(response.data.summary).toMatchObject({
+      periodType: "monthly",
+      periodMonth: "2026-01",
+      storeRowsRead: 3,
+      canonicalRowCount: 3,
+    });
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kpiCode: "GSM_ONAY",
+          storeExternalRef: "SM182",
+          actualValue: 91.2052,
+          achievementRate: 0.912052,
+          validationError: null,
+          periodType: "monthly",
+          periodStart: "2026-01-01",
+          periodEnd: "2026-01-31",
+        }),
+        expect.objectContaining({
+          kpiCode: "GSM_ONAY",
+          storeExternalRef: "SM183",
+          actualValue: 0,
+          achievementRate: null,
+          validationError: "GSM_ONAY value is required",
+        }),
+        expect.objectContaining({
+          kpiCode: "GSM_ONAY",
+          storeExternalRef: "SM999",
+          actualValue: 50,
+          achievementRate: 0.5,
+          validationError: "GSM_ONAY store reference is not mapped: SM999",
+        }),
+      ]),
+    );
+  });
+
   it("recomputes store ATV UPT and CR from base totals instead of trusting reported ratios", async () => {
     const { integrationService, service } = createService();
     const buffer = createWorkbookBuffer([

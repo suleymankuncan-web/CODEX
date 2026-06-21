@@ -429,6 +429,7 @@ describe("MaterializationService", () => {
         null,
         null,
         null,
+        null,
       ],
     );
   });
@@ -514,6 +515,7 @@ describe("MaterializationService", () => {
         "2026-04-01",
         "2026-04-30",
         1200,
+        null,
         null,
         null,
         null,

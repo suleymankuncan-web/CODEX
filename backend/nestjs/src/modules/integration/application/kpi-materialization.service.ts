@@ -98,6 +98,10 @@ export class KpiMaterializationService {
         const periodStart = String(payload["periodStart"]);
         const periodEnd = String(payload["periodEnd"]);
         const actualValue = Number(payload["actualValue"] ?? 0);
+        const achievementRate =
+          payload["achievementRate"] === null || payload["achievementRate"] === undefined
+            ? null
+            : Number(payload["achievementRate"]);
         const employeeIdToPersist = scopeType === "employee" ? employeeId : null;
         const storeOrgScope = storeId
           ? await this.resolveStoreOrgScope(storeId, storeOrgScopeCache)
@@ -119,6 +123,7 @@ export class KpiMaterializationService {
             periodStart,
             periodEnd,
             actualValue,
+            achievementRate,
             batchEnvelope: input.batchEnvelope,
           });
 
@@ -145,6 +150,7 @@ export class KpiMaterializationService {
             periodStart,
             periodEnd,
             actualValue,
+            achievementRate,
             batchEnvelope: input.batchEnvelope,
           });
         }
@@ -162,6 +168,10 @@ export class KpiMaterializationService {
   }
 
   private validateKpiPayload(payload: Record<string, unknown>): string | null {
+    if (typeof payload["validationError"] === "string" && payload["validationError"].trim()) {
+      return payload["validationError"].trim();
+    }
+
     if (!payload["kpiId"] && !payload["kpiCode"] && !payload["sourceMetricId"]) {
       return "kpiId, kpiCode, or sourceMetricId is required";
     }
@@ -172,6 +182,19 @@ export class KpiMaterializationService {
 
     if (!payload["periodEnd"]) {
       return "periodEnd is required";
+    }
+
+    const kpiCode = payload["kpiCode"] ?? payload["sourceMetricId"];
+    if (kpiCode === "GSM_ONAY") {
+      const actualValue = Number(payload["actualValue"]);
+      if (!Number.isFinite(actualValue) || actualValue < 0 || actualValue > 100) {
+        return "GSM_ONAY actualValue must be between 0 and 100";
+      }
+
+      const achievementRate = Number(payload["achievementRate"]);
+      if (!Number.isFinite(achievementRate) || achievementRate < 0 || achievementRate > 1) {
+        return "GSM_ONAY achievementRate must be between 0 and 1";
+      }
     }
 
     return null;

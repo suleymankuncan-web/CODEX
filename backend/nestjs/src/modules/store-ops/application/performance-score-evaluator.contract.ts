@@ -4,6 +4,7 @@ export type PerformanceScoreMetricValue = {
   label: string;
   actualValue: number | null;
   targetValue: number | null;
+  scoreValue?: number | null;
 };
 
 export type PerformanceScoreBenchmarkFallback =

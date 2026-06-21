@@ -1,8 +1,49 @@
-CREATE TABLE IF NOT EXISTS ops.kpi_score_profile_config (
-    config_key TEXT PRIMARY KEY,
-    config_payload JSONB NOT NULL,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
+ALTER TABLE ops.kpi_actual
+ADD COLUMN IF NOT EXISTS achievement_rate NUMERIC(18,6);
+
+ALTER TABLE ops.kpi_actual
+ALTER COLUMN achievement_rate TYPE NUMERIC(18,6);
+
+ALTER TABLE rpt.store_kpi_snapshot
+ADD COLUMN IF NOT EXISTS achievement_rate NUMERIC(18,6);
+
+ALTER TABLE rpt.store_kpi_snapshot
+ALTER COLUMN achievement_rate TYPE NUMERIC(18,6);
+
+INSERT INTO ops.kpi_definition (
+    kpi_id,
+    kpi_code,
+    kpi_name,
+    metric_type,
+    unit_type,
+    aggregation_type,
+    scope_type,
+    formula_definition,
+    target_direction,
+    is_active
+)
+VALUES (
+    'b0000000-0000-0000-0000-000000000020',
+    'GSM_ONAY',
+    'GSM Onay',
+    'percentage',
+    'ratio',
+    'avg',
+    'store',
+    NULL,
+    'higher_is_better',
+    TRUE
+)
+ON CONFLICT (kpi_code) DO UPDATE
+SET
+    kpi_name = EXCLUDED.kpi_name,
+    metric_type = EXCLUDED.metric_type,
+    unit_type = EXCLUDED.unit_type,
+    aggregation_type = EXCLUDED.aggregation_type,
+    scope_type = EXCLUDED.scope_type,
+    formula_definition = EXCLUDED.formula_definition,
+    target_direction = EXCLUDED.target_direction,
+    is_active = EXCLUDED.is_active;
 
 INSERT INTO ops.kpi_score_profile_config (
     config_key,
@@ -22,6 +63,9 @@ VALUES
           "weightPercent": 35,
           "ownerRole": "STORE_MANAGER",
           "scoreBehavior": "task_candidate",
+          "direction": "HIGHER_IS_BETTER",
+          "benchmarkSource": "TARGET",
+          "capRatio": 1.2,
           "aliases": ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
           "notes": "Primary store score driver and strongest workflow candidate."
         },
@@ -31,6 +75,9 @@ VALUES
           "weightPercent": 20,
           "ownerRole": "STORE_MANAGER",
           "scoreBehavior": "task_candidate",
+          "direction": "HIGHER_IS_BETTER",
+          "benchmarkSource": "TURKEY_AVERAGE",
+          "capRatio": 1.2,
           "notes": "Conversion health should remain visible and action-oriented."
         },
         {
@@ -39,6 +86,9 @@ VALUES
           "weightPercent": 15,
           "ownerRole": "STORE_MANAGER",
           "scoreBehavior": "warning_first",
+          "direction": "HIGHER_IS_BETTER",
+          "benchmarkSource": "TURKEY_AVERAGE",
+          "capRatio": 1.2,
           "notes": "Useful in score immediately; promote to tasks only if signal quality stays high."
         },
         {
@@ -47,6 +97,9 @@ VALUES
           "weightPercent": 15,
           "ownerRole": "STORE_MANAGER",
           "scoreBehavior": "warning_first",
+          "direction": "HIGHER_IS_BETTER",
+          "benchmarkSource": "TURKEY_AVERAGE",
+          "capRatio": 1.2,
           "notes": "Operationally important but should avoid inbox noise early."
         },
         {
@@ -71,46 +124,13 @@ VALUES
           "weightPercent": 5,
           "ownerRole": "STORE_MANAGER",
           "scoreBehavior": "warning_first",
+          "direction": "HIGHER_IS_BETTER",
+          "benchmarkSource": "TARGET",
+          "capRatio": 1,
           "notes": "Monthly store-level GSM approval contributor."
         }
       ],
       "futureMetricRule": "New metrics such as GSM approvals should be added through the KPI catalog and score profile, not hard-coded into one page."
-    }'::jsonb
-),
-(
-    'personnel_profile',
-    '{
-      "profileCode": "personnel",
-      "title": "Personnel score profile",
-      "summary": "Store personnel should have an individual scorecard that stays related to, but separate from, the store score.",
-      "metrics": [
-        {
-          "code": "TARGET_ACHIEVEMENT",
-          "label": "Hedef gerceklestirme orani",
-          "weightPercent": 40,
-          "ownerRole": "STORE_PERSONNEL",
-          "scoreBehavior": "warning_first",
-          "aliases": ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
-          "notes": "Primary personnel score driver and strongest coaching signal."
-        },
-        {
-          "code": "ATV",
-          "label": "ATV",
-          "weightPercent": 30,
-          "ownerRole": "STORE_PERSONNEL",
-          "scoreBehavior": "warning_first",
-          "notes": "Useful for coaching and should not inherit store-level weighting by default."
-        },
-        {
-          "code": "UPT",
-          "label": "UPT",
-          "weightPercent": 30,
-          "ownerRole": "STORE_PERSONNEL",
-          "scoreBehavior": "warning_first",
-          "notes": "Belongs in the personnel profile even before task triggers are enabled."
-        }
-      ],
-      "futureMetricRule": "Personnel weights should live in the same rule system as store weights, but remain a separate profile."
     }'::jsonb
 ),
 (
@@ -173,17 +193,63 @@ VALUES
         "taskCandidate": false
       }
     ]'::jsonb
-),
-(
-    'grading_bands',
-    '[
-      { "code": "A", "label": "Mukemmel", "emoji": "🏆", "tone": "calm", "minScore": 1.0 },
-      { "code": "B", "label": "Iyi", "emoji": "🙂", "tone": "accent", "minScore": 0.85 },
-      { "code": "C", "label": "Takip gerekli", "emoji": "👀", "tone": "warning", "minScore": 0.75 },
-      { "code": "D", "label": "Kritik", "emoji": "🚨", "tone": "danger", "minScore": 0.0 }
-    ]'::jsonb
 )
 ON CONFLICT (config_key) DO UPDATE
 SET
     config_payload = EXCLUDED.config_payload,
     updated_at = NOW();
+
+WITH published_config AS (
+    SELECT
+        (
+            SELECT config_payload
+            FROM ops.kpi_score_profile_config
+            WHERE config_key = 'store_profile'
+            LIMIT 1
+        ) AS store_profile,
+        (
+            SELECT config_payload
+            FROM ops.kpi_score_profile_config
+            WHERE config_key = 'personnel_profile'
+            LIMIT 1
+        ) AS personnel_profile,
+        (
+            SELECT config_payload
+            FROM ops.kpi_score_profile_config
+            WHERE config_key = 'ownership_matrix'
+            LIMIT 1
+        ) AS ownership_matrix,
+        (
+            SELECT config_payload
+            FROM ops.kpi_score_profile_config
+            WHERE config_key = 'grading_bands'
+            LIMIT 1
+        ) AS grading_bands
+)
+INSERT INTO ops.kpi_config_version (
+    version_no,
+    lifecycle_state,
+    effective_from,
+    published_at,
+    published_by,
+    change_summary,
+    config_payload
+)
+SELECT
+    COALESCE((SELECT MAX(version_no) + 1 FROM ops.kpi_config_version), 1),
+    'published',
+    NOW(),
+    NOW(),
+    NULL,
+    '{"added":["GSM_ONAY"],"changed":["store_profile","ownership_matrix"]}'::jsonb,
+    jsonb_build_object(
+        'storeProfile', store_profile,
+        'personnelProfile', personnel_profile,
+        'ownershipMatrix', ownership_matrix,
+        'gradingBands', grading_bands
+    )
+FROM published_config
+WHERE store_profile IS NOT NULL
+  AND personnel_profile IS NOT NULL
+  AND ownership_matrix IS NOT NULL
+  AND grading_bands IS NOT NULL;

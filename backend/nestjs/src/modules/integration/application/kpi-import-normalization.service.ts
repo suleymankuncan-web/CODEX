@@ -1,5 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
+import {
+  GSM_ONAY_KPI_CODE,
+  normalizeGsmOnayValue,
+} from "./gsm-onay-normalization";
 
 type KpiImportSourceSystem = "nebim_v3" | "power_bi" | "manual" | "other";
 
@@ -63,6 +67,11 @@ const KPI_METRIC_CANDIDATES: MetricCandidate[] = [
     aliases: ["vmChecklist", "vmChecklistScore", "vmChecklistPuan"],
     defaultScopeType: "store",
   },
+  {
+    code: GSM_ONAY_KPI_CODE,
+    aliases: ["gsmOnay", "gsmOnayYuzde", "gsmApproval", "gsmApprovalRate", "Gsm Onay %"],
+    defaultScopeType: "store",
+  },
 ];
 
 @Injectable()
@@ -101,6 +110,25 @@ export class KpiImportNormalizationService {
     const periodEnd = this.resolvePeriodEnd(row, input, periodStart);
     const sourceMetricId = this.resolveMetricCode(row);
     const kpiCode = this.resolveKpiCode(row, sourceMetricId);
+    const actualValue = this.resolveNumericValue(row);
+    const existingValidationError = this.getString(row, ["validationError"]);
+    const existingAchievementRate = this.getNumber(row, ["achievementRate"]);
+    const gsmValue =
+      kpiCode === GSM_ONAY_KPI_CODE
+        ? existingValidationError
+          ? {
+              actualValue,
+              achievementRate: existingAchievementRate,
+              validationError: existingValidationError,
+            }
+          : existingAchievementRate !== null
+          ? {
+              actualValue,
+              achievementRate: existingAchievementRate,
+              validationError: existingValidationError,
+            }
+          : normalizeGsmOnayValue(row["actualValue"] ?? row["metricValue"] ?? row["value"] ?? row["amount"])
+        : null;
     const scopeType =
       this.getString(row, ["scopeType"]) ??
       (this.hasValue(this.resolveEmployeeExternalRef(row)) ? "employee" : "store");
@@ -120,7 +148,9 @@ export class KpiImportNormalizationService {
             this.getString(row, ["employeeExternalRef"]) ??
             this.getString(row, ["sourceEmployeeId"])
           : null,
-      actualValue: this.resolveNumericValue(row),
+      actualValue: gsmValue?.actualValue ?? actualValue,
+      achievementRate: gsmValue?.achievementRate ?? existingAchievementRate,
+      validationError: gsmValue?.validationError ?? existingValidationError,
       periodType: this.getString(row, ["periodType"]) ?? "daily",
       periodStart,
       periodEnd,
@@ -142,6 +172,29 @@ export class KpiImportNormalizationService {
     const periodType = this.getString(row, ["periodType"]) ?? "daily";
 
     return KPI_METRIC_CANDIDATES.flatMap((metric) => {
+      const rawMetricValue = this.getValue(row, metric.aliases);
+      if (metric.code === GSM_ONAY_KPI_CODE && rawMetricValue !== undefined) {
+        const gsmValue = normalizeGsmOnayValue(rawMetricValue);
+        const normalizedRow = {
+          kpiCode: metric.code,
+          sourceMetricId: metric.code,
+          actualValue: gsmValue.actualValue,
+          achievementRate: gsmValue.achievementRate,
+          validationError: gsmValue.validationError,
+          scopeType: "store",
+          storeExternalRef,
+          employeeExternalRef: null,
+          periodType,
+          periodStart,
+          periodEnd,
+          sourceSystem: input.sourceSystem,
+          sourceCapturedAt: input.sourceCapturedAt ?? null,
+          sourceRow: row,
+        };
+
+        return [this.withSourceLineage(normalizedRow, { metricCode: metric.code, sourceRow: row })];
+      }
+
       const metricValue = this.getNumber(row, metric.aliases);
       if (metricValue === null) {
         return [];
@@ -235,6 +288,9 @@ export class KpiImportNormalizationService {
       "storeId",
       "magazaKodu",
       "magazaKod",
+      "storeName",
+      "magazaAdi",
+      "magazaAd",
     ]);
   }
 
