@@ -3474,7 +3474,7 @@ test('store rankings store rows keep long names on one line without covering sco
     })
   })
 
-  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.setViewportSize({ width: 1366, height: 768 })
   await page.goto('/store/rankings')
 
   const firstRow = page.locator('.store-rankings-table tbody tr').first()
@@ -3498,6 +3498,23 @@ test('store rankings store rows keep long names on one line without covering sco
   expect(storeTextLayout.overflow).toBe('hidden')
   expect(storeTextLayout.textOverflow).toBe('ellipsis')
   expect(storeTextLayout.height).toBeLessThanOrEqual(storeTextLayout.lineHeight * 1.35)
+
+  const tableWidthState = await page.locator('.store-rankings-table-wrap').evaluate((wrap) => {
+    const table = wrap.querySelector('.store-rankings-table')
+    const finalHeader = table?.querySelector('thead th:last-child')
+    const wrapRect = wrap.getBoundingClientRect()
+    const finalHeaderRect = finalHeader?.getBoundingClientRect()
+
+    return {
+      clientWidth: wrap.clientWidth,
+      scrollWidth: wrap.scrollWidth,
+      finalHeaderRight: finalHeaderRect?.right ?? Number.POSITIVE_INFINITY,
+      wrapRight: wrapRect.right,
+    }
+  })
+
+  expect(tableWidthState.scrollWidth).toBeLessThanOrEqual(tableWidthState.clientWidth + 1)
+  expect(tableWidthState.finalHeaderRight).toBeLessThanOrEqual(tableWidthState.wrapRight + 1)
 
   const cellGap = await firstRow.evaluate((row) => {
     const storeCell = row.querySelector('.store-rankings-cell-entity')
