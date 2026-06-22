@@ -27,17 +27,18 @@
 }
 
 .store-rankings-table {
+  table-layout: fixed;
   width: 100%;
-  min-width: 1100px;
+  min-width: 1160px;
   border-collapse: collapse;
 }
 
 .store-rankings-col-rank {
-  width: 68px;
+  width: 70px;
 }
 
 .store-rankings-col-entity {
-  width: 330px;
+  width: 390px;
 }
 
 .store-rankings-col-store {
@@ -45,11 +46,11 @@
 }
 
 .store-rankings-col-score {
-  width: 88px;
+  width: 104px;
 }
 
 .store-rankings-col-kpi {
-  width: 86px;
+  width: 88px;
 }
 
 .store-rankings-col-action {
@@ -96,8 +97,8 @@
   gap: 5px;
   padding: 0;
   color: var(--rankings-muted);
-  font-size: 11px;
-  font-weight: 720;
+  font-size: 10px;
+  font-weight: 620;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -121,7 +122,7 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.58);
   color: var(--rankings-text);
-  font-weight: 760;
+  font-weight: 640;
 }
 
 .store-rankings-rank-chip {
@@ -136,16 +137,16 @@
 
 .store-rankings-entity {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: 32px minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
 .store-rankings-entity-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
 }
 
 .store-rankings-entity-copy {
@@ -157,17 +158,17 @@
 .store-rankings-entity strong {
   overflow: hidden;
   color: var(--rankings-text);
-  font-size: 13px;
-  font-weight: 720;
+  font-size: 12px;
+  font-weight: 620;
+  line-height: 1.12;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .store-rankings-entity-copy-store strong {
-  overflow: visible;
-  line-height: 1.25;
-  text-overflow: clip;
-  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .store-rankings-entity-detail {
@@ -177,9 +178,9 @@
 .store-rankings-score-number {
   display: inline-flex;
   color: var(--rankings-text);
-  font-size: 21px;
-  font-weight: 760;
-  letter-spacing: -0.04em;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .store-rankings-kpi-cell {
@@ -187,7 +188,7 @@
   min-width: 58px;
   gap: 7px;
   padding: 0 8px;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .store-rankings-kpi-missing {
@@ -207,8 +208,8 @@
 
 .store-rankings-muted-value {
   color: var(--rankings-muted);
-  font-size: 13px;
-  font-weight: 560;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .store-rankings-primary-button {
@@ -218,7 +219,7 @@
   color: white;
   box-shadow: 0 14px 32px rgba(118, 80, 232, 0.22);
   font-size: 13px;
-  font-weight: 740;
+  font-weight: 650;
 }
 
 .store-rankings-action-empty {
