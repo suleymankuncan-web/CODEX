@@ -55,7 +55,6 @@ export function StoreChecklistsVisitPanel(input: {
   hydrateActiveResponseDrafts: (
     active: ChecklistActiveInstance | undefined,
   ) => ChecklistDraftHydration
-  incompleteVisitStoreRows: ChecklistStoreVisitRow[]
   locale: AppLocale
   mobileToday: MobileChecklistToday | undefined
   selectedTab: ChecklistTab
@@ -69,12 +68,11 @@ export function StoreChecklistsVisitPanel(input: {
   onStartVisit: (variables: ChecklistVisitStartVariables) => void
   onToggleVisitSort: (key: ChecklistSortKey) => void
 }) {
-  if (input.selectedTab !== 'visits' && input.selectedTab !== 'incomplete') return null
+  if (input.selectedTab !== 'visits') return null
 
   const hasMissingTemplate =
     input.assignedVisitStoreCount > 0 && (input.mobileToday?.templates.length ?? 0) === 0
-  const isIncompletePanel = input.selectedTab === 'incomplete'
-  const panelRows = isIncompletePanel ? input.incompleteVisitStoreRows : input.visitStoreRows
+  const panelRows = input.visitStoreRows
 
   return (
     <section
@@ -87,79 +85,47 @@ export function StoreChecklistsVisitPanel(input: {
       <div className="store-checklists-section-head">
         <div>
           <div className="store-checklists-eyebrow">
-            {isIncompletePanel
-              ? getStaticCopy(input.locale, 'Tamamlanmayanlar', 'Incomplete')
-              : input.t('storeChecklists.visitEyebrow')}
+            {input.t('storeChecklists.visitEyebrow')}
           </div>
-          <h3>
-            {isIncompletePanel
-              ? getStaticCopy(
-                  input.locale,
-                  'Seçili dönemde tamamlanmayan checklistler',
-                  'Incomplete checklists in the selected period',
-                )
-              : input.t('storeChecklists.visitTitle')}
-          </h3>
+          <h3>{input.t('storeChecklists.visitTitle')}</h3>
           <p>
-            {isIncompletePanel
+            {input.display.vmOnlyVisitScope
               ? getStaticCopy(
                   input.locale,
-                  'Yetkili mağaza listesinde olup seçili dönem içinde tamamlanmış checklist kaydı görünmeyen mağazalar listelenir.',
-                  'Selected stores without a completed checklist in the selected period are listed here.',
+                  'VM ziyaret durumu ve skor takibi.',
+                  'VM visit status and score follow-up.',
                 )
-              : input.display.vmOnlyVisitScope
-                ? getStaticCopy(
-                    input.locale,
-                    'Her satır tek mağaza; yalnızca VM checklist durumu ve skoru gösterilir.',
-                    'Each row is one store; only VM checklist status and score are shown.',
-                  )
-                : getStaticCopy(
-                    input.locale,
-                    'Her satır tek mağaza; BM ve VM checklist skorları birbirine karışmadan okunur.',
-                    'Each row is one store; BM and VM checklist scores stay separate.',
-                  )}
+              : getStaticCopy(
+                  input.locale,
+                  'BM ve VM checklistleri aynı satırda ayrı okunur.',
+                  'BM and VM checklists stay separate on each row.',
+                )}
           </p>
         </div>
         <ChecklistBadge
-          tone={
-            isIncompletePanel && panelRows.length > 0
-              ? 'warning'
-              : input.activeVisitCount > 0
-                ? 'warning'
-                : 'accent'
-          }
+          tone={input.activeVisitCount > 0 ? 'warning' : 'accent'}
         >
-          {isIncompletePanel
-            ? getStaticCopy(input.locale, `${panelRows.length} kayıt`, `${panelRows.length} records`)
-            : input.activeVisitCount > 0
-              ? input.t('storeChecklists.visitStatus.inProgress')
-              : input.t('storeChecklists.visitStatus.ready')}
+          {input.activeVisitCount > 0
+            ? input.t('storeChecklists.visitStatus.inProgress')
+            : input.t('storeChecklists.visitStatus.ready')}
         </ChecklistBadge>
       </div>
 
       {panelRows.length === 0 ? (
         <ChecklistEmptyBlock
           copy={
-            isIncompletePanel
+            hasMissingTemplate
               ? getStaticCopy(
                   input.locale,
-                  'Seçili filtrelerde tamamlanmayan checklist bulunmuyor.',
-                  'There are no incomplete checklists for the selected filters.',
+                  'Atanmış mağazan var; ancak bu rol için yayınlanmış VM checklist şablonu henüz yok.',
+                  'You have assigned stores, but there is no published VM checklist template for this role yet.',
                 )
-              : hasMissingTemplate
-                ? getStaticCopy(
-                    input.locale,
-                    'Atanmış mağazan var; ancak bu rol için yayınlanmış VM checklist şablonu henüz yok.',
-                    'You have assigned stores, but there is no published VM checklist template for this role yet.',
-                  )
-                : input.t('storeChecklists.noActiveChecklistCopy')
+              : input.t('storeChecklists.noActiveChecklistCopy')
           }
           title={
-            isIncompletePanel
-              ? getStaticCopy(input.locale, 'Tamamlanmayan kayıt yok', 'No incomplete records')
-              : hasMissingTemplate
-                ? getStaticCopy(input.locale, 'VM şablonu yayında değil', 'VM template is not published')
-                : input.t('storeChecklists.noActiveChecklistTitle')
+            hasMissingTemplate
+              ? getStaticCopy(input.locale, 'VM şablonu yayında değil', 'VM template is not published')
+              : input.t('storeChecklists.noActiveChecklistTitle')
           }
         />
       ) : (
@@ -245,7 +211,7 @@ function StoreChecklistsVisitTable(input: {
             direction={input.visitSort.direction}
             onClick={() => input.onToggleVisitSort('score')}
           >
-            {getStaticCopy(input.locale, 'BM skor', 'BM score')}
+            {getStaticCopy(input.locale, 'BM Checklist', 'BM Checklist')}
           </SortButton>
         ) : null}
         {input.showVmVisitScore ? (
@@ -254,7 +220,7 @@ function StoreChecklistsVisitTable(input: {
             direction={input.visitSort.direction}
             onClick={() => input.onToggleVisitSort('score')}
           >
-            {getStaticCopy(input.locale, 'VM skor', 'VM score')}
+            {getStaticCopy(input.locale, 'VM Checklist', 'VM Checklist')}
           </SortButton>
         ) : null}
         <SortButton
@@ -366,7 +332,7 @@ function StoreChecklistsVisitRow(input: {
       </div>
       {input.showBmVisitScore ? (
         <ChecklistTemplateScore
-          label={getStaticCopy(input.locale, 'BM', 'BM')}
+          label={getStaticCopy(input.locale, 'BM Checklist', 'BM Checklist')}
           locale={input.locale}
           row={input.storeRow.bm}
           t={input.t}
@@ -374,7 +340,7 @@ function StoreChecklistsVisitRow(input: {
       ) : null}
       {input.showVmVisitScore ? (
         <ChecklistTemplateScore
-          label={getStaticCopy(input.locale, 'VM', 'VM')}
+          label={getStaticCopy(input.locale, 'VM Checklist', 'VM Checklist')}
           locale={input.locale}
           row={input.storeRow.vm}
           t={input.t}
@@ -419,12 +385,20 @@ function StoreChecklistsVisitRow(input: {
 
 function ChecklistVisitDateCell(input: { date: string | null | undefined; locale: AppLocale }) {
   if (!input.date) {
-    return <span className="store-checklists-date-cell store-checklists-date-cell-empty">-</span>
+    return (
+      <span className="store-checklists-date-cell store-checklists-date-cell-empty">
+        {getStaticCopy(input.locale, 'Yok', 'None')}
+      </span>
+    )
   }
 
   const date = new Date(input.date)
   if (Number.isNaN(date.getTime())) {
-    return <span className="store-checklists-date-cell store-checklists-date-cell-empty">-</span>
+    return (
+      <span className="store-checklists-date-cell store-checklists-date-cell-empty">
+        {getStaticCopy(input.locale, 'Yok', 'None')}
+      </span>
+    )
   }
 
   const intlLocale = getIntlLocale(input.locale)

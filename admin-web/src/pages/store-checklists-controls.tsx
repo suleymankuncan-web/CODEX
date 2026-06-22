@@ -1,12 +1,4 @@
-import {
-  AlertTriangle,
-  Archive,
-  History,
-  ListChecks,
-  MapPinned,
-  RefreshCw,
-  Search,
-} from 'lucide-react'
+import { Archive, History, ListChecks, MapPinned, RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -101,6 +93,9 @@ export function ChecklistToolbar(input: {
           <SelectContent>
             <SelectGroup>
               <SelectItem value="all">{getStaticCopy(input.locale, 'Tüm durumlar', 'All statuses')}</SelectItem>
+              <SelectItem value="missing_or_draft">
+                {getStaticCopy(input.locale, 'Tamamlanmayan', 'Missing or draft')}
+              </SelectItem>
               <SelectItem value="missing">{input.t('storeChecklists.noVisit')}</SelectItem>
               <SelectItem value="draft">{input.t('storeChecklists.coverage.draft')}</SelectItem>
               <SelectItem value="completed">{input.t('storeChecklists.status.completed')}</SelectItem>
@@ -206,7 +201,6 @@ export function ChecklistTabs(input: {
 
 function ChecklistTabIcon(input: { tab: ChecklistTab }) {
   if (input.tab === 'inbox') return <Archive aria-hidden="true" />
-  if (input.tab === 'incomplete') return <AlertTriangle aria-hidden="true" />
   if (input.tab === 'history') return <History aria-hidden="true" />
   if (input.tab === 'plan') return <MapPinned aria-hidden="true" />
   return <ListChecks aria-hidden="true" />

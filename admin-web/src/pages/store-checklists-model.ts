@@ -21,11 +21,18 @@ export type ChecklistStoreVisitRow = {
 export type ChecklistSession = ChecklistCoverageRow
 export type ChecklistTone = 'calm' | 'warning' | 'accent' | 'danger' | 'neutral'
 export type ChecklistTypeFilter = 'all' | 'BM_STORE_VISIT' | 'VM_STORE_VISIT'
-export type ChecklistStatusFilter = 'all' | 'missing' | 'draft' | 'completed' | 'pending' | 'acknowledged'
+export type ChecklistStatusFilter =
+  | 'all'
+  | 'missing'
+  | 'draft'
+  | 'missing_or_draft'
+  | 'completed'
+  | 'pending'
+  | 'acknowledged'
 export type ChecklistSortKey = 'priority' | 'store' | 'score' | 'date' | 'status'
 export type ChecklistSortDirection = 'asc' | 'desc'
 export type ChecklistSort = { key: ChecklistSortKey; direction: ChecklistSortDirection }
-export type ChecklistTab = 'visits' | 'plan' | 'inbox' | 'incomplete' | 'history'
+export type ChecklistTab = 'visits' | 'plan' | 'inbox' | 'history'
 export type ChecklistActiveInstance = MobileChecklistToday['activeInstances'][number]
 export type ChecklistCompletedInstance = {
   checklistInstanceId: string
@@ -124,7 +131,7 @@ export function createInitialStoreChecklistsState(search: string): StoreChecklis
     searchQuery: '',
     selectedMonth: getCurrentMonthKey(),
     typeFilter: 'all',
-    statusFilter: 'all',
+    statusFilter: resolveChecklistStatusFromSearch(search),
     activeTab: resolveChecklistTabFromSearch(search),
     visitSort: { key: 'priority', direction: 'desc' },
     resultSort: { key: 'date', direction: 'desc' },
@@ -305,7 +312,7 @@ export function storeChecklistsReducer(
 
 export function buildChecklistSearch(
   search: string,
-  updates: { result?: string | null; tab?: ChecklistTab },
+  updates: { result?: string | null; status?: ChecklistStatusFilter | null; tab?: ChecklistTab },
 ) {
   const params = new URLSearchParams(search)
 
@@ -321,19 +328,38 @@ export function buildChecklistSearch(
     }
   }
 
+  if (updates.status !== undefined) {
+    if (updates.status === null || updates.status === 'all') {
+      params.delete('status')
+    } else {
+      params.set('status', updates.status)
+    }
+  }
+
   const nextSearch = params.toString()
   return nextSearch ? `?${nextSearch}` : ''
 }
 
 function resolveChecklistTabFromSearch(search: string): ChecklistTab {
   const tab = new URLSearchParams(search).get('tab')
-  return tab === 'inbox' ||
-    tab === 'history' ||
-    tab === 'incomplete' ||
-    tab === 'plan' ||
-    tab === 'visits'
+  return tab === 'inbox' || tab === 'history' || tab === 'plan' || tab === 'visits'
     ? tab
     : 'visits'
+}
+
+function resolveChecklistStatusFromSearch(search: string): ChecklistStatusFilter {
+  const params = new URLSearchParams(search)
+  if (params.get('tab') === 'incomplete') return 'missing_or_draft'
+
+  const status = params.get('status')
+  return status === 'missing' ||
+    status === 'draft' ||
+    status === 'missing_or_draft' ||
+    status === 'completed' ||
+    status === 'pending' ||
+    status === 'acknowledged'
+    ? status
+    : 'all'
 }
 
 function resolveChecklistResultFromSearch(search: string) {

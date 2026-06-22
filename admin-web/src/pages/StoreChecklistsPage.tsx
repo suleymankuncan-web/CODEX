@@ -1,4 +1,4 @@
-import { useReducer, useRef } from 'react'
+import { useEffect, useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -112,6 +112,22 @@ function useStoreChecklistsPageContent(input: {
     location.search,
     createInitialStoreChecklistsState,
   )
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('tab') !== 'incomplete') return
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: buildChecklistSearch(location.search, {
+          status: 'missing_or_draft',
+          tab: 'visits',
+        }),
+      },
+      { replace: true },
+    )
+  }, [location.pathname, location.search, navigate])
   const {
     ackNotes,
     ackNotice,
@@ -495,16 +511,6 @@ function useStoreChecklistsPageContent(input: {
           },
         ]
       : []),
-    ...(canManageVisits
-      ? [
-          {
-            key: 'incomplete' as const,
-            label: getStaticCopy(locale, 'Tamamlanmayanlar', 'Incomplete'),
-            count: incompleteVisitStoreRows.length,
-            tone: incompleteVisitStoreRows.length > 0 ? 'danger' as const : 'calm' as const,
-          },
-        ]
-      : []),
     ...(canUseAcknowledgements
       ? [
           {
@@ -670,7 +676,6 @@ function useStoreChecklistsPageContent(input: {
                   start: startVisitMutation.isError ? startVisitMutation.error : null,
                 }}
                 hydrateActiveResponseDrafts={hydrateActiveResponseDrafts}
-                incompleteVisitStoreRows={incompleteVisitStoreRows}
                 locale={locale}
                 mobileToday={mobileToday}
                 selectedTab={selectedTab}

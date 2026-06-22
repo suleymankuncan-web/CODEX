@@ -30,11 +30,11 @@ export const storeChecklistsTr = {
     'Checklist sonucunu görme teyidi, onay kararından ayrı kalır.',
 
   'storeChecklists.visitPanelAria': 'Atanmış mağaza checklist ziyaretleri',
-  'storeChecklists.visitEyebrow': 'Ziyaret akışı',
+  'storeChecklists.visitEyebrow': 'Ziyaretler',
   'storeChecklists.visitTitle': 'Atanmış mağaza checklist ziyaretleri',
   'storeChecklists.visitStatus.inProgress': 'Devam ediyor',
   'storeChecklists.visitStatus.ready': 'Hazır',
-  'storeChecklists.visitPlanEyebrow': 'Ziyaret Planı',
+  'storeChecklists.visitPlanEyebrow': 'Ziyaret planı',
   'storeChecklists.visitPlanTitle': 'Öncelikli mağazalar',
   'storeChecklists.visitPlanCopy':
     'Seçili filtrelerde {period} için mağaza ziyaret önceliği gösterilir.',
@@ -57,7 +57,7 @@ export const storeChecklistsTr = {
   'storeChecklists.visitPlanScoresAria': 'Ziyaret planı skorları',
   'storeChecklists.visitPlanReasonsAria': 'Ziyaret planı nedenleri',
   'storeChecklists.visitPlan.lastVisit': 'Son ziyaret',
-  'storeChecklists.visitPlan.action': 'Ziyaret akışına git',
+  'storeChecklists.visitPlan.action': 'Ziyaretlere git',
   'storeChecklists.visitPlanRisk.high': 'Yüksek',
   'storeChecklists.visitPlanRisk.medium': 'Takip',
   'storeChecklists.visitPlanRisk.low': 'Plan temiz',
@@ -107,7 +107,7 @@ export const storeChecklistsTr = {
   'storeChecklists.sessionEyebrow': 'Checklist oturumu',
   'storeChecklists.sessionCopy': '{store} için {template} v{version} şablonu kullanılıyor.',
   'storeChecklists.closeSession': 'Kapat',
-  'storeChecklists.cancelSession': 'İptal Et',
+  'storeChecklists.cancelSession': 'Kapat ve taslakta bırak',
   'storeChecklists.sessionCloseConfirm': 'Kaydedilmemiş değişiklikler var. Pencere kapatılsın mı?',
   'storeChecklists.cancelSessionConfirm': 'Checklist oturumu iptal edilsin mi?',
   'storeChecklists.completeSessionConfirm': 'Checklist kaydedilip tamamlanacak. Emin misiniz?',
@@ -140,7 +140,7 @@ export const storeChecklistsTr = {
   'storeChecklists.lowScoreTitle': 'Dikkat isteyen maddeler',
   'storeChecklists.sectionResultSummary': '{count} madde / ortalama {score}%',
 
-  'storeChecklists.inboxEyebrow': 'Checklist kutusu',
+  'storeChecklists.inboxEyebrow': 'Sonuç kabul',
   'storeChecklists.inboxTitle': 'Mağaza kabulü bekleyen tamamlanmış checklistler',
   'storeChecklists.needsAcknowledgement': 'Kabul bekliyor',
   'storeChecklists.clear': 'Temiz',
@@ -162,7 +162,7 @@ export const storeChecklistsTr = {
   'storeChecklists.reviewOnlyCopy':
     'Bu checklist incelenebilir, ancak kabul işlemi atanmış aksiyon mağazalarıyla sınırlıdır.',
 
-  'storeChecklists.recentHistoryEyebrow': 'Yakın geçmiş',
+  'storeChecklists.recentHistoryEyebrow': 'Geçmiş',
   'storeChecklists.recentHistoryTitle': 'Yakın zamanda kabul edilen checklist kayıtları',
   'storeChecklists.noAcknowledgementsTitle': 'Henüz kabul kaydı yok',
   'storeChecklists.noAcknowledgementsCopy':
@@ -219,7 +219,7 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
     'Checklist result confirmation stays separate from approval.',
 
   'storeChecklists.visitPanelAria': 'Assigned store checklist visits',
-  'storeChecklists.visitEyebrow': 'Visit flow',
+  'storeChecklists.visitEyebrow': 'Visits',
   'storeChecklists.visitTitle': 'Assigned store checklist visits',
   'storeChecklists.visitStatus.inProgress': 'In progress',
   'storeChecklists.visitStatus.ready': 'Ready',
@@ -246,7 +246,7 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
   'storeChecklists.visitPlanScoresAria': 'Visit plan scores',
   'storeChecklists.visitPlanReasonsAria': 'Visit plan reasons',
   'storeChecklists.visitPlan.lastVisit': 'Last visit',
-  'storeChecklists.visitPlan.action': 'Open visit flow',
+  'storeChecklists.visitPlan.action': 'Open visits',
   'storeChecklists.visitPlanRisk.high': 'High',
   'storeChecklists.visitPlanRisk.medium': 'Follow-up',
   'storeChecklists.visitPlanRisk.low': 'Clear plan',
@@ -296,7 +296,7 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
   'storeChecklists.sessionEyebrow': 'Checklist session',
   'storeChecklists.sessionCopy': '{template} v{version} template is used for {store}.',
   'storeChecklists.closeSession': 'Close',
-  'storeChecklists.cancelSession': 'Cancel',
+  'storeChecklists.cancelSession': 'Close and keep draft',
   'storeChecklists.sessionCloseConfirm': 'There are unsaved changes. Close this window?',
   'storeChecklists.cancelSessionConfirm': 'Cancel this checklist session?',
   'storeChecklists.completeSessionConfirm': 'This checklist will be saved and completed. Are you sure?',
@@ -329,7 +329,7 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
   'storeChecklists.lowScoreTitle': 'Items needing attention',
   'storeChecklists.sectionResultSummary': '{count} items / {score}% average',
 
-  'storeChecklists.inboxEyebrow': 'Checklist inbox',
+  'storeChecklists.inboxEyebrow': 'Result acknowledgement',
   'storeChecklists.inboxTitle': 'Completed checklist receipts waiting on store acknowledgement',
   'storeChecklists.needsAcknowledgement': 'Needs acknowledgement',
   'storeChecklists.clear': 'Clear',
@@ -351,7 +351,7 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
   'storeChecklists.reviewOnlyCopy':
     'This checklist can be reviewed, but acknowledgement is limited to assigned action stores.',
 
-  'storeChecklists.recentHistoryEyebrow': 'Recent history',
+  'storeChecklists.recentHistoryEyebrow': 'History',
   'storeChecklists.recentHistoryTitle': 'Recently acknowledged checklist receipts',
   'storeChecklists.noAcknowledgementsTitle': 'No acknowledgements yet',
   'storeChecklists.noAcknowledgementsCopy':

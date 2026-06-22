@@ -511,9 +511,8 @@ export function doesChecklistItemMatchFilters(
 }
 
 export function doesStatusMatch(itemStatus: string, filterStatus: ChecklistStatusFilter) {
-  if (filterStatus === 'all') return true
-  if (filterStatus === 'completed') return itemStatus === 'completed'
-  return itemStatus === filterStatus
+  if (filterStatus === 'all' || itemStatus === filterStatus) return true
+  return filterStatus === 'missing_or_draft' && (itemStatus === 'missing' || itemStatus === 'draft')
 }
 
 export function getCoverageStatus(row: ChecklistCoverageRow): ChecklistStatusFilter {

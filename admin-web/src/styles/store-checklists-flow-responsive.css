@@ -44,6 +44,18 @@
   font-weight: 520;
 }
 
+.store-checklists-template-score-status {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  max-width: 112px;
+  color: var(--checklist-muted);
+  font-size: 10px;
+  font-weight: 520;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .store-checklists-template-scorebar {
   display: block;
   grid-column: 1 / -1;
@@ -192,14 +204,16 @@
 
 .store-checklists-date-cell-empty {
   display: inline-grid;
-  width: 24px;
+  width: fit-content;
+  min-width: 38px;
   height: 24px;
   place-items: center;
-  border: 1px solid rgba(225, 29, 72, 0.18);
+  border: 1px solid var(--checklist-line);
   border-radius: 999px;
-  background: var(--checklist-danger-soft);
-  color: #c72340;
-  font-weight: 600;
+  background: var(--checklist-soft);
+  color: var(--checklist-muted);
+  font-size: 11px;
+  font-weight: 560;
 }
 
 .store-checklists-result-table .store-checklists-table-head,

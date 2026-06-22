@@ -661,6 +661,49 @@ describe("ChecklistRepository", () => {
     ]);
   });
 
+  it("reads active draft updatedAt from the latest response timestamp", async () => {
+    const query = createQueryMock({
+      stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
+      templates: [
+        {
+          checklist_template_id: "template-1",
+          template_code: "BM_VISIT_V1",
+          template_type: "BM_STORE_VISIT",
+          template_name: "BM Visit",
+          version_no: 1,
+        },
+      ],
+      activeInstances: [
+        {
+          checklist_instance_id: "instance-1",
+          checklist_template_id: "template-1",
+          store_id: "store-1",
+          status: "in_progress",
+          started_at: "2026-04-28T10:00:00.000Z",
+          updated_at: "2026-04-28T10:12:00.000Z",
+          responses_json: [],
+        },
+      ],
+    });
+    const repository = new ChecklistRepository({ query } as never);
+
+    const result = await repository.getMobileChecklistToday({
+      actorUserId: "region-user-1",
+      assignedStoreIds: ["store-1"],
+      readStoreIds: [],
+      allowedTemplateTypes: ["BM_STORE_VISIT"],
+    });
+
+    const activeSql = query.mock.calls.find(([sql]) =>
+      String(sql).includes("ci.status IN ('planned', 'in_progress')"),
+    )?.[0] as string | undefined;
+    expect(activeSql).toBeDefined();
+    expect(activeSql).toContain("COALESCE(MAX(cr.responded_at), ci.created_at) AS updated_at");
+    expect(activeSql).toContain("LEFT JOIN ops.checklist_response cr");
+    expect(activeSql).toContain("ON cr.checklist_instance_id = ci.checklist_instance_id");
+    expect(result.activeInstances[0]?.updatedAt).toBe("2026-04-28T10:12:00.000Z");
+  });
+
   it("excludes completed checklist rows without total scores", async () => {
     const query = createQueryMock({
       stores: [{ store_id: "store-1", store_name: "Marmara Park" }],
