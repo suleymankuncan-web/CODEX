@@ -1718,7 +1718,10 @@ test('store home dashboard actions follow role-aware navigation for admin landin
   await page.goto('/store/home')
 
   await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
-  await expect(page.getByText('Bölge özet dashboard')).toBeVisible()
+  await expect(page.locator('.store-command-persona-chip')).toContainText('Admin görünümü')
+  await expect(page.locator('.store-command-identity')).toContainText('Admin görünümü / Şirket geneli')
+  await expect(page.getByText('Admin mağaza özeti')).toBeVisible()
+  await expect(page.getByText('Bölge özet dashboard')).toHaveCount(0)
   await expect(page.locator('a[href="/store/feed"]').first()).toBeVisible()
   await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/kpis"]')).toHaveCount(0)

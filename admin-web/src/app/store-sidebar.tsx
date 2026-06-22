@@ -70,7 +70,9 @@ export function StoreSidebar(input: {
     input.authSummary?.user.scope.storeIds.length ??
     0
   const identityMeta =
-    assignedStoreCount > 0
+    persona === 'admin'
+      ? t('storeHome.sidebar.adminScope')
+      : assignedStoreCount > 0
       ? t('storeHome.sidebar.assignedStores', { count: assignedStoreCount })
       : t('storeHome.sidebar.scopedStores', { count: scopedStoreCount })
   const warmStoreRoute = (path: string) => {

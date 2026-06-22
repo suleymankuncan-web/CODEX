@@ -30,8 +30,8 @@
   --legacy-radius-xl: 28px;
   --legacy-radius-lg: 20px;
   --legacy-radius-md: 14px;
-  --legacy-font-sans: 'Manrope', 'Segoe UI', sans-serif;
-  --legacy-font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+  --legacy-font-sans: 'Segoe UI Variable', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --legacy-font-mono: 'Cascadia Mono', 'Segoe UI Mono', 'Consolas', 'Liberation Mono', monospace;
   color: var(--legacy-surface-ink);
   background:
     radial-gradient(circle at top left, rgba(124, 58, 237, 0.12), transparent 28rem),
