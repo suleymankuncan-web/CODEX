@@ -93,7 +93,7 @@ export function StoreChecklistsHero(input: {
           note={
             canManageVisits
               ? getStaticCopy(locale, 'Bu ay', 'This month')
-              : getStaticCopy(locale, 'Yakın geçmiş', 'Recent history')
+              : getStaticCopy(locale, 'Geçmiş', 'History')
           }
           tone={heroCompletedCount > 0 ? 'calm' : 'neutral'}
           value={formatNumber(heroCompletedCount, locale)}

@@ -352,25 +352,6 @@
   background: linear-gradient(90deg, var(--checklist-blue), var(--checklist-cyan));
 }
 
-.store-checklists-tab-incomplete {
-  background: var(--checklist-danger-soft);
-  color: var(--checklist-danger);
-}
-
-.store-checklists-tab-incomplete small {
-  background: var(--checklist-danger-soft);
-  color: var(--checklist-danger);
-}
-
-.store-checklists-tab-incomplete[aria-selected="true"] {
-  background: linear-gradient(90deg, var(--checklist-danger-soft), rgba(255, 255, 255, 0.55));
-  color: var(--checklist-danger);
-}
-
-.store-checklists-tab-incomplete[aria-selected="true"]::after {
-  background: linear-gradient(90deg, var(--checklist-danger), var(--checklist-plum));
-}
-
 .store-checklists-tab-plan {
   color: var(--checklist-plum);
 }
@@ -507,28 +488,11 @@
 }
 
 .store-checklists-visit-row-danger {
-  background: linear-gradient(90deg, rgba(255, 236, 240, 0.82), rgba(255, 255, 255, 0.94) 48%);
+  background: linear-gradient(90deg, rgba(255, 244, 246, 0.78), rgba(255, 255, 255, 0.96) 56%);
 }
 
 .store-checklists-visit-row-warning {
-  background: linear-gradient(90deg, rgba(255, 247, 231, 0.86), rgba(255, 255, 255, 0.96) 48%);
-}
-
-.store-checklists-visit-row-danger::before,
-.store-checklists-visit-row-warning::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  border-radius: 0;
-  content: "";
-}
-
-.store-checklists-visit-row-danger::before {
-  background: var(--checklist-danger);
-}
-
-.store-checklists-visit-row-warning::before {
-  background: var(--checklist-amber);
+  background: linear-gradient(90deg, rgba(255, 251, 235, 0.82), rgba(255, 255, 255, 0.96) 56%);
 }
 
 .store-checklists-visit-row:hover {

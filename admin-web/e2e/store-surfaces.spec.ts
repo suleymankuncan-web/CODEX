@@ -1987,7 +1987,7 @@ test('visual merchandiser lands on checklist-only shell from store root', async 
   await expect(storeNav.locator('a[href="/store/rankings"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/approvals"]')).toHaveCount(0)
   await expect(page.getByText('VM görünümü').first()).toBeVisible()
-  await expect(page.getByLabel(/VM ziyaret yok/)).toHaveCount(2)
+  await expect(page.getByLabel(/VM Checklist ziyaret yok/)).toHaveCount(2)
   await expect(page.getByText('BM Checklist')).toHaveCount(0)
   await expect(page.getByText('BM skor')).toHaveCount(0)
   await expect(page.getByText('BM görünümü')).toHaveCount(0)
@@ -3574,7 +3574,7 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   await expect(page.getByRole('dialog')).toContainText('Checklist result')
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 
-  await page.getByRole('dialog').getByRole('button', { name: 'Close' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
 
   await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox$/)
   await expect(page.getByRole('dialog')).toHaveCount(0)

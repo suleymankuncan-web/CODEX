@@ -88,6 +88,7 @@ export function ChecklistTemplateScore(input: {
       <span className="store-checklists-template-score-label">{input.label}</span>
       <b>{value}</b>
       <em>/100</em>
+      <small className="store-checklists-template-score-status">{status}</small>
       <span className={`store-checklists-template-scorebar${tone === 'neutral' ? ' store-checklists-scorebar-empty' : ''}`}>
         <i>
           <b className={`store-checklists-tone-${tone}`} style={{ width: `${clamp(score ?? 0, 0, 100)}%` }} />

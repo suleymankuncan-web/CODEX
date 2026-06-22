@@ -772,7 +772,7 @@ export class ChecklistRepository {
           ci.store_id,
           ci.status,
           ci.started_at,
-          ci.created_at AS updated_at,
+          COALESCE(MAX(cr.responded_at), ci.created_at) AS updated_at,
           COALESCE(
             jsonb_agg(
               jsonb_build_object(
