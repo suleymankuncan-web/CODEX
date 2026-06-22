@@ -186,7 +186,7 @@ export function StoreSurfaceActionButton(input: { action: StoreSurfaceAction }) 
       <Button
         asChild
         variant={input.action.variant ?? 'default'}
-        className="tw:min-h-9 tw:w-full tw:rounded-xl tw:text-xs tw:font-semibold tw:md:w-auto"
+        className="tw:min-h-9 tw:w-full tw:max-w-full tw:min-w-0 tw:rounded-xl tw:text-xs tw:font-semibold tw:md:w-auto"
       >
         <Link to={input.action.to}>{content}</Link>
       </Button>
@@ -198,7 +198,7 @@ export function StoreSurfaceActionButton(input: { action: StoreSurfaceAction }) 
       type="button"
       variant={input.action.variant ?? 'default'}
       disabled={input.action.disabled}
-      className="tw:min-h-9 tw:w-full tw:rounded-xl tw:text-xs tw:font-semibold tw:md:w-auto"
+      className="tw:min-h-9 tw:w-full tw:max-w-full tw:min-w-0 tw:rounded-xl tw:text-xs tw:font-semibold tw:md:w-auto"
       onClick={input.action.onClick}
     >
       {content}
@@ -264,9 +264,9 @@ export function StoreFinanceBand(input: {
     <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_16.25rem]">
       <StoreSurfacePanel tone="gradient" className="tw:grid tw:min-h-56 tw:content-between tw:gap-4 tw:overflow-hidden">
         <div className="tw:flex tw:items-start tw:justify-between tw:gap-4">
-          <div>
+          <div className="tw:min-w-0">
             <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span>
-            <strong className="tw:mt-3 tw:block tw:text-5xl tw:font-semibold tw:leading-none tw:text-foreground">
+            <strong className="tw:mt-3 tw:block tw:break-words tw:text-5xl tw:font-semibold tw:leading-none tw:text-foreground">
               {input.value}
             </strong>
           </div>
@@ -287,8 +287,8 @@ export function StoreStepList(input: { items: Array<{ label: string; value: stri
           className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-lg tw:border tw:border-border tw:bg-muted/30 tw:px-3 tw:py-2"
           key={`${item.label}:${item.value}`}
         >
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{item.label}</span>
-          <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{item.value}</strong>
+          <span className="tw:min-w-0 tw:break-words tw:text-xs tw:font-medium tw:text-muted-foreground">{item.label}</span>
+          <strong className="tw:min-w-0 tw:break-words tw:text-right tw:text-sm tw:font-semibold tw:text-foreground">{item.value}</strong>
         </div>
       ))}
     </div>
@@ -387,10 +387,10 @@ export function StoreSectionCard(input: {
       className={cn('tw:overflow-visible tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm', input.className)}
     >
       <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border tw:p-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-        <div>
-          <h2 className="tw:text-xl tw:font-semibold tw:leading-snug tw:text-foreground">{input.title}</h2>
+        <div className="tw:min-w-0">
+          <h2 className="tw:break-words tw:text-xl tw:font-semibold tw:leading-snug tw:text-foreground">{input.title}</h2>
           {input.description ? (
-            <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.description}</p>
+            <p className="tw:mt-1 tw:break-words tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.description}</p>
           ) : null}
         </div>
         <div className="tw:flex tw:flex-wrap tw:gap-2">
@@ -417,12 +417,12 @@ export function StoreInfoGrid(input: {
         <div
           key={`${item.label}:${item.value}`}
           className={cn(
-            'tw:flex tw:min-h-20 tw:flex-col tw:justify-between tw:gap-2 tw:rounded-xl tw:border tw:p-3',
+            'tw:flex tw:min-h-20 tw:min-w-0 tw:flex-col tw:justify-between tw:gap-2 tw:rounded-xl tw:border tw:p-3',
             toneClasses[item.tone ?? 'neutral'],
           )}
         >
-          <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{item.label}</span>
-          <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{item.value}</strong>
+          <span className="tw:break-words tw:text-xs tw:font-medium tw:text-muted-foreground">{item.label}</span>
+          <strong className="tw:break-words tw:text-sm tw:font-semibold tw:text-foreground">{item.value}</strong>
         </div>
       ))}
     </div>
@@ -438,7 +438,11 @@ export function StoreStatusBadge(input: {
     <Badge
       data-store-tone={input.tone ?? 'neutral'}
       variant="outline"
-      className={cn('tw:shadow-none', toneBadgeClasses[input.tone ?? 'neutral'], input.className)}
+      className={cn(
+        'tw:max-w-full tw:min-w-0 tw:whitespace-normal tw:break-words tw:text-left tw:shadow-none',
+        toneBadgeClasses[input.tone ?? 'neutral'],
+        input.className,
+      )}
     >
       {input.children}
     </Badge>

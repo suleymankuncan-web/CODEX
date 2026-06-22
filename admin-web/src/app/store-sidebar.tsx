@@ -5,6 +5,7 @@ import {
   ClipboardList,
   CircleDollarSign,
   Home,
+  Medal,
   Megaphone,
   ReceiptText,
   Settings,
@@ -31,6 +32,7 @@ import { preloadRouteModule } from './route-preloaders'
 const iconById: Record<StoreNavIconId, LucideIcon> = {
   approvals: ReceiptText,
   checklist: ClipboardList,
+  competitions: Medal,
   feed: Megaphone,
   home: Home,
   incentives: CircleDollarSign,

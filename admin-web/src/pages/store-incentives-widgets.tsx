@@ -3,20 +3,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type {
   SalesTargetIncentiveProjection,
   SalesTargetIncentiveRow,
+  SalesTargetIncentiveStatus,
 } from '../features/incentives/api'
+import { useLocalization } from '../features/localization/useLocalization'
 import type { AppLocale } from '../lib/i18n'
 import {
   formatDateTimeValue,
   formatMoneyValue,
   formatPercentValue,
   formatRateValue,
-  getIncentivePositionLabel,
-  getIncentiveStatusLabel,
   getIncentiveStatusTone,
   getManagerRow,
   getPersonnelRows,
   getPrimaryEarnedAmount,
-  getRevisionLabel,
   managerRateBrackets,
   personnelRateBrackets,
   toProgressPercent,
@@ -33,48 +32,55 @@ import {
   StoreStatusBadge,
 } from './store-surface-primitives'
 
+type StoreIncentiveTranslate = ReturnType<typeof useLocalization>['t']
+
 export function StoreMeIncentiveCard(input: {
   locale: AppLocale
   projection: SalesTargetIncentiveProjection
 }) {
+  const { t } = useLocalization()
   const row = input.projection.rows[0] ?? null
   if (!row) return null
 
   return (
     <StoreSectionCard
-      title="Hak edilen prim"
-      description="Güncel ay satış hedefi ve mağaza kapısı üzerinden hesaplanan prim görünümü."
-      badge={{ label: getIncentiveStatusLabel(row.status), tone: getIncentiveStatusTone(row.status) }}
-      ariaLabel="Hak edilen prim"
+      title={t('storeIncentives.widgetEarnedTitle')}
+      description={t('storeIncentives.widgetEarnedDescription')}
+      badge={{ label: getWidgetStatusLabel(t, row.status), tone: getIncentiveStatusTone(row.status) }}
+      ariaLabel={t('storeIncentives.widgetEarnedAria')}
       testId="store-me-incentive-card"
     >
-      <StoreMetricGrid className="tw:xl:grid-cols-4" ariaLabel="Kişisel prim özeti">
+      <StoreMetricGrid className="tw:xl:grid-cols-4" ariaLabel={t('storeIncentives.widgetPersonalSummaryAria')}>
         <StoreMetricCard
-          title="Hak ediş"
+          title={t('storeIncentives.widgetEarnedValue')}
           value={formatMoneyValue(getPrimaryEarnedAmount(row), input.locale)}
-          note="Kesin ödeme ay kapanışı sonrası netleşir."
+          note={t('storeIncentives.widgetFinalAfterClose')}
           icon={<WalletCards size={18} />}
           tone={getIncentiveStatusTone(row.status)}
         />
         <StoreMetricCard
-          title="Kişisel hedef"
+          title={t('storeIncentives.widgetPersonalTarget')}
           value={formatMoneyValue(row.target, input.locale)}
-          note={`Gerçekleşen: ${formatMoneyValue(row.actualPositiveSales, input.locale)}`}
+          note={t('storeIncentives.widgetActualPrefix', {
+            value: formatMoneyValue(row.actualPositiveSales, input.locale),
+          })}
           icon={<Target size={18} />}
           {...optionalProgress(row.achievementPct)}
           tone="accent"
         />
         <StoreMetricCard
-          title="Kişisel oran"
+          title={t('storeIncentives.widgetPersonalRate')}
           value={formatPercentValue(row.achievementPct, input.locale)}
-          note={`Prim oranı: ${formatRateValue(row.rate, input.locale)}`}
+          note={t('storeIncentives.widgetRatePrefix', { value: formatRateValue(row.rate, input.locale) })}
           icon={<TrendingUp size={18} />}
           tone="neutral"
         />
         <StoreMetricCard
-          title="Mağaza kapısı"
-          value={row.storeGatePassed ? 'Geçildi' : 'Bekliyor'}
-          note={`Mağaza gerçekleşmesi: ${formatPercentValue(row.storeAchievementPct, input.locale)}`}
+          title={t('storeIncentives.widgetStoreGate')}
+          value={row.storeGatePassed ? t('storeIncentives.widgetGatePassed') : t('storeIncentives.widgetGateWaiting')}
+          note={t('storeIncentives.widgetStoreAchievementPrefix', {
+            value: formatPercentValue(row.storeAchievementPct, input.locale),
+          })}
           icon={<ShieldCheck size={18} />}
           tone={row.storeGatePassed ? 'calm' : 'warning'}
         />
@@ -84,13 +90,13 @@ export function StoreMeIncentiveCard(input: {
         <StoreInfoGrid
           className="tw:xl:grid-cols-2"
           items={[
-            { label: 'Dönem', value: input.projection.period },
-            { label: 'Son veri', value: formatDateTimeValue(input.projection.lastImportAt, input.locale) },
-            { label: 'Revizyon', value: getRevisionLabel(input.projection), tone: input.projection.storeTarget ? 'calm' : 'warning' },
-            { label: 'Durum', value: row.blockedReason ? 'İnceleme gerekiyor' : row.explanation },
+            { label: t('storeIncentives.widgetPeriod'), value: input.projection.period },
+            { label: t('storeIncentives.widgetLastData'), value: formatDateTimeValue(input.projection.lastImportAt, input.locale) },
+            { label: t('storeIncentives.widgetRevision'), value: getWidgetRevisionLabel(t, input.projection), tone: input.projection.storeTarget ? 'calm' : 'warning' },
+            { label: t('storeIncentives.widgetStatus'), value: row.blockedReason ? t('storeIncentives.widgetNeedsReview') : getWidgetStatusLabel(t, row.status) },
           ]}
         />
-        <IncentiveRateTable title="Satış personeli prim tablosu" rows={personnelRateBrackets} />
+        <IncentiveRateTable title={t('storeIncentives.widgetPersonnelRateTableTitle')} rows={personnelRateBrackets} t={t} />
       </div>
     </StoreSectionCard>
   )
@@ -101,47 +107,50 @@ export function StoreIncentiveProjectionCard(input: {
   projection: SalesTargetIncentiveProjection
   showStoreName?: boolean
 }) {
+  const { t } = useLocalization()
   const manager = getManagerRow(input.projection)
   const personnel = getPersonnelRows(input.projection)
 
   return (
     <StoreSectionCard
-      title={input.showStoreName ? input.projection.storeName : 'Mağaza prim özeti'}
-      description="Mağaza hedefi, gerçekleşen net satış ve ekip hak edişi aynı dönem üzerinden okunur."
+      title={input.showStoreName ? input.projection.storeName : t('storeIncentives.widgetStoreProjectionFallbackTitle')}
+      description={t('storeIncentives.widgetStoreProjectionDescription')}
       badge={{
-        label: getIncentiveStatusLabel(input.projection.calculationState),
+        label: getWidgetStatusLabel(t, input.projection.calculationState),
         tone: getIncentiveStatusTone(input.projection.calculationState),
       }}
-      ariaLabel={`${input.projection.storeName} prim özeti`}
+      ariaLabel={t('storeIncentives.widgetStoreProjectionAria', { storeName: input.projection.storeName })}
       testId="store-incentive-projection"
     >
-      <StoreMetricGrid className="tw:xl:grid-cols-4" ariaLabel="Mağaza prim özetleri">
+      <StoreMetricGrid className="tw:xl:grid-cols-4" ariaLabel={t('storeIncentives.widgetStoreMetricAria')}>
         <StoreMetricCard
-          title="Mağaza hedefi"
+          title={t('storeIncentives.widgetStoreTarget')}
           value={formatMoneyValue(input.projection.storeTarget, input.locale)}
-          note={getRevisionLabel(input.projection)}
+          note={getWidgetRevisionLabel(t, input.projection)}
           icon={<Target size={18} />}
           tone={input.projection.storeTarget ? 'accent' : 'warning'}
         />
         <StoreMetricCard
-          title="Net satış"
+          title={t('storeIncentives.widgetNetSales')}
           value={formatMoneyValue(input.projection.storeActualNetSales, input.locale)}
-          note={`Son veri: ${formatDateTimeValue(input.projection.lastImportAt, input.locale)}`}
+          note={t('storeIncentives.widgetLastDataPrefix', {
+            value: formatDateTimeValue(input.projection.lastImportAt, input.locale),
+          })}
           icon={<Clock3 size={18} />}
           tone={input.projection.storeActualNetSales ? 'neutral' : 'warning'}
         />
         <StoreMetricCard
-          title="Gerçekleşme"
+          title={t('storeIncentives.widgetAchievement')}
           value={formatPercentValue(input.projection.storeAchievementPct, input.locale)}
-          note={input.projection.storeGatePassed ? 'Personel prim kapısı geçildi.' : 'Personel için %80 mağaza kapısı bekliyor.'}
+          note={input.projection.storeGatePassed ? t('storeIncentives.widgetPersonnelGatePassed') : t('storeIncentives.widgetPersonnelGateWaiting')}
           icon={<TrendingUp size={18} />}
           {...optionalProgress(input.projection.storeAchievementPct)}
           tone={input.projection.storeGatePassed ? 'calm' : 'warning'}
         />
         <StoreMetricCard
-          title="Müdür hak edişi"
+          title={t('storeIncentives.widgetManagerEarning')}
           value={formatMoneyValue(getPrimaryEarnedAmount(manager), input.locale)}
-          note={`Prim oranı: ${formatRateValue(manager?.rate, input.locale)}`}
+          note={t('storeIncentives.widgetRatePrefix', { value: formatRateValue(manager?.rate, input.locale) })}
           icon={<CircleDollarSign size={18} />}
           tone={manager ? getIncentiveStatusTone(manager.status) : 'warning'}
         />
@@ -149,11 +158,11 @@ export function StoreIncentiveProjectionCard(input: {
 
       <div className="tw:mt-4">
         {personnel.length > 0 ? (
-          <IncentivePersonnelRows locale={input.locale} rows={personnel} />
+          <IncentivePersonnelRows locale={input.locale} rows={personnel} t={t} />
         ) : (
           <StoreEmptyState
-            title="Personel prim satırı yok"
-            description="Bu mağaza için V1 kapsamındaki satış personeli veya müdür yardımcısı satırı bulunmuyor."
+            title={t('storeIncentives.widgetNoPersonnelTitle')}
+            description={t('storeIncentives.widgetNoPersonnelCopy')}
           />
         )}
       </div>
@@ -162,19 +171,21 @@ export function StoreIncentiveProjectionCard(input: {
 }
 
 export function IncentiveRateTables() {
+  const { t } = useLocalization()
+
   return (
-    <section className="tw:grid tw:gap-4 tw:lg:grid-cols-2" aria-label="Prim oran tabloları">
+    <section className="tw:grid tw:gap-4 tw:lg:grid-cols-2" aria-label={t('storeIncentives.widgetRateTablesAria')}>
       <StoreSectionCard
-        title="Mağaza müdürü prim tablosu"
-        description="Mağaza müdürü prim oranı toplam mağaza net satış gerçekleşmesine göre belirlenir."
+        title={t('storeIncentives.widgetManagerRateTableTitle')}
+        description={t('storeIncentives.widgetManagerRateTableDescription')}
       >
-        <IncentiveRateTable title="Mağaza müdürü prim tablosu" rows={managerRateBrackets} />
+        <IncentiveRateTable title={t('storeIncentives.widgetManagerRateTableTitle')} rows={managerRateBrackets} t={t} />
       </StoreSectionCard>
       <StoreSectionCard
-        title="Satış personeli prim tablosu"
-        description="Satış personeli ve müdür yardımcısı için önce mağaza %80 kapısı, sonra kişisel hedef gerçekleşmesi aranır."
+        title={t('storeIncentives.widgetPersonnelRateTableTitle')}
+        description={t('storeIncentives.widgetPersonnelRateTableDescription')}
       >
-        <IncentiveRateTable title="Satış personeli prim tablosu" rows={personnelRateBrackets} />
+        <IncentiveRateTable title={t('storeIncentives.widgetPersonnelRateTableTitle')} rows={personnelRateBrackets} t={t} />
       </StoreSectionCard>
     </section>
   )
@@ -183,6 +194,7 @@ export function IncentiveRateTables() {
 function IncentivePersonnelRows(input: {
   locale: AppLocale
   rows: SalesTargetIncentiveRow[]
+  t: StoreIncentiveTranslate
 }) {
   return (
     <StoreStackedList>
@@ -196,20 +208,20 @@ function IncentivePersonnelRows(input: {
             <div className="tw:flex tw:flex-col tw:gap-2 tw:sm:flex-row tw:sm:items-start tw:sm:justify-between">
               <div className="tw:min-w-0">
                 <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{row.displayName}</strong>
-                <span className="tw:text-xs tw:text-muted-foreground">{getIncentivePositionLabel(row.positionCode)}</span>
+                <span className="tw:text-xs tw:text-muted-foreground">{getWidgetPositionLabel(input.t, row.positionCode)}</span>
               </div>
               <StoreStatusBadge tone={getIncentiveStatusTone(row.status)}>
-                {getIncentiveStatusLabel(row.status)}
+                {getWidgetStatusLabel(input.t, row.status)}
               </StoreStatusBadge>
             </div>
             <StoreInfoGrid
               className="tw:xl:grid-cols-5"
               items={[
-                { label: 'Hedef', value: formatMoneyValue(row.target, input.locale) },
-                { label: 'Satış', value: formatMoneyValue(row.actualPositiveSales, input.locale) },
-                { label: 'Gerçekleşme', value: formatPercentValue(row.achievementPct, input.locale) },
-                { label: 'Oran', value: formatRateValue(row.rate, input.locale) },
-                { label: 'Hak ediş', value: formatMoneyValue(getPrimaryEarnedAmount(row), input.locale), tone: getIncentiveStatusTone(row.status) },
+                { label: input.t('storeIncentives.widgetTarget'), value: formatMoneyValue(row.target, input.locale) },
+                { label: input.t('storeIncentives.widgetSales'), value: formatMoneyValue(row.actualPositiveSales, input.locale) },
+                { label: input.t('storeIncentives.widgetAchievement'), value: formatPercentValue(row.achievementPct, input.locale) },
+                { label: input.t('storeIncentives.widgetRate'), value: formatRateValue(row.rate, input.locale) },
+                { label: input.t('storeIncentives.widgetEarnedValue'), value: formatMoneyValue(getPrimaryEarnedAmount(row), input.locale), tone: getIncentiveStatusTone(row.status) },
               ]}
             />
             {row.blockedReason ? (
@@ -225,14 +237,15 @@ function IncentivePersonnelRows(input: {
 function IncentiveRateTable(input: {
   title: string
   rows: IncentiveRateBracket[]
+  t: StoreIncentiveTranslate
 }) {
   return (
     <div className="tw:overflow-hidden tw:rounded-lg tw:border tw:border-border" aria-label={input.title}>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Gerçekleşme</TableHead>
-            <TableHead className="tw:text-right">Prim oranı</TableHead>
+            <TableHead>{input.t('storeIncentives.widgetAchievement')}</TableHead>
+            <TableHead className="tw:text-right">{input.t('storeIncentives.widgetRate')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -251,4 +264,35 @@ function IncentiveRateTable(input: {
 function optionalProgress(value: string | null | undefined) {
   const progress = toProgressPercent(value)
   return progress === undefined ? {} : { progress }
+}
+
+function getWidgetStatusLabel(t: StoreIncentiveTranslate, status: SalesTargetIncentiveStatus) {
+  const labels: Record<SalesTargetIncentiveStatus, ReturnType<StoreIncentiveTranslate>> = {
+    adjusted: t('storeIncentives.widgetStatusAdjusted'),
+    blocked: t('storeIncentives.widgetStatusBlocked'),
+    closed: t('storeIncentives.widgetStatusClosed'),
+    corrected: t('storeIncentives.widgetStatusCorrected'),
+    no_source: t('storeIncentives.widgetStatusNoSource'),
+    projected: t('storeIncentives.widgetStatusProjected'),
+  }
+  return labels[status] ?? status
+}
+
+function getWidgetRevisionLabel(t: StoreIncentiveTranslate, projection: SalesTargetIncentiveProjection) {
+  if (projection.storeTarget) return t('storeIncentives.widgetRevisionApproved')
+  if (projection.calculationState === 'blocked') return t('storeIncentives.widgetRevisionWaitingTarget')
+  return t('storeIncentives.widgetRevisionNone')
+}
+
+function getWidgetPositionLabel(
+  t: StoreIncentiveTranslate,
+  positionCode: SalesTargetIncentiveRow['positionCode'],
+) {
+  const labels: Record<SalesTargetIncentiveRow['positionCode'], ReturnType<StoreIncentiveTranslate>> = {
+    ASSISTANT_MANAGER: t('storeIncentives.widgetPositionAssistantManager'),
+    SALES_ASSOCIATE: t('storeIncentives.widgetPositionSalesAssociate'),
+    SENIOR_SALES_CONSULTANT: t('storeIncentives.widgetPositionSeniorSalesConsultant'),
+    STORE_MANAGER: t('storeIncentives.widgetPositionStoreManager'),
+  }
+  return labels[positionCode] ?? positionCode
 }

@@ -138,6 +138,7 @@ function buildMetrics(input: {
   pendingWorkNote: string
   pendingWorkValue: string
   pendingRequestsValue: string | null
+  readyValue: string
   storeScopeValue: string
 }) {
   const metrics: HomeMetric[] = [
@@ -172,7 +173,7 @@ function buildMetrics(input: {
         icon: <Target data-icon="inline-start" />,
         labelKey: 'storeHome.metric.targetRequestFlow',
         noteKey: 'storeHome.metric.targetRequestPending',
-        value: input.pendingValue,
+        value: input.readyValue,
         tone: 'neutral',
         href: targetRequestHref,
       })
@@ -212,7 +213,7 @@ function buildMetrics(input: {
         ? 'storeHome.nav.kpiSummaries'
         : 'storeHome.command.kpiSnapshot',
       noteKey: 'storeHome.metric.kpiSnapshotPending',
-      value: input.pendingValue,
+      value: input.readyValue,
       tone: 'neutral',
       href: '/store/kpis',
     })
@@ -272,6 +273,7 @@ export function StoreHomePage(input: {
   const title = t(config.titleKey)
   const copy = t(config.copyKey)
   const pendingValue = t('storeHome.valuePending')
+  const readyValue = t('storeHome.command.ready')
   const storeScopeValue = formatStoreScope(input.authSummary)
   const workflowItems = workflowInboxQuery.data?.items ?? []
   const pendingWorkflowItems = workflowItems.filter((item) => item.inboxStatus === 'needs_attention')
@@ -323,6 +325,7 @@ export function StoreHomePage(input: {
     pendingWorkNote,
     pendingWorkValue,
     pendingRequestsValue,
+    readyValue,
     storeScopeValue,
   })
   const dailyBriefItems = buildDailyCommandBriefItems({
@@ -341,6 +344,7 @@ export function StoreHomePage(input: {
     pendingValue,
     pendingWorkValue,
     persona,
+    readyValue,
     t,
     visitPrioritySummary,
   })
@@ -400,7 +404,7 @@ export function StoreHomePage(input: {
         </div>
 
         <div className="tw:flex tw:flex-col tw:gap-4">
-          {showKpiSnapshotPanel ? <KpiSnapshotPanel pendingValue={pendingValue} persona={persona} /> : null}
+          {showKpiSnapshotPanel ? <KpiSnapshotPanel statusValue={readyValue} persona={persona} /> : null}
 
           <StoreSectionCard
             title={t(config.timelineTitleKey)}
@@ -469,6 +473,7 @@ function buildHomeDashboardRows(input: {
   pendingValue: string
   pendingWorkValue: string
   persona: StorePersona
+  readyValue: string
   t: ReturnType<typeof useLocalization>['t']
   visitPrioritySummary: VisitPriorityHomeSummary | null
 }): HomeDashboardRow[] {
@@ -510,7 +515,7 @@ function buildHomeDashboardRows(input: {
         id: 'kpi-snapshot',
         title: input.t('storeHome.command.kpiSnapshot'),
         tone: 'neutral',
-        value: input.pendingValue,
+        value: input.readyValue,
       })
     }
     if (input.availablePaths.has('/store/approvals')) {
@@ -558,7 +563,7 @@ function buildHomeDashboardRows(input: {
         id: 'region-kpis',
         title: input.t('storeHome.nav.kpiSummaries'),
         tone: 'neutral',
-        value: input.pendingValue,
+        value: input.readyValue,
       })
     }
     if (input.availablePaths.has('/store/targets')) {
@@ -570,7 +575,7 @@ function buildHomeDashboardRows(input: {
         id: 'targets',
         title: input.t('storeHome.nav.targets'),
         tone: 'neutral',
-        value: input.pendingValue,
+        value: input.readyValue,
       })
     }
     if (input.availablePaths.has('/store/reports')) {
@@ -582,7 +587,7 @@ function buildHomeDashboardRows(input: {
         id: 'reports',
         title: input.t('storeHome.nav.reports'),
         tone: 'neutral',
-        value: input.pendingValue,
+        value: input.readyValue,
       })
     }
 
@@ -598,7 +603,7 @@ function buildHomeDashboardRows(input: {
       id: 'performance',
       title: input.t('storeHome.nav.myPerformance'),
       tone: 'neutral',
-      value: input.pendingValue,
+      value: input.readyValue,
     })
   }
   if (checklistRow) rows.push(checklistRow)
@@ -653,7 +658,7 @@ function HomeDashboardRowCard(input: { row: HomeDashboardRow }) {
   )
 }
 
-function KpiSnapshotPanel(input: { pendingValue: string; persona: StorePersona }) {
+function KpiSnapshotPanel(input: { statusValue: string; persona: StorePersona }) {
   const { t } = useLocalization()
   const title =
     input.persona === 'regionManager'
@@ -664,7 +669,7 @@ function KpiSnapshotPanel(input: { pendingValue: string; persona: StorePersona }
     <StoreSectionCard
       title={title}
       description={t('storeHome.dashboard.kpiSnapshotCopy')}
-      badge={{ label: input.pendingValue, tone: 'neutral' }}
+      badge={{ label: input.statusValue, tone: 'neutral' }}
     >
       <StoreStackedList>
         <StoreStackedRow>
@@ -690,7 +695,7 @@ function KpiSnapshotPanel(input: { pendingValue: string; persona: StorePersona }
             <span className="tw:text-sm tw:font-medium tw:text-muted-foreground">
               {t('storeHome.dashboard.kpiMetricSet')}
             </span>
-            <StoreStatusBadge tone="neutral">{input.pendingValue}</StoreStatusBadge>
+            <StoreStatusBadge tone="neutral">{input.statusValue}</StoreStatusBadge>
           </div>
         </StoreStackedRow>
       </StoreStackedList>
