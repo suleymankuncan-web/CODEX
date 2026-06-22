@@ -19,7 +19,7 @@ VALUES
         {
           "code": "TARGET_ACHIEVEMENT",
           "label": "Hedef gerceklestirme orani",
-          "weightPercent": 35,
+          "weightPercent": 40,
           "ownerRole": "STORE_MANAGER",
           "scoreBehavior": "task_candidate",
           "aliases": ["STORE_SALES", "SALES_TARGET_ACHIEVEMENT"],
@@ -64,14 +64,6 @@ VALUES
           "ownerRole": "STORE_MANAGER",
           "scoreBehavior": "task_candidate",
           "notes": "Visual teams may produce the data, but the store manager carries the score outcome."
-        },
-        {
-          "code": "GSM_ONAY",
-          "label": "GSM Onay",
-          "weightPercent": 5,
-          "ownerRole": "STORE_MANAGER",
-          "scoreBehavior": "warning_first",
-          "notes": "Monthly store-level GSM approval contributor."
         }
       ],
       "futureMetricRule": "New metrics such as GSM approvals should be added through the KPI catalog and score profile, not hard-coded into one page."
@@ -163,14 +155,6 @@ VALUES
         "operationalOwner": "STORE_MANAGER",
         "contributesTo": ["store"],
         "taskCandidate": true
-      },
-      {
-        "code": "GSM_ONAY",
-        "label": "GSM Onay",
-        "visibleTo": ["DEPUTY_GM", "REGION_MANAGER", "STORE_MANAGER"],
-        "operationalOwner": "STORE_MANAGER",
-        "contributesTo": ["store"],
-        "taskCandidate": false
       }
     ]'::jsonb
 ),
