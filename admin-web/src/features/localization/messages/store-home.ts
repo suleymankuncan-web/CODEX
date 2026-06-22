@@ -27,6 +27,7 @@ export const storeHomeTr = {
   'storeHome.nav.incentives': 'Primler',
   'storeHome.nav.workforce': 'Norm Kadro',
   'storeHome.nav.reports': 'Raporlar',
+  'storeHome.nav.competitions': 'Yarışmalar',
   'storeHome.nav.settings': 'Ayarlar / Profil',
   'storeHome.sidebar.aria': 'Store navigasyonu',
   'storeHome.sidebar.brandArea': 'Store Home',
@@ -61,7 +62,7 @@ export const storeHomeTr = {
   'storeHome.command.managerTimelineTitle': 'Mağaza akışı',
   'storeHome.command.regionTitle': 'Bölge ana ekranı hazır.',
   'storeHome.command.regionCopy':
-    'Bölge müdürü rankings, KPI özetleri, checklist, hedef ve talep akışlarına aynı sol toolbar ile gider.',
+    'Bölge müdürü rankings, KPI özetleri, checklist, hedef ve talep akışlarına tek girişten ulaşır.',
   'storeHome.command.regionTimelineTitle': 'Bölge akışı',
   'storeHome.command.vmTitle': 'Checklist ana ekranı hazır.',
   'storeHome.command.vmCopy': 'VM kullanıcısı yalnızca checklist ve duyuru akışına odaklanır.',
@@ -73,7 +74,7 @@ export const storeHomeTr = {
   'storeHome.command.vmTimelineTitle': 'Checklist akışı',
   'storeHome.command.latestLoadedPeriodPending': 'Son veri: bağlanacak',
   'storeHome.command.connected': 'Bağlı',
-  'storeHome.command.connectedRoutesCopy': 'Sayfalar sol toolbar üzerinden role göre açılır.',
+  'storeHome.command.connectedRoutesCopy': 'Rolüne uygun sayfalar burada listelenir.',
   'storeHome.command.routeConnected': 'Bu sayfa mağaza alanı içinde açılır.',
   'storeHome.command.ready': 'Hazır',
   'storeHome.command.kpiSnapshot': 'KPI görünümü',
@@ -86,14 +87,14 @@ export const storeHomeTr = {
     'Bölge müdürü için yetkili mağaza sayısı, checklist, KPI, hedef ve rapor girişleri aynı ritimde toplanır.',
   'storeHome.dashboard.pendingWorkTitle': 'Bekleyen iş',
   'storeHome.dashboard.managerPendingWorkCopy':
-    'Açık talep ve checklist işi birlikte sayılır; bu sayfa yeni görev üretmez.',
+    'Açık talep ve checklist işleri tek noktadan açılır.',
   'storeHome.dashboard.kpiPendingCopy':
-    'KPI değeri Store KPI sayfasındaki gerçek veri hazır olduğunda dolar.',
+    'Mağaza KPI özeti ilgili sayfada açılır.',
   'storeHome.dashboard.approvalsCopy':
     'Mağaza talep ve onayları mevcut onay kutusundan açılır.',
   'storeHome.dashboard.regionKpiTitle': 'Bölge KPI görünümü',
   'storeHome.dashboard.regionKpiCopy':
-    'Bölge KPI özeti KPI sayfasından açılır; bu kart yeni skor hesaplamaz.',
+    'Bölge KPI özeti KPI sayfasından açılır.',
   'storeHome.dashboard.regionTargetsCopy':
     'Hedef akışı mevcut hedef sayfasından takip edilir.',
   'storeHome.dashboard.regionReportsCopy':
@@ -108,12 +109,12 @@ export const storeHomeTr = {
     'Checklist verisi okunamadı; ziyaret planı checklist sayfasında tekrar denenir.',
   'storeHome.visitPriority.action': 'Planı aç',
   'storeHome.dashboard.kpiSnapshotCopy':
-    'Bu sayfa yalnızca KPI durumunu özetler; detay Store KPI sayfasındadır.',
+    'KPI detayları Store KPI sayfasında açılır.',
   'storeHome.dashboard.kpiSnapshotStatus': 'KPI durumu',
   'storeHome.dashboard.kpiMetricSet': 'HG, UPT, ATV ve CR okuması',
   'storeHome.dashboard.open': 'Aç',
   'storeHome.dailyBrief.title': 'Gunluk komuta ozeti',
-  'storeHome.dailyBrief.copy': 'Bugun bakilacak konular yalnizca mevcut sayfalara gider; yeni skor veya otomatik onerme uretmez.',
+  'storeHome.dailyBrief.copy': 'Bugün bakılacak konular mevcut sayfalara kısa yol verir.',
   'storeHome.dailyBrief.sourceLinked': 'Hazir',
   'storeHome.dailyBrief.actionCopy': 'KPI takip adaylari ve kayitli aksiyon planlari Gorevler sayfasinda dogrulanir.',
   'storeHome.dailyBrief.checklistCopy': 'Bekleyen checklist isi mevcut checklist sayfasindan izlenir.',
@@ -291,6 +292,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.nav.incentives': 'Incentives',
   'storeHome.nav.workforce': 'Workforce Plan',
   'storeHome.nav.reports': 'Reports',
+  'storeHome.nav.competitions': 'Competitions',
   'storeHome.nav.settings': 'Settings / Profile',
   'storeHome.sidebar.aria': 'Store navigation',
   'storeHome.sidebar.brandArea': 'Store Home',
@@ -325,7 +327,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.command.managerTimelineTitle': 'Store flow',
   'storeHome.command.regionTitle': 'Region home is ready.',
   'storeHome.command.regionCopy':
-    'Region managers reach rankings, KPI summaries, checklist, targets, and requests through one left toolbar.',
+    'Region managers reach rankings, KPI summaries, checklist, targets, and requests from one entry.',
   'storeHome.command.regionTimelineTitle': 'Region flow',
   'storeHome.command.vmTitle': 'Checklist home is ready.',
   'storeHome.command.vmCopy': 'VM users focus only on checklist and announcement flows.',
@@ -337,7 +339,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.command.vmTimelineTitle': 'Checklist flow',
   'storeHome.command.latestLoadedPeriodPending': 'Latest data: pending',
   'storeHome.command.connected': 'Connected',
-  'storeHome.command.connectedRoutesCopy': 'Pages open through the left toolbar according to role access.',
+  'storeHome.command.connectedRoutesCopy': 'Pages available to this role are listed here.',
   'storeHome.command.routeConnected': 'This page opens inside the store workspace.',
   'storeHome.command.ready': 'Ready',
   'storeHome.command.kpiSnapshot': 'KPI view',
@@ -350,14 +352,14 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
     'Authorized store count, checklist, KPI, target, and report entry points share one dashboard rhythm for region managers.',
   'storeHome.dashboard.pendingWorkTitle': 'Open work',
   'storeHome.dashboard.managerPendingWorkCopy':
-    'Open requests and checklist work are counted together; this page does not create new tasks.',
+    'Open requests and checklist work open from one place.',
   'storeHome.dashboard.kpiPendingCopy':
-    'The KPI value appears when real Store KPI data is available.',
+    'Store KPI summary opens on the KPI page.',
   'storeHome.dashboard.approvalsCopy':
     'Store requests and approvals open from the existing approval inbox.',
   'storeHome.dashboard.regionKpiTitle': 'Region KPI view',
   'storeHome.dashboard.regionKpiCopy':
-    'The region KPI summary opens from the KPI page; this card does not calculate a new score.',
+    'The region KPI summary opens from the KPI page.',
   'storeHome.dashboard.regionTargetsCopy':
     'Target flow is tracked from the existing targets page.',
   'storeHome.dashboard.regionReportsCopy':
@@ -372,12 +374,12 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
     'Checklist data could not be read; retry the visit plan from the checklist page.',
   'storeHome.visitPriority.action': 'Open plan',
   'storeHome.dashboard.kpiSnapshotCopy':
-    'This page only summarizes KPI status; detail stays on the Store KPI page.',
+    'KPI details open on the Store KPI page.',
   'storeHome.dashboard.kpiSnapshotStatus': 'KPI status',
   'storeHome.dashboard.kpiMetricSet': 'HG, UPT, ATV, and CR reading',
   'storeHome.dashboard.open': 'Open',
   'storeHome.dailyBrief.title': 'Daily command brief',
-  'storeHome.dailyBrief.copy': 'Today\'s focus only opens existing pages; it does not create new scores or automated advice.',
+  'storeHome.dailyBrief.copy': 'Today\'s focus gives short paths to the active store pages.',
   'storeHome.dailyBrief.sourceLinked': 'Ready',
   'storeHome.dailyBrief.actionCopy': 'KPI follow-up candidates and saved action plans are verified on the Tasks page.',
   'storeHome.dailyBrief.checklistCopy': 'Open checklist work is tracked from the existing checklist page.',

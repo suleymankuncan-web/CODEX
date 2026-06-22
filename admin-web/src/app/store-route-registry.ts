@@ -30,6 +30,7 @@ export type StoreRouteId =
 export type StoreNavIconId =
   | 'approvals'
   | 'checklist'
+  | 'competitions'
   | 'feed'
   | 'home'
   | 'incentives'
@@ -246,6 +247,10 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     id: 'competitions',
     path: '/store/competitions',
     routePath: '/store/competitions',
+    nav: {
+      labelKey: 'storeHome.nav.competitions',
+      icon: 'competitions',
+    },
     modulePreload: () => import('../pages/StoreCompetitionsPage'),
     access: (authSummary) => hasAnyRole(authSummary, storeCompetitionRoles),
   },

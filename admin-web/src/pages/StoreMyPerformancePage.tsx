@@ -1,4 +1,5 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { useEffect, useReducer } from 'react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -428,12 +429,8 @@ function StoreMyPerformancePageExperience({
   } = viewModel
 
   return (
-    <section
-      className="store-me-plum-page tw:min-h-screen tw:text-foreground"
-      data-testid="store-me-page"
-      aria-label={t('storeMe.title')}
-    >
-      <main className="store-me-plum-content tw:min-w-0">
+    <>
+      <PerformanceSurface ariaLabel={t('storeMe.title')}>
         <section className="tw:mx-auto tw:grid tw:max-w-7xl tw:gap-4" aria-label={t('storeMe.title')}>
           <StoreMyPerformanceTopbar
             employeeHeading={employeeHeading}
@@ -504,7 +501,7 @@ function StoreMyPerformancePageExperience({
             turkeyRankLabel={turkeyRankLabel}
           />
         </section>
-      </main>
+      </PerformanceSurface>
 
       <StoreMyPerformanceKpiDialog
         employeeName={performanceEmployeeName}
@@ -513,6 +510,23 @@ function StoreMyPerformancePageExperience({
         onClose={onCloseKpiDetails}
         t={t}
       />
+    </>
+  )
+}
+
+function PerformanceSurface(input: {
+  ariaLabel: string
+  children: ReactNode
+}) {
+  return (
+    <section
+      className="store-me-plum-page tw:min-h-screen tw:text-foreground"
+      data-testid="store-me-page"
+      aria-label={input.ariaLabel}
+    >
+      <main className="store-me-plum-content tw:min-w-0">
+        {input.children}
+      </main>
     </section>
   )
 }
