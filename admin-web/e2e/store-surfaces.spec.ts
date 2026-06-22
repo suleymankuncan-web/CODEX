@@ -3435,6 +3435,84 @@ test('store rankings removes signal chrome while preserving weighted score rows'
   await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
 })
 
+test('store rankings store rows keep long names on one line without covering scores', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/rankings**')
+  await page.route('**/api/reports/rankings**', async (route) => {
+    await route.fulfill({
+      json: {
+        ...rankingsPrivilegedDetailFixture,
+        storeLeaderboard: {
+          ...rankingsPrivilegedDetailFixture.storeLeaderboard,
+          items: [
+            {
+              ...scoreDisplayLeaderStoreRow,
+              storeName: 'Istanbul Beylikduzu Cadde Avm Metropol Outlet Uzun Magaza Adi',
+            },
+            scoreDisplayFollowerStoreRow,
+          ],
+          meta: {
+            total: 2,
+            limit: 100,
+            offset: 0,
+          },
+        },
+      },
+    })
+  })
+
+  await page.setViewportSize({ width: 1024, height: 768 })
+  await page.goto('/store/rankings')
+
+  const firstRow = page.locator('.store-rankings-table tbody tr').first()
+  const storeName = firstRow.locator('.store-rankings-entity-copy-store strong')
+  await expect(storeName).toBeVisible()
+
+  const storeTextLayout = await storeName.evaluate((node) => {
+    const rect = node.getBoundingClientRect()
+    const style = window.getComputedStyle(node)
+
+    return {
+      height: rect.height,
+      lineHeight: Number.parseFloat(style.lineHeight),
+      overflow: style.overflow,
+      textOverflow: style.textOverflow,
+      whiteSpace: style.whiteSpace,
+    }
+  })
+
+  expect(storeTextLayout.whiteSpace).toBe('nowrap')
+  expect(storeTextLayout.overflow).toBe('hidden')
+  expect(storeTextLayout.textOverflow).toBe('ellipsis')
+  expect(storeTextLayout.height).toBeLessThanOrEqual(storeTextLayout.lineHeight * 1.35)
+
+  const cellGap = await firstRow.evaluate((row) => {
+    const storeCell = row.querySelector('.store-rankings-cell-entity')
+    const scoreCell = row.querySelector('.store-rankings-cell-score')
+
+    if (!storeCell || !scoreCell) {
+      return Number.NEGATIVE_INFINITY
+    }
+
+    return scoreCell.getBoundingClientRect().left - storeCell.getBoundingClientRect().right
+  })
+
+  expect(cellGap).toBeGreaterThanOrEqual(-1)
+})
+
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
