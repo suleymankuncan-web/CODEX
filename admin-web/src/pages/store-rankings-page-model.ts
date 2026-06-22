@@ -186,6 +186,22 @@ export function getMetricLabel(t: TranslateFunction, code: string, fallback?: st
   return key ? t(key) : fallback ?? code
 }
 
+export function getMetricHeaderLabel(t: TranslateFunction, code: string, fallback?: string) {
+  if (code === 'gsm_approval') {
+    return 'GSM'
+  }
+
+  if (code === 'BM_CHECKLIST') {
+    return 'BM'
+  }
+
+  if (code === 'VM_CHECKLIST') {
+    return 'VM'
+  }
+
+  return getMetricLabel(t, code, fallback)
+}
+
 export function getMetricByCode(metrics: RankingMetricValue[] | undefined, code: string) {
   return metrics?.find((metric) => metric.code === code)
 }

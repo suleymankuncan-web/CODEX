@@ -29,7 +29,7 @@
 .store-rankings-table {
   table-layout: fixed;
   width: 100%;
-  min-width: 990px;
+  min-width: 910px;
   border-collapse: collapse;
 }
 
@@ -50,7 +50,7 @@
 }
 
 .store-rankings-col-kpi {
-  width: 78px;
+  width: 66px;
 }
 
 .store-rankings-col-action {
