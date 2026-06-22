@@ -13,6 +13,7 @@ import {
   formatNumber,
   formatRankBadge,
   getMetricByCode,
+  getMetricHeaderLabel,
   getMetricLabel,
   personnelMetricCodes,
   storeMetricCodes,
@@ -240,7 +241,7 @@ function StoreRankingTable(input: {
             ? storeMetricCodes.map((code) => (
                 <TableHead key={code}>
                   <SortButton
-                    label={getMetricLabel(input.t, code)}
+                    label={getMetricHeaderLabel(input.t, code)}
                     sortKey={code}
                     activeSortKey={input.sortKey}
                     sortDirection={input.sortDirection}
@@ -325,7 +326,7 @@ function PersonnelRankingTable(input: {
             ? personnelMetricCodes.map((code) => (
                 <TableHead key={code}>
                   <SortButton
-                    label={getMetricLabel(input.t, code)}
+                    label={getMetricHeaderLabel(input.t, code)}
                     sortKey={code}
                     activeSortKey={input.sortKey}
                     sortDirection={input.sortDirection}
