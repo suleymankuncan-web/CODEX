@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T05:11:04.929Z",
+  "generatedAt": "2026-06-22T20:59:21.890Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -691,7 +691,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 159
+        "line": 168
       }
     },
     {
@@ -708,7 +708,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 260
+        "line": 269
       }
     },
     {
@@ -726,7 +726,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 171
+        "line": 180
       }
     },
     {
@@ -743,7 +743,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 249
+        "line": 258
       }
     },
     {
@@ -761,7 +761,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 237
+        "line": 246
       }
     },
     {
@@ -778,7 +778,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 158
+        "line": 167
       }
     },
     {
@@ -795,7 +795,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 271
+        "line": 280
       }
     },
     {
@@ -812,7 +812,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 196
+        "line": 205
       }
     },
     {
@@ -829,7 +829,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 207
+        "line": 216
       }
     },
     {
@@ -846,7 +846,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 218
+        "line": 227
       }
     },
     {
@@ -863,7 +863,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 226
+        "line": 235
       }
     },
     {
@@ -880,7 +880,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 318
+        "line": 327
       }
     },
     {
@@ -898,7 +898,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 282
+        "line": 291
       }
     },
     {
@@ -915,7 +915,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 294
+        "line": 303
       }
     },
     {
@@ -932,7 +932,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 185
+        "line": 194
       }
     },
     {
@@ -949,7 +949,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 307
+        "line": 316
       }
     }
   ],

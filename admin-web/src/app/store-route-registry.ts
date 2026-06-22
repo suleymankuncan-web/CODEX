@@ -8,7 +8,12 @@ import {
 } from '../features/auth/authorization'
 import type { TranslationKey } from '../features/localization/dictionary'
 
-export type StorePersona = 'personnel' | 'storeManager' | 'regionManager' | 'visualMerchandiser'
+export type StorePersona =
+  | 'admin'
+  | 'personnel'
+  | 'storeManager'
+  | 'regionManager'
+  | 'visualMerchandiser'
 
 export type StoreRouteId =
   | 'approvals'
@@ -108,8 +113,12 @@ export function resolveStorePersona(authSummary: AuthSessionSummary | null): Sto
     return 'visualMerchandiser'
   }
 
-  if (roles.has('REGION_MANAGER') || hasAdminLandingRole(authSummary)) {
+  if (roles.has('REGION_MANAGER')) {
     return 'regionManager'
+  }
+
+  if (hasAdminLandingRole(authSummary)) {
+    return 'admin'
   }
 
   const assignedStoreIds =
@@ -326,6 +335,20 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
 ]
 
 const navigationByPersona: Record<StorePersona, StoreRouteId[]> = {
+  admin: [
+    'home',
+    'rankings',
+    'kpis',
+    'checklists',
+    'approvals',
+    'targets',
+    'incentives',
+    'workforce',
+    'tasks',
+    'reports',
+    'feed',
+    'settings',
+  ],
   personnel: ['home', 'me', 'rankings', 'feed', 'settings'],
   storeManager: [
     'home',
@@ -412,6 +435,7 @@ export function getRoleAwareStoreNavigation(authSummary: AuthSessionSummary | nu
 }
 
 export function getStorePersonaLabelKey(persona: StorePersona): TranslationKey {
+  if (persona === 'admin') return 'storeHome.persona.admin'
   if (persona === 'visualMerchandiser') return 'storeHome.persona.visualMerchandiser'
   if (persona === 'regionManager') return 'storeHome.persona.regionManager'
   if (persona === 'storeManager') return 'storeHome.persona.storeManager'

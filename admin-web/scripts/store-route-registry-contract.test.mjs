@@ -70,6 +70,13 @@ test('store navigation comes from registered routes instead of a second route li
   assert.doesNotMatch(registrySource, /regionManagerNavigation/u)
 })
 
+test('admin landing roles use an admin store persona instead of region manager copy', () => {
+  assert.match(registrySource, /'admin'/u)
+  assert.match(registrySource, /if \(roles\.has\('REGION_MANAGER'\)\) \{\s+return 'regionManager'\s+\}/u)
+  assert.match(registrySource, /if \(hasAdminLandingRole\(authSummary\)\) \{\s+return 'admin'\s+\}/u)
+  assert.match(registrySource, /storeHome\.persona\.admin/u)
+})
+
 test('store shell renders registered routes instead of duplicating path-specific guards', () => {
   assert.match(shellSource, /getStoreRouteDefinitions\(\)\.flatMap/u)
   assert.match(shellSource, /isStoreRouteAllowed\(route, input\.authSummary\)/u)

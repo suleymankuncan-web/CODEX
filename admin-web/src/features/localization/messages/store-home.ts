@@ -36,10 +36,12 @@ export const storeHomeTr = {
   'storeHome.sidebar.navAria': 'Pozisyon bazlı sekmeler',
   'storeHome.sidebar.assignedStores': '{count} atanmış mağaza',
   'storeHome.sidebar.scopedStores': '{count} yetkili mağaza',
+  'storeHome.sidebar.adminScope': 'Şirket geneli',
   'storeHome.sidebar.contextAria': 'Store oturum bağlamı',
   'storeHome.sidebar.languagePreference': 'Dil: {locale} · kayıtlı tercih',
   'storeHome.sidebar.sessionUser': 'Oturum kullanıcısı',
   'storeHome.persona.personnel': 'Mağaza personeli',
+  'storeHome.persona.admin': 'Admin görünümü',
   'storeHome.persona.storeManager': 'Mağaza müdürü',
   'storeHome.persona.regionManager': 'Bölge müdürü',
   'storeHome.persona.visualMerchandiser': 'VM kullanıcısı',
@@ -64,6 +66,10 @@ export const storeHomeTr = {
   'storeHome.command.regionCopy':
     'Bölge müdürü rankings, KPI özetleri, checklist, hedef ve talep akışlarına tek girişten ulaşır.',
   'storeHome.command.regionTimelineTitle': 'Bölge akışı',
+  'storeHome.command.adminTitle': 'Admin mağaza görünümü hazır.',
+  'storeHome.command.adminCopy':
+    'Admin oturumu mağaza alanını şirket geneli kontrol ve destek amacıyla ön izler.',
+  'storeHome.command.adminTimelineTitle': 'Admin mağaza akışı',
   'storeHome.command.vmTitle': 'Checklist ana ekranı hazır.',
   'storeHome.command.vmCopy': 'VM kullanıcısı yalnızca checklist ve duyuru akışına odaklanır.',
   'storeHome.command.vmHeroTitle': 'Checklist işi ayrı ve temiz bir yüzeye bağlı.',
@@ -85,6 +91,7 @@ export const storeHomeTr = {
   'storeHome.dashboard.regionTitle': 'Bölge özet dashboard',
   'storeHome.dashboard.regionCopy':
     'Bölge müdürü için yetkili mağaza sayısı, checklist, KPI, hedef ve rapor girişleri aynı ritimde toplanır.',
+  'storeHome.dashboard.adminTitle': 'Admin mağaza özeti',
   'storeHome.dashboard.pendingWorkTitle': 'Bekleyen iş',
   'storeHome.dashboard.managerPendingWorkCopy':
     'Açık talep ve checklist işleri tek noktadan açılır.',
@@ -301,10 +308,12 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.sidebar.navAria': 'Position-based sections',
   'storeHome.sidebar.assignedStores': '{count} assigned stores',
   'storeHome.sidebar.scopedStores': '{count} authorized stores',
+  'storeHome.sidebar.adminScope': 'Company-wide',
   'storeHome.sidebar.contextAria': 'Store session context',
   'storeHome.sidebar.languagePreference': 'Language: {locale} · saved preference',
   'storeHome.sidebar.sessionUser': 'Session user',
   'storeHome.persona.personnel': 'Store personnel',
+  'storeHome.persona.admin': 'Admin view',
   'storeHome.persona.storeManager': 'Store manager',
   'storeHome.persona.regionManager': 'Region manager',
   'storeHome.persona.visualMerchandiser': 'VM user',
@@ -329,6 +338,10 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.command.regionCopy':
     'Region managers reach rankings, KPI summaries, checklist, targets, and requests from one entry.',
   'storeHome.command.regionTimelineTitle': 'Region flow',
+  'storeHome.command.adminTitle': 'Admin store view is ready.',
+  'storeHome.command.adminCopy':
+    'The admin session previews the store workspace for company-wide control and support.',
+  'storeHome.command.adminTimelineTitle': 'Admin store flow',
   'storeHome.command.vmTitle': 'Checklist home is ready.',
   'storeHome.command.vmCopy': 'VM users focus only on checklist and announcement flows.',
   'storeHome.command.vmHeroTitle': 'Checklist work is connected to a clean surface.',
@@ -350,6 +363,7 @@ export const storeHomeEn: Record<keyof typeof storeHomeTr, string> = {
   'storeHome.dashboard.regionTitle': 'Region summary dashboard',
   'storeHome.dashboard.regionCopy':
     'Authorized store count, checklist, KPI, target, and report entry points share one dashboard rhythm for region managers.',
+  'storeHome.dashboard.adminTitle': 'Admin store summary',
   'storeHome.dashboard.pendingWorkTitle': 'Open work',
   'storeHome.dashboard.managerPendingWorkCopy':
     'Open requests and checklist work open from one place.',

@@ -87,6 +87,12 @@ type ChecklistHomeSummary = {
 }
 
 const homeConfigByPersona: Record<StorePersona, HomeConfig> = {
+  admin: {
+    titleKey: 'storeHome.command.adminTitle',
+    copyKey: 'storeHome.command.adminCopy',
+    summaryTitleKey: 'storeHome.dashboard.adminTitle',
+    timelineTitleKey: 'storeHome.command.adminTimelineTitle',
+  },
   personnel: {
     titleKey: 'storeHome.command.personnelTitle',
     copyKey: 'storeHome.command.personnelCopy',
