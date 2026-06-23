@@ -56,6 +56,15 @@ Tier A - controlled pilot expansion follow-up:
 5. Keep using `docs/plans/clerk-persona-staging-evidence-runbook-v1.md` for any
    new persona onboarding or role/scope evidence.
 
+2026-06-23 pilot access guard:
+
+- Use `docs/plans/pilot-access-matrix-v1.md` before creating, rebinding, or
+  cleaning staging pilot accounts.
+- Protected real accounts must keep their baseline role/scope assignments unless
+  the owner explicitly requests access removal.
+- Automated Store Manager and Store Personnel smoke should use the staging-safe
+  example pilot accounts, not personal real accounts that require OTP.
+
 Current execution loop under Tier A:
 
 1. Add each real pilot session to the controlled pilot feedback log.
