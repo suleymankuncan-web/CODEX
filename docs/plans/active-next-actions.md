@@ -65,6 +65,17 @@ Tier A - controlled pilot expansion follow-up:
 - Automated Store Manager and Store Personnel smoke should use the staging-safe
   example pilot accounts, not personal real accounts that require OTP.
 
+2026-06-23 controlled pilot preflight rehearsal:
+
+- Evidence:
+  `docs/evidence/pilot-readiness/2026-06-23-controlled-pilot-preflight-rehearsal.md`.
+- Result is `Conditional Go`: auth/session and admin/BM/SM route walkthroughs
+  pass, but GSM approval import and incentive projection persistence need
+  focused proof before a GSM or incentive-data pilot session.
+- GSM parser/resolution fix is merged and deployed in PR `#789`; next practical
+  blocker is a fresh `Ocak GSM.xlsx` re-upload proof, then `2026-05` incentive
+  API body plus projection/correction persistence verification.
+
 Current execution loop under Tier A:
 
 1. Add each real pilot session to the controlled pilot feedback log.
