@@ -24,18 +24,16 @@ export class ExternalIdMappingService {
       return String(directValue);
     }
 
-    const externalValue = input.externalKeys
-      .map((key) => input.payload[key])
-      .find((value) => value !== undefined && value !== null);
+    const externalValues = this.getExternalValues(input.payload, input.externalKeys);
 
-    if (!externalValue) {
+    if (externalValues.length === 0) {
       throw new Error(input.missingMessage);
     }
 
-    const mappedId = await this.resolveMappedInternalId(
+    const mappedId = await this.resolveFirstMappedInternalId(
       input.integrationSourceId,
       input.entityType,
-      String(externalValue),
+      externalValues,
     );
 
     if (!mappedId) {
@@ -60,18 +58,16 @@ export class ExternalIdMappingService {
       return String(directValue);
     }
 
-    const externalValue = input.externalKeys
-      .map((key) => input.payload[key])
-      .find((value) => value !== undefined && value !== null);
+    const externalValues = this.getExternalValues(input.payload, input.externalKeys);
 
-    if (!externalValue) {
+    if (externalValues.length === 0) {
       return null;
     }
 
-    return this.resolveMappedInternalId(
+    return this.resolveFirstMappedInternalId(
       input.integrationSourceId,
       input.entityType,
-      String(externalValue),
+      externalValues,
     );
   }
 
@@ -118,6 +114,33 @@ export class ExternalIdMappingService {
     internalTableName: string;
   }): Promise<void> {
     await this.externalIdMappingCommandRepository.upsertMapping(input);
+  }
+
+  private getExternalValues(payload: Record<string, unknown>, keys: string[]): string[] {
+    return keys
+      .map((key) => payload[key])
+      .filter((value): value is NonNullable<unknown> => value !== undefined && value !== null)
+      .map((value) => String(value).trim())
+      .filter((value) => value.length > 0);
+  }
+
+  private async resolveFirstMappedInternalId(
+    integrationSourceId: string,
+    entityType: string,
+    externalIds: string[],
+  ): Promise<string | null> {
+    for (const externalId of externalIds) {
+      const mappedId = await this.resolveMappedInternalId(
+        integrationSourceId,
+        entityType,
+        externalId,
+      );
+      if (mappedId) {
+        return mappedId;
+      }
+    }
+
+    return null;
   }
 }
 

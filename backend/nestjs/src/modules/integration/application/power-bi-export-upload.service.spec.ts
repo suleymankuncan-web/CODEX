@@ -450,7 +450,8 @@ describe("PowerBiExportUploadService", () => {
       expect.arrayContaining([
         expect.objectContaining({
           kpiCode: "gsm_approval",
-          storeExternalRef: "SM182",
+          sourceStoreId: "SM182",
+          storeExternalRef: "Balıkesir 10 Burda AVM",
           actualValue: 91.2052,
           achievementRate: 0.912052,
           validationError: null,
@@ -460,14 +461,16 @@ describe("PowerBiExportUploadService", () => {
         }),
         expect.objectContaining({
           kpiCode: "gsm_approval",
-          storeExternalRef: "SM183",
+          sourceStoreId: "SM183",
+          storeExternalRef: "Boş GSM Mağazası",
           actualValue: 0,
           achievementRate: null,
           validationError: "gsm_approval value is required",
         }),
         expect.objectContaining({
           kpiCode: "gsm_approval",
-          storeExternalRef: "SM999",
+          sourceStoreId: "SM999",
+          storeExternalRef: "Eşleşmeyen Mağaza",
           actualValue: 50,
           achievementRate: 0.5,
           validationError: "gsm_approval store reference is not mapped: SM999",

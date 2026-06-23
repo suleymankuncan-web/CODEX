@@ -77,6 +77,40 @@ describe("ExternalIdMappingService", () => {
     expect(repository.findActiveMappingsByNormalizedExternalId).not.toHaveBeenCalled();
   });
 
+  it("tries later external reference keys when the first reference is unmapped", async () => {
+    const repository = createRepositoryMock({
+      findActiveMapping: jest
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({ internalId: "00000000-0000-4000-8000-000000000182" }),
+      findActiveMappingsByNormalizedExternalId: jest.fn(async () => []),
+    });
+    const service = new ExternalIdMappingService(repository as never);
+
+    const result = await service.resolveOptionalInternalId({
+      payload: {
+        sourceStoreId: "SM182",
+        storeExternalRef: "Balikesir 10 Burda AVM",
+      },
+      integrationSourceId: "00000000-0000-4000-8000-000000000001",
+      entityType: "store",
+      directKeys: ["storeId"],
+      externalKeys: ["sourceStoreId", "storeExternalRef"],
+    });
+
+    expect(result).toBe("00000000-0000-4000-8000-000000000182");
+    expect(repository.findActiveMapping).toHaveBeenCalledWith({
+      integrationSourceId: "00000000-0000-4000-8000-000000000001",
+      entityType: "store",
+      externalId: "SM182",
+    });
+    expect(repository.findActiveMapping).toHaveBeenCalledWith({
+      integrationSourceId: "00000000-0000-4000-8000-000000000001",
+      entityType: "store",
+      externalId: "Balikesir 10 Burda AVM",
+    });
+  });
+
   it("delegates mapping upserts to the command repository", async () => {
     const repository = createRepositoryMock();
     const service = new ExternalIdMappingService(repository as never);

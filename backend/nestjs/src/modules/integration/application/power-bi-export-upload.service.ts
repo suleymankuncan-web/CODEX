@@ -47,6 +47,7 @@ type CanonicalKpiRow = {
   validationError?: string | null;
   targetValue?: number | null;
   scopeType: "store" | "employee";
+  sourceStoreId?: string | null;
   storeExternalRef: string;
   employeeExternalRef: string | null;
   periodType: PeriodType;
@@ -468,15 +469,16 @@ export class PowerBiExportUploadService {
     return rows.map((row, index) => {
       const storeCode = this.getStoreCode(row);
       const storeName = this.getStoreName(row);
-      const storeExternalRef = storeCode ?? storeName ?? `gsm-row-${index + 1}`;
+      const storeExternalRef = storeName ?? storeCode ?? `gsm-row-${index + 1}`;
+      const storeReferenceForMessage = storeCode ?? storeName ?? storeExternalRef;
       const rawValue = this.getGsmApprovalRawValue(row);
       const gsmValue = normalizeGsmOnayValue(rawValue);
       const validationError =
         !storeCode && !storeName
           ? "gsm_approval store reference is required"
-          : !this.isStoreInKpiImportScope(storeExternalRef, storeScope) &&
+          : !(storeCode && this.isStoreInKpiImportScope(storeCode, storeScope)) &&
               (!storeName || !this.isStoreInKpiImportScope(storeName, storeScope))
-            ? `gsm_approval store reference is not mapped: ${storeExternalRef}`
+            ? `gsm_approval store reference is not mapped: ${storeReferenceForMessage}`
             : gsmValue.validationError;
 
       return {
@@ -486,6 +488,7 @@ export class PowerBiExportUploadService {
         achievementRate: gsmValue.achievementRate,
         validationError,
         scopeType: "store",
+        sourceStoreId: storeCode,
         storeExternalRef,
         employeeExternalRef: null,
         periodType: "monthly",
