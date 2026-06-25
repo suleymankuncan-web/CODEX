@@ -30,7 +30,11 @@ type MetricCard = {
   label: string
   progressPercent: number
   statusLabel: string
+  storePopulationLabel: string
+  storeRankLabel: string
   tone: string
+  turkeyPopulationLabel: string
+  turkeyRankLabel: string
   weightPercent: number
 }
 
@@ -268,18 +272,10 @@ function RankStrip({
 
 function MetricKpiCard({
   metric,
-  storePopulationLabel,
-  storeRankLabel,
   t,
-  turkeyPopulationLabel,
-  turkeyRankLabel,
 }: {
   metric: MetricCard
-  storePopulationLabel: string
-  storeRankLabel: string
   t: TranslateFunction
-  turkeyPopulationLabel: string
-  turkeyRankLabel: string
 }) {
   const Icon = metricIconByCode[metric.code] ?? ChartNoAxesColumnIncreasing
 
@@ -301,11 +297,11 @@ function MetricKpiCard({
       </div>
       <KpiProgress label={metric.label} value={metric.progressPercent} />
       <RankStrip
-        storePopulationLabel={storePopulationLabel}
-        storeRankLabel={storeRankLabel}
+        storePopulationLabel={metric.storePopulationLabel}
+        storeRankLabel={metric.storeRankLabel}
         t={t}
-        turkeyPopulationLabel={turkeyPopulationLabel}
-        turkeyRankLabel={turkeyRankLabel}
+        turkeyPopulationLabel={metric.turkeyPopulationLabel}
+        turkeyRankLabel={metric.turkeyRankLabel}
       />
     </article>
   )
@@ -413,11 +409,7 @@ export function StoreMyPerformancePlumDashboard({
           <MetricKpiCard
             key={metric.code}
             metric={metric}
-            storePopulationLabel={storePopulationLabel}
-            storeRankLabel={storeRankLabel}
             t={t}
-            turkeyPopulationLabel={turkeyPopulationLabel}
-            turkeyRankLabel={turkeyRankLabel}
           />
         ))}
       </section>

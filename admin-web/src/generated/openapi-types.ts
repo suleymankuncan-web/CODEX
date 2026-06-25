@@ -1711,6 +1711,15 @@ export type components = {
         "storeRank": number | null
         "storePopulation": number
       }
+      "metricRanks": Array<{
+          "code": string
+          "label": string
+          "actualValue": number | null
+          "storeRank": number | null
+          "storePopulation": number
+          "turkeyRank": number | null
+          "turkeyPopulation": number
+        }>
       "availablePeriods": Array<{
           "periodType": string
           "periodStart": string

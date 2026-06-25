@@ -6,6 +6,7 @@ import { KpiScoreProfile } from "./kpi-config.contract";
 import { createSnapshotKpiConfigProvider, getDefaultKpiConfig, mapKpiConfigVersionMetadata, resolveKpiConfigFromRows, validateKpiConfigInput } from "./reporting-kpi-config.helpers";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ClosedRankingService } from "./closed-ranking.service";
+import type { ClosedRankingMetricRank } from "./closed-ranking.contract";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 import { ReportingStoreKpiReadService } from "./reporting-store-kpi-read.service";
@@ -542,6 +543,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: [],
         partial: {
           isPartial: true,
@@ -614,6 +616,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: mappedAvailablePeriods,
         partial: {
           isPartial: true,
@@ -840,6 +843,12 @@ export class ReportingService {
       turkeyScores.findIndex((row) => row.employeeId === employeeId) >= 0
         ? turkeyScores.findIndex((row) => row.employeeId === employeeId) + 1
         : null;
+    const metricRanks = this.buildLiveMetricRanks({
+      employeeId,
+      metricCodes,
+      rows: turkeyRows,
+      storeId: latestPeriod.store_id ?? null,
+    });
 
     return {
       source: {
@@ -870,6 +879,7 @@ export class ReportingService {
         storeRank,
         storePopulation: storeScores.length,
       },
+      metricRanks,
       availablePeriods: mappedAvailablePeriods,
       partial: {
         isPartial: missingMetrics.length > 0 || pendingNormalizationMetrics.length > 0,
@@ -928,6 +938,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: [],
         partial: {
           isPartial: true,
@@ -973,6 +984,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: [],
         partial: {
           isPartial: true,
@@ -999,6 +1011,13 @@ export class ReportingService {
       employeeId,
       metricCodes: employeeDataMetricCodes,
     });
+    const visibleMetricRankCodes = new Set(metricCodes);
+    const metricRankRows = (
+      await this.closedRankingRepository.listClosedDailyMetricRankRows({
+        snapshotRunId: snapshotRun.snapshot_run_id,
+        employeeIds: [employeeId],
+      })
+    ).filter((row) => visibleMetricRankCodes.has(row.kpi_code));
     const fallbackAssignment = summaryRow
       ? null
       : await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId);
@@ -1066,6 +1085,7 @@ export class ReportingService {
         storeRank: summaryRow?.store_rank ?? null,
         storePopulation: summaryRow?.store_population ?? 0,
       },
+      metricRanks: this.mapClosedMetricRankRows(metricRankRows),
       availablePeriods: [
         {
           periodType: "daily",
@@ -1085,6 +1105,95 @@ export class ReportingService {
       },
       metrics: mappedMetrics,
     };
+  }
+
+  private buildLiveMetricRanks(input: {
+    employeeId: string;
+    metricCodes: string[];
+    rows: Array<{
+      employee_id: string;
+      store_id: string | null;
+      kpi_code: string;
+      kpi_name: string;
+      actual_value: string;
+    }>;
+    storeId: string | null;
+  }): ClosedRankingMetricRank[] {
+    const metricRanks: Array<ClosedRankingMetricRank | null> = input.metricCodes
+      .map((code): ClosedRankingMetricRank | null => {
+        const metricRows = input.rows.filter(
+          (row) => row.kpi_code === code && Number.isFinite(Number(row.actual_value)),
+        );
+        const currentRow = metricRows.find((row) => row.employee_id === input.employeeId);
+
+        if (!currentRow) {
+          return null;
+        }
+
+        const storeMetricRows = input.storeId
+          ? metricRows.filter((row) => row.store_id === input.storeId)
+          : [];
+
+        return {
+          code,
+          label: currentRow.kpi_name,
+          actualValue: Number(currentRow.actual_value),
+          storeRank: this.rankMetricRow(storeMetricRows, input.employeeId),
+          storePopulation: storeMetricRows.length,
+          turkeyRank: this.rankMetricRow(metricRows, input.employeeId),
+          turkeyPopulation: metricRows.length,
+        };
+      })
+
+    return metricRanks.filter((row): row is ClosedRankingMetricRank => row !== null);
+  }
+
+  private rankMetricRow(
+    rows: Array<{ employee_id: string; actual_value: string }>,
+    employeeId: string,
+  ) {
+    const sortedRows = [...rows].sort((left, right) => {
+      const valueDelta = Number(right.actual_value) - Number(left.actual_value);
+      return valueDelta !== 0 ? valueDelta : left.employee_id.localeCompare(right.employee_id);
+    });
+    let previousValue: number | null = null;
+    let previousRank = 0;
+
+    for (const [index, row] of sortedRows.entries()) {
+      const value = Number(row.actual_value);
+      const rank = previousValue === value ? previousRank : index + 1;
+
+      if (row.employee_id === employeeId) {
+        return rank;
+      }
+
+      previousValue = value;
+      previousRank = rank;
+    }
+
+    return null;
+  }
+
+  private mapClosedMetricRankRows(
+    rows: Array<{
+      kpi_code: string;
+      kpi_name: string;
+      actual_value: string | null;
+      store_rank: number | null;
+      store_population: number;
+      turkey_rank: number | null;
+      turkey_population: number;
+    }>,
+  ): ClosedRankingMetricRank[] {
+    return rows.map((row) => ({
+      code: row.kpi_code,
+      label: row.kpi_name,
+      actualValue: row.actual_value !== null ? Number(row.actual_value) : null,
+      storeRank: row.store_rank,
+      storePopulation: row.store_population,
+      turkeyRank: row.turkey_rank,
+      turkeyPopulation: row.turkey_population,
+    }));
   }
 
   private hasUsableBenchmarkRows(rows: Array<{ benchmark_value: string | null }>) {

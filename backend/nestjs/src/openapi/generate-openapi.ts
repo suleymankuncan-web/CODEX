@@ -2853,6 +2853,28 @@ const reportingPerformanceMetricSchema = {
   },
 };
 
+const reportingPerformanceMetricRankSchema = {
+  type: "object",
+  required: [
+    "code",
+    "label",
+    "actualValue",
+    "storeRank",
+    "storePopulation",
+    "turkeyRank",
+    "turkeyPopulation",
+  ],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    actualValue: { type: "number", nullable: true },
+    storeRank: { type: "integer", nullable: true },
+    storePopulation: { type: "integer", minimum: 0 },
+    turkeyRank: { type: "integer", nullable: true },
+    turkeyPopulation: { type: "integer", minimum: 0 },
+  },
+};
+
 const reportingPerformanceResponseSchema = {
   type: "object",
   required: [
@@ -2861,6 +2883,7 @@ const reportingPerformanceResponseSchema = {
     "period",
     "score",
     "rankings",
+    "metricRanks",
     "availablePeriods",
     "partial",
     "metrics",
@@ -2918,6 +2941,10 @@ const reportingPerformanceResponseSchema = {
         storeRank: { type: "integer", nullable: true },
         storePopulation: { type: "integer", minimum: 0 },
       },
+    },
+    metricRanks: {
+      type: "array",
+      items: reportingPerformanceMetricRankSchema,
     },
     availablePeriods: {
       type: "array",

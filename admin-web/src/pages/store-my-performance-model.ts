@@ -1010,8 +1010,10 @@ export function buildStoreMyPerformanceViewModel(input: {
       width: getDeltaWidth(deltaValue),
     }
   })
+  const metricRanksByCode = new Map(input.performance.metricRanks.map((metricRank) => [metricRank.code, metricRank]))
   const metricCards = samePeriodMetrics.map((metricDelta) => {
     const metric = findMetric(personnelMetrics, metricDelta.code)
+    const metricRank = metricRanksByCode.get(metricDelta.code)
     const displayValue = getMetricDisplayValue(input.locale, input.t, personnelMetrics, metricDelta.code)
     const progressPercent = getMetricProgressPercent(metric)
 
@@ -1021,11 +1023,15 @@ export function buildStoreMyPerformanceViewModel(input: {
       progressPercent,
       contributionValue: getFiniteMetricNumber(metric?.contributionValue) ?? 0,
       weightPercent: getFiniteMetricNumber(metric?.weightPercent) ?? 0,
+      storePopulationLabel: formatPopulation(metricRank?.storePopulation, input.t),
+      storeRankLabel: formatRank(metricRank?.storeRank, input.t),
       tone: getMetricTone(metricDelta.code),
       statusLabel: getMetricStatusLabel(input.t, metric, metricDelta.deltaValue),
       narrative: input.t(getMetricNarrativeKey(metricDelta.code), {
         delta: metricDelta.delta ?? input.t('storeMe.noTrendData'),
       }),
+      turkeyPopulationLabel: formatPopulation(metricRank?.turkeyPopulation, input.t),
+      turkeyRankLabel: formatRank(metricRank?.turkeyRank, input.t),
     }
   })
   const todayActions = buildStoreMyPerformanceTodayActions({ metricCards, partial, pendingNormalizationLabels, samePeriodScoreDelta, samePeriodScoreDeltaValue, t: input.t, targetProgressPercent })
