@@ -29,6 +29,8 @@ type MetricCard = {
   displayValue: string
   label: string
   progressPercent: number
+  regionPopulationLabel: string
+  regionRankLabel: string
   statusLabel: string
   storePopulationLabel: string
   storeRankLabel: string
@@ -59,6 +61,8 @@ type StoreMyPerformancePlumDashboardProps = {
   scoreFocus: string
   scoreSummary: string
   scoreValue: number
+  regionPopulationLabel: string
+  regionRankLabel: string
   storePopulationLabel: string
   storeRankLabel: string
   t: TranslateFunction
@@ -232,12 +236,16 @@ function KpiProgress({
 }
 
 function RankStrip({
+  regionPopulationLabel,
+  regionRankLabel,
   storePopulationLabel,
   storeRankLabel,
   t,
   turkeyPopulationLabel,
   turkeyRankLabel,
 }: {
+  regionPopulationLabel: string
+  regionRankLabel: string
   storePopulationLabel: string
   storeRankLabel: string
   t: TranslateFunction
@@ -257,8 +265,8 @@ function RankStrip({
         </span>
         <span>
           <small>{t('storeMe.region')}</small>
-          <strong>{t('storeMe.noData')}</strong>
-          <em>{t('storeMe.regionRankPending')}</em>
+          <strong>{regionRankLabel}</strong>
+          <em>{regionPopulationLabel}</em>
         </span>
         <span>
           <small>{t('storeMe.turkey')}</small>
@@ -297,6 +305,8 @@ function MetricKpiCard({
       </div>
       <KpiProgress label={metric.label} value={metric.progressPercent} />
       <RankStrip
+        regionPopulationLabel={metric.regionPopulationLabel}
+        regionRankLabel={metric.regionRankLabel}
         storePopulationLabel={metric.storePopulationLabel}
         storeRankLabel={metric.storeRankLabel}
         t={t}
@@ -320,6 +330,8 @@ export function StoreMyPerformancePlumDashboard({
   scoreFocus,
   scoreSummary,
   scoreValue,
+  regionPopulationLabel,
+  regionRankLabel,
   storePopulationLabel,
   storeRankLabel,
   t,
@@ -360,6 +372,8 @@ export function StoreMyPerformancePlumDashboard({
           </div>
           <KpiProgress label={t('storeMe.performanceScore')} value={scoreValue} />
           <RankStrip
+            regionPopulationLabel={regionPopulationLabel}
+            regionRankLabel={regionRankLabel}
             storePopulationLabel={storePopulationLabel}
             storeRankLabel={storeRankLabel}
             t={t}

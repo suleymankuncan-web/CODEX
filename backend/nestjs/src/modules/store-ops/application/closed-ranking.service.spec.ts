@@ -172,6 +172,8 @@ describe("ClosedRankingService", () => {
         rankings: {
           turkeyRank: 4,
           turkeyPopulation: 100,
+          regionRank: null,
+          regionPopulation: 0,
           storeRank: 1,
           storePopulation: 8,
         },
@@ -393,6 +395,8 @@ describe("ClosedRankingService", () => {
     expect(result.currentEmployee?.rankings).toEqual({
       turkeyRank: null,
       turkeyPopulation: 25,
+      regionRank: null,
+      regionPopulation: 0,
       storeRank: null,
       storePopulation: 5,
     });

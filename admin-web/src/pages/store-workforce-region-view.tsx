@@ -91,8 +91,7 @@ export function RegionWorkforceView(input: {
   const scopedStores = useMemo(
     () => {
       const orgStores = orgStoresQuery.data?.items ?? []
-      const hasRegionalScope = readRegionIds.length > 0
-      const scopedOrgStores = !hasRegionalScope && fallbackStoreIds.length > 0
+      const scopedOrgStores = fallbackStoreIds.length > 0
         ? orgStores.filter((store) => fallbackStoreIds.includes(store.store_id))
         : orgStores
 
@@ -108,7 +107,7 @@ export function RegionWorkforceView(input: {
         storeLabel: storeId,
       }))
     },
-    [fallbackStoreIds, orgStoresQuery.data?.items, readRegionIds.length],
+    [fallbackStoreIds, orgStoresQuery.data?.items],
   )
   const storeEmployeeQueries = useQueries({
     queries: scopedStores.map((store) => ({

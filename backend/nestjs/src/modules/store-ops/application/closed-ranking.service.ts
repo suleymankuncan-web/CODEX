@@ -310,6 +310,8 @@ export class ClosedRankingService {
       rankings: {
         turkeyRank: isEligibleForRanking ? input.row.turkey_rank : null,
         turkeyPopulation: input.row.turkey_population,
+        regionRank: null,
+        regionPopulation: 0,
         storeRank: isEligibleForRanking ? input.row.store_rank : null,
         storePopulation: input.row.store_population,
       },
@@ -325,6 +327,8 @@ export class ClosedRankingService {
         actualValue: row.actual_value !== null ? Number(row.actual_value) : null,
         storeRank: row.store_rank,
         storePopulation: row.store_population,
+        regionRank: null,
+        regionPopulation: 0,
         turkeyRank: row.turkey_rank,
         turkeyPopulation: row.turkey_population,
       })),

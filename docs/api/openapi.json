@@ -10896,6 +10896,8 @@
             "required": [
               "turkeyRank",
               "turkeyPopulation",
+              "regionRank",
+              "regionPopulation",
               "storeRank",
               "storePopulation"
             ],
@@ -10905,6 +10907,14 @@
                 "nullable": true
               },
               "turkeyPopulation": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "regionRank": {
+                "type": "integer",
+                "nullable": true
+              },
+              "regionPopulation": {
                 "type": "integer",
                 "minimum": 0
               },
@@ -10928,6 +10938,8 @@
                 "actualValue",
                 "storeRank",
                 "storePopulation",
+                "regionRank",
+                "regionPopulation",
                 "turkeyRank",
                 "turkeyPopulation"
               ],
@@ -10947,6 +10959,14 @@
                   "nullable": true
                 },
                 "storePopulation": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "regionRank": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "regionPopulation": {
                   "type": "integer",
                   "minimum": 0
                 },
@@ -12645,6 +12665,8 @@
                 "required": [
                   "turkeyRank",
                   "turkeyPopulation",
+                  "regionRank",
+                  "regionPopulation",
                   "storeRank",
                   "storePopulation"
                 ],
@@ -12654,6 +12676,14 @@
                     "nullable": true
                   },
                   "turkeyPopulation": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "regionRank": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "regionPopulation": {
                     "type": "integer",
                     "minimum": 0
                   },
@@ -12703,6 +12733,8 @@
                     "actualValue",
                     "storeRank",
                     "storePopulation",
+                    "regionRank",
+                    "regionPopulation",
                     "turkeyRank",
                     "turkeyPopulation"
                   ],
@@ -12722,6 +12754,14 @@
                       "nullable": true
                     },
                     "storePopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "regionRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "regionPopulation": {
                       "type": "integer",
                       "minimum": 0
                     },
@@ -12797,6 +12837,8 @@
                   "required": [
                     "turkeyRank",
                     "turkeyPopulation",
+                    "regionRank",
+                    "regionPopulation",
                     "storeRank",
                     "storePopulation"
                   ],
@@ -12806,6 +12848,14 @@
                       "nullable": true
                     },
                     "turkeyPopulation": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "regionRank": {
+                      "type": "integer",
+                      "nullable": true
+                    },
+                    "regionPopulation": {
                       "type": "integer",
                       "minimum": 0
                     },
@@ -12855,6 +12905,8 @@
                       "actualValue",
                       "storeRank",
                       "storePopulation",
+                      "regionRank",
+                      "regionPopulation",
                       "turkeyRank",
                       "turkeyPopulation"
                     ],
@@ -12874,6 +12926,14 @@
                         "nullable": true
                       },
                       "storePopulation": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "regionRank": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "regionPopulation": {
                         "type": "integer",
                         "minimum": 0
                       },

@@ -25,8 +25,7 @@ export class PerformanceScoreEvaluator {
         matchedMetric?.scoreValue !== undefined
           ? 1
           : targetValue;
-      const benchmarkSource =
-        metric.benchmarkSource ?? (scoringTargetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+      const benchmarkSource = metric.code === "TARGET_ACHIEVEMENT" ? "TARGET" : metric.benchmarkSource ?? (scoringTargetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
       const benchmarkValue =
         benchmarkSource === "TURKEY_AVERAGE" && matchedCode
           ? this.resolveBenchmarkValue({

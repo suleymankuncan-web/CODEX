@@ -9,6 +9,8 @@ export type ClosedRankingMetricRank = {
   actualValue: number | null;
   storeRank: number | null;
   storePopulation: number;
+  regionRank: number | null;
+  regionPopulation: number;
   turkeyRank: number | null;
   turkeyPopulation: number;
 };
@@ -32,6 +34,8 @@ export type ClosedRankingEmployee = {
   rankings: {
     turkeyRank: number | null;
     turkeyPopulation: number;
+    regionRank: number | null;
+    regionPopulation: number;
     storeRank: number | null;
     storePopulation: number;
   };

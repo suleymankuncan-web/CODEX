@@ -391,6 +391,7 @@ export class ReportingRepository {
       last_name: string;
       store_id: string | null;
       store_name: string | null;
+      region_id: string | null;
       kpi_code: string;
       kpi_name: string;
       target_value: string | null;
@@ -404,6 +405,7 @@ export class ReportingRepository {
           e.last_name,
           assignment.store_id,
           store.store_name,
+          store.region_id::text AS region_id,
           kd.kpi_code,
           kd.kpi_name,
           ptr.target_value::text AS target_value,
@@ -475,6 +477,7 @@ export class ReportingRepository {
       last_name: string;
       store_id: string | null;
       store_name: string | null;
+      region_id: string | null;
       kpi_code: string;
       kpi_name: string;
       target_value: string | null;
@@ -488,6 +491,7 @@ export class ReportingRepository {
           e.last_name,
           ka.store_id,
           store.store_name,
+          store.region_id::text AS region_id,
           kd.kpi_code,
           kd.kpi_name,
           ptr.target_value::text AS target_value,
