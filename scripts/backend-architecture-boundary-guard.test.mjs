@@ -200,10 +200,6 @@ const largeTrackedSourceAllowlist = new Map([
     'Existing pilot smoke regression spec; parked until concrete flake, runtime issue, or reviewability blocker.',
   ],
   [
-    'backend/nestjs/src/modules/store-ops/application/reporting.service.ts',
-    'Existing Store Ops reporting application hotspot; V2 splits surrounding module graph before further behavior-preserving extraction.',
-  ],
-  [
     'admin-web/src/pages/IntegrationDashboardPage.tsx',
     'Existing integration dashboard hotspot; parked until concrete product or reviewability trigger.',
   ],

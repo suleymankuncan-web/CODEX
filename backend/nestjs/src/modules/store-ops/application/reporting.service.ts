@@ -6,10 +6,10 @@ import { KpiScoreProfile } from "./kpi-config.contract";
 import { createSnapshotKpiConfigProvider, getDefaultKpiConfig, mapKpiConfigVersionMetadata, resolveKpiConfigFromRows, validateKpiConfigInput } from "./reporting-kpi-config.helpers";
 import { KpiConfigRepository } from "../infrastructure/kpi-config.repository";
 import { ClosedRankingService } from "./closed-ranking.service";
-import type { ClosedRankingMetricRank } from "./closed-ranking.contract";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 import { ReportingStoreKpiReadService } from "./reporting-store-kpi-read.service";
+import { buildLiveMetricRanks, formatEmployeeAssignmentName, getProfileMetricCodes, hasUsableBenchmarkRows, mapClosedMetricRankRows, mapEmployeeAssignmentIdentity, mapEmployeeAvailablePeriods } from "./reporting-performance.helpers";
 import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
 import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
@@ -513,7 +513,7 @@ export class ReportingService {
   }) {
     const config = await this.getKpiConfig();
     const profile = config.personnelProfile;
-    const metricCodes = this.getProfileMetricCodes(profile);
+    const metricCodes = getProfileMetricCodes(profile);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
     const employeeId =
       input.targetEmployeeId ??
@@ -587,7 +587,7 @@ export class ReportingService {
       periodType: input.periodType,
       periodStart: input.periodStart,
     });
-    const mappedAvailablePeriods = this.mapEmployeeAvailablePeriods(
+    const mappedAvailablePeriods = mapEmployeeAvailablePeriods(
       availablePeriods,
       latestPeriod,
       input.periodType,
@@ -603,7 +603,7 @@ export class ReportingService {
           snapshotRunId: null,
           snapshotDate: null,
         },
-        employee: this.mapEmployeeAssignmentIdentity(employeeId, fallbackAssignment),
+        employee: mapEmployeeAssignmentIdentity(employeeId, fallbackAssignment),
         period: null,
         score: {
           value: 0,
@@ -649,7 +649,7 @@ export class ReportingService {
       periodEnd: latestPeriod.period_end,
     });
 
-    if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
+    if (!hasUsableBenchmarkRows(benchmarkRows)) {
       benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
         companyId: undefined,
         periodType: latestPeriod.period_type ?? input.periodType,
@@ -843,7 +843,7 @@ export class ReportingService {
       turkeyScores.findIndex((row) => row.employeeId === employeeId) >= 0
         ? turkeyScores.findIndex((row) => row.employeeId === employeeId) + 1
         : null;
-    const metricRanks = this.buildLiveMetricRanks({
+    const metricRanks = buildLiveMetricRanks({
       employeeId,
       metricCodes,
       rows: turkeyRows,
@@ -860,7 +860,7 @@ export class ReportingService {
         employeeId,
         displayName: employeeRows[0]
           ? `${employeeRows[0].first_name} ${employeeRows[0].last_name}`.trim()
-          : this.formatEmployeeAssignmentName(fallbackAssignment),
+          : formatEmployeeAssignmentName(fallbackAssignment),
         storeId: employeeRows[0]?.store_id ?? latestPeriod.store_id ?? fallbackAssignment?.store_id ?? null,
         storeName: employeeRows[0]?.store_name ?? fallbackAssignment?.store_name ?? null,
       },
@@ -908,7 +908,7 @@ export class ReportingService {
   }) {
     const config = await this.getKpiConfig();
     const profile = config.personnelProfile;
-    const metricCodes = this.getProfileMetricCodes(profile);
+    const metricCodes = getProfileMetricCodes(profile);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
     const employeeId =
       input.targetEmployeeId ??
@@ -1085,7 +1085,7 @@ export class ReportingService {
         storeRank: summaryRow?.store_rank ?? null,
         storePopulation: summaryRow?.store_population ?? 0,
       },
-      metricRanks: this.mapClosedMetricRankRows(metricRankRows),
+      metricRanks: mapClosedMetricRankRows(metricRankRows),
       availablePeriods: [
         {
           periodType: "daily",
@@ -1105,210 +1105,6 @@ export class ReportingService {
       },
       metrics: mappedMetrics,
     };
-  }
-
-  private buildLiveMetricRanks(input: {
-    employeeId: string;
-    metricCodes: string[];
-    rows: Array<{
-      employee_id: string;
-      store_id: string | null;
-      kpi_code: string;
-      kpi_name: string;
-      actual_value: string;
-    }>;
-    storeId: string | null;
-  }): ClosedRankingMetricRank[] {
-    const metricRanks: Array<ClosedRankingMetricRank | null> = input.metricCodes
-      .map((code): ClosedRankingMetricRank | null => {
-        const metricRows = input.rows.filter(
-          (row) => row.kpi_code === code && Number.isFinite(Number(row.actual_value)),
-        );
-        const currentRow = metricRows.find((row) => row.employee_id === input.employeeId);
-
-        if (!currentRow) {
-          return null;
-        }
-
-        const storeMetricRows = input.storeId
-          ? metricRows.filter((row) => row.store_id === input.storeId)
-          : [];
-
-        return {
-          code,
-          label: currentRow.kpi_name,
-          actualValue: Number(currentRow.actual_value),
-          storeRank: this.rankMetricRow(storeMetricRows, input.employeeId),
-          storePopulation: storeMetricRows.length,
-          turkeyRank: this.rankMetricRow(metricRows, input.employeeId),
-          turkeyPopulation: metricRows.length,
-        };
-      })
-
-    return metricRanks.filter((row): row is ClosedRankingMetricRank => row !== null);
-  }
-
-  private rankMetricRow(
-    rows: Array<{ employee_id: string; actual_value: string }>,
-    employeeId: string,
-  ) {
-    const sortedRows = [...rows].sort((left, right) => {
-      const valueDelta = Number(right.actual_value) - Number(left.actual_value);
-      return valueDelta !== 0 ? valueDelta : left.employee_id.localeCompare(right.employee_id);
-    });
-    let previousValue: number | null = null;
-    let previousRank = 0;
-
-    for (const [index, row] of sortedRows.entries()) {
-      const value = Number(row.actual_value);
-      const rank = previousValue === value ? previousRank : index + 1;
-
-      if (row.employee_id === employeeId) {
-        return rank;
-      }
-
-      previousValue = value;
-      previousRank = rank;
-    }
-
-    return null;
-  }
-
-  private mapClosedMetricRankRows(
-    rows: Array<{
-      kpi_code: string;
-      kpi_name: string;
-      actual_value: string | null;
-      store_rank: number | null;
-      store_population: number;
-      turkey_rank: number | null;
-      turkey_population: number;
-    }>,
-  ): ClosedRankingMetricRank[] {
-    return rows.map((row) => ({
-      code: row.kpi_code,
-      label: row.kpi_name,
-      actualValue: row.actual_value !== null ? Number(row.actual_value) : null,
-      storeRank: row.store_rank,
-      storePopulation: row.store_population,
-      turkeyRank: row.turkey_rank,
-      turkeyPopulation: row.turkey_population,
-    }));
-  }
-
-  private hasUsableBenchmarkRows(rows: Array<{ benchmark_value: string | null }>) {
-    return rows.some((row) => {
-      if (row.benchmark_value === null) {
-        return false;
-      }
-
-      const value = Number(row.benchmark_value);
-      return Number.isFinite(value) && value !== 0;
-    });
-  }
-
-  private mapEmployeeAvailablePeriods(
-    periods: Array<{ period_type: string; period_start: string; period_end: string }>,
-    fallbackPeriod?: {
-      period_type?: string | null;
-      period_start: string;
-      period_end: string;
-    } | null,
-    fallbackPeriodType?: string,
-  ) {
-    const seenPeriodKeys = new Set<string>();
-    const mappedPeriods: Array<{
-      periodType: string;
-      periodStart: string;
-      periodEnd: string;
-    }> = [];
-
-    const addPeriod = (periodType: string | null | undefined, periodStart: string, periodEnd: string) => {
-      if (!periodStart || !periodEnd) {
-        return;
-      }
-
-      const normalizedPeriodType = this.normalizeEmployeeLivePeriodType(
-        periodType,
-        periodStart,
-        periodEnd,
-        fallbackPeriodType,
-      );
-      if (!normalizedPeriodType) {
-        return;
-      }
-
-      const periodKey = `${normalizedPeriodType}:${periodStart}`;
-      if (seenPeriodKeys.has(periodKey)) {
-        return;
-      }
-
-      seenPeriodKeys.add(periodKey);
-      mappedPeriods.push({
-        periodType: normalizedPeriodType,
-        periodStart,
-        periodEnd,
-      });
-    };
-
-    periods.forEach((period) => addPeriod(period.period_type, period.period_start, period.period_end));
-
-    if (fallbackPeriod) {
-      addPeriod(
-        fallbackPeriod.period_type ?? fallbackPeriodType ?? "monthly",
-        fallbackPeriod.period_start,
-        fallbackPeriod.period_end,
-      );
-    }
-
-    return mappedPeriods;
-  }
-
-  private normalizeEmployeeLivePeriodType(
-    periodType: string | null | undefined,
-    periodStart: string,
-    periodEnd: string,
-    fallbackPeriodType?: string,
-  ) {
-    if (periodType === "custom") {
-      return periodStart === periodEnd ? "daily" : "monthly";
-    }
-
-    return periodType ?? fallbackPeriodType ?? "monthly";
-  }
-
-  private mapEmployeeAssignmentIdentity(
-    employeeId: string,
-    assignment: {
-      first_name?: string | null;
-      last_name?: string | null;
-      store_id?: string | null;
-      store_name?: string | null;
-    } | null,
-  ) {
-    return {
-      employeeId,
-      displayName: this.formatEmployeeAssignmentName(assignment),
-      storeId: assignment?.store_id ?? null,
-      storeName: assignment?.store_name ?? null,
-    };
-  }
-
-  private formatEmployeeAssignmentName(
-    assignment: {
-      first_name?: string | null;
-      last_name?: string | null;
-    } | null,
-  ) {
-    return assignment
-      ? `${assignment.first_name ?? ""} ${assignment.last_name ?? ""}`.trim() || "Unknown employee"
-      : "Unknown employee";
-  }
-
-  private getProfileMetricCodes(profile: KpiScoreProfile) {
-    return [
-      ...new Set(profile.metrics.flatMap((metric) => [metric.code, ...(metric.aliases ?? [])])),
-    ];
   }
 
   private buildClosedStoreLeaderboard(

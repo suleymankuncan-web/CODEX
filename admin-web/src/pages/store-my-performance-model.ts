@@ -1,15 +1,8 @@
 import { useMemo, type Dispatch } from 'react'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { formatKpiMetricValue } from '../features/kpi/display'
-import {
-  type PerformanceGradeCode,
-  resolvePerformanceGrade,
-} from '../features/kpi/grading'
-import type {
-  MyPerformanceMetric,
-  MyPerformanceSummary,
-  ReportingSnapshotRun,
-} from '../features/reports/api'
+import { type PerformanceGradeCode, resolvePerformanceGrade } from '../features/kpi/grading'
+import type { MyPerformanceMetric, MyPerformanceSummary, ReportingSnapshotRun } from '../features/reports/api'
 import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
@@ -1010,7 +1003,7 @@ export function buildStoreMyPerformanceViewModel(input: {
       width: getDeltaWidth(deltaValue),
     }
   })
-  const metricRanksByCode = new Map(input.performance.metricRanks.map((metricRank) => [metricRank.code, metricRank]))
+  const metricRanksByCode = new Map((input.performance.metricRanks ?? []).map((metricRank) => [metricRank.code, metricRank]))
   const metricCards = samePeriodMetrics.map((metricDelta) => {
     const metric = findMetric(personnelMetrics, metricDelta.code)
     const metricRank = metricRanksByCode.get(metricDelta.code)
