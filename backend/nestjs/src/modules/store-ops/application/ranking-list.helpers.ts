@@ -124,9 +124,8 @@ export function getMetricComparableValue(metrics: RankingMetricValue[], code: st
 }
 
 export function rankStoreRows(rows: UnrankedStoreRankingRow[]): RankedStoreRankingRow[] {
-  const sorted = [...rows].sort(
-    (left, right) =>
-      right.scoreValue - left.scoreValue || left.storeId.localeCompare(right.storeId),
+  const sorted = [...rows].sort((left, right) =>
+    compareRowsByScoreStrengthAndId(left, right, (row) => row.storeId),
   );
   const population = sorted.length;
 
@@ -141,10 +140,8 @@ export function rankStoreRows(rows: UnrankedStoreRankingRow[]): RankedStoreRanki
 export function rankPersonnelRows(
   rows: UnrankedPersonnelRankingRow[],
 ): RankedPersonnelRankingRow[] {
-  const sorted = [...rows].sort(
-    (left, right) =>
-      right.scoreValue - left.scoreValue ||
-      left.employeeId.localeCompare(right.employeeId),
+  const sorted = [...rows].sort((left, right) =>
+    compareRowsByScoreStrengthAndId(left, right, (row) => row.employeeId),
   );
   const storeRanks = buildStoreRanks(sorted);
   const population = sorted.length;
@@ -161,6 +158,77 @@ export function rankPersonnelRows(
       visibility: "detail",
     };
   });
+}
+
+function compareRowsByScoreStrengthAndId<
+  Row extends { scoreValue: number; metrics: RankingMetricValue[] },
+>(
+  left: Row,
+  right: Row,
+  stableId: (row: Row) => string,
+) {
+  return (
+    right.scoreValue - left.scoreValue ||
+    compareMetricStrength(left.metrics, right.metrics) ||
+    stableId(left).localeCompare(stableId(right))
+  );
+}
+
+function compareMetricStrength(
+  preferredMetrics: RankingMetricValue[],
+  fallbackMetrics: RankingMetricValue[],
+) {
+  const contributionDelta =
+    getContributionTieBreakValue(preferredMetrics) -
+    getContributionTieBreakValue(fallbackMetrics);
+
+  if (contributionDelta !== 0) {
+    return -contributionDelta;
+  }
+
+  const metricCodes = [
+    ...new Set([
+      ...preferredMetrics.map((metric) => metric.code),
+      ...fallbackMetrics.map((metric) => metric.code),
+    ]),
+  ];
+
+  for (const code of metricCodes) {
+    const preferredValue = getMetricComparableValue(preferredMetrics, code);
+    const fallbackValue = getMetricComparableValue(fallbackMetrics, code);
+
+    if (preferredValue === null && fallbackValue === null) {
+      continue;
+    }
+
+    if (preferredValue === null) {
+      return 1;
+    }
+
+    if (fallbackValue === null) {
+      return -1;
+    }
+
+    const metricDelta = preferredValue - fallbackValue;
+
+    if (metricDelta !== 0) {
+      return -metricDelta;
+    }
+  }
+
+  return 0;
+}
+
+function getContributionTieBreakValue(metrics: RankingMetricValue[]) {
+  return metrics.reduce((sum, metric) => {
+    const contribution = metric.contributionValue;
+
+    return contribution !== null &&
+      contribution !== undefined &&
+      Number.isFinite(contribution)
+      ? sum + contribution
+      : sum;
+  }, 0);
 }
 
 export function applyStoreFilters(
@@ -422,6 +490,7 @@ function buildStoreRanks(
     employeeId: string;
     storeId: string | null;
     scoreValue: number;
+    metrics: RankingMetricValue[];
   }>,
 ) {
   const byStore = rows.reduce((map, row) => {
@@ -430,14 +499,20 @@ function buildStoreRanks(
     current.push(row);
     map.set(key, current);
     return map;
-  }, new Map<string, Array<{ employeeId: string; storeId: string | null; scoreValue: number }>>());
+  }, new Map<
+    string,
+    Array<{
+      employeeId: string;
+      storeId: string | null;
+      scoreValue: number;
+      metrics: RankingMetricValue[];
+    }>
+  >());
   const ranks = new Map<string, { rank: number; population: number }>();
 
   byStore.forEach((storeRows) => {
-    const sorted = [...storeRows].sort(
-      (left, right) =>
-        right.scoreValue - left.scoreValue ||
-        left.employeeId.localeCompare(right.employeeId),
+    const sorted = [...storeRows].sort((left, right) =>
+      compareRowsByScoreStrengthAndId(left, right, (row) => row.employeeId),
     );
     sorted.forEach((row, index) => {
       ranks.set(row.employeeId, {
