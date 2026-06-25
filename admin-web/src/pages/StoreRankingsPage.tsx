@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useReducer, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CalendarCheck, CalendarClock, CalendarDays, CalendarRange, LineChart, ListFilter, Search, Store, Trophy, UserCheck, UsersRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -26,6 +26,7 @@ import {
   average,
   canUsePrivilegedFilters,
   canUseRankings,
+  createInitialStoreRankingsPageState,
   formatMetricValue,
   formatNumber,
   formatPeriod,
@@ -33,7 +34,6 @@ import {
   getMetricLabel,
   getReferenceMetricValue,
   getVisibleWindow,
-  initialStoreRankingsPageState,
   personnelMetricCodes,
   storeMetricCodes,
   storeRankingsPageReducer,
@@ -51,12 +51,14 @@ export function StoreRankingsPage(input: {
 }) {
   const { locale, t } = useLocalization()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
   const enabled = canUseRankings(input.authSummary)
   const privilegedSession = canUsePrivilegedFilters(input.authSummary)
   const [pageState, dispatchPageState] = useReducer(
     storeRankingsPageReducer,
-    initialStoreRankingsPageState,
+    searchParams,
+    createInitialStoreRankingsPageState,
   )
   const {
     periodStart,
@@ -78,6 +80,20 @@ export function StoreRankingsPage(input: {
   }
   const updateSort = (nextSortKey: RankingSortKey) => {
     dispatchPageState({ type: 'setSort', value: nextSortKey })
+  }
+  const updateActiveList = (nextList: ActiveRankingList) => {
+    dispatchPageState({ type: 'setActiveList', value: nextList })
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+
+      if (nextList === 'personnel') {
+        next.set('list', 'personnel')
+      } else {
+        next.delete('list')
+      }
+
+      return next
+    }, { replace: true })
   }
 
   const rankingsQuery = useQuery({
@@ -242,9 +258,7 @@ export function StoreRankingsPage(input: {
         sortKey={sortKey}
         sortDirection={sortDirection}
         onSortChange={updateSort}
-        onActiveListChange={(nextList) =>
-          dispatchPageState({ type: 'setActiveList', value: nextList })
-        }
+        onActiveListChange={updateActiveList}
         onOpenPersonnelProfile={openPersonnelProfile}
         onOffsetChange={(value) => dispatchPageState({ type: 'setOffset', value })}
         hasNextPage={Boolean(hasNextPage)}
