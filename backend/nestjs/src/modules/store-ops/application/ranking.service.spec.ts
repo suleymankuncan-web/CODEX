@@ -682,6 +682,79 @@ describe("RankingService", () => {
     ).toBe(1);
   });
 
+  it("breaks equal personnel score ties by underlying metric strength before employee id", async () => {
+    const createMetricRows = (input: { employeeId: string; targetAchievement: number; atv: number; upt: number }) => {
+      const base = { ...createPersonnelRows(1)[0], employee_id: input.employeeId };
+
+      return [
+        {
+          ...base,
+          kpi_code: "TARGET_ACHIEVEMENT",
+          kpi_name: "Hedef gerceklestirme orani",
+          actual_value: String(input.targetAchievement),
+          target_value: "100",
+        },
+        {
+          ...base,
+          kpi_code: "ATV",
+          kpi_name: "ATV",
+          actual_value: String(input.atv),
+          target_value: null,
+        },
+        {
+          ...base,
+          kpi_code: "UPT",
+          kpi_name: "UPT",
+          actual_value: String(input.upt),
+          target_value: null,
+        },
+      ];
+    };
+    const personnelRows = [
+      ...createMetricRows({
+        employeeId: "employee-014",
+        targetAchievement: 100,
+        atv: 50,
+        upt: 56.67,
+      }),
+      ...createMetricRows({
+        employeeId: "employee-015",
+        targetAchievement: 100.001,
+        atv: 50.002,
+        upt: 56.675,
+      }),
+    ];
+    const repository = createRepositoryMock({
+      storeRows: [],
+      personnelRows,
+      personnelBenchmarkRows: [
+        { kpi_code: "ATV", benchmark_value: "100" },
+        { kpi_code: "UPT", benchmark_value: "100" },
+      ],
+    });
+    const service = createService(repository, createKpiConfigRepositoryMock());
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+      limit: 2,
+      offset: 0,
+    });
+
+    expect(result.personnelLeaderboard.items.map((item) => item.scoreValue)).toEqual([72, 72]);
+    expect(result.personnelLeaderboard.items.map((item) => item.employeeId)).toEqual([
+      "employee-015",
+      "employee-014",
+    ]);
+    expect(result.personnelLeaderboard.items.map((item) => item.rank)).toEqual([1, 2]);
+    expect(result.personnelLeaderboard.items.map((item) => item.storeRank)).toEqual([1, 2]);
+  });
+
   it("accepts gsm_approval as a store ranking sort key and scores from achievement rate", async () => {
     const baseStoreRow = createStoreRows(1)[0];
     const storeRows = [
