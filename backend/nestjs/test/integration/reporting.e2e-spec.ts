@@ -753,6 +753,14 @@ describe("Reporting read APIs", () => {
         };
       }
 
+      if (sql.includes("closed_metric_daily_rank_rows")) {
+        if (!Array.isArray(params[1]) || params[1][0] !== resolvedEmployeeId) {
+          throw new Error(`expected resolved employee UUID list, got ${String(params[1])}`);
+        }
+
+        return { rowCount: 0, rows: [] };
+      }
+
       if (sql.includes("FROM rpt.employee_kpi_snapshot")) {
         if (params[1] !== resolvedEmployeeId) {
           throw new Error(`expected resolved employee UUID, got ${String(params[1])}`);

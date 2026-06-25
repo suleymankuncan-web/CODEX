@@ -759,6 +759,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       getLatestCompletedSnapshotRunByType: jest.fn(),
       getEmployeePerformanceSnapshot: jest.fn(async () => null),
       getEmployeeKpiSnapshotRows: jest.fn(async () => []),
+      listClosedDailyMetricRankRows: jest.fn(async () => []),
       getActiveEmployeeAssignmentScope: jest.fn(async () => ({
         employee_id: employeeId,
         external_employee_ref: "EMP-2",
@@ -801,6 +802,7 @@ describe("ReportingService KPI benchmark scoring", () => {
       },
     ]);
   });
+
 });
 
 describe("ReportingService personnel performance profile access", () => {

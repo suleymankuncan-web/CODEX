@@ -2853,6 +2853,28 @@ const reportingPerformanceMetricSchema = {
   },
 };
 
+const reportingMetricRankSchema = {
+  type: "object",
+  required: [
+    "code",
+    "label",
+    "actualValue",
+    "storeRank",
+    "storePopulation",
+    "turkeyRank",
+    "turkeyPopulation",
+  ],
+  properties: {
+    code: { type: "string" },
+    label: { type: "string" },
+    actualValue: { type: "number", nullable: true },
+    storeRank: { type: "integer", nullable: true },
+    storePopulation: { type: "integer", minimum: 0 },
+    turkeyRank: { type: "integer", nullable: true },
+    turkeyPopulation: { type: "integer", minimum: 0 },
+  },
+};
+
 const reportingPerformanceResponseSchema = {
   type: "object",
   required: [
@@ -2860,8 +2882,7 @@ const reportingPerformanceResponseSchema = {
     "employee",
     "period",
     "score",
-    "rankings",
-    "availablePeriods",
+    "rankings", "metricRanks", "availablePeriods",
     "partial",
     "metrics",
   ],
@@ -2919,6 +2940,7 @@ const reportingPerformanceResponseSchema = {
         storePopulation: { type: "integer", minimum: 0 },
       },
     },
+    metricRanks: { type: "array", items: reportingMetricRankSchema },
     availablePeriods: {
       type: "array",
       items: {
@@ -3416,28 +3438,6 @@ const reportingRankingsResponseSchema = {
   },
 };
 
-const reportingClosedRankingMetricRankSchema = {
-  type: "object",
-  required: [
-    "code",
-    "label",
-    "actualValue",
-    "storeRank",
-    "storePopulation",
-    "turkeyRank",
-    "turkeyPopulation",
-  ],
-  properties: {
-    code: { type: "string" },
-    label: { type: "string" },
-    actualValue: { type: "number", nullable: true },
-    storeRank: { type: "integer", nullable: true },
-    storePopulation: { type: "integer", minimum: 0 },
-    turkeyRank: { type: "integer", nullable: true },
-    turkeyPopulation: { type: "integer", minimum: 0 },
-  },
-};
-
 const reportingClosedRankingCoverageSchema = {
   type: "object",
   required: [
@@ -3499,7 +3499,7 @@ const reportingClosedRankingEmployeeSchema = {
     coverage: reportingClosedRankingCoverageSchema,
     metricRanks: {
       type: "array",
-      items: reportingClosedRankingMetricRankSchema,
+      items: reportingMetricRankSchema,
     },
   },
 };

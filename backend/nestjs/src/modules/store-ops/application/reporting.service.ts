@@ -9,6 +9,7 @@ import { ClosedRankingService } from "./closed-ranking.service";
 import { KpiBenchmarkScoringService } from "./kpi-benchmark-scoring.service";
 import { LiveMonthlyLeaderboardService } from "./live-monthly-leaderboard.service";
 import { ReportingStoreKpiReadService } from "./reporting-store-kpi-read.service";
+import { buildLiveMetricRanks, formatEmployeeAssignmentName, getProfileMetricCodes, hasUsableBenchmarkRows, mapClosedMetricRankRows, mapEmployeeAssignmentIdentity, mapEmployeeAvailablePeriods } from "./reporting-performance.helpers";
 import { StoreScoreReportingReadRepository } from "../infrastructure/store-score-reporting-read.repository";
 import { ClosedRankingRepository } from "../infrastructure/closed-ranking.repository";
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
@@ -512,7 +513,7 @@ export class ReportingService {
   }) {
     const config = await this.getKpiConfig();
     const profile = config.personnelProfile;
-    const metricCodes = this.getProfileMetricCodes(profile);
+    const metricCodes = getProfileMetricCodes(profile);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
     const employeeId =
       input.targetEmployeeId ??
@@ -542,6 +543,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: [],
         partial: {
           isPartial: true,
@@ -585,7 +587,7 @@ export class ReportingService {
       periodType: input.periodType,
       periodStart: input.periodStart,
     });
-    const mappedAvailablePeriods = this.mapEmployeeAvailablePeriods(
+    const mappedAvailablePeriods = mapEmployeeAvailablePeriods(
       availablePeriods,
       latestPeriod,
       input.periodType,
@@ -601,7 +603,7 @@ export class ReportingService {
           snapshotRunId: null,
           snapshotDate: null,
         },
-        employee: this.mapEmployeeAssignmentIdentity(employeeId, fallbackAssignment),
+        employee: mapEmployeeAssignmentIdentity(employeeId, fallbackAssignment),
         period: null,
         score: {
           value: 0,
@@ -614,6 +616,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: mappedAvailablePeriods,
         partial: {
           isPartial: true,
@@ -646,7 +649,7 @@ export class ReportingService {
       periodEnd: latestPeriod.period_end,
     });
 
-    if (!this.hasUsableBenchmarkRows(benchmarkRows)) {
+    if (!hasUsableBenchmarkRows(benchmarkRows)) {
       benchmarkRows = await this.reportingRepository.getEmployeeTurkeyBenchmarkValues({
         companyId: undefined,
         periodType: latestPeriod.period_type ?? input.periodType,
@@ -840,6 +843,12 @@ export class ReportingService {
       turkeyScores.findIndex((row) => row.employeeId === employeeId) >= 0
         ? turkeyScores.findIndex((row) => row.employeeId === employeeId) + 1
         : null;
+    const metricRanks = buildLiveMetricRanks({
+      employeeId,
+      metricCodes,
+      rows: turkeyRows,
+      storeId: latestPeriod.store_id ?? null,
+    });
 
     return {
       source: {
@@ -851,7 +860,7 @@ export class ReportingService {
         employeeId,
         displayName: employeeRows[0]
           ? `${employeeRows[0].first_name} ${employeeRows[0].last_name}`.trim()
-          : this.formatEmployeeAssignmentName(fallbackAssignment),
+          : formatEmployeeAssignmentName(fallbackAssignment),
         storeId: employeeRows[0]?.store_id ?? latestPeriod.store_id ?? fallbackAssignment?.store_id ?? null,
         storeName: employeeRows[0]?.store_name ?? fallbackAssignment?.store_name ?? null,
       },
@@ -870,6 +879,7 @@ export class ReportingService {
         storeRank,
         storePopulation: storeScores.length,
       },
+      metricRanks,
       availablePeriods: mappedAvailablePeriods,
       partial: {
         isPartial: missingMetrics.length > 0 || pendingNormalizationMetrics.length > 0,
@@ -898,7 +908,7 @@ export class ReportingService {
   }) {
     const config = await this.getKpiConfig();
     const profile = config.personnelProfile;
-    const metricCodes = this.getProfileMetricCodes(profile);
+    const metricCodes = getProfileMetricCodes(profile);
     const employeeDataMetricCodes = [...new Set([...metricCodes, "NET_SALES"])];
     const employeeId =
       input.targetEmployeeId ??
@@ -928,6 +938,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: [],
         partial: {
           isPartial: true,
@@ -973,6 +984,7 @@ export class ReportingService {
           storeRank: null,
           storePopulation: 0,
         },
+        metricRanks: [],
         availablePeriods: [],
         partial: {
           isPartial: true,
@@ -999,6 +1011,13 @@ export class ReportingService {
       employeeId,
       metricCodes: employeeDataMetricCodes,
     });
+    const visibleMetricRankCodes = new Set(metricCodes);
+    const metricRankRows = (
+      await this.closedRankingRepository.listClosedDailyMetricRankRows({
+        snapshotRunId: snapshotRun.snapshot_run_id,
+        employeeIds: [employeeId],
+      })
+    ).filter((row) => visibleMetricRankCodes.has(row.kpi_code));
     const fallbackAssignment = summaryRow
       ? null
       : await this.reportingRepository.getActiveEmployeeAssignmentScope(employeeId);
@@ -1066,6 +1085,7 @@ export class ReportingService {
         storeRank: summaryRow?.store_rank ?? null,
         storePopulation: summaryRow?.store_population ?? 0,
       },
+      metricRanks: mapClosedMetricRankRows(metricRankRows),
       availablePeriods: [
         {
           periodType: "daily",
@@ -1085,121 +1105,6 @@ export class ReportingService {
       },
       metrics: mappedMetrics,
     };
-  }
-
-  private hasUsableBenchmarkRows(rows: Array<{ benchmark_value: string | null }>) {
-    return rows.some((row) => {
-      if (row.benchmark_value === null) {
-        return false;
-      }
-
-      const value = Number(row.benchmark_value);
-      return Number.isFinite(value) && value !== 0;
-    });
-  }
-
-  private mapEmployeeAvailablePeriods(
-    periods: Array<{ period_type: string; period_start: string; period_end: string }>,
-    fallbackPeriod?: {
-      period_type?: string | null;
-      period_start: string;
-      period_end: string;
-    } | null,
-    fallbackPeriodType?: string,
-  ) {
-    const seenPeriodKeys = new Set<string>();
-    const mappedPeriods: Array<{
-      periodType: string;
-      periodStart: string;
-      periodEnd: string;
-    }> = [];
-
-    const addPeriod = (periodType: string | null | undefined, periodStart: string, periodEnd: string) => {
-      if (!periodStart || !periodEnd) {
-        return;
-      }
-
-      const normalizedPeriodType = this.normalizeEmployeeLivePeriodType(
-        periodType,
-        periodStart,
-        periodEnd,
-        fallbackPeriodType,
-      );
-      if (!normalizedPeriodType) {
-        return;
-      }
-
-      const periodKey = `${normalizedPeriodType}:${periodStart}`;
-      if (seenPeriodKeys.has(periodKey)) {
-        return;
-      }
-
-      seenPeriodKeys.add(periodKey);
-      mappedPeriods.push({
-        periodType: normalizedPeriodType,
-        periodStart,
-        periodEnd,
-      });
-    };
-
-    periods.forEach((period) => addPeriod(period.period_type, period.period_start, period.period_end));
-
-    if (fallbackPeriod) {
-      addPeriod(
-        fallbackPeriod.period_type ?? fallbackPeriodType ?? "monthly",
-        fallbackPeriod.period_start,
-        fallbackPeriod.period_end,
-      );
-    }
-
-    return mappedPeriods;
-  }
-
-  private normalizeEmployeeLivePeriodType(
-    periodType: string | null | undefined,
-    periodStart: string,
-    periodEnd: string,
-    fallbackPeriodType?: string,
-  ) {
-    if (periodType === "custom") {
-      return periodStart === periodEnd ? "daily" : "monthly";
-    }
-
-    return periodType ?? fallbackPeriodType ?? "monthly";
-  }
-
-  private mapEmployeeAssignmentIdentity(
-    employeeId: string,
-    assignment: {
-      first_name?: string | null;
-      last_name?: string | null;
-      store_id?: string | null;
-      store_name?: string | null;
-    } | null,
-  ) {
-    return {
-      employeeId,
-      displayName: this.formatEmployeeAssignmentName(assignment),
-      storeId: assignment?.store_id ?? null,
-      storeName: assignment?.store_name ?? null,
-    };
-  }
-
-  private formatEmployeeAssignmentName(
-    assignment: {
-      first_name?: string | null;
-      last_name?: string | null;
-    } | null,
-  ) {
-    return assignment
-      ? `${assignment.first_name ?? ""} ${assignment.last_name ?? ""}`.trim() || "Unknown employee"
-      : "Unknown employee";
-  }
-
-  private getProfileMetricCodes(profile: KpiScoreProfile) {
-    return [
-      ...new Set(profile.metrics.flatMap((metric) => [metric.code, ...(metric.aliases ?? [])])),
-    ];
   }
 
   private buildClosedStoreLeaderboard(
