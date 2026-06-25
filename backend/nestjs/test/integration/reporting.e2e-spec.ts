@@ -590,6 +590,8 @@ describe("Reporting read APIs", () => {
     expect(response.body.currentEmployee.rankings).toEqual({
       turkeyRank: 4,
       turkeyPopulation: 100,
+      regionRank: null,
+      regionPopulation: 0,
       storeRank: 1,
       storePopulation: 8,
     });
@@ -874,6 +876,8 @@ describe("Reporting read APIs", () => {
     expect(response.body.currentEmployee.rankings).toEqual({
       turkeyRank: 7,
       turkeyPopulation: 96,
+      regionRank: null,
+      regionPopulation: 0,
       storeRank: 1,
       storePopulation: 8,
     });

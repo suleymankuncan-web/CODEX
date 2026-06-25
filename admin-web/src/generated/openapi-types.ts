@@ -1358,6 +1358,8 @@ export type components = {
         "rankings": {
           "turkeyRank": number | null
           "turkeyPopulation": number
+          "regionRank": number | null
+          "regionPopulation": number
           "storeRank": number | null
           "storePopulation": number
         }
@@ -1373,6 +1375,8 @@ export type components = {
             "actualValue": number | null
             "storeRank": number | null
             "storePopulation": number
+            "regionRank": number | null
+            "regionPopulation": number
             "turkeyRank": number | null
             "turkeyPopulation": number
           }>
@@ -1389,6 +1393,8 @@ export type components = {
           "rankings": {
             "turkeyRank": number | null
             "turkeyPopulation": number
+            "regionRank": number | null
+            "regionPopulation": number
             "storeRank": number | null
             "storePopulation": number
           }
@@ -1404,6 +1410,8 @@ export type components = {
               "actualValue": number | null
               "storeRank": number | null
               "storePopulation": number
+              "regionRank": number | null
+              "regionPopulation": number
               "turkeyRank": number | null
               "turkeyPopulation": number
             }>
@@ -1708,6 +1716,8 @@ export type components = {
       "rankings": {
         "turkeyRank": number | null
         "turkeyPopulation": number
+        "regionRank": number | null
+        "regionPopulation": number
         "storeRank": number | null
         "storePopulation": number
       }
@@ -1717,6 +1727,8 @@ export type components = {
           "actualValue": number | null
           "storeRank": number | null
           "storePopulation": number
+          "regionRank": number | null
+          "regionPopulation": number
           "turkeyRank": number | null
           "turkeyPopulation": number
         }>

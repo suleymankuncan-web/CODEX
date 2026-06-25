@@ -315,6 +315,7 @@ describe("ReportingService KPI benchmark scoring", () => {
           last_name: "Lovelace",
           store_id: "store-1",
           store_name: "Marmara Park",
+          region_id: "region-1",
           kpi_code: "TARGET_ACHIEVEMENT",
           kpi_name: "Target Achievement",
           target_value: null,
@@ -323,9 +324,49 @@ describe("ReportingService KPI benchmark scoring", () => {
         },
       ]),
       getPeerEmployeePerformanceRows: jest.fn(async () => []),
-      getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
+      getEmployeeTurkeyBenchmarkValues: jest.fn(async () => [
+        { kpi_code: "TARGET_ACHIEVEMENT", benchmark_value: "1" },
+      ]),
     };
-    const service = createReportingService(reportingRepository);
+    const service = createReportingService(
+      reportingRepository,
+      {
+        getKpiConfigRows: jest.fn(async () => [
+          {
+            config_key: "store_profile",
+            config_payload: {
+              profileCode: "store",
+              title: "Store score profile",
+              summary: "Store score profile",
+              futureMetricRule: "test",
+              metrics: [],
+            },
+          },
+          {
+            config_key: "personnel_profile",
+            config_payload: {
+              profileCode: "personnel",
+              title: "Personnel score profile",
+              summary: "Personnel score profile",
+              futureMetricRule: "test",
+              metrics: [
+                {
+                  code: "TARGET_ACHIEVEMENT",
+                  label: "Hedef gerceklestirme orani",
+                  weightPercent: 100,
+                  ownerRole: "STORE_PERSONNEL",
+                  scoreBehavior: "warning_first",
+                  direction: "HIGHER_IS_BETTER",
+                },
+              ],
+            },
+          },
+          { config_key: "ownership_matrix", config_payload: [] },
+          { config_key: "grading_bands", config_payload: [] },
+        ]),
+        getLatestPublishedKpiConfigVersion: jest.fn(async () => null),
+      },
+    );
 
     const result = await service.getMyPerformance({
       userId: "user-1",
@@ -345,6 +386,7 @@ describe("ReportingService KPI benchmark scoring", () => {
     expect((targetAchievement as Record<string, unknown> | undefined)?.missingReason).toBe(
       "personnel_target_missing",
     );
+    expect((targetAchievement as Record<string, unknown> | undefined)?.actualRatio).toBeNull();
     expect(targetAchievement?.contributionValue).toBe(0);
   });
 

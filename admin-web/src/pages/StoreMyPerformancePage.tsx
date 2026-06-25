@@ -414,6 +414,8 @@ function StoreMyPerformancePageExperience({
     periodLabel,
     pendingNormalizationLabels,
     remainingTargetLabel,
+    regionPopulationLabel,
+    regionRankLabel,
     samePeriodScoreDelta,
     scoreMeaning,
     scoreValue,
@@ -490,6 +492,8 @@ function StoreMyPerformancePageExperience({
             scoreFocus={scoreMeaning.focus}
             scoreSummary={scoreMeaning.summary}
             scoreValue={scoreValue}
+            regionPopulationLabel={regionPopulationLabel}
+            regionRankLabel={regionRankLabel}
             storePopulationLabel={storePopulationLabel}
             storeRankLabel={storeRankLabel}
             t={t}

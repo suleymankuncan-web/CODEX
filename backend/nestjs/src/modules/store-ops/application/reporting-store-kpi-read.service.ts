@@ -220,8 +220,10 @@ export class ReportingStoreKpiReadService {
       const benchmarkSource =
         isChecklistMetric
           ? "TARGET"
-          : metric.benchmarkSource ??
-            (scoringTargetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+          : metric.code === "TARGET_ACHIEVEMENT"
+            ? "TARGET"
+            : metric.benchmarkSource ??
+              (scoringTargetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
       const benchmarkValue =
         !isChecklistMetric && benchmarkSource === "TURKEY_AVERAGE" && row
           ? benchmarkLookup.get(row.kpi_code) ?? null

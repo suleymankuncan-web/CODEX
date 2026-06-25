@@ -15,6 +15,7 @@ import { ClosedRankingRepository } from "../infrastructure/closed-ranking.reposi
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 import { StorePerformanceReportingReadRepository } from "../infrastructure/store-performance-reporting-read.repository";
+import { buildEmployeeScoreRankRows } from "./employee-score-rank.helpers";
 
 @Injectable()
 export class ReportingService {
@@ -540,6 +541,8 @@ export class ReportingService {
         rankings: {
           turkeyRank: null,
           turkeyPopulation: 0,
+          regionRank: null,
+          regionPopulation: 0,
           storeRank: null,
           storePopulation: 0,
         },
@@ -613,6 +616,8 @@ export class ReportingService {
         rankings: {
           turkeyRank: null,
           turkeyPopulation: 0,
+          regionRank: null,
+          regionPopulation: 0,
           storeRank: null,
           storePopulation: 0,
         },
@@ -694,8 +699,7 @@ export class ReportingService {
         row?.target_value !== null && row?.target_value !== undefined
           ? Number(row.target_value)
           : null;
-      const benchmarkSource =
-        metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+      const benchmarkSource = metric.code === "TARGET_ACHIEVEMENT" ? "TARGET" : metric.benchmarkSource ?? (targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
       const benchmarkValue =
         benchmarkSource === "TURKEY_AVERAGE" && row
           ? benchmarkLookup.get(row.kpi_code) ?? null
@@ -760,84 +764,25 @@ export class ReportingService {
         ),
     );
 
-    const scoreForRows = (
-      rows: Array<{
-        employee_id: string;
-        kpi_code: string;
-        actual_value: string;
-        target_value: string | null;
-      }>,
-    ) => {
-      const byEmployee = new Map<
-        string,
-        Record<string, { actualValue: number; targetValue: number | null }>
-      >();
-
-      rows.forEach((row) => {
-        const current = byEmployee.get(row.employee_id) ?? {};
-        current[row.kpi_code] = {
-          actualValue: Number(row.actual_value),
-          targetValue: row.target_value !== null ? Number(row.target_value) : null,
-        };
-        byEmployee.set(row.employee_id, current);
-      });
-
-      const scoreRows = [...byEmployee.entries()].map(([peerEmployeeId, values]) => {
-        const score = profile.metrics.reduce((sum, metric) => {
-          const matchingCodes = [metric.code, ...(metric.aliases ?? [])];
-          const matchedCode = matchingCodes.find((code) => values[code]);
-          const matchedMetric = matchingCodes
-            .map((code) => values[code])
-            .find((value) => typeof value?.actualValue === "number");
-
-          if (!matchedMetric) {
-            return sum;
-          }
-
-          const benchmarkSource =
-            metric.benchmarkSource ??
-            (matchedMetric.targetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
-          const benchmarkValue =
-            benchmarkSource === "TURKEY_AVERAGE" && matchedCode
-              ? benchmarkLookup.get(matchedCode) ?? null
-              : null;
-          const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
-            metricCode: metric.code,
-            actualValue: matchedMetric.actualValue,
-            benchmarkValue,
-            targetValue: matchedMetric.targetValue,
-            weightPercent: metric.weightPercent,
-            direction: metric.direction ?? "HIGHER_IS_BETTER",
-            benchmarkSource,
-            capRatio: metric.capRatio ?? 1.2,
-          });
-
-          if (metricScore.scoreContribution === null) {
-            return sum;
-          }
-
-          return sum + metricScore.scoreContribution;
-        }, 0);
-
-        return {
-          employeeId: peerEmployeeId,
-          score: Number(score.toFixed(2)),
-        };
-      });
-
-      scoreRows.sort((left, right) => right.score - left.score);
-      return scoreRows;
-    };
-
     const storeRows = latestPeriod.store_id
       ? turkeyRows.filter((row) => row.store_id === latestPeriod.store_id)
       : [];
-    const storeScores = scoreForRows(storeRows);
-    const turkeyScores = scoreForRows(turkeyRows);
+    const currentRegionId = employeeRows[0]?.region_id ?? fallbackAssignment?.region_id ?? null;
+    const regionRows = currentRegionId
+      ? turkeyRows.filter((row) => row.region_id === currentRegionId)
+      : [];
+    const rankInput = { profile, benchmarkLookup, scoringService: this.kpiBenchmarkScoringService };
+    const storeScores = buildEmployeeScoreRankRows({ ...rankInput, rows: storeRows });
+    const regionScores = buildEmployeeScoreRankRows({ ...rankInput, rows: regionRows });
+    const turkeyScores = buildEmployeeScoreRankRows({ ...rankInput, rows: turkeyRows });
 
     const storeRank =
       storeScores.findIndex((row) => row.employeeId === employeeId) >= 0
         ? storeScores.findIndex((row) => row.employeeId === employeeId) + 1
+        : null;
+    const regionRank =
+      regionScores.findIndex((row) => row.employeeId === employeeId) >= 0
+        ? regionScores.findIndex((row) => row.employeeId === employeeId) + 1
         : null;
     const turkeyRank =
       turkeyScores.findIndex((row) => row.employeeId === employeeId) >= 0
@@ -848,6 +793,7 @@ export class ReportingService {
       metricCodes,
       rows: turkeyRows,
       storeId: latestPeriod.store_id ?? null,
+      regionId: currentRegionId,
     });
 
     return {
@@ -876,6 +822,8 @@ export class ReportingService {
       rankings: {
         turkeyRank,
         turkeyPopulation: turkeyScores.length,
+        regionRank,
+        regionPopulation: regionScores.length,
         storeRank,
         storePopulation: storeScores.length,
       },
@@ -935,6 +883,8 @@ export class ReportingService {
         rankings: {
           turkeyRank: null,
           turkeyPopulation: 0,
+          regionRank: null,
+          regionPopulation: 0,
           storeRank: null,
           storePopulation: 0,
         },
@@ -981,6 +931,8 @@ export class ReportingService {
         rankings: {
           turkeyRank: null,
           turkeyPopulation: 0,
+          regionRank: null,
+          regionPopulation: 0,
           storeRank: null,
           storePopulation: 0,
         },
@@ -1082,6 +1034,8 @@ export class ReportingService {
       rankings: {
         turkeyRank: summaryRow?.turkey_rank ?? null,
         turkeyPopulation: summaryRow?.turkey_population ?? 0,
+        regionRank: null,
+        regionPopulation: 0,
         storeRank: summaryRow?.store_rank ?? null,
         storePopulation: summaryRow?.store_population ?? 0,
       },

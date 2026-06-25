@@ -14,6 +14,7 @@ type LiveEmployeePerformanceRow = {
   last_name?: string;
   store_id: string | null;
   store_name?: string | null;
+  region_id?: string | null;
   kpi_code: string;
   kpi_name?: string;
   target_value: string | null;
@@ -26,6 +27,7 @@ type LiveEmployeeScoreRow = {
   lastName: string;
   storeId: string | null;
   storeName: string | null;
+  regionId: string | null;
   scoreValue: number;
 };
 
@@ -162,15 +164,23 @@ export class LiveMonthlyLeaderboardService {
     });
     const turkeyRankByEmployee = this.buildRankMap(scoreRows);
     const storeRankByEmployee = this.buildRankMap(storeScoreRows);
-    const toEmployee = (row: LiveEmployeeScoreRow): ClosedRankingEmployee =>
-      this.mapLiveEmployeeRow({
+    const regionRankMapsByRegion = this.buildRegionRankMaps(scoreRows);
+    const toEmployee = (row: LiveEmployeeScoreRow): ClosedRankingEmployee => {
+      const regionRank = row.regionId
+        ? regionRankMapsByRegion.get(row.regionId)?.get(row.employeeId)
+        : undefined;
+
+      return this.mapLiveEmployeeRow({
         row,
         turkeyRank: turkeyRankByEmployee.get(row.employeeId)?.rank ?? null,
         turkeyPopulation: scoreRows.length,
+        regionRank: regionRank?.rank ?? null,
+        regionPopulation: regionRank?.population ?? 0,
         storeRank: storeRankByEmployee.get(row.employeeId)?.rank ?? null,
         storePopulation: storeScoreRows.length,
         metricRanks: metricRanksByEmployee.get(row.employeeId) ?? [],
       });
+    };
 
     return {
       source: {
@@ -201,6 +211,7 @@ export class LiveMonthlyLeaderboardService {
         lastName: string;
         storeId: string | null;
         storeName: string | null;
+        regionId: string | null;
         values: Map<
           string,
           {
@@ -224,6 +235,7 @@ export class LiveMonthlyLeaderboardService {
         lastName: row.last_name ?? "",
         storeId: row.store_id,
         storeName: row.store_name ?? null,
+        regionId: row.region_id ?? null,
         values: new Map(),
       };
       current.values.set(row.kpi_code, {
@@ -250,6 +262,7 @@ export class LiveMonthlyLeaderboardService {
           lastName: value.lastName,
           storeId: value.storeId,
           storeName: value.storeName,
+          regionId: value.regionId,
           scoreValue: scoring.scoreValue,
         };
       })
@@ -296,6 +309,7 @@ export class LiveMonthlyLeaderboardService {
       storeRowsByStore.forEach((rows, storeKey) => {
         storeRankMapsByStore.set(storeKey, this.buildMetricRankMap(rows));
       });
+      const regionRankMapsByRegion = this.buildMetricRegionRankMaps(metricRows);
 
       input.employeeIds.forEach((employeeId) => {
         const currentRow =
@@ -309,12 +323,17 @@ export class LiveMonthlyLeaderboardService {
         const current = metricRanksByEmployee.get(employeeId) ?? [];
         const turkeyRank = turkeyRankByEmployee.get(employeeId);
         const storeRank = storeRankMapsByStore.get(storeKey)?.get(employeeId);
+        const regionRank = currentRow.region_id
+          ? regionRankMapsByRegion.get(currentRow.region_id)?.get(employeeId)
+          : undefined;
         current.push({
           code: metric.code,
           label: currentRow.kpi_name ?? metric.label,
           actualValue: Number(currentRow.actual_value),
           storeRank: storeRank?.rank ?? null,
           storePopulation: storeRank?.population ?? 0,
+          regionRank: regionRank?.rank ?? null,
+          regionPopulation: regionRank?.population ?? 0,
           turkeyRank: turkeyRank?.rank ?? null,
           turkeyPopulation: turkeyRank?.population ?? 0,
         });
@@ -349,10 +368,46 @@ export class LiveMonthlyLeaderboardService {
     );
   }
 
+  private buildRegionRankMaps(rows: LiveEmployeeScoreRow[]) {
+    const rowsByRegion = rows.reduce((map, row) => {
+      const key = row.regionId;
+      if (!key) return map;
+      const current = map.get(key) ?? [];
+      current.push(row);
+      map.set(key, current);
+      return map;
+    }, new Map<string, LiveEmployeeScoreRow[]>());
+
+    const rankMaps = new Map<string, Map<string, { rank: number; population: number }>>();
+    rowsByRegion.forEach((regionRows, regionId) => {
+      rankMaps.set(regionId, this.buildRankMap(regionRows));
+    });
+    return rankMaps;
+  }
+
+  private buildMetricRegionRankMaps(rows: LiveEmployeePerformanceRow[]) {
+    const rowsByRegion = rows.reduce((map, row) => {
+      const key = row.region_id;
+      if (!key) return map;
+      const current = map.get(key) ?? [];
+      current.push(row);
+      map.set(key, current);
+      return map;
+    }, new Map<string, LiveEmployeePerformanceRow[]>());
+
+    const rankMaps = new Map<string, Map<string, { rank: number; population: number }>>();
+    rowsByRegion.forEach((regionRows, regionId) => {
+      rankMaps.set(regionId, this.buildMetricRankMap(regionRows));
+    });
+    return rankMaps;
+  }
+
   private mapLiveEmployeeRow(input: {
     row: LiveEmployeeScoreRow;
     turkeyRank: number | null;
     turkeyPopulation: number;
+    regionRank: number | null;
+    regionPopulation: number;
     storeRank: number | null;
     storePopulation: number;
     metricRanks: ClosedRankingMetricRank[];
@@ -370,6 +425,8 @@ export class LiveMonthlyLeaderboardService {
       rankings: {
         turkeyRank: input.turkeyRank,
         turkeyPopulation: input.turkeyPopulation,
+        regionRank: input.regionRank,
+        regionPopulation: input.regionPopulation,
         storeRank: input.storeRank,
         storePopulation: input.storePopulation,
       },

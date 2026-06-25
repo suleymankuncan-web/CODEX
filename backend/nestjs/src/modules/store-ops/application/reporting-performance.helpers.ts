@@ -27,6 +27,7 @@ type EmployeeAssignmentIdentityRow = {
 type LiveMetricRankRow = {
   employee_id: string;
   store_id: string | null;
+  region_id?: string | null;
   kpi_code: string;
   kpi_name: string;
   actual_value: string;
@@ -127,6 +128,7 @@ export function buildLiveMetricRanks(input: {
   metricCodes: string[];
   rows: LiveMetricRankRow[];
   storeId: string | null;
+  regionId?: string | null;
 }): ClosedRankingMetricRank[] {
   const metricRanks: Array<ClosedRankingMetricRank | null> = input.metricCodes
     .map((code): ClosedRankingMetricRank | null => {
@@ -142,6 +144,9 @@ export function buildLiveMetricRanks(input: {
       const storeMetricRows = input.storeId
         ? metricRows.filter((row) => row.store_id === input.storeId)
         : [];
+      const regionMetricRows = input.regionId
+        ? metricRows.filter((row) => row.region_id === input.regionId)
+        : [];
 
       return {
         code,
@@ -149,6 +154,8 @@ export function buildLiveMetricRanks(input: {
         actualValue: Number(currentRow.actual_value),
         storeRank: rankMetricRow(storeMetricRows, input.employeeId),
         storePopulation: storeMetricRows.length,
+        regionRank: rankMetricRow(regionMetricRows, input.employeeId),
+        regionPopulation: regionMetricRows.length,
         turkeyRank: rankMetricRow(metricRows, input.employeeId),
         turkeyPopulation: metricRows.length,
       };
@@ -164,6 +171,8 @@ export function mapClosedMetricRankRows(rows: ClosedRankingMetricRankRow[]): Clo
     actualValue: row.actual_value !== null ? Number(row.actual_value) : null,
     storeRank: row.store_rank,
     storePopulation: row.store_population,
+    regionRank: null,
+    regionPopulation: 0,
     turkeyRank: row.turkey_rank,
     turkeyPopulation: row.turkey_population,
   }));

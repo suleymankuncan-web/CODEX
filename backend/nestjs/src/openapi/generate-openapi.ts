@@ -2855,21 +2855,15 @@ const reportingPerformanceMetricSchema = {
 
 const reportingMetricRankSchema = {
   type: "object",
-  required: [
-    "code",
-    "label",
-    "actualValue",
-    "storeRank",
-    "storePopulation",
-    "turkeyRank",
-    "turkeyPopulation",
-  ],
+  required: ["code", "label", "actualValue", "storeRank", "storePopulation", "regionRank", "regionPopulation", "turkeyRank", "turkeyPopulation"],
   properties: {
     code: { type: "string" },
     label: { type: "string" },
     actualValue: { type: "number", nullable: true },
     storeRank: { type: "integer", nullable: true },
     storePopulation: { type: "integer", minimum: 0 },
+    regionRank: { type: "integer", nullable: true },
+    regionPopulation: { type: "integer", minimum: 0 },
     turkeyRank: { type: "integer", nullable: true },
     turkeyPopulation: { type: "integer", minimum: 0 },
   },
@@ -2927,15 +2921,12 @@ const reportingPerformanceResponseSchema = {
     },
     rankings: {
       type: "object",
-      required: [
-        "turkeyRank",
-        "turkeyPopulation",
-        "storeRank",
-        "storePopulation",
-      ],
+      required: ["turkeyRank", "turkeyPopulation", "regionRank", "regionPopulation", "storeRank", "storePopulation"],
       properties: {
         turkeyRank: { type: "integer", nullable: true },
         turkeyPopulation: { type: "integer", minimum: 0 },
+        regionRank: { type: "integer", nullable: true },
+        regionPopulation: { type: "integer", minimum: 0 },
         storeRank: { type: "integer", nullable: true },
         storePopulation: { type: "integer", minimum: 0 },
       },
@@ -3483,15 +3474,12 @@ const reportingClosedRankingEmployeeSchema = {
     neededPerformanceDays: { type: "integer", minimum: 0 },
     rankings: {
       type: "object",
-      required: [
-        "turkeyRank",
-        "turkeyPopulation",
-        "storeRank",
-        "storePopulation",
-      ],
+      required: ["turkeyRank", "turkeyPopulation", "regionRank", "regionPopulation", "storeRank", "storePopulation"],
       properties: {
         turkeyRank: { type: "integer", nullable: true },
         turkeyPopulation: { type: "integer", minimum: 0 },
+        regionRank: { type: "integer", nullable: true },
+        regionPopulation: { type: "integer", minimum: 0 },
         storeRank: { type: "integer", nullable: true },
         storePopulation: { type: "integer", minimum: 0 },
       },

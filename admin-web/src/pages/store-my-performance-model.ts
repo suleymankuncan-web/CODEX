@@ -7,6 +7,7 @@ import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import { buildStoreMyPerformanceTodayActions } from './store-my-performance-actions'
+import { formatPopulation, formatRank, formatRegionRankLabels } from './store-my-performance-rank-labels'
 
 export type LivePeriodType = 'monthly' | 'daily'
 export type StorePerformanceSourceMode = 'live' | 'closed'
@@ -420,14 +421,6 @@ function getMetricProgressPercent(metric: MyPerformanceMetric | null) {
   }
 
   return Math.max(0, Math.min(100, Math.round(source)))
-}
-
-function formatRank(input: number | null | undefined, t: TranslateFunction) {
-  return input ? `${input}.` : t('storeMe.noData')
-}
-
-function formatPopulation(input: number | null | undefined, t: TranslateFunction) {
-  return input && input > 0 ? t('storeMe.rankPopulation', { count: input }) : t('storeMe.noData')
 }
 
 function getMetricTone(code: string) {
@@ -1016,6 +1009,7 @@ export function buildStoreMyPerformanceViewModel(input: {
       progressPercent,
       contributionValue: getFiniteMetricNumber(metric?.contributionValue) ?? 0,
       weightPercent: getFiniteMetricNumber(metric?.weightPercent) ?? 0,
+      ...formatRegionRankLabels(metricRank, input.t),
       storePopulationLabel: formatPopulation(metricRank?.storePopulation, input.t),
       storeRankLabel: formatRank(metricRank?.storeRank, input.t),
       tone: getMetricTone(metricDelta.code),
@@ -1081,6 +1075,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     scoreDeltaLabel: samePeriodScoreDelta ?? input.t('storeMe.noTrendData'),
     scoreMeaning,
     scoreValue: Math.round(input.performance.score.value),
+    ...formatRegionRankLabels(input.performance.rankings, input.t),
     selectedPeriodLabel: periodLabelWithSource,
     storePopulationLabel: formatPopulation(input.performance.rankings.storePopulation, input.t),
     storeRankLabel: formatRank(input.performance.rankings.storeRank, input.t),

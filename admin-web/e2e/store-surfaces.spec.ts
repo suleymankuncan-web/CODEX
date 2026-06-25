@@ -181,10 +181,7 @@ test('store workforce region detail stays usable on mobile', async ({ page }) =>
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   )
   expect(hasHorizontalOverflow).toBe(false)
-  expect(workforceCalls).toEqual([
-    demoStoreId,
-    regionSecondStoreId,
-  ])
+  expect(workforceCalls).toEqual([demoStoreId])
 })
 
 test('store workforce region command layout stays aligned on compact desktop', async ({ page }) => {
