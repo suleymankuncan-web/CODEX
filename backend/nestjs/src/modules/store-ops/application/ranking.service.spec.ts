@@ -61,11 +61,15 @@ describe("RankingService", () => {
     ReturnType<typeof createStoreRows>[number],
     "target_value" | "achievement_rate"
   > & { target_value: string | null; achievement_rate?: string | null };
+  type PersonnelRankingFixtureRow = Omit<
+    ReturnType<typeof createPersonnelRows>[number],
+    "target_value"
+  > & { target_value: string | null };
 
   function createRepositoryMock(input?: {
     storeRows?: StoreRankingFixtureRow[];
     storeChecklistRows?: StoreRankingFixtureRow[];
-    personnelRows?: ReturnType<typeof createPersonnelRows>;
+    personnelRows?: PersonnelRankingFixtureRow[];
     period?: typeof period;
     storeBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
     personnelBenchmarkRows?: Array<{ kpi_code: string; benchmark_value: string | null }>;
@@ -597,6 +601,85 @@ describe("RankingService", () => {
         rank: 3,
       }),
     );
+  });
+
+  it("does not treat target achievement sales amounts as percentages when target is missing", async () => {
+    const storeRows = [
+      {
+        ...createStoreRows(1)[0],
+        store_id: "store-missing-target",
+        actual_value: "293827",
+        target_value: null,
+      },
+      {
+        ...createStoreRows(1)[0],
+        store_id: "store-high-achievement",
+        actual_value: "120",
+        target_value: "100",
+      },
+      {
+        ...createStoreRows(1)[0],
+        store_id: "store-low-achievement",
+        actual_value: "80",
+        target_value: "100",
+      },
+    ];
+    const personnelRows = [
+      {
+        ...createPersonnelRows(1)[0],
+        employee_id: "employee-missing-target",
+        actual_value: "293827",
+        target_value: null,
+      },
+      {
+        ...createPersonnelRows(1)[0],
+        employee_id: "employee-high-achievement",
+        actual_value: "120",
+        target_value: "100",
+      },
+      {
+        ...createPersonnelRows(1)[0],
+        employee_id: "employee-low-achievement",
+        actual_value: "80",
+        target_value: "100",
+      },
+    ];
+    const repository = createRepositoryMock({ storeRows, personnelRows });
+    const service = createService(repository, createKpiConfigRepositoryMock());
+
+    const result = await service.getRankings({
+      userId: "regional-1",
+      roleCodes: ["REGION_MANAGER"],
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+      periodType: "monthly",
+      sortKey: "TARGET_ACHIEVEMENT",
+      sortDirection: "desc",
+      limit: 3,
+      offset: 0,
+    });
+
+    expect(result.storeLeaderboard.items.map((item) => item.storeId)).toEqual([
+      "store-high-achievement",
+      "store-low-achievement",
+      "store-missing-target",
+    ]);
+    expect(result.personnelLeaderboard.items.map((item) => item.employeeId)).toEqual([
+      "employee-high-achievement",
+      "employee-low-achievement",
+      "employee-missing-target",
+    ]);
+    expect(
+      result.reference.store.metrics.find((metric) => metric.code === "TARGET_ACHIEVEMENT")
+        ?.value,
+    ).toBe(1);
+    expect(
+      result.reference.personnel.metrics.find(
+        (metric) => metric.code === "TARGET_ACHIEVEMENT",
+      )?.value,
+    ).toBe(1);
   });
 
   it("accepts gsm_approval as a store ranking sort key and scores from achievement rate", async () => {
