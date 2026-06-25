@@ -221,7 +221,7 @@ export function getMetricComparableValue(metric: RankingMetricValue | undefined,
     !Number.isFinite(metric.targetValue) ||
     metric.targetValue === 0
   ) {
-    return metric.actualValue
+    return null
   }
 
   return metric.actualValue / Math.abs(metric.targetValue)
