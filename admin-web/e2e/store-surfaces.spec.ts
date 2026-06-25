@@ -2449,6 +2449,11 @@ test('store rankings personnel detail opens the selected personnel performance p
       personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
     )
     .toBe(true)
+
+  await page.goBack()
+  await expect(page).toHaveURL(/\/store\/rankings/)
+  await expect(page.getByRole('tab', { name: 'Personel listesi' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toBeVisible()
 })
 
 test('region manager rankings opens only in-region personnel profile actions', async ({ page }) => {
@@ -3191,6 +3196,7 @@ test('store rankings page switches to English copy and persists locale', async (
   await page.getByRole('tab', { name: 'Personnel list' }).click()
   await expect(page.getByRole('heading', { name: 'Turkey personnel ranking' })).toBeVisible()
   await expect(page.getByRole('table', { name: /Showing personnel results/i })).toBeVisible()
+  await expect.poll(() => new URL(page.url()).searchParams.get('list')).toBe('personnel')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByText('Mağaza ve personel sıralamaları')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
@@ -3201,7 +3207,8 @@ test('store rankings page switches to English copy and persists locale', async (
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Rankings' })).toBeVisible()
-  await expect(page.getByRole('table', { name: /Showing store results/i })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Personnel list' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('table', { name: /Showing personnel results/i })).toBeVisible()
   await expect
     .poll(
       () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),

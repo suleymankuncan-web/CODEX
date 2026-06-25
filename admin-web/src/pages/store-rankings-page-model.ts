@@ -64,6 +64,19 @@ export const initialStoreRankingsPageState: StoreRankingsPageState = {
   sortDirection: 'desc',
 }
 
+export function getInitialRankingsActiveList(searchParams: URLSearchParams): ActiveRankingList {
+  return searchParams.get('list') === 'personnel' ? 'personnel' : 'stores'
+}
+
+export function createInitialStoreRankingsPageState(
+  searchParams: URLSearchParams,
+): StoreRankingsPageState {
+  return {
+    ...initialStoreRankingsPageState,
+    activeList: getInitialRankingsActiveList(searchParams),
+  }
+}
+
 const metricLabelKeyByCode: Record<string, TranslationKey> = {
   TARGET_ACHIEVEMENT: 'storeRankings.metric.targetAchievement',
   ATV: 'storeRankings.metric.atv',
