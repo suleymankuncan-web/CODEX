@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-22T20:59:21.890Z",
+  "generatedAt": "2026-06-26T18:08:40.828Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2901,7 +2901,7 @@
       "exportedFunction": "getStoreTargetingPersonnel",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 25
+        "line": 28
       }
     },
     {
@@ -2916,7 +2916,7 @@
       "exportedFunction": "getTargetCoverage",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 35
+        "line": 38
       }
     },
     {
@@ -2931,37 +2931,37 @@
       "exportedFunction": "getTargetDistributionRequests",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 67
+        "line": 70
       }
     },
     {
       "id": "api:133",
-      "client": "legacy-json",
-      "functionName": "sendJson",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
       "method": "POST",
-      "rawPath": "/target-distributions/requests",
+      "rawPath": "/api/target-distributions/requests",
       "path": "/api/target-distributions/requests",
       "backendEndpointId": "endpoint:POST:/api/target-distributions/requests",
       "openApiCovered": true,
       "exportedFunction": "createTargetDistributionRequest",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 115
+        "line": 118
       }
     },
     {
       "id": "api:134",
-      "client": "legacy-json",
-      "functionName": "sendJson",
+      "client": "openapi-generated",
+      "functionName": "sendOpenApiJson",
       "method": "PATCH",
-      "rawPath": "/target-distributions/requests/${input.requestId}/approve",
-      "path": "/api/target-distributions/requests/{dynamic}/approve",
+      "rawPath": "/api/target-distributions/requests/{requestId}/approve",
+      "path": "/api/target-distributions/requests/{requestId}/approve",
       "backendEndpointId": "endpoint:PATCH:/api/target-distributions/requests/{requestId}/approve",
       "openApiCovered": true,
       "exportedFunction": "approveTargetDistributionRequest",
       "source": {
         "file": "admin-web/src/features/targets/api.ts",
-        "line": 128
+        "line": 140
       }
     },
     {
@@ -5541,7 +5541,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 71
+        "line": 76
       }
     },
     {
@@ -5555,7 +5555,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 40
+        "line": 45
       }
     },
     {
@@ -5569,7 +5569,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 99
+        "line": 104
       }
     },
     {
@@ -5583,7 +5583,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 127
+        "line": 132
       }
     },
     {
@@ -5597,7 +5597,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/target-distribution.controller.ts",
-        "line": 14
+        "line": 19
       }
     },
     {
