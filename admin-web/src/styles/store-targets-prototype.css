@@ -40,7 +40,8 @@
 
 @media (min-width: 1121px) {
   .targets-prototype {
-    width: 85%;
+    max-width: 1220px;
+    width: 100%;
   }
 }
 
@@ -65,7 +66,7 @@
 
 .targets-prototype-header h1 {
   font-size: clamp(38px, 4vw, 58px);
-  font-weight: 680;
+  font-weight: 640;
   letter-spacing: 0;
   line-height: 0.96;
   margin: 20px 0 8px;
@@ -79,12 +80,19 @@
 }
 
 .targets-prototype-pills,
-.targets-header-actions,
 .targets-segments,
 .targets-detail-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.targets-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  max-width: 460px;
 }
 
 .targets-pill,
@@ -100,7 +108,7 @@
   color: #25253a;
   display: inline-flex;
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 600;
   gap: 7px;
   min-height: 38px;
   padding: 0 14px;
@@ -136,7 +144,7 @@
 .targets-metrics {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .targets-metric {
@@ -164,13 +172,13 @@
   color: var(--targets-muted);
   display: block;
   font-size: 13px;
-  font-weight: 560;
+  font-weight: 520;
 }
 
 .targets-metric strong {
   display: block;
   font-size: 30px;
-  font-weight: 690;
+  font-weight: 640;
   line-height: 1;
   margin-top: 6px;
 }
@@ -196,7 +204,7 @@
   box-shadow: 0 16px 44px rgba(28, 32, 64, 0.06);
   display: grid;
   gap: 12px;
-  grid-template-columns: minmax(280px, 1fr) auto;
+  grid-template-columns: minmax(240px, 270px) minmax(0, 1fr);
   padding: 12px;
 }
 
@@ -218,7 +226,7 @@
   color: var(--targets-ink);
   flex: 1;
   font-size: 14px;
-  font-weight: 560;
+  font-weight: 520;
   min-width: 0;
   outline: 0;
 }
@@ -234,6 +242,7 @@
   border-color: transparent;
   box-shadow: none;
   min-height: 34px;
+  padding-inline: 10px;
 }
 
 .targets-segments button.active {
@@ -273,7 +282,7 @@
   border-bottom: 1px solid var(--targets-line);
   color: #67617d;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 620;
   padding: 14px 18px;
 }
 
@@ -355,7 +364,7 @@
   color: #111326;
   display: block;
   font-size: 14px;
-  font-weight: 680;
+  font-weight: 620;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -380,7 +389,7 @@
   color: #242338;
   display: block;
   font-size: 13px;
-  font-weight: 670;
+  font-weight: 610;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -403,7 +412,7 @@
   border-radius: 999px;
   display: inline-flex;
   font-size: 12px;
-  font-weight: 690;
+  font-weight: 620;
   justify-content: center;
   min-height: 30px;
   padding: 7px 11px;
