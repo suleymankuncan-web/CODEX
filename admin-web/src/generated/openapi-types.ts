@@ -4,6 +4,11 @@
 
 export type components = {
   schemas: {
+    "ApproveTargetDistributionRequestDto": {
+      "approvalNote"?: string
+      "approvedTotalTargetValue"?: number
+      "approvedAllocations"?: unknown[]
+    }
     "AuthActionStoreAssignmentCommandResponse": {
       "command": {
         "status": string
@@ -711,6 +716,14 @@ export type components = {
       "summary"?: string
       "priority": "high" | "medium" | "low"
       "dueOn": string
+    }
+    "CreateTargetDistributionRequestDto": {
+      "storeId": string
+      "requestMonth": string
+      "targetLabel": string
+      "totalTargetValue": number
+      "requestReason"?: string
+      "allocations": components['schemas']["TargetDistributionAllocationDto"][]
     }
     "CreateUserAccountDto": {
       "employeeId"?: string
@@ -2463,6 +2476,12 @@ export type components = {
         "coverageRate": number
       }
     }
+    "TargetDistributionAllocationDto": {
+      "employeeId": string
+      "assigneeLabel": string
+      "targetValue": number
+      "note"?: string
+    }
     "TargetDistributionRequestsResponse": {
       "items": Array<{
           "requestId": string
@@ -3691,6 +3710,32 @@ export type paths = {
           content: {
             'application/json': components['schemas']["TargetDistributionRequestsResponse"]
           }
+        }
+      }
+    }
+    post: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["CreateTargetDistributionRequestDto"]
+        }
+      }
+      responses: {
+        "201": {
+          content: Record<string, never>
+        }
+      }
+    }
+  }
+  "/api/target-distributions/requests/{requestId}/approve": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["ApproveTargetDistributionRequestDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: Record<string, never>
         }
       }
     }

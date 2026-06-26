@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import { TargetDistributionRepository } from "../infrastructure/target-distribution.repository";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
@@ -179,6 +179,13 @@ export class TargetDistributionService {
     };
     requestId: string;
     approvalNote?: string;
+    approvedTotalTargetValue?: number;
+    approvedAllocations?: Array<{
+      employeeId: string;
+      assigneeLabel: string;
+      targetValue: number;
+      note?: string;
+    }>;
   }) {
     const requestScope = await this.targetDistributionRepository.getRequestScope(
       input.requestId,
@@ -191,6 +198,43 @@ export class TargetDistributionService {
       throw new ForbiddenException("Target distribution request is outside assigned action stores");
     }
 
+    const hasEditedApproval =
+      input.approvedAllocations !== undefined || input.approvedTotalTargetValue !== undefined;
+
+    if (hasEditedApproval) {
+      if (
+        input.approvedAllocations === undefined ||
+        input.approvedTotalTargetValue === undefined
+      ) {
+        throw new BadRequestException(
+          "Approved target total and final allocations must be submitted together",
+        );
+      }
+
+      const approvalNote = input.approvalNote?.trim();
+      if (!approvalNote) {
+        throw new BadRequestException(
+          "Approval note is required when target allocations are edited",
+        );
+      }
+
+      const approvedAllocationTotal = input.approvedAllocations.reduce(
+        (sum, allocation) => sum + Number(allocation.targetValue || 0),
+        0,
+      );
+
+      if (Math.abs(approvedAllocationTotal - input.approvedTotalTargetValue) > 0.0001) {
+        throw new BadRequestException(
+          "Approved allocation total must match the approved target total",
+        );
+      }
+
+      await this.assertAllocationsBelongToStore({
+        storeId: requestScope.storeId,
+        allocations: input.approvedAllocations,
+      });
+    }
+
     return buildCommandResponse({
       status: "approved",
       message: "Target distribution request approved",
@@ -198,7 +242,9 @@ export class TargetDistributionService {
         request: await this.targetDistributionRepository.approveRequest({
           requestId: input.requestId,
           approverUserId: input.actorUserId,
-          approvalNote: input.approvalNote,
+          approvalNote: input.approvalNote?.trim() || undefined,
+          approvedTotalTargetValue: input.approvedTotalTargetValue,
+          approvedAllocations: input.approvedAllocations,
         }),
       },
     });

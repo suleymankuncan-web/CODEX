@@ -136,6 +136,15 @@ export function StoreTargetsPage(input: {
     () => getAssignedStoreIds(input.authSummary),
     [input.authSummary],
   )
+  const targetQueryScopeKey = useMemo(() => {
+    const user = input.authSummary?.user
+
+    return [
+      user?.userId ?? 'anonymous',
+      [...(user?.roleCodes ?? [])].sort().join('|') || 'no-roles',
+      [...assignedStoreIds].sort().join('|') || 'no-action-stores',
+    ]
+  }, [assignedStoreIds, input.authSummary])
   const defaultStoreId = useMemo(() => {
     if (!hasAnyRole(input.authSummary, ['STORE_MANAGER'])) {
       return ''
@@ -188,6 +197,7 @@ export function StoreTargetsPage(input: {
     queryKey: [
       'target-distribution-requests',
       'store-targets',
+      ...targetQueryScopeKey,
       hasExplicitRequestMonth ? requestMonthStart : 'auto-month',
       effectiveSelectedStoreId || 'all',
     ],
@@ -213,6 +223,7 @@ export function StoreTargetsPage(input: {
     queryKey: [
       'target-distribution-coverage',
       'store-targets',
+      ...targetQueryScopeKey,
       activeRequestMonthStart,
       coverageStoreId ?? 'all',
     ],
@@ -243,9 +254,14 @@ export function StoreTargetsPage(input: {
   })
   const approveMutation = useMutation({
     mutationFn: approveTargetDistributionRequest,
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
       void queryClient.invalidateQueries({ queryKey: ['target-distribution-coverage'] })
+      setApprovalNotes((current) => {
+        const next = { ...current }
+        delete next[variables.requestId]
+        return next
+      })
       setFormNotice(result.command.message || copy.success)
     },
   })

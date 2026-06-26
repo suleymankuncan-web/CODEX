@@ -265,4 +265,73 @@ describe("TargetDistributionRepository", () => {
       promotedTargetReferenceCount: 2,
     });
   });
+
+  it("persists edited final allocations before promotion", async () => {
+    const approvedAllocations = [
+      {
+        employeeId: "00000000-0000-0000-0000-000000000501",
+        assigneeLabel: "Ada Kaya",
+        targetValue: 100000,
+      },
+      {
+        employeeId: "00000000-0000-0000-0000-000000000502",
+        assigneeLabel: "Ece Demir",
+        targetValue: 75000,
+      },
+    ];
+    const requestRow = {
+      target_distribution_request_id: "00000000-0000-0000-0000-000000000701",
+      company_id: "00000000-0000-0000-0000-000000000001",
+      region_id: "00000000-0000-0000-0000-000000000010",
+      store_id: "00000000-0000-0000-0000-000000000201",
+      request_month: "2026-03-01",
+      target_label: "Aylik personel hedef dagitimi",
+      total_target_value: "175000",
+      allocation_count: 2,
+      request_status: "approved",
+      request_reason: null,
+      allocation_json: approvedAllocations,
+      submitted_by_user_id: "store-manager-user",
+      approved_by_user_id: "region-manager-user",
+      approved_at: "2026-03-02T08:00:00.000Z",
+      approval_note: "Duzenlendi",
+      created_at: "2026-03-01T08:00:00.000Z",
+      updated_at: "2026-03-02T08:00:00.000Z",
+    };
+    const query = createRepositoryQueryMock()
+      .mockResolvedValueOnce({ rows: [requestRow] })
+      .mockResolvedValue({ rows: [] });
+    const withTransaction = jest.fn(async (callback) => callback({ query }));
+    const repository = new TargetDistributionRepository({
+      withTransaction,
+    } as never);
+
+    await repository.approveRequest({
+      requestId: requestRow.target_distribution_request_id,
+      approverUserId: "region-manager-user",
+      approvalNote: "Duzenlendi",
+      approvedTotalTargetValue: 175000,
+      approvedAllocations,
+    });
+
+    const updateCall = getExecutedQuery(query, 0);
+    expect(updateCall.sql).toContain("allocation_json");
+    expect(updateCall.params).toContain(JSON.stringify(approvedAllocations));
+
+    const targetReferenceCalls = findExecutedQueries(
+      query,
+      "INSERT INTO ops.personnel_target_reference",
+    );
+    expect(targetReferenceCalls).toHaveLength(2);
+    expect(targetReferenceCalls[0]?.params[6]).toBe(approvedAllocations[0].targetValue);
+    expect(targetReferenceCalls[1]?.params[6]).toBe(approvedAllocations[1].targetValue);
+
+    const auditCall = findExecutedQuery(query, "INSERT INTO audit.event_log");
+    expect(JSON.parse(auditCall?.params[5] as string)).toMatchObject({
+      actorUserId: "region-manager-user",
+      approvalMode: "adjusted",
+      promotedTargetReferenceCount: 2,
+      finalAllocationCount: 2,
+    });
+  });
 });

@@ -1,12 +1,17 @@
 import { Body, Controller, Get, Patch, Post, Query, Req } from "@nestjs/common";
+import { ApiExtraModels } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireActionScope } from "../../auth/decorators/scope.decorator";
 import { TargetDistributionService } from "../application/target-distribution.service";
 import { CreateTargetDistributionRequestDto } from "./dto/create-target-distribution-request.dto";
-import { ApproveTargetDistributionRequestDto } from "./dto/approve-target-distribution-request.dto";
+import {
+  ApprovedTargetDistributionAllocationDto,
+  ApproveTargetDistributionRequestDto,
+} from "./dto/approve-target-distribution-request.dto";
 import { ListTargetDistributionRequestsQueryDto } from "./dto/list-target-distribution-requests.query";
 import { ListTargetCoverageQueryDto } from "./dto/list-target-coverage.query";
 
+@ApiExtraModels(ApprovedTargetDistributionAllocationDto)
 @Controller("target-distributions")
 export class TargetDistributionController {
   constructor(private readonly targetDistributionService: TargetDistributionService) {}
@@ -146,6 +151,8 @@ export class TargetDistributionController {
       actorActionScope: request.user.actionScope,
       requestId: request.params.requestId,
       approvalNote: body.approvalNote,
+      approvedTotalTargetValue: body.approvedTotalTargetValue,
+      approvedAllocations: body.approvedAllocations,
     });
   }
 }

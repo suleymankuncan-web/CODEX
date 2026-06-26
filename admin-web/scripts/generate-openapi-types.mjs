@@ -109,6 +109,8 @@ const selectedOperations = [
   { path: '/api/admin/incentives/region-packages/reviews', method: 'post' },
   { path: '/api/target-distributions/coverage', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'get' },
+  { path: '/api/target-distributions/requests', method: 'post' },
+  { path: '/api/target-distributions/requests/{requestId}/approve', method: 'patch' },
   { path: '/api/target-distributions/store-personnel', method: 'get' },
   { path: '/api/workforce/offboarding-requests', method: 'get' },
   { path: '/api/workforce/position-options', method: 'get' },
@@ -443,7 +445,12 @@ function refToType(ref) {
   const name = parts.at(-1)
 
   if (componentType === 'schemas' && name) {
-    return `components['schemas'][${quoteKey(decodeURIComponent(name))}]`
+    const schemaName = decodeURIComponent(name)
+    if (!document.components?.schemas?.[schemaName]) {
+      return 'unknown'
+    }
+
+    return `components['schemas'][${quoteKey(schemaName)}]`
   }
 
   return 'unknown'

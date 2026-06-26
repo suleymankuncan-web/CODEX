@@ -379,6 +379,106 @@ test('store targets page lets region managers approve pending target requests in
   expect(capturedPayload).not.toBeNull()
 })
 
+test('store targets page lets region managers approve with edited target allocations', async ({ page }) => {
+  let capturedPayload: unknown = null
+  let approvedAfterPatch = false
+
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.unroute('**/api/target-distributions/coverage**')
+  await page.unroute('**/api/target-distributions/store-personnel**')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['REGION_MANAGER'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    await route.fulfill({ json: targetCoverageFixture })
+  })
+  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
+    await route.fulfill({ json: storeTargetingPersonnelFixture })
+  })
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'GET') {
+      await route.fulfill({
+        json: approvedAfterPatch
+          ? approvedTargetDistributionRequestsFixture
+          : pendingTargetDistributionRequestsWithTwoAllocationsFixture,
+      })
+      return
+    }
+
+    capturedPayload = request.postDataJSON()
+    expect(request.url()).toContain(`/requests/${pendingTargetRequestId}/approve`)
+    expect(capturedPayload).toEqual({
+      approvalNote: 'Bolge hedefi dengeledi',
+      approvedTotalTargetValue: 145000,
+      approvedAllocations: [
+        {
+          employeeId: demoEmployeeId,
+          assigneeLabel: 'Store Personnel',
+          targetValue: 40000,
+        },
+        {
+          employeeId: '00000000-0000-0000-0000-000000000203',
+          assigneeLabel: 'Store Personnel Covered',
+          targetValue: 105000,
+        },
+      ],
+    })
+
+    await route.fulfill({
+      json: {
+        command: {
+          status: 'approved',
+          message: 'Target distribution request approved',
+        },
+        data: {
+          request: {
+            ...pendingTargetDistributionRequestsWithTwoAllocationsFixture.items[0],
+            status: 'approved',
+            approvedByUserId: 'region-user-1',
+            approvedAt: '2026-05-11T08:00:00.000Z',
+            approvalNote: 'Bolge hedefi dengeledi',
+          },
+        },
+      },
+    })
+    approvedAfterPatch = true
+  })
+
+  await page.goto('/store/targets')
+
+  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  await page.getByLabel('Donem').fill('2026-05')
+  await expect(page.getByRole('heading', { name: 'Onay akisi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Onayla' })).toBeVisible()
+
+  await page.getByLabel('Store Personnel Hedef').fill('40000')
+  await expect(page.getByRole('button', { name: 'Duzenleyerek onayla' })).toBeDisabled()
+  await expect(page.getByText('Dagitilan hedef toplam hedefle eslesmeli.')).toBeVisible()
+
+  await page.getByLabel('Store Personnel Covered Hedef').fill('105000')
+  await expect(page.getByRole('button', { name: 'Duzenleyerek onayla' })).toBeDisabled()
+  await page.getByLabel('Karar notu').fill('Bolge hedefi dengeledi')
+  await page.getByRole('button', { name: 'Duzenleyerek onayla' }).click()
+
+  await expect(page.getByText('Target distribution request approved')).toBeVisible()
+  expect(capturedPayload).not.toBeNull()
+})
+
 test('store targets page submits revision requests from approved target snapshots', async ({ page }) => {
   let capturedPayload: unknown = null
 
@@ -524,6 +624,35 @@ const pendingTargetDistributionRequestsFixture = {
       approvalNote: null,
       createdAt: '2026-05-10T08:00:00.000Z',
       updatedAt: '2026-05-10T08:00:00.000Z',
+    },
+  ],
+  meta: {
+    count: 1,
+    total: 1,
+    limit: 30,
+    offset: 0,
+  },
+}
+
+const pendingTargetDistributionRequestsWithTwoAllocationsFixture = {
+  items: [
+    {
+      ...pendingTargetDistributionRequestsFixture.items[0],
+      allocationCount: 2,
+      allocations: [
+        {
+          employeeId: demoEmployeeId,
+          assigneeLabel: 'Store Personnel',
+          targetValue: 45000,
+          note: null,
+        },
+        {
+          employeeId: '00000000-0000-0000-0000-000000000203',
+          assigneeLabel: 'Store Personnel Covered',
+          targetValue: 100000,
+          note: null,
+        },
+      ],
     },
   ],
   meta: {

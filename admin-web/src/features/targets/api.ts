@@ -1,5 +1,8 @@
-import { sendJson } from '../../lib/api'
-import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
+import {
+  fetchOpenApiJson,
+  sendOpenApiJson,
+  type ApiGetResponse,
+} from '../../lib/openapi-client'
 
 type CommandResponse<T> = {
   command: {
@@ -112,26 +115,31 @@ export async function createTargetDistributionRequest(input: {
   requestReason?: string
   allocations: TargetDistributionAllocation[]
 }) {
-  return sendJson<CommandResponse<{ request: TargetDistributionRequest }>>(
-    '/target-distributions/requests',
-    {
-      method: 'POST',
-      body: input,
-    },
-  )
+  return sendOpenApiJson('/api/target-distributions/requests', {
+    method: 'POST',
+    body: input,
+  }) as Promise<CommandResponse<{ request: TargetDistributionRequest }>>
 }
 
 export async function approveTargetDistributionRequest(input: {
   requestId: string
   approvalNote?: string
+  approvedTotalTargetValue?: number
+  approvedAllocations?: TargetDistributionAllocation[]
 }) {
-  return sendJson<CommandResponse<{ request: TargetDistributionRequest }>>(
-    `/target-distributions/requests/${input.requestId}/approve`,
-    {
-      method: 'PATCH',
-      body: {
-        approvalNote: input.approvalNote,
-      },
-    },
-  )
+  const body = {
+    ...(input.approvalNote !== undefined ? { approvalNote: input.approvalNote } : {}),
+    ...(input.approvedTotalTargetValue !== undefined
+      ? { approvedTotalTargetValue: input.approvedTotalTargetValue }
+      : {}),
+    ...(input.approvedAllocations !== undefined
+      ? { approvedAllocations: input.approvedAllocations }
+      : {}),
+  }
+
+  return sendOpenApiJson('/api/target-distributions/requests/{requestId}/approve', {
+    method: 'PATCH',
+    params: { requestId: input.requestId },
+    body,
+  }) as unknown as Promise<CommandResponse<{ request: TargetDistributionRequest }>>
 }

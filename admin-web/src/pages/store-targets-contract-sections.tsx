@@ -41,8 +41,11 @@ type TargetCopy = {
   approvalNote: string
   approvalQueueCopy: string
   approve: string
+  approveAdjusted: string
   approvedTarget: string
   approving: string
+  approvalEditedNoteRequired: string
+  approvalPositiveTargets: string
   cannotApprove: string
   coverageCopy: string
   coverageRisk: string
@@ -92,6 +95,8 @@ type TargetCopy = {
   noApprovedCopy: string
   revisionMismatch: string
   revisionNoChange: string
+  resetApprovalDraft: string
+  adjustedStatus: string
 }
 
 export function TargetDistributionForm(input: {
@@ -271,9 +276,18 @@ export function TargetApprovalQueue(input: {
   pendingRequests: TargetDistributionRequest[]
 }) {
   const [openRequestId, setOpenRequestId] = useState<string | null>(null)
+  const [approvalDrafts, setApprovalDrafts] = useState<Record<string, Record<string, number>>>({})
   const firstRequestId = input.pendingRequests[0]?.requestId ?? null
   const effectiveOpenRequestId =
     openRequestId === null ? firstRequestId : openRequestId
+
+  const resetApprovalDraft = (requestId: string) => {
+    setApprovalDrafts((current) => {
+      const next = { ...current }
+      delete next[requestId]
+      return next
+    })
+  }
 
   return (
     <StoreSectionCard
@@ -293,6 +307,34 @@ export function TargetApprovalQueue(input: {
               input.approveMutation.variables?.requestId === request.requestId
             const approvalNote = input.approvalNotes[request.requestId]?.trim() ?? ''
             const isOpen = effectiveOpenRequestId === request.requestId
+            const originalTotal = Number(request.totalTargetValue || 0)
+            const draftValues = approvalDrafts[request.requestId] ?? {}
+            const allocations = request.allocations.map((allocation) => ({
+              ...allocation,
+              targetValue:
+                draftValues[allocation.employeeId] ?? Number(allocation.targetValue || 0),
+            }))
+            const allocationTotal = allocations.reduce(
+              (sum, allocation) => sum + Number(allocation.targetValue || 0),
+              0,
+            )
+            const difference = allocationTotal - originalTotal
+            const hasEditedTargets = allocations.some(
+              (allocation) =>
+                Number(allocation.targetValue || 0) !==
+                Number(
+                  request.allocations.find((item) => item.employeeId === allocation.employeeId)
+                    ?.targetValue || 0,
+                ),
+            )
+            const hasEveryTarget = allocations.every(
+              (allocation) => Number(allocation.targetValue || 0) > 0,
+            )
+            const totalsAligned = Math.abs(difference) < 0.0001
+            const canSubmit =
+              canApprove &&
+              !isApproving &&
+              (!hasEditedTargets || (hasEveryTarget && totalsAligned && Boolean(approvalNote)))
 
             return (
               <StoreStackedRow
@@ -352,7 +394,15 @@ export function TargetApprovalQueue(input: {
                         <span>{input.copy.share}</span>
                         <span className="tw:hidden tw:md:block">{input.copy.status}</span>
                       </div>
-                      {request.allocations.map((allocation) => (
+                      {allocations.map((allocation) => {
+                        const originalValue = Number(
+                          request.allocations.find((item) => item.employeeId === allocation.employeeId)
+                            ?.targetValue || 0,
+                        )
+                        const isEdited =
+                          Number(allocation.targetValue || 0) !== originalValue
+
+                        return (
                         <div
                           key={allocation.employeeId}
                           className="tw:grid tw:grid-cols-[minmax(0,1fr)_92px_64px] tw:items-center tw:gap-2 tw:border-t tw:border-border/70 tw:bg-white/80 tw:px-3 tw:py-2 tw:md:grid-cols-[minmax(180px,260px)_110px_72px_96px]"
@@ -362,17 +412,65 @@ export function TargetApprovalQueue(input: {
                               {allocation.assigneeLabel}
                             </strong>
                           </div>
-                          <span className="tw:text-sm tw:font-medium">
-                            {formatAmount(Number(allocation.targetValue || 0), input.locale, input.copy.emptyValue)}
-                          </span>
+                          {canApprove ? (
+                            <Input
+                              aria-label={`${allocation.assigneeLabel} ${input.copy.targetValue}`}
+                              disabled={isApproving}
+                              inputMode="numeric"
+                              value={formatCurrencyInputValue(Number(allocation.targetValue || 0), input.locale)}
+                              onChange={(event) =>
+                                setApprovalDrafts((current) => ({
+                                  ...current,
+                                  [request.requestId]: {
+                                    ...(current[request.requestId] ?? {}),
+                                    [allocation.employeeId]: parseCurrencyInputValue(event.target.value),
+                                  },
+                                }))
+                              }
+                              className="tw:h-9 tw:text-sm tw:font-medium"
+                            />
+                          ) : (
+                            <span className="tw:text-sm tw:font-medium">
+                              {formatAmount(
+                                Number(allocation.targetValue || 0),
+                                input.locale,
+                                input.copy.emptyValue,
+                              )}
+                            </span>
+                          )}
                           <StoreStatusBadge tone="calm">
-                            {formatTargetShare(Number(allocation.targetValue || 0), Number(request.totalTargetValue || 0), input.locale)}
+                            {formatTargetShare(Number(allocation.targetValue || 0), originalTotal, input.locale)}
                           </StoreStatusBadge>
-                          <StoreStatusBadge tone="warning" className="tw:hidden tw:md:inline-flex">
-                            {input.copy.pendingStatus}
+                          <StoreStatusBadge
+                            tone={isEdited ? 'accent' : 'warning'}
+                            className="tw:hidden tw:md:inline-flex"
+                          >
+                            {isEdited ? input.copy.adjustedStatus : input.copy.pendingStatus}
                           </StoreStatusBadge>
                         </div>
-                      ))}
+                        )
+                      })}
+                    </div>
+                  ) : null}
+
+                  {isOpen && request.allocations.length > 0 ? (
+                    <div className="tw:mx-3 tw:mb-3 tw:grid tw:gap-2 tw:sm:grid-cols-3">
+                      <KeyValue
+                        label={input.copy.totalTarget}
+                        value={formatAmount(originalTotal, input.locale, input.copy.emptyValue)}
+                      />
+                      <KeyValue
+                        label={input.copy.allocationTotal}
+                        value={formatAmount(allocationTotal, input.locale, input.copy.emptyValue)}
+                      />
+                      <KeyValue
+                        label={input.copy.difference}
+                        value={`${difference < 0 ? '-' : ''}${formatAmount(
+                          Math.abs(difference),
+                          input.locale,
+                          input.copy.emptyValue,
+                        )}`}
+                      />
                     </div>
                   ) : null}
 
@@ -394,6 +492,11 @@ export function TargetApprovalQueue(input: {
                           disabled={!canApprove}
                           className="tw:min-h-12"
                         />
+                        {hasEditedTargets && !approvalNote ? (
+                          <span className="tw:text-xs tw:font-medium tw:text-destructive">
+                            {input.copy.approvalEditedNoteRequired}
+                          </span>
+                        ) : null}
                       </label>
                       <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
                         {!canApprove ? (
@@ -401,18 +504,53 @@ export function TargetApprovalQueue(input: {
                             {input.copy.cannotApprove}
                           </span>
                         ) : null}
+                        {hasEditedTargets && !hasEveryTarget ? (
+                          <span className="tw:text-xs tw:font-medium tw:text-destructive">
+                            {input.copy.approvalPositiveTargets}
+                          </span>
+                        ) : null}
+                        {hasEditedTargets && hasEveryTarget && !totalsAligned ? (
+                          <span className="tw:text-xs tw:font-medium tw:text-destructive">
+                            {input.copy.allocationMismatch}
+                          </span>
+                        ) : null}
+                        {hasEditedTargets ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            disabled={isApproving}
+                            onClick={() => resetApprovalDraft(request.requestId)}
+                          >
+                            {input.copy.resetApprovalDraft}
+                          </Button>
+                        ) : null}
                         <Button
                           type="button"
-                          disabled={!canApprove || isApproving}
+                          disabled={!canSubmit}
                           onClick={() =>
                             input.approveMutation.mutate({
                               requestId: request.requestId,
                               ...(approvalNote ? { approvalNote } : {}),
+                              ...(hasEditedTargets
+                                ? {
+                                    approvedTotalTargetValue: originalTotal,
+                                    approvedAllocations: allocations.map((allocation) => ({
+                                      employeeId: allocation.employeeId,
+                                      assigneeLabel: allocation.assigneeLabel,
+                                      targetValue: Number(allocation.targetValue || 0),
+                                      ...(allocation.note ? { note: allocation.note } : {}),
+                                    })),
+                                  }
+                                : {}),
                             })
                           }
                         >
                           <BadgeCheck data-icon="inline-start" />
-                          {isApproving ? input.copy.approving : input.copy.approve}
+                          {isApproving
+                            ? input.copy.approving
+                            : hasEditedTargets
+                              ? input.copy.approveAdjusted
+                              : input.copy.approve}
                         </Button>
                       </div>
                     </div>
