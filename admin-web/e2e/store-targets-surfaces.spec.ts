@@ -65,7 +65,7 @@ test('store targets page submits target distribution allocations with employee i
     expect(capturedPayload).toEqual({
       storeId: demoStoreId,
       requestMonth: '2026-05-01',
-      targetLabel: 'Aylik personel hedef dagitimi',
+      targetLabel: 'Aylık personel hedef dağıtımı',
       totalTargetValue: 145000,
       allocations: [
         {
@@ -92,11 +92,11 @@ test('store targets page submits target distribution allocations with employee i
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Personel hedef dagitimi' })).toBeVisible()
-  await page.getByLabel('Donem').fill('2026-05')
+  await expect(page.getByRole('heading', { name: 'Personel hedef dağıtımı' })).toBeVisible()
+  await page.getByLabel('Dönem').fill('2026-05')
   await page.getByLabel('Toplam hedef').fill('145000')
   await page.getByLabel('Store Personnel Hedef').fill('145000')
-  await page.getByRole('button', { name: 'Onaya gonder' }).click()
+  await page.getByRole('button', { name: 'Onaya gönder' }).click()
 
   await expect(page.getByText('Target distribution request submitted for region approval')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
@@ -106,10 +106,10 @@ test('store targets page renders only role-fit target flows', async ({ page }) =
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Dagitim talebi/ })).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Dağıtım talebi/ })).toBeVisible()
   await expect(page.getByRole('radio', { name: /Revize Talebi/ })).toBeVisible()
   await expect(page.getByRole('radio', { name: /Onaylananlar/ })).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Onay akisi/ })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: /Onay akışı/ })).toHaveCount(0)
 
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/target-distributions/requests**')
@@ -143,9 +143,9 @@ test('store targets page renders only role-fit target flows', async ({ page }) =
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Onay akisi/ })).toBeVisible()
+  await expect(page.getByRole('radio', { name: /Onay akışı/ })).toBeVisible()
   await expect(page.getByRole('radio', { name: /Onaylananlar/ })).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Dagitim talebi/ })).toHaveCount(0)
+  await expect(page.getByRole('radio', { name: /Dağıtım talebi/ })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: /Revize Talebi/ })).toHaveCount(0)
 })
 
@@ -167,7 +167,7 @@ test('store targets page opens latest visible target request month when no month
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByLabel('Donem')).toHaveValue('2026-06')
+  await expect(page.getByLabel('Dönem')).toHaveValue('2026-06')
   expect(requestUrls.some((url) => !url.searchParams.has('requestMonth'))).toBe(true)
   await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-06-01')
 })
@@ -213,11 +213,11 @@ test('store targets page keeps region managers on latest approved or pending tar
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByLabel('Donem')).toHaveValue('2026-05')
+  await expect(page.getByLabel('Dönem')).toHaveValue('2026-05')
   await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-05-01')
   await expect(page.getByRole('heading', { name: 'Onaylananlar' })).toBeVisible()
   await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
-  await expect(page.getByTestId('store-targets-store-metric')).toContainText('1 / 2 magaza hedefli')
+  await expect(page.getByTestId('store-targets-store-metric')).toContainText('1 / 2 mağaza hedefli')
   await expect(page.getByTestId('store-targets-decision-metric')).toContainText('0')
   await expect(page.getByTestId('store-targets-no-request-metric')).toContainText('1')
 })
@@ -367,11 +367,13 @@ test('store targets page lets region managers approve pending target requests in
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await page.getByLabel('Donem').fill('2026-05')
-  await expect(page.getByRole('heading', { name: 'Onay akisi' })).toBeVisible()
+  await page.getByLabel('Dönem').fill('2026-05')
+  await expect(page.getByRole('heading', { name: 'Mağaza hedefleri' })).toBeVisible()
+  await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
+  await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
   await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
   await page.getByLabel('Karar notu').fill('Bolge onayi')
-  await page.getByRole('button', { name: 'Onayla' }).click()
+  await page.getByRole('button', { name: /^Onayla$/ }).click()
 
   await expect(page.getByText('Target distribution request approved')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Onaylananlar' })).toBeVisible()
@@ -462,18 +464,19 @@ test('store targets page lets region managers approve with edited target allocat
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await page.getByLabel('Donem').fill('2026-05')
-  await expect(page.getByRole('heading', { name: 'Onay akisi' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Onayla' })).toBeVisible()
+  await page.getByLabel('Dönem').fill('2026-05')
+  await expect(page.getByRole('heading', { name: 'Mağaza hedefleri' })).toBeVisible()
+  await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
+  await expect(page.getByRole('button', { name: /^Onayla$/ })).toBeVisible()
 
   await page.getByLabel('Store Personnel Hedef').fill('40000')
-  await expect(page.getByRole('button', { name: 'Duzenleyerek onayla' })).toBeDisabled()
-  await expect(page.getByText('Dagitilan hedef toplam hedefle eslesmeli.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true })).toBeDisabled()
+  await expect(page.getByText('Dağıtılan hedef toplam hedefle eşleşmeli.')).toBeVisible()
 
   await page.getByLabel('Store Personnel Covered Hedef').fill('105000')
-  await expect(page.getByRole('button', { name: 'Duzenleyerek onayla' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true })).toBeDisabled()
   await page.getByLabel('Karar notu').fill('Bolge hedefi dengeledi')
-  await page.getByRole('button', { name: 'Duzenleyerek onayla' }).click()
+  await page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true }).click()
 
   await expect(page.getByText('Target distribution request approved')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
@@ -539,18 +542,18 @@ test('store targets page submits revision requests from approved target snapshot
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await page.getByLabel('Donem').fill('2026-05')
+  await page.getByLabel('Dönem').fill('2026-05')
   await page.getByRole('radio', { name: /Revize Talebi/ }).click()
-  await page.getByRole('button', { name: 'Revize olustur' }).click()
-  await page.getByLabel('Store Personnel Revize talebi gonder').fill('40000')
-  await expect(page.getByText('Revize toplam onayli toplamla eslesmeli.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Revize talebi gonder' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Revize oluştur' }).click()
+  await page.getByLabel('Store Personnel Revize talebi gönder').fill('40000')
+  await expect(page.getByText('Revize toplam onaylı toplamla eşleşmeli.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Revize talebi gönder' })).toBeDisabled()
 
-  await page.getByLabel('Store Personnel Covered Revize talebi gonder').fill('105000')
-  await expect(page.getByRole('button', { name: 'Revize talebi gonder' })).toBeDisabled()
+  await page.getByLabel('Store Personnel Covered Revize talebi gönder').fill('105000')
+  await expect(page.getByRole('button', { name: 'Revize talebi gönder' })).toBeDisabled()
 
   await page.getByLabel('Revize notu').fill('Ay ici kadro degisikligi')
-  await page.getByRole('button', { name: 'Revize talebi gonder' }).click()
+  await page.getByRole('button', { name: 'Revize talebi gönder' }).click()
 
   await expect(page.getByText('Revision request submitted for region approval')).toBeVisible()
   expect(capturedPayload).not.toBeNull()

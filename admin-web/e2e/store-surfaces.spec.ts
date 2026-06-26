@@ -2168,8 +2168,8 @@ test('store utility pages show honest preferences and stay mobile-safe', async (
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Hedef kontrol masasi' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Personel hedef dagitimi' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hedefler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Personel hedef dağıtımı' })).toBeVisible()
   await expect(page.getByRole('link', { name: /Hedef ak/i })).toHaveCount(0)
   await expect(page.getByText('/admin/targets')).toHaveCount(0)
 

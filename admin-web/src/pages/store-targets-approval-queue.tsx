@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { UseMutationResult } from '@tanstack/react-query'
-import { BadgeCheck, ChevronDown, Store } from 'lucide-react'
+import { ArrowRight, BadgeCheck, RotateCcw, Store, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,16 +11,15 @@ import {
   approveTargetDistributionRequest,
   type TargetDistributionRequest,
 } from '../features/targets/api'
-import { formatDate, formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
+import { formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
-import {
-  StoreEmptyState,
-  StoreSectionCard,
-  StoreStackedList,
-  StoreStackedRow,
-  StoreStatusBadge,
-} from './store-surface-primitives'
+import { StoreEmptyState, StoreStatusBadge } from './store-surface-primitives'
 import type { TargetCopy } from './store-targets-contract-sections'
+
+type TargetApprovalDraft = {
+  allocations?: Record<string, number>
+  totalTargetValue?: number
+}
 
 export function TargetApprovalQueue(input: {
   approvalNotes: Record<string, string>
@@ -36,10 +35,9 @@ export function TargetApprovalQueue(input: {
   pendingRequests: TargetDistributionRequest[]
 }) {
   const [openRequestId, setOpenRequestId] = useState<string | null>(null)
-  const [approvalDrafts, setApprovalDrafts] = useState<Record<string, Record<string, number>>>({})
-  const firstRequestId = input.pendingRequests[0]?.requestId ?? null
-  const effectiveOpenRequestId =
-    openRequestId === null ? firstRequestId : openRequestId
+  const [approvalDrafts, setApprovalDrafts] = useState<Record<string, TargetApprovalDraft>>({})
+  const selectedRequest =
+    input.pendingRequests.find((request) => request.requestId === openRequestId) ?? null
 
   const resetApprovalDraft = (requestId: string) => {
     setApprovalDrafts((current) => {
@@ -49,302 +47,415 @@ export function TargetApprovalQueue(input: {
     })
   }
 
+  const updateTotalDraft = (requestId: string, totalTargetValue: number) => {
+    setApprovalDrafts((current) => ({
+      ...current,
+      [requestId]: {
+        ...(current[requestId] ?? {}),
+        totalTargetValue,
+      },
+    }))
+  }
+
+  const updateAllocationDraft = (requestId: string, employeeId: string, targetValue: number) => {
+    setApprovalDrafts((current) => ({
+      ...current,
+      [requestId]: {
+        ...(current[requestId] ?? {}),
+        allocations: {
+          ...(current[requestId]?.allocations ?? {}),
+          [employeeId]: targetValue,
+        },
+      },
+    }))
+  }
+
+  const submitApproval = (request: TargetDistributionRequest) => {
+    const approvalState = resolveApprovalState(request, approvalDrafts[request.requestId], input.locale)
+    const approvalNote = input.approvalNotes[request.requestId]?.trim() ?? ''
+
+    input.approveMutation.mutate({
+      requestId: request.requestId,
+      ...(approvalNote ? { approvalNote } : {}),
+      ...(approvalState.hasEditedTargets
+        ? {
+            approvedTotalTargetValue: approvalState.effectiveTotal,
+            approvedAllocations: approvalState.allocations.map((allocation) => ({
+              employeeId: allocation.employeeId,
+              assigneeLabel: allocation.assigneeLabel,
+              targetValue: Number(allocation.targetValue || 0),
+              ...(allocation.note ? { note: allocation.note } : {}),
+            })),
+          }
+        : {}),
+    })
+  }
+
   return (
-    <StoreSectionCard
-      title={input.copy.targetApprovalQueue}
-      description={input.copy.approvalQueueCopy}
-      badge={{ label: `${input.pendingRequests.length} ${input.copy.storeName.toLowerCase()}`, tone: 'warning' }}
-      className="tw:w-full tw:max-w-[820px] tw:overflow-hidden tw:bg-card/90 tw:shadow-[0_16px_44px_rgba(23,30,58,0.06)]"
-    >
+    <section className="targets-command-ledger" aria-labelledby="target-approval-title">
+      <div className="targets-command-ledger-summary">
+        <div>
+          <h2 id="target-approval-title">{input.copy.targetApprovalQueue}</h2>
+          <p>{input.copy.approvalQueueCopy}</p>
+        </div>
+        <StoreStatusBadge tone={input.pendingRequests.length > 0 ? 'warning' : 'neutral'}>
+          {input.pendingRequests.length} {input.copy.storeName.toLowerCase()}
+        </StoreStatusBadge>
+      </div>
+
       {input.pendingRequests.length === 0 ? (
-        <StoreEmptyState title={input.copy.noPendingTitle} description={input.copy.noPendingCopy} />
+        <div className="targets-command-ledger-empty">
+          <StoreEmptyState title={input.copy.noPendingTitle} description={input.copy.noPendingCopy} />
+        </div>
       ) : (
-        <StoreStackedList>
-          {input.pendingRequests.map((request) => {
-            const canApprove = canApproveTargetDistributionRequest(input.authSummary, request.storeId)
-            const isApproving =
-              input.approveMutation.isPending &&
-              input.approveMutation.variables?.requestId === request.requestId
-            const approvalNote = input.approvalNotes[request.requestId]?.trim() ?? ''
-            const isOpen = effectiveOpenRequestId === request.requestId
-            const originalTotal = Number(request.totalTargetValue || 0)
-            const draftValues = approvalDrafts[request.requestId] ?? {}
-            const allocations = request.allocations.map((allocation) => ({
-              ...allocation,
-              targetValue:
-                draftValues[allocation.employeeId] ?? Number(allocation.targetValue || 0),
-            }))
-            const allocationTotal = allocations.reduce(
-              (sum, allocation) => sum + Number(allocation.targetValue || 0),
-              0,
-            )
-            const difference = allocationTotal - originalTotal
-            const hasEditedTargets = allocations.some(
-              (allocation) =>
-                Number(allocation.targetValue || 0) !==
-                Number(
-                  request.allocations.find((item) => item.employeeId === allocation.employeeId)
-                    ?.targetValue || 0,
-                ),
-            )
-            const hasEveryTarget = allocations.every(
-              (allocation) => Number(allocation.targetValue || 0) > 0,
-            )
-            const totalsAligned = Math.abs(difference) < 0.0001
-            const canSubmit =
-              canApprove &&
-              !isApproving &&
-              (!hasEditedTargets || (hasEveryTarget && totalsAligned && Boolean(approvalNote)))
+        <>
+          <div className="targets-command-ledger-head" aria-hidden="true">
+            <span>{input.copy.storeName}</span>
+            <span>{input.copy.totalTarget}</span>
+            <span>{input.copy.allocationTotal}</span>
+            <span>{input.copy.personnel}</span>
+            <span>{input.copy.status}</span>
+            <span>{input.copy.approve}</span>
+          </div>
+          <div className="targets-command-ledger-list">
+            {input.pendingRequests.map((request) => {
+              const approvalState = resolveApprovalState(
+                request,
+                approvalDrafts[request.requestId],
+                input.locale,
+              )
+              const canApprove = canApproveTargetDistributionRequest(input.authSummary, request.storeId)
+              const isSelected = selectedRequest?.requestId === request.requestId
 
-            return (
-              <StoreStackedRow
-                key={request.requestId}
-                tone={canApprove ? 'warning' : 'neutral'}
-                className="tw:w-fit tw:max-w-full tw:overflow-hidden tw:border-border/80 tw:bg-white/90 tw:p-0 tw:shadow-[inset_3px_0_0_rgba(245,158,11,0.28),0_10px_28px_rgba(23,30,58,0.04)]"
-              >
-                <div className="tw:flex tw:flex-col">
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    className="tw:grid tw:w-full tw:border-0 tw:bg-transparent tw:gap-3 tw:p-3 tw:text-left tw:text-inherit tw:lg:grid-cols-[minmax(230px,300px)_auto_24px] tw:lg:items-center"
-                    onClick={() => setOpenRequestId(isOpen ? '' : request.requestId)}
-                  >
-                    <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
-                      <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
-                        <Store data-icon="inline-start" />
-                      </span>
-                      <div className="tw:min-w-0">
-                        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-                          <strong className="tw:text-sm tw:font-medium tw:text-foreground">
-                            {request.storeName || request.storeId}
-                          </strong>
-                          <StoreStatusBadge tone="warning">{input.copy.pendingStatus}</StoreStatusBadge>
-                        </div>
-                        <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
-                          {formatDate(request.requestMonth, input.locale)} - {request.targetLabel}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="tw:grid tw:gap-2 tw:sm:grid-cols-3">
-                      <KeyValue
-                        label={input.copy.totalTarget}
-                        value={formatAmount(request.totalTargetValue, input.locale, input.copy.emptyValue)}
-                      />
-                      <KeyValue label={input.copy.allocationCount} value={String(request.allocationCount)} />
-                      <KeyValue
-                        label={input.copy.createdAt}
-                        value={formatDateTime(request.createdAt, input.locale)}
-                      />
-                    </div>
-                    <span
-                      className={cn(
-                        'tw:grid tw:size-6 tw:place-items-center tw:rounded-full tw:bg-primary/10 tw:text-primary tw:transition-transform',
-                        isOpen ? 'tw:rotate-180' : undefined,
-                      )}
-                    >
-                      <ChevronDown data-icon="inline-start" />
+              return (
+                <button
+                  key={request.requestId}
+                  type="button"
+                  className={cn(
+                    'targets-command-ledger-row',
+                    isSelected ? 'is-selected' : undefined,
+                    !canApprove ? 'is-readonly' : undefined,
+                  )}
+                  onClick={() => setOpenRequestId(request.requestId)}
+                >
+                  <span className="targets-command-store-cell">
+                    <span className="targets-command-store-icon">
+                      <Store data-icon="inline-start" />
                     </span>
-                  </button>
-
-                  {isOpen && request.allocations.length > 0 ? (
-                    <div className="tw:mx-3 tw:mb-3 tw:w-fit tw:max-w-full tw:overflow-hidden tw:rounded-lg tw:border tw:border-border/80">
-                      <div className="tw:grid tw:grid-cols-[minmax(0,1fr)_92px_64px] tw:gap-2 tw:bg-muted/55 tw:px-3 tw:py-2 tw:text-xs tw:font-medium tw:text-muted-foreground tw:md:grid-cols-[minmax(180px,260px)_110px_72px_96px]">
-                        <span>{input.copy.personnel}</span>
-                        <span>{input.copy.targetValue}</span>
-                        <span>{input.copy.share}</span>
-                        <span className="tw:hidden tw:md:block">{input.copy.status}</span>
-                      </div>
-                      {allocations.map((allocation) => {
-                        const originalValue = Number(
-                          request.allocations.find((item) => item.employeeId === allocation.employeeId)
-                            ?.targetValue || 0,
-                        )
-                        const isEdited =
-                          Number(allocation.targetValue || 0) !== originalValue
-
-                        return (
-                          <div
-                            key={allocation.employeeId}
-                            className="tw:grid tw:grid-cols-[minmax(0,1fr)_92px_64px] tw:items-center tw:gap-2 tw:border-t tw:border-border/70 tw:bg-white/80 tw:px-3 tw:py-2 tw:md:grid-cols-[minmax(180px,260px)_110px_72px_96px]"
-                          >
-                            <div className="tw:min-w-0">
-                              <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">
-                                {allocation.assigneeLabel}
-                              </strong>
-                            </div>
-                            {canApprove ? (
-                              <Input
-                                aria-label={`${allocation.assigneeLabel} ${input.copy.targetValue}`}
-                                disabled={isApproving}
-                                inputMode="numeric"
-                                value={formatCurrencyInputValue(Number(allocation.targetValue || 0), input.locale)}
-                                onChange={(event) =>
-                                  setApprovalDrafts((current) => ({
-                                    ...current,
-                                    [request.requestId]: {
-                                      ...(current[request.requestId] ?? {}),
-                                      [allocation.employeeId]: parseCurrencyInputValue(event.target.value),
-                                    },
-                                  }))
-                                }
-                                className="tw:h-9 tw:text-sm tw:font-medium"
-                              />
-                            ) : (
-                              <span className="tw:text-sm tw:font-medium">
-                                {formatAmount(
-                                  Number(allocation.targetValue || 0),
-                                  input.locale,
-                                  input.copy.emptyValue,
-                                )}
-                              </span>
-                            )}
-                            <StoreStatusBadge tone="calm">
-                              {formatTargetShare(Number(allocation.targetValue || 0), originalTotal, input.locale)}
-                            </StoreStatusBadge>
-                            <StoreStatusBadge
-                              tone={isEdited ? 'accent' : 'warning'}
-                              className="tw:hidden tw:md:inline-flex"
-                            >
-                              {isEdited ? input.copy.adjustedStatus : input.copy.pendingStatus}
-                            </StoreStatusBadge>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : null}
-
-                  {isOpen && request.allocations.length > 0 ? (
-                    <div className="tw:mx-3 tw:mb-3 tw:grid tw:gap-2 tw:sm:grid-cols-3">
-                      <KeyValue
-                        label={input.copy.totalTarget}
-                        value={formatAmount(originalTotal, input.locale, input.copy.emptyValue)}
-                      />
-                      <KeyValue
-                        label={input.copy.allocationTotal}
-                        value={formatAmount(allocationTotal, input.locale, input.copy.emptyValue)}
-                      />
-                      <KeyValue
-                        label={input.copy.difference}
-                        value={`${difference < 0 ? '-' : ''}${formatAmount(
-                          Math.abs(difference),
-                          input.locale,
-                          input.copy.emptyValue,
-                        )}`}
-                      />
-                    </div>
-                  ) : null}
-
-                  {isOpen && request.requestReason ? (
-                    <p className="tw:px-3 tw:pb-2 tw:text-xs tw:leading-5 tw:text-muted-foreground">
-                      {input.copy.reason}: {request.requestReason}
-                    </p>
-                  ) : null}
-                  {isOpen ? (
-                    <div className="tw:grid tw:gap-2 tw:border-t tw:border-border/70 tw:bg-white/62 tw:p-3 tw:md:grid-cols-[minmax(0,1fr)_auto] tw:md:items-end">
-                      <label className="tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-                        {input.copy.approvalNote}
-                        <Textarea
-                          rows={2}
-                          value={input.approvalNotes[request.requestId] ?? ''}
-                          onChange={(event) =>
-                            input.onApprovalNoteChange(request.requestId, event.target.value)
-                          }
-                          disabled={!canApprove}
-                          className="tw:min-h-12"
-                        />
-                        {hasEditedTargets && !approvalNote ? (
-                          <span className="tw:text-xs tw:font-medium tw:text-destructive">
-                            {input.copy.approvalEditedNoteRequired}
-                          </span>
-                        ) : null}
-                      </label>
-                      <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
-                        {!canApprove ? (
-                          <span className="tw:text-xs tw:text-muted-foreground">
-                            {input.copy.cannotApprove}
-                          </span>
-                        ) : null}
-                        {hasEditedTargets && !hasEveryTarget ? (
-                          <span className="tw:text-xs tw:font-medium tw:text-destructive">
-                            {input.copy.approvalPositiveTargets}
-                          </span>
-                        ) : null}
-                        {hasEditedTargets && hasEveryTarget && !totalsAligned ? (
-                          <span className="tw:text-xs tw:font-medium tw:text-destructive">
-                            {input.copy.allocationMismatch}
-                          </span>
-                        ) : null}
-                        {hasEditedTargets ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            disabled={isApproving}
-                            onClick={() => resetApprovalDraft(request.requestId)}
-                          >
-                            {input.copy.resetApprovalDraft}
-                          </Button>
-                        ) : null}
-                        <Button
-                          type="button"
-                          disabled={!canSubmit}
-                          onClick={() =>
-                            input.approveMutation.mutate({
-                              requestId: request.requestId,
-                              ...(approvalNote ? { approvalNote } : {}),
-                              ...(hasEditedTargets
-                                ? {
-                                    approvedTotalTargetValue: originalTotal,
-                                    approvedAllocations: allocations.map((allocation) => ({
-                                      employeeId: allocation.employeeId,
-                                      assigneeLabel: allocation.assigneeLabel,
-                                      targetValue: Number(allocation.targetValue || 0),
-                                      ...(allocation.note ? { note: allocation.note } : {}),
-                                    })),
-                                  }
-                                : {}),
-                            })
-                          }
-                        >
-                          <BadgeCheck data-icon="inline-start" />
-                          {isApproving
-                            ? input.copy.approving
-                            : hasEditedTargets
-                              ? input.copy.approveAdjusted
-                              : input.copy.approve}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </StoreStackedRow>
-            )
-          })}
-        </StoreStackedList>
+                    <span>
+                      <strong>{request.storeName || request.storeId}</strong>
+                      <small>{formatRequestPeriod(request.requestMonth, input.locale)}</small>
+                    </span>
+                  </span>
+                  <span className="targets-command-money">
+                    {formatMoney(approvalState.effectiveTotal, input.locale, input.copy.emptyValue)}
+                  </span>
+                  <span className="targets-command-money">
+                    {formatMoney(approvalState.allocationTotal, input.locale, input.copy.emptyValue)}
+                  </span>
+                  <span>{request.allocationCount}</span>
+                  <span>
+                    <StoreStatusBadge tone={canApprove ? 'warning' : 'neutral'}>
+                      {canApprove ? input.copy.pendingStatus : input.copy.cannotApprove}
+                    </StoreStatusBadge>
+                  </span>
+                  <span className="targets-command-row-cta">
+                    {approvalState.hasEditedTargets ? input.copy.approveAdjusted : input.copy.approve}
+                    <ArrowRight data-icon="inline-end" />
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </>
       )}
-      {input.approveMutation.isError ? (
-        <p className="tw:mt-3 tw:text-sm tw:text-destructive">
-          {getErrorMessage(input.approveMutation.error)}
-        </p>
+
+      {selectedRequest ? (
+        <TargetApprovalDrawer
+          approvalDraft={approvalDrafts[selectedRequest.requestId]}
+          approvalNote={input.approvalNotes[selectedRequest.requestId] ?? ''}
+          approveMutation={input.approveMutation}
+          canApprove={canApproveTargetDistributionRequest(input.authSummary, selectedRequest.storeId)}
+          copy={input.copy}
+          locale={input.locale}
+          onAllocationChange={(employeeId, value) =>
+            updateAllocationDraft(selectedRequest.requestId, employeeId, value)
+          }
+          onClose={() => setOpenRequestId(null)}
+          onNoteChange={(value) => input.onApprovalNoteChange(selectedRequest.requestId, value)}
+          onReset={() => resetApprovalDraft(selectedRequest.requestId)}
+          onSubmit={() => submitApproval(selectedRequest)}
+          onTotalChange={(value) => updateTotalDraft(selectedRequest.requestId, value)}
+          request={selectedRequest}
+        />
       ) : null}
-    </StoreSectionCard>
+
+      {input.approveMutation.isError ? (
+        <p className="targets-command-error">{getErrorMessage(input.approveMutation.error)}</p>
+      ) : null}
+    </section>
   )
 }
 
-function KeyValue(input: { label: string; value: string }) {
+function TargetApprovalDrawer(input: {
+  approvalDraft: TargetApprovalDraft | undefined
+  approvalNote: string
+  approveMutation: UseMutationResult<
+    Awaited<ReturnType<typeof approveTargetDistributionRequest>>,
+    Error,
+    Parameters<typeof approveTargetDistributionRequest>[0]
+  >
+  canApprove: boolean
+  copy: TargetCopy
+  locale: AppLocale
+  onAllocationChange: (employeeId: string, value: number) => void
+  onClose: () => void
+  onNoteChange: (value: string) => void
+  onReset: () => void
+  onSubmit: () => void
+  onTotalChange: (value: number) => void
+  request: TargetDistributionRequest
+}) {
+  const approvalState = resolveApprovalState(input.request, input.approvalDraft, input.locale)
+  const isApproving =
+    input.approveMutation.isPending &&
+    input.approveMutation.variables?.requestId === input.request.requestId
+  const hasNote = Boolean(input.approvalNote.trim())
+  const canSubmit =
+    input.canApprove &&
+    !isApproving &&
+    (!approvalState.hasEditedTargets ||
+      (approvalState.hasEveryTarget && approvalState.totalsAligned && hasNote))
+
   return (
-    <div className="tw:min-w-[72px] tw:rounded-lg tw:border tw:border-border/70 tw:bg-card/70 tw:p-2">
-      <span className="tw:text-[11px] tw:text-muted-foreground">{input.label}</span>
-      <strong className="tw:mt-1 tw:block tw:text-xs tw:font-medium tw:text-foreground">{input.value}</strong>
+    <div className="targets-command-drawer-layer">
+      <button
+        type="button"
+        className="targets-command-drawer-backdrop"
+        aria-label="Kapat"
+        onClick={input.onClose}
+      />
+      <aside className="targets-command-detail-drawer" aria-label={`${input.request.storeName} hedef kararı`}>
+        <header className="targets-command-detail-head">
+          <div>
+            <StoreStatusBadge tone="warning">{input.copy.pendingStatus}</StoreStatusBadge>
+            <h3>{input.request.storeName || input.request.storeId}</h3>
+            <p>
+              {formatRequestPeriod(input.request.requestMonth, input.locale)}
+              {input.request.targetLabel ? ` · ${input.request.targetLabel}` : ''}
+            </p>
+          </div>
+          <Button type="button" variant="outline" size="icon" onClick={input.onClose} aria-label="Kapat">
+            <X data-icon="inline-start" />
+          </Button>
+        </header>
+
+        <div className="targets-command-detail-body">
+          <div className="targets-command-mini-grid">
+            <MiniStat
+              label={input.copy.totalTarget}
+              value={formatMoney(approvalState.effectiveTotal, input.locale, input.copy.emptyValue)}
+            />
+            <MiniStat
+              label={input.copy.allocationTotal}
+              value={formatMoney(approvalState.allocationTotal, input.locale, input.copy.emptyValue)}
+              tone={approvalState.totalsAligned ? 'good' : 'warning'}
+            />
+            <MiniStat label={input.copy.allocationCount} value={String(input.request.allocationCount)} />
+            <MiniStat
+              label={input.copy.difference}
+              value={formatSignedMoney(approvalState.difference, input.locale, input.copy.emptyValue)}
+              tone={approvalState.totalsAligned ? 'good' : 'danger'}
+            />
+          </div>
+
+          <section className="targets-command-decision-card">
+            <div className="targets-command-card-title">
+              <h4>{input.copy.totalTarget}</h4>
+              {approvalState.hasEditedTargets ? (
+                <StoreStatusBadge tone="accent">{input.copy.adjustedStatus}</StoreStatusBadge>
+              ) : (
+                <StoreStatusBadge tone="neutral">{input.copy.pendingStatus}</StoreStatusBadge>
+              )}
+            </div>
+            <label className="targets-command-money-field">
+              <span>{input.copy.totalTarget}</span>
+              <Input
+                aria-label={input.copy.totalTarget}
+                disabled={!input.canApprove || isApproving}
+                inputMode="numeric"
+                value={formatCurrencyInputValue(approvalState.effectiveTotal, input.locale)}
+                onChange={(event) => input.onTotalChange(parseCurrencyInputValue(event.target.value))}
+              />
+            </label>
+            {input.request.requestReason ? (
+              <p className="targets-command-muted">
+                {input.copy.reason}: {input.request.requestReason}
+              </p>
+            ) : null}
+          </section>
+
+          <section className="targets-command-target-editor">
+            <div className="targets-command-card-title">
+              <h4>{input.copy.personnel}</h4>
+              <span>{input.copy.targetValue}</span>
+            </div>
+            <div className="targets-command-target-list">
+              {approvalState.allocations.map((allocation) => (
+                <div
+                  key={allocation.employeeId}
+                  className={cn(
+                    'targets-command-target-row',
+                    allocation.isEdited ? 'is-changed' : undefined,
+                  )}
+                >
+                  <div>
+                    <strong>{allocation.assigneeLabel}</strong>
+                    <small>
+                      {input.copy.share}: {formatTargetShare(allocation.targetValue, approvalState.effectiveTotal, input.locale)}
+                    </small>
+                  </div>
+                  <Input
+                    aria-label={`${allocation.assigneeLabel} ${input.copy.targetValue}`}
+                    disabled={!input.canApprove || isApproving}
+                    inputMode="numeric"
+                    value={formatCurrencyInputValue(allocation.targetValue, input.locale)}
+                    onChange={(event) =>
+                      input.onAllocationChange(
+                        allocation.employeeId,
+                        parseCurrencyInputValue(event.target.value),
+                      )
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="targets-command-decision-card">
+            <div className="targets-command-card-title">
+              <h4>{input.copy.approvalNote}</h4>
+              <span>{input.copy.createdAt}: {formatDateTime(input.request.createdAt, input.locale)}</span>
+            </div>
+            <Textarea
+              aria-label={input.copy.approvalNote}
+              rows={4}
+              value={input.approvalNote}
+              onChange={(event) => input.onNoteChange(event.target.value)}
+              disabled={!input.canApprove || isApproving}
+              placeholder={input.copy.optionalNote}
+            />
+            {approvalState.hasEditedTargets && !hasNote ? (
+              <p className="targets-command-error">{input.copy.approvalEditedNoteRequired}</p>
+            ) : null}
+            {approvalState.hasEditedTargets && !approvalState.hasEveryTarget ? (
+              <p className="targets-command-error">{input.copy.approvalPositiveTargets}</p>
+            ) : null}
+            {approvalState.hasEditedTargets &&
+            approvalState.hasEveryTarget &&
+            !approvalState.totalsAligned ? (
+              <p className="targets-command-error">{input.copy.allocationMismatch}</p>
+            ) : null}
+            {!input.canApprove ? (
+              <p className="targets-command-muted">{input.copy.cannotApprove}</p>
+            ) : null}
+          </section>
+        </div>
+
+        <footer className="targets-command-drawer-footer">
+          {approvalState.hasEditedTargets ? (
+            <Button type="button" variant="outline" onClick={input.onReset} disabled={isApproving}>
+              <RotateCcw data-icon="inline-start" />
+              {input.copy.resetApprovalDraft}
+            </Button>
+          ) : null}
+          <Button type="button" variant="outline" onClick={input.onClose}>
+            Kapat
+          </Button>
+          <Button type="button" onClick={input.onSubmit} disabled={!canSubmit}>
+            <BadgeCheck data-icon="inline-start" />
+            {isApproving
+              ? input.copy.approving
+              : approvalState.hasEditedTargets
+                ? input.copy.approveAdjusted
+                : input.copy.approve}
+          </Button>
+        </footer>
+      </aside>
     </div>
   )
 }
 
-function formatAmount(value: number | null, locale: AppLocale, emptyValue: string) {
+function MiniStat(input: { label: string; tone?: 'danger' | 'good' | 'warning'; value: string }) {
+  return (
+    <div className={cn('targets-command-mini-stat', input.tone ? `is-${input.tone}` : undefined)}>
+      <span>{input.label}</span>
+      <strong>{input.value}</strong>
+    </div>
+  )
+}
+
+function resolveApprovalState(
+  request: TargetDistributionRequest,
+  draft: TargetApprovalDraft | undefined,
+  locale: AppLocale,
+) {
+  const originalTotal = Number(request.totalTargetValue || 0)
+  const draftTotal = draft?.totalTargetValue
+  const effectiveTotal =
+    draftTotal !== undefined && Number.isFinite(draftTotal) ? draftTotal : originalTotal
+  const allocations = request.allocations.map((allocation) => {
+    const originalValue = Number(allocation.targetValue || 0)
+    const draftValue = draft?.allocations?.[allocation.employeeId]
+    const targetValue =
+      draftValue !== undefined && Number.isFinite(draftValue) ? draftValue : originalValue
+
+    return {
+      ...allocation,
+      isEdited: !areAmountsEqual(targetValue, originalValue),
+      targetValue,
+    }
+  })
+  const allocationTotal = allocations.reduce(
+    (sum, allocation) => sum + Number(allocation.targetValue || 0),
+    0,
+  )
+  const difference = allocationTotal - effectiveTotal
+  const hasEditedTotal = !areAmountsEqual(effectiveTotal, originalTotal)
+  const hasEditedTargets = hasEditedTotal || allocations.some((allocation) => allocation.isEdited)
+  const hasEveryTarget = allocations.every((allocation) => Number(allocation.targetValue || 0) > 0)
+  const totalsAligned = areAmountsEqual(difference, 0)
+
+  return {
+    allocationTotal,
+    allocations,
+    difference,
+    effectiveTotal,
+    hasEditedTargets,
+    hasEveryTarget,
+    locale,
+    totalsAligned,
+  }
+}
+
+function areAmountsEqual(left: number, right: number) {
+  return Math.abs(Number(left || 0) - Number(right || 0)) < 0.0001
+}
+
+function formatMoney(value: number | null, locale: AppLocale, emptyValue: string) {
   if (value === null || !Number.isFinite(value)) {
     return emptyValue
   }
 
-  return formatNumber(value, locale, { maximumFractionDigits: 0 })
+  return `${formatNumber(value, locale, { maximumFractionDigits: 0 })} TL`
+}
+
+function formatSignedMoney(value: number, locale: AppLocale, emptyValue: string) {
+  if (!Number.isFinite(value) || areAmountsEqual(value, 0)) {
+    return emptyValue
+  }
+
+  return `${value > 0 ? '+' : '-'}${formatMoney(Math.abs(value), locale, emptyValue)}`
 }
 
 function formatCurrencyInputValue(value: number, locale: AppLocale) {
@@ -352,7 +463,7 @@ function formatCurrencyInputValue(value: number, locale: AppLocale) {
     return ''
   }
 
-  return `${formatNumber(value, locale, { maximumFractionDigits: 0 })} TL`
+  return formatNumber(value, locale, { maximumFractionDigits: 0 })
 }
 
 function parseCurrencyInputValue(value: string) {
@@ -365,4 +476,18 @@ function formatTargetShare(value: number, total: number, locale: AppLocale) {
   }
 
   return `${formatNumber((value / total) * 100, locale, { maximumFractionDigits: 1 })}%`
+}
+
+function formatRequestPeriod(value: string, locale: AppLocale) {
+  const [year, month] = value.slice(0, 7).split('-')
+  const monthIndex = Number(month) - 1
+
+  if (!year || !Number.isFinite(monthIndex)) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(Number(year), monthIndex, 1))
 }
