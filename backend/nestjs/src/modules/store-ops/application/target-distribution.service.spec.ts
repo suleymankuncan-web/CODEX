@@ -216,6 +216,183 @@ describe("TargetDistributionService", () => {
     });
   });
 
+  it("approves with edited allocations when every employee belongs to the request store", async () => {
+    const targetDistributionRepository = {
+      getRequestScope: jest.fn(async () => ({
+        storeId: "00000000-0000-4000-8000-000000000201",
+      })),
+      approveRequest: jest.fn(async () => ({
+        requestId: "00000000-0000-4000-8000-000000000701",
+      })),
+    };
+    const storeOpsRepository = {
+      listStorePersonnelTargetingRows: jest.fn(async () => [
+        {
+          employee_id: "00000000-0000-4000-8000-000000000501",
+          first_name: "Ada",
+          last_name: "Kaya",
+          external_employee_ref: "FM8375",
+          period_start: null,
+          period_end: null,
+          net_sales_value: null,
+        },
+        {
+          employee_id: "00000000-0000-4000-8000-000000000502",
+          first_name: "Ece",
+          last_name: "Demir",
+          external_employee_ref: "FM8376",
+          period_start: null,
+          period_end: null,
+          net_sales_value: null,
+        },
+      ]),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      storeOpsRepository as never,
+    );
+
+    await service.approveRequest({
+      actorUserId: "region-user",
+      actorActionScope: {
+        assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      requestId: "00000000-0000-4000-8000-000000000701",
+      approvalNote: "Bolge hedefi dengeledi",
+      approvedTotalTargetValue: 175000,
+      approvedAllocations: [
+        {
+          employeeId: "00000000-0000-4000-8000-000000000501",
+          assigneeLabel: "Ada Kaya",
+          targetValue: 100000,
+        },
+        {
+          employeeId: "00000000-0000-4000-8000-000000000502",
+          assigneeLabel: "Ece Demir",
+          targetValue: 75000,
+        },
+      ],
+    });
+
+    expect(storeOpsRepository.listStorePersonnelTargetingRows).toHaveBeenCalledWith({
+      storeId: "00000000-0000-4000-8000-000000000201",
+    });
+    expect(targetDistributionRepository.approveRequest).toHaveBeenCalledWith({
+      requestId: "00000000-0000-4000-8000-000000000701",
+      approverUserId: "region-user",
+      approvalNote: "Bolge hedefi dengeledi",
+      approvedTotalTargetValue: 175000,
+      approvedAllocations: [
+        {
+          employeeId: "00000000-0000-4000-8000-000000000501",
+          assigneeLabel: "Ada Kaya",
+          targetValue: 100000,
+        },
+        {
+          employeeId: "00000000-0000-4000-8000-000000000502",
+          assigneeLabel: "Ece Demir",
+          targetValue: 75000,
+        },
+      ],
+    });
+  });
+
+  it("rejects edited approve payloads when allocation total does not match the approved target total", async () => {
+    const targetDistributionRepository = {
+      getRequestScope: jest.fn(async () => ({
+        storeId: "00000000-0000-4000-8000-000000000201",
+      })),
+      approveRequest: jest.fn(),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      {} as never,
+    );
+
+    await expect(
+      service.approveRequest({
+        actorUserId: "region-user",
+        actorActionScope: {
+          assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        requestId: "00000000-0000-4000-8000-000000000701",
+        approvalNote: "Bolge hedefi dengeledi",
+        approvedTotalTargetValue: 175000,
+        approvedAllocations: [
+          {
+            employeeId: "00000000-0000-4000-8000-000000000501",
+            assigneeLabel: "Ada Kaya",
+            targetValue: 100000,
+          },
+        ],
+      }),
+    ).rejects.toThrow("Approved allocation total must match the approved target total");
+
+    expect(targetDistributionRepository.approveRequest).not.toHaveBeenCalled();
+  });
+
+  it("rejects partial edited approve payloads before persisting", async () => {
+    const targetDistributionRepository = {
+      getRequestScope: jest.fn(async () => ({
+        storeId: "00000000-0000-4000-8000-000000000201",
+      })),
+      approveRequest: jest.fn(),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      {} as never,
+    );
+
+    await expect(
+      service.approveRequest({
+        actorUserId: "region-user",
+        actorActionScope: {
+          assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        requestId: "00000000-0000-4000-8000-000000000701",
+        approvalNote: "Bolge hedefi dengeledi",
+        approvedTotalTargetValue: 175000,
+      }),
+    ).rejects.toThrow(
+      "Approved target total and final allocations must be submitted together",
+    );
+
+    expect(targetDistributionRepository.approveRequest).not.toHaveBeenCalled();
+  });
+
+  it("requires a note when approving edited target allocations", async () => {
+    const targetDistributionRepository = {
+      getRequestScope: jest.fn(async () => ({
+        storeId: "00000000-0000-4000-8000-000000000201",
+      })),
+      approveRequest: jest.fn(),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      {} as never,
+    );
+
+    await expect(
+      service.approveRequest({
+        actorUserId: "region-user",
+        actorActionScope: {
+          assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        requestId: "00000000-0000-4000-8000-000000000701",
+        approvedTotalTargetValue: 100000,
+        approvedAllocations: [
+          {
+            employeeId: "00000000-0000-4000-8000-000000000501",
+            assigneeLabel: "Ada Kaya",
+            targetValue: 100000,
+          },
+        ],
+      }),
+    ).rejects.toThrow("Approval note is required when target allocations are edited");
+
+    expect(targetDistributionRepository.approveRequest).not.toHaveBeenCalled();
+  });
+
   it("summarizes approved target coverage for active personnel", async () => {
     const targetDistributionRepository = {
       listTargetCoverage: jest.fn(async () => [

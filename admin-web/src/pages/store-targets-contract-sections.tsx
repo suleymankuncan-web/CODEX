@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import type { UseMutationResult } from '@tanstack/react-query'
-import { BadgeCheck, ChevronDown, FilePenLine, Send, Store } from 'lucide-react'
+import { FilePenLine, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -13,10 +12,7 @@ import {
 } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
-import type { AuthSessionSummary } from '../features/auth/api'
-import { canApproveTargetDistributionRequest } from '../features/auth/authorization'
 import {
-  approveTargetDistributionRequest,
   type TargetCoverageRow,
   type TargetCoverageSummary,
   type TargetDistributionAllocation,
@@ -33,16 +29,20 @@ import {
   StoreStatusBadge,
   type StoreSurfaceTone,
 } from './store-surface-primitives'
+export { TargetApprovalQueue } from './store-targets-approval-queue'
 
-type TargetCopy = {
+export type TargetCopy = {
   allocationCount: string
   allocationMismatch: string
   allocationTotal: string
   approvalNote: string
   approvalQueueCopy: string
   approve: string
+  approveAdjusted: string
   approvedTarget: string
   approving: string
+  approvalEditedNoteRequired: string
+  approvalPositiveTargets: string
   cannotApprove: string
   coverageCopy: string
   coverageRisk: string
@@ -92,6 +92,8 @@ type TargetCopy = {
   noApprovedCopy: string
   revisionMismatch: string
   revisionNoChange: string
+  resetApprovalDraft: string
+  adjustedStatus: string
 }
 
 export function TargetDistributionForm(input: {
@@ -253,181 +255,6 @@ export function TargetDistributionForm(input: {
           {input.createPending ? input.copy.submitting : input.copy.submitTarget}
         </Button>
       </div>
-    </StoreSectionCard>
-  )
-}
-
-export function TargetApprovalQueue(input: {
-  approvalNotes: Record<string, string>
-  approveMutation: UseMutationResult<
-    Awaited<ReturnType<typeof approveTargetDistributionRequest>>,
-    Error,
-    Parameters<typeof approveTargetDistributionRequest>[0]
-  >
-  authSummary: AuthSessionSummary | null
-  copy: TargetCopy
-  locale: AppLocale
-  onApprovalNoteChange: (requestId: string, value: string) => void
-  pendingRequests: TargetDistributionRequest[]
-}) {
-  const [openRequestId, setOpenRequestId] = useState<string | null>(null)
-  const firstRequestId = input.pendingRequests[0]?.requestId ?? null
-  const effectiveOpenRequestId =
-    openRequestId === null ? firstRequestId : openRequestId
-
-  return (
-    <StoreSectionCard
-      title={input.copy.targetApprovalQueue}
-      description={input.copy.approvalQueueCopy}
-      badge={{ label: `${input.pendingRequests.length} ${input.copy.storeName.toLowerCase()}`, tone: 'warning' }}
-      className="tw:w-full tw:max-w-[820px] tw:overflow-hidden tw:bg-card/90 tw:shadow-[0_16px_44px_rgba(23,30,58,0.06)]"
-    >
-      {input.pendingRequests.length === 0 ? (
-        <StoreEmptyState title={input.copy.noPendingTitle} description={input.copy.noPendingCopy} />
-      ) : (
-        <StoreStackedList>
-          {input.pendingRequests.map((request) => {
-            const canApprove = canApproveTargetDistributionRequest(input.authSummary, request.storeId)
-            const isApproving =
-              input.approveMutation.isPending &&
-              input.approveMutation.variables?.requestId === request.requestId
-            const approvalNote = input.approvalNotes[request.requestId]?.trim() ?? ''
-            const isOpen = effectiveOpenRequestId === request.requestId
-
-            return (
-              <StoreStackedRow
-                key={request.requestId}
-                tone={canApprove ? 'warning' : 'neutral'}
-                className="tw:w-fit tw:max-w-full tw:overflow-hidden tw:border-border/80 tw:bg-white/90 tw:p-0 tw:shadow-[inset_3px_0_0_rgba(245,158,11,0.28),0_10px_28px_rgba(23,30,58,0.04)]"
-              >
-                <div className="tw:flex tw:flex-col">
-                  <button
-                    type="button"
-                    aria-expanded={isOpen}
-                    className="tw:grid tw:w-full tw:border-0 tw:bg-transparent tw:gap-3 tw:p-3 tw:text-left tw:text-inherit tw:lg:grid-cols-[minmax(230px,300px)_auto_24px] tw:lg:items-center"
-                    onClick={() => setOpenRequestId(isOpen ? '' : request.requestId)}
-                  >
-                    <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
-                      <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
-                        <Store data-icon="inline-start" />
-                      </span>
-                      <div className="tw:min-w-0">
-                        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
-                          <strong className="tw:text-sm tw:font-medium tw:text-foreground">
-                            {request.storeName || request.storeId}
-                          </strong>
-                          <StoreStatusBadge tone="warning">{input.copy.pendingStatus}</StoreStatusBadge>
-                        </div>
-                        <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">
-                          {formatDate(request.requestMonth, input.locale)} - {request.targetLabel}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="tw:grid tw:gap-2 tw:sm:grid-cols-3">
-                      <KeyValue
-                        label={input.copy.totalTarget}
-                        value={formatAmount(request.totalTargetValue, input.locale, input.copy.emptyValue)}
-                      />
-                      <KeyValue label={input.copy.allocationCount} value={String(request.allocationCount)} />
-                      <KeyValue
-                        label={input.copy.createdAt}
-                        value={formatDateTime(request.createdAt, input.locale)}
-                      />
-                    </div>
-                    <span
-                      className={cn(
-                        'tw:grid tw:size-6 tw:place-items-center tw:rounded-full tw:bg-primary/10 tw:text-primary tw:transition-transform',
-                        isOpen ? 'tw:rotate-180' : undefined,
-                      )}
-                    >
-                      <ChevronDown data-icon="inline-start" />
-                    </span>
-                  </button>
-
-                  {isOpen && request.allocations.length > 0 ? (
-                    <div className="tw:mx-3 tw:mb-3 tw:w-fit tw:max-w-full tw:overflow-hidden tw:rounded-lg tw:border tw:border-border/80">
-                      <div className="tw:grid tw:grid-cols-[minmax(0,1fr)_92px_64px] tw:gap-2 tw:bg-muted/55 tw:px-3 tw:py-2 tw:text-xs tw:font-medium tw:text-muted-foreground tw:md:grid-cols-[minmax(180px,260px)_110px_72px_96px]">
-                        <span>{input.copy.personnel}</span>
-                        <span>{input.copy.targetValue}</span>
-                        <span>{input.copy.share}</span>
-                        <span className="tw:hidden tw:md:block">{input.copy.status}</span>
-                      </div>
-                      {request.allocations.map((allocation) => (
-                        <div
-                          key={allocation.employeeId}
-                          className="tw:grid tw:grid-cols-[minmax(0,1fr)_92px_64px] tw:items-center tw:gap-2 tw:border-t tw:border-border/70 tw:bg-white/80 tw:px-3 tw:py-2 tw:md:grid-cols-[minmax(180px,260px)_110px_72px_96px]"
-                        >
-                          <div className="tw:min-w-0">
-                            <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">
-                              {allocation.assigneeLabel}
-                            </strong>
-                          </div>
-                          <span className="tw:text-sm tw:font-medium">
-                            {formatAmount(Number(allocation.targetValue || 0), input.locale, input.copy.emptyValue)}
-                          </span>
-                          <StoreStatusBadge tone="calm">
-                            {formatTargetShare(Number(allocation.targetValue || 0), Number(request.totalTargetValue || 0), input.locale)}
-                          </StoreStatusBadge>
-                          <StoreStatusBadge tone="warning" className="tw:hidden tw:md:inline-flex">
-                            {input.copy.pendingStatus}
-                          </StoreStatusBadge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-
-                  {isOpen && request.requestReason ? (
-                    <p className="tw:px-3 tw:pb-2 tw:text-xs tw:leading-5 tw:text-muted-foreground">
-                      {input.copy.reason}: {request.requestReason}
-                    </p>
-                  ) : null}
-                  {isOpen ? (
-                    <div className="tw:grid tw:gap-2 tw:border-t tw:border-border/70 tw:bg-white/62 tw:p-3 tw:md:grid-cols-[minmax(0,1fr)_auto] tw:md:items-end">
-                      <label className="tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-                        {input.copy.approvalNote}
-                        <Textarea
-                          rows={2}
-                          value={input.approvalNotes[request.requestId] ?? ''}
-                          onChange={(event) =>
-                            input.onApprovalNoteChange(request.requestId, event.target.value)
-                          }
-                          disabled={!canApprove}
-                          className="tw:min-h-12"
-                        />
-                      </label>
-                      <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-end tw:gap-2">
-                        {!canApprove ? (
-                          <span className="tw:text-xs tw:text-muted-foreground">
-                            {input.copy.cannotApprove}
-                          </span>
-                        ) : null}
-                        <Button
-                          type="button"
-                          disabled={!canApprove || isApproving}
-                          onClick={() =>
-                            input.approveMutation.mutate({
-                              requestId: request.requestId,
-                              ...(approvalNote ? { approvalNote } : {}),
-                            })
-                          }
-                        >
-                          <BadgeCheck data-icon="inline-start" />
-                          {isApproving ? input.copy.approving : input.copy.approve}
-                        </Button>
-                      </div>
-                    </div>
-                  ) : null}
-                </div>
-              </StoreStackedRow>
-            )
-          })}
-        </StoreStackedList>
-      )}
-      {input.approveMutation.isError ? (
-        <p className="tw:mt-3 tw:text-sm tw:text-destructive">
-          {getErrorMessage(input.approveMutation.error)}
-        </p>
-      ) : null}
     </StoreSectionCard>
   )
 }

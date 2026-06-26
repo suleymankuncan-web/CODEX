@@ -22,6 +22,8 @@ type TargetDistributionRow = {
   created_at: string;
   updated_at: string;
   total_count?: string | number;
+  original_allocation_json?: unknown;
+  original_total_target_value?: string | null;
 };
 
 type TargetDistributionAllocation = {
@@ -480,42 +482,76 @@ export class TargetDistributionRepository {
     requestId: string;
     approverUserId: string;
     approvalNote?: string;
+    approvedTotalTargetValue?: number;
+    approvedAllocations?: TargetDistributionAllocation[];
   }) {
     return this.databaseService.withTransaction(async (client) => {
+      const approvedAllocationJson =
+        input.approvedAllocations !== undefined
+          ? JSON.stringify(input.approvedAllocations)
+          : null;
       const result = await client.query<TargetDistributionRow>(
         `
-          UPDATE ops.target_distribution_request
-          SET
-            request_status = 'approved',
-            approved_by_user_id = $2,
-            approved_at = NOW(),
-            approval_note = $3,
-            updated_at = NOW()
-          WHERE target_distribution_request_id = $1::uuid
-          RETURNING
-            target_distribution_request_id,
-            company_id,
-            region_id,
-            store_id,
-            request_month,
-            target_label,
-            total_target_value,
-            allocation_count,
-            request_status,
-            request_reason,
-            allocation_json,
-            submitted_by_user_id,
-            approved_by_user_id,
-            approved_at,
-            approval_note,
-            created_at,
-            updated_at
+          WITH existing AS (
+            SELECT
+              allocation_json AS original_allocation_json,
+              total_target_value AS original_total_target_value
+            FROM ops.target_distribution_request
+            WHERE target_distribution_request_id = $1::uuid
+            FOR UPDATE
+          ),
+          updated AS (
+            UPDATE ops.target_distribution_request AS tdr
+            SET
+              request_status = 'approved',
+              approved_by_user_id = $2,
+              approved_at = NOW(),
+              approval_note = $3,
+              total_target_value = COALESCE($4::numeric, tdr.total_target_value),
+              allocation_count = COALESCE($5::int, tdr.allocation_count),
+              allocation_json = COALESCE($6::jsonb, tdr.allocation_json),
+              updated_at = NOW()
+            FROM existing
+            WHERE tdr.target_distribution_request_id = $1::uuid
+            RETURNING
+              tdr.target_distribution_request_id,
+              tdr.company_id,
+              tdr.region_id,
+              tdr.store_id,
+              tdr.request_month,
+              tdr.target_label,
+              tdr.total_target_value,
+              tdr.allocation_count,
+              tdr.request_status,
+              tdr.request_reason,
+              tdr.allocation_json,
+              tdr.submitted_by_user_id,
+              tdr.approved_by_user_id,
+              tdr.approved_at,
+              tdr.approval_note,
+              tdr.created_at,
+              tdr.updated_at,
+              existing.original_allocation_json,
+              existing.original_total_target_value
+          )
+          SELECT * FROM updated
         `,
-        [input.requestId, input.approverUserId, input.approvalNote ?? null],
+        [
+          input.requestId,
+          input.approverUserId,
+          input.approvalNote ?? null,
+          input.approvedTotalTargetValue ?? null,
+          input.approvedAllocations?.length ?? null,
+          approvedAllocationJson,
+        ],
       );
 
       const request = result.rows[0];
       const allocations = parseTargetDistributionAllocations(request.allocation_json);
+      const originalAllocations = parseTargetDistributionAllocations(
+        request.original_allocation_json,
+      );
+      const isAdjustedApproval = input.approvedAllocations !== undefined;
 
       for (const allocation of allocations) {
         await client.query(
@@ -607,8 +643,18 @@ export class TargetDistributionRepository {
           JSON.stringify({
             correlationId: RequestContextStore.getCorrelationId(),
             actorUserId: input.approverUserId,
+            approvalMode: isAdjustedApproval ? "adjusted" : "direct",
             approvalNote: input.approvalNote ?? null,
             promotedTargetReferenceCount: allocations.length,
+            originalAllocationCount:
+              originalAllocations.length > 0 ? originalAllocations.length : allocations.length,
+            finalAllocationCount: allocations.length,
+            originalTargetValue:
+              request.original_total_target_value !== undefined &&
+              request.original_total_target_value !== null
+                ? Number(request.original_total_target_value)
+                : Number(request.total_target_value),
+            finalTargetValue: Number(request.total_target_value),
           }),
         ],
       );
