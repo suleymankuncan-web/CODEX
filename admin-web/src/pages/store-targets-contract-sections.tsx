@@ -1,15 +1,7 @@
 import { useState } from 'react'
-import { FilePenLine, Send } from 'lucide-react'
+import { FilePenLine, Send, Store } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { cn } from '@/lib/utils'
 import {
@@ -23,9 +15,6 @@ import type { AppLocale } from '../lib/i18n'
 import {
   StoreEmptyState,
   StoreErrorState,
-  StoreSectionCard,
-  StoreStackedList,
-  StoreStackedRow,
   StoreStatusBadge,
   type StoreSurfaceTone,
 } from './store-surface-primitives'
@@ -123,139 +112,138 @@ export function TargetDistributionForm(input: {
   const remainingTarget = totalTargetNumber - input.allocationTotal
 
   return (
-    <StoreSectionCard
-      title={input.copy.targetRequestTitle}
-      description={input.copy.targetRequestCopy}
-      badge={{ label: input.copy.storeManagerMode, tone: 'accent' }}
-      className="tw:w-full tw:max-w-[820px] tw:overflow-hidden tw:bg-card/90 tw:shadow-[0_16px_44px_rgba(23,30,58,0.06)]"
-    >
-      <div className="tw:grid tw:gap-3 tw:lg:grid-cols-3">
-        <label className="tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-          {input.copy.targetLabel}
-          <Input
-            value={input.targetLabel}
-            onChange={(event) => input.onTargetLabelChange(event.target.value)}
-          />
-        </label>
-        <label className="tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-          {input.copy.totalTarget}
-          <Input
-            inputMode="numeric"
-            value={formatCurrencyInputValue(totalTargetNumber, input.locale)}
-            onChange={(event) =>
-              input.onTotalTargetValueChange(String(parseCurrencyInputValue(event.target.value) || ''))
-            }
-          />
-        </label>
-        <div className="tw:grid tw:grid-cols-2 tw:gap-2">
-          <StoreStackedRow tone={input.totalsAligned ? 'calm' : 'warning'}>
-            <span className="tw:text-xs tw:text-muted-foreground">{input.copy.allocationTotal}</span>
-            <strong className="tw:block tw:text-sm">
-              {formatAmount(input.allocationTotal, input.locale, input.copy.emptyValue)}
-            </strong>
-          </StoreStackedRow>
-          <StoreStackedRow tone={remainingTarget === 0 && totalTargetNumber > 0 ? 'calm' : 'warning'}>
-            <span className="tw:text-xs tw:text-muted-foreground">{input.copy.remainingTarget}</span>
-            <strong className="tw:block tw:text-sm">
-              {formatAmount(remainingTarget, input.locale, input.copy.emptyValue)}
-            </strong>
-          </StoreStackedRow>
+    <section className="targets-command-panel" aria-labelledby="target-distribution-title">
+      <div className="targets-command-ledger-summary">
+        <div>
+          <h2 id="target-distribution-title">{input.copy.targetRequestTitle}</h2>
+          <p>{input.copy.targetRequestCopy}</p>
         </div>
+        <StoreStatusBadge tone="accent">{input.copy.storeManagerMode}</StoreStatusBadge>
       </div>
 
-      <label className="tw:mt-3 tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-        {input.copy.requestReason}
-        <Textarea
-          value={input.requestReason}
-          onChange={(event) => input.onRequestReasonChange(event.target.value)}
-          rows={3}
-        />
-      </label>
-
-      {input.personnelLoading ? (
-        <StoreEmptyState description={input.copy.targetRequestCopy} />
-      ) : input.personnelErrorVisible ? (
-        <StoreErrorState
-          title={input.copy.targetRequestTitle}
-          description={getErrorMessage(input.personnelError)}
-        />
-      ) : input.activeAllocations.length === 0 ? (
-        <StoreEmptyState title={input.copy.noPersonnelTitle} description={input.copy.noPersonnelCopy} />
-      ) : (
-        <div className="tw:mt-3 tw:flex tw:flex-col tw:gap-2">
-          <div className="tw:hidden tw:grid-cols-[minmax(0,1fr)_220px_80px_minmax(0,1fr)] tw:gap-3 tw:px-3 tw:text-xs tw:font-medium tw:text-muted-foreground tw:lg:grid">
-            <span>{input.copy.personnel}</span>
-            <span>{input.copy.targetValue}</span>
-            <span>{input.copy.share}</span>
-            <span>{input.copy.optionalNote}</span>
+      <div className="targets-command-panel-body">
+        <div className="targets-command-distribution-grid">
+          <label className="targets-command-form-field">
+            <span>{input.copy.targetLabel}</span>
+            <Input
+              value={input.targetLabel}
+              onChange={(event) => input.onTargetLabelChange(event.target.value)}
+            />
+          </label>
+          <label className="targets-command-form-field">
+            <span>{input.copy.totalTarget}</span>
+            <Input
+              inputMode="numeric"
+              value={formatCurrencyInputValue(totalTargetNumber, input.locale)}
+              onChange={(event) =>
+                input.onTotalTargetValueChange(String(parseCurrencyInputValue(event.target.value) || ''))
+              }
+            />
+          </label>
+          <div className="targets-command-mini-grid">
+            <KeyValue
+              label={input.copy.allocationTotal}
+              value={formatAmount(input.allocationTotal, input.locale, input.copy.emptyValue)}
+              tone={input.totalsAligned ? 'good' : 'warning'}
+            />
+            <KeyValue
+              label={input.copy.remainingTarget}
+              value={formatAmount(remainingTarget, input.locale, input.copy.emptyValue)}
+              tone={remainingTarget === 0 && totalTargetNumber > 0 ? 'good' : 'warning'}
+            />
           </div>
-          {input.activeAllocations.map((allocation) => (
-            <StoreStackedRow
-              key={allocation.employeeId}
-              className="tw:border-border/80 tw:bg-white/72 tw:shadow-[0_8px_22px_rgba(23,30,58,0.035)]"
-            >
-              <div className="tw:grid tw:gap-3 tw:lg:grid-cols-[minmax(0,1fr)_220px_80px_minmax(0,1fr)] tw:lg:items-center">
-                <div className="tw:min-w-0">
-                  <strong className="tw:block tw:text-sm tw:font-medium tw:text-foreground">
-                    {allocation.assigneeLabel}
-                  </strong>
-                </div>
-                <label className="tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground tw:lg:contents">
-                  <span className="tw:lg:hidden">{input.copy.targetValue}</span>
-                  <Input
-                    aria-label={`${allocation.assigneeLabel} ${input.copy.targetValue}`}
-                    inputMode="numeric"
-                    value={formatCurrencyInputValue(Number(allocation.targetValue || 0), input.locale)}
-                    onChange={(event) =>
-                      input.onAllocationValueChange(
-                        allocation.employeeId,
-                        parseCurrencyInputValue(event.target.value),
-                      )
-                    }
-                  />
-                </label>
-                <div className="tw:flex tw:items-center tw:gap-2 tw:text-xs tw:text-muted-foreground">
-                  <span className="tw:lg:hidden">{input.copy.share}</span>
-                  <StoreStatusBadge tone="neutral">
-                    {formatTargetShare(Number(allocation.targetValue || 0), totalTargetNumber, input.locale)}
-                  </StoreStatusBadge>
-                </div>
-                <label className="tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground tw:lg:contents">
-                  <span className="tw:lg:hidden">{input.copy.optionalNote}</span>
-                  <Input
-                    value={allocation.note ?? ''}
-                    onChange={(event) =>
-                      input.onAllocationNoteChange(allocation.employeeId, event.target.value)
-                    }
-                    placeholder={input.copy.optionalNote}
-                  />
-                </label>
-              </div>
-            </StoreStackedRow>
-          ))}
         </div>
-      )}
 
-      {!input.totalsAligned && totalTargetNumber > 0 ? (
-        <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-muted-foreground">
-          {input.copy.allocationMismatch}
-        </p>
-      ) : null}
-      {input.createVisible ? (
-        <p className="tw:mt-3 tw:text-sm tw:text-destructive">{getErrorMessage(input.createError)}</p>
-      ) : null}
+        <label className="targets-command-form-field">
+          <span>{input.copy.requestReason}</span>
+          <Textarea
+            value={input.requestReason}
+            onChange={(event) => input.onRequestReasonChange(event.target.value)}
+            rows={3}
+          />
+        </label>
 
-      <div className="tw:mt-4 tw:flex tw:justify-end">
-        <Button
-          type="button"
-          disabled={!input.submitAllowed || input.createPending}
-          onClick={input.onSubmit}
-        >
-          <Send data-icon="inline-start" />
-          {input.createPending ? input.copy.submitting : input.copy.submitTarget}
-        </Button>
+        {input.personnelLoading ? (
+          <div className="targets-command-panel-empty">
+            <StoreEmptyState description={input.copy.targetRequestCopy} />
+          </div>
+        ) : input.personnelErrorVisible ? (
+          <div className="targets-command-panel-empty">
+            <StoreErrorState
+              title={input.copy.targetRequestTitle}
+              description={getErrorMessage(input.personnelError)}
+            />
+          </div>
+        ) : input.activeAllocations.length === 0 ? (
+          <div className="targets-command-panel-empty">
+            <StoreEmptyState title={input.copy.noPersonnelTitle} description={input.copy.noPersonnelCopy} />
+          </div>
+        ) : (
+          <div className="targets-command-allocation-editor">
+            <div className="targets-command-allocation-head">
+              <span>{input.copy.personnel}</span>
+              <span>{input.copy.targetValue}</span>
+              <span>{input.copy.share}</span>
+              <span>{input.copy.optionalNote}</span>
+            </div>
+            <div className="targets-command-allocation-list">
+              {input.activeAllocations.map((allocation) => (
+                <div className="targets-command-allocation-row" key={allocation.employeeId}>
+                  <div className="targets-command-target-person">
+                    <strong>{allocation.assigneeLabel}</strong>
+                  </div>
+                  <label className="targets-command-compact-field">
+                    <span>{input.copy.targetValue}</span>
+                    <Input
+                      aria-label={`${allocation.assigneeLabel} ${input.copy.targetValue}`}
+                      inputMode="numeric"
+                      value={formatCurrencyInputValue(Number(allocation.targetValue || 0), input.locale)}
+                      onChange={(event) =>
+                        input.onAllocationValueChange(
+                          allocation.employeeId,
+                          parseCurrencyInputValue(event.target.value),
+                        )
+                      }
+                    />
+                  </label>
+                  <div className="targets-command-share-pill">
+                    {formatTargetShare(Number(allocation.targetValue || 0), totalTargetNumber, input.locale)}
+                  </div>
+                  <label className="targets-command-compact-field">
+                    <span>{input.copy.optionalNote}</span>
+                    <Input
+                      value={allocation.note ?? ''}
+                      onChange={(event) =>
+                        input.onAllocationNoteChange(allocation.employeeId, event.target.value)
+                      }
+                      placeholder={input.copy.optionalNote}
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!input.totalsAligned && totalTargetNumber > 0 ? (
+          <p className="targets-command-warning">{input.copy.allocationMismatch}</p>
+        ) : null}
+        {input.createVisible ? (
+          <p className="targets-command-error">{getErrorMessage(input.createError)}</p>
+        ) : null}
+
+        <div className="targets-command-panel-actions">
+          <Button
+            type="button"
+            disabled={!input.submitAllowed || input.createPending}
+            onClick={input.onSubmit}
+          >
+            <Send data-icon="inline-start" />
+            {input.createPending ? input.copy.submitting : input.copy.submitTarget}
+          </Button>
+        </div>
       </div>
-    </StoreSectionCard>
+    </section>
   )
 }
 
@@ -266,52 +254,56 @@ export function TargetCoveragePanel(input: {
   summary: TargetCoverageSummary
 }) {
   return (
-    <StoreSectionCard
-      title={input.copy.coverageTitle}
-      description={input.copy.coverageCopy}
-      badge={{ label: String(input.summary.totalEmployees), tone: 'accent' }}
-    >
+    <section className="targets-command-ledger targets-command-coverage-ledger" aria-labelledby="target-coverage-title">
+      <div className="targets-command-ledger-summary">
+        <div>
+          <h2 id="target-coverage-title">{input.copy.coverageTitle}</h2>
+          <p>{input.copy.coverageCopy}</p>
+        </div>
+        <StoreStatusBadge tone="accent">{input.summary.totalEmployees}</StoreStatusBadge>
+      </div>
       {input.coverageRows.length === 0 ? (
-        <StoreEmptyState title={input.copy.noCoverageTitle} description={input.copy.noCoverageCopy} />
+        <div className="targets-command-ledger-empty">
+          <StoreEmptyState title={input.copy.noCoverageTitle} description={input.copy.noCoverageCopy} />
+        </div>
       ) : (
-        <div className="tw:rounded-lg tw:border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{input.copy.personnel}</TableHead>
-                <TableHead>{input.copy.storeName}</TableHead>
-                <TableHead>{input.copy.approvedTarget}</TableHead>
-                <TableHead>{input.copy.pendingTarget}</TableHead>
-                <TableHead>{input.copy.status}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {input.coverageRows.map((row) => (
-                <TableRow
-                  key={`${row.storeId}-${row.employeeId}`}
-                  className={cn(row.targetStatus !== 'approved' ? 'tw:bg-muted/25' : undefined)}
-                >
-                  <TableCell>
-                    <strong>{row.displayName}</strong>
-                    <span className="tw:block tw:text-xs tw:text-muted-foreground">
-                      {row.externalEmployeeRef ?? input.copy.emptyValue}
-                    </span>
-                  </TableCell>
-                  <TableCell>{row.storeName || row.storeId}</TableCell>
-                  <TableCell>{formatAmount(row.targetValue, input.locale, input.copy.emptyValue)}</TableCell>
-                  <TableCell>{formatAmount(row.pendingTargetValue, input.locale, input.copy.emptyValue)}</TableCell>
-                  <TableCell>
-                    <StoreStatusBadge tone={mapTargetCoverageTone(row.targetStatus)}>
-                      {formatTargetCoverageStatus(row.targetStatus, input.copy)}
-                    </StoreStatusBadge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div className="targets-command-coverage-list">
+          <div className="targets-command-coverage-head" aria-hidden="true">
+            <span>{input.copy.personnel}</span>
+            <span>{input.copy.storeName}</span>
+            <span>{input.copy.approvedTarget}</span>
+            <span>{input.copy.pendingTarget}</span>
+            <span>{input.copy.status}</span>
+          </div>
+          {input.coverageRows.map((row) => (
+            <div
+              className={cn(
+                'targets-command-coverage-row',
+                row.targetStatus !== 'approved' ? 'is-attention' : undefined,
+              )}
+              key={`${row.storeId}-${row.employeeId}`}
+            >
+              <span className="targets-command-target-person">
+                <strong>{row.displayName}</strong>
+                <small>{row.externalEmployeeRef ?? input.copy.emptyValue}</small>
+              </span>
+              <span>{row.storeName || row.storeId}</span>
+              <span className="targets-command-money">
+                {formatAmount(row.targetValue, input.locale, input.copy.emptyValue)}
+              </span>
+              <span className="targets-command-money">
+                {formatAmount(row.pendingTargetValue, input.locale, input.copy.emptyValue)}
+              </span>
+              <span>
+                <StoreStatusBadge tone={mapTargetCoverageTone(row.targetStatus)}>
+                  {formatTargetCoverageStatus(row.targetStatus, input.copy)}
+                </StoreStatusBadge>
+              </span>
+            </div>
+          ))}
         </div>
       )}
-    </StoreSectionCard>
+    </section>
   )
 }
 
@@ -321,16 +313,20 @@ export function TargetApprovedRequestsPanel(input: {
   locale: AppLocale
 }) {
   return (
-    <StoreSectionCard
-      title={input.copy.approvedRequests}
-      description={input.copy.approvedRequestsCopy}
-      badge={{ label: String(input.approvedRequests.length), tone: 'calm' }}
-      className="tw:w-full tw:max-w-[820px] tw:overflow-hidden tw:bg-card/90 tw:shadow-[0_16px_44px_rgba(23,30,58,0.06)]"
-    >
+    <section className="targets-command-ledger targets-command-approved-ledger" aria-labelledby="target-approved-title">
+      <div className="targets-command-ledger-summary">
+        <div>
+          <h2 id="target-approved-title">{input.copy.approvedRequests}</h2>
+          <p>{input.copy.approvedRequestsCopy}</p>
+        </div>
+        <StoreStatusBadge tone="calm">{input.approvedRequests.length}</StoreStatusBadge>
+      </div>
       {input.approvedRequests.length === 0 ? (
-        <StoreEmptyState title={input.copy.noApprovedTitle} description={input.copy.noApprovedCopy} />
+        <div className="targets-command-ledger-empty">
+          <StoreEmptyState title={input.copy.noApprovedTitle} description={input.copy.noApprovedCopy} />
+        </div>
       ) : (
-        <StoreStackedList>
+        <div className="targets-command-approved-list">
           {input.approvedRequests.map((request) => (
             <ApprovedRequestSnapshot
               key={request.requestId}
@@ -339,9 +335,9 @@ export function TargetApprovedRequestsPanel(input: {
               request={request}
             />
           ))}
-        </StoreStackedList>
+        </div>
       )}
-    </StoreSectionCard>
+    </section>
   )
 }
 
@@ -382,16 +378,20 @@ export function TargetRevisionPanel(input: {
   }
 
   return (
-    <StoreSectionCard
-      title={input.copy.revisionRequests}
-      description={input.copy.revisionRequestsCopy}
-      badge={{ label: String(input.approvedRequests.length), tone: 'accent' }}
-      className="tw:w-full tw:max-w-[820px] tw:overflow-hidden tw:bg-card/90 tw:shadow-[0_16px_44px_rgba(23,30,58,0.06)]"
-    >
+    <section className="targets-command-panel targets-command-revision-panel" aria-labelledby="target-revision-title">
+      <div className="targets-command-ledger-summary">
+        <div>
+          <h2 id="target-revision-title">{input.copy.revisionRequests}</h2>
+          <p>{input.copy.revisionRequestsCopy}</p>
+        </div>
+        <StoreStatusBadge tone="accent">{input.approvedRequests.length}</StoreStatusBadge>
+      </div>
       {input.approvedRequests.length === 0 ? (
-        <StoreEmptyState title={input.copy.noApprovedTitle} description={input.copy.noApprovedCopy} />
+        <div className="targets-command-ledger-empty">
+          <StoreEmptyState title={input.copy.noApprovedTitle} description={input.copy.noApprovedCopy} />
+        </div>
       ) : (
-        <StoreStackedList>
+        <div className="targets-command-revision-list">
           {input.approvedRequests.map((request) => {
             const isOpen = openRequestId === request.requestId
             const draftValues = revisionDrafts[request.requestId] ?? {}
@@ -426,12 +426,15 @@ export function TargetRevisionPanel(input: {
               !input.createPending
 
             return (
-              <StoreStackedRow key={request.requestId} tone={isOpen ? 'accent' : 'calm'}>
-                <div className="tw:flex tw:flex-col tw:gap-3">
-                  <div className="tw:flex tw:flex-col tw:gap-2 tw:md:flex-row tw:md:items-start tw:md:justify-between">
+              <article
+                className={cn('targets-command-revision-card', isOpen ? 'is-open' : undefined)}
+                key={request.requestId}
+              >
+                <div className="targets-command-revision-card-body">
+                  <div className="targets-command-revision-head">
                     <div>
-                      <strong className="tw:text-sm">{request.targetLabel}</strong>
-                      <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">
+                      <strong>{request.targetLabel}</strong>
+                      <p>
                         {request.storeName || request.storeId} - {formatDate(request.requestMonth, input.locale)}
                       </p>
                     </div>
@@ -442,29 +445,42 @@ export function TargetRevisionPanel(input: {
                     </StoreStatusBadge>
                   </div>
 
-                  <div className="tw:grid tw:gap-2 tw:sm:grid-cols-3">
+                  <div className="targets-command-mini-grid">
                     <KeyValue
                       label={input.copy.approvedTotal}
                       value={formatAmount(request.totalTargetValue, input.locale, input.copy.emptyValue)}
+                      tone="good"
                     />
                     <KeyValue
                       label={input.copy.revisionTotal}
                       value={formatAmount(revisionTotal, input.locale, input.copy.emptyValue)}
+                      tone={difference === 0 ? 'good' : 'warning'}
                     />
                     <KeyValue
                       label={input.copy.difference}
                       value={`${difference < 0 ? '-' : ''}${formatAmount(Math.abs(difference), input.locale, input.copy.emptyValue)}`}
+                      tone={difference === 0 ? 'good' : 'warning'}
                     />
                   </div>
 
-                  <div className="tw:flex tw:flex-col tw:gap-2">
+                  <div className="targets-command-target-list">
                     {allocations.map((allocation) => (
                       <div
                         key={allocation.employeeId}
-                        className="tw:grid tw:items-center tw:gap-2 tw:border-t tw:pt-2 tw:sm:grid-cols-[minmax(0,220px)_140px]"
+                        className={cn(
+                          'targets-command-target-row',
+                          Number(allocation.targetValue || 0) !==
+                            Number(
+                              request.allocations.find((item) => item.employeeId === allocation.employeeId)
+                                ?.targetValue || 0,
+                            )
+                            ? 'is-changed'
+                            : undefined,
+                        )}
                       >
-                        <span className="tw:text-xs tw:text-muted-foreground">
-                          {allocation.assigneeLabel}
+                        <span>
+                          <strong>{allocation.assigneeLabel}</strong>
+                          <small>{formatTargetShare(Number(allocation.targetValue || 0), revisionTotal, input.locale)}</small>
                         </span>
                         <Input
                           aria-label={`${allocation.assigneeLabel} ${input.copy.revisionSubmit}`}
@@ -489,8 +505,8 @@ export function TargetRevisionPanel(input: {
                   </div>
 
                   {isOpen ? (
-                    <label className="tw:flex tw:flex-col tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-                      {input.copy.revisionNote}
+                    <label className="targets-command-form-field">
+                      <span>{input.copy.revisionNote}</span>
                       <Textarea
                         rows={3}
                         value={note}
@@ -505,22 +521,16 @@ export function TargetRevisionPanel(input: {
                   ) : null}
 
                   {isOpen && difference !== 0 ? (
-                    <p className="tw:text-xs tw:font-medium tw:text-muted-foreground">
-                      {input.copy.revisionMismatch}
-                    </p>
+                    <p className="targets-command-warning">{input.copy.revisionMismatch}</p>
                   ) : null}
                   {isOpen && !hasChanged ? (
-                    <p className="tw:text-xs tw:font-medium tw:text-muted-foreground">
-                      {input.copy.revisionNoChange}
-                    </p>
+                    <p className="targets-command-warning">{input.copy.revisionNoChange}</p>
                   ) : null}
                   {input.createVisible && isOpen ? (
-                    <p className="tw:text-sm tw:text-destructive">
-                      {getErrorMessage(input.createError)}
-                    </p>
+                    <p className="targets-command-error">{getErrorMessage(input.createError)}</p>
                   ) : null}
 
-                  <div className="tw:flex tw:justify-end tw:gap-2">
+                  <div className="targets-command-panel-actions">
                     {!isOpen ? (
                       <Button type="button" variant="outline" onClick={() => openRevision(request)}>
                         <FilePenLine data-icon="inline-start" />
@@ -538,12 +548,12 @@ export function TargetRevisionPanel(input: {
                     )}
                   </div>
                 </div>
-              </StoreStackedRow>
+              </article>
             )
           })}
-        </StoreStackedList>
+        </div>
       )}
-    </StoreSectionCard>
+    </section>
   )
 }
 
@@ -553,47 +563,57 @@ function ApprovedRequestSnapshot(input: {
   request: TargetDistributionRequest
 }) {
   return (
-    <StoreStackedRow tone="calm">
-      <div className="tw:flex tw:flex-col tw:gap-3">
-        <div className="tw:flex tw:flex-col tw:gap-2 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-          <div>
-            <strong className="tw:text-sm">{input.request.targetLabel}</strong>
-            <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">
-              {input.request.storeName || input.request.storeId} -{' '}
-              {formatDate(input.request.requestMonth, input.locale)}
-            </p>
-          </div>
-          <StoreStatusBadge tone="calm">
-            {formatAmount(input.request.totalTargetValue, input.locale, input.copy.emptyValue)}
-          </StoreStatusBadge>
-        </div>
-        {input.request.allocations.length > 0 ? (
-          <div className="tw:flex tw:flex-col tw:gap-2">
-            {input.request.allocations.map((allocation) => (
-              <div
-                key={allocation.employeeId}
-                className="tw:grid tw:items-center tw:gap-2 tw:border-t tw:pt-2 tw:sm:grid-cols-[minmax(0,220px)_120px]"
-              >
-                <span className="tw:text-xs tw:text-muted-foreground">
-                  {allocation.assigneeLabel}
-                </span>
-                <strong className="tw:text-xs tw:font-medium tw:text-foreground">
-                  {formatAmount(Number(allocation.targetValue || 0), input.locale, input.copy.emptyValue)}
-                </strong>
-              </div>
-            ))}
-          </div>
-        ) : null}
+    <article className="targets-command-approved-card">
+      <div className="targets-command-approved-head">
+        <span className="targets-command-store-cell">
+          <span className="targets-command-store-icon">
+            <Store data-icon="inline-start" />
+          </span>
+          <span>
+            <strong>{input.request.storeName || input.request.storeId}</strong>
+            <small>{input.request.targetLabel}</small>
+          </span>
+        </span>
+        <span className="targets-command-money">
+          {formatAmount(input.request.totalTargetValue, input.locale, input.copy.emptyValue)}
+        </span>
+        <StoreStatusBadge tone="calm">
+          {input.request.approvedAt
+            ? formatDateTime(input.request.approvedAt, input.locale)
+            : formatDate(input.request.requestMonth, input.locale)}
+        </StoreStatusBadge>
       </div>
-    </StoreStackedRow>
+      {input.request.allocations.length > 0 ? (
+        <div className="targets-command-approved-allocations">
+          {input.request.allocations.map((allocation) => (
+            <div className="targets-command-target-row" key={allocation.employeeId}>
+              <span>
+                <strong>{allocation.assigneeLabel}</strong>
+                <small>{input.copy.personnel}</small>
+              </span>
+              <span className="targets-command-money">
+                {formatAmount(Number(allocation.targetValue || 0), input.locale, input.copy.emptyValue)}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </article>
   )
 }
 
-function KeyValue(input: { label: string; value: string }) {
+function KeyValue(input: { label: string; value: string; tone?: 'good' | 'warning' | 'danger' }) {
   return (
-    <div className="tw:min-w-[72px] tw:rounded-lg tw:border tw:border-border/70 tw:bg-card/70 tw:p-2">
-      <span className="tw:text-[11px] tw:text-muted-foreground">{input.label}</span>
-      <strong className="tw:mt-1 tw:block tw:text-xs tw:font-medium tw:text-foreground">{input.value}</strong>
+    <div
+      className={cn(
+        'targets-command-mini-stat',
+        input.tone === 'danger' ? 'is-danger' : undefined,
+        input.tone === 'warning' ? 'is-warning' : undefined,
+        input.tone === 'good' ? 'is-good' : undefined,
+      )}
+    >
+      <span>{input.label}</span>
+      <strong>{input.value}</strong>
     </div>
   )
 }
