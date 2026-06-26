@@ -92,6 +92,8 @@ test('store targets page submits target distribution allocations with employee i
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  await expect(page.locator('.targets-command-panel')).toBeVisible()
+  await expect(page.locator('[data-testid="store-targets-contract-surface"] [data-store-section-card]')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Personel hedef dağıtımı' })).toBeVisible()
   await page.getByLabel('Dönem').fill('2026-05')
   await page.getByLabel('Toplam hedef').fill('145000')
@@ -147,6 +149,42 @@ test('store targets page renders only role-fit target flows', async ({ page }) =
   await expect(page.getByRole('radio', { name: /Onaylananlar/ })).toBeVisible()
   await expect(page.getByRole('radio', { name: /Dağıtım talebi/ })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: /Revize Talebi/ })).toHaveCount(0)
+})
+
+test('store targets page keeps command surface after target request approval', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.unroute('**/api/target-distributions/coverage**')
+  await page.unroute('**/api/target-distributions/store-personnel**')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          roleCodes: ['REGION_MANAGER'],
+          actionScope: {
+            assignedStoreIds: [demoStoreId],
+          },
+          assignedStoreIds: [demoStoreId],
+        },
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    await route.fulfill({ json: approvedTargetDistributionRequestsFixture })
+  })
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    await route.fulfill({ json: approvedTargetCoverageFixture })
+  })
+  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
+    await route.fulfill({ json: storeTargetingPersonnelFixture })
+  })
+
+  await page.goto('/store/targets')
+
+  await expect(page.locator('.targets-command-approved-ledger')).toBeVisible()
+  await expect(page.locator('[data-testid="store-targets-contract-surface"] [data-store-section-card]')).toHaveCount(0)
 })
 
 test('store targets page opens latest visible target request month when no month is provided', async ({ page }) => {
