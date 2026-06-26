@@ -73,6 +73,7 @@ import {
   StoreStatusBadge,
   StoreSurfacePage,
 } from './store-surface-primitives'
+import { StoreTargetsRegionCommand } from './store-targets-region-command'
 
 function getQueryMonthInput(value: string | null) {
   if (!value) {
@@ -442,6 +443,46 @@ export function StoreTargetsPage(input: {
     setSelectedStoreId('')
     setMonthTouched(true)
     setRequestMonth(getCurrentMonthInput())
+  }
+
+  if (canApproveTargets) {
+    return (
+      <StoreSurfacePage
+        ariaLabel={copy.aria}
+        ariaLabelledBy="targets-prototype-title"
+        testId="store-targets-contract-surface"
+        className="store-targets-prototype-shell"
+      >
+        <StoreTargetsRegionCommand
+          activeRequestMonth={activeRequestMonth}
+          approvalNotes={approvalNotes}
+          approveMutation={approveMutation}
+          assignedStoreIds={assignedStoreIds}
+          authSummary={input.authSummary}
+          coverageRows={coverageRows}
+          coverageSummary={coverageSummary}
+          locale={locale}
+          onApprovalNoteChange={(requestId, value) =>
+            setApprovalNotes((current) => ({ ...current, [requestId]: value }))
+          }
+          onMonthChange={(nextMonth) => {
+            setMonthTouched(true)
+            setRequestMonth(nextMonth)
+          }}
+          onRefresh={() => {
+            void queryClient.invalidateQueries({ queryKey: ['target-distribution-requests'] })
+            void queryClient.invalidateQueries({ queryKey: ['target-distribution-coverage'] })
+          }}
+          storeOptions={storeOptions}
+          targetRequests={targetRequests}
+        />
+        {formNotice ? (
+          <StoreStatusBadge tone="calm" className="tw:w-fit">
+            {formNotice}
+          </StoreStatusBadge>
+        ) : null}
+      </StoreSurfacePage>
+    )
   }
 
   return (

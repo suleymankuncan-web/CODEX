@@ -145,8 +145,9 @@ test('store targets page renders only role-fit target flows', async ({ page }) =
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Onay akışı/ })).toBeVisible()
-  await expect(page.getByRole('radio', { name: /Onaylananlar/ })).toBeVisible()
+  await expect(page.locator('.targets-prototype')).toBeVisible()
+  await expect(page.locator('.targets-ledger')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Onay bekleyen/ })).toBeVisible()
   await expect(page.getByRole('radio', { name: /Dağıtım talebi/ })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: /Revize Talebi/ })).toHaveCount(0)
 })
@@ -183,7 +184,10 @@ test('store targets page keeps command surface after target request approval', a
 
   await page.goto('/store/targets')
 
-  await expect(page.locator('.targets-command-approved-ledger')).toBeVisible()
+  await expect(page.locator('.targets-prototype')).toBeVisible()
+  await expect(page.locator('.targets-ledger')).toBeVisible()
+  await expect(page.getByRole('button', { name: /IstinyePark Demo Store/ })).toBeVisible()
+  await expect(page.locator('.targets-status.success', { hasText: 'Onaylandı' })).toBeVisible()
   await expect(page.locator('[data-testid="store-targets-contract-surface"] [data-store-section-card]')).toHaveCount(0)
 })
 
@@ -253,11 +257,11 @@ test('store targets page keeps region managers on latest approved or pending tar
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
   await expect(page.getByLabel('Dönem')).toHaveValue('2026-05')
   await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-05-01')
-  await expect(page.getByRole('heading', { name: 'Onaylananlar' })).toBeVisible()
+  await expect(page.locator('.targets-prototype')).toBeVisible()
+  await expect(page.locator('.targets-ledger')).toBeVisible()
   await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
-  await expect(page.getByTestId('store-targets-store-metric')).toContainText('1 / 2 mağaza hedefli')
-  await expect(page.getByTestId('store-targets-decision-metric')).toContainText('0')
-  await expect(page.getByTestId('store-targets-no-request-metric')).toContainText('1')
+  await expect(page.getByText('1 onaylandı')).toBeVisible()
+  await expect(page.locator('.targets-metric').filter({ hasText: 'Hedefsiz mağaza' })).toContainText('1')
 })
 
 test('store targets page honors query store id for multi-store managers', async ({ page }) => {
@@ -406,16 +410,16 @@ test('store targets page lets region managers approve pending target requests in
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
   await page.getByLabel('Dönem').fill('2026-05')
-  await expect(page.getByRole('heading', { name: 'Mağaza hedefleri' })).toBeVisible()
+  await expect(page.locator('.targets-ledger')).toBeVisible()
   await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
-  await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
+  await expect(page.locator('.targets-detail-head')).toContainText('Mayis hedef dagitimi')
   await page.getByLabel('Karar notu').fill('Bolge onayi')
   await page.getByRole('button', { name: /^Onayla$/ }).click()
 
   await expect(page.getByText('Target distribution request approved')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Onaylananlar' })).toBeVisible()
-  await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
+  await expect(page.locator('.targets-prototype')).toBeVisible()
+  await expect(page.locator('.targets-ledger')).toContainText('Mayis hedef dagitimi')
   expect(capturedPayload).not.toBeNull()
 })
 
@@ -503,13 +507,13 @@ test('store targets page lets region managers approve with edited target allocat
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
   await page.getByLabel('Dönem').fill('2026-05')
-  await expect(page.getByRole('heading', { name: 'Mağaza hedefleri' })).toBeVisible()
+  await expect(page.locator('.targets-ledger')).toBeVisible()
   await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
   await expect(page.getByRole('button', { name: /^Onayla$/ })).toBeVisible()
 
   await page.getByLabel('Store Personnel Hedef').fill('40000')
   await expect(page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true })).toBeDisabled()
-  await expect(page.getByText('Dağıtılan hedef toplam hedefle eşleşmeli.')).toBeVisible()
+  await expect(page.getByText(/eksik dağıtıldı/)).toBeVisible()
 
   await page.getByLabel('Store Personnel Covered Hedef').fill('105000')
   await expect(page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true })).toBeDisabled()
