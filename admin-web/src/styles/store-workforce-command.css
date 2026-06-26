@@ -31,7 +31,7 @@
 .swc-hero {
   position: relative;
   overflow: hidden;
-  min-height: 150px;
+  min-height: 132px;
   border: 1px solid rgba(204, 210, 223, 0.8);
   border-radius: 26px;
   background:
@@ -43,7 +43,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 22px;
-  padding: 24px 26px;
+  padding: 22px 26px;
 }
 
 .swc-hero::after {
@@ -111,15 +111,15 @@
 }
 
 .swc-title-row {
-  margin-top: 18px;
+  margin-top: 16px;
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
 .swc-title-icon {
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border: 1px solid rgba(103, 66, 232, 0.16);
   border-radius: 19px;
   display: inline-flex;
@@ -134,17 +134,17 @@
 }
 
 .swc-title-icon svg {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
 }
 
 .swc-hero h1 {
   margin: 0;
   max-width: 780px;
-  font-size: clamp(34px, 4vw, 60px);
-  line-height: 0.98;
-  letter-spacing: -0.05em;
-  font-weight: 710;
+  font-size: clamp(30px, 3.2vw, 42px);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 690;
 }
 
 .swc-hero p {
@@ -305,7 +305,8 @@
 }
 
 .swc-search-field,
-.swc-select-trigger[data-slot="select-trigger"] {
+.swc-select-trigger[data-slot="select-trigger"],
+.swc-year-trigger {
   min-height: 44px;
   border: 1px solid var(--swc-line);
   border-radius: 15px;
@@ -324,11 +325,51 @@
 }
 
 .swc-search-field > svg,
-.swc-select-trigger > svg {
+.swc-select-trigger > svg,
+.swc-year-trigger > svg {
   width: 17px;
   height: 17px;
   color: var(--swc-muted);
   flex: 0 0 auto;
+}
+
+.swc-year-trigger {
+  width: 100%;
+  justify-content: flex-start;
+  font-size: 13px;
+  font-weight: 640;
+}
+
+.swc-year-popover[data-slot="popover-content"] {
+  width: 220px;
+  border: 1px solid var(--swc-line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--swc-shadow-tight);
+  padding: 10px;
+}
+
+.swc-year-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.swc-year-option {
+  min-height: 38px;
+  border: 1px solid var(--swc-line);
+  border-radius: 13px;
+  background: #fff;
+  color: var(--swc-ink);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.swc-year-option.active,
+.swc-year-option:hover {
+  border-color: rgba(103, 66, 232, 0.28);
+  color: var(--swc-plum);
+  background: var(--swc-plum-soft);
 }
 
 .swc-search-field [data-slot="input"] {

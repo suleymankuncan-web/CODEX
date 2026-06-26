@@ -24,6 +24,11 @@ implemented and verified.
   assets used by the prototype pages.
 - `docs/prototypes/store-workforce-prototype-v1.html` is the locked Store
   workforce / Norm Kadro visual contract for the Store workforce split.
+- `docs/prototypes/store-workforce-full-ledger-prototype.tsx` is the
+  locked production-bound React prototype for the next Region Manager
+  `/store/workforce` Norm Kadro full-ledger translation. It supersedes the
+  older standalone workforce HTML contract for the upcoming production
+  implementation pass.
 - `docs/prototypes/store-approvals-request-center-v1.html` is the locked Store
   approvals / Talep Merkezi visual contract for the approvals cleanup.
 - `docs/prototypes/store-home-store-manager-standard-v1.html` is the locked
@@ -77,6 +82,7 @@ Important production boundary:
 | `docs/prototypes/store-home-region-manager-standard-v1.html` | `/store/home` Region Manager dashboard | `DF4E1583D39588FFA2B150937DAC3556983A59F781960C8DC986ED396B4A1E81` |
 | `docs/prototypes/store-checklist-result-modal-v1.html` | `/store/checklists` result modal | `110EAD19449A59EBB1C84666FC4F66AC9067DEAF7CCF1BF8990917BDFD2DC8B9` |
 | `docs/prototypes/store-incentives-region-manager-command-v2.html` | `/store/incentives` Region Manager command center and Store/Admin surface standard reference | `B18107107BB91332179F00A93166ECF04038CA6E6878E14DFE8DD2FBECA5BF87` |
+| `docs/prototypes/store-workforce-full-ledger-prototype.tsx` | `/store/workforce` Region Manager Norm Kadro full-ledger production-bound prototype | `DBA61AB355FC25B564612873ECAF0C7A927C9D10CAB7D5F148395BE57767CEC3` |
 
 ## Prototype Implementation Evidence
 
