@@ -254,7 +254,11 @@ export function TargetCoveragePanel(input: {
   summary: TargetCoverageSummary
 }) {
   return (
-    <section className="targets-command-ledger targets-command-coverage-ledger" aria-labelledby="target-coverage-title">
+    <section
+      className="targets-command-ledger targets-command-coverage-ledger"
+      aria-labelledby="target-coverage-title"
+      title={input.copy.coverageTitle}
+    >
       <div className="targets-command-ledger-summary">
         <div>
           <h2 id="target-coverage-title">{input.copy.coverageTitle}</h2>
@@ -313,7 +317,11 @@ export function TargetApprovedRequestsPanel(input: {
   locale: AppLocale
 }) {
   return (
-    <section className="targets-command-ledger targets-command-approved-ledger" aria-labelledby="target-approved-title">
+    <section
+      className="targets-command-ledger targets-command-approved-ledger"
+      aria-labelledby="target-approved-title"
+      title={input.copy.approvedRequests}
+    >
       <div className="targets-command-ledger-summary">
         <div>
           <h2 id="target-approved-title">{input.copy.approvedRequests}</h2>
