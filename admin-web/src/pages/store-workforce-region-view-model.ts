@@ -9,14 +9,7 @@ export type StoreStatus = NormStaffingStatusKind
 export type StatusFilter = 'all' | Exclude<StoreStatus, 'notConfigured'>
 export type SortDirection = 'asc' | 'desc'
 export type SortKey = 'name' | 'active' | 'norm' | 'status' | 'shortage' | 'turnover'
-export type DetailTab = 'summary' | 'people' | 'positions' | 'requests'
-
-export type ColumnFilterOption = {
-  action?: () => void
-  direction?: SortDirection
-  key?: SortKey
-  label: string
-}
+export type DetailTab = 'history' | 'people' | 'positions'
 
 export type RegionStoreViewModel = RegionStoreRow & {
   activeHeadcount: number | null
@@ -70,12 +63,11 @@ export const statusCopy: Record<
 }
 
 export function compareRows(left: RegionStoreViewModel, right: RegionStoreViewModel, key: SortKey) {
-  if (key === 'name') return left.storeLabel.localeCompare(right.storeLabel, 'tr-TR')
-  if (key === 'active') return compareNullable(left.activeHeadcount, right.activeHeadcount)
-  if (key === 'norm') return compareNullable(getNormSortValue(left), getNormSortValue(right))
-  if (key === 'status') return statusRank(left.status) - statusRank(right.status)
-  if (key === 'shortage') return compareNullable(left.shortageDays, right.shortageDays)
-  return compareNullable(left.turnover, right.turnover)
+  const primary = compareRowsPrimary(left, right, key)
+  if (primary !== 0) return primary
+  const byName = left.storeLabel.localeCompare(right.storeLabel, 'tr-TR')
+  if (byName !== 0) return byName
+  return left.storeId.localeCompare(right.storeId)
 }
 
 export function formatGapLabel(row: RegionStoreViewModel) {
@@ -170,6 +162,15 @@ function statusRank(status: StoreStatus) {
   if (status === 'balanced') return 1
   if (status === 'over') return 2
   return 3
+}
+
+function compareRowsPrimary(left: RegionStoreViewModel, right: RegionStoreViewModel, key: SortKey) {
+  if (key === 'name') return left.storeLabel.localeCompare(right.storeLabel, 'tr-TR')
+  if (key === 'active') return compareNullable(left.activeHeadcount, right.activeHeadcount)
+  if (key === 'norm') return compareNullable(getNormSortValue(left), getNormSortValue(right))
+  if (key === 'status') return statusRank(left.status) - statusRank(right.status)
+  if (key === 'shortage') return compareNullable(left.shortageDays, right.shortageDays)
+  return compareNullable(left.turnover, right.turnover)
 }
 
 function compareNullable(left: number | null, right: number | null) {

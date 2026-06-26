@@ -1,6 +1,5 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
-import { DropdownMenu } from 'radix-ui'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -18,9 +17,14 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
+import {
   ArrowRight,
+  ArrowUpDown,
   CalendarDays,
-  CheckCircle2,
   CircleSlash2,
   Clock3,
   Download,
@@ -29,7 +33,6 @@ import {
   Search,
   Store,
   TrendingUp,
-  UserRound,
   UsersRound,
   X,
 } from 'lucide-react'
@@ -56,7 +59,6 @@ import {
   resolveManagerName,
   statusCopy,
   toFiniteNumber,
-  type ColumnFilterOption,
   type DetailTab,
   type RegionStoreViewModel,
   type SortDirection,
@@ -71,11 +73,11 @@ export function RegionWorkforceView(input: {
   const now = useMemo(() => new Date(), [])
   const [query, setQuery] = useState('')
   const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()))
+  const [isYearPickerOpen, setYearPickerOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sort, setSort] = useState<{ direction: SortDirection; key: SortKey }>({ direction: 'asc', key: 'status' })
-  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
   const [detailStoreId, setDetailStoreId] = useState<string | null>(null)
-  const [detailTab, setDetailTab] = useState<DetailTab>('summary')
+  const [detailTab, setDetailTab] = useState<DetailTab>('people')
   const currentMonthRange = useMemo(() => getMonthRange(now), [now])
   const explicitReadStoreIds = useMemo(() => getUniqueIds(getReadStoreIds(input.authSummary)), [input.authSummary])
   const assignedStoreIds = useMemo(() => getUniqueIds(getAssignedStoreIds(input.authSummary)), [input.authSummary])
@@ -193,7 +195,6 @@ export function RegionWorkforceView(input: {
     },
     [query, rows, sort.direction, sort.key, statusFilter],
   )
-  const selectedStore = rows.find((row) => row.storeId === selectedStoreId) ?? visibleRows[0] ?? rows[0] ?? null
   const detailStore = rows.find((row) => row.storeId === detailStoreId) ?? null
   const shortStoreCount = rows.filter((row) => row.status === 'short').length
   const totalOpenHeadcount = rows.reduce((sum, row) => sum + (row.openHeadcount ?? 0), 0)
@@ -219,6 +220,16 @@ export function RegionWorkforceView(input: {
       formatTurnover(row.turnover),
     ])
     downloadCsv(`norm-kadro-${selectedYear}.csv`, [headers, ...csvRows])
+  }
+
+  const toggleSort = (key: SortKey) => {
+    setSort((current) => {
+      if (current.key === key) {
+        return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+      }
+
+      return { key, direction: key === 'name' || key === 'status' ? 'asc' : 'desc' }
+    })
   }
 
   return (
@@ -300,86 +311,73 @@ export function RegionWorkforceView(input: {
             <SelectItem value="over">Fazla kadro</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={selectedYear} onValueChange={setSelectedYear}>
-          <SelectTrigger aria-label={copy.yearAria} className="swc-select-trigger">
-            <CalendarDays aria-hidden="true" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="start" position="popper">
-            {getYearOptions(now).map((year) => (
-              <SelectItem key={year} value={year}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Popover open={isYearPickerOpen} onOpenChange={setYearPickerOpen}>
+          <PopoverTrigger asChild>
+            <button aria-label={copy.yearAria} className="swc-select-trigger swc-year-trigger" type="button">
+              <CalendarDays aria-hidden="true" />
+              <span>{selectedYear}</span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="swc-year-popover">
+            <div className="swc-year-grid" role="listbox" aria-label={copy.yearAria}>
+              {getYearOptions(now).map((year) => (
+                <button
+                  aria-selected={year === selectedYear}
+                  className={`swc-year-option ${year === selectedYear ? 'active' : ''}`}
+                  key={year}
+                  onClick={() => {
+                    setSelectedYear(year)
+                    setYearPickerOpen(false)
+                  }}
+                  role="option"
+                  type="button"
+                >
+                  {year}
+                </button>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </section>
 
       <section className="swc-content-grid">
         <div className="swc-ledger">
           <div className="swc-ledger-head">
-            <ColumnFilter
+            <SortHeader
               active={sort.key === 'name'}
+              direction={sort.direction}
               label={copy.storeColumn}
-              onSort={setSort}
-              options={[
-                { direction: 'asc', key: 'name', label: 'A-Z sırala' },
-                { direction: 'desc', key: 'name', label: 'Z-A sırala' },
-              ]}
+              onClick={() => toggleSort('name')}
             />
-            <ColumnFilter
+            <SortHeader
               active={sort.key === 'active'}
+              direction={sort.direction}
               label={copy.activeColumn}
-              onSort={setSort}
-              options={[
-                { direction: 'desc', key: 'active', label: 'Çoktan aza' },
-                { direction: 'asc', key: 'active', label: 'Azdan çoğa' },
-              ]}
+              onClick={() => toggleSort('active')}
             />
-            <ColumnFilter
-              active={sort.key === 'norm' || statusFilter !== 'all'}
+            <SortHeader
+              active={sort.key === 'norm'}
+              direction={sort.direction}
               label={copy.normActualColumn}
-              onSort={setSort}
-              options={[
-                { action: () => setStatusFilter('short'), label: 'Eksikleri göster' },
-                { action: () => setStatusFilter('balanced'), label: 'Tamları göster' },
-                { action: () => setStatusFilter('over'), label: 'Fazlaları göster' },
-                { direction: 'desc', key: 'norm', label: 'Eksik önce' },
-                { direction: 'asc', key: 'norm', label: 'Fazla önce' },
-              ]}
+              onClick={() => toggleSort('norm')}
             />
-            <ColumnFilter
-              active={sort.key === 'status' || statusFilter !== 'all'}
+            <SortHeader
+              active={sort.key === 'status'}
+              direction={sort.direction}
               label={copy.statusColumn}
-              onSort={setSort}
-              options={[
-                { action: () => setStatusFilter('all'), label: 'Tüm durumlar' },
-                { action: () => setStatusFilter('short'), label: 'Sadece Eksik' },
-                { action: () => setStatusFilter('balanced'), label: 'Sadece Tam' },
-                { action: () => setStatusFilter('over'), label: 'Sadece Fazla' },
-                { direction: 'asc', key: 'status', label: 'Eksik, Tam, Fazla' },
-                { direction: 'desc', key: 'status', label: 'Fazla, Tam, Eksik' },
-              ]}
+              onClick={() => toggleSort('status')}
             />
-            <ColumnFilter
-              active={sort.key === 'shortage' || statusFilter === 'short'}
+            <SortHeader
+              active={sort.key === 'shortage'}
+              direction={sort.direction}
               label={copy.shortageColumn}
-              onSort={setSort}
-              options={[
-                { action: () => setStatusFilter('short'), label: 'Eksik günü olanlar' },
-                { action: () => setStatusFilter('all'), label: 'Tüm mağazalar' },
-                { direction: 'desc', key: 'shortage', label: 'En uzun önce' },
-                { direction: 'asc', key: 'shortage', label: 'En kısa önce' },
-              ]}
+              onClick={() => toggleSort('shortage')}
             />
-            <ColumnFilter
+            <SortHeader
               active={sort.key === 'turnover'}
+              direction={sort.direction}
               label={copy.turnoverColumn}
-              onSort={setSort}
-              options={[
-                { direction: 'desc', key: 'turnover', label: 'Yüksek önce' },
-                { direction: 'asc', key: 'turnover', label: 'Düşük önce' },
-              ]}
+              onClick={() => toggleSort('turnover')}
             />
             <span>{copy.actionColumn}</span>
           </div>
@@ -392,9 +390,8 @@ export function RegionWorkforceView(input: {
                   key={row.storeId}
                   locale={locale}
                   onDetail={() => {
-                    setSelectedStoreId(row.storeId)
                     setDetailStoreId(row.storeId)
-                    setDetailTab('summary')
+                    setDetailTab('people')
                   }}
                   row={row}
                 />
@@ -408,16 +405,6 @@ export function RegionWorkforceView(input: {
           )}
         </div>
 
-        <InsightPanel
-          locale={locale}
-          onOpenDetail={() => {
-            if (selectedStore) {
-              setDetailStoreId(selectedStore.storeId)
-              setDetailTab('summary')
-            }
-          }}
-          row={selectedStore}
-        />
       </section>
 
       <StoreDossier
@@ -506,75 +493,6 @@ function StoreRow(input: {
   )
 }
 
-function InsightPanel(input: {
-  locale: AppLocale
-  onOpenDetail: () => void
-  row: RegionStoreViewModel | null
-}) {
-  if (!input.row) {
-    return (
-      <aside className="swc-insight-panel">
-        <div className="swc-panel-top">
-          <div>
-            <small>Seçili mağaza</small>
-            <h2>Mağaza yok</h2>
-            <p>Liste yüklenince detay açılır.</p>
-          </div>
-        </div>
-      </aside>
-    )
-  }
-
-  const status = statusCopy[input.row.status]
-  const positionRows = input.row.summary.positionRows
-  const maxPositionCount = Math.max(...positionRows.map((row) => row.count), 1)
-
-  return (
-    <aside className="swc-insight-panel">
-      <div className="swc-panel-top">
-        <div>
-          <small>Seçili mağaza</small>
-          <h2>{input.row.storeLabel}</h2>
-          <p>{status.helper}</p>
-        </div>
-        <Pill tone={status.tone}>{status.label}</Pill>
-      </div>
-
-      <div className="swc-panel-facts">
-        <Fact label="Norm / fiili" value={input.row.normLabel} />
-        <Fact label="Eksik kadro" value={formatGapLabel(input.row)} />
-        <Fact label="Eksik süre" value={formatShortage(input.row)} />
-        <Fact label="Turnover" value={formatTurnover(input.row.turnover)} />
-      </div>
-
-      <div className="swc-role-stack">
-        <div className="swc-section-title">
-          <b>Pozisyon dengesi</b>
-          <span>{formatNumber(positionRows.length, input.locale)} rol</span>
-        </div>
-        {positionRows.length > 0 ? (
-          positionRows.slice(0, 6).map((row) => (
-            <div className="swc-role-row" key={row.label}>
-              <span>{row.label}</span>
-              <b>{formatNumber(row.count, input.locale)} aktif</b>
-              <i aria-hidden="true">
-                <em style={{ width: `${Math.max(8, (row.count / maxPositionCount) * 100)}%` }} />
-              </i>
-            </div>
-          ))
-        ) : (
-          <p className="swc-muted-copy">Pozisyon dağılımı yok.</p>
-        )}
-      </div>
-
-      <Button className="swc-panel-button" onClick={input.onOpenDetail} type="button">
-        Mağaza dosyasını aç
-        <ArrowRight data-icon="inline-end" />
-      </Button>
-    </aside>
-  )
-}
-
 function StoreDossier(input: {
   activeTab: DetailTab
   locale: AppLocale
@@ -624,14 +542,6 @@ function StoreDossier(input: {
 
         <div className="swc-modal-tabs">
           <button
-            aria-selected={input.activeTab === 'summary'}
-            className={`swc-tab-trigger ${input.activeTab === 'summary' ? 'active' : ''}`}
-            onClick={() => input.setActiveTab('summary')}
-            type="button"
-          >
-            Özet
-          </button>
-          <button
             aria-selected={input.activeTab === 'people'}
             className={`swc-tab-trigger ${input.activeTab === 'people' ? 'active' : ''}`}
             onClick={() => input.setActiveTab('people')}
@@ -648,20 +558,19 @@ function StoreDossier(input: {
             Pozisyon
           </button>
           <button
-            aria-selected={input.activeTab === 'requests'}
-            className={`swc-tab-trigger ${input.activeTab === 'requests' ? 'active' : ''}`}
-            onClick={() => input.setActiveTab('requests')}
+            aria-selected={input.activeTab === 'history'}
+            className={`swc-tab-trigger ${input.activeTab === 'history' ? 'active' : ''}`}
+            onClick={() => input.setActiveTab('history')}
             type="button"
           >
-            Talep
+            Geçmiş
           </button>
         </div>
 
         <div className="swc-modal-body">
-          {input.activeTab === 'summary' ? <SummaryPane locale={input.locale} row={input.row} /> : null}
           {input.activeTab === 'people' ? <PeoplePane locale={input.locale} row={input.row} /> : null}
           {input.activeTab === 'positions' ? <PositionsPane locale={input.locale} row={input.row} /> : null}
-          {input.activeTab === 'requests' ? <RequestsPane /> : null}
+          {input.activeTab === 'history' ? <HistoryPane locale={input.locale} row={input.row} /> : null}
         </div>
 
         <DialogFooter className="swc-modal-footer">
@@ -671,47 +580,6 @@ function StoreDossier(input: {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function SummaryPane(input: { locale: AppLocale; row: RegionStoreViewModel | null }) {
-  if (!input.row) return null
-  const positionRows = input.row.summary.positionRows
-
-  return (
-    <div className="swc-overview-grid">
-      <section className="swc-timeline-card">
-        <div className="swc-section-title">
-          <b>Eksik kadro kronolojisi</b>
-          <span>{input.row.status === 'short' ? formatShortage(input.row) : 'Kapalı'}</span>
-        </div>
-        <div className="swc-timeline">
-          <TimelineItem icon={<UsersRound />} label="Norm durumu" tone={input.row.status === 'short' ? 'danger' : 'calm'} value={statusCopy[input.row.status].label} />
-          <TimelineItem icon={<CircleSlash2 />} label="Açık pozisyon" tone={input.row.status === 'short' ? 'danger' : 'calm'} value={formatGapLabel(input.row)} />
-          <TimelineItem icon={<CheckCircle2 />} label="Aksiyon" tone="calm" value="Aksiyon yok" />
-        </div>
-      </section>
-
-      <section className="swc-position-map">
-        <div className="swc-section-title">
-          <b>Pozisyon haritası</b>
-          <span>{formatNumber(positionRows.length, input.locale)} rol</span>
-        </div>
-        {positionRows.length > 0 ? (
-          positionRows.map((row) => (
-            <div className="swc-position-row" key={row.label}>
-              <div>
-                <span>{row.label}</span>
-                <b>{formatNumber(row.count, input.locale)} aktif personel</b>
-              </div>
-              <Pill tone="neutral">Aktif</Pill>
-            </div>
-          ))
-        ) : (
-          <p className="swc-muted-copy">Pozisyon dağılımı yok.</p>
-        )}
-      </section>
-    </div>
   )
 }
 
@@ -751,6 +619,43 @@ function PeoplePane(input: { locale: AppLocale; row: RegionStoreViewModel | null
   )
 }
 
+function HistoryPane(input: { locale: AppLocale; row: RegionStoreViewModel | null }) {
+  const employees = input.row?.employees ?? []
+  const historyRows = employees
+    .filter((employee) => Boolean(employee.assignmentStartDate))
+    .map((employee) => ({
+      date: employee.assignmentStartDate,
+      name: employee.displayName,
+      position: employee.positionName || 'Pozisyon bilgisi yok',
+      reference: employee.externalEmployeeRef ?? employee.employeeId,
+    }))
+    .sort((left, right) => new Date(`${right.date}T00:00:00`).getTime() - new Date(`${left.date}T00:00:00`).getTime())
+
+  if (historyRows.length === 0) {
+    return (
+      <div className="swc-empty-state compact">
+        <strong>Geçmiş yok</strong>
+        <p>Bu mağaza için giriş geçmişi bulunamadı.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="swc-history-list">
+      {historyRows.map((item) => (
+        <article className="swc-history-row" key={`${item.reference}-${item.date}`}>
+          <div>
+            <b>{item.name}</b>
+            <span>{item.position}</span>
+          </div>
+          <Pill tone="mint">Giriş</Pill>
+          <strong>{formatDateLabel(item.date)}</strong>
+        </article>
+      ))}
+    </div>
+  )
+}
+
 function PositionsPane(input: { locale: AppLocale; row: RegionStoreViewModel | null }) {
   const rows = input.row?.summary.positionRows ?? []
 
@@ -778,50 +683,22 @@ function PositionsPane(input: { locale: AppLocale; row: RegionStoreViewModel | n
   )
 }
 
-function RequestsPane() {
-  return (
-    <div className="swc-request-flow">
-      <TimelineItem icon={<UserRound />} label="Personel talebi" tone="calm" value="Aksiyon yok" />
-      <TimelineItem icon={<CalendarDays />} label="Son revizyon" tone="calm" value="Veri yok" />
-    </div>
-  )
-}
-
-function ColumnFilter(input: {
+function SortHeader(input: {
   active: boolean
+  direction: SortDirection
   label: string
-  onSort: (value: { direction: SortDirection; key: SortKey }) => void
-  options: ColumnFilterOption[]
+  onClick: () => void
 }) {
   return (
-    <DropdownMenu.Root>
-      <DropdownMenu.Trigger className={`swc-column-filter-trigger ${input.active ? 'active' : ''}`}>
-        <span>{input.label}</span>
-        <Filter />
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Portal>
-        <DropdownMenu.Content align="start" className="swc-column-filter-content" sideOffset={7}>
-          {input.options.map((option) => (
-            <DropdownMenu.Item
-              className="swc-column-filter-item"
-              key={`${option.label}-${option.key ?? 'action'}-${option.direction ?? ''}`}
-              onSelect={() => {
-                if (option.action) {
-                  option.action()
-                  return
-                }
-                if (option.key && option.direction) {
-                  input.onSort({ direction: option.direction, key: option.key })
-                }
-              }}
-            >
-              <CheckCircle2 />
-              <span>{option.label}</span>
-            </DropdownMenu.Item>
-          ))}
-        </DropdownMenu.Content>
-      </DropdownMenu.Portal>
-    </DropdownMenu.Root>
+    <button
+      aria-pressed={input.active}
+      className={`swc-column-filter-trigger ${input.active ? 'active' : ''}`}
+      onClick={input.onClick}
+      type="button"
+    >
+      <span>{input.label}</span>
+      <ArrowUpDown aria-hidden="true" data-direction={input.active ? input.direction : undefined} />
+    </button>
   )
 }
 
@@ -832,21 +709,6 @@ function Pill(input: { children: ReactNode; tone: 'blue' | 'mint' | 'neutral' | 
 function Fact(input: { label: string; value: string }) {
   return (
     <div className="swc-fact">
-      <span>{input.label}</span>
-      <b>{input.value}</b>
-    </div>
-  )
-}
-
-function TimelineItem(input: {
-  icon: ReactNode
-  label: string
-  tone: 'calm' | 'danger' | 'watch'
-  value: string
-}) {
-  return (
-    <div className={`swc-timeline-item ${input.tone}`}>
-      <i>{input.icon}</i>
       <span>{input.label}</span>
       <b>{input.value}</b>
     </div>

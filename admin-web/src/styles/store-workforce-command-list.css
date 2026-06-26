@@ -1,7 +1,7 @@
 ﻿.swc-content-grid {
   margin-top: 14px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -28,13 +28,13 @@
 .swc-store-row {
   display: grid;
   grid-template-columns:
-    minmax(220px, 1.35fr)
-    minmax(84px, 0.55fr)
-    minmax(96px, 0.65fr)
-    minmax(86px, 0.55fr)
-    minmax(112px, 0.65fr)
-    minmax(96px, 0.55fr)
-    minmax(112px, auto);
+    minmax(260px, 1.6fr)
+    minmax(104px, 0.65fr)
+    minmax(122px, 0.75fr)
+    minmax(94px, 0.55fr)
+    minmax(126px, 0.72fr)
+    minmax(112px, 0.62fr)
+    minmax(118px, 0.62fr);
   align-items: center;
   gap: 10px;
 }
@@ -46,7 +46,7 @@
   background: #fbfcff;
   color: var(--swc-muted);
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 680;
 }
 
 .swc-column-filter-trigger {
@@ -63,13 +63,17 @@
   gap: 5px;
   padding: 0 7px;
   font-size: 11px;
-  font-weight: 760;
+  font-weight: 670;
   transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 
 .swc-column-filter-trigger svg {
   width: 12px;
   height: 12px;
+}
+
+.swc-column-filter-trigger svg[data-direction="desc"] {
+  transform: rotate(180deg);
 }
 
 .swc-ledger-head .swc-column-filter-trigger,
@@ -234,7 +238,7 @@
 
 .swc-store-name b {
   font-size: 13px;
-  font-weight: 720;
+  font-weight: 650;
 }
 
 .swc-store-name small {
@@ -257,7 +261,7 @@
 
 .swc-count-cell b {
   font-size: 14px;
-  font-weight: 740;
+  font-weight: 670;
 }
 
 .swc-count-cell span {
@@ -329,7 +333,7 @@
 
 .swc-turnover-cell span {
   font-size: 13px;
-  font-weight: 750;
+  font-weight: 670;
 }
 
 .swc-turnover-cell i,

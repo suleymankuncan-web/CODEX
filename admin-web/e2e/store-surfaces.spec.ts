@@ -132,7 +132,7 @@ test('store workforce page shows only region manager read-scope rows and opens d
   await expect(page.getByText('IstinyePark Demo Store').first()).toBeVisible()
   await expect(page.getByText('Marmara Forum').first()).toBeVisible()
   await expect(page.getByText(outsideStoreId)).toHaveCount(0)
-  await expect(page.getByText('Mağaza dosyasını aç')).toBeVisible()
+  await expect(page.getByText('Mağaza dosyasını aç')).toHaveCount(0)
   await expect(page.getByText('5 / 1').first()).toBeVisible()
   expect(workforceCalls).toEqual([
     demoStoreId,
