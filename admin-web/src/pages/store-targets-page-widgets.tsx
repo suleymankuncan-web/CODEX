@@ -16,12 +16,12 @@ export function TargetMetricTile(input: {
   return (
     <article
       data-testid={input.testId}
-      className="tw:min-h-32 tw:rounded-lg tw:border tw:border-border/80 tw:bg-white/80 tw:p-4 tw:shadow-[0_14px_38px_rgba(23,30,58,0.06)] tw:backdrop-blur"
+      className={cn('targets-command-metric', metricTileToneClasses[input.tone].card)}
     >
-      <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
+      <div className="targets-command-metric-top">
         <span
           className={cn(
-            'tw:grid tw:size-10 tw:place-items-center tw:rounded-lg',
+            'targets-command-metric-icon',
             metricTileToneClasses[input.tone].icon,
           )}
         >
@@ -29,19 +29,15 @@ export function TargetMetricTile(input: {
         </span>
         <span
           className={cn(
-            'tw:rounded-full tw:px-2.5 tw:py-1 tw:text-xs tw:font-medium',
+            'targets-command-metric-chip',
             metricTileToneClasses[input.tone].chip,
           )}
         >
           {input.label}
         </span>
       </div>
-      <div className="tw:mt-4 tw:text-3xl tw:font-semibold tw:leading-none tw:text-foreground">
-        {input.value}
-      </div>
-      <p className="tw:mt-2 tw:text-xs tw:font-medium tw:leading-5 tw:text-muted-foreground">
-        {input.note}
-      </p>
+      <div className="targets-command-metric-value">{input.value}</div>
+      <p>{input.note}</p>
     </article>
   )
 }
@@ -59,20 +55,24 @@ export function TargetWorkflowTabIcon(input: { tab: TargetWorkflowTab }) {
   }
 }
 
-const metricTileToneClasses: Record<TargetMetricTileTone, { icon: string; chip: string }> = {
+const metricTileToneClasses: Record<TargetMetricTileTone, { card: string; icon: string; chip: string }> = {
   plum: {
+    card: 'is-plum',
     icon: 'tw:bg-primary/10 tw:text-primary',
     chip: 'tw:bg-primary/10 tw:text-primary',
   },
   cyan: {
+    card: 'is-cyan',
     icon: 'tw:bg-accent/15 tw:text-accent-foreground',
     chip: 'tw:bg-accent/15 tw:text-accent-foreground',
   },
   amber: {
+    card: 'is-amber',
     icon: 'tw:bg-chart-4/15 tw:text-chart-4',
     chip: 'tw:bg-chart-4/15 tw:text-foreground',
   },
   rose: {
+    card: 'is-rose',
     icon: 'tw:bg-destructive/10 tw:text-destructive',
     chip: 'tw:bg-destructive/10 tw:text-destructive',
   },

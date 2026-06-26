@@ -449,12 +449,12 @@ export function StoreTargetsPage(input: {
       ariaLabel={copy.aria}
       ariaLabelledBy="store-targets-title"
       testId="store-targets-contract-surface"
-      className="tw:gap-3"
+      className="store-targets-command"
     >
-      <header className="tw:overflow-hidden tw:rounded-lg tw:border tw:border-border/80 tw:bg-[linear-gradient(135deg,rgba(255,255,255,0.94),rgba(238,232,255,0.72)_48%,rgba(214,249,252,0.72))] tw:p-4 tw:shadow-[0_18px_50px_rgba(23,30,58,0.08)] tw:md:p-5">
-        <div className="tw:grid tw:gap-4 tw:lg:grid-cols-[minmax(0,1fr)_auto] tw:lg:items-start">
-          <div className="tw:min-w-0">
-            <div className="tw:flex tw:flex-wrap tw:gap-2">
+      <header className="targets-command-header">
+        <div className="targets-command-header-grid">
+          <div className="targets-command-title-block">
+            <div className="targets-command-pills">
               <StoreStatusBadge tone="accent">
                 <Target data-icon="inline-start" />
                 {copy.eyebrow}
@@ -468,22 +468,20 @@ export function StoreTargetsPage(input: {
             </div>
             <h1
               id="store-targets-title"
-              className="tw:mt-4 tw:max-w-4xl tw:text-[clamp(30px,4vw,52px)] tw:font-semibold tw:leading-[0.96] tw:text-foreground"
+              className="targets-command-title"
             >
               {copy.title}
             </h1>
-            <p className="tw:mt-3 tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              {copy.description}
-            </p>
+            <p>{copy.description}</p>
           </div>
 
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:lg:justify-end">
+          <div className="targets-command-header-actions">
             <StoreStatusBadge tone="accent">{copy.contractReady}</StoreStatusBadge>
             <StoreStatusBadge tone={userMode.tone}>{copy[userMode.badgeKey]}</StoreStatusBadge>
           </div>
         </div>
 
-        <div className="tw:mt-5 tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4">
+        <div className="targets-command-metrics">
           <TargetMetricTile
             icon={<PieChart data-icon="inline-start" />}
             label={copy.personnelMetric}
@@ -521,9 +519,9 @@ export function StoreTargetsPage(input: {
 
       <section
         aria-label="Hedef filtreleri"
-        className="tw:grid tw:gap-2 tw:lg:grid-cols-[minmax(260px,420px)_180px_180px_180px_auto]"
+        className="targets-command-toolbar"
       >
-        <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border/80 tw:bg-card/85 tw:px-3 tw:text-xs tw:font-medium tw:text-muted-foreground tw:shadow-sm">
+        <label className="targets-command-field is-search">
           <Search data-icon="inline-start" />
           <span className="tw:sr-only">{copy.search}</span>
           <Input
@@ -531,10 +529,10 @@ export function StoreTargetsPage(input: {
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
             placeholder={copy.searchPlaceholder}
-            className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-sm tw:font-medium tw:shadow-none tw:focus-visible:ring-0"
+            className="targets-command-field-input"
           />
         </label>
-        <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border/80 tw:bg-card/85 tw:px-3 tw:text-xs tw:font-medium tw:text-muted-foreground tw:shadow-sm">
+        <label className="targets-command-field">
           <Clock3 data-icon="inline-start" />
           <span className="tw:sr-only">{copy.period}</span>
           <Input
@@ -549,10 +547,10 @@ export function StoreTargetsPage(input: {
                 setRequestMonth(nextMonth)
               }
             }}
-            className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-sm tw:font-medium tw:shadow-none tw:focus-visible:ring-0"
+            className="targets-command-field-input"
           />
         </label>
-        <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border/80 tw:bg-card/85 tw:px-3 tw:text-xs tw:font-medium tw:text-muted-foreground tw:shadow-sm">
+        <label className="targets-command-field">
           <Store data-icon="inline-start" />
           <span className="tw:sr-only">{copy.store}</span>
           <Select
@@ -561,7 +559,7 @@ export function StoreTargetsPage(input: {
           >
             <SelectTrigger
               aria-label={copy.store}
-              className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-sm tw:font-medium tw:shadow-none tw:focus:ring-0"
+              className="targets-command-select-trigger"
             >
               <SelectValue />
             </SelectTrigger>
@@ -577,7 +575,7 @@ export function StoreTargetsPage(input: {
             </SelectContent>
           </Select>
         </label>
-        <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border/80 tw:bg-card/85 tw:px-3 tw:text-xs tw:font-medium tw:text-muted-foreground tw:shadow-sm">
+        <label className="targets-command-field">
           <SlidersHorizontal data-icon="inline-start" />
           <span className="tw:sr-only">{copy.statusFilter}</span>
           <Select
@@ -586,7 +584,7 @@ export function StoreTargetsPage(input: {
           >
             <SelectTrigger
               aria-label={copy.statusFilter}
-              className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-sm tw:font-medium tw:shadow-none tw:focus:ring-0"
+              className="targets-command-select-trigger"
             >
               <SelectValue />
             </SelectTrigger>
@@ -603,7 +601,7 @@ export function StoreTargetsPage(input: {
           type="button"
           variant="outline"
           onClick={resetFilters}
-          className="tw:min-h-11 tw:justify-center tw:gap-2 tw:rounded-lg tw:bg-card/85 tw:px-4 tw:shadow-sm"
+          className="targets-command-toolbar-button"
         >
           <RefreshCcw data-icon="inline-start" />
           {copy.resetFilters}
@@ -619,7 +617,7 @@ export function StoreTargetsPage(input: {
           }
         }}
         variant="outline"
-        className="tw:flex tw:w-full tw:flex-wrap tw:items-center tw:gap-2"
+        className="targets-command-tabs"
         aria-label={copy.currentScope}
       >
         {availableTabs.map((tab) => (
@@ -628,9 +626,9 @@ export function StoreTargetsPage(input: {
             value={tab.id}
             aria-label={tab.label}
             className={cn(
-              'tw:min-h-10 tw:gap-2 tw:rounded-lg tw:bg-card/85 tw:text-muted-foreground tw:shadow-sm',
+              'targets-command-tab',
               selectedTab === tab.id
-                ? 'tw:border-primary/25 tw:bg-primary/10 tw:text-primary'
+                ? 'is-active'
                 : undefined,
             )}
           >

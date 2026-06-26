@@ -30,6 +30,6 @@ test('approved target workflow list stays separate from target references', () =
   assert.match(targetsPageSource, /<TargetApprovedRequestsPanel/u)
   assert.match(targetSectionsSource, /title=\{input\.copy\.coverageTitle\}/u)
   assert.match(targetSectionsSource, /title=\{input\.copy\.approvedRequests\}/u)
-  assert.match(targetsModelSource, /coverageTitle: 'Hedef referanslari'/u)
+  assert.match(targetsModelSource, /coverageTitle: 'Hedef referansları'/u)
   assert.match(targetsModelSource, /approvedRequests: 'Onaylananlar'/u)
 })
