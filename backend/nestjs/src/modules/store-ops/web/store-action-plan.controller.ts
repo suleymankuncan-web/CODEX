@@ -19,7 +19,7 @@ export class StoreActionPlanController {
 
   @Get("plans")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REGION_MANAGER")
   async listPlans(
     @Req() request: StoreActionPlanRequest,
     @Query() query: ListStoreActionPlansQueryDto,
@@ -35,7 +35,7 @@ export class StoreActionPlanController {
 
   @Get("plans/:actionPlanId")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REGION_MANAGER")
   async getPlan(
     @Req() request: StoreActionPlanRequest,
     @Param("actionPlanId") actionPlanId: string,
