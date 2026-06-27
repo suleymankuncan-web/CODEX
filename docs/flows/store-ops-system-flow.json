@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-26T18:08:40.828Z",
+  "generatedAt": "2026-06-27T22:25:33.512Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 150,
     "openApiEndpointCount": 186,
-    "routeApiEdgeCount": 221,
+    "routeApiEdgeCount": 219,
     "routesWithoutApiCallCount": 2,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -7970,16 +7970,6 @@
         "id": "edge:route:store:/store/tasks:api:135",
         "routeId": "route:store:/store/tasks",
         "apiCallId": "api:135"
-      },
-      {
-        "id": "edge:route:store:/store/tasks:api:137",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:137"
-      },
-      {
-        "id": "edge:route:store:/store/tasks:api:145",
-        "routeId": "route:store:/store/tasks",
-        "apiCallId": "api:145"
       },
       {
         "id": "edge:route:store:/store/tasks:api:28",

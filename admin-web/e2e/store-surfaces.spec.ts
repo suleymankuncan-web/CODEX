@@ -1517,7 +1517,7 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
     .getByRole('link', { name: 'Görevler', exact: true })
     .click()
 
-  await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
   expect(workflowInboxRequests).toBe(1)
 })
 
@@ -2138,7 +2138,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Görevler',
     path: '/store/tasks',
-    ready: page.getByRole('heading', { name: /Store Action İş Akışı/i }),
+    ready: page.getByRole('heading', { name: 'Görevler' }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Duyurular',
@@ -3540,13 +3540,16 @@ test('store rankings store rows keep long names on one line without covering sco
 test('store tasks page renders readable Turkish queue labels', async ({ page }) => {
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByText('Mağaza aksiyonları, checklist takipleri ve projeksiyon işleri.')).toBeVisible()
   await expect(page.getByText('Detay ozeti')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Mağaza aksiyon listesi' })).toBeVisible()
-  await expect(page.getByText('Kendi mağazamda açık iş').first()).toBeVisible()
-  await expect(page.getByText('KPI / projeksiyon').first()).toBeVisible()
-  await expect(page.getByRole('button', { name: /Tüm akış/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Plan/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'İş kuyruğu' })).toBeVisible()
+  await expect(page.getByText('Açık iş').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Projeksiyon', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Checklist', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hedef' })).toHaveCount(0)
+  await expect(page.getByText('Store Action İş Akışı')).toHaveCount(0)
+  await expect(page.getByText('Mağaza aksiyon listesi')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
@@ -3573,30 +3576,29 @@ test('store tasks lets managers retry after the queue load fails', async ({ page
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: 'İş listesi açılamadı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler açılamadı' })).toBeVisible()
   const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
   await expect(retryButton).toBeVisible()
 
   allowInbox = true
   await retryButton.click()
 
-  await expect(page.getByRole('heading', { name: /Store Action İş Akışı/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
   await expect.poll(() => inboxAttempts).toBeGreaterThan(1)
-  await expect(page.getByRole('heading', { name: 'İş listesi açılamadı' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Görevler açılamadı' })).toHaveCount(0)
 })
 
-test('store tasks page switches to English copy and persists locale', async ({ page }) => {
+test('store tasks command-center copy stays stable when locale changes', async ({ page }) => {
   await page.goto('/store/tasks')
 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store Action workflow/i })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Store action list' })).toBeVisible()
-  await expect(page.getByText('Open work in my store').first()).toBeVisible()
-  await expect(page.getByText('KPI / projection').first()).toBeVisible()
-  await expect(page.getByRole('button', { name: /All flow/i })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Open plan' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'İş kuyruğu' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Projeksiyon', exact: true })).toBeVisible()
+  await expect(page.getByText('Store Action workflow')).toHaveCount(0)
+  await expect(page.getByText('Store action list')).toHaveCount(0)
   await expect(page.getByText('Aksiyon gerektiren işler')).toHaveCount(0)
   await expect(page.getByText('Detay özeti')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
@@ -3606,7 +3608,7 @@ test('store tasks page switches to English copy and persists locale', async ({ p
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store Action workflow/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
 })
 
 test('store tasks checklist acknowledgement opens the exact checklist receipt', async ({ page }) => {
@@ -3668,7 +3670,8 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
 
   await page.goto('/store/tasks')
   await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
-  await page.getByRole('link', { name: 'I acknowledge' }).click()
+  await page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' }).click()
+  await page.getByRole('dialog', { name: 'Görev detayı' }).getByRole('link', { name: 'Kaynağı aç' }).click()
 
   await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox&result=checklist-instance-bm-1$/)
   await expect(page.locator('#store-checklist-tab-inbox')).toHaveAttribute('aria-selected', 'true')
@@ -3690,7 +3693,7 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 })
 
-test('store tasks prefetches approvals data before opening approval actions', async ({ page }) => {
+test('store tasks keeps target approvals out of the command center', async ({ page }) => {
   let targetDistributionRequests = 0
 
   await page.unroute('**/api/workflow/inbox')
@@ -3742,19 +3745,9 @@ test('store tasks prefetches approvals data before opening approval actions', as
 
   await page.goto('/store/tasks')
 
-  const approvalAction = page
-    .getByTestId('store-task-queue-row')
-    .filter({ hasText: 'Mayis hedef dagitimi' })
-    .locator('a[href="/store/approvals"]')
-  await expect(approvalAction).toBeVisible()
-  await expect.poll(() => targetDistributionRequests).toBeGreaterThanOrEqual(1)
-  const prefetchedRequestCount = targetDistributionRequests
-
-  await approvalAction.click()
-
-  await expect(page).toHaveURL(/\/store\/approvals$/)
-  await expect(page.getByRole('heading', { name: 'Talep Merkezi' })).toBeVisible()
-  await expect.poll(() => targetDistributionRequests, { timeout: 1000 }).toBe(prefetchedRequestCount)
+  await expect(page.getByText('Mayis hedef dagitimi')).toHaveCount(0)
+  await expect(page.getByTestId('store-action-plans-panel').locator('a[href="/store/approvals"]')).toHaveCount(0)
+  await expect.poll(() => targetDistributionRequests, { timeout: 1000 }).toBe(0)
 })
 
 test('store checklist acknowledgement refreshes the store task queue', async ({ page }) => {
@@ -3854,10 +3847,11 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
   })
 
   await page.goto('/store/tasks')
-  await expect(page.getByRole('link', { name: 'I acknowledge' })).toBeVisible()
+  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' })).toBeVisible()
   expect(workflowInboxRequests).toBe(1)
 
-  await page.getByRole('link', { name: 'I acknowledge' }).click()
+  await page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' }).click()
+  await page.getByRole('dialog', { name: 'Görev detayı' }).getByRole('link', { name: 'Kaynağı aç' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'I acknowledge' }).click()
   await expect(page).toHaveURL(/\/store\/checklists\?tab=history$/)
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -3865,7 +3859,7 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
   await page.goto('/store/tasks')
 
   await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
-  await expect(page.getByRole('link', { name: 'I acknowledge' })).toHaveCount(0)
+  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
 })
 
 test('store incentives page switches to English copy and persists locale', async ({ page }) => {

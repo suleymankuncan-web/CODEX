@@ -1,1086 +1,217 @@
-import { expect, test, type Page } from './test-fixtures'
+import { expect, test, type Page, type Route } from './test-fixtures'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'tr')
     window.localStorage.setItem(
       'store-ops-admin-session',
       JSON.stringify({
         mode: 'mock',
-        mockUserId: 'store-me-smoke-user',
+        mockUserId: 'store-tasks-smoke-user',
         mockRoleCodes: 'STORE_MANAGER',
         mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
     )
   })
-
-  await routeStoreActionPlanApi(page)
 })
 
-function getActionPlansPanel(page: Page) {
-  return page.getByTestId('store-action-plans-panel')
-}
-
-function getActionPlanRow(page: Page, title = 'Net sales recovery plan') {
-  return getActionPlansPanel(page).getByTestId('store-action-plan-row').filter({ hasText: title })
-}
-
-function getActionPlanDetailDialog(page: Page, title = 'Net sales recovery plan') {
-  return page.getByRole('dialog').filter({ hasText: title })
-}
-
-test('store tasks renders persisted action plans from the workflow inbox', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/workflow/inbox')
-  await page.route('**/api/workflow/inbox', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            itemType: 'task',
-            sourceType: 'store_action_plan',
-            sourceId: 'action-plan-1',
-            title: 'Net sales recovery plan',
-            summary: 'Call the team and confirm recovery actions.',
-            companyId: '00000000-0000-0000-0000-000000000001',
-            regionId: '00000000-0000-0000-0000-000000000010',
-            storeId: demoStoreId,
-            storeName: 'IstinyePark Demo Store',
-            workflowStatus: 'open',
-            inboxStatus: 'needs_attention',
-            urgency: 'high',
-            createdAt: '2026-05-22T08:00:00.000Z',
-            needsAttentionAt: '2026-05-24T12:00:00.000Z',
-            actorRole: 'STORE_MANAGER',
-            primaryActionLabel: 'Open action plan',
-            secondaryActionLabel: 'Review source',
-            deepLink: '/store/tasks?actionPlan=action-plan-1',
-            historyPreview: 'Due 2026-05-24',
-          },
-        ],
-        meta: {
-          count: 1,
-          total: 1,
-          limit: 30,
-          offset: 0,
-        },
-      },
-    })
-  })
+test('store tasks renders the command center and keeps target approvals out', async ({ page }) => {
+  const api = await routeStoreTasksApi(page)
 
   await page.goto('/store/tasks')
 
-  const actionRow = page.getByTestId('store-task-queue-row').filter({ hasText: 'Net sales recovery plan' })
-  await expect(actionRow).toBeVisible()
-  await expect(actionRow.getByText('Action plan', { exact: true })).toBeVisible()
-  await expect(actionRow.getByText('Call the team and confirm recovery actions.')).toBeVisible()
-  await expect(actionRow.getByText('Due 2026-05-24')).toBeVisible()
-  const actionLink = actionRow.getByRole('link', { name: 'Go to action plan' })
-  await expect(actionLink).toBeVisible()
-  await expect(actionLink).toHaveAttribute('href', '/store/tasks?actionPlan=action-plan-1')
+  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(page.getByText('Mağaza aksiyonları, checklist takipleri ve projeksiyon işleri.')).toBeVisible()
+  await expect(page.getByText('İş kuyruğu')).toBeVisible()
+  const queuePanel = page.getByTestId('store-action-plans-panel')
+  await expect(queuePanel.getByText('Görev', { exact: true })).toBeVisible()
+  await expect(queuePanel.getByText('Kaynak', { exact: true })).toBeVisible()
+  await expect(queuePanel.getByText('Atanma', { exact: true })).toBeVisible()
+  await expect(queuePanel.getByText('Süre', { exact: true })).toBeVisible()
+  await expect(queuePanel.getByText('Öncelik', { exact: true })).toBeVisible()
+  await expect(queuePanel.getByText('Durum', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Hedef' })).toHaveCount(0)
+  await expect(page.getByText('Hedef dağıtımı onayı')).toHaveCount(0)
+  await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toBeVisible()
+  await expect(getActionPlanRow(page, 'Mayıs reyon düzeni')).toBeVisible()
+  await expect(getActionPlanRow(page, 'Mayıs çözüm kaydı')).toHaveCount(0)
+  await expect(page.getByText('Devreden').first()).toBeVisible()
+  expect(api.listStatuses).toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked', 'closed', 'cancelled']))
 })
 
-test('store tasks shows region managers checklist remediation plans as informational read rows', async ({ page }) => {
+test('store manager can move and close a persisted action plan from the drawer', async ({ page }) => {
+  const api = await routeStoreTasksApi(page)
+
+  await page.goto('/store/tasks')
+
+  await getActionPlanRow(page, 'Vitrin düzeni takip maddesi').click()
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await expect(drawer.getByRole('heading', { name: 'Vitrin düzeni takip maddesi' })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'İşleme al' })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Bloke et' })).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'Çözüm bildir' })).toBeVisible()
+
+  await drawer.getByRole('button', { name: 'İşleme al' }).click()
+  expect(api.statusPayloads.at(-1)).toMatchObject({ status: 'in_progress' })
+
+  await drawer.getByPlaceholder('Kısa not yaz').fill('Vitrin düzeni tamamlandı.')
+  await drawer.getByRole('button', { name: 'Çözüm bildir' }).click()
+  expect(api.closePayloads.at(-1)).toMatchObject({
+    resolutionNote: 'Vitrin düzeni tamamlandı.',
+  })
+})
+
+test('store manager can block a persisted action plan with a note', async ({ page }) => {
+  const api = await routeStoreTasksApi(page)
+
+  await page.goto('/store/tasks')
+
+  await getActionPlanRow(page, 'Mayıs reyon düzeni').click()
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await drawer.getByPlaceholder('Kısa not yaz').fill('Eksik ürün bekleniyor.')
+  await drawer.getByRole('button', { name: 'Bloke et' }).click()
+
+  expect(api.statusPayloads.at(-1)).toMatchObject({
+    status: 'blocked',
+    note: 'Eksik ürün bekleniyor.',
+  })
+})
+
+test('region manager reads results and open follow-ups without command buttons', async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
     window.localStorage.setItem(
       'store-ops-admin-session',
       JSON.stringify({
         mode: 'mock',
-        mockUserId: 'region-remediation-smoke-user',
+        mockUserId: 'store-tasks-rm-smoke-user',
         mockRoleCodes: 'REGION_MANAGER',
-        mockCompanyIds: '',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
         bearerToken: '',
       }),
     )
   })
-  await page.unroute('**/api/auth/session')
+  await routeStoreTasksApi(page, { roleCodes: ['REGION_MANAGER'] })
+
+  await page.goto('/store/tasks')
+
+  await expect(page.getByText('Mağaza müdürünün bitirdiği süreçler ve sonuç geçmişi.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Sonuçlar' })).toBeVisible()
+  await expect(getActionPlanRow(page, 'Haziran çözüm kaydı')).toBeVisible()
+  await getActionPlanRow(page, 'Haziran çözüm kaydı').click()
+  let drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await expect(drawer.getByText('Mağaza müdürü notu')).toBeVisible()
+  await expect(drawer.getByRole('button', { name: 'İşleme al' })).toHaveCount(0)
+  await drawer.getByRole('button', { name: 'Kapat', exact: true }).click()
+
+  await page.getByRole('button', { name: 'Açık takipler' }).click()
+  await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toBeVisible()
+  await getActionPlanRow(page, 'Vitrin düzeni takip maddesi').click()
+  drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await expect(drawer.getByRole('button', { name: 'Çözüm bildir' })).toHaveCount(0)
+})
+
+test('region manager with no action-store assignment does not read persisted plans', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'store-tasks-rm-no-actions-user',
+        mockRoleCodes: 'REGION_MANAGER',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+  })
+  const api = await routeStoreTasksApi(page, {
+    roleCodes: ['REGION_MANAGER'],
+    assignedStoreIds: [],
+  })
+
+  await page.goto('/store/tasks')
+
+  await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
+  await expect(getActionPlanRow(page, 'Haziran çözüm kaydı')).toHaveCount(0)
+  await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Açık takipler' }).click()
+  await expect(getWorkflowRow(page, 'UPT projeksiyon riski')).toBeVisible()
+  await getWorkflowRow(page, 'UPT projeksiyon riski').click()
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await expect(drawer.getByRole('button', { name: 'İşleme al' })).toHaveCount(0)
+  expect(api.listStatuses).toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked', 'closed', 'cancelled']))
+})
+
+test('store manager can create an action plan from a projection candidate', async ({ page }) => {
+  const api = await routeStoreTasksApi(page, { plans: [] })
+
+  await page.goto('/store/tasks')
+
+  await getWorkflowRow(page, 'UPT projeksiyon riski').click()
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await drawer.getByLabel('Termin').fill('2026-06-30')
+  await drawer.getByRole('button', { name: 'Aksiyon planı oluştur' }).click()
+
+  expect(api.createPayloads.at(-1)).toMatchObject({
+    storeId: demoStoreId,
+    sourceType: 'kpi_exception',
+    sourceId: 'snapshot-2026-06:store:kpi',
+    sourceDeepLink: '/store/kpis',
+    title: 'UPT projeksiyon riski',
+    summary: 'UPT ritmi dönem sonu hedefinin altında kalıyor.',
+    priority: 'high',
+    dueOn: '2026-06-30',
+  })
+})
+
+function getActionPlanRow(page: Page, title: string) {
+  return page.getByTestId('store-action-plan-row').filter({ hasText: title })
+}
+
+function getWorkflowRow(page: Page, title: string) {
+  return page.getByTestId('store-task-queue-row').filter({ hasText: title })
+}
+
+async function routeStoreTasksApi(
+  page: Page,
+  input: {
+    roleCodes?: string[]
+    plans?: StoreActionPlanFixture[]
+    assignedStoreIds?: string[]
+  } = {},
+) {
+  const roleCodes = input.roleCodes ?? ['STORE_MANAGER']
+  const assignedStoreIds = input.assignedStoreIds ?? [demoStoreId]
+  const state = {
+    plans: [...(input.plans ?? storeActionPlansFixture)],
+    assignedStoreIds,
+    listStatuses: [] as string[],
+    statusPayloads: [] as Array<Record<string, unknown>>,
+    closePayloads: [] as Array<Record<string, unknown>>,
+    createPayloads: [] as Array<Record<string, unknown>>,
+  }
+
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
       json: {
         ...authSessionFixture,
         user: {
           ...authSessionFixture.user,
-          roleCodes: ['REGION_MANAGER'],
-          scope: {
-            companyIds: [],
-            regionIds: ['00000000-0000-0000-0000-000000000010'],
-            storeIds: [],
-          },
-          readScope: {
-            companyIds: [],
-            regionIds: ['00000000-0000-0000-0000-000000000010'],
-            storeIds: [],
-          },
+          roleCodes,
           actionScope: {
-            assignedStoreIds: [],
+            assignedStoreIds,
           },
-          assignedStoreIds: [],
+          assignedStoreIds,
+        },
+        scopeSummary: {
+          ...authSessionFixture.scopeSummary,
+          assignedStoreCount: assignedStoreIds.length,
         },
       },
     })
-  })
-  await page.unroute('**/api/workflow/inbox')
-  await page.route('**/api/workflow/inbox', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            itemType: 'task',
-            sourceType: 'store_action_plan',
-            sourceId: 'action-plan-checklist-1',
-            title: 'Kasa checklist bulgusu',
-            summary: 'Kasa duzeni standardi icin takip',
-            companyId: '00000000-0000-0000-0000-000000000001',
-            regionId: '00000000-0000-0000-0000-000000000010',
-            storeId: demoStoreId,
-            storeName: 'IstinyePark Demo Store',
-            workflowStatus: 'closed',
-            inboxStatus: 'informational',
-            urgency: 'low',
-            createdAt: '2026-05-22T08:00:00.000Z',
-            needsAttentionAt: '2026-05-24T12:00:00.000Z',
-            actorRole: 'STORE_MANAGER',
-            primaryActionLabel: 'Review checklist source',
-            secondaryActionLabel: 'Store reported resolved',
-            deepLink: '/store/checklists?result=instance-1',
-            historyPreview: 'Store reported resolved: Kasa alani duzenlendi',
-          },
-        ],
-        meta: {
-          count: 1,
-          total: 1,
-          limit: 30,
-          offset: 0,
-        },
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  await expect(getActionPlansPanel(page)).toBeVisible()
-  const remediationRow = page.getByTestId('store-task-queue-row').filter({ hasText: 'Kasa checklist bulgusu' })
-  await expect(remediationRow).toBeVisible()
-  await expect(remediationRow.getByText('Action plan', { exact: true })).toBeVisible()
-  await expect(remediationRow.getByText('Informational')).toBeVisible()
-  await expect(remediationRow.getByText('Store reported resolved: Kasa alani duzenlendi')).toBeVisible()
-  await expect(remediationRow.getByRole('link', { name: 'Review checklist source' })).toHaveCount(0)
-  const sourceLink = remediationRow.getByRole('link', { name: /Open checklist result|Checklist sonucunu/ })
-  await expect(sourceLink).toHaveAttribute('href', '/store/checklists?result=instance-1')
-  await expect(page.getByRole('button', { name: 'Create action plan' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Close plan' })).toHaveCount(0)
-})
-
-test('store tasks lists persisted action plan records with active status controls', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    await route.fulfill({ json: storeActionPlansFixture })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByRole('heading', { name: 'Store action list' })).toBeVisible()
-  await expect(actionPlansPanel.getByText('1 work')).toBeVisible()
-  const actionPlanRow = getActionPlanRow(page)
-  await expect(actionPlanRow.getByText('Net sales recovery plan')).toBeVisible()
-  await expect(actionPlanRow.getByText('Confirm the daily recovery checklist with the team.')).toBeVisible()
-  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
-  await expect(actionPlanRow.getByRole('button', { name: 'Update status' })).toHaveCount(0)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page)
-  await expect(detailDialog.getByText('Why was it created?')).toBeVisible()
-  await expect(detailDialog.getByText('Movement history')).toBeVisible()
-  await expect(detailDialog.getByText('High')).toBeVisible()
-  await expect(detailDialog.getByText('May 24, 2026')).toBeVisible()
-  await expect(detailDialog.getByRole('link', { name: 'Open source' })).toHaveAttribute('href', '/store/kpis')
-  await expect(detailDialog.getByText('Action command')).toBeVisible()
-  await expect(detailDialog.getByRole('button', { name: 'Update status' })).toBeVisible()
-  await expect(detailDialog.getByRole('button', { name: 'Close plan' })).toBeVisible()
-  await expect(detailDialog.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
-  await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
-})
-
-test('store tasks labels persisted checklist remediation plans without changing checklist receipts', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            actionPlanId: '00000000-0000-0000-0000-00000000c001',
-            sourceType: 'checklist_remediation',
-            sourceId: 'checklist:checklist-instance-bm-1:item:item-1',
-            sourceDeepLink: '/store/checklists?result=checklist-instance-bm-1',
-            title: 'Kasa checklist bulgusu',
-            summary: 'BM Store Visit - Kasa duzeni standartlara uygun mu?',
-          },
-        ],
-        meta: {
-          count: 1,
-          total: 1,
-          limit: 20,
-          offset: 0,
-        },
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page, 'Kasa checklist bulgusu')
-  await expect(actionPlanRow.getByText('Kasa checklist bulgusu')).toBeVisible()
-  await expect(actionPlanRow.getByText('Checklist remediation')).toBeVisible()
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page, 'Kasa checklist bulgusu')
-  const sourceLink = detailDialog.getByRole('link', { name: 'Open source' })
-  await expect(sourceLink).toHaveAttribute(
-    'href',
-    '/store/checklists?result=checklist-instance-bm-1',
-  )
-  await expect(detailDialog.getByRole('button', { name: 'Close plan' })).toBeVisible()
-})
-
-test('store tasks opens persisted action plan detail on demand', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  let detailRequested = false
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-    const url = new URL(request.url())
-
-    if (
-      request.method() === 'GET' &&
-      url.pathname.endsWith(`/store-actions/plans/${storeActionPlansFixture.items[0].actionPlanId}`)
-    ) {
-      detailRequested = true
-      await route.fulfill({
-        json: {
-          data: {
-            plan: {
-              ...storeActionPlansFixture.items[0],
-              status: 'blocked',
-              sourceSnapshotRunId: '00000000-0000-0000-0000-00000000c001',
-              sourceKpiId: '00000000-0000-0000-0000-00000000d001',
-              updatedAt: '2026-05-23T10:30:00.000Z',
-            },
-          },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({ json: storeActionPlansFixture })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-
-  const detailDialog = getActionPlanDetailDialog(page)
-  await expect(detailDialog).toBeVisible()
-  await expect(detailDialog.getByText('Why was it created?')).toBeVisible()
-  await expect(detailDialog.getByText('Movement history')).toBeVisible()
-  await expect(detailDialog.getByText('Action command')).toBeVisible()
-  await expect(detailDialog.getByText('Blocked')).toBeVisible()
-  await expect(detailDialog.getByRole('link', { name: 'Open source' })).toHaveAttribute('href', '/store/kpis')
-  await expect(detailDialog.getByText('Not available').first()).toBeVisible()
-  expect(detailRequested).toBe(true)
-})
-
-test('store tasks keeps persisted plan commands available when detail fails', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-    const url = new URL(request.url())
-
-    if (
-      request.method() === 'GET' &&
-      url.pathname.endsWith(`/store-actions/plans/${storeActionPlansFixture.items[0].actionPlanId}`)
-    ) {
-      await route.fulfill({
-        status: 503,
-        json: { message: 'Action plan detail temporarily unavailable' },
-      })
-      return
-    }
-
-    await route.fulfill({ json: storeActionPlansFixture })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-
-  const detailDialog = getActionPlanDetailDialog(page)
-  await expect(detailDialog.getByText('Plan detail could not be opened')).toBeVisible()
-  await expect(detailDialog.getByText('Action command')).toBeVisible()
-  await expect(detailDialog.getByRole('button', { name: 'Update status' })).toBeVisible()
-  await expect(detailDialog.getByRole('button', { name: 'Close plan' })).toBeVisible()
-  await expect(detailDialog.getByRole('button', { name: 'Cancel plan' })).toBeVisible()
-})
-
-test('store tasks updates a persisted action plan status', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  let updated = false
-  let capturedStatusBody: Record<string, unknown> | null = null
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'PATCH' && request.url().endsWith('/status')) {
-      capturedStatusBody = request.postDataJSON() as Record<string, unknown>
-      updated = true
-      await route.fulfill({
-        json: {
-          command: {
-            status: 'updated',
-            message: 'Store action plan status updated',
-          },
-          data: {
-            plan: {
-              ...storeActionPlansFixture.items[0],
-              status: 'blocked',
-            },
-          },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: {
-        ...storeActionPlansFixture,
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            status: updated ? 'blocked' : 'open',
-          },
-        ],
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page)
-  await detailDialog.getByRole('button', { name: 'Update status' }).click()
-  const statusForm = detailDialog.locator('form[aria-label="Action plan status"]')
-  await statusForm.getByLabel('Status').selectOption('blocked')
-  await statusForm.getByLabel('Note').fill('Waiting for regional input')
-  await statusForm.getByRole('button', { name: 'Save status' }).click()
-
-  expect(capturedStatusBody).toMatchObject({
-    status: 'blocked',
-    note: 'Waiting for regional input',
-  })
-  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Blocked$/ })).toBeVisible()
-})
-
-test('store tasks keeps status update failures local to the action plan form', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'PATCH' && request.url().endsWith('/status')) {
-      await route.fulfill({
-        status: 409,
-        json: { message: 'Terminal plan cannot be updated' },
-      })
-      return
-    }
-
-    await route.fulfill({ json: storeActionPlansFixture })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page)
-  await detailDialog.getByRole('button', { name: 'Update status' }).click()
-  const statusForm = detailDialog.locator('form[aria-label="Action plan status"]')
-  await statusForm.getByLabel('Status').selectOption('blocked')
-  await statusForm.getByRole('button', { name: 'Save status' }).click()
-
-  await expect(statusForm.getByRole('alert')).toContainText('Status could not be updated')
-  await expect(statusForm.getByRole('alert')).toContainText('Terminal plan cannot be updated')
-  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
-})
-
-test('store tasks closes a persisted action plan with a resolution note', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  let closed = false
-  let capturedCloseBody: Record<string, unknown> | null = null
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'PATCH' && request.url().endsWith('/close')) {
-      capturedCloseBody = request.postDataJSON() as Record<string, unknown>
-      closed = true
-      await route.fulfill({
-        json: {
-          command: {
-            status: 'closed',
-            message: 'Store action plan closed',
-          },
-          data: {
-            plan: {
-              ...storeActionPlansFixture.items[0],
-              status: 'closed',
-              resolutionNote: capturedCloseBody.resolutionNote,
-            },
-          },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: {
-        ...storeActionPlansFixture,
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            status: closed ? 'closed' : 'open',
-            resolutionNote: closed ? 'Resolution completed with the store team' : null,
-          },
-        ],
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page)
-  await detailDialog.getByRole('button', { name: 'Close plan' }).click()
-  const closeForm = detailDialog.locator('form[aria-label="Close action plan"]')
-  await closeForm.getByLabel('Resolution note').fill('Resolution completed with the store team')
-  await closeForm.getByRole('button', { name: 'Close' }).click()
-
-  expect(capturedCloseBody).toMatchObject({
-    resolutionNote: 'Resolution completed with the store team',
-  })
-  await expect(actionPlanRow.getByText('Closed', { exact: true })).toBeVisible()
-  await expect(actionPlanRow.getByRole('button', { name: 'Close plan' })).toHaveCount(0)
-})
-
-test('store tasks keeps close failures local to the action plan form', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'PATCH' && request.url().endsWith('/close')) {
-      await route.fulfill({
-        status: 409,
-        json: { message: 'Action plan was already closed' },
-      })
-      return
-    }
-
-    await route.fulfill({ json: storeActionPlansFixture })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page)
-  await detailDialog.getByRole('button', { name: 'Close plan' }).click()
-  const closeForm = detailDialog.locator('form[aria-label="Close action plan"]')
-  await closeForm.getByLabel('Resolution note').fill('Resolution completed with the store team')
-  await closeForm.getByRole('button', { name: 'Close' }).click()
-
-  await expect(closeForm.getByRole('alert')).toContainText('Plan could not be closed')
-  await expect(closeForm.getByRole('alert')).toContainText('Action plan was already closed')
-  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
-})
-
-test('store tasks cancels a persisted action plan with a reason', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  let cancelled = false
-  let capturedCancelBody: Record<string, unknown> | null = null
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'PATCH' && request.url().endsWith('/cancel')) {
-      capturedCancelBody = request.postDataJSON() as Record<string, unknown>
-      cancelled = true
-      await route.fulfill({
-        json: {
-          command: {
-            status: 'cancelled',
-            message: 'Store action plan cancelled',
-          },
-          data: {
-            plan: {
-              ...storeActionPlansFixture.items[0],
-              status: 'cancelled',
-              cancelReason: 'Duplicate of a regional recovery plan',
-            },
-          },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: {
-        ...storeActionPlansFixture,
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            status: cancelled ? 'cancelled' : 'open',
-            cancelReason: cancelled ? 'Duplicate of a regional recovery plan' : null,
-          },
-        ],
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlansPanel = getActionPlansPanel(page)
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page)
-  await detailDialog.getByRole('button', { name: 'Cancel plan' }).click()
-  const cancelForm = detailDialog.locator('form[aria-label="Cancel action plan"]')
-  await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
-  await cancelForm.getByRole('button', { name: 'Cancel plan' }).click()
-
-  expect(capturedCancelBody).toMatchObject({
-    cancelReason: 'Duplicate of a regional recovery plan',
-  })
-  await expect(actionPlansPanel.getByText('Cancelled', { exact: true })).toBeVisible()
-  await expect(actionPlanRow.getByRole('button', { name: 'Cancel plan' })).toHaveCount(0)
-})
-
-test('store tasks keeps cancel failures local to the action plan form', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'PATCH' && request.url().endsWith('/cancel')) {
-      await route.fulfill({
-        status: 409,
-        json: { message: 'Action plan was already cancelled' },
-      })
-      return
-    }
-
-    await route.fulfill({ json: storeActionPlansFixture })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlanRow = getActionPlanRow(page)
-  await actionPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page)
-  await detailDialog.getByRole('button', { name: 'Cancel plan' }).click()
-  const cancelForm = detailDialog.locator('form[aria-label="Cancel action plan"]')
-  await cancelForm.getByLabel('Cancel reason').fill('Duplicate of a regional recovery plan')
-  await cancelForm.getByRole('button', { name: 'Cancel plan' }).click()
-
-  await expect(cancelForm.getByRole('alert')).toContainText('Plan could not be cancelled')
-  await expect(cancelForm.getByRole('alert')).toContainText('Action plan was already cancelled')
-  await expect(actionPlanRow.locator('strong').filter({ hasText: /^Open$/ })).toBeVisible()
-})
-
-test('store tasks creates an action plan from a KPI follow-up candidate', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  const competingStoreId = '00000000-0000-0000-0000-000000000101'
-  let created = false
-  let capturedCreateBody: Record<string, unknown> | null = null
-
-  await page.unroute('**/api/workflow/inbox')
-  await page.route('**/api/workflow/inbox', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          workflowInboxFixture.items[0],
-          {
-            ...workflowInboxFixture.items[0],
-            title: 'UPT at risk in a second store',
-            summary: 'Kanyon Demo Store icin KPI exception takibi gerekiyor',
-            storeId: competingStoreId,
-            storeName: 'Kanyon Demo Store',
-            deepLink: '/store/kpis?store=kanyon',
-          },
-        ],
-        meta: {
-          count: 2,
-          total: 2,
-          limit: 30,
-          offset: 0,
-        },
-      },
-    })
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'POST') {
-      const requestBody = request.postDataJSON() as Record<string, unknown>
-      capturedCreateBody = requestBody
-      created = true
-      await route.fulfill({
-        status: 201,
-        json: {
-          command: {
-            status: 'created',
-            message: 'Store action plan created',
-          },
-          data: {
-            plan: {
-              ...storeActionPlansFixture.items[0],
-              actionPlanId: '00000000-0000-0000-0000-00000000a111',
-              sourceId: requestBody.sourceId,
-              sourceDeepLink: requestBody.sourceDeepLink,
-              title: requestBody.title,
-              summary: requestBody.summary,
-              priority: requestBody.priority,
-              dueOn: requestBody.dueOn,
-            },
-          },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: created
-        ? {
-            items: [
-              {
-                ...storeActionPlansFixture.items[0],
-                actionPlanId: '00000000-0000-0000-0000-00000000a111',
-                title: 'UPT at risk',
-                summary: 'IstinyePark Demo Store icin KPI exception takibi gerekiyor',
-                dueOn: '2026-05-27',
-              },
-            ],
-            meta: { count: 1, total: 1, limit: 20, offset: 0 },
-          }
-        : {
-            items: [],
-            meta: { count: 0, total: 0, limit: 20, offset: 0 },
-          },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const firstKpiFollowUp = page
-    .getByTestId('store-task-queue-row')
-    .filter({ hasText: 'IstinyePark Demo Store' })
-    .filter({ hasText: 'UPT at risk' })
-    .first()
-  await firstKpiFollowUp.getByRole('button', { name: 'Open plan' }).click()
-  const createForm = page.locator('form[aria-label="KPI follow-up action plan"]')
-  await expect(createForm.getByLabel('Title')).toHaveValue('UPT at risk')
-  await createForm.getByLabel('Due date').fill('2026-05-27')
-  await createForm.getByRole('button', { name: 'Create plan' }).click()
-
-  expect(capturedCreateBody).toMatchObject({
-    storeId: demoStoreId,
-    sourceType: 'kpi_exception',
-    sourceId: 'snapshot-2026-04-24:store:kpi',
-    sourceDeepLink: '/store/kpis',
-    title: 'UPT at risk',
-    summary: 'IstinyePark Demo Store icin KPI exception takibi gerekiyor',
-    priority: 'high',
-    dueOn: '2026-05-27',
-  })
-  const actionPlansPanel = getActionPlansPanel(page)
-  const createdPlanRow = getActionPlanRow(page, 'UPT at risk')
-  await expect(createdPlanRow).toBeVisible()
-  await createdPlanRow.getByRole('button', { name: 'Open detail' }).click()
-  await expect(getActionPlanDetailDialog(page, 'UPT at risk').getByText('May 27, 2026')).toBeVisible()
-  await expect(actionPlansPanel.getByText('1-1 / 1')).toBeVisible()
-})
-
-test('store tasks keeps create failures local to the KPI follow-up form', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 409,
-        json: { message: 'Active store action plan already exists for this source' },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: {
-        items: [],
-        meta: { count: 0, total: 0, limit: 20, offset: 0 },
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  await page.getByRole('button', { name: 'Open plan' }).click()
-  const createForm = page.locator('form[aria-label="KPI follow-up action plan"]')
-  await createForm.getByLabel('Due date').fill('2026-05-27')
-  await createForm.getByRole('button', { name: 'Create plan' }).click()
-
-  await expect(createForm.getByRole('alert')).toContainText('Action plan could not be created')
-  await expect(createForm.getByRole('alert')).toContainText('Active store action plan already exists')
-  await expect(getActionPlansPanel(page).getByTestId('store-action-plan-row')).toHaveCount(0)
-  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'UPT at risk' })).toBeVisible()
-})
-
-test('store tasks keeps workflow rows visible when persisted action plans fail', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    await route.fulfill({
-      status: 503,
-      json: { message: 'Temporary action plan outage' },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByText('Action plans could not be opened')).toBeVisible()
-  await expect(actionPlansPanel.getByText('Temporary action plan outage')).toBeVisible()
-  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'UPT at risk' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Open plan' })).toBeVisible()
-})
-
-test('store tasks keeps off-page workflow action plans when active index cannot prove a persisted row', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/workflow/inbox')
-  await page.route('**/api/workflow/inbox', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            itemType: 'task',
-            sourceType: 'store_action_plan',
-            sourceId: '00000000-0000-0000-0000-00000000a099',
-            title: 'Off-page active plan',
-            summary: 'Active action plan projected by the workflow inbox.',
-            companyId: '00000000-0000-0000-0000-000000000001',
-            regionId: '00000000-0000-0000-0000-000000000010',
-            storeId: demoStoreId,
-            storeName: 'IstinyePark Demo Store',
-            workflowStatus: 'open',
-            inboxStatus: 'needs_attention',
-            urgency: 'high',
-            createdAt: '2026-05-23T08:00:00.000Z',
-            needsAttentionAt: '2026-05-25T12:00:00.000Z',
-            actorRole: 'STORE_MANAGER',
-            primaryActionLabel: 'Open action plan',
-            secondaryActionLabel: 'Review source',
-            deepLink: '/store/tasks?actionPlan=00000000-0000-0000-0000-00000000a099',
-          },
-        ],
-        meta: {
-          count: 1,
-          total: 1,
-          limit: 30,
-          offset: 0,
-        },
-      },
-    })
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const url = new URL(route.request().url())
-
-    if (url.searchParams.has('status')) {
-      await route.fulfill({
-        json: {
-          items: [],
-          meta: { count: 0, total: 0, limit: 100, offset: 0 },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            actionPlanId: '00000000-0000-0000-0000-00000000c099',
-            title: 'Closed archive plan',
-            status: 'closed',
-          },
-        ],
-        meta: {
-          count: 20,
-          total: 21,
-          limit: 20,
-          offset: 0,
-        },
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  await expect(getActionPlanRow(page, 'Closed archive plan')).toBeVisible()
-  const offPageWorkflowRow = page.getByTestId('store-task-queue-row').filter({ hasText: 'Off-page active plan' })
-  await expect(offPageWorkflowRow).toBeVisible()
-  await expect(offPageWorkflowRow.getByRole('link', { name: 'Go to action plan' })).toBeVisible()
-})
-
-test('store tasks pages persisted action plan records', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/workflow/inbox')
-  await page.route('**/api/workflow/inbox', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          workflowInboxFixture.items[0],
-          {
-            itemType: 'task',
-            sourceType: 'store_action_plan',
-            sourceId: '00000000-0000-0000-0000-00000000a021',
-            title: 'Second page recovery plan',
-            summary: 'This projection is already represented by the paged plan endpoint.',
-            companyId: '00000000-0000-0000-0000-000000000001',
-            regionId: '00000000-0000-0000-0000-000000000010',
-            storeId: demoStoreId,
-            storeName: 'IstinyePark Demo Store',
-            workflowStatus: 'open',
-            inboxStatus: 'needs_attention',
-            urgency: 'high',
-            createdAt: '2026-05-23T08:00:00.000Z',
-            needsAttentionAt: '2026-05-25T12:00:00.000Z',
-            actorRole: 'STORE_MANAGER',
-            primaryActionLabel: 'Open action plan',
-            secondaryActionLabel: 'Review source',
-            deepLink: '/store/tasks?actionPlan=00000000-0000-0000-0000-00000000a021',
-          },
-        ],
-        meta: {
-          count: 2,
-          total: 2,
-          limit: 30,
-          offset: 0,
-        },
-      },
-    })
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const url = new URL(route.request().url())
-    const status = url.searchParams.get('status')
-    const offset = Number(url.searchParams.get('offset') ?? '0')
-    const isSecondPage = offset === 20
-
-    if (status) {
-      await route.fulfill({
-        json:
-          status === 'open'
-            ? {
-                items: [
-                  {
-                    ...storeActionPlansFixture.items[0],
-                    actionPlanId: '00000000-0000-0000-0000-00000000a021',
-                    title: 'Second page recovery plan',
-                  },
-                ],
-                meta: { count: 1, total: 1, limit: 100, offset: 0 },
-              }
-            : {
-                items: [],
-                meta: { count: 0, total: 0, limit: 100, offset: 0 },
-              },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            actionPlanId: isSecondPage
-              ? '00000000-0000-0000-0000-00000000a021'
-              : '00000000-0000-0000-0000-00000000a001',
-            title: isSecondPage ? 'Second page recovery plan' : 'First page recovery plan',
-          },
-        ],
-        meta: {
-          count: isSecondPage ? 1 : 20,
-          total: 21,
-          limit: 20,
-          offset,
-        },
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByText('21 work')).toBeVisible()
-  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
-  await expect(getActionPlanRow(page, 'Second page recovery plan')).toBeVisible()
-  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'Second page recovery plan' })).toHaveCount(0)
-  await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
-  await expect(actionPlansPanel.getByRole('button', { name: 'Previous' })).toBeDisabled()
-
-  const nextButton = actionPlansPanel.getByRole('button', { name: 'Next' })
-  await expect(nextButton).toBeEnabled()
-  await nextButton.click()
-
-  await expect(actionPlansPanel.getByText('Second page recovery plan')).toBeVisible()
-  await expect(actionPlansPanel.getByText('21-21 / 21')).toBeVisible()
-  await expect(actionPlansPanel.getByRole('button', { name: 'Previous' })).toBeEnabled()
-  await expect(actionPlansPanel.getByRole('button', { name: 'Next' })).toBeDisabled()
-})
-
-test('store tasks hides unsafe persisted action plan source links', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            actionPlanId: '00000000-0000-0000-0000-00000000bad1',
-            title: 'Unsafe source plan',
-            summary: '   ',
-            sourceDeepLink: 'javascript:alert(1)',
-          },
-        ],
-        meta: { count: 1, total: 1, limit: 20, offset: 0 },
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByText('Unsafe source plan')).toBeVisible()
-  await expect(actionPlansPanel.getByText('No plan summary')).toBeVisible()
-  await expect(actionPlansPanel.getByRole('link', { name: 'Open source' })).toHaveCount(0)
-  await getActionPlanRow(page, 'Unsafe source plan').getByRole('button', { name: 'Open detail' }).click()
-  const detailDialog = getActionPlanDetailDialog(page, 'Unsafe source plan')
-  await expect(detailDialog.getByRole('link', { name: 'Open source' })).toHaveCount(0)
-})
-
-test('store tasks recovers when the current action plan page becomes empty', async ({ page }) => {
-  await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'en')
-  })
-  await page.unroute('**/api/store-actions/plans**')
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? '0')
-
-    if (offset === 20) {
-      await route.fulfill({
-        json: {
-          items: [],
-          meta: { count: 0, total: 20, limit: 20, offset: 20 },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            ...storeActionPlansFixture.items[0],
-            actionPlanId: '00000000-0000-0000-0000-00000000a001',
-            title: 'First page recovery plan',
-          },
-        ],
-        meta: { count: 20, total: 21, limit: 20, offset: 0 },
-      },
-    })
-  })
-
-  await page.goto('/store/tasks')
-
-  const actionPlansPanel = getActionPlansPanel(page)
-  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
-  await actionPlansPanel.getByRole('button', { name: 'Next' }).click()
-
-  await expect(actionPlansPanel.getByText('First page recovery plan')).toBeVisible()
-  await expect(actionPlansPanel.getByText('21-20 / 20')).toHaveCount(0)
-  await expect(actionPlansPanel.getByText('No persisted action plans')).toHaveCount(0)
-  await expect(actionPlansPanel.getByText('1-20 / 21')).toBeVisible()
-})
-
-
-async function routeStoreActionPlanApi(page: Page) {
-  await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({ json: authSessionFixture })
   })
 
   await page.route('**/api/workflow/inbox', async (route) => {
@@ -1088,12 +219,97 @@ async function routeStoreActionPlanApi(page: Page) {
   })
 
   await page.route('**/api/store-actions/plans**', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [],
-        meta: { count: 0, total: 0, limit: 20, offset: 0 },
-      },
-    })
+    await handleStoreActionPlanRoute(route, state)
+  })
+
+  return state
+}
+
+async function handleStoreActionPlanRoute(
+  route: Route,
+  state: {
+    plans: StoreActionPlanFixture[]
+    assignedStoreIds: string[]
+    listStatuses: string[]
+    statusPayloads: Array<Record<string, unknown>>
+    closePayloads: Array<Record<string, unknown>>
+    createPayloads: Array<Record<string, unknown>>
+  },
+) {
+  const request = route.request()
+  const url = new URL(request.url())
+  const planIdMatch = /\/store-actions\/plans\/([^/]+)(?:\/(status|close|cancel))?$/.exec(url.pathname)
+  const actionPlanId = planIdMatch?.[1]
+  const command = planIdMatch?.[2]
+  const scopedPlans = state.plans.filter((plan) => state.assignedStoreIds.includes(plan.storeId))
+
+  if (request.method() === 'GET' && actionPlanId && !command) {
+    const plan = scopedPlans.find((item) => item.actionPlanId === actionPlanId)
+    if (!plan) {
+      await route.fulfill({ status: 404, json: { message: 'Not found' } })
+      return
+    }
+    await route.fulfill({ json: { data: { plan } } })
+    return
+  }
+
+  if (request.method() === 'PATCH' && actionPlanId && command === 'status') {
+    const body = request.postDataJSON() as Record<string, unknown>
+    state.statusPayloads.push(body)
+    state.plans = state.plans.map((plan) =>
+      plan.actionPlanId === actionPlanId ? { ...plan, status: body.status as StoreActionPlanFixture['status'] } : plan,
+    )
+    await route.fulfill({ json: { command: { status: 'updated', message: 'updated' }, data: { plan: state.plans.find((item) => item.actionPlanId === actionPlanId) } } })
+    return
+  }
+
+  if (request.method() === 'PATCH' && actionPlanId && command === 'close') {
+    const body = request.postDataJSON() as Record<string, unknown>
+    state.closePayloads.push(body)
+    state.plans = state.plans.map((plan) =>
+      plan.actionPlanId === actionPlanId
+        ? {
+            ...plan,
+            status: 'closed',
+            resolutionNote: body.resolutionNote as string,
+            closedAt: '2026-06-27T10:00:00.000Z',
+          }
+        : plan,
+    )
+    await route.fulfill({ json: { command: { status: 'closed', message: 'closed' }, data: { plan: state.plans.find((item) => item.actionPlanId === actionPlanId) } } })
+    return
+  }
+
+  if (request.method() === 'POST') {
+    const body = request.postDataJSON() as Record<string, unknown>
+    state.createPayloads.push(body)
+    const plan = {
+      ...storeActionPlansFixture[0],
+      actionPlanId: '00000000-0000-0000-0000-00000000c999',
+      sourceId: body.sourceId as string,
+      sourceDeepLink: body.sourceDeepLink as string,
+      title: body.title as string,
+      summary: body.summary as string,
+      dueOn: body.dueOn as string,
+      priority: body.priority as StoreActionPlanFixture['priority'],
+      status: 'open' as const,
+      createdAt: '2026-06-27T08:00:00.000Z',
+    }
+    state.plans.push(plan)
+    await route.fulfill({ status: 201, json: { command: { status: 'created', message: 'created' }, data: { plan } } })
+    return
+  }
+
+  const status = url.searchParams.get('status')
+  if (status) {
+    state.listStatuses.push(status)
+  }
+  const items = status ? scopedPlans.filter((plan) => plan.status === status) : []
+  await route.fulfill({
+    json: {
+      items,
+      meta: { count: items.length, total: items.length, limit: 20, offset: 0 },
+    },
   })
 }
 
@@ -1101,9 +317,9 @@ const authSessionFixture = {
   authMode: 'mock',
   authenticated: true,
   user: {
-    userId: 'store-me-smoke-user',
+    userId: 'store-tasks-smoke-user',
     employeeId: demoEmployeeId,
-    roleCodes: ['STORE_PERSONNEL', 'STORE_MANAGER'],
+    roleCodes: ['STORE_MANAGER'],
     scope: {
       companyIds: ['00000000-0000-0000-0000-000000000001'],
       regionIds: ['00000000-0000-0000-0000-000000000010'],
@@ -1132,64 +348,180 @@ const workflowInboxFixture = {
     {
       itemType: 'task',
       sourceType: 'kpi_exception',
-      sourceId: 'snapshot-2026-04-24:store:kpi',
-      title: 'UPT at risk',
-      summary: 'IstinyePark Demo Store icin KPI exception takibi gerekiyor',
+      sourceId: 'snapshot-2026-06:store:kpi',
+      title: 'UPT projeksiyon riski',
+      summary: 'UPT ritmi dönem sonu hedefinin altında kalıyor.',
       storeId: demoStoreId,
       storeName: 'IstinyePark Demo Store',
       workflowStatus: 'at_risk',
       inboxStatus: 'needs_attention',
       urgency: 'high',
-      createdAt: '2026-04-24T08:00:00.000Z',
-      needsAttentionAt: '2026-04-24T08:00:00.000Z',
+      createdAt: '2026-06-24T08:00:00.000Z',
+      needsAttentionAt: '2026-06-24T08:00:00.000Z',
       actorRole: 'STORE_MANAGER',
-      primaryActionLabel: 'Open KPI detail',
-      secondaryActionLabel: 'Detay ac',
+      primaryActionLabel: 'KPI detayına git',
+      secondaryActionLabel: 'Detay aç',
       deepLink: '/store/kpis',
-      historyPreview: 'Achievement 84%',
+      historyPreview: 'Gerçekleşme %84',
+    },
+    {
+      itemType: 'approval',
+      sourceType: 'target_distribution_request',
+      sourceId: 'target-request-1',
+      title: 'Hedef dağıtımı onayı',
+      summary: 'Bu kayıt Store Tasks içinde görünmemeli.',
+      storeId: demoStoreId,
+      storeName: 'IstinyePark Demo Store',
+      workflowStatus: 'pending_region_approval',
+      inboxStatus: 'needs_attention',
+      urgency: 'medium',
+      createdAt: '2026-06-24T08:00:00.000Z',
+      needsAttentionAt: '2026-06-24T08:00:00.000Z',
+      actorRole: 'REGION_MANAGER',
+      primaryActionLabel: 'Talebi onayla',
+      secondaryActionLabel: 'Detay aç',
+      deepLink: '/store/targets',
+      historyPreview: 'Hedef onayı bekliyor',
     },
   ],
   meta: {
-    count: 1,
-    total: 1,
+    count: 2,
+    total: 2,
     limit: 30,
     offset: 0,
   },
 }
 
-const storeActionPlansFixture = {
-  items: [
-    {
-      actionPlanId: '00000000-0000-0000-0000-00000000a001',
-      companyId: '00000000-0000-0000-0000-000000000001',
-      regionId: '00000000-0000-0000-0000-000000000010',
-      storeId: demoStoreId,
-      ownerUserId: '00000000-0000-0000-0000-00000000b001',
-      createdByUserId: '00000000-0000-0000-0000-00000000b001',
-      sourceType: 'kpi_exception',
-      sourceId: 'snapshot-2026-04-24:store:kpi',
-      sourceDeepLink: '/store/kpis',
-      sourceSnapshotRunId: null,
-      sourceKpiId: null,
-      title: 'Net sales recovery plan',
-      summary: 'Confirm the daily recovery checklist with the team.',
-      priority: 'high',
-      status: 'open',
-      dueOn: '2026-05-24',
-      resolutionNote: null,
-      closedByUserId: null,
-      closedAt: null,
-      cancelReason: null,
-      cancelledByUserId: null,
-      cancelledAt: null,
-      createdAt: '2026-05-22T08:00:00.000Z',
-      updatedAt: '2026-05-22T08:30:00.000Z',
-    },
-  ],
-  meta: {
-    count: 1,
-    total: 1,
-    limit: 20,
-    offset: 0,
-  },
+type StoreActionPlanFixture = {
+  actionPlanId: string
+  companyId: string
+  regionId: string
+  storeId: string
+  ownerUserId: string
+  createdByUserId: string
+  sourceType: 'kpi_exception' | 'checklist_remediation'
+  sourceId: string
+  sourceDeepLink: string | null
+  sourceSnapshotRunId: string | null
+  sourceKpiId: string | null
+  title: string
+  summary: string | null
+  priority: 'high' | 'medium' | 'low'
+  status: 'open' | 'in_progress' | 'blocked' | 'closed' | 'cancelled'
+  dueOn: string
+  resolutionNote: string | null
+  closedByUserId: string | null
+  closedAt: string | null
+  cancelReason: string | null
+  cancelledByUserId: string | null
+  cancelledAt: string | null
+  createdAt: string
+  updatedAt: string
 }
+
+const storeActionPlansFixture: StoreActionPlanFixture[] = [
+  {
+    actionPlanId: '00000000-0000-0000-0000-00000000a001',
+    companyId: '00000000-0000-0000-0000-000000000001',
+    regionId: '00000000-0000-0000-0000-000000000010',
+    storeId: demoStoreId,
+    ownerUserId: 'Mert Alcan',
+    createdByUserId: '00000000-0000-0000-0000-00000000b001',
+    sourceType: 'checklist_remediation',
+    sourceId: 'checklist:2026-06:item-1',
+    sourceDeepLink: '/store/checklists?result=checklist-1',
+    sourceSnapshotRunId: null,
+    sourceKpiId: null,
+    title: 'Vitrin düzeni takip maddesi',
+    summary: 'BM checklist sonucunda vitrin sezon standardı düşük puan aldı.',
+    priority: 'high',
+    status: 'open',
+    dueOn: '2026-06-28',
+    resolutionNote: null,
+    closedByUserId: null,
+    closedAt: null,
+    cancelReason: null,
+    cancelledByUserId: null,
+    cancelledAt: null,
+    createdAt: '2026-06-14T08:00:00.000Z',
+    updatedAt: '2026-06-14T08:30:00.000Z',
+  },
+  {
+    actionPlanId: '00000000-0000-0000-0000-00000000a002',
+    companyId: '00000000-0000-0000-0000-000000000001',
+    regionId: '00000000-0000-0000-0000-000000000010',
+    storeId: demoStoreId,
+    ownerUserId: 'Eda Çelik',
+    createdByUserId: '00000000-0000-0000-0000-00000000b002',
+    sourceType: 'checklist_remediation',
+    sourceId: 'checklist:2026-05:item-2',
+    sourceDeepLink: '/store/checklists?result=checklist-2',
+    sourceSnapshotRunId: null,
+    sourceKpiId: null,
+    title: 'Mayıs reyon düzeni',
+    summary: 'Mayıs checklistinden kalan reyon düzeni aksiyonu devam ediyor.',
+    priority: 'medium',
+    status: 'in_progress',
+    dueOn: '2026-06-30',
+    resolutionNote: null,
+    closedByUserId: null,
+    closedAt: null,
+    cancelReason: null,
+    cancelledByUserId: null,
+    cancelledAt: null,
+    createdAt: '2026-05-28T08:00:00.000Z',
+    updatedAt: '2026-06-04T08:30:00.000Z',
+  },
+  {
+    actionPlanId: '00000000-0000-0000-0000-00000000a003',
+    companyId: '00000000-0000-0000-0000-000000000001',
+    regionId: '00000000-0000-0000-0000-000000000010',
+    storeId: demoStoreId,
+    ownerUserId: 'Onur Tekin',
+    createdByUserId: '00000000-0000-0000-0000-00000000b003',
+    sourceType: 'kpi_exception',
+    sourceId: 'snapshot-2026-06:store:kpi-closed',
+    sourceDeepLink: '/store/kpis',
+    sourceSnapshotRunId: null,
+    sourceKpiId: null,
+    title: 'Haziran çözüm kaydı',
+    summary: 'UPT aksiyon sonucu mağaza müdürü tarafından bildirildi.',
+    priority: 'low',
+    status: 'closed',
+    dueOn: '2026-06-20',
+    resolutionNote: 'Ekip ürün eşleştirme odağına geçti.',
+    closedByUserId: '00000000-0000-0000-0000-00000000b003',
+    closedAt: '2026-06-21T08:00:00.000Z',
+    cancelReason: null,
+    cancelledByUserId: null,
+    cancelledAt: null,
+    createdAt: '2026-06-02T08:00:00.000Z',
+    updatedAt: '2026-06-21T08:30:00.000Z',
+  },
+  {
+    actionPlanId: '00000000-0000-0000-0000-00000000a004',
+    companyId: '00000000-0000-0000-0000-000000000001',
+    regionId: '00000000-0000-0000-0000-000000000010',
+    storeId: demoStoreId,
+    ownerUserId: 'Onur Tekin',
+    createdByUserId: '00000000-0000-0000-0000-00000000b004',
+    sourceType: 'checklist_remediation',
+    sourceId: 'checklist:2026-05:item-closed',
+    sourceDeepLink: '/store/checklists?result=checklist-closed',
+    sourceSnapshotRunId: null,
+    sourceKpiId: null,
+    title: 'Mayıs çözüm kaydı',
+    summary: 'Mayıs döneminde kapanan kayıt.',
+    priority: 'low',
+    status: 'closed',
+    dueOn: '2026-05-20',
+    resolutionNote: 'Kayıt Mayıs ayında kapandı.',
+    closedByUserId: '00000000-0000-0000-0000-00000000b004',
+    closedAt: '2026-05-26T08:00:00.000Z',
+    cancelReason: null,
+    cancelledByUserId: null,
+    cancelledAt: null,
+    createdAt: '2026-05-10T08:00:00.000Z',
+    updatedAt: '2026-05-26T08:30:00.000Z',
+  },
+]
