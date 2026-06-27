@@ -39,6 +39,27 @@ function createRequest() {
   };
 }
 
+function createRegionManagerRequest(assignedStoreIds: string[] = [assignedStoreId]) {
+  return {
+    user: buildAuthenticatedUser({
+      userId: "00000000-0000-4000-8000-000000000902",
+      roleCodes: ["REGION_MANAGER"],
+      readScope: {
+        companyIds: ["00000000-0000-4000-8000-000000000001"],
+        regionIds: ["00000000-0000-4000-8000-000000000010"],
+        storeIds: [
+          assignedStoreId,
+          "00000000-0000-4000-8000-000000000202",
+          "00000000-0000-4000-8000-000000000203",
+        ],
+      },
+      actionScope: {
+        assignedStoreIds,
+      },
+    }),
+  };
+}
+
 describe("StoreActionPlanController", () => {
   it("delegates list queries with actor action scope", async () => {
     const { controller, storeActionPlanService } = createHarness();
@@ -56,6 +77,49 @@ describe("StoreActionPlanController", () => {
       status: "open",
       limit: 25,
       offset: 5,
+    });
+  });
+
+  it("delegates region manager read queries with action scope only", async () => {
+    const { controller, storeActionPlanService } = createHarness();
+    const request = createRegionManagerRequest();
+    const actionPlanId = "00000000-0000-4000-8000-000000000701";
+
+    await controller.listPlans(request, {
+      status: "open",
+      limit: 25,
+      offset: 0,
+    });
+    await controller.getPlan(request, actionPlanId);
+
+    expect(storeActionPlanService.listPlans).toHaveBeenCalledWith({
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      storeId: undefined,
+      status: "open",
+      limit: 25,
+      offset: 0,
+    });
+    expect(storeActionPlanService.getPlan).toHaveBeenCalledWith({
+      actorActionScope: { assignedStoreIds: [assignedStoreId] },
+      actionPlanId,
+    });
+  });
+
+  it("does not widen region manager plan reads from read scope when action stores are empty", async () => {
+    const { controller, storeActionPlanService } = createHarness();
+
+    await controller.listPlans(createRegionManagerRequest([]), {
+      status: "open",
+      limit: 25,
+      offset: 0,
+    });
+
+    expect(storeActionPlanService.listPlans).toHaveBeenCalledWith({
+      actorActionScope: { assignedStoreIds: [] },
+      storeId: undefined,
+      status: "open",
+      limit: 25,
+      offset: 0,
     });
   });
 
@@ -139,12 +203,30 @@ describe("StoreActionPlanController", () => {
     );
   });
 
-  it("limits plan endpoints to store managers and super admins", () => {
+  it("limits command endpoints to store managers and super admins while allowing region manager reads", () => {
     expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("listPlans"))).toEqual([
       "STORE_MANAGER",
       "SUPER_ADMIN",
+      "REGION_MANAGER",
+    ]);
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("getPlan"))).toEqual([
+      "STORE_MANAGER",
+      "SUPER_ADMIN",
+      "REGION_MANAGER",
     ]);
     expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("createPlan"))).toEqual([
+      "STORE_MANAGER",
+      "SUPER_ADMIN",
+    ]);
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("updateStatus"))).toEqual([
+      "STORE_MANAGER",
+      "SUPER_ADMIN",
+    ]);
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("closePlan"))).toEqual([
+      "STORE_MANAGER",
+      "SUPER_ADMIN",
+    ]);
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("cancelPlan"))).toEqual([
       "STORE_MANAGER",
       "SUPER_ADMIN",
     ]);
