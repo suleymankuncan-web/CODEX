@@ -339,8 +339,8 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   })
 
   await page.goto('/store/tasks')
-  await expect(page.getByRole('heading', { name: 'Store action list' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'I acknowledge' })).toHaveCount(0)
+  await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
+  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'VM Result' })).toHaveCount(0)
   expect(workflowInboxRequests).toBe(1)
 
   await page.goto('/store/checklists')
@@ -361,10 +361,10 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   await expect.poll(() => handoffState.completed).toBe(true)
 
   await page.goto('/store/tasks')
-  await expect(page.getByRole('heading', { name: 'Store action list' })).toBeVisible()
+  await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
 
   await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
-  await expect(page.getByRole('link', { name: 'I acknowledge' })).toBeVisible()
+  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
 test('region manager can read BM and VM checklist results without acknowledging them', async ({ page }) => {
