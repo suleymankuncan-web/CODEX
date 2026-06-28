@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-28T14:38:18.992Z",
+  "generatedAt": "2026-06-28T23:16:29.907Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 186,
-    "backendEndpointsWithoutFrontendCallCount": 35,
-    "controllerCount": 22,
+    "backendEndpointCount": 188,
+    "backendEndpointsWithoutFrontendCallCount": 37,
+    "controllerCount": 23,
     "frontendApiCallCount": 151,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 151,
-    "openApiEndpointCount": 186,
+    "openApiEndpointCount": 188,
     "routeApiEdgeCount": 224,
     "routesWithoutApiCallCount": 2,
     "unmatchedFrontendApiCallCount": 0
@@ -5140,6 +5140,34 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/reports/store-monthly-package",
+      "method": "GET",
+      "path": "/api/reports/store-monthly-package",
+      "rawControllerPath": "reports",
+      "rawMethodPath": "store-monthly-package",
+      "controller": "store-monthly-report-package",
+      "domain": "reports",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-monthly-report-package.controller.ts",
+        "line": 106
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/reports/store-monthly-package.xlsx",
+      "method": "GET",
+      "path": "/api/reports/store-monthly-package.xlsx",
+      "rawControllerPath": "reports",
+      "rawMethodPath": "store-monthly-package.xlsx",
+      "controller": "store-monthly-report-package",
+      "domain": "reports",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/store-monthly-report-package.controller.ts",
+        "line": 123
+      }
+    },
+    {
       "id": "endpoint:GET:/api/reports/store-score-breakdown",
       "method": "GET",
       "path": "/api/reports/store-score-breakdown",
@@ -6647,6 +6675,18 @@
       "id": "openapi:GET:/api/reports/store-kpi-highlights",
       "method": "GET",
       "path": "/api/reports/store-kpi-highlights",
+      "domain": "reports"
+    },
+    {
+      "id": "openapi:GET:/api/reports/store-monthly-package",
+      "method": "GET",
+      "path": "/api/reports/store-monthly-package",
+      "domain": "reports"
+    },
+    {
+      "id": "openapi:GET:/api/reports/store-monthly-package.xlsx",
+      "method": "GET",
+      "path": "/api/reports/store-monthly-package.xlsx",
       "domain": "reports"
     },
     {
@@ -9142,6 +9182,13 @@
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 0
+      },
+      {
+        "id": "controller:store-monthly-report-package",
+        "controller": "store-monthly-report-package",
+        "domain": "reports",
+        "endpointCount": 2,
+        "frontendCallCount": 0
       }
     ]
   },
@@ -9178,6 +9225,8 @@
       "endpoint:DELETE:/api/mobile/auth/sessions/{sessionId}",
       "endpoint:POST:/api/mobile/checklists/instances/{checklistInstanceId}/acknowledge",
       "endpoint:GET:/api/reports/leaderboards/closed",
+      "endpoint:GET:/api/reports/store-monthly-package",
+      "endpoint:GET:/api/reports/store-monthly-package.xlsx",
       "endpoint:GET:/api/snapshots/lookups",
       "endpoint:GET:/api/snapshots/runs",
       "endpoint:POST:/api/snapshots/runs",

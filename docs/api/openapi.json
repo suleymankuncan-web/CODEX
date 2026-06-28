@@ -4683,6 +4683,209 @@
           "AdminSalesTargetIncentive"
         ]
       }
+    },
+    "/api/reports/store-monthly-package": {
+      "get": {
+        "operationId": "StoreMonthlyReportPackageController_getStoreMonthlyReportPackage",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-06"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "period",
+                    "periodLabel",
+                    "coverageLabel",
+                    "isCurrentPeriod",
+                    "storeCount",
+                    "sections",
+                    "items"
+                  ],
+                  "properties": {
+                    "period": {
+                      "type": "string",
+                      "example": "2026-06"
+                    },
+                    "periodLabel": {
+                      "type": "string",
+                      "example": "Haziran 2026"
+                    },
+                    "coverageLabel": {
+                      "type": "string",
+                      "example": "1-14 Haziran"
+                    },
+                    "isCurrentPeriod": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "storeCount": {
+                      "type": "number",
+                      "example": 30
+                    },
+                    "sections": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "code",
+                          "label",
+                          "value",
+                          "status"
+                        ],
+                        "properties": {
+                          "code": {
+                            "type": "string",
+                            "example": "scope"
+                          },
+                          "label": {
+                            "type": "string",
+                            "example": "Kapsam"
+                          },
+                          "value": {
+                            "type": "string",
+                            "example": "30 mağaza"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "ready",
+                              "partial"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "regionManager": {
+                            "type": "string"
+                          },
+                          "storeName": {
+                            "type": "string"
+                          },
+                          "city": {
+                            "type": "string"
+                          },
+                          "period": {
+                            "type": "string"
+                          },
+                          "reportRange": {
+                            "type": "string"
+                          },
+                          "score": {
+                            "type": "string"
+                          },
+                          "upt": {
+                            "type": "string"
+                          },
+                          "atv": {
+                            "type": "string"
+                          },
+                          "cr": {
+                            "type": "string"
+                          },
+                          "hg": {
+                            "type": "string"
+                          },
+                          "gsm": {
+                            "type": "string"
+                          },
+                          "bmChecklist": {
+                            "type": "string"
+                          },
+                          "vmChecklist": {
+                            "type": "string"
+                          },
+                          "actionStatus": {
+                            "type": "string"
+                          },
+                          "targetStatus": {
+                            "type": "string"
+                          },
+                          "incentiveStatus": {
+                            "type": "string"
+                          },
+                          "normFiili": {
+                            "type": "string"
+                          },
+                          "missingDays": {
+                            "type": "string"
+                          },
+                          "turnover": {
+                            "type": "string"
+                          },
+                          "lastVisit": {
+                            "type": "string"
+                          },
+                          "daysSinceVisit": {
+                            "type": "string"
+                          },
+                          "dataNote": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreMonthlyReportPackage"
+        ]
+      }
+    },
+    "/api/reports/store-monthly-package.xlsx": {
+      "get": {
+        "operationId": "StoreMonthlyReportPackageController_downloadStoreMonthlyReportPackage",
+        "parameters": [
+          {
+            "name": "period",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$",
+              "example": "2026-06"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "StoreMonthlyReportPackage"
+        ]
+      }
     }
   },
   "info": {
@@ -5946,16 +6149,20 @@
             "type": "string"
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 160
           },
           "body": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 4000
           },
           "linkLabel": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 80
           },
           "linkUrl": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 300
           },
           "visibilityScopeType": {
             "enum": [
@@ -5989,10 +6196,12 @@
             "type": "string"
           },
           "metricCode": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 80
           },
           "metricLabel": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 160
           },
           "challengeStartsOn": {
             "type": "string"
@@ -6001,7 +6210,8 @@
             "type": "string"
           },
           "targetRoute": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 160
           }
         },
         "required": [
@@ -6015,18 +6225,22 @@
         "type": "object",
         "properties": {
           "title": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 160
           },
           "body": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 4000
           },
           "linkLabel": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "maxLength": 80
           },
           "linkUrl": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "maxLength": 300
           },
           "visibilityScopeType": {
             "enum": [
@@ -6052,11 +6266,13 @@
           },
           "metricCode": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "maxLength": 80
           },
           "metricLabel": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "maxLength": 160
           },
           "challengeStartsOn": {
             "type": "string",
@@ -6068,7 +6284,8 @@
           },
           "targetRoute": {
             "type": "string",
-            "nullable": true
+            "nullable": true,
+            "maxLength": 160
           }
         }
       },
