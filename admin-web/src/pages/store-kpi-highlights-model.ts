@@ -513,10 +513,11 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
         ? liveKpiQuery.isLoading
         : dailySnapshotQuery.isLoading || closedKpiQuery.isLoading)
   const liveSummary = liveKpiQuery.data
+  const closedStoreName = closedKpiQuery.data?.items.find((row) => row.storeName)?.storeName ?? null
   const activeStoreName =
     viewMode === 'live'
-      ? liveSummary?.store?.storeName ?? effectiveStoreId ?? t('storeKpis.noStoreScope')
-      : effectiveStoreId ?? t('storeKpis.noStoreScope')
+      ? liveSummary?.store?.storeName ?? t('storeKpis.noStoreScope')
+      : closedStoreName ?? t('storeKpis.noStoreScope')
   const latestLivePeriodLabel =
     liveSummary?.period
       ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)} (${t('storeKpis.latestMonthlyPeriod')})`

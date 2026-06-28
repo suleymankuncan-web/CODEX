@@ -15,6 +15,7 @@ export const storeCompetitionsTr = {
   'storeCompetitions.heroCopy':
     'Mağaza kullanıcıları aktif yarışma sıralamalarını ve kendi mağazalarına ait katkı satırlarını görür.',
   'storeCompetitions.storeScope': 'Mağaza',
+  'storeCompetitions.storeScopeCount': '{count} mağaza',
   'storeCompetitions.competitions': 'Yarışmalar',
   'storeCompetitions.contributions': 'Katkılar',
 
@@ -73,6 +74,7 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.heroCopy':
     'Store users see active competition standings and contribution rows for their stores.',
   'storeCompetitions.storeScope': 'Store',
+  'storeCompetitions.storeScopeCount': '{count} stores',
   'storeCompetitions.competitions': 'Competitions',
   'storeCompetitions.contributions': 'Contributions',
 

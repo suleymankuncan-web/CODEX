@@ -102,15 +102,20 @@ type StoreActionPlanInboxSource = {
   updatedAt: string;
 };
 
+function displayStoreName(storeName: string | null | undefined) {
+  return storeName?.trim() || "Mağaza adı yok";
+}
+
 export function toTargetApprovalInboxItem(item: TargetDistributionRequest): WorkflowInboxItem {
   const needsAttention = item.status === "pending_region_approval";
+  const storeLabel = displayStoreName(item.storeName);
 
   return {
     itemType: "approval",
     sourceType: "target_distribution_request",
     sourceId: item.requestId,
     title: item.targetLabel,
-    summary: `${item.storeName || item.storeId} icin ${item.allocationCount} kisilik hedef dagitimi talebi`,
+    summary: `${storeLabel} icin ${item.allocationCount} kisilik hedef dagitimi talebi`,
     companyId: item.companyId,
     regionId: item.regionId,
     storeId: item.storeId,
@@ -132,13 +137,14 @@ export function toChecklistAcknowledgementInboxItem(
   item: ChecklistAcknowledgementItem,
 ): WorkflowInboxItem {
   const needsAttention = item.acknowledgement === null;
+  const storeLabel = displayStoreName(item.storeName);
 
   return {
     itemType: "acknowledgement",
     sourceType: "checklist_receipt",
     sourceId: item.checklistInstanceId,
     title: item.templateName,
-    summary: `${item.storeName || item.storeId} icin tamamlanan checklist sonucu`,
+    summary: `${storeLabel} icin tamamlanan checklist sonucu`,
     storeId: item.storeId,
     storeName: item.storeName,
     workflowStatus: item.status,
@@ -156,7 +162,7 @@ export function toChecklistAcknowledgementInboxItem(
 
 export function toKpiExceptionInboxItem(item: KpiExceptionItem): WorkflowInboxItem {
   const isOffTrack = item.statusBand === "off_track";
-  const storeLabel = item.storeName || item.storeId;
+  const storeLabel = displayStoreName(item.storeName);
   const label = item.kpiName || item.kpiCode || item.kpiId;
 
   return {

@@ -17,6 +17,7 @@ import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getTurnoverReport } from '../features/reports/api'
 import { downloadCsv } from '../lib/download-csv'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import {
@@ -51,12 +52,15 @@ function formatPercent(input: string, locale: AppLocale) {
 function getScopeLabel(row: {
   scopeType: string
   companyId: string | null
+  companyName?: string | null
   regionId: string | null
+  regionName?: string | null
   storeId: string | null
+  storeName?: string | null
 }, t: TranslateFunction) {
-  if (row.scopeType === 'store') return row.storeId ?? t('reportsTurnover.scope.store')
-  if (row.scopeType === 'region') return row.regionId ?? t('reportsTurnover.scope.region')
-  if (row.scopeType === 'company') return row.companyId ?? t('reportsTurnover.scope.company')
+  if (row.scopeType === 'store') return normalizeDisplayLabel(row.storeName ?? row.storeId, t('reportsTurnover.scope.store'))
+  if (row.scopeType === 'region') return normalizeDisplayLabel(row.regionName ?? row.regionId, t('reportsTurnover.scope.region'))
+  if (row.scopeType === 'company') return normalizeDisplayLabel(row.companyName ?? row.companyId, t('reportsTurnover.scope.company'))
   return t('reportsTurnover.scope.unknown')
 }
 
@@ -115,6 +119,7 @@ export function ReportsTurnoverPage() {
       [
         row.scopeType,
         getScopeTypeLabel(row.scopeType, t),
+        getScopeLabel(row, t),
         row.companyId ?? '',
         row.regionId ?? '',
         row.storeId ?? '',
@@ -274,13 +279,11 @@ export function ReportsTurnoverPage() {
             onExport={() =>
               downloadCsv({
                 filename: `turnover-${snapshotRunId}.csv`,
-                columns: ['snapshotRunId', 'scopeType', 'companyId', 'regionId', 'storeId', 'periodStart', 'periodEnd', 'openingHeadcount', 'closingHeadcount', 'avgHeadcount', 'leaverCount', 'turnoverRate'],
+                columns: ['snapshotRunId', 'scopeType', 'scopeName', 'periodStart', 'periodEnd', 'openingHeadcount', 'closingHeadcount', 'avgHeadcount', 'leaverCount', 'turnoverRate'],
                 rows: sortedRows.map((row) => [
                   row.snapshotRunId,
                   row.scopeType,
-                  row.companyId,
-                  row.regionId,
-                  row.storeId,
+                  getScopeLabel(row, t),
                   row.periodStart,
                   row.periodEnd,
                   row.openingHeadcount,

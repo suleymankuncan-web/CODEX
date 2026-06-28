@@ -103,6 +103,9 @@ export class JwtAuthProvider implements AuthProvider {
     return buildAuthenticatedUser({
       userId: resolvedUserId,
       employeeId: payload["employee_id"] ? String(payload["employee_id"]) : undefined,
+      displayName: userInfo?.name,
+      username: userInfo?.preferredUsername,
+      email: userInfo?.email,
       roleCodes,
       readScope: {
         companyIds,
@@ -172,8 +175,8 @@ export class JwtAuthProvider implements AuthProvider {
 
   private async resolveUserInfo(
     token: string,
-    payload: { iss?: unknown; sub?: unknown; preferred_username?: unknown },
-  ): Promise<{ sub?: string; preferredUsername?: string } | null> {
+    payload: { email?: unknown; iss?: unknown; name?: unknown; sub?: unknown; preferred_username?: unknown },
+  ): Promise<{ email?: string; name?: string; sub?: string; preferredUsername?: string } | null> {
     if (
       typeof payload.sub === "string" &&
       payload.sub.length > 0 &&
@@ -181,6 +184,8 @@ export class JwtAuthProvider implements AuthProvider {
       payload.preferred_username.length > 0
     ) {
       return {
+        email: typeof payload.email === "string" ? payload.email : undefined,
+        name: typeof payload.name === "string" ? payload.name : undefined,
         sub: payload.sub,
         preferredUsername: payload.preferred_username,
       };
@@ -203,11 +208,15 @@ export class JwtAuthProvider implements AuthProvider {
       }
 
       const userInfo = (await response.json()) as {
+        email?: unknown;
+        name?: unknown;
         sub?: unknown;
         preferred_username?: unknown;
       };
 
       return {
+        email: typeof userInfo.email === "string" ? userInfo.email : undefined,
+        name: typeof userInfo.name === "string" ? userInfo.name : undefined,
         sub: typeof userInfo.sub === "string" ? userInfo.sub : undefined,
         preferredUsername:
           typeof userInfo.preferred_username === "string"

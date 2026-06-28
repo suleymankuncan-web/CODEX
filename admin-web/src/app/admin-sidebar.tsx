@@ -7,14 +7,14 @@ import { Button } from '../components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { formatDisplayRoles } from '../features/auth/display'
 import { useLocalization } from '../features/localization/useLocalization'
+import { resolveUserDisplayLabel } from '../lib/display-labels'
 import type { NavDefinition } from './admin-navigation'
 import { preloadRouteModule } from './route-preloaders'
 
 const adminRouteWarmDedupeMs = 2_000
 
-function getAdminInitials(authSummary: AuthSessionSummary | null) {
-  const userId = authSummary?.user.userId?.trim() || 'ADMIN'
-  const parts = userId
+function getAdminInitials(label: string) {
+  const parts = label
     .replace(/[^A-Za-z0-9]+/g, ' ')
     .trim()
     .split(/\s+/)
@@ -24,7 +24,7 @@ function getAdminInitials(authSummary: AuthSessionSummary | null) {
     return `${parts[0]?.[0] ?? ''}${parts[1]?.[0] ?? ''}`.toUpperCase()
   }
 
-  return userId.slice(0, 2).toUpperCase()
+  return label.slice(0, 2).toUpperCase()
 }
 
 export function AdminSidebar(input: {
@@ -38,6 +38,7 @@ export function AdminSidebar(input: {
   const warmingRouteDedupeRef = useRef<Set<string>>(new Set())
   const ToggleIcon = input.collapsed ? PanelLeftOpen : PanelLeftClose
   const roleSummary = formatDisplayRoles(input.authSummary?.user.roleCodes, t('adminShell.noResolvedRoles'))
+  const identityLabel = resolveUserDisplayLabel(input.authSummary?.user, t('adminShell.sessionUser'))
   const primaryNavItems = input.allowedAdminNav.filter((item) => item.id !== 'session')
   const warmAdminRoute = (path: string) => {
     preloadRouteModule(path)
@@ -112,10 +113,10 @@ export function AdminSidebar(input: {
       <div className="admin-command-sidebar-footer">
         <div className="admin-command-identity">
           <span className="admin-command-avatar" aria-hidden="true">
-            {getAdminInitials(input.authSummary)}
+            {getAdminInitials(identityLabel)}
           </span>
           <span className="admin-command-identity-text">
-            <strong>{input.authSummary?.user.userId ?? t('adminShell.sessionUser')}</strong>
+            <strong>{identityLabel}</strong>
             <small>{roleSummary}</small>
           </span>
         </div>

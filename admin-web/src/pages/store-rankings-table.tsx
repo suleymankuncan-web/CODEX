@@ -4,6 +4,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { PersonnelRankingRow, RankingMetricValue, RankingSummary, StoreRankingRow } from '../features/reports/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import type { AppLocale } from '../lib/i18n'
 import {
   type ActiveRankingList,
@@ -404,7 +405,7 @@ function StoreRankingTableRow(input: {
         <RankChip rank={row.rank} t={input.t} />
       </TableCell>
       <TableCell className="store-rankings-cell-entity" data-label={input.t('storeRankings.store')}>
-        <RankingEntity label={row.storeName ?? row.storeId} kind="store" rank={row.rank} />
+        <RankingEntity label={normalizeDisplayLabel(row.storeName, input.t('storeRankings.store'))} kind="store" rank={row.rank} />
       </TableCell>
       <TableCell className="store-rankings-cell-score" data-label={input.t('storeRankings.storeScore')}>
         <RankingScore value={row.scoreValue} locale={input.locale} t={input.t} />

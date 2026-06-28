@@ -3,6 +3,7 @@ import type {
   TargetDistributionAllocation,
   TargetDistributionRequest,
 } from '../features/targets/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 
@@ -73,7 +74,7 @@ export function createRegionTargetRows(input: {
   const optionMap = new Map(input.storeOptions.map((store) => [store.storeId, store.storeName]))
 
   for (const storeId of input.assignedStoreIds) {
-    optionMap.set(storeId, optionMap.get(storeId) ?? storeId)
+    optionMap.set(storeId, normalizeDisplayLabel(optionMap.get(storeId), 'Mağaza adı yok'))
   }
 
   for (const [storeId, storeName] of optionMap) {
@@ -101,7 +102,7 @@ export function createRegionTargetRows(input: {
         locale: input.locale,
         request,
         storeId: request.storeId,
-        storeName: request.storeName || request.storeId,
+        storeName: normalizeDisplayLabel(request.storeName, 'Mağaza adı yok'),
       }),
     )
   }
@@ -220,7 +221,7 @@ function createRegionTargetRow(input: {
     request,
     status: resolveRowStatus(request, input.coverageRows),
     storeId: input.storeId,
-    storeName: request?.storeName || input.storeName,
+    storeName: normalizeDisplayLabel(request?.storeName ?? input.storeName, 'Mağaza adı yok'),
     storeTarget,
     submittedAt: request ? formatDateLabel(request.createdAt, input.locale) : 'Yok',
     subtitle,

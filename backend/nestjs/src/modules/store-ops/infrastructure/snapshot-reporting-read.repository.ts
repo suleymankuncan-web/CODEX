@@ -280,6 +280,7 @@ export class SnapshotReportingReadRepository {
     const result = await this.databaseService.query<{
       snapshot_run_id: string;
       store_id: string;
+      store_name: string | null;
       position_id: string;
       active_headcount: string;
       active_fte: string;
@@ -292,6 +293,7 @@ export class SnapshotReportingReadRepository {
         SELECT
           sws.snapshot_run_id,
           sws.store_id,
+          s.store_name,
           sws.position_id,
           sws.active_headcount,
           sws.active_fte,
@@ -364,6 +366,7 @@ export class SnapshotReportingReadRepository {
     const result = await this.databaseService.query<{
       snapshot_run_id: string;
       store_id: string;
+      store_name: string | null;
       kpi_id: string;
       kpi_code: string;
       kpi_name: string;
@@ -378,6 +381,7 @@ export class SnapshotReportingReadRepository {
         SELECT
           sks.snapshot_run_id,
           sks.store_id,
+          s.store_name,
           sks.kpi_id,
           kd.kpi_code,
           kd.kpi_name,
@@ -450,6 +454,7 @@ export class SnapshotReportingReadRepository {
     const result = await this.databaseService.query<{
       snapshot_run_id: string;
       store_id: string;
+      store_name: string | null;
       checklist_template_id: string;
       audit_count: number;
       avg_score: string | null;
@@ -460,6 +465,7 @@ export class SnapshotReportingReadRepository {
         SELECT
           scs.snapshot_run_id,
           scs.store_id,
+          s.store_name,
           scs.checklist_template_id,
           scs.audit_count,
           scs.avg_score,
@@ -529,14 +535,23 @@ export class SnapshotReportingReadRepository {
 
     const fromClause = `
         FROM rpt.turnover_snapshot ts
+        LEFT JOIN ops.company company
+          ON company.company_id = ts.company_id
+        LEFT JOIN ops.region region
+          ON region.region_id = ts.region_id
+        LEFT JOIN ops.store store
+          ON store.store_id = ts.store_id
     `;
 
     const result = await this.databaseService.query<{
       snapshot_run_id: string;
       scope_type: string;
       company_id: string | null;
+      company_name: string | null;
       region_id: string | null;
+      region_name: string | null;
       store_id: string | null;
+      store_name: string | null;
       period_start: string;
       period_end: string;
       opening_headcount: string;
@@ -550,8 +565,11 @@ export class SnapshotReportingReadRepository {
           ts.snapshot_run_id,
           ts.scope_type,
           ts.company_id,
+          company.company_name,
           ts.region_id,
+          region.region_name,
           ts.store_id,
+          store.store_name,
           ts.period_start,
           ts.period_end,
           ts.opening_headcount,

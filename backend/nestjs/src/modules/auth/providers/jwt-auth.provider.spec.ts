@@ -422,6 +422,7 @@ describe("JwtAuthProvider", () => {
 
     expect(user).toEqual({
       userId: "user-local-admin",
+      username: "admin.operator",
       employeeId: undefined,
       roleCodes: ["SUPER_ADMIN", "REPORT_VIEWER", "INTEGRATION_ADMIN", "SNAPSHOT_OPERATOR"],
       scope: {
@@ -497,6 +498,7 @@ describe("JwtAuthProvider", () => {
 
     expect(user).toEqual({
       userId: "user-local-store-manager",
+      username: "store.manager",
       employeeId: undefined,
       roleCodes: [],
       scope: {

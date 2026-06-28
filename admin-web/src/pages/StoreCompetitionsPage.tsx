@@ -56,7 +56,7 @@ export function StoreCompetitionsPage(input: {
   const { locale, t } = useLocalization()
   const enabled = canUseStoreCompetitions(input.authSummary)
   const [selectedCompetitionId, setSelectedCompetitionId] = useState<string | null>(null)
-  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? t('storeCompetitions.noStoreScope')
+  const storeScopeCount = input.authSummary?.user.scope.storeIds.length ?? 0
   const competitionsQuery = useQuery({
     queryKey: ['store-competitions'],
     queryFn: listCompetitions,
@@ -134,7 +134,12 @@ export function StoreCompetitionsPage(input: {
         title={t('storeCompetitions.title')}
         description={t('storeCompetitions.heroCopy')}
         badges={[
-          { label: `${t('storeCompetitions.storeScope')}: ${primaryStoreId}`, tone: 'accent' },
+          {
+            label: `${t('storeCompetitions.storeScope')}: ${
+              storeScopeCount > 0 ? t('storeCompetitions.storeScopeCount', { count: storeScopeCount }) : t('storeCompetitions.noStoreScope')
+            }`,
+            tone: 'accent',
+          },
           { label: `${t('storeCompetitions.competitions')}: ${competitions.length}`, tone: 'neutral' },
           { label: `${t('storeCompetitions.contributions')}: ${contributionCount}`, tone: 'calm' },
         ]}

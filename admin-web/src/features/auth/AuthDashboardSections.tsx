@@ -24,6 +24,7 @@ import {
   AuthRowHead,
 } from './AuthSurfacePrimitives'
 import { formatDateTime } from '../../lib/format'
+import { normalizeDisplayLabel } from '../../lib/display-labels'
 import type {
   ActionStoreAssignment,
   AuthLookupStore,
@@ -675,7 +676,6 @@ function ActionStoreGrantsPanel({
                       : t('authAdmin.immediate')
                   }
                 />
-                <AdminKeyValue label={t('authAdmin.storeId')} value={assignment.storeId} />
               </AdminKeyValueGrid>
               <AuthActionRow>
                 <AuthButton asChild size="sm" variant="outline">
@@ -890,15 +890,15 @@ function RoleAssignmentsPanel({
                 <AdminKeyValue label={t('authAdmin.scopeType')} value={assignment.scopeType} />
                 <AdminKeyValue
                   label={t('authAdmin.company')}
-                  value={assignment.companyId ?? t('authAdmin.notAvailable')}
+                  value={normalizeDisplayLabel(assignment.companyId, t('authAdmin.notAvailable'))}
                 />
                 <AdminKeyValue
                   label={t('authAdmin.region')}
-                  value={assignment.regionId ?? t('authAdmin.notAvailable')}
+                  value={normalizeDisplayLabel(assignment.regionId, t('authAdmin.notAvailable'))}
                 />
                 <AdminKeyValue
                   label={t('authAdmin.store')}
-                  value={assignment.storeId ?? t('authAdmin.notAvailable')}
+                  value={normalizeDisplayLabel(assignment.storeId, t('authAdmin.notAvailable'))}
                 />
                 <AdminKeyValue
                   label={t('authAdmin.effectiveFrom')}

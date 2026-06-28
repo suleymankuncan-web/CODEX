@@ -10,6 +10,7 @@ import {
   type SalesTargetIncentiveProjection,
   type SalesTargetIncentiveRow,
 } from '../features/incentives/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { formatMoneyValue } from './store-incentives-model'
@@ -78,7 +79,11 @@ export function AdminRegionPackageReviewSection(input: {
             item.row.regionCorrection.status !== 'voided',
           )
           const status = getRegionPackageStatus(packageSummary.status)
-          const regionLabel = packageSummary.regionManagerName ?? packageSummary.regionName ?? 'Bölge müdürü'
+          const regionLabel = normalizeDisplayLabel(
+            packageSummary.regionManagerName ?? packageSummary.regionName,
+            'Bölge müdürü',
+          )
+          const regionName = normalizeDisplayLabel(packageSummary.regionName, 'Bölge adı yok')
           const isSubmitted = packageSummary.status === 'submitted'
           const returnNote = input.returnNotes[packageSummary.regionId] ?? ''
           const isMutatingThis =
@@ -104,7 +109,7 @@ export function AdminRegionPackageReviewSection(input: {
                       {regionLabel}
                     </span>
                     <span className="tw:mt-1 tw:block tw:text-xs tw:text-muted-foreground">
-                      {packageSummary.regionName ?? packageSummary.regionId}
+                      {regionName}
                     </span>
                   </span>
                 </span>

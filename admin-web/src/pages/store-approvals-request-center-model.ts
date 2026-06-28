@@ -1,5 +1,6 @@
 import type { TargetDistributionRequest } from '../features/targets/api'
 import type { OffboardingRequest, SellerCodeRequest } from '../features/workforce/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDateTime } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import type { StoreApprovalsPersona } from './store-approvals-model'
@@ -90,6 +91,7 @@ export const requestCenterCopy = {
     sellerScopeSubtitle: 'TC son 4 {last4}',
     offboardingScopeSubtitle: '{ref}',
     noReference: 'referans yok',
+    unknownStore: 'Mağaza adı yok',
     regionSubtitle: 'Bölge müdürü satırı',
     storeSubtitle: 'Mağaza hedef talebi',
   },
@@ -151,6 +153,7 @@ export const requestCenterCopy = {
     sellerScopeSubtitle: 'National ID last 4 {last4}',
     offboardingScopeSubtitle: '{ref}',
     noReference: 'no reference',
+    unknownStore: 'Store name unavailable',
     regionSubtitle: 'Region request row',
     storeSubtitle: 'Store target request',
   },
@@ -247,7 +250,7 @@ function mapTargetRequestToRow(input: {
     type: 'target',
     title: input.request.targetLabel || input.copy.targetType,
     subtitle: input.copy.targetSubtitle,
-    scopeTitle: input.request.storeName || input.request.storeId,
+    scopeTitle: normalizeDisplayLabel(input.request.storeName, input.copy.unknownStore),
     scopeSubtitle:
       input.persona === 'regionManager'
         ? input.copy.regionSubtitle
@@ -282,7 +285,7 @@ function mapSellerCodeRequestToRow(input: {
     type: 'sellerCode',
     title: `${input.request.firstName} ${input.request.lastName}`.trim() || input.copy.sellerCodeType,
     subtitle: input.copy.sellerSubtitle,
-    scopeTitle: input.request.storeName || input.request.storeId,
+    scopeTitle: normalizeDisplayLabel(input.request.storeName, input.copy.unknownStore),
     scopeSubtitle: formatCopy(input.copy.sellerScopeSubtitle, {
       last4: input.request.nationalIdLast4,
     }),
@@ -318,7 +321,7 @@ function mapOffboardingRequestToRow(input: {
     type: 'offboarding',
     title: input.request.displayName || input.copy.offboardingType,
     subtitle: input.copy.offboardingSubtitle,
-    scopeTitle: input.request.storeName || input.request.storeId,
+    scopeTitle: normalizeDisplayLabel(input.request.storeName, input.copy.unknownStore),
     scopeSubtitle: formatCopy(input.copy.offboardingScopeSubtitle, {
       ref: input.request.externalEmployeeRef ?? input.copy.noReference,
     }),

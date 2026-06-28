@@ -13,6 +13,7 @@ import {
 import { getAuthSession, type AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { normalizeDisplayLabel, resolveUserDisplayLabel } from '../lib/display-labels'
 import { useSession } from '../features/session/session-context-value'
 import {
   defaultSession,
@@ -427,6 +428,18 @@ function SessionVerificationPanel(input: {
         </div>
       ) : sessionQuery.data ? (
         <div className="stacked-table">
+          {(() => {
+            const userLabel = resolveUserDisplayLabel(
+              sessionQuery.data.user,
+              t('sessionReadiness.notAvailable'),
+            )
+            const employeeLabel = normalizeDisplayLabel(
+              sessionQuery.data.user.employeeId,
+              t('sessionReadiness.notAvailable'),
+            )
+
+            return (
+              <>
           <div className="stacked-row">
             <div className="stacked-row-head">
               <strong>{t('sessionReadiness.backendAccepted')}</strong>
@@ -434,7 +447,7 @@ function SessionVerificationPanel(input: {
             </div>
             <p>
               {t('sessionReadiness.backendAcceptedCopy', {
-                userId: sessionQuery.data.user.userId,
+                userId: userLabel,
                 roles: sessionQuery.data.user.roleCodes.join(', ') || t('sessionReadiness.none'),
               })}
             </p>
@@ -443,7 +456,7 @@ function SessionVerificationPanel(input: {
           <div className="key-grid">
             <KeyValue
               label={t('sessionReadiness.employeeId')}
-              value={sessionQuery.data.user.employeeId ?? t('sessionReadiness.notAvailable')}
+              value={employeeLabel}
             />
             <KeyValue
               label={t('sessionReadiness.companyScopes')}
@@ -458,6 +471,9 @@ function SessionVerificationPanel(input: {
               value={String(sessionQuery.data.scopeSummary.storeCount)}
             />
           </div>
+              </>
+            )
+          })()}
 
           <div className="stacked-row">
             <div className="stacked-row-head">
@@ -465,16 +481,13 @@ function SessionVerificationPanel(input: {
               <StatusPill tone="accent">{t('sessionReadiness.claimsAssignments')}</StatusPill>
             </div>
             <p>
-              {t('sessionReadiness.companyIdsLabel')}{' '}
-              {sessionQuery.data.user.scope.companyIds.join(', ') || t('sessionReadiness.none')}
+              {t('sessionReadiness.companyScopes')}: {sessionQuery.data.scopeSummary.companyCount}
             </p>
             <p>
-              {t('sessionReadiness.regionIdsLabel')}{' '}
-              {sessionQuery.data.user.scope.regionIds.join(', ') || t('sessionReadiness.none')}
+              {t('sessionReadiness.regionScopes')}: {sessionQuery.data.scopeSummary.regionCount}
             </p>
             <p>
-              {t('sessionReadiness.storeIdsLabel')}{' '}
-              {sessionQuery.data.user.scope.storeIds.join(', ') || t('sessionReadiness.none')}
+              {t('sessionReadiness.storeScopes')}: {sessionQuery.data.scopeSummary.storeCount}
             </p>
           </div>
         </div>

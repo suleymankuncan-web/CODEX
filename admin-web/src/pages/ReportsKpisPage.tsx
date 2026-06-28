@@ -16,6 +16,7 @@ import {
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getKpiReport } from '../features/reports/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { downloadCsv } from '../lib/download-csv'
 import { formatDate, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
@@ -86,6 +87,7 @@ export function ReportsKpisPage() {
 
     return rows.filter((row) =>
       [
+        normalizeDisplayLabel(row.storeName, t('reportsKpis.unknownStore')),
         row.storeId,
         row.kpiId,
         row.statusBand ?? '',
@@ -103,7 +105,9 @@ export function ReportsKpisPage() {
   const sortedRows = useMemo(() => {
     const items = [...filteredRows]
     if (sortBy === 'store') {
-      return items.sort((left, right) => left.storeId.localeCompare(right.storeId))
+      return items.sort((left, right) =>
+        normalizeDisplayLabel(left.storeName, '').localeCompare(normalizeDisplayLabel(right.storeName, '')),
+      )
     }
     if (sortBy === 'status') {
       return items.sort((left, right) => (left.statusBand ?? '').localeCompare(right.statusBand ?? ''))
@@ -249,10 +253,10 @@ export function ReportsKpisPage() {
             onExport={() =>
               downloadCsv({
                 filename: `kpis-${snapshotRunId}.csv`,
-                columns: ['snapshotRunId', 'storeId', 'kpiId', 'periodStart', 'periodEnd', 'targetValue', 'actualValue', 'achievementRate', 'statusBand'],
+                columns: ['snapshotRunId', 'storeName', 'kpiId', 'periodStart', 'periodEnd', 'targetValue', 'actualValue', 'achievementRate', 'statusBand'],
                 rows: sortedRows.map((row) => [
                   row.snapshotRunId,
-                  row.storeId,
+                  normalizeDisplayLabel(row.storeName, t('reportsKpis.unknownStore')),
                   row.kpiId,
                   row.periodStart,
                   row.periodEnd,
@@ -293,7 +297,7 @@ export function ReportsKpisPage() {
               {sortedRows.map((row) => (
                 <TableRow key={`${row.storeId}:${row.kpiId}`}>
                   <TableCell>
-                    <div className="tw:font-medium">{row.storeId}</div>
+                    <div className="tw:font-medium">{normalizeDisplayLabel(row.storeName, t('reportsKpis.unknownStore'))}</div>
                     <div className="tw:text-xs tw:text-muted-foreground">{row.kpiId}</div>
                   </TableCell>
                   <TableCell>{formatDate(row.periodStart, locale)} - {formatDate(row.periodEnd, locale)}</TableCell>

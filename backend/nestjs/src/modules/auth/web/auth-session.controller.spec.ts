@@ -48,4 +48,35 @@ describe("AuthSessionController", () => {
 
     expect(controller.getBootstrap().provider.configured).toBe(false);
   });
+
+  it("returns user display fields in the session response", () => {
+    const controller = new AuthSessionController(
+      { authMode: "jwt" } as never,
+      {} as never,
+      {} as never,
+    );
+
+    expect(
+      controller.getSession({
+        user: {
+          userId: "90000000-0000-4000-8000-000000000010",
+          employeeId: "70000000-0000-4000-8000-000000000010",
+          displayName: "Mert Kaya",
+          username: "store.manager",
+          email: "store.manager@example.com",
+          roleCodes: ["STORE_MANAGER"],
+          scope: { companyIds: [], regionIds: [], storeIds: ["store-1"] },
+          readScope: { companyIds: [], regionIds: [], storeIds: ["store-1"] },
+          actionScope: { assignedStoreIds: ["store-1"] },
+          assignedStoreIds: ["store-1"],
+        },
+      }),
+    ).toMatchObject({
+      user: {
+        displayName: "Mert Kaya",
+        username: "store.manager",
+        email: "store.manager@example.com",
+      },
+    });
+  });
 });

@@ -47,6 +47,7 @@ export function SellerCodeRequestForm(input: {
   sellerRequestReason: string
   submission: RequestFormSubmission
   storeId: string
+  storeLabel?: string
   t: TranslateFunction
 }) {
   const sellerPositionOptions = getStoreSellerPositionOptions(
@@ -79,7 +80,11 @@ export function SellerCodeRequestForm(input: {
             <label className="store-request-label" htmlFor="seller-store-id">
               {input.t('storeApprovals.storeId')}
             </label>
-            <Input id="seller-store-id" value={input.storeId} readOnly />
+            <Input
+              id="seller-store-id"
+              value={input.storeLabel ?? input.t('storeApprovals.unknownStore')}
+              readOnly
+            />
           </div>
 
           <div className="store-request-field">

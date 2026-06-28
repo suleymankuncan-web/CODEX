@@ -44,6 +44,7 @@ export function TargetDistributionRequestForm(input: {
   requestMonth: string
   requestReason: string
   storeId: string
+  storeLabelsById?: Record<string, string>
   submission: RequestFormSubmission
   targetLabel: string
   t: TranslateFunction
@@ -52,6 +53,7 @@ export function TargetDistributionRequestForm(input: {
 }) {
   const totalTargetNumber = Number(input.totalTargetValue || 0)
   const remainingTargetValue = totalTargetNumber - input.allocationTotal
+  const selectedStoreLabel = getStoreFieldLabel(input.storeId, input.storeLabelsById, input.t)
   const completionShare = formatAllocationShare(
     input.allocationTotal,
     totalTargetNumber,
@@ -94,9 +96,9 @@ export function TargetDistributionRequestForm(input: {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {input.assignedStoreIds.map((assignedStoreId) => (
+                    {input.assignedStoreIds.map((assignedStoreId, index) => (
                       <SelectItem key={assignedStoreId} value={assignedStoreId}>
-                        {assignedStoreId}
+                        {getStoreFieldLabel(assignedStoreId, input.storeLabelsById, input.t, index)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -105,10 +107,9 @@ export function TargetDistributionRequestForm(input: {
             ) : (
               <Input
                 id="store-id"
-                value={input.storeId}
-                onChange={(event) => input.onStoreIdChange(event.target.value)}
+                value={selectedStoreLabel}
                 placeholder={input.t('storeApprovals.scopedStoreId')}
-                readOnly={Boolean(input.primaryStoreId)}
+                readOnly
               />
             )}
           </div>
@@ -266,4 +267,17 @@ export function TargetDistributionRequestForm(input: {
       )}
     </article>
   )
+}
+
+function getStoreFieldLabel(
+  storeId: string,
+  storeLabelsById: Record<string, string> | undefined,
+  t: TranslateFunction,
+  index?: number,
+) {
+  const label = storeLabelsById?.[storeId]?.trim()
+  if (label) return label
+  return typeof index === 'number'
+    ? `${t('storeApprovals.storeId')} ${index + 1}`
+    : t('storeApprovals.unknownStore')
 }

@@ -500,7 +500,7 @@ const competitionWarningSchema = {
     "warningId",
     "stageId",
     "teamId",
-    "storeId",
+    "storeId", "storeName",
     "warningCode",
     "warningLevel",
     "periodStart",
@@ -512,7 +512,7 @@ const competitionWarningSchema = {
     warningId: { type: "string" },
     stageId: { type: "string" },
     teamId: { type: "string", nullable: true },
-    storeId: { type: "string", nullable: true },
+    storeId: { type: "string", nullable: true }, storeName: { type: "string", nullable: true },
     warningCode: {
       type: "string",
       enum: ["missing_daily_store_data", "missing_bm_checklist", "missing_vm_checklist"],
@@ -1092,6 +1092,7 @@ const authSessionResponseSchema = {
       required: [
         "userId",
         "employeeId",
+        "displayName", "username", "email",
         "roleCodes",
         "scope",
         "readScope",
@@ -1101,6 +1102,7 @@ const authSessionResponseSchema = {
       properties: {
         userId: { type: "string" },
         employeeId: { type: "string", nullable: true },
+        displayName: { type: "string", nullable: true }, username: { type: "string", nullable: true }, email: { type: "string", nullable: true },
         roleCodes: {
           type: "array",
           items: { type: "string" },
@@ -2746,8 +2748,7 @@ const reportingKpiConfigAuditResponseSchema = {
 const reportingWorkforceRowSchema = {
   type: "object",
   required: [
-    "snapshotRunId",
-    "storeId",
+    "snapshotRunId", "storeId", "storeName",
     "positionId",
     "activeHeadcount",
     "activeFte",
@@ -2757,8 +2758,7 @@ const reportingWorkforceRowSchema = {
     "gapFte",
   ],
   properties: {
-    snapshotRunId: { type: "string" },
-    storeId: { type: "string" },
+    snapshotRunId: { type: "string" }, storeId: { type: "string" }, storeName: { type: "string", nullable: true },
     positionId: { type: "string" },
     activeHeadcount: { type: "string" },
     activeFte: { type: "string" },
@@ -2784,8 +2784,7 @@ const reportingWorkforceResponseSchema = {
 const reportingKpiRowSchema = {
   type: "object",
   required: [
-    "snapshotRunId",
-    "storeId",
+    "snapshotRunId", "storeId", "storeName",
     "kpiId",
     "kpiCode",
     "kpiName",
@@ -2797,8 +2796,7 @@ const reportingKpiRowSchema = {
     "statusBand",
   ],
   properties: {
-    snapshotRunId: { type: "string" },
-    storeId: { type: "string" },
+    snapshotRunId: { type: "string" }, storeId: { type: "string" }, storeName: { type: "string", nullable: true },
     kpiId: { type: "string" },
     kpiCode: { type: "string" },
     kpiName: { type: "string" },
@@ -3579,8 +3577,7 @@ const reportingClosedLeaderboardResponseSchema = {
 const reportingChecklistRowSchema = {
   type: "object",
   required: [
-    "snapshotRunId",
-    "storeId",
+    "snapshotRunId", "storeId", "storeName",
     "checklistTemplateId",
     "auditCount",
     "avgScore",
@@ -3588,8 +3585,7 @@ const reportingChecklistRowSchema = {
     "criticalIssueCount",
   ],
   properties: {
-    snapshotRunId: { type: "string" },
-    storeId: { type: "string" },
+    snapshotRunId: { type: "string" }, storeId: { type: "string" }, storeName: { type: "string", nullable: true },
     checklistTemplateId: { type: "string" },
     auditCount: { type: "integer", minimum: 0 },
     avgScore: { type: "string", nullable: true },
@@ -3614,10 +3610,8 @@ const reportingTurnoverRowSchema = {
   type: "object",
   required: [
     "snapshotRunId",
-    "scopeType",
-    "companyId",
-    "regionId",
-    "storeId",
+    "scopeType", "companyId", "companyName",
+    "regionId", "regionName", "storeId", "storeName",
     "periodStart",
     "periodEnd",
     "openingHeadcount",
@@ -3628,10 +3622,8 @@ const reportingTurnoverRowSchema = {
   ],
   properties: {
     snapshotRunId: { type: "string" },
-    scopeType: { type: "string" },
-    companyId: { type: "string", nullable: true },
-    regionId: { type: "string", nullable: true },
-    storeId: { type: "string", nullable: true },
+    scopeType: { type: "string" }, companyId: { type: "string", nullable: true }, companyName: { type: "string", nullable: true },
+    regionId: { type: "string", nullable: true }, regionName: { type: "string", nullable: true }, storeId: { type: "string", nullable: true }, storeName: { type: "string", nullable: true },
     periodStart: { type: "string" },
     periodEnd: { type: "string" },
     openingHeadcount: { type: "string" },

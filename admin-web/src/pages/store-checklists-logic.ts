@@ -2,6 +2,7 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import { hasAnyRole } from '../features/auth/authorization'
 import type { ChecklistAcknowledgementItem, MobileChecklistToday } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDateTime, formatNumber, formatState } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import type {
@@ -390,13 +391,9 @@ export function getChecklistResultDigest(
   }
 }
 
-export function formatCompletedSentence(
-  t: TranslateFunction,
-  locale: AppLocale,
-  item: ChecklistAcknowledgementItem,
-) {
+export function formatCompletedSentence(t: TranslateFunction, locale: AppLocale, item: ChecklistAcknowledgementItem) {
   return t('storeChecklists.completedSentence', {
-    store: item.storeName || item.storeId,
+    store: normalizeDisplayLabel(item.storeName, t('storeChecklists.unknown')),
     category: item.category,
     date: item.completedAt ? formatDateTime(item.completedAt, locale) : t('storeChecklists.recently'),
   })
@@ -603,7 +600,7 @@ export function compareChecklistItems(
 ) {
   switch (key) {
     case 'store':
-      return compareText(left.storeName || left.storeId, right.storeName || right.storeId, locale)
+      return compareText(normalizeDisplayLabel(left.storeName, ''), normalizeDisplayLabel(right.storeName, ''), locale)
     case 'score':
       return compareNumber(left.totalScore ?? -1, right.totalScore ?? -1)
     case 'status':

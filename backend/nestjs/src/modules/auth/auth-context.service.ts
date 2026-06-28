@@ -15,6 +15,9 @@ import { MockAuthProvider } from "./providers/mock-auth.provider";
 export interface AuthenticatedUser {
   userId: string;
   employeeId?: string;
+  displayName?: string;
+  username?: string;
+  email?: string;
   roleCodes: string[];
   scope: AuthReadScope;
   readScope: AuthReadScope;
@@ -38,6 +41,9 @@ export interface AuthActionScope {
 export function buildAuthenticatedUser(input: {
   userId: string;
   employeeId?: string;
+  displayName?: string;
+  username?: string;
+  email?: string;
   roleCodes: string[];
   scope?: AuthReadScope;
   readScope?: AuthReadScope;
@@ -57,6 +63,9 @@ export function buildAuthenticatedUser(input: {
   return {
     userId: input.userId,
     employeeId: input.employeeId,
+    ...(input.displayName ? { displayName: input.displayName } : {}),
+    ...(input.username ? { username: input.username } : {}),
+    ...(input.email ? { email: input.email } : {}),
     roleCodes: uniqueStrings(input.roleCodes),
     scope: readScope,
     readScope,
@@ -228,6 +237,9 @@ export class AuthContextService {
             ...providerUser,
             userId: mappedUser.user_id,
             employeeId: mappedUser.employee_id ?? providerUser.employeeId,
+            displayName: mappedUser.display_name ?? providerUser.displayName,
+            username: mappedUser.username ?? providerUser.username,
+            email: mappedUser.email ?? providerUser.email,
           });
         } else if (this.appConfigService.isProduction) {
           throw new UnauthorizedException("User account is not mapped");

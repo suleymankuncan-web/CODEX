@@ -12,6 +12,7 @@ describe("AuthContextService", () => {
     mappedProviderUser?: {
       user_id: string;
       employee_id: string | null;
+      display_name?: string | null;
       username: string;
       email: string;
       is_active: boolean;
@@ -309,6 +310,7 @@ describe("AuthContextService", () => {
       mappedProviderUser: {
         user_id: "90000000-0000-4000-8000-000000000010",
         employee_id: "70000000-0000-4000-8000-000000000010",
+        display_name: "Mert Kaya",
         username: "store.manager",
         email: "store.manager@example.com",
         is_active: true,
@@ -354,6 +356,9 @@ describe("AuthContextService", () => {
     );
     expect(user?.userId).toBe("90000000-0000-4000-8000-000000000010");
     expect(user?.employeeId).toBe("70000000-0000-4000-8000-000000000010");
+    expect(user?.displayName).toBe("Mert Kaya");
+    expect(user?.username).toBe("store.manager");
+    expect(user?.email).toBe("store.manager@example.com");
     expect(user?.roleCodes).toEqual(["STORE_MANAGER"]);
   });
 

@@ -424,9 +424,9 @@ function AdminFeedComposerPanel(input: {
               <option value="">{t('adminFeed.selectScope')}</option>
               {input.form.visibilityScopeType === 'region'
                 ? input.regionOptions.map((option) => (
-                    <option key={option.regionId} value={option.regionId}>
-                      {option.regionName} - {option.regionId}
-                    </option>
+                  <option key={option.regionId} value={option.regionId}>
+                      {option.regionName}
+                  </option>
                   ))
                 : input.stores.map((option) => (
                     <option key={option.storeId} value={option.storeId}>

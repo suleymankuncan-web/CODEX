@@ -1,5 +1,6 @@
 import type { AuthSessionSummary } from '../features/auth/api'
 import { hasAnyRole } from '../features/auth/authorization'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import type {
   TargetCoverageRow,
   TargetCoverageSummary,
@@ -252,15 +253,15 @@ export function createStoreOptions(input: {
   const stores = new Map<string, string>()
 
   for (const storeId of input.assignedStoreIds) {
-    stores.set(storeId, storeId)
+    stores.set(storeId, normalizeDisplayLabel(null, 'Mağaza adı yok'))
   }
 
   for (const row of input.coverageRows) {
-    stores.set(row.storeId, row.storeName || row.storeId)
+    stores.set(row.storeId, normalizeDisplayLabel(row.storeName, 'Mağaza adı yok'))
   }
 
   for (const request of input.targetRequests) {
-    stores.set(request.storeId, request.storeName || request.storeId)
+    stores.set(request.storeId, normalizeDisplayLabel(request.storeName, 'Mağaza adı yok'))
   }
 
   return Array.from(stores, ([storeId, storeName]) => ({ storeId, storeName })).sort((a, b) =>

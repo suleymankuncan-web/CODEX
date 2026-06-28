@@ -121,6 +121,7 @@ export type CompetitionWarningRow = {
   competition_stage_id: string;
   competition_team_id: string | null;
   store_id: string | null;
+  store_name: string | null;
   warning_code: CompetitionWarning["warningCode"];
   warning_level: CompetitionWarning["warningLevel"];
   period_start: string | Date;
@@ -323,6 +324,7 @@ export function mapWarning(row: CompetitionWarningRow): CompetitionWarning {
     stageId: row.competition_stage_id,
     teamId: row.competition_team_id,
     storeId: row.store_id,
+    storeName: row.store_name,
     warningCode: row.warning_code,
     warningLevel: row.warning_level,
     periodStart: toDateString(row.period_start),

@@ -15,6 +15,9 @@ function createUser() {
   return buildAuthenticatedUser({
     userId: "app-user-1",
     employeeId: "employee-1",
+    displayName: "Ada Kaya",
+    username: "ada.kaya",
+    email: "ada.kaya@example.com",
     roleCodes: ["REPORT_VIEWER"],
     readScope: {
       companyIds: ["company-1"],
@@ -40,6 +43,9 @@ describe("BrowserSessionService", () => {
     expect(verified.user).toMatchObject({
       userId: "app-user-1",
       employeeId: "employee-1",
+      displayName: "Ada Kaya",
+      username: "ada.kaya",
+      email: "ada.kaya@example.com",
       roleCodes: ["REPORT_VIEWER"],
       readScope: {
         companyIds: ["company-1"],

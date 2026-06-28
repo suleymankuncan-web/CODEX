@@ -67,7 +67,7 @@ export function ModalPersonnelPane(input: {
                 {employee.displayName}
               </strong>
               <span className={cn('tw:block tw:truncate tw:text-xs', textMuted)}>
-                {employee.externalEmployeeRef ?? employee.employeeId}
+                {employee.externalEmployeeRef ?? 'Personel referansı yok'}
               </span>
             </div>
             <span className={cn('tw:truncate tw:text-sm tw:font-medium', textInk)}>

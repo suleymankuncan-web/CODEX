@@ -121,6 +121,7 @@ export function StoreKpiHighlightsPage(input: {
 
 function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageModel }) {
   const { primaryStoreId, storeShellIntent, t } = model
+  const storeScopeLabel = primaryStoreId ? t('storeKpis.storeScopeCount', { count: 1 }) : t('storeKpis.noStoreScope')
 
   return (
     <StoreSurfacePage ariaLabel={t('storeKpis.title')}>
@@ -129,7 +130,7 @@ function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageMode
         title={t('storeKpis.title')}
         description={t('storeKpis.unavailableCopy')}
         badges={[
-          { label: `${t('storeKpis.store')}: ${primaryStoreId ?? t('storeKpis.noStoreScope')}`, tone: 'neutral' },
+          { label: `${t('storeKpis.store')}: ${storeScopeLabel}`, tone: 'neutral' },
           { label: t('storeKpis.authWaiting'), tone: 'warning' },
         ]}
       />
@@ -140,7 +141,7 @@ function StoreKpiUnavailableState({ model }: { model: StoreKpiHighlightsPageMode
             items={[
               {
                 label: t('storeKpis.storeScope'),
-                value: primaryStoreId ?? t('storeKpis.noOpenStoreScope'),
+                value: storeScopeLabel,
               },
               { label: t('storeKpis.readStatus'), value: t('storeKpis.readWaiting'), tone: 'warning' },
             ]}

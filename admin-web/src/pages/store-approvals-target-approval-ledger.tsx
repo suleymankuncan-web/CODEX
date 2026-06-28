@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { TargetDistributionRequest } from '../features/targets/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDate, formatDateTime } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import {
@@ -60,7 +61,7 @@ export function TargetApprovalLedger(input: {
                     <p className="store-approvals-ledger-row-note">
                       {input.t('storeApprovals.targetSummary', {
                         month: formatDate(item.requestMonth, input.locale),
-                        storeName: item.storeName || item.storeId,
+                        storeName: normalizeDisplayLabel(item.storeName, input.t('storeApprovals.unknownStore')),
                         value: item.totalTargetValue,
                       })}
                     </p>
@@ -80,7 +81,7 @@ export function TargetApprovalLedger(input: {
                   />
                   <StoreApprovalKeyValue
                     label={input.t('storeApprovals.userId')}
-                    value={item.submittedByUserId}
+                    value={normalizeDisplayLabel(item.submittedByUserId, input.t('storeApprovals.unknownUser'))}
                   />
                   <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
                 </div>

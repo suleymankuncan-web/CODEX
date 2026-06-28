@@ -12,6 +12,7 @@ export class AuthAuthorizationRepository {
     const result = await this.databaseService.query<{
       user_id: string;
       employee_id: string | null;
+      display_name: string | null;
       username: string;
       email: string;
       is_active: boolean;
@@ -20,10 +21,13 @@ export class AuthAuthorizationRepository {
         SELECT
           ua.user_id,
           ua.employee_id,
+          NULLIF(CONCAT_WS(' ', e.first_name, e.last_name), '') AS display_name,
           ua.username,
           ua.email,
           ua.is_active
         FROM ops.user_account ua
+        LEFT JOIN ops.employee e
+          ON e.employee_id = ua.employee_id
         WHERE ua.auth_provider = $1
           AND ua.provider_subject = $2
         LIMIT 1

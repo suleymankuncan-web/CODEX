@@ -109,6 +109,7 @@ export type CompetitionWarning = {
   stageId: string;
   teamId: string | null;
   storeId: string | null;
+  storeName: string | null;
   warningCode: CompetitionWarningCode;
   warningLevel: "info" | "warning" | "blocker";
   periodStart: string;

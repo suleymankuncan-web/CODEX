@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Textarea } from '@/components/ui/textarea'
 import type { ChecklistAcknowledgementItem } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDateTime } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import {
@@ -83,6 +84,11 @@ export function ChecklistResultModal(input: {
   const completedAt = input.item.completedAt
     ? formatDateTime(input.item.completedAt, input.locale)
     : input.t('storeChecklists.unknown')
+  const storeLabel = normalizeDisplayLabel(input.item.storeName, input.t('storeChecklists.unknown'))
+  const completedByLabel = normalizeDisplayLabel(
+    input.item.completedByUserId,
+    input.t('storeChecklists.unknown'),
+  )
 
   return (
     <Dialog open onOpenChange={(open) => {
@@ -126,11 +132,11 @@ export function ChecklistResultModal(input: {
             </div>
           </div>
           <div className="store-checklist-modal-summary">
-            <ChecklistFact label={input.t('storeChecklists.store')} value={input.item.storeName || input.item.storeId} />
+            <ChecklistFact label={input.t('storeChecklists.store')} value={storeLabel} />
             <ChecklistFact label={input.t('storeChecklists.templateType')} value={formatChecklistTemplateType(input.t, input.item.templateType)} />
             <ChecklistFact
               label={input.t('storeChecklists.resultCompletedBy')}
-              value={input.item.completedByUserId ?? input.t('storeChecklists.unknown')}
+              value={completedByLabel}
             />
             <ChecklistFact
               label={input.t('storeChecklists.resultStatus')}
@@ -256,12 +262,12 @@ export function ChecklistResultModal(input: {
               <span className="store-checklist-result-quick-fact-icon" aria-hidden="true"><StoreIcon /></span>
               <div>
                 <span>{input.t('storeChecklists.store')}</span>
-                <strong>{input.item.storeName || input.item.storeId}</strong>
+                <strong>{storeLabel}</strong>
               </div>
               <span className="store-checklist-result-quick-fact-icon" aria-hidden="true"><UserRound /></span>
               <div>
                 <span>{input.t('storeChecklists.resultCompletedBy')}</span>
-                <strong>{input.item.completedByUserId ?? input.t('storeChecklists.unknown')}</strong>
+                <strong>{completedByLabel}</strong>
               </div>
             </div>
             <div className="store-checklist-result-ack">
