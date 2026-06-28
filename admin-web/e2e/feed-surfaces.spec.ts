@@ -139,21 +139,29 @@ test('admin feed switches chrome to English copy and persists locale', async ({ 
   await expect(page.getByRole('heading', { name: 'Company and region announcements in one controlled feed.' })).toBeVisible()
 })
 
-test('store feed renders pinned challenge posts with ranking link', async ({ page }) => {
+test('store feed renders prototype-parity read-only surface for store personnel', async ({ page }) => {
   await seedMockSession(page, 'STORE_PERSONNEL', 'store-feed-smoke-user')
   await routeFeedApi(page, storeSessionFixture)
 
   await page.goto('/store/feed')
 
-  await expect(page.getByRole('heading', { name: 'Görünen duyurular' })).toBeVisible()
-  const postRow = page.getByTestId('store-feed-post-row').filter({ hasText: 'May UPT Challenge' })
+  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
+  await expect(page.getByText('Bölge akışı')).toBeVisible()
+  await expect(page.getByText('Görünür duyuru')).toBeVisible()
+  await expect(page.getByText('Sabitlenen')).toBeVisible()
+  await expect(page.getByText('Bugün paylaşılan')).toBeVisible()
+  await expect(page.getByText('Bölge mağazası')).toBeVisible()
+  await expect(page.getByPlaceholder('Bölge mağazalarına ne duyurmak istiyorsun?')).toHaveCount(0)
+  await expect(page.getByLabel('Gönderi seçenekleri')).toHaveCount(0)
+
+  const postRow = page.getByTestId('store-feed-post-row').filter({ hasText: 'UPT focus window for the current month.' })
   await expect(postRow).toBeVisible()
   await expect(postRow.getByText('Sabit', { exact: true })).toBeVisible()
   await expect(postRow.getByText('UPT', { exact: true })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Open rankings' })).toHaveAttribute('href', '/store/rankings')
 })
 
-test('store feed switches to English copy and persists locale', async ({ page }) => {
+test('store feed keeps pinned posts first and Turkish copy clean after locale changes', async ({ page }) => {
   await seedMockSession(page, 'STORE_PERSONNEL', 'store-feed-english-user')
   await routeFeedApi(page, storeSessionFixture)
 
@@ -162,16 +170,13 @@ test('store feed switches to English copy and persists locale', async ({ page })
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Visible announcements' })).toBeVisible()
-  await expect(page.getByText('Company, region, and store announcements in one feed.')).toBeVisible()
-  await expect(page.getByText('Visible posts', { exact: true })).toBeVisible()
-  await expect(page.getByText('Pinned posts', { exact: true })).toBeVisible()
-  await expect(page.getByText('Challenge announcements', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
+  await expect(page.getByText('Bölge mağazalarına giden hızlı duyuru ve paylaşım akışı.')).toBeVisible()
+  await expect(page.getByText('Görünür duyuru', { exact: true })).toBeVisible()
 
-  const postRow = page.getByTestId('store-feed-post-row').filter({ hasText: 'May UPT Challenge' })
-  await expect(postRow.getByText('Pinned', { exact: true })).toBeVisible()
-  await expect(postRow.getByText('Challenge', { exact: true })).toBeVisible()
-  await expect(postRow.getByText('Company', { exact: true })).toBeVisible()
+  const rows = page.getByTestId('store-feed-post-row')
+  await expect(rows.first()).toContainText('UPT focus window for the current month.')
+  await expect(rows.first().getByText('Sabit', { exact: true })).toBeVisible()
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
@@ -179,7 +184,78 @@ test('store feed switches to English copy and persists locale', async ({ page })
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Visible announcements' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
+})
+
+test('region manager store feed supports composer, edit, pin menu, archive undo, and unclipped last menu', async ({ page }) => {
+  let createdPayload: Record<string, unknown> | null = null
+  let updatedPayload: Record<string, unknown> | null = null
+  let archivedPostId: string | null = null
+
+  await seedMockSession(page, 'REGION_MANAGER', 'region-store-feed-user')
+  await routeFeedApi(page, regionManagerSessionFixture, {
+    onArchiveFeedPost: (feedPostId) => {
+      archivedPostId = feedPostId
+    },
+    onCreateFeedPost: (payload) => {
+      createdPayload = payload as Record<string, unknown>
+    },
+    onUpdateFeedPost: (_feedPostId, payload) => {
+      updatedPayload = payload as Record<string, unknown>
+    },
+  })
+
+  await page.goto('/store/feed')
+
+  await expect(page.getByPlaceholder('Bölge mağazalarına ne duyurmak istiyorsun?')).toBeVisible()
+  await expect(page.getByLabel('Gönderi seçenekleri').first()).toBeVisible()
+
+  await page.getByPlaceholder('Bölge mağazalarına ne duyurmak istiyorsun?').fill('Bölge toplantısı bugün 15:00')
+  await page.getByRole('button', { name: 'Sabitle' }).click()
+  await page.getByRole('button', { name: 'Paylaş' }).click()
+
+  await expect(page.getByText('Bölge duyurusu sabitlenerek paylaşıldı.')).toBeVisible()
+  expect(createdPayload).toMatchObject({
+    postType: 'announcement',
+    title: 'Bölge toplantısı bugün 15:00',
+    body: 'Bölge toplantısı bugün 15:00',
+    visibilityScopeType: 'region',
+    visibilityScopeIds: [regionId],
+    isPinned: true,
+    publishStatus: 'published',
+  })
+
+  const firstMenuButton = page.getByLabel('Gönderi seçenekleri').first()
+  await firstMenuButton.click()
+  await page.getByRole('menuitem', { name: 'Düzenle' }).click()
+  await page.getByLabel('Gönderi metnini düzenle').fill('Güncellenen bölge duyurusu')
+  await page.getByRole('button', { name: 'Kaydet' }).click()
+
+  await expect(page.getByText('Gönderi güncellendi.')).toBeVisible()
+  expect(updatedPayload).toMatchObject({
+    title: 'Güncellenen bölge duyurusu',
+    body: 'Güncellenen bölge duyurusu',
+  })
+
+  await firstMenuButton.click()
+  await expect(page.getByRole('menuitem', { name: 'Sabitlemeden kaldır' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+
+  const lastMenuButton = page.getByLabel('Gönderi seçenekleri').last()
+  await lastMenuButton.click()
+  const menuBox = await page.getByRole('menu').boundingBox()
+  const viewport = page.viewportSize()
+  expect(menuBox).not.toBeNull()
+  expect(viewport).not.toBeNull()
+  expect(menuBox!.y + menuBox!.height).toBeLessThanOrEqual(viewport!.height)
+
+  await page.getByRole('menuitem', { name: 'Yayından kaldır' }).click()
+  await expect(page.getByText('Gönderi yayından kaldırıldı.')).toBeVisible()
+  await page.getByRole('button', { name: 'Geri al' }).click()
+  await expect(page.getByText('Gönderi geri alındı.')).toBeVisible()
+  await page.waitForTimeout(4800)
+  expect(archivedPostId).toBeNull()
 })
 
 test('store home links to announcements without rendering pinned feed preview', async ({ page }) => {
@@ -218,7 +294,9 @@ async function routeFeedApi(
   page: Page,
   authSession: unknown,
   options?: {
+    onArchiveFeedPost?: (feedPostId: string) => void
     onCreateFeedPost?: (payload: unknown) => void
+    onUpdateFeedPost?: (feedPostId: string, payload: unknown) => void
   },
 ) {
   await page.route('**/api/**', async (route) => {
@@ -238,8 +316,8 @@ async function routeFeedApi(
     if (request.method() === 'GET' && pathname.endsWith('/api/admin/feed')) {
       await route.fulfill({
         json: {
-          items: [feedPostFixture],
-          meta: { count: 1, total: 1, limit: 50, offset: 0 },
+          items: [secondaryFeedPostFixture, feedPostFixture],
+          meta: { count: 2, total: 2, limit: 50, offset: 0 },
         },
       })
       return
@@ -248,8 +326,8 @@ async function routeFeedApi(
     if (request.method() === 'GET' && pathname.endsWith('/api/feed')) {
       await route.fulfill({
         json: {
-          items: [feedPostFixture],
-          meta: { count: 1, total: 1, limit: 50, offset: 0 },
+          items: [secondaryFeedPostFixture, feedPostFixture],
+          meta: { count: 2, total: 2, limit: 50, offset: 0 },
         },
       })
       return
@@ -275,7 +353,32 @@ async function routeFeedApi(
       return
     }
 
+    if (request.method() === 'PUT' && pathname.includes('/api/admin/feed/')) {
+      const feedPostId = pathname.split('/').at(-1) ?? ''
+      const payload = request.postDataJSON()
+      options?.onUpdateFeedPost?.(feedPostId, payload)
+      await route.fulfill({
+        json: {
+          command: { status: 'updated', message: 'Feed post updated' },
+          data: {
+            feedPost: {
+              ...feedPostFixture,
+              ...(payload as Record<string, unknown>),
+              updatedAt: '2026-04-26T11:00:00.000Z',
+            },
+          },
+        },
+      })
+      return
+    }
+
     if (request.method() === 'POST' && pathname.includes('/api/admin/feed/')) {
+      const parts = pathname.split('/')
+      const action = parts.at(-1)
+      const feedPostId = parts.at(-2) ?? ''
+      if (action === 'archive') {
+        options?.onArchiveFeedPost?.(feedPostId)
+      }
       await route.fulfill({
         json: {
           command: { status: 'ok', message: 'Feed post updated' },
@@ -312,6 +415,25 @@ const feedPostFixture = {
   updatedByUserId: companyId,
   createdAt: '2026-04-26T09:00:00.000Z',
   updatedAt: '2026-04-26T09:00:00.000Z',
+}
+
+const secondaryFeedPostFixture = {
+  ...feedPostFixture,
+  feedPostId: '33333333-3333-4333-8333-333333333333',
+  postType: 'announcement',
+  title: 'Visual checklist reminder',
+  body: 'Vitrin kontrol listesi cuma kapanışına kadar tamamlanacak.',
+  linkLabel: null,
+  linkUrl: null,
+  isPinned: false,
+  publishedAt: '2026-04-25T17:45:00.000Z',
+  metricCode: null,
+  metricLabel: null,
+  challengeStartsOn: null,
+  challengeEndsOn: null,
+  targetRoute: null,
+  createdAt: '2026-04-25T17:45:00.000Z',
+  updatedAt: '2026-04-25T17:45:00.000Z',
 }
 
 const hrSessionFixture = {

@@ -2046,7 +2046,7 @@ test('store sidebar recovers when a lazy route module fails during SPA navigatio
     .click()
 
   await expect(page).toHaveURL(/\/store\/feed$/)
-  await expect(page.getByRole('heading', { name: 'Görünen duyurular' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
   expect(failedFeedRouteModuleOnce).toBe(true)
 })
 
@@ -2082,7 +2082,7 @@ test('store sidebar retries a transient announcements API failure without leavin
 
   await expect(page).toHaveURL(/\/store\/feed$/)
   await expect.poll(() => feedAttempts).toBeGreaterThanOrEqual(2)
-  await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
   await expect(page.getByText(/Duyurular a..lamad./i)).toHaveCount(0)
   expect(pageErrors).toEqual([])
 })
@@ -2112,7 +2112,7 @@ test('store sidebar prefetches announcement data before opening feed', async ({ 
   await feedLink.click()
 
   await expect(page).toHaveURL(/\/store\/feed$/)
-  await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
   await expect.poll(() => feedRequests, { timeout: 1000 }).toBe(prefetchedFeedRequests)
 })
 
@@ -2143,7 +2143,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Duyurular',
     path: '/store/feed',
-    ready: page.getByRole('heading', { name: 'Görünen duyurular' }),
+    ready: page.getByRole('heading', { name: 'Duyurular' }),
   })
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Ana Sayfa',
@@ -2240,7 +2240,7 @@ test('store route navigation does not blank the shell with a global transition l
   await storeNav.getByRole('link', { name: 'Duyurular', exact: true }).click()
 
   await expect(page).toHaveURL(/\/store\/feed$/)
-  await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
   await expect.poll(() =>
     page.evaluate(() => (window as Window & { __storeRouteTransitionSeen?: boolean }).__storeRouteTransitionSeen ?? false),
   ).toBe(false)

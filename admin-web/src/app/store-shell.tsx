@@ -52,6 +52,7 @@ export function StoreShell(input: {
   const storePersonnelRoute = activeStoreRoute?.id === 'personnel'
   const storeChecklistRoute = activeStoreRoute?.id === 'checklists'
   const storeIncentivesRoute = activeStoreRoute?.id === 'incentives'
+  const storeFeedRoute = activeStoreRoute?.id === 'feed'
   const checklistOnlyRoute = storeChecklistRoute && checklistOnly
   const storeRoute = (route: StoreRouteDefinition, element: ReactNode) => (
     <StoreRouteGuard
@@ -96,6 +97,8 @@ export function StoreShell(input: {
         checklistOnlyRoute ? ' store-shell-store-checklists' : ''
       }${
         storeIncentivesRoute ? ' store-shell-store-incentives' : ''
+      }${
+        storeFeedRoute ? ' store-shell-store-feed' : ''
       }`}
     >
       {checklistOnlyRoute ? null : (

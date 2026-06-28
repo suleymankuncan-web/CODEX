@@ -12,7 +12,12 @@ import {
   getMobileChecklistToday,
 } from '../features/checklists/api'
 import { listCompetitions } from '../features/competitions/api'
-import { getAdminFeedPosts, getVisibleFeedPosts } from '../features/feed/api'
+import {
+  getAdminFeedPosts,
+  getAdminFeedQueryKey,
+  getVisibleFeedPosts,
+  getVisibleFeedQueryKey,
+} from '../features/feed/api'
 import {
   getStoreSalesTargetIncentives,
   storeSalesTargetIncentivesQueryKey,
@@ -299,7 +304,7 @@ function getStoreRankingsPrefetchTasks(authSummary: AuthSessionSummary | null): 
 function getStoreFeedPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
   return [
     {
-      queryKey: ['visible-feed'],
+      queryKey: getVisibleFeedQueryKey(authSummary),
       queryFn: getVisibleFeedPosts,
       enabled: Boolean(authSummary),
     },
@@ -500,7 +505,7 @@ function getAdminFeedPrefetchTasks(authSummary: AuthSessionSummary | null): Pref
   const enabled = hasAnyRole(authSummary, adminFeedRoles)
   return [
     {
-      queryKey: ['admin-feed'],
+      queryKey: getAdminFeedQueryKey(authSummary),
       queryFn: getAdminFeedPosts,
       enabled,
     },

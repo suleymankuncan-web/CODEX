@@ -16,6 +16,7 @@ import { getAuthSession } from './features/auth/api'
 import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
+import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell'
 import { StoreIncentivesPrototypeShell } from './prototypes/store-incentives-prototype-shell'
 
 function App() {
@@ -25,6 +26,11 @@ function App() {
     import.meta.env.DEV &&
     pathname === '/store/incentives' &&
     new URLSearchParams(location.search).get('prototype') === 'command-v2'
+  const isStoreFeedPrototype =
+    import.meta.env.DEV &&
+    pathname === '/store/feed' &&
+    new URLSearchParams(location.search).get('prototype') === 'region-composer-v1'
+  const isPrototypeRoute = isStoreIncentivesPrototype || isStoreFeedPrototype
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
@@ -57,7 +63,7 @@ function App() {
             session.mockReadRegionIds,
           ],
     queryFn: getAuthSession,
-    enabled: isReady && !isStoreIncentivesPrototype,
+    enabled: isReady && !isPrototypeRoute,
     retry: false,
     staleTime: 30_000,
   })
@@ -123,22 +129,22 @@ function App() {
   })
 
   useEffect(() => {
-    if (isStoreIncentivesPrototype) return
+    if (isPrototypeRoute) return
     if (pathname.startsWith('/auth')) return
 
     preloadRouteModule(pathname)
-  }, [isStoreIncentivesPrototype, pathname])
+  }, [isPrototypeRoute, pathname])
 
   useEffect(() => {
-    if (isStoreIncentivesPrototype) return
+    if (isPrototypeRoute) return
     if (shellState.mode !== 'ready') return
 
     preloadRouteModule(firstAllowedPath)
     preloadRouteModule(pathname)
-  }, [firstAllowedPath, isStoreIncentivesPrototype, pathname, shellState.mode])
+  }, [firstAllowedPath, isPrototypeRoute, pathname, shellState.mode])
 
   useEffect(() => {
-    if (isStoreIncentivesPrototype) return
+    if (isPrototypeRoute) return
     if (shellState.mode !== 'ready') return
 
     let cancelled = false
@@ -162,10 +168,14 @@ function App() {
     return () => {
       cancelled = true
     }
-  }, [authSummary, firstAllowedPath, isStoreIncentivesPrototype, pathname, queryClient, shellState.mode])
+  }, [authSummary, firstAllowedPath, isPrototypeRoute, pathname, queryClient, shellState.mode])
 
   if (isStoreIncentivesPrototype) {
     return <StoreIncentivesPrototypeShell />
+  }
+
+  if (isStoreFeedPrototype) {
+    return <StoreFeedPrototypeShell />
   }
 
   if (pathname.startsWith('/auth')) {

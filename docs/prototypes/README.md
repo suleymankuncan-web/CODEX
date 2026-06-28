@@ -52,6 +52,12 @@ implemented and verified.
   and the canonical Store/Admin operational surface reference for compact
   premium density, metric cards, period filters, store review toggles,
   accordion/table rhythm, right drawer, and package-submit dialog.
+- `admin-web/src/prototypes/store-feed-region-composer-v1.tsx` is the locked
+  production-bound React prototype for `/store/feed`. It defines the Region
+  Manager composer command surface, the same read-only feed surface for Store
+  Manager and other store roles, pinned-post ordering, inline edit, pin/unpin,
+  archive/undo affordance, and compact feed card rhythm. It has no read/seen
+  tracking in v1.
 
 ## Locked Prototype Contracts
 
@@ -83,6 +89,7 @@ Important production boundary:
 | `docs/prototypes/store-checklist-result-modal-v1.html` | `/store/checklists` result modal | `110EAD19449A59EBB1C84666FC4F66AC9067DEAF7CCF1BF8990917BDFD2DC8B9` |
 | `docs/prototypes/store-incentives-region-manager-command-v2.html` | `/store/incentives` Region Manager command center and Store/Admin surface standard reference | `B18107107BB91332179F00A93166ECF04038CA6E6878E14DFE8DD2FBECA5BF87` |
 | `docs/prototypes/store-workforce-full-ledger-prototype.tsx` | `/store/workforce` Region Manager Norm Kadro full-ledger production-bound prototype | `DBA61AB355FC25B564612873ECAF0C7A927C9D10CAB7D5F148395BE57767CEC3` |
+| `admin-web/src/prototypes/store-feed-region-composer-v1.tsx` | `/store/feed` Region Manager composer and read-only store-role feed surface | `145040F4C55444465861059D7DFD5A8EF619865C56AECD1B07224C561EBC64F6` |
 
 ## Prototype Implementation Evidence
 

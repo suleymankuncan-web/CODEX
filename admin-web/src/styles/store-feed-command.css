@@ -1,0 +1,95 @@
+.store-shell-store-feed {
+  --feed-ink: #171421;
+  --feed-muted: #6d6479;
+  --feed-soft: rgba(255, 255, 255, 0.72);
+  --feed-card: rgba(255, 255, 255, 0.9);
+  --feed-line: rgba(58, 44, 88, 0.14);
+  --feed-line-strong: rgba(58, 44, 88, 0.22);
+  --feed-plum: #7049e8;
+  --feed-plum-deep: #4c2aa5;
+  --feed-cyan: #12a9bd;
+  --feed-mint: #12a875;
+  --feed-amber: #d88412;
+  --feed-rose: #e14664;
+  --feed-shadow: 0 22px 70px rgba(32, 24, 48, 0.1);
+  background:
+    linear-gradient(rgba(112, 73, 232, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(18, 169, 189, 0.03) 1px, transparent 1px),
+    linear-gradient(135deg, #fbf9ff 0%, #f8fbff 46%, #edf8f8 100%);
+  background-size: 72px 72px, 72px 72px, auto;
+}
+
+.store-shell-store-feed .store-command-main {
+  box-sizing: border-box;
+  margin: 0;
+  width: min(1360px, calc(100vw - var(--store-command-sidebar) - 36px));
+}
+
+.store-feed-command-page {
+  --feed-ink: #171421;
+  --feed-muted: #6d6479;
+  --feed-soft: rgba(255, 255, 255, 0.72);
+  --feed-card: rgba(255, 255, 255, 0.9);
+  --feed-line: rgba(58, 44, 88, 0.14);
+  --feed-line-strong: rgba(58, 44, 88, 0.22);
+  --feed-plum: #7049e8;
+  --feed-plum-deep: #4c2aa5;
+  --feed-cyan: #12a9bd;
+  --feed-mint: #12a875;
+  --feed-amber: #d88412;
+  --feed-rose: #e14664;
+  --feed-shadow: 0 22px 70px rgba(32, 24, 48, 0.1);
+}
+
+.store-feed-command-page .feed-notice-error {
+  border-color: rgba(225, 70, 100, 0.2);
+  color: #b42318;
+}
+
+.store-feed-command-page .feed-post-row-readonly {
+  padding-right: 18px;
+}
+
+.store-feed-command-page .feed-post-meta-link {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--feed-line);
+  border-radius: 999px;
+  color: var(--feed-plum-deep);
+  display: inline-flex;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 9px;
+  text-decoration: none;
+}
+
+.store-feed-command-page .feed-post-meta-link:hover,
+.store-feed-command-page .feed-post-meta-link:focus-visible {
+  border-color: rgba(112, 73, 232, 0.26);
+  outline: none;
+}
+
+.store-feed-command-page .feed-state-row {
+  background: linear-gradient(90deg, rgba(112, 73, 232, 0.045), rgba(255, 255, 255, 0.86));
+  display: grid;
+  gap: 7px;
+  padding: 18px;
+}
+
+.store-feed-command-page .feed-state-row strong {
+  color: var(--feed-ink);
+  font-size: 15px;
+  font-weight: 640;
+}
+
+.store-feed-command-page .feed-state-row span {
+  color: var(--feed-muted);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+@media (max-width: 1120px) {
+  .store-shell-store-feed .store-command-main {
+    width: min(100%, 920px);
+  }
+}
