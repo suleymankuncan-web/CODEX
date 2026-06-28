@@ -8,7 +8,9 @@ const planRow = {
   company_id: "00000000-0000-4000-8000-000000000001",
   region_id: "00000000-0000-4000-8000-000000000010",
   store_id: "00000000-0000-4000-8000-000000000201",
+  store_name: "Marmara Park",
   owner_user_id: "00000000-0000-4000-8000-000000000901",
+  owner_display_name: "Mert Alcan",
   created_by_user_id: "00000000-0000-4000-8000-000000000901",
   source_type: "kpi_exception",
   source_id: "snapshot-1:store-1:kpi-1",
@@ -110,10 +112,18 @@ describe("StoreActionPlanRepository", () => {
     expect(String(query.mock.calls[0][0])).toContain("COUNT(*)::int AS total");
     expect(String(query.mock.calls[0][0])).toContain("store_id = ANY($1::uuid[])");
     expect(String(query.mock.calls[0][0])).toContain("status = $2");
-    expect(String(query.mock.calls[1][0])).toContain("ORDER BY due_on ASC, updated_at DESC");
+    expect(String(query.mock.calls[1][0])).toContain("INNER JOIN ops.store s");
+    expect(String(query.mock.calls[1][0])).toContain("owner_display_name");
+    expect(String(query.mock.calls[1][0])).toContain("ORDER BY p.due_on ASC, p.updated_at DESC");
     expect(query.mock.calls[1][1]).toEqual([[planRow.store_id], "open", 25, 10]);
     expect(result).toEqual({
-      items: [expect.objectContaining({ actionPlanId: planRow.store_action_plan_id })],
+      items: [
+        expect.objectContaining({
+          actionPlanId: planRow.store_action_plan_id,
+          storeName: "Marmara Park",
+          ownerDisplayName: "Mert Alcan",
+        }),
+      ],
       total: 1,
     });
   });
@@ -129,17 +139,22 @@ describe("StoreActionPlanRepository", () => {
     });
 
     const sql = String(query.mock.calls[0][0]);
-    expect(sql).toContain("FROM ops.store_action_plan");
-    expect(sql).toContain("store_id = ANY($1::uuid[])");
-    expect(sql).toContain("status = ANY($2::text[])");
-    expect(sql).toContain("ORDER BY due_on ASC, updated_at DESC");
+    expect(sql).toContain("FROM ops.store_action_plan p");
+    expect(sql).toContain("INNER JOIN ops.store s");
+    expect(sql).toContain("p.store_id = ANY($1::uuid[])");
+    expect(sql).toContain("p.status = ANY($2::text[])");
+    expect(sql).toContain("ORDER BY p.due_on ASC, p.updated_at DESC");
     expect(query.mock.calls[0][1]).toEqual([
       [planRow.store_id],
       ["open", "in_progress", "blocked"],
       20,
     ]);
     expect(result).toEqual([
-      expect.objectContaining({ actionPlanId: planRow.store_action_plan_id }),
+      expect.objectContaining({
+        actionPlanId: planRow.store_action_plan_id,
+        storeName: "Marmara Park",
+        ownerDisplayName: "Mert Alcan",
+      }),
     ]);
   });
 
@@ -163,10 +178,10 @@ describe("StoreActionPlanRepository", () => {
     });
 
     const sql = String(query.mock.calls[0][0]);
-    expect(sql).toContain("region_id = ANY($1::uuid[])");
-    expect(sql).toContain("status = ANY($2::text[])");
-    expect(sql).toContain("source_type = ANY($3::text[])");
-    expect(sql).toContain("ORDER BY due_on ASC, updated_at DESC");
+    expect(sql).toContain("p.region_id = ANY($1::uuid[])");
+    expect(sql).toContain("p.status = ANY($2::text[])");
+    expect(sql).toContain("p.source_type = ANY($3::text[])");
+    expect(sql).toContain("ORDER BY p.due_on ASC, p.updated_at DESC");
     expect(query.mock.calls[0][1]).toEqual([
       [planRow.region_id],
       ["open", "in_progress", "blocked", "closed"],

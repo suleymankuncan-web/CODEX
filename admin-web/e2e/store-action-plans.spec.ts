@@ -1,6 +1,7 @@
 import { expect, test, type Page, type Route } from './test-fixtures'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
+const detachedStoreId = '00000000-0000-0000-0000-000000000101'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 
 test.beforeEach(async ({ page }) => {
@@ -41,6 +42,39 @@ test('store tasks renders the command center and keeps target approvals out', as
   await expect(getActionPlanRow(page, 'Mayıs çözüm kaydı')).toHaveCount(0)
   await expect(page.getByText('Devreden').first()).toBeVisible()
   expect(api.listStatuses).toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked', 'closed', 'cancelled']))
+})
+
+test('store tasks renders persisted plan names without UUID fallbacks', async ({ page }) => {
+  const detachedPlan = {
+    ...storeActionPlansFixture[0],
+    actionPlanId: '00000000-0000-0000-0000-00000000a101',
+    storeId: detachedStoreId,
+    storeName: 'Bagdat Caddesi',
+    ownerUserId: '00000000-0000-0000-0000-00000000b101',
+    ownerDisplayName: 'Ayse Demir',
+    sourceId: 'checklist:2026-06:item-detached',
+    title: 'Bagdat takip maddesi',
+  }
+  await routeStoreTasksApi(page, {
+    plans: [detachedPlan],
+    assignedStoreIds: [demoStoreId, detachedStoreId],
+  })
+
+  await page.goto('/store/tasks')
+
+  const row = getActionPlanRow(page, 'Bagdat takip maddesi')
+  await expect(row).toContainText('Bagdat Caddesi')
+  await expect(row).not.toContainText(detachedStoreId)
+})
+
+test('store tasks keeps raw action plan permission errors out of the UI', async ({ page }) => {
+  await routeStoreTasksApi(page, { failActionPlanList: true })
+
+  await page.goto('/store/tasks')
+
+  await expect(page.getByTestId('store-action-plans-panel').getByText(/Aksiyon planlar/).first()).toBeVisible()
+  await expect(page.getByText('Missing required role')).toHaveCount(0)
+  await expect(getWorkflowRow(page, 'UPT projeksiyon riski')).toBeVisible()
 })
 
 test('store manager can move and close a persisted action plan from the drawer', async ({ page }) => {
@@ -181,6 +215,7 @@ async function routeStoreTasksApi(
     roleCodes?: string[]
     plans?: StoreActionPlanFixture[]
     assignedStoreIds?: string[]
+    failActionPlanList?: boolean
   } = {},
 ) {
   const roleCodes = input.roleCodes ?? ['STORE_MANAGER']
@@ -192,6 +227,7 @@ async function routeStoreTasksApi(
     statusPayloads: [] as Array<Record<string, unknown>>,
     closePayloads: [] as Array<Record<string, unknown>>,
     createPayloads: [] as Array<Record<string, unknown>>,
+    failActionPlanList: input.failActionPlanList ?? false,
   }
 
   await page.route('**/api/auth/session', async (route) => {
@@ -234,6 +270,7 @@ async function handleStoreActionPlanRoute(
     statusPayloads: Array<Record<string, unknown>>
     closePayloads: Array<Record<string, unknown>>
     createPayloads: Array<Record<string, unknown>>
+    failActionPlanList: boolean
   },
 ) {
   const request = route.request()
@@ -242,6 +279,11 @@ async function handleStoreActionPlanRoute(
   const actionPlanId = planIdMatch?.[1]
   const command = planIdMatch?.[2]
   const scopedPlans = state.plans.filter((plan) => state.assignedStoreIds.includes(plan.storeId))
+
+  if (request.method() === 'GET' && !actionPlanId && state.failActionPlanList) {
+    await route.fulfill({ status: 403, json: { message: 'Missing required role' } })
+    return
+  }
 
   if (request.method() === 'GET' && actionPlanId && !command) {
     const plan = scopedPlans.find((item) => item.actionPlanId === actionPlanId)
@@ -397,7 +439,9 @@ type StoreActionPlanFixture = {
   companyId: string
   regionId: string
   storeId: string
+  storeName: string | null
   ownerUserId: string
+  ownerDisplayName: string | null
   createdByUserId: string
   sourceType: 'kpi_exception' | 'checklist_remediation'
   sourceId: string
@@ -425,7 +469,9 @@ const storeActionPlansFixture: StoreActionPlanFixture[] = [
     companyId: '00000000-0000-0000-0000-000000000001',
     regionId: '00000000-0000-0000-0000-000000000010',
     storeId: demoStoreId,
+    storeName: 'IstinyePark Demo Store',
     ownerUserId: 'Mert Alcan',
+    ownerDisplayName: 'Mert Alcan',
     createdByUserId: '00000000-0000-0000-0000-00000000b001',
     sourceType: 'checklist_remediation',
     sourceId: 'checklist:2026-06:item-1',
@@ -451,7 +497,9 @@ const storeActionPlansFixture: StoreActionPlanFixture[] = [
     companyId: '00000000-0000-0000-0000-000000000001',
     regionId: '00000000-0000-0000-0000-000000000010',
     storeId: demoStoreId,
+    storeName: 'IstinyePark Demo Store',
     ownerUserId: 'Eda Çelik',
+    ownerDisplayName: 'Eda Celik',
     createdByUserId: '00000000-0000-0000-0000-00000000b002',
     sourceType: 'checklist_remediation',
     sourceId: 'checklist:2026-05:item-2',
@@ -477,7 +525,9 @@ const storeActionPlansFixture: StoreActionPlanFixture[] = [
     companyId: '00000000-0000-0000-0000-000000000001',
     regionId: '00000000-0000-0000-0000-000000000010',
     storeId: demoStoreId,
+    storeName: 'IstinyePark Demo Store',
     ownerUserId: 'Onur Tekin',
+    ownerDisplayName: 'Onur Tekin',
     createdByUserId: '00000000-0000-0000-0000-00000000b003',
     sourceType: 'kpi_exception',
     sourceId: 'snapshot-2026-06:store:kpi-closed',
@@ -503,7 +553,9 @@ const storeActionPlansFixture: StoreActionPlanFixture[] = [
     companyId: '00000000-0000-0000-0000-000000000001',
     regionId: '00000000-0000-0000-0000-000000000010',
     storeId: demoStoreId,
+    storeName: 'IstinyePark Demo Store',
     ownerUserId: 'Onur Tekin',
+    ownerDisplayName: 'Onur Tekin',
     createdByUserId: '00000000-0000-0000-0000-00000000b004',
     sourceType: 'checklist_remediation',
     sourceId: 'checklist:2026-05:item-closed',

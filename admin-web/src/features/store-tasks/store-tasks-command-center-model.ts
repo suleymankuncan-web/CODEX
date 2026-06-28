@@ -131,6 +131,7 @@ export function buildStoreTaskCommandRows(input: {
     .map((plan): StoreTaskCommandRow => {
       const workflowPlanRow = workflowPlanRowsById.get(plan.actionPlanId)
       const workflowStoreName = workflowPlanRow?.storeName ?? workflowStoreNamesByStoreId.get(plan.storeId)
+      const storeName = normalizeDisplayLabel(workflowStoreName ?? plan.storeName, 'Mağaza adı yok')
       const assignedAt = plan.createdAt
       const completionAt = plan.closedAt ?? plan.cancelledAt
       const sourcePeriod = getMonthKeyFromDate(assignedAt)
@@ -147,8 +148,8 @@ export function buildStoreTaskCommandRows(input: {
         title: plan.title,
         summary: plan.summary?.trim() || 'Özet bulunamadı',
         storeId: plan.storeId,
-        storeName: workflowStoreName || plan.storeId,
-        ownerLabel: plan.ownerUserId,
+        storeName,
+        ownerLabel: normalizeDisplayLabel(plan.ownerDisplayName, 'Sorumlu yok'),
         sourceLabel: formatSourceGroupLabel(mapPlanSourceGroup(plan)),
         priority: plan.priority,
         priorityLabel: formatPriorityLabel(plan.priority),
@@ -194,8 +195,8 @@ export function buildStoreTaskCommandRows(input: {
         title: item.title,
         summary: item.summary,
         storeId: item.storeId,
-        storeName: item.storeName || item.storeId,
-        ownerLabel: item.actorRole,
+        storeName: normalizeDisplayLabel(item.storeName, 'Mağaza adı yok'),
+        ownerLabel: formatActorRoleLabel(item.actorRole),
         sourceLabel: formatSourceGroupLabel(sourceGroup),
         priority: item.urgency,
         priorityLabel: formatPriorityLabel(item.urgency),
@@ -366,6 +367,29 @@ function formatPriorityLabel(priority: StoreActionPlanPriority | WorkflowInboxIt
     default:
       return 'Normal'
   }
+}
+
+function normalizeDisplayLabel(value: string | null | undefined, fallback: string) {
+  const label = value?.trim()
+  if (!label || isUuidLike(label)) return fallback
+  return label
+}
+
+function formatActorRoleLabel(role: string | null | undefined) {
+  switch (role) {
+    case 'STORE_MANAGER':
+      return 'Mağaza müdürü'
+    case 'REGION_MANAGER':
+      return 'Bölge müdürü'
+    case 'SUPER_ADMIN':
+      return 'Admin'
+    default:
+      return normalizeDisplayLabel(role, 'Sorumlu yok')
+  }
+}
+
+function isUuidLike(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
 function buildPlanNextStep(status: StoreActionPlanStatus) {

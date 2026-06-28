@@ -2303,7 +2303,9 @@ export type components = {
           "companyId": string
           "regionId": string
           "storeId": string
+          "storeName": string | null
           "ownerUserId": string
+          "ownerDisplayName": string | null
           "createdByUserId": string
           "sourceType": "kpi_exception" | "checklist_remediation"
           "sourceId": string
@@ -2333,7 +2335,9 @@ export type components = {
           "companyId": string
           "regionId": string
           "storeId": string
+          "storeName": string | null
           "ownerUserId": string
+          "ownerDisplayName": string | null
           "createdByUserId": string
           "sourceType": "kpi_exception" | "checklist_remediation"
           "sourceId": string
@@ -2362,7 +2366,9 @@ export type components = {
           "companyId": string
           "regionId": string
           "storeId": string
+          "storeName": string | null
           "ownerUserId": string
+          "ownerDisplayName": string | null
           "createdByUserId": string
           "sourceType": "kpi_exception" | "checklist_remediation"
           "sourceId": string
