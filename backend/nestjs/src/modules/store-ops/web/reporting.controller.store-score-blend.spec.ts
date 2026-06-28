@@ -10,6 +10,7 @@ describe("ReportingController store score breakdown", () => {
     const controller = new ReportingController(
       reportingService as never,
       { getRankings: jest.fn() } as never,
+      {} as never,
     );
 
     await controller.getStoreScoreBreakdown(
@@ -48,6 +49,7 @@ describe("ReportingController store score breakdown", () => {
     const controller = new ReportingController(
       reportingService as never,
       { getRankings: jest.fn() } as never,
+      {} as never,
     );
 
     await controller.getPersonnelPerformance(
@@ -100,6 +102,7 @@ describe("ReportingController store score breakdown", () => {
     const controller = new ReportingController(
       reportingService as never,
       { getRankings: jest.fn() } as never,
+      {} as never,
     );
 
     await controller.getPersonnelPerformance(
