@@ -1,5 +1,6 @@
 export const storeIncentivesTr = {
   'storeIncentives.noStoreScope': 'Yetkili mağaza yok',
+  'storeIncentives.unknownStore': 'Mağaza adı yok',
   'storeIncentives.storeScope': 'Mağaza',
   'storeIncentives.state': 'Durum',
   'storeIncentives.foundation': 'Hazırlık',
@@ -241,6 +242,7 @@ export const storeIncentivesTr = {
 
 export const storeIncentivesEn: Record<keyof typeof storeIncentivesTr, string> = {
   'storeIncentives.noStoreScope': 'No authorized store',
+  'storeIncentives.unknownStore': 'Store name unavailable',
   'storeIncentives.storeScope': 'Store',
   'storeIncentives.state': 'State',
   'storeIncentives.foundation': 'Setup',

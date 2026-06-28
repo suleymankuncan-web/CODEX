@@ -151,7 +151,9 @@ export const storeTasksTr = {
   'storeTasks.actionPlansPageStaleTitle': 'Plan sayfası yenileniyor',
   'storeTasks.actionPlansPageStaleCopy':
     'Bu sayfadaki kayıtlar değişmiş olabilir; liste önceki uygun sayfaya çekiliyor.',
+  'storeTasks.actionPlansErrorCopy': 'Aksiyon planları şu anda listelenemiyor. Diğer görev kayıtları gösterilmeye devam eder.',
   'storeTasks.actionPlansNoSummary': 'Plan özeti yok',
+  'storeTasks.unknownStore': 'Mağaza adı yok',
   'storeTasks.actionPlansStore': 'Mağaza',
   'storeTasks.actionPlansDueOn': 'Termin',
   'storeTasks.actionPlansUpdatedAt': 'Son güncelleme',
@@ -447,7 +449,9 @@ export const storeTasksEn: Record<keyof typeof storeTasksTr, string> = {
   'storeTasks.actionPlansPageStaleTitle': 'Refreshing plan page',
   'storeTasks.actionPlansPageStaleCopy':
     'Records on this page may have changed; the list is returning to the nearest available page.',
+  'storeTasks.actionPlansErrorCopy': 'Action plans cannot be listed right now. Other task records remain visible.',
   'storeTasks.actionPlansNoSummary': 'No plan summary',
+  'storeTasks.unknownStore': 'Store name unavailable',
   'storeTasks.actionPlansStore': 'Store',
   'storeTasks.actionPlansDueOn': 'Due date',
   'storeTasks.actionPlansUpdatedAt': 'Last update',

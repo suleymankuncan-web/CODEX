@@ -148,6 +148,9 @@ export class AuthSessionController {
       user: {
         userId: user.userId,
         employeeId: user.employeeId ?? null,
+        displayName: user.displayName ?? null,
+        username: user.username ?? null,
+        email: user.email ?? null,
         roleCodes: user.roleCodes,
         scope: {
           companyIds: user.scope.companyIds,

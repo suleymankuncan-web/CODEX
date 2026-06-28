@@ -341,6 +341,9 @@ export type components = {
       "user": {
         "userId": string
         "employeeId": string | null
+        "displayName": string | null
+        "username": string | null
+        "email": string | null
         "roleCodes": string[]
         "scope": {
           "companyIds": string[]
@@ -532,6 +535,7 @@ export type components = {
           "stageId": string
           "teamId": string | null
           "storeId": string | null
+          "storeName": string | null
           "warningCode": "missing_daily_store_data" | "missing_bm_checklist" | "missing_vm_checklist"
           "warningLevel": "info" | "warning" | "blocker"
           "periodStart": string
@@ -1326,6 +1330,7 @@ export type components = {
       "items": Array<{
           "snapshotRunId": string
           "storeId": string
+          "storeName": string | null
           "checklistTemplateId": string
           "auditCount": number
           "avgScore": string | null
@@ -1688,6 +1693,7 @@ export type components = {
       "items": Array<{
           "snapshotRunId": string
           "storeId": string
+          "storeName": string | null
           "kpiId": string
           "kpiCode": string
           "kpiName": string
@@ -2114,8 +2120,11 @@ export type components = {
           "snapshotRunId": string
           "scopeType": string
           "companyId": string | null
+          "companyName": string | null
           "regionId": string | null
+          "regionName": string | null
           "storeId": string | null
+          "storeName": string | null
           "periodStart": string
           "periodEnd": string
           "openingHeadcount": string
@@ -2135,6 +2144,7 @@ export type components = {
       "items": Array<{
           "snapshotRunId": string
           "storeId": string
+          "storeName": string | null
           "positionId": string
           "activeHeadcount": string
           "activeFte": string

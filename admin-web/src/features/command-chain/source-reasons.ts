@@ -1,5 +1,6 @@
 import type { StoreActionPlan } from '../store-actions/api'
 import type { WorkflowInboxItem } from '../workflow/contracts'
+import { normalizeDisplayLabel } from '../../lib/display-labels'
 
 export type CommandChainActorRole =
   | 'SUPER_ADMIN'
@@ -191,7 +192,7 @@ export function buildWorkflowReasonSources(
       ownerSurface: 'workflow inbox',
       priority: item.urgency === 'high' ? 10 : item.urgency === 'medium' ? 25 : 40,
       proofLabel: `Workflow inbox item needs attention: ${item.title}`,
-      scopeLabel: item.storeName ?? item.storeId,
+      scopeLabel: normalizeDisplayLabel(item.storeName, 'Mağaza adı yok'),
       severityLabel: severityForWorkflowUrgency(item.urgency),
       sourceEntityId: item.sourceId,
       sourceFamily,
@@ -220,13 +221,14 @@ export function buildStoreActionPlanReasonSources(
       ownerSurface: 'store tasks',
       priority: plan.status === 'blocked' ? 8 : plan.priority === 'high' ? 12 : 30,
       proofLabel: `Persisted Store Action plan is ${plan.status}: ${plan.title}`,
-      scopeLabel: plan.storeId,
+      scopeLabel: normalizeDisplayLabel(plan.storeName, 'Mağaza adı yok'),
       severityLabel: plan.status === 'blocked' || plan.priority === 'high' ? 'high' : 'medium',
       sourceEntityId: plan.sourceId,
       sourceFamily: 'store_action',
       sourceSurface: plan.sourceDeepLink ?? '/store/tasks',
       statusLabel: plan.status,
       storeId: plan.storeId,
+      storeLabel: normalizeDisplayLabel(plan.storeName, 'Mağaza adı yok'),
     },
   ]
 }

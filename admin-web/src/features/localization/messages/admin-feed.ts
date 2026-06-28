@@ -82,7 +82,7 @@ export const adminFeedEn: Record<keyof typeof adminFeedTr, string> = {
     'This surface requires an HR admin, super admin, or region manager role.',
   'adminFeed.regionMissingTitle': 'Region scope missing',
   'adminFeed.regionMissingCopy':
-    'A region manager must carry at least one region id in token/read scope to publish announcements.',
+    'A region manager must carry at least one region scope in token/read access to publish announcements.',
   'adminFeed.loadingTitle': 'Loading feed',
   'adminFeed.loadingCopy': 'Preparing the announcement library.',
   'adminFeed.errorTitle': 'Announcements could not be opened',

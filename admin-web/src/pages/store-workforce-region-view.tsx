@@ -608,7 +608,7 @@ function PeoplePane(input: { locale: AppLocale; row: RegionStoreViewModel | null
         <div className="swc-people-row" key={employee.employeeId}>
           <div>
             <b>{employee.displayName}</b>
-            <small>{employee.externalEmployeeRef ?? employee.employeeId}</small>
+            <small>{employee.externalEmployeeRef ?? 'Personel referansı yok'}</small>
           </div>
           <span>{employee.positionName || 'Pozisyon bilgisi yok'}</span>
           <span>{getTenureFromDate(employee.assignmentStartDate, now, input.locale).label}</span>
@@ -627,7 +627,7 @@ function HistoryPane(input: { locale: AppLocale; row: RegionStoreViewModel | nul
       date: employee.assignmentStartDate,
       name: employee.displayName,
       position: employee.positionName || 'Pozisyon bilgisi yok',
-      reference: employee.externalEmployeeRef ?? employee.employeeId,
+      reference: employee.externalEmployeeRef ?? 'Personel referansı yok',
     }))
     .sort((left, right) => new Date(`${right.date}T00:00:00`).getTime() - new Date(`${left.date}T00:00:00`).getTime())
 

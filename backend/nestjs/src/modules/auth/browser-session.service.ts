@@ -14,6 +14,8 @@ export interface BrowserSessionEnvelope {
   sid: string;
   user: {
     actionScope: { assignedStoreIds: string[]; assignedStoreTypes?: string[] };
+    displayName?: string;
+    email?: string;
     employeeId?: string;
     readScope: {
       companyIds: string[];
@@ -21,6 +23,7 @@ export interface BrowserSessionEnvelope {
       storeIds: string[];
     };
     roleCodes: string[];
+    username?: string;
     userId: string;
   };
   v: typeof SESSION_VERSION;
@@ -52,9 +55,12 @@ export class BrowserSessionService {
           assignedStoreIds: user.actionScope.assignedStoreIds,
           assignedStoreTypes: user.actionScope.assignedStoreTypes ?? [],
         },
+        displayName: user.displayName,
+        email: user.email,
         employeeId: user.employeeId,
         readScope: user.readScope,
         roleCodes: user.roleCodes,
+        username: user.username,
         userId: user.userId,
       },
       v: SESSION_VERSION,
@@ -89,6 +95,9 @@ export class BrowserSessionService {
       user: {
         userId: envelope.user.userId,
         employeeId: envelope.user.employeeId,
+        displayName: envelope.user.displayName,
+        username: envelope.user.username,
+        email: envelope.user.email,
         roleCodes: envelope.user.roleCodes,
         scope: envelope.user.readScope,
         readScope: envelope.user.readScope,

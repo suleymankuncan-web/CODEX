@@ -1,4 +1,5 @@
 import type { AppLocale } from '../../lib/i18n'
+import { normalizeDisplayLabel } from '../../lib/display-labels'
 import type { StoreActionPlan, StoreActionPlanPriority, StoreActionPlanStatus } from '../store-actions/api'
 import type { ReadOnlyStoreActionCandidate } from '../store-actions/candidates'
 import type { WorkflowInboxItem } from '../workflow/contracts'
@@ -369,12 +370,6 @@ function formatPriorityLabel(priority: StoreActionPlanPriority | WorkflowInboxIt
   }
 }
 
-function normalizeDisplayLabel(value: string | null | undefined, fallback: string) {
-  const label = value?.trim()
-  if (!label || isUuidLike(label)) return fallback
-  return label
-}
-
 function formatActorRoleLabel(role: string | null | undefined) {
   switch (role) {
     case 'STORE_MANAGER':
@@ -386,10 +381,6 @@ function formatActorRoleLabel(role: string | null | undefined) {
     default:
       return normalizeDisplayLabel(role, 'Sorumlu yok')
   }
-}
-
-function isUuidLike(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
 }
 
 function buildPlanNextStep(status: StoreActionPlanStatus) {

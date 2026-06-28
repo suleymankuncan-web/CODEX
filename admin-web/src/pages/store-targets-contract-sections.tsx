@@ -10,6 +10,7 @@ import {
   type TargetDistributionAllocation,
   type TargetDistributionRequest,
 } from '../features/targets/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDate, formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import {
@@ -291,7 +292,7 @@ export function TargetCoveragePanel(input: {
                 <strong>{row.displayName}</strong>
                 <small>{row.externalEmployeeRef ?? input.copy.emptyValue}</small>
               </span>
-              <span>{row.storeName || row.storeId}</span>
+              <span>{normalizeDisplayLabel(row.storeName, input.copy.emptyValue)}</span>
               <span className="targets-command-money">
                 {formatAmount(row.targetValue, input.locale, input.copy.emptyValue)}
               </span>
@@ -443,7 +444,7 @@ export function TargetRevisionPanel(input: {
                     <div>
                       <strong>{request.targetLabel}</strong>
                       <p>
-                        {request.storeName || request.storeId} - {formatDate(request.requestMonth, input.locale)}
+                        {normalizeDisplayLabel(request.storeName, input.copy.emptyValue)} - {formatDate(request.requestMonth, input.locale)}
                       </p>
                     </div>
                     <StoreStatusBadge tone="calm">
@@ -578,7 +579,7 @@ function ApprovedRequestSnapshot(input: {
             <Store data-icon="inline-start" />
           </span>
           <span>
-            <strong>{input.request.storeName || input.request.storeId}</strong>
+            <strong>{normalizeDisplayLabel(input.request.storeName, input.copy.emptyValue)}</strong>
             <small>{input.request.targetLabel}</small>
           </span>
         </span>

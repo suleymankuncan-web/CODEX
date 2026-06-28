@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import type { AuthSessionSummary } from '../auth/api'
 import type { AppLocale } from '../../lib/i18n'
+import { normalizeDisplayLabel } from '../../lib/display-labels'
 import { getErrorMessage } from '../../lib/format'
 import { cn } from '../../lib/utils'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
@@ -55,6 +56,8 @@ export function StoreTasksAccessState(input: {
   authSummary: AuthSessionSummary | null
   primaryStoreId: string
 }) {
+  const storeLabel = normalizeDisplayLabel(input.primaryStoreId, 'Mağaza adı yok')
+
   return (
     <Card className="tw:border-border/80 tw:bg-card/85 tw:shadow-sm">
       <CardHeader>
@@ -67,7 +70,7 @@ export function StoreTasksAccessState(input: {
         <CardDescription>Bu sayfa mağaza operasyon rolüyle açılır.</CardDescription>
       </CardHeader>
       <CardContent className="tw:flex tw:flex-wrap tw:gap-2">
-        <Badge variant="outline">{`Mağaza: ${input.primaryStoreId}`}</Badge>
+        <Badge variant="outline">{`Mağaza: ${storeLabel}`}</Badge>
         <Badge variant="secondary">{(input.authSummary?.user.roleCodes ?? []).join(', ') || 'Rol yok'}</Badge>
       </CardContent>
     </Card>

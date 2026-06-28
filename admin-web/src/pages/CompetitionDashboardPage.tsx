@@ -29,6 +29,7 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   AdminMetricStrip,
@@ -604,7 +605,10 @@ function ScopedWarningsSection(input: { warnings: CompetitionWarning[] }) {
                 <CompetitionKeyValue label={t('competition.warningCode')} value={formatState(warning.warningCode)} />
                 <CompetitionKeyValue label={t('competition.periodStart')} value={formatDate(warning.periodStart, locale)} />
                 <CompetitionKeyValue label={t('competition.periodEnd')} value={formatDate(warning.periodEnd, locale)} />
-                <CompetitionKeyValue label={t('competition.store')} value={warning.storeId ?? t('competition.teamLevel')} />
+                <CompetitionKeyValue
+                  label={t('competition.store')}
+                  value={normalizeDisplayLabel(warning.storeName ?? warning.storeId, t('competition.teamLevel'))}
+                />
               </CompetitionKeyValueGrid>
             </CompetitionRow>
           )

@@ -15,6 +15,7 @@ import {
 } from '../components/ui/table'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getChecklistReport } from '../features/reports/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { downloadCsv } from '../lib/download-csv'
 import { formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
@@ -76,6 +77,7 @@ export function ReportsChecklistsPage() {
 
     return rows.filter((row) =>
       [
+        normalizeDisplayLabel(row.storeName, t('reportsChecklists.unknownStore')),
         row.storeId,
         row.checklistTemplateId,
         row.auditCount,
@@ -96,7 +98,9 @@ export function ReportsChecklistsPage() {
       return items.sort((left, right) => toNumber(right.complianceRate) - toNumber(left.complianceRate))
     }
     if (sortBy === 'store') {
-      return items.sort((left, right) => left.storeId.localeCompare(right.storeId))
+      return items.sort((left, right) =>
+        normalizeDisplayLabel(left.storeName, '').localeCompare(normalizeDisplayLabel(right.storeName, '')),
+      )
     }
     return items.sort((left, right) => right.criticalIssueCount - left.criticalIssueCount)
   }, [filteredRows, sortBy])
@@ -238,10 +242,10 @@ export function ReportsChecklistsPage() {
             onExport={() =>
               downloadCsv({
                 filename: `checklists-${snapshotRunId}.csv`,
-                columns: ['snapshotRunId', 'storeId', 'checklistTemplateId', 'auditCount', 'avgScore', 'complianceRate', 'criticalIssueCount'],
+                columns: ['snapshotRunId', 'storeName', 'checklistTemplateId', 'auditCount', 'avgScore', 'complianceRate', 'criticalIssueCount'],
                 rows: sortedRows.map((row) => [
                   row.snapshotRunId,
-                  row.storeId,
+                  normalizeDisplayLabel(row.storeName, t('reportsChecklists.unknownStore')),
                   row.checklistTemplateId,
                   row.auditCount,
                   row.avgScore,
@@ -280,7 +284,7 @@ export function ReportsChecklistsPage() {
               {sortedRows.map((row) => (
                 <TableRow key={`${row.storeId}:${row.checklistTemplateId}`}>
                   <TableCell>
-                    <div className="tw:font-medium">{row.storeId}</div>
+                    <div className="tw:font-medium">{normalizeDisplayLabel(row.storeName, t('reportsChecklists.unknownStore'))}</div>
                     <div className="tw:text-xs tw:text-muted-foreground">{row.checklistTemplateId}</div>
                   </TableCell>
                   <TableCell>{row.auditCount}</TableCell>

@@ -1,4 +1,5 @@
 import type { Tone } from '../../components/dashboard-primitives'
+import { normalizeDisplayLabel } from '../../lib/display-labels'
 import type { ApiGetResponse } from '../../lib/openapi-client'
 import type { TargetDistributionRequest } from '../targets/api'
 
@@ -44,7 +45,7 @@ export function toTargetApprovalInboxItem(
     sourceType: 'target_distribution_request',
     sourceId: item.requestId,
     title: item.targetLabel,
-    summary: `${item.storeName || item.storeId} icin ${item.allocationCount} kisilik hedef dagitimi talebi`,
+    summary: `${normalizeDisplayLabel(item.storeName, 'Mağaza adı yok')} icin ${item.allocationCount} kisilik hedef dagitimi talebi`,
     companyId: item.companyId,
     regionId: item.regionId,
     storeId: item.storeId,

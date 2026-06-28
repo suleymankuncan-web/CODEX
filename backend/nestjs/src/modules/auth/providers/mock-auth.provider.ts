@@ -38,6 +38,9 @@ export class MockAuthProvider implements AuthProvider {
       userId: (request.headers["x-user-id"] as string | undefined) ??
         "80000000-0000-0000-0000-000000000001",
       employeeId: request.headers["x-employee-id"] as string | undefined,
+      displayName: request.headers["x-display-name"] as string | undefined,
+      username: request.headers["x-username"] as string | undefined,
+      email: request.headers["x-email"] as string | undefined,
       roleCodes: roleCodes.length ? roleCodes : ["SUPER_ADMIN"],
       readScope: {
         companyIds: readCompanyIds.length

@@ -37,6 +37,7 @@ import {
   type SellerCodeRequest,
 } from '../features/workforce/api'
 import { formatDateTime, formatState, getErrorMessage } from '../lib/format'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
 function canUseAdminInbox(authSummary: AuthSessionSummary | null) {
@@ -807,7 +808,7 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
       <AdminKeyValueGrid>
         <KeyValue label={t('storeTasks.workType')} value={formatWorkflowItemTypeLabel(input.item.itemType, t)} />
         <KeyValue label={t('storeTasks.actorRole')} value={formatState(input.item.actorRole)} />
-        <KeyValue label={t('storeTasks.store')} value={input.item.storeName || input.item.storeId} />
+        <KeyValue label={t('storeTasks.store')} value={normalizeDisplayLabel(input.item.storeName, t('storeTasks.unknownStore'))} />
         <KeyValue
           label={t('storeTasks.actionTime')}
           value={input.item.needsAttentionAt ? formatDateTime(input.item.needsAttentionAt, locale) : t('storeTasks.now')}

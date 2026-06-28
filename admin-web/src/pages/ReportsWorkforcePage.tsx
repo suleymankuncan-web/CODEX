@@ -15,6 +15,7 @@ import {
 } from '../components/ui/table'
 import { useLocalization } from '../features/localization/useLocalization'
 import { getWorkforceReport } from '../features/reports/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { downloadCsv } from '../lib/download-csv'
 import { formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
@@ -62,17 +63,27 @@ export function ReportsWorkforcePage() {
     }
 
     return rows.filter((row) =>
-      [row.storeId, row.positionId, row.gapHeadcount, row.gapFte, row.activeHeadcount, row.plannedHeadcount]
+      [
+        normalizeDisplayLabel(row.storeName, t('reportsWorkforce.unknownStore')),
+        row.storeId,
+        row.positionId,
+        row.gapHeadcount,
+        row.gapFte,
+        row.activeHeadcount,
+        row.plannedHeadcount,
+      ]
         .join(' ')
         .toLowerCase()
         .includes(input),
     )
-  }, [deferredSearch, rows])
+  }, [deferredSearch, rows, t])
 
   const sortedRows = useMemo(() => {
     const items = [...filteredRows]
     if (sortBy === 'store') {
-      return items.sort((left, right) => left.storeId.localeCompare(right.storeId))
+      return items.sort((left, right) =>
+        normalizeDisplayLabel(left.storeName, '').localeCompare(normalizeDisplayLabel(right.storeName, '')),
+      )
     }
     if (sortBy === 'position') {
       return items.sort((left, right) => left.positionId.localeCompare(right.positionId))
@@ -237,10 +248,10 @@ export function ReportsWorkforcePage() {
             onExport={() =>
               downloadCsv({
                 filename: `workforce-${snapshotRunId}.csv`,
-                columns: ['snapshotRunId', 'storeId', 'positionId', 'activeHeadcount', 'activeFte', 'plannedHeadcount', 'plannedFte', 'gapHeadcount', 'gapFte'],
+                columns: ['snapshotRunId', 'storeName', 'positionId', 'activeHeadcount', 'activeFte', 'plannedHeadcount', 'plannedFte', 'gapHeadcount', 'gapFte'],
                 rows: sortedRows.map((row) => [
                   row.snapshotRunId,
-                  row.storeId,
+                  normalizeDisplayLabel(row.storeName, t('reportsWorkforce.unknownStore')),
                   row.positionId,
                   row.activeHeadcount,
                   row.activeFte,
@@ -289,7 +300,7 @@ export function ReportsWorkforcePage() {
                 return (
                   <TableRow key={`${row.storeId}:${row.positionId}`}>
                     <TableCell>
-                      <div className="tw:font-medium">{row.storeId}</div>
+                      <div className="tw:font-medium">{normalizeDisplayLabel(row.storeName, t('reportsWorkforce.unknownStore'))}</div>
                       <div className="tw:text-xs tw:text-muted-foreground">{row.positionId}</div>
                     </TableCell>
                     <TableCell>{formatMetric(toNumber(row.activeHeadcount), locale)}</TableCell>

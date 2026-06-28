@@ -96,6 +96,7 @@ export class ReportingService {
       result.rows.map((item) => ({
         snapshotRunId: item.snapshot_run_id,
         storeId: item.store_id,
+        storeName: item.store_name,
         positionId: item.position_id,
         activeHeadcount: item.active_headcount,
         activeFte: item.active_fte,
@@ -124,6 +125,7 @@ export class ReportingService {
       result.rows.map((item) => ({
         snapshotRunId: item.snapshot_run_id,
         storeId: item.store_id,
+        storeName: item.store_name,
         kpiId: item.kpi_id,
         kpiCode: item.kpi_code,
         kpiName: item.kpi_name,
@@ -154,6 +156,7 @@ export class ReportingService {
       result.rows.map((item) => ({
         snapshotRunId: item.snapshot_run_id,
         storeId: item.store_id,
+        storeName: item.store_name,
         checklistTemplateId: item.checklist_template_id,
         auditCount: item.audit_count,
         avgScore: item.avg_score,
@@ -183,8 +186,11 @@ export class ReportingService {
         snapshotRunId: item.snapshot_run_id,
         scopeType: item.scope_type,
         companyId: item.company_id,
+        companyName: item.company_name,
         regionId: item.region_id,
+        regionName: item.region_name,
         storeId: item.store_id,
+        storeName: item.store_name,
         periodStart: item.period_start,
         periodEnd: item.period_end,
         openingHeadcount: item.opening_headcount,

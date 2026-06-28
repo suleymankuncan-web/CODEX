@@ -2,6 +2,7 @@ import { ChevronRight, Store as StoreIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { ChecklistAcknowledgementItem } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatNumber } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import type {
@@ -177,6 +178,7 @@ function ChecklistResultRow(input: {
   const statusLabel = hasAcknowledgement
     ? input.t('storeChecklists.acknowledged')
     : input.t('storeChecklists.needsAcknowledgement')
+  const storeLabel = normalizeDisplayLabel(input.item.storeName, input.t('storeChecklists.unknown'))
 
   return (
     <article className={`store-checklists-history-row store-checklists-result-row store-checklists-visit-row store-checklists-visit-row-${rowTone}`}>
@@ -185,7 +187,7 @@ function ChecklistResultRow(input: {
           <StoreIcon />
         </span>
         <div className="store-checklists-row-main">
-          <strong>{input.item.storeName || input.item.storeId}</strong>
+          <strong>{storeLabel}</strong>
           <p>{input.item.templateName}</p>
           <span>{formatChecklistTemplateType(input.t, input.item.templateType)}</span>
         </div>

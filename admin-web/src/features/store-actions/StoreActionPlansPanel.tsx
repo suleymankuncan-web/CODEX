@@ -10,7 +10,8 @@ import {
   StoreStatusBadge,
   type StoreSurfaceTone,
 } from '../../pages/store-surface-primitives'
-import { formatDate, formatDateTime, getErrorMessage } from '../../lib/format'
+import { formatDate, formatDateTime } from '../../lib/format'
+import { normalizeDisplayLabel } from '../../lib/display-labels'
 import type { AppLocale } from '../../lib/i18n'
 import type { TranslateFunction } from '../localization/dictionary'
 import type {
@@ -94,7 +95,9 @@ function renderPanelBody(input: {
             {input.isFetching ? input.t('storeTasks.retryingAction') : input.t('storeTasks.retryAction')}
           </Button>
         </div>
-        <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">{getErrorMessage(input.error)}</p>
+        <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">
+          {input.t('storeTasks.actionPlansErrorCopy')}
+        </p>
       </StoreStackedRow>
     )
   }
@@ -188,6 +191,7 @@ function StoreActionPlanRow(input: {
 }) {
   const safeSourceDeepLink = getSafeSourceDeepLink(input.plan.sourceDeepLink)
   const summary = input.plan.summary?.trim()
+  const storeLabel = normalizeDisplayLabel(input.plan.storeName, input.t('storeTasks.unknownStore'))
 
   return (
     <StoreStackedRow testId="store-action-plan-row">
@@ -211,7 +215,7 @@ function StoreActionPlanRow(input: {
 
         <StoreInfoGrid
           items={[
-            { label: input.t('storeTasks.actionPlansStore'), value: input.plan.storeId },
+            { label: input.t('storeTasks.actionPlansStore'), value: storeLabel },
             {
               label: input.t('storeTasks.actionPlansDueOn'),
               value: formatActionPlanDate(input.plan.dueOn, input.locale),

@@ -26,6 +26,7 @@ import {
 import { toTargetApprovalInboxItem } from '../features/workflow/contracts'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDate, formatDateTime, formatNumber, formatState, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { cn } from '../lib/utils'
@@ -339,7 +340,7 @@ function TargetApprovalDecisionBrief(input: {
           label={input.t('adminTargets.nextRequest')}
           value={
             input.firstPendingItem
-              ? input.firstPendingItem.storeName || input.firstPendingItem.storeId
+              ? normalizeDisplayLabel(input.firstPendingItem.storeName, input.t('adminTargets.unknown'))
               : input.t('adminTargets.noPendingRequest')
           }
         />
@@ -359,7 +360,7 @@ function TargetApprovalDecisionBrief(input: {
       {input.firstPendingItem ? (
         <AdminStatePanel
           title={input.t('adminTargets.nextRequestEvidence', {
-            store: input.firstPendingItem.storeName || input.firstPendingItem.storeId,
+            store: normalizeDisplayLabel(input.firstPendingItem.storeName, input.t('adminTargets.unknown')),
             month: formatDate(input.firstPendingItem.requestMonth, input.locale),
           })}
           description={input.t('adminTargets.actionScopeEvidence', {
@@ -387,7 +388,7 @@ function TargetCoverageAttentionRow(input: { item: TargetCoverageRow }) {
               </h3>
             </div>
             <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
-              {input.item.storeName || input.item.storeId}
+              {normalizeDisplayLabel(input.item.storeName, t('adminTargets.unknown'))}
             </p>
           </div>
           <AdminSurfaceBadge tone={mapTargetCoverageStatusTone(input.item.targetStatus)}>
@@ -428,7 +429,7 @@ function TargetApprovalRow(input: {
             <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-foreground">{input.item.targetLabel}</h3>
             <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
               {t('adminTargets.requestSummary', {
-                store: input.item.storeName || input.item.storeId,
+                store: normalizeDisplayLabel(input.item.storeName, t('adminTargets.unknown')),
                 month: formatDate(input.item.requestMonth, locale),
               })}
             </p>
@@ -444,7 +445,10 @@ function TargetApprovalRow(input: {
           />
           <AdminKeyValue label={t('adminTargets.allocationCount')} value={String(input.item.allocationCount)} />
           <AdminKeyValue label={t('adminTargets.submission')} value={formatDateTime(input.item.createdAt, locale)} />
-          <AdminKeyValue label={t('adminTargets.requestOwner')} value={input.item.submittedByUserId} />
+          <AdminKeyValue
+            label={t('adminTargets.requestOwner')}
+            value={normalizeDisplayLabel(input.item.submittedByUserId, t('adminTargets.unknown'))}
+          />
         </AdminKeyValueGrid>
         {input.item.requestReason ? (
           <p className="tw:text-sm tw:text-muted-foreground">
@@ -544,7 +548,7 @@ function ApprovedTargetRequestRow(input: {
             <h3 className="tw:m-0 tw:text-base tw:font-medium tw:text-foreground">{input.item.targetLabel}</h3>
             <p className="tw:mt-1 tw:text-sm tw:text-muted-foreground">
               {input.t('adminTargets.requestSummary', {
-                store: input.item.storeName || input.item.storeId,
+                store: normalizeDisplayLabel(input.item.storeName, input.t('adminTargets.unknown')),
                 month: formatDate(input.item.requestMonth, input.locale),
               })}
             </p>
@@ -563,7 +567,10 @@ function ApprovedTargetRequestRow(input: {
             label={input.t('adminTargets.approvedAt')}
             value={input.item.approvedAt ? formatDateTime(input.item.approvedAt, input.locale) : input.t('adminTargets.unknown')}
           />
-          <AdminKeyValue label={input.t('adminTargets.approver')} value={input.item.approvedByUserId ?? input.t('adminTargets.unknown')} />
+          <AdminKeyValue
+            label={input.t('adminTargets.approver')}
+            value={normalizeDisplayLabel(input.item.approvedByUserId, input.t('adminTargets.unknown'))}
+          />
         </AdminKeyValueGrid>
         {input.item.approvalNote ? (
           <p className="tw:text-sm tw:text-muted-foreground">{input.item.approvalNote}</p>

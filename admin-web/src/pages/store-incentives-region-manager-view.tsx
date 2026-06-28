@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import {
   type SalesTargetIncentiveProjection,
   type SalesTargetIncentiveResponse,
@@ -472,6 +473,7 @@ function RegionStoreCard(input: {
   const achievementProgress = toProgressPercent(input.projection.storeAchievementPct) ?? 0
   const gate = getStoreGateState(input.projection)
   const gateLabel = getStoreGateLabel(input.projection)
+  const storeLabel = normalizeDisplayLabel(input.projection.storeName, t('storeIncentives.unknownStore'))
 
   return (
     <AccordionItem
@@ -498,7 +500,7 @@ function RegionStoreCard(input: {
             </span>
             <span className="tw:min-w-0">
               <span className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">
-                {input.projection.storeName}
+                {storeLabel}
               </span>
               <span className="tw:mt-0.5 tw:block tw:text-xs tw:text-muted-foreground">
                 {t('storeIncentives.regionManagerStoreType')}

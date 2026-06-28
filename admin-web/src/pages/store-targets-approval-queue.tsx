@@ -11,6 +11,7 @@ import {
   approveTargetDistributionRequest,
   type TargetDistributionRequest,
 } from '../features/targets/api'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { StoreEmptyState, StoreStatusBadge } from './store-surface-primitives'
@@ -126,6 +127,7 @@ export function TargetApprovalQueue(input: {
               )
               const canApprove = canApproveTargetDistributionRequest(input.authSummary, request.storeId)
               const isSelected = selectedRequest?.requestId === request.requestId
+              const storeLabel = normalizeDisplayLabel(request.storeName, input.copy.emptyValue)
 
               return (
                 <button
@@ -143,7 +145,7 @@ export function TargetApprovalQueue(input: {
                       <Store data-icon="inline-start" />
                     </span>
                     <span>
-                      <strong>{request.storeName || request.storeId}</strong>
+                      <strong>{storeLabel}</strong>
                       <small>{formatRequestPeriod(request.requestMonth, input.locale)}</small>
                     </span>
                   </span>
@@ -221,6 +223,7 @@ function TargetApprovalDrawer(input: {
     input.approveMutation.isPending &&
     input.approveMutation.variables?.requestId === input.request.requestId
   const hasNote = Boolean(input.approvalNote.trim())
+  const storeLabel = normalizeDisplayLabel(input.request.storeName, input.copy.emptyValue)
   const canSubmit =
     input.canApprove &&
     !isApproving &&
@@ -235,11 +238,11 @@ function TargetApprovalDrawer(input: {
         aria-label="Kapat"
         onClick={input.onClose}
       />
-      <aside className="targets-command-detail-drawer" aria-label={`${input.request.storeName} hedef kararı`}>
+      <aside className="targets-command-detail-drawer" aria-label={`${storeLabel} hedef kararı`}>
         <header className="targets-command-detail-head">
           <div>
             <StoreStatusBadge tone="warning">{input.copy.pendingStatus}</StoreStatusBadge>
-            <h3>{input.request.storeName || input.request.storeId}</h3>
+            <h3>{storeLabel}</h3>
             <p>
               {formatRequestPeriod(input.request.requestMonth, input.locale)}
               {input.request.targetLabel ? ` · ${input.request.targetLabel}` : ''}

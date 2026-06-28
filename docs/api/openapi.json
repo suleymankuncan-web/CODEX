@@ -6875,6 +6875,7 @@
                 "stageId",
                 "teamId",
                 "storeId",
+                "storeName",
                 "warningCode",
                 "warningLevel",
                 "periodStart",
@@ -6894,6 +6895,10 @@
                   "nullable": true
                 },
                 "storeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "storeName": {
                   "type": "string",
                   "nullable": true
                 },
@@ -10638,6 +10643,7 @@
               "required": [
                 "snapshotRunId",
                 "storeId",
+                "storeName",
                 "positionId",
                 "activeHeadcount",
                 "activeFte",
@@ -10652,6 +10658,10 @@
                 },
                 "storeId": {
                   "type": "string"
+                },
+                "storeName": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "positionId": {
                   "type": "string"
@@ -10720,6 +10730,7 @@
               "required": [
                 "snapshotRunId",
                 "storeId",
+                "storeName",
                 "kpiId",
                 "kpiCode",
                 "kpiName",
@@ -10736,6 +10747,10 @@
                 },
                 "storeId": {
                   "type": "string"
+                },
+                "storeName": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "kpiId": {
                   "type": "string"
@@ -13000,6 +13015,7 @@
               "required": [
                 "snapshotRunId",
                 "storeId",
+                "storeName",
                 "checklistTemplateId",
                 "auditCount",
                 "avgScore",
@@ -13012,6 +13028,10 @@
                 },
                 "storeId": {
                   "type": "string"
+                },
+                "storeName": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "checklistTemplateId": {
                   "type": "string"
@@ -13079,8 +13099,11 @@
                 "snapshotRunId",
                 "scopeType",
                 "companyId",
+                "companyName",
                 "regionId",
+                "regionName",
                 "storeId",
+                "storeName",
                 "periodStart",
                 "periodEnd",
                 "openingHeadcount",
@@ -13100,11 +13123,23 @@
                   "type": "string",
                   "nullable": true
                 },
+                "companyName": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "regionId": {
                   "type": "string",
                   "nullable": true
                 },
+                "regionName": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "storeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "storeName": {
                   "type": "string",
                   "nullable": true
                 },
@@ -15021,6 +15056,9 @@
             "required": [
               "userId",
               "employeeId",
+              "displayName",
+              "username",
+              "email",
               "roleCodes",
               "scope",
               "readScope",
@@ -15032,6 +15070,18 @@
                 "type": "string"
               },
               "employeeId": {
+                "type": "string",
+                "nullable": true
+              },
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              },
+              "username": {
+                "type": "string",
+                "nullable": true
+              },
+              "email": {
                 "type": "string",
                 "nullable": true
               },

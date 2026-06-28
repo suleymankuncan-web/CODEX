@@ -21,6 +21,7 @@ import { NavLink } from 'react-router-dom'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
+import { resolveUserDisplayLabel } from '../lib/display-labels'
 import {
   getRoleAwareStoreNavigation,
   getStorePersonaLabelKey,
@@ -46,12 +47,8 @@ const iconById: Record<StoreNavIconId, LucideIcon> = {
   workforce: UsersRound,
 }
 
-function getIdentityLabel(authSummary: AuthSessionSummary | null) {
-  const employeeId = authSummary?.user.employeeId?.trim()
-  const userId = authSummary?.user.userId?.trim()
-  if (employeeId) return employeeId
-  if (userId) return userId
-  return null
+function getIdentityLabel(authSummary: AuthSessionSummary | null, fallback: string) {
+  return resolveUserDisplayLabel(authSummary?.user, fallback)
 }
 
 export function StoreSidebar(input: {
@@ -62,7 +59,7 @@ export function StoreSidebar(input: {
   const persona = resolveStorePersona(input.authSummary)
   const personaLabel = t(getStorePersonaLabelKey(persona))
   const navItems = getRoleAwareStoreNavigation(input.authSummary)
-  const identityLabel = getIdentityLabel(input.authSummary)
+  const identityLabel = getIdentityLabel(input.authSummary, personaLabel)
   const assignedStoreCount = input.authSummary?.scopeSummary.assignedStoreCount ?? 0
   const scopedStoreCount =
     input.authSummary?.scopeSummary.storeCount ??
@@ -137,7 +134,7 @@ export function StoreSidebar(input: {
             <Store size={18} />
           </span>
           <span className="store-command-identity-text">
-            <strong>{identityLabel ?? t('storeHome.sidebar.sessionUser')}</strong>
+            <strong>{identityLabel}</strong>
             <small>{personaLabel} / {identityMeta}</small>
           </span>
         </div>

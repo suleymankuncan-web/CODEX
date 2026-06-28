@@ -6,6 +6,7 @@ export const storeKpisTr = {
   'storeKpis.unavailableCopy':
     'KPI raporlama yetkisi açıldığında mağaza skoru ve aksiyon sinyalleri burada görünür.',
   'storeKpis.store': 'Mağaza',
+  'storeKpis.storeScopeCount': '{count} mağaza',
   'storeKpis.noStoreScope': 'Yetkili mağaza yok',
   'storeKpis.status': 'Durum',
   'storeKpis.regionOverviewEyebrow': 'Bölge KPI',
@@ -282,6 +283,7 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.unavailableCopy':
     'Store score and action signals will appear here when KPI reporting access is enabled.',
   'storeKpis.store': 'Store',
+  'storeKpis.storeScopeCount': '{count} stores',
   'storeKpis.noStoreScope': 'No authorized store',
   'storeKpis.status': 'Status',
   'storeKpis.regionOverviewEyebrow': 'Region KPI',
