@@ -17763,7 +17763,9 @@
           "companyId",
           "regionId",
           "storeId",
+          "storeName",
           "ownerUserId",
+          "ownerDisplayName",
           "createdByUserId",
           "sourceType",
           "sourceId",
@@ -17797,8 +17799,16 @@
           "storeId": {
             "type": "string"
           },
+          "storeName": {
+            "type": "string",
+            "nullable": true
+          },
           "ownerUserId": {
             "type": "string"
+          },
+          "ownerDisplayName": {
+            "type": "string",
+            "nullable": true
           },
           "createdByUserId": {
             "type": "string"
@@ -17901,7 +17911,9 @@
                 "companyId",
                 "regionId",
                 "storeId",
+                "storeName",
                 "ownerUserId",
+                "ownerDisplayName",
                 "createdByUserId",
                 "sourceType",
                 "sourceId",
@@ -17935,8 +17947,16 @@
                 "storeId": {
                   "type": "string"
                 },
+                "storeName": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "ownerUserId": {
                   "type": "string"
+                },
+                "ownerDisplayName": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "createdByUserId": {
                   "type": "string"
@@ -18072,7 +18092,9 @@
                   "companyId",
                   "regionId",
                   "storeId",
+                  "storeName",
                   "ownerUserId",
+                  "ownerDisplayName",
                   "createdByUserId",
                   "sourceType",
                   "sourceId",
@@ -18106,8 +18128,16 @@
                   "storeId": {
                     "type": "string"
                   },
+                  "storeName": {
+                    "type": "string",
+                    "nullable": true
+                  },
                   "ownerUserId": {
                     "type": "string"
+                  },
+                  "ownerDisplayName": {
+                    "type": "string",
+                    "nullable": true
                   },
                   "createdByUserId": {
                     "type": "string"
@@ -18233,7 +18263,9 @@
                   "companyId",
                   "regionId",
                   "storeId",
+                  "storeName",
                   "ownerUserId",
+                  "ownerDisplayName",
                   "createdByUserId",
                   "sourceType",
                   "sourceId",
@@ -18267,8 +18299,16 @@
                   "storeId": {
                     "type": "string"
                   },
+                  "storeName": {
+                    "type": "string",
+                    "nullable": true
+                  },
                   "ownerUserId": {
                     "type": "string"
+                  },
+                  "ownerDisplayName": {
+                    "type": "string",
+                    "nullable": true
                   },
                   "createdByUserId": {
                     "type": "string"

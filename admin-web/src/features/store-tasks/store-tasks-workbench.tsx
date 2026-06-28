@@ -245,7 +245,7 @@ export function StoreTasksCommandCenter(input: {
         {input.error ? (
           <div className="stcc-error">
             <strong>Aksiyon planları alınamadı</strong>
-            <span>{getErrorMessage(input.error)}</span>
+            <span>Aksiyon planları şu anda listelenemiyor. Diğer görev kayıtları gösterilmeye devam eder.</span>
             <Button type="button" variant="outline" onClick={input.onRetryActionPlans}>
               Tekrar dene
             </Button>

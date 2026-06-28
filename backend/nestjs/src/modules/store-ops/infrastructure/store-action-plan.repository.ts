@@ -13,7 +13,9 @@ export type StoreActionPlan = {
   companyId: string;
   regionId: string;
   storeId: string;
+  storeName: string | null;
   ownerUserId: string;
+  ownerDisplayName: string | null;
   createdByUserId: string;
   sourceType: StoreActionPlanSourceType;
   sourceId: string;
@@ -40,7 +42,9 @@ type StoreActionPlanRow = {
   company_id: string;
   region_id: string;
   store_id: string;
+  store_name?: string | null;
   owner_user_id: string;
+  owner_display_name?: string | null;
   created_by_user_id: string;
   source_type: StoreActionPlanSourceType;
   source_id: string;
@@ -100,6 +104,48 @@ const STORE_ACTION_PLAN_COLUMNS = `
   updated_at
 `;
 
+const STORE_ACTION_PLAN_READ_COLUMNS = `
+  p.store_action_plan_id,
+  p.company_id,
+  p.region_id,
+  p.store_id,
+  s.store_name,
+  p.owner_user_id,
+  COALESCE(
+    NULLIF(BTRIM(CONCAT_WS(' ', owner_employee.first_name, owner_employee.last_name)), ''),
+    NULLIF(owner_account.username, ''),
+    NULLIF(owner_account.email, '')
+  ) AS owner_display_name,
+  p.created_by_user_id,
+  p.source_type,
+  p.source_id,
+  p.source_deep_link,
+  p.source_snapshot_run_id,
+  p.source_kpi_id,
+  p.title,
+  p.summary,
+  p.priority,
+  p.status,
+  p.due_on,
+  p.resolution_note,
+  p.closed_by_user_id,
+  p.closed_at,
+  p.cancel_reason,
+  p.cancelled_by_user_id,
+  p.cancelled_at,
+  p.created_at,
+  p.updated_at
+`;
+
+const STORE_ACTION_PLAN_READ_JOINS = `
+  INNER JOIN ops.store s
+    ON s.store_id = p.store_id
+  LEFT JOIN ops.user_account owner_account
+    ON owner_account.user_id = p.owner_user_id
+  LEFT JOIN ops.employee owner_employee
+    ON owner_employee.employee_id = owner_account.employee_id
+`;
+
 @Injectable()
 export class StoreActionPlanRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -107,9 +153,10 @@ export class StoreActionPlanRepository {
   async getPlanById(actionPlanId: string) {
     const result = await this.databaseService.query<StoreActionPlanRow>(
       `
-        SELECT ${STORE_ACTION_PLAN_COLUMNS}
-        FROM ops.store_action_plan
-        WHERE store_action_plan_id = $1::uuid
+        SELECT ${STORE_ACTION_PLAN_READ_COLUMNS}
+        FROM ops.store_action_plan p
+        ${STORE_ACTION_PLAN_READ_JOINS}
+        WHERE p.store_action_plan_id = $1::uuid
       `,
       [actionPlanId],
     );
@@ -131,18 +178,18 @@ export class StoreActionPlanRepository {
     }
 
     const params: unknown[] = [[...input.storeIds]];
-    const filters = ["store_id = ANY($1::uuid[])"];
+    const filters = ["p.store_id = ANY($1::uuid[])"];
 
     if (input.status) {
       params.push(input.status);
-      filters.push(`status = $${params.length}`);
+      filters.push(`p.status = $${params.length}`);
     }
 
     const whereSql = filters.join(" AND ");
     const countResult = await this.databaseService.query<{ total: number }>(
       `
         SELECT COUNT(*)::int AS total
-        FROM ops.store_action_plan
+        FROM ops.store_action_plan p
         WHERE ${whereSql}
       `,
       params,
@@ -152,10 +199,11 @@ export class StoreActionPlanRepository {
     const offsetParam = params.length + 2;
     const result = await this.databaseService.query<StoreActionPlanRow>(
       `
-        SELECT ${STORE_ACTION_PLAN_COLUMNS}
-        FROM ops.store_action_plan
+        SELECT ${STORE_ACTION_PLAN_READ_COLUMNS}
+        FROM ops.store_action_plan p
+        ${STORE_ACTION_PLAN_READ_JOINS}
         WHERE ${whereSql}
-        ORDER BY due_on ASC, updated_at DESC
+        ORDER BY p.due_on ASC, p.updated_at DESC
         LIMIT $${limitParam}
         OFFSET $${offsetParam}
       `,
@@ -182,22 +230,27 @@ export class StoreActionPlanRepository {
 
     const params: unknown[] = [];
     const filters: string[] = [];
-    this.addScopeFilters(filters, params, {
-      companyIds: input.companyIds ?? [],
-      regionIds: input.regionIds ?? [],
-      storeIds: input.storeIds ?? [],
-    });
+    this.addScopeFilters(
+      filters,
+      params,
+      {
+        companyIds: input.companyIds ?? [],
+        regionIds: input.regionIds ?? [],
+        storeIds: input.storeIds ?? [],
+      },
+      "p",
+    );
 
     if (filters.length === 0) {
       return [];
     }
 
     params.push([...input.statuses]);
-    filters.push(`status = ANY($${params.length}::text[])`);
+    filters.push(`p.status = ANY($${params.length}::text[])`);
 
     if (input.sourceTypes?.length) {
       params.push([...input.sourceTypes]);
-      filters.push(`source_type = ANY($${params.length}::text[])`);
+      filters.push(`p.source_type = ANY($${params.length}::text[])`);
     }
 
     params.push(input.limit);
@@ -206,10 +259,11 @@ export class StoreActionPlanRepository {
 
     const result = await this.databaseService.query<StoreActionPlanRow>(
       `
-        SELECT ${STORE_ACTION_PLAN_COLUMNS}
-        FROM ops.store_action_plan
+        SELECT ${STORE_ACTION_PLAN_READ_COLUMNS}
+        FROM ops.store_action_plan p
+        ${STORE_ACTION_PLAN_READ_JOINS}
         WHERE ${whereSql}
-        ORDER BY due_on ASC, updated_at DESC
+        ORDER BY p.due_on ASC, p.updated_at DESC
         LIMIT $${limitParam}
       `,
       params,
@@ -484,20 +538,22 @@ export class StoreActionPlanRepository {
       regionIds: readonly string[];
       storeIds: readonly string[];
     },
+    alias = "",
   ) {
+    const prefix = alias ? `${alias}.` : "";
     if (scope.companyIds.length > 0) {
       params.push([...scope.companyIds]);
-      filters.push(`company_id = ANY($${params.length}::uuid[])`);
+      filters.push(`${prefix}company_id = ANY($${params.length}::uuid[])`);
     }
 
     if (scope.regionIds.length > 0) {
       params.push([...scope.regionIds]);
-      filters.push(`region_id = ANY($${params.length}::uuid[])`);
+      filters.push(`${prefix}region_id = ANY($${params.length}::uuid[])`);
     }
 
     if (scope.storeIds.length > 0) {
       params.push([...scope.storeIds]);
-      filters.push(`store_id = ANY($${params.length}::uuid[])`);
+      filters.push(`${prefix}store_id = ANY($${params.length}::uuid[])`);
     }
   }
 
@@ -507,7 +563,9 @@ export class StoreActionPlanRepository {
       companyId: row.company_id,
       regionId: row.region_id,
       storeId: row.store_id,
+      storeName: row.store_name ?? null,
       ownerUserId: row.owner_user_id,
+      ownerDisplayName: row.owner_display_name ?? null,
       createdByUserId: row.created_by_user_id,
       sourceType: row.source_type,
       sourceId: row.source_id,
