@@ -391,11 +391,7 @@ export function getChecklistResultDigest(
   }
 }
 
-export function formatCompletedSentence(
-  t: TranslateFunction,
-  locale: AppLocale,
-  item: ChecklistAcknowledgementItem,
-) {
+export function formatCompletedSentence(t: TranslateFunction, locale: AppLocale, item: ChecklistAcknowledgementItem) {
   return t('storeChecklists.completedSentence', {
     store: normalizeDisplayLabel(item.storeName, t('storeChecklists.unknown')),
     category: item.category,
@@ -604,11 +600,7 @@ export function compareChecklistItems(
 ) {
   switch (key) {
     case 'store':
-      return compareText(
-        normalizeDisplayLabel(left.storeName, ''),
-        normalizeDisplayLabel(right.storeName, ''),
-        locale,
-      )
+      return compareText(normalizeDisplayLabel(left.storeName, ''), normalizeDisplayLabel(right.storeName, ''), locale)
     case 'score':
       return compareNumber(left.totalScore ?? -1, right.totalScore ?? -1)
     case 'status':

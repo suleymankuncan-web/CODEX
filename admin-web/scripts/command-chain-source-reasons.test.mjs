@@ -5,7 +5,19 @@ import { Buffer } from 'node:buffer'
 import ts from 'typescript'
 
 const moduleUrl = new URL('../src/features/command-chain/source-reasons.ts', import.meta.url)
+const displayLabelsUrl = new URL('../src/lib/display-labels.ts', import.meta.url)
 const source = await readFile(moduleUrl, 'utf8')
+const displayLabelsSource = await readFile(displayLabelsUrl, 'utf8')
+const displayLabelsTranspiled = ts.transpileModule(displayLabelsSource, {
+  compilerOptions: {
+    module: ts.ModuleKind.ES2022,
+    target: ts.ScriptTarget.ES2022,
+    verbatimModuleSyntax: true,
+  },
+})
+const displayLabelsDataUrl = `data:text/javascript;base64,${Buffer.from(
+  displayLabelsTranspiled.outputText,
+).toString('base64')}`
 const transpiled = ts.transpileModule(source, {
   compilerOptions: {
     module: ts.ModuleKind.ES2022,
@@ -14,7 +26,9 @@ const transpiled = ts.transpileModule(source, {
   },
 })
 const commandChain = await import(
-  `data:text/javascript;base64,${Buffer.from(transpiled.outputText).toString('base64')}`
+  `data:text/javascript;base64,${Buffer.from(
+    transpiled.outputText.replace("'../../lib/display-labels'", JSON.stringify(displayLabelsDataUrl)),
+  ).toString('base64')}`
 )
 
 test('Command Chain reason helper keeps store personnel out of management reasons', () => {

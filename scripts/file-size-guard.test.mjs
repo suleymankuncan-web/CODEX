@@ -8,11 +8,11 @@ const trackedExtensions = new Set(['.css', '.js', '.jsx', '.mjs', '.ts', '.tsx']
 const generatedPrefixes = ['admin-web/src/generated/']
 
 const oversizedBaseline = new Map([
-  ['backend/nestjs/src/openapi/generate-openapi.ts', 5155],
+  ['backend/nestjs/src/openapi/generate-openapi.ts', 5147],
   ['admin-web/src/pages/MasterDataBootstrapPage.tsx', 1568],
   ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1123],
   ['scripts/generate-system-flow.mjs', 1433],
-  ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1245],
+  ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1244],
   ['admin-web/src/pages/IntegrationDashboardPage.tsx', 1388],
   ['admin-web/src/pages/ImportBatchDetailPage.tsx', 1423],
   ['admin-web/src/pages/AdminKpiConfigPage.tsx', 1373],
@@ -30,7 +30,7 @@ const oversizedBaseline = new Map([
   ['admin-web/src/features/competitions/stage-builder-package-section.tsx', 802],
   ['backend/nestjs/src/modules/store-ops/infrastructure/snapshot-operations.repository.ts', 842],
   ['admin-web/src/pages/OperationsControlTowerPage.tsx', 940],
-  ['admin-web/src/pages/store-checklists-logic.ts', 706],
+  ['admin-web/src/pages/store-checklists-logic.ts', 703],
   ['admin-web/src/features/localization/messages/competition.ts', 601],
 ])
 

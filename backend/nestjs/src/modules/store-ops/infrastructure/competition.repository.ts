@@ -1165,11 +1165,8 @@ export class CompetitionRepository {
     const result = await this.databaseService.query<CompetitionWarningRow>(
       `
         SELECT
-          warning.competition_stage_warning_id,
-          warning.competition_stage_id,
-          warning.competition_team_id,
-          warning.store_id,
-          store.store_name,
+          warning.competition_stage_warning_id, warning.competition_stage_id,
+          warning.competition_team_id, warning.store_id, store.store_name,
           warning.warning_code,
           warning.warning_level,
           warning.period_start,
@@ -1177,8 +1174,7 @@ export class CompetitionRepository {
           warning.message,
           warning.resolved_at
         FROM rpt.competition_stage_warning warning
-        LEFT JOIN ops.store store
-          ON store.store_id = warning.store_id
+        LEFT JOIN ops.store store ON store.store_id = warning.store_id
         WHERE warning.competition_stage_id = $1::uuid
           AND warning.resolved_at IS NULL
         ORDER BY warning.warning_level DESC, warning.warning_code ASC, warning.period_start ASC
