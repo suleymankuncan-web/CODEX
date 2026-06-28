@@ -78,7 +78,7 @@ const detailScenarios = [
     heading: 'Workforce rows for one immutable reporting context.',
     contextHeading: 'Selected workforce snapshot',
     tableHeading: 'Store-position staffing balance',
-    rowText: 'store-istanbul-001',
+    rowText: 'Istanbul Flagship',
     placeholder: 'Search by store, position, or gap',
     statusText: 'Gap detected',
   },
@@ -265,6 +265,7 @@ const workforceReportFixture = {
     {
       snapshotRunId: 'snapshot-versioned',
       storeId: 'store-istanbul-001',
+      storeName: 'Istanbul Flagship',
       positionId: 'sales-consultant',
       activeHeadcount: '8',
       activeFte: '8',
@@ -276,6 +277,7 @@ const workforceReportFixture = {
     {
       snapshotRunId: 'snapshot-versioned',
       storeId: 'store-ankara-002',
+      storeName: 'Ankara Armada',
       positionId: 'store-manager',
       activeHeadcount: '1',
       activeFte: '1',
@@ -293,6 +295,7 @@ const kpiReportFixture = {
     {
       snapshotRunId: 'snapshot-versioned',
       storeId: 'store-istanbul-001',
+      storeName: 'Istanbul Flagship',
       kpiId: 'kpi-upt',
       kpiCode: 'UPT',
       kpiName: 'Units per transaction',
@@ -306,6 +309,7 @@ const kpiReportFixture = {
     {
       snapshotRunId: 'snapshot-versioned',
       storeId: 'store-ankara-002',
+      storeName: 'Ankara Armada',
       kpiId: 'kpi-sales',
       kpiCode: 'SALES',
       kpiName: 'Sales',
@@ -325,6 +329,7 @@ const checklistReportFixture = {
     {
       snapshotRunId: 'snapshot-versioned',
       storeId: 'store-istanbul-001',
+      storeName: 'Istanbul Flagship',
       checklistTemplateId: 'bm-visit',
       auditCount: 2,
       avgScore: '82',
@@ -334,6 +339,7 @@ const checklistReportFixture = {
     {
       snapshotRunId: 'snapshot-versioned',
       storeId: 'store-ankara-002',
+      storeName: 'Ankara Armada',
       checklistTemplateId: 'vm-visit',
       auditCount: 1,
       avgScore: '96',
@@ -352,6 +358,7 @@ const turnoverReportFixture = {
       companyId: null,
       regionId: null,
       storeId: 'store-istanbul-001',
+      storeName: 'Istanbul Flagship',
       periodStart: '2026-04-01',
       periodEnd: '2026-04-30',
       openingHeadcount: '12',
