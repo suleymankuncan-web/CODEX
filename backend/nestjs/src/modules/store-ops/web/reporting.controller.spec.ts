@@ -14,7 +14,6 @@ describe("ReportingController", () => {
       controller: new ReportingController(
         reportingService as never,
         rankingService as never,
-        {} as never,
       ),
       reportingService,
     };

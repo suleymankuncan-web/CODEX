@@ -4686,7 +4686,7 @@
     },
     "/api/reports/store-monthly-package": {
       "get": {
-        "operationId": "ReportingController_getStoreMonthlyReportPackage",
+        "operationId": "StoreMonthlyReportPackageController_getStoreMonthlyReportPackage",
         "parameters": [
           {
             "name": "period",
@@ -4850,13 +4850,13 @@
           }
         },
         "tags": [
-          "Reporting"
+          "StoreMonthlyReportPackage"
         ]
       }
     },
     "/api/reports/store-monthly-package.xlsx": {
       "get": {
-        "operationId": "ReportingController_downloadStoreMonthlyReportPackage",
+        "operationId": "StoreMonthlyReportPackageController_downloadStoreMonthlyReportPackage",
         "parameters": [
           {
             "name": "period",
@@ -4883,7 +4883,7 @@
           }
         },
         "tags": [
-          "Reporting"
+          "StoreMonthlyReportPackage"
         ]
       }
     }
