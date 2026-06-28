@@ -14,7 +14,9 @@ import { getAuthLookups, type AuthLookupStore, type AuthSessionSummary } from '.
 import {
   archiveFeedPost,
   createFeedPost,
+  getAdminFeedQueryKey,
   getAdminFeedPosts,
+  getVisibleFeedQueryKey,
   pinFeedPost,
   publishFeedPost,
   unpinFeedPost,
@@ -100,9 +102,11 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   const [notice, setNotice] = useState<string | null>(null)
   const [errorNotice, setErrorNotice] = useState<string | null>(null)
   const [form, setForm] = useState<FeedFormState>(() => createInitialForm(isRegionManagerOnly, defaultRegionId))
+  const adminFeedQueryKey = getAdminFeedQueryKey(input.authSummary)
+  const visibleFeedQueryKey = getVisibleFeedQueryKey(input.authSummary)
 
   const feedQuery = useQuery({
-    queryKey: ['admin-feed'],
+    queryKey: adminFeedQueryKey,
     queryFn: getAdminFeedPosts,
     staleTime: 30_000,
     ...transientQueryRetryOptions,
@@ -127,6 +131,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+        queryClient.invalidateQueries({ queryKey: adminFeedQueryKey }),
+        queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
     onError: (error) => {
@@ -141,6 +147,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+        queryClient.invalidateQueries({ queryKey: adminFeedQueryKey }),
+        queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),
@@ -153,6 +161,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+        queryClient.invalidateQueries({ queryKey: adminFeedQueryKey }),
+        queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),
@@ -165,6 +175,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+        queryClient.invalidateQueries({ queryKey: adminFeedQueryKey }),
+        queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),
@@ -177,6 +189,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
+        queryClient.invalidateQueries({ queryKey: adminFeedQueryKey }),
+        queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
     onError: (error) => setErrorNotice(getErrorMessage(error)),

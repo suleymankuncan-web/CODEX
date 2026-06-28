@@ -73,7 +73,7 @@ test('keeps API diagnostics quiet when feed API requests succeed', async ({ page
 
   await page.goto('/store/feed')
 
-  await expect(page.getByText('Pilot announcement')).toBeVisible()
+  await expect(page.getByText('UPT focus window for the current month.')).toBeVisible()
   expect(await readApiFailures(page)).toEqual([])
   expect(await readCapturedApiFailureEvents(page)).toEqual([])
 })

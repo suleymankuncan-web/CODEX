@@ -46,6 +46,22 @@ export type CreateFeedPostPayload = {
   targetRoute?: string
 }
 
+export type UpdateFeedPostPayload = {
+  title?: string
+  body?: string
+  linkLabel?: string | null
+  linkUrl?: string | null
+  visibilityScopeType?: FeedVisibilityScopeType
+  visibilityScopeIds?: string[]
+  startsAt?: string | null
+  endsAt?: string | null
+  metricCode?: string | null
+  metricLabel?: string | null
+  challengeStartsOn?: string | null
+  challengeEndsOn?: string | null
+  targetRoute?: string | null
+}
+
 export const challengeMetricOptions = [
   { metricCode: 'total_score', metricLabel: 'Total score' },
   { metricCode: 'upt', metricLabel: 'UPT' },
