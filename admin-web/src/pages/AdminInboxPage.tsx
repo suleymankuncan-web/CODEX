@@ -5,15 +5,20 @@ import { Link } from 'react-router-dom'
 import {
   AdminKeyValue as KeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
-  AdminSurfaceBadge,
   AdminSurfaceEmpty as EmptyState,
-  AdminSurfaceHeader,
   AdminSurfacePage,
   AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalBadge,
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalRow,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Textarea } from '../components/ui/textarea'
@@ -124,7 +129,7 @@ function StatusPill({
   children: ReactNode
   tone?: WorkflowSurfaceTone
 }) {
-  return <AdminSurfaceBadge tone={toSurfaceTone(tone)}>{children}</AdminSurfaceBadge>
+  return <AdminOperationalBadge tone={toSurfaceTone(tone)}>{children}</AdminOperationalBadge>
 }
 
 function AdminInboxState({
@@ -319,23 +324,23 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('adminInbox.heroTitle')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('adminInbox.heroTitle')}>
+      <AdminOperationalHeader
         eyebrow={t('adminInbox.heroEyebrow')}
         title={t('adminInbox.heroTitle')}
         description={t('adminInbox.heroCopy')}
         icon={<Bell size={18} />}
         meta={
           <>
-            <AdminSurfaceBadge tone={pendingItems.length > 0 ? 'warning' : 'success'}>
+            <AdminOperationalBadge tone={pendingItems.length > 0 ? 'warning' : 'success'}>
               {t('adminInbox.needsAttention')}: {pendingItems.length}
-            </AdminSurfaceBadge>
-            <AdminSurfaceBadge tone="cyan">{regionScope}</AdminSurfaceBadge>
+            </AdminOperationalBadge>
+            <AdminOperationalBadge tone="cyan">{regionScope}</AdminOperationalBadge>
           </>
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         className="tw:xl:grid-cols-3"
         items={[
           {
@@ -467,8 +472,7 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
         />
       ) : null}
 
-      <AdminSurfaceSection
-        eyebrow={t('adminInbox.adminQueueEyebrow')}
+      <AdminOperationalSection
         title={t('adminInbox.adminQueueTitle')}
         badge={
           <StatusPill tone={sortedItems.length > 0 ? 'warning' : 'calm'}>
@@ -488,8 +492,8 @@ export function AdminInboxPage(input: { authSummary: AuthSessionSummary | null }
             ))}
           </div>
         )}
-      </AdminSurfaceSection>
-    </AdminSurfacePage>
+      </AdminOperationalSection>
+    </AdminOperationalPage>
   )
 }
 
@@ -788,13 +792,11 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
   const { locale, t } = useLocalization()
 
   return (
-    <article className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-background/65 tw:p-3">
-      <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-        <div>
-          <strong className="tw:text-sm tw:font-semibold tw:text-foreground">{input.item.title}</strong>
-          <p className="tw:mt-1 tw:text-xs tw:leading-5 tw:text-muted-foreground">{input.item.summary}</p>
-        </div>
-        <div className="tw:flex tw:flex-wrap tw:gap-2">
+    <AdminOperationalRow
+      title={input.item.title}
+      meta={input.item.summary}
+      status={
+        <>
           <StatusPill tone="accent">{formatWorkflowSourceTypeLabel(input.item.sourceType, t)}</StatusPill>
           <StatusPill tone={mapInboxStatusTone(input.item.inboxStatus)}>
             {formatTranslatedState(input.item.inboxStatus, t)}
@@ -802,8 +804,10 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
           <StatusPill tone={mapWorkflowUrgencyTone(input.item.urgency)}>
             {formatTranslatedState(input.item.urgency, t)}
           </StatusPill>
-        </div>
-      </div>
+        </>
+      }
+      tone={mapWorkflowUrgencyTone(input.item.urgency)}
+    >
 
       <AdminKeyValueGrid>
         <KeyValue label={t('storeTasks.workType')} value={formatWorkflowItemTypeLabel(input.item.itemType, t)} />
@@ -826,6 +830,6 @@ function AdminInboxRow(input: { item: WorkflowInboxItem }) {
           <Link to={input.item.deepLink}>{input.item.primaryActionLabel}</Link>
         </Button>
       </div>
-    </article>
+    </AdminOperationalRow>
   )
 }

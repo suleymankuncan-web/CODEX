@@ -1,6 +1,6 @@
-import { useMemo, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, DatabaseZap, Inbox, Layers3, ServerCog, ShieldCheck, Trophy, Users } from 'lucide-react'
+import { Activity, DatabaseZap, Inbox, Layers3, ShieldCheck, Trophy, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import {
   AdminMetricStrip,
@@ -8,6 +8,7 @@ import {
   AdminSurfacePage,
   type AdminMetricStripItem,
 } from './admin-surface-primitives'
+import { AdminOperationalPage } from './admin-operational-primitives'
 import { Button } from '../components/ui/button'
 import {
   getImportOverview,
@@ -35,7 +36,8 @@ import type { AppLocale } from '../lib/i18n'
 import { DataQualitySignalPanel, type DataQualitySnapshot } from './operations-data-quality-signal-panel'
 import { OperationsApiFailureSnapshotPanel } from './operations-api-failure-snapshot-panel'
 import { OperationsCapacityReadinessPanel } from './operations-capacity-readiness-panel'
-import { OperationsHero, OperationsReadinessStrip, type SignalStatus } from './operations-hero'
+import { OperationsCommandHeader } from './operations-command-header'
+import { type SignalStatus } from './operations-hero'
 import { buildOperatorActions } from './operations-operator-action-model'
 import { OperatorActionListPanel } from './operations-operator-action-list'
 import { summarizeKpiRankingReadiness } from './operations-kpi-ranking-signal-model'
@@ -257,18 +259,8 @@ export function OperationsControlTowerPage() {
     workforceState: signalStateFromQueries(sellerCodeRequestsQuery, offboardingRequestsQuery),
   })
 
-  const summaryCards = useMemo(() => {
-    const backendMetric = getBackendMetricStatus(healthQuery.data, healthQuery.isError, t)
-
-    return [
-      {
-        id: 'backend',
-        title: t('adminOperations.metric.backend'),
-        value: backendMetric.label,
-        note: backendMetric.copy,
-        icon: <ServerCog size={18} />,
-        tone: backendMetric.tone,
-      },
+  const backendMetric = getBackendMetricStatus(healthQuery.data, healthQuery.isError, t)
+  const summaryCards = [
       {
         title: t('adminOperations.metric.imports'),
         value: String(importActionCount),
@@ -388,41 +380,6 @@ export function OperationsControlTowerPage() {
       icon: ReactNode
       tone: OperationsTone
     }>
-  }, [
-    healthQuery.data,
-    healthQuery.isError,
-    dataQuality.blockedBatchCount,
-    dataQuality.errorRowCount,
-    dataQuality.mappingEntityTypes.length,
-    dataQuality.snapshotIssueCount,
-    importActionCount,
-    importOverviewQuery.data,
-    importOverviewQuery.isError,
-    importOverviewQuery.error,
-    snapshotActionCount,
-    snapshotOverviewQuery.data,
-    snapshotOverviewQuery.isError,
-    snapshotOverviewQuery.error,
-    t,
-    hasWorkforceSignalError,
-    hasWorkflowSignalError,
-    hasKpiRankingSignalError,
-    isKpiRankingSignalLoading,
-    sellerCodeRequestsQuery.error,
-    offboardingRequestsQuery.error,
-    workflowInboxQuery.error,
-    kpiConfigQuery.error,
-    rankingsQuery.error,
-    workforcePressure.offboardingCount,
-    workforcePressure.sellerCodeCount,
-    workforcePressure.total,
-    workflowPressure.highUrgencyCount,
-    workflowPressure.needsAttentionCount,
-    workflowPressure.total,
-    kpiRankingReadiness.availablePeriodCount,
-    kpiRankingReadiness.issueCount,
-    kpiRankingReadiness.totalPopulation,
-  ])
 
   if (isInitialLoading) {
     return (
@@ -437,12 +394,17 @@ export function OperationsControlTowerPage() {
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('adminOperations.heroTitle')}>
-      <OperationsHero t={t} />
+    <AdminOperationalPage ariaLabel={t('adminOperations.heroTitle')}>
+      <OperationsCommandHeader
+        backendMetric={backendMetric}
+        hasSignalError={hasSignalError}
+        operationalPressure={operationalPressure}
+        providerBlockerCount={providerBlockers.length}
+        readiness={readiness}
+        t={t}
+      />
 
       <OperatorActionListPanel actions={operatorActions} t={t} />
-
-      <OperationsReadinessStrip operationalPressure={operationalPressure} providerBlockerCount={providerBlockers.length} readiness={readiness} t={t} />
       <OperationsCapacityReadinessPanel t={t} />
       <AdminMetricStrip
         items={summaryCards.map((card): AdminMetricStripItem => ({
@@ -454,26 +416,20 @@ export function OperationsControlTowerPage() {
           value: card.value,
         }))}
       />
-
       <MetricCoveragePanel t={t} />
-
       <SignalFreshnessPanel items={signalFreshness} locale={locale} t={t} />
-
       <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
         <BackendSignalPanel error={healthQuery.error} health={healthQuery.data} isError={healthQuery.isError} locale={locale} t={t} />
         <OperationsApiFailureSnapshotPanel locale={locale} t={t} />
       </section>
-
       <section className="tw:grid tw:gap-4 tw:xl:grid-cols-2">
         <ProviderBlockersPanel t={t} />
       </section>
-
       <DataQualitySignalPanel
         dataQuality={dataQuality}
         isError={importNeedsActionQuery.isError || importOverviewQuery.isError || snapshotOverviewQuery.isError}
         t={t}
       />
-
       <WorkforceSignalPanel
         error={sellerCodeRequestsQuery.error ?? offboardingRequestsQuery.error}
         isError={sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError}
@@ -518,7 +474,7 @@ export function OperationsControlTowerPage() {
           t={t}
         />
       </section>
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
