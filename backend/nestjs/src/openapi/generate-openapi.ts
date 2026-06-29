@@ -3319,15 +3319,7 @@ const reportingRankingMetaSchema = {
 
 const reportingRankingsResponseSchema = {
   type: "object",
-  required: [
-    "source",
-    "access",
-    "filters",
-    "reference",
-    "storeLeaderboard",
-    "personnelLeaderboard",
-    "availablePeriods",
-  ],
+  required: ["source", "access", "filters", "reference", "scopeSummary", "storeLeaderboard", "personnelLeaderboard", "availablePeriods"],
   properties: {
     source: {
       type: "object",
@@ -3378,6 +3370,7 @@ const reportingRankingsResponseSchema = {
         personnel: reportingRankingReferenceGroupSchema,
       },
     },
+    scopeSummary: { type: "object", required: ["storeCount", "activePersonnelCount"], properties: { storeCount: { type: "integer", minimum: 0 }, activePersonnelCount: { type: "integer", minimum: 0 } } },
     storeLeaderboard: {
       type: "object",
       required: ["items", "currentStore", "meta"],

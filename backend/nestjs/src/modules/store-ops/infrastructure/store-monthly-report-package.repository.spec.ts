@@ -77,4 +77,25 @@ describe("StoreMonthlyReportPackageRepository", () => {
       "00000000-0000-4000-8000-000000000900",
     ]);
   });
+
+  it("resolves report region manager names from active role assignments, not action assignments", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getStoreMonthlyReportPackageRows({
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-14",
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      regionManagerUserId: "00000000-0000-4000-8000-000000000900",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    const managerNameCte = sql.slice(sql.indexOf("region_manager_names AS"));
+
+    expect(managerNameCte).toContain("ops.user_role_assignment");
+    expect(managerNameCte).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(managerNameCte).toContain("ROW_NUMBER() OVER");
+    expect(managerNameCte).not.toContain("ops.user_action_store_assignment action_scope");
+  });
 });

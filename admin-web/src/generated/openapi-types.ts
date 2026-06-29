@@ -1832,6 +1832,10 @@ export type components = {
             }>
         }
       }
+      "scopeSummary": {
+        "storeCount": number
+        "activePersonnelCount": number
+      }
       "storeLeaderboard": {
         "items": Array<{
             "subject": "store"

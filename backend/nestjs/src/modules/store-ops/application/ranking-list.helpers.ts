@@ -398,6 +398,10 @@ export function getEmptyRankingResponse(input: {
   periodType: "daily" | "monthly";
   periodStart: string | null;
   periodEnd: string | null;
+  scopeSummary?: {
+    storeCount: number;
+    activePersonnelCount: number;
+  };
 }): RankingResponse {
   return {
     source: {
@@ -426,6 +430,10 @@ export function getEmptyRankingResponse(input: {
         averageScore: null,
         metrics: [],
       },
+    },
+    scopeSummary: input.scopeSummary ?? {
+      storeCount: 0,
+      activePersonnelCount: 0,
     },
     storeLeaderboard: {
       items: [],
