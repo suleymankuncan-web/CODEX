@@ -1,3 +1,4 @@
+import { StreamableFile } from "@nestjs/common";
 import { StoreMonthlyReportPackageController } from "./store-monthly-report-package.controller";
 
 describe("StoreMonthlyReportPackageController", () => {
@@ -44,7 +45,7 @@ describe("StoreMonthlyReportPackageController", () => {
     });
   });
 
-  it("sets download headers and returns the workbook buffer", async () => {
+  it("sets download headers and returns the workbook as a raw streamable file", async () => {
     const { controller, service } = createController();
     const response = {
       setHeader: jest.fn(),
@@ -84,6 +85,17 @@ describe("StoreMonthlyReportPackageController", () => {
       "Content-Disposition",
       'attachment; filename="magaza-izleyis-2026-06.xlsx"',
     );
-    expect(result).toEqual(Buffer.from("xlsx"));
+    expect(result).toBeInstanceOf(StreamableFile);
+    await expect(readStreamableFile(result)).resolves.toEqual(Buffer.from("xlsx"));
   });
 });
+
+async function readStreamableFile(file: StreamableFile): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of file.getStream()) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks);
+}
