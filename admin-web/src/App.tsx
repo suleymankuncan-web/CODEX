@@ -17,6 +17,7 @@ import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell'
+import { StoreHomeCommandV1Prototype } from './prototypes/store-home-command-v1'
 import { StoreIncentivesPrototypeShell } from './prototypes/store-incentives-prototype-shell'
 
 function App() {
@@ -26,11 +27,15 @@ function App() {
     import.meta.env.DEV &&
     pathname === '/store/incentives' &&
     new URLSearchParams(location.search).get('prototype') === 'command-v2'
+  const isStoreHomePrototype =
+    import.meta.env.DEV &&
+    pathname === '/store/home' &&
+    new URLSearchParams(location.search).get('prototype') === 'command-v1'
   const isStoreFeedPrototype =
     import.meta.env.DEV &&
     pathname === '/store/feed' &&
     new URLSearchParams(location.search).get('prototype') === 'region-composer-v1'
-  const isPrototypeRoute = isStoreIncentivesPrototype || isStoreFeedPrototype
+  const isPrototypeRoute = isStoreIncentivesPrototype || isStoreHomePrototype || isStoreFeedPrototype
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
@@ -172,6 +177,10 @@ function App() {
 
   if (isStoreIncentivesPrototype) {
     return <StoreIncentivesPrototypeShell />
+  }
+
+  if (isStoreHomePrototype) {
+    return <StoreHomeCommandV1Prototype />
   }
 
   if (isStoreFeedPrototype) {

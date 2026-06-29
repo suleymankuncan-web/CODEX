@@ -48,6 +48,7 @@ export function StoreShell(input: {
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
   const location = useLocation()
   const activeStoreRoute = findStoreRouteDefinition(location.pathname)
+  const storeHomeRoute = activeStoreRoute?.id === 'home'
   const storeMeRoute = activeStoreRoute?.id === 'me'
   const storePersonnelRoute = activeStoreRoute?.id === 'personnel'
   const storeChecklistRoute = activeStoreRoute?.id === 'checklists'
@@ -93,6 +94,8 @@ export function StoreShell(input: {
   return (
     <div
       className={`store-shell store-command-app${
+        storeHomeRoute ? ' store-shell-store-home' : ''
+      }${
         storeMeRoute || storePersonnelRoute ? ' store-shell-store-me' : ''
       }${
         checklistOnlyRoute ? ' store-shell-store-checklists' : ''
