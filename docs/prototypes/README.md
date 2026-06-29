@@ -58,6 +58,11 @@ implemented and verified.
   Manager and other store roles, pinned-post ordering, inline edit, pin/unpin,
   archive/undo affordance, and compact feed card rhythm. It has no read/seen
   tracking in v1.
+- `docs/superpowers/plans/2026-06-29-store-reports-prototype-to-product-v1.md`
+  is the accepted Store Reports product contract that promoted `/store/reports`
+  out of placeholder status. The production route now owns the month/year
+  report package surface and scoped Excel export; Store Manager visibility is
+  intentionally excluded.
 
 ## Locked Prototype Contracts
 
