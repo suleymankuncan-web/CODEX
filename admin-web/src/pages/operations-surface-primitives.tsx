@@ -1,14 +1,15 @@
-import { Activity } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { cn } from '../lib/utils'
 import {
   AdminKeyValue,
   AdminKeyValueGrid,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceSection,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalRow,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
+import { cn } from '../lib/utils'
 import { toAdminSurfaceTone, type OperationsTone } from './operations-surface-tones'
 
 type OperationsQueueItem = {
@@ -51,16 +52,20 @@ function OperationsPanel({
   title: ReactNode
 }) {
   return (
-    <AdminSurfaceSection
+    <AdminOperationalSection
       actions={actions}
       badge={badge}
       description={description}
-      eyebrow={eyebrow}
       testId={testId}
-      title={title}
+      title={
+        <span>
+          {eyebrow ? <span className="tw:mr-2 tw:text-xs tw:font-medium tw:text-muted-foreground">{eyebrow}</span> : null}
+          {title}
+        </span>
+      }
     >
       {children}
-    </AdminSurfaceSection>
+    </AdminOperationalSection>
   )
 }
 
@@ -93,42 +98,19 @@ function OperationsQueueList({
 }
 
 function OperationsQueueRow({ item }: { item: OperationsQueueItem }) {
-  const content = (
-    <>
-      <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
-        <div className="tw:min-w-0">
-          <div className="tw:text-sm tw:font-medium tw:text-foreground">{item.title}</div>
-          {item.meta ? <div className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{item.meta}</div> : null}
-        </div>
-        {item.status ? <OperationsStatusBadge tone={item.tone}>{item.status}</OperationsStatusBadge> : null}
-      </div>
-      {item.reason ? <p className="tw:m-0 tw:text-xs tw:leading-5 tw:text-muted-foreground">{item.reason}</p> : null}
-      {item.body ? <div className="tw:mt-1">{item.body}</div> : null}
-      {item.footer ? (
-        <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:text-xs tw:text-muted-foreground">
-          <span>{item.footer}</span>
-          <Activity aria-hidden="true" size={14} />
-        </div>
-      ) : null}
-    </>
-  )
-  const className = cn(
-    'tw:grid tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3 tw:text-left tw:shadow-xs',
-    item.href && 'tw:transition-colors tw:hover:bg-muted/50',
-  )
-
-  if (item.href) {
-    return (
-      <Link className={className} data-testid="operations-queue-row" to={item.href}>
-        {content}
-      </Link>
-    )
-  }
-
   return (
-    <div className={className} data-testid="operations-queue-row">
-      {content}
-    </div>
+    <AdminOperationalRow
+      href={item.href}
+      meta={item.meta}
+      status={item.status ? <OperationsStatusBadge tone={item.tone}>{item.status}</OperationsStatusBadge> : null}
+      testId="operations-queue-row"
+      title={item.title}
+      tone={item.tone}
+    >
+      {item.reason ? <p className="tw:m-0 tw:text-xs tw:leading-5 tw:text-muted-foreground">{item.reason}</p> : null}
+      {item.body ? <div className="tw:mt-2">{item.body}</div> : null}
+      {item.footer ? <p className="tw:mt-2 tw:text-xs tw:text-muted-foreground">{item.footer}</p> : null}
+    </AdminOperationalRow>
   )
 }
 

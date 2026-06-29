@@ -5,15 +5,18 @@ import { Link } from 'react-router-dom'
 import {
   AdminKeyValue as KeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
-  AdminSurfaceBadge,
   AdminSurfaceEmpty as EmptyState,
-  AdminSurfaceHeader,
   AdminSurfacePage,
   AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalBadge,
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+} from './admin-operational-primitives'
 import { Button } from '../components/ui/button'
 import {
   summarizeDataQualityCenter,
@@ -123,18 +126,18 @@ export function AdminDataQualityCenterPage() {
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('dataQuality.heroTitle')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('dataQuality.heroTitle')}>
+      <AdminOperationalHeader
         eyebrow={t('dataQuality.heroEyebrow')}
         title={t('dataQuality.heroTitle')}
         description={t('dataQuality.heroCopy')}
         icon={<ShieldCheck size={18} />}
         meta={
           <>
-            <AdminSurfaceBadge tone={toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning')}>
+            <AdminOperationalBadge tone={toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning')}>
               {t(status.labelKey)}
-            </AdminSurfaceBadge>
-            <AdminSurfaceBadge tone="cyan">{t('dataQuality.sourceFamiliesValue')}</AdminSurfaceBadge>
+            </AdminOperationalBadge>
+            <AdminOperationalBadge tone="cyan">{t('dataQuality.sourceFamiliesValue')}</AdminOperationalBadge>
           </>
         }
       />
@@ -147,32 +150,24 @@ export function AdminDataQualityCenterPage() {
         />
       ) : null}
 
-      <AdminMetricStrip
-        className="tw:xl:grid-cols-3"
+      <AdminOperationalMetrics
         items={[
           {
             id: 'status',
             label: t('dataQuality.status'),
             value: t(status.labelKey),
+            description: t('dataQuality.sourceFamiliesValue'),
+            icon: <ShieldCheck size={18} />,
             tone: toSurfaceTone(status.labelKey === 'dataQuality.ready' ? 'calm' : 'warning'),
           },
           {
             id: 'totalPressure',
             label: t('dataQuality.totalPressure'),
             value: formatNumber(summary.totalPressure, locale),
+            description: t(status.labelKey === 'dataQuality.ready' ? 'dataQuality.readyCopy' : 'dataQuality.attentionCopy'),
+            icon: <ShieldCheck size={18} />,
             tone: toSurfaceTone(metricTone(hasSignalError, summary.totalPressure)),
           },
-          {
-            id: 'sourceFamilies',
-            label: t('dataQuality.sourceFamilies'),
-            value: t('dataQuality.sourceFamiliesValue'),
-            tone: 'cyan',
-          },
-        ]}
-      />
-
-      <AdminMetricStrip
-        items={[
           {
             id: 'import',
             label: t('dataQuality.importMetric'),
@@ -234,7 +229,7 @@ export function AdminDataQualityCenterPage() {
           leaderboardSource={formatLeaderboardSource(rankingsQuery.data, t('dataQuality.missingLeaderboardPeriod'))}
         />
       </section>
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
@@ -443,7 +438,7 @@ function resolveCenterStatus(summary: DataQualityCenterSummary, hasSignalError: 
 type SurfacePillTone = AdminSurfaceTone | 'calm'
 
 function StatusPill(input: { children: ReactNode; tone?: SurfacePillTone }) {
-  return <AdminSurfaceBadge tone={toSurfaceTone(input.tone)}>{input.children}</AdminSurfaceBadge>
+  return <AdminOperationalBadge tone={toSurfaceTone(input.tone)}>{input.children}</AdminOperationalBadge>
 }
 
 function toSurfaceTone(tone: SurfacePillTone | undefined): AdminSurfaceTone {
