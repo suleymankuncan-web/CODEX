@@ -4,6 +4,7 @@ import {
   type ApiGetResponse,
   type ApiMutationBody,
 } from '../../lib/openapi-client'
+import { fetchBlob } from '../../lib/api'
 
 export type ReportingSummary = ApiGetResponse<'/api/reports/summary'>
 
@@ -46,6 +47,10 @@ export type ChecklistRow = ChecklistReport['items'][number]
 
 export type TurnoverReport = ApiGetResponse<'/api/reports/turnover'>
 export type TurnoverRow = TurnoverReport['items'][number]
+
+export type StoreMonthlyReportPackage = ApiGetResponse<'/api/reports/store-monthly-package'>
+export type StoreMonthlyReportPackageSection = StoreMonthlyReportPackage['sections'][number]
+export type StoreMonthlyReportPackageRow = StoreMonthlyReportPackage['items'][number]
 
 export async function getReportingSummary() {
   return fetchOpenApiJson('/api/reports/summary')
@@ -263,4 +268,14 @@ export async function getTurnoverReport(snapshotRunId: string) {
       offset: '0',
     }),
   })
+}
+
+export async function getStoreMonthlyReportPackage(input: { period: string }) {
+  return fetchOpenApiJson('/api/reports/store-monthly-package', {
+    query: new URLSearchParams({ period: input.period }),
+  })
+}
+
+export async function downloadStoreMonthlyReportPackage(input: { period: string }) {
+  return fetchBlob(`/reports/store-monthly-package.xlsx?period=${encodeURIComponent(input.period)}`)
 }

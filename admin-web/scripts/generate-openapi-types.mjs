@@ -94,6 +94,7 @@ const selectedOperations = [
   { path: '/api/reports/rankings', method: 'get' },
   { path: '/api/reports/snapshot-runs', method: 'get' },
   { path: '/api/reports/store-kpi-highlights', method: 'get' },
+  { path: '/api/reports/store-monthly-package', method: 'get' },
   { path: '/api/reports/store-score-breakdown', method: 'get' },
   { path: '/api/reports/summary', method: 'get' },
   { path: '/api/reports/turnover', method: 'get' },

@@ -3545,6 +3545,53 @@ export type paths = {
       }
     }
   }
+  "/api/reports/store-monthly-package": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': {
+              "period": string
+              "periodLabel": string
+              "coverageLabel": string
+              "isCurrentPeriod": boolean
+              "storeCount": number
+              "sections": Array<{
+                  "code": string
+                  "label": string
+                  "value": string
+                  "status": "ready" | "partial"
+                }>
+              "items": Array<{
+                  "regionManager"?: string
+                  "storeName"?: string
+                  "city"?: string
+                  "period"?: string
+                  "reportRange"?: string
+                  "score"?: string
+                  "upt"?: string
+                  "atv"?: string
+                  "cr"?: string
+                  "hg"?: string
+                  "gsm"?: string
+                  "bmChecklist"?: string
+                  "vmChecklist"?: string
+                  "actionStatus"?: string
+                  "targetStatus"?: string
+                  "incentiveStatus"?: string
+                  "normFiili"?: string
+                  "missingDays"?: string
+                  "turnover"?: string
+                  "lastVisit"?: string
+                  "daysSinceVisit"?: string
+                  "dataNote"?: string
+                }>
+            }
+          }
+        }
+      }
+    }
+  }
   "/api/reports/store-score-breakdown": {
     get: {
       responses: {

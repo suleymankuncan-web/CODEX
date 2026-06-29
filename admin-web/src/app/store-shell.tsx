@@ -53,6 +53,7 @@ export function StoreShell(input: {
   const storeChecklistRoute = activeStoreRoute?.id === 'checklists'
   const storeIncentivesRoute = activeStoreRoute?.id === 'incentives'
   const storeFeedRoute = activeStoreRoute?.id === 'feed'
+  const storeReportsRoute = activeStoreRoute?.id === 'reports'
   const checklistOnlyRoute = storeChecklistRoute && checklistOnly
   const storeRoute = (route: StoreRouteDefinition, element: ReactNode) => (
     <StoreRouteGuard
@@ -99,6 +100,8 @@ export function StoreShell(input: {
         storeIncentivesRoute ? ' store-shell-store-incentives' : ''
       }${
         storeFeedRoute ? ' store-shell-store-feed' : ''
+      }${
+        storeReportsRoute ? ' store-shell-store-reports' : ''
       }`}
     >
       {checklistOnlyRoute ? null : (
@@ -181,7 +184,7 @@ function getStoreRouteElement(routeId: StoreRouteId, authSummary: AuthSessionSum
     case 'workforce':
       return <StoreWorkforcePage authSummary={authSummary} />
     case 'reports':
-      return <StoreReportsPage />
+      return <StoreReportsPage authSummary={authSummary} />
     default:
       return <Navigate to="/store" replace />
   }

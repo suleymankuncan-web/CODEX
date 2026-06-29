@@ -41,7 +41,8 @@ const checklistReadRoleCodes = [
   'VISUAL_MERCHANDISER',
 ]
 const storePerformanceRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL']
-const storeReportingRoleCodes = ['SUPER_ADMIN', 'STORE_MANAGER', 'REPORT_VIEWER', 'AUDITOR']
+const storeKpiRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
+const storeReportingRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'REPORT_VIEWER', 'AUDITOR']
 const targetRequestListRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
 
 const adminRouteNotes: Record<string, Pick<RolePermissionPreviewRow, 'scopeNoteKey' | 'actionNoteKey'>> = {
@@ -189,7 +190,7 @@ const storePreviewRows: RolePermissionPreviewRow[] = [
     route: '/store/kpis',
     labelKey: 'storeHome.nav.storeKpis',
     shell: 'store',
-    allowedRoles: storeReportingRoleCodes,
+    allowedRoles: storeKpiRoleCodes,
     scopeNoteKey: 'authAdmin.previewScopeStoreKpi',
     actionNoteKey: 'authAdmin.previewActionReadOnlyPerformance',
   },
@@ -243,7 +244,7 @@ const storePreviewRows: RolePermissionPreviewRow[] = [
     route: '/store/reports',
     labelKey: 'storeHome.nav.reports',
     shell: 'store',
-    allowedRoles: nonVisualMerchandiserStoreRouteRoles,
+    allowedRoles: storeReportingRoleCodes,
     scopeNoteKey: 'authAdmin.previewScopeReporting',
     actionNoteKey: 'authAdmin.previewActionReadOnlyReports',
   },

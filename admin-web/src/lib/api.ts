@@ -153,8 +153,54 @@ async function requestFormData<T>(
   })
 }
 
+async function requestBlob(path: string): Promise<Blob> {
+  const method = 'GET'
+  const prepared = await prepareHeaders(path, false, method)
+
+  let attempt = await performFetchAttempt(
+    path,
+    {
+      method,
+      headers: prepared.headers,
+      ...(isCookieBrowserSession(prepared.session) ? { credentials: 'include' as const } : {}),
+    },
+  )
+  let response = attempt.response
+
+  if (response.status === 401 && prepared.session.mode === 'bearer') {
+    const retryHeaders = await prepareRefreshedHeaders(path, false, method, { skipCache: true })
+    if (retryHeaders) {
+      const retrySession = readClientSession()
+      attempt = await performFetchAttempt(
+        path,
+        {
+          method,
+          headers: retryHeaders,
+          ...(isCookieBrowserSession(retrySession) ? { credentials: 'include' as const } : {}),
+        },
+        2,
+      )
+      response = attempt.response
+    }
+  }
+
+  if (!response.ok) {
+    await throwApiError(response, path, prepared.session, {
+      method,
+      durationMs: attempt.durationMs,
+      requestAttempt: attempt.requestAttempt,
+    })
+  }
+
+  return response.blob()
+}
+
 export async function fetchJson<T>(path: string): Promise<T> {
   return requestJson<T>(path)
+}
+
+export async function fetchBlob(path: string): Promise<Blob> {
+  return requestBlob(path)
 }
 
 export async function sendJson<T>(
