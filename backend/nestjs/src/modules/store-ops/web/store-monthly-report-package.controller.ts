@@ -1,4 +1,4 @@
-import { Controller, Get, Query, Req, Res } from "@nestjs/common";
+import { Controller, Get, Query, Req, Res, StreamableFile } from "@nestjs/common";
 import { ApiOkResponse, ApiProduces, ApiQuery } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
@@ -150,7 +150,7 @@ export class StoreMonthlyReportPackageController {
       `attachment; filename="${workbook.fileName}"`,
     );
 
-    return workbook.buffer;
+    return new StreamableFile(workbook.buffer);
   }
 
   private resolveReadScope(user: ReportPackageRequest["user"]) {
