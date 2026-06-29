@@ -3,7 +3,6 @@ import type { UseMutationResult } from '@tanstack/react-query'
 import {
   AlertTriangle,
   BadgeCheck,
-  CalendarDays,
   CheckCircle2,
   Clock3,
   RefreshCcw,
@@ -23,6 +22,7 @@ import {
 } from '../features/targets/api'
 import type { AppLocale } from '../lib/i18n'
 import { formatMonthLabel } from './store-targets-page-model'
+import { StoreTargetsPeriodPicker } from './store-targets-period-picker'
 import {
   createPeoplePreview,
   createRegionTargetRows,
@@ -42,6 +42,10 @@ import {
   type StoreOption,
   type TargetCommandStatus,
 } from './store-targets-region-command-model'
+
+type TargetSortKey = 'store' | 'storeTarget' | 'distribution' | 'personnel' | 'status'
+type TargetSortDirection = 'asc' | 'desc'
+type TargetSortState = { key: TargetSortKey; direction: TargetSortDirection }
 
 export function StoreTargetsRegionCommand(input: {
   activeRequestMonth: string
@@ -67,6 +71,7 @@ export function StoreTargetsRegionCommand(input: {
   const [drawerStoreId, setDrawerStoreId] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [approvalDrafts, setApprovalDrafts] = useState<Record<string, ApprovalDraft>>({})
+  const [sortState, setSortState] = useState<TargetSortState>({ key: 'store', direction: 'asc' })
 
   const storeRows = useMemo(
     () =>
@@ -101,6 +106,11 @@ export function StoreTargetsRegionCommand(input: {
     })
   }, [activeFilter, query, storeRows])
 
+  const sortedStores = useMemo(
+    () => sortTargetRows(filteredStores, sortState),
+    [filteredStores, sortState],
+  )
+
   const selectedStore = storeRows.find((store) => store.storeId === drawerStoreId) ?? null
   const pendingCount = storeRows.filter((store) => store.status === 'pending').length
   const approvedCount = storeRows.filter((store) =>
@@ -111,6 +121,12 @@ export function StoreTargetsRegionCommand(input: {
   const closeDrawer = () => {
     setDrawerStoreId(null)
     setNotice(null)
+  }
+  const toggleSort = (key: TargetSortKey) => {
+    setSortState((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc',
+    }))
   }
 
   return (
@@ -131,20 +147,12 @@ export function StoreTargetsRegionCommand(input: {
         </div>
 
         <div className="targets-header-actions">
-          <label className="targets-month-button">
-            <CalendarDays size={16} />
-            {formatMonthLabel(input.activeRequestMonth, input.locale)}
-            <input
-              aria-label="Dönem"
-              type="month"
-              value={input.activeRequestMonth}
-              onChange={(event) => {
-                if (/^\d{4}-\d{2}$/.test(event.target.value)) {
-                  input.onMonthChange(event.target.value)
-                }
-              }}
-            />
-          </label>
+          <StoreTargetsPeriodPicker
+            locale={input.locale}
+            onPeriodChange={input.onMonthChange}
+            period={input.activeRequestMonth}
+            triggerClassName="targets-month-button"
+          />
           <button type="button" onClick={input.onRefresh}>
             <RefreshCcw size={16} />
             Yenile
@@ -200,15 +208,15 @@ export function StoreTargetsRegionCommand(input: {
       <div className="targets-workspace">
         <section className="targets-ledger" aria-label="Mağaza hedef listesi">
           <div className="targets-ledger-head">
-            <span>Mağaza</span>
-            <span>Mağaza hedefi</span>
-            <span>Dağıtım</span>
-            <span>Personel</span>
-            <span>Durum</span>
+            <TargetSortHeader label="Mağaza" sortKey="store" sortState={sortState} onSort={toggleSort} />
+            <TargetSortHeader label="Mağaza hedefi" sortKey="storeTarget" sortState={sortState} onSort={toggleSort} />
+            <TargetSortHeader label="Dağıtım" sortKey="distribution" sortState={sortState} onSort={toggleSort} />
+            <TargetSortHeader label="Personel" sortKey="personnel" sortState={sortState} onSort={toggleSort} />
+            <TargetSortHeader label="Durum" sortKey="status" sortState={sortState} onSort={toggleSort} />
             <span>Aksiyon</span>
           </div>
           <div className="targets-ledger-list">
-            {filteredStores.map((store) => {
+            {sortedStores.map((store) => {
               const status = statusCopy[store.status]
               const preview = createPeoplePreview(store)
 
@@ -305,6 +313,79 @@ export function StoreTargetsRegionCommand(input: {
       ) : null}
     </section>
   )
+}
+
+function TargetSortHeader(input: {
+  label: string
+  sortKey: TargetSortKey
+  sortState: TargetSortState
+  onSort: (key: TargetSortKey) => void
+}) {
+  const active = input.sortState.key === input.sortKey
+  const indicator = active ? (input.sortState.direction === 'asc' ? '↑' : '↓') : '↕'
+
+  return (
+    <button
+      aria-label={`${input.label} sırala`}
+      aria-pressed={active}
+      className={`targets-sort-heading ${active ? 'active' : ''}`}
+      onClick={() => input.onSort(input.sortKey)}
+      type="button"
+    >
+      {input.label}
+      <span aria-hidden="true">{indicator}</span>
+    </button>
+  )
+}
+
+function sortTargetRows(rows: RegionTargetRow[], sortState: TargetSortState) {
+  return [...rows].sort((left, right) => {
+    const result = compareTargetRows(left, right, sortState)
+    if (result !== 0) return result
+    return left.storeName.localeCompare(right.storeName, 'tr-TR')
+  })
+}
+
+function compareTargetRows(left: RegionTargetRow, right: RegionTargetRow, sortState: TargetSortState) {
+  if (sortState.key === 'store') {
+    return directionMultiplier(sortState.direction) * left.storeName.localeCompare(right.storeName, 'tr-TR')
+  }
+
+  if (sortState.key === 'storeTarget') {
+    return compareNullableNumber(left.storeTarget, right.storeTarget, sortState.direction)
+  }
+
+  if (sortState.key === 'distribution') {
+    return compareNullableNumber(left.totalDistributed, right.totalDistributed, sortState.direction)
+  }
+
+  if (sortState.key === 'personnel') {
+    return compareNullableNumber(left.people, right.people, sortState.direction)
+  }
+
+  return directionMultiplier(sortState.direction) * (targetStatusOrder(left.status) - targetStatusOrder(right.status))
+}
+
+function compareNullableNumber(left: number | null, right: number | null, direction: TargetSortDirection) {
+  const leftMissing = left === null || !Number.isFinite(left)
+  const rightMissing = right === null || !Number.isFinite(right)
+  if (leftMissing && rightMissing) return 0
+  if (leftMissing) return 1
+  if (rightMissing) return -1
+
+  return direction === 'asc' ? Number(left) - Number(right) : Number(right) - Number(left)
+}
+
+function directionMultiplier(direction: TargetSortDirection) {
+  return direction === 'asc' ? 1 : -1
+}
+
+function targetStatusOrder(status: TargetCommandStatus) {
+  if (status === 'pending') return 0
+  if (status === 'returned') return 1
+  if (status === 'approved' || status === 'adjusted-approved') return 2
+  if (status === 'missing') return 3
+  return 4
 }
 
 function TargetDecisionDrawer(input: {

@@ -385,3 +385,23 @@
   font-size: 13px;
   font-weight: 610;
 }
+
+.store-workforce-command :where(.swc-hero h1) {
+  font-weight: 620;
+}
+
+.store-workforce-command :where(.swc-kicker span, .swc-kicker b, .swc-outline-button[data-slot="button"], .swc-primary-button[data-slot="button"], .swc-row-action[data-slot="button"], .swc-panel-button[data-slot="button"], .swc-close-button) {
+  font-weight: 600;
+}
+
+.store-workforce-command :where(.swc-metric-copy span, .swc-year-trigger, .swc-year-option, .swc-search-field [data-slot="input"], .swc-select-trigger[data-slot="select-trigger"]) {
+  font-weight: 560;
+}
+
+.store-workforce-command :where(.swc-metric-card b, .swc-store-cell strong, .swc-count-cell strong, .swc-turnover-cell strong, .swc-people-row strong, .swc-position-card strong, .swc-fact strong, .swc-modal-summary strong) {
+  font-weight: 620;
+}
+
+.store-workforce-command :where(.swc-row-action[data-slot="button"], .swc-pill, .swc-column-filter-trigger) {
+  font-weight: 590;
+}

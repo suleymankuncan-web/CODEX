@@ -21,8 +21,8 @@
 
 .store-shell-store-feed .store-command-main {
   box-sizing: border-box;
-  margin: 0;
-  width: min(1360px, calc(100vw - var(--store-command-sidebar) - 36px));
+  margin-inline: auto;
+  width: min(100%, 1280px);
 }
 
 .store-feed-command-page {

@@ -3,7 +3,6 @@ import { type UseMutationResult } from '@tanstack/react-query'
 import {
   ClipboardCheck,
   CircleDollarSign,
-  Download,
   Loader2,
   RefreshCw,
   Search,
@@ -142,9 +141,7 @@ export function RegionManagerIncentivesView(input: {
   const { t } = useLocalization()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StoreStatusFilter>('all')
-  const [expandedStoreId, setExpandedStoreId] = useState<string | null>(
-    input.data.projections[0]?.storeId ?? null,
-  )
+  const [expandedStoreId, setExpandedStoreId] = useState<string | null>(null)
   const [selectedRow, setSelectedRow] = useState<SelectedIncentiveRow | null>(null)
   const [isSubmitDialogOpen, setSubmitDialogOpen] = useState(false)
   const summary = getRegionSummary(input.data.projections)
@@ -176,10 +173,6 @@ export function RegionManagerIncentivesView(input: {
         description={t('storeIncentives.regionManagerCommandDescription')}
         end={(
           <div className="tw:flex tw:flex-wrap tw:gap-2">
-            <Button type="button" variant="outline" onClick={() => undefined}>
-              <Download data-icon="inline-start" />
-              {t('storeIncentives.regionManagerExportExcel')}
-            </Button>
             <Button
               className={regionManagerPrimaryActionClass}
               type="button"

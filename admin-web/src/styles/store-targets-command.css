@@ -159,7 +159,8 @@
 }
 
 .targets-command-field-input,
-.targets-command-select-trigger {
+.targets-command-select-trigger,
+.targets-command-period-trigger[data-slot="button"] {
   height: auto;
   min-height: 0;
   border: 0;
@@ -172,9 +173,20 @@
 }
 
 .targets-command-field-input:focus-visible,
-.targets-command-select-trigger:focus-visible {
+.targets-command-select-trigger:focus-visible,
+.targets-command-period-trigger[data-slot="button"]:focus-visible {
   box-shadow: none;
   outline: 0;
+}
+
+.targets-command-period-trigger[data-slot="button"] {
+  justify-content: flex-start;
+  min-height: 44px;
+  border: 1px solid var(--targets-command-border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--card) 72%, white 28%);
+  color: var(--targets-command-ink);
+  padding-inline: 12px;
 }
 
 .targets-command-toolbar-button {

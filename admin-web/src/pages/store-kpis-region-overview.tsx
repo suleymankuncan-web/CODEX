@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom'
 import {
   Activity,
   ArrowRight,
-  CalendarDays,
   ChevronDown,
   ChevronUp,
   Gauge,
@@ -20,6 +19,7 @@ import {
   getMetricByCode,
   getMetricComparableValue,
 } from './store-rankings-page-model'
+import { StoreKpisPeriodPicker } from './store-kpis-period-picker'
 import { StoreEmptyState, StoreSurfacePage } from './store-surface-primitives'
 
 const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'gsm_approval'] as const
@@ -183,25 +183,14 @@ function RegionPeriodSelect({ model }: { model: StoreKpiHighlightsPageModel }) {
     ''
 
   return (
-    <label className="tw:inline-flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-[0.95rem] tw:border tw:border-[#dce4f1] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[#071332]">
-      <CalendarDays aria-hidden="true" className="tw:size-4" />
-      <span className="tw:sr-only">{model.t('storeKpis.regionPeriodSelect')}</span>
-      <select
-        aria-label={model.t('storeKpis.regionPeriodSelect')}
-        className="tw:min-w-32 tw:border-0 tw:bg-transparent tw:p-0 tw:text-xs tw:font-medium tw:text-[#071332] tw:outline-none"
-        value={activePeriodStart}
-        onChange={(event) => model.setRegionOverviewPeriodStart(event.target.value)}
-      >
-        {monthlyPeriods.length === 0 ? (
-          <option value={activePeriodStart}>{model.t('storeKpis.regionLatestPeriod')}</option>
-        ) : null}
-        {monthlyPeriods.map((period) => (
-          <option key={period.periodStart} value={period.periodStart}>
-            {formatMonthLabel(period.periodStart, model.locale)}
-          </option>
-        ))}
-      </select>
-    </label>
+    <StoreKpisPeriodPicker
+      ariaLabel={model.t('storeKpis.regionPeriodSelect')}
+      availablePeriodStarts={monthlyPeriods.map((period) => period.periodStart)}
+      locale={model.locale}
+      onPeriodStartChange={model.setRegionOverviewPeriodStart}
+      periodStart={activePeriodStart}
+      triggerClassName="tw:min-h-10 tw:rounded-[0.95rem] tw:border-[#dce4f1] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[#071332]"
+    />
   )
 }
 
