@@ -35,16 +35,15 @@ import type { AppLocale } from '../lib/i18n'
 import {
   AdminActionRow,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
   AdminSurfacePage,
   AdminSurfaceSection,
   type AdminMetricStripItem,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import { AdminOperationalHeader, AdminOperationalMetrics, AdminOperationalPage } from './admin-operational-primitives'
 
 export function ImportBatchDetailPage() {
   const params = useParams()
@@ -208,7 +207,7 @@ export function ImportBatchDetailPage() {
   })
 
   return (
-    <AdminSurfacePage ariaLabel={t('importBatchDetail.heroEyebrow')}>
+    <AdminOperationalPage ariaLabel={t('importBatchDetail.heroEyebrow')}>
       <AdminActionRow>
         <Button asChild variant="outline">
           <Link to="/admin/integrations">
@@ -281,7 +280,7 @@ export function ImportBatchDetailPage() {
           t={t}
         />
       </div>
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
@@ -330,7 +329,7 @@ function ImportBatchHero(input: { detail: ImportBatchDetail; t: TranslateFunctio
 
   return (
     <>
-      <AdminSurfaceHeader
+      <AdminOperationalHeader
         eyebrow={t('importBatchDetail.heroEyebrow')}
         title={`${detail.batch.sourceCode} / ${detail.batch.entityType}`}
         description={
@@ -349,7 +348,7 @@ function ImportBatchHero(input: { detail: ImportBatchDetail; t: TranslateFunctio
           </AdminSurfaceBadge>
         }
       />
-      <AdminMetricStrip className="tw:xl:grid-cols-3" items={metrics} />
+      <AdminOperationalMetrics className="tw:xl:grid-cols-3" items={metrics} />
     </>
   )
 }
