@@ -2175,15 +2175,42 @@ test('store utility pages show honest preferences and stay mobile-safe', async (
 
   await page.goto('/store/reports')
 
-  await expect(page.getByRole('heading', { name: /Rapor görün/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Raporları aç' }).first()).toHaveAttribute('href', '/admin/reports')
-  await expect(page.getByText('Kapanmış dönem sonuçları')).toBeVisible()
-  await expect(page.getByText('Aksiyon gerektiren metrikler')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Raporlar' })).toHaveCount(0)
 
   await page.setViewportSize({ width: 390, height: 900 })
   await page.reload()
 
-  await expect(page.getByRole('heading', { name: /Rapor görün/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+  await expect.poll(
+    () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
+  ).toBe(true)
+})
+
+test('store reports package is visible for region managers and stays mobile-safe', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REGION_MANAGER'],
+    readStoreIds: [demoStoreId, regionSecondStoreId],
+    readRegionIds: [demoRegionId],
+    scopeStoreIds: [],
+    scopeRegionIds: [demoRegionId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+
+  await page.goto('/store/reports')
+
+  await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Mağaza İzleyiş Exceli/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Excel indir/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Haziran 2026/i })).toBeVisible()
+  await expect(page.getByText('Raporları aç')).toHaveCount(0)
+  await expect(page.getByText('/admin/reports')).toHaveCount(0)
+
+  await page.setViewportSize({ width: 390, height: 900 })
+  await page.reload()
+
+  await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
   await expect.poll(
     () => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth),
   ).toBe(true)
@@ -2208,14 +2235,7 @@ test('store utility pages show honest preferences and stay mobile-safe', async (
       return window.getComputedStyle(nav).position !== 'fixed'
     }),
   ).toBe(true)
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))
-  await expect(page.getByText('Aksiyon gerektiren metrikler')).toBeVisible()
-
-  await setStoredLocale(page, 'en')
-
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Report view' })).toBeVisible()
-  await expect(page.getByText('Metrics needing action')).toBeVisible()
+  await expect(page.getByText('KPI kolonları')).toBeVisible()
 })
 
 test('store route navigation does not blank the shell with a global transition layer', async ({ page }) => {
@@ -4691,6 +4711,60 @@ async function routeStoreSurfaceApi(page: Page) {
           offset: 0,
         },
       },
+    })
+  })
+
+  await page.route('**/api/reports/store-monthly-package?**', async (route) => {
+    await route.fulfill({
+      json: {
+        period: '2026-06',
+        periodLabel: 'Haziran 2026',
+        coverageLabel: '1-14 Haziran',
+        isCurrentPeriod: true,
+        storeCount: 30,
+        sections: [
+          { code: 'kpis', label: 'KPI kolonları', value: 'Skor, UPT, ATV, CR, HG%', status: 'ready' },
+          { code: 'approval_scores', label: 'Onay skorları', value: 'GSM, BM Checklist, VM Checklist', status: 'ready' },
+          { code: 'actions', label: 'Aksiyon durumu', value: 'Bitirildi, devam ediyor, bekliyor', status: 'ready' },
+          { code: 'targets', label: 'Hedefler', value: 'Mağaza ve personel hedef durumu', status: 'ready' },
+          { code: 'incentives', label: 'Primler', value: 'Hakediş ve kontrol durumu', status: 'ready' },
+          { code: 'workforce', label: 'Norm Kadro', value: 'Aktif, norm, eksik gün, turnover', status: 'ready' },
+          { code: 'visits', label: 'Ziyaret', value: 'Son ziyaret ve geçen gün', status: 'ready' },
+        ],
+        items: [
+          {
+            regionManager: 'Onur Kaytan',
+            storeName: 'IstinyePark Demo Store',
+            city: 'İstanbul',
+            period: 'Haziran 2026',
+            reportRange: '1-14 Haziran',
+            score: '87,20',
+            upt: '4,12',
+            atv: '4.850,00',
+            cr: '%22,4',
+            hg: '%104,5',
+            gsm: '%96',
+            bmChecklist: '91',
+            vmChecklist: '88',
+            actionStatus: 'Devam ediyor',
+            targetStatus: 'Onaylandı',
+            incentiveStatus: 'Kontrol edildi',
+            normFiili: '6 / 6',
+            missingDays: 'Yok',
+            turnover: 'Veri yok',
+            lastVisit: '14 Haziran',
+            daysSinceVisit: '7 gün',
+            dataNote: '',
+          },
+        ],
+      },
+    })
+  })
+
+  await page.route('**/api/reports/store-monthly-package.xlsx?**', async (route) => {
+    await route.fulfill({
+      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      body: 'store-report-package',
     })
   })
 
