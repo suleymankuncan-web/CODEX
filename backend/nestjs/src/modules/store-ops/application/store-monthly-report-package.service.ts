@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import * as XLSX from "@e965/xlsx";
+import * as XLSX from "xlsx-js-style";
 import { StoreMonthlyReportPackageRepository } from "../infrastructure/store-monthly-report-package.repository";
 import {
   StoreMonthlyReportPackageItem,
@@ -11,6 +11,41 @@ import {
 } from "../infrastructure/store-monthly-report-package.types";
 
 const EMPTY_VALUE = "Veri yok";
+
+type StyledWorksheet = XLSX.WorkSheet & {
+  "!autofilter"?: { ref: string };
+};
+
+type StyledCell = XLSX.CellObject & {
+  s?: Record<string, unknown>;
+};
+
+const WORKBOOK_HEADER_STYLE = {
+  fill: { fgColor: { rgb: "3F2A8C" }, patternType: "solid" },
+  font: { bold: true, color: { rgb: "FFFFFF" } },
+  alignment: { horizontal: "center", vertical: "center" },
+};
+
+const WORKBOOK_STATUS_STYLES = {
+  good: {
+    fill: { fgColor: { rgb: "DDF8ED" }, patternType: "solid" },
+    font: { bold: true, color: { rgb: "087751" } },
+  },
+  warning: {
+    fill: { fgColor: { rgb: "FFF3D6" }, patternType: "solid" },
+    font: { bold: true, color: { rgb: "A35B00" } },
+  },
+  danger: {
+    fill: { fgColor: { rgb: "FFE6EE" }, patternType: "solid" },
+    font: { bold: true, color: { rgb: "C52D54" } },
+  },
+  muted: {
+    fill: { fgColor: { rgb: "F2F4F8" }, patternType: "solid" },
+    font: { color: { rgb: "65708D" } },
+  },
+};
+
+const WORKBOOK_STATUS_COLUMN_INDEXES = [13, 14, 15, 16, 17, 18, 21];
 
 const TURKISH_MONTHS = [
   "Ocak",
@@ -162,17 +197,99 @@ export class StoreMonthlyReportPackageService {
       ]),
     ];
     const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet(worksheetRows);
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetRows) as StyledWorksheet;
     worksheet["!cols"] = STORE_MONTHLY_REPORT_PACKAGE_HEADERS.map((header) => ({
       wch: Math.max(14, Math.min(28, header.length + 6)),
     }));
+    applyWorkbookPresentation(worksheet, worksheetRows);
     XLSX.utils.book_append_sheet(workbook, worksheet, "Mağaza İzleyiş");
 
     return {
-      buffer: Buffer.from(XLSX.write(workbook, { bookType: "xlsx", type: "buffer" })),
+      buffer: Buffer.from(
+        XLSX.write(workbook, { bookType: "xlsx", cellStyles: true, type: "buffer" }),
+      ),
       fileName: `magaza-izleyis-${input.period}.xlsx`,
     };
   }
+}
+
+function applyWorkbookPresentation(
+  worksheet: StyledWorksheet,
+  worksheetRows: Array<Array<string>>,
+) {
+  if (worksheetRows.length === 0) {
+    return;
+  }
+
+  const headerCount = worksheetRows[0].length;
+  worksheet["!autofilter"] = {
+    ref: XLSX.utils.encode_range({
+      s: { c: 0, r: 0 },
+      e: { c: headerCount - 1, r: Math.max(0, worksheetRows.length - 1) },
+    }),
+  };
+
+  for (let columnIndex = 0; columnIndex < headerCount; columnIndex += 1) {
+    const cellAddress = XLSX.utils.encode_cell({ c: columnIndex, r: 0 });
+    const cell = worksheet[cellAddress] as StyledCell | undefined;
+
+    if (cell) {
+      cell.s = WORKBOOK_HEADER_STYLE;
+    }
+  }
+
+  for (let rowIndex = 1; rowIndex < worksheetRows.length; rowIndex += 1) {
+    for (const columnIndex of WORKBOOK_STATUS_COLUMN_INDEXES) {
+      const cellAddress = XLSX.utils.encode_cell({ c: columnIndex, r: rowIndex });
+      const cell = worksheet[cellAddress] as StyledCell | undefined;
+      const style = resolveStatusCellStyle(String(worksheetRows[rowIndex][columnIndex] ?? ""));
+
+      if (cell && style) {
+        cell.s = style;
+      }
+    }
+  }
+}
+
+function resolveStatusCellStyle(value: string) {
+  const normalized = value.toLocaleLowerCase("tr-TR");
+
+  if (
+    normalized === EMPTY_VALUE.toLocaleLowerCase("tr-TR") ||
+    normalized.includes("kayna") ||
+    normalized.includes("veri yok")
+  ) {
+    return WORKBOOK_STATUS_STYLES.muted;
+  }
+
+  if (
+    normalized.includes("devam") ||
+    normalized.includes("bekliyor") ||
+    normalized.includes("taslak") ||
+    normalized.includes("eksik")
+  ) {
+    return WORKBOOK_STATUS_STYLES.warning;
+  }
+
+  if (
+    normalized.includes("hata") ||
+    normalized.includes("iade") ||
+    normalized.includes("iptal")
+  ) {
+    return WORKBOOK_STATUS_STYLES.danger;
+  }
+
+  if (
+    normalized.includes("bitirildi") ||
+    normalized.includes("onayland") ||
+    normalized.includes("kapand") ||
+    normalized.includes("tamam") ||
+    normalized === "yok"
+  ) {
+    return WORKBOOK_STATUS_STYLES.good;
+  }
+
+  return null;
 }
 
 function buildSections(input: {

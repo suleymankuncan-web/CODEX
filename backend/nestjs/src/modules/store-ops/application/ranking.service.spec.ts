@@ -107,6 +107,10 @@ describe("RankingService", () => {
           .map((employeeId) => resolveActiveAssignment(employeeId))
           .filter((assignment) => assignment !== null),
       ),
+      getActiveStorePersonnelScopeSummary: jest.fn(async () => ({
+        active_personnel_count: "105",
+        store_count: "105",
+      })),
       getLatestRankingPeriod: jest.fn(async () => input?.period ?? period),
       listRankingAvailablePeriods: jest.fn(async () => [input?.period ?? period]),
       listRankingStoreKpiRows: jest.fn(async () => input?.storeRows ?? createStoreRows(105)),

@@ -392,9 +392,10 @@ function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
   const ranking = model.regionOverviewQuery.data
   const rows = model.regionOverviewRows
   const noData = model.t('common.noData')
-  const storeCount = ranking?.storeLeaderboard.meta.total ?? rows.length
-  const personnelTotal = ranking?.personnelLeaderboard.meta.total
-  const hasCompleteStoreCoverage = storeCount > 0 && rows.length >= storeCount
+  const rankingStoreCount = ranking?.storeLeaderboard.meta.total ?? rows.length
+  const scopeStoreCount = ranking?.scopeSummary?.storeCount ?? rankingStoreCount
+  const scopePersonnelTotal = ranking?.scopeSummary?.activePersonnelCount
+  const hasCompleteStoreCoverage = rankingStoreCount > 0 && rows.length >= rankingStoreCount
   const averageScore = hasCompleteStoreCoverage ? average(rows.map((row) => row.scoreValue)) : null
   const metricAverages = Object.fromEntries(
     regionMetricCodes.map((code) => [
@@ -414,7 +415,7 @@ function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
     averageScoreLabel: formatNumber(model.locale, averageScore, noData, 0),
     averageScoreCopy: hasCompleteStoreCoverage
       ? model.t('storeKpis.regionAverageScoreCopy', {
-          count: formatInteger(model.locale, storeCount),
+          count: formatInteger(model.locale, rankingStoreCount),
         })
       : model.t('storeKpis.regionAverageIncompleteCopy'),
     metricAverages,
@@ -423,16 +424,16 @@ function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
       model.locale,
     ),
     personnelCountLabel:
-      personnelTotal !== undefined
+      scopePersonnelTotal !== undefined
         ? model.t('storeKpis.regionScopeCopy', {
-            stores: formatInteger(model.locale, storeCount),
-            personnel: formatInteger(model.locale, personnelTotal),
+            stores: formatInteger(model.locale, scopeStoreCount),
+            personnel: formatInteger(model.locale, scopePersonnelTotal),
           })
         : model.t('storeKpis.regionScopePersonnelUnavailable', {
-            stores: formatInteger(model.locale, storeCount),
+            stores: formatInteger(model.locale, scopeStoreCount),
           }),
     scoreBadge: model.t(resolveScoreBadgeKey(averageScore)),
-    storeCount,
+    storeCount: scopeStoreCount,
     visibleStoreCount: rows.length,
   }
 }

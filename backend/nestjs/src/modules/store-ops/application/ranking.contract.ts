@@ -93,6 +93,10 @@ export type RankingResponse = {
     store: RankingReferenceGroup;
     personnel: RankingReferenceGroup;
   };
+  scopeSummary: {
+    storeCount: number;
+    activePersonnelCount: number;
+  };
   storeLeaderboard: {
     items: StoreRankingRow[];
     currentStore: StoreRankingRow | null;

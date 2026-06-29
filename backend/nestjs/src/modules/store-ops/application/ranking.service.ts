@@ -114,7 +114,7 @@ export class RankingService {
     const personnelMetricCodes = this.getProfileMetricCodes(personnelProfile);
     const allMetricCodes = uniqueIds([...storeMetricCodes, ...personnelMetricCodes]);
 
-    const [employeeId, latestPeriod] = await Promise.all([
+    const [employeeId, latestPeriod, activeScopeSummary] = await Promise.all([
       this.reportingRepository.resolveEmployeeIdForAuthIdentity({
         userId: input.userId,
         employeeId: input.employeeId,
@@ -125,7 +125,11 @@ export class RankingService {
         periodType: input.periodType ?? "monthly",
         periodStart: input.periodStart,
       }),
+      this.reportingRepository.getActiveStorePersonnelScopeSummary(
+        this.resolveActiveScopeSummaryInput(input),
+      ),
     ]);
+    const scopeSummary = this.toScopeSummary(activeScopeSummary);
 
     const availablePeriods =
       await this.rankingReportingReadRepository.listRankingAvailablePeriods({
@@ -143,6 +147,7 @@ export class RankingService {
             ? input.periodStart
             : resolveMonthEnd(input.periodStart)
           : null,
+        scopeSummary,
       });
     }
 
@@ -307,6 +312,7 @@ export class RankingService {
       },
       filters,
       reference,
+      scopeSummary,
       storeLeaderboard: {
         items: storeItems,
         currentStore: currentStore
@@ -522,6 +528,60 @@ export class RankingService {
         row.benchmark_value !== null ? Number(row.benchmark_value) : null,
       ]),
     );
+  }
+
+  private resolveActiveScopeSummaryInput(input: GetRankingsInput) {
+    if (input.assignedStoreIds.length > 0) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds: input.assignedStoreIds,
+      };
+    }
+
+    if (input.storeIds.length > 0) {
+      return {
+        companyIds: [],
+        regionIds: [],
+        storeIds: input.storeIds,
+      };
+    }
+
+    if (input.regionIds.length > 0) {
+      return {
+        companyIds: [],
+        regionIds: input.regionIds,
+        storeIds: [],
+      };
+    }
+
+    return {
+      companyIds: input.companyIds,
+      regionIds: [],
+      storeIds: [],
+    };
+  }
+
+  private toScopeSummary(input: {
+    store_count: string | null;
+    active_personnel_count: string | null;
+  }) {
+    return {
+      storeCount: this.toNonNegativeInteger(input.store_count),
+      activePersonnelCount: this.toNonNegativeInteger(input.active_personnel_count),
+    };
+  }
+
+  private toNonNegativeInteger(value: string | null) {
+    if (value === null) {
+      return 0;
+    }
+
+    const numericValue = Number(value);
+
+    return Number.isFinite(numericValue) && numericValue > 0
+      ? Math.floor(numericValue)
+      : 0;
   }
 
   private buildStoreRows(input: {

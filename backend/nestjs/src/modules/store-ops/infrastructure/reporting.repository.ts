@@ -13,6 +13,11 @@ type ActiveEmployeeAssignmentScopeRow = {
   store_name: string | null;
 };
 
+type ActiveStorePersonnelScopeSummaryRow = {
+  store_count: string;
+  active_personnel_count: string;
+};
+
 @Injectable()
 export class ReportingRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -120,6 +125,67 @@ export class ReportingRepository {
     );
 
     return result.rows;
+  }
+
+  async getActiveStorePersonnelScopeSummary(input: {
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+  }): Promise<ActiveStorePersonnelScopeSummaryRow> {
+    const params: unknown[] = [];
+    const clauses: string[] = [`store.status = 'active'`];
+    const scopeClauses: string[] = [];
+
+    if (input.storeIds.length > 0) {
+      params.push(input.storeIds);
+      scopeClauses.push(`store.store_id = ANY($${params.length}::uuid[])`);
+    }
+
+    if (input.regionIds.length > 0) {
+      params.push(input.regionIds);
+      scopeClauses.push(`store.region_id = ANY($${params.length}::uuid[])`);
+    }
+
+    if (input.companyIds.length > 0) {
+      params.push(input.companyIds);
+      scopeClauses.push(`store.company_id = ANY($${params.length}::uuid[])`);
+    }
+
+    if (scopeClauses.length === 0) {
+      return {
+        store_count: "0",
+        active_personnel_count: "0",
+      };
+    }
+
+    clauses.push(`(${scopeClauses.join(" OR ")})`);
+
+    const result = await this.databaseService.query<ActiveStorePersonnelScopeSummaryRow>(
+      `
+        WITH scoped AS (
+          SELECT store.store_id
+          FROM ops.store store
+          WHERE ${clauses.join(" AND ")}
+        )
+        SELECT
+          COUNT(DISTINCT scoped.store_id)::text AS store_count,
+          COUNT(DISTINCT employee.employee_id)::text AS active_personnel_count
+        FROM scoped
+        LEFT JOIN ops.employee_assignment_history eah
+          ON eah.store_id = scoped.store_id
+         AND eah.assignment_status = 'active'
+         AND eah.end_date IS NULL
+        LEFT JOIN ops.employee employee
+          ON employee.employee_id = eah.employee_id
+         AND employee.employment_status = 'active'
+      `,
+      params,
+    );
+
+    return result.rows[0] ?? {
+      store_count: "0",
+      active_personnel_count: "0",
+    };
   }
 
   async getEmployeeIdByExternalRef(input: {

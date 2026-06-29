@@ -160,10 +160,11 @@ describe("StoreMonthlyReportPackageService", () => {
       today: "2026-06-14",
       ...scope,
     });
-    const workbook = XLSX.read(workbookResult.buffer, { type: "buffer" });
+    const workbook = XLSX.read(workbookResult.buffer, { cellStyles: true, type: "buffer" });
     const rows = XLSX.utils.sheet_to_json(workbook.Sheets["Mağaza İzleyiş"], {
       header: 1,
     }) as string[][];
+    const worksheet = workbook.Sheets["Mağaza İzleyiş"];
 
     expect(workbookResult.fileName).toBe("magaza-izleyis-2026-06.xlsx");
     expect(workbook.SheetNames).toContain("Mağaza İzleyiş");
@@ -171,5 +172,13 @@ describe("StoreMonthlyReportPackageService", () => {
     expect(rows[1]).toContain("Onur Kaytan");
     expect(rows[1]).toContain("%22,32");
     expect(rows[1]).toContain("Devam ediyor");
+    expect(worksheet["A1"].s).toMatchObject({
+      fgColor: { rgb: "3F2A8C" },
+      patternType: "solid",
+    });
+    expect(worksheet["N2"].s).toMatchObject({
+      fgColor: { rgb: "FFF3D6" },
+      patternType: "solid",
+    });
   });
 });

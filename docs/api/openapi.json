@@ -11870,6 +11870,7 @@
           "access",
           "filters",
           "reference",
+          "scopeSummary",
           "storeLeaderboard",
           "personnelLeaderboard",
           "availablePeriods"
@@ -12072,6 +12073,23 @@
                     }
                   }
                 }
+              }
+            }
+          },
+          "scopeSummary": {
+            "type": "object",
+            "required": [
+              "storeCount",
+              "activePersonnelCount"
+            ],
+            "properties": {
+              "storeCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "activePersonnelCount": {
+                "type": "integer",
+                "minimum": 0
               }
             }
           },

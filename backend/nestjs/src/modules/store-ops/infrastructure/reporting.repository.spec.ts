@@ -146,6 +146,34 @@ describe("ReportingRepository access scope contract", () => {
 
     expect(query).not.toHaveBeenCalled();
   });
+
+  it("counts active stores and active personnel for the current read scope", async () => {
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
+      rowCount: 1,
+      rows: [{ active_personnel_count: "150", store_count: "30" }],
+    }));
+    const repository = new ReportingRepository({ query } as never);
+
+    await expect(
+      repository.getActiveStorePersonnelScopeSummary({
+        companyIds: [],
+        regionIds: [],
+        storeIds: ["00000000-0000-4000-8000-000000000100"],
+      }),
+    ).resolves.toEqual({
+      active_personnel_count: "150",
+      store_count: "30",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("FROM ops.store store");
+    expect(sql).toContain("store.store_id = ANY($1::uuid[])");
+    expect(sql).toContain("eah.assignment_status = 'active'");
+    expect(sql).toContain("eah.end_date IS NULL");
+    expect(sql).toContain("employee.employment_status = 'active'");
+    expect(sql).toContain("COUNT(DISTINCT scoped.store_id)::text AS store_count");
+    expect(sql).toContain("COUNT(DISTINCT employee.employee_id)::text AS active_personnel_count");
+  });
 });
 
 describe("ReportingRepository benchmark queries", () => {
