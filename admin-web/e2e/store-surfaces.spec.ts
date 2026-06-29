@@ -1630,8 +1630,10 @@ test('region manager visit priority card stays pending when checklist data fails
   await expect(visitPriorityCard).toBeVisible()
   await expect.poll(() => mobileTodayErrorRequests).toBeGreaterThanOrEqual(1)
   await expect(visitPriorityCard).toContainText('Bekliyor')
-  await expect(visitPriorityCard).toContainText('Checklist verisi okunamadı')
-  await expect(visitPriorityCard).not.toContainText('Yüksek riskli mağaza yok')
+  await visitPriorityCard.click()
+  const visitPriorityDetail = page.locator('.sh-detail-panel')
+  await expect(visitPriorityDetail).toContainText('Checklist verisi okunamadı')
+  await expect(visitPriorityDetail).not.toContainText('Yüksek riskli mağaza yok')
 })
 
 test('report viewer store home does not advertise the visit plan link', async ({ page }) => {
