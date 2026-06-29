@@ -115,6 +115,7 @@ export function StoreIncentivesPage(input: {
     queryKey: incentivesQueryKey,
     queryFn: () => getStoreSalesTargetIncentives(period ? { period } : undefined),
     enabled,
+    staleTime: 30_000,
     ...transientQueryRetryOptions,
   })
   const invalidateCurrentQuery = () => {
