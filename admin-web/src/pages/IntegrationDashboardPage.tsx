@@ -61,15 +61,14 @@ import {
   AdminActionRow,
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
   AdminSurfacePage,
   AdminSurfaceSection,
   type AdminMetricStripItem,
 } from './admin-surface-primitives'
+import { AdminOperationalHeader, AdminOperationalMetrics, AdminOperationalPage } from './admin-operational-primitives'
 
 const PAGE_SIZE = 12
 const trNumberFormatter = new Intl.NumberFormat('tr-TR')
@@ -607,8 +606,8 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
   ]
 
   return (
-    <AdminSurfacePage ariaLabel={t('adminIntegrations.heroEyebrow')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('adminIntegrations.heroEyebrow')}>
+      <AdminOperationalHeader
         eyebrow={t('adminIntegrations.heroEyebrow')}
         title={t('adminIntegrations.title')}
         description={t('adminIntegrations.heroCopy')}
@@ -636,7 +635,7 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         className="tw:xl:grid-cols-5"
         items={metricItems}
       />
@@ -737,7 +736,7 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
           t={t}
         />
       ) : null}
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 

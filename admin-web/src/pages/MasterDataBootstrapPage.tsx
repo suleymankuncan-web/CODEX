@@ -53,15 +53,14 @@ import { formatDateTime, getErrorMessage } from '../lib/format'
 import {
   AdminActionRow,
   AdminFilterBar,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
   AdminSurfacePage,
   AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import { AdminOperationalHeader, AdminOperationalMetrics, AdminOperationalPage } from './admin-operational-primitives'
 import {
   PAGE_SIZE,
   dateInputValue,
@@ -437,7 +436,7 @@ export function MasterDataBootstrapPage() {
       : promotionResult?.batch.promotedRows ?? []
 
   return (
-    <AdminSurfacePage ariaLabel={t('adminMasterData.title')}>
+    <AdminOperationalPage ariaLabel={t('adminMasterData.title')}>
       <MasterDataCommandHero t={t} />
 
       <MasterDataCommandMetrics
@@ -556,7 +555,7 @@ export function MasterDataBootstrapPage() {
       ) : null}
 
       {activeTab === 'history' ? <MasterDataHistoryPanel t={t} /> : null}
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
@@ -564,7 +563,7 @@ function MasterDataCommandHero(input: { t: TranslateFunction }) {
   const { t } = input
 
   return (
-    <AdminSurfaceHeader
+    <AdminOperationalHeader
       eyebrow={t('adminMasterData.heroEyebrow')}
       title={t('adminMasterData.title')}
       description={t('adminMasterData.heroCopy')}
@@ -594,7 +593,7 @@ function MasterDataCommandMetrics(input: {
   const { t } = input
 
   return (
-    <AdminMetricStrip
+    <AdminOperationalMetrics
       className="tw:xl:grid-cols-4"
       items={[
         {
