@@ -1409,17 +1409,15 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(storeNav.locator('a[href="/store/targets"]')).toBeVisible()
   await expect(storeNav.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.getByRole('main', { name: 'Mağaza çalışma alanı' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Günlük Operasyon' })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Mağaza KPI', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Talep Merkezi', exact: true })).toBeVisible()
   await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
   const checklistCard = page.getByTestId('store-home-checklist-card')
   await expect(checklistCard).toBeVisible()
   await expect(checklistCard).toContainText('1')
-  await expect(checklistCard.getByRole('link', { name: /Checklist kabul/i })).toHaveAttribute(
-    'href',
-    '/store/checklists',
-  )
+  await checklistCard.click()
+  await expect(page.locator('.sh-detail-action')).toHaveAttribute('href', '/store/checklists')
   await expect(page.getByText('Ön izleme', { exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Prototip rol seçimi')).toHaveCount(0)
   await expect(page.getByTestId('store-home-visit-priority-card')).toHaveCount(0)
@@ -1448,40 +1446,31 @@ test('store home uses locked Plum Glacier prototype palette tokens', async ({ pa
   expect(activeNav.backgroundImage).toContain('rgba(19, 167, 179, 0.12)')
   expect(activeNav.color).toBe('rgb(76, 42, 165)')
 
-  const header = await readComputedStyle(page, '.store-command-home [data-store-surface-header]')
-  expect(header.backgroundColor).toBe('rgba(255, 255, 255, 0.88)')
-  expect(header.borderColor).toBe('rgba(36, 28, 50, 0.1)')
-  expect(header.boxShadow).toContain('rgba(32, 24, 48, 0.12)')
+  const hero = await readComputedStyle(page, '.store-command-home .sh-hero')
+  expect(hero.backgroundImage).toContain('rgba(255, 255, 255, 0.97)')
+  expect(hero.backgroundImage).toContain('rgba(239, 247, 246, 0.92)')
+  expect(hero.borderColor).toBe('rgba(36, 28, 50, 0.1)')
+  expect(hero.boxShadow).toContain('rgba(32, 24, 48, 0.08)')
 
-  const card = await readComputedStyle(page, '.store-command-home [data-slot="card"]')
-  expect(card.backgroundColor).toBe('rgba(255, 255, 255, 0.68)')
+  const card = await readComputedStyle(page, '.store-command-home .sh-metric')
+  expect(card.backgroundColor).toBe('rgba(255, 255, 255, 0.86)')
   expect(card.borderColor).toBe('rgba(36, 28, 50, 0.1)')
   expect(card.boxShadow).toContain('rgba(32, 24, 48, 0.08)')
 
-  const accentBadge = await readComputedStyle(
-    page,
-    '.store-command-home [data-slot="badge"][data-store-tone="accent"]',
-  )
-  expect(accentBadge.backgroundColor).toBe('rgba(124, 58, 237, 0.12)')
-  expect(accentBadge.borderColor).toBe('rgba(124, 58, 237, 0.2)')
-  expect(accentBadge.color).toBe('rgb(76, 42, 165)')
+  const primaryPill = await readComputedStyle(page, '.store-command-home .sh-pill-primary')
+  expect(primaryPill.backgroundImage).toContain('rgb(124, 58, 237)')
+  expect(primaryPill.backgroundImage).toContain('rgb(19, 167, 179)')
+  expect(primaryPill.color).toBe('rgb(255, 255, 255)')
 
-  const calmBadge = await readComputedStyle(
-    page,
-    '.store-command-home [data-slot="badge"][data-store-tone="calm"]',
-  )
-  expect(calmBadge.backgroundColor).toBe('rgba(16, 185, 129, 0.1)')
-  expect(calmBadge.borderColor).toBe('rgba(16, 185, 129, 0.22)')
-  expect(calmBadge.color).toBe('rgb(8, 122, 85)')
+  const cyanIcon = await readComputedStyle(page, '.store-command-home .sh-tone-cyan .sh-icon')
+  expect(cyanIcon.backgroundColor).toBe('rgba(19, 167, 179, 0.12)')
+  expect(cyanIcon.color).toBe('rgb(8, 123, 134)')
 
-  const outlineButton = await readComputedStyle(
-    page,
-    '.store-command-home [data-slot="button"][data-variant="outline"]',
-  )
-  expect(outlineButton.backgroundColor).toBe('rgb(255, 255, 255)')
-  expect(outlineButton.borderColor).toBe('rgba(36, 28, 50, 0.18)')
-  expect(outlineButton.color).toBe('rgb(76, 42, 165)')
-  expect(outlineButton.minHeight).toBe('38px')
+  const softButton = await readComputedStyle(page, '.store-command-home .sh-button-soft')
+  expect(softButton.backgroundColor).toBe('rgba(255, 255, 255, 0.82)')
+  expect(softButton.borderColor).toBe('rgba(36, 28, 50, 0.1)')
+  expect(softButton.color).toBe('rgb(76, 42, 165)')
+  expect(softButton.minHeight).toBe('40px')
 
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
@@ -1499,18 +1488,15 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
 
   await page.goto('/store/home')
 
-  await expect(page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Günlük Operasyon' })).toBeVisible()
   await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
-  await expect(page.getByText('Mağaza özet dashboard')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Öncelik akışı' })).toBeVisible()
   await expect(page.getByText('Mağaza özeti', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Dönem', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Ayarlar içinde', { exact: true })).toHaveCount(0)
-  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
-  await expect(dailyBrief).toBeVisible()
-  await expect(dailyBrief).toContainText('KPI takip adaylari')
-  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveText('1')
-  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/approvals"]')).toBeVisible()
+  await expect(page.getByText('Açık görevler takipte')).toBeVisible()
+  const taskPriority = page.getByRole('button', { name: /Görevler Açık görevler takipte/ })
+  await expect(taskPriority.locator('.sh-status')).toHaveText('Takipte')
   await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(1)
 
   await page
@@ -1522,7 +1508,7 @@ test('store home prefetches the task queue for manager navigation', async ({ pag
   expect(workflowInboxRequests).toBe(1)
 })
 
-test('store home keeps the daily brief pending when workflow inbox fails', async ({ page }) => {
+test('store home keeps the command surface pending when workflow inbox fails', async ({ page }) => {
   await page.unroute('**/api/workflow/inbox')
   await page.route('**/api/workflow/inbox', async (route) => {
     await route.fulfill({
@@ -1533,10 +1519,10 @@ test('store home keeps the daily brief pending when workflow inbox fails', async
 
   await page.goto('/store/home')
 
-  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
-  await expect(dailyBrief).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveText('Bekliyor')
-  await expect(dailyBrief.locator('a[href="/store/tasks"]')).not.toHaveText('0')
+  await expect(page.getByRole('heading', { name: 'Günlük Operasyon' })).toBeVisible()
+  await expect(page.getByText('Görev verisi bekleniyor')).toBeVisible()
+  await expect(page.getByText('Bekliyor').first()).toBeVisible()
+  await expect(page.getByText('Görev verisi bekleniyor')).not.toHaveText('0')
 })
 
 test('region manager home surfaces checklist field queue summary', async ({ page }) => {
@@ -1581,32 +1567,27 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   await expect(storeNav.locator('a[href="/store/reports"]')).toBeVisible()
   const checklistCard = page.getByTestId('store-home-checklist-card')
   await expect(checklistCard).toBeVisible()
-  await expect(checklistCard).toContainText('2')
   await expect(checklistCard).toContainText('1')
-  const checklistLink = checklistCard.getByRole('link', { name: /Checklist saha turu/i })
-  await expect(checklistLink).toHaveAttribute('href', '/store/checklists')
+  await checklistCard.click()
+  await expect(page.locator('.sh-detail-action')).toHaveAttribute('href', '/store/checklists')
   const visitPriorityCard = page.getByTestId('store-home-visit-priority-card')
   await expect(visitPriorityCard).toBeVisible()
   await expect(visitPriorityCard).toContainText('Bu hafta ziyaret')
   await expect(visitPriorityCard).toContainText('2')
-  await expect(visitPriorityCard).toContainText('IstinyePark Demo Store')
-  await expect(visitPriorityCard).toContainText('Marmara Park Demo Store')
-  await expect(visitPriorityCard).toContainText('Bu ay ziyaret yok')
-  await expect(visitPriorityCard.getByRole('link', { name: /Bu hafta ziyaret/i })).toHaveAttribute(
-    'href',
-    '/store/checklists?tab=plan',
-  )
-  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
-  await expect(dailyBrief).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveText('1')
-  await expect(dailyBrief.locator('a[href="/store/kpis"]')).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveCount(0)
+  await visitPriorityCard.click()
+  const visitPriorityDetail = page.locator('.sh-detail-panel')
+  await expect(visitPriorityDetail).toContainText('2 yüksek riskli mağaza')
+  await expect(visitPriorityDetail).toContainText('ziyaret planında görünüyor')
+  await expect(page.locator('.sh-detail-action')).toHaveAttribute('href', '/store/checklists?tab=plan')
+  await expect(page.getByRole('heading', { name: 'Hızlı geçiş' })).toBeVisible()
+  await expect(page.locator('a[href="/store/kpis"]').first()).toBeVisible()
   await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
   await expect.poll(() => mobileTodayRequests).toBeGreaterThanOrEqual(1)
   const prefetchedAcknowledgementRequests = acknowledgementRequests
   const prefetchedMobileTodayRequests = mobileTodayRequests
 
-  await checklistLink.click()
+  await checklistCard.click()
+  await page.locator('.sh-detail-action').click()
 
   await expect(page).toHaveURL(/\/store\/checklists$/)
   await expect(page.getByRole('heading', { name: 'Checklist Akış Sayfası' })).toBeVisible()
@@ -1687,8 +1668,11 @@ test('region manager home translates visit priority reasons in English', async (
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(visitPriorityCard).toBeVisible()
   await expect(visitPriorityCard).toContainText('This week visit priority')
-  await expect(visitPriorityCard).toContainText('No visit this month')
-  await expect(visitPriorityCard).not.toContainText('Bu ay ziyaret yok')
+  await visitPriorityCard.click()
+  const selectedDetail = page.locator('.sh-detail-panel')
+  await expect(selectedDetail).toContainText('2 high-risk stores')
+  await expect(selectedDetail).toContainText('visit plan')
+  await expect(selectedDetail).not.toContainText('Bu ay ziyaret yok')
 })
 
 test('store home dashboard actions follow role-aware navigation for admin landing roles', async ({ page }) => {
@@ -1718,7 +1702,8 @@ test('store home dashboard actions follow role-aware navigation for admin landin
   await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
   await expect(page.locator('.store-command-persona-chip')).toContainText('Admin görünümü')
   await expect(page.locator('.store-command-identity')).toContainText('Admin görünümü / Şirket geneli')
-  await expect(page.getByText('Admin mağaza özeti')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Günlük Operasyon' })).toBeVisible()
+  await expect(page.getByTestId('store-home-dashboard').getByText('Admin görünümü', { exact: true })).toBeVisible()
   await expect(page.getByText('Bölge özet dashboard')).toHaveCount(0)
   await expect(page.locator('a[href="/store/feed"]').first()).toBeVisible()
   await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
@@ -1761,7 +1746,7 @@ test('store personnel sidebar only exposes personnel surfaces', async ({ page })
   await expect(page.locator('a[href="/store/approvals"]')).toHaveCount(0)
 })
 
-test('store personnel daily command brief stays personal and read-only', async ({ page }) => {
+test('store personnel command surface stays personal and read-only', async ({ page }) => {
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
@@ -1781,13 +1766,14 @@ test('store personnel daily command brief stays personal and read-only', async (
 
   await page.goto('/store/home')
 
-  const dailyBrief = page.getByLabel('Gunluk komuta ozeti')
-  await expect(dailyBrief).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/me"]')).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/rankings"]')).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/feed"]')).toBeVisible()
-  await expect(dailyBrief.locator('a[href="/store/tasks"]')).toHaveCount(0)
-  await expect(dailyBrief.locator('a[href="/store/checklists"]')).toHaveCount(0)
+  await expect(page.getByTestId('store-home-command')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Günlük Operasyon' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hızlı geçiş' })).toBeVisible()
+  await expect(page.locator('a[href="/store/me"]').first()).toBeVisible()
+  await expect(page.locator('a[href="/store/rankings"]').first()).toBeVisible()
+  await expect(page.locator('a[href="/store/feed"]').first()).toBeVisible()
+  await expect(page.locator('a[href="/store/tasks"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/checklists"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/kpis"]')).toHaveCount(0)
 })
 
@@ -1996,7 +1982,7 @@ test('visual merchandiser lands on checklist-only shell from store root', async 
   await expectHealthyStoreTransition(page)
 })
 
-test('store home switches to English copy and persists locale', async ({ page }) => {
+test('store home keeps the command surface stable when English locale persists', async ({ page }) => {
   await page.goto('/store')
 
   await setStoredLocale(page, 'en')
@@ -2004,9 +1990,9 @@ test('store home switches to English copy and persists locale', async ({ page })
   const storeNav = page.locator('.store-command-nav')
   const storeSidebar = page.locator('.store-command-sidebar')
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store Management Panel/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Günlük Operasyon' })).toBeVisible()
   await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
-  await expect(page.getByText('Store summary dashboard')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Öncelik akışı' })).toBeVisible()
   await expect(page.getByText('Store operations run from one command surface.')).toHaveCount(0)
   await expect(page.getByText('Store performance and requests share one entry.')).toHaveCount(0)
   await expect(storeNav.getByRole('link', { name: 'Store KPIs', exact: true })).toBeVisible()
@@ -2024,7 +2010,7 @@ test('store home switches to English copy and persists locale', async ({ page })
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store Management Panel/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Günlük Operasyon' })).toBeVisible()
 })
 
 test('store sidebar recovers when a lazy route module fails during SPA navigation', async ({ page }) => {
@@ -2149,7 +2135,7 @@ test('store sidebar transitions across visible manager pages without requiring m
   await verifyStoreNavTransition(page, storeNav, {
     linkName: 'Ana Sayfa',
     path: '/store/home',
-    ready: page.getByRole('heading', { name: /Mağaza Yönetim Paneli/i }),
+    ready: page.getByRole('heading', { name: 'Günlük Operasyon' }),
   })
 
   await expectHealthyStoreTransition(page)
