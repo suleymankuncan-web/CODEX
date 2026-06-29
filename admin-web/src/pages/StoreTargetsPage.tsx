@@ -74,6 +74,7 @@ import {
   StoreSurfacePage,
 } from './store-surface-primitives'
 import { StoreTargetsRegionCommand } from './store-targets-region-command'
+import { StoreTargetsPeriodPicker } from './store-targets-period-picker'
 
 function getQueryMonthInput(value: string | null) {
   if (!value) {
@@ -573,24 +574,15 @@ export function StoreTargetsPage(input: {
             className="targets-command-field-input"
           />
         </label>
-        <label className="targets-command-field">
-          <Clock3 data-icon="inline-start" />
-          <span className="tw:sr-only">{copy.period}</span>
-          <Input
-            aria-label={copy.period}
-            type="month"
-            value={activeRequestMonth}
-            onChange={(event) => {
-              const nextMonth = event.target.value
-
-              if (/^\d{4}-\d{2}$/.test(nextMonth)) {
-                setMonthTouched(true)
-                setRequestMonth(nextMonth)
-              }
-            }}
-            className="targets-command-field-input"
-          />
-        </label>
+        <StoreTargetsPeriodPicker
+          locale={locale}
+          onPeriodChange={(nextMonth) => {
+            setMonthTouched(true)
+            setRequestMonth(nextMonth)
+          }}
+          period={activeRequestMonth}
+          triggerClassName="targets-command-period-trigger"
+        />
         <label className="targets-command-field">
           <Store data-icon="inline-start" />
           <span className="tw:sr-only">{copy.store}</span>

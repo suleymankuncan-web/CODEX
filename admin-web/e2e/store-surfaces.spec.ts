@@ -1346,7 +1346,8 @@ test('region manager store KPI overview waits for selected store before loading 
   expect(rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('desc')
   expect(highlightRequests).toHaveLength(0)
 
-  await page.getByLabel('Bölge KPI dönemi').selectOption('2026-04-01')
+  await page.getByRole('button', { name: 'Bölge KPI dönemi' }).click()
+  await page.getByRole('button', { name: 'Nis', exact: true }).click()
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-04-01')
 
   await page.getByRole('button', { name: 'UPT sütununa göre sırala' }).click()

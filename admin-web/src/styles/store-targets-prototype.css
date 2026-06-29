@@ -116,15 +116,6 @@
 
 .targets-month-button {
   cursor: pointer;
-  position: relative;
-}
-
-.targets-month-button input {
-  cursor: pointer;
-  inset: 0;
-  opacity: 0;
-  position: absolute;
-  width: 100%;
 }
 
 .targets-pill-primary,
@@ -284,6 +275,40 @@
   font-size: 12px;
   font-weight: 620;
   padding: 14px 18px;
+}
+
+.targets-sort-heading {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  gap: 5px;
+  justify-content: flex-start;
+  letter-spacing: inherit;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.targets-sort-heading.active {
+  color: var(--targets-plum);
+}
+
+.targets-sort-heading:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid rgba(112, 73, 232, 0.26);
+  outline-offset: 4px;
+}
+
+.targets-sort-heading span {
+  color: currentColor;
+  font-size: 11px;
+  line-height: 1;
+  opacity: .72;
 }
 
 .targets-ledger-list {

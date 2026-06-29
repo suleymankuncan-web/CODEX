@@ -1,9 +1,28 @@
 import { expect, test } from './test-fixtures'
+import type { Page } from '@playwright/test'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const nonPrimaryStoreId = '00000000-0000-0000-0000-000000000101'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 const pendingTargetRequestId = '00000000-0000-4000-8000-000000000777'
+const periodMonthCopy: Record<string, { full: string; short: string }> = {
+  '2026-05': { full: 'May', short: 'May' },
+  '2026-06': { full: 'Haziran', short: 'Haz' },
+}
+
+async function selectTargetPeriod(page: Page, period: string) {
+  const monthCopy = periodMonthCopy[period]
+  await page.getByRole('button', { name: 'Dönem' }).first().click()
+  await page.getByRole('button', { name: monthCopy?.short ?? period.slice(5, 7), exact: true }).click()
+  await expectTargetPeriod(page, period)
+}
+
+async function expectTargetPeriod(page: Page, period: string) {
+  const monthCopy = periodMonthCopy[period]
+  const trigger = page.getByRole('button', { name: 'Dönem' }).first()
+  await expect(trigger).toContainText(monthCopy?.full ?? period)
+  await expect(trigger).toContainText(period.slice(0, 4))
+}
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -95,7 +114,7 @@ test('store targets page submits target distribution allocations with employee i
   await expect(page.locator('.targets-command-panel')).toBeVisible()
   await expect(page.locator('[data-testid="store-targets-contract-surface"] [data-store-section-card]')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Personel hedef dağıtımı' })).toBeVisible()
-  await page.getByLabel('Dönem').fill('2026-05')
+  await selectTargetPeriod(page, '2026-05')
   await page.getByLabel('Toplam hedef').fill('145000')
   await page.getByLabel('Store Personnel Hedef').fill('145000')
   await page.getByRole('button', { name: 'Onaya gönder' }).click()
@@ -209,7 +228,7 @@ test('store targets page opens latest visible target request month when no month
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByLabel('Dönem')).toHaveValue('2026-06')
+  await expectTargetPeriod(page, '2026-06')
   expect(requestUrls.some((url) => !url.searchParams.has('requestMonth'))).toBe(true)
   await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-06-01')
 })
@@ -255,7 +274,7 @@ test('store targets page keeps region managers on latest approved or pending tar
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByLabel('Dönem')).toHaveValue('2026-05')
+  await expectTargetPeriod(page, '2026-05')
   await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-05-01')
   await expect(page.locator('.targets-prototype')).toBeVisible()
   await expect(page.locator('.targets-ledger')).toBeVisible()
@@ -409,7 +428,7 @@ test('store targets page lets region managers approve pending target requests in
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await page.getByLabel('Dönem').fill('2026-05')
+  await selectTargetPeriod(page, '2026-05')
   await expect(page.locator('.targets-ledger')).toBeVisible()
   await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
@@ -506,7 +525,7 @@ test('store targets page lets region managers approve with edited target allocat
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await page.getByLabel('Dönem').fill('2026-05')
+  await selectTargetPeriod(page, '2026-05')
   await expect(page.locator('.targets-ledger')).toBeVisible()
   await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
   await expect(page.getByRole('button', { name: /^Onayla$/ })).toBeVisible()
@@ -584,7 +603,7 @@ test('store targets page submits revision requests from approved target snapshot
   await page.goto('/store/targets')
 
   await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await page.getByLabel('Dönem').fill('2026-05')
+  await selectTargetPeriod(page, '2026-05')
   await page.getByRole('radio', { name: /Revize Talebi/ }).click()
   await page.getByRole('button', { name: 'Revize oluştur' }).click()
   await page.getByLabel('Store Personnel Revize talebi gönder').fill('40000')

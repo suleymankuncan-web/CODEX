@@ -30,6 +30,7 @@ import {
 } from './store-kpi-highlights-formatters'
 import type { DisplayKpiRow, StoreKpiHighlightsPageModel } from './store-kpi-highlights-model'
 import { StoreKpisCommandDeckHeader, type StoreKpiCommandTab } from './store-kpis-command-deck-header'
+import { StoreKpisPeriodPicker } from './store-kpis-period-picker'
 import { StoreEmptyState, StoreErrorState, StoreLoadingState, StoreStatusBadge, StoreSurfacePage } from './store-surface-primitives'
 
 type MetricTone = 'good' | 'warn' | 'danger' | 'neutral'
@@ -39,7 +40,7 @@ const metricColors: Record<string, string> = {
   UPT: '#6d4df7',
   ATV: '#f59e0b',
   CR: '#f43f72',
-  gsm_approval: '#18bfd0',
+  gsm_approval: '#2563eb',
   BM_CHECKLIST: '#3878ff',
   VM_CHECKLIST: '#13a779',
 }
@@ -150,6 +151,11 @@ function CommandDeckControls({ model }: { model: StoreKpiHighlightsPageModel }) 
 
 function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
   const livePeriods = model.liveSummary?.availablePeriods.filter((period) => period.periodType === 'monthly') ?? []
+  const activeLivePeriodStart = model.livePeriodStart || model.liveSummary?.period?.periodStart || livePeriods[0]?.periodStart || ''
+  const snapshotPeriodStart = model.activeSnapshotRun?.snapshotDate ?? model.activeSnapshotRun?.periodStart ?? ''
+  const snapshotPeriodStarts = model.availableSnapshotRuns
+    .map((run) => run.snapshotDate ?? run.periodStart)
+    .filter((value): value is string => Boolean(value))
 
   return (
     <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
@@ -168,32 +174,29 @@ function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
         </div>
       ) : null}
       {model.viewMode === 'live' ? (
-        <select
-          aria-label={model.t('storeKpis.livePeriodSelect')}
-          className="tw:h-10 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[#071332]"
-          value={model.livePeriodStart}
-          onChange={(event) => model.setLivePeriodStart(event.target.value)}
-        >
-          <option value="">{model.t('storeKpis.latestMonthlyPeriod')}</option>
-          {livePeriods.map((period) => (
-            <option key={`${period.periodType}:${period.periodStart}`} value={period.periodStart}>
-              {formatMonthLabel(period.periodStart, model.locale)}
-            </option>
-          ))}
-        </select>
+        <StoreKpisPeriodPicker
+          ariaLabel={model.t('storeKpis.livePeriodSelect')}
+          availablePeriodStarts={livePeriods.map((period) => period.periodStart)}
+          locale={model.locale}
+          onPeriodStartChange={model.setLivePeriodStart}
+          periodStart={activeLivePeriodStart}
+          triggerClassName="tw:h-10 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[#071332]"
+        />
       ) : (
-        <select
-          aria-label={model.t('storeKpis.closedRecordSelect')}
-          className="tw:h-10 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[#071332]"
-          value={model.selectedSnapshotRunId}
-          onChange={(event) => model.setSelectedSnapshotRunId(event.target.value)}
-        >
-          {model.availableSnapshotRuns.map((run) => (
-            <option key={run.snapshotRunId} value={run.snapshotRunId}>
-              {run.snapshotDate ?? run.periodStart}
-            </option>
-          ))}
-        </select>
+        <StoreKpisPeriodPicker
+          ariaLabel={model.t('storeKpis.closedRecordSelect')}
+          availablePeriodStarts={snapshotPeriodStarts}
+          locale={model.locale}
+          onPeriodStartChange={(periodStart) => {
+            const selectedMonth = periodStart.slice(0, 7)
+            const matchingRun = model.availableSnapshotRuns.find((run) =>
+              (run.snapshotDate ?? run.periodStart ?? '').slice(0, 7) === selectedMonth,
+            )
+            if (matchingRun) model.setSelectedSnapshotRunId(matchingRun.snapshotRunId)
+          }}
+          periodStart={snapshotPeriodStart}
+          triggerClassName="tw:h-10 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[#071332]"
+        />
       )}
     </div>
   )
@@ -555,6 +558,7 @@ function PersonnelKpiRows(input: {
 function PersonnelRow({ model, row }: { model: StoreKpiHighlightsPageModel; row: PersonnelRankingRow }) {
   const getMetric = (code: string) => row.metrics?.find((metric) => metric.code === code)
   const target = getMetric('TARGET_ACHIEVEMENT')
+  const contribution = calculatePersonnelPrimaryContribution(model, target)
   const statusTone: MetricTone = row.scoreValue >= 85 ? 'good' : row.scoreValue >= 75 ? 'warn' : 'danger'
   const employeeId = row.employeeId ?? ''
   const profilePath = `/store/personnel/${encodeURIComponent(employeeId)}?mode=live&periodType=monthly${model.liveSummary?.period?.periodStart ? `&periodStart=${encodeURIComponent(model.liveSummary.period.periodStart)}` : ''}`
@@ -563,7 +567,7 @@ function PersonnelRow({ model, row }: { model: StoreKpiHighlightsPageModel; row:
     <tr className="tw:border-t tw:border-border/70">
       <td className="tw:px-4 tw:py-3"><strong className="tw:block tw:text-sm tw:font-semibold tw:text-[#071332]">{row.displayName}</strong></td>
       <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{formatNumber(model.locale, row.scoreValue, 1)}</td>
-      <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{formatNumber(model.locale, row.metrics?.reduce((sum, metric) => sum + Number(metric.contributionValue ?? 0), 0) ?? 0, 1)}</td>
+      <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{contribution === null ? model.t('storeKpis.noData') : formatNumber(model.locale, contribution, 1)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatRankingMetric(model.locale, getMetric('UPT')?.actualValue)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatCurrency(model.locale, getMetric('ATV')?.actualValue)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatPersonnelTargetAchievement(model, target)}</td>
@@ -571,6 +575,30 @@ function PersonnelRow({ model, row }: { model: StoreKpiHighlightsPageModel; row:
       <td className="tw:px-4 tw:py-3">{row.canOpenProfile && employeeId ? <Link className="tw:inline-flex tw:h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-[#b8a7ff] tw:px-3 tw:text-sm tw:font-semibold tw:text-[#6d4df7]" to={profilePath}>{model.t('storeKpis.commandProfile')}<ArrowRight className="tw:size-4" /></Link> : <span className="tw:text-sm tw:text-[#65708d]">{model.t('storeKpis.noData')}</span>}</td>
     </tr>
   )
+}
+
+function calculatePersonnelPrimaryContribution(
+  model: StoreKpiHighlightsPageModel,
+  metric: RankingMetricValue | undefined,
+) {
+  const profileMetric = model.personnelKpiScoreProfile?.metrics.find((item) =>
+    item.code.toUpperCase() === 'TARGET_ACHIEVEMENT' ||
+    (item.aliases ?? []).some((alias) => alias.toUpperCase() === 'TARGET_ACHIEVEMENT'),
+  )
+  const weight = toFiniteNumber(profileMetric?.weightPercent)
+  const directContribution = toFiniteNumber(metric?.contributionValue)
+
+  if (directContribution !== null && (weight === null || directContribution <= weight * 1.2 + 0.001)) {
+    return directContribution
+  }
+
+  if (weight === null) return null
+
+  const actualValue = toFiniteNumber(metric?.actualValue)
+  const referenceValue = toFiniteNumber(metric?.targetValue) ?? toFiniteNumber(metric?.benchmarkValue)
+  if (actualValue === null || referenceValue === null || referenceValue === 0) return null
+
+  return Math.min(actualValue / Math.abs(referenceValue), 1.2) * weight
 }
 
 function ScoreSourceCard({ model, missingChecklistCodes }: { model: StoreKpiHighlightsPageModel; missingChecklistCodes: string[] }) {
@@ -699,10 +727,6 @@ function formatPersonnelTargetAchievement(
 function toFiniteNumber(input: unknown) {
   const value = Number(input)
   return Number.isFinite(value) ? value : null
-}
-
-function formatMonthLabel(input: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(new Date(input))
 }
 
 function formatShortMonth(input: string, locale: string) {

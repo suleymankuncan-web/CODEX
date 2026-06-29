@@ -46,7 +46,7 @@ test('store KPI closed view explains effective BM and VM checklist weights', asy
 
   await page.getByRole('button', { name: 'Kapanmış gün' }).click()
 
-  await expect(page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' })).toHaveValue('snapshot-1')
+  await expect(page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' })).toContainText('Mart')
   await expect(page.getByText('BM checklist').first()).toBeVisible()
   await expect(page.getByText('VM checklist').first()).toBeVisible()
   await expect(page.getByText('Yapılmadı').first()).toBeVisible()
@@ -61,9 +61,10 @@ test('store KPI closed view lets users choose a closed snapshot from the list', 
   await page.goto('/store/kpis')
 
   await page.getByRole('button', { name: 'Kapanmış gün' }).click()
-  await page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' }).selectOption('snapshot-2026-04-20')
+  await page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' }).click()
+  await page.getByRole('button', { name: 'Nis', exact: true }).click()
 
-  await expect(page.getByRole('combobox', { name: 'Kapanmış KPI kaydı seçimi' })).toHaveValue('snapshot-2026-04-20')
+  await expect(page.getByRole('button', { name: 'Kapanmış KPI kaydı seçimi' })).toContainText('Nisan')
   await expect(page.getByText('VM checklist').first()).toBeVisible()
   await expect(page.getByText('Yapılmadı').first()).toBeVisible()
   await page.getByRole('button', { name: 'Personel KPI' }).click()

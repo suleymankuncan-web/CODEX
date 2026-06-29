@@ -563,6 +563,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     matchedMetricCount,
     needsAttention,
     personnelWeightsReady,
+    personnelKpiScoreProfile,
     primaryStoreId,
     reportingAllowed,
     regionOverviewActivePeriodStart: activeRegionOverviewPeriodStart,

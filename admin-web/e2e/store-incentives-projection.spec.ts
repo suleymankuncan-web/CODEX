@@ -110,7 +110,7 @@ test('region manager sees assigned stores grouped by store with approval control
   await page.getByRole('button', { name: /Marmara Forum/ }).click()
   await expect(page.getByRole('button', { name: 'Second Store Personnel' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
-  await expect(page.getByRole('button', { name: /Excel/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Excel/i })).toHaveCount(0)
   await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toBeVisible()
 })
 
@@ -121,6 +121,7 @@ test('region manager marks a store reviewed with period and store id', async ({ 
   await routeRegionIncentiveMutations(page, { reviewRequests: requests })
 
   await page.goto('/store/incentives')
+  await openDemoStore(page)
   await page.getByRole('checkbox', { name: 'Kontrol et' }).first().click()
 
   await expect.poll(() => requests.length).toBe(1)
@@ -138,6 +139,7 @@ test('region manager saves a final amount correction from the personnel sheet', 
   await routeRegionIncentiveMutations(page, { correctionRequests: requests })
 
   await page.goto('/store/incentives')
+  await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await expect(page.getByRole('heading', { name: 'Store Personnel' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Hakediş özeti' })).toBeVisible()
@@ -167,6 +169,7 @@ test('region manager sees saved draft correction amount in totals and sheet inpu
   await page.goto('/store/incentives')
 
   await expect(page.getByText('63.500,25 TL').first()).toBeVisible()
+  await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   const finalAmountInput = page.getByLabel('Final prim tutarı')
   await expect(finalAmountInput).toHaveValue('17000,25')
@@ -181,6 +184,7 @@ test('region manager can type a large final correction amount without live group
   await routeRegionIncentiveMutations(page, { correctionRequests: requests })
 
   await page.goto('/store/incentives')
+  await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
 
   const finalAmountInput = page.getByLabel('Final prim tutarı')
@@ -206,6 +210,7 @@ test('region manager cannot save an invalid final correction amount', async ({ p
   await routeRegionIncentiveMutations(page, { correctionRequests: requests })
 
   await page.goto('/store/incentives')
+  await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await page.getByLabel('Final prim tutarı').fill('yanlış tutar')
   await page.getByLabel('Düzeltme notu').fill('Bölge kontrolü sonrası final prim düzeltmesi')
@@ -222,6 +227,7 @@ test('region manager cannot save a negative final correction amount', async ({ p
   await routeRegionIncentiveMutations(page, { correctionRequests: requests })
 
   await page.goto('/store/incentives')
+  await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await page.getByLabel(/Final prim tutar/).fill('-1')
   await page.getByLabel(/notu/).fill('BÃƒÂ¶lge kontrolÃƒÂ¼ sonrasÃ„Â± final prim dÃƒÂ¼zeltmesi')
@@ -238,6 +244,7 @@ test('region manager cannot save an over-precision final correction amount', asy
   await routeRegionIncentiveMutations(page, { correctionRequests: requests })
 
   await page.goto('/store/incentives')
+  await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await page.getByLabel(/Final prim tutar/).fill('17000.255')
   await page.getByLabel(/notu/).fill('BÃ¶lge kontrolÃ¼ sonrasÄ± final prim dÃ¼zeltmesi')
@@ -283,6 +290,7 @@ test('region manager approval controls stay disabled before month close', async 
 
   await expect(page.getByText(/Ay kapan.*bekliyor/).first()).toBeVisible()
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
+  await openDemoStore(page)
   await expect(page.getByRole('checkbox', { name: 'Kontrol et' }).first()).toBeDisabled()
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await expect(page.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
@@ -400,6 +408,10 @@ async function routeAuthSession(page: Page, authSession: ReturnType<typeof creat
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSession })
   })
+}
+
+async function openDemoStore(page: Page) {
+  await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
 }
 
 async function routeOwnIncentive(page: Page, fixture: unknown, status = 200) {
