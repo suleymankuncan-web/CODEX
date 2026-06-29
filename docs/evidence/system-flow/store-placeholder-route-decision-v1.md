@@ -2,14 +2,18 @@
 
 ## Scope
 
-This evidence closes Milestone 6 of the system-flow readiness line.
-It classifies the store routes that intentionally have no frontend API calls in
+This evidence closed Milestone 6 of the system-flow readiness line.
+It classified the store routes that intentionally had no frontend API calls in
 the generated system-flow map:
 
 - `/store/incentives`
-- `/store/reports`
 - `/store/settings`
 - `/store/targets`
+
+This document is now historical for `/store/reports`: Store Reports Package V1
+superseded that placeholder classification on 2026-06-29. The remaining active
+placeholder/utility decisions in this file are `/store/settings`,
+`/store/targets`, and `/store/incentives`.
 
 It does not change route access, API calls, auth/permission behavior, DB state,
 business logic, CSS behavior, or user workflow semantics.
@@ -21,8 +25,11 @@ Decision:
 - Keep all four routes in the store shell.
 - Treat `/store/settings` as a real utility route with browser-local language
   preference only.
-- Treat `/store/reports` and `/store/targets` as honest handoff placeholders
-  until native store read models are explicitly scoped.
+- Treat `/store/targets` as an honest handoff placeholder until native store
+  read models are explicitly scoped.
+- Superseded on 2026-06-29: `/store/reports` is no longer an honest handoff
+  placeholder. It is a native Store Reports Package V1 read/export surface for
+  Region Manager, Super Admin, Report Viewer, and Auditor roles.
 - Treat `/store/incentives` as product expansion intake/foundation, not a live
   incentive engine.
 
@@ -46,8 +53,10 @@ Evidence:
 - `admin-web/e2e/store-surfaces.spec.ts` covers the utility handoff pages,
   mobile width/toolbar clearance, and `/store/incentives` locale/foundation
   behavior.
-- `StoreReportsPage.tsx`, `StoreTargetsPage.tsx`, and
-  `StoreSettingsPage.tsx` are small utility/handoff components.
+- `StoreTargetsPage.tsx` and `StoreSettingsPage.tsx` are small
+  utility/handoff components.
+- `StoreReportsPage.tsx` now uses the real `GET /api/reports/store-monthly-package`
+  and `GET /api/reports/store-monthly-package.xlsx` read/export contract.
 - `StoreIncentivesPage.tsx` already states there is no live payout calculation,
   approval outcome, rule lookup, or recalculation contract behind the route.
 
@@ -84,7 +93,7 @@ Stop rule:
 | --- | --- | --- | --- | --- |
 | `/store/settings` | Real utility route | It owns browser-local language preference and no backend profile contract yet. | Keep. No API needed. | Add backend profile persistence only with a user settings contract. |
 | `/store/targets` | Honest handoff placeholder | Store-native target detail/write semantics are not scoped; current working flow is `/admin/targets` and `/store/approvals`. | Keep as handoff. | Add store-native target read only after target product contract and scope rules are explicit. |
-| `/store/reports` | Honest handoff placeholder | Store-native report summary is not scoped; store users already have `/store/kpis`, `/store/me`, and `/store/rankings` as real read surfaces. | Keep as handoff. | Add store summary report only if it reuses existing reports reads and has clear V1 copy/tests. |
+| `/store/reports` | Superseded: native report package | Store Reports Package V1 now uses a scoped backend read/export contract. | Changed on 2026-06-29. Store Manager remains intentionally excluded. | Extend only through the report package contract and scoped missing-data policy. |
 | `/store/incentives` | Product expansion intake/foundation | No live incentive engine, payout model, rule lookup, approval outcome, or recalculation contract exists. | Keep as intake/foundation. | Start with store-scoped incentive summary cards only after incentive rules/source ownership is decided. |
 
 ## What Not To Build Now
