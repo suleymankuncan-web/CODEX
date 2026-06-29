@@ -705,6 +705,7 @@ export class RankingService {
           benchmarkLookup: input.benchmarkLookup,
         });
         const displayName = [value.firstName, value.lastName]
+          .map((part) => part?.trim())
           .filter(Boolean)
           .join(" ")
           .trim();
@@ -712,7 +713,7 @@ export class RankingService {
         return {
           subject: "personnel" as const,
           employeeId,
-          displayName: displayName || employeeId,
+          displayName: displayName || "Personel bilgisi eksik",
           storeId: value.storeId,
           storeName: value.storeName,
           regionId: value.regionId,
