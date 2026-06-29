@@ -161,20 +161,21 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
     input.availablePaths.has('/store/checklists')
   ) {
     const visitPriorityCount = countNumeric(input.visitPriorityValue)
+    const visitPriorityPending = visitPriorityCount === 0 && !/^\d+$/.test(input.visitPriorityValue)
     priorities.push({
       id: 'visit-priority',
       source: 'Ziyaret planı',
       title: input.visitPriorityTitle ?? 'Öncelikli mağazaları incele',
       detail: input.visitPriorityCopy ?? 'Ziyaret öncelikleri checklist sayfasındaki plan görünümünde izlenir.',
       meta: input.visitPriorityValue,
-      status: visitPriorityCount > 0 ? 'Planla' : 'Hazır',
+      status: visitPriorityPending ? 'Bekliyor' : visitPriorityCount > 0 ? 'Planla' : 'Hazır',
       cta: input.visitPriorityActionLabel ?? 'Planı aç',
       href: '/store/checklists?tab=plan',
       routeLabel: 'Checklistler',
-      tone: visitPriorityCount > 0 ? 'amber' : 'mint',
+      tone: visitPriorityPending || visitPriorityCount > 0 ? 'amber' : 'mint',
       icon: input.icons.store,
       priority: 25,
-      filter: visitPriorityCount > 0 ? 'critical' : 'approval',
+      filter: visitPriorityPending || visitPriorityCount > 0 ? 'critical' : 'approval',
       testId: 'store-home-visit-priority-card',
     })
   }
