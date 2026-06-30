@@ -7,7 +7,13 @@ export type components = {
     "ApproveTargetDistributionRequestDto": {
       "approvalNote"?: string
       "approvedTotalTargetValue"?: number
-      "approvedAllocations"?: unknown[]
+      "approvedAllocations"?: components['schemas']["ApprovedTargetDistributionAllocationDto"][]
+    }
+    "ApprovedTargetDistributionAllocationDto": {
+      "employeeId": string
+      "assigneeLabel": string
+      "targetValue": number
+      "note"?: string
     }
     "AuthActionStoreAssignmentCommandResponse": {
       "command": {
@@ -1182,6 +1188,61 @@ export type components = {
         }
       }
     }
+    "MasterDataQualityAuditItemDto": {
+      "eventId": string
+      "eventType": string
+      "entityType": "store" | "personnel" | "import"
+      "entityId": string | null
+      "entityLabel": string
+      "actorLabel": string
+      "occurredAt": string
+      "summary": string
+      "metadata": {
+        [key: string]: unknown
+      }
+    }
+    "MasterDataQualityAuditResponseDto": {
+      "items": components['schemas']["MasterDataQualityAuditItemDto"][]
+      "meta": components['schemas']["MasterDataQualityListMetaDto"]
+    }
+    "MasterDataQualityIssueItemDto": {
+      "id": string
+      "issueCode": string
+      "severity": "critical" | "warning" | "info"
+      "entityType": "store" | "personnel" | "assignment" | "import"
+      "entityId": string
+      "entityLabel": string
+      "secondaryLabel": string | null
+      "problemLabel": string
+      "recommendedAction": string
+      "affectedModules": string[]
+      "lastSeenAt": string
+      "source": string
+    }
+    "MasterDataQualityIssueSummaryDto": {
+      "severity": {
+        "critical": number
+        "warning": number
+        "info": number
+      }
+      "entityType": {
+        "store": number
+        "personnel": number
+        "assignment": number
+        "import": number
+      }
+    }
+    "MasterDataQualityIssuesResponseDto": {
+      "items": components['schemas']["MasterDataQualityIssueItemDto"][]
+      "meta": components['schemas']["MasterDataQualityListMetaDto"]
+      "summary": components['schemas']["MasterDataQualityIssueSummaryDto"]
+    }
+    "MasterDataQualityListMetaDto": {
+      "count": number
+      "total": number
+      "limit": number
+      "offset": number
+    }
     "MobileChecklistTodayResponse": {
       "data": {
         "stores": Array<{
@@ -1241,6 +1302,36 @@ export type components = {
           }>
       }
     }
+    "PersonnelMasterCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "personnelMaster": {
+          "employeeId": string
+          "externalEmployeeRef": string | null
+          "firstName": string
+          "lastName": string
+          "displayName": string
+          "hireDate": string
+          "terminationDate": string | null
+          "employmentStatus": string
+          "employmentType": string
+          "assignmentId": string | null
+          "assignmentStartDate": string | null
+          "storeId": string | null
+          "storeCode": string | null
+          "storeName": string | null
+          "regionId": string | null
+          "regionName": string | null
+          "positionId": string | null
+          "positionCode": string | null
+          "positionName": string | null
+          "updatedAt": string | null
+        }
+      }
+    }
     "PersonnelMasterListResponse": {
       "items": Array<{
           "employeeId": string
@@ -1262,6 +1353,7 @@ export type components = {
           "positionId": string | null
           "positionCode": string | null
           "positionName": string | null
+          "updatedAt": string | null
         }>
       "meta": {
         "count": number
@@ -2413,6 +2505,25 @@ export type components = {
         "offset": number
       }
     }
+    "StoreMasterCommandResponse": {
+      "command": {
+        "status": string
+        "message": string
+      }
+      "data": {
+        "storeMaster": {
+          "storeId": string
+          "storeCode": string
+          "storeName": string
+          "storeType": string
+          "status": string
+          "kpiImportEnabled": boolean
+          "regionId": string | null
+          "regionName": string | null
+          "updatedAt": string | null
+        }
+      }
+    }
     "StoreMasterListResponse": {
       "items": Array<{
           "storeId": string
@@ -2423,6 +2534,7 @@ export type components = {
           "kpiImportEnabled": boolean
           "regionId": string | null
           "regionName": string | null
+          "updatedAt": string | null
         }>
       "meta": {
         "count": number
@@ -2537,6 +2649,25 @@ export type components = {
         "limit": number
         "offset": number
       }
+    }
+    "UpdateKpiImportStoreScopeDto": {
+      "storeType": "company" | "franchise" | "operator"
+      "regionId": string
+      "status": "active" | "inactive" | "closed"
+      "kpiImportEnabled": boolean
+      "expectedUpdatedAt"?: string
+    }
+    "UpdatePersonnelMasterDto": {
+      "firstName": string
+      "lastName": string
+      "externalEmployeeRef"?: string
+      "employmentStatus": "active" | "inactive" | "terminated"
+      "employmentType": "full_time" | "part_time" | "temporary"
+      "hireDate": string
+      "storeId": string
+      "positionId": string
+      "assignmentStartDate"?: string
+      "expectedUpdatedAt"?: string
     }
     "UpdateStoreActionPlanStatusRequest": {
       "status": "open" | "in_progress" | "blocked"
@@ -3140,12 +3271,50 @@ export type paths = {
       }
     }
   }
+  "/api/integrations/master-data-quality/audit": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["MasterDataQualityAuditResponseDto"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/master-data-quality/issues": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["MasterDataQualityIssuesResponseDto"]
+          }
+        }
+      }
+    }
+  }
   "/api/integrations/personnel-master": {
     get: {
       responses: {
         "200": {
           content: {
             'application/json': components['schemas']["PersonnelMasterListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/personnel-master/{employeeId}": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["UpdatePersonnelMasterDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["PersonnelMasterCommandResponse"]
           }
         }
       }
@@ -3168,6 +3337,22 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["StoreMasterListResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/integrations/store-master/{storeId}": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["UpdateKpiImportStoreScopeDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["StoreMasterCommandResponse"]
           }
         }
       }

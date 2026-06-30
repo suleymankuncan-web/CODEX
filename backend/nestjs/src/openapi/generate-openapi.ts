@@ -12,6 +12,14 @@ import {
   setJsonRequestSchema,
   setJsonResponseSchema,
 } from "./openapi-schema-helpers";
+import {
+  applyMasterDataResponseSchemas,
+  createMasterDataCommandResponseSchemas,
+  masterDataQualityAuditItemSchema,
+  masterDataQualityIssueEntitySummarySchema, masterDataQualityIssueItemSchema,
+  masterDataQualityIssueSeveritySummarySchema,
+  masterDataQualityIssueSummarySchema,
+} from "./openapi-master-data-schemas";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyBrowserSessionOpenApi } from "./browser-session-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
@@ -1776,6 +1784,7 @@ const storeMasterItemSchema = {
     "kpiImportEnabled",
     "regionId",
     "regionName",
+    "updatedAt",
   ],
   properties: {
     storeId: { type: "string" },
@@ -1786,6 +1795,7 @@ const storeMasterItemSchema = {
     kpiImportEnabled: { type: "boolean" },
     regionId: { type: "string", nullable: true },
     regionName: { type: "string", nullable: true },
+    updatedAt: { type: "string", nullable: true },
   },
 };
 
@@ -1867,6 +1877,7 @@ const personnelMasterItemSchema = {
     "positionId",
     "positionCode",
     "positionName",
+    "updatedAt",
   ],
   properties: {
     employeeId: { type: "string" },
@@ -1888,6 +1899,7 @@ const personnelMasterItemSchema = {
     positionId: { type: "string", nullable: true },
     positionCode: { type: "string", nullable: true },
     positionName: { type: "string", nullable: true },
+    updatedAt: { type: "string", nullable: true },
   },
 };
 
@@ -4080,6 +4092,14 @@ const personnelMasterListResponseSchema = {
   },
 };
 
+const {
+  storeMasterCommandResponseSchema,
+  personnelMasterCommandResponseSchema,
+} = createMasterDataCommandResponseSchemas({
+  storeMasterItemSchema,
+  personnelMasterItemSchema,
+});
+
 const masterDataBootstrapBatchItemSchema = {
   type: "object",
   required: [
@@ -4479,9 +4499,19 @@ async function generateOpenApi(): Promise<void> {
     ImportBatchReconciliationResponse: importBatchReconciliationResponseSchema,
     ExternalIdMapCandidatesResponse: externalIdMapCandidatesResponseSchema,
     IntegrationLookups: integrationLookupsSchema,
+    MasterDataQualityAuditItemDto: masterDataQualityAuditItemSchema,
+    MasterDataQualityIssueEntitySummaryDto:
+      masterDataQualityIssueEntitySummarySchema,
+    MasterDataQualityIssueItemDto: masterDataQualityIssueItemSchema,
+    MasterDataQualityIssueSeveritySummaryDto:
+      masterDataQualityIssueSeveritySummarySchema,
+    MasterDataQualityIssueSummaryDto: masterDataQualityIssueSummarySchema,
+    MasterDataQualityListMetaDto: listResponseMetaSchema,
     PersonnelMasterListResponse: personnelMasterListResponseSchema,
+    PersonnelMasterCommandResponse: personnelMasterCommandResponseSchema,
     PersonnelMasterLookups: personnelMasterLookupsSchema,
     StoreMasterListResponse: storeMasterListResponseSchema,
+    StoreMasterCommandResponse: storeMasterCommandResponseSchema,
     StoreMasterLookups: storeMasterLookupsSchema,
     MasterDataBootstrapBatchesResponse: masterDataBootstrapBatchesResponseSchema,
     MasterDataBootstrapBatchDetailResponse:
@@ -5074,37 +5104,7 @@ async function generateOpenApi(): Promise<void> {
     "IntegrationLookups",
   );
 
-  setJsonResponseSchema(
-    document.paths,
-    "/api/integrations/store-master-lookups",
-    "get",
-    "Store master lookup options for the admin master-data surface.",
-    "StoreMasterLookups",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/integrations/store-master",
-    "get",
-    "Paginated store master data for the admin master-data surface.",
-    "StoreMasterListResponse",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/integrations/personnel-master-lookups",
-    "get",
-    "Personnel master lookup options for the admin master-data surface.",
-    "PersonnelMasterLookups",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/integrations/personnel-master",
-    "get",
-    "Paginated personnel master data for the admin master-data surface.",
-    "PersonnelMasterListResponse",
-  );
+  applyMasterDataResponseSchemas(document.paths);
 
   setJsonResponseSchema(
     document.paths,

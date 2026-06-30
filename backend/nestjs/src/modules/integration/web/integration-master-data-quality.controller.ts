@@ -1,10 +1,20 @@
 import { Controller, Get, Query, Req } from "@nestjs/common";
-import { ApiQuery } from "@nestjs/swagger";
+import { ApiExtraModels, ApiOkResponse, ApiQuery } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { MasterDataQualityService } from "../application/master-data-quality.service";
 import { ListMasterDataQualityAuditQueryDto } from "./dto/list-master-data-quality-audit.query";
 import { ListMasterDataQualityIssuesQueryDto } from "./dto/list-master-data-quality-issues.query";
+import {
+  MasterDataQualityAuditItemDto,
+  MasterDataQualityAuditResponseDto,
+  MasterDataQualityIssueEntitySummaryDto,
+  MasterDataQualityIssueItemDto,
+  MasterDataQualityIssueSeveritySummaryDto,
+  MasterDataQualityIssueSummaryDto,
+  MasterDataQualityIssuesResponseDto,
+  MasterDataQualityListMetaDto,
+} from "./dto/master-data-quality.response";
 
 type CompanyScopedRequest = {
   user: {
@@ -15,6 +25,16 @@ type CompanyScopedRequest = {
 };
 
 @Controller("integrations/master-data-quality")
+@ApiExtraModels(
+  MasterDataQualityAuditItemDto,
+  MasterDataQualityAuditResponseDto,
+  MasterDataQualityIssueEntitySummaryDto,
+  MasterDataQualityIssueItemDto,
+  MasterDataQualityIssueSeveritySummaryDto,
+  MasterDataQualityIssueSummaryDto,
+  MasterDataQualityIssuesResponseDto,
+  MasterDataQualityListMetaDto,
+)
 export class IntegrationMasterDataQualityController {
   constructor(private readonly masterDataQualityService: MasterDataQualityService) {}
 
@@ -33,6 +53,7 @@ export class IntegrationMasterDataQualityController {
   @ApiQuery({ name: "issueCode", required: false, type: String })
   @ApiQuery({ name: "limit", required: false, type: Number })
   @ApiQuery({ name: "offset", required: false, type: Number })
+  @ApiOkResponse({ type: MasterDataQualityIssuesResponseDto })
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async listIssues(
@@ -59,6 +80,7 @@ export class IntegrationMasterDataQualityController {
   @ApiQuery({ name: "entityId", required: false, type: String })
   @ApiQuery({ name: "limit", required: false, type: Number })
   @ApiQuery({ name: "offset", required: false, type: Number })
+  @ApiOkResponse({ type: MasterDataQualityAuditResponseDto })
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
   async listAudit(

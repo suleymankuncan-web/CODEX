@@ -1,5 +1,10 @@
 import { sendFormData, sendJson } from '../../lib/api'
-import { fetchOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
+import {
+  fetchOpenApiJson,
+  sendOpenApiJson,
+  type ApiGetResponse,
+  type ApiMutationResponse,
+} from '../../lib/openapi-client'
 
 export type ImportOverview = ApiGetResponse<'/api/integrations/import-batches/overview'>
 
@@ -89,12 +94,21 @@ export type StoreMasterList = ApiGetResponse<'/api/integrations/store-master'>
 export type StoreMasterItem = StoreMasterList['items'][number]
 
 export type StoreMasterLookups = ApiGetResponse<'/api/integrations/store-master-lookups'>
+export type StoreMasterUpdateResponse = ApiMutationResponse<'/api/integrations/store-master/{storeId}', 'PATCH'>
 
 export type PersonnelMasterList = ApiGetResponse<'/api/integrations/personnel-master'>
 export type PersonnelMasterItem = PersonnelMasterList['items'][number]
 
 export type PersonnelMasterLookups =
   ApiGetResponse<'/api/integrations/personnel-master-lookups'>
+export type PersonnelMasterUpdateResponse = ApiMutationResponse<'/api/integrations/personnel-master/{employeeId}', 'PATCH'>
+
+export type MasterDataQualityIssues =
+  ApiGetResponse<'/api/integrations/master-data-quality/issues'>
+export type MasterDataQualityIssueItem = MasterDataQualityIssues['items'][number]
+export type MasterDataQualityAudit =
+  ApiGetResponse<'/api/integrations/master-data-quality/audit'>
+export type MasterDataQualityAuditItem = MasterDataQualityAudit['items'][number]
 
 export type MasterDataBootstrapEntity = 'store' | 'personnel'
 
@@ -322,25 +336,74 @@ export async function getStoreMasterLookups() {
   return fetchOpenApiJson('/api/integrations/store-master-lookups')
 }
 
+export async function getMasterDataQualityIssues(input?: {
+  q?: string
+  entityType?: 'store' | 'personnel' | 'assignment' | 'import'
+  severity?: 'critical' | 'warning' | 'info'
+  issueCode?: string
+  limit?: number
+  offset?: number
+}) {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 50),
+    offset: String(input?.offset ?? 0),
+  })
+  const search = input?.q?.trim()
+  if (search) {
+    params.set('q', search)
+  }
+  if (input?.entityType) {
+    params.set('entityType', input.entityType)
+  }
+  if (input?.severity) {
+    params.set('severity', input.severity)
+  }
+  if (input?.issueCode) {
+    params.set('issueCode', input.issueCode)
+  }
+
+  return fetchOpenApiJson('/api/integrations/master-data-quality/issues', { query: params })
+}
+
+export async function getMasterDataQualityAudit(input?: {
+  entityType?: 'store' | 'personnel' | 'import'
+  entityId?: string
+  limit?: number
+  offset?: number
+}) {
+  const params = new URLSearchParams({
+    limit: String(input?.limit ?? 30),
+    offset: String(input?.offset ?? 0),
+  })
+  if (input?.entityType) {
+    params.set('entityType', input.entityType)
+  }
+  if (input?.entityId) {
+    params.set('entityId', input.entityId)
+  }
+
+  return fetchOpenApiJson('/api/integrations/master-data-quality/audit', { query: params })
+}
+
 export async function updateStoreMasterData(input: {
   storeId: string
   storeType: 'company' | 'franchise' | 'operator'
   regionId: string
   status: 'active' | 'inactive' | 'closed'
   kpiImportEnabled: boolean
-}) {
-  return sendJson<CommandResponse<{ storeMaster: StoreMasterItem }>>(
-    `/integrations/store-master/${input.storeId}`,
-    {
-      method: 'PATCH',
-      body: {
-        storeType: input.storeType,
-        regionId: input.regionId,
-        status: input.status,
-        kpiImportEnabled: input.kpiImportEnabled,
-      },
+  expectedUpdatedAt?: string
+}): Promise<StoreMasterUpdateResponse> {
+  return sendOpenApiJson('/api/integrations/store-master/{storeId}', {
+    method: 'PATCH',
+    params: { storeId: input.storeId },
+    body: {
+      storeType: input.storeType,
+      regionId: input.regionId,
+      status: input.status,
+      kpiImportEnabled: input.kpiImportEnabled,
+      ...(input.expectedUpdatedAt ? { expectedUpdatedAt: input.expectedUpdatedAt } : {}),
     },
-  )
+  })
 }
 
 export async function getPersonnelMasterData(input?: {
@@ -383,24 +446,24 @@ export async function updatePersonnelMasterData(input: {
   storeId: string
   positionId: string
   assignmentStartDate?: string
-}) {
-  return sendJson<CommandResponse<{ personnelMaster: PersonnelMasterItem }>>(
-    `/integrations/personnel-master/${input.employeeId}`,
-    {
-      method: 'PATCH',
-      body: {
-        firstName: input.firstName,
-        lastName: input.lastName,
-        externalEmployeeRef: input.externalEmployeeRef,
-        employmentStatus: input.employmentStatus,
-        employmentType: input.employmentType,
-        hireDate: input.hireDate,
-        storeId: input.storeId,
-        positionId: input.positionId,
-        assignmentStartDate: input.assignmentStartDate,
-      },
+  expectedUpdatedAt?: string
+}): Promise<PersonnelMasterUpdateResponse> {
+  return sendOpenApiJson('/api/integrations/personnel-master/{employeeId}', {
+    method: 'PATCH',
+    params: { employeeId: input.employeeId },
+    body: {
+      firstName: input.firstName,
+      lastName: input.lastName,
+      ...(input.externalEmployeeRef !== undefined ? { externalEmployeeRef: input.externalEmployeeRef } : {}),
+      employmentStatus: input.employmentStatus,
+      employmentType: input.employmentType,
+      hireDate: input.hireDate,
+      storeId: input.storeId,
+      positionId: input.positionId,
+      ...(input.assignmentStartDate !== undefined ? { assignmentStartDate: input.assignmentStartDate } : {}),
+      ...(input.expectedUpdatedAt ? { expectedUpdatedAt: input.expectedUpdatedAt } : {}),
     },
-  )
+  })
 }
 
 export async function getMasterDataBootstrapBatches(input?: {
