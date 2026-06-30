@@ -23,17 +23,17 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
-test('master data renders promoted batches when updatedAt is absent', async ({ page }) => {
+test('master data renders import batches when updatedAt is absent', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
 
-  await page.route('**/api/integrations/master-data-bootstrap/batches?**', async (route) => {
-    await route.fulfill({ json: masterDataWithoutUpdatedAt })
-  })
+  await routeMasterDataControlApi(page)
 
   await page.goto('/admin/master-data')
+  await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
+  await page.getByRole('tab', { name: /İçe Aktarım/ }).click()
 
-  await expect(page.getByText('Accepted personnel baseline')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Accepted personnel baseline' })).toBeVisible()
   expect(pageErrors).toEqual([])
 })
 
@@ -87,6 +87,30 @@ async function routeStoreMeMinimalApi(page: Page) {
   })
 }
 
+async function routeMasterDataControlApi(page: Page) {
+  await page.route('**/api/integrations/master-data-quality/issues?**', async (route) => {
+    await route.fulfill({ json: emptyMasterDataIssues })
+  })
+  await page.route('**/api/integrations/master-data-quality/audit?**', async (route) => {
+    await route.fulfill({ json: emptyList })
+  })
+  await page.route('**/api/integrations/store-master-lookups', async (route) => {
+    await route.fulfill({ json: storeMasterLookups })
+  })
+  await page.route('**/api/integrations/store-master?**', async (route) => {
+    await route.fulfill({ json: emptyList })
+  })
+  await page.route('**/api/integrations/personnel-master-lookups', async (route) => {
+    await route.fulfill({ json: personnelMasterLookups })
+  })
+  await page.route('**/api/integrations/personnel-master?**', async (route) => {
+    await route.fulfill({ json: emptyList })
+  })
+  await page.route('**/api/integrations/master-data-bootstrap/batches?**', async (route) => {
+    await route.fulfill({ json: masterDataWithoutUpdatedAt })
+  })
+}
+
 async function routeStoreApprovalsMinimalApi(page: Page) {
   await page.route('**/api/target-distributions/requests**', async (route) => {
     await route.fulfill({ json: pendingTargetRequests })
@@ -126,6 +150,44 @@ const authSession = {
 const emptyList = {
   items: [],
   meta: { count: 0, total: 0, limit: 50, offset: 0 },
+}
+
+const emptyMasterDataIssues = {
+  items: [],
+  summary: {
+    severity: { critical: 0, warning: 0, info: 0 },
+    entityType: { store: 0, personnel: 0, assignment: 0, import: 0 },
+  },
+  meta: { count: 0, total: 0, limit: 50, offset: 0 },
+}
+
+const storeMasterLookups = {
+  storeTypes: [
+    { value: 'company', label: 'Şirket mağazası' },
+    { value: 'franchise', label: 'Bayi' },
+    { value: 'operator', label: 'İşletme' },
+  ],
+  statuses: [
+    { value: 'active', label: 'Aktif' },
+    { value: 'inactive', label: 'Pasif' },
+    { value: 'closed', label: 'Kapalı' },
+  ],
+  regions: [],
+}
+
+const personnelMasterLookups = {
+  stores: [],
+  positions: [],
+  employmentStatuses: [
+    { value: 'active', label: 'Aktif' },
+    { value: 'inactive', label: 'Pasif' },
+    { value: 'terminated', label: 'Ayrıldı' },
+  ],
+  employmentTypes: [
+    { value: 'full_time', label: 'Tam zamanlı' },
+    { value: 'part_time', label: 'Yarı zamanlı' },
+    { value: 'temporary', label: 'Geçici' },
+  ],
 }
 
 const masterDataWithoutUpdatedAt = {

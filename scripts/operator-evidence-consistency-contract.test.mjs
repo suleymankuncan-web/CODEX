@@ -91,7 +91,11 @@ test('operator evidence copy is visible on existing admin surfaces', () => {
 
   requireText(
     adminRoutingSpec,
-    'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
+    'Ana Veri Kontrolü',
+  )
+  requireText(
+    adminRoutingSpec,
+    'İçe Aktarım',
   )
 
   for (const phrase of [

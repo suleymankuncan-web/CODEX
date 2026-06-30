@@ -52,7 +52,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     {
       path: '/admin/master-data',
       urlPattern: /\/admin\/master-data$/,
-      heading: page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' }),
+      heading: page.getByRole('heading', { name: 'Ana Veri Kontrolü' }),
     },
     {
       path: '/admin/targets',
@@ -455,6 +455,16 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/integrations/master-data-quality/issues')) {
+      await route.fulfill({ json: masterDataQualityIssuesFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/integrations/master-data-quality/audit')) {
+      await route.fulfill({ json: masterDataQualityAuditFixture })
+      return
+    }
+
     if (pathname.endsWith('/api/integrations/store-master-lookups')) {
       await route.fulfill({ json: storeMasterLookupsFixture })
       return
@@ -462,6 +472,16 @@ async function routePilotSmokeApi(context: BrowserContext) {
 
     if (pathname.endsWith('/api/integrations/store-master')) {
       await route.fulfill({ json: storeMasterFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/integrations/personnel-master-lookups')) {
+      await route.fulfill({ json: personnelMasterLookupsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/integrations/personnel-master')) {
+      await route.fulfill({ json: personnelMasterFixture })
       return
     }
 
@@ -866,6 +886,47 @@ const importPayloadTemplateFixture = {
   },
 }
 
+const masterDataQualityIssuesFixture = {
+  items: [
+    {
+      id: 'pilot-smoke-master-data-issue',
+      issueCode: 'store_missing_region_assignment',
+      severity: 'warning',
+      entityType: 'store',
+      entityId: storeId,
+      entityLabel: 'Pilot Store',
+      secondaryLabel: 'Store master',
+      problemLabel: 'Region assignment review',
+      recommendedAction: 'Review store region assignment.',
+      affectedModules: ['KPI', 'Targets', 'Incentives'],
+      lastSeenAt: '2026-06-30T10:00:00.000Z',
+      source: 'store-master',
+    },
+  ],
+  summary: {
+    severity: { critical: 0, warning: 1, info: 0 },
+    entityType: { store: 1, personnel: 0, assignment: 0, import: 0 },
+  },
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const masterDataQualityAuditFixture = {
+  items: [
+    {
+      eventId: 'pilot-smoke-master-data-audit',
+      eventType: 'store_master_updated',
+      entityType: 'store',
+      entityId: storeId,
+      entityLabel: 'Pilot Store',
+      actorLabel: 'Pilot Admin',
+      occurredAt: '2026-06-30T10:30:00.000Z',
+      summary: 'Store master reviewed.',
+      metadata: {},
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 30, offset: 0 },
+}
+
 const storeMasterLookupsFixture = {
   storeTypes: [
     { value: 'company', label: 'Company' },
@@ -900,6 +961,64 @@ const storeMasterFixture = {
     },
   ],
   meta: { count: 1, total: 1, limit: 200, offset: 0 },
+}
+
+const personnelMasterLookupsFixture = {
+  stores: [
+    {
+      storeId,
+      storeCode: 'PILOT-100',
+      storeName: 'Pilot Store',
+      regionId,
+      regionName: 'Pilot Region',
+    },
+  ],
+  positions: [
+    {
+      positionId: '44444444-4444-4444-8444-444444444444',
+      positionCode: 'STORE_MANAGER',
+      positionName: 'Store Manager',
+      isManagerial: true,
+    },
+  ],
+  employmentStatuses: [
+    { value: 'active', label: 'Active' },
+    { value: 'inactive', label: 'Inactive' },
+    { value: 'terminated', label: 'Terminated' },
+  ],
+  employmentTypes: [
+    { value: 'full_time', label: 'Full time' },
+    { value: 'part_time', label: 'Part time' },
+    { value: 'temporary', label: 'Temporary' },
+  ],
+}
+
+const personnelMasterFixture = {
+  items: [
+    {
+      employeeId,
+      externalEmployeeRef: 'SM-1',
+      firstName: 'Pilot',
+      lastName: 'Manager',
+      displayName: 'Pilot Store Manager',
+      hireDate: '2026-05-01',
+      terminationDate: null,
+      employmentStatus: 'active',
+      employmentType: 'full_time',
+      assignmentId: 'pilot-personnel-assignment',
+      assignmentStartDate: '2026-05-01',
+      storeId,
+      storeCode: 'PILOT-100',
+      storeName: 'Pilot Store',
+      regionId,
+      regionName: 'Pilot Region',
+      positionId: '44444444-4444-4444-8444-444444444444',
+      positionCode: 'STORE_MANAGER',
+      positionName: 'Store Manager',
+      updatedAt: '2026-06-30T10:00:00.000Z',
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
 }
 
 const masterDataFixture = {
