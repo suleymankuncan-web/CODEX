@@ -12,8 +12,9 @@ Modernization V1:
 
 - 31 active `/admin/*` routes.
 - 16 admin navigation items.
-- Explicit parked exceptions: `/admin/session` and `/admin/feed`, rechecked by
-  PR-9 evidence.
+- Explicit parked exception: `/admin/session`. `/admin/feed` was parked in
+  this V2 matrix, then reopened by the 2026-06-30 Admin Pages Operational
+  Prototype Parity train PR7 with feed workflow coverage.
 - Runtime code remains unchanged by this document.
 
 The audit uses repo evidence only: `admin-shell.tsx`, `admin-navigation.ts`,
@@ -60,7 +61,7 @@ Evidence Confidence:
 | A15 Audit Center | `/admin/audit`; `/admin/audit/users/:userId/audit`; `/admin/audit/role-assignments/:assignmentId/audit`; `/admin/audit/action-store-assignments/:assignmentId/audit` | `AuditCenterPage.tsx`; auth audit detail pages; `audit-navigation.ts` | `SUPER_ADMIN`, `AUDITOR`; center nav visible as `audit`, detail routes not nav visible | Security/audit read surface for auditors and super admins. | Find traceable audit evidence and navigate to relevant detail. | Read-only audit inspection. | Search/filter audit lists, open user/assignment/action-store audit detail. | auth audit APIs, `getNeedsAction`, `getSnapshotNeedsAction`. | audit / security read | R5 |
 | A16 Pilot Feedback | `/admin/pilot-feedback` | `admin-web/src/pages/AdminPilotFeedbackPage.tsx` | `SUPER_ADMIN`; nav visible as `pilotFeedback` | Review and classify pilot feedback. | Decide what feedback needs classification/response. | Classify/respond with existing mutation. | Filter feedback, inspect severity/status, paginate. | `listPilotFeedback`, `classifyPilotFeedback`. | admin response / read-write | R2 |
 | P1 Session Readiness | `/admin/session` | `admin-web/src/pages/SessionReadinessPage.tsx` | Unguarded through `SessionGate`; nav visible as `session` | Diagnostic session/auth readiness surface. | Inspect or set local/session mode for diagnostics. | Parked diagnostic action surface. | Bearer/mock mode setup, session probe, readiness result. | `getAuthSession`, local session storage/context. | diagnostic | R1 parked |
-| P2 Admin Feed | `/admin/feed` | `admin-web/src/pages/AdminFeedPage.tsx` | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`; nav visible as `feed` | Create, publish, pin, unpin, archive and filter admin feed posts. | Manage feed composer/write workflow. | Parked write/composer modernization. | Filter posts, create draft, publish/pin/archive. | `getAdminFeedPosts`, `getAuthLookups`, `createFeedPost`, `publishFeedPost`, `pinFeedPost`, `unpinFeedPost`, `archiveFeedPost`, `getAdminFeedPrefetchTasks`. | workflow / composer | R2/R4 parked |
+| P2 Admin Feed | `/admin/feed` | `admin-web/src/pages/AdminFeedPage.tsx` | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER`; nav visible as `feed` | Create, publish, pin, unpin, archive and filter admin feed posts. | Manage feed composer/write workflow. | Create/manage posts with existing behavior-preserving controls. | Filter posts, create draft, publish/pin/archive. | `getAdminFeedPosts`, `getAuthLookups`, `createFeedPost`, `publishFeedPost`, `pinFeedPost`, `unpinFeedPost`, `archiveFeedPost`, `getAdminFeedPrefetchTasks`. | workflow / composer | R2/R4 reopened in 2026-06-30 PR7 |
 
 ## UX, Risk, And Verification Matrix
 
@@ -83,7 +84,7 @@ Evidence Confidence:
 | A15 Audit Center | Audit lists are traceable, but evidence confidence depends on keeping correlation/detail context visible. | Audit tables and detail links can overflow. | medium: one filter/detail route is often needed. | clear: audit entries, correlation/detail routes, and security context exist. | Audit entries, correlation ids, needs-action summaries, detail links. | Searchable audit list with compact evidence cells and clear detail navigation. | Existing primitives sufficient. | clear/partial through empty/error/detail states. | none in guard scope after V1. | `audit-surfaces.spec.ts`, `auth-admin-surfaces.spec.ts`. | yes; audit visibility and route params. | grouped in PR-8. |
 | A16 Pilot Feedback | Feedback classification is functional; severity/status evidence and next action can be more compact. | Feedback cards/list and response actions can stack. | medium: item selection/inspection usually needed. | partial: severity/status visible, but classification reason depends on current API fields. | Feedback status, severity suggestion, pagination, mutation feedback. | Feedback queue with status/severity chips, concise detail, and safe classify action. | Existing primitives sufficient; local `StatusPill` wrapper should be evaluated if PR-8 touches file. | clear/partial through list loading/error/empty states. | broad token scan finds local `StatusPill` wrapper, not forbidden guard legacy. | `pilot-feedback.spec.ts`. | no unless mutation controls move. | grouped in PR-8. |
 | P1 Session Readiness | Diagnostic route intentionally contains mock/bearer/header language and old dashboard primitives. PR-9 confirmed this is a diagnostic auth readiness tool, not a product admin surface. | Forms and diagnostic panels can be long. | parked: not scored for product UX. | parked: diagnostic evidence only. | Session mode, auth/session probe, local header/token values. | Keep parked until product decision changes route purpose. | Not applicable until reopened. | diagnostic states exist. | explicit V1 parked exception. | `admin-routing.spec.ts`, route parity guard; PR-9 evidence: `docs/evidence/admin-operational-ux-v2-pr9-parked-routes-2026-06-01.md`. | yes if reopened. | parked; reopen only if diagnostic readiness becomes production settings. |
-| P2 Admin Feed | Composer/write workflow still uses old primitives and feed-specific write behavior. PR-9 confirmed modernization requires a dedicated feed workflow contract pass, not polish-only work. | Composer form and post cards can overflow. | parked: not scored for V2 runtime until separate feed decision. | parked/partial: feed status exists, but composer workflow needs its own contract pass. | Post type/status, pinned state, lookup targets, mutation feedback. | Dedicated behavior-preserving composer modernization when scoped. | Not applicable until reopened. | loading/error/empty/mutation states exist. | explicit V1 parked exception: dashboard-primitives, hero-panel, StatusPill. | `feed-surfaces.spec.ts` when reopened; PR-9 evidence: `docs/evidence/admin-operational-ux-v2-pr9-parked-routes-2026-06-01.md`. | yes; publish/pin/archive payload, role scope defaults, query invalidation, and store feed visibility. | parked; reopen only as dedicated behavior-preserving feed workflow PR. |
+| P2 Admin Feed | Composer/write workflow was reopened in the 2026-06-30 Admin Pages Operational Prototype Parity train PR7. Native form controls intentionally remain because feed payload coverage is broad. | Composer form and post cards can overflow. | medium: composer and post state are visible on one surface. | partial: feed status exists; payload-level confidence is protected by `feed-surfaces.spec.ts`. | Post type/status, pinned state, lookup targets, mutation feedback. | Behavior-preserving operational composer and post library. | Existing admin operational primitives around the current form contract. | loading/error/empty/mutation states exist. | legacy native form controls remain intentionally. | `feed-surfaces.spec.ts`; PR7 evidence: `docs/evidence/admin-pages-operational-prototype-parity-v1/pr7-admin-feed.md`. | yes; publish/pin/archive payload, role scope defaults, query invalidation, and store feed visibility. | reopened; future shadcn form-control migration should be separate and behavior-preserving. |
 
 ## AdminSurface Primitive Usage Map
 
@@ -95,7 +96,7 @@ Evidence Confidence:
 | Targets + KPI Config | Core primitives plus KPI-specific anchored helper. | Sufficient. | Governance/approval confidence can be improved with existing sections, badges, and key/value grids. | No repeated pattern outside existing primitives. | None. | No guard change expected. |
 | Checklist Templates + Competitions | Checklist uses core primitives; competitions use anchored competition primitives. | Sufficient with domain helpers. | Authoring builders are domain-specific and should not be hidden behind a generic primitive prematurely. | Complex builder sections repeat inside each domain, not across two route groups yet. | None. | No guard change expected unless a shared primitive emerges during PR-7. |
 | Auth + Audit + Pilot Feedback | Core primitives across auth/audit; pilot feedback uses local badge wrapper anchored to AdminSurface primitives. | Sufficient. | Security evidence is domain-specific; existing `AdminKeyValueGrid` and `AdminSurfaceSection` cover it. | No cross-group primitive needed. | None. | No guard change expected. |
-| Parked routes | Not required to use AdminSurface until reopened. | Not evaluated for runtime V2. | `/admin/session` diagnostic and `/admin/feed` composer/write work remain separate; PR-9 rechecked both decisions. | None for active V2. | None. | Keep explicit exception allowlist until product decision; feed reopening requires a dedicated behavior-preserving workflow PR. |
+| Parked routes | Not required to use AdminSurface until reopened. | Not evaluated for runtime V2. | `/admin/session` diagnostic remains parked. `/admin/feed` was reopened in 2026-06-30 PR7. | None for active V2. | None. | Keep explicit exception allowlist only for `/admin/session`; feed form-control migration requires a dedicated behavior-preserving workflow PR. |
 
 PR-2 decision source: existing AdminSurface primitives appear sufficient for the
 first runtime PR. PR-2 should be docs-only/skipped unless PR-3 pre-work proves
@@ -130,8 +131,9 @@ Local self-review focus:
 
 - Docs-only scope.
 - Active route coverage includes `/admin/inbox`.
-- `/admin/session` and `/admin/feed` stay parked unless PR-9 evidence or a
-  later product decision explicitly reopens them with behavior-freeze coverage.
+- `/admin/session` stays parked unless a later product decision explicitly
+  reopens it with behavior-freeze coverage. `/admin/feed` was reopened in the
+  2026-06-30 PR7 train.
 - No runtime API/auth/workflow/scoring/snapshot/import/approval behavior is
   changed.
 - No fake data, fake metrics, or unsupported product copy is added.
@@ -144,8 +146,10 @@ Evidence:
 Decision:
 
 - `/admin/session` remains parked as diagnostic session/auth readiness.
-- `/admin/feed` remains parked as a composer/write workflow requiring a
-  dedicated feed contract pass before UI migration.
+- Historical decision: `/admin/feed` was parked as a composer/write workflow
+  requiring a dedicated feed contract pass before UI migration.
+- 2026-06-30 update: `/admin/feed` received that dedicated behavior-preserving
+  pass in `docs/evidence/admin-pages-operational-prototype-parity-v1/pr7-admin-feed.md`.
 
 No runtime code changed in PR-9. Current parked status is unchanged, so
 `current-state.md` does not need a PR-9 parked-status update.
@@ -161,4 +165,5 @@ Final decision:
   operational UX direction, primitive sufficiency, and parked-route decisions.
 - All non-parked active admin routes were improved or covered by route-group
   PRs.
-- `/admin/session` and `/admin/feed` remain parked with PR-9 evidence.
+- `/admin/session` remains parked with PR8 evidence from the 2026-06-30 train.
+- `/admin/feed` is no longer parked; it was reopened and modernized in PR7.

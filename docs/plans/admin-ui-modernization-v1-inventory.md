@@ -38,6 +38,11 @@ Explicitly parked active admin routes:
 | `/admin/session` | `admin-web/src/pages/SessionReadinessPage.tsx` | Diagnostic session/auth readiness surface still owns existing mock/bearer/header setup language. | Session/auth readiness is redesigned as a production admin page or the diagnostic copy is removed from the route. |
 | `/admin/feed` | `admin-web/src/pages/AdminFeedPage.tsx` | Feed composer/write behavior was intentionally kept out of the read-surface PR to avoid changing publish/pin/archive workflow semantics. | A behavior-preserving feed composer modernization PR is opened with targeted feed workflow verification. |
 
+2026-06-30 update: `/admin/feed` was reopened by the Admin Pages Operational
+Prototype Parity train PR7. The behavior-preserving feed workflow contract was
+verified with `feed-surfaces.spec.ts`. `/admin/session` remains the active
+parked admin route.
+
 ## Route Role Baseline
 
 The following block is intentionally stable and parseable enough for the PR-2

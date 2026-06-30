@@ -50,8 +50,61 @@ function authSession(roleCode: RoleCode) {
 }
 
 async function routeAuth(page: Page, roleCode: RoleCode) {
+  const session = authSession(roleCode)
+  const user = session.user
+
+  await page.addInitScript(
+    (input) => {
+      window.localStorage.setItem(
+        'store-ops-admin-session',
+        JSON.stringify({
+          mode: 'mock',
+          mockUserId: input.userId,
+          mockRoleCodes: input.roleCodes.join(','),
+          mockCompanyIds: input.companyIds.join(','),
+          mockStoreIds: input.storeIds.join(','),
+          mockReadStoreIds: input.readStoreIds.join(','),
+          mockAssignedStoreIds: input.assignedStoreIds.join(','),
+          mockRegionIds: input.regionIds.join(','),
+          mockReadRegionIds: input.readRegionIds.join(','),
+          bearerToken: '',
+        }),
+      )
+    },
+    {
+      userId: user.userId,
+      roleCodes: user.roleCodes,
+      companyIds: user.scope.companyIds,
+      storeIds: user.scope.storeIds,
+      readStoreIds: user.readScope.storeIds,
+      assignedStoreIds: user.assignedStoreIds,
+      regionIds: user.scope.regionIds,
+      readRegionIds: user.readScope.regionIds,
+    },
+  )
+
+  await page.route('**/api/auth/bootstrap', async (route) => {
+    await route.fulfill({
+      json: {
+        authMode: 'mock',
+        provider: {
+          configured: false,
+          authorizationUrl: null,
+          clientId: null,
+          scope: null,
+          responseType: null,
+          audience: null,
+          callbackPath: '/auth/callback',
+          tokenUrl: null,
+          logoutUrl: null,
+          postLogoutRedirectPath: '/auth/login',
+        },
+      },
+    })
+  })
+
   await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({ json: authSession(roleCode) })
+    await route.fulfill({ json: session })
   })
 }
 
