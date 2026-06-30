@@ -57,6 +57,16 @@ export type UserAccessClosure = DeactivateUserAccountResponse['data']['accessClo
 
 export type PilotUserBinding = CreatePilotUserBindingResponse['data']['binding']
 
+const authAdminListMaxLimit = 200
+
+function normalizeAuthAdminListLimit(limit: number | undefined, fallback: number) {
+  if (limit === undefined || !Number.isFinite(limit)) {
+    return fallback
+  }
+
+  return Math.min(Math.max(Math.trunc(limit), 1), authAdminListMaxLimit)
+}
+
 export async function getAuthLookups() {
   return fetchOpenApiJson('/api/auth/lookups')
 }
@@ -95,7 +105,7 @@ export async function getUserAccounts(input?: {
   q?: string
 }) {
   const params = new URLSearchParams({
-    limit: String(input?.limit ?? 100),
+    limit: String(normalizeAuthAdminListLimit(input?.limit, 100)),
     offset: String(input?.offset ?? 0),
   })
 
@@ -123,7 +133,7 @@ export async function getRoleAssignments(input?: {
   offset?: number
 }) {
   const params = new URLSearchParams({
-    limit: String(input?.limit ?? 100),
+    limit: String(normalizeAuthAdminListLimit(input?.limit, 100)),
     offset: String(input?.offset ?? 0),
   })
 
@@ -154,7 +164,7 @@ export async function getActionStoreAssignments(input?: {
   offset?: number
 }) {
   const params = new URLSearchParams({
-    limit: String(input?.limit ?? 100),
+    limit: String(normalizeAuthAdminListLimit(input?.limit, 100)),
     offset: String(input?.offset ?? 0),
   })
 

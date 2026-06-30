@@ -68,6 +68,8 @@ const defaultNewAccountDraft: NewAuthAccountDraft = {
   employeeId: '',
   username: '',
 }
+const authWorkbenchListLimit = 200
+const authWorkbenchUserListLimit = 100
 
 export function AuthDashboardPage() {
   const dashboard = useAuthDashboardViewModel()
@@ -129,27 +131,27 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
     queryFn: getAuthLookups,
   })
   const usersQuery = useQuery({
-    queryKey: authAccessWorkbenchKeys.users({ limit: 100, q: trimmedQuery }),
-    queryFn: () => getUserAccounts({ limit: 100, q: trimmedQuery }),
+    queryKey: authAccessWorkbenchKeys.users({ limit: authWorkbenchUserListLimit, q: trimmedQuery }),
+    queryFn: () => getUserAccounts({ limit: authWorkbenchUserListLimit, q: trimmedQuery }),
   })
   const assignmentsQuery = useQuery({
     queryKey: authAccessWorkbenchKeys.roleAssignments(),
-    queryFn: () => getRoleAssignments({ limit: 250 }),
+    queryFn: () => getRoleAssignments({ limit: authWorkbenchListLimit }),
   })
   const actionStoreAssignmentsQuery = useQuery({
     queryKey: authAccessWorkbenchKeys.actionStoreAssignments(),
-    queryFn: () => getActionStoreAssignments({ limit: 250 }),
+    queryFn: () => getActionStoreAssignments({ limit: authWorkbenchListLimit }),
   })
   const users = useMemo(() => usersQuery.data?.items ?? [], [usersQuery.data?.items])
   const effectiveSelectedUserId = selectedUserId ?? users[0]?.userId ?? null
   const selectedRoleAssignmentsQuery = useQuery({
     queryKey: authAccessWorkbenchKeys.roleAssignments(effectiveSelectedUserId ?? undefined),
-    queryFn: () => getRoleAssignments({ userId: effectiveSelectedUserId!, limit: 250 }),
+    queryFn: () => getRoleAssignments({ userId: effectiveSelectedUserId!, limit: authWorkbenchListLimit }),
     enabled: Boolean(effectiveSelectedUserId),
   })
   const selectedActionStoreAssignmentsQuery = useQuery({
     queryKey: authAccessWorkbenchKeys.actionStoreAssignments(effectiveSelectedUserId ?? undefined),
-    queryFn: () => getActionStoreAssignments({ userId: effectiveSelectedUserId!, limit: 250 }),
+    queryFn: () => getActionStoreAssignments({ userId: effectiveSelectedUserId!, limit: authWorkbenchListLimit }),
     enabled: Boolean(effectiveSelectedUserId),
   })
   const auditQuery = useQuery({
