@@ -15,6 +15,7 @@ export type AuthWorkbenchTone = 'cyan' | 'mint' | 'plum' | 'amber' | 'rose' | 's
 
 export type AuthWorkbenchFilters = {
   query?: string
+  q?: string
   authProvider?: string
   isActive?: boolean
   limit?: number
@@ -331,7 +332,7 @@ function providerLabel(provider: string) {
   if (normalized === 'oidc') return 'OIDC'
   if (normalized === 'sso') return 'SSO'
   if (normalized === 'local') return 'Yerel'
-  return normalizeDisplayLabel(provider, 'Kimlik sağlayıcı')
+  return normalizeDisplayLabel(provider, 'Giriş yöntemi')
 }
 
 function auditEventLabel(eventType: string) {
@@ -387,6 +388,7 @@ function groupBy<T>(items: T[], keyOf: (item: T) => string) {
 function normalizeFilters(filters: AuthWorkbenchFilters) {
   return {
     query: filters.query?.trim() ?? '',
+    q: filters.q?.trim() ?? '',
     authProvider: filters.authProvider ?? '',
     isActive: filters.isActive ?? null,
     limit: filters.limit ?? 100,

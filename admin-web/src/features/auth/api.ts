@@ -119,10 +119,12 @@ export async function getRoleAssignments(input?: {
   roleCode?: string
   scopeType?: string
   active?: boolean
+  limit?: number
+  offset?: number
 }) {
   const params = new URLSearchParams({
-    limit: '50',
-    offset: '0',
+    limit: String(input?.limit ?? 100),
+    offset: String(input?.offset ?? 0),
   })
 
   if (input?.userId) {
@@ -148,10 +150,12 @@ export async function getActionStoreAssignments(input?: {
   userId?: string
   storeId?: string
   active?: boolean
+  limit?: number
+  offset?: number
 }) {
   const params = new URLSearchParams({
-    limit: '50',
-    offset: '0',
+    limit: String(input?.limit ?? 100),
+    offset: String(input?.offset ?? 0),
   })
 
   if (input?.userId) {

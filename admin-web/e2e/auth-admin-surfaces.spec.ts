@@ -18,33 +18,25 @@ test.beforeEach(async ({ page }) => {
   await routeAuthAdminApi(page)
 })
 
-test('auth dashboard page switches chrome to English copy and persists locale', async ({ page }) => {
+test('auth workbench remains readable and persists locale preference', async ({ page }) => {
   await page.goto('/admin/auth')
 
-  const main = page.getByRole('main')
+  const main = page.getByRole('main', { name: 'Erişim yönetimi' })
+  const toolbar = main.locator('.auth-workbench-toolbar')
 
-  await expect(main.getByText('Auth operasyonları')).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Kullanıcılar, roller ve kapsam duruşu tek operatör görünümünde.' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Pilot kullanıcı bağlantısı' })).toBeVisible()
-  const preview = main.getByTestId('role-permission-preview')
-  await expect(preview.getByRole('heading', { name: 'Rol, rota ve kapsam kararlari okunabilir kalsin.' })).toBeVisible()
-  await expect(preview.getByLabel('On izlenecek rol')).toHaveValue('SUPER_ADMIN')
-  await preview.getByLabel('On izlenecek rol').selectOption('REPORT_VIEWER')
-  await expect(preview.locator('article').filter({ hasText: '/admin/reports' }).getByText('Gorunur')).toBeVisible()
-  await expect(preview.locator('article').filter({ hasText: '/admin/auth' }).getByText('Kapali')).toBeVisible()
-  await expect(
-    preview.locator('article').filter({ hasText: '/store' }).first().getByText('Gorunur', { exact: true }),
-  ).toBeVisible()
-  await expect(preview.locator('article').filter({ hasText: '/store/reports' }).getByText('Gorunur')).toBeVisible()
-  await expect(preview.locator('article').filter({ hasText: '/store/feed' }).getByText('Gorunur')).toBeVisible()
-  await preview.getByLabel('On izlenecek rol').selectOption('STORE_PERSONNEL')
-  await expect(preview.locator('article').filter({ hasText: '/store/checklists' }).getByText('Kapali')).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Yeni hesap' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Kapsamlı rol yetkisi' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Operasyonel aksiyonlar için atanmış mağazalar' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Rol atama kuyruğu' })).toBeVisible()
-  await expect(main.getByRole('link', { name: 'Kataloğu aç' }).first()).toBeVisible()
-  await expect(main.getByText('Users, roles, and scope posture')).toHaveCount(0)
+  await expect(main).toHaveAttribute('aria-label', 'Erişim yönetimi')
+  await expect(main.getByRole('heading', { name: 'Erişim Yönetimi' })).toBeVisible()
+  await expect(main.getByText('Kullanıcı, rol ve mağaza yetkilerini tek çalışma masasında düzenle.')).toBeVisible()
+  await expect(main.getByLabel('Erişim özeti')).toContainText('Üyelik')
+  await expect(main.getByLabel('Erişim özeti')).toContainText('Rol ataması')
+  await expect(main.getByLabel('Erişim özeti')).toContainText('Mağaza erişimi')
+  await expect(main.getByLabel('Kullanıcı ara')).toHaveValue('')
+  await expect(main.getByLabel('Kullanıcı listesi')).toContainText('admin.user')
+  await expect(main.getByLabel('Seçili kullanıcı')).toContainText('store.manager')
+  await expect(toolbar.getByRole('button', { name: 'Rol ata' })).toBeVisible()
+  await expect(toolbar.getByRole('button', { name: 'Mağaza bağla' })).toBeVisible()
+  await expect(main.getByRole('button', { name: 'Üyelik oluştur' })).toBeVisible()
+  await expect(main.getByText('Kontrol izi')).toBeVisible()
   await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€')
   await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
@@ -52,63 +44,40 @@ test('auth dashboard page switches chrome to English copy and persists locale', 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(main.getByText('Auth Admin', { exact: true })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Users, roles, and scope posture in one operator view.' })).toBeVisible()
-  await expect(preview.getByRole('heading', { name: 'Keep role, route, and scope decisions inspectable.' })).toBeVisible()
-  await expect(preview.getByLabel('Role to preview')).toHaveValue('SUPER_ADMIN')
-  await preview.getByLabel('Role to preview').selectOption('REPORT_VIEWER')
-  await expect(preview.locator('article').filter({ hasText: '/admin/reports' }).getByText('Visible')).toBeVisible()
-  await expect(preview.locator('article').filter({ hasText: '/admin/auth' }).getByText('Closed')).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Pilot user binding' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'New account' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Scoped role grant' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Assigned stores for operational actions' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Role assignment queue' })).toBeVisible()
-  await expect(
-    main.getByText('Search by user, role, store, or scope identifiers to inspect the current access map.'),
-  ).toBeVisible()
-  await expect(main.getByRole('link', { name: 'Open catalog' }).first()).toBeVisible()
-  await expect(main.getByText('Auth operasyonları')).toHaveCount(0)
+  await expect(main.getByRole('heading', { name: 'Erişim Yönetimi' })).toBeVisible()
+  await expect(main.getByText('Kullanıcı, rol ve mağaza yetkilerini tek çalışma masasında düzenle.')).toBeVisible()
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(main.getByRole('heading', { name: 'Users, roles, and scope posture in one operator view.' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Erişim Yönetimi' })).toBeVisible()
 })
 
-test('HR admin can submit a pilot user binding', async ({ page }) => {
+test('HR admin can create a user from the access workbench', async ({ page }) => {
   let requestBody: Record<string, unknown> | null = null
 
-  await page.route('**/api/auth/pilot-user-bindings', async (route) => {
+  await page.route('**/api/auth/users', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fallback()
+      return
+    }
+
     requestBody = route.request().postDataJSON()
     await route.fulfill({
       status: 201,
       json: {
-        command: { status: 'created', message: 'Pilot user binding created' },
+        command: { status: 'created', message: 'Üyelik oluşturuldu' },
         data: {
-          binding: {
-            user: {
-              userId: '90000000-0000-4000-8000-000000000101',
-              employeeId: '70000000-0000-4000-8000-000000000101',
-              username: 'ayse.demir',
-              email: 'ayse.demir@example.com',
-              authProvider: 'oidc',
-              providerSubject: '2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22',
-              isActive: true,
-              lastLoginAt: null,
-              createdAt: '2026-04-29T18:30:00.000Z',
-            },
-            roleAssignments: [],
-            actionStoreAssignments: [],
-            employee: {
-              employeeId: '70000000-0000-4000-8000-000000000101',
-              employeeCode: 'FM8375',
-              firstName: 'Ayse',
-              lastName: 'Demir',
-              storeId: '10000000-0000-4000-8000-000000000021',
-              storeCode: 'SM140',
-              storeName: 'Marmara Park',
-            },
+          user: {
+            userId: '90000000-0000-4000-8000-000000000101',
+            employeeId: '70000000-0000-4000-8000-000000000101',
+            username: 'ayse.demir',
+            email: 'ayse.demir@example.com',
+            authProvider: 'clerk',
+            providerSubject: null,
+            isActive: true,
+            lastLoginAt: null,
+            createdAt: '2026-04-29T18:30:00.000Z',
           },
         },
       },
@@ -117,84 +86,72 @@ test('HR admin can submit a pilot user binding', async ({ page }) => {
 
   await page.goto('/admin/auth')
 
-  await expect(page.getByRole('heading', { name: 'Pilot kullanıcı bağlantısı' })).toBeVisible()
-  await page.getByLabel('Pilot personel id').fill('70000000-0000-4000-8000-000000000101')
-  await page.getByLabel('Pilot sağlayıcı subject').fill('2f7b9d1e-8a41-4c7e-9d63-0d6b3c9a5f22')
-  await page.getByLabel('Pilot kullanıcı adı').fill('ayse.demir')
-  await page.getByLabel('Pilot e-posta').fill('ayse.demir@example.com')
-  await page.getByLabel('Pilot rolü').selectOption('STORE_MANAGER')
-  await page.getByLabel('Pilot mağazaları').selectOption('10000000-0000-4000-8000-000000000021')
-  await page.getByRole('button', { name: 'Pilot bağlantısı oluştur' }).click()
+  await page.getByRole('button', { name: 'Üyelik oluştur' }).first().click()
+  const newAccount = page.locator('.auth-account-section').filter({ hasText: 'Yeni üyelik' })
+  await newAccount.getByLabel('Ad soyad').fill('ayse.demir')
+  await newAccount.getByLabel('E-posta').fill('ayse.demir@example.com')
+  await newAccount.getByLabel('Personel').fill('70000000-0000-4000-8000-000000000101')
+  await newAccount.getByRole('button', { name: 'Üyelik oluştur' }).click()
 
-  await expect(page.getByText('Pilot user binding created')).toBeVisible()
-  expect(requestBody?.roleCode).toBe('STORE_MANAGER')
-  expect(requestBody?.storeIds).toEqual(['10000000-0000-4000-8000-000000000021'])
+  await expect(page.getByText('Üyelik oluşturuldu')).toBeVisible()
+  expect(requestBody).toMatchObject({
+    username: 'ayse.demir',
+    email: 'ayse.demir@example.com',
+    employeeId: '70000000-0000-4000-8000-000000000101',
+    authProvider: 'clerk',
+  })
 })
 
-test('HR admin can search auth users and stores while creating assignments', async ({ page }) => {
+test('HR admin can search users and create assignments from the workbench', async ({ page }) => {
   const userId = '90000000-0000-4000-8000-000000000201'
   const storeId = '10000000-0000-4000-8000-000000000021'
   const companyId = '10000000-0000-4000-8000-000000000001'
-  const regionId = '10000000-0000-4000-8000-000000000011'
   let roleAssignmentBody: Record<string, unknown> | null = null
   let actionStoreBody: Record<string, unknown> | null = null
+  let userSearchQuery: string | null = null
 
-  await page.route('**/api/auth/lookups/users/search?**', async (route) => {
+  await page.route('**/api/auth/users?**', async (route) => {
     const url = new URL(route.request().url())
-    expect(url.searchParams.get('q')?.length).toBeGreaterThanOrEqual(2)
+    userSearchQuery = url.searchParams.get('q')
+    const items = userSearchQuery?.toLocaleLowerCase('tr-TR').includes('manager')
+      ? authUsersFixture.items.filter((user) => user.userId === userId)
+      : authUsersFixture.items
+
     await route.fulfill({
       json: {
-        items: [
-          {
-            userId,
-            username: 'store.manager',
-            email: 'store.manager@example.com',
-            authProvider: 'oidc',
-            providerSubject: 'provider-subject-201',
-          },
-        ],
-        meta: { query: url.searchParams.get('q'), count: 1, limit: 20 },
-      },
-    })
-  })
-
-  await page.route('**/api/auth/lookups/stores/search?**', async (route) => {
-    const url = new URL(route.request().url())
-    expect(url.searchParams.get('q')?.length).toBeGreaterThanOrEqual(2)
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            storeId,
-            storeCode: 'SM140',
-            storeName: 'Marmara Park',
-            companyId,
-            regionId,
-            regionName: 'Marmara',
-          },
-        ],
-        meta: { query: url.searchParams.get('q'), count: 1, limit: 20 },
+        items,
+        meta: { count: items.length, total: items.length, limit: 100, offset: 0 },
       },
     })
   })
 
   await page.route('**/api/auth/role-assignments', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fallback()
+      return
+    }
+
     roleAssignmentBody = route.request().postDataJSON()
     await route.fulfill({
       status: 201,
       json: {
-        command: { status: 'created', message: 'Role assignment created' },
+        command: { status: 'created', message: 'Rol kaydedildi' },
         data: { assignment: { assignmentId: 'assignment-1' } },
       },
     })
   })
 
   await page.route('**/api/auth/action-store-assignments', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fallback()
+      return
+    }
+
     actionStoreBody = route.request().postDataJSON()
     await route.fulfill({
       status: 201,
       json: {
-        command: { status: 'created', message: 'Action store assignment created' },
+        command: { status: 'created', message: 'Mağaza kaydedildi' },
         data: { assignment: { assignmentId: 'action-store-assignment-1' } },
       },
     })
@@ -202,35 +159,27 @@ test('HR admin can search auth users and stores while creating assignments', asy
 
   await page.goto('/admin/auth')
 
-  await page.getByLabel('Rol yetkisi için kullanıcı ara').fill('manager')
-  await expect(page.getByLabel('Rol yetkisi kullanıcısı')).toContainText('store.manager')
-  await page.getByLabel('Rol yetkisi kullanıcısı').selectOption(userId)
-  await page.getByLabel('Rol yetkisi rolü').selectOption('STORE_MANAGER')
-  await page.getByLabel('Rol yetkisi kapsam tipi').selectOption('store')
-  await page.getByLabel('Rol yetkisi için mağaza ara').fill('marmara')
-  await expect(page.getByLabel('Rol yetkisi mağazası')).toContainText('SM140')
-  await page.getByLabel('Rol yetkisi mağazası').selectOption(storeId)
-  await page.getByRole('button', { name: 'Yetki oluştur' }).click()
+  await page.getByLabel('Kullanıcı ara').fill('manager')
+  await expect(page.getByLabel('Kullanıcı listesi')).toContainText('store.manager')
+  await expect(page.getByLabel('Seçili kullanıcı')).toContainText('store.manager')
+  expect(userSearchQuery).toBe('manager')
 
-  await expect(page.getByText('Role assignment created')).toBeVisible()
+  await page.getByRole('button', { name: 'Rolü kaydet' }).click()
+
+  await expect(page.getByText('Rol kaydedildi')).toBeVisible()
   expect(roleAssignmentBody).toMatchObject({
     userId,
     roleCode: 'STORE_MANAGER',
-    scopeType: 'store',
+    scopeType: 'company',
     companyId,
-    regionId,
-    storeId,
   })
 
-  await page.getByLabel('Aksiyon erişimi için kullanıcı ara').fill('manager')
-  await expect(page.getByLabel('Aksiyon erişimi kullanıcısı')).toContainText('store.manager')
-  await page.getByLabel('Aksiyon erişimi kullanıcısı').selectOption(userId)
-  await page.getByLabel('Aksiyon erişimi için mağaza ara').fill('marmara')
-  await expect(page.getByLabel('Aksiyon mağazası')).toContainText('SM140')
-  await page.getByLabel('Aksiyon mağazası').selectOption(storeId)
-  await page.getByRole('button', { name: 'Aksiyon mağazası ata' }).click()
+  await page.locator('.auth-workbench-toolbar').getByRole('button', { name: 'Mağaza bağla' }).click()
+  await page.locator('.auth-tray').filter({ hasText: 'Mağaza bağla' }).getByRole('combobox').click()
+  await page.getByRole('option', { name: 'Marmara Park' }).click()
+  await page.getByRole('button', { name: 'Mağazayı kaydet' }).click()
 
-  await expect(page.getByText('Action store assignment created')).toBeVisible()
+  await expect(page.getByText('Mağaza kaydedildi')).toBeVisible()
   expect(actionStoreBody).toMatchObject({
     userId,
     storeId,
@@ -284,9 +233,10 @@ test('auth dashboard remains readable on mobile', async ({ page }) => {
   })
   await page.goto('/admin/auth')
 
-  const main = page.getByRole('main')
-  await expect(main.getByRole('heading', { name: 'Kullanıcılar, roller ve kapsam duruşu tek operatör görünümünde.' })).toBeVisible()
-  await expect(main.getByTestId('role-permission-preview')).toBeVisible()
+  const main = page.getByRole('main', { name: 'Erişim yönetimi' })
+  await expect(main.getByRole('heading', { name: 'Erişim Yönetimi' })).toBeVisible()
+  await expect(main.getByLabel('Kullanıcı listesi')).toBeVisible()
+  await expect(main.getByLabel('İşlem paneli')).toBeVisible()
   const hasHorizontalOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
   )
@@ -303,15 +253,32 @@ async function routeAuthAdminApi(page: Page) {
   })
 
   await page.route('**/api/auth/users?**', async (route) => {
-    await route.fulfill({ json: { items: [], meta: { count: 0, total: 0, limit: 50, offset: 0 } } })
+    const url = new URL(route.request().url())
+    const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('tr-TR') ?? ''
+    const items = query
+      ? authUsersFixture.items.filter((user) =>
+          [user.username, user.email, user.employeeId ?? '']
+            .join(' ')
+            .toLocaleLowerCase('tr-TR')
+            .includes(query),
+        )
+      : authUsersFixture.items
+
+    await route.fulfill({
+      json: { items, meta: { count: items.length, total: items.length, limit: 100, offset: 0 } },
+    })
   })
 
   await page.route('**/api/auth/role-assignments?**', async (route) => {
-    await route.fulfill({ json: { items: [], meta: { count: 0, total: 0, limit: 50, offset: 0 } } })
+    await route.fulfill({ json: authRoleAssignmentsFixture })
   })
 
   await page.route('**/api/auth/action-store-assignments?**', async (route) => {
-    await route.fulfill({ json: { items: [], meta: { count: 0, total: 0, limit: 50, offset: 0 } } })
+    await route.fulfill({ json: authActionStoreAssignmentsFixture })
+  })
+
+  await page.route('**/api/auth/users/*/audit', async (route) => {
+    await route.fulfill({ json: authAuditFixture })
   })
 
   await page.route('**/api/auth/roles', async (route) => {
@@ -351,6 +318,62 @@ const authSessionFixture = {
     storeCount: 0,
     assignedStoreCount: 0,
   },
+}
+
+const authUsersFixture = {
+  items: [
+    {
+      userId: '90000000-0000-4000-8000-000000000201',
+      employeeId: '70000000-0000-4000-8000-000000000201',
+      username: 'store.manager',
+      email: 'store.manager@example.com',
+      authProvider: 'oidc',
+      providerSubject: 'provider-subject-201',
+      isActive: true,
+      lastLoginAt: '2026-06-01T08:30:00.000Z',
+      createdAt: '2026-05-15T09:00:00.000Z',
+    },
+    {
+      userId: '90000000-0000-4000-8000-000000000202',
+      employeeId: null,
+      username: 'admin.user',
+      email: 'admin.user@example.com',
+      authProvider: 'clerk',
+      providerSubject: 'provider-subject-202',
+      isActive: true,
+      lastLoginAt: '2026-06-02T08:30:00.000Z',
+      createdAt: '2026-05-16T09:00:00.000Z',
+    },
+  ],
+  meta: { count: 2, total: 2, limit: 100, offset: 0 },
+}
+
+const authRoleAssignmentsFixture = {
+  items: [],
+  meta: { count: 0, total: 0, limit: 250, offset: 0 },
+}
+
+const authActionStoreAssignmentsFixture = {
+  items: [],
+  meta: { count: 0, total: 0, limit: 250, offset: 0 },
+}
+
+const authAuditFixture = {
+  items: [
+    {
+      eventLogId: 'auth-event-1',
+      occurredAt: '2026-06-02T08:35:00.000Z',
+      eventType: 'user_account.updated',
+      actorUserId: 'super-admin-auth-user',
+      correlationId: 'auth-correlation-1',
+      metadata: {
+        changedFields: ['email'],
+        sourceContext: { module: 'auth', operation: 'update' },
+        details: { email: 'admin.user@example.com' },
+      },
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
 }
 
 const authLookupsFixture = {
