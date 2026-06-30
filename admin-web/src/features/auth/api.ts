@@ -182,6 +182,7 @@ export async function deactivateUserAccount(userId: string) {
   return sendOpenApiJson('/api/auth/users/{userId}/deactivate', {
     method: 'PATCH',
     params: { userId },
+    body: {},
   })
 }
 

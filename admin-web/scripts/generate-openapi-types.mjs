@@ -38,6 +38,7 @@ const selectedOperations = [
   { path: '/api/auth/users', method: 'get' },
   { path: '/api/auth/users', method: 'post' },
   { path: '/api/auth/users/{userId}/audit', method: 'get' },
+  { path: '/api/auth/users/{userId}', method: 'patch' },
   { path: '/api/auth/users/{userId}/deactivate', method: 'patch' },
   { path: '/api/auth/users/{userId}/reactivate', method: 'patch' },
   { path: '/api/competitions', method: 'get' },

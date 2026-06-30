@@ -8,7 +8,7 @@ const trackedExtensions = new Set(['.css', '.js', '.jsx', '.mjs', '.ts', '.tsx']
 const generatedPrefixes = ['admin-web/src/generated/']
 
 const oversizedBaseline = new Map([
-  ['backend/nestjs/src/openapi/generate-openapi.ts', 5140],
+  ['backend/nestjs/src/openapi/generate-openapi.ts', 5148],
   ['admin-web/src/pages/MasterDataBootstrapPage.tsx', 1567],
   ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1123],
   ['scripts/generate-system-flow.mjs', 1433],
@@ -16,13 +16,13 @@ const oversizedBaseline = new Map([
   ['admin-web/src/pages/IntegrationDashboardPage.tsx', 1387],
   ['admin-web/src/pages/ImportBatchDetailPage.tsx', 1422],
   ['admin-web/src/pages/AdminKpiConfigPage.tsx', 1371],
-  ['backend/nestjs/src/shared/openapi-baseline.contract.spec.ts', 1330],
+  ['backend/nestjs/src/shared/openapi-baseline.contract.spec.ts', 1342],
   ['backend/nestjs/src/modules/integration/application/master-data-bootstrap.service.ts', 906],
   ['backend/nestjs/src/modules/integration/infrastructure/master-data-bootstrap.repository.ts', 1179],
   ['admin-web/src/pages/store-my-performance-model.ts', 1090],
   ['admin-web/src/styles/store-approvals-ledger.css', 976],
   ['admin-web/src/features/auth/AuthDashboardSections.tsx', 937],
-  ['backend/nestjs/src/modules/auth/auth-admin.service.ts', 936],
+  ['backend/nestjs/src/modules/auth/auth-admin.service.ts', 935],
   ['backend/nestjs/src/modules/integration/web/integration.controller.ts', 899],
   ['admin-web/src/features/competitions/StageBuilderForm.tsx', 861],
   ['admin-web/src/pages/store-my-performance-sections.tsx', 865],

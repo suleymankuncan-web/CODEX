@@ -26,6 +26,7 @@ export const AUDIT_EVENT_CATALOG = [
   auditEvent("user_account.created", "ops.user_account", "auth", "User account was created."),
   auditEvent("user_account.deactivated", "ops.user_account", "auth", "User account was deactivated."),
   auditEvent("user_account.reactivated", "ops.user_account", "auth", "User account was reactivated."),
+  auditEvent("user_account.updated", "ops.user_account", "auth", "User account profile was updated."),
   auditEvent(
     "pilot_user_binding.created",
     "ops.user_account",

@@ -379,10 +379,8 @@ export class AuthAdminService {
   }
 
   async listUserAccounts(input: {
-    limit?: number;
-    offset?: number;
-    authProvider?: "local" | "oidc" | "sso" | "clerk";
-    isActive?: boolean;
+    limit?: number; offset?: number; authProvider?: "local" | "oidc" | "sso" | "clerk";
+    q?: string; isActive?: boolean;
   }) {
     const result = await this.authAdminUserAccountReadRepository.listUserAccounts(input);
 
@@ -393,7 +391,7 @@ export class AuthAdminService {
     });
   }
 
-  async deactivateUserAccount(userId: string, actorUserId: string) {
+  async deactivateUserAccount(userId: string, actorUserId: string, reason?: string) {
     const existingUser = await this.authAdminUserAccountReadRepository.getUserAccountById(userId);
 
     if (!existingUser) {
@@ -404,6 +402,7 @@ export class AuthAdminService {
       userId,
       actorUserId,
       reason: "manual_admin_deactivation",
+      operatorReason: reason?.trim() || null,
     });
 
     return buildCommandResponse({

@@ -65,6 +65,9 @@ type UserAccountCommandRow = {
   is_active: boolean;
   last_login_at: string | null;
   created_at: string;
+  deactivated_at?: string | null;
+  deactivation_reason?: string | null;
+  deactivated_by_user_id?: string | null;
 };
 
 export type CreateUserAccountCommandInput = {
@@ -95,6 +98,14 @@ export type CreatePilotUserBindingCommandInput = {
 
 export type ReactivateUserAccountCommandInput = {
   userId: string;
+  actorUserId: string;
+};
+
+export type UpdateUserAccountCommandInput = {
+  userId: string;
+  employeeId?: string | null;
+  username?: string;
+  email?: string;
   actorUserId: string;
 };
 
@@ -173,6 +184,100 @@ export class AuthUserAccountCommandRepository {
                 providerSubject: user.provider_subject,
                 isActive: user.is_active,
               },
+            }),
+          }),
+        ],
+      );
+
+      return user;
+    });
+  }
+
+  async updateUserAccount(input: UpdateUserAccountCommandInput) {
+    const setClauses: string[] = [];
+    const changedFields: string[] = [];
+    const details: Record<string, unknown> = {};
+    const params: unknown[] = [];
+
+    if (input.employeeId !== undefined) {
+      params.push(input.employeeId);
+      setClauses.push(`employee_id = $${params.length}::uuid`);
+      changedFields.push("employeeId");
+      details.employeeId = input.employeeId;
+    }
+
+    if (input.username !== undefined) {
+      params.push(input.username);
+      setClauses.push(`username = $${params.length}`);
+      changedFields.push("username");
+      details.username = input.username;
+    }
+
+    if (input.email !== undefined) {
+      params.push(input.email);
+      setClauses.push(`email = $${params.length}`);
+      changedFields.push("email");
+      details.email = input.email;
+    }
+
+    if (setClauses.length === 0) {
+      return null;
+    }
+
+    return this.databaseService.withTransaction(async (client) => {
+      params.push(input.userId);
+      const userResult = await client.query<UserAccountCommandRow>(
+        `
+          /* auth_update_user_account */
+          UPDATE ops.user_account
+          SET ${setClauses.join(", ")},
+              updated_at = NOW()
+          WHERE user_id = $${params.length}::uuid
+          RETURNING
+            user_id,
+            employee_id,
+            username,
+            email,
+            auth_provider,
+            provider_subject,
+            is_active,
+            last_login_at,
+            created_at,
+            deactivated_at,
+            deactivation_reason,
+            deactivated_by_user_id
+        `,
+        params,
+      );
+
+      const user = userResult.rows[0] ?? null;
+      if (!user) {
+        return null;
+      }
+
+      await client.query(
+        `
+          INSERT INTO audit.event_log (
+            actor_user_id,
+            event_type,
+            entity_name,
+            entity_id,
+            scope_type,
+            metadata_json
+          )
+          VALUES ($1::uuid, 'user_account.updated', 'ops.user_account', $2::uuid, 'company', $3::jsonb)
+        `,
+        [
+          input.actorUserId,
+          input.userId,
+          JSON.stringify({
+            ...buildRequestAuditMetadata({
+              sourceContext: {
+                module: "auth-admin",
+                operation: "update-user-account",
+              },
+              changedFields,
+              details,
             }),
           }),
         ],

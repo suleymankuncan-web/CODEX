@@ -42,6 +42,7 @@ export class AccessLifecycleRepository {
     userId: string;
     actorUserId: string;
     reason: AccessLifecycleReason;
+    operatorReason?: string | null;
     sourceEntity?: AccessLifecycleSourceEntity;
   }): Promise<AccessLifecycleResult> {
     return this.databaseService.withTransaction((client) =>
@@ -55,6 +56,7 @@ export class AccessLifecycleRepository {
       userId: string;
       actorUserId: string;
       reason: AccessLifecycleReason;
+      operatorReason?: string | null;
       sourceEntity?: AccessLifecycleSourceEntity;
     },
   ): Promise<AccessLifecycleResult> {
@@ -86,6 +88,8 @@ export class AccessLifecycleRepository {
       return emptyAccessLifecycleResult();
     }
 
+    const deactivationReason = input.operatorReason?.trim() || input.reason;
+
     const userResult = await client.query<AccessLifecycleUserRow>(
       `
         /* access_lifecycle_deactivate_user */
@@ -112,7 +116,7 @@ export class AccessLifecycleRepository {
           deactivation_reason,
           deactivated_by_user_id
       `,
-      [input.userId, input.actorUserId, input.reason],
+      [input.userId, input.actorUserId, deactivationReason],
     );
 
     const user = userResult.rows[0] ?? null;
@@ -210,6 +214,7 @@ export class AccessLifecycleRepository {
               closedRoleAssignments: result.closedRoleAssignments,
               closedActionStoreAssignments: result.closedActionStoreAssignments,
               revokedMobileSessions: result.revokedMobileSessions,
+              operatorReason: input.operatorReason ?? null,
               sourceEntity: input.sourceEntity ?? null,
             },
           }),

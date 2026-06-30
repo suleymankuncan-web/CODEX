@@ -25,6 +25,7 @@ export class AuthAdminUserAccountReadRepository {
     limit?: number;
     offset?: number;
     authProvider?: string;
+    q?: string;
     isActive?: boolean;
   }) {
     const limit = input.limit ?? 50;
@@ -42,12 +43,26 @@ export class AuthAdminUserAccountReadRepository {
       filters.push(`ua.is_active = $${params.length}`);
     }
 
+    if (input.q) {
+      params.push(`%${input.q}%`);
+      filters.push(`(
+        ua.username ILIKE $${params.length}
+        OR ua.email ILIKE $${params.length}
+        OR COALESCE(ua.provider_subject, '') ILIKE $${params.length}
+        OR COALESCE(e.external_employee_ref, '') ILIKE $${params.length}
+        OR COALESCE(e.first_name, '') ILIKE $${params.length}
+        OR COALESCE(e.last_name, '') ILIKE $${params.length}
+      )`);
+    }
+
     const whereClause = filters.length > 0 ? `WHERE ${filters.join(" AND ")}` : "";
 
     const totalResult = await this.databaseService.query<{ total_count: string }>(
       `
         SELECT COUNT(*)::text AS total_count
         FROM ops.user_account ua
+        LEFT JOIN ops.employee e
+          ON e.employee_id = ua.employee_id
         ${whereClause}
       `,
       params,
