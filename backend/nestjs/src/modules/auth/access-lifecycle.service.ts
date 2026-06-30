@@ -14,6 +14,7 @@ export class AccessLifecycleService {
     userId: string;
     actorUserId: string;
     reason: AccessLifecycleReason;
+    operatorReason?: string | null;
     sourceEntity?: AccessLifecycleSourceEntity;
   }): Promise<{
     user: AccessLifecycleUserRow;

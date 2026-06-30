@@ -4889,6 +4889,14 @@ async function generateOpenApi(): Promise<void> {
 
   setJsonResponseSchema(
     document.paths,
+    "/api/auth/users/{userId}",
+    "patch",
+    "Command result with the updated auth user account.",
+    "AuthUserAccountCommandResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
     "/api/auth/pilot-user-bindings",
     "post",
     "Command result with the created pilot user binding.",

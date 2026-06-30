@@ -998,6 +998,18 @@ describe("OpenAPI baseline", () => {
       $ref: "#/components/schemas/AuthUserAccountCommandResponse",
     });
 
+    const authUserUpdate = document.paths["/api/auth/users/{userId}"].patch;
+    expect(
+      authUserUpdate.requestBody?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/UpdateUserAccountDto",
+    });
+    expect(
+      authUserUpdate.responses?.["200"]?.content?.["application/json"]?.schema,
+    ).toEqual({
+      $ref: "#/components/schemas/AuthUserAccountCommandResponse",
+    });
+
     const authPilotUserBindingCreate =
       document.paths["/api/auth/pilot-user-bindings"].post;
     expect(

@@ -2,21 +2,27 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from "@
 import { RequireRoles } from "../decorators/roles.decorator";
 import { RequireScope } from "../decorators/scope.decorator";
 import { AuthAdminService } from "../auth-admin.service";
+import { AuthAdminUserAccountService } from "../auth-admin-user-account.service";
 import { CreateActionStoreAssignmentDto } from "./dto/create-action-store-assignment.dto";
 import { CreatePilotUserBindingDto } from "./dto/create-pilot-user-binding.dto";
 import { CreateRoleAssignmentDto } from "./dto/create-role-assignment.dto";
 import { CreateUserAccountDto } from "./dto/create-user-account.dto";
+import { DeactivateUserAccountDto } from "./dto/deactivate-user-account.dto";
 import { GrantRolePermissionDto } from "./dto/grant-role-permission.dto";
 import { ListActionStoreAssignmentsQueryDto } from "./dto/list-action-store-assignments.query";
 import { ListRoleAssignmentAuditQueryDto } from "./dto/list-role-assignment-audit.query";
 import { ListRoleAssignmentsQueryDto } from "./dto/list-role-assignments.query";
 import { ListUserAccountsQueryDto } from "./dto/list-user-accounts.query";
 import { SearchAuthLookupQueryDto } from "./dto/search-auth-lookup.query";
+import { UpdateUserAccountDto } from "./dto/update-user-account.dto";
 
 @Controller("auth")
 @RequireRoles("SUPER_ADMIN")
 export class AuthAdminController {
-  constructor(private readonly authAdminService: AuthAdminService) {}
+  constructor(
+    private readonly authAdminService: AuthAdminService,
+    private readonly authAdminUserAccountService: AuthAdminUserAccountService,
+  ) {}
 
   @Post("role-assignments")
   async createRoleAssignment(
@@ -174,6 +180,7 @@ export class AuthAdminController {
       limit: query.limit,
       offset: query.offset,
       authProvider: query.authProvider,
+      q: query.q,
       isActive: query.isActive,
     });
   }
@@ -190,6 +197,26 @@ export class AuthAdminController {
     });
   }
 
+  @Patch("users/:userId")
+  async updateUserAccount(
+    @Param("userId") userId: string,
+    @Req()
+    request: {
+      user: {
+        userId: string;
+      };
+    },
+    @Body() body: UpdateUserAccountDto,
+  ) {
+    return this.authAdminUserAccountService.updateUserAccount({
+      userId,
+      employeeId: body.employeeId,
+      username: body.username,
+      email: body.email,
+      actorUserId: request.user.userId,
+    });
+  }
+
   @Patch("users/:userId/deactivate")
   async deactivateUserAccount(
     @Param("userId") userId: string,
@@ -199,8 +226,9 @@ export class AuthAdminController {
         userId: string;
       };
     },
+    @Body() body?: DeactivateUserAccountDto,
   ) {
-    return this.authAdminService.deactivateUserAccount(userId, request.user.userId);
+    return this.authAdminService.deactivateUserAccount(userId, request.user.userId, body?.reason);
   }
 
   @Patch("users/:userId/reactivate")

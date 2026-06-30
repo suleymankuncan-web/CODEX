@@ -156,6 +156,71 @@ describe("Auth user accounts", () => {
     await app.close();
   });
 
+  it("filters user accounts by query text", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (
+        sql.includes("FROM ops.user_account ua") &&
+        sql.includes("COUNT(*)::text AS total_count")
+      ) {
+        expect(sql).toContain("ILIKE");
+        expect(sql).toContain("e.first_name");
+        expect(params).toEqual(["%admin%"]);
+        return {
+          rowCount: 1,
+          rows: [{ total_count: "1" }],
+        };
+      }
+
+      if (sql.includes("FROM ops.user_account ua")) {
+        expect(sql).toContain("ILIKE");
+        expect(sql).toContain("e.last_name");
+        expect(params).toEqual(["%admin%", 20, 0]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "new.admin",
+              email: "new.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+            },
+          ],
+        };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: { query },
+    });
+
+    const response = await request(app.getHttpServer())
+      .get("/api/auth/users?limit=20&offset=0&q=admin")
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN");
+
+    expect(response.status).toBe(200);
+    expect(response.body.meta).toEqual({
+      count: 1,
+      total: 1,
+      limit: 20,
+      offset: 0,
+    });
+    expect(response.body.items[0]).toMatchObject({
+      userId: createdUserId,
+      username: "new.admin",
+      email: "new.admin@example.com",
+    });
+
+    await app.close();
+  });
+
   it("keeps user account total count independent from pagination offset", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (
@@ -201,6 +266,116 @@ describe("Auth user accounts", () => {
       total: 42,
       limit: 20,
       offset: 20,
+    });
+
+    await app.close();
+  });
+
+  it("updates a user account profile", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM ops.user_account ua") && sql.includes("INNER JOIN ops.user_role_assignment")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.user_account ua") && sql.includes("WHERE user_id = $1::uuid")) {
+        expect(params).toEqual([createdUserId]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "new.admin",
+              email: "new.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* auth_update_user_account */")) {
+        expect(sql).toContain("username = $1");
+        expect(sql).toContain("email = $2");
+        expect(params).toEqual([
+          "updated.admin",
+          "updated.admin@example.com",
+          createdUserId,
+        ]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "updated.admin",
+              email: "updated.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+              deactivated_at: null,
+              deactivation_reason: null,
+              deactivated_by_user_id: null,
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO audit.event_log")) {
+        expect(params?.[0]).toBe(adminUserId);
+        expect(params?.[1]).toBe(createdUserId);
+        const metadata = JSON.parse(String(params?.[2]));
+        expect(metadata.changedFields).toEqual(["username", "email"]);
+        expect(metadata.details).toMatchObject({
+          username: "updated.admin",
+          email: "updated.admin@example.com",
+        });
+        return { rowCount: 1, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/auth/users/${createdUserId}`)
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({
+        username: " updated.admin ",
+        email: "updated.admin@example.com",
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.command).toEqual({
+      status: "updated",
+      message: "User account updated",
+    });
+    expect(response.body.data.user).toEqual({
+      userId: createdUserId,
+      employeeId: null,
+      username: "updated.admin",
+      email: "updated.admin@example.com",
+      authProvider: "oidc",
+      providerSubject: null,
+      isActive: true,
+      lastLoginAt: null,
+      createdAt: "2026-04-17T22:15:00.000Z",
+      deactivatedAt: null,
+      deactivationReason: null,
+      deactivatedByUserId: null,
     });
 
     await app.close();
@@ -375,6 +550,118 @@ describe("Auth user accounts", () => {
       "close-action-stores",
       "revoke-mobile-sessions",
     ]);
+
+    await app.close();
+  });
+
+  it("stores an operator reason when deactivating a user account", async () => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
+      if (sql.includes("FROM ops.user_account ua") && sql.includes("INNER JOIN ops.user_role_assignment")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("/* access_lifecycle_lock_user */")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "new.admin",
+              email: "new.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_deactivate_user */")) {
+        expect(params).toEqual([
+          createdUserId,
+          adminUserId,
+          "İşten ayrılış bildirildi",
+        ]);
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "new.admin",
+              email: "new.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: false,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+              deactivation_reason: "İşten ayrılış bildirildi",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("/* access_lifecycle_close_role_assignments */")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("/* access_lifecycle_close_action_store_assignments */")) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("/* access_lifecycle_revoke_mobile_sessions */")) {
+        expect(params).toEqual([createdUserId, adminUserId, "manual_admin_deactivation"]);
+        return { rowCount: 0, rows: [] };
+      }
+
+      if (sql.includes("FROM ops.user_account") && sql.includes("WHERE user_id = $1::uuid")) {
+        return {
+          rowCount: 1,
+          rows: [
+            {
+              user_id: createdUserId,
+              employee_id: null,
+              username: "new.admin",
+              email: "new.admin@example.com",
+              auth_provider: "oidc",
+              provider_subject: null,
+              is_active: true,
+              last_login_at: null,
+              created_at: "2026-04-17T22:15:00.000Z",
+            },
+          ],
+        };
+      }
+
+      if (sql.includes("INSERT INTO audit.event_log")) {
+        const metadata = JSON.parse(String(params?.[2]));
+        expect(metadata.reason).toBe("manual_admin_deactivation");
+        expect(metadata.details.operatorReason).toBe("İşten ayrılış bildirildi");
+        return { rowCount: 1, rows: [] };
+      }
+
+      return { rowCount: 0, rows: [] };
+    });
+
+    const app = await createIntegrationApp({
+      databaseService: {
+        query,
+        withTransaction: async <T>(work: (client: { query: typeof query }) => Promise<T>) =>
+          work({ query }),
+      },
+    });
+
+    const response = await request(app.getHttpServer())
+      .patch(`/api/auth/users/${createdUserId}/deactivate`)
+      .set("x-user-id", adminUserId)
+      .set("x-role-codes", "SUPER_ADMIN")
+      .send({ reason: " İşten ayrılış bildirildi " });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.user.deactivationReason).toBe("İşten ayrılış bildirildi");
 
     await app.close();
   });

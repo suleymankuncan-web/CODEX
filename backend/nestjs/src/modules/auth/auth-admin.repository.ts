@@ -471,6 +471,16 @@ export class AuthAdminRepository {
     return this.userAccountCommandRepository.createUserAccount(input);
   }
 
+  async updateUserAccount(input: {
+    userId: string;
+    employeeId?: string | null;
+    username?: string;
+    email?: string;
+    actorUserId: string;
+  }) {
+    return this.userAccountCommandRepository.updateUserAccount(input);
+  }
+
   async createPilotUserBinding(input: {
     employeeId: string;
     authProvider: string;

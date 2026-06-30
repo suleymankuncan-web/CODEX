@@ -753,6 +753,9 @@ export type components = {
       "existingFailureReason": string | null
       "existingGeneratedAt": string | null
     }
+    "DeactivateUserAccountDto": {
+      "reason"?: string
+    }
     "ExternalIdMapCandidatesResponse": {
       "items": Array<{
           "entityType": "employee" | "store"
@@ -2539,6 +2542,11 @@ export type components = {
       "status": "open" | "in_progress" | "blocked"
       "note"?: string
     }
+    "UpdateUserAccountDto": {
+      "employeeId"?: string | null
+      "username"?: string
+      "email"?: string
+    }
     "VoidSalesTargetIncentiveRegionCorrectionDto": {
       "period": string
       "correctionId": string
@@ -2935,8 +2943,29 @@ export type paths = {
       }
     }
   }
+  "/api/auth/users/{userId}": {
+    patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["UpdateUserAccountDto"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["AuthUserAccountCommandResponse"]
+          }
+        }
+      }
+    }
+  }
   "/api/auth/users/{userId}/deactivate": {
     patch: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["DeactivateUserAccountDto"]
+        }
+      }
       responses: {
         "200": {
           content: {

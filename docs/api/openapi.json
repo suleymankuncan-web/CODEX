@@ -387,6 +387,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeactivateUserAccountDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Command result with the deactivated auth user account and closed access summary.",
@@ -4884,6 +4894,46 @@
         },
         "tags": [
           "StoreMonthlyReportPackage"
+        ]
+      }
+    },
+    "/api/auth/users/{userId}": {
+      "patch": {
+        "operationId": "AuthAdminController_updateUserAccount",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Command result with the updated auth user account.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthUserAccountCommandResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "AuthAdmin"
         ]
       }
     }
@@ -19246,6 +19296,36 @@
           "regionId",
           "decision"
         ]
+      },
+      "UpdateUserAccountDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "minLength": 3,
+            "maxLength": 254
+          }
+        }
+      },
+      "DeactivateUserAccountDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 500
+          }
+        }
       }
     }
   },
