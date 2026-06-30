@@ -1,6 +1,9 @@
 import { useDeferredValue, useMemo, useReducer } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AdminStatePanel, AdminSurfacePage } from './admin-surface-primitives'
+import {
+  AdminOperationalPage as AdminSurfacePage,
+  AdminOperationalState as AdminStatePanel,
+} from './admin-operational-primitives'
 import {
   createActionStoreAssignment,
   createRoleAssignment,

@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom'
 import { KeyRound, MapPin, ShieldCheck, UserCog, Users } from 'lucide-react'
 import {
-  AdminKeyValue,
-  AdminKeyValueGrid,
-  AdminMetricStrip,
-  AdminStatePanel,
-  AdminSurfaceBadge,
-  AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
-} from '../../pages/admin-surface-primitives'
+  AdminOperationalBadge as AdminSurfaceBadge,
+  AdminOperationalEmpty as AdminSurfaceEmpty,
+  AdminOperationalHeader as AdminSurfaceHeader,
+  AdminOperationalKeyGrid as AdminKeyValueGrid,
+  AdminOperationalKeyValue as AdminKeyValue,
+  AdminOperationalMetrics as AdminMetricStrip,
+  AdminOperationalPage as AdminSurfacePage,
+  AdminOperationalSection as AdminSurfaceSection,
+  AdminOperationalState as AdminStatePanel,
+} from '../../pages/admin-operational-primitives'
 import {
   AuthActionRow,
   AuthButton,

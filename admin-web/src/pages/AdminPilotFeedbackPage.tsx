@@ -2,20 +2,21 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 're
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle2, Inbox, MessageSquareWarning, RefreshCw, Save, Tags } from 'lucide-react'
 import {
-  AdminFilterBar,
-  AdminKeyValue as KeyValue,
-  AdminKeyValueGrid,
-  AdminMetricStrip,
-  AdminStatePanel,
-  AdminSurfaceBadge,
-  AdminSurfaceEmpty as EmptyState,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
-  type AdminSurfaceTone,
-} from './admin-surface-primitives'
+  AdminOperationalBadge as AdminSurfaceBadge,
+  AdminOperationalEmpty as EmptyState,
+  AdminOperationalFilterBar as AdminFilterBar,
+  AdminOperationalHeader as AdminSurfaceHeader,
+  AdminOperationalKeyGrid as AdminKeyValueGrid,
+  AdminOperationalKeyValue as KeyValue,
+  AdminOperationalMetrics as AdminMetricStrip,
+  AdminOperationalPage as AdminSurfacePage,
+  AdminOperationalSection as AdminSurfaceSection,
+  AdminOperationalState as AdminStatePanel,
+  type AdminOperationalTone as AdminSurfaceTone,
+} from './admin-operational-primitives'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -37,6 +38,8 @@ const classifications = [
   'p2_pilot_friction',
   'p3_backlog',
 ] as const satisfies readonly PilotFeedbackClassification[]
+const allStatusSelectValue = '__all_statuses__'
+const allClassificationSelectValue = '__all_classifications__'
 
 export function AdminPilotFeedbackPage() {
   const { locale, t } = useLocalization()
@@ -182,35 +185,49 @@ export function AdminPilotFeedbackPage() {
         <AdminFilterBar>
           <label className="tw:grid tw:min-w-44 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
             {t('pilotFeedback.admin.statusFilter')}
-            <select
-              className="tw:h-8 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2 tw:text-sm tw:text-foreground"
-              value={status}
-              onChange={(event) => updateStatusFilter(event.target.value as PilotFeedbackStatus | '')}
+            <Select
+              value={status || allStatusSelectValue}
+              onValueChange={(value) =>
+                updateStatusFilter(value === allStatusSelectValue ? '' : (value as PilotFeedbackStatus))
+              }
             >
-              <option value="">{t('pilotFeedback.admin.allStatuses')}</option>
-              {statuses.map((value) => (
-                <option key={value} value={value}>
-                  {formatPilotFeedbackStatus(t, value)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="tw:h-8 tw:bg-background/70">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={allStatusSelectValue}>{t('pilotFeedback.admin.allStatuses')}</SelectItem>
+                {statuses.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatPilotFeedbackStatus(t, value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="tw:grid tw:min-w-52 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
             {t('pilotFeedback.admin.classificationFilter')}
-            <select
-              className="tw:h-8 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2 tw:text-sm tw:text-foreground"
-              value={classification}
-              onChange={(event) =>
-                updateClassificationFilter(event.target.value as PilotFeedbackClassification | '')
+            <Select
+              value={classification || allClassificationSelectValue}
+              onValueChange={(value) =>
+                updateClassificationFilter(
+                  value === allClassificationSelectValue ? '' : (value as PilotFeedbackClassification),
+                )
               }
             >
-              <option value="">{t('pilotFeedback.admin.allClassifications')}</option>
-              {classifications.map((value) => (
-                <option key={value} value={value}>
-                  {formatPilotFeedbackClassification(t, value)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="tw:h-8 tw:bg-background/70">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={allClassificationSelectValue}>
+                  {t('pilotFeedback.admin.allClassifications')}
+                </SelectItem>
+                {classifications.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatPilotFeedbackClassification(t, value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
         </AdminFilterBar>
       </AdminSurfaceSection>
@@ -332,17 +349,21 @@ function PilotFeedbackRow(input: {
         <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:md:grid-cols-2">
           <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
             {input.t('pilotFeedback.admin.classificationFilter')}
-            <select
-              className="tw:h-8 tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2 tw:text-sm tw:text-foreground"
+            <Select
               value={classification}
-              onChange={(event) => setClassification(event.target.value as PilotFeedbackClassification)}
+              onValueChange={(value) => setClassification(value as PilotFeedbackClassification)}
             >
-              {classifications.map((value) => (
-                <option key={value} value={value}>
-                  {formatPilotFeedbackClassification(input.t, value)}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="tw:h-8 tw:bg-background/70">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {classifications.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {formatPilotFeedbackClassification(input.t, value)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </label>
           <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
             {input.t('pilotFeedback.admin.noteLabel')}

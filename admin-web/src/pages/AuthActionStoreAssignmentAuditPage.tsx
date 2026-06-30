@@ -2,14 +2,14 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import {
-  AdminKeyValue,
-  AdminKeyValueGrid,
-  AdminStatePanel,
-  AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
-} from './admin-surface-primitives'
+  AdminOperationalEmpty as AdminSurfaceEmpty,
+  AdminOperationalHeader as AdminSurfaceHeader,
+  AdminOperationalKeyGrid as AdminKeyValueGrid,
+  AdminOperationalKeyValue as AdminKeyValue,
+  AdminOperationalPage as AdminSurfacePage,
+  AdminOperationalSection as AdminSurfaceSection,
+  AdminOperationalState as AdminStatePanel,
+} from './admin-operational-primitives'
 import {
   AuthButton,
   AuthMuted,
