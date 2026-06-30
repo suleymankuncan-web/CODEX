@@ -186,6 +186,80 @@ test('HR admin can search users and create assignments from the workbench', asyn
   })
 })
 
+test('HR admin can update and deactivate selected user access', async ({ page }) => {
+  const userId = '90000000-0000-4000-8000-000000000201'
+  let updateBody: Record<string, unknown> | null = null
+  let deactivateBody: Record<string, unknown> | null = null
+
+  await page.route(`**/api/auth/users/${userId}`, async (route) => {
+    if (route.request().method() !== 'PATCH') {
+      await route.fallback()
+      return
+    }
+
+    updateBody = route.request().postDataJSON()
+    await route.fulfill({
+      json: {
+        command: { status: 'updated', message: 'Hesap güncellendi' },
+        data: { user: { ...authUsersFixture.items[0], username: 'store.manager.updated' } },
+      },
+    })
+  })
+
+  await page.route(`**/api/auth/users/${userId}/deactivate`, async (route) => {
+    deactivateBody = route.request().postDataJSON()
+    await route.fulfill({
+      json: {
+        command: { status: 'deactivated', message: 'Hesap pasife alındı' },
+        data: { accessClosure: { closedRoleAssignments: 0, closedActionStoreAssignments: 0 } },
+      },
+    })
+  })
+
+  await page.goto('/admin/auth')
+
+  await page.getByRole('button', { name: 'Üyelik oluştur' }).first().click()
+  const account = page.locator('.auth-account-section').filter({ hasText: 'Hesap bilgileri' })
+  await account.getByLabel('Ad soyad').fill('store.manager.updated')
+  await account.getByRole('button', { name: 'Bilgileri kaydet' }).click()
+
+  await expect(page.locator('.auth-notice').filter({ hasText: 'Hesap güncellendi' })).toBeVisible()
+  expect(updateBody).toMatchObject({ username: 'store.manager.updated' })
+
+  const status = page.locator('.auth-danger-box')
+  await status.getByLabel('Kapatma nedeni').fill('Görev değişikliği')
+  await status.getByRole('button', { name: 'Erişimi kapat ve pasife al' }).click()
+  await page.getByRole('button', { name: 'Hesabı kapat' }).click()
+
+  await expect(page.locator('.auth-notice').filter({ hasText: 'Hesap pasife alındı' })).toBeVisible()
+  expect(deactivateBody).toMatchObject({ reason: 'Görev değişikliği' })
+})
+
+test('HR admin can reactivate an inactive user from the workbench', async ({ page }) => {
+  const inactiveUserId = '90000000-0000-4000-8000-000000000203'
+  let reactivateCalled = false
+
+  await page.route(`**/api/auth/users/${inactiveUserId}/reactivate`, async (route) => {
+    reactivateCalled = true
+    await route.fulfill({
+      json: {
+        command: { status: 'reactivated', message: 'Hesap aktifleştirildi' },
+        data: { user: { ...authUsersFixture.items[2], isActive: true } },
+      },
+    })
+  })
+
+  await page.goto('/admin/auth')
+
+  await page.getByLabel('Kullanıcı listesi').getByRole('button', { name: /inactive\.user/ }).click()
+  await expect(page.getByLabel('Seçili kullanıcı')).toContainText('inactive.user')
+  await page.getByRole('button', { name: 'Üyelik oluştur' }).first().click()
+  await page.getByRole('button', { name: 'Hesabı aktifleştir' }).click()
+
+  await expect(page.locator('.auth-notice').filter({ hasText: 'Hesap aktifleştirildi' })).toBeVisible()
+  expect(reactivateCalled).toBe(true)
+})
+
 test('auth catalog page switches chrome to English copy and persists locale', async ({ page }) => {
   await page.goto('/admin/auth/catalog')
 
@@ -344,8 +418,19 @@ const authUsersFixture = {
       lastLoginAt: '2026-06-02T08:30:00.000Z',
       createdAt: '2026-05-16T09:00:00.000Z',
     },
+    {
+      userId: '90000000-0000-4000-8000-000000000203',
+      employeeId: null,
+      username: 'inactive.user',
+      email: 'inactive.user@example.com',
+      authProvider: 'clerk',
+      providerSubject: 'provider-subject-203',
+      isActive: false,
+      lastLoginAt: null,
+      createdAt: '2026-05-12T09:00:00.000Z',
+    },
   ],
-  meta: { count: 2, total: 2, limit: 100, offset: 0 },
+  meta: { count: 3, total: 3, limit: 100, offset: 0 },
 }
 
 const authRoleAssignmentsFixture = {

@@ -27,7 +27,7 @@
 
 ## Current Evidence
 
-- [ ] Prototype source exists at `admin-web/src/prototypes/admin/auth-access-workbench-v1.tsx`.
+- [ ] Prototype source exists at `docs/prototypes/admin-auth-access-workbench-v1.tsx`.
 - [ ] Prototype style exists at `admin-web/src/styles/admin-auth-access-workbench.css`.
 - [ ] Dev-only prototype route exists in `admin-web/src/App.tsx`.
 - [ ] Current production page is `admin-web/src/pages/AuthDashboardPage.tsx`.

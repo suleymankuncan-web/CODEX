@@ -58,6 +58,10 @@ implemented and verified.
   Manager and other store roles, pinned-post ordering, inline edit, pin/unpin,
   archive/undo affordance, and compact feed card rhythm. It has no read/seen
   tracking in v1.
+- `docs/prototypes/admin-auth-access-workbench-v1.tsx` is the locked
+  production-bound React prototype for `/admin/auth`. It defines the Admin Auth
+  access workbench: compact user inventory, profile detail, role/store action
+  trays, account edit, deactivate/reactivate, and audit review rhythm.
 - `docs/superpowers/plans/2026-06-29-store-reports-prototype-to-product-v1.md`
   is the accepted Store Reports product contract that promoted `/store/reports`
   out of placeholder status. The production route now owns the month/year
@@ -95,6 +99,7 @@ Important production boundary:
 | `docs/prototypes/store-incentives-region-manager-command-v2.html` | `/store/incentives` Region Manager command center and Store/Admin surface standard reference | `B18107107BB91332179F00A93166ECF04038CA6E6878E14DFE8DD2FBECA5BF87` |
 | `docs/prototypes/store-workforce-full-ledger-prototype.tsx` | `/store/workforce` Region Manager Norm Kadro full-ledger production-bound prototype | `DBA61AB355FC25B564612873ECAF0C7A927C9D10CAB7D5F148395BE57767CEC3` |
 | `admin-web/src/prototypes/store-feed-region-composer-v1.tsx` | `/store/feed` Region Manager composer and read-only store-role feed surface | `145040F4C55444465861059D7DFD5A8EF619865C56AECD1B07224C561EBC64F6` |
+| `docs/prototypes/admin-auth-access-workbench-v1.tsx` | `/admin/auth` Admin Auth access workbench | `DFDBC11C2CD9D7B451CF8B5AEEEB16455D3E370E1C60B8B310E42F2F7BF34069` |
 
 ## Prototype Implementation Evidence
 
