@@ -57,24 +57,24 @@ matrix remains in `docs/plans/admin-operational-ux-v2-audit-matrix.md`.
 | Auth Admin | `/admin/auth`, `/admin/auth/catalog`, `/admin/auth/users/:userId/audit`, `/admin/auth/role-assignments/:assignmentId/audit`, `/admin/auth/action-store-assignments/:assignmentId/audit` | `AuthDashboardPage.tsx`, `AuthCatalogPage.tsx`, auth audit detail pages | `SUPER_ADMIN` | `auth-admin-surfaces.spec.ts`, `admin-routing.spec.ts` |
 | Audit | `/admin/audit`, `/admin/audit/users/:userId/audit`, `/admin/audit/role-assignments/:assignmentId/audit`, `/admin/audit/action-store-assignments/:assignmentId/audit` | `AuditCenterPage.tsx`, auth audit detail pages | `SUPER_ADMIN`, `AUDITOR` | `audit-surfaces.spec.ts`, `admin-routing.spec.ts`, `auth-admin-surfaces.spec.ts` |
 | Pilot Feedback | `/admin/pilot-feedback` | `AdminPilotFeedbackPage.tsx` | `SUPER_ADMIN` | `pilot-feedback.spec.ts`, `admin-surfaces.spec.ts` |
-| Admin Feed | `/admin/feed` | `AdminFeedPage.tsx` | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER` | `feed-surfaces.spec.ts`; parked until dedicated workflow contract pass |
+| Admin Feed | `/admin/feed` | `AdminFeedPage.tsx` | `SUPER_ADMIN`, `HR_ADMIN`, `REGION_MANAGER` | `feed-surfaces.spec.ts`; reopened and modernized in PR7 |
 | Session Readiness | `/admin/session` | `SessionReadinessPage.tsx`, `SessionGate` | unguarded diagnostic route | `admin-routing.spec.ts`, `auth-cookie-session.spec.ts`; parked diagnostic route |
 
 ## Parked Route Decisions
 
 ### `/admin/feed`
 
-Status: parked for this baseline.
+Status: reopened and modernized in PR7.
 
 Reason:
 
 - Prior V1/V2 evidence explicitly parked it because composer/write behavior
   includes publish, pin, unpin, archive, visibility, role-scope defaults, query
   invalidation, and Store Feed visibility.
-- It can be reopened only as a dedicated feed workflow PR with behavior coverage
-  before visual modernization.
+- PR7 reopened it as a dedicated feed workflow PR, preserved the behavior
+  contract, and verified it with `feed-surfaces.spec.ts`.
 
-Reopen gate:
+Reopen gate satisfied by PR7:
 
 - Read `AdminFeedPage.tsx` and `features/feed/api.ts`.
 - Freeze existing payloads and mutation semantics.
@@ -111,8 +111,7 @@ Non-blocking notes for later runtime PRs:
 - Incentives currently has less obvious dedicated e2e naming than other admin
   routes. PR4 must identify existing targeted coverage or add narrow coverage
   before runtime changes.
-- Feed must not be folded into a polish PR. It needs a behavior-preserving
-  composer contract if reopened.
+- Feed was reopened in PR7 with behavior-preserving composer coverage.
 
 ## Behavior Freeze
 
@@ -125,7 +124,7 @@ The train must preserve:
 - Snapshot run, rerun, dependency, lineage, and report semantics.
 - KPI scoring, ranking, checklist weights, and competition lifecycle behavior.
 - Target and incentive approval semantics.
-- Feed publish/pin/archive behavior unless a dedicated feed PR owns it.
+- Feed publish/pin/archive behavior was owned by PR7 and stayed behavior-preserving.
 
 ## Verification For This PR
 
