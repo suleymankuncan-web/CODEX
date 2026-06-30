@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './test-fixtures'
+import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 
 const competitionId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -62,10 +62,10 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
     page.getByTestId(`admin-metric-${teamId}-2026-04-22`).getByText('92.45'),
   ).toBeVisible()
   await expect(
-    page.getByLabel('Kapsamdaki yarışma uyarıları').getByText('BM checklist eksik', { exact: true }),
+    page.getByLabel('Görünen yarışma uyarıları').getByText('BM checklist eksik', { exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByLabel('Kapsamdaki yarışma uyarıları').getByText('missing bm checklist', { exact: true }),
+    page.getByLabel('Görünen yarışma uyarıları').getByText('missing bm checklist', { exact: true }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: /Yeniden hesapla QUALIFIER/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeVisible()
@@ -225,7 +225,7 @@ test('admin can create a competition stage with team store assignments', async (
   await page.getByLabel('Etap kodu').fill('MAY_QUALIFIER')
   await page.getByLabel('Etap adı').fill('May Qualifier')
   await page.getByLabel('Etap sırası').fill('1')
-  await page.getByLabel('Etap tipi').selectOption('qualifier')
+  await chooseCompetitionOption(page, 'Etap tipi', 'eleme')
   await page.getByLabel('Başlangıç', { exact: true }).fill('2026-05-01')
   await page.getByLabel('Bitiş', { exact: true }).fill('2026-05-15')
   const teamOne = page.locator('.stage-builder-team').filter({ hasText: '1. takım' })
@@ -272,10 +272,10 @@ test('admin can apply a stage format preset before creating a stage', async ({ p
 
   await page.goto('/admin/competitions')
 
-  await page.getByLabel('Etap ön ayarı').selectOption('region_league')
+  await chooseCompetitionOption(page, 'Etap ön ayarı', 'Bölge ligi')
   await expect(page.getByLabel('Etap kodu')).toHaveValue('REGION_LEAGUE')
   await expect(page.getByLabel('Etap adı')).toHaveValue('Regional League')
-  await expect(page.getByLabel('Etap tipi')).toHaveValue('league')
+  await expect(page.getByLabel('Etap tipi')).toContainText('lig')
   await expect(page.getByLabel('Başlangıç', { exact: true })).toHaveValue('2026-04-22')
   await expect(page.getByLabel('Bitiş', { exact: true })).toHaveValue('2026-04-24')
 
@@ -313,9 +313,9 @@ test('admin can create a league then final stage package from templates', async 
 
   await page.goto('/admin/competitions')
 
-  await page.getByLabel('Etap paketi').selectOption('league_then_final')
-  await page.getByLabel('Paket 1. takım şablonu').selectOption(templateId)
-  await page.getByLabel('Paket 2. takım şablonu').selectOption(secondTemplateId)
+  await chooseCompetitionOption(page, 'Etap paketi', 'Lig sonra final')
+  await chooseCompetitionOption(page, 'Paket 1. takım şablonu', 'MARMARA_TEMPLATE_A - Marmara Template A')
+  await chooseCompetitionOption(page, 'Paket 2. takım şablonu', 'MARMARA_TEMPLATE_B - Marmara Template B')
   await expect(page.getByLabel('Paket etabı 1 kodu')).toHaveValue('REGION_LEAGUE')
   await expect(page.getByLabel('Paket etabı 2 kodu')).toHaveValue('FINAL_SHOWDOWN')
   await page.getByLabel('Paket etabı 2 adı').fill('Marmara Final Night')
@@ -386,9 +386,9 @@ test('admin can save, submit, approve, and execute a stage package plan', async 
 
   await page.goto('/admin/competitions')
 
-  await page.getByLabel('Etap paketi').selectOption('league_then_final')
-  await page.getByLabel('Paket 1. takım şablonu').selectOption(templateId)
-  await page.getByLabel('Paket 2. takım şablonu').selectOption(secondTemplateId)
+  await chooseCompetitionOption(page, 'Etap paketi', 'Lig sonra final')
+  await chooseCompetitionOption(page, 'Paket 1. takım şablonu', 'MARMARA_TEMPLATE_A - Marmara Template A')
+  await chooseCompetitionOption(page, 'Paket 2. takım şablonu', 'MARMARA_TEMPLATE_B - Marmara Template B')
   await page.getByLabel('Paket plan adı').fill('April regional package')
   await page.getByLabel('Paket etabı 2 adı').fill('Marmara Final Night')
   await page.getByRole('button', { name: 'Paket planını kaydet' }).click()
@@ -569,7 +569,7 @@ test('admin creates a team template and applies it to a stage team', async ({ pa
   await page.getByLabel('Başlangıç', { exact: true }).fill('2026-05-16')
   await page.getByLabel('Bitiş', { exact: true }).fill('2026-05-31')
   const teamOne = page.locator('.stage-builder-team').filter({ hasText: '1. takım' })
-  await teamOne.getByLabel('1. takım şablonu').selectOption(templateId)
+  await chooseCompetitionOption(page, '1. takım şablonu', 'MARMARA_TEMPLATE_A - Marmara Template A', teamOne)
   await page.getByLabel('2. takım kodu').fill('MARMARA_B')
   await page.getByLabel('2. takım adı').fill('Marmara B')
   const teamTwo = page.locator('.stage-builder-team').filter({ hasText: '2. takım' })
@@ -682,12 +682,12 @@ test('region manager competitions surface is read-only and scoped to visible sto
 
   await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
   const regionReadSummary = page.getByLabel('Yönetici yarışma okuma özeti')
-  const regionContributionRows = page.getByLabel('Kapsamdaki yarışma mağaza katkıları')
+  const regionContributionRows = page.getByLabel('Görünen yarışma mağaza katkıları')
   await expect(regionReadSummary.getByText('Okuma özeti')).toBeVisible()
   await expect(regionReadSummary.getByText('95% katkı kapsamı')).toBeVisible()
   await expect(regionContributionRows.getByText('Katkı sağlığı')).toBeVisible()
   await expect(regionContributionRows.getByText('Kısmi katkı').first()).toBeVisible()
-  await expect(page.getByText('Kapsamdaki katkılar')).toBeVisible()
+  await expect(page.getByText('Görünen katkılar')).toBeVisible()
   await expect(page.getByText('Visible Region Store')).toBeVisible()
   await expect(page.getByText('93.50')).toBeVisible()
   await expect(page.getByText('Outside Region Store')).toHaveCount(0)
@@ -1359,6 +1359,16 @@ async function routeCompetitionApi(
       },
     })
   })
+}
+
+async function chooseCompetitionOption(
+  page: Page,
+  label: string,
+  optionName: string | RegExp,
+  scope?: Locator,
+) {
+  await (scope ?? page).getByLabel(label).click()
+  await page.getByRole('option', { name: optionName }).click()
 }
 
 function storesFromIds(storeIds: string[]) {
