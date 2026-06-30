@@ -233,7 +233,9 @@ function parseLiveAdminRoutes() {
 }
 
 const approvedAdminSurfaceImportSources = new Set([
+  './admin-operational-primitives',
   './admin-surface-primitives',
+  '../../pages/admin-operational-primitives',
   '../../pages/admin-surface-primitives',
   './operations-surface-primitives',
   './AdminChecklistTemplateSurface',

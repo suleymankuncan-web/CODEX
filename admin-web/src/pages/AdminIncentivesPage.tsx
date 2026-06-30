@@ -38,18 +38,18 @@ import {
   getPrimaryEarnedAmount,
 } from './store-incentives-model'
 import {
-  AdminActionRow,
-  AdminFilterBar,
-  AdminMetricStrip,
-  AdminStatePanel,
-  AdminSurfaceBadge,
-  AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
-  AdminSurfaceSkeleton,
-  type AdminSurfaceTone,
-} from './admin-surface-primitives'
+  AdminOperationalActionRow as AdminActionRow,
+  AdminOperationalBadge as AdminSurfaceBadge,
+  AdminOperationalEmpty as AdminSurfaceEmpty,
+  AdminOperationalFilterBar as AdminFilterBar,
+  AdminOperationalHeader as AdminSurfaceHeader,
+  AdminOperationalMetrics as AdminMetricStrip,
+  AdminOperationalPage as AdminSurfacePage,
+  AdminOperationalSection as AdminSurfaceSection,
+  AdminOperationalSkeleton as AdminSurfaceSkeleton,
+  AdminOperationalState as AdminStatePanel,
+  type AdminOperationalTone as AdminSurfaceTone,
+} from './admin-operational-primitives'
 import { AdminRegionPackageReviewSection } from './admin-incentive-region-packages'
 
 type AdminIncentiveRow = {

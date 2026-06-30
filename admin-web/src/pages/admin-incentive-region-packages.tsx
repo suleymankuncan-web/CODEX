@@ -15,13 +15,13 @@ import { getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { formatMoneyValue } from './store-incentives-model'
 import {
-  AdminActionRow,
-  AdminStatePanel,
-  AdminSurfaceBadge,
-  AdminSurfaceEmpty,
-  AdminSurfaceSection,
-  type AdminSurfaceTone,
-} from './admin-surface-primitives'
+  AdminOperationalActionRow as AdminActionRow,
+  AdminOperationalBadge as AdminSurfaceBadge,
+  AdminOperationalEmpty as AdminSurfaceEmpty,
+  AdminOperationalSection as AdminSurfaceSection,
+  AdminOperationalState as AdminStatePanel,
+  type AdminOperationalTone as AdminSurfaceTone,
+} from './admin-operational-primitives'
 
 type RegionPackageRow = {
   id: string

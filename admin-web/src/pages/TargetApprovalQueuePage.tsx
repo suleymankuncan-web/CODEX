@@ -31,18 +31,18 @@ import { formatDate, formatDateTime, formatNumber, formatState, getErrorMessage 
 import type { AppLocale } from '../lib/i18n'
 import { cn } from '../lib/utils'
 import {
-  AdminActionRow,
-  AdminKeyValue,
-  AdminKeyValueGrid,
-  AdminMetricStrip,
-  AdminStatePanel,
-  AdminSurfaceBadge,
-  AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
-  type AdminSurfaceTone,
-} from './admin-surface-primitives'
+  AdminOperationalActionRow as AdminActionRow,
+  AdminOperationalBadge as AdminSurfaceBadge,
+  AdminOperationalEmpty as AdminSurfaceEmpty,
+  AdminOperationalHeader as AdminSurfaceHeader,
+  AdminOperationalKeyGrid as AdminKeyValueGrid,
+  AdminOperationalKeyValue as AdminKeyValue,
+  AdminOperationalMetrics as AdminMetricStrip,
+  AdminOperationalPage as AdminSurfacePage,
+  AdminOperationalSection as AdminSurfaceSection,
+  AdminOperationalState as AdminStatePanel,
+  type AdminOperationalTone as AdminSurfaceTone,
+} from './admin-operational-primitives'
 
 export function TargetApprovalQueuePage(input: {
   authSummary: AuthSessionSummary | null
