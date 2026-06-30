@@ -305,27 +305,85 @@ function AdminOperationalKeyValue({ label, value }: { label: ReactNode; value: R
 }
 
 function AdminOperationalState({
+  action,
   children,
+  description,
   isLoading = false,
+  testId,
   title,
   tone = 'neutral',
 }: {
+  action?: ReactNode | undefined
   children?: ReactNode | undefined
+  description?: ReactNode | undefined
   isLoading?: boolean
+  testId?: string | undefined
   title: ReactNode
   tone?: AdminOperationalTone | undefined
 }) {
   const Icon = isLoading ? Loader2 : tone === 'success' || tone === 'calm' ? CheckCircle2 : Info
 
   return (
-    <div className={cn('tw:flex tw:gap-3 tw:rounded-xl tw:border tw:p-3', toneCardStyles[toSurfaceTone(tone)])}>
+    <div
+      className={cn('tw:flex tw:gap-3 tw:rounded-xl tw:border tw:p-3', toneCardStyles[toSurfaceTone(tone)])}
+      data-testid={testId}
+    >
       <Icon className={cn('tw:mt-0.5 tw:size-4 tw:shrink-0', isLoading && 'tw:animate-spin')} aria-hidden="true" />
-      <div className="tw:min-w-0">
+      <div className="tw:min-w-0 tw:flex-1">
         <div className="tw:text-sm tw:font-semibold tw:text-foreground">{title}</div>
+        {description ? <div className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">{description}</div> : null}
         {children ? <div className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">{children}</div> : null}
+        {action ? <div className="tw:mt-3">{action}</div> : null}
       </div>
     </div>
   )
+}
+
+function AdminOperationalEmpty({
+  action,
+  copy,
+  title = 'Kayıt bulunamadı',
+}: {
+  action?: ReactNode | undefined
+  copy?: ReactNode | undefined
+  title?: ReactNode | undefined
+}) {
+  return (
+    <AdminOperationalState action={action} description={copy} title={title} tone="neutral" />
+  )
+}
+
+function AdminOperationalActionRow({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string | undefined
+}) {
+  return <div className={cn('tw:flex tw:flex-wrap tw:items-center tw:gap-2', className)}>{children}</div>
+}
+
+function AdminOperationalFilterBar({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className?: string | undefined
+}) {
+  return (
+    <div
+      className={cn(
+        'tw:flex tw:flex-col tw:gap-3 tw:rounded-2xl tw:border tw:border-border/80 tw:bg-card/90 tw:p-3 tw:shadow-sm tw:lg:flex-row tw:lg:items-end',
+        className,
+      )}
+    >
+      {children}
+    </div>
+  )
+}
+
+function AdminOperationalSkeleton() {
+  return <AdminOperationalState isLoading title="Yükleniyor" tone="neutral" />
 }
 
 function AdminOperationalBadge({
@@ -339,7 +397,10 @@ function AdminOperationalBadge({
 }
 
 export {
+  AdminOperationalActionRow,
   AdminOperationalBadge,
+  AdminOperationalEmpty,
+  AdminOperationalFilterBar,
   AdminOperationalHeader,
   AdminOperationalKeyGrid,
   AdminOperationalKeyValue,
@@ -347,6 +408,7 @@ export {
   AdminOperationalPage,
   AdminOperationalRow,
   AdminOperationalSection,
+  AdminOperationalSkeleton,
   AdminOperationalState,
 }
 
