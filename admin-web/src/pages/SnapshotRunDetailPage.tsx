@@ -33,15 +33,17 @@ import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 import {
   AdminKeyValue as KeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 function formatCheckStatus(input: 'pass' | 'fail', t: TranslateFunction) {
   return input === 'pass' ? t('adminSnapshots.check.pass') : t('adminSnapshots.check.fail')
@@ -91,36 +93,36 @@ export function SnapshotRunDetailPage() {
 
   if (!snapshotRunId) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('adminSnapshots.detailMissingTitle')}
           description={t('adminSnapshots.detailMissingCopy')}
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (detailQuery.isLoading) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           isLoading
           title={t('adminSnapshots.detailLoadingTitle')}
           description={t('adminSnapshots.detailLoadingCopy')}
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('adminSnapshots.detailUnavailableTitle')}
           description={getErrorMessage(detailQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
@@ -135,7 +137,7 @@ export function SnapshotRunDetailPage() {
     detail.cards.turnoverRows
 
   return (
-    <AdminSurfacePage ariaLabel={t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}>
+    <AdminOperationalPage ariaLabel={t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}>
       <Button asChild className="tw:w-fit" variant="outline">
         <Link to="/admin/snapshots">
           <ArrowLeft aria-hidden="true" />
@@ -143,7 +145,7 @@ export function SnapshotRunDetailPage() {
         </Link>
       </Button>
 
-      <AdminSurfaceHeader
+      <AdminOperationalHeader
         eyebrow={t('adminSnapshots.detailEyebrow')}
         title={t('adminSnapshots.detailTitle', { type: formatSnapshotType(detail.snapshotRun.snapshotType, t) })}
         description={t('adminSnapshots.detailCopy', {
@@ -168,7 +170,7 @@ export function SnapshotRunDetailPage() {
 
       {feedback ? <AdminStatePanel title={feedback} tone="accent" /> : null}
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'rows',
@@ -216,7 +218,7 @@ export function SnapshotRunDetailPage() {
       <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:xl:grid-cols-2">
         <SnapshotOutputVolumePanel detail={detail} totalRows={totalRows} />
 
-        <AdminSurfaceSection
+        <AdminOperationalSection
           eyebrow={t('adminSnapshots.lineageEyebrow')}
           title={t('adminSnapshots.lineageTitle')}
         >
@@ -254,11 +256,11 @@ export function SnapshotRunDetailPage() {
           ) : (
             <AdminSurfaceEmpty copy={t('adminSnapshots.dependencyLoading')} />
           )}
-        </AdminSurfaceSection>
+        </AdminOperationalSection>
       </div>
 
       <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:xl:grid-cols-2">
-        <AdminSurfaceSection
+        <AdminOperationalSection
           eyebrow={t('adminSnapshots.failurePostureEyebrow')}
           title={t('adminSnapshots.failurePostureTitle')}
         >
@@ -276,9 +278,9 @@ export function SnapshotRunDetailPage() {
               value={String(detail.rerunCount)}
             />
           </AdminKeyValueGrid>
-        </AdminSurfaceSection>
+        </AdminOperationalSection>
 
-        <AdminSurfaceSection
+        <AdminOperationalSection
           eyebrow={t('adminSnapshots.auditTimelineEyebrow')}
           title={t('adminSnapshots.auditTimelineTitle')}
           actions={
@@ -323,9 +325,9 @@ export function SnapshotRunDetailPage() {
               ))}
             </div>
           )}
-        </AdminSurfaceSection>
+        </AdminOperationalSection>
       </div>
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
@@ -334,7 +336,7 @@ function SnapshotRunSummaryPanel(input: { detail: SnapshotRunDetail }) {
   const { snapshotRun } = input.detail
 
   return (
-    <AdminSurfaceSection
+    <AdminOperationalSection
       eyebrow={t('adminSnapshots.executionStateEyebrow')}
       title={t('adminSnapshots.runSummary')}
     >
@@ -351,7 +353,7 @@ function SnapshotRunSummaryPanel(input: { detail: SnapshotRunDetail }) {
           <KeyValue key={label} label={label} value={value} />
         ))}
       </AdminKeyValueGrid>
-    </AdminSurfaceSection>
+    </AdminOperationalSection>
   )
 }
 
@@ -365,7 +367,7 @@ function SnapshotDependenciesPanel(input: {
   const { t } = useLocalization()
 
   return (
-    <AdminSurfaceSection
+    <AdminOperationalSection
       eyebrow={t('adminSnapshots.rerunGovernanceEyebrow')}
       title={t('adminSnapshots.dependenciesTitle')}
       actions={
@@ -424,7 +426,7 @@ function SnapshotDependenciesPanel(input: {
       ) : (
         <AdminSurfaceEmpty copy={t('adminSnapshots.dependencyLoading')} />
       )}
-    </AdminSurfaceSection>
+    </AdminOperationalSection>
   )
 }
 
@@ -433,7 +435,7 @@ function SnapshotOutputVolumePanel(input: { detail: SnapshotRunDetail; totalRows
   const total = Math.max(input.totalRows, 1)
 
   return (
-    <AdminSurfaceSection
+    <AdminOperationalSection
       eyebrow={t('adminSnapshots.outputVolumeEyebrow')}
       title={t('adminSnapshots.materializedSlices')}
     >
@@ -451,7 +453,7 @@ function SnapshotOutputVolumePanel(input: { detail: SnapshotRunDetail; totalRows
           <OutputVolumeRow label={t('adminSnapshots.turnoverRows')} tone="danger" value={input.detail.cards.turnoverRows} total={total} />
         </TableBody>
       </Table>
-    </AdminSurfaceSection>
+    </AdminOperationalSection>
   )
 }
 

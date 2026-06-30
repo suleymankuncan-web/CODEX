@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowRight, BriefcaseBusiness, ClipboardCheck, Database, TrendingDown, Trophy } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, ClipboardCheck, Database, FileSpreadsheet, Layers3, TrendingDown, Trophy } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import {
   Table,
@@ -17,14 +17,16 @@ import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 import {
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 const runStatusLabelKeys: Record<string, TranslationKey> = {
   completed: 'reportsSummary.status.completed',
@@ -53,50 +55,50 @@ export function ReportsSummaryPage() {
 
   if (summaryQuery.isLoading || runsQuery.isLoading) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsSummary.loadingTitle')}
           description={t('reportsSummary.loadingCopy')}
           isLoading
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (summaryQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsSummary.errorTitle')}
           description={getErrorMessage(summaryQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (runsQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsSummary.runsErrorTitle')}
           description={getErrorMessage(runsQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   const summary = summaryQuery.data
   if (!summary) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsSummary.noSummaryTitle')}
           description={t('reportsSummary.noSummaryCopy')}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
@@ -142,12 +144,12 @@ export function ReportsSummaryPage() {
   ]
 
   return (
-    <AdminSurfacePage ariaLabel={t('reportsSummary.heroEyebrow')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('reportsSummary.heroEyebrow')}>
+      <AdminOperationalHeader
         eyebrow={t('reportsSummary.heroEyebrow')}
         title={t('reportsSummary.heroTitle')}
         description={t('reportsSummary.heroCopy')}
-        icon={<Database size={18} />}
+        icon={<FileSpreadsheet size={18} />}
         actions={
           <Button asChild variant="outline">
             <Link to="/admin/reports/snapshot-runs">
@@ -158,33 +160,36 @@ export function ReportsSummaryPage() {
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'total-report-rows',
             label: t('reportsSummary.totalReportRows'),
             value: totalRows,
+            icon: <Database size={18} />,
             tone: 'neutral',
           },
           {
             id: 'latest-run',
             label: t('reportsSummary.latestRun'),
             value: latestRun ? formatSnapshotType(latestRun.snapshotType, t) : t('reportsSummary.noCompletedRun'),
+            icon: <Layers3 size={18} />,
             tone: latestRun ? 'success' : 'warning',
           },
           {
             id: 'status',
             label: t('reportsSummary.status'),
             value: latestRun ? formatRunStatus(latestRun.runStatus, t) : t('reportsSummary.unavailable'),
+            icon: <Trophy size={18} />,
             tone: latestRun ? 'success' : 'neutral',
           },
         ]}
       />
 
       {latestRun ? (
-        <AdminSurfaceSection
-          eyebrow={t('reportsSummary.latestSnapshotEyebrow')}
+        <AdminOperationalSection
           title={t('reportsSummary.reportingAnchorTitle')}
+          description={t('reportsSummary.latestSnapshotEyebrow')}
         >
           <AdminKeyValueGrid>
             <AdminKeyValue label={t('reportsSummary.snapshotRunId')} value={latestRun.snapshotRunId} />
@@ -195,17 +200,17 @@ export function ReportsSummaryPage() {
             />
             <AdminKeyValue label={t('reportsSummary.generatedAt')} value={formatDateTime(latestRun.generatedAt, locale)} />
           </AdminKeyValueGrid>
-        </AdminSurfaceSection>
+        </AdminOperationalSection>
       ) : (
-        <AdminSurfaceSection title={t('reportsSummary.reportingAnchorTitle')}>
+        <AdminOperationalSection title={t('reportsSummary.reportingAnchorTitle')}>
           <AdminSurfaceEmpty
             title={t('reportsSummary.noCompletedTitle')}
             copy={t('reportsSummary.noCompletedCopy')}
           />
-        </AdminSurfaceSection>
+        </AdminOperationalSection>
       )}
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'workforce-rows',
@@ -243,9 +248,9 @@ export function ReportsSummaryPage() {
       />
 
       <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-2">
-        <AdminSurfaceSection
-          eyebrow={t('reportsSummary.coverageEyebrow')}
+        <AdminOperationalSection
           title={t('reportsSummary.coverageTitle')}
+          description={t('reportsSummary.coverageEyebrow')}
         >
           <Table>
             <TableHeader>
@@ -276,11 +281,11 @@ export function ReportsSummaryPage() {
               ))}
             </TableBody>
           </Table>
-        </AdminSurfaceSection>
+        </AdminOperationalSection>
 
-        <AdminSurfaceSection
-          eyebrow={t('reportsSummary.recentRunsEyebrow')}
+        <AdminOperationalSection
           title={t('reportsSummary.recentRunsTitle')}
+          description={t('reportsSummary.recentRunsEyebrow')}
         >
           {runsQuery.data?.items.length ? (
             <Table>
@@ -349,9 +354,9 @@ export function ReportsSummaryPage() {
           ) : (
             <AdminSurfaceEmpty copy={t('reportsSummary.recentRunsEmpty')} />
           )}
-        </AdminSurfaceSection>
+        </AdminOperationalSection>
       </div>
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 

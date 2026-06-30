@@ -23,15 +23,17 @@ import type { AppLocale } from '../lib/i18n'
 import {
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
@@ -141,31 +143,31 @@ export function ReportsKpisPage() {
 
   if (!snapshotRunId) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsKpis.missingTitle')} description={t('reportsKpis.missingCopy')} tone="danger" />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (kpiQuery.isLoading) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsKpis.loadingTitle')} description={t('reportsKpis.loadingCopy')} isLoading />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (kpiQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsKpis.errorTitle')} description={getErrorMessage(kpiQuery.error)} tone="danger" />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('reportsKpis.heroEyebrow')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('reportsKpis.heroEyebrow')}>
+      <AdminOperationalHeader
         eyebrow={t('reportsKpis.heroEyebrow')}
         title={t('reportsKpis.heroTitle')}
         description={t('reportsKpis.heroCopy')}
@@ -180,7 +182,7 @@ export function ReportsKpisPage() {
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           { id: 'snapshot-run', label: t('reportsKpis.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
           { id: 'rows-in-view', label: t('reportsKpis.rowsInView'), value: filteredRows.length, tone: 'cyan' },
@@ -188,16 +190,16 @@ export function ReportsKpisPage() {
         ]}
       />
 
-      <AdminSurfaceSection eyebrow={t('reportsKpis.contextEyebrow')} title={t('reportsKpis.contextTitle')}>
+      <AdminOperationalSection title={t('reportsKpis.contextTitle')} description={t('reportsKpis.contextEyebrow')}>
         <AdminKeyValueGrid>
           <AdminKeyValue label={t('reportsKpis.snapshotRunId')} value={snapshotRunId} />
           <AdminKeyValue label={t('reportsKpis.rowsLoaded')} value={String(rows.length)} />
           <AdminKeyValue label={t('reportsKpis.rowsAfterFilter')} value={String(filteredRows.length)} />
           <AdminKeyValue label={t('reportsKpis.offTrackRows')} value={String(totals.offTrack)} />
         </AdminKeyValueGrid>
-      </AdminSurfaceSection>
+      </AdminOperationalSection>
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'target-total',
@@ -234,11 +236,10 @@ export function ReportsKpisPage() {
         ]}
       />
 
-      <AdminSurfaceSection
+      <AdminOperationalSection
         ariaLabel={t('reportsKpis.tableTitle')}
-        eyebrow={t('reportsKpis.tableEyebrow')}
         title={t('reportsKpis.tableTitle')}
-        description={t('reportsKpis.tableCopy')}
+        description={`${t('reportsKpis.tableEyebrow')} · ${t('reportsKpis.tableCopy')}`}
         actions={
           <AdminReportingToolbar
             sortValue={sortBy}
@@ -314,7 +315,7 @@ export function ReportsKpisPage() {
             </TableBody>
           </Table>
         )}
-      </AdminSurfaceSection>
-    </AdminSurfacePage>
+      </AdminOperationalSection>
+    </AdminOperationalPage>
   )
 }

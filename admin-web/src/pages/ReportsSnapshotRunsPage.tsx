@@ -21,11 +21,13 @@ import {
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 const runStatusLabelKeys: Record<string, TranslationKey> = {
   completed: 'reportsSnapshotRuns.status.completed',
@@ -62,31 +64,31 @@ export function ReportsSnapshotRunsPage() {
 
   if (runsQuery.isLoading) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsSnapshotRuns.loadingTitle')}
           description={t('reportsSnapshotRuns.loadingCopy')}
           isLoading
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (runsQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsSnapshotRuns.errorTitle')}
           description={getErrorMessage(runsQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('reportsSnapshotRuns.heroEyebrow')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('reportsSnapshotRuns.heroEyebrow')}>
+      <AdminOperationalHeader
         eyebrow={t('reportsSnapshotRuns.heroEyebrow')}
         title={t('reportsSnapshotRuns.heroTitle')}
         description={t('reportsSnapshotRuns.heroCopy')}
@@ -101,9 +103,9 @@ export function ReportsSnapshotRunsPage() {
         }
       />
 
-      <AdminSurfaceSection
-        eyebrow={t('reportsSnapshotRuns.contextsEyebrow')}
+      <AdminOperationalSection
         title={t('reportsSnapshotRuns.recentRunsTitle')}
+        description={t('reportsSnapshotRuns.contextsEyebrow')}
         actions={
           <AdminReportingToolbar
             sortValue={sortBy}
@@ -224,8 +226,8 @@ export function ReportsSnapshotRunsPage() {
             </TableBody>
           </Table>
         )}
-      </AdminSurfaceSection>
-    </AdminSurfacePage>
+      </AdminOperationalSection>
+    </AdminOperationalPage>
   )
 }
 

@@ -47,14 +47,16 @@ import {
   AdminFilterBar,
   AdminKeyValue as KeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 const PAGE_SIZE = 12
 
@@ -234,48 +236,48 @@ export function SnapshotsDashboardPage() {
 
   if (overviewQuery.isLoading || needsActionQuery.isLoading || dailyClosureQuery.isLoading) {
     return (
-      <AdminSurfacePage ariaLabel={t('adminSnapshots.loadingTitle')}>
+      <AdminOperationalPage ariaLabel={t('adminSnapshots.loadingTitle')}>
         <AdminStatePanel
           isLoading
           title={t('adminSnapshots.loadingTitle')}
           description={t('adminSnapshots.loadingCopy')}
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (overviewQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('adminSnapshots.overviewUnavailableTitle')}
           description={getErrorMessage(overviewQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (needsActionQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('adminSnapshots.queueUnavailableTitle')}
           description={getErrorMessage(needsActionQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
   if (dailyClosureQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('adminSnapshots.dailyClosureUnavailableTitle')}
           description={getErrorMessage(dailyClosureQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
@@ -283,24 +285,24 @@ export function SnapshotsDashboardPage() {
   const dailyClosure = dailyClosureQuery.data
   if (!overview) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('adminSnapshots.overviewUnavailableTitle')}
           description={t('adminSnapshots.overviewMissingCopy')}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
   if (!dailyClosure) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('adminSnapshots.dailyClosureUnavailableTitle')}
           description={t('adminSnapshots.dailyClosureMissingCopy')}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
@@ -309,7 +311,7 @@ export function SnapshotsDashboardPage() {
   const canGoForward = meta ? offset + PAGE_SIZE < meta.total : false
 
   return (
-    <AdminSurfacePage ariaLabel={t('adminSnapshots.heroTitle')}>
+    <AdminOperationalPage ariaLabel={t('adminSnapshots.heroTitle')}>
       <SnapshotsHeader overview={overview} t={t} />
       <SnapshotFeedbackPanel feedback={feedback} />
       <DailyClosurePanels
@@ -338,7 +340,7 @@ export function SnapshotsDashboardPage() {
         onRerun={(snapshotRunId) => rerunMutation.mutate(snapshotRunId)}
         t={t}
       />
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
@@ -348,7 +350,7 @@ type SnapshotNeedsActionMeta = {
 
 function SnapshotsHeader(input: { overview: SnapshotOverview; t: TranslateFunction }) {
   return (
-    <AdminSurfaceHeader
+    <AdminOperationalHeader
       eyebrow={input.t('adminSnapshots.heroEyebrow')}
       title={input.t('adminSnapshots.heroTitle')}
       description={input.t('adminSnapshots.heroCopy')}
@@ -385,7 +387,7 @@ function DailyClosurePanels(input: {
 }) {
   return (
     <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
-      <AdminSurfaceSection
+      <AdminOperationalSection
         eyebrow={input.t('adminSnapshots.dailyClosureEyebrow')}
         title={input.t('adminSnapshots.dailyClosureTitle')}
         description={input.t('adminSnapshots.dailyClosureCopy')}
@@ -455,9 +457,9 @@ function DailyClosurePanels(input: {
             tone="danger"
           />
         ) : null}
-      </AdminSurfaceSection>
+      </AdminOperationalSection>
 
-      <AdminSurfaceSection
+      <AdminOperationalSection
         eyebrow={input.t('adminSnapshots.closureRuleEyebrow')}
         title={input.t('adminSnapshots.closureRuleTitle')}
       >
@@ -487,14 +489,14 @@ function DailyClosurePanels(input: {
             }
           />
         </AdminKeyValueGrid>
-      </AdminSurfaceSection>
+      </AdminOperationalSection>
     </div>
   )
 }
 
 function SnapshotHealthMetricGrid(input: { overview: SnapshotOverview; t: TranslateFunction }) {
   return (
-    <AdminMetricStrip
+    <AdminOperationalMetrics
       items={[
         {
           id: 'healthy',
@@ -556,7 +558,7 @@ function SnapshotActionQueuePanel(input: {
   t: TranslateFunction
 }) {
   return (
-    <AdminSurfaceSection
+    <AdminOperationalSection
       eyebrow={input.t('adminSnapshots.actionQueueEyebrow')}
       title={input.t('adminSnapshots.actionQueueTitle')}
       description={input.t('adminSnapshots.actionQueueCopy')}
@@ -661,7 +663,7 @@ function SnapshotActionQueuePanel(input: {
         pagination={input.pagination}
         t={input.t}
       />
-    </AdminSurfaceSection>
+    </AdminOperationalSection>
   )
 }
 

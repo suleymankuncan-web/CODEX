@@ -168,28 +168,38 @@ function AdminOperationalMetrics({
 
 function AdminOperationalSection({
   actions,
+  ariaLabel,
   badge,
   children,
   className,
   description,
+  eyebrow,
   testId,
   title,
 }: {
   actions?: ReactNode | undefined
+  ariaLabel?: string | undefined
   badge?: ReactNode | undefined
   children: ReactNode
   className?: string | undefined
   description?: ReactNode | undefined
+  eyebrow?: ReactNode | undefined
   testId?: string | undefined
   title: ReactNode
 }) {
   return (
     <section
+      aria-label={ariaLabel}
       className={cn('tw:rounded-2xl tw:border tw:border-border/80 tw:bg-card/90 tw:shadow-sm', className)}
       data-testid={testId}
     >
       <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-border/70 tw:p-4 tw:lg:flex-row tw:lg:items-start tw:lg:justify-between">
         <div className="tw:min-w-0">
+          {eyebrow ? (
+            <div className="tw:mb-1 tw:text-[0.68rem] tw:font-medium tw:tracking-[0.08em] tw:text-muted-foreground tw:uppercase">
+              {eyebrow}
+            </div>
+          ) : null}
           <h2 className="tw:m-0 tw:text-base tw:font-semibold tw:tracking-normal tw:text-foreground">{title}</h2>
           {description ? (
             <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">{description}</p>

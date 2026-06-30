@@ -22,14 +22,16 @@ import type { AppLocale } from '../lib/i18n'
 import {
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 function toNumber(input: string) {
   const parsed = Number(input)
@@ -121,43 +123,43 @@ export function ReportsWorkforcePage() {
 
   if (!snapshotRunId) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsWorkforce.missingTitle')}
           description={t('reportsWorkforce.missingCopy')}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (workforceQuery.isLoading) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsWorkforce.loadingTitle')}
           description={t('reportsWorkforce.loadingCopy')}
           isLoading
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (workforceQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel
           title={t('reportsWorkforce.errorTitle')}
           description={getErrorMessage(workforceQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('reportsWorkforce.heroEyebrow')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('reportsWorkforce.heroEyebrow')}>
+      <AdminOperationalHeader
         eyebrow={t('reportsWorkforce.heroEyebrow')}
         title={t('reportsWorkforce.heroTitle')}
         description={t('reportsWorkforce.heroCopy')}
@@ -172,7 +174,7 @@ export function ReportsWorkforcePage() {
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           { id: 'snapshot-run', label: t('reportsWorkforce.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
           { id: 'rows-in-view', label: t('reportsWorkforce.rowsInView'), value: filteredRows.length, tone: 'cyan' },
@@ -180,9 +182,9 @@ export function ReportsWorkforcePage() {
         ]}
       />
 
-      <AdminSurfaceSection
-        eyebrow={t('reportsWorkforce.contextEyebrow')}
+      <AdminOperationalSection
         title={t('reportsWorkforce.contextTitle')}
+        description={t('reportsWorkforce.contextEyebrow')}
       >
         <AdminKeyValueGrid>
           <AdminKeyValue label={t('reportsWorkforce.snapshotRunId')} value={snapshotRunId} />
@@ -190,9 +192,9 @@ export function ReportsWorkforcePage() {
           <AdminKeyValue label={t('reportsWorkforce.rowsAfterFilter')} value={String(filteredRows.length)} />
           <AdminKeyValue label={t('reportsWorkforce.gapRows')} value={String(rowsWithGap)} />
         </AdminKeyValueGrid>
-      </AdminSurfaceSection>
+      </AdminOperationalSection>
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'active-headcount',
@@ -229,11 +231,10 @@ export function ReportsWorkforcePage() {
         ]}
       />
 
-      <AdminSurfaceSection
+      <AdminOperationalSection
         ariaLabel={t('reportsWorkforce.tableTitle')}
-        eyebrow={t('reportsWorkforce.tableEyebrow')}
         title={t('reportsWorkforce.tableTitle')}
-        description={t('reportsWorkforce.tableCopy')}
+        description={`${t('reportsWorkforce.tableEyebrow')} · ${t('reportsWorkforce.tableCopy')}`}
         actions={
           <AdminReportingToolbar
             sortValue={sortBy}
@@ -320,7 +321,7 @@ export function ReportsWorkforcePage() {
             </TableBody>
           </Table>
         )}
-      </AdminSurfaceSection>
-    </AdminSurfacePage>
+      </AdminOperationalSection>
+    </AdminOperationalPage>
   )
 }
