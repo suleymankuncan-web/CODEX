@@ -1,4 +1,4 @@
-import { IsBoolean, IsIn } from "class-validator";
+import { IsBoolean, IsIn, IsISO8601, IsOptional } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class UpdateKpiImportStoreScopeDto {
@@ -13,4 +13,8 @@ export class UpdateKpiImportStoreScopeDto {
 
   @IsBoolean()
   kpiImportEnabled!: boolean;
+
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  expectedUpdatedAt?: string;
 }

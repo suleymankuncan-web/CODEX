@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { IntegrationController } from "./web/integration.controller";
+import { IntegrationMasterDataQualityController } from "./web/integration-master-data-quality.controller";
 import { IntegrationService } from "./application/integration.service";
 import { IntegrationRepository } from "./infrastructure/integration.repository";
 import { ImportBatchReadRepository } from "./infrastructure/import-batch-read.repository";
@@ -35,9 +36,11 @@ import { PowerBiExportParserService } from "./application/power-bi-export-parser
 import { PowerBiExportNormalizerService } from "./application/power-bi-export-normalizer.service";
 import { MasterDataBootstrapService } from "./application/master-data-bootstrap.service";
 import { MasterDataBootstrapRepository } from "./infrastructure/master-data-bootstrap.repository";
+import { MasterDataQualityService } from "./application/master-data-quality.service";
+import { MasterDataQualityRepository } from "./infrastructure/master-data-quality.repository";
 
 @Module({
-  controllers: [IntegrationController],
+  controllers: [IntegrationController, IntegrationMasterDataQualityController],
   providers: [
     IntegrationService,
     IntegrationRepository,
@@ -74,6 +77,8 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     PowerBiExportNormalizerService,
     MasterDataBootstrapService,
     MasterDataBootstrapRepository,
+    MasterDataQualityService,
+    MasterDataQualityRepository,
   ],
   exports: [
     IntegrationService,
@@ -95,6 +100,8 @@ import { MasterDataBootstrapRepository } from "./infrastructure/master-data-boot
     PowerBiExportNormalizerService,
     MasterDataBootstrapService,
     MasterDataBootstrapRepository,
+    MasterDataQualityService,
+    MasterDataQualityRepository,
   ],
 })
 export class IntegrationModule {}

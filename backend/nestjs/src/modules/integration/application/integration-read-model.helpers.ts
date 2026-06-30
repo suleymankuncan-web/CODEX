@@ -131,6 +131,7 @@ export function mapStoreMaster(item: {
   kpi_import_enabled: boolean;
   region_id: string | null;
   region_name: string | null;
+  updated_at?: string;
 }) {
   return {
     storeId: item.store_id,
@@ -141,6 +142,7 @@ export function mapStoreMaster(item: {
     kpiImportEnabled: item.kpi_import_enabled,
     regionId: item.region_id,
     regionName: item.region_name,
+    updatedAt: item.updated_at ?? null,
   };
 }
 
@@ -163,6 +165,7 @@ export function mapPersonnelMaster(item: {
   position_id: string | null;
   position_code: string | null;
   position_name: string | null;
+  updated_at?: string;
 }) {
   const firstName = item.first_name.trim();
   const lastName = item.last_name.trim();
@@ -187,5 +190,6 @@ export function mapPersonnelMaster(item: {
     positionId: item.position_id,
     positionCode: item.position_code,
     positionName: item.position_name,
+    updatedAt: item.updated_at ?? null,
   };
 }

@@ -825,6 +825,8 @@ describe("Import batch evidence", () => {
     const storeId = "44444444-4444-4444-8444-444444444444";
     const regionId = "22222222-2222-4222-8222-222222222222";
     const nextRegionId = "66666666-6666-4666-8666-666666666666";
+    const listedUpdatedAt = "2026-06-30T10:00:00.000Z";
+    const updatedAt = "2026-06-30T10:05:00.000Z";
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("FROM ops.region r") && sql.includes("ORDER BY r.region_name ASC")) {
         expect(params).toEqual([[actorCompanyId]]);
@@ -867,6 +869,7 @@ describe("Import batch evidence", () => {
               kpi_import_enabled: true,
               region_id: regionId,
               region_name: "Marmara",
+              updated_at: listedUpdatedAt,
             },
           ],
         };
@@ -876,6 +879,16 @@ describe("Import batch evidence", () => {
         return {
           rowCount: 1,
           rows: [{ user_id: actorUserId }],
+        };
+      }
+
+      if (sql.includes("FOR UPDATE OF s")) {
+        expect(sql).toContain("FROM ops.store s");
+        expect(sql).toContain("INNER JOIN ops.region r");
+        expect(params).toEqual([storeId, nextRegionId, [actorCompanyId], null]);
+        return {
+          rowCount: 1,
+          rows: [{ store_id: storeId, is_current: true }],
         };
       }
 
@@ -895,6 +908,7 @@ describe("Import batch evidence", () => {
               kpi_import_enabled: false,
               region_id: nextRegionId,
               region_name: "Karadeniz",
+              updated_at: updatedAt,
             },
           ],
         };
@@ -961,6 +975,7 @@ describe("Import batch evidence", () => {
           kpiImportEnabled: true,
           regionId,
           regionName: "Marmara",
+          updatedAt: listedUpdatedAt,
         },
       ],
       meta: {
@@ -999,6 +1014,7 @@ describe("Import batch evidence", () => {
           kpiImportEnabled: false,
           regionId: nextRegionId,
           regionName: "Karadeniz",
+          updatedAt,
         },
       },
     });

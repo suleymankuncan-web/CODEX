@@ -319,6 +319,7 @@ export class IntegrationService {
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
     actorUserId: string;
+    expectedUpdatedAt?: string;
   }) {
     const storeScope =
       await this.integrationRepository.updateKpiImportStoreScope(input);
@@ -418,6 +419,7 @@ export class IntegrationService {
     storeId: string;
     positionId: string;
     assignmentStartDate?: string;
+    expectedUpdatedAt?: string;
   }) {
     const actorCompanyIds = this.normalizeCompanyScope(input.actorCompanyIds);
     this.assertCompanyScope(actorCompanyIds);
@@ -429,6 +431,7 @@ export class IntegrationService {
       externalEmployeeRef: input.externalEmployeeRef?.trim(),
       hireDate: input.hireDate.slice(0, 10),
       assignmentStartDate: input.assignmentStartDate?.slice(0, 10),
+      expectedUpdatedAt: input.expectedUpdatedAt,
     });
 
     if (!personnel) {

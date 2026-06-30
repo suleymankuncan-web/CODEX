@@ -341,7 +341,7 @@ export class IntegrationController {
       regionId: body.regionId,
       status: body.status,
       kpiImportEnabled: body.kpiImportEnabled,
-      actorUserId: request.user.userId,
+      actorUserId: request.user.userId, expectedUpdatedAt: body.expectedUpdatedAt,
     });
   }
 
@@ -368,7 +368,7 @@ export class IntegrationController {
       regionId: body.regionId,
       status: body.status,
       kpiImportEnabled: body.kpiImportEnabled,
-      actorUserId: request.user.userId,
+      actorUserId: request.user.userId, expectedUpdatedAt: body.expectedUpdatedAt,
     });
   }
 
@@ -400,7 +400,7 @@ export class IntegrationController {
       hireDate: body.hireDate,
       storeId: body.storeId,
       positionId: body.positionId,
-      assignmentStartDate: body.assignmentStartDate,
+      assignmentStartDate: body.assignmentStartDate, expectedUpdatedAt: body.expectedUpdatedAt,
     });
   }
 
