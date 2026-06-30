@@ -3897,7 +3897,7 @@ test('store incentives page switches to English copy and persists locale', async
   await expect(page.getByRole('heading', { name: /Store incentives/i })).toBeVisible()
 })
 
-test('store competitions page renders scoped contribution details', async ({ page }) => {
+test('store competitions page renders visible contribution details', async ({ page }) => {
   await page.goto('/store/competitions')
 
   await expect(page.getByRole('heading', { name: /Mağaza yarışmaları/i })).toBeVisible()
@@ -3909,7 +3909,7 @@ test('store competitions page renders scoped contribution details', async ({ pag
   await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
   await expect(contributionRows.getByText('Kısmi katkı').first()).toBeVisible()
   await expect(contributionRows.getByText('BM checklist', { exact: true })).toBeVisible()
-  await expect(page.getByText('Kapsamdaki katkılar')).toBeVisible()
+  await expect(page.getByText('Görünen katkılar')).toBeVisible()
   await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
   await expect(page.getByText('93.50')).toBeVisible()
   await expect(page.getByText('Outside Region Store')).toHaveCount(0)
