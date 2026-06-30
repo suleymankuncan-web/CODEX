@@ -1,14 +1,6 @@
 import { useDeferredValue, useMemo, useReducer, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  ArrowRight,
-  Building2,
-  DatabaseZap,
-  History,
-  Save,
-  Search,
-  UserRound,
-} from 'lucide-react'
+import { ArrowRight, Building2, DatabaseZap, History, Save, Search, UserRound } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
@@ -88,6 +80,13 @@ import {
   type StoreMasterPatch,
   type StoreMasterStatusFilter,
 } from './master-data-bootstrap-model'
+import {
+  findMasterDataConflict,
+  invalidateMasterDataImportFamily,
+  invalidatePersonnelMasterDataFamily,
+  invalidateStoreMasterDataFamily,
+  masterDataQueryKeys,
+} from './master-data-control-center-model'
 import { BatchDetailPanel } from './master-data-bootstrap-batch-detail-panel'
 import { MasterDataReadinessStrip } from './master-data-readiness-strip'
 
@@ -111,7 +110,14 @@ function useMasterDataBootstrapQueries(input: {
   const deferredPersonnelSearch = useDeferredValue(input.personnelSearch)
 
   const batchesQuery = useQuery({
-    queryKey: ['master-data-bootstrap-batches', input.entityFilter, input.readinessFilter, deferredBatchSearch],
+    queryKey: masterDataQueryKeys.imports({
+      activeTab: 'imports',
+      search: deferredBatchSearch,
+      entityFilter: input.entityFilter,
+      readinessFilter: input.readinessFilter,
+      limit: PAGE_SIZE,
+      offset: 0,
+    }),
     queryFn: () =>
       getMasterDataBootstrapBatches({
         ...(input.entityFilter === 'all' ? {} : { bootstrapEntity: input.entityFilter }),
@@ -123,23 +129,24 @@ function useMasterDataBootstrapQueries(input: {
     staleTime: 30_000,
   })
   const detailQuery = useQuery({
-    queryKey: ['master-data-bootstrap-detail', input.batchId],
+    queryKey: masterDataQueryKeys.importDetail(input.batchId),
     queryFn: () => getMasterDataBootstrapBatchDetail(input.batchId ?? ''),
     enabled: Boolean(input.batchId),
   })
   const readinessQuery = useQuery({
-    queryKey: ['master-data-bootstrap-readiness', input.batchId],
+    queryKey: masterDataQueryKeys.importReadiness(input.batchId),
     queryFn: () => getMasterDataBootstrapPromotionReadiness(input.batchId ?? ''),
     enabled: Boolean(input.batchId),
   })
   const storeMasterQuery = useQuery({
-    queryKey: [
-      'master-data-store-master',
-      deferredStoreSearch,
-      input.storeEnabledFilter,
-      input.storeStatusFilter,
-      input.storeOffset,
-    ],
+    queryKey: masterDataQueryKeys.storeList({
+      activeTab: 'stores',
+      search: deferredStoreSearch,
+      enabledFilter: input.storeEnabledFilter,
+      statusFilter: input.storeStatusFilter,
+      limit: PAGE_SIZE,
+      offset: input.storeOffset,
+    }),
     queryFn: () =>
       getStoreMasterData({
         ...(deferredStoreSearch ? { q: deferredStoreSearch } : {}),
@@ -158,13 +165,14 @@ function useMasterDataBootstrapQueries(input: {
     enabled: input.activeTab === 'stores',
   })
   const personnelMasterQuery = useQuery({
-    queryKey: [
-      'master-data-personnel-master',
-      deferredPersonnelSearch,
-      input.personnelStatusFilter,
-      input.personnelStoreFilter,
-      input.personnelOffset,
-    ],
+    queryKey: masterDataQueryKeys.personnelList({
+      activeTab: 'personnel',
+      search: deferredPersonnelSearch,
+      statusFilter: input.personnelStatusFilter,
+      storeFilter: input.personnelStoreFilter,
+      limit: PAGE_SIZE,
+      offset: input.personnelOffset,
+    }),
     queryFn: () =>
       getPersonnelMasterData({
         ...(deferredPersonnelSearch ? { q: deferredPersonnelSearch } : {}),
@@ -202,15 +210,7 @@ function useMasterDataBootstrapMutations(input: {
     onSuccess: async (response) => {
       input.setFeedback(response.command.message)
       input.setPromotionResult(null)
-      await Promise.all([
-        input.queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
-        input.batchId
-          ? input.queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-detail', input.batchId] })
-          : Promise.resolve(),
-        input.batchId
-          ? input.queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-readiness', input.batchId] })
-          : Promise.resolve(),
-      ])
+      await invalidateMasterDataImportFamily(input.queryClient, input.batchId)
     },
     onError: (error) => {
       input.setFeedback(getErrorMessage(error))
@@ -231,15 +231,7 @@ function useMasterDataBootstrapMutations(input: {
         .join(' · ')
       input.setFeedback([response.command.message, promotedTrail].filter(Boolean).join(' — '))
       input.setPromotionResult(response.data)
-      await Promise.all([
-        input.queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-batches'] }),
-        input.batchId
-          ? input.queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-detail', input.batchId] })
-          : Promise.resolve(),
-        input.batchId
-          ? input.queryClient.invalidateQueries({ queryKey: ['master-data-bootstrap-readiness', input.batchId] })
-          : Promise.resolve(),
-      ])
+      await invalidateMasterDataImportFamily(input.queryClient, input.batchId)
     },
     onError: (error) => {
       input.setFeedback(getErrorMessage(error))
@@ -348,7 +340,7 @@ export function MasterDataBootstrapPage() {
       items: storeMasterItems,
       t,
       clearDraft: clearStoreDraft,
-      invalidateMasterData: () => queryClient.invalidateQueries({ queryKey: ['master-data-store-master'] }),
+      invalidateMasterData: () => invalidateStoreMasterDataFamily(queryClient),
       setFeedback: (value) => dispatch({ type: 'setStoreFeedback', value }),
       setSaving: setStoreSaving,
       updateCache: (store) => setStoreMasterQueryCache(queryClient, store),
@@ -379,7 +371,7 @@ export function MasterDataBootstrapPage() {
       items: personnelMasterItems,
       t,
       clearDraft: clearPersonnelDraft,
-      invalidateMasterData: () => queryClient.invalidateQueries({ queryKey: ['master-data-personnel-master'] }),
+      invalidateMasterData: () => invalidatePersonnelMasterDataFamily(queryClient),
       setFeedback: (value) => dispatch({ type: 'setPersonnelFeedback', value }),
       setSaving: setPersonnelSaving,
       updateCache: (personnel) => setPersonnelMasterQueryCache(queryClient, personnel),
@@ -879,6 +871,7 @@ async function submitStoreMasterDrafts(input: {
           regionId: nextStore.regionId ?? '',
           status: normalizeStoreStatus(nextStore.status),
           kpiImportEnabled: nextStore.kpiImportEnabled,
+          ...(store.updatedAt ? { expectedUpdatedAt: store.updatedAt } : {}),
         })
         input.updateCache(response.data.storeMaster)
         input.clearDraft(store.storeId)
@@ -890,12 +883,13 @@ async function submitStoreMasterDrafts(input: {
   )
   const failedCount = results.filter((result) => result.status === 'rejected').length
   const savedCount = changedStores.length - failedCount
+  const conflict = findMasterDataConflict(results)
 
-  input.setFeedback(
-    failedCount > 0
+  input.setFeedback(conflict
+    ? conflict.message
+    : failedCount > 0
       ? input.t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
-      : input.t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
-  )
+      : input.t('adminMasterData.bulkSaveSuccess', { count: savedCount }))
   void input.invalidateMasterData()
 }
 
@@ -948,6 +942,7 @@ async function submitPersonnelMasterDrafts(input: {
           ...(nextPersonnel.assignmentStartDate
             ? { assignmentStartDate: nextPersonnel.assignmentStartDate }
             : {}),
+          ...(personnel.updatedAt ? { expectedUpdatedAt: personnel.updatedAt } : {}),
         })
         input.updateCache(response.data.personnelMaster)
         input.clearDraft(personnel.employeeId)
@@ -959,12 +954,13 @@ async function submitPersonnelMasterDrafts(input: {
   )
   const failedCount = results.filter((result) => result.status === 'rejected').length
   const savedCount = changedPersonnel.length - failedCount
+  const conflict = findMasterDataConflict(results)
 
-  input.setFeedback(
-    failedCount > 0
+  input.setFeedback(conflict
+    ? conflict.message
+    : failedCount > 0
       ? input.t('adminMasterData.bulkSavePartial', { saved: savedCount, failed: failedCount })
-      : input.t('adminMasterData.bulkSaveSuccess', { count: savedCount }),
-  )
+      : input.t('adminMasterData.bulkSaveSuccess', { count: savedCount }))
   void input.invalidateMasterData()
 }
 

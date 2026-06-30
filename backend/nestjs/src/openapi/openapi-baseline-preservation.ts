@@ -228,6 +228,7 @@ function pruneUnreferencedGeneratedSchemas(
   const baselineSchemas = baselineDocument.components?.schemas ?? {};
   const referencedSchemas = new Set<string>();
   collectSchemaReferences(document.paths, referencedSchemas);
+  collectSchemaReferences(schemas, referencedSchemas);
 
   for (const [schemaName, schema] of Object.entries(schemas)) {
     if (Object.prototype.hasOwnProperty.call(baselineSchemas, schemaName)) {

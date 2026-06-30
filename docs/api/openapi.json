@@ -3632,7 +3632,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Updated store master data for the admin master-data surface.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoreMasterCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -3665,7 +3672,14 @@
         },
         "responses": {
           "200": {
-            "description": ""
+            "description": "Updated personnel master data for the admin master-data surface.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PersonnelMasterCommandResponse"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5003,7 +5017,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterDataQualityIssuesResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -5055,7 +5076,14 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterDataQualityAuditResponseDto"
+                }
+              }
+            }
           }
         },
         "tags": [
@@ -16994,7 +17022,8 @@
                 "regionName",
                 "positionId",
                 "positionCode",
-                "positionName"
+                "positionName",
+                "updatedAt"
               ],
               "properties": {
                 "employeeId": {
@@ -17063,6 +17092,10 @@
                   "nullable": true
                 },
                 "positionName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "updatedAt": {
                   "type": "string",
                   "nullable": true
                 }
@@ -17230,7 +17263,8 @@
                 "status",
                 "kpiImportEnabled",
                 "regionId",
-                "regionName"
+                "regionName",
+                "updatedAt"
               ],
               "properties": {
                 "storeId": {
@@ -17256,6 +17290,10 @@
                   "nullable": true
                 },
                 "regionName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "updatedAt": {
                   "type": "string",
                   "nullable": true
                 }
@@ -19458,6 +19496,484 @@
             "maxLength": 500
           }
         }
+      },
+      "MasterDataQualityIssuesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MasterDataQualityIssueItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MasterDataQualityListMetaDto"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/MasterDataQualityIssueSummaryDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta",
+          "summary"
+        ]
+      },
+      "MasterDataQualityAuditResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MasterDataQualityAuditItemDto"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MasterDataQualityListMetaDto"
+          }
+        },
+        "required": [
+          "items",
+          "meta"
+        ]
+      },
+      "PersonnelMasterCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "personnelMaster"
+            ],
+            "properties": {
+              "personnelMaster": {
+                "type": "object",
+                "required": [
+                  "employeeId",
+                  "externalEmployeeRef",
+                  "firstName",
+                  "lastName",
+                  "displayName",
+                  "hireDate",
+                  "terminationDate",
+                  "employmentStatus",
+                  "employmentType",
+                  "assignmentId",
+                  "assignmentStartDate",
+                  "storeId",
+                  "storeCode",
+                  "storeName",
+                  "regionId",
+                  "regionName",
+                  "positionId",
+                  "positionCode",
+                  "positionName",
+                  "updatedAt"
+                ],
+                "properties": {
+                  "employeeId": {
+                    "type": "string"
+                  },
+                  "externalEmployeeRef": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "firstName": {
+                    "type": "string"
+                  },
+                  "lastName": {
+                    "type": "string"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "hireDate": {
+                    "type": "string"
+                  },
+                  "terminationDate": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "employmentStatus": {
+                    "type": "string"
+                  },
+                  "employmentType": {
+                    "type": "string"
+                  },
+                  "assignmentId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "assignmentStartDate": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "storeId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "storeCode": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "storeName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "positionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "positionCode": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "positionName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "StoreMasterCommandResponse": {
+        "type": "object",
+        "required": [
+          "command",
+          "data"
+        ],
+        "properties": {
+          "command": {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "storeMaster"
+            ],
+            "properties": {
+              "storeMaster": {
+                "type": "object",
+                "required": [
+                  "storeId",
+                  "storeCode",
+                  "storeName",
+                  "storeType",
+                  "status",
+                  "kpiImportEnabled",
+                  "regionId",
+                  "regionName",
+                  "updatedAt"
+                ],
+                "properties": {
+                  "storeId": {
+                    "type": "string"
+                  },
+                  "storeCode": {
+                    "type": "string"
+                  },
+                  "storeName": {
+                    "type": "string"
+                  },
+                  "storeType": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "kpiImportEnabled": {
+                    "type": "boolean"
+                  },
+                  "regionId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "regionName": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MasterDataQualityAuditItemDto": {
+        "type": "object",
+        "required": [
+          "eventId",
+          "eventType",
+          "entityType",
+          "entityId",
+          "entityLabel",
+          "actorLabel",
+          "occurredAt",
+          "summary",
+          "metadata"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "store",
+              "personnel",
+              "import"
+            ]
+          },
+          "entityId": {
+            "type": "string",
+            "nullable": true
+          },
+          "entityLabel": {
+            "type": "string"
+          },
+          "actorLabel": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "MasterDataQualityListMetaDto": {
+        "type": "object",
+        "required": [
+          "count",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "MasterDataQualityIssueItemDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "issueCode",
+          "severity",
+          "entityType",
+          "entityId",
+          "entityLabel",
+          "secondaryLabel",
+          "problemLabel",
+          "recommendedAction",
+          "affectedModules",
+          "lastSeenAt",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "issueCode": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "critical",
+              "warning",
+              "info"
+            ]
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "store",
+              "personnel",
+              "assignment",
+              "import"
+            ]
+          },
+          "entityId": {
+            "type": "string"
+          },
+          "entityLabel": {
+            "type": "string"
+          },
+          "secondaryLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "problemLabel": {
+            "type": "string"
+          },
+          "recommendedAction": {
+            "type": "string"
+          },
+          "affectedModules": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lastSeenAt": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        }
+      },
+      "MasterDataQualityIssueSummaryDto": {
+        "type": "object",
+        "required": [
+          "severity",
+          "entityType"
+        ],
+        "properties": {
+          "severity": {
+            "type": "object",
+            "required": [
+              "critical",
+              "warning",
+              "info"
+            ],
+            "properties": {
+              "critical": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "warning": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "info": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "entityType": {
+            "type": "object",
+            "required": [
+              "store",
+              "personnel",
+              "assignment",
+              "import"
+            ],
+            "properties": {
+              "store": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "personnel": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "assignment": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "import": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      },
+      "ApprovedTargetDistributionAllocationDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          },
+          "assigneeLabel": {
+            "type": "string"
+          },
+          "targetValue": {
+            "type": "number",
+            "minimum": 0
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "employeeId",
+          "assigneeLabel",
+          "targetValue"
+        ]
       }
     }
   },
