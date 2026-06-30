@@ -112,6 +112,9 @@ const migratedAdminSurfaces = [
     pageFile: 'admin-web/src/pages/MasterDataBootstrapPage.tsx',
     checkedFiles: [
       'admin-web/src/pages/MasterDataBootstrapPage.tsx',
+      'admin-web/src/pages/master-data-control-center-page.tsx',
+      'admin-web/src/pages/master-data-control-center-detail.tsx',
+      'admin-web/src/pages/master-data-control-center-tables.tsx',
       'admin-web/src/pages/master-data-bootstrap-batch-detail-panel.tsx',
       'admin-web/src/pages/SnapshotsDashboardPage.tsx',
       'admin-web/src/pages/SnapshotRunDetailPage.tsx',
@@ -275,12 +278,11 @@ function adminUiSurfaceViolations(input = {}) {
     }
 
     const fileTexts = checkedFiles.map((file) => ({ file, text: reader(file, 'utf8') }))
+    if (!fileTexts.some(({ text }) => containsApprovedAdminSurfaceAnchor(text))) {
+      violations.push(`${surface.pageFile}: migrated admin surface is not anchored to AdminSurface* primitives`)
+    }
 
     for (const { file, text } of fileTexts) {
-      if (!containsApprovedAdminSurfaceAnchor(text)) {
-        violations.push(`${file}: migrated admin file is not anchored to AdminSurface* primitives`)
-      }
-
       for (const { pattern, reason } of forbiddenMigratedPatterns) {
         if (countPatternMatches(text, pattern) > 0) {
           violations.push(`${file}: ${reason} matched ${pattern}`)

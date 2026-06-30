@@ -188,10 +188,6 @@ const largeTrackedSourceAllowlist = new Map([
     'Generated OpenAPI client types; size is controlled by backend API contract breadth.',
   ],
   [
-    'admin-web/src/pages/MasterDataBootstrapPage.tsx',
-    'Existing master data admin page hotspot; parked by refactor inventory until concrete product or reviewability trigger.',
-  ],
-  [
     'admin-web/e2e/competition-surfaces.spec.ts',
     'Existing competition regression spec; parked until concrete flake, runtime issue, or reviewability blocker.',
   ],
