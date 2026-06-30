@@ -62,7 +62,7 @@ test('core admin routes open without unavailable states', async ({ page }) => {
     {
       path: '/admin/auth',
       urlPattern: /\/admin\/auth$/,
-      heading: page.locator('a[href="/admin/auth/catalog"]').first(),
+      heading: page.getByRole('heading', { name: 'Erişim Yönetimi' }),
     },
     {
       path: '/admin/audit',
