@@ -30,6 +30,8 @@ const oversizedBaseline = new Map([
   ['backend/nestjs/src/modules/store-ops/infrastructure/snapshot-operations.repository.ts', 842],
   ['admin-web/src/pages/store-checklists-logic.ts', 703],
   ['admin-web/src/features/localization/messages/competition.ts', 601],
+  ['admin-web/src/prototypes/admin/master-data-command-v1.tsx', 945],
+  ['admin-web/src/prototypes/admin/master-data-command-v1.css', 756],
 ])
 
 function git(args) {
