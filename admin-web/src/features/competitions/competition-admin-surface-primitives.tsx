@@ -1,8 +1,15 @@
-import type { ChangeEvent, ReactNode } from 'react'
+import { Children, isValidElement, type ChangeEvent, type ReactNode } from 'react'
 import { AlertCircle, CheckCircle2, Info, Loader2 } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
 import { Input } from '../../components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../../components/ui/select'
 import { Textarea } from '../../components/ui/textarea'
 import { cn } from '../../lib/utils'
 import {
@@ -17,6 +24,8 @@ import {
 import type { CompetitionDisplayTone } from './display'
 
 type CompetitionFeedbackTone = CompetitionDisplayTone | 'error'
+
+const emptySelectItemValue = '__competition_empty_value__'
 
 const toneMap: Record<CompetitionFeedbackTone, AdminSurfaceTone> = {
   accent: 'accent',
@@ -248,18 +257,64 @@ function CompetitionSelectField({
   value: string
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void
 }) {
+  const options = getCompetitionSelectOptions(children)
+  const selectValue = value === '' ? emptySelectItemValue : value
+
   return (
     <label className="tw:grid tw:gap-1.5">
       <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{label}</span>
-      <select
-        className="tw:h-8 tw:w-full tw:rounded-lg tw:border tw:border-input tw:bg-background tw:px-2.5 tw:text-sm tw:text-foreground tw:outline-none tw:transition-colors tw:focus-visible:border-ring tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:disabled:cursor-not-allowed tw:disabled:opacity-50"
-        value={value}
-        onChange={onChange}
+      <Select
+        value={selectValue}
+        onValueChange={(nextValue) => {
+          const normalizedValue = nextValue === emptySelectItemValue ? '' : nextValue
+          onChange(createCompetitionSelectChangeEvent(normalizedValue))
+        }}
       >
-        {children}
-      </select>
+        <SelectTrigger aria-label={label} className="tw:w-full">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem
+              key={option.key}
+              value={option.value === '' ? emptySelectItemValue : option.value}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </label>
   )
+}
+
+function createCompetitionSelectChangeEvent(value: string): ChangeEvent<HTMLSelectElement> {
+  return {
+    currentTarget: { value },
+    target: { value },
+  } as ChangeEvent<HTMLSelectElement>
+}
+
+function getCompetitionSelectOptions(children: ReactNode) {
+  return Children.toArray(children).flatMap((child, index) => {
+    if (!isValidElement<{ children?: ReactNode; value?: unknown }>(child)) {
+      return []
+    }
+
+    const value = child.props.value
+
+    if (typeof value !== 'string') {
+      return []
+    }
+
+    return [
+      {
+        key: child.key?.toString() ?? `${value}-${index}`,
+        label: child.props.children ?? value,
+        value,
+      },
+    ]
+  })
 }
 
 function CompetitionCheckbox({

@@ -25,15 +25,13 @@ import {
   AdminActionRow,
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
   AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import { AdminOperationalHeader, AdminOperationalMetrics, AdminOperationalPage } from './admin-operational-primitives'
 import {
   KpiConfigEditorRow,
   KpiConfigFieldGrid,
@@ -137,25 +135,25 @@ export function AdminKpiConfigPage() {
 
   if (configQuery.isLoading) {
     return (
-      <AdminSurfacePage ariaLabel={t('adminKpiConfig.loadingTitle')}>
+      <AdminOperationalPage ariaLabel={t('adminKpiConfig.loadingTitle')}>
         <AdminStatePanel
           title={t('adminKpiConfig.loadingTitle')}
           description={t('adminKpiConfig.loadingCopy')}
           isLoading
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (configQuery.isError || !draft) {
     return (
-      <AdminSurfacePage ariaLabel={t('adminKpiConfig.errorTitle')}>
+      <AdminOperationalPage ariaLabel={t('adminKpiConfig.errorTitle')}>
         <AdminStatePanel
           title={t('adminKpiConfig.errorTitle')}
           description={getErrorMessage(configQuery.error)}
           tone="danger"
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
@@ -183,7 +181,7 @@ export function AdminKpiConfigPage() {
   })
 
   return (
-    <AdminSurfacePage ariaLabel={t('adminKpiConfig.heroTitle')}>
+    <AdminOperationalPage ariaLabel={t('adminKpiConfig.heroTitle')}>
       <AdminKpiConfigHero
         draft={draft}
         editorState={{ hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges) }}
@@ -348,7 +346,7 @@ export function AdminKpiConfigPage() {
         locale={locale}
         t={t}
       />
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
@@ -373,7 +371,7 @@ function AdminKpiConfigHero(input: {
   t: TranslateFunction
 }) {
   return (
-    <AdminSurfaceHeader
+    <AdminOperationalHeader
       icon={<SlidersHorizontal size={20} />}
       eyebrow={input.t('adminKpiConfig.heroEyebrow')}
       title={input.t('adminKpiConfig.heroTitle')}
@@ -410,7 +408,7 @@ function KpiConfigMetricSummary(input: {
   t: TranslateFunction
 }) {
   return (
-    <AdminMetricStrip
+    <AdminOperationalMetrics
       items={[
         {
           id: 'store-weight-total',

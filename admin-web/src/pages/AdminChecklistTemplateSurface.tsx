@@ -30,13 +30,15 @@ import {
   AdminFilterBar,
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
   AdminSurfaceSection,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+} from './admin-operational-primitives'
 import type {
   AdminChecklistTemplatesPageModel,
   ChecklistTemplateType,
@@ -59,10 +61,10 @@ export function AdminChecklistTemplatesExperience({
   model: AdminChecklistTemplatesPageModel
 }) {
   return (
-    <AdminSurfacePage ariaLabel={model.t('adminChecklists.editorAria')}>
+    <AdminOperationalPage ariaLabel={model.t('adminChecklists.editorAria')}>
       <AdminChecklistTemplatesHero model={model} />
       <AdminChecklistTemplatesEditorPanel model={model} />
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
@@ -96,7 +98,7 @@ function AdminChecklistTemplatesHero({
 
   return (
     <>
-      <AdminSurfaceHeader
+      <AdminOperationalHeader
         icon={<ClipboardList size={20} />}
         eyebrow={t('adminChecklists.heroEyebrow')}
         title={t('adminChecklists.heroTitle')}
@@ -138,7 +140,7 @@ function AdminChecklistTemplatesHero({
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'weight',

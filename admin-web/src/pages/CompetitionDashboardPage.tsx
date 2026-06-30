@@ -32,11 +32,13 @@ import { formatDate, formatState, getErrorMessage } from '../lib/format'
 import { normalizeDisplayLabel } from '../lib/display-labels'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
-  AdminMetricStrip,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
   AdminSurfaceSection,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+} from './admin-operational-primitives'
 import {
   CompetitionActionRow,
   CompetitionButton,
@@ -136,19 +138,19 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
 
   if (competitionsQuery.isLoading) {
     return (
-      <AdminSurfacePage ariaLabel={t('competition.admin.loadingTitle')}>
+      <AdminOperationalPage ariaLabel={t('competition.admin.loadingTitle')}>
         <CompetitionStatePanel
           title={t('competition.admin.loadingTitle')}
           copy={t('competition.admin.loadingCopy')}
           isLoading
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (competitionsQuery.isError) {
     return (
-      <AdminSurfacePage ariaLabel={t('competition.admin.errorTitle')}>
+      <AdminOperationalPage ariaLabel={t('competition.admin.errorTitle')}>
         <CompetitionStatePanel
           title={t('competition.admin.errorTitle')}
           copy={getErrorMessage(competitionsQuery.error)}
@@ -167,7 +169,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
             </CompetitionButton>
           }
         />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
@@ -175,8 +177,8 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
   const activeStage = detailQuery.data?.stages[0] ?? null
 
   return (
-    <AdminSurfacePage ariaLabel={t('competition.admin.heroTitle')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('competition.admin.heroTitle')}>
+      <AdminOperationalHeader
         eyebrow={t('competition.admin.heroEyebrow')}
         title={t('competition.admin.heroTitle')}
         description={t('competition.admin.heroCopy')}
@@ -262,7 +264,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
                   copy={t('competition.admin.noScoreCopy')}
                 />
               ) : (
-                <AdminMetricStrip
+                <AdminOperationalMetrics
                   items={detailQuery.data.latestScores.map((score) => ({
                     id: `${score.teamId}-${score.snapshotDate}`,
                     label: score.teamName,
@@ -358,7 +360,7 @@ export function CompetitionDashboardPage(input: { authSummary: AuthSessionSummar
           ) : null}
         </AdminSurfaceSection>
       ) : null}
-    </AdminSurfacePage>
+    </AdminOperationalPage>
   )
 }
 
