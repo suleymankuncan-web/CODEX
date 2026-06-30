@@ -2,17 +2,17 @@ import { useMemo } from 'react'
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { ArrowRight, DatabaseZap, Layers3, ShieldCheck } from 'lucide-react'
 import {
-  AdminKeyValue,
-  AdminKeyValueGrid,
-  AdminMetricStrip,
-  AdminStatePanel,
-  AdminSurfaceBadge,
-  AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
-  type AdminSurfaceTone,
-} from './admin-surface-primitives'
+  AdminOperationalBadge as AdminSurfaceBadge,
+  AdminOperationalEmpty as AdminSurfaceEmpty,
+  AdminOperationalHeader as AdminSurfaceHeader,
+  AdminOperationalKeyGrid as AdminKeyValueGrid,
+  AdminOperationalKeyValue as AdminKeyValue,
+  AdminOperationalMetrics as AdminMetricStrip,
+  AdminOperationalPage as AdminSurfacePage,
+  AdminOperationalSection as AdminSurfaceSection,
+  AdminOperationalState as AdminStatePanel,
+  type AdminOperationalTone as AdminSurfaceTone,
+} from './admin-operational-primitives'
 import {
   AuthLinkRow,
   AuthList,

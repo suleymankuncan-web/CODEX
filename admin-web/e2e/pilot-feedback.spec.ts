@@ -1,4 +1,4 @@
-import { expect, test, type Page } from './test-fixtures'
+import { expect, test, type Locator, type Page } from './test-fixtures'
 
 const superAdminSession = {
   authMode: 'mock',
@@ -86,6 +86,11 @@ test.beforeEach(async ({ page }) => {
   await routeAuthSession(page)
 })
 
+async function chooseSelectOption(page: Page, trigger: Locator, optionName: string | RegExp) {
+  await trigger.click()
+  await page.getByRole('option', { name: optionName }).click()
+}
+
 test('pilot feedback can be submitted and classified inside the app', async ({ page }) => {
   const submittedBodies: unknown[] = []
   const classifiedBodies: unknown[] = []
@@ -118,13 +123,13 @@ test('pilot feedback can be submitted and classified inside the app', async ({ p
   const main = page.getByRole('main')
   await expect(page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Pilot Feedback' })).toBeVisible()
   await expect(main.getByRole('heading', { name: 'Pilot feedback is classified in one queue.' })).toBeVisible()
-  await expect(main.getByText('All statuses', { exact: true }).filter({ visible: true })).toBeVisible()
-  await expect(main.getByText('All classes', { exact: true }).filter({ visible: true })).toBeVisible()
+  await expect(main.getByRole('combobox', { name: 'Status' })).toContainText('All statuses')
+  await expect(main.getByRole('combobox', { name: 'Class' }).first()).toContainText('All classes')
   await expect(main.getByText('Checkout submit failed')).toBeVisible()
 
   const row = main.locator('article').filter({ hasText: 'Checkout submit failed' }).first()
   await expect(row.getByText('P1 blocker')).toBeVisible()
-  await row.getByLabel('Class').selectOption('p1_pilot_blocker')
+  await chooseSelectOption(page, row.getByLabel('Class'), 'P1 pilot blocker')
   await row.getByLabel('Note').fill('Blocks pilot action confidence.')
   await row.getByRole('button', { name: 'Classify' }).click()
 
@@ -151,7 +156,7 @@ test('pilot feedback classification keeps an existing note when unchanged', asyn
 
   const row = page.getByRole('main').locator('article').filter({ hasText: 'Checkout submit failed' }).first()
   await expect(row.getByLabel('Note')).toHaveValue('Existing triage context.')
-  await row.getByLabel('Class').selectOption('p3_backlog')
+  await chooseSelectOption(page, row.getByLabel('Class'), 'P3 backlog')
   await row.getByRole('button', { name: 'Classify' }).click()
 
   await expect(row.getByRole('status')).toContainText('Class updated')

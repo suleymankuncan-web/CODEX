@@ -22,7 +22,7 @@ test('PR-3 migrated admin read surfaces render with honest empty states', async 
   await routePilotFeedback(page)
   await page.goto('/admin/pilot-feedback')
   await expect(page.getByRole('heading', { name: 'Pilot feedback is classified in one queue.' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'No feedback visible' })).toBeVisible()
+  await expect(page.getByText('No feedback visible')).toBeVisible()
 
   await routeDataQuality(page)
   await page.goto('/admin/data-quality')
