@@ -49,7 +49,8 @@ export class PersonnelMasterReadRepository {
           eah.store_id,
           eah.region_id,
           eah.position_id,
-          eah.start_date
+          eah.start_date,
+          eah.updated_at
         FROM ops.employee_assignment_history eah
         WHERE eah.employee_id = e.employee_id
           AND eah.is_primary_assignment = TRUE
@@ -97,6 +98,7 @@ export class PersonnelMasterReadRepository {
       position_id: string | null;
       position_code: string | null;
       position_name: string | null;
+      updated_at: string;
     }>(
       `
         SELECT
@@ -117,7 +119,11 @@ export class PersonnelMasterReadRepository {
           r.region_name,
           p.position_id::text AS position_id,
           p.position_code,
-          p.position_name
+          p.position_name,
+          GREATEST(
+            e.updated_at,
+            COALESCE(assignment.updated_at, e.updated_at)
+          )::text AS updated_at
         ${fromClause}
         ${whereClause}
         ORDER BY e.first_name ASC, e.last_name ASC, e.external_employee_ref ASC

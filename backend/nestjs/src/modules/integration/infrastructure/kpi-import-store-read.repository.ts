@@ -105,6 +105,7 @@ export class KpiImportStoreReadRepository {
       kpi_import_enabled: boolean;
       region_id: string | null;
       region_name: string | null;
+      updated_at: string;
     }>(
       `
         SELECT
@@ -115,7 +116,8 @@ export class KpiImportStoreReadRepository {
           s.status,
           s.kpi_import_enabled,
           r.region_id::text AS region_id,
-          r.region_name
+          r.region_name,
+          s.updated_at::text AS updated_at
         FROM ops.store s
         LEFT JOIN ops.region r
           ON r.region_id = s.region_id

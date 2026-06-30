@@ -295,9 +295,42 @@ export class IntegrationRepository {
     status: "active" | "inactive" | "closed";
     kpiImportEnabled: boolean;
     actorUserId: string;
+    expectedUpdatedAt?: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
+      const currentResult = await client.query<{
+        store_id: string;
+        is_current: boolean;
+      }>(
+        `
+          SELECT
+            s.store_id::text AS store_id,
+            ($4::timestamptz IS NULL OR s.updated_at = $4::timestamptz) AS is_current
+          FROM ops.store s
+          INNER JOIN ops.region r
+            ON r.region_id = $2::uuid
+           AND r.status = 'active'
+           AND r.company_id = s.company_id
+          WHERE s.store_id = $1::uuid
+            AND s.company_id = ANY($3::uuid[])
+          FOR UPDATE OF s
+        `,
+        [
+          input.storeId,
+          input.regionId,
+          input.actorCompanyIds,
+          input.expectedUpdatedAt ?? null,
+        ],
+      );
+      const currentStore = currentResult.rows[0] ?? null;
+      if (!currentStore) {
+        return null;
+      }
+      if (!currentStore.is_current) {
+        throw new ConflictException("Store master data changed after it was loaded");
+      }
+
       const result = await client.query<{
         store_id: string;
         store_code: string;
@@ -307,6 +340,7 @@ export class IntegrationRepository {
         kpi_import_enabled: boolean;
         region_id: string | null;
         region_name: string | null;
+        updated_at: string;
       }>(
         `
           UPDATE ops.store s
@@ -329,7 +363,8 @@ export class IntegrationRepository {
             s.status,
             s.kpi_import_enabled,
             r.region_id::text AS region_id,
-            r.region_name
+            r.region_name,
+            s.updated_at::text AS updated_at
         `,
         [
           input.storeId,
@@ -389,16 +424,25 @@ export class IntegrationRepository {
     positionId: string;
     assignmentStartDate?: string;
     actorUserId: string;
+    expectedUpdatedAt?: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const auditActorUserId = await this.resolveAuditActorUserId(input.actorUserId, client);
-      const employeeResult = await client.query<{ employee_id: string; company_id: string }>(
+      const employeeResult = await client.query<{
+        employee_id: string;
+        company_id: string;
+        updated_at: string;
+      }>(
         `
-          SELECT employee_id::text AS employee_id, company_id::text AS company_id
+          SELECT
+            employee_id::text AS employee_id,
+            company_id::text AS company_id,
+            updated_at::text AS updated_at
           FROM ops.employee
           WHERE employee_id = $1::uuid
             AND company_id = ANY($2::uuid[])
           LIMIT 1
+          FOR UPDATE
         `,
         [input.employeeId, input.actorCompanyIds],
       );
@@ -443,6 +487,49 @@ export class IntegrationRepository {
         return null;
       }
 
+      const assignmentStartDate = input.assignmentStartDate ?? input.hireDate;
+      const assignmentResult = await client.query<{ assignment_id: string }>(
+        `
+          SELECT assignment_id::text AS assignment_id
+          FROM ops.employee_assignment_history
+          WHERE employee_id = $1::uuid
+            AND is_primary_assignment = TRUE
+            AND assignment_status = 'active'
+            AND end_date IS NULL
+          ORDER BY start_date DESC, created_at DESC
+          LIMIT 1
+          FOR UPDATE
+        `,
+        [input.employeeId],
+      );
+      const assignmentId = assignmentResult.rows[0]?.assignment_id ?? null;
+
+      const freshnessResult = await client.query<{ is_current: boolean }>(
+        `
+          SELECT ($2::timestamptz IS NULL OR GREATEST(
+            e.updated_at,
+            COALESCE(assignment.updated_at, e.updated_at)
+          ) = $2::timestamptz) AS is_current
+          FROM ops.employee e
+          LEFT JOIN LATERAL (
+            SELECT eah.updated_at
+            FROM ops.employee_assignment_history eah
+            WHERE eah.employee_id = e.employee_id
+              AND eah.is_primary_assignment = TRUE
+              AND eah.assignment_status = 'active'
+              AND eah.end_date IS NULL
+            ORDER BY eah.start_date DESC, eah.created_at DESC
+            LIMIT 1
+          ) assignment ON TRUE
+          WHERE e.employee_id = $1::uuid
+          LIMIT 1
+        `,
+        [input.employeeId, input.expectedUpdatedAt ?? null],
+      );
+      if (!freshnessResult.rows[0]?.is_current) {
+        throw new ConflictException("Personnel master data changed after it was loaded");
+      }
+
       await client.query(
         `
           UPDATE ops.employee
@@ -465,22 +552,6 @@ export class IntegrationRepository {
           input.hireDate,
         ],
       );
-
-      const assignmentStartDate = input.assignmentStartDate ?? input.hireDate;
-      const assignmentResult = await client.query<{ assignment_id: string }>(
-        `
-          SELECT assignment_id::text AS assignment_id
-          FROM ops.employee_assignment_history
-          WHERE employee_id = $1::uuid
-            AND is_primary_assignment = TRUE
-            AND assignment_status = 'active'
-            AND end_date IS NULL
-          ORDER BY start_date DESC, created_at DESC
-          LIMIT 1
-        `,
-        [input.employeeId],
-      );
-      const assignmentId = assignmentResult.rows[0]?.assignment_id ?? null;
 
       if (assignmentId) {
         await client.query(
@@ -571,6 +642,7 @@ export class IntegrationRepository {
         position_id: string | null;
         position_code: string | null;
         position_name: string | null;
+        updated_at: string;
       }>(
         `
           SELECT
@@ -591,7 +663,11 @@ export class IntegrationRepository {
             r.region_name,
             p.position_id::text AS position_id,
             p.position_code,
-            p.position_name
+            p.position_name,
+            GREATEST(
+              e.updated_at,
+              COALESCE(assignment.updated_at, e.updated_at)
+            )::text AS updated_at
           FROM ops.employee e
           LEFT JOIN LATERAL (
             SELECT
@@ -599,7 +675,8 @@ export class IntegrationRepository {
               eah.store_id,
               eah.region_id,
               eah.position_id,
-              eah.start_date
+              eah.start_date,
+              eah.updated_at
             FROM ops.employee_assignment_history eah
             WHERE eah.employee_id = e.employee_id
               AND eah.is_primary_assignment = TRUE

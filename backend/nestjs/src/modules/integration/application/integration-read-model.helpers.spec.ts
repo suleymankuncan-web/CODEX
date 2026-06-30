@@ -70,6 +70,7 @@ describe("integration read model helpers", () => {
         kpi_import_enabled: true,
         region_id: "region-1",
         region_name: "Marmara",
+        updated_at: "2026-06-30T10:00:00.000Z",
       }),
     ).toEqual({
       storeId: "store-1",
@@ -80,6 +81,7 @@ describe("integration read model helpers", () => {
       kpiImportEnabled: true,
       regionId: "region-1",
       regionName: "Marmara",
+      updatedAt: "2026-06-30T10:00:00.000Z",
     });
   });
 
@@ -104,6 +106,7 @@ describe("integration read model helpers", () => {
         position_id: "position-1",
         position_code: "SALES",
         position_name: "Sales Consultant",
+        updated_at: "2026-06-30T10:00:00.000Z",
       }),
     ).toEqual({
       employeeId: "employee-1",
@@ -125,6 +128,7 @@ describe("integration read model helpers", () => {
       positionId: "position-1",
       positionCode: "SALES",
       positionName: "Sales Consultant",
+      updatedAt: "2026-06-30T10:00:00.000Z",
     });
   });
 });

@@ -33,4 +33,8 @@ export class UpdatePersonnelMasterDto {
   @IsOptional()
   @IsISO8601({ strict: true })
   assignmentStartDate?: string;
+
+  @IsOptional()
+  @IsISO8601({ strict: true })
+  expectedUpdatedAt?: string;
 }

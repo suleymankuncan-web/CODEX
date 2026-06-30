@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-06-30T13:15:24.512Z",
+  "generatedAt": "2026-06-30T18:11:32.993Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 189,
-    "backendEndpointsWithoutFrontendCallCount": 36,
-    "controllerCount": 23,
+    "backendEndpointCount": 191,
+    "backendEndpointsWithoutFrontendCallCount": 38,
+    "controllerCount": 24,
     "frontendApiCallCount": 153,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 153,
-    "openApiEndpointCount": 189,
+    "openApiEndpointCount": 191,
     "routeApiEdgeCount": 224,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0
@@ -4638,6 +4638,34 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/integrations/master-data-quality/audit",
+      "method": "GET",
+      "path": "/api/integrations/master-data-quality/audit",
+      "rawControllerPath": "integrations/master-data-quality",
+      "rawMethodPath": "audit",
+      "controller": "integration-master-data-quality",
+      "domain": "integrations",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/integration/web/integration-master-data-quality.controller.ts",
+        "line": 53
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/integrations/master-data-quality/issues",
+      "method": "GET",
+      "path": "/api/integrations/master-data-quality/issues",
+      "rawControllerPath": "integrations/master-data-quality",
+      "rawMethodPath": "issues",
+      "controller": "integration-master-data-quality",
+      "domain": "integrations",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/integration/web/integration-master-data-quality.controller.ts",
+        "line": 21
+      }
+    },
+    {
       "id": "endpoint:GET:/api/integrations/personnel-master-lookups",
       "method": "GET",
       "path": "/api/integrations/personnel-master-lookups",
@@ -6491,6 +6519,18 @@
       "id": "openapi:POST:/api/integrations/master-data-bootstrap/batches/{batchId}/validate",
       "method": "POST",
       "path": "/api/integrations/master-data-bootstrap/batches/{batchId}/validate",
+      "domain": "integrations"
+    },
+    {
+      "id": "openapi:GET:/api/integrations/master-data-quality/audit",
+      "method": "GET",
+      "path": "/api/integrations/master-data-quality/audit",
+      "domain": "integrations"
+    },
+    {
+      "id": "openapi:GET:/api/integrations/master-data-quality/issues",
+      "method": "GET",
+      "path": "/api/integrations/master-data-quality/issues",
       "domain": "integrations"
     },
     {
@@ -9244,6 +9284,13 @@
         "frontendCallCount": 0
       },
       {
+        "id": "controller:integration-master-data-quality",
+        "controller": "integration-master-data-quality",
+        "domain": "integrations",
+        "endpointCount": 2,
+        "frontendCallCount": 0
+      },
+      {
         "id": "controller:migrations",
         "controller": "migrations",
         "domain": "admin",
@@ -9271,6 +9318,8 @@
       "endpoint:PATCH:/api/integrations/kpi-import-store-scope/{storeId}",
       "endpoint:POST:/api/integrations/master-data-bootstrap/batches",
       "endpoint:GET:/api/integrations/master-data-bootstrap/batches/{batchId}/rows",
+      "endpoint:GET:/api/integrations/master-data-quality/audit",
+      "endpoint:GET:/api/integrations/master-data-quality/issues",
       "endpoint:GET:/api/integrations/sources",
       "endpoint:POST:/api/integrations/sources",
       "endpoint:GET:/api/integrations/sources/{sourceId}/audit",

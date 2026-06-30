@@ -45,6 +45,7 @@ CREATE TABLE ops.store (
     kpi_import_enabled BOOLEAN NOT NULL DEFAULT TRUE,
     timezone TEXT NOT NULL DEFAULT 'Europe/Istanbul',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT ops_store_store_type_allowed_check CHECK (store_type IN ('company', 'franchise', 'operator')),
     CONSTRAINT ops_store_status_allowed_check CHECK (status IN ('active', 'inactive', 'closed'))
 );
@@ -72,7 +73,8 @@ CREATE TABLE ops.employee (
     employment_status TEXT NOT NULL DEFAULT 'active',
     employment_type TEXT NOT NULL,
     birth_date DATE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE ops.employee_assignment_history (
@@ -88,6 +90,7 @@ CREATE TABLE ops.employee_assignment_history (
     fte_ratio NUMERIC(5,2) NOT NULL DEFAULT 1.00,
     assignment_status TEXT NOT NULL DEFAULT 'active',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CHECK (end_date IS NULL OR end_date >= start_date),
     CHECK (fte_ratio > 0 AND fte_ratio <= 1.00)
 );
@@ -1722,6 +1725,31 @@ CREATE INDEX idx_event_log_scope_date
 
 CREATE INDEX IF NOT EXISTS idx_schema_migration_status
     ON audit.schema_migration (status, started_at DESC);
+
+CREATE OR REPLACE FUNCTION ops.touch_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_store_touch_updated_at ON ops.store;
+CREATE TRIGGER trg_store_touch_updated_at
+    BEFORE UPDATE ON ops.store
+    FOR EACH ROW EXECUTE FUNCTION ops.touch_updated_at();
+
+DROP TRIGGER IF EXISTS trg_employee_touch_updated_at ON ops.employee;
+CREATE TRIGGER trg_employee_touch_updated_at
+    BEFORE UPDATE ON ops.employee
+    FOR EACH ROW EXECUTE FUNCTION ops.touch_updated_at();
+
+DROP TRIGGER IF EXISTS trg_employee_assignment_history_touch_updated_at ON ops.employee_assignment_history;
+CREATE TRIGGER trg_employee_assignment_history_touch_updated_at
+    BEFORE UPDATE ON ops.employee_assignment_history
+    FOR EACH ROW EXECUTE FUNCTION ops.touch_updated_at();
 
 CREATE TRIGGER trg_store_workforce_snapshot_immutable
     BEFORE UPDATE OR DELETE ON rpt.store_workforce_snapshot

@@ -4936,6 +4936,132 @@
           "AuthAdmin"
         ]
       }
+    },
+    "/api/integrations/master-data-quality/issues": {
+      "get": {
+        "operationId": "IntegrationMasterDataQualityController_listIssues",
+        "parameters": [
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "issueCode",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "severity",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "critical",
+                "warning",
+                "info"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "store",
+                "personnel",
+                "assignment",
+                "import"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "IntegrationMasterDataQuality"
+        ]
+      }
+    },
+    "/api/integrations/master-data-quality/audit": {
+      "get": {
+        "operationId": "IntegrationMasterDataQualityController_listAudit",
+        "parameters": [
+          {
+            "name": "offset",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "entityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "entityType",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "store",
+                "personnel",
+                "import"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "IntegrationMasterDataQuality"
+        ]
+      }
     }
   },
   "info": {
@@ -6589,6 +6715,9 @@
           },
           "kpiImportEnabled": {
             "type": "boolean"
+          },
+          "expectedUpdatedAt": {
+            "type": "string"
           }
         },
         "required": [
@@ -6642,6 +6771,9 @@
             "type": "string"
           },
           "assignmentStartDate": {
+            "type": "string"
+          },
+          "expectedUpdatedAt": {
             "type": "string"
           }
         },
