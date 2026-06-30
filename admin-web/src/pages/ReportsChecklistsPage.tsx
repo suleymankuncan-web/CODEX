@@ -22,15 +22,17 @@ import type { AppLocale } from '../lib/i18n'
 import {
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
@@ -130,31 +132,31 @@ export function ReportsChecklistsPage() {
 
   if (!snapshotRunId) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsChecklists.missingTitle')} description={t('reportsChecklists.missingCopy')} tone="danger" />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (checklistQuery.isLoading) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsChecklists.loadingTitle')} description={t('reportsChecklists.loadingCopy')} isLoading />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (checklistQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsChecklists.errorTitle')} description={getErrorMessage(checklistQuery.error)} tone="danger" />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('reportsChecklists.heroEyebrow')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('reportsChecklists.heroEyebrow')}>
+      <AdminOperationalHeader
         eyebrow={t('reportsChecklists.heroEyebrow')}
         title={t('reportsChecklists.heroTitle')}
         description={t('reportsChecklists.heroCopy')}
@@ -169,7 +171,7 @@ export function ReportsChecklistsPage() {
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           { id: 'snapshot-run', label: t('reportsChecklists.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
           { id: 'rows-in-view', label: t('reportsChecklists.rowsInView'), value: filteredRows.length, tone: 'cyan' },
@@ -177,16 +179,16 @@ export function ReportsChecklistsPage() {
         ]}
       />
 
-      <AdminSurfaceSection eyebrow={t('reportsChecklists.contextEyebrow')} title={t('reportsChecklists.contextTitle')}>
+      <AdminOperationalSection title={t('reportsChecklists.contextTitle')} description={t('reportsChecklists.contextEyebrow')}>
         <AdminKeyValueGrid>
           <AdminKeyValue label={t('reportsChecklists.snapshotRunId')} value={snapshotRunId} />
           <AdminKeyValue label={t('reportsChecklists.rowsLoaded')} value={String(rows.length)} />
           <AdminKeyValue label={t('reportsChecklists.rowsAfterFilter')} value={String(filteredRows.length)} />
           <AdminKeyValue label={t('reportsChecklists.criticalRows')} value={String(totals.rowsWithCriticalIssues)} />
         </AdminKeyValueGrid>
-      </AdminSurfaceSection>
+      </AdminOperationalSection>
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'audit-count',
@@ -223,11 +225,10 @@ export function ReportsChecklistsPage() {
         ]}
       />
 
-      <AdminSurfaceSection
+      <AdminOperationalSection
         ariaLabel={t('reportsChecklists.tableTitle')}
-        eyebrow={t('reportsChecklists.tableEyebrow')}
         title={t('reportsChecklists.tableTitle')}
-        description={t('reportsChecklists.tableCopy')}
+        description={`${t('reportsChecklists.tableEyebrow')} · ${t('reportsChecklists.tableCopy')}`}
         actions={
           <AdminReportingToolbar
             sortValue={sortBy}
@@ -301,7 +302,7 @@ export function ReportsChecklistsPage() {
             </TableBody>
           </Table>
         )}
-      </AdminSurfaceSection>
-    </AdminSurfacePage>
+      </AdminOperationalSection>
+    </AdminOperationalPage>
   )
 }

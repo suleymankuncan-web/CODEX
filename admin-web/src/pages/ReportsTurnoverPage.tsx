@@ -23,15 +23,17 @@ import type { AppLocale } from '../lib/i18n'
 import {
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminMetricStrip,
   AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceEmpty,
-  AdminSurfaceHeader,
-  AdminSurfacePage,
-  AdminSurfaceSection,
   type AdminSurfaceTone,
 } from './admin-surface-primitives'
+import {
+  AdminOperationalHeader,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+} from './admin-operational-primitives'
 
 function toNumber(input: string | null) {
   const parsed = Number(input)
@@ -167,31 +169,31 @@ export function ReportsTurnoverPage() {
 
   if (!snapshotRunId) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsTurnover.missingTitle')} description={t('reportsTurnover.missingCopy')} tone="danger" />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (turnoverQuery.isLoading) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsTurnover.loadingTitle')} description={t('reportsTurnover.loadingCopy')} isLoading />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   if (turnoverQuery.isError) {
     return (
-      <AdminSurfacePage>
+      <AdminOperationalPage>
         <AdminStatePanel title={t('reportsTurnover.errorTitle')} description={getErrorMessage(turnoverQuery.error)} tone="danger" />
-      </AdminSurfacePage>
+      </AdminOperationalPage>
     )
   }
 
   return (
-    <AdminSurfacePage ariaLabel={t('reportsTurnover.heroEyebrow')}>
-      <AdminSurfaceHeader
+    <AdminOperationalPage ariaLabel={t('reportsTurnover.heroEyebrow')}>
+      <AdminOperationalHeader
         eyebrow={t('reportsTurnover.heroEyebrow')}
         title={t('reportsTurnover.heroTitle')}
         description={t('reportsTurnover.heroCopy')}
@@ -206,7 +208,7 @@ export function ReportsTurnoverPage() {
         }
       />
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           { id: 'snapshot-run', label: t('reportsTurnover.snapshotRun'), value: snapshotRunId.slice(0, 12), tone: 'neutral' },
           { id: 'rows-in-view', label: t('reportsTurnover.rowsInView'), value: filteredRows.length, tone: 'cyan' },
@@ -214,16 +216,16 @@ export function ReportsTurnoverPage() {
         ]}
       />
 
-      <AdminSurfaceSection eyebrow={t('reportsTurnover.contextEyebrow')} title={t('reportsTurnover.contextTitle')}>
+      <AdminOperationalSection title={t('reportsTurnover.contextTitle')} description={t('reportsTurnover.contextEyebrow')}>
         <AdminKeyValueGrid>
           <AdminKeyValue label={t('reportsTurnover.snapshotRunId')} value={snapshotRunId} />
           <AdminKeyValue label={t('reportsTurnover.rowsLoaded')} value={String(rows.length)} />
           <AdminKeyValue label={t('reportsTurnover.rowsAfterFilter')} value={String(filteredRows.length)} />
           <AdminKeyValue label={t('reportsTurnover.leaversInView')} value={String(totals.leavers)} />
         </AdminKeyValueGrid>
-      </AdminSurfaceSection>
+      </AdminOperationalSection>
 
-      <AdminMetricStrip
+      <AdminOperationalMetrics
         items={[
           {
             id: 'opening-headcount',
@@ -260,11 +262,10 @@ export function ReportsTurnoverPage() {
         ]}
       />
 
-      <AdminSurfaceSection
+      <AdminOperationalSection
         ariaLabel={t('reportsTurnover.tableTitle')}
-        eyebrow={t('reportsTurnover.tableEyebrow')}
         title={t('reportsTurnover.tableTitle')}
-        description={t('reportsTurnover.tableCopy')}
+        description={`${t('reportsTurnover.tableEyebrow')} · ${t('reportsTurnover.tableCopy')}`}
         actions={
           <AdminReportingToolbar
             sortValue={sortBy}
@@ -343,7 +344,7 @@ export function ReportsTurnoverPage() {
             </TableBody>
           </Table>
         )}
-      </AdminSurfaceSection>
-    </AdminSurfacePage>
+      </AdminOperationalSection>
+    </AdminOperationalPage>
   )
 }
