@@ -18,6 +18,12 @@ export type PermissionCatalogItem = AuthPermissionCatalogResponse['items'][numbe
 type AuthUserAccountsResponse = ApiGetResponse<'/api/auth/users'>
 export type UserAccount = AuthUserAccountsResponse['items'][number]
 export type CreateUserAccountInput = ApiMutationBody<'/api/auth/users', 'POST'>
+export type UpdateUserAccountInput = ApiMutationBody<'/api/auth/users/{userId}', 'PATCH'>
+type UpdateUserAccountResponse = ApiMutationResponse<'/api/auth/users/{userId}', 'PATCH'>
+export type DeactivateUserAccountInput = ApiMutationBody<
+  '/api/auth/users/{userId}/deactivate',
+  'PATCH'
+>
 type DeactivateUserAccountResponse = ApiMutationResponse<
   '/api/auth/users/{userId}/deactivate',
   'PATCH'
@@ -84,10 +90,13 @@ export async function getAuthBootstrap() {
 export async function getUserAccounts(input?: {
   authProvider?: string
   isActive?: boolean
+  limit?: number
+  offset?: number
+  q?: string
 }) {
   const params = new URLSearchParams({
-    limit: '50',
-    offset: '0',
+    limit: String(input?.limit ?? 100),
+    offset: String(input?.offset ?? 0),
   })
 
   if (input?.authProvider) {
@@ -96,6 +105,10 @@ export async function getUserAccounts(input?: {
 
   if (input?.isActive !== undefined) {
     params.set('isActive', String(input.isActive))
+  }
+
+  if (input?.q?.trim()) {
+    params.set('q', input.q.trim())
   }
 
   return fetchOpenApiJson('/api/auth/users', { query: params })
@@ -178,11 +191,24 @@ export async function deactivateActionStoreAssignment(assignmentId: string) {
   })
 }
 
-export async function deactivateUserAccount(userId: string) {
+export async function updateUserAccount(userId: string, input: UpdateUserAccountInput) {
+  return sendOpenApiJson('/api/auth/users/{userId}', {
+    method: 'PATCH',
+    params: { userId },
+    body: input,
+  }) satisfies Promise<UpdateUserAccountResponse>
+}
+
+export async function deactivateUserAccount(
+  input: string | { userId: string; reason?: string },
+) {
+  const userId = typeof input === 'string' ? input : input.userId
+  const reason = typeof input === 'string' ? undefined : input.reason?.trim()
+
   return sendOpenApiJson('/api/auth/users/{userId}/deactivate', {
     method: 'PATCH',
     params: { userId },
-    body: {},
+    body: reason ? { reason } : {},
   })
 }
 
