@@ -1,15 +1,19 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Megaphone, Pin, Send, Trophy } from 'lucide-react'
+import { Megaphone, Pin, Send, ShieldCheck, Trophy } from 'lucide-react'
 import {
-  EmptyState,
-  KeyValue,
-  MetricAccent,
-  MetricCard,
-  ScreenState,
-  StatusPill,
-  type Tone,
-} from '../components/dashboard-primitives'
+  AdminOperationalBadge as StatusPill,
+  AdminOperationalEmpty as EmptyState,
+  AdminOperationalHeader,
+  AdminOperationalKeyGrid,
+  AdminOperationalKeyValue as KeyValue,
+  AdminOperationalMetrics,
+  AdminOperationalPage,
+  AdminOperationalSection,
+  AdminOperationalState,
+  type AdminOperationalTone as Tone,
+} from './admin-operational-primitives'
+import { Button } from '../components/ui/button'
 import { getAuthLookups, type AuthLookupStore, type AuthSessionSummary } from '../features/auth/api'
 import {
   archiveFeedPost,
@@ -90,6 +94,24 @@ function formatTargetRouteLabel(route: string, t: TranslateFunction) {
   if (route === '/store/rankings') return t('adminFeed.targetRoute.rankings')
   if (route === '/store/me') return t('adminFeed.targetRoute.me')
   return route
+}
+
+function ScreenState({
+  copy,
+  title,
+  tone = 'neutral',
+}: {
+  copy?: ReactNode | undefined
+  title: ReactNode
+  tone?: Tone | 'error' | undefined
+}) {
+  const normalizedTone = tone === 'error' ? 'danger' : tone
+
+  return (
+    <AdminOperationalPage ariaLabel={typeof title === 'string' ? title : undefined}>
+      <AdminOperationalState description={copy} title={title} tone={normalizedTone} />
+    </AdminOperationalPage>
+  )
 }
 
 export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null }) {
@@ -265,31 +287,63 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   }
 
   return (
-    <section className="page-stack">
-      <section className="hero-panel">
-        <div>
-          <div className="eyebrow">{t('adminFeed.heroEyebrow')}</div>
-          <h2 className="hero-title">{t('adminFeed.heroTitle')}</h2>
-          <p className="hero-copy">{t('adminFeed.heroCopy')}</p>
-        </div>
-        <div className="hero-metrics">
-          <MetricAccent label={t('adminFeed.route')} value="/admin/feed" />
-          <MetricAccent label={t('adminFeed.posts')} value={String(posts.length)} />
-          <MetricAccent label={t('adminFeed.published')} value={String(publishedCount)} />
-        </div>
-      </section>
+    <AdminOperationalPage ariaLabel={t('adminFeed.heroTitle')}>
+      <AdminOperationalHeader
+        description={t('adminFeed.heroCopy')}
+        eyebrow={t('adminFeed.heroEyebrow')}
+        icon={<Megaphone aria-hidden="true" size={22} />}
+        meta={
+          <>
+            <StatusPill tone="neutral">/admin/feed</StatusPill>
+            <StatusPill tone={isRegionManagerOnly ? 'cyan' : 'accent'}>
+              {isRegionManagerOnly ? t('adminFeed.regionManagerValue') : t('adminFeed.scoreOwnershipValue')}
+            </StatusPill>
+          </>
+        }
+        title={t('adminFeed.heroTitle')}
+      />
 
-      <section className="metric-grid">
-        <MetricCard title={t('adminFeed.totalPosts')} value={posts.length} note={t('adminFeed.totalPostsNote')} icon={<Megaphone size={18} />} tone="accent" />
-        <MetricCard title={t('adminFeed.pinned')} value={pinnedCount} note={t('adminFeed.pinnedNote')} icon={<Pin size={18} />} tone={pinnedCount > 0 ? 'warning' : 'neutral'} />
-        <MetricCard title={t('adminFeed.challenges')} value={challengeCount} note={t('adminFeed.challengesNote')} icon={<Trophy size={18} />} tone="calm" />
-        <MetricCard title={t('adminFeed.published')} value={publishedCount} note={t('adminFeed.publishedNote')} icon={<Send size={18} />} tone="accent" />
-      </section>
+      <AdminOperationalMetrics
+        items={[
+          {
+            description: t('adminFeed.totalPostsNote'),
+            icon: <Megaphone aria-hidden="true" size={18} />,
+            id: 'feed-total',
+            label: t('adminFeed.totalPosts'),
+            tone: 'accent',
+            value: posts.length,
+          },
+          {
+            description: t('adminFeed.pinnedNote'),
+            icon: <Pin aria-hidden="true" size={18} />,
+            id: 'feed-pinned',
+            label: t('adminFeed.pinned'),
+            tone: pinnedCount > 0 ? 'warning' : 'neutral',
+            value: pinnedCount,
+          },
+          {
+            description: t('adminFeed.challengesNote'),
+            icon: <Trophy aria-hidden="true" size={18} />,
+            id: 'feed-challenges',
+            label: t('adminFeed.challenges'),
+            tone: 'calm',
+            value: challengeCount,
+          },
+          {
+            description: t('adminFeed.publishedNote'),
+            icon: <Send aria-hidden="true" size={18} />,
+            id: 'feed-published',
+            label: t('adminFeed.published'),
+            tone: 'cyan',
+            value: publishedCount,
+          },
+        ]}
+      />
 
       {notice ? <div className="shell-notice">{notice}</div> : null}
       {errorNotice ? <div className="shell-notice shell-notice-warning">{errorNotice}</div> : null}
 
-      <section className="two-up-grid">
+      <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
         <AdminFeedComposerPanel
           createPending={createMutation.isPending}
           form={form}
@@ -301,34 +355,29 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
           stores={stores}
         />
 
-        <article className="panel">
-          <div className="panel-heading">
-            <div>
-              <div className="eyebrow">{t('adminFeed.guardrailEyebrow')}</div>
-              <h3>{t('adminFeed.guardrailTitle')}</h3>
-            </div>
-          </div>
-          <div className="key-grid">
+        <AdminOperationalSection
+          badge={<StatusPill tone="success"><ShieldCheck aria-hidden="true" size={13} />{t('adminFeed.regionManagerValue')}</StatusPill>}
+          eyebrow={t('adminFeed.guardrailEyebrow')}
+          title={t('adminFeed.guardrailTitle')}
+        >
+          <AdminOperationalKeyGrid>
             <KeyValue label={t('adminFeed.challengeTarget')} value="/store/rankings or /store/me" />
             <KeyValue label={t('adminFeed.scoreOwnership')} value={t('adminFeed.scoreOwnershipValue')} />
             <KeyValue label={t('adminFeed.competitionStages')} value={t('adminFeed.competitionStagesValue')} />
             <KeyValue label={t('adminFeed.regionManager')} value={t('adminFeed.regionManagerValue')} />
-          </div>
-        </article>
-      </section>
+          </AdminOperationalKeyGrid>
+        </AdminOperationalSection>
+      </div>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('adminFeed.libraryEyebrow')}</div>
-            <h3>{t('adminFeed.libraryTitle')}</h3>
-          </div>
-        </div>
-
+      <AdminOperationalSection
+        badge={<StatusPill tone="neutral">{`${posts.length} ${t('adminFeed.posts')}`}</StatusPill>}
+        eyebrow={t('adminFeed.libraryEyebrow')}
+        title={t('adminFeed.libraryTitle')}
+      >
         {posts.length === 0 ? (
           <EmptyState title={t('adminFeed.emptyTitle')} copy={t('adminFeed.emptyCopy')} />
         ) : (
-          <div className="stacked-table">
+          <div className="tw:grid tw:gap-3">
             {posts.map((post) => (
               <FeedAdminRow
                 key={post.feedPostId}
@@ -343,8 +392,8 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
             ))}
           </div>
         )}
-      </section>
-    </section>
+      </AdminOperationalSection>
+    </AdminOperationalPage>
   )
 }
 
@@ -361,16 +410,16 @@ function AdminFeedComposerPanel(input: {
   const { t } = useLocalization()
 
   return (
-    <article className="panel">
-      <div className="panel-heading">
-        <div>
-          <div className="eyebrow">{t('adminFeed.composerEyebrow')}</div>
-          <h3>{t('adminFeed.composerTitle')}</h3>
-        </div>
+    <AdminOperationalSection
+      badge={
         <StatusPill tone={input.form.postType === 'challenge' ? 'accent' : 'neutral'}>
           {formatFeedPostTypeLabel(input.form.postType, t)}
         </StatusPill>
-      </div>
+      }
+      className="admin-feed-composer"
+      eyebrow={t('adminFeed.composerEyebrow')}
+      title={t('adminFeed.composerTitle')}
+    >
 
       <div className="form-grid">
         <label>
@@ -549,24 +598,23 @@ function AdminFeedComposerPanel(input: {
       ) : null}
 
       <div className="action-cluster">
-        <button
-          className="control-button"
+        <Button
+          variant="secondary"
           type="button"
           disabled={input.createPending}
           onClick={() => input.onSubmit('draft')}
         >
           {t('adminFeed.saveDraft')}
-        </button>
-        <button
-          className="control-button primary-control"
+        </Button>
+        <Button
           type="button"
           disabled={input.createPending}
           onClick={() => input.onSubmit('published')}
         >
           {t('adminFeed.publishPost')}
-        </button>
+        </Button>
       </div>
-    </article>
+    </AdminOperationalSection>
   )
 }
 
@@ -580,13 +628,13 @@ function FeedAdminRow(input: {
   onArchive: () => void
 }) {
   return (
-    <article className="stacked-row">
-      <div className="stacked-row-head">
-        <div>
-          <strong>{input.post.title}</strong>
-          <p className="queue-subtitle">{input.post.body}</p>
+    <article className="tw:rounded-xl tw:border tw:border-border/80 tw:bg-background/65 tw:p-4 tw:shadow-xs">
+      <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:flex-row tw:lg:items-start tw:lg:justify-between">
+        <div className="tw:min-w-0">
+          <strong className="tw:block tw:text-sm tw:font-semibold tw:text-foreground">{input.post.title}</strong>
+          <p className="tw:mt-1 tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.post.body}</p>
         </div>
-        <div className="action-cluster">
+        <div className="tw:flex tw:flex-wrap tw:gap-2">
           <StatusPill tone={input.post.postType === 'challenge' ? 'accent' : 'neutral'}>
             {formatFeedPostTypeLabel(input.post.postType, input.t)}
           </StatusPill>
@@ -597,7 +645,7 @@ function FeedAdminRow(input: {
         </div>
       </div>
 
-      <div className="key-grid">
+      <AdminOperationalKeyGrid className="tw:mt-3">
         <KeyValue
           label={input.t('adminFeed.scope')}
           value={input.t('adminFeed.scopeValue', {
@@ -620,28 +668,28 @@ function FeedAdminRow(input: {
           }
         />
         <KeyValue label={input.t('adminFeed.link')} value={input.post.targetRoute ?? input.post.linkUrl ?? input.t('storeFeed.noLink')} />
-      </div>
+      </AdminOperationalKeyGrid>
 
-      <div className="action-cluster">
+      <div className="tw:mt-3 tw:flex tw:flex-wrap tw:justify-end tw:gap-2">
         {input.post.publishStatus === 'draft' ? (
-          <button className="control-button" type="button" onClick={input.onPublish}>
+          <Button variant="secondary" type="button" onClick={input.onPublish}>
             {input.t('adminFeed.publish')}
-          </button>
+          </Button>
         ) : null}
         {input.post.publishStatus !== 'archived' && !input.post.isPinned ? (
-          <button className="control-button" type="button" onClick={input.onPin}>
+          <Button variant="secondary" type="button" onClick={input.onPin}>
             {input.t('adminFeed.pin')}
-          </button>
+          </Button>
         ) : null}
         {input.post.publishStatus !== 'archived' && input.post.isPinned ? (
-          <button className="control-button" type="button" onClick={input.onUnpin}>
+          <Button variant="secondary" type="button" onClick={input.onUnpin}>
             {input.t('adminFeed.unpin')}
-          </button>
+          </Button>
         ) : null}
         {input.post.publishStatus !== 'archived' ? (
-          <button className="control-button" type="button" onClick={input.onArchive}>
+          <Button variant="outline" type="button" onClick={input.onArchive}>
             {input.t('adminFeed.archive')}
-          </button>
+          </Button>
         ) : null}
       </div>
     </article>

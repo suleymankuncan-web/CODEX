@@ -99,7 +99,7 @@ test('region manager feed composer defaults to own region and hides company scop
   await page.goto('/admin/feed')
 
   await expect(page.getByRole('heading', { name: 'Feed postu oluştur' })).toBeVisible()
-  const composer = page.locator('article.panel').filter({
+  const composer = page.locator('.admin-feed-composer').filter({
     has: page.getByRole('heading', { name: 'Feed postu oluştur' }),
   })
   const scopeSelect = composer.locator('label').filter({ hasText: 'Kapsam' }).locator('select').first()
