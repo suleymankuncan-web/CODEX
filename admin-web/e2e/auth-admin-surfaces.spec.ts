@@ -328,6 +328,7 @@ async function routeAuthAdminApi(page: Page) {
 
   await page.route('**/api/auth/users?**', async (route) => {
     const url = new URL(route.request().url())
+    expectAuthListLimitWithinContract(url)
     const query = url.searchParams.get('q')?.trim().toLocaleLowerCase('tr-TR') ?? ''
     const items = query
       ? authUsersFixture.items.filter((user) =>
@@ -344,10 +345,12 @@ async function routeAuthAdminApi(page: Page) {
   })
 
   await page.route('**/api/auth/role-assignments?**', async (route) => {
+    expectAuthListLimitWithinContract(new URL(route.request().url()))
     await route.fulfill({ json: authRoleAssignmentsFixture })
   })
 
   await page.route('**/api/auth/action-store-assignments?**', async (route) => {
+    expectAuthListLimitWithinContract(new URL(route.request().url()))
     await route.fulfill({ json: authActionStoreAssignmentsFixture })
   })
 
@@ -362,6 +365,12 @@ async function routeAuthAdminApi(page: Page) {
   await page.route('**/api/auth/permissions', async (route) => {
     await route.fulfill({ json: authPermissionsFixture })
   })
+}
+
+function expectAuthListLimitWithinContract(url: URL) {
+  const limit = Number(url.searchParams.get('limit') ?? 100)
+  expect(limit).toBeGreaterThanOrEqual(1)
+  expect(limit).toBeLessThanOrEqual(200)
 }
 
 const authSessionFixture = {
@@ -435,12 +444,12 @@ const authUsersFixture = {
 
 const authRoleAssignmentsFixture = {
   items: [],
-  meta: { count: 0, total: 0, limit: 250, offset: 0 },
+  meta: { count: 0, total: 0, limit: 200, offset: 0 },
 }
 
 const authActionStoreAssignmentsFixture = {
   items: [],
-  meta: { count: 0, total: 0, limit: 250, offset: 0 },
+  meta: { count: 0, total: 0, limit: 200, offset: 0 },
 }
 
 const authAuditFixture = {

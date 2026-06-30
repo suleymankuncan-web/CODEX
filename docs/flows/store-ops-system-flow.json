@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T10:59:01.401Z",
+  "generatedAt": "2026-06-30T13:15:24.512Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -966,7 +966,7 @@
       "exportedFunction": "getAuthLookups",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 61
+        "line": 71
       }
     },
     {
@@ -981,7 +981,7 @@
       "exportedFunction": "searchAuthUsers",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 70
+        "line": 80
       }
     },
     {
@@ -996,7 +996,7 @@
       "exportedFunction": "searchAuthStores",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 79
+        "line": 89
       }
     },
     {
@@ -1011,7 +1011,7 @@
       "exportedFunction": "getAuthSession",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 83
+        "line": 93
       }
     },
     {
@@ -1026,7 +1026,7 @@
       "exportedFunction": "getAuthBootstrap",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 87
+        "line": 97
       }
     },
     {
@@ -1041,7 +1041,7 @@
       "exportedFunction": "getUserAccounts",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 114
+        "line": 124
       }
     },
     {
@@ -1056,7 +1056,7 @@
       "exportedFunction": "getRoleAssignments",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 146
+        "line": 156
       }
     },
     {
@@ -1071,7 +1071,7 @@
       "exportedFunction": "getActionStoreAssignments",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 173
+        "line": 183
       }
     },
     {
@@ -1086,7 +1086,7 @@
       "exportedFunction": "getRoles",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 177
+        "line": 187
       }
     },
     {
@@ -1101,7 +1101,7 @@
       "exportedFunction": "getPermissions",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 181
+        "line": 191
       }
     },
     {
@@ -1116,7 +1116,7 @@
       "exportedFunction": "deactivateRoleAssignment",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 185
+        "line": 195
       }
     },
     {
@@ -1131,7 +1131,7 @@
       "exportedFunction": "deactivateActionStoreAssignment",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 192
+        "line": 202
       }
     },
     {
@@ -1146,7 +1146,7 @@
       "exportedFunction": "updateUserAccount",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 199
+        "line": 209
       }
     },
     {
@@ -1161,7 +1161,7 @@
       "exportedFunction": "deactivateUserAccount",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 212
+        "line": 222
       }
     },
     {
@@ -1176,7 +1176,7 @@
       "exportedFunction": "reactivateUserAccount",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 220
+        "line": 230
       }
     },
     {
@@ -1191,7 +1191,7 @@
       "exportedFunction": "createUserAccount",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 227
+        "line": 237
       }
     },
     {
@@ -1206,7 +1206,7 @@
       "exportedFunction": "createPilotUserBinding",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 234
+        "line": 244
       }
     },
     {
@@ -1221,7 +1221,7 @@
       "exportedFunction": "createRoleAssignment",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 243
+        "line": 253
       }
     },
     {
@@ -1236,7 +1236,7 @@
       "exportedFunction": "createActionStoreAssignment",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 250
+        "line": 260
       }
     },
     {
@@ -1251,7 +1251,7 @@
       "exportedFunction": "grantRolePermission",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 260
+        "line": 270
       }
     },
     {
@@ -1266,7 +1266,7 @@
       "exportedFunction": "revokeRolePermission",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 273
+        "line": 283
       }
     },
     {
@@ -1281,7 +1281,7 @@
       "exportedFunction": "getUserAudit",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 283
+        "line": 293
       }
     },
     {
@@ -1296,7 +1296,7 @@
       "exportedFunction": "getRoleAssignmentAudit",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 289
+        "line": 299
       }
     },
     {
@@ -1311,7 +1311,7 @@
       "exportedFunction": "getActionStoreAssignmentAudit",
       "source": {
         "file": "admin-web/src/features/auth/api.ts",
-        "line": 295
+        "line": 305
       }
     },
     {
