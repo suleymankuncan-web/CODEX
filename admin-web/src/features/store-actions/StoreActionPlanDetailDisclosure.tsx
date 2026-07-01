@@ -7,7 +7,7 @@ import {
   StoreInfoGrid,
   StoreStackedRow,
 } from '../../pages/store-surface-primitives'
-import { formatDateTime, getErrorMessage } from '../../lib/format'
+import { formatDateTime } from '../../lib/format'
 import type { AppLocale } from '../../lib/i18n'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
 import type { TranslateFunction } from '../localization/dictionary'
@@ -99,7 +99,7 @@ function StoreActionPlanDetailBody(input: {
             {input.isFetching ? input.t('storeTasks.retryingAction') : input.t('storeTasks.retryAction')}
           </Button>
         </div>
-        <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">{getErrorMessage(input.error)}</p>
+        <p className="tw:mt-2 tw:text-sm tw:text-muted-foreground">Detay şu anda alınamıyor.</p>
       </StoreStackedRow>
     )
   }
@@ -115,16 +115,9 @@ function StoreActionPlanDetailBody(input: {
         </div>
         <StoreInfoGrid
           items={[
-            { label: input.t('storeTasks.actionPlansOwner'), value: plan.ownerUserId },
-            { label: input.t('storeTasks.actionPlansCreatedBy'), value: plan.createdByUserId },
+            { label: input.t('storeTasks.actionPlansOwner'), value: formatOptionalValue(plan.ownerDisplayName, input.t) },
             { label: input.t('storeTasks.actionPlansCreatedAt'), value: formatDateTime(plan.createdAt, input.locale) },
             { label: input.t('storeTasks.actionPlansUpdatedAt'), value: formatDateTime(plan.updatedAt, input.locale) },
-            { label: input.t('storeTasks.actionPlansSourceId'), value: plan.sourceId },
-            {
-              label: input.t('storeTasks.actionPlansSourceSnapshot'),
-              value: formatOptionalValue(plan.sourceSnapshotRunId, input.t),
-            },
-            { label: input.t('storeTasks.actionPlansSourceKpi'), value: formatOptionalValue(plan.sourceKpiId, input.t) },
             {
               label: input.t('storeTasks.actionPlansClosedAt'),
               value: formatOptionalDateTime(plan.closedAt, input.locale, input.t),

@@ -8,7 +8,7 @@ export const ACTIVE_STORE_ACTION_PLAN_STATUSES = ['open', 'in_progress', 'blocke
 export const RESULT_STORE_ACTION_PLAN_STATUSES = ['closed', 'cancelled'] as const satisfies readonly StoreActionPlanStatus[]
 
 export type StoreTasksPersona = 'storeManager' | 'regionManager' | 'readOnly'
-export type StoreTasksRegionMode = 'results' | 'openFollowups'
+export type StoreTasksRegionMode = 'results'
 export type StoreTaskSourceGroup = 'checklist' | 'projection'
 export type StoreTaskUiStatus = 'open' | 'in_progress' | 'blocked' | 'resolved' | 'cancelled'
 export type StoreTaskFilter =
@@ -60,7 +60,7 @@ export function getCurrentMonthKey(now = new Date()) {
 
 export function formatPeriodLabel(periodKey: string, locale: AppLocale) {
   const date = parsePeriodKey(periodKey)
-  if (!date) return 'Guncel donem'
+  if (!date) return 'Güncel dönem'
   return new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(date)
 }
 
@@ -238,8 +238,7 @@ export function filterStoreTaskRows(input: {
   return input.rows
     .filter((row) => {
       if (input.persona === 'regionManager') {
-        if (input.regionMode === 'results' && !isResultRow(row)) return false
-        if (input.regionMode === 'openFollowups' && isResultRow(row)) return false
+        if (!isResultRow(row)) return false
       }
 
       if (
@@ -302,8 +301,29 @@ function mapPlanUiStatus(status: StoreActionPlanStatus): StoreTaskUiStatus {
 }
 
 function mapWorkflowUiStatus(item: WorkflowInboxItem): StoreTaskUiStatus {
+  if (item.sourceType === 'store_action_plan') {
+    return mapWorkflowActionPlanUiStatus(item.workflowStatus)
+  }
+
   if (item.inboxStatus === 'completed' || item.inboxStatus === 'informational') return 'resolved'
   return item.urgency === 'high' ? 'open' : 'in_progress'
+}
+
+function mapWorkflowActionPlanUiStatus(status: string): StoreTaskUiStatus {
+  switch (status) {
+    case 'closed':
+      return 'resolved'
+    case 'cancelled':
+      return 'cancelled'
+    case 'in_progress':
+      return 'in_progress'
+    case 'blocked':
+      return 'blocked'
+    case 'open':
+      return 'open'
+    default:
+      return 'in_progress'
+  }
 }
 
 function isResultRow(row: StoreTaskCommandRow) {
@@ -402,9 +422,18 @@ function buildPlanNextStep(status: StoreActionPlanStatus) {
 
 function formatDurationLabel(start: string | null, end: string | null, status: StoreActionPlanStatus | StoreTaskUiStatus) {
   if (!start) return 'Süre yok'
-  const days = Math.max(0, Math.ceil((getDateTime(end ?? new Date().toISOString()) - getDateTime(start)) / 86_400_000))
+  const days = elapsedCalendarDays(start, end ?? new Date().toISOString())
   const suffix = status === 'closed' || status === 'resolved' || status === 'cancelled' ? 'sürdü' : 'açık'
   return days === 0 ? `Bugün ${suffix}` : `${days} gün ${suffix}`
+}
+
+function elapsedCalendarDays(startIso: string, endIso: string) {
+  const start = new Date(startIso)
+  const end = new Date(endIso)
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 0
+  const startDay = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
+  const endDay = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate())
+  return Math.max(0, Math.floor((endDay - startDay) / 86_400_000))
 }
 
 function formatDateLabel(input: string | null | undefined, locale: AppLocale) {
