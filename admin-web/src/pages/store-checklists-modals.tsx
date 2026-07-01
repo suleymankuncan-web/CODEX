@@ -29,8 +29,14 @@ import {
   getScoreQuickOptions,
   getStaticCopy,
   groupChecklistTemplateItems,
-  parseChecklistScoreInput,
 } from './store-checklists-logic'
+import {
+  getChecklistScoreBounds,
+  getChecklistScoreOptions,
+  isChecklistLowScoreNoteMissing,
+  isChecklistLowScoreSelection,
+  parseChecklistScoreInput,
+} from './store-checklists-score-policy'
 import { ChecklistBadge, ChecklistEmptyBlock } from './store-checklists-atoms'
 import { ChecklistResultModal } from './store-checklists-result-modal'
 
@@ -165,8 +171,19 @@ function ChecklistVisitModal(input: {
   const currentScore =
     scoredRatioCount > 0 ? Math.round(scoredRatioTotal / scoredRatioCount) : 0
   const missingResponseCount = Math.max(input.session.template.items.length - answeredCount, 0)
+  const missingRequiredLowScoreNoteCount = input.session.template.items.filter((item) =>
+    isChecklistLowScoreNoteMissing({
+      commentText: input.comments[item.templateItemId],
+      item,
+      score: input.scores[item.templateItemId],
+    }),
+  ).length
   const canComplete =
-    Boolean(input.active) && !input.isCompleting && hasItems && missingResponseCount === 0
+    Boolean(input.active) &&
+    !input.isCompleting &&
+    hasItems &&
+    missingResponseCount === 0 &&
+    missingRequiredLowScoreNoteCount === 0
   const sessionStatus = input.active
     ? formatChecklistStatus(input.t, input.active.status)
     : input.t('storeChecklists.newVisit')
@@ -315,6 +332,14 @@ function ChecklistVisitModal(input: {
                     t={input.t}
                     onScoreChange={input.onScoreChange}
                   />
+                  {isChecklistLowScoreSelection(
+                    activeEntry.item,
+                    input.scores[activeEntry.item.templateItemId],
+                  ) ? (
+                    <p className="store-checklist-session-low-score-warning">
+                      {input.t('storeChecklists.lowScoreTaskWarning')}
+                    </p>
+                  ) : null}
 
                   <div className="store-checklist-session-note-field">
                     <label htmlFor={`checklist-session-note-${activeEntry.item.templateItemId}`}>
@@ -370,6 +395,12 @@ function ChecklistVisitModal(input: {
                 <span>{input.t('storeChecklists.startPending')}</span>
               ) : missingResponseCount > 0 ? (
                 <span>{input.t('storeChecklists.missingResponsesHint', { count: missingResponseCount })}</span>
+              ) : missingRequiredLowScoreNoteCount > 0 ? (
+                <span>
+                  {input.t('storeChecklists.missingLowScoreNotesHint', {
+                    count: missingRequiredLowScoreNoteCount,
+                  })}
+                </span>
               ) : input.isSaving ? (
                 <span>{input.t('storeChecklists.autosaving')}</span>
               ) : (
@@ -411,7 +442,7 @@ function ChecklistSessionAnswerControl(input: {
   t: TranslateFunction
 }) {
   const scoreValue = Number.isFinite(input.score) ? String(input.score) : undefined
-  const scoreOptions = getChecklistScoreScaleOptions(input.item.maxScore)
+  const scoreOptions = getChecklistScoreOptions(input.item)
   const choiceOptions = getChecklistChoiceOptions(input.locale, input.item)
 
   if (choiceOptions.length > 0) {
@@ -482,21 +513,39 @@ function ChecklistSessionAnswerControl(input: {
           ))}
         </ToggleGroup>
       ) : (
-        <Input
+        <ChecklistSessionScoreInput
           disabled={input.disabled}
-          max={input.item.maxScore}
-          min={0}
-          type="number"
-          value={input.score ?? ''}
-          onChange={(event) =>
-            input.onScoreChange(
-              input.item.templateItemId,
-              parseChecklistScoreInput(event.target.value, input.item.maxScore),
-            )
-          }
+          item={input.item}
+          score={input.score}
+          onScoreChange={input.onScoreChange}
         />
       )}
     </div>
+  )
+}
+
+function ChecklistSessionScoreInput(input: {
+  disabled: boolean
+  item: ChecklistTemplateItem
+  onScoreChange: (templateItemId: string, score: number | null) => void
+  score: number | undefined
+}) {
+  const bounds = getChecklistScoreBounds(input.item)
+
+  return (
+    <Input
+      disabled={input.disabled}
+      max={bounds.maxScore}
+      min={bounds.minScore}
+      type="number"
+      value={input.score ?? ''}
+      onChange={(event) =>
+        input.onScoreChange(
+          input.item.templateItemId,
+          parseChecklistScoreInput(event.target.value, input.item),
+        )
+      }
+    />
   )
 }
 
@@ -520,11 +569,6 @@ function getChecklistResponseTypeLabel(
     default:
       return getStaticCopy(locale, 'Skor', 'Score')
   }
-}
-
-function getChecklistScoreScaleOptions(maxScore: number) {
-  if (!Number.isInteger(maxScore) || maxScore < 1 || maxScore > 10) return []
-  return Array.from({ length: maxScore + 1 }, (_item, index) => index)
 }
 
 function getChecklistChoiceOptions(locale: AppLocale, item: ChecklistTemplateItem) {

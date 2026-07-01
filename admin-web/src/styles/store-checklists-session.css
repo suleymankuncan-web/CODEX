@@ -384,6 +384,17 @@
   outline-offset: 2px;
 }
 
+.store-checklist-session-low-score-warning {
+  margin: 0;
+  border: 1px solid rgba(245, 158, 11, 0.34);
+  border-radius: 0.86rem;
+  background: rgba(255, 247, 237, 0.82);
+  color: rgb(146 64 14);
+  padding: 0.62rem 0.78rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .store-checklist-session-note-field textarea {
   min-height: 5.8rem;
   resize: vertical;
