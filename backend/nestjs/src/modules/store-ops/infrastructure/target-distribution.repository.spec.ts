@@ -334,4 +334,147 @@ describe("TargetDistributionRepository", () => {
       finalAllocationCount: 2,
     });
   });
+
+  it("persists adjusted approval evidence on the target request row", async () => {
+    const originalAllocations = [
+      {
+        employeeId: "00000000-0000-0000-0000-000000000501",
+        assigneeLabel: "Ada Kaya",
+        targetValue: 120000,
+      },
+      {
+        employeeId: "00000000-0000-0000-0000-000000000502",
+        assigneeLabel: "Ece Demir",
+        targetValue: 55000,
+      },
+    ];
+    const approvedAllocations = [
+      {
+        employeeId: "00000000-0000-0000-0000-000000000501",
+        assigneeLabel: "Ada Kaya",
+        targetValue: 100000,
+      },
+      {
+        employeeId: "00000000-0000-0000-0000-000000000502",
+        assigneeLabel: "Ece Demir",
+        targetValue: 75000,
+      },
+    ];
+    const requestRow = {
+      target_distribution_request_id: "00000000-0000-0000-0000-000000000701",
+      company_id: "00000000-0000-0000-0000-000000000001",
+      region_id: "00000000-0000-0000-0000-000000000010",
+      store_id: "00000000-0000-0000-0000-000000000201",
+      request_month: "2026-03-01",
+      target_label: "Aylik personel hedef dagitimi",
+      total_target_value: "175000",
+      allocation_count: 2,
+      request_status: "approved",
+      request_reason: null,
+      allocation_json: approvedAllocations,
+      submitted_by_user_id: "store-manager-user",
+      approved_by_user_id: "region-manager-user",
+      approved_at: "2026-03-02T08:00:00.000Z",
+      approval_note: "Duzenlendi",
+      approval_evidence_json: {
+        approvalMode: "adjusted",
+        originalTotalTargetValue: 175000,
+        approvedTotalTargetValue: 175000,
+        originalAllocations,
+        approvedAllocations,
+      },
+      created_at: "2026-03-01T08:00:00.000Z",
+      updated_at: "2026-03-02T08:00:00.000Z",
+      original_allocation_json: originalAllocations,
+      original_total_target_value: "175000",
+    };
+    const query = createRepositoryQueryMock()
+      .mockResolvedValueOnce({ rows: [requestRow] })
+      .mockResolvedValue({ rows: [] });
+    const withTransaction = jest.fn(async (callback) => callback({ query }));
+    const repository = new TargetDistributionRepository({
+      withTransaction,
+    } as never);
+
+    const approvedRequest = await repository.approveRequest({
+      requestId: requestRow.target_distribution_request_id,
+      approverUserId: "region-manager-user",
+      approvalNote: "Duzenlendi",
+      approvedTotalTargetValue: 175000,
+      approvedAllocations,
+    });
+
+    const approvalUpdate = getExecutedQuery(query, 0);
+    expect(approvalUpdate.sql).toContain("approval_evidence_json");
+    expect(approvedRequest).toMatchObject({
+      approvalMode: "adjusted",
+      originalTotalTargetValue: 175000,
+      approvedTotalTargetValue: 175000,
+      originalAllocations,
+      approvedAllocations,
+    });
+  });
+
+  it("maps persisted approval evidence when listing target requests", async () => {
+    const originalAllocations = [
+      {
+        employeeId: "00000000-0000-0000-0000-000000000501",
+        assigneeLabel: "Ada Kaya",
+        targetValue: 120000,
+      },
+    ];
+    const approvedAllocations = [
+      {
+        employeeId: "00000000-0000-0000-0000-000000000501",
+        assigneeLabel: "Ada Kaya",
+        targetValue: 100000,
+      },
+    ];
+    const query = createRepositoryQueryMock()
+      .mockResolvedValueOnce({ rows: [{ total_count: "1" }] })
+      .mockResolvedValueOnce({
+        rows: [{
+        target_distribution_request_id: "00000000-0000-0000-0000-000000000701",
+        company_id: "00000000-0000-0000-0000-000000000001",
+        region_id: "00000000-0000-0000-0000-000000000010",
+        store_id: "00000000-0000-0000-0000-000000000201",
+        store_name: "Marmara Park",
+        request_month: "2026-03-01",
+        target_label: "Mart hedefi",
+        total_target_value: "100000",
+        allocation_count: 1,
+        request_status: "approved",
+        request_reason: null,
+        allocation_json: approvedAllocations,
+        approval_evidence_json: {
+          approvalMode: "adjusted",
+          originalTotalTargetValue: 120000,
+          approvedTotalTargetValue: 100000,
+          originalAllocations,
+          approvedAllocations,
+        },
+        submitted_by_user_id: "store-manager-user",
+        approved_by_user_id: "region-manager-user",
+        approved_at: "2026-03-02T08:00:00.000Z",
+        approval_note: "Duzenlendi",
+        created_at: "2026-03-01T08:00:00.000Z",
+        updated_at: "2026-03-02T08:00:00.000Z",
+      }],
+      });
+    const repository = new TargetDistributionRepository({ query } as never);
+
+    const page = await repository.listRequests({
+      companyIds: ["00000000-0000-0000-0000-000000000001"],
+      regionIds: [],
+      storeIds: [],
+    });
+
+    expect(page.items[0]).toMatchObject({
+      approvalMode: "adjusted",
+      originalTotalTargetValue: 120000,
+      approvedTotalTargetValue: 100000,
+      originalAllocations,
+      approvedAllocations,
+    });
+  });
 });

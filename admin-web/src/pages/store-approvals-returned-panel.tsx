@@ -91,7 +91,6 @@ export function ReturnedRequestsPanel(input: {
                   label={input.t('storeApprovals.updatedAt')}
                   value={formatDateTime(item.updatedAt, input.locale)}
                 />
-                <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
               </div>
               <div className="store-approvals-ledger-actions">
                 <Button
@@ -133,7 +132,6 @@ export function ReturnedRequestsPanel(input: {
                   label={input.t('storeApprovals.reviewNote')}
                   value={item.reviewNote ?? input.t('storeApprovals.noNote')}
                 />
-                <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
               </div>
               <div className="store-approvals-ledger-actions">
                 <Button

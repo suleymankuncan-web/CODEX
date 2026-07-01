@@ -7842,6 +7842,11 @@
                 "approvedByUserId",
                 "approvedAt",
                 "approvalNote",
+                "approvalMode",
+                "originalTotalTargetValue",
+                "approvedTotalTargetValue",
+                "originalAllocations",
+                "approvedAllocations",
                 "createdAt",
                 "updatedAt"
               ],
@@ -7920,6 +7925,72 @@
                 "approvalNote": {
                   "type": "string",
                   "nullable": true
+                },
+                "approvalMode": {
+                  "type": "string",
+                  "enum": [
+                    "direct",
+                    "adjusted"
+                  ],
+                  "nullable": true
+                },
+                "originalTotalTargetValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "approvedTotalTargetValue": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "originalAllocations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "employeeId",
+                      "assigneeLabel",
+                      "targetValue"
+                    ],
+                    "properties": {
+                      "employeeId": {
+                        "type": "string"
+                      },
+                      "assigneeLabel": {
+                        "type": "string"
+                      },
+                      "targetValue": {
+                        "type": "number"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "approvedAllocations": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "employeeId",
+                      "assigneeLabel",
+                      "targetValue"
+                    ],
+                    "properties": {
+                      "employeeId": {
+                        "type": "string"
+                      },
+                      "assigneeLabel": {
+                        "type": "string"
+                      },
+                      "targetValue": {
+                        "type": "number"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 },
                 "createdAt": {
                   "type": "string"

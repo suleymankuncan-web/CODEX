@@ -83,6 +83,7 @@ export const requestCenterCopy = {
     pendingHrStatus: 'HR onayı bekliyor',
     rejectedStatus: 'İade edildi',
     approvedStatus: 'Onaylandı',
+    adjustedApprovedStatus: 'Düzenlenerek onaylandı',
     unknownStatus: 'Durum okunuyor',
     targetSubtitle: 'Toplam hedef ve personel dağılımı',
     sellerSubtitle: 'Yeni personel kod kaydı',
@@ -145,6 +146,7 @@ export const requestCenterCopy = {
     pendingHrStatus: 'Waiting for HR approval',
     rejectedStatus: 'Returned',
     approvedStatus: 'Approved',
+    adjustedApprovedStatus: 'Approved with edits',
     unknownStatus: 'Reading status',
     targetSubtitle: 'Total target and personnel distribution',
     sellerSubtitle: 'New personnel code record',
@@ -243,7 +245,10 @@ function mapTargetRequestToRow(input: {
   request: TargetDistributionRequest
 }): RequestCenterRow {
   const isApproved = input.request.status === 'approved'
-  const status = resolveStatus(input.request.status, input.copy)
+  const status =
+    isApproved && input.request.approvalMode === 'adjusted'
+      ? { label: input.copy.adjustedApprovedStatus, tone: 'calm' as StoreSurfaceTone }
+      : resolveStatus(input.request.status, input.copy)
 
   return {
     id: `target:${input.request.requestId}`,

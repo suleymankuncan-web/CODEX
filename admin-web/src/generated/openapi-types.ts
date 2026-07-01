@@ -2640,6 +2640,21 @@ export type components = {
           "approvedByUserId": string | null
           "approvedAt": string | null
           "approvalNote": string | null
+          "approvalMode": "direct" | "adjusted" | null
+          "originalTotalTargetValue": number | null
+          "approvedTotalTargetValue": number | null
+          "originalAllocations": Array<{
+              "employeeId": string
+              "assigneeLabel": string
+              "targetValue": number
+              "note"?: string
+            }>
+          "approvedAllocations": Array<{
+              "employeeId": string
+              "assigneeLabel": string
+              "targetValue": number
+              "note"?: string
+            }>
           "createdAt": string
           "updatedAt": string
         }>

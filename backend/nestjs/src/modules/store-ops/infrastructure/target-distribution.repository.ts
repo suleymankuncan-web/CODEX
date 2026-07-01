@@ -24,6 +24,7 @@ type TargetDistributionRow = {
   total_count?: string | number;
   original_allocation_json?: unknown;
   original_total_target_value?: string | null;
+  approval_evidence_json?: unknown;
 };
 
 type TargetDistributionAllocation = {
@@ -31,6 +32,14 @@ type TargetDistributionAllocation = {
   assigneeLabel: string;
   targetValue: number;
   note?: string;
+};
+
+type TargetDistributionApprovalEvidence = {
+  approvalMode: "direct" | "adjusted";
+  originalTotalTargetValue: number;
+  approvedTotalTargetValue: number;
+  originalAllocations: TargetDistributionAllocation[];
+  approvedAllocations: TargetDistributionAllocation[];
 };
 
 type TargetCoverageRow = {
@@ -98,6 +107,47 @@ function parseTargetDistributionAllocations(
       return parsed;
     })
     .filter((item): item is TargetDistributionAllocation => item !== null);
+}
+
+function parseApprovalEvidence(
+  value: unknown,
+): TargetDistributionApprovalEvidence | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const evidence = value as Record<string, unknown>;
+  const approvalMode = evidence.approvalMode;
+  const originalTotalTargetValue = Number(evidence.originalTotalTargetValue);
+  const approvedTotalTargetValue = Number(evidence.approvedTotalTargetValue);
+  const originalAllocations = parseTargetDistributionAllocations(
+    evidence.originalAllocations,
+  );
+  const approvedAllocations = parseTargetDistributionAllocations(
+    evidence.approvedAllocations,
+  );
+
+  if (
+    approvalMode !== "direct" &&
+    approvalMode !== "adjusted"
+  ) {
+    return null;
+  }
+
+  if (
+    !Number.isFinite(originalTotalTargetValue) ||
+    !Number.isFinite(approvedTotalTargetValue)
+  ) {
+    return null;
+  }
+
+  return {
+    approvalMode,
+    originalTotalTargetValue,
+    approvedTotalTargetValue,
+    originalAllocations,
+    approvedAllocations,
+  };
 }
 
 @Injectable()
@@ -334,6 +384,7 @@ export class TargetDistributionRepository {
           tdr.approved_by_user_id,
           tdr.approved_at,
           tdr.approval_note,
+          tdr.approval_evidence_json,
           tdr.created_at,
           tdr.updated_at
         FROM ops.target_distribution_request tdr
@@ -510,6 +561,18 @@ export class TargetDistributionRepository {
               total_target_value = COALESCE($4::numeric, tdr.total_target_value),
               allocation_count = COALESCE($5::int, tdr.allocation_count),
               allocation_json = COALESCE($6::jsonb, tdr.allocation_json),
+              approval_evidence_json = jsonb_build_object(
+                'approvalMode',
+                CASE WHEN $6::jsonb IS NULL THEN 'direct' ELSE 'adjusted' END,
+                'originalTotalTargetValue',
+                COALESCE(existing.original_total_target_value, tdr.total_target_value),
+                'approvedTotalTargetValue',
+                COALESCE($4::numeric, tdr.total_target_value),
+                'originalAllocations',
+                existing.original_allocation_json,
+                'approvedAllocations',
+                COALESCE($6::jsonb, tdr.allocation_json)
+              ),
               updated_at = NOW()
             FROM existing
             WHERE tdr.target_distribution_request_id = $1::uuid
@@ -529,6 +592,7 @@ export class TargetDistributionRepository {
               tdr.approved_by_user_id,
               tdr.approved_at,
               tdr.approval_note,
+              tdr.approval_evidence_json,
               tdr.created_at,
               tdr.updated_at,
               existing.original_allocation_json,
@@ -664,6 +728,8 @@ export class TargetDistributionRepository {
   }
 
   private mapRequest(row: TargetDistributionRow) {
+    const approvalEvidence = parseApprovalEvidence(row.approval_evidence_json);
+
     return {
       requestId: row.target_distribution_request_id,
       companyId: row.company_id,
@@ -681,6 +747,11 @@ export class TargetDistributionRepository {
       approvedByUserId: row.approved_by_user_id,
       approvedAt: row.approved_at,
       approvalNote: row.approval_note,
+      approvalMode: approvalEvidence?.approvalMode ?? null,
+      originalTotalTargetValue: approvalEvidence?.originalTotalTargetValue ?? null,
+      approvedTotalTargetValue: approvalEvidence?.approvedTotalTargetValue ?? null,
+      originalAllocations: approvalEvidence?.originalAllocations ?? [],
+      approvedAllocations: approvalEvidence?.approvedAllocations ?? [],
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };
