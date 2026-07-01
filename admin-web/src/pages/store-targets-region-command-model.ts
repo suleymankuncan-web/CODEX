@@ -220,9 +220,10 @@ function createRegionTargetRow(input: {
   storeName: string
 }): RegionTargetRow {
   const request = input.request
+  const approvedAllocations = request?.approvedAllocations ?? []
   const allocations = request
-    ? request.approvedAllocations.length > 0
-      ? request.approvedAllocations
+    ? approvedAllocations.length > 0
+      ? approvedAllocations
       : request.allocations
     : createAllocationsFromCoverage(input.coverageRows)
   const storeTarget = request
