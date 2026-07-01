@@ -21,7 +21,7 @@ import {
   type MobileChecklistTodayResponse,
 } from '../features/checklists/api'
 import { useLocalization } from '../features/localization/useLocalization'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   buildChecklistSearch,
@@ -347,7 +347,10 @@ function useStoreChecklistsPageContent(input: {
   const isError =
     (canUseAcknowledgements && checklistsQuery.isError) ||
     (canManageVisits && mobileTodayQuery.isError)
-  const errorMessage = getErrorMessage(checklistsQuery.error ?? mobileTodayQuery.error)
+  const errorMessage = getUserFacingErrorMessage(
+    checklistsQuery.error ?? mobileTodayQuery.error,
+    t('storeChecklists.errorCopy'),
+  )
   const isRetrying =
     (canUseAcknowledgements && checklistsQuery.isFetching) ||
     (canManageVisits && mobileTodayQuery.isFetching)

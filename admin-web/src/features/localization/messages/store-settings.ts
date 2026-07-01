@@ -13,19 +13,19 @@ export const storeSettingsTr = {
   'storeHome.settings.availableLanguages': 'Kullanılabilir diller',
   'storeHome.settings.languagePreferenceCopy':
     'Mağaza ekranlarındaki metinler seçilen dile göre güncellenir.',
-  'storeHome.settings.storageLabel': 'Kayıt yeri',
-  'storeHome.settings.storageValue': 'Bu tarayıcı',
-  'storeHome.settings.scopeLabel': 'Etkilediği alan',
-  'storeHome.settings.scopeValue': 'Uygulama metinleri',
+  'storeHome.settings.storageLabel': 'Tercih alanı',
+  'storeHome.settings.storageValue': 'Dil ve görünüm',
+  'storeHome.settings.scopeLabel': 'Uygulandığı yer',
+  'storeHome.settings.scopeValue': 'Bu cihazdaki mağaza ekranları',
   'storeHome.settings.profileStatusTitle': 'Profil tercihleri',
   'storeHome.settings.profileStatusCopy':
-    'Bu yüzey şu anda yalnızca dil tercihini yönetir; kayıtlı profil ayarı geldiğinde aynı alanda gösterilir.',
-  'storeHome.settings.profileEmptyTitle': 'Kayıtlı profil tercihi yok',
+    'Profil ve bildirim tercihleri hazırlandığında burada yönetilecek.',
+  'storeHome.settings.profileEmptyTitle': 'Profil bilgileri hazırlanıyor',
   'storeHome.settings.profileEmptyCopy':
-    'Bildirim, tema veya profil alanı için gerçek bir tercih modeli bağlı değil.',
-  'storeHome.settings.preferenceModelTitle': 'Tercih modeli',
+    'Bildirim ve görünüm tercihleri hazır olduğunda burada görünecek.',
+  'storeHome.settings.preferenceModelTitle': 'Bildirim tercihleri',
   'storeHome.settings.preferenceModelCopy':
-    'Bağlı gerçek ayar olmadan yeni kontrol gösterilmez.',
+    'Ek profil ayarları hazırlandığında burada açılacak.',
   'storeHome.settings.boundaryAria': 'Ayarlar çalışma sınırı',
 } as const
 
@@ -44,18 +44,18 @@ export const storeSettingsEn: Record<keyof typeof storeSettingsTr, string> = {
   'storeHome.settings.availableLanguages': 'Available languages',
   'storeHome.settings.languagePreferenceCopy':
     'Store workspace copy updates according to the selected language.',
-  'storeHome.settings.storageLabel': 'Stored in',
-  'storeHome.settings.storageValue': 'This browser',
-  'storeHome.settings.scopeLabel': 'Affects',
-  'storeHome.settings.scopeValue': 'Application copy',
+  'storeHome.settings.storageLabel': 'Preference area',
+  'storeHome.settings.storageValue': 'Language and appearance',
+  'storeHome.settings.scopeLabel': 'Applies to',
+  'storeHome.settings.scopeValue': 'Store screens on this device',
   'storeHome.settings.profileStatusTitle': 'Profile preferences',
   'storeHome.settings.profileStatusCopy':
-    'This surface currently manages language only; saved profile settings appear here when a real model is connected.',
-  'storeHome.settings.profileEmptyTitle': 'No saved profile preference',
+    'Profile and notification preferences will be managed here when ready.',
+  'storeHome.settings.profileEmptyTitle': 'Profile details are being prepared',
   'storeHome.settings.profileEmptyCopy':
-    'No real preference model is connected for notifications, theme, or profile fields.',
-  'storeHome.settings.preferenceModelTitle': 'Preference model',
+    'Notification and appearance preferences will appear here when ready.',
+  'storeHome.settings.preferenceModelTitle': 'Notification preferences',
   'storeHome.settings.preferenceModelCopy':
-    'New controls are not shown without a connected real setting.',
+    'Additional profile settings will appear here when ready.',
   'storeHome.settings.boundaryAria': 'Settings operating boundary',
 }

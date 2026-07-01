@@ -27,7 +27,7 @@ import {
   updateFeedPost,
 } from '../features/feed/api'
 import type { FeedPost } from '../features/feed/contracts'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
 type FeedTone = 'plum' | 'cyan' | 'mint' | 'amber'
@@ -47,6 +47,8 @@ type MetricCard = {
 }
 
 const archiveUndoDelayMs = 4500
+const feedActionErrorCopy = 'Duyuru işlemi şu anda tamamlanamadı.'
+const feedLoadErrorCopy = 'Duyurular şu anda yüklenemedi.'
 
 export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null }) {
   const queryClient = useQueryClient()
@@ -118,7 +120,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
     {
       label: 'Bugün paylaşılan',
       value: String(todayPosts.length),
-      note: 'Son 24 saat',
+      note: 'Bugün',
       icon: Clock3,
       tone: 'cyan',
     },
@@ -144,7 +146,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
     onError: (error) => {
-      setErrorNotice(getErrorMessage(error))
+      setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy))
     },
   })
   const updateMutation = useMutation({
@@ -160,7 +162,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
     onError: (error) => {
-      setErrorNotice(getErrorMessage(error))
+      setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy))
     },
   })
   const pinMutation = useMutation({
@@ -172,7 +174,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       setNotice('Gönderi sabitlendi.')
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
-    onError: (error) => setErrorNotice(getErrorMessage(error)),
+    onError: (error) => setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy)),
   })
   const unpinMutation = useMutation({
     mutationFn: unpinFeedPost,
@@ -183,7 +185,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       setNotice('Gönderi sabitlemeden kaldırıldı.')
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
-    onError: (error) => setErrorNotice(getErrorMessage(error)),
+    onError: (error) => setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy)),
   })
   const archiveMutation = useMutation({
     mutationFn: archiveFeedPost,
@@ -197,7 +199,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
         next.delete(feedPostId)
         return next
       })
-      setErrorNotice(getErrorMessage(error))
+      setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy))
     },
   })
 
@@ -443,7 +445,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
           {feedQuery.isError ? (
             <FeedStateRow
               title="Duyurular açılamadı"
-              copy={getErrorMessage(feedQuery.error)}
+              copy={getUserFacingErrorMessage(feedQuery.error, feedLoadErrorCopy)}
               actionLabel="Tekrar dene"
               onAction={() => void feedQuery.refetch()}
             />

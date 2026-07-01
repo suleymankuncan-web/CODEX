@@ -58,7 +58,7 @@ import {
   type StoreSalesTargetIncentiveVoidCorrectionInput,
 } from '../features/incentives/api'
 import { useLocalization } from '../features/localization/useLocalization'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import {
   formatMoneyValue,
   formatRateValue,
@@ -113,6 +113,8 @@ export function RegionManagerIncentivesView(input: {
   locale: ReturnType<typeof useLocalization>['locale']
   selectedPeriod: string
   onPeriodChange: (period: string) => void
+  onRefresh: () => void
+  refreshing: boolean
   mutationState: {
     reviewMutation: UseMutationResult<
       StoreSalesTargetIncentiveReviewResponse,
@@ -228,7 +230,10 @@ export function RegionManagerIncentivesView(input: {
       {mutationError ? (
         <StoreErrorState
           title={t('storeIncentives.regionManagerMutationErrorTitle')}
-          description={getErrorMessage(mutationError)}
+          description={getUserFacingErrorMessage(
+            mutationError,
+            t('storeIncentives.regionManagerMutationErrorCopy'),
+          )}
         />
       ) : null}
 
@@ -296,7 +301,8 @@ export function RegionManagerIncentivesView(input: {
             className="tw:h-11 tw:rounded-xl tw:border-border/80 tw:bg-background/80 tw:px-3 tw:font-semibold tw:shadow-none tw:hover:bg-muted/60"
             type="button"
             variant="outline"
-            onClick={() => undefined}
+            disabled={input.refreshing}
+            onClick={input.onRefresh}
           >
             <RefreshCw data-icon="inline-start" />
             {t('storeIncentives.regionManagerRefresh')}

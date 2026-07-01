@@ -7,6 +7,7 @@ export const storeCompetitionsTr = {
   'storeCompetitions.loadingCopy':
     'Mağaza yarışma sıralamaları kontrol ediliyor.',
   'storeCompetitions.errorTitle': 'Yarışma yüzeyi açılamadı',
+  'storeCompetitions.errorCopy': 'Yarışma verisi şu anda alınamadı. Tekrar deneyin.',
   'storeCompetitions.retryAction': 'Tekrar dene',
   'storeCompetitions.retryingAction': 'Tekrar deneniyor...',
 
@@ -37,6 +38,7 @@ export const storeCompetitionsTr = {
   'storeCompetitions.standingLoadingTitle': 'Sıralama yükleniyor',
   'storeCompetitions.standingLoadingCopy': 'Yarışma detayı yükleniyor.',
   'storeCompetitions.standingErrorTitle': 'Sıralama açılamadı',
+  'storeCompetitions.standingErrorCopy': 'Yarışma sıralaması şu anda alınamadı. Tekrar deneyin.',
   'storeCompetitions.teams': 'Takımlar',
   'storeCompetitions.teamsNote':
     'Bu yarışma için görünür güncel takım sıralama satırları.',
@@ -66,6 +68,7 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.loadingCopy':
     'Store competition standings are being checked.',
   'storeCompetitions.errorTitle': 'Competition surface could not load',
+  'storeCompetitions.errorCopy': 'Competition data could not be loaded right now. Please try again.',
   'storeCompetitions.retryAction': 'Try again',
   'storeCompetitions.retryingAction': 'Retrying...',
 
@@ -96,6 +99,7 @@ export const storeCompetitionsEn: Record<keyof typeof storeCompetitionsTr, strin
   'storeCompetitions.standingLoadingTitle': 'Standing is loading',
   'storeCompetitions.standingLoadingCopy': 'Competition detail is loading.',
   'storeCompetitions.standingErrorTitle': 'Standing could not load',
+  'storeCompetitions.standingErrorCopy': 'Competition standing could not be loaded right now. Please try again.',
   'storeCompetitions.teams': 'Teams',
   'storeCompetitions.teamsNote':
     'Current team standing rows visible for this competition.',

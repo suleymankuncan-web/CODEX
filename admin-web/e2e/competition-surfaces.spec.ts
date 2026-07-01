@@ -62,10 +62,10 @@ test('admin competitions surface shows live scores and warnings', async ({ page 
     page.getByTestId(`admin-metric-${teamId}-2026-04-22`).getByText('92.45'),
   ).toBeVisible()
   await expect(
-    page.getByLabel('Görünen yarışma uyarıları').getByText('BM checklist eksik', { exact: true }),
+    page.getByLabel('Mağaza yarışma uyarıları').getByText('BM checklist eksik', { exact: true }),
   ).toBeVisible()
   await expect(
-    page.getByLabel('Görünen yarışma uyarıları').getByText('missing bm checklist', { exact: true }),
+    page.getByLabel('Mağaza yarışma uyarıları').getByText('missing bm checklist', { exact: true }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: /Yeniden hesapla QUALIFIER/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Finale al QUALIFIER/ })).toBeVisible()
@@ -682,12 +682,12 @@ test('region manager competitions surface is read-only and scoped to visible sto
 
   await expect(page.getByRole('heading', { name: /Bölge yarışma etapları/i })).toBeVisible()
   const regionReadSummary = page.getByLabel('Yönetici yarışma okuma özeti')
-  const regionContributionRows = page.getByLabel('Görünen yarışma mağaza katkıları')
+  const regionContributionRows = page.getByLabel('Mağaza yarışma katkıları')
   await expect(regionReadSummary.getByText('Okuma özeti')).toBeVisible()
   await expect(regionReadSummary.getByText('95% katkı kapsamı')).toBeVisible()
   await expect(regionContributionRows.getByText('Katkı sağlığı')).toBeVisible()
   await expect(regionContributionRows.getByText('Kısmi katkı').first()).toBeVisible()
-  await expect(page.getByText('Görünen katkılar')).toBeVisible()
+  await expect(page.getByText('Mağaza katkıları')).toBeVisible()
   await expect(page.getByText('Visible Region Store')).toBeVisible()
   await expect(page.getByText('93.50')).toBeVisible()
   await expect(page.getByText('Outside Region Store')).toHaveCount(0)

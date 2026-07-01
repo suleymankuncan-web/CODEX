@@ -3,6 +3,7 @@ export const storeChecklistsTr = {
   'storeChecklists.loadingCopy':
     'Atanmış mağaza checklistleri ve kabul sırası yükleniyor.',
   'storeChecklists.errorTitle': 'Checklist alanı açılamadı',
+  'storeChecklists.errorCopy': 'Checklist verisi şu anda alınamadı. Tekrar deneyin.',
   'storeChecklists.retryAction': 'Tekrar dene',
   'storeChecklists.retryingAction': 'Tekrar deneniyor...',
 
@@ -109,7 +110,9 @@ export const storeChecklistsTr = {
   'storeChecklists.closeSession': 'Kapat',
   'storeChecklists.cancelSession': 'Kapat ve taslakta bırak',
   'storeChecklists.sessionCloseConfirm': 'Kaydedilmemiş değişiklikler var. Pencere kapatılsın mı?',
-  'storeChecklists.cancelSessionConfirm': 'Checklist oturumu iptal edilsin mi?',
+  'storeChecklists.cancelSessionConfirm':
+    'Checklist taslakta kalacak. Ziyaret tamamlandı sayılmayacak.',
+  'storeChecklists.completeErrorCopy': 'Checklist şu anda tamamlanamadı. Tekrar deneyin.',
   'storeChecklists.completeSessionConfirm': 'Checklist kaydedilip tamamlanacak. Emin misiniz?',
   'storeChecklists.templateCode': 'Şablon kodu',
   'storeChecklists.templateVersion': 'Versiyon',
@@ -192,6 +195,7 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
   'storeChecklists.loadingCopy':
     'Assigned store checklists and acknowledgement records are loading.',
   'storeChecklists.errorTitle': 'Checklist area could not be opened',
+  'storeChecklists.errorCopy': 'Checklist data could not be loaded right now. Please try again.',
   'storeChecklists.retryAction': 'Try again',
   'storeChecklists.retryingAction': 'Retrying...',
 
@@ -298,7 +302,9 @@ export const storeChecklistsEn: Record<keyof typeof storeChecklistsTr, string> =
   'storeChecklists.closeSession': 'Close',
   'storeChecklists.cancelSession': 'Close and keep draft',
   'storeChecklists.sessionCloseConfirm': 'There are unsaved changes. Close this window?',
-  'storeChecklists.cancelSessionConfirm': 'Cancel this checklist session?',
+  'storeChecklists.cancelSessionConfirm':
+    'The checklist will remain as a draft. The visit will not be marked complete.',
+  'storeChecklists.completeErrorCopy': 'Checklist could not be completed right now. Please try again.',
   'storeChecklists.completeSessionConfirm': 'This checklist will be saved and completed. Are you sure?',
   'storeChecklists.templateCode': 'Template code',
   'storeChecklists.templateVersion': 'Version',

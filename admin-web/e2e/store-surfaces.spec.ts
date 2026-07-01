@@ -2143,14 +2143,21 @@ test('store sidebar transitions across visible manager pages without requiring m
   await expectHealthyStoreTransition(page)
 })
 
-test('store utility pages show honest preferences and stay mobile-safe', async ({ page }) => {
+test('store settings utility pages show honest preferences and stay mobile-safe', async ({ page }) => {
   await page.goto('/store/settings')
 
   await expect(page.getByRole('heading', { name: 'Profil ve dil tercihleri' })).toBeVisible()
   await expect(page.getByLabel('Dil tercihi kontrolü')).toContainText('Tercih')
-  await expect(page.getByLabel('Ayarlar çalışma sınırı')).toContainText('Kayıtlı profil tercihi yok')
-  await expect(page.getByLabel('Dil tercihi kontrolü').getByText('Bu tarayıcı')).toBeVisible()
-  await expect(page.getByLabel('Dil tercihi kontrolü').getByText('Uygulama metinleri')).toBeVisible()
+  await expect(page.getByLabel('Ayarlar çalışma sınırı')).toContainText('Profil bilgileri hazırlanıyor')
+  await expect(page.getByLabel('Ayarlar çalışma sınırı')).toContainText('Bildirim tercihleri')
+  await expect(page.getByLabel('Dil tercihi kontrolü').getByText('Dil ve görünüm')).toBeVisible()
+  await expect(page.getByLabel('Dil tercihi kontrolü').getByText('Bu cihazdaki mağaza ekranları')).toBeVisible()
+  await expect(page.getByText('Tercih modeli')).toHaveCount(0)
+  await expect(page.getByText('Kayıt yeri')).toHaveCount(0)
+  await expect(page.getByText('Etkilediği alan')).toHaveCount(0)
+  await expect(page.getByText('gerçek tercih modeli')).toHaveCount(0)
+  await expect(page.getByText('Bu tarayıcı')).toHaveCount(0)
+  await expect(page.getByText('Uygulama metinleri')).toHaveCount(0)
   await expect(page.getByText('/store/settings')).toHaveCount(0)
   await expect(page.getByText('Sonraki güvenli adım')).toHaveCount(0)
 
@@ -3963,7 +3970,7 @@ test('store competitions page renders visible contribution details', async ({ pa
   await expect(contributionRows.getByText('Katkı sağlığı')).toBeVisible()
   await expect(contributionRows.getByText('Kısmi katkı').first()).toBeVisible()
   await expect(contributionRows.getByText('BM checklist', { exact: true })).toBeVisible()
-  await expect(page.getByText('Görünen katkılar')).toBeVisible()
+  await expect(page.getByText('Mağaza katkıları')).toBeVisible()
   await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
   await expect(page.getByText('93.50')).toBeVisible()
   await expect(page.getByText('Outside Region Store')).toHaveCount(0)
