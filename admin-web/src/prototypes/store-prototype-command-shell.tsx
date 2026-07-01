@@ -41,7 +41,7 @@ const navItems: PrototypeNavItem[] = [
 ]
 
 export function StorePrototypeCommandShell(input: {
-  activePath: '/store/home'
+  activePath: string
   children: ReactNode
   identityLabel: string
   personaLabel: string

@@ -201,47 +201,35 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
   }
 
-  .store-checklist-session-section-rail {
-    grid-template-columns: 1fr;
-  }
-
-  .store-checklist-session-section-tab {
-    border-right: 0;
-    border-bottom: 1px solid var(--checklist-soft-line);
-  }
-
-  .store-checklist-session-section-tab:last-child {
-    border-bottom: 0;
-  }
-
   .store-checklist-session-score-scale {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(2.2rem, 1fr));
   }
 }
 
 @media (max-width: 640px) {
   .store-checklist-session-dialog {
-    top: 0 !important;
-    left: 0 !important;
-    width: 100vw !important;
-    max-width: none !important;
-    height: 100dvh;
-    max-height: 100dvh;
-    translate: none !important;
-    transform: none !important;
-    border-radius: 0;
+    width: min(23rem, calc(100vw - 1rem)) !important;
+    max-width: calc(100vw - 1rem) !important;
+    max-height: calc(100dvh - 0.75rem);
+    border-radius: 1.2rem;
   }
 
   .store-checklist-session-shell {
-    gap: 0.5rem;
-    min-height: 100dvh;
-    padding: 0.5rem;
+    min-height: min(88dvh, 760px);
+    max-height: calc(100dvh - 0.75rem);
   }
 
   .store-checklist-session-topbar {
-    grid-template-columns: 2rem minmax(0, 1fr) auto;
-    border-radius: 0.9rem;
-    padding: 0.35rem;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.5rem;
+    padding: 0.48rem;
+  }
+
+  .store-checklist-session-topbar .store-checklist-session-draft-state {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    justify-content: center;
+    min-height: 1.85rem;
   }
 
   .store-checklist-session-title {
@@ -255,7 +243,6 @@
   }
 
   .store-checklist-session-draft-state {
-    min-height: 2rem;
     padding: 0 0.58rem;
     font-size: 0.75rem;
   }
@@ -267,14 +254,18 @@
     padding: 0.55rem;
   }
 
+  .store-checklist-session-work {
+    padding: 0.55rem;
+  }
+
   .store-checklist-session-store-icon {
-    width: 2.25rem;
-    height: 2.25rem;
+    width: 2.05rem;
+    height: 2.05rem;
     border-radius: 0.78rem;
   }
 
   .store-checklist-session-summary-title-row h3 {
-    font-size: 0.94rem;
+    font-size: 0.9rem;
   }
 
   .store-checklist-session-summary-copy p,
@@ -295,46 +286,23 @@
   .store-checklist-session-answer-heading span,
   .store-checklist-session-note-field > label {
     font-size: 0.62rem;
-    letter-spacing: 0.03em;
   }
 
   .store-checklist-session-progress {
     gap: 0.3rem;
   }
 
-  .store-checklist-session-section-rail {
-    display: flex;
-    overflow-x: auto;
-    border-radius: 0.9rem;
-    scroll-snap-type: x mandatory;
-  }
-
-  .store-checklist-session-section-tab {
-    min-width: 11rem;
-    min-height: 2.7rem;
-    border-right: 1px solid var(--checklist-soft-line);
-    border-bottom: 0;
-    padding: 0.45rem 0.58rem;
-    scroll-snap-align: start;
-  }
-
-  .store-checklist-session-section-tab span {
-    font-size: 0.8rem;
-  }
-
-  .store-checklist-session-section-tab strong {
-    font-size: 0.66rem;
-  }
-
   .store-checklist-session-question-card {
     gap: 0.58rem;
     border-radius: 0.98rem;
     padding: 0.68rem;
+    box-shadow: none;
   }
 
-  .store-checklist-session-question-meta span {
-    padding: 0.16rem 0.44rem;
-    font-size: 0.7rem;
+  .store-checklist-session-question-badge {
+    min-height: 1.45rem;
+    padding: 0 0.45rem;
+    font-size: 0.68rem;
   }
 
   .store-checklist-session-question-copy h3 {
@@ -342,7 +310,6 @@
     line-height: 1.18;
   }
 
-  .store-checklist-session-question-copy p,
   .store-checklist-session-answer-heading small,
   .store-checklist-session-note-field small {
     font-size: 0.72rem;
@@ -368,13 +335,18 @@
   }
 
   .store-checklist-session-score-scale {
-    grid-template-columns: repeat(11, minmax(0, 1fr));
-    gap: 0.18rem;
+    grid-template-columns: repeat(auto-fit, minmax(1.9rem, 1fr));
+    gap: 0.22rem;
   }
 
   .store-checklist-session-scale-item {
-    min-height: 1.92rem;
+    min-height: 2rem;
     border-radius: 0.58rem;
+    font-size: 0.72rem;
+  }
+
+  .store-checklist-session-low-score-warning {
+    padding: 0.48rem 0.56rem;
     font-size: 0.72rem;
   }
 
@@ -382,23 +354,33 @@
     min-height: 4.5rem;
   }
 
-  .store-checklist-session-question-actions,
   .store-checklist-session-footer,
   .store-checklist-session-footer-actions {
     gap: 0.42rem;
   }
 
-  .store-checklist-session-question-actions > button,
-  .store-checklist-session-footer-actions > button {
-    min-height: 2.2rem;
-    padding: 0 0.65rem;
-    font-size: 0.78rem;
+  .store-checklist-session-footer {
+    display: grid;
+    padding: 0.42rem;
   }
 
-  .store-checklist-session-footer {
-    margin-top: auto;
-    border-radius: 0.88rem;
-    padding: 0.42rem;
+  .store-checklist-session-footer-progress {
+    min-width: 0;
+  }
+
+  .store-checklist-session-footer-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+  }
+
+  .store-checklist-session-footer-actions > button {
+    min-height: 2.2rem;
+    padding: 0 0.55rem;
+    font-size: 0.76rem;
+  }
+
+  .store-checklist-session-footer-actions > button:first-child {
+    grid-column: 1 / -1;
   }
 
   .store-checklist-session-state {

@@ -229,7 +229,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
     },
   )
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Close and keep draft' }).click()
+  await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(visitRow.getByRole('button', { name: 'Continue' })).toBeVisible()
   await expect(visitDateCell).toHaveText('None')
@@ -869,7 +869,7 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.locator('a[href="/store/reports"]')).toHaveCount(0)
   await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Kapat ve taslakta bırak' }).click()
+  await page.getByRole('button', { name: 'İptal' }).click()
   await page.getByRole('tab', { name: /Sonuç kabul/ }).click()
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
@@ -990,10 +990,10 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByText('Add photo (optional)')).toHaveCount(0)
   await expect(page.getByText('Not ready')).toHaveCount(0)
   await expect(page.getByText('Draft saved')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Save draft' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Save draft' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Complete', exact: true })).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept())
-  await page.getByRole('button', { name: 'Close and keep draft' }).click()
+  await page.getByRole('button', { name: 'Cancel' }).click()
   await page.getByRole('tab', { name: /Result acknowledgement/ }).click()
   await expect(
     page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
