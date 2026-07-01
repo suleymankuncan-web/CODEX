@@ -188,7 +188,7 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
       }),
     [actionStoreAssignments, effectiveSelectedUserId, roleAssignments, selectedAuditEvents, users],
   )
-  const selectedUser = model.selectedUser
+  const selectedUserFromModel = model.selectedUser
   const roleAssignmentsByUser = useMemo(() => groupBy(roleAssignments, (item) => item.userId), [roleAssignments])
   const filteredUsers = useMemo(
     () =>
@@ -198,6 +198,13 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
         return userMatchesKindFilter(user, roleAssignmentsByUser.get(user.userId) ?? [], filter)
       }),
     [filter, model.users, roleAssignmentsByUser, statusFilter],
+  )
+  const selectedUser = filteredUsers.some((user) => user.userId === selectedUserFromModel?.userId)
+    ? selectedUserFromModel
+    : null
+  const visibleModel = useMemo(
+    () => (selectedUser === model.selectedUser ? model : { ...model, selectedUser }),
+    [model, selectedUser],
   )
   const providerOptions = useMemo(
     () => Array.from(new Set(['clerk', 'oidc', 'sso', 'local', ...(lookups?.authProviders ?? [])])),
@@ -352,7 +359,7 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
         feedback={feedback}
         filter={filter}
         lookups={lookups}
-        model={model}
+        model={visibleModel}
         mutationBusy={mutationBusy}
         newAccountDraft={newAccountDraft}
         onActionStoreDraftChange={(patch) =>

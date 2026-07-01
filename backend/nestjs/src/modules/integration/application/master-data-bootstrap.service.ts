@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   ForbiddenException,
   Injectable,
@@ -208,8 +208,8 @@ export class MasterDataBootstrapService {
       },
     );
   }
-
   async validateBootstrapBatch(input: {
+    actorUserId?: string;
     actorScope: {
       companyIds: string[];
     };
@@ -224,7 +224,6 @@ export class MasterDataBootstrapService {
     );
     const results: BootstrapValidationResult[] = [];
     const preflightIssues = buildBootstrapPreflightIssueMap(batch, rows);
-
     for (const row of rows) {
       const preflightIssue = preflightIssues.get(row.rowId);
       if (preflightIssue) {
@@ -236,22 +235,25 @@ export class MasterDataBootstrapService {
         );
         continue;
       }
-
       results.push(await this.validateBootstrapRow(batch, row));
     }
-
     const updatedBatch =
       await this.masterDataBootstrapRepository.updateBootstrapRowValidationResults({
+        ...(input.actorUserId
+          ? {
+              actorUserId: input.actorUserId,
+              bootstrapEntity: batch.bootstrapEntity,
+              companyId: batch.companyId,
+            }
+          : {}),
         batchId: input.batchId,
         results,
       });
-
     if (!updatedBatch) {
       throw new NotFoundException(
         `Master data bootstrap batch not found: ${input.batchId}`,
       );
     }
-
     return buildCommandResponse({
       status: "validated",
       message: "Master data bootstrap batch validated for review",
@@ -260,7 +262,6 @@ export class MasterDataBootstrapService {
       },
     });
   }
-
   async getBootstrapPromotionReadiness(input: {
     actorScope: {
       companyIds: string[];
@@ -278,7 +279,6 @@ export class MasterDataBootstrapService {
       buildBootstrapPromotionReadinessItem(batch, row),
     );
     const summary = buildBootstrapPromotionReadinessSummary(batch, items);
-
     return {
       summary,
       rows: buildListResponse(items, {
@@ -288,8 +288,8 @@ export class MasterDataBootstrapService {
       }),
     };
   }
-
   async promoteStoreBootstrapBatch(input: {
+    actorUserId?: string;
     actorScope: {
       companyIds: string[];
     };
@@ -299,19 +299,16 @@ export class MasterDataBootstrapService {
       batchId: input.batchId,
       companyIds: input.actorScope.companyIds,
     });
-
     if (batch.bootstrapEntity !== "store") {
       throw new BadRequestException(
         "Store bootstrap promotion only supports store batches",
       );
     }
-
     if (batch.batchStatus !== "ready_to_promote") {
       throw new BadRequestException(
         "Store bootstrap batch must be ready_to_promote before promotion",
       );
     }
-
     const rows = await this.masterDataBootstrapRepository.listBootstrapRows(
       input.batchId,
     );
@@ -323,17 +320,17 @@ export class MasterDataBootstrapService {
     const promotionRows = promotionReadiness
       .filter((item) => item.promotionReadiness === "ready")
       .map((item) => buildStorePromotionRow(batch, item.row));
-
     if (promotionRows.length === 0) {
       throw new BadRequestException("Store bootstrap batch has no ready rows");
     }
-
     const promotedBatch =
       await this.masterDataBootstrapRepository.promoteStoreBootstrapRows({
+        ...(input.actorUserId
+          ? { actorUserId: input.actorUserId, companyId: batch.companyId }
+          : {}),
         batchId: input.batchId,
         rows: promotionRows,
       });
-
     return buildCommandResponse({
       status: "promoted",
       message: "Store bootstrap rows promoted",
@@ -343,8 +340,8 @@ export class MasterDataBootstrapService {
       },
     });
   }
-
   async promotePersonnelBootstrapBatch(input: {
+    actorUserId?: string;
     actorScope: {
       companyIds: string[];
     };
@@ -385,6 +382,9 @@ export class MasterDataBootstrapService {
 
     const promotedBatch =
       await this.masterDataBootstrapRepository.promotePersonnelBootstrapRows({
+        ...(input.actorUserId
+          ? { actorUserId: input.actorUserId, companyId: batch.companyId }
+          : {}),
         batchId: input.batchId,
         rows: promotionRows,
       });

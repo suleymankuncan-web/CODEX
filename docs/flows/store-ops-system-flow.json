@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-30T21:50:56.867Z",
+  "generatedAt": "2026-07-01T08:47:43.629Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -4608,7 +4608,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 528
+        "line": 527
       }
     },
     {
@@ -4622,7 +4622,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 506
+        "line": 504
       }
     },
     {
@@ -4636,7 +4636,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 484
+        "line": 483
       }
     },
     {
@@ -4664,7 +4664,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/integration/web/integration.controller.ts",
-        "line": 434
+        "line": 433
       }
     },
     {

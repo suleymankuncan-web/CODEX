@@ -1,5 +1,10 @@
-import { Injectable } from "@nestjs/common";
+﻿import { Injectable } from "@nestjs/common";
 import { DatabaseService } from "../../../shared/database/database.service";
+import {
+  auditBootstrapBatchCreated,
+  auditBootstrapBatchValidated,
+  auditBootstrapRowsPromoted,
+} from "./master-data-bootstrap-audit.helper";
 
 export type BootstrapEntity = "store" | "personnel";
 
@@ -231,11 +236,10 @@ export class MasterDataBootstrapRepository {
           ],
         );
       }
-
+      await auditBootstrapBatchCreated(client, input, batch.master_data_bootstrap_batch_id);
       return mapBootstrapBatch(batch);
     });
   }
-
   async getBootstrapBatchForActor(input: {
     batchId: string;
     companyIds: string[];
@@ -243,7 +247,6 @@ export class MasterDataBootstrapRepository {
     if (input.companyIds.length === 0) {
       return null;
     }
-
     const result = await this.databaseService.query<BootstrapBatchRow>(
       `
         SELECT
@@ -268,10 +271,8 @@ export class MasterDataBootstrapRepository {
       `,
       [input.batchId, input.companyIds],
     );
-
     return result.rows[0] ? mapBootstrapBatch(result.rows[0]) : null;
   }
-
   async listBootstrapBatches(input: {
     companyIds: string[];
     bootstrapEntity?: BootstrapEntity;
@@ -284,32 +285,26 @@ export class MasterDataBootstrapRepository {
     if (input.companyIds.length === 0) {
       return { rows: [], total: 0 };
     }
-
     const params: unknown[] = [input.companyIds];
     const filters = ["company_id = ANY($1::uuid[])"];
-
     if (input.bootstrapEntity) {
       params.push(input.bootstrapEntity);
       filters.push(`bootstrap_entity = $${params.length}`);
     }
-
     if (input.batchStatus) {
       params.push(input.batchStatus);
       filters.push(`batch_status = $${params.length}`);
     }
-
     if (input.q) {
       params.push(`%${input.q.trim()}%`);
       filters.push(
         `(source_label ILIKE $${params.length} OR file_reference ILIKE $${params.length})`,
       );
     }
-
     const readinessClause = buildBootstrapReadinessSql(input.readiness);
     if (readinessClause) {
       filters.push(readinessClause);
     }
-
     const whereClause = `WHERE ${filters.join(" AND ")}`;
     const selectSql = `
       SELECT
@@ -335,12 +330,10 @@ export class MasterDataBootstrapRepository {
       FROM stg.master_data_bootstrap_batch
       ${whereClause}
     `;
-
     const totalResult = await this.databaseService.query<{ total_count: string }>(
       `SELECT COUNT(*)::text AS total_count FROM (${selectSql}) batches`,
       params,
     );
-
     params.push(input.limit, input.offset);
     const result = await this.databaseService.query<BootstrapBatchQueueRecord>(
       `
@@ -351,13 +344,11 @@ export class MasterDataBootstrapRepository {
       `,
       params,
     );
-
     return {
       rows: result.rows.map(mapBootstrapBatchQueueItem),
       total: Number(totalResult.rows[0]?.total_count ?? 0),
     };
   }
-
   async listBootstrapRows(batchId: string): Promise<BootstrapStagedRow[]> {
     const result = await this.databaseService.query<BootstrapStagedRowRecord>(
       `
@@ -387,7 +378,6 @@ export class MasterDataBootstrapRepository {
       `,
       [batchId],
     );
-
     return result.rows.map(mapBootstrapStagedRow);
   }
 
@@ -584,7 +574,10 @@ export class MasterDataBootstrapRepository {
   }
 
   async updateBootstrapRowValidationResults(input: {
+    actorUserId?: string;
     batchId: string;
+    bootstrapEntity?: BootstrapEntity;
+    companyId?: string;
     results: BootstrapValidationResult[];
   }): Promise<BootstrapValidationSummary | null> {
     return this.databaseService.withTransaction(async (client) => {
@@ -671,6 +664,7 @@ export class MasterDataBootstrapRepository {
       );
 
       const batch = batchResult.rows[0];
+      if (batch) await auditBootstrapBatchValidated(client, input, batch);
       return batch
         ? {
             batchId: batch.master_data_bootstrap_batch_id,
@@ -686,7 +680,9 @@ export class MasterDataBootstrapRepository {
   }
 
   async promoteStoreBootstrapRows(input: {
+    actorUserId?: string;
     batchId: string;
+    companyId?: string;
     rows: Array<{
       rowId: string;
       companyId: string;
@@ -822,6 +818,7 @@ export class MasterDataBootstrapRepository {
         throw new Error(`Store bootstrap batch was not refreshed: ${input.batchId}`);
       }
 
+      await auditBootstrapRowsPromoted(client, input, batch, promotedRows.length, "master_data_bootstrap.stores.promoted");
       return {
         batchId: batch.master_data_bootstrap_batch_id,
         batchStatus: batch.batch_status,
@@ -836,7 +833,9 @@ export class MasterDataBootstrapRepository {
   }
 
   async promotePersonnelBootstrapRows(input: {
+    actorUserId?: string;
     batchId: string;
+    companyId?: string;
     rows: Array<{
       rowId: string;
       companyId: string;
@@ -1088,6 +1087,7 @@ export class MasterDataBootstrapRepository {
         );
       }
 
+      await auditBootstrapRowsPromoted(client, input, batch, promotedRows.length, "master_data_bootstrap.personnel.promoted");
       return {
         batchId: batch.master_data_bootstrap_batch_id,
         batchStatus: batch.batch_status,
