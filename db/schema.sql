@@ -278,6 +278,7 @@ CREATE TABLE ops.target_distribution_request (
     approved_by_user_id TEXT,
     approved_at TIMESTAMPTZ,
     approval_note TEXT,
+    approval_evidence_json JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -1805,6 +1806,7 @@ COMMENT ON TABLE ops.user_role_assignment IS 'RBAC assignments with scope-limite
 COMMENT ON TABLE ops.user_action_store_assignment IS 'Store-level action grants kept separate from role read scope so regional or audit users can read broadly but act only on assigned stores.';
 COMMENT ON TABLE ops.mobile_device_session IS 'Mobile device session registry for active/revoked app sessions. Refresh tokens remain IdP-owned in V1.';
 COMMENT ON TABLE ops.target_distribution_request IS 'Store-level target distribution requests that are submitted by store managers and approved by region-level oversight.';
+COMMENT ON COLUMN ops.target_distribution_request.approval_evidence_json IS 'Stores original and final target approval evidence for adjusted approvals without changing approved target references.';
 COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target references promoted from region-approved target distribution requests for scoring.';
 COMMENT ON TABLE ops.store_action_plan IS 'Store-owned follow-up plans created from approved Store Action candidate sources.';
 COMMENT ON TABLE ops.pilot_feedback IS 'Controlled pilot feedback intake for classifying P0/P1/P2/P3 findings without changing pilot go/no-go semantics.';

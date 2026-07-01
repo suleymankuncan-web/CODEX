@@ -66,7 +66,6 @@ export function SubmittedTargetRequestsPanel(input: {
                       : input.t('storeApprovals.pending')
                   }
                 />
-                <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
               </div>
               {item.requestReason ? (
                 <p className="store-approvals-ledger-row-note">

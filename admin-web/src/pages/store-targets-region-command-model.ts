@@ -116,12 +116,28 @@ export function createRegionTargetRows(input: {
 }
 
 export function resolveApprovalState(store: RegionTargetRow, draft: ApprovalDraft | undefined) {
-  const originalTotal = Number(store.storeTarget || 0)
-  const effectiveTotal = Number.isFinite(draft?.totalTargetValue) ? Number(draft?.totalTargetValue) : originalTotal
+  const evidenceOriginalTotal = Number(store.request?.originalTotalTargetValue)
+  const evidenceApprovedTotal = Number(store.request?.approvedTotalTargetValue)
+  const finalTotal = Number.isFinite(evidenceApprovedTotal)
+    ? evidenceApprovedTotal
+    : Number(store.storeTarget || 0)
+  const originalTotal = Number.isFinite(evidenceOriginalTotal)
+    ? evidenceOriginalTotal
+    : finalTotal
+  const effectiveTotal = Number.isFinite(draft?.totalTargetValue) ? Number(draft?.totalTargetValue) : finalTotal
+  const originalAllocationsByEmployee = new Map(
+    (store.request?.originalAllocations ?? []).map((allocation) => [
+      allocation.employeeId,
+      Number(allocation.targetValue || 0),
+    ]),
+  )
   const allocations = store.allocations.map((allocation) => {
-    const originalValue = Number(allocation.targetValue || 0)
+    const finalValue = Number(allocation.targetValue || 0)
+    const originalValue = originalAllocationsByEmployee.has(allocation.employeeId)
+      ? Number(originalAllocationsByEmployee.get(allocation.employeeId) || 0)
+      : finalValue
     const draftValue = draft?.allocations?.[allocation.employeeId]
-    const targetValue = Number.isFinite(draftValue) ? Number(draftValue) : originalValue
+    const targetValue = Number.isFinite(draftValue) ? Number(draftValue) : finalValue
 
     return { ...allocation, delta: targetValue - originalValue, originalValue, targetValue }
   })
@@ -204,9 +220,14 @@ function createRegionTargetRow(input: {
   storeName: string
 }): RegionTargetRow {
   const request = input.request
-  const allocations = request?.allocations ?? createAllocationsFromCoverage(input.coverageRows)
+  const approvedAllocations = request?.approvedAllocations ?? []
+  const allocations = request
+    ? approvedAllocations.length > 0
+      ? approvedAllocations
+      : request.allocations
+    : createAllocationsFromCoverage(input.coverageRows)
   const storeTarget = request
-    ? Number(request.totalTargetValue || 0)
+    ? Number(request.approvedTotalTargetValue ?? request.totalTargetValue ?? 0)
     : sumNullable(input.coverageRows.map((row) => row.targetValue ?? row.pendingTargetValue))
   const totalDistributed = allocations.length > 0
     ? allocations.reduce((sum, allocation) => sum + Number(allocation.targetValue || 0), 0)
@@ -266,7 +287,9 @@ function groupRequestsByStore(requests: TargetDistributionRequest[], requestMont
 
 function resolveRowStatus(request: TargetDistributionRequest | null, coverageRows: TargetCoverageRow[]): TargetCommandStatus {
   if (request?.status === 'pending_region_approval') return 'pending'
-  if (request?.status === 'approved') return 'approved'
+  if (request?.status === 'approved') {
+    return request.approvalMode === 'adjusted' ? 'adjusted-approved' : 'approved'
+  }
   if (request?.status === 'rejected') return 'returned'
   if (request?.status === 'pending_change_conflict') return 'draft'
   if (coverageRows.some((row) => row.targetStatus === 'pending_region_approval')) return 'pending'

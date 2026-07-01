@@ -79,11 +79,6 @@ export function TargetApprovalLedger(input: {
                     label={input.t('storeApprovals.createdAt')}
                     value={formatDateTime(item.createdAt, input.locale)}
                   />
-                  <StoreApprovalKeyValue
-                    label={input.t('storeApprovals.userId')}
-                    value={normalizeDisplayLabel(item.submittedByUserId, input.t('storeApprovals.unknownUser'))}
-                  />
-                  <StoreApprovalKeyValue label={input.t('storeApprovals.requestId')} value={item.requestId} />
                 </div>
                 {item.requestReason ? (
                   <p className="store-approvals-ledger-row-note">
