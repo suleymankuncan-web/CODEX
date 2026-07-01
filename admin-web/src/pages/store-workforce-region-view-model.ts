@@ -49,7 +49,7 @@ export const copy = {
   totalStoresMetric: 'Toplam mağaza',
   turnoverColumn: 'Turnover',
   turnoverMetric: 'Yıl geneli turnover',
-  yearAria: 'Yıl filtresi',
+  yearAria: 'Güncel görünüm',
 } as const
 
 export const statusCopy: Record<
