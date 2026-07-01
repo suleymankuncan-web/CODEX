@@ -1,15 +1,11 @@
-import { useMemo, useState, type ComponentType } from 'react'
+import { useMemo } from 'react'
 import {
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   CircleAlert,
   Cloud,
-  FileText,
-  ListChecks,
   MinusCircle,
+  Save,
   Store,
-  UserRound,
   XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,7 +14,6 @@ import { Input } from '@/components/ui/input'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { cn } from '@/lib/utils'
 import type { ChecklistAcknowledgementItem, MobileChecklistToday } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { getUserFacingErrorMessage } from '../lib/format'
@@ -43,8 +38,6 @@ import { ChecklistResultModal } from './store-checklists-result-modal'
 type ChecklistTemplateItem = ChecklistSession['template']['items'][number]
 type ChecklistVisitItemEntry = {
   item: ChecklistTemplateItem
-  itemIndex: number
-  sectionIndex: number
   sectionName: string
 }
 
@@ -133,25 +126,15 @@ function ChecklistVisitModal(input: {
   )
   const itemEntries = useMemo<ChecklistVisitItemEntry[]>(
     () =>
-      sections.flatMap((section, sectionIndex) =>
-        section.items.map((item, itemIndex) => ({
+      sections.flatMap((section) =>
+        section.items.map((item) => ({
           item,
-          itemIndex,
-          sectionIndex,
           sectionName: section.name,
         })),
       ),
     [sections],
   )
   const hasItems = input.session.template.items.length > 0
-  const firstItemId = itemEntries[0]?.item.templateItemId ?? null
-  const [activeItemId, setActiveItemId] = useState<string | null>(firstItemId)
-
-  const activeIndex = Math.max(
-    itemEntries.findIndex((entry) => entry.item.templateItemId === activeItemId),
-    0,
-  )
-  const activeEntry = itemEntries[activeIndex]
   const answeredCount = input.session.template.items.filter(
     (item) => Number.isFinite(input.scores[item.templateItemId]),
   ).length
@@ -187,28 +170,26 @@ function ChecklistVisitModal(input: {
   const sessionStatus = input.active
     ? formatChecklistStatus(input.t, input.active.status)
     : input.t('storeChecklists.newVisit')
-
-  const goToItem = (nextIndex: number) => {
-    const nextEntry = itemEntries[nextIndex]
-    if (!nextEntry) return
-    setActiveItemId(nextEntry.item.templateItemId)
-  }
-
-  const goToSection = (sectionIndex: number) => {
-    const section = sections[sectionIndex]
-    if (!section) return
-    const firstUnansweredItem = section.items.find(
-      (item) => !Number.isFinite(input.scores[item.templateItemId]),
-    )
-    setActiveItemId((firstUnansweredItem ?? section.items[0])?.templateItemId ?? null)
-  }
+  const footerStateText = input.completeError
+    ? getUserFacingErrorMessage(input.completeError, input.t('storeChecklists.completeErrorCopy'))
+    : !input.active && input.isStarting
+      ? input.t('storeChecklists.startPending')
+      : missingResponseCount > 0
+        ? input.t('storeChecklists.missingResponsesHint', { count: missingResponseCount })
+        : missingRequiredLowScoreNoteCount > 0
+          ? input.t('storeChecklists.missingLowScoreNotesHint', {
+              count: missingRequiredLowScoreNoteCount,
+            })
+          : input.isSaving
+            ? input.t('storeChecklists.autosaving')
+            : input.t('storeChecklists.draftSaved')
 
   return (
     <Dialog open onOpenChange={(open) => {
       if (!open) input.onClose()
     }}>
       <DialogContent
-        className="store-checklist-session-dialog tw:max-w-[min(940px,calc(100vw-1.5rem))] tw:sm:max-w-[min(940px,calc(100vw-1.5rem))]"
+        className="store-checklist-session-dialog tw:max-w-[min(760px,calc(100vw-1rem))] tw:sm:max-w-[min(760px,calc(100vw-1rem))]"
         closeLabel={input.t('storeChecklists.closeSession')}
         showCloseButton={false}
       >
@@ -274,140 +255,78 @@ function ChecklistVisitModal(input: {
               title={input.t('storeChecklists.emptyTemplateTitle')}
             />
           ) : (
-            <>
-              <nav className="store-checklist-session-section-rail" aria-label={input.t('storeChecklists.section')}>
-                {sections.map((section, sectionIndex) => {
-                  const sectionAnsweredCount = section.items.filter((item) =>
-                    Number.isFinite(input.scores[item.templateItemId]),
-                  ).length
-                  const SectionIcon = getChecklistSessionSectionIcon(sectionIndex)
-                  const isActiveSection = activeEntry?.sectionIndex === sectionIndex
+            <main className="store-checklist-session-work" aria-label={input.t('storeChecklists.scoreInput')}>
+              <div className="store-checklist-session-item-list">
+                {itemEntries.map((entry, index) => {
+                  const score = input.scores[entry.item.templateItemId]
+                  const isAnswered = Number.isFinite(score)
+                  const isLowScore = isChecklistLowScoreSelection(entry.item, score)
                   return (
-                    <button
-                      aria-current={isActiveSection ? 'step' : undefined}
-                      className={cn(
-                        'store-checklist-session-section-tab',
-                        isActiveSection && 'store-checklist-session-section-tab-active',
-                      )}
-                      key={section.name}
-                      type="button"
-                      onClick={() => goToSection(sectionIndex)}
+                    <article
+                      className="store-checklist-session-question-card"
+                      data-answered={isAnswered ? 'true' : undefined}
+                      key={entry.item.templateItemId}
                     >
-                      <SectionIcon aria-hidden={true} />
-                      <span>{section.name}</span>
-                      <strong>
-                        {sectionAnsweredCount} / {section.items.length}
-                      </strong>
-                    </button>
+                      <div className="store-checklist-session-question-copy">
+                        <span className="store-checklist-session-question-badge">
+                          Madde {index + 1}/{itemEntries.length} - {entry.sectionName}
+                        </span>
+                        <h3>{entry.item.itemText}</h3>
+                      </div>
+
+                      <ChecklistSessionAnswerControl
+                        disabled={!input.active}
+                        item={entry.item}
+                        locale={input.locale}
+                        score={score}
+                        t={input.t}
+                        onScoreChange={input.onScoreChange}
+                      />
+
+                      {isLowScore ? (
+                        <p className="store-checklist-session-low-score-warning">
+                          {input.t('storeChecklists.lowScoreTaskWarning')}
+                        </p>
+                      ) : null}
+
+                      <div className="store-checklist-session-note-field">
+                        <label htmlFor={`checklist-session-note-${entry.item.templateItemId}`}>
+                          {input.t('storeChecklists.noteInput')}{' '}
+                          <small>{getStaticCopy(input.locale, '(opsiyonel)', '(optional)')}</small>
+                        </label>
+                        <Textarea
+                          disabled={!input.active}
+                          id={`checklist-session-note-${entry.item.templateItemId}`}
+                          maxLength={500}
+                          rows={3}
+                          value={input.comments[entry.item.templateItemId] ?? ''}
+                          onChange={(event) =>
+                            input.onCommentChange(entry.item.templateItemId, event.target.value)
+                          }
+                        />
+                      </div>
+                    </article>
                   )
                 })}
-              </nav>
-
-              {activeEntry ? (
-                <article className="store-checklist-session-question-card">
-                  <div className="store-checklist-session-question-meta">
-                    <span>
-                      {activeEntry.itemIndex + 1} / {sections[activeEntry.sectionIndex]?.items.length ?? 0}
-                    </span>
-                    <span>
-                      {activeIndex + 1} / {itemEntries.length}
-                    </span>
-                  </div>
-                  <div className="store-checklist-session-question-copy">
-                    <h3>{activeEntry.item.itemText}</h3>
-                    <p>
-                      {input.t('storeChecklists.itemMeta', {
-                        maxScore: activeEntry.item.maxScore,
-                        weight: activeEntry.item.weight,
-                      })}{' '}
-                      - {getChecklistResponseTypeLabel(input.locale, activeEntry.item.responseType)}
-                    </p>
-                  </div>
-
-                  <ChecklistSessionAnswerControl
-                    disabled={!input.active}
-                    item={activeEntry.item}
-                    locale={input.locale}
-                    score={input.scores[activeEntry.item.templateItemId]}
-                    t={input.t}
-                    onScoreChange={input.onScoreChange}
-                  />
-                  {isChecklistLowScoreSelection(
-                    activeEntry.item,
-                    input.scores[activeEntry.item.templateItemId],
-                  ) ? (
-                    <p className="store-checklist-session-low-score-warning">
-                      {input.t('storeChecklists.lowScoreTaskWarning')}
-                    </p>
-                  ) : null}
-
-                  <div className="store-checklist-session-note-field">
-                    <label htmlFor={`checklist-session-note-${activeEntry.item.templateItemId}`}>
-                      {input.t('storeChecklists.noteInput')}{' '}
-                      <small>{getStaticCopy(input.locale, '(opsiyonel)', '(optional)')}</small>
-                    </label>
-                    <Textarea
-                      disabled={!input.active}
-                      id={`checklist-session-note-${activeEntry.item.templateItemId}`}
-                      maxLength={500}
-                      rows={3}
-                      value={input.comments[activeEntry.item.templateItemId] ?? ''}
-                      onChange={(event) =>
-                        input.onCommentChange(activeEntry.item.templateItemId, event.target.value)
-                      }
-                    />
-                  </div>
-
-                  <div className="store-checklist-session-question-actions">
-                    <Button
-                      disabled={activeIndex <= 0}
-                      type="button"
-                      variant="outline"
-                      onClick={() => goToItem(activeIndex - 1)}
-                    >
-                      <ChevronLeft data-icon="inline-start" />
-                      {input.t('storeChecklists.previousItem')}
-                    </Button>
-                    <Button
-                      disabled={activeIndex >= itemEntries.length - 1}
-                      type="button"
-                      onClick={() => goToItem(activeIndex + 1)}
-                    >
-                      {input.t('storeChecklists.nextItem')}
-                      <ChevronRight data-icon="inline-end" />
-                    </Button>
-                  </div>
-                </article>
-              ) : null}
-            </>
+              </div>
+            </main>
           )}
 
           <div className="store-checklist-session-footer">
-            <div className="store-checklist-session-state">
-              {input.completeError ? (
-                <span>
-                  {getUserFacingErrorMessage(
-                    input.completeError,
-                    input.t('storeChecklists.completeErrorCopy'),
-                  )}
-                </span>
-              ) : !input.active && input.isStarting ? (
-                <span>{input.t('storeChecklists.startPending')}</span>
-              ) : missingResponseCount > 0 ? (
-                <span>{input.t('storeChecklists.missingResponsesHint', { count: missingResponseCount })}</span>
-              ) : missingRequiredLowScoreNoteCount > 0 ? (
-                <span>
-                  {input.t('storeChecklists.missingLowScoreNotesHint', {
-                    count: missingRequiredLowScoreNoteCount,
-                  })}
-                </span>
-              ) : input.isSaving ? (
-                <span>{input.t('storeChecklists.autosaving')}</span>
-              ) : (
-                <span>{input.t('storeChecklists.draftSaved')}</span>
-              )}
+            <div className="store-checklist-session-footer-progress">
+              <div>
+                <span className="store-checklist-session-state">{footerStateText}</span>
+                <strong>{progressPercent}%</strong>
+              </div>
+              <span className="store-checklist-session-footer-bar" aria-hidden="true">
+                <span style={{ width: `${progressPercent}%` }} />
+              </span>
             </div>
             <div className="store-checklist-session-footer-actions">
+              <Button type="button" variant="outline" onClick={input.onClose}>
+                <Save data-icon="inline-start" />
+                {input.t('storeChecklists.draftSave')}
+              </Button>
               <Button type="button" variant="outline" onClick={input.onClose}>
                 {input.t('storeChecklists.cancelSession')}
               </Button>
@@ -450,9 +369,6 @@ function ChecklistSessionAnswerControl(input: {
       <div className="store-checklist-session-answer-block">
         <div className="store-checklist-session-answer-heading">
           <span>{input.t('storeChecklists.scoreInput')}</span>
-          <small>
-            {input.t('storeChecklists.responseType')}: {getChecklistResponseTypeLabel(input.locale, input.item.responseType)}
-          </small>
         </div>
         <ToggleGroup
           className="store-checklist-session-choice-grid"
@@ -547,28 +463,6 @@ function ChecklistSessionScoreInput(input: {
       }
     />
   )
-}
-
-function getChecklistSessionSectionIcon(index: number): ComponentType<{ 'aria-hidden'?: boolean }> {
-  const icons = [Store, ListChecks, UserRound, FileText]
-  return icons[index % icons.length] ?? ListChecks
-}
-
-function getChecklistResponseTypeLabel(
-  locale: AppLocale,
-  responseType: ChecklistTemplateItem['responseType'],
-) {
-  switch (responseType) {
-    case 'yes_no':
-      return getStaticCopy(locale, 'Evet / Hayır', 'Yes / No')
-    case 'partial':
-      return getStaticCopy(locale, 'Kısmi', 'Partial')
-    case 'text':
-      return getStaticCopy(locale, 'Metin', 'Text')
-    case 'score':
-    default:
-      return getStaticCopy(locale, 'Skor', 'Score')
-  }
 }
 
 function getChecklistChoiceOptions(locale: AppLocale, item: ChecklistTemplateItem) {

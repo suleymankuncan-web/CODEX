@@ -17,6 +17,7 @@ import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell'
+import { StoreChecklistSessionModalV1Prototype } from './prototypes/store-checklist-session-modal-v1'
 import { StoreHomeCommandV1Prototype } from './prototypes/store-home-command-v1'
 import { StoreIncentivesPrototypeShell } from './prototypes/store-incentives-prototype-shell'
 import { AdminMasterDataCommandV1Prototype } from './prototypes/admin/master-data-command-v1'
@@ -36,6 +37,10 @@ function App() {
     import.meta.env.DEV &&
     pathname === '/store/feed' &&
     new URLSearchParams(location.search).get('prototype') === 'region-composer-v1'
+  const isStoreChecklistSessionPrototype =
+    import.meta.env.DEV &&
+    pathname === '/store/checklists' &&
+    new URLSearchParams(location.search).get('prototype') === 'session-modal-v1'
   const isAdminMasterDataPrototype =
     import.meta.env.DEV &&
     pathname === '/admin/master-data' &&
@@ -44,6 +49,7 @@ function App() {
     isStoreIncentivesPrototype ||
     isStoreHomePrototype ||
     isStoreFeedPrototype ||
+    isStoreChecklistSessionPrototype ||
     isAdminMasterDataPrototype
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -194,6 +200,10 @@ function App() {
 
   if (isStoreFeedPrototype) {
     return <StoreFeedPrototypeShell />
+  }
+
+  if (isStoreChecklistSessionPrototype) {
+    return <StoreChecklistSessionModalV1Prototype />
   }
 
   if (isAdminMasterDataPrototype) {

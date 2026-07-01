@@ -38,6 +38,11 @@ implemented and verified.
 - `docs/prototypes/store-checklist-result-modal-v1.html` is the locked and
   implemented checklist result modal visual contract for Store Manager
   acknowledgement and Region Manager review contexts.
+- `admin-web/src/prototypes/store-checklist-session-modal-v1.tsx` and
+  `admin-web/src/prototypes/store-checklist-session-modal-v1.css` are the
+  locked production-bound React prototype for the `/store/checklists` checklist
+  session modal. They define the one-scroll item scoring surface, low-score
+  warning, note input, and sticky draft/cancel/complete footer.
 - `docs/prototypes/store-checklists-region-manager-v1.html` is the draft
   Region Manager `/store/checklists` page prototype for the store-first
   checklist operation view. It is not locked until explicitly approved.
@@ -102,6 +107,8 @@ Important production boundary:
 | `docs/prototypes/store-home-store-manager-standard-v1.html` | `/store/home` Store Manager dashboard | `B36442A7244FCF4FE85954E4F08C88E2A3684055DD03D854F3C54DA629022E37` |
 | `docs/prototypes/store-home-region-manager-standard-v1.html` | `/store/home` Region Manager dashboard | `DF4E1583D39588FFA2B150937DAC3556983A59F781960C8DC986ED396B4A1E81` |
 | `docs/prototypes/store-checklist-result-modal-v1.html` | `/store/checklists` result modal | `110EAD19449A59EBB1C84666FC4F66AC9067DEAF7CCF1BF8990917BDFD2DC8B9` |
+| `admin-web/src/prototypes/store-checklist-session-modal-v1.tsx` | `/store/checklists` checklist session modal | `1436DD369F73D104A1B3EDF5A28B97B5ECB3AFB7068858CB9645202C9CE52606` |
+| `admin-web/src/prototypes/store-checklist-session-modal-v1.css` | `/store/checklists` checklist session modal styles | `9DB2DDF45ADC68AE1E9A8585A32A22124627A2565698263EED510F2AB1E32565` |
 | `docs/prototypes/store-incentives-region-manager-command-v2.html` | `/store/incentives` Region Manager command center and Store/Admin surface standard reference | `B18107107BB91332179F00A93166ECF04038CA6E6878E14DFE8DD2FBECA5BF87` |
 | `docs/prototypes/store-workforce-full-ledger-prototype.tsx` | `/store/workforce` Region Manager Norm Kadro full-ledger production-bound prototype | `DBA61AB355FC25B564612873ECAF0C7A927C9D10CAB7D5F148395BE57767CEC3` |
 | `admin-web/src/prototypes/store-feed-region-composer-v1.tsx` | `/store/feed` Region Manager composer and read-only store-role feed surface | `145040F4C55444465861059D7DFD5A8EF619865C56AECD1B07224C561EBC64F6` |
