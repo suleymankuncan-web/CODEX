@@ -9,6 +9,7 @@ import {
   PublishChecklistTemplateInput,
 } from "../application/checklist.contract";
 import { isChecklistScoreNonCompliant } from "../application/checklist-low-score-policy";
+import { parseChecklistScorePolicy } from "../application/checklist-score-policy";
 
 @Injectable()
 export class ChecklistRepository {
@@ -367,6 +368,7 @@ export class ChecklistRepository {
         checklist_instance_id: string;
         store_id: string;
         status: string;
+        response_type: ChecklistTemplateResponseType;
         max_score: string;
         expected_value: string | null;
       }>(
@@ -375,6 +377,7 @@ export class ChecklistRepository {
             ci.checklist_instance_id,
             ci.store_id,
             ci.status,
+            cti.response_type,
             cti.max_score,
             cti.expected_value
           FROM ops.checklist_instance ci
@@ -396,6 +399,12 @@ export class ChecklistRepository {
 
       if (guard.status === "completed") {
         throw new BadRequestException("Completed checklist instances are locked");
+      }
+
+      const scorePolicy = parseChecklistScorePolicy(guard.expected_value);
+      const minScore = scorePolicy.minScore ?? 0;
+      if (guard.response_type === "score" && input.scoreValue < minScore) {
+        throw new BadRequestException("Checklist score is below item min score");
       }
 
       if (input.scoreValue > Number(guard.max_score)) {
@@ -712,6 +721,7 @@ export class ChecklistRepository {
             response_type: ChecklistTemplateResponseType;
             weight: string;
             max_score: string;
+            expected_value: string | null;
           }>(
             `
               SELECT
@@ -722,7 +732,8 @@ export class ChecklistRepository {
                 cti.item_text,
                 cti.response_type,
                 cti.weight,
-                cti.max_score
+                cti.max_score,
+                cti.expected_value
               FROM ops.checklist_template_item cti
               WHERE cti.checklist_template_id = ANY($1::uuid[])
               ORDER BY cti.checklist_template_id, cti.item_no ASC
@@ -739,11 +750,15 @@ export class ChecklistRepository {
         responseType: ChecklistTemplateResponseType;
         weight: number;
         maxScore: number;
+        minScore?: number;
+        lowScoreThreshold?: number | null;
+        requiresLowScoreNote?: boolean;
       }>
     >();
 
     for (const item of templateItems.rows) {
       const items = itemsByTemplateId.get(item.checklist_template_id) ?? [];
+      const scorePolicy = parseChecklistScorePolicy(item.expected_value);
       items.push({
         templateItemId: item.template_item_id,
         sectionName: item.section_name,
@@ -752,6 +767,11 @@ export class ChecklistRepository {
         responseType: item.response_type,
         weight: Number(item.weight),
         maxScore: Number(item.max_score),
+        ...(scorePolicy.minScore !== null
+          ? { minScore: scorePolicy.minScore }
+          : {}),
+        lowScoreThreshold: scorePolicy.lowScoreThreshold,
+        requiresLowScoreNote: scorePolicy.requiresLowScoreNote,
       });
       itemsByTemplateId.set(item.checklist_template_id, items);
     }

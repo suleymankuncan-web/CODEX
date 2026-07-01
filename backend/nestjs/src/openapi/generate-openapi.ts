@@ -70,7 +70,7 @@ const mobileChecklistTodayTemplateItemSchema = {
     itemText: { type: "string" },
     responseType: { type: "string", enum: ["score", "yes_no", "partial", "text"] },
     weight: { type: "number" },
-    maxScore: { type: "number" },
+    maxScore: { type: "number" }, minScore: { type: "number" }, lowScoreThreshold: { type: "number", nullable: true }, requiresLowScoreNote: { type: "boolean" },
   },
 };
 

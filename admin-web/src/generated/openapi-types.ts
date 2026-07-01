@@ -1263,6 +1263,9 @@ export type components = {
                 "responseType": "score" | "yes_no" | "partial" | "text"
                 "weight": number
                 "maxScore": number
+                "minScore"?: number
+                "lowScoreThreshold"?: number | null
+                "requiresLowScoreNote"?: boolean
               }>
           }>
         "activeInstances": Array<{

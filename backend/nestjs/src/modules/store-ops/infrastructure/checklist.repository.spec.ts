@@ -211,6 +211,7 @@ describe("ChecklistRepository", () => {
             checklist_instance_id: "instance-1",
             store_id: "store-1",
             status: "in_progress",
+            response_type: "score",
             max_score: "10.00",
             expected_value: JSON.stringify({ lowScoreThreshold: 6 }),
           },
@@ -266,6 +267,7 @@ describe("ChecklistRepository", () => {
             checklist_instance_id: "instance-1",
             store_id: "store-1",
             status: "in_progress",
+            response_type: "score",
             max_score: "10.00",
             expected_value: JSON.stringify({ lowScoreThreshold: 6 }),
           },
@@ -319,7 +321,9 @@ describe("ChecklistRepository", () => {
           checklist_instance_id: "instance-1",
           store_id: "store-1",
           status: "in_progress",
+          response_type: "score",
           max_score: "5.00",
+          expected_value: null,
         },
       ],
     });
@@ -334,6 +338,77 @@ describe("ChecklistRepository", () => {
     ).rejects.toThrow("Checklist score exceeds item max score");
 
     expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects saving a score response below the item min score", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query.mockResolvedValueOnce({
+      rows: [
+        {
+          checklist_instance_id: "instance-1",
+          store_id: "store-1",
+          status: "in_progress",
+          response_type: "score",
+          max_score: "5.00",
+          expected_value: JSON.stringify({ minScore: 1 }),
+        },
+      ],
+    });
+
+    await expect(
+      repository.saveMobileChecklistResponse({
+        checklistInstanceId: "instance-1",
+        templateItemId: "item-1",
+        scoreValue: 0,
+        actorUserId: "user-1",
+      }),
+    ).rejects.toThrow("Checklist score is below item min score");
+
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows zero score for yes no responses even when expected value carries min score", async () => {
+    const { client, repository } = createTransactionHarness();
+    client.query
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            checklist_instance_id: "instance-1",
+            store_id: "store-1",
+            status: "in_progress",
+            response_type: "yes_no",
+            max_score: "1.00",
+            expected_value: JSON.stringify({ minScore: 1, lowScoreThreshold: 0 }),
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            response_id: "response-1",
+            responded_at: "2026-04-28T10:05:00.000Z",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [] });
+
+    await expect(
+      repository.saveMobileChecklistResponse({
+        checklistInstanceId: "instance-1",
+        templateItemId: "item-1",
+        scoreValue: 0,
+        actorUserId: "user-1",
+      }),
+    ).resolves.toEqual({
+      response_id: "response-1",
+      responded_at: "2026-04-28T10:05:00.000Z",
+    });
+
+    expect(client.query).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining("is_non_compliant"),
+      ["instance-1", "item-1", 0, null, true],
+    );
   });
 
   it("calculates mobile checklist completion score and missing mandatory count", async () => {
@@ -533,6 +608,11 @@ describe("ChecklistRepository", () => {
           response_type: "score",
           weight: "100.00",
           max_score: "5.00",
+          expected_value: JSON.stringify({
+            lowScoreThreshold: 2,
+            minScore: 1,
+            requiresLowScoreNote: true,
+          }),
         },
       ],
     });
@@ -551,6 +631,8 @@ describe("ChecklistRepository", () => {
     expect(templateSql).toContain("SELECT DISTINCT s.company_id");
     expect(templateSql).toContain("s.store_id = ANY($1::uuid[])");
     expect(templateParams).toEqual([["store-1"], ["BM_STORE_VISIT"]]);
+    const [itemsSql] = query.mock.calls[2];
+    expect(itemsSql).toContain("cti.expected_value");
     expect(result.templates).toEqual([
       {
         checklistTemplateId: "template-1",
@@ -567,6 +649,9 @@ describe("ChecklistRepository", () => {
             responseType: "score",
             weight: 100,
             maxScore: 5,
+            minScore: 1,
+            lowScoreThreshold: 2,
+            requiresLowScoreNote: true,
           },
         ],
       },

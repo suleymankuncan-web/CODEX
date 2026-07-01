@@ -84,6 +84,9 @@ export type MobileChecklistToday = {
       responseType: ChecklistTemplateResponseType;
       weight: number;
       maxScore: number;
+      minScore?: number;
+      lowScoreThreshold?: number | null;
+      requiresLowScoreNote?: boolean;
     }>;
   }>;
   activeInstances: Array<{
