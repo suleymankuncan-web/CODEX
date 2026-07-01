@@ -34,6 +34,7 @@ const formatState = (value) => String(value)
 const getIntlLocale = (locale) => locale === 'en' ? 'en-US' : 'tr-TR'
 `,
 })
+const checklistScorePolicy = await importTranspiled('../src/pages/store-checklists-score-policy.ts')
 const workforceViewSource = await readFile(
   new URL('../src/pages/store-workforce-region-view.tsx', import.meta.url),
   'utf8',
@@ -120,6 +121,71 @@ test('checklist acknowledgement filter keeps pending rows inside selected month 
   )
   assert.equal(checklistLogic.doesChecklistItemMatchFilters(junePending, filters), true)
   assert.equal(checklistLogic.doesChecklistItemMatchFilters(noCompletion, filters), false)
+})
+
+test('checklist score options follow template min and max policy', () => {
+  assert.deepEqual(
+    checklistScorePolicy.getChecklistScoreOptions({
+      maxScore: 5,
+      minScore: 1,
+      responseType: 'score',
+    }),
+    [1, 2, 3, 4, 5],
+  )
+  assert.deepEqual(
+    checklistScorePolicy.getChecklistScoreOptions({
+      maxScore: 10,
+      responseType: 'score',
+    }),
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  )
+})
+
+test('checklist score parsing clamps to template score bounds', () => {
+  const item = { maxScore: 5, minScore: 1, responseType: 'score' }
+
+  assert.equal(checklistScorePolicy.parseChecklistScoreInput('0', item), 1)
+  assert.equal(checklistScorePolicy.parseChecklistScoreInput('6', item), 5)
+  assert.equal(checklistScorePolicy.parseChecklistScoreInput('3', item), 3)
+  assert.equal(checklistScorePolicy.parseChecklistScoreInput('', item), null)
+  assert.equal(checklistScorePolicy.parseChecklistScoreInput('bad', item), null)
+})
+
+test('checklist low score note requirement only blocks low score selections', () => {
+  const item = {
+    lowScoreThreshold: 2,
+    maxScore: 5,
+    minScore: 1,
+    requiresLowScoreNote: true,
+    responseType: 'score',
+  }
+
+  assert.equal(checklistScorePolicy.isChecklistLowScoreSelection(item, 2), true)
+  assert.equal(checklistScorePolicy.isChecklistLowScoreSelection(item, 3), false)
+  assert.equal(
+    checklistScorePolicy.isChecklistLowScoreNoteMissing({
+      commentText: '',
+      item,
+      score: 2,
+    }),
+    true,
+  )
+  assert.equal(
+    checklistScorePolicy.isChecklistLowScoreNoteMissing({
+      commentText: 'Reyon standardı tekrar kontrol edilecek.',
+      item,
+      score: 2,
+    }),
+    false,
+  )
+  assert.equal(
+    checklistScorePolicy.isChecklistLowScoreNoteMissing({
+      commentText: '',
+      item,
+      score: 3,
+    }),
+    false,
+  )
 })
 
 test('workforce region view has honest current-snapshot year copy and no store id label fallback', () => {

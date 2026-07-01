@@ -679,12 +679,6 @@ export function serializeChecklistResponseDraft(input: { scoreValue: number; com
   return JSON.stringify({ commentText: input.commentText ?? '', scoreValue: input.scoreValue })
 }
 
-export function parseChecklistScoreInput(value: string, maxScore: number) {
-  if (value === '') return null
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? clamp(parsed, 0, maxScore) : null
-}
-
 export function getScoreQuickOptions(locale: AppLocale, maxScore: number) {
   const safeMax = Math.max(0, maxScore)
   const watch = Math.round(safeMax * 0.6)
