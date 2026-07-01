@@ -62,6 +62,12 @@ implemented and verified.
   production-bound React prototype for `/admin/auth`. It defines the Admin Auth
   access workbench: compact user inventory, profile detail, role/store action
   trays, account edit, deactivate/reactivate, and audit review rhythm.
+- `admin-web/src/prototypes/admin/master-data-command-v1.tsx` and
+  `admin-web/src/prototypes/admin/master-data-command-v1.css` are the locked
+  production-bound React prototype for `/admin/master-data`. They define the
+  Admin Master Data control center: issue-first workbench, direct store/personnel
+  save detail, import processing, audit history, and compact right-side
+  operational panel.
 - `docs/superpowers/plans/2026-06-29-store-reports-prototype-to-product-v1.md`
   is the accepted Store Reports product contract that promoted `/store/reports`
   out of placeholder status. The production route now owns the month/year
@@ -100,6 +106,8 @@ Important production boundary:
 | `docs/prototypes/store-workforce-full-ledger-prototype.tsx` | `/store/workforce` Region Manager Norm Kadro full-ledger production-bound prototype | `DBA61AB355FC25B564612873ECAF0C7A927C9D10CAB7D5F148395BE57767CEC3` |
 | `admin-web/src/prototypes/store-feed-region-composer-v1.tsx` | `/store/feed` Region Manager composer and read-only store-role feed surface | `145040F4C55444465861059D7DFD5A8EF619865C56AECD1B07224C561EBC64F6` |
 | `docs/prototypes/admin-auth-access-workbench-v1.tsx` | `/admin/auth` Admin Auth access workbench | `DFDBC11C2CD9D7B451CF8B5AEEEB16455D3E370E1C60B8B310E42F2F7BF34069` |
+| `admin-web/src/prototypes/admin/master-data-command-v1.tsx` | `/admin/master-data` Admin Master Data control center | `FD21F8D6491250F38791FD208BF5A7148A8FA0F1767AD3A60F15D61BA6951486` |
+| `admin-web/src/prototypes/admin/master-data-command-v1.css` | `/admin/master-data` Admin Master Data control center styles | `514305117DD8187871D622202447B430D193780843E2FAE42C4C33734D721DE3` |
 
 ## Prototype Implementation Evidence
 

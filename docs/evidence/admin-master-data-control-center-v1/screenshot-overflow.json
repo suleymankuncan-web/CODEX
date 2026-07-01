@@ -1,0 +1,42 @@
+{
+  "prototype-desktop": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "ok": true
+  },
+  "prototype-mobile": {
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "ok": true
+  },
+  "production-desktop-issues": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "ok": true
+  },
+  "production-desktop-stores": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "ok": true
+  },
+  "production-desktop-personnel": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "ok": true
+  },
+  "production-desktop-history": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "ok": true
+  },
+  "production-desktop-import": {
+    "scrollWidth": 1440,
+    "clientWidth": 1440,
+    "ok": true
+  },
+  "production-mobile": {
+    "scrollWidth": 390,
+    "clientWidth": 390,
+    "ok": true
+  }
+}

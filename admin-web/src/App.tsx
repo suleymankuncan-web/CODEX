@@ -19,6 +19,7 @@ import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell'
 import { StoreHomeCommandV1Prototype } from './prototypes/store-home-command-v1'
 import { StoreIncentivesPrototypeShell } from './prototypes/store-incentives-prototype-shell'
+import { AdminMasterDataCommandV1Prototype } from './prototypes/admin/master-data-command-v1'
 
 function App() {
   const location = useLocation()
@@ -35,7 +36,15 @@ function App() {
     import.meta.env.DEV &&
     pathname === '/store/feed' &&
     new URLSearchParams(location.search).get('prototype') === 'region-composer-v1'
-  const isPrototypeRoute = isStoreIncentivesPrototype || isStoreHomePrototype || isStoreFeedPrototype
+  const isAdminMasterDataPrototype =
+    import.meta.env.DEV &&
+    pathname === '/admin/master-data' &&
+    new URLSearchParams(location.search).get('prototype') === 'master-data-command-v1'
+  const isPrototypeRoute =
+    isStoreIncentivesPrototype ||
+    isStoreHomePrototype ||
+    isStoreFeedPrototype ||
+    isAdminMasterDataPrototype
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { session, isReady, isProviderSessionHydrating, expireSession } = useSession()
@@ -185,6 +194,10 @@ function App() {
 
   if (isStoreFeedPrototype) {
     return <StoreFeedPrototypeShell />
+  }
+
+  if (isAdminMasterDataPrototype) {
+    return <AdminMasterDataCommandV1Prototype />
   }
 
   if (pathname.startsWith('/auth')) {

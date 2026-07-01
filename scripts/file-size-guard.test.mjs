@@ -9,7 +9,6 @@ const generatedPrefixes = ['admin-web/src/generated/']
 
 const oversizedBaseline = new Map([
   ['backend/nestjs/src/openapi/generate-openapi.ts', 5148],
-  ['admin-web/src/pages/MasterDataBootstrapPage.tsx', 1563],
   ['backend/nestjs/src/modules/store-ops/application/reporting.service.ts', 1123],
   ['scripts/generate-system-flow.mjs', 1433],
   ['backend/nestjs/src/modules/store-ops/infrastructure/competition.repository.ts', 1244],
@@ -31,6 +30,8 @@ const oversizedBaseline = new Map([
   ['backend/nestjs/src/modules/store-ops/infrastructure/snapshot-operations.repository.ts', 842],
   ['admin-web/src/pages/store-checklists-logic.ts', 703],
   ['admin-web/src/features/localization/messages/competition.ts', 601],
+  ['admin-web/src/prototypes/admin/master-data-command-v1.tsx', 945],
+  ['admin-web/src/prototypes/admin/master-data-command-v1.css', 756],
 ])
 
 function git(args) {

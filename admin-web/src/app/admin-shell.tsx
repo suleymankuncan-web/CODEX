@@ -1,5 +1,5 @@
 import { Suspense, useState, type ReactNode } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import { PilotFeedbackControl } from '../features/pilot-feedback/PilotFeedbackControl'
@@ -50,7 +50,9 @@ export function AdminShell(input: {
   authError: boolean
 }) {
   const { t } = useLocalization()
+  const location = useLocation()
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const isMasterDataSurface = location.pathname.startsWith('/admin/master-data')
   const adminRoute = (roles: string[], element: ReactNode) => (
     <AdminRouteGuard
       shellState={input.shellState}
@@ -62,7 +64,14 @@ export function AdminShell(input: {
   )
 
   return (
-    <div className={`admin-command-app${isSidebarCollapsed ? ' admin-command-app-collapsed' : ''}`} data-admin-surface-foundation="v1">
+    <div
+      className={[
+        'admin-command-app',
+        isSidebarCollapsed ? 'admin-command-app-collapsed' : '',
+        isMasterDataSurface ? 'admin-command-app-master-data' : '',
+      ].filter(Boolean).join(' ')}
+      data-admin-surface-foundation="v1"
+    >
       <AdminSidebar
         allowedAdminNav={input.allowedAdminNav}
         authSummary={input.authSummary}

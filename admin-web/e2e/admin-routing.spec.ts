@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
+import { routeMasterDataControlApi } from './master-data-control-test-fixtures'
 import { readComputedStyle } from './style-test-utils'
 
 test.beforeEach(async ({ page }) => {
@@ -417,7 +418,7 @@ test('audit center switches chrome to English copy and persists locale', async (
   await expect(page.getByRole('heading', { name: 'Audit Center' })).toBeVisible()
 })
 
-test('master data list renders bootstrap batches when updatedAt is absent', async ({ page }) => {
+test('master data control center renders import batches when updatedAt is absent', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => {
     pageErrors.push(error.message)
@@ -425,39 +426,23 @@ test('master data list renders bootstrap batches when updatedAt is absent', asyn
 
   await page.goto('/admin/master-data')
 
-  await expect(page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' })).toBeVisible()
-  await expect(page.getByText('Accepted personnel baseline')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
+  await page.getByRole('tab', { name: /İçe Aktarım/ }).click()
+  await expect(page.getByRole('heading', { name: 'Accepted personnel baseline' })).toBeVisible()
   expect(pageErrors).toEqual([])
 })
 
-test('master data page switches chrome to English copy and persists locale', async ({ page }) => {
+test('master data page keeps control center copy stable without legacy bootstrap copy', async ({ page }) => {
   await page.goto('/admin/master-data')
 
-  await expect(page.getByRole('heading', { name: 'Ana Veri Yönetim Paneli' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Hazırlık Partileri/ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Canlıya alınacak temel dosyalar' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Düzeltilecekler/ })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /İçe Aktarım/ })).toBeVisible()
   await expect(page.getByText('Master data bootstrap')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ã')
   await expect(page.locator('body')).not.toContainText('Ä')
   await expect(page.locator('body')).not.toContainText('Å')
 
-  await setStoredLocale(page, 'en')
-
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Master Data Command Center' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Bootstrap Batches/ })).toBeVisible()
-  await expect(
-    page.getByText(
-      'Open a batch to inspect row evidence, dry-run evidence, readiness counters, and promotion state.',
-    ),
-  ).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Baseline files before live promotion' })).toBeVisible()
-  await expect(page.getByText('Ana Veri Yönetim Paneli')).toHaveCount(0)
-
-  await page.reload()
-
-  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Master Data Command Center' })).toBeVisible()
 })
 
 test('admin checklist templates page switches chrome to English copy and persists locale', async ({ page }) => {
@@ -732,6 +717,8 @@ async function routeAdminShellApi(page: Page) {
   await page.route('**/api/snapshots/runs/snapshot-run-1', async (route) => {
     await route.fulfill({ json: snapshotDetailFixture })
   })
+
+  await routeMasterDataControlApi(page)
 
   await page.route('**/api/integrations/master-data-bootstrap/batches?**', async (route) => {
     await route.fulfill({

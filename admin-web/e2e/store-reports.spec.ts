@@ -5,6 +5,7 @@ const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoRegionId = '00000000-0000-0000-0000-000000000010'
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-06-29T12:00:00.000Z'))
   await page.addInitScript(() => {
     window.localStorage.setItem(
       'store-ops-admin-session',

@@ -2177,6 +2177,7 @@ test('store utility pages show honest preferences and stay mobile-safe', async (
 })
 
 test('store reports package is visible for region managers and stays mobile-safe', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-06-29T12:00:00.000Z'))
   await routeAuthSession(page, createStoreAuthSession({
     roleCodes: ['REGION_MANAGER'],
     readStoreIds: [demoStoreId, regionSecondStoreId],
