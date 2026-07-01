@@ -331,6 +331,7 @@ function ChecklistVisitModal(input: {
                 {input.t('storeChecklists.cancelSession')}
               </Button>
               <Button
+                className="store-checklist-session-complete-button"
                 disabled={!canComplete}
                 type="button"
                 onClick={() => {

@@ -1,4 +1,18 @@
 .store-checklist-session-dialog {
+  --checklist-plum: var(--store-command-plum, #7c3aed);
+  --checklist-blue: var(--store-command-blue, #2563eb);
+  --checklist-cyan: var(--store-command-cyan, #13a7b3);
+  --checklist-mint: var(--store-command-mint, #10b981);
+  --checklist-danger: var(--store-command-danger, #e11d48);
+  --checklist-amber: var(--store-command-amber, #f59e0b);
+  --checklist-plum-soft: var(--store-command-plum-soft, rgba(124, 58, 237, 0.12));
+  --checklist-cyan-soft: var(--store-command-cyan-soft, rgba(19, 167, 179, 0.12));
+  --checklist-danger-soft: rgba(225, 29, 72, 0.1);
+  --checklist-amber-soft: rgba(245, 158, 11, 0.14);
+  --checklist-soft: var(--store-command-surface-soft, rgba(255, 255, 255, 0.68));
+  --checklist-line: var(--store-command-line, rgba(36, 28, 50, 0.12));
+  --checklist-soft-line: rgba(36, 28, 50, 0.075);
+
   width: min(760px, calc(100vw - 1rem));
   max-height: min(90dvh, 720px);
   overflow: hidden;
@@ -392,9 +406,20 @@
   gap: 0.5rem;
 }
 
-.store-checklist-session-footer-actions [data-variant="default"] {
+.store-checklist-session-footer-actions [data-variant="default"],
+.store-checklist-session-complete-button {
   background: linear-gradient(135deg, var(--checklist-plum), var(--checklist-cyan));
   box-shadow: 0 14px 30px rgba(82, 82, 210, 0.24);
+}
+
+.store-checklist-session-complete-button,
+.store-checklist-session-complete-button:disabled {
+  min-width: 7.75rem;
+  color: var(--primary-foreground);
+}
+
+.store-checklist-session-complete-button:disabled {
+  opacity: 0.72;
 }
 
 body:has(.store-checklist-session-dialog) .pilot-feedback-control {
