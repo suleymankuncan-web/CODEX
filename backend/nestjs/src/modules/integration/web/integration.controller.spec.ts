@@ -25,4 +25,18 @@ describe("IntegrationController upload hardening", () => {
       /@Get\("audit"\)[\s\S]*?@RequireScope\("company"\)[\s\S]*?@RequireRoles\("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN"\)/,
     );
   });
+
+  it("keeps store bootstrap promotion out of the HR-only master data lane", () => {
+    const source = readFileSync(
+      join(__dirname, "integration.controller.ts"),
+      "utf8",
+    );
+
+    expect(source).toMatch(
+      /@Post\("master-data-bootstrap\/batches\/:batchId\/promote-stores"\)[\s\S]*?@RequireScope\("company"\)[\s\S]*?@RequireRoles\("INTEGRATION_ADMIN"\)/,
+    );
+    expect(source).toMatch(
+      /promoteMasterDataBootstrapStores[\s\S]*?actorUserId: request\.user\.userId/,
+    );
+  });
 });

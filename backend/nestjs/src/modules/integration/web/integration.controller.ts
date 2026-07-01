@@ -1,4 +1,4 @@
-import {
+﻿import {
   BadRequestException,
   Body,
   Controller,
@@ -430,7 +430,6 @@ export class IntegrationController {
       rows: body.rows,
     });
   }
-
   @Post("master-data-bootstrap/batches/:batchId/validate")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
@@ -439,6 +438,7 @@ export class IntegrationController {
     @Req()
     request: {
       user: {
+        userId: string;
         scope: {
           companyIds: string[];
         };
@@ -446,13 +446,13 @@ export class IntegrationController {
     },
   ) {
     return this.masterDataBootstrapService.validateBootstrapBatch({
+      actorUserId: request.user.userId,
       actorScope: {
         companyIds: request.user.scope.companyIds,
       },
       batchId,
     });
   }
-
   @Get("master-data-bootstrap/batches/:batchId/rows")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
@@ -480,7 +480,6 @@ export class IntegrationController {
       offset: query.offset,
     });
   }
-
   @Get("master-data-bootstrap/batches/:batchId/promotion-readiness")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
@@ -502,15 +501,15 @@ export class IntegrationController {
       batchId,
     });
   }
-
   @Post("master-data-bootstrap/batches/:batchId/promote-stores")
   @RequireScope("company")
-  @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
+  @RequireRoles("INTEGRATION_ADMIN")
   async promoteMasterDataBootstrapStores(
     @Param("batchId") batchId: string,
     @Req()
     request: {
       user: {
+        userId: string;
         scope: {
           companyIds: string[];
         };
@@ -518,13 +517,13 @@ export class IntegrationController {
     },
   ) {
     return this.masterDataBootstrapService.promoteStoreBootstrapBatch({
+      actorUserId: request.user.userId,
       actorScope: {
         companyIds: request.user.scope.companyIds,
       },
       batchId,
     });
   }
-
   @Post("master-data-bootstrap/batches/:batchId/promote-personnel")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")
@@ -533,6 +532,7 @@ export class IntegrationController {
     @Req()
     request: {
       user: {
+        userId: string;
         scope: {
           companyIds: string[];
         };
@@ -540,13 +540,13 @@ export class IntegrationController {
     },
   ) {
     return this.masterDataBootstrapService.promotePersonnelBootstrapBatch({
+      actorUserId: request.user.userId,
       actorScope: {
         companyIds: request.user.scope.companyIds,
       },
       batchId,
     });
   }
-
   @Get("master-data-bootstrap/batches/:batchId")
   @RequireScope("company")
   @RequireRoles("HR_ADMIN", "SUPER_ADMIN", "INTEGRATION_ADMIN")

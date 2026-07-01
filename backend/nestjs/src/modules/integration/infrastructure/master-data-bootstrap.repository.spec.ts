@@ -51,6 +51,7 @@ describe("MasterDataBootstrapRepository", () => {
     const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
     expect(sql).toContain("INSERT INTO stg.master_data_bootstrap_batch");
     expect(sql).toContain("INSERT INTO stg.master_data_bootstrap_row");
+    expect(sql).toContain("INSERT INTO audit.event_log");
     expect(sql).not.toContain("INSERT INTO ops.store");
     expect(sql).not.toContain("INSERT INTO ops.employee");
     expect(query.mock.calls[1][1]).toEqual([
@@ -88,7 +89,10 @@ describe("MasterDataBootstrapRepository", () => {
     } as never);
 
     const batch = await repository.updateBootstrapRowValidationResults({
+      actorUserId: "00000000-0000-4000-8000-000000000999",
       batchId: "00000000-0000-4000-8000-000000000901",
+      bootstrapEntity: "personnel",
+      companyId: "00000000-0000-4000-8000-000000000001",
       results: [
         {
           rowId: "00000000-0000-4000-8000-000000000101",
@@ -107,6 +111,7 @@ describe("MasterDataBootstrapRepository", () => {
     const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_row");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_batch");
+    expect(sql).toContain("INSERT INTO audit.event_log");
     expect(sql).not.toContain("INSERT INTO ops.store");
     expect(sql).not.toContain("INSERT INTO ops.employee");
     expect(sql).not.toContain("UPDATE ops.store");
@@ -366,7 +371,9 @@ describe("MasterDataBootstrapRepository", () => {
     } as never);
 
     const result = await repository.promoteStoreBootstrapRows({
+      actorUserId: "00000000-0000-4000-8000-000000000999",
       batchId: "batch-store",
+      companyId: "00000000-0000-4000-8000-000000000001",
       rows: [
         {
           rowId: "row-store",
@@ -386,6 +393,7 @@ describe("MasterDataBootstrapRepository", () => {
     expect(sql).toContain("ON CONFLICT (store_code) DO UPDATE");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_row");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_batch");
+    expect(sql).toContain("INSERT INTO audit.event_log");
     expect(sql).not.toContain("INSERT INTO ops.employee");
     expect(sql).not.toContain("UPDATE ops.employee");
     expect(sql).not.toContain("employee_assignment_history");
@@ -479,7 +487,9 @@ describe("MasterDataBootstrapRepository", () => {
     } as never);
 
     const result = await repository.promotePersonnelBootstrapRows({
+      actorUserId: "00000000-0000-4000-8000-000000000999",
       batchId: "batch-personnel",
+      companyId: "00000000-0000-4000-8000-000000000001",
       rows: [
         {
           rowId: "row-personnel",
@@ -506,6 +516,7 @@ describe("MasterDataBootstrapRepository", () => {
     expect(sql).toContain("INSERT INTO ops.employee_assignment_history");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_row");
     expect(sql).toContain("UPDATE stg.master_data_bootstrap_batch");
+    expect(sql).toContain("INSERT INTO audit.event_log");
     expect(sql).not.toContain("INSERT INTO ops.store");
     expect(sql).not.toContain("UPDATE ops.store");
     expect(result).toEqual({

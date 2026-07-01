@@ -357,7 +357,9 @@ export function MasterDataControlCenterPage() {
   const selectedStore = storeRows.find((row) => row.id === selectedStoreId) ?? storeRows[0] ?? null
   const selectedPersonnel =
     personnelRows.find((row) => row.id === selectedPersonnelId) ?? personnelRows[0] ?? null
-  const selectedImport = importRows.find((row) => row.id === selectedImportBatchId) ?? importRows[0] ?? null
+  const selectedImport = selectedImportBatchId
+    ? importRows.find((row) => row.id === selectedImportBatchId) ?? null
+    : importRows[0] ?? null
   const selectedAudit = auditRows.find((row) => row.id === selectedAuditId) ?? auditRows[0] ?? null
 
   const unsavedCount = Object.keys(storeDrafts).length + Object.keys(personnelDrafts).length
@@ -376,6 +378,17 @@ export function MasterDataControlCenterPage() {
     const personnelEntries = Object.entries(personnelDrafts).filter(([employeeId]) =>
       personnelById.has(employeeId),
     )
+    const hiddenDraftCount =
+      Object.keys(storeDrafts).filter((storeId) => !storesById.has(storeId)).length +
+      Object.keys(personnelDrafts).filter((employeeId) => !personnelById.has(employeeId)).length
+
+    if (hiddenDraftCount > 0) {
+      setFeedback({
+        tone: 'warning',
+        message: 'Filtre dışında kaydedilmemiş değişiklik var. Kaydetmeden önce filtreleri sıfırlayın.',
+      })
+      return
+    }
 
     if (
       storeEntries.some(([storeId, patch]) => !mergeStoreMasterPatch(storesById.get(storeId)!, patch, storeLookupsQuery.data).regionId) ||
@@ -486,7 +499,7 @@ export function MasterDataControlCenterPage() {
         <div>
           <div className="master-data-control-center__pills">
             <span className="master-data-control-center__pill master-data-control-center__pill--primary">Ana Veri</span>
-            <span className="master-data-control-center__pill">Haziran 2026</span>
+            <span className="master-data-control-center__pill">Canlı kayıtlar</span>
             <span className="master-data-control-center__pill master-data-control-center__pill--warning">
               {unsavedCount} kaydedilmedi
             </span>
