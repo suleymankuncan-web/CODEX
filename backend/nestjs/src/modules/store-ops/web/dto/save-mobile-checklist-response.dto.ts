@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsNumber, IsOptional, IsString, Min } from "class-validator";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
 export class SaveMobileChecklistResponseDto {
@@ -7,7 +7,6 @@ export class SaveMobileChecklistResponseDto {
 
   @IsNumber()
   @Min(0)
-  @Max(10)
   scoreValue!: number;
 
   @IsOptional()

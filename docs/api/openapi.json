@@ -5715,8 +5715,7 @@
           },
           "scoreValue": {
             "type": "number",
-            "minimum": 0,
-            "maximum": 10
+            "minimum": 0
           },
           "commentText": {
             "type": "string"
@@ -18158,6 +18157,16 @@
                           },
                           "maxScore": {
                             "type": "number"
+                          },
+                          "minScore": {
+                            "type": "number"
+                          },
+                          "lowScoreThreshold": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "requiresLowScoreNote": {
+                            "type": "boolean"
                           }
                         }
                       }
