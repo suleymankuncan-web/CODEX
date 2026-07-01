@@ -2386,8 +2386,42 @@ test('store rankings keeps non-privileged rows summary-only and backend-gated', 
   await expect.poll(() => personnelPerformanceRequests).toBe(0)
 })
 
+test('store personnel profile hides backend denial details on direct access', async ({ page }) => {
+  const deniedEmployeeId = '99999999-9999-4999-8999-999999999998'
+
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        ...authSessionFixture,
+        user: {
+          ...authSessionFixture.user,
+          userId: 'region-ranking-user',
+          roleCodes: ['REGION_MANAGER'],
+        },
+      },
+    })
+  })
+
+  await page.unroute('**/api/reports/personnel-performance/**')
+  await page.route('**/api/reports/personnel-performance/**', async (route) => {
+    await route.fulfill({
+      status: 403,
+      json: { message: `Forbidden employee ${deniedEmployeeId}` },
+    })
+  })
+
+  await page.goto(`/store/personnel/${deniedEmployeeId}`)
+
+  await expect(page.getByRole('heading', { name: 'Personel profili açılamıyor' })).toBeVisible()
+  await expect(page.getByText('Bu personel profiline erişiminiz yok.')).toBeVisible()
+  await expect(page.locator('body')).not.toContainText('Forbidden employee')
+  await expect(page.locator('body')).not.toContainText(deniedEmployeeId)
+})
+
 test('store rankings personnel detail opens the selected personnel performance profile', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
+  const rankingRequests: URL[] = []
 
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {
@@ -2405,6 +2439,7 @@ test('store rankings personnel detail opens the selected personnel performance p
 
   await page.unroute('**/api/reports/rankings**')
   await page.route('**/api/reports/rankings**', async (route) => {
+    rankingRequests.push(new URL(route.request().url()))
     await route.fulfill({
       json: {
         ...rankingsPrivilegedDetailFixture,
@@ -2438,8 +2473,18 @@ test('store rankings personnel detail opens the selected personnel performance p
     })
   })
 
-  await page.goto('/store/rankings')
-  await page.getByRole('tab', { name: 'Personel listesi' }).click()
+  await page.goto('/store/rankings?list=personnel&period=2026-04-01&q=Store&sort=ATV&dir=asc&page=2')
+  await expect(page.getByRole('tab', { name: 'Personel listesi' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('searchbox', { name: 'Personel arama' })).toHaveValue('Store')
+  await expect.poll(() =>
+    rankingRequests.some((requestUrl) =>
+      requestUrl.searchParams.get('periodStart') === '2026-04-01' &&
+      requestUrl.searchParams.get('search') === 'Store' &&
+      requestUrl.searchParams.get('sortKey') === 'ATV' &&
+      requestUrl.searchParams.get('sortDirection') === 'asc' &&
+      requestUrl.searchParams.get('offset') === '100',
+    ),
+  ).toBe(true)
   const personnelRow = page.getByRole('row', { name: /Store Personnel - 1/ })
   await personnelRow.getByRole('button', { name: 'Profile Git' }).click()
   await expect(page.locator('.store-rankings-drawer')).toHaveCount(0)
@@ -2460,9 +2505,17 @@ test('store rankings personnel detail opens the selected personnel performance p
     )
     .toBe(true)
 
-  await page.goBack()
-  await expect(page).toHaveURL(/\/store\/rankings/)
+  await page.getByRole('button', { name: 'Sıralamaya dön' }).click()
+  await expect(page).toHaveURL(/\/store\/rankings\?/)
+  const returnedParams = new URL(page.url()).searchParams
+  expect(returnedParams.get('list')).toBe('personnel')
+  expect(returnedParams.get('period')).toBe('2026-04-01')
+  expect(returnedParams.get('q')).toBe('Store')
+  expect(returnedParams.get('sort')).toBe('ATV')
+  expect(returnedParams.get('dir')).toBe('asc')
+  expect(returnedParams.get('page')).toBe('2')
   await expect(page.getByRole('tab', { name: 'Personel listesi' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('searchbox', { name: 'Personel arama' })).toHaveValue('Store')
   await expect(page.getByRole('row', { name: /Store Personnel - 1/ })).toBeVisible()
 })
 

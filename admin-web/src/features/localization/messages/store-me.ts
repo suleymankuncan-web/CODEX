@@ -2,8 +2,8 @@ export const storeMeTr = {
   'storeMe.unavailableTitle': 'Performans yüzeyi kullanılamıyor',
   'storeMe.unavailableCopy': 'Bu yüzey mağaza personeli veya mağaza müdürü oturumu gerektirir.',
   'storeMe.personnelProfileUnavailableTitle': 'Personel profili açılamıyor',
-  'storeMe.personnelProfileUnavailableCopy':
-    'Bu profil için personel, mağaza müdürü, bölge müdürü veya yetkili yönetici oturumu gerekir.',
+  'storeMe.personnelProfileUnavailableCopy': 'Bu personel profiline erişiminiz yok.',
+  'storeMe.backToRankings': 'Sıralamaya dön',
   'storeMe.loadingTitle': 'Benim performansım hazırlanıyor',
   'storeMe.loadingCopy': 'Personel performans profili yükleniyor.',
   'storeMe.errorTitle': 'Performans yüzeyi açılamadı',
@@ -243,8 +243,8 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.unavailableTitle': 'Performance surface unavailable',
   'storeMe.unavailableCopy': 'This surface requires a store personnel or store manager session.',
   'storeMe.personnelProfileUnavailableTitle': 'Personnel profile cannot be opened',
-  'storeMe.personnelProfileUnavailableCopy':
-    'This profile requires a personnel, store manager, region manager, or authorized admin session.',
+  'storeMe.personnelProfileUnavailableCopy': 'You do not have access to this personnel profile.',
+  'storeMe.backToRankings': 'Back to rankings',
   'storeMe.loadingTitle': 'Preparing my performance',
   'storeMe.loadingCopy': 'Loading the personnel performance profile.',
   'storeMe.errorTitle': 'Performance surface could not be opened',

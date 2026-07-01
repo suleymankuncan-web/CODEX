@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { useReducer, useState } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { CalendarCheck, CalendarClock, CalendarDays, CalendarRange, LineChart, ListFilter, Search, Store, Trophy, UserCheck, UsersRound, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -24,6 +24,7 @@ import {
   type SortableRankingRow,
   type StoreRankingsTextFilter,
   average,
+  buildStoreRankingsSearchParams,
   canUsePrivilegedFilters,
   canUseRankings,
   createInitialStoreRankingsPageState,
@@ -35,6 +36,7 @@ import {
   getReferenceMetricValue,
   getVisibleWindow,
   personnelMetricCodes,
+  rankingPageSize,
   storeMetricCodes,
   storeRankingsPageReducer,
 } from './store-rankings-page-model'
@@ -50,6 +52,7 @@ export function StoreRankingsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
+  const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
@@ -72,9 +75,18 @@ export function StoreRankingsPage(input: {
     sortKey,
     sortDirection,
   } = pageState
-  const limit = 100
+  const limit = rankingPageSize
   const hasNonDefaultSort = sortKey !== 'score' || sortDirection !== 'desc'
   const requestedPeriod = getRequestedRankingPeriod(periodStart, dayOfMonth)
+
+  useEffect(() => {
+    const nextParams = buildStoreRankingsSearchParams(pageState)
+    const current = new URLSearchParams(location.search).toString()
+    const next = nextParams.toString()
+    if (current !== next) {
+      setSearchParams(nextParams, { replace: true })
+    }
+  }, [location.search, pageState, setSearchParams])
   const setFilter = (field: StoreRankingsTextFilter) => (value: string) => {
     dispatchPageState({ type: 'setFilter', field, value })
   }
@@ -83,17 +95,6 @@ export function StoreRankingsPage(input: {
   }
   const updateActiveList = (nextList: ActiveRankingList) => {
     dispatchPageState({ type: 'setActiveList', value: nextList })
-    setSearchParams((current) => {
-      const next = new URLSearchParams(current)
-
-      if (nextList === 'personnel') {
-        next.set('list', 'personnel')
-      } else {
-        next.delete('list')
-      }
-
-      return next
-    }, { replace: true })
   }
 
   const rankingsQuery = useQuery({
@@ -154,7 +155,9 @@ export function StoreRankingsPage(input: {
     }
 
     const query = params.toString()
-    navigate(query ? `${path}?${query}` : path)
+    const returnParams = buildStoreRankingsSearchParams(pageState).toString()
+    const returnTo = `${location.pathname}${returnParams ? `?${returnParams}` : ''}`
+    navigate(query ? `${path}?${query}` : path, { state: { returnTo } })
   }
 
   if (!enabled) {

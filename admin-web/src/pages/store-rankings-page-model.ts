@@ -13,6 +13,7 @@ export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
 export const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
 export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'gsm_approval', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
 export const personnelMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const
+export const rankingPageSize = 100
 
 export type ActiveRankingList = 'stores' | 'personnel'
 export type RankingSortKey = 'score' | typeof storeMetricCodes[number]
@@ -64,6 +65,8 @@ export const initialStoreRankingsPageState: StoreRankingsPageState = {
   sortDirection: 'desc',
 }
 
+const rankingSortKeys = new Set<RankingSortKey>(['score', ...storeMetricCodes])
+
 export function getInitialRankingsActiveList(searchParams: URLSearchParams): ActiveRankingList {
   return searchParams.get('list') === 'personnel' ? 'personnel' : 'stores'
 }
@@ -71,10 +74,49 @@ export function getInitialRankingsActiveList(searchParams: URLSearchParams): Act
 export function createInitialStoreRankingsPageState(
   searchParams: URLSearchParams,
 ): StoreRankingsPageState {
+  const sortKey = searchParams.get('sort')
+  const page = Number.parseInt(searchParams.get('page') ?? '1', 10)
+
   return {
     ...initialStoreRankingsPageState,
     activeList: getInitialRankingsActiveList(searchParams),
+    dayOfMonth: parseRankingDay(searchParams.get('day')),
+    offset: Number.isFinite(page) && page > 1 ? (page - 1) * rankingPageSize : 0,
+    periodStart: parseRankingPeriodStart(searchParams.get('period')),
+    regionId: searchParams.get('region')?.trim() ?? '',
+    regionManagerUserId: searchParams.get('regionManager')?.trim() ?? '',
+    search: searchParams.get('q')?.trim() ?? '',
+    sortDirection: searchParams.get('dir') === 'asc' ? 'asc' : 'desc',
+    sortKey: sortKey && rankingSortKeys.has(sortKey as RankingSortKey) ? (sortKey as RankingSortKey) : 'score',
+    storeId: searchParams.get('store')?.trim() ?? '',
   }
+}
+
+export function buildStoreRankingsSearchParams(state: StoreRankingsPageState) {
+  const params = new URLSearchParams()
+  if (state.activeList === 'personnel') params.set('list', 'personnel')
+  if (state.periodStart) params.set('period', state.periodStart)
+  if (state.dayOfMonth) params.set('day', state.dayOfMonth)
+  if (state.search.trim()) params.set('q', state.search.trim())
+  if (state.sortKey !== 'score' || state.sortDirection !== 'desc') {
+    params.set('sort', state.sortKey)
+    params.set('dir', state.sortDirection)
+  }
+  if (state.offset > 0) params.set('page', String(Math.floor(state.offset / rankingPageSize) + 1))
+  if (state.regionManagerUserId) params.set('regionManager', state.regionManagerUserId)
+  if (state.regionId) params.set('region', state.regionId)
+  if (state.storeId) params.set('store', state.storeId)
+  return params
+}
+
+function parseRankingPeriodStart(input: string | null) {
+  return input && /^\d{4}-\d{2}-\d{2}$/.test(input) ? input : ''
+}
+
+function parseRankingDay(input: string | null) {
+  if (!input) return ''
+  const day = Number.parseInt(input, 10)
+  return Number.isFinite(day) && day >= 1 && day <= 31 ? String(day) : ''
 }
 
 const metricLabelKeyByCode: Record<string, TranslationKey> = {
