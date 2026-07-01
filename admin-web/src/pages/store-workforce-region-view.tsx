@@ -17,11 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
   ArrowRight,
   ArrowUpDown,
   CalendarDays,
@@ -55,7 +50,6 @@ import {
   formatTurnover,
   getAverageTenureMonths,
   getUniqueIds,
-  getYearOptions,
   resolveManagerName,
   statusCopy,
   toFiniteNumber,
@@ -72,8 +66,6 @@ export function RegionWorkforceView(input: {
   const locale: AppLocale = 'tr'
   const now = useMemo(() => new Date(), [])
   const [query, setQuery] = useState('')
-  const [selectedYear, setSelectedYear] = useState(String(now.getFullYear()))
-  const [isYearPickerOpen, setYearPickerOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [sort, setSort] = useState<{ direction: SortDirection; key: SortKey }>({ direction: 'asc', key: 'status' })
   const [detailStoreId, setDetailStoreId] = useState<string | null>(null)
@@ -106,7 +98,7 @@ export function RegionWorkforceView(input: {
 
       return fallbackStoreIds.map((storeId) => ({
         storeId,
-        storeLabel: storeId,
+        storeLabel: 'Mağaza adı yok',
       }))
     },
     [fallbackStoreIds, orgStoresQuery.data?.items],
@@ -219,7 +211,7 @@ export function RegionWorkforceView(input: {
       formatShortage(row),
       formatTurnover(row.turnover),
     ])
-    downloadCsv(`norm-kadro-${selectedYear}.csv`, [headers, ...csvRows])
+    downloadCsv('norm-kadro-guncel.csv', [headers, ...csvRows])
   }
 
   const toggleSort = (key: SortKey) => {
@@ -242,7 +234,7 @@ export function RegionWorkforceView(input: {
         <div className="swc-hero-copy">
           <div className="swc-kicker">
             <span>{copy.pageTitle}</span>
-            <b>{selectedYear}</b>
+            <b>{copy.yearAria}</b>
             <b>{copy.managerBadge}</b>
           </div>
           <div className="swc-title-row">
@@ -311,33 +303,10 @@ export function RegionWorkforceView(input: {
             <SelectItem value="over">Fazla kadro</SelectItem>
           </SelectContent>
         </Select>
-        <Popover open={isYearPickerOpen} onOpenChange={setYearPickerOpen}>
-          <PopoverTrigger asChild>
-            <button aria-label={copy.yearAria} className="swc-select-trigger swc-year-trigger" type="button">
-              <CalendarDays aria-hidden="true" />
-              <span>{selectedYear}</span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="swc-year-popover">
-            <div className="swc-year-grid" role="listbox" aria-label={copy.yearAria}>
-              {getYearOptions(now).map((year) => (
-                <button
-                  aria-selected={year === selectedYear}
-                  className={`swc-year-option ${year === selectedYear ? 'active' : ''}`}
-                  key={year}
-                  onClick={() => {
-                    setSelectedYear(year)
-                    setYearPickerOpen(false)
-                  }}
-                  role="option"
-                  type="button"
-                >
-                  {year}
-                </button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <button aria-label={copy.yearAria} className="swc-select-trigger swc-year-trigger" disabled type="button">
+          <CalendarDays aria-hidden="true" />
+          <span>{copy.yearAria}</span>
+        </button>
       </section>
 
       <section className="swc-content-grid">

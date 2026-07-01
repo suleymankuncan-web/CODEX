@@ -395,9 +395,11 @@ function useStoreChecklistsPageContent(input: {
     visitSort,
     locale,
   )
+  const currentMonth = getVisitPlanCurrentMonthKey()
   const filteredPendingItems = sortChecklistItems(
     pendingItems.filter((item) =>
       doesChecklistItemMatchFilters(item, {
+        includeOutOfPeriodPending: true,
         month: selectedMonth,
         query: searchQuery,
         status: statusFilter,
@@ -433,7 +435,6 @@ function useStoreChecklistsPageContent(input: {
   const incompleteVisitStoreRows = visitStoreRows.filter((row) =>
     isIncompleteStoreVisitRow(row, requiresCombinedVisitTemplates),
   )
-  const currentMonth = getVisitPlanCurrentMonthKey()
   const evaluationMonth = resolveVisitPlanEvaluationMonth(selectedMonth, currentMonth)
   const visitPlanCoverageRows = buildChecklistCoverageRows({
     acknowledgementItems: items,

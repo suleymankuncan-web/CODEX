@@ -14,17 +14,17 @@ export type StoreReportSection = {
   code: string
   label: string
   value: string
-  status: 'ready' | 'partial'
+  status: 'ready' | 'partial' | 'missing'
 }
 
 const sectionFallbacks: StoreReportSection[] = [
-  { code: 'kpis', label: 'KPI kolonları', value: 'Skor, UPT, ATV, CR, HG%', status: 'ready' },
-  { code: 'approval_scores', label: 'Onay skorları', value: 'GSM, BM Checklist, VM Checklist', status: 'ready' },
-  { code: 'actions', label: 'Aksiyon durumu', value: 'Bitirildi, devam ediyor, bekliyor', status: 'ready' },
-  { code: 'targets', label: 'Hedefler', value: 'Mağaza ve personel hedef durumu', status: 'ready' },
-  { code: 'incentives', label: 'Primler', value: 'Hakediş ve kontrol durumu', status: 'ready' },
-  { code: 'workforce', label: 'Norm Kadro', value: 'Aktif, norm, eksik gün, turnover', status: 'ready' },
-  { code: 'visits', label: 'Ziyaret', value: 'Son ziyaret ve geçen gün', status: 'ready' },
+  { code: 'kpis', label: 'KPI kolonları', value: 'Veri bekleniyor', status: 'missing' },
+  { code: 'approval_scores', label: 'Onay skorları', value: 'Veri bekleniyor', status: 'missing' },
+  { code: 'actions', label: 'Aksiyon durumu', value: 'Veri bekleniyor', status: 'missing' },
+  { code: 'targets', label: 'Hedefler', value: 'Veri bekleniyor', status: 'missing' },
+  { code: 'incentives', label: 'Primler', value: 'Veri bekleniyor', status: 'missing' },
+  { code: 'workforce', label: 'Norm Kadro', value: 'Veri bekleniyor', status: 'missing' },
+  { code: 'visits', label: 'Ziyaret', value: 'Veri bekleniyor', status: 'missing' },
 ]
 
 export function buildStoreReportsViewModel(summary: StoreMonthlyReportPackage | null) {
@@ -33,7 +33,7 @@ export function buildStoreReportsViewModel(summary: StoreMonthlyReportPackage | 
   const periodLabel = summary?.periodLabel ?? 'Dönem seç'
   const coverageLabel = summary?.coverageLabel ?? 'Dönem kapsamı'
   const storeCount = summary?.storeCount ?? 0
-  const isReady = storeCount > 0 || readySections > 0
+  const isReady = sections.length > 0 && readySections === sections.length
 
   return {
     periodLabel,
@@ -66,7 +66,7 @@ export function buildStoreReportsViewModel(summary: StoreMonthlyReportPackage | 
         id: 'period-state',
         label: periodLabel,
         value: isReady ? 'Hazır' : 'Bekliyor',
-        copy: storeCount > 0 ? 'Bölge özeti' : 'Veri bekleniyor',
+        copy: storeCount > 0 && !isReady ? 'Kontrol bekliyor' : storeCount > 0 ? 'Bölge özeti' : 'Veri bekleniyor',
         tone: 'amber',
       },
     ] satisfies StoreReportMetric[],
@@ -84,7 +84,7 @@ function normalizeSections(summary: StoreMonthlyReportPackage | null): StoreRepo
       code: fallback.code,
       label: source?.label?.trim() || fallback.label,
       value: source?.value?.trim() || fallback.value,
-      status: source?.status ?? fallback.status,
+      status: source?.status ?? 'missing',
     }
   })
 }
