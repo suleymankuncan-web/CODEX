@@ -1,13 +1,7 @@
 import type { Page } from '@playwright/test'
 
 export async function routeMasterDataControlApi(page: Page) {
-  await page.route('**/api/integrations/master-data-quality/issues?**', async (route) => {
-    await route.fulfill({ json: masterDataQualityIssuesFixture })
-  })
-
-  await page.route('**/api/integrations/master-data-quality/audit?**', async (route) => {
-    await route.fulfill({ json: masterDataQualityAuditFixture })
-  })
+  await routeMasterDataQualityApi(page)
 
   await page.route('**/api/integrations/store-master-lookups', async (route) => {
     await route.fulfill({ json: storeMasterLookupsFixture })
@@ -23,6 +17,16 @@ export async function routeMasterDataControlApi(page: Page) {
 
   await page.route('**/api/integrations/personnel-master?**', async (route) => {
     await route.fulfill({ json: personnelMasterFixture })
+  })
+}
+
+export async function routeMasterDataQualityApi(page: Page) {
+  await page.route('**/api/integrations/master-data-quality/issues?**', async (route) => {
+    await route.fulfill({ json: masterDataQualityIssuesFixture })
+  })
+
+  await page.route('**/api/integrations/master-data-quality/audit?**', async (route) => {
+    await route.fulfill({ json: masterDataQualityAuditFixture })
   })
 }
 
