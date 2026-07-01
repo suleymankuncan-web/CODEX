@@ -28,7 +28,6 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import type { AuthSessionSummary } from '../auth/api'
 import type { AppLocale } from '../../lib/i18n'
-import { normalizeDisplayLabel } from '../../lib/display-labels'
 import { getErrorMessage } from '../../lib/format'
 import { cn } from '../../lib/utils'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
@@ -54,9 +53,8 @@ import {
 import './store-tasks-command-center.css'
 export function StoreTasksAccessState(input: {
   authSummary: AuthSessionSummary | null
-  primaryStoreId: string
 }) {
-  const storeLabel = normalizeDisplayLabel(input.primaryStoreId, 'Mağaza adı yok')
+  const roleLabel = formatAccessRoleLabel(input.authSummary?.user.roleCodes ?? [])
 
   return (
     <Card className="tw:border-border/80 tw:bg-card/85 tw:shadow-sm">
@@ -70,8 +68,8 @@ export function StoreTasksAccessState(input: {
         <CardDescription>Bu sayfa mağaza operasyon rolüyle açılır.</CardDescription>
       </CardHeader>
       <CardContent className="tw:flex tw:flex-wrap tw:gap-2">
-        <Badge variant="outline">{`Mağaza: ${storeLabel}`}</Badge>
-        <Badge variant="secondary">{(input.authSummary?.user.roleCodes ?? []).join(', ') || 'Rol yok'}</Badge>
+        <Badge variant="outline">Mağaza bilgisi alınamadı</Badge>
+        <Badge variant="secondary">{roleLabel}</Badge>
       </CardContent>
     </Card>
   )
@@ -93,7 +91,6 @@ export function StoreTasksCommandCenter(input: {
   pageMeta: { total: number; limit: number; offset: number; count: number } | undefined
   onSearchChange: (value: string) => void
   onActiveFilterChange: (value: StoreTaskFilter) => void
-  onRegionModeChange: (value: StoreTasksRegionMode) => void
   onSelectedPeriodChange: (value: string) => void
   onRefresh: () => void
   onActionPlanCreated: () => void
@@ -109,7 +106,7 @@ export function StoreTasksCommandCenter(input: {
   )
   const isRegion = input.persona === 'regionManager'
   const periodLabel = formatPeriodLabel(input.selectedPeriod, input.locale)
-  const filters = buildFilters(input.persona, input.regionMode)
+  const filters = buildFilters(input.persona)
   return (
     <div className="store-tasks-command">
       <header className="stcc-topbar">
@@ -223,22 +220,7 @@ export function StoreTasksCommandCenter(input: {
             <span>{input.rows.length} kayıt</span>
           </div>
           {isRegion ? (
-            <div className="stcc-mode-toggle" aria-label="Bölge müdürü görev görünümü">
-              <button
-                type="button"
-                className={input.regionMode === 'results' ? 'selected' : ''}
-                onClick={() => input.onRegionModeChange('results')}
-              >
-                Sonuçlar
-              </button>
-              <button
-                type="button"
-                className={input.regionMode === 'openFollowups' ? 'selected' : ''}
-                onClick={() => input.onRegionModeChange('openFollowups')}
-              >
-                Açık takipler
-              </button>
-            </div>
+            <Badge variant="outline">Sonuç geçmişi</Badge>
           ) : (
             <Button type="button" variant="outline" className="stcc-button" onClick={() => input.onActiveFilterChange('blocked')}>
               Blokeleri göster
@@ -631,13 +613,13 @@ function Pagination(input: {
     </div>
   )
 }
-function buildFilters(persona: StoreTasksPersona, regionMode: StoreTasksRegionMode): Array<{ id: StoreTaskFilter; label: string }> {
+function buildFilters(persona: StoreTasksPersona): Array<{ id: StoreTaskFilter; label: string }> {
   const base: Array<{ id: StoreTaskFilter; label: string }> = [
     { id: 'all', label: 'Tümü' },
     { id: 'checklist', label: 'Checklist' },
     { id: 'projection', label: 'Projeksiyon' },
   ]
-  if (persona === 'regionManager' && regionMode === 'results') {
+  if (persona === 'regionManager') {
     return [
       ...base,
       { id: 'resolved', label: 'Çözüm bildirildi' },
@@ -651,6 +633,27 @@ function buildFilters(persona: StoreTasksPersona, regionMode: StoreTasksRegionMo
     { id: 'blocked', label: 'Bloke' },
     { id: 'resolved', label: 'Çözüm bildirildi' },
   ]
+}
+function formatAccessRoleLabel(roleCodes: readonly string[]) {
+  const labels: string[] = []
+  for (const roleCode of roleCodes) {
+    switch (roleCode) {
+      case 'STORE_MANAGER':
+        labels.push('Mağaza müdürü')
+        break
+      case 'REGION_MANAGER':
+        labels.push('Bölge müdürü')
+        break
+      case 'SUPER_ADMIN':
+        labels.push('Admin')
+        break
+      case 'REPORT_VIEWER':
+        labels.push('Rapor kullanıcısı')
+        break
+    }
+  }
+
+  return labels.length > 0 ? labels.join(', ') : 'Rol bilgisi doğrulanamadı'
 }
 function renderSourceIcon(sourceGroup: StoreTaskCommandRow['sourceGroup']) {
   return sourceGroup === 'checklist' ? <ClipboardList aria-hidden="true" /> : <TrendingDown aria-hidden="true" />

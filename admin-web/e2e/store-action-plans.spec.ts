@@ -45,6 +45,21 @@ test('store tasks renders the command center and keeps target approvals out', as
   expect(api.listStatuses).toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked', 'closed', 'cancelled']))
 })
 
+test('store tasks shows same-day open plans as today instead of one elapsed day', async ({ page }) => {
+  const sameDayPlan = {
+    ...storeActionPlansFixture[0],
+    actionPlanId: '00000000-0000-0000-0000-00000000a105',
+    title: 'Bugün açılan takip',
+    createdAt: '2026-06-29T08:00:00.000Z',
+    updatedAt: '2026-06-29T08:30:00.000Z',
+  }
+  await routeStoreTasksApi(page, { plans: [sameDayPlan] })
+
+  await page.goto('/store/tasks')
+
+  await expect(getActionPlanRow(page, 'Bugün açılan takip')).toContainText('Bugün açık')
+})
+
 test('store tasks renders persisted plan names without UUID fallbacks', async ({ page }) => {
   const detachedPlan = {
     ...storeActionPlansFixture[0],
@@ -116,7 +131,7 @@ test('store manager can block a persisted action plan with a note', async ({ pag
   })
 })
 
-test('region manager reads results and open follow-ups without command buttons', async ({ page }) => {
+test('region manager reads only completed results without command buttons', async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
       'store-ops-admin-session',
@@ -129,24 +144,23 @@ test('region manager reads results and open follow-ups without command buttons',
       }),
     )
   })
-  await routeStoreTasksApi(page, { roleCodes: ['REGION_MANAGER'] })
+  const api = await routeStoreTasksApi(page, { roleCodes: ['REGION_MANAGER'] })
 
   await page.goto('/store/tasks')
 
   await expect(page.getByText('Mağaza müdürünün bitirdiği süreçler ve sonuç geçmişi.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Sonuçlar' })).toBeVisible()
+  await expect(page.getByTestId('store-action-plans-panel').getByText('Sonuç geçmişi')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Açık takipler' })).toHaveCount(0)
   await expect(getActionPlanRow(page, 'Haziran çözüm kaydı')).toBeVisible()
+  await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toHaveCount(0)
+  await expect(getActionPlanRow(page, 'Mayıs reyon düzeni')).toHaveCount(0)
   await getActionPlanRow(page, 'Haziran çözüm kaydı').click()
-  let drawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
   await expect(drawer.getByText('Mağaza müdürü notu')).toBeVisible()
   await expect(drawer.getByRole('button', { name: 'İşleme al' })).toHaveCount(0)
-  await drawer.getByRole('button', { name: 'Kapat', exact: true }).click()
-
-  await page.getByRole('button', { name: 'Açık takipler' }).click()
-  await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toBeVisible()
-  await getActionPlanRow(page, 'Vitrin düzeni takip maddesi').click()
-  drawer = page.getByRole('dialog', { name: 'Görev detayı' })
   await expect(drawer.getByRole('button', { name: 'Çözüm bildir' })).toHaveCount(0)
+  expect(api.listStatuses).toEqual(expect.arrayContaining(['closed', 'cancelled']))
+  expect(api.listStatuses).not.toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked']))
 })
 
 test('region manager with no action-store assignment does not read persisted plans', async ({ page }) => {
@@ -172,12 +186,55 @@ test('region manager with no action-store assignment does not read persisted pla
   await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
   await expect(getActionPlanRow(page, 'Haziran çözüm kaydı')).toHaveCount(0)
   await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toHaveCount(0)
-  await page.getByRole('button', { name: 'Açık takipler' }).click()
-  await expect(getWorkflowRow(page, 'UPT projeksiyon riski')).toBeVisible()
-  await getWorkflowRow(page, 'UPT projeksiyon riski').click()
-  const drawer = page.getByRole('dialog', { name: 'Görev detayı' })
-  await expect(drawer.getByRole('button', { name: 'İşleme al' })).toHaveCount(0)
-  expect(api.listStatuses).toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked', 'closed', 'cancelled']))
+  await expect(page.getByRole('button', { name: 'Açık takipler' })).toHaveCount(0)
+  await expect(getWorkflowRow(page, 'UPT projeksiyon riski')).toHaveCount(0)
+  expect(api.listStatuses).toEqual(expect.arrayContaining(['closed', 'cancelled']))
+  expect(api.listStatuses).not.toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked']))
+})
+
+test('region manager does not see active action plans from workflow inbox as completed results', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'store-tasks-rm-workflow-user',
+        mockRoleCodes: 'REGION_MANAGER',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+  })
+  await routeStoreTasksApi(page, {
+    roleCodes: ['REGION_MANAGER'],
+    plans: [],
+    workflowItems: [
+      ...workflowInboxFixture.items,
+      {
+        itemType: 'task',
+        sourceType: 'store_action_plan',
+        sourceId: 'workflow-active-plan-1',
+        title: 'Workflow açık takip',
+        summary: 'Aktif plan sonuç geçmişinde görünmemeli.',
+        storeId: demoStoreId,
+        storeName: 'IstinyePark Demo Store',
+        workflowStatus: 'open',
+        inboxStatus: 'informational',
+        urgency: 'medium',
+        createdAt: '2026-06-27T08:00:00.000Z',
+        needsAttentionAt: '2026-06-27T08:00:00.000Z',
+        actorRole: 'STORE_MANAGER',
+        primaryActionLabel: 'Detay aç',
+        secondaryActionLabel: 'Detay aç',
+        deepLink: '/store/tasks',
+        historyPreview: 'Aksiyon açık.',
+      },
+    ],
+  })
+
+  await page.goto('/store/tasks')
+
+  await expect(getWorkflowRow(page, 'Workflow açık takip')).toHaveCount(0)
 })
 
 test('store manager can create an action plan from a projection candidate', async ({ page }) => {
@@ -217,6 +274,7 @@ async function routeStoreTasksApi(
     plans?: StoreActionPlanFixture[]
     assignedStoreIds?: string[]
     failActionPlanList?: boolean
+    workflowItems?: WorkflowInboxItemFixture[]
   } = {},
 ) {
   const roleCodes = input.roleCodes ?? ['STORE_MANAGER']
@@ -252,7 +310,12 @@ async function routeStoreTasksApi(
   })
 
   await page.route('**/api/workflow/inbox', async (route) => {
-    await route.fulfill({ json: workflowInboxFixture })
+    await route.fulfill({
+      json: {
+        ...workflowInboxFixture,
+        items: input.workflowItems ?? workflowInboxFixture.items,
+      },
+    })
   })
 
   await page.route('**/api/store-actions/plans**', async (route) => {
@@ -434,6 +497,8 @@ const workflowInboxFixture = {
     offset: 0,
   },
 }
+
+type WorkflowInboxItemFixture = (typeof workflowInboxFixture.items)[number]
 
 type StoreActionPlanFixture = {
   actionPlanId: string

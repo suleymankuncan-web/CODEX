@@ -27,7 +27,6 @@ import {
   mergeActionPlans,
   type StoreTaskFilter,
   type StoreTasksPersona,
-  type StoreTasksRegionMode,
 } from '../features/store-tasks/store-tasks-command-center-model'
 import { getWorkflowInbox } from '../features/workflow/api'
 import type { WorkflowInboxItem } from '../features/workflow/contracts'
@@ -93,10 +92,9 @@ export function StoreTasksPage(input: {
   const storeActionPlansEnabled = canReadStoreActionPlans(input.authSummary)
   const canMutatePlans = canMutateStoreActionPlans(input.authSummary)
   const persona = resolveTaskPersona(input.authSummary)
-  const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? t('storeTasks.noStoreScope')
   const [storeActionPlansOffset, setStoreActionPlansOffset] = useState(0)
   const [selectedPeriod, setSelectedPeriod] = useState(() => getCurrentMonthKey())
-  const [regionMode, setRegionMode] = useState<StoreTasksRegionMode>('results')
+  const regionMode = 'results'
   const [activeFilter, setActiveFilter] = useState<StoreTaskFilter>('all')
   const [search, setSearch] = useState('')
 
@@ -113,13 +111,13 @@ export function StoreTasksPage(input: {
         limit: STORE_ACTION_PLAN_PAGE_SIZE,
         offset: storeActionPlansOffset,
       }),
-    enabled: storeActionPlansEnabled,
+    enabled: storeActionPlansEnabled && persona !== 'regionManager',
     ...transientQueryRetryOptions,
   })
   const activeStoreActionPlansQuery = useQuery({
     queryKey: ['store-action-plans', 'store-tasks', 'active-index', actorUserId],
     queryFn: () => listStoreActionPlansByStatuses(ACTIVE_STORE_ACTION_PLAN_STATUSES),
-    enabled: storeActionPlansEnabled,
+    enabled: storeActionPlansEnabled && persona !== 'regionManager',
     ...transientQueryRetryOptions,
   })
   const resultStoreActionPlansQuery = useQuery({
@@ -218,7 +216,7 @@ export function StoreTasksPage(input: {
   if (!inboxEnabled) {
     return (
       <StoreSurfacePage ariaLabel={t('storeTasks.unavailableEyebrow')}>
-        <StoreTasksAccessState authSummary={input.authSummary} primaryStoreId={primaryStoreId} />
+        <StoreTasksAccessState authSummary={input.authSummary} />
       </StoreSurfacePage>
     )
   }
@@ -264,7 +262,6 @@ export function StoreTasksPage(input: {
         pageMeta={storeActionPlansPageQuery.data?.meta}
         onSearchChange={setSearch}
         onActiveFilterChange={setActiveFilter}
-        onRegionModeChange={setRegionMode}
         onSelectedPeriodChange={setSelectedPeriod}
         onRefresh={() => {
           void Promise.all([
