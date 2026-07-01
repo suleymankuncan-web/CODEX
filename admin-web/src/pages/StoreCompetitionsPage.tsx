@@ -20,7 +20,7 @@ import {
   formatCompetitionType,
 } from '../features/competitions/display'
 import { useLocalization } from '../features/localization/useLocalization'
-import { formatDate, formatState, getErrorMessage } from '../lib/format'
+import { formatDate, formatState, getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   StoreEmptyState,
@@ -109,7 +109,10 @@ export function StoreCompetitionsPage(input: {
       <StoreSurfacePage ariaLabel={t('storeCompetitions.errorTitle')}>
         <StoreErrorState
           title={t('storeCompetitions.errorTitle')}
-          description={getErrorMessage(competitionsQuery.error)}
+          description={getUserFacingErrorMessage(
+            competitionsQuery.error,
+            t('storeCompetitions.errorCopy'),
+          )}
           action={{
             disabled: competitionsQuery.isFetching,
             icon: <RefreshCw data-icon="inline-start" />,
@@ -233,7 +236,10 @@ export function StoreCompetitionsPage(input: {
             {detailQuery.isError ? (
               <StoreErrorState
                 title={t('storeCompetitions.standingErrorTitle')}
-                description={getErrorMessage(detailQuery.error)}
+                description={getUserFacingErrorMessage(
+                  detailQuery.error,
+                  t('storeCompetitions.standingErrorCopy'),
+                )}
                 action={{
                   disabled: detailQuery.isFetching,
                   icon: <RefreshCw data-icon="inline-start" />,

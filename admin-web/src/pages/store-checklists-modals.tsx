@@ -21,7 +21,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
 import type { ChecklistAcknowledgementItem, MobileChecklistToday } from '../features/checklists/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import type { ChecklistSession } from './store-checklists-model'
 import {
@@ -360,7 +360,12 @@ function ChecklistVisitModal(input: {
           <div className="store-checklist-session-footer">
             <div className="store-checklist-session-state">
               {input.completeError ? (
-                <span>{getErrorMessage(input.completeError)}</span>
+                <span>
+                  {getUserFacingErrorMessage(
+                    input.completeError,
+                    input.t('storeChecklists.completeErrorCopy'),
+                  )}
+                </span>
               ) : !input.active && input.isStarting ? (
                 <span>{input.t('storeChecklists.startPending')}</span>
               ) : missingResponseCount > 0 ? (

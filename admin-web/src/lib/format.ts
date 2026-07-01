@@ -29,6 +29,19 @@ export function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'Unexpected error'
 }
 
+const technicalErrorMessagePattern =
+  /([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|\/api\/|cannot\s+(get|post|put|patch|delete)|uuid|request\s*id|requestid|source\s*id|sourceid|run\s*id|runid|provider\s*id|providerid|forbidden|internal|stack|sql|relation|column)/i
+
+export function getUserFacingErrorMessage(error: unknown, fallback: string) {
+  const raw = getErrorMessage(error).trim()
+
+  if (!raw || raw === 'Unexpected error' || technicalErrorMessagePattern.test(raw)) {
+    return fallback
+  }
+
+  return raw
+}
+
 export function formatNumber(
   input: number,
   locale: AppLocale = defaultAppLocale,

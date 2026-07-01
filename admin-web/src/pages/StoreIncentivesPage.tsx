@@ -20,7 +20,7 @@ import {
 import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import { useLocalization } from '../features/localization/useLocalization'
 import { ApiError } from '../lib/api'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import { canOpenStoreIncentives } from '../app/store-navigation'
 import {
@@ -251,7 +251,9 @@ export function StoreIncentivesPage(input: {
       <StoreSurfacePage ariaLabel={t('storeIncentives.heroEyebrow')}>
         <StoreErrorState
           title={isUnavailable ? t('storeIncentives.routeUnavailableTitle') : t('storeIncentives.errorTitle')}
-          description={isUnavailable ? t('storeIncentives.routeUnavailableCopy') : getErrorMessage(incentivesQuery.error)}
+          description={isUnavailable
+            ? t('storeIncentives.routeUnavailableCopy')
+            : getUserFacingErrorMessage(incentivesQuery.error, t('storeIncentives.errorCopy'))}
         />
       </StoreSurfacePage>
     )
@@ -304,6 +306,8 @@ export function StoreIncentivesPage(input: {
           pendingCorrectionKeys,
         }}
         onPeriodChange={handlePeriodChange}
+        onRefresh={() => void incentivesQuery.refetch()}
+        refreshing={incentivesQuery.isFetching}
         selectedPeriod={period ?? data.period}
       />
     )
