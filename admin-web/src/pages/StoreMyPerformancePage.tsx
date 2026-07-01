@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useEffect, useReducer } from 'react'
+import { useNavigate } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   getMySalesTargetIncentives,
@@ -74,6 +75,7 @@ type StoreMyPerformancePageExperienceProps = {
   onOpenKpiDetails: () => void
   onSelectClosedSnapshotRun: (snapshotRunId: string) => void
   onSelectSourceMode: (mode: StorePerformanceSourceMode) => void
+  onReturnToRankings?: () => void
   onToggleDateFilter: () => void
   periodHandlers: StoreMyPerformancePeriodHandlers
   performanceEmployeeName: string
@@ -92,8 +94,10 @@ export function StoreMyPerformancePage(input: {
   initialLivePeriodStart?: string
   initialLivePeriodType?: LivePeriodType
   profileMode?: 'self' | 'personnel'
+  returnTo?: string
 }) {
   const { locale, t } = useLocalization()
+  const navigate = useNavigate()
   const profileMode = input.profileMode ?? 'self'
   const targetEmployeeId = input.employeeId?.trim() ?? ''
   const enabled =
@@ -287,6 +291,21 @@ export function StoreMyPerformancePage(input: {
   }
 
   const configForbidden = configQuery.error instanceof ApiError && configQuery.error.status === 403
+  const personnelProfileSafeError =
+    profileMode === 'personnel' &&
+    performanceQuery.error instanceof ApiError &&
+    [401, 403, 404].includes(performanceQuery.error.status)
+
+  if (personnelProfileSafeError) {
+    return (
+      <StoreSurfacePage ariaLabel={t('storeMe.personnelProfileUnavailableTitle')}>
+        <StoreErrorState
+          title={t('storeMe.personnelProfileUnavailableTitle')}
+          description={t('storeMe.personnelProfileUnavailableCopy')}
+        />
+      </StoreSurfacePage>
+    )
+  }
 
   if (
     performanceQuery.isLoading ||
@@ -363,6 +382,9 @@ export function StoreMyPerformancePage(input: {
         dispatch({ type: 'setClosedSnapshotRunId', snapshotRunId })
       }
       onSelectSourceMode={(mode) => dispatch({ type: 'setSourceMode', mode })}
+      {...(profileMode === 'personnel' && input.returnTo
+        ? { onReturnToRankings: () => navigate(input.returnTo as string) }
+        : {})}
       onToggleDateFilter={() => dispatch({ type: 'toggleDateFilter' })}
       periodHandlers={periodHandlers}
       performanceEmployeeName={performance.employee.displayName}
@@ -386,6 +408,7 @@ function StoreMyPerformancePageExperience({
   onOpenKpiDetails,
   onSelectClosedSnapshotRun,
   onSelectSourceMode,
+  onReturnToRankings,
   onToggleDateFilter,
   periodHandlers,
   performanceEmployeeName,
@@ -437,6 +460,7 @@ function StoreMyPerformancePageExperience({
           <StoreMyPerformanceTopbar
             employeeHeading={employeeHeading}
             introCopy={introCopy}
+            {...(onReturnToRankings ? { onReturn: onReturnToRankings, returnLabel: t('storeMe.backToRankings') } : {})}
             periodLabel={periodLabel}
           />
 
