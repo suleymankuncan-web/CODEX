@@ -370,7 +370,8 @@
 
   .store-checklist-session-footer-actions {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 0.75fr);
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) minmax(7.75rem, 1fr);
   }
 
   .store-checklist-session-footer-actions > button {
