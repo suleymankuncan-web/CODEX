@@ -141,6 +141,7 @@ export class StoreOpsRepository {
       fte_gap: string;
       shortage_started_on: string | null;
       shortage_days: number | null;
+      turnover_rate: string | null;
     }>(
       `
         WITH as_of_date AS (
@@ -193,6 +194,35 @@ export class StoreOpsRepository {
           ) source
           GROUP BY source.store_id
         ),
+        turnover_projection AS (
+          SELECT
+            $1::uuid AS store_id,
+            (
+              SELECT COUNT(*)::numeric(10,2)
+              FROM ops.employee_assignment_history eah
+              CROSS JOIN as_of_date asof
+              WHERE eah.store_id = $1
+                AND eah.start_date <= date_trunc('year', asof.value)::date
+                AND (eah.end_date IS NULL OR eah.end_date >= date_trunc('year', asof.value)::date)
+            ) AS opening_headcount,
+            (
+              SELECT COUNT(*)::numeric(10,2)
+              FROM ops.employee_assignment_history eah
+              CROSS JOIN as_of_date asof
+              WHERE eah.store_id = $1
+                AND eah.start_date <= asof.value
+                AND (eah.end_date IS NULL OR eah.end_date >= asof.value)
+                AND eah.assignment_status = 'active'
+            ) AS closing_headcount,
+            (
+              SELECT COUNT(*)::numeric(10,2)
+              FROM ops.turnover_event te
+              CROSS JOIN as_of_date asof
+              WHERE te.store_id = $1
+                AND te.event_type = 'termination'
+                AND te.event_date BETWEEN date_trunc('year', asof.value)::date AND asof.value
+            ) AS leaver_count
+        ),
         headcount_projection AS (
           SELECT
             COALESCE(np.store_id, aa.store_id) AS store_id,
@@ -222,10 +252,18 @@ export class StoreOpsRepository {
             WHEN hp.headcount_gap > 0 AND ss.shortage_started_on IS NOT NULL
               THEN (SELECT value FROM as_of_date) - ss.shortage_started_on
             ELSE NULL
-          END AS shortage_days
+          END AS shortage_days,
+          CASE
+            WHEN tp.leaver_count > 0
+              AND ((tp.opening_headcount + tp.closing_headcount) / 2.0) > 0
+              THEN ((tp.leaver_count / ((tp.opening_headcount + tp.closing_headcount) / 2.0)) * 100)::numeric(10,2)
+            ELSE NULL
+          END AS turnover_rate
         FROM headcount_projection hp
         LEFT JOIN shortage_source ss
           ON ss.store_id = hp.store_id
+        LEFT JOIN turnover_projection tp
+          ON tp.store_id = hp.store_id
       `,
       [input.storeId, input.periodStart, input.periodEnd],
     );

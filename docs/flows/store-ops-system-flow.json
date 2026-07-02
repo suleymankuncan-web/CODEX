@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-02T16:34:45.141Z",
+  "generatedAt": "2026-07-02T19:29:22.890Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -3066,7 +3066,7 @@
       "exportedFunction": "getSellerCodeReference",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 77
+        "line": 79
       }
     },
     {
@@ -3081,7 +3081,7 @@
       "exportedFunction": "getSellerCodeRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 88
+        "line": 90
       }
     },
     {
@@ -3096,7 +3096,7 @@
       "exportedFunction": "approveSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 96
+        "line": 98
       }
     },
     {
@@ -3111,7 +3111,7 @@
       "exportedFunction": "rejectSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 112
+        "line": 114
       }
     },
     {
@@ -3126,7 +3126,7 @@
       "exportedFunction": "resubmitSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 134
+        "line": 136
       }
     },
     {
@@ -3141,7 +3141,7 @@
       "exportedFunction": "getPositionOptions",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 154
+        "line": 156
       }
     },
     {
@@ -3156,7 +3156,7 @@
       "exportedFunction": "getStoreEmployees",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 159
+        "line": 161
       }
     },
     {
@@ -3171,7 +3171,7 @@
       "exportedFunction": "getStoreHeadcountGap",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 172
+        "line": 174
       }
     },
     {
@@ -3186,7 +3186,7 @@
       "exportedFunction": "getOrgStores",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 193
+        "line": 198
       }
     },
     {
@@ -3201,7 +3201,7 @@
       "exportedFunction": "getOffboardingRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 202
+        "line": 207
       }
     },
     {
@@ -3216,7 +3216,7 @@
       "exportedFunction": "createSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 217
+        "line": 222
       }
     },
     {
@@ -3231,7 +3231,7 @@
       "exportedFunction": "createOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 233
+        "line": 238
       }
     },
     {
@@ -3246,7 +3246,7 @@
       "exportedFunction": "approveOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 246
+        "line": 251
       }
     },
     {
@@ -3261,7 +3261,7 @@
       "exportedFunction": "rejectOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 263
+        "line": 268
       }
     },
     {
@@ -3276,7 +3276,7 @@
       "exportedFunction": "resubmitOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 281
+        "line": 286
       }
     }
   ],
