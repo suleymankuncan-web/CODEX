@@ -38,6 +38,7 @@ const visitPageSize = 10
 
 export function StoreChecklistsVisitPanel(input: {
   activeVisitCount: number
+  actionVisitRowsByStoreId: Map<string, ChecklistStoreVisitRow>
   assignedStoreIds: string[]
   assignedVisitStoreCount: number
   authSummary: AuthSessionSummary | null
@@ -132,6 +133,7 @@ export function StoreChecklistsVisitPanel(input: {
         <StoreChecklistsVisitTable
           assignedStoreIds={input.assignedStoreIds}
           authSummary={input.authSummary}
+          actionVisitRowsByStoreId={input.actionVisitRowsByStoreId}
           hydrateActiveResponseDrafts={input.hydrateActiveResponseDrafts}
           locale={input.locale}
           requiresCombinedVisitTemplates={input.display.requiresCombinedVisitTemplates}
@@ -163,6 +165,7 @@ export function StoreChecklistsVisitPanel(input: {
 }
 
 function StoreChecklistsVisitTable(input: {
+  actionVisitRowsByStoreId: Map<string, ChecklistStoreVisitRow>
   assignedStoreIds: string[]
   authSummary: AuthSessionSummary | null
   hydrateActiveResponseDrafts: (
@@ -237,6 +240,7 @@ function StoreChecklistsVisitTable(input: {
         <StoreChecklistsVisitRow
           assignedStoreIds={input.assignedStoreIds}
           authSummary={input.authSummary}
+          actionStoreRow={input.actionVisitRowsByStoreId.get(storeRow.store.storeId)}
           hydrateActiveResponseDrafts={input.hydrateActiveResponseDrafts}
           key={getStoreVisitRowKey(storeRow)}
           locale={input.locale}
@@ -288,6 +292,7 @@ function StoreChecklistsVisitTable(input: {
 }
 
 function StoreChecklistsVisitRow(input: {
+  actionStoreRow: ChecklistStoreVisitRow | undefined
   assignedStoreIds: string[]
   authSummary: AuthSessionSummary | null
   hydrateActiveResponseDrafts: (
@@ -305,7 +310,8 @@ function StoreChecklistsVisitRow(input: {
   onResetSessionDrafts: () => void
   onStartVisit: (variables: ChecklistVisitStartVariables) => void
 }) {
-  const actionableRow = getActionableStoreVisitRow(input.storeRow, input.authSummary)
+  const actionStoreRow = input.actionStoreRow ?? input.storeRow
+  const actionableRow = getActionableStoreVisitRow(actionStoreRow, input.authSummary)
   const row = actionableRow ?? input.storeRow.primary
   const active = row.active
   const canStart =
