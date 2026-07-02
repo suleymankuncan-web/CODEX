@@ -375,6 +375,14 @@ function useStoreChecklistsPageContent(input: {
     mobileToday,
     month: selectedMonth,
   })
+  const actionCoverageRows = buildChecklistCoverageRows({
+    acknowledgementItems: items,
+    localActiveInstances,
+    localCompletedInstances,
+    localCompletedRows,
+    mobileToday,
+    month: 'all',
+  })
   const monthOptions = buildMonthOptions(
     coverageRows,
     items,
@@ -397,6 +405,18 @@ function useStoreChecklistsPageContent(input: {
     buildChecklistStoreVisitRows(filteredCoverageRows),
     visitSort,
     locale,
+  )
+  const actionVisitRowsByStoreId = new Map(
+    buildChecklistStoreVisitRows(
+      actionCoverageRows.filter((row) =>
+        doesCoverageRowMatchFilters(row, {
+          month: 'all',
+          query: searchQuery,
+          status: 'all',
+          type: 'all',
+        }),
+      ),
+    ).map((row) => [row.store.storeId, row]),
   )
   const currentMonth = getVisitPlanCurrentMonthKey()
   const filteredPendingItems = sortChecklistItems(
@@ -665,6 +685,7 @@ function useStoreChecklistsPageContent(input: {
                 assignedStoreIds={assignedStoreIds}
                 assignedVisitStoreCount={assignedVisitStoreCount}
                 authSummary={input.authSummary}
+                actionVisitRowsByStoreId={actionVisitRowsByStoreId}
                 display={{
                   requiresCombinedVisitTemplates,
                   showBmVisitScore,

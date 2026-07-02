@@ -418,6 +418,40 @@ test('region manager visit flow reads VM score but starts BM checklist only', as
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 })
 
+test('region manager keeps BM checklist action available while reading the VM filter', async ({ page }) => {
+  const requests = createChecklistRequestLog()
+  await page.addInitScript(() => {
+    window.localStorage.setItem('store-ops-app-locale', 'en')
+  })
+  await setupChecklistPage(page, ['REGION_MANAGER'], {
+    activeInstances: [],
+    includeVmTemplate: true,
+    monthlySummaries: [
+      {
+        storeId,
+        checklistTemplateId: vmTemplateId,
+        monthStart: '2026-05-01',
+        completedCount: 1,
+        averageScore: 92,
+      },
+    ],
+    requests,
+  })
+  await page.goto('/store/checklists')
+
+  await page.getByRole('combobox', { name: 'Template type' }).click()
+  await page.getByRole('option', { name: 'VM Checklist' }).click()
+
+  const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
+  await expect(visitRow).toBeVisible()
+  await expect(visitRow.getByText('92')).toBeVisible()
+  await expect(visitRow.getByRole('button', { name: 'Read only' })).toHaveCount(0)
+
+  await visitRow.getByRole('button', { name: 'Start checklist' }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
+})
+
 test('visit plan prioritizes region manager stores and does not start checklist', async ({ page }) => {
   const requests = createChecklistRequestLog()
   const stores = [
