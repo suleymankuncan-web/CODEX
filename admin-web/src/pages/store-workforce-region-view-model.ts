@@ -130,8 +130,8 @@ export function getYearOptions(now: Date) {
   return [currentYear, currentYear - 1, currentYear - 2].map(String)
 }
 
-export function toFiniteNumber(value: string | undefined) {
-  if (value === undefined) return null
+export function toFiniteNumber(value: string | number | null | undefined) {
+  if (value === undefined || value === null) return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
 }

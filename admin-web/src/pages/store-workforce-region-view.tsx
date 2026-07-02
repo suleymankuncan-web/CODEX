@@ -160,7 +160,7 @@ export function RegionWorkforceView(input: {
           openHeadcount,
           overHeadcount,
           plannedHeadcount,
-          shortageDays: null,
+          shortageDays: status === 'short' ? toFiniteNumber(headcountGap?.shortageDays) : null,
           status,
           summary,
           turnover: null,

@@ -33,6 +33,8 @@ type RawHeadcountGap = {
   planned_fte: string
   active_fte: string
   fte_gap: string
+  shortage_started_on?: string | null
+  shortage_days?: number | string | null
 } | null
 
 export type StoreHeadcountGap = {
@@ -43,6 +45,8 @@ export type StoreHeadcountGap = {
   plannedFte: string
   activeFte: string
   fteGap: string
+  shortageStartedOn: string | null
+  shortageDays: string | null
 } | null
 
 export type OrgStore = {
@@ -178,6 +182,10 @@ export async function getStoreHeadcountGap(input: {
     plannedFte: response.planned_fte,
     activeFte: response.active_fte,
     fteGap: response.fte_gap,
+    shortageStartedOn: response.shortage_started_on ?? null,
+    shortageDays: response.shortage_days === null || response.shortage_days === undefined
+      ? null
+      : String(response.shortage_days),
   } satisfies NonNullable<StoreHeadcountGap>
 }
 
