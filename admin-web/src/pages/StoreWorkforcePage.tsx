@@ -77,9 +77,7 @@ function resolveWorkforceMode(authSummary: AuthSessionSummary | null): Workforce
   return roles.includes('REGION_MANAGER') ? 'region' : 'store'
 }
 
-export function StoreWorkforcePage(input: {
-  authSummary: AuthSessionSummary | null
-}) {
+export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | null }) {
   const mode = resolveWorkforceMode(input.authSummary)
 
   if (mode === 'region') {
@@ -89,9 +87,7 @@ export function StoreWorkforcePage(input: {
   return <StoreManagerWorkforce authSummary={input.authSummary} />
 }
 
-function StoreManagerWorkforce(input: {
-  authSummary: AuthSessionSummary | null
-}) {
+function StoreManagerWorkforce(input: { authSummary: AuthSessionSummary | null }) {
   const queryClient = useQueryClient()
   const { locale, t } = useLocalization()
   const [searchParams] = useSearchParams()
@@ -418,11 +414,8 @@ function StoreManagerWorkforce(input: {
 
   if (!storeId) {
     return (
-      <StoreSurfacePage
-        ariaLabel={t('storeWorkforce.title')}
-        className="tw:mx-auto tw:w-full tw:max-w-7xl"
-        testId="store-workforce-page"
-      >
+      <StoreSurfacePage ariaLabel={t('storeWorkforce.title')} className="tw:mx-auto tw:w-full tw:max-w-7xl"
+        testId="store-workforce-page">
         <StoreSurfaceHeader
           eyebrow={t('storeWorkforce.eyebrow')}
           title={t('storeWorkforce.title')}
@@ -439,11 +432,8 @@ function StoreManagerWorkforce(input: {
 
   if (storeEmployeesQuery.isLoading && !storeEmployeesQuery.data) {
     return (
-      <StoreSurfacePage
-        ariaLabel={t('storeWorkforce.title')}
-        className="tw:mx-auto tw:w-full tw:max-w-7xl"
-        testId="store-workforce-page"
-      >
+      <StoreSurfacePage ariaLabel={t('storeWorkforce.title')} className="tw:mx-auto tw:w-full tw:max-w-7xl"
+        testId="store-workforce-page">
         <StoreSurfaceHeader
           eyebrow={t('storeWorkforce.eyebrow')}
           title={t('storeWorkforce.title')}
