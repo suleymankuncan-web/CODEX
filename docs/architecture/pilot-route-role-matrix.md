@@ -12,6 +12,7 @@
 | Route | Shell | Classification | Roles | Landing Behavior | Refresh/Return Expectation | Data Boundary | Primary Nav |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `/admin/integrations` | admin | core | `SUPER_ADMIN`, `INTEGRATION_ADMIN` | first landing for super admin and integration admin | must return to same route after auth verification | company-scoped import state | yes |
+| `/admin/operations` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped operational health and readiness signals | yes |
 | `/admin/master-data` | admin | core | `SUPER_ADMIN`, `HR_ADMIN`, `INTEGRATION_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped bootstrap batches | yes |
 | `/admin/snapshots` | admin | ops | `SUPER_ADMIN`, `SNAPSHOT_OPERATOR` | first landing for snapshot operator | must return to same route after auth verification | company-scoped snapshot state | yes |
 | `/admin/inbox` | admin | needs decision | `SUPER_ADMIN`, `REPORT_VIEWER`, `HR_ADMIN` | direct navigation only | must return to same route after auth verification | current admin queue scope | yes |
@@ -20,6 +21,7 @@
 | `/admin/competitions` | admin | needs decision | `SUPER_ADMIN`, `HR_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER` | first landing for HR admin | must return to same route after auth verification | competition setup and read scope | yes |
 | `/admin/reports` | admin | ops | `SUPER_ADMIN`, `REPORT_VIEWER` | first landing for report viewer | must return to same route after auth verification | reporting read models | yes |
 | `/admin/targets` | admin | core | `SUPER_ADMIN`, `REPORT_VIEWER`, `REGION_MANAGER` | direct navigation for region manager target follow-up | must return to same route after auth verification when opened directly | target approval queue by scope | yes |
+| `/admin/incentives` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped incentive package review | yes |
 | `/admin/kpi-config` | admin | ops | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | global KPI governance | yes |
 | `/admin/auth` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | auth admin catalog and assignment scope | yes |
 | `/admin/audit` | admin | core | `SUPER_ADMIN`, `AUDITOR` | first landing for auditor | must return to same route after auth verification | audit event read scope | yes |
@@ -28,12 +30,15 @@
 | `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |
 | `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles, full list for privileged roles | yes |
 | `/store/approvals` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target/workforce request ledger by read/action scope | yes |
+| `/store/targets` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target distribution requests, coverage and approval state by scope | yes |
 | `/store/checklists` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `VISUAL_MERCHANDISER`, `REPORT_VIEWER`, `SUPER_ADMIN` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks/results by store scope; `STORE_PERSONNEL` is forbidden | yes |
 | `/store/tasks` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` is forbidden | direct navigation only for eligible roles; region manager sees scoped read-only remediation rows | must return to same route after auth verification | workflow inbox and Store Action task visibility by read/action scope; Store Action commands remain assigned-store scoped | yes |
 | `/store/kpis` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
 | `/store/feed` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store announcements | yes |
 | `/store/competitions` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store-visible competitions | yes |
 | `/store/incentives` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store incentives preview | no |
+| `/store/workforce` | store | secondary | `STORE_MANAGER` with assigned action store, `REGION_MANAGER` with read store or read region scope | direct navigation only | must return to same route after auth verification | norm kadro and active workforce state by store/read scope | yes |
+| `/store/reports` | store | secondary | `SUPER_ADMIN`, `REPORT_VIEWER`, `AUDITOR`, `REGION_MANAGER`; `STORE_MANAGER` is forbidden for now | direct navigation only | must return to same route after auth verification | monthly store report package by read scope | yes |
 
 ## Landing Order
 

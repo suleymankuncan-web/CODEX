@@ -24,6 +24,7 @@ const appRouteSource = [
 
 const requiredRoutes = [
   '/admin/integrations',
+  '/admin/operations',
   '/admin/master-data',
   '/admin/snapshots',
   '/admin/inbox',
@@ -32,6 +33,7 @@ const requiredRoutes = [
   '/admin/competitions',
   '/admin/reports',
   '/admin/targets',
+  '/admin/incentives',
   '/admin/kpi-config',
   '/admin/auth',
   '/admin/audit',
@@ -46,6 +48,9 @@ const requiredRoutes = [
   '/store/feed',
   '/store/competitions',
   '/store/incentives',
+  '/store/targets',
+  '/store/workforce',
+  '/store/reports',
 ]
 
 test('pilot route matrix documents every active admin and store route', () => {

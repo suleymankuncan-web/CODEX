@@ -50,6 +50,11 @@ test('core admin routes open without unavailable states', async ({ page }) => {
       heading: page.getByRole('heading', { name: 'Entegrasyon yönetim paneli' }),
     },
     {
+      path: '/admin/operations',
+      urlPattern: /\/admin\/operations$/,
+      heading: page.getByTestId('operations-backend-signal'),
+    },
+    {
       path: '/admin/master-data',
       urlPattern: /\/admin\/master-data$/,
       heading: page.getByRole('heading', { name: 'Ana Veri Kontrolü' }),
@@ -73,6 +78,21 @@ test('core admin routes open without unavailable states', async ({ page }) => {
       path: '/admin/competitions',
       urlPattern: /\/admin\/competitions$/,
       heading: page.getByRole('heading', { name: /Bölge yarışma etapları/i }),
+    },
+    {
+      path: '/admin/reports',
+      urlPattern: /\/admin\/reports$/,
+      heading: page.getByRole('main').getByRole('heading').first(),
+    },
+    {
+      path: '/admin/incentives',
+      urlPattern: /\/admin\/incentives$/,
+      heading: page.getByTestId('admin-incentives-page'),
+    },
+    {
+      path: '/admin/kpi-config',
+      urlPattern: /\/admin\/kpi-config$/,
+      heading: page.getByRole('heading', { name: /Skor profilleri/ }),
     },
   ]
 
@@ -133,6 +153,21 @@ test('core store routes open without unavailable states', async ({ page }) => {
       path: '/store/approvals',
       urlPattern: /\/store\/approvals$/,
       heading: page.getByRole('heading', { name: 'Talep Merkezi' }),
+    },
+    {
+      path: '/store/targets',
+      urlPattern: /\/store\/targets$/,
+      heading: page.locator('.targets-prototype'),
+    },
+    {
+      path: '/store/workforce',
+      urlPattern: /\/store\/workforce$/,
+      heading: page.getByTestId('store-workforce-page'),
+    },
+    {
+      path: '/store/reports',
+      urlPattern: /\/store\/reports$/,
+      heading: page.locator('.store-reports-command'),
     },
   ]
 
@@ -435,6 +470,11 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/health')) {
+      await route.fulfill({ json: healthFixture })
+      return
+    }
+
     if (pathname.endsWith('/api/integrations/import-batches/overview')) {
       await route.fulfill({ json: importOverviewFixture })
       return
@@ -495,6 +535,11 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/snapshots/runs/overview')) {
+      await route.fulfill({ json: snapshotOverviewFixture })
+      return
+    }
+
     if (pathname.endsWith('/api/target-distributions/requests')) {
       await route.fulfill({ json: targetRequestsFixture })
       return
@@ -512,6 +557,16 @@ async function routePilotSmokeApi(context: BrowserContext) {
 
     if (pathname.endsWith('/api/workforce/position-options')) {
       await route.fulfill({ json: positionOptionsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/org/stores')) {
+      await route.fulfill({ json: orgStoresFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/workforce/headcount-gap')) {
+      await route.fulfill({ json: headcountGapFixture })
       return
     }
 
@@ -555,8 +610,38 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/reports/kpi-config/editor')) {
+      await route.fulfill({ json: kpiConfigEditorFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/kpi-config/audit')) {
+      await route.fulfill({ json: kpiConfigAuditFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/summary')) {
+      await route.fulfill({ json: reportingSummaryFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/snapshot-runs')) {
+      await route.fulfill({ json: reportingSnapshotRunsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/reports/store-monthly-package')) {
+      await route.fulfill({ json: storeMonthlyReportPackageFixture })
+      return
+    }
+
     if (pathname.endsWith('/api/reports/my-performance')) {
       await route.fulfill({ json: myPerformanceFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/admin/incentives')) {
+      await route.fulfill({ json: adminIncentivesFixture })
       return
     }
 
@@ -823,6 +908,42 @@ const feedFixture = {
   meta: { count: 1, total: 1, limit: 50, offset: 0 },
 }
 
+const healthFixture = {
+  status: 'ok',
+  service: 'store-ops-api',
+  timestamp: '2026-05-21T09:00:00.000Z',
+  queueBackend: 'in-memory',
+  queue: {
+    backend: 'in-memory',
+    durable: false,
+    redisRequired: false,
+    status: 'process-local',
+    message: 'In-memory queue is process-local; acceptable for controlled pilot only.',
+  },
+  observability: {
+    status: 'ok',
+    errorTracking: {
+      dsnConfigured: false,
+      environment: 'staging',
+      externalDelivery: 'not-enabled',
+      mode: 'log-only',
+    },
+    logLevel: 'info',
+    readinessProfile: 'controlled-pilot',
+  },
+  checks: {
+    database: {
+      status: 'ok',
+      latencyMs: 4,
+    },
+    redis: {
+      status: 'skipped',
+      latencyMs: 0,
+      message: 'Redis health check skipped for process-local queue posture.',
+    },
+  },
+}
+
 const importOverviewFixture = {
   totals: {
     all: 3,
@@ -1052,6 +1173,33 @@ const snapshotNeedsActionFixture = {
   meta: { count: 0, total: 0, limit: 6, offset: 0 },
 }
 
+const snapshotOverviewFixture = {
+  totals: {
+    all: 1,
+    queued: 0,
+    running: 0,
+    completed: 1,
+    failed: 0,
+  },
+  healthTotals: {
+    healthy: 1,
+    inProgress: 0,
+    retryReady: 0,
+    needsAction: 0,
+    stuck: 0,
+  },
+  actionTotals: {
+    retryReady: 0,
+    stuck: 0,
+  },
+  latest: {
+    completedSnapshotRunId: 'pilot-snapshot-run-1',
+    failedSnapshotRunId: null,
+    inProgressSnapshotRunId: null,
+    stuckSnapshotRunId: null,
+  },
+}
+
 const targetRequestsFixture = {
   items: [],
   meta: { count: 0, total: 0, limit: 50, offset: 0 },
@@ -1112,6 +1260,30 @@ const positionOptionsFixture = {
     },
   ],
   meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const orgStoresFixture = {
+  items: [
+    {
+      store_id: storeId,
+      store_code: 'PILOT-100',
+      store_name: 'Pilot Store',
+      region_id: regionId,
+      company_id: companyId,
+      status: 'active',
+    },
+  ],
+  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const headcountGapFixture = {
+  store_id: storeId,
+  planned_headcount: '1.00',
+  active_headcount: '1.00',
+  headcount_gap: '0.00',
+  planned_fte: '1.00',
+  active_fte: '1.00',
+  fte_gap: '0.00',
 }
 
 const storeEmployeesFixture = {
@@ -1217,6 +1389,155 @@ const kpiConfigFixture = {
   ],
 }
 
+const pilotKpiConfig = {
+  metadata: {
+    kpiConfigVersionId: 'pilot-kpi-config-version',
+    versionNo: 1,
+    effectiveFrom: '2026-05-01T00:00:00.000Z',
+    effectiveTo: null,
+    publishedAt: '2026-05-01T08:00:00.000Z',
+    publishedBy: 'pilot-smoke-user',
+  },
+  storeProfile: {
+    profileCode: 'store',
+    title: 'Store Score',
+    summary: 'Published store score profile',
+    futureMetricRule: 'Pilot smoke keeps the existing KPI catalog boundary.',
+    metrics: [
+      {
+        code: 'TARGET_ACHIEVEMENT',
+        label: 'Target Achievement',
+        weightPercent: 100,
+        ownerRole: 'STORE_MANAGER',
+        scoreBehavior: 'task_candidate',
+      },
+    ],
+  },
+  personnelProfile: {
+    profileCode: 'personnel',
+    title: 'Personnel Score',
+    summary: 'Published personnel score profile',
+    futureMetricRule: 'Pilot smoke keeps the existing KPI catalog boundary.',
+    metrics: [
+      {
+        code: 'TARGET_ACHIEVEMENT',
+        label: 'Target Achievement',
+        weightPercent: 100,
+        ownerRole: 'STORE_PERSONNEL',
+        scoreBehavior: 'warning_first',
+      },
+    ],
+  },
+  ownershipMatrix: [
+    {
+      code: 'TARGET_ACHIEVEMENT',
+      label: 'Target Achievement',
+      visibleTo: ['STORE_MANAGER', 'STORE_PERSONNEL'],
+      operationalOwner: 'STORE_MANAGER',
+      contributesTo: ['store', 'personnel'],
+      taskCandidate: true,
+    },
+  ],
+  gradingBands: [
+    { code: 'A', label: 'Strong', emoji: 'A', tone: 'calm', minScore: 80 },
+    { code: 'B', label: 'Good', emoji: 'B', tone: 'accent', minScore: 60 },
+    { code: 'C', label: 'Focus', emoji: 'C', tone: 'warning', minScore: 0 },
+  ],
+}
+
+const kpiConfigEditorFixture = {
+  draftConfig: pilotKpiConfig,
+  publishedConfig: pilotKpiConfig,
+  hasUnpublishedChanges: false,
+  latestPublishedVersion: {
+    kpiConfigVersionId: 'pilot-kpi-config-version',
+    versionNo: 1,
+    effectiveFrom: '2026-05-01T00:00:00.000Z',
+    effectiveTo: null,
+    publishedAt: '2026-05-01T08:00:00.000Z',
+    publishedBy: 'pilot-smoke-user',
+  },
+}
+
+const kpiConfigAuditFixture = {
+  items: [],
+  meta: { count: 0, total: 0, limit: 20, offset: 0 },
+}
+
+const reportingSnapshotRun = {
+  snapshotRunId: 'pilot-snapshot-run-1',
+  snapshotDate: '2026-05-31',
+  snapshotType: 'monthly',
+  periodStart: '2026-05-01',
+  periodEnd: '2026-05-31',
+  runStatus: 'completed',
+  generatedAt: '2026-06-01T01:00:00.000Z',
+  generatedBy: 'pilot-smoke-user',
+  kpiConfigVersion: {
+    kpiConfigVersionId: 'pilot-kpi-config-version',
+    versionNo: 1,
+    state: 'versioned',
+  },
+}
+
+const reportingSummaryFixture = {
+  latestCompletedSnapshotRun: reportingSnapshotRun,
+  cards: {
+    workforceRows: 1,
+    kpiRows: 1,
+    checklistRows: 1,
+    turnoverRows: 0,
+  },
+}
+
+const reportingSnapshotRunsFixture = {
+  items: [reportingSnapshotRun],
+  meta: { count: 1, total: 1, limit: 8, offset: 0 },
+}
+
+const storeMonthlyReportPackageFixture = {
+  period: '2026-06',
+  periodLabel: 'Haziran 2026',
+  coverageLabel: '1-30 Haziran',
+  isCurrentPeriod: true,
+  storeCount: 1,
+  sections: [
+    { code: 'kpis', label: 'KPI kolonlari', value: 'Skor, UPT, ATV, CR, HG%', status: 'ready' },
+    { code: 'approval_scores', label: 'Onay skorlari', value: 'GSM, BM, VM', status: 'ready' },
+    { code: 'actions', label: 'Aksiyon durumu', value: 'Bitirildi, devam ediyor, bekliyor', status: 'ready' },
+    { code: 'targets', label: 'Hedefler', value: 'Magaza ve personel hedef durumu', status: 'ready' },
+    { code: 'incentives', label: 'Primler', value: 'Hakedis ve kontrol durumu', status: 'ready' },
+    { code: 'workforce', label: 'Norm Kadro', value: 'Aktif, norm, eksik gun, turnover', status: 'ready' },
+    { code: 'visits', label: 'Ziyaret', value: 'Son ziyaret ve gecen gun', status: 'ready' },
+  ],
+  items: [
+    {
+      regionManager: 'Pilot Region Manager',
+      storeName: 'Pilot Store',
+      city: 'Istanbul',
+      period: 'Haziran 2026',
+      reportRange: '1-30 Haziran',
+      score: '88,00',
+      upt: '4,12',
+      atv: '4.850,00',
+      cr: '%22,4',
+      hg: '%104,5',
+      gsm: '%96',
+      bmChecklist: '91',
+      vmChecklist: '88',
+      actionStatus: 'Devam ediyor',
+      targetStatus: 'Onaylandi',
+      incentiveStatus: 'Kontrol edildi',
+      normFiili: '1 / 1',
+      missingDays: 'Yok',
+      turnover: 'Veri yok',
+      lastVisit: '14 Haziran',
+      daysSinceVisit: '15 gun',
+      dataNote: '',
+    },
+  ],
+}
+
 const myPerformanceFixture = {
   source: { mode: 'live', snapshotRunId: null, snapshotDate: null },
   employee: { employeeId, displayName: 'Pilot Store Manager', storeId, storeName: 'Pilot Store' },
@@ -1300,6 +1621,83 @@ const storeIncentivesFixture = {
             blockedReason: null,
             rateTableVersion: 'manager-sales-target-v1.0.0',
             explanation: 'Pilot fixture projection.',
+          },
+        ],
+      },
+    ],
+  },
+}
+
+const adminIncentivesFixture = {
+  data: {
+    period: '2026-06',
+    periodStart: '2026-06-01',
+    periodEnd: '2026-06-30',
+    periodTimezone: 'Europe/Istanbul',
+    roleScope: 'admin',
+    regionWorkflow: null,
+    regionPackages: [
+      {
+        regionId,
+        regionName: 'Pilot Region',
+        regionManagerUserId: 'region-manager-user',
+        regionManagerName: 'Pilot Region Manager',
+        submittedByUserId: null,
+        submittedByName: null,
+        submittedAt: null,
+        reviewedByUserId: null,
+        reviewedByName: null,
+        reviewedAt: null,
+        reviewNote: null,
+        status: 'not_submitted',
+        storeCount: 1,
+        reviewedStoreCount: 0,
+        submittedStoreCount: 0,
+        draftCorrectionCount: 0,
+        submittedCorrectionCount: 0,
+      },
+    ],
+    projections: [
+      {
+        period: '2026-06',
+        periodTimezone: 'Europe/Istanbul',
+        closeCutoffAt: null,
+        ruleVersionId: 'sales-target-incentive-v1.0.0',
+        regionId,
+        storeId,
+        storeName: 'Pilot Store',
+        storeOwnershipType: 'company',
+        roleScope: 'admin',
+        storeTarget: '1000000.00',
+        storeActualNetSales: '1000000.00',
+        storeAchievementPct: '100.0000',
+        storeGatePassed: true,
+        calculationState: 'projected',
+        blockedReason: null,
+        lastImportAt: '2026-06-18T08:00:00.000Z',
+        rows: [
+          {
+            employeeId,
+            displayName: 'Pilot Store Manager',
+            participantType: 'store_manager',
+            positionCode: 'STORE_MANAGER',
+            normalizedFromPositionCode: null,
+            target: '1000000.00',
+            actualPositiveSales: '1000000.00',
+            achievementPct: '100.0000',
+            storeAchievementPct: '100.0000',
+            storeGatePassed: null,
+            rate: '0.0070',
+            rawEarnedAmount: '7000.000000',
+            payableAmount: '7000.00',
+            correctionAmount: null,
+            adjustmentAmount: null,
+            finalAmount: null,
+            status: 'projected',
+            blockedReason: null,
+            rateTableVersion: 'manager-sales-target-v1.0.0',
+            explanation: 'Pilot fixture projection.',
+            regionCorrection: null,
           },
         ],
       },
