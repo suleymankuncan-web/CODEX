@@ -34,7 +34,7 @@ import {
   type OffboardingRequest,
   type SellerCodeRequest,
 } from '../features/workforce/api'
-import { formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
+import { formatDateTime, formatNumber, getUserFacingErrorMessage } from '../lib/format'
 import { StoreRequestFeedback } from './store-approvals-atoms'
 import { OffboardingRequestForm } from './store-approvals-offboarding-form'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
@@ -77,9 +77,7 @@ function resolveWorkforceMode(authSummary: AuthSessionSummary | null): Workforce
   return roles.includes('REGION_MANAGER') ? 'region' : 'store'
 }
 
-export function StoreWorkforcePage(input: {
-  authSummary: AuthSessionSummary | null
-}) {
+export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | null }) {
   const mode = resolveWorkforceMode(input.authSummary)
 
   if (mode === 'region') {
@@ -89,9 +87,7 @@ export function StoreWorkforcePage(input: {
   return <StoreManagerWorkforce authSummary={input.authSummary} />
 }
 
-function StoreManagerWorkforce(input: {
-  authSummary: AuthSessionSummary | null
-}) {
+function StoreManagerWorkforce(input: { authSummary: AuthSessionSummary | null }) {
   const queryClient = useQueryClient()
   const { locale, t } = useLocalization()
   const [searchParams] = useSearchParams()
@@ -418,11 +414,8 @@ function StoreManagerWorkforce(input: {
 
   if (!storeId) {
     return (
-      <StoreSurfacePage
-        ariaLabel={t('storeWorkforce.title')}
-        className="tw:mx-auto tw:w-full tw:max-w-7xl"
-        testId="store-workforce-page"
-      >
+      <StoreSurfacePage ariaLabel={t('storeWorkforce.title')} className="tw:mx-auto tw:w-full tw:max-w-7xl"
+        testId="store-workforce-page">
         <StoreSurfaceHeader
           eyebrow={t('storeWorkforce.eyebrow')}
           title={t('storeWorkforce.title')}
@@ -439,11 +432,8 @@ function StoreManagerWorkforce(input: {
 
   if (storeEmployeesQuery.isLoading && !storeEmployeesQuery.data) {
     return (
-      <StoreSurfacePage
-        ariaLabel={t('storeWorkforce.title')}
-        className="tw:mx-auto tw:w-full tw:max-w-7xl"
-        testId="store-workforce-page"
-      >
+      <StoreSurfacePage ariaLabel={t('storeWorkforce.title')} className="tw:mx-auto tw:w-full tw:max-w-7xl"
+        testId="store-workforce-page">
         <StoreSurfaceHeader
           eyebrow={t('storeWorkforce.eyebrow')}
           title={t('storeWorkforce.title')}
@@ -612,7 +602,10 @@ function StoreManagerWorkforce(input: {
               <div className="tw:p-4">
                 <StoreErrorState
                   title={t('storeWorkforce.personnelErrorTitle')}
-                  description={getErrorMessage(storeEmployeesQuery.error)}
+                  description={getUserFacingErrorMessage(
+                    storeEmployeesQuery.error,
+                    'Personel listesi alınamadı. Mağazayı kontrol edip tekrar deneyin.',
+                  )}
                 />
               </div>
             ) : employees.length === 0 ? (
@@ -731,12 +724,18 @@ function StoreManagerWorkforce(input: {
               <div className="tw:flex tw:flex-col tw:gap-2">
                 {sellerCodeRequestsQuery.isError ? (
                   <StoreRequestFeedback tone="error">
-                    {getErrorMessage(sellerCodeRequestsQuery.error)}
+                    {getUserFacingErrorMessage(
+                      sellerCodeRequestsQuery.error,
+                      'Personel kodu talepleri alınamadı. Tekrar deneyin.',
+                    )}
                   </StoreRequestFeedback>
                 ) : null}
                 {offboardingRequestsQuery.isError ? (
                   <StoreRequestFeedback tone="error">
-                    {getErrorMessage(offboardingRequestsQuery.error)}
+                    {getUserFacingErrorMessage(
+                      offboardingRequestsQuery.error,
+                      'Ayrılış talepleri alınamadı. Tekrar deneyin.',
+                    )}
                   </StoreRequestFeedback>
                 ) : null}
               </div>

@@ -17,7 +17,7 @@ import {
   getReportingSnapshotRuns,
   type MyPerformanceQueryInput,
 } from '../features/reports/api'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
@@ -329,7 +329,10 @@ export function StoreMyPerformancePage(input: {
       <StoreSurfacePage ariaLabel={t('storeMe.errorTitle')}>
         <StoreErrorState
           title={t('storeMe.errorTitle')}
-          description={getErrorMessage(performanceQuery.error ?? configQuery.error ?? closedRunsQuery.error)}
+          description={getUserFacingErrorMessage(
+            performanceQuery.error ?? configQuery.error ?? closedRunsQuery.error,
+            'Performans verisi alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )

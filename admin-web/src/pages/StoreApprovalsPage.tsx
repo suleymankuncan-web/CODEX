@@ -24,7 +24,7 @@ import {
   getOffboardingRequests,
   getSellerCodeRequests,
 } from '../features/workforce/api'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import {
   buildRequestRows,
@@ -106,7 +106,10 @@ export function StoreApprovalsPage(input: {
       <StoreSurfacePage ariaLabel={copy.aria}>
         <StoreErrorState
           title={copy.errorTitle}
-          description={getErrorMessage(targetRequestsQuery.error)}
+          description={getUserFacingErrorMessage(
+            targetRequestsQuery.error,
+            'Talep merkezi verisi alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )
@@ -228,13 +231,19 @@ function RequestCenterSurface(input: {
           {input.sellerCodeErrorVisible ? (
             <StoreErrorState
               title={input.copy.errorTitle}
-              description={getErrorMessage(input.sellerCodeError)}
+              description={getUserFacingErrorMessage(
+                input.sellerCodeError,
+                'Personel kodu talepleri alınamadı. Dönemi kontrol edip tekrar deneyin.',
+              )}
             />
           ) : null}
           {input.offboardingErrorVisible ? (
             <StoreErrorState
               title={input.copy.errorTitle}
-              description={getErrorMessage(input.offboardingError)}
+              description={getUserFacingErrorMessage(
+                input.offboardingError,
+                'Ayrılış talepleri alınamadı. Dönemi kontrol edip tekrar deneyin.',
+              )}
             />
           ) : null}
         </div>

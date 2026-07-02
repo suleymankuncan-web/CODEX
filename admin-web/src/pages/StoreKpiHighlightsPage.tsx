@@ -1,5 +1,5 @@
 import type { AuthSessionSummary } from '../features/auth/api'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import { ApiError } from '../lib/api'
 import {
   type StoreKpiHighlightsPageModel,
@@ -40,7 +40,10 @@ export function StoreKpiHighlightsPage(input: {
       <StoreSurfacePage ariaLabel={t('storeKpis.configErrorTitle')}>
         <StoreErrorState
           title={t('storeKpis.configErrorTitle')}
-          description={getErrorMessage(model.configQuery.error)}
+          description={getUserFacingErrorMessage(
+            model.configQuery.error,
+            'KPI ayarları alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )
@@ -51,7 +54,10 @@ export function StoreKpiHighlightsPage(input: {
       <StoreSurfacePage ariaLabel={t('storeKpis.regionOverviewErrorTitle')}>
         <StoreErrorState
           title={t('storeKpis.regionOverviewErrorTitle')}
-          description={getErrorMessage(model.regionOverviewQuery.error)}
+          description={getUserFacingErrorMessage(
+            model.regionOverviewQuery.error,
+            'Bölge KPI özeti alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )
@@ -77,7 +83,10 @@ export function StoreKpiHighlightsPage(input: {
       <StoreSurfacePage ariaLabel={t('storeKpis.rowsErrorTitle')}>
         <StoreErrorState
           title={t('storeKpis.rowsErrorTitle')}
-          description={getErrorMessage(model.liveKpiQuery.error)}
+          description={getUserFacingErrorMessage(
+            model.liveKpiQuery.error,
+            'KPI verisi alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )
@@ -88,7 +97,10 @@ export function StoreKpiHighlightsPage(input: {
       <StoreSurfacePage ariaLabel={t('storeKpis.snapshotListErrorTitle')}>
         <StoreErrorState
           title={t('storeKpis.snapshotListErrorTitle')}
-          description={getErrorMessage(model.dailySnapshotQuery.error)}
+          description={getUserFacingErrorMessage(
+            model.dailySnapshotQuery.error,
+            'Kapanmış dönem listesi alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )
@@ -110,7 +122,10 @@ export function StoreKpiHighlightsPage(input: {
       <StoreSurfacePage ariaLabel={t('storeKpis.rowsErrorTitle')}>
         <StoreErrorState
           title={t('storeKpis.rowsErrorTitle')}
-          description={getErrorMessage(model.closedKpiQuery.error)}
+          description={getUserFacingErrorMessage(
+            model.closedKpiQuery.error,
+            'Kapanmış dönem KPI verisi alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )

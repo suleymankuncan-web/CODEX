@@ -30,7 +30,7 @@ import {
 } from '../features/store-tasks/store-tasks-command-center-model'
 import { getWorkflowInbox } from '../features/workflow/api'
 import type { WorkflowInboxItem } from '../features/workflow/contracts'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   StoreErrorState,
@@ -230,7 +230,10 @@ export function StoreTasksPage(input: {
       <StoreSurfacePage ariaLabel="Görevler">
         <StoreErrorState
           title="Görevler açılamadı"
-          description={getErrorMessage(inboxQuery.error)}
+          description={getUserFacingErrorMessage(
+            inboxQuery.error,
+            'Görevler alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
           action={{
             disabled: inboxQuery.isFetching,
             icon: <RefreshCw data-icon="inline-start" />,
