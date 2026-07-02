@@ -208,8 +208,8 @@
 
 @media (max-width: 640px) {
   .store-checklist-session-dialog {
-    width: min(23rem, calc(100vw - 1rem)) !important;
-    max-width: calc(100vw - 1rem) !important;
+    width: calc(100vw - 0.75rem) !important;
+    max-width: calc(100vw - 0.75rem) !important;
     max-height: calc(100dvh - 0.75rem);
     border-radius: 1.2rem;
   }
@@ -362,19 +362,24 @@
   .store-checklist-session-footer {
     display: grid;
     padding: 0.42rem;
+    width: 100%;
   }
 
   .store-checklist-session-footer-progress {
     min-width: 0;
+    width: 100%;
   }
 
   .store-checklist-session-footer-actions {
     display: grid;
     width: 100%;
-    grid-template-columns: minmax(0, 1fr) minmax(7.75rem, 1fr);
+    align-items: stretch;
+    justify-items: stretch;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .store-checklist-session-footer-actions > button {
+    width: 100%;
     min-height: 2.2rem;
     padding: 0 0.55rem;
     font-size: 0.76rem;

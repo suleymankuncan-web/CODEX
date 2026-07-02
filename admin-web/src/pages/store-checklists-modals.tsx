@@ -129,7 +129,7 @@ function ChecklistVisitModal(input: {
       sections.flatMap((section) =>
         section.items.map((item) => ({
           item,
-          sectionName: section.name,
+          sectionName: normalizeChecklistDisplayText(section.name),
         })),
       ),
     [sections],
@@ -209,7 +209,7 @@ function ChecklistVisitModal(input: {
                 {input.t('storeChecklists.sessionTitle')}
               </DialogTitle>
               <DialogDescription className="store-checklist-session-subtitle">
-                {input.session.template.templateName}
+                {normalizeChecklistDisplayText(input.session.template.templateName)}
               </DialogDescription>
             </div>
             <div
@@ -271,7 +271,7 @@ function ChecklistVisitModal(input: {
                         <span className="store-checklist-session-question-badge">
                           Madde {index + 1}/{itemEntries.length} - {entry.sectionName}
                         </span>
-                        <h3>{entry.item.itemText}</h3>
+                        <h3>{normalizeChecklistDisplayText(entry.item.itemText)}</h3>
                       </div>
 
                       <ChecklistSessionAnswerControl
@@ -520,4 +520,27 @@ function getChecklistChoiceOptions(locale: AppLocale, item: ChecklistTemplateIte
 
 function formatChecklistPointLabel(locale: AppLocale, value: number) {
   return `${value} ${getStaticCopy(locale, 'puan', 'pts')}`
+}
+
+function normalizeChecklistDisplayText(value: string) {
+  return value
+    .replace(/\bGorsel\b/g, 'Görsel')
+    .replace(/\bgorsel\b/g, 'görsel')
+    .replace(/\bGORSEL\b/g, 'GÖRSEL')
+    .replace(/\bDuzen\b/g, 'Düzen')
+    .replace(/\bduzen\b/g, 'düzen')
+    .replace(/\bDUZEN\b/g, 'DÜZEN')
+    .replace(/\bMagaza\b/g, 'Mağaza')
+    .replace(/\bmagaza\b/g, 'mağaza')
+    .replace(/\bMAGAZA\b/g, 'MAĞAZA')
+    .replace(/\bstandardina\b/g, 'standardına')
+    .replace(/\bStandardina\b/g, 'Standardına')
+    .replace(/\btum\b/g, 'tüm')
+    .replace(/\bTum\b/g, 'Tüm')
+    .replace(/\bhizali\b/g, 'hizalı')
+    .replace(/\bHizali\b/g, 'Hizalı')
+    .replace(/\buzeri\b/g, 'üzeri')
+    .replace(/\bUzeri\b/g, 'Üzeri')
+    .replace(/\badi\b/g, 'adı')
+    .replace(/\bAdi\b/g, 'Adı')
 }

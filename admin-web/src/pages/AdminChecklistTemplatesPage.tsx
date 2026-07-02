@@ -138,7 +138,7 @@ const initialSections: DraftChecklistSection[] = [
 const vmInitialSections: DraftChecklistSection[] = [
   {
     id: 'vm-section-visual-presentation',
-    name: 'Gorsel Sunum',
+    name: 'Görsel Sunum',
     items: [
       {
         id: 'vm-item-window-concept',
