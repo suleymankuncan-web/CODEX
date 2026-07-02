@@ -23,6 +23,9 @@ test('checklist session modal uses 1-5 score policy and low-score note guard', a
   const dialog = page.getByRole('dialog')
 
   await expect(dialog).toBeVisible()
+  await expect(dialog.getByText('BM Mağaza Ziyareti')).toBeVisible()
+  await expect(dialog.getByText('Madde 1/1 - Görsel Sunum')).toBeVisible()
+  await expect(dialog.getByRole('heading', { name: 'Vitrin konsepti VM standardına uygun mu?' })).toBeVisible()
   await expect(dialog.getByRole('radio', { name: '0', exact: true })).toHaveCount(0)
   for (const score of ['1', '2', '3', '4', '5']) {
     await expect(dialog.getByRole('radio', { name: score, exact: true })).toBeVisible()
@@ -79,6 +82,7 @@ test('checklist session modal keeps footer usable on mobile width', async ({ pag
   await expect(dialog.getByRole('button', { name: 'Taslak kaydet' })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'İptal' })).toBeVisible()
   await expect(dialog.getByRole('button', { name: 'Tamamla', exact: true })).toBeVisible()
+  await expectFooterActionsFillMobileWidth(dialog)
   await expectPageNoHorizontalOverflow(page)
   await expectLocatorNoHorizontalOverflow(dialog)
 })
@@ -205,19 +209,19 @@ function createMobileChecklistTodayFixture() {
           items: [
             {
               itemNo: 1,
-              itemText: 'Vitrin standartlara uygun',
+              itemText: 'Vitrin konsepti VM standardina uygun mu?',
               lowScoreThreshold: 2,
               maxScore: 5,
               minScore: 1,
               requiresLowScoreNote: true,
               responseType: 'score',
-              sectionName: 'Görsel düzen',
+              sectionName: 'Gorsel Sunum',
               templateItemId,
               weight: 100,
             },
           ],
           templateCode: 'BM_VISIT_V1',
-          templateName: 'BM Mağaza Ziyareti',
+          templateName: 'BM Magaza Ziyareti',
           templateType: 'BM_STORE_VISIT',
           versionNo: 1,
         },
@@ -235,5 +239,29 @@ async function expectPageNoHorizontalOverflow(page: Page) {
 async function expectLocatorNoHorizontalOverflow(locator: Locator) {
   await expect
     .poll(async () => locator.evaluate((element) => element.scrollWidth <= element.clientWidth + 1))
+    .toBe(true)
+}
+
+async function expectFooterActionsFillMobileWidth(dialog: Locator) {
+  const footerActions = dialog.locator('.store-checklist-session-footer-actions')
+  await expect
+    .poll(async () =>
+      footerActions.evaluate((element) => {
+        const buttons = Array.from(element.querySelectorAll('button'))
+        if (buttons.length < 3) return false
+        const containerRect = element.getBoundingClientRect()
+        const draftRect = buttons[0]!.getBoundingClientRect()
+        const cancelRect = buttons[1]!.getBoundingClientRect()
+        const completeRect = buttons[2]!.getBoundingClientRect()
+        const threshold = 1
+
+        return (
+          Math.abs(draftRect.left - containerRect.left) <= threshold &&
+          Math.abs(draftRect.right - containerRect.right) <= threshold &&
+          Math.abs(cancelRect.left - containerRect.left) <= threshold &&
+          Math.abs(completeRect.right - containerRect.right) <= threshold
+        )
+      }),
+    )
     .toBe(true)
 }
