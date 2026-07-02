@@ -81,6 +81,7 @@ Use for controlled staging/internal pilot work.
 - `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md`
 - `docs/plans/controlled-pilot-preflight-checklist-v1.md`
 - `docs/plans/controlled-pilot-operating-checklist-v1.md`
+- `docs/runbooks/pilot-daily-ops-runbook-v1.md`
 - `docs/plans/pilot-access-matrix-v1.md`
 - `docs/plans/clerk-persona-staging-evidence-runbook-v1.md`
 - `docs/plans/pilot-persona-evidence-runbook-v1.md`
