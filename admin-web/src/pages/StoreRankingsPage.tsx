@@ -14,7 +14,7 @@ import {
   type PersonnelRankingRow,
   type RankingSummary,
 } from '../features/reports/api'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
@@ -185,7 +185,10 @@ export function StoreRankingsPage(input: {
       <StoreSurfacePage ariaLabel={t('storeRankings.errorTitle')}>
         <StoreErrorState
           title={t('storeRankings.errorTitle')}
-          description={getErrorMessage(rankingsQuery.error)}
+          description={getUserFacingErrorMessage(
+            rankingsQuery.error,
+            'Sıralama verisi alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
         />
       </StoreSurfacePage>
     )

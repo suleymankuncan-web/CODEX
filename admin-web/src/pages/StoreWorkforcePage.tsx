@@ -34,7 +34,7 @@ import {
   type OffboardingRequest,
   type SellerCodeRequest,
 } from '../features/workforce/api'
-import { formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
+import { formatDateTime, formatNumber, getUserFacingErrorMessage } from '../lib/format'
 import { StoreRequestFeedback } from './store-approvals-atoms'
 import { OffboardingRequestForm } from './store-approvals-offboarding-form'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
@@ -612,7 +612,10 @@ function StoreManagerWorkforce(input: {
               <div className="tw:p-4">
                 <StoreErrorState
                   title={t('storeWorkforce.personnelErrorTitle')}
-                  description={getErrorMessage(storeEmployeesQuery.error)}
+                  description={getUserFacingErrorMessage(
+                    storeEmployeesQuery.error,
+                    'Personel listesi alınamadı. Mağazayı kontrol edip tekrar deneyin.',
+                  )}
                 />
               </div>
             ) : employees.length === 0 ? (
@@ -731,12 +734,18 @@ function StoreManagerWorkforce(input: {
               <div className="tw:flex tw:flex-col tw:gap-2">
                 {sellerCodeRequestsQuery.isError ? (
                   <StoreRequestFeedback tone="error">
-                    {getErrorMessage(sellerCodeRequestsQuery.error)}
+                    {getUserFacingErrorMessage(
+                      sellerCodeRequestsQuery.error,
+                      'Personel kodu talepleri alınamadı. Tekrar deneyin.',
+                    )}
                   </StoreRequestFeedback>
                 ) : null}
                 {offboardingRequestsQuery.isError ? (
                   <StoreRequestFeedback tone="error">
-                    {getErrorMessage(offboardingRequestsQuery.error)}
+                    {getUserFacingErrorMessage(
+                      offboardingRequestsQuery.error,
+                      'Ayrılış talepleri alınamadı. Tekrar deneyin.',
+                    )}
                   </StoreRequestFeedback>
                 ) : null}
               </div>

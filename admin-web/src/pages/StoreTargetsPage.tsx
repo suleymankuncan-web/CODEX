@@ -40,7 +40,7 @@ import {
   type TargetDistributionAllocation,
   type TargetDistributionRequest,
 } from '../features/targets/api'
-import { getErrorMessage } from '../lib/format'
+import { getUserFacingErrorMessage } from '../lib/format'
 import {
   TargetApprovalQueue,
   TargetApprovedRequestsPanel,
@@ -295,7 +295,13 @@ export function StoreTargetsPage(input: {
   if (requestsQuery.isError) {
     return (
       <StoreSurfacePage ariaLabel={copy.aria}>
-        <StoreErrorState title={copy.title} description={getErrorMessage(requestsQuery.error)} />
+        <StoreErrorState
+          title={copy.title}
+          description={getUserFacingErrorMessage(
+            requestsQuery.error,
+            'Hedef talepleri alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
+        />
       </StoreSurfacePage>
     )
   }
@@ -303,7 +309,13 @@ export function StoreTargetsPage(input: {
   if (coverageQuery.isError) {
     return (
       <StoreSurfacePage ariaLabel={copy.aria}>
-        <StoreErrorState title={copy.coverageTitle} description={getErrorMessage(coverageQuery.error)} />
+        <StoreErrorState
+          title={copy.coverageTitle}
+          description={getUserFacingErrorMessage(
+            coverageQuery.error,
+            'Hedef kapsamı alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
+        />
       </StoreSurfacePage>
     )
   }

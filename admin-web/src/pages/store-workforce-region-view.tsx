@@ -35,6 +35,7 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import { getAssignedStoreIds, getReadRegionIds, getReadStoreIds } from '../features/auth/authorization'
 import { getOrgStores, getStoreEmployees, getStoreHeadcountGap } from '../features/workforce/api'
 import { formatNumber } from '../lib/format'
+import { normalizeDisplayLabel } from '../lib/display-labels'
 import type { AppLocale } from '../lib/i18n'
 import { getMonthRange, interpretNormStaffingStatus } from './store-workforce-headcount'
 import { deriveWorkforceSummary, getTenureFromDate } from './store-workforce-model'
@@ -92,7 +93,7 @@ export function RegionWorkforceView(input: {
       if (scopedOrgStores.length > 0) {
         return scopedOrgStores.map((store) => ({
           storeId: store.store_id,
-          storeLabel: store.store_name || store.store_code || store.store_id,
+          storeLabel: normalizeDisplayLabel(store.store_name || store.store_code || store.store_id, 'Mağaza adı yok'),
         }))
       }
 
