@@ -36,4 +36,41 @@ describe("StoreOpsRepository", () => {
       ],
     );
   });
+
+  it("projects shortage metadata with the headcount gap", async () => {
+    const storeId = "00000000-0000-0000-0000-000000000100";
+    const query = jest.fn().mockResolvedValue({
+      rows: [
+        {
+          store_id: storeId,
+          planned_headcount: "8.00",
+          active_headcount: "7.00",
+          headcount_gap: "1.00",
+          planned_fte: "8.00",
+          active_fte: "7.00",
+          fte_gap: "1.00",
+          shortage_started_on: "2026-06-15",
+          shortage_days: 17,
+        },
+      ],
+    });
+    const repository = new StoreOpsRepository({ query } as never);
+
+    await expect(repository.getStoreHeadcountGap({
+      storeId,
+      periodStart: "2026-07-01",
+      periodEnd: "2026-07-31",
+    })).resolves.toMatchObject({
+      headcount_gap: "1.00",
+      shortage_started_on: "2026-06-15",
+      shortage_days: 17,
+    });
+
+    expect(query).toHaveBeenCalledWith(
+      expect.stringContaining("shortage_source"),
+      [storeId, "2026-07-01", "2026-07-31"],
+    );
+    expect(query.mock.calls[0][0]).toEqual(expect.stringContaining("shortage_started_on"));
+    expect(query.mock.calls[0][0]).toEqual(expect.stringContaining("CURRENT_DATE"));
+  });
 });

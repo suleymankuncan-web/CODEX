@@ -139,9 +139,14 @@ export class StoreOpsRepository {
       planned_fte: string;
       active_fte: string;
       fte_gap: string;
+      shortage_started_on: string | null;
+      shortage_days: number | null;
     }>(
       `
-        WITH active_assignments AS (
+        WITH as_of_date AS (
+          SELECT LEAST($3::date, CURRENT_DATE)::date AS value
+        ),
+        active_assignments AS (
           SELECT
             eah.store_id,
             COUNT(*)::numeric(10,2) AS active_headcount,
@@ -163,18 +168,64 @@ export class StoreOpsRepository {
             AND wnp.period_start <= $3::date
             AND wnp.period_end >= $2::date
           GROUP BY wnp.store_id
+        ),
+        shortage_source AS (
+          SELECT
+            source.store_id,
+            MAX(source.shortage_started_on)::date AS shortage_started_on
+          FROM (
+            SELECT
+              eah.store_id,
+              eah.end_date::date AS shortage_started_on
+            FROM ops.employee_assignment_history eah
+            CROSS JOIN as_of_date asof
+            WHERE eah.store_id = $1
+              AND eah.end_date IS NOT NULL
+              AND eah.end_date <= asof.value
+            UNION ALL
+            SELECT
+              te.store_id,
+              te.event_date::date AS shortage_started_on
+            FROM ops.turnover_event te
+            CROSS JOIN as_of_date asof
+            WHERE te.store_id = $1
+              AND te.event_date <= asof.value
+          ) source
+          GROUP BY source.store_id
+        ),
+        headcount_projection AS (
+          SELECT
+            COALESCE(np.store_id, aa.store_id) AS store_id,
+            COALESCE(np.planned_headcount, 0) AS planned_headcount,
+            COALESCE(aa.active_headcount, 0) AS active_headcount,
+            COALESCE(np.planned_headcount, 0) - COALESCE(aa.active_headcount, 0) AS headcount_gap,
+            COALESCE(np.planned_fte, 0) AS planned_fte,
+            COALESCE(aa.active_fte, 0) AS active_fte,
+            COALESCE(np.planned_fte, 0) - COALESCE(aa.active_fte, 0) AS fte_gap
+          FROM norm_plan np
+          FULL OUTER JOIN active_assignments aa
+            ON aa.store_id = np.store_id
         )
         SELECT
-          COALESCE(np.store_id, aa.store_id) AS store_id,
-          COALESCE(np.planned_headcount, 0) AS planned_headcount,
-          COALESCE(aa.active_headcount, 0) AS active_headcount,
-          COALESCE(np.planned_headcount, 0) - COALESCE(aa.active_headcount, 0) AS headcount_gap,
-          COALESCE(np.planned_fte, 0) AS planned_fte,
-          COALESCE(aa.active_fte, 0) AS active_fte,
-          COALESCE(np.planned_fte, 0) - COALESCE(aa.active_fte, 0) AS fte_gap
-        FROM norm_plan np
-        FULL OUTER JOIN active_assignments aa
-          ON aa.store_id = np.store_id
+          hp.store_id,
+          hp.planned_headcount,
+          hp.active_headcount,
+          hp.headcount_gap,
+          hp.planned_fte,
+          hp.active_fte,
+          hp.fte_gap,
+          CASE
+            WHEN hp.headcount_gap > 0 THEN ss.shortage_started_on
+            ELSE NULL
+          END AS shortage_started_on,
+          CASE
+            WHEN hp.headcount_gap > 0 AND ss.shortage_started_on IS NOT NULL
+              THEN (SELECT value FROM as_of_date) - ss.shortage_started_on
+            ELSE NULL
+          END AS shortage_days
+        FROM headcount_projection hp
+        LEFT JOIN shortage_source ss
+          ON ss.store_id = hp.store_id
       `,
       [input.storeId, input.periodStart, input.periodEnd],
     );
