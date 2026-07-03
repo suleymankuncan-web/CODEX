@@ -272,7 +272,6 @@ function IncentiveCorrectionSheetForm(input: {
                 period: input.period,
                 correctionId,
               })
-              input.onOpenChange(false)
             }}
           >
             <RotateCcw data-icon="inline-start" />
@@ -295,7 +294,6 @@ function IncentiveCorrectionSheetForm(input: {
                 finalAmount: normalizedFinalAmount,
                 reasonNote: reasonNote.trim(),
               })
-              input.onOpenChange(false)
             }}
           >
             <Save data-icon="inline-start" />

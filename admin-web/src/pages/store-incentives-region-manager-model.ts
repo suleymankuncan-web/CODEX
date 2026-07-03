@@ -26,7 +26,7 @@ export function getRegionSummary(projections: SalesTargetIncentiveProjection[]) 
     (projection) => getReviewState(projection.review).storeReviewStatus === 'reviewed',
   ).length
   const projectionOnlyCount = projections.filter(
-    (projection) => getReviewState(projection.review).periodCloseStatus === 'projection_only',
+    (projection) => isProjectionOnlyReview(getReviewState(projection.review)),
   ).length
   const correctionCount = rows.filter(
     (row) => row.regionCorrection && row.regionCorrection.status !== 'voided',
@@ -94,7 +94,7 @@ export function getProjectionWorkflowStatus(projection: SalesTargetIncentiveProj
   tone: StoreSurfaceTone
 } {
   const review = getReviewState(projection.review)
-  if (review.periodCloseStatus === 'projection_only') {
+  if (isProjectionOnlyReview(review)) {
     return { label: 'Ay kapanışı bekliyor', tone: 'warning' }
   }
   if (review.workflowLockedReason === 'package_submitted') {
@@ -107,6 +107,10 @@ export function getProjectionWorkflowStatus(projection: SalesTargetIncentiveProj
     return { label: 'Kontrol edildi', tone: 'calm' }
   }
   return { label: 'Kontrol edilmeli', tone: 'warning' }
+}
+
+export function isProjectionOnlyReview(review: SalesTargetIncentiveStoreReview) {
+  return review.periodCloseStatus !== 'closed' || review.workflowLockedReason === 'period_not_closed'
 }
 
 export function getPackageStatus(workflow: SalesTargetIncentiveRegionWorkflow | null): {

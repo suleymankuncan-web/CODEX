@@ -203,10 +203,10 @@ npm.cmd --prefix admin-web run build
 
 ### Tasks
 
-- [ ] Compare the external prototype files:
+- [x] Compare the external prototype files:
   - `D:\hr-axis-external-lab\prototypes\store-incentives-turkish-command-v3\src\App.tsx`
   - `D:\hr-axis-external-lab\prototypes\store-incentives-turkish-command-v3\src\App.css`
-- [ ] Update `store-incentives-region-manager-view.tsx` to match the accepted visual structure:
+- [x] Update `store-incentives-region-manager-view.tsx` to match the accepted visual structure:
   - Title: `Prim Kontrol Sayfası`
   - Title has a meaningful lucide icon.
   - Smaller heading than the previous oversized command hero.
@@ -216,7 +216,7 @@ npm.cmd --prefix admin-web run build
   - Drawer is closed by default.
   - No approval timeline block.
   - Buttons use lucide icons where useful.
-- [ ] Preserve all current real data mapping:
+- [x] Preserve all current real data mapping:
   - store target,
   - realized sales,
   - achievement percent,
@@ -225,29 +225,29 @@ npm.cmd --prefix admin-web run build
   - calculated amount,
   - final amount,
   - correction delta.
-- [ ] Keep store states aligned with prototype:
+- [x] Keep store states aligned with prototype:
   - `Kontrol edilmeli`: amber/yellow surface.
   - `Kontrol edildi`: mint/cyan success surface.
   - `%80 Aşılmadı`: rose/red surface.
-- [ ] Ensure `Kontrol et` updates immediately with optimistic UI and then confirms via toast.
-- [ ] Add `useToastViewportOffset(Boolean(selectedRow))` or equivalent while the correction Sheet is open.
-- [ ] Keep final incentive input editable in the right sheet.
+- [x] Ensure `Kontrol et` updates immediately with optimistic UI and then confirms via toast.
+- [x] Add `useToastViewportOffset(Boolean(selectedRow))` or equivalent while the correction Sheet is open.
+- [x] Keep final incentive input editable in the right sheet.
   - Preserve fixed money-input behavior.
   - Decimal cents are supported.
   - Typing `50000` must not become `5.000000`.
-- [ ] Add action toasts:
+- [x] Add action toasts:
   - review success: `Kontrol edildi`
   - correction success: `Düzeltme kaydedildi`
   - revert/void success: `Eski değere dönüldü`
   - package submit success: `Onaya gönderildi`
   - mutation failure: action-specific short Turkish error
-- [ ] Remove unsupported top-level Excel export button from incentives if backend/export route is not wired.
-- [ ] Add or update targeted tests:
+- [x] Remove unsupported top-level Excel export button from incentives if backend/export route is not wired.
+- [x] Add or update targeted tests:
   - money input formatting,
   - review optimistic state,
   - drawer default closed,
   - submit dialog/toast behavior where test harness supports it.
-- [ ] Add visual evidence checklist to PR description:
+- [x] Add visual evidence checklist to PR description:
   - desktop default page,
   - desktop drawer open,
   - desktop drawer open + toast,

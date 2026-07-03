@@ -104,7 +104,7 @@ test('region manager sees assigned stores grouped by store with approval control
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByRole('heading', { name: 'Primler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Prim Kontrol Sayfası' })).toBeVisible()
   await expect(page.getByRole('button', { name: /IstinyePark Demo Store/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Marmara Forum/ })).toBeVisible()
   await page.getByRole('button', { name: /Marmara Forum/ }).click()
@@ -230,7 +230,7 @@ test('region manager cannot save a negative final correction amount', async ({ p
   await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await page.getByLabel(/Final prim tutar/).fill('-1')
-  await page.getByLabel(/notu/).fill('BÃƒÂ¶lge kontrolÃƒÂ¼ sonrasÃ„Â± final prim dÃƒÂ¼zeltmesi')
+  await page.getByLabel(/notu/).fill('Bölge kontrolü sonrası final prim düzeltmesi')
 
   await expect(page.getByText(/tutar girin/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
@@ -247,7 +247,7 @@ test('region manager cannot save an over-precision final correction amount', asy
   await openDemoStore(page)
   await page.getByRole('button', { name: 'Store Personnel' }).click()
   await page.getByLabel(/Final prim tutar/).fill('17000.255')
-  await page.getByLabel(/notu/).fill('BÃ¶lge kontrolÃ¼ sonrasÄ± final prim dÃ¼zeltmesi')
+  await page.getByLabel(/notu/).fill('Bölge kontrolü sonrası final prim düzeltmesi')
 
   await expect(page.getByText(/tutar girin/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Kaydet' })).toBeDisabled()
@@ -274,6 +274,7 @@ test('region manager submits the reviewed period package once all stores are che
   await page.getByRole('button', { name: 'Onaya gönder' }).click()
   await expect(page.getByRole('heading', { name: 'Haziran 2026 primlerini onaya gönder' })).toBeVisible()
   await page.getByRole('button', { name: 'Onaya gönder' }).last().click()
+  await expect(page.getByText('Onaya gönderildi')).toBeVisible()
 
   await expect.poll(() => requests.length).toBe(1)
   expect(requests[0]).toMatchObject({
@@ -313,7 +314,7 @@ test('cashier and non-company store users do not see incentive surfaces', async 
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByText('Prim kaydÄ± bulunamadÄ±')).toHaveCount(0)
+  await expect(page.getByText('Prim kaydı bulunamadı')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Haziran 2026' })).toHaveCount(0)
   await expect(page.getByTestId('store-incentives-page')).toHaveCount(0)
 })
@@ -348,6 +349,7 @@ test('captures responsive visual evidence for region manager incentive command s
 
   await routeAuthSession(page, createRegionManagerSession())
   await routeStoreIncentives(page, regionIncentiveFixture)
+  await routeRegionIncentiveMutations(page)
 
   await page.setViewportSize({ width: 1440, height: 1100 })
   await page.goto('/store/incentives')
@@ -366,6 +368,14 @@ test('captures responsive visual evidence for region manager incentive command s
     path: join(evidenceDir, 'store-incentives-region-manager-sheet-desktop.png'),
     fullPage: true,
   })
+  await page.getByLabel('Final prim tutarı').fill('17000.25')
+  await page.getByLabel('Düzeltme notu').fill('Görsel kontrol için final prim düzeltmesi')
+  await page.getByRole('button', { name: 'Kaydet' }).click()
+  await expect(page.getByText('Düzeltme kaydedildi')).toBeVisible()
+  await page.screenshot({
+    path: join(evidenceDir, 'store-incentives-region-manager-sheet-toast-desktop.png'),
+    fullPage: true,
+  })
 
   await page.setViewportSize({ width: 390, height: 1200 })
   await page.goto('/store/incentives')
@@ -373,6 +383,18 @@ test('captures responsive visual evidence for region manager incentive command s
   await expectNoHorizontalOverflow(page)
   await page.screenshot({
     path: join(evidenceDir, 'store-incentives-region-manager-mobile-390.png'),
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: /Marmara Forum/ }).click()
+  await page.getByRole('button', { name: 'Second Store Personnel' }).click()
+  await expect(page.getByRole('dialog', { name: 'Second Store Personnel' })).toBeVisible()
+  await page.getByLabel('Final prim tutarı').fill('18000.75')
+  await page.getByLabel('Düzeltme notu').fill('Mobil kontrol için final prim düzeltmesi')
+  await page.getByRole('button', { name: 'Kaydet' }).click()
+  await expect(page.getByText('Düzeltme kaydedildi')).toBeVisible()
+  await expectNoHorizontalOverflow(page)
+  await page.screenshot({
+    path: join(evidenceDir, 'store-incentives-region-manager-sheet-toast-mobile-390.png'),
     fullPage: true,
   })
 })
