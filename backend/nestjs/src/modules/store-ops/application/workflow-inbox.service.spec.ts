@@ -17,7 +17,7 @@ describe("WorkflowInboxService", () => {
       listRequests: jest.fn(),
     };
     const checklistAcknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn(async () => []),
+      listChecklistAcknowledgements: jest.fn(async () => ({ items: [], total: 0 })),
     };
     const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => null),
@@ -54,7 +54,7 @@ describe("WorkflowInboxService", () => {
       listRequests: jest.fn(),
     };
     const checklistAcknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn(async () => []),
+      listChecklistAcknowledgements: jest.fn(async () => ({ items: [], total: 0 })),
     };
     const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => ({
@@ -120,7 +120,7 @@ describe("WorkflowInboxService", () => {
       listRequests: jest.fn(),
     };
     const checklistAcknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn(async () => []),
+      listChecklistAcknowledgements: jest.fn(async () => ({ items: [], total: 0 })),
     };
     const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => null),
@@ -198,7 +198,7 @@ describe("WorkflowInboxService", () => {
       listRequests: jest.fn(),
     };
     const checklistAcknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn(async () => []),
+      listChecklistAcknowledgements: jest.fn(async () => ({ items: [], total: 0 })),
     };
     const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => null),
@@ -279,21 +279,24 @@ describe("WorkflowInboxService", () => {
       listRequests: jest.fn(),
     };
     const checklistAcknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn(async () => [
-        {
-          checklistInstanceId: "checklist-instance-1",
-          checklistTemplateId: "checklist-template-1",
-          templateName: "BM Result",
-          category: "BM",
-          storeId: "store-1",
-          storeName: "Assigned Store",
-          completedAt: "2026-05-14T09:00:00.000Z",
-          status: "completed",
-          totalScore: 82,
-          complianceRate: 0.82,
-          acknowledgement: null,
-        },
-      ]),
+      listChecklistAcknowledgements: jest.fn(async () => ({
+        items: [
+          {
+            checklistInstanceId: "checklist-instance-1",
+            checklistTemplateId: "checklist-template-1",
+            templateName: "BM Result",
+            category: "BM",
+            storeId: "store-1",
+            storeName: "Assigned Store",
+            completedAt: "2026-05-14T09:00:00.000Z",
+            status: "completed",
+            totalScore: 82,
+            complianceRate: 0.82,
+            acknowledgement: null,
+          },
+        ],
+        total: 1,
+      })),
     };
     const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => null),
@@ -334,7 +337,7 @@ describe("WorkflowInboxService", () => {
       }),
     };
     const checklistAcknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn(async () => []),
+      listChecklistAcknowledgements: jest.fn(async () => ({ items: [], total: 0 })),
     };
     const snapshotReportingReadRepository = {
       getLatestCompletedSnapshotRun: jest.fn(async () => null),

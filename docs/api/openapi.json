@@ -1271,6 +1271,16 @@
       "post": {
         "operationId": "ChecklistController_listChecklistAcknowledgements",
         "parameters": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListChecklistAcknowledgementsDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -20054,6 +20064,40 @@
           "assigneeLabel",
           "targetValue"
         ]
+      },
+      "ListChecklistAcknowledgementsDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "number",
+            "minimum": 0
+          },
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "status": {
+            "enum": [
+              "pending_acknowledgement",
+              "acknowledged"
+            ],
+            "type": "string"
+          },
+          "storeId": {
+            "type": "string"
+          },
+          "checklistInstanceId": {
+            "type": "string"
+          },
+          "includeResponses": {
+            "type": "boolean"
+          }
+        }
       }
     }
   },

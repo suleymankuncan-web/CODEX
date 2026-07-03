@@ -60,7 +60,7 @@ describe("ChecklistService", () => {
 
   it("keeps store manager checklist acknowledgement lists limited to assigned stores even when company scope is present", async () => {
     const acknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     };
     const service = new ChecklistService(
       storeOpsRepository as never,
@@ -85,12 +85,15 @@ describe("ChecklistService", () => {
       regionIds: [],
       storeIds: ["store-1"],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      includeResponses: true,
+      limit: 50,
+      offset: 0,
     });
   });
 
   it("lets region managers read BM and VM checklist results for their assigned stores", async () => {
     const acknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     };
     const service = new ChecklistService(
       storeOpsRepository as never,
@@ -115,6 +118,9 @@ describe("ChecklistService", () => {
       regionIds: [],
       storeIds: ["store-1", "store-2"],
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+      includeResponses: true,
+      limit: 50,
+      offset: 0,
     });
   });
 
@@ -413,7 +419,7 @@ describe("ChecklistService", () => {
 
   it("limits visual merchandisers to VM checklist results", async () => {
     const acknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     };
     const service = new ChecklistService(
       storeOpsRepository as never,
@@ -438,12 +444,15 @@ describe("ChecklistService", () => {
       regionIds: [],
       storeIds: ["store-1"],
       allowedTemplateTypes: ["VM_STORE_VISIT"],
+      includeResponses: true,
+      limit: 50,
+      offset: 0,
     });
   });
 
   it("keeps broad checklist result readers unrestricted by template type", async () => {
     const acknowledgementRepository = {
-      listChecklistAcknowledgements: jest.fn().mockResolvedValue([]),
+      listChecklistAcknowledgements: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     };
     const service = new ChecklistService(
       storeOpsRepository as never,
@@ -465,6 +474,9 @@ describe("ChecklistService", () => {
       regionIds: [],
       storeIds: [],
       allowedTemplateTypes: undefined,
+      includeResponses: true,
+      limit: 50,
+      offset: 0,
     });
   });
 

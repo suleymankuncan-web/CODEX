@@ -17,6 +17,7 @@ import {
 import {
   acknowledgeChecklist,
   completeMobileChecklistInstance,
+  getChecklistAcknowledgementDetail,
   getChecklistAcknowledgements,
   getMobileChecklistToday,
   saveMobileChecklistResponse,
@@ -171,8 +172,18 @@ function useStoreChecklistsPageContent(input: {
   }
   const checklistsQuery = useQuery({
     queryKey: checklistAcknowledgementsQueryKey,
-    queryFn: getChecklistAcknowledgements,
+    queryFn: () => getChecklistAcknowledgements(),
     enabled: canUseAcknowledgements,
+    ...transientQueryRetryOptions,
+  })
+  const selectedResultDetailQuery = useQuery({
+    queryKey: [
+      ...checklistAcknowledgementsQueryKey,
+      'detail',
+      selectedResultId ?? 'none',
+    ],
+    queryFn: () => getChecklistAcknowledgementDetail(selectedResultId ?? ''),
+    enabled: canUseAcknowledgements && Boolean(selectedResultId),
     ...transientQueryRetryOptions,
   })
   const mobileTodayQuery = useQuery({
@@ -374,7 +385,9 @@ function useStoreChecklistsPageContent(input: {
   const mobileToday = mobileTodayQuery.data?.data
   const pendingItems = items.filter((item) => item.acknowledgement === null)
   const acknowledgedItems = items.filter((item) => item.acknowledgement !== null)
-  const selectedResult = items.find((item) => item.checklistInstanceId === selectedResultId) ?? null
+  const selectedResultSummary =
+    items.find((item) => item.checklistInstanceId === selectedResultId) ?? null
+  const selectedResult = selectedResultDetailQuery.data ?? selectedResultSummary
   const assignedStoreIds = getAssignedStoreIds(input.authSummary)
   const coverageRows = buildChecklistCoverageRows({
     acknowledgementItems: items,

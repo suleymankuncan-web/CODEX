@@ -172,15 +172,14 @@ function App() {
       .then(({ prefetchRouteData }) => {
         if (cancelled) return
 
-        prefetchRouteData({
-          queryClient,
-          pathname: firstAllowedPath,
-          authSummary,
-        })
-        prefetchRouteData({
-          queryClient,
-          pathname,
-          authSummary,
+        const prefetchPaths = [...new Set([firstAllowedPath, pathname])]
+
+        prefetchPaths.forEach((prefetchPath) => {
+          prefetchRouteData({
+            queryClient,
+            pathname: prefetchPath,
+            authSummary,
+          })
         })
       })
       .catch(() => undefined)

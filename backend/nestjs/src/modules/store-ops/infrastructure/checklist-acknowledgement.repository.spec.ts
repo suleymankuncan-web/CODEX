@@ -14,9 +14,63 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
         regionIds: [],
         storeIds: [],
       }),
-    ).resolves.toEqual([]);
+    ).resolves.toEqual({ items: [], total: 0 });
 
     expect(query).not.toHaveBeenCalled();
+  });
+
+  it("loads bounded acknowledgement summary rows without response details by default", async () => {
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => ({
+      rowCount: 1,
+      rows: [
+        {
+          checklist_instance_id: "instance-1",
+          checklist_template_id: "template-1",
+          template_name: "VM Visit",
+          template_type: "VM_STORE_VISIT",
+          category: "VM",
+          store_id: "store-1",
+          store_name: "Marmara Park",
+          completed_by_user_id: "vm-user-1",
+          completed_at: "2026-05-14T08:00:00.000Z",
+          status: "completed",
+          total_score: "74.50",
+          compliance_rate: "0.7500",
+          checklist_acknowledgement_id: null,
+          acknowledged_by_user_id: null,
+          acknowledgement_note: null,
+          acknowledged_at: null,
+          responses_json: [],
+          total_count: "125",
+        },
+      ],
+    }));
+    const repository = new ChecklistAcknowledgementRepository({ query } as never);
+
+    const result = await repository.listChecklistAcknowledgements({
+      companyIds: [],
+      regionIds: [],
+      storeIds: ["store-1"],
+      limit: 50,
+      offset: 25,
+    });
+
+    const [sql, params] = query.mock.calls[0];
+    expect(sql).not.toContain("jsonb_agg");
+    expect(sql).not.toContain("ops.checklist_template_item");
+    expect(sql).not.toContain("ops.checklist_response");
+    expect(sql).toContain("LIMIT $2::integer");
+    expect(sql).toContain("OFFSET $3::integer");
+    expect(params).toEqual([["store-1"], 50, 25]);
+    expect(result).toMatchObject({
+      total: 125,
+      items: [
+        {
+          checklistInstanceId: "instance-1",
+          responses: [],
+        },
+      ],
+    });
   });
 
   it("loads response detail rows and filters result visibility by template type", async () => {
@@ -40,6 +94,7 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
           acknowledged_by_user_id: null,
           acknowledgement_note: null,
           acknowledged_at: null,
+          total_count: "1",
           responses_json: [
             {
               templateItemId: "item-1",
@@ -63,6 +118,7 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
       regionIds: [],
       storeIds: ["store-1"],
       allowedTemplateTypes: ["VM_STORE_VISIT"],
+      includeResponses: true,
     });
 
     const [sql, params] = query.mock.calls[0];
@@ -70,8 +126,8 @@ describe("ChecklistAcknowledgementRepository access scope contract", () => {
     expect(sql).toContain("jsonb_agg");
     expect(sql).toContain("ops.checklist_template_item");
     expect(sql).toContain("ops.checklist_response");
-    expect(params).toEqual([["store-1"], ["VM_STORE_VISIT"]]);
-    expect(result[0]).toMatchObject({
+    expect(params).toEqual([["store-1"], ["VM_STORE_VISIT"], 50, 0]);
+    expect(result.items[0]).toMatchObject({
       templateType: "VM_STORE_VISIT",
       completedByUserId: "vm-user-1",
       responses: [

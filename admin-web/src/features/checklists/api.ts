@@ -94,6 +94,16 @@ export type ChecklistAcknowledgementItem = {
   } | null
 }
 
+export type ChecklistAcknowledgementListInput = {
+  checklistInstanceId?: string
+  includeResponses?: boolean
+  limit?: number
+  offset?: number
+  period?: string
+  status?: 'pending_acknowledgement' | 'acknowledged'
+  storeId?: string
+}
+
 export type MobileChecklistTodayResponse = ApiGetResponse<'/api/mobile/checklists/today'>
 export type MobileChecklistToday = MobileChecklistTodayResponse['data']
 export type MobileChecklistInstanceStatus =
@@ -161,11 +171,30 @@ export async function completeMobileChecklistInstance(input: {
   })
 }
 
-export async function getChecklistAcknowledgements() {
+export async function getChecklistAcknowledgements(input: ChecklistAcknowledgementListInput = {}) {
   return sendJson<ListResponse<ChecklistAcknowledgementItem>>('/checklists/acknowledgements/list', {
     method: 'POST',
-    body: {},
+    body: {
+      includeResponses: input.includeResponses ?? false,
+      limit: input.limit ?? 50,
+      offset: input.offset ?? 0,
+      ...(input.checklistInstanceId ? { checklistInstanceId: input.checklistInstanceId } : {}),
+      ...(input.period ? { period: input.period } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.storeId ? { storeId: input.storeId } : {}),
+    },
   })
+}
+
+export async function getChecklistAcknowledgementDetail(checklistInstanceId: string) {
+  const response = await getChecklistAcknowledgements({
+    checklistInstanceId,
+    includeResponses: true,
+    limit: 1,
+    offset: 0,
+  })
+
+  return response.items[0] ?? null
 }
 
 export async function createAdminChecklistTemplate(input: CreateAdminChecklistTemplateInput) {

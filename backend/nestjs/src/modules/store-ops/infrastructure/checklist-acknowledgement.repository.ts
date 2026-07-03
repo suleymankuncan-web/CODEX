@@ -21,6 +21,7 @@ type ChecklistAcknowledgementRow = {
   acknowledgement_note: string | null;
   acknowledged_at: string | null;
   responses_json: unknown;
+  total_count: string | number;
 };
 
 type ChecklistAcknowledgementResponseRow = {
@@ -95,17 +96,26 @@ export class ChecklistAcknowledgementRepository {
     regionIds: string[];
     storeIds: string[];
     allowedTemplateTypes?: string[];
+    checklistInstanceId?: string;
+    includeResponses?: boolean;
+    limit?: number;
+    offset?: number;
+    period?: string;
+    status?: "pending_acknowledgement" | "acknowledged";
+    storeId?: string;
   }) {
     if (!this.hasStoreAccessScope(input)) {
-      return [];
+      return { items: [], total: 0 };
     }
 
     if (input.allowedTemplateTypes && input.allowedTemplateTypes.length === 0) {
-      return [];
+      return { items: [], total: 0 };
     }
 
     const clauses: string[] = [];
     const params: unknown[] = [];
+    const limit = Math.min(Math.max(Math.trunc(input.limit ?? 50), 1), 100);
+    const offset = Math.max(Math.trunc(input.offset ?? 0), 0);
 
     if (input.storeIds.length > 0) {
       params.push(input.storeIds);
@@ -123,8 +133,89 @@ export class ChecklistAcknowledgementRepository {
       clauses.push(`ct.template_type = ANY($${params.length}::text[])`);
     }
 
+    if (input.checklistInstanceId) {
+      params.push(input.checklistInstanceId);
+      clauses.push(`ci.checklist_instance_id = $${params.length}::uuid`);
+    }
+
+    if (input.storeId) {
+      params.push(input.storeId);
+      clauses.push(`ci.store_id = $${params.length}::uuid`);
+    }
+
+    if (input.period) {
+      params.push(input.period);
+      clauses.push(
+        `ci.completed_at >= ($${params.length}::text || '-01')::date AND ci.completed_at < (($${params.length}::text || '-01')::date + INTERVAL '1 month')`,
+      );
+    }
+
+    if (input.status === "pending_acknowledgement") {
+      clauses.push(`ca.checklist_acknowledgement_id IS NULL`);
+    } else if (input.status === "acknowledged") {
+      clauses.push(`ca.checklist_acknowledgement_id IS NOT NULL`);
+    }
+
     clauses.push(`ci.status = 'completed'`);
     const whereClause = `WHERE ${clauses.join(" AND ")}`;
+    const includeResponses = input.includeResponses === true;
+    const responsesSelect = includeResponses
+      ? `
+          COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'templateItemId', cti.template_item_id,
+                'sectionName', cti.section_name,
+                'itemNo', cti.item_no,
+                'itemText', cti.item_text,
+                'responseType', cti.response_type,
+                'weight', cti.weight,
+                'maxScore', cti.max_score,
+                'scoreValue', cr.score_value,
+                'commentText', cr.comment_text
+              )
+              ORDER BY cti.section_name ASC, cti.item_no ASC, cti.template_item_id ASC
+            ) FILTER (WHERE cti.template_item_id IS NOT NULL),
+            '[]'::jsonb
+          ) AS responses_json,
+        `
+      : `'[]'::jsonb AS responses_json,`;
+    const responseJoins = includeResponses
+      ? `
+        LEFT JOIN ops.checklist_template_item cti
+          ON cti.checklist_template_id = ci.checklist_template_id
+        LEFT JOIN ops.checklist_response cr
+          ON cr.checklist_instance_id = ci.checklist_instance_id
+         AND cr.template_item_id = cti.template_item_id
+        `
+      : "";
+    const groupByClause = includeResponses
+      ? `
+        GROUP BY
+          ci.checklist_instance_id,
+          ci.checklist_template_id,
+          ct.template_name,
+          ct.template_type,
+          ct.category,
+          ci.store_id,
+          s.store_name,
+          ci.completed_by_user_id,
+          ci.completed_at,
+          ci.status,
+          ci.total_score,
+          ci.compliance_rate,
+          ci.created_at,
+          ca.checklist_acknowledgement_id,
+          ca.acknowledged_by_user_id,
+          ca.acknowledgement_note,
+          ca.acknowledged_at
+        `
+      : "";
+
+    params.push(limit);
+    const limitParam = params.length;
+    params.push(offset);
+    const offsetParam = params.length;
 
     const result = await this.databaseService.query<ChecklistAcknowledgementRow>(
       `
@@ -145,81 +236,56 @@ export class ChecklistAcknowledgementRepository {
           ca.acknowledged_by_user_id,
           ca.acknowledgement_note,
           ca.acknowledged_at,
-          COALESCE(
-            jsonb_agg(
-              jsonb_build_object(
-                'templateItemId', cti.template_item_id,
-                'sectionName', cti.section_name,
-                'itemNo', cti.item_no,
-                'itemText', cti.item_text,
-                'responseType', cti.response_type,
-                'weight', cti.weight,
-                'maxScore', cti.max_score,
-                'scoreValue', cr.score_value,
-                'commentText', cr.comment_text
-              )
-              ORDER BY cti.section_name ASC, cti.item_no ASC, cti.template_item_id ASC
-            ) FILTER (WHERE cti.template_item_id IS NOT NULL),
-            '[]'::jsonb
-          ) AS responses_json
+          ${responsesSelect}
+          COUNT(*) OVER() AS total_count
         FROM ops.checklist_instance ci
         INNER JOIN ops.checklist_template ct
           ON ct.checklist_template_id = ci.checklist_template_id
         INNER JOIN ops.store s
           ON s.store_id = ci.store_id
-        LEFT JOIN ops.checklist_template_item cti
-          ON cti.checklist_template_id = ci.checklist_template_id
-        LEFT JOIN ops.checklist_response cr
-          ON cr.checklist_instance_id = ci.checklist_instance_id
-         AND cr.template_item_id = cti.template_item_id
         LEFT JOIN ops.checklist_acknowledgement ca
           ON ca.checklist_instance_id = ci.checklist_instance_id
+        ${responseJoins}
         ${whereClause}
-        GROUP BY
-          ci.checklist_instance_id,
-          ci.checklist_template_id,
-          ct.template_name,
-          ct.template_type,
-          ct.category,
-          ci.store_id,
-          s.store_name,
-          ci.completed_by_user_id,
-          ci.completed_at,
-          ci.status,
-          ci.total_score,
-          ci.compliance_rate,
-          ca.checklist_acknowledgement_id,
-          ca.acknowledged_by_user_id,
-          ca.acknowledgement_note,
-          ca.acknowledged_at
+        ${groupByClause}
         ORDER BY ci.completed_at DESC NULLS LAST, ci.created_at DESC
+        LIMIT $${limitParam}::integer
+        OFFSET $${offsetParam}::integer
       `,
       params,
     );
 
-    return result.rows.map((row) => ({
-      checklistInstanceId: row.checklist_instance_id,
-      checklistTemplateId: row.checklist_template_id,
-      templateName: row.template_name,
-      templateType: row.template_type,
-      category: row.category,
-      storeId: row.store_id,
-      storeName: row.store_name,
-      completedByUserId: row.completed_by_user_id,
-      completedAt: row.completed_at,
-      status: row.status,
-      totalScore: row.total_score ? Number(row.total_score) : null,
-      complianceRate: row.compliance_rate ? Number(row.compliance_rate) : null,
-      responses: this.mapResponseDetails(row.responses_json),
-      acknowledgement: row.checklist_acknowledgement_id
-        ? {
-            checklistAcknowledgementId: row.checklist_acknowledgement_id,
-            acknowledgedByUserId: row.acknowledged_by_user_id,
-            acknowledgementNote: row.acknowledgement_note,
-            acknowledgedAt: row.acknowledged_at,
-          }
-        : null,
-    }));
+    const total =
+      result.rows[0]?.total_count === undefined
+        ? result.rows.length
+        : Number(result.rows[0].total_count);
+
+    return {
+      items: result.rows.map((row) => ({
+        checklistInstanceId: row.checklist_instance_id,
+        checklistTemplateId: row.checklist_template_id,
+        templateName: row.template_name,
+        templateType: row.template_type,
+        category: row.category,
+        storeId: row.store_id,
+        storeName: row.store_name,
+        completedByUserId: row.completed_by_user_id,
+        completedAt: row.completed_at,
+        status: row.status,
+        totalScore: row.total_score ? Number(row.total_score) : null,
+        complianceRate: row.compliance_rate ? Number(row.compliance_rate) : null,
+        responses: this.mapResponseDetails(row.responses_json),
+        acknowledgement: row.checklist_acknowledgement_id
+          ? {
+              checklistAcknowledgementId: row.checklist_acknowledgement_id,
+              acknowledgedByUserId: row.acknowledged_by_user_id,
+              acknowledgementNote: row.acknowledgement_note,
+              acknowledgedAt: row.acknowledged_at,
+            }
+          : null,
+      })),
+      total,
+    };
   }
 
   async getChecklistRemediationSource(checklistInstanceId: string) {
