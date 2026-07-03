@@ -494,7 +494,7 @@ test('admin checklist editor keeps BM and VM template drafts separate', async ({
   await expect(firstQuestion).toHaveValue(/Vitrin sezon/i)
 
   await chooseChecklistTemplate(page, templateTypeSelect, 'VM Checklist')
-  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardina uygun mu?')
+  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardına uygun mu?')
 
   await firstQuestion.fill('VM-only fixture question')
   await expect(firstQuestion).toHaveValue('VM-only fixture question')
@@ -524,7 +524,7 @@ test('admin checklist template editor stays bounded on mobile width', async ({ p
   await expectNoHorizontalOverflow(page)
 
   await chooseChecklistTemplate(page, templateTypeSelect, 'VM Checklist')
-  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardina uygun mu?')
+  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardına uygun mu?')
   await expectNoHorizontalOverflow(page)
 })
 

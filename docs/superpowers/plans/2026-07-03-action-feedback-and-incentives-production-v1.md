@@ -343,29 +343,29 @@ Manual smoke routes:
 
 ### Tasks
 
-- [ ] Add a short section to `.agents/skills/hr-axis-ui-refactor/SKILL.md` or a process doc:
+- [x] Add a short section to `.agents/skills/hr-axis-ui-refactor/SKILL.md` or a process doc:
   - Use global action toast for mutation results.
   - Do not create page-local toast systems.
   - Do not use toast for passive loads/filters/navigation.
   - Keep copy short and Turkish with correct Turkish characters.
-- [ ] Add a checklist to the UI migration docs:
+- [x] Add a checklist to the UI migration docs:
   - explicit mutation,
   - success toast,
   - error toast,
   - no duplicate toast,
   - drawer/mobile overlap checked.
-- [ ] Run broad checks.
-- [ ] Capture evidence screenshots for:
+- [x] Run broad checks.
+- [x] Capture evidence screenshots for:
   - incentives desktop drawer open + toast,
   - incentives mobile drawer/footer + toast,
   - one admin mutation toast,
   - one store mutation toast.
-- [ ] Search for direct Sonner imports outside allowed wrapper/helper:
+- [x] Search for direct Sonner imports outside allowed wrapper/helper:
   ```powershell
   rg -n "from 'sonner'|from \"sonner\"" admin-web/src
   ```
   Expected: only `components/ui/sonner.tsx`, `components/hr-axis-toaster.tsx`, and `lib/action-toast.ts` import from Sonner.
-- [ ] Search for leftover local success notices on migrated pages:
+- [x] Search for leftover local success notices on migrated pages:
   ```powershell
   rg -n "setNotice\\(|setErrorNotice\\(|successNotice|errorNotice" admin-web/src/pages admin-web/src/features
   ```

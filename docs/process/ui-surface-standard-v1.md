@@ -98,6 +98,57 @@ browser-native exception is documented in the PR. Toolbar filters such as
 `Durum`, `Mağaza türü`, `Rol`, and similar single-choice controls use shadcn
 `Select`.
 
+## Action Feedback Standard
+
+Store/Admin production pages use one global Sonner-backed HR Axis action toast
+layer.
+
+Use `admin-web/src/lib/action-toast.ts` from mutation boundaries. Pages and
+feature components do not import `sonner` directly and do not mount local
+`Toaster` instances.
+
+Use toast for explicit user-triggered action results:
+
+- save, submit, approve, return,
+- import, export, retry,
+- pin, unpin, archive,
+- complete, resolve, reopen.
+
+Do not use toast for:
+
+- passive page load,
+- passive refresh,
+- navigation,
+- tab or filter changes,
+- autosave field edits,
+- readonly browsing,
+- long explanatory guidance.
+
+Page-level load failures stay inline with a retry action when recovery is
+available. Toast confirms a completed action; it does not replace a stable
+broken-page state.
+
+Undoable actions keep a recovery path. Use a Sonner action or retain the
+existing inline undo affordance, but do not show both for the same user action.
+
+Toast copy is short, Turkish, and action-specific:
+
+- `Kaydedildi`
+- `Düzeltme kaydedildi`
+- `Kontrol edildi`
+- `Onaya gönderildi`
+- `Onaylandı`
+- `İade edildi`
+- `Excel indirildi`
+
+Error toasts use a short Turkish fallback and the project user-facing error
+mapper. Product screens must not expose raw API, DB, route, token, UUID, stack,
+provider, or internal request details.
+
+Placement must be verified when overlays are involved. Toasts must not block
+right drawer or sheet footers, sticky mobile action bars, or the floating Pilot
+Feedback control.
+
 ## Button Standard
 
 All production actions should use the project shadcn `Button` unless a real

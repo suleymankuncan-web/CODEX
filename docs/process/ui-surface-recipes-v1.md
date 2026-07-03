@@ -257,6 +257,24 @@ Before product implementation:
   explicitly parked,
 - PR states `Contract Impact`.
 
+## Action Feedback Checklist
+
+Before closing a Store/Admin mutation or export UI change:
+
+- every explicit mutation has one success feedback path,
+- every explicit mutation has one error feedback path,
+- action feedback uses `actionToast`,
+- pages and feature components do not import `sonner` directly,
+- no page-local `Toaster` is introduced,
+- passive load, refresh, navigation, tab changes, filter changes, and autosave
+  do not fire toasts,
+- inline load failures remain inline,
+- undoable actions keep one recovery affordance,
+- no duplicate inline success banner and toast appear for the same action,
+- drawer, sheet, sticky footer, and Pilot Feedback overlap are checked when
+  relevant,
+- toast copy uses correct Turkish characters and stays short.
+
 ## Review Prompt
 
 Use this when reviewing a Store/Admin page refactor:
