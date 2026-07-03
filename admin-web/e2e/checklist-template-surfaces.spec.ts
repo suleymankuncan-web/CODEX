@@ -36,7 +36,7 @@ test('admin checklist template surface keeps BM and VM drafts isolated', async (
   await expect(firstQuestion).toHaveValue(/Vitrin sezon/i)
 
   await chooseChecklistTemplate(page, templateTypeSelect, 'VM Checklist')
-  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardina uygun mu?')
+  await expect(firstQuestion).toHaveValue('Vitrin konsepti VM standardına uygun mu?')
 
   await firstQuestion.fill('VM-only fixture question')
   await chooseChecklistTemplate(page, templateTypeSelect, 'BM Checklist')

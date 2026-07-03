@@ -10,7 +10,7 @@ import {
 } from '../features/checklists/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import type { TranslateFunction } from '../features/localization/dictionary'
-import { getErrorMessage } from '../lib/format'
+import { actionToast } from '../lib/action-toast'
 import { AdminChecklistTemplatesExperience } from './AdminChecklistTemplateSurface'
 
 export type DraftChecklistItem = {
@@ -142,8 +142,8 @@ const vmInitialSections: DraftChecklistSection[] = [
     items: [
       {
         id: 'vm-item-window-concept',
-        itemText: 'Vitrin konsepti VM standardina uygun mu?',
-        note: 'Tema, renk akisi, manken kombinleri ve ilk gorunur alan birlikte kontrol edilir.',
+        itemText: 'Vitrin konsepti VM standardına uygun mu?',
+        note: 'Tema, renk akışı, manken kombinleri ve ilk görünür alan birlikte kontrol edilir.',
         responseType: 'score',
         minScore: 0,
         maxScore: 10,
@@ -153,8 +153,8 @@ const vmInitialSections: DraftChecklistSection[] = [
       },
       {
         id: 'vm-item-mannequin-story',
-        itemText: 'Manken hikayesi ve urun anlatimi net mi?',
-        note: 'Kombin butunlugu, aksesuar kullanimi ve fiyat/urun gorunurlugu degerlendirilir.',
+        itemText: 'Manken hikayesi ve ürün anlatımı net mi?',
+        note: 'Kombin bütünlüğü, aksesuar kullanımı ve fiyat/ürün görünürlüğü değerlendirilir.',
         responseType: 'score',
         minScore: 0,
         maxScore: 10,
@@ -166,12 +166,12 @@ const vmInitialSections: DraftChecklistSection[] = [
   },
   {
     id: 'vm-section-floor-layout',
-    name: 'Reyon Duzeni',
+    name: 'Reyon Düzeni',
     items: [
       {
         id: 'vm-item-floor-flow',
-        itemText: 'Reyon akisi ve urun bloklari okunabilir mi?',
-        note: 'Kategori ayrimi, beden akisi ve eksik urun gorunurlugu incelenir.',
+        itemText: 'Reyon akışı ve ürün blokları okunabilir mi?',
+        note: 'Kategori ayrımı, beden akışı ve eksik ürün görünürlüğü incelenir.',
         responseType: 'score',
         minScore: 0,
         maxScore: 10,
@@ -187,8 +187,8 @@ const vmInitialSections: DraftChecklistSection[] = [
     items: [
       {
         id: 'vm-item-signage',
-        itemText: 'Tabela, POP ve kampanya materyalleri guncel mi?',
-        note: 'Eski kampanya gorseli, eksik etiket ve yanlis konumlanan POP notlanir.',
+        itemText: 'Tabela, POP ve kampanya materyalleri güncel mi?',
+        note: 'Eski kampanya görseli, eksik etiket ve yanlış konumlanan POP notlanır.',
         responseType: 'score',
         minScore: 0,
         maxScore: 10,
@@ -320,9 +320,6 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
   )
   const currentDraft = draftsByTemplate[templateType]
   const { effectiveFrom, isDirty, savedTemplate, sections, templateName } = currentDraft
-  const [notice, setNotice] = useState<{ tone: 'success' | 'warning' | 'danger'; message: string } | null>(
-    null,
-  )
 
   const totalWeight = useMemo(
     () =>
@@ -380,7 +377,6 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
       ...patch,
       isDirty: true,
     }))
-    setNotice(null)
   }
 
   const updateTemplateType = (nextType: ChecklistTemplateType) => {
@@ -388,7 +384,6 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
     if (!nextTemplate) return
 
     setTemplateType(nextType)
-    setNotice(null)
   }
 
   const updateSection = (sectionId: string, name: string) => {
@@ -422,7 +417,7 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
 
   const removeSection = (sectionId: string) => {
     if (sections.length <= 1) {
-      setNotice({ tone: 'warning', message: t('adminChecklists.noticeMinSection') })
+      actionToast.warning(t('adminChecklists.noticeMinSection'))
       return
     }
 
@@ -442,7 +437,7 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
   const removeItem = (sectionId: string, itemId: string) => {
     const targetSection = sections.find((section) => section.id === sectionId)
     if (!targetSection || targetSection.items.length <= 1) {
-      setNotice({ tone: 'warning', message: t('adminChecklists.noticeMinItem') })
+      actionToast.warning(t('adminChecklists.noticeMinItem'))
       return
     }
 
@@ -457,10 +452,7 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
 
   const saveDraft = async () => {
     if (!canSubmit) {
-      setNotice({
-        tone: 'warning',
-        message: resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore, t),
-      })
+      actionToast.warning(resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore, t))
       return null
     }
 
@@ -479,20 +471,17 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
         isDirty: false,
         savedTemplate: result.data.checklistTemplate,
       }))
-      setNotice({ tone: 'success', message: result.command.message })
+      actionToast.success('Taslak kaydedildi')
       return result.data.checklistTemplate
     } catch (error) {
-      setNotice({ tone: 'danger', message: getErrorMessage(error) })
+      actionToast.error(error, 'Taslak kaydedilemedi.')
       return null
     }
   }
 
   const publishTemplate = async () => {
     if (!canSubmit) {
-      setNotice({
-        tone: 'warning',
-        message: resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore, t),
-      })
+      actionToast.warning(resolveValidationMessage(companyId, weightIsReady, emptyTextCount, hasInvalidScore, t))
       return
     }
 
@@ -509,9 +498,9 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
         isDirty: false,
         savedTemplate: result.data.checklistTemplate,
       }))
-      setNotice({ tone: 'success', message: result.command.message })
+      actionToast.success('Yayınlandı')
     } catch (error) {
-      setNotice({ tone: 'danger', message: getErrorMessage(error) })
+      actionToast.error(error, 'Yayınlanamadı.')
     }
   }
 
@@ -526,7 +515,6 @@ function useAdminChecklistTemplatesPageModel(input: { authSummary: AuthSessionSu
     hasInvalidScore,
     isSaving,
     itemCount,
-    notice,
     publishTemplate,
     removeItem,
     removeSection,

@@ -30,7 +30,6 @@ import {
   AdminFilterBar,
   AdminKeyValue,
   AdminKeyValueGrid,
-  AdminStatePanel,
   AdminSurfaceBadge,
   AdminSurfaceSection,
 } from './admin-surface-primitives'
@@ -198,7 +197,6 @@ function AdminChecklistTemplatesEditorPanel({
     >
       <AdminChecklistTemplateStrip model={model} />
       <AdminChecklistPublishGate model={model} />
-      <AdminChecklistNotice model={model} />
       <AdminChecklistSectionsList model={model} />
     </AdminSurfaceSection>
   )
@@ -307,18 +305,6 @@ function AdminChecklistPublishGate({
       </AdminKeyValueGrid>
     </div>
   )
-}
-
-function AdminChecklistNotice({
-  model,
-}: {
-  model: AdminChecklistTemplatesPageModel
-}) {
-  const { notice } = model
-
-  if (!notice) return null
-
-  return <AdminStatePanel title={notice.message} tone={notice.tone} />
 }
 
 function AdminChecklistSectionsList({

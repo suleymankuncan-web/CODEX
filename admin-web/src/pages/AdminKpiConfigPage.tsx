@@ -20,6 +20,7 @@ import {
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import type { AppLocale } from '../lib/i18n'
+import { actionToast } from '../lib/action-toast'
 import { formatDateTime, getErrorMessage } from '../lib/format'
 import {
   AdminActionRow,
@@ -89,7 +90,6 @@ export function AdminKpiConfigPage() {
   const queryClient = useQueryClient()
   const [draftOverride, setDraft] = useState<KpiConfig | null>(null)
   const [publishedOverride, setPublished] = useState<KpiConfig | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
 
   const configQuery = useQuery({
     queryKey: ['kpi-config-editor'],
@@ -106,7 +106,6 @@ export function AdminKpiConfigPage() {
   const gradingBands = useStableDraftRows(draft?.gradingBands ?? [], 'grading-band')
 
   const updateDraft = (updater: (current: KpiConfig) => KpiConfig) => {
-    setNotice(null)
     setDraft((current) => {
       const base = current ?? configQuery.data?.draftConfig ?? null
       return base ? updater(base) : current
@@ -117,19 +116,25 @@ export function AdminKpiConfigPage() {
     mutationFn: updateKpiConfigDraft,
     onSuccess: (result) => {
       syncEditorState(result, setDraft, setPublished)
-      setNotice(t('adminKpiConfig.noticeDraftSaved'))
+      actionToast.success('Taslak kaydedildi')
       void queryClient.invalidateQueries({ queryKey: ['kpi-config-editor'] })
       void queryClient.invalidateQueries({ queryKey: ['kpi-config-audit'] })
+    },
+    onError: (error) => {
+      actionToast.error(error, 'Taslak kaydedilemedi.')
     },
   })
   const publishMutation = useMutation({
     mutationFn: publishKpiConfig,
     onSuccess: (result) => {
       syncEditorState(result, setDraft, setPublished)
-      setNotice(t('adminKpiConfig.noticePublished'))
+      actionToast.success('Yayınlandı')
       void queryClient.invalidateQueries({ queryKey: ['kpi-config-editor'] })
       void queryClient.invalidateQueries({ queryKey: ['kpi-config'] })
       void queryClient.invalidateQueries({ queryKey: ['kpi-config-audit'] })
+    },
+    onError: (error) => {
+      actionToast.error(error, 'Yayınlanamadı.')
     },
   })
 
@@ -322,14 +327,11 @@ export function AdminKpiConfigPage() {
 
       <KpiConfigPersistPanel
         draft={draft}
-        notice={notice}
         onPublish={() => publishMutation.mutate()}
         onSave={() => saveMutation.mutate(draft)}
-        saveError={saveMutation.error}
         status={{
           hasUnpublishedChanges: Boolean(configQuery.data?.hasUnpublishedChanges),
           publishPending: publishMutation.isPending,
-          saveErrorVisible: saveMutation.isError,
           savePending: saveMutation.isPending,
           weightTotalsValid,
         }}
@@ -801,17 +803,14 @@ function GradingBandsPanel(input: {
 type KpiConfigPersistStatus = {
   hasUnpublishedChanges: boolean
   publishPending: boolean
-  saveErrorVisible: boolean
   savePending: boolean
   weightTotalsValid: boolean
 }
 
 function KpiConfigPersistPanel(input: {
   draft: KpiConfig
-  notice: string | null
   onPublish: () => void
   onSave: () => void
-  saveError: unknown
   status: KpiConfigPersistStatus
   t: TranslateFunction
 }) {
@@ -849,12 +848,8 @@ function KpiConfigPersistPanel(input: {
           value={String(input.draft.gradingBands.length)}
         />
       </AdminKeyValueGrid>
-      {input.notice ? <KpiConfigMutedText>{input.notice}</KpiConfigMutedText> : null}
       {!input.status.weightTotalsValid ? (
         <KpiConfigMutedText>{input.t('adminKpiConfig.weightSaveBlocked')}</KpiConfigMutedText>
-      ) : null}
-      {input.status.saveErrorVisible ? (
-        <KpiConfigMutedText>{getErrorMessage(input.saveError)}</KpiConfigMutedText>
       ) : null}
       <AdminActionRow>
         <Button

@@ -1,5 +1,12 @@
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
+
+const actionFeedbackEvidenceDir = fileURLToPath(
+  new URL('../../docs/evidence/action-feedback-v1-pr4-visual-qa-2026-07-03/', import.meta.url),
+)
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -224,6 +231,11 @@ test('HR admin can update and deactivate selected user access', async ({ page })
   await account.getByRole('button', { name: 'Bilgileri kaydet' }).click()
 
   await expect(page.locator('.hr-axis-toast__title').getByText('Hesap güncellendi')).toBeVisible()
+  mkdirSync(actionFeedbackEvidenceDir, { recursive: true })
+  await page.screenshot({
+    path: join(actionFeedbackEvidenceDir, 'admin-auth-user-update-toast-desktop.png'),
+    fullPage: true,
+  })
   expect(updateBody).toMatchObject({ username: 'store.manager.updated' })
 
   const status = page.locator('.auth-danger-box')
