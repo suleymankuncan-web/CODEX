@@ -37,7 +37,8 @@ isletim sistemi buradadir. Hizli navigasyon icin:
 - Kodlama freni ve scope: `Istisare ve Kodlama Freni`, `Slice Disiplini`,
   `PR Risk Class`, `Feature Intake`.
 - PR ve merge: `PR Disiplini`, `PR Oncesi Adversarial Review`,
-  `Repo-Native Subagent Review Model`, `Merge Disiplini`.
+  `Repo-Native Subagent Review Model`, `Pilot Subagent Orchestration
+  Discipline`, `Merge Disiplini`.
 - Verification: `Verification Ladder`, `External Evidence Disiplini`.
 - UI refactor: `UI/UX Disiplini`, `Prototype to Product`, Store Me
   refactorundan cikan tekrar kullanilabilir sayfa kurallari,
@@ -357,6 +358,75 @@ Kullanim kurali:
 Bu model `PR Oncesi Adversarial Review` kuralini genisletir. GitHub Codex
 review'u yine zorunlu dis denetim olarak kalir; lokal subagent modeli sadece
 round-trip kaybini azaltmak ve PR kalitesini yukseltmek icindir.
+
+### Pilot Subagent Orchestration Discipline
+
+Bu bolum gecici/pilot calisma disiplinidir. Surec olgunlasinca kaldirilabilir,
+daraltilabilir veya kalici role modeline tasinabilir.
+
+Varsayilan model:
+
+- Ana koordinasyon, kapsam karari, uygulama birlestirme, PR karari ve merge
+  sorumlulugu tek elde kalir.
+- Subagentler once arastirma, denetim, kanit toplama ve review icin kullanilir.
+- Ayni dosya veya ayni workflow uzerinde birden fazla implementer subagent
+  paralel calistirilmaz.
+- Paralel implementasyon sadece dosya/katman sinirlari gercekten bagimsizsa
+  kullanilir.
+- Subagent bulgusu karar degil, kanittir. Nihai karar ana koordinatorde kalir.
+
+Standart akisi:
+
+1. Task hedefi, risk sinifi ve kabul kriteri netlestirilir.
+2. Is bagimsiz inceleme alanlarina ayrilir: UI, veri/API, role/scope, test,
+   performans veya PR hygiene.
+3. Her subagent'e yalnizca kendi alanina yetecek kapali ve dar prompt verilir.
+4. Subagentler repo kaniti, risk, onerilen fix ve verification ihtiyacini
+   raporlar.
+5. Ana koordinator bulgulari birlestirir, cakisma veya ayni dosya riski varsa
+   uygulamayi tek elden yapar.
+6. Uygulama sonrasi targeted test/build/smoke ve lokal adversarial review
+   kosulur.
+7. PR acilacaksa tek review hikayesi, rollback yolu ve verification sonucu
+   PR'da yazilir.
+
+Onerilen pilot roller:
+
+- `Mufettis Gecidi`: Kod, akis, role/scope ve boundary bug taramasi yapar.
+- `Veri Dedektifi`: DB/API/veri tutarliligi ve eksik mapping riskini inceler.
+- `UI Nobetcisi`: Prototype parity, responsive, overflow, font, spacing ve
+  copy hijyenini kontrol eder.
+- `Test Hakemi`: Mevcut testlerin kapsamini, eksik negatif senaryolari ve
+  uygun gate'i belirler.
+- `Performans Gozcusu`: Yavas sayfa acilisi, gereksiz query, polling, render
+  ve bundle risklerini arar.
+- `PR Bekcisi`: Diff hygiene, unrelated change, file-size guard, PR body ve
+  merge hazirligini denetler.
+
+Ne zaman kullanilir:
+
+- Store/Admin sayfalarinda cok katmanli bug veya UI/akis revizyonu varsa.
+- Auth, role/scope, KPI/ranking, checklist, incentives, targets, workforce,
+  reports veya feed gibi domainlerde veri ve UI birlikte etkileniyorsa.
+- PR oncesi "burada mayin var mi?" kontrolu isteniyorsa.
+- Birden fazla bagimsiz bulgu ayni anda incelenebiliyorsa.
+
+Ne zaman kullanilmaz:
+
+- Tek satirlik net fix.
+- Docs-only kucuk duzeltme.
+- Ayni dosyada birbirine bagli refactor.
+- Henuz problem alani bilinmeyen ve once ana kesif gerektiren belirsiz is.
+- Kullanici acikca "sadece cevapla" veya "kodlama yapma" dediyse.
+
+Stop kurali:
+
+- Subagentler ayni dosya veya ayni contract icin celisen fix onerirse
+  paralel uygulama durur; ana koordinator once tek plan cikarir.
+- Subagent yeni API, DB, auth, scoring veya workflow degisikligi onerirse bu
+  otomatik kapsam sayilmaz; once Contract Impact ve risk sinifi yazilir.
+- Subagent kanitsiz varsayimla hareket ederse bulgu gecersiz sayilir ve repo
+  kaniti istenir.
 
 ## Merge Disiplini
 

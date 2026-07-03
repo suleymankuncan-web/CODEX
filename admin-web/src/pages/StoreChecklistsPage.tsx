@@ -10,6 +10,11 @@ import {
   hasAnyRole,
 } from '../features/auth/authorization'
 import {
+  storeChecklistAcknowledgementsQueryKey,
+  storeMobileChecklistsTodayQueryKey,
+  storeWorkflowInboxQueryKey,
+} from '../features/auth/store-query-scope'
+import {
   acknowledgeChecklist,
   completeMobileChecklistInstance,
   getChecklistAcknowledgements,
@@ -158,17 +163,20 @@ function useStoreChecklistsPageContent(input: {
   const effectiveTypeFilter = templateTypeOptions.some((option) => option.value === typeFilter)
     ? typeFilter
     : templateTypeOptions[0]?.value ?? 'all'
+  const checklistAcknowledgementsQueryKey = storeChecklistAcknowledgementsQueryKey(input.authSummary)
+  const mobileChecklistsTodayQueryKey = storeMobileChecklistsTodayQueryKey(input.authSummary)
+  const workflowInboxQueryKey = storeWorkflowInboxQueryKey(input.authSummary)
   const showCommandNotice = (message: string) => {
     actionToast.success(message)
   }
   const checklistsQuery = useQuery({
-    queryKey: ['checklist-acknowledgements'],
+    queryKey: checklistAcknowledgementsQueryKey,
     queryFn: getChecklistAcknowledgements,
     enabled: canUseAcknowledgements,
     ...transientQueryRetryOptions,
   })
   const mobileTodayQuery = useQuery({
-    queryKey: ['mobile-checklists-today'],
+    queryKey: mobileChecklistsTodayQueryKey,
     queryFn: getMobileChecklistToday,
     enabled: canManageVisits,
     ...transientQueryRetryOptions,
@@ -176,8 +184,8 @@ function useStoreChecklistsPageContent(input: {
   const acknowledgeMutation = useMutation({
     mutationFn: acknowledgeChecklist,
     onSuccess: (result, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
-      void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
+      void queryClient.invalidateQueries({ queryKey: checklistAcknowledgementsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: workflowInboxQueryKey })
       dispatchPageState({
         type: 'acknowledgeSucceeded',
         checklistInstanceId: variables.checklistInstanceId,
@@ -196,7 +204,7 @@ function useStoreChecklistsPageContent(input: {
   const startVisitMutation = useMutation({
     mutationFn: startMobileChecklistInstance,
     onSuccess: (result, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
+      void queryClient.invalidateQueries({ queryKey: mobileChecklistsTodayQueryKey })
       const instance = result.data.checklistInstance
       const rowKey = getCoverageRowKey(variables.storeId, variables.checklistTemplateId)
       dispatchPageState({
@@ -220,14 +228,14 @@ function useStoreChecklistsPageContent(input: {
     mutationFn: saveMobileChecklistResponse,
     onMutate: async () => {
       // Prevent an older activeInstances refetch from replacing the saved draft snapshot.
-      await queryClient.cancelQueries({ queryKey: ['mobile-checklists-today'] })
+      await queryClient.cancelQueries({ queryKey: mobileChecklistsTodayQueryKey })
     },
     onSuccess: (result, variables) => {
       const updatedAt = result.data.checklistResponse.responded_at
       savedResponseDraftsRef.current[getChecklistResponseDraftKey(variables)] =
         serializeChecklistResponseDraft(variables)
       queryClient.setQueryData<MobileChecklistTodayResponse>(
-        ['mobile-checklists-today'],
+        mobileChecklistsTodayQueryKey,
         (current) => mergeSavedResponseIntoMobileToday(current, variables, updatedAt),
       )
       dispatchPageState({
@@ -289,13 +297,13 @@ function useStoreChecklistsPageContent(input: {
         totalScore: totalScore === null || Number.isFinite(totalScore) ? totalScore : null,
       }
       queryClient.setQueryData<MobileChecklistTodayResponse>(
-        ['mobile-checklists-today'],
+        mobileChecklistsTodayQueryKey,
         (current) => mergeCompletedInstanceIntoMobileToday(current, completedChecklistInstance),
       )
       showCommandNotice(getStaticCopy(locale, 'Başarıyla Tamamlandı', 'Completed successfully'))
-      void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
-      void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
-      void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
+      void queryClient.invalidateQueries({ queryKey: mobileChecklistsTodayQueryKey })
+      void queryClient.invalidateQueries({ queryKey: checklistAcknowledgementsQueryKey })
+      void queryClient.invalidateQueries({ queryKey: workflowInboxQueryKey })
       dispatchPageState({
         type: 'completeVisitSucceeded',
         completedInstance: completedChecklistInstance,

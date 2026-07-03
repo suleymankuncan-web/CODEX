@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
+import {
+  storeActionPlansActiveIndexQueryKey,
+  storeActionPlansPageQueryKey,
+  storeActionPlansResultIndexQueryKey,
+  storeChecklistAcknowledgementsQueryKey,
+  storeWorkflowInboxQueryKey,
+} from '../features/auth/store-query-scope'
 import { getChecklistAcknowledgements } from '../features/checklists/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -87,7 +94,6 @@ export function StoreTasksPage(input: {
 }) {
   const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
-  const actorUserId = input.authSummary?.user.userId ?? 'anonymous'
   const inboxEnabled = canUseWorkflowInbox(input.authSummary)
   const storeActionPlansEnabled = canReadStoreActionPlans(input.authSummary)
   const canMutatePlans = canMutateStoreActionPlans(input.authSummary)
@@ -97,15 +103,35 @@ export function StoreTasksPage(input: {
   const regionMode = 'results'
   const [activeFilter, setActiveFilter] = useState<StoreTaskFilter>('all')
   const [search, setSearch] = useState('')
+  const workflowInboxQueryKey = useMemo(
+    () => storeWorkflowInboxQueryKey(input.authSummary),
+    [input.authSummary],
+  )
+  const storeActionPlansPageKey = useMemo(
+    () => storeActionPlansPageQueryKey(input.authSummary, storeActionPlansOffset),
+    [input.authSummary, storeActionPlansOffset],
+  )
+  const activeStoreActionPlansQueryKey = useMemo(
+    () => storeActionPlansActiveIndexQueryKey(input.authSummary),
+    [input.authSummary],
+  )
+  const resultStoreActionPlansQueryKey = useMemo(
+    () => storeActionPlansResultIndexQueryKey(input.authSummary),
+    [input.authSummary],
+  )
+  const checklistAcknowledgementsQueryKey = useMemo(
+    () => storeChecklistAcknowledgementsQueryKey(input.authSummary),
+    [input.authSummary],
+  )
 
   const inboxQuery = useQuery({
-    queryKey: ['workflow-inbox'],
+    queryKey: workflowInboxQueryKey,
     queryFn: getWorkflowInbox,
     enabled: inboxEnabled,
     ...transientQueryRetryOptions,
   })
   const storeActionPlansPageQuery = useQuery({
-    queryKey: ['store-action-plans', 'store-tasks', 'page', storeActionPlansOffset],
+    queryKey: storeActionPlansPageKey,
     queryFn: () =>
       listStoreActionPlans({
         limit: STORE_ACTION_PLAN_PAGE_SIZE,
@@ -115,13 +141,13 @@ export function StoreTasksPage(input: {
     ...transientQueryRetryOptions,
   })
   const activeStoreActionPlansQuery = useQuery({
-    queryKey: ['store-action-plans', 'store-tasks', 'active-index', actorUserId],
+    queryKey: activeStoreActionPlansQueryKey,
     queryFn: () => listStoreActionPlansByStatuses(ACTIVE_STORE_ACTION_PLAN_STATUSES),
     enabled: storeActionPlansEnabled && persona !== 'regionManager',
     ...transientQueryRetryOptions,
   })
   const resultStoreActionPlansQuery = useQuery({
-    queryKey: ['store-action-plans', 'store-tasks', 'result-index', actorUserId],
+    queryKey: resultStoreActionPlansQueryKey,
     queryFn: () => listStoreActionPlansByStatuses(RESULT_STORE_ACTION_PLAN_STATUSES),
     enabled: storeActionPlansEnabled,
     ...transientQueryRetryOptions,
@@ -207,11 +233,11 @@ export function StoreTasksPage(input: {
     if (!items.some((item) => item.sourceType === 'checklist_receipt')) return
 
     void queryClient.prefetchQuery({
-      queryKey: ['checklist-acknowledgements'],
+      queryKey: checklistAcknowledgementsQueryKey,
       queryFn: getChecklistAcknowledgements,
       ...transientQueryRetryOptions,
     }).catch(() => undefined)
-  }, [items, queryClient])
+  }, [checklistAcknowledgementsQueryKey, items, queryClient])
 
   if (!inboxEnabled) {
     return (

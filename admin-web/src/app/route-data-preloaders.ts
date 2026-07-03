@@ -8,6 +8,11 @@ import {
   hasAnyRole,
 } from '../features/auth/authorization'
 import {
+  storeChecklistAcknowledgementsQueryKey,
+  storeMobileChecklistsTodayQueryKey,
+  storeWorkflowInboxQueryKey,
+} from '../features/auth/store-query-scope'
+import {
   getChecklistAcknowledgements,
   getMobileChecklistToday,
 } from '../features/checklists/api'
@@ -210,7 +215,7 @@ function getStoreHomePrefetchTasks(authSummary: AuthSessionSummary | null): Pref
 function getStoreTasksPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
   return [
     {
-      queryKey: ['workflow-inbox'],
+      queryKey: storeWorkflowInboxQueryKey(authSummary),
       queryFn: getWorkflowInbox,
       enabled: hasAnyRole(authSummary, workflowInboxRoles),
     },
@@ -337,12 +342,12 @@ function getStoreChecklistsPrefetchTasks(authSummary: AuthSessionSummary | null)
 
   return [
     {
-      queryKey: ['checklist-acknowledgements'],
+      queryKey: storeChecklistAcknowledgementsQueryKey(authSummary),
       queryFn: getChecklistAcknowledgements,
       enabled: canReadChecklists,
     },
     {
-      queryKey: ['mobile-checklists-today'],
+      queryKey: storeMobileChecklistsTodayQueryKey(authSummary),
       queryFn: getMobileChecklistToday,
       enabled: canManageChecklistVisits,
     },

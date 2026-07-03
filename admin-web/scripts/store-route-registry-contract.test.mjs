@@ -77,6 +77,21 @@ test('admin landing roles use an admin store persona instead of region manager c
   assert.match(registrySource, /storeHome\.persona\.admin/u)
 })
 
+test('store manager pilot navigation keeps reports hidden and personnel profile role-gated', () => {
+  const storeManagerNavigation = registrySource.match(/storeManager: \[([\s\S]*?)\],/u)
+  const reportingRoles = registrySource.match(/const storeReportingRoles = \[([^\]]+)\]/u)
+  const personnelRoute = getRouteBlocks().find((route) => route.id === 'personnel')
+
+  assert.ok(storeManagerNavigation, 'store manager navigation should be explicit')
+  assert.ok(reportingRoles, 'store reporting roles should be explicit')
+  assert.ok(personnelRoute, 'personnel profile route should be registered')
+
+  assert.doesNotMatch(storeManagerNavigation[1], /'reports'/u)
+  assert.doesNotMatch(reportingRoles[1], /'STORE_MANAGER'/u)
+  assert.match(registrySource, /const storePersonnelPerformanceRoles = \[/u)
+  assert.match(personnelRoute.source, /hasAnyRole\(authSummary, storePersonnelPerformanceRoles\)/u)
+})
+
 test('store shell renders registered routes instead of duplicating path-specific guards', () => {
   assert.match(shellSource, /getStoreRouteDefinitions\(\)\.flatMap/u)
   assert.match(shellSource, /isStoreRouteAllowed\(route, input\.authSummary\)/u)

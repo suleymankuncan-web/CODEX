@@ -15,6 +15,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
 import {
+  storeChecklistAcknowledgementsQueryKey,
+  storeMobileChecklistsTodayQueryKey,
+  storeWorkflowInboxQueryKey,
+} from '../features/auth/store-query-scope'
+import {
   getChecklistAcknowledgements,
   getMobileChecklistToday,
   type ChecklistAcknowledgementItem,
@@ -76,20 +81,23 @@ export function StoreHomePage(input: {
     'REPORT_VIEWER',
   ])
   const canReadChecklistInbox = canReadChecklistResults(input.authSummary)
+  const checklistAcknowledgementsQueryKey = storeChecklistAcknowledgementsQueryKey(input.authSummary)
+  const mobileChecklistsTodayQueryKey = storeMobileChecklistsTodayQueryKey(input.authSummary)
+  const workflowInboxQueryKey = storeWorkflowInboxQueryKey(input.authSummary)
   const checklistAcknowledgementsQuery = useQuery({
-    queryKey: ['checklist-acknowledgements'],
+    queryKey: checklistAcknowledgementsQueryKey,
     queryFn: getChecklistAcknowledgements,
     enabled: canReadChecklistInbox && persona !== 'personnel',
     ...transientQueryRetryOptions,
   })
   const mobileChecklistQuery = useQuery({
-    queryKey: ['mobile-checklists-today'],
+    queryKey: mobileChecklistsTodayQueryKey,
     queryFn: getMobileChecklistToday,
     enabled: canManageChecklistVisits && persona !== 'storeManager' && persona !== 'personnel',
     ...transientQueryRetryOptions,
   })
   const workflowInboxQuery = useQuery({
-    queryKey: ['workflow-inbox'],
+    queryKey: workflowInboxQueryKey,
     queryFn: getWorkflowInbox,
     enabled: canUseWorkflowInbox,
     ...transientQueryRetryOptions,
@@ -175,9 +183,9 @@ export function StoreHomePage(input: {
     },
   })
   const refreshHome = () => {
-    void queryClient.invalidateQueries({ queryKey: ['checklist-acknowledgements'] })
-    void queryClient.invalidateQueries({ queryKey: ['mobile-checklists-today'] })
-    void queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] })
+    void queryClient.invalidateQueries({ queryKey: checklistAcknowledgementsQueryKey })
+    void queryClient.invalidateQueries({ queryKey: mobileChecklistsTodayQueryKey })
+    void queryClient.invalidateQueries({ queryKey: workflowInboxQueryKey })
   }
 
   return <StoreHomeCommandView model={commandModel} onRefresh={refreshHome} />
