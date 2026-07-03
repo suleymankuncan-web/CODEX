@@ -20,6 +20,7 @@ import {
 import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import { useLocalization } from '../features/localization/useLocalization'
 import { ApiError } from '../lib/api'
+import { actionToast } from '../lib/action-toast'
 import { getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import { canOpenStoreIncentives } from '../app/store-navigation'
@@ -154,13 +155,22 @@ export function StoreIncentivesPage(input: {
       )
       return rollback
     },
-    onError: (_error, _variables, rollback) => {
-      if (!rollback) return
-      updateIncentiveQueryData((response) =>
-        response.data.period === rollback.period ? rollbackOptimisticStoreReview(response, rollback) : response,
-      )
+    onError: (error, _variables, rollback) => {
+      if (rollback) {
+        updateIncentiveQueryData((response) =>
+          response.data.period === rollback.period ? rollbackOptimisticStoreReview(response, rollback) : response,
+        )
+      }
+      actionToast.error(error, 'Kontrol kaydedilemedi.')
     },
-    onSuccess: invalidateCurrentQuery,
+    onSuccess: (_data, variables) => {
+      invalidateCurrentQuery()
+      if (variables.reviewStatus === 'reviewed') {
+        actionToast.success('Kontrol edildi')
+      } else {
+        actionToast.info('Kontrol geri alındı')
+      }
+    },
     onSettled: (_data, _error, variables) => {
       if (variables) {
         setPendingReviewStoreIds((current) => removeSetValue(current, variables.storeId))
@@ -181,13 +191,18 @@ export function StoreIncentivesPage(input: {
       )
       return rollback
     },
-    onError: (_error, _variables, rollback) => {
-      if (!rollback) return
-      updateIncentiveQueryData((response) =>
-        response.data.period === rollback.period ? rollbackOptimisticRegionCorrection(response, rollback) : response,
-      )
+    onError: (error, _variables, rollback) => {
+      if (rollback) {
+        updateIncentiveQueryData((response) =>
+          response.data.period === rollback.period ? rollbackOptimisticRegionCorrection(response, rollback) : response,
+        )
+      }
+      actionToast.error(error, 'Düzeltme kaydedilemedi.')
     },
-    onSuccess: invalidateCurrentQuery,
+    onSuccess: () => {
+      invalidateCurrentQuery()
+      actionToast.success('Düzeltme kaydedildi')
+    },
     onSettled: (_data, _error, variables) => {
       if (variables) {
         setPendingCorrectionKeys((current) => removeSetValue(current, getCorrectionPendingKey(variables)))
@@ -209,17 +224,28 @@ export function StoreIncentivesPage(input: {
       )
       return rollback
     },
-    onError: (_error, _variables, rollback) => {
-      if (!rollback) return
-      updateIncentiveQueryData((response) =>
-        response.data.period === rollback.period ? rollbackOptimisticVoidRegionCorrection(response, rollback) : response,
-      )
+    onError: (error, _variables, rollback) => {
+      if (rollback) {
+        updateIncentiveQueryData((response) =>
+          response.data.period === rollback.period ? rollbackOptimisticVoidRegionCorrection(response, rollback) : response,
+        )
+      }
+      actionToast.error(error, 'Düzeltme geri alınamadı.')
     },
-    onSuccess: invalidateCurrentQuery,
+    onSuccess: () => {
+      invalidateCurrentQuery()
+      actionToast.info('Eski değere dönüldü')
+    },
   })
   const submitPackageMutation = useMutation({
     mutationFn: submitStoreSalesTargetIncentiveRegionPackage,
-    onSuccess: invalidateCurrentQuery,
+    onError: (error) => {
+      actionToast.error(error, 'Onaya gönderilemedi.')
+    },
+    onSuccess: () => {
+      invalidateCurrentQuery()
+      actionToast.success('Onaya gönderildi')
+    },
   })
 
   if (!enabled) {
