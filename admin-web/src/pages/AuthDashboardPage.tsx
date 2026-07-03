@@ -48,6 +48,7 @@ import {
   type UserStatusDraft,
 } from '../features/auth/auth-access-workbench-model'
 import { useLocalization } from '../features/localization/useLocalization'
+import { actionToast } from '../lib/action-toast'
 import { getErrorMessage } from '../lib/format'
 
 type AuthDashboardViewModel =
@@ -98,7 +99,6 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<AuthWorkbenchDetailTab>('overview')
   const [openTray, setOpenTray] = useState<AuthWorkbenchTray>('role')
-  const [feedback, setFeedback] = useState<string | null>(null)
   const [profileDraftState, setProfileDraftState] = useState<{
     draft: UserProfileDraft | null
     userId: string | null
@@ -236,11 +236,11 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
   const createUserMutation = useMutation({
     mutationFn: createUserAccount,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.success(response.command.message)
       setNewAccountDraft(defaultNewAccountDraft)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Kullanıcı oluşturulamadı.'),
   })
   const updateUserMutation = useMutation({
     mutationFn: (input: { user: UserAccount; draft: UserProfileDraft }) => {
@@ -249,59 +249,59 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
       return updateUserAccount(input.user.userId, payload)
     },
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.success(response.command.message)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Kullanıcı güncellenemedi.'),
   })
   const createRoleMutation = useMutation({
     mutationFn: (input: CreateRoleAssignmentInput) => createRoleAssignment(input),
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.success(response.command.message)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Rol ataması kaydedilemedi.'),
   })
   const createActionStoreMutation = useMutation({
     mutationFn: (input: CreateActionStoreAssignmentInput) => createActionStoreAssignment(input),
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.success(response.command.message)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Mağaza ataması kaydedilemedi.'),
   })
   const deactivateRoleMutation = useMutation({
     mutationFn: deactivateRoleAssignment,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.info(response.command.message)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Rol ataması kapatılamadı.'),
   })
   const deactivateActionStoreMutation = useMutation({
     mutationFn: deactivateActionStoreAssignment,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.info(response.command.message)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Mağaza ataması kapatılamadı.'),
   })
   const deactivateUserMutation = useMutation({
     mutationFn: (input: { userId: string; draft: UserStatusDraft }) =>
       deactivateUserAccount({ userId: input.userId, ...buildDeactivateUserInput(input.draft) }),
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.info(response.command.message)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Kullanıcı kapatılamadı.'),
   })
   const reactivateUserMutation = useMutation({
     mutationFn: reactivateUserAccount,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.success(response.command.message)
       await invalidateWorkbench(queryClient, effectiveSelectedUserId)
     },
-    onError: (error) => setFeedback(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Kullanıcı yeniden açılamadı.'),
   })
 
   if (
@@ -356,7 +356,7 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
         availableStores={availableStores}
         canSaveProfile={canSaveProfile}
         canSaveStatus={canSaveStatus}
-        feedback={feedback}
+        feedback={null}
         filter={filter}
         lookups={lookups}
         model={visibleModel}
@@ -429,7 +429,6 @@ function useAuthDashboardViewModel(): AuthDashboardViewModel {
         onSelectUser={(userId) => {
           setSelectedUserId(userId)
           setActiveTab('overview')
-          setFeedback(null)
         }}
         onStatusDraftChange={(patch) =>
           selectedUser &&

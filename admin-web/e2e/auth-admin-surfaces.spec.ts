@@ -223,7 +223,7 @@ test('HR admin can update and deactivate selected user access', async ({ page })
   await account.getByLabel('Ad soyad').fill('store.manager.updated')
   await account.getByRole('button', { name: 'Bilgileri kaydet' }).click()
 
-  await expect(page.locator('.auth-notice').filter({ hasText: 'Hesap güncellendi' })).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Hesap güncellendi')).toBeVisible()
   expect(updateBody).toMatchObject({ username: 'store.manager.updated' })
 
   const status = page.locator('.auth-danger-box')
@@ -231,7 +231,7 @@ test('HR admin can update and deactivate selected user access', async ({ page })
   await status.getByRole('button', { name: 'Erişimi kapat ve pasife al' }).click()
   await page.getByRole('button', { name: 'Hesabı kapat' }).click()
 
-  await expect(page.locator('.auth-notice').filter({ hasText: 'Hesap pasife alındı' })).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Hesap pasife alındı')).toBeVisible()
   expect(deactivateBody).toMatchObject({ reason: 'Görev değişikliği' })
 })
 
@@ -256,7 +256,7 @@ test('HR admin can reactivate an inactive user from the workbench', async ({ pag
   await page.getByRole('button', { name: 'Üyelik oluştur' }).first().click()
   await page.getByRole('button', { name: 'Hesabı aktifleştir' }).click()
 
-  await expect(page.locator('.auth-notice').filter({ hasText: 'Hesap aktifleştirildi' })).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Hesap aktifleştirildi')).toBeVisible()
   expect(reactivateCalled).toBe(true)
 })
 

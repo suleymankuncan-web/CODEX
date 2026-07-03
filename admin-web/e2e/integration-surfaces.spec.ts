@@ -197,13 +197,13 @@ test('admin store master edits bulk save from master data and keep latest values
   })
 
   releaseFirstPatch()
-  await expect(page.getByText('Değişiklikler kaydedildi.')).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Değişiklikler kaydedildi')).toBeVisible()
   await expect(marmaraType).toContainText('Franchise')
 
   await selectRadixOption(page, marmaraType, 'Operator')
   await expect(storePanel.getByText('1 kaydedilmemiş değişiklik')).toBeVisible()
   await storePanel.getByRole('button', { name: 'Kaydet' }).click()
-  await expect(page.getByText('Değişiklikler kaydedildi.')).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Değişiklikler kaydedildi')).toBeVisible()
   expect(patchBodies[patchBodies.length - 1]).toMatchObject({
     storeType: 'operator',
     regionId: '22222222-2222-4222-8222-222222222222',
@@ -253,7 +253,7 @@ test('admin store master update keeps near-expiry bearer tokens on action reques
   await storePanel.getByRole('button', { name: 'Kaydet' }).click()
 
   await expect(page).toHaveURL(/\/admin\/master-data$/)
-  await expect(page.getByText('Değişiklikler kaydedildi.')).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Değişiklikler kaydedildi')).toBeVisible()
   expect(patchAuthorizations.some((authorization) => authorization.includes(nearExpiryToken))).toBe(true)
 })
 
@@ -364,13 +364,13 @@ test('admin master data bootstrap surface exposes personnel promotion evidence',
   await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
   await expect(page.getByRole('tab', { name: /İçe Aktarım/ })).toBeVisible()
   await expect(page.getByText('Kayda hazır').first()).toBeVisible()
-  await expect(page.getByText('Hazır kayıtlar kayda işlendi.')).toHaveCount(0)
+  await expect(page.locator('.hr-axis-toast__title').getByText('Hazır kayıtlar kayda işlendi')).toHaveCount(0)
 
   const detail = page.getByLabel('Ana veri detayı')
   await expect(detail.getByText('#1 FM8375')).toBeVisible()
   await expect(detail.getByText('#2 FM8374')).toBeVisible()
   await page.getByRole('button', { name: 'Kayda işle' }).click()
-  await expect(page.getByText('Hazır kayıtlar kayda işlendi.')).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Hazır kayıtlar kayda işlendi')).toBeVisible()
 })
 
 async function routeIntegrationApi(page: Page) {

@@ -56,6 +56,7 @@ import {
 } from '../features/integrations/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { actionToast } from '../lib/action-toast'
 import { formatState, getErrorMessage, mapHealthTone } from '../lib/format'
 import {
   AdminActionRow,
@@ -89,9 +90,7 @@ function createInitialIntegrationDashboardState(): IntegrationDashboardState {
     offset: 0,
     entityTypeFilter: '',
     statusFilter: '',
-    feedback: null,
     createdBatchId: null,
-    uploadFeedback: null,
     uploadedBatchId: null,
     templateSourceSystem: 'power_bi',
     selectedTemplateSourceCode: '',
@@ -123,13 +122,13 @@ function integrationDashboardReducer(
     case 'clearQueueFilters':
       return { ...state, offset: 0, entityTypeFilter: '', statusFilter: '', search: '' }
     case 'retrySucceeded':
-      return { ...state, feedback: action.message, createdBatchId: null }
+      return { ...state, createdBatchId: null }
     case 'batchCreated':
-      return { ...state, feedback: action.message, createdBatchId: action.batchId }
+      return { ...state, createdBatchId: action.batchId }
     case 'uploadSucceeded':
-      return { ...state, uploadFeedback: action.message, uploadedBatchId: action.batchId }
+      return { ...state, uploadedBatchId: action.batchId }
     case 'uploadFailed':
-      return { ...state, uploadFeedback: action.message, uploadedBatchId: null }
+      return { ...state, uploadedBatchId: null }
     case 'setTemplateSourceSystem':
       return { ...state, templateSourceSystem: action.value, selectedTemplateSourceCode: '' }
     case 'setSelectedTemplateSourceCode':
@@ -179,9 +178,7 @@ export function IntegrationDashboardPage() {
     offset,
     entityTypeFilter,
     statusFilter,
-    feedback,
     createdBatchId,
-    uploadFeedback,
     uploadedBatchId,
     templateSourceSystem,
     selectedTemplateSourceCode,
@@ -229,19 +226,21 @@ export function IntegrationDashboardPage() {
   const retryMutation = useMutation({
     mutationFn: retryImportBatch,
     onSuccess: async (response) => {
-      dispatchPageState({ type: 'retrySucceeded', message: response.command.message })
+      actionToast.success(response.command.message)
+      dispatchPageState({ type: 'retrySucceeded' })
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['integration-needs-action'] }),
         queryClient.invalidateQueries({ queryKey: ['integration-overview'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, 'Tekrar deneme başlatılamadı.'),
   })
   const createBatchMutation = useMutation({
     mutationFn: createImportBatch,
     onSuccess: async (response) => {
+      actionToast.success(response.command.message)
       dispatchPageState({
         type: 'batchCreated',
-        message: response.command.message,
         batchId: response.data.batch.batchId,
       })
       await Promise.all([
@@ -249,13 +248,14 @@ export function IntegrationDashboardPage() {
         queryClient.invalidateQueries({ queryKey: ['integration-overview'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, 'Aktarım partisi oluşturulamadı.'),
   })
   const uploadPowerBiMutation = useMutation({
     mutationFn: uploadPowerBiExport,
     onSuccess: async (response) => {
+      actionToast.success(response.command.message)
       dispatchPageState({
         type: 'uploadSucceeded',
-        message: response.command.message,
         batchId: response.data.batch.batchId,
       })
       await Promise.all([
@@ -264,7 +264,8 @@ export function IntegrationDashboardPage() {
       ])
     },
     onError: (error) => {
-      dispatchPageState({ type: 'uploadFailed', message: getErrorMessage(error) })
+      actionToast.error(error, 'Dosya yüklenemedi.')
+      dispatchPageState({ type: 'uploadFailed' })
     },
   })
 
@@ -443,7 +444,6 @@ export function IntegrationDashboardPage() {
       dispatchPageState={dispatchPageState}
       entityTypeFilter={entityTypeFilter}
       evidenceState={evidenceState}
-      feedback={feedback}
       importTemplateQuery={importTemplateQuery}
       isPowerBiUploadDisabled={isPowerBiUploadDisabled}
       meta={meta}
@@ -467,7 +467,6 @@ export function IntegrationDashboardPage() {
       submitSampleImport={submitSampleImport}
       t={t}
       templateSourceSystem={templateSourceSystem}
-      uploadFeedback={uploadFeedback}
       uploadedBatchId={uploadedBatchId}
       uploadPowerBiMutation={uploadPowerBiMutation}
     />
@@ -485,7 +484,6 @@ type IntegrationDashboardLoadedContentProps = {
   dispatchPageState: IntegrationDispatch
   entityTypeFilter: string
   evidenceState: string
-  feedback: string | null
   importTemplateQuery: ImportTemplateQueryState
   isPowerBiUploadDisabled: boolean
   meta: IntegrationListMeta | undefined
@@ -509,7 +507,6 @@ type IntegrationDashboardLoadedContentProps = {
   submitSampleImport: () => void
   t: TranslateFunction
   templateSourceSystem: IntegrationTemplateSourceSystem
-  uploadFeedback: string | null
   uploadedBatchId: string | null
   uploadPowerBiMutation: PowerBiUploadMutationState
 }
@@ -526,7 +523,6 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
     dispatchPageState,
     entityTypeFilter,
     evidenceState,
-    feedback,
     importTemplateQuery,
     isPowerBiUploadDisabled,
     meta,
@@ -550,7 +546,6 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
     submitSampleImport,
     t,
     templateSourceSystem,
-    uploadFeedback,
     uploadedBatchId,
     uploadPowerBiMutation,
   } = input
@@ -641,9 +636,8 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
       />
 
       <IntegrationLifecycleStrip actionCount={actionCount} overview={overview} primaryItem={sortedItems[0]} t={t} onOpenIssues={() => dispatchPageState({ type: 'setActiveTab', value: 'errors' })} />
-      {(feedback || uploadFeedback) ? (
+      {(createdBatchId || uploadedBatchId) ? (
         <div className="tw:grid tw:grid-cols-1 tw:gap-3 tw:lg:grid-cols-2">
-          {feedback ? <AdminStatePanel title={feedback} tone="success" /> : null}
           {createdBatchId ? (
             <Button asChild variant="outline">
               <Link to={`/admin/integrations/${createdBatchId}`}>
@@ -652,7 +646,6 @@ function IntegrationDashboardLoadedContent(input: IntegrationDashboardLoadedCont
               </Link>
             </Button>
           ) : null}
-          {uploadFeedback ? <AdminStatePanel title={uploadFeedback} tone="success" /> : null}
           {uploadedBatchId ? (
             <Button asChild variant="outline">
               <Link to={`/admin/integrations/${uploadedBatchId}`}>

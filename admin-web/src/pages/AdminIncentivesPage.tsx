@@ -27,6 +27,7 @@ import {
 } from '../features/incentives/api'
 import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
 import { useLocalization } from '../features/localization/useLocalization'
+import { actionToast } from '../lib/action-toast'
 import { getErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import type { AppLocale } from '../lib/i18n'
@@ -95,20 +96,24 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
     onSuccess: async () => {
       setAdjustmentAmount('')
       setReasonNote('')
+      actionToast.success('Düzeltme kaydedildi')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-sales-target-incentives'] }),
         queryClient.invalidateQueries({ queryKey: ['store-sales-target-incentives'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, 'Düzeltme kaydedilemedi.'),
   })
   const packageReviewMutation = useMutation({
     mutationFn: reviewAdminSalesTargetIncentiveRegionPackage,
-    onSuccess: async () => {
+    onSuccess: async (_response, variables) => {
+      actionToast.success(variables.decision === 'approve' ? 'Paket onaylandı' : 'Paket iade edildi')
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-sales-target-incentives'] }),
         queryClient.invalidateQueries({ queryKey: ['store-sales-target-incentives'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, 'Paket kararı kaydedilemedi.'),
   })
 
   const data = incentivesQuery.data?.data ?? null
@@ -156,6 +161,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
       periodLabel: displayedPeriodLabel,
       rows,
     })
+    actionToast.success('Excel indirildi')
   }
 
   function submitPackageReview(

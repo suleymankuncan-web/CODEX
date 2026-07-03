@@ -25,9 +25,7 @@ type IntegrationDashboardState = {
   offset: number
   entityTypeFilter: string
   statusFilter: string
-  feedback: string | null
   createdBatchId: string | null
-  uploadFeedback: string | null
   uploadedBatchId: string | null
   templateSourceSystem: IntegrationTemplateSourceSystem
   selectedTemplateSourceCode: string
@@ -47,10 +45,10 @@ type IntegrationDashboardAction =
   | { type: 'setQueueFilter'; field: IntegrationQueueFilter; value: string }
   | { type: 'setOffset'; value: number }
   | { type: 'clearQueueFilters' }
-  | { type: 'retrySucceeded'; message: string }
-  | { type: 'batchCreated'; message: string; batchId: string }
-  | { type: 'uploadSucceeded'; message: string; batchId: string }
-  | { type: 'uploadFailed'; message: string }
+  | { type: 'retrySucceeded' }
+  | { type: 'batchCreated'; batchId: string }
+  | { type: 'uploadSucceeded'; batchId: string }
+  | { type: 'uploadFailed' }
   | { type: 'setTemplateSourceSystem'; value: IntegrationTemplateSourceSystem }
   | { type: 'setSelectedTemplateSourceCode'; value: string }
   | { type: 'setPowerBiSourceCode'; value: string }

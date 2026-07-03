@@ -275,35 +275,36 @@ npm.cmd --prefix admin-web run test:e2e -- store-incentives-projection.spec.ts
 
 ### Tasks
 
-- [ ] For each page below, first map existing success/error UI:
+- [x] For each page below, first map existing success/error UI:
   - `setNotice`, `setErrorNotice`, `Alert`, inline success panels, and button pending states.
   - Keep inline blocking errors for page-level load failures.
   - Convert action-result banners to Sonner.
   - Do not remove undo behavior unless replaced by a Sonner action.
-- [ ] `/store/targets`
+- [x] `/store/targets`
   - Add toasts for approve, edit-and-approve, return/reject, distribution save.
   - Do not toast filter or tab changes.
-- [ ] `/store/tasks`
+- [x] `/store/tasks`
   - Add toasts for completion, resolution note save, close/reopen.
   - Keep Region Manager readonly flow intact.
-- [ ] `/store/checklists`
+- [x] `/store/checklists`
   - Add toasts for draft save and checklist complete.
   - Do not toast plain cancel.
-- [ ] `/store/feed` or Duyurular route
+  - Note: response save is an autosave path, so it stays quiet; explicit start/complete/acknowledge commands use Sonner.
+- [x] `/store/feed` or Duyurular route
   - Add toasts for post share, edit, delete, pin/unpin.
   - Fix existing mojibake Turkish copy while touching the file, and replace ASCII fallback Turkish with correct Turkish characters.
   - Preserve archive undo behavior.
-- [ ] `/store/reports`
+- [x] `/store/reports`
   - Add toasts for Excel export success/failure.
-- [ ] `/admin/auth`
+- [x] `/admin/auth`
   - Add toasts for user update, deactivate/reactivate, role/store/region assignment save.
-- [ ] `/admin/master-data`
+- [x] `/admin/master-data`
   - Add toasts for store/region updates and active/passive changes.
-- [ ] `/admin/integrations`
+- [x] `/admin/integrations`
   - Add toasts for upload accepted, retry started, import failure.
-- [ ] `/admin/incentives`
+- [x] `/admin/incentives`
   - Add toasts for package approve/return and note save.
-- [ ] `/admin/feed`
+- [x] `/admin/feed`
   - Add toasts for create, publish, pin/unpin, archive.
 
 ### Verification

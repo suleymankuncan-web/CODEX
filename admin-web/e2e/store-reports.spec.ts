@@ -120,15 +120,20 @@ test('store reports Excel action calls the scoped export endpoint once', async (
 })
 
 test('store reports Excel action shows product copy when download fails', async ({ page }) => {
-  await page.unroute('**/api/reports/store-monthly-package.xlsx?**')
-  await page.route('**/api/reports/store-monthly-package.xlsx?**', async (route) => {
+  let downloadCalls = 0
+
+  await page.route('**/api/reports/store-monthly-package.xlsx**', async (route) => {
+    downloadCalls += 1
     await route.fulfill({ status: 500, json: { message: 'download failed' } })
   })
 
   await page.goto('/store/reports')
   await page.getByRole('button', { name: /Excel indir/i }).click()
 
-  await expect(page.getByText('Excel indirilemedi. Dönemi kontrol edip tekrar deneyin.')).toBeVisible()
+  await expect.poll(() => downloadCalls).toBe(1)
+  await expect(
+    page.locator('.hr-axis-toast__title').getByText('Excel indirilemedi. Dönemi kontrol edip tekrar deneyin.'),
+  ).toBeVisible()
   await expect(page.getByText('download failed')).toHaveCount(0)
 })
 

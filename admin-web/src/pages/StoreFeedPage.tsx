@@ -27,6 +27,7 @@ import {
   updateFeedPost,
 } from '../features/feed/api'
 import type { FeedPost } from '../features/feed/contracts'
+import { actionToast } from '../lib/action-toast'
 import { getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
@@ -75,7 +76,6 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   const roleLabel = formatRoleLabel(roleCodes)
   const contextLabel = canComposeRegionFeed ? 'Bölge mağazaları' : roleLabel
   const [notice, setNotice] = useState<string | null>(null)
-  const [errorNotice, setErrorNotice] = useState<string | null>(null)
   const [body, setBody] = useState('')
   const [pinNextPost, setPinNextPost] = useState(false)
   const [openPostMenuId, setOpenPostMenuId] = useState<string | null>(null)
@@ -141,12 +141,12 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       setBody('')
       setPinNextPost(false)
       setRemovedPostSnapshot(null)
-      setErrorNotice(null)
-      setNotice(response.data.feedPost.isPinned ? 'Bölge duyurusu sabitlenerek paylaşıldı.' : 'Bölge duyurusu paylaşıldı.')
+      setNotice(null)
+      actionToast.success(response.data.feedPost.isPinned ? 'Bölge duyurusu sabitlenerek paylaşıldı.' : 'Bölge duyurusu paylaşıldı.')
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
     onError: (error) => {
-      setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy))
+      actionToast.error(error, feedActionErrorCopy)
     },
   })
   const updateMutation = useMutation({
@@ -157,12 +157,12 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       setEditingPostId(null)
       setEditingBody('')
       setRemovedPostSnapshot(null)
-      setErrorNotice(null)
-      setNotice('Gönderi güncellendi.')
+      setNotice(null)
+      actionToast.success('Gönderi güncellendi.')
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
     onError: (error) => {
-      setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy))
+      actionToast.error(error, feedActionErrorCopy)
     },
   })
   const pinMutation = useMutation({
@@ -170,27 +170,26 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
     onSuccess: async (response) => {
       upsertFeedPost(queryClient, visibleFeedQueryKey, response.data.feedPost)
       upsertFeedPost(queryClient, adminFeedQueryKey, response.data.feedPost)
-      setErrorNotice(null)
-      setNotice('Gönderi sabitlendi.')
+      setNotice(null)
+      actionToast.success('Gönderi sabitlendi.')
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
-    onError: (error) => setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy)),
+    onError: (error) => actionToast.error(error, feedActionErrorCopy),
   })
   const unpinMutation = useMutation({
     mutationFn: unpinFeedPost,
     onSuccess: async (response) => {
       upsertFeedPost(queryClient, visibleFeedQueryKey, response.data.feedPost)
       upsertFeedPost(queryClient, adminFeedQueryKey, response.data.feedPost)
-      setErrorNotice(null)
-      setNotice('Gönderi sabitlemeden kaldırıldı.')
+      setNotice(null)
+      actionToast.info('Gönderi sabitlemeden kaldırıldı.')
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
-    onError: (error) => setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy)),
+    onError: (error) => actionToast.error(error, feedActionErrorCopy),
   })
   const archiveMutation = useMutation({
     mutationFn: archiveFeedPost,
     onSuccess: async () => {
-      setErrorNotice(null)
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
     onError: (error, feedPostId) => {
@@ -199,7 +198,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
         next.delete(feedPostId)
         return next
       })
-      setErrorNotice(getUserFacingErrorMessage(error, feedActionErrorCopy))
+      actionToast.error(error, feedActionErrorCopy)
     },
   })
 
@@ -288,7 +287,6 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
     setOpenPostMenuId(null)
     setRemovedPostSnapshot({ post })
     setNotice('Gönderi yayından kaldırıldı.')
-    setErrorNotice(null)
 
     if (editingPostId === post.feedPostId) {
       cancelEditingPost()
@@ -419,12 +417,6 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
               Geri al
             </button>
           ) : null}
-        </div>
-      ) : null}
-
-      {errorNotice ? (
-        <div className="feed-notice feed-notice-error" role="alert">
-          {errorNotice}
         </div>
       ) : null}
 

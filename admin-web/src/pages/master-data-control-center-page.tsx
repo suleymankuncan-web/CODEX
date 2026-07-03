@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../components/ui/select'
+import { actionToast } from '../lib/action-toast'
 import {
   getMasterDataBootstrapBatches,
   getMasterDataBootstrapBatchDetail,
@@ -299,10 +300,11 @@ export function MasterDataControlCenterPage() {
   const validateMutation = useMutation({
     mutationFn: validateMasterDataBootstrapBatch,
     onSuccess: async () => {
-      setFeedback({ tone: 'success', message: 'Aktarım kontrol edildi.' })
+      setFeedback(null)
+      actionToast.success('Aktarım kontrol edildi')
       await invalidateMasterDataImportFamily(queryClient, selectedImportBatchId)
     },
-    onError: () => setFeedback({ tone: 'danger', message: 'Aktarım kontrol edilemedi.' }),
+    onError: (error) => actionToast.error(error, 'Aktarım kontrol edilemedi.'),
   })
 
   const promoteMutation = useMutation({
@@ -311,10 +313,11 @@ export function MasterDataControlCenterPage() {
         ? promoteMasterDataBootstrapStores(input.batchId)
         : promoteMasterDataBootstrapPersonnel(input.batchId),
     onSuccess: async () => {
-      setFeedback({ tone: 'success', message: 'Hazır kayıtlar kayda işlendi.' })
+      setFeedback(null)
+      actionToast.success('Hazır kayıtlar kayda işlendi')
       await invalidateMasterDataImportFamily(queryClient, selectedImportBatchId)
     },
-    onError: () => setFeedback({ tone: 'danger', message: 'Kayıt işleme tamamlanamadı.' }),
+    onError: (error) => actionToast.error(error, 'Kayıt işleme tamamlanamadı.'),
   })
 
   const issueRows = useMemo(
@@ -445,9 +448,11 @@ export function MasterDataControlCenterPage() {
       if (conflict) {
         setFeedback({ tone: 'warning', message: conflict.message })
       } else if ([...storeResults, ...personnelResults].some((result) => result.status === 'rejected')) {
-        setFeedback({ tone: 'danger', message: 'Bazı değişiklikler kaydedilemedi.' })
+        setFeedback(null)
+        actionToast.error(new Error('Bazı değişiklikler kaydedilemedi.'), 'Bazı değişiklikler kaydedilemedi.')
       } else {
-        setFeedback({ tone: 'success', message: 'Değişiklikler kaydedildi.' })
+        setFeedback(null)
+        actionToast.success('Değişiklikler kaydedildi')
       }
 
       await Promise.all([
