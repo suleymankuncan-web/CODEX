@@ -91,6 +91,7 @@ const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeTargetsRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
+const storePersonnelPerformanceRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 
 function roleSet(authSummary: AuthSessionSummary | null) {
   return new Set(authSummary?.user.roleCodes ?? [])
@@ -226,7 +227,7 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     path: '/store/personnel/:employeeId',
     routePath: '/store/personnel/:employeeId',
     modulePreload: () => import('../pages/StorePersonnelPerformancePage'),
-    access: authenticated,
+    access: (authSummary) => hasAnyRole(authSummary, storePersonnelPerformanceRoles),
     match: (pathname) => pathname.startsWith('/store/personnel/'),
   },
   {
