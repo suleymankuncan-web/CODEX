@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle2, Save, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { actionToast } from '../../lib/action-toast'
 import { getErrorMessage } from '../../lib/format'
 import type { TranslateFunction } from '../localization/dictionary'
 import {
@@ -27,6 +28,7 @@ export function StoreActionPlanCloseControl(input: {
   const closePlanMutation = useMutation({
     mutationFn: closeStoreActionPlan,
     onSuccess: async () => {
+      actionToast.success('Çözüm bildirildi')
       setIsOpen(false)
       setResolutionNote('')
       await Promise.all([
@@ -34,6 +36,7 @@ export function StoreActionPlanCloseControl(input: {
         queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] }),
       ])
     },
+    onError: (error) => actionToast.error(error, 'Çözüm kaydedilemedi.'),
   })
 
   if (!isActiveStatus(input.plan.status)) {
@@ -77,9 +80,6 @@ export function StoreActionPlanCloseControl(input: {
           <CheckCircle2 data-icon="inline-start" />
           {input.t('storeTasks.actionPlansCloseAction')}
         </Button>
-        {closePlanMutation.isSuccess ? (
-          <span className="tw:text-sm tw:text-muted-foreground">{input.t('storeTasks.actionPlansCloseSuccess')}</span>
-        ) : null}
       </>
     )
   }

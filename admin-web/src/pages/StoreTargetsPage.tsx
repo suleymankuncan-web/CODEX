@@ -40,6 +40,7 @@ import {
   type TargetDistributionAllocation,
   type TargetDistributionRequest,
 } from '../features/targets/api'
+import { actionToast } from '../lib/action-toast'
 import { getUserFacingErrorMessage } from '../lib/format'
 import {
   TargetApprovalQueue,
@@ -176,7 +177,6 @@ export function StoreTargetsPage(input: {
   const [requestReason, setRequestReason] = useState('')
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
   const [allocationDrafts, setAllocationDrafts] = useState<Record<string, TargetAllocationDraft>>({})
-  const [formNotice, setFormNotice] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<TargetWorkflowTab | null>(() =>
     getQueryWorkflowTab(searchParams.get('tab')),
   )
@@ -251,8 +251,9 @@ export function StoreTargetsPage(input: {
       setAllocationDrafts({})
       setTotalTargetValue('')
       setRequestReason('')
-      setFormNotice(result.command.message || copy.success)
+      actionToast.success(result.command.message || copy.success)
     },
+    onError: (error) => actionToast.error(error, 'Hedef kaydedilemedi.'),
   })
   const approveMutation = useMutation({
     mutationFn: approveTargetDistributionRequest,
@@ -264,8 +265,9 @@ export function StoreTargetsPage(input: {
         delete next[variables.requestId]
         return next
       })
-      setFormNotice(result.command.message || copy.success)
+      actionToast.success(result.command.message || copy.success)
     },
+    onError: (error) => actionToast.error(error, 'Hedef kararı kaydedilemedi.'),
   })
 
   if (!canReadTargets) {
@@ -489,11 +491,6 @@ export function StoreTargetsPage(input: {
           storeOptions={storeOptions}
           targetRequests={targetRequests}
         />
-        {formNotice ? (
-          <StoreStatusBadge tone="calm" className="tw:w-fit">
-            {formNotice}
-          </StoreStatusBadge>
-        ) : null}
       </StoreSurfacePage>
     )
   }
@@ -772,11 +769,6 @@ export function StoreTargetsPage(input: {
         </div>
       ) : null}
 
-      {formNotice ? (
-        <StoreStatusBadge tone="calm" className="tw:w-fit">
-          {formNotice}
-        </StoreStatusBadge>
-      ) : null}
     </StoreSurfacePage>
   )
 }

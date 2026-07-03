@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import type { AuthSessionSummary } from '../auth/api'
 import type { AppLocale } from '../../lib/i18n'
+import { actionToast } from '../../lib/action-toast'
 import { getErrorMessage } from '../../lib/format'
 import { cn } from '../../lib/utils'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
@@ -364,22 +365,36 @@ function TaskDetailDrawer(input: {
   })
   const updateStatusMutation = useMutation({
     mutationFn: updateStoreActionPlanStatus,
-    onSuccess: () => invalidateStoreTaskQueries(queryClient),
+    onSuccess: (_data, variables) => {
+      actionToast.success(variables.body.status === 'blocked' ? 'Bloke edildi' : 'İşleme alındı')
+      return invalidateStoreTaskQueries(queryClient)
+    },
+    onError: (error) => actionToast.error(error, 'Görev durumu kaydedilemedi.'),
   })
   const closePlanMutation = useMutation({
     mutationFn: closeStoreActionPlan,
-    onSuccess: () => invalidateStoreTaskQueries(queryClient),
+    onSuccess: () => {
+      actionToast.success('Çözüm bildirildi')
+      return invalidateStoreTaskQueries(queryClient)
+    },
+    onError: (error) => actionToast.error(error, 'Çözüm kaydedilemedi.'),
   })
   const cancelPlanMutation = useMutation({
     mutationFn: cancelStoreActionPlan,
-    onSuccess: () => invalidateStoreTaskQueries(queryClient),
+    onSuccess: () => {
+      actionToast.info('Görev iptal edildi')
+      return invalidateStoreTaskQueries(queryClient)
+    },
+    onError: (error) => actionToast.error(error, 'Görev iptal edilemedi.'),
   })
   const createPlanMutation = useMutation({
     mutationFn: createStoreActionPlan,
     onSuccess: async () => {
+      actionToast.success('Aksiyon planı oluşturuldu')
       input.onActionPlanCreated()
       await invalidateStoreTaskQueries(queryClient)
     },
+    onError: (error) => actionToast.error(error, 'Aksiyon planı oluşturulamadı.'),
   })
   if (!row) return null
   const currentRow = row
@@ -679,8 +694,6 @@ function mapUrgencyToPriority(urgency: StoreTaskCommandRow['priority']): StoreAc
   }
 }
 async function invalidateStoreTaskQueries(queryClient: ReturnType<typeof useQueryClient>) {
-  await Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['store-action-plans', 'store-tasks'] }),
-    queryClient.invalidateQueries({ queryKey: ['workflow-inbox'] }),
-  ])
+  const keys = [['store-action-plans', 'store-tasks'], ['workflow-inbox']] as const
+  await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })))
 }

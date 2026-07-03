@@ -34,6 +34,7 @@ import {
   downloadStoreMonthlyReportPackage,
   getStoreMonthlyReportPackage,
 } from '../features/reports/api'
+import { actionToast } from '../lib/action-toast'
 import { buildStoreReportsViewModel, type StoreReportMetricTone } from './store-reports-model'
 import {
   formatReportPeriodLabel,
@@ -70,7 +71,6 @@ const sectionIcons = {
 export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) {
   const [period, setPeriod] = useState(() => getCurrentReportPeriod())
   const [downloadState, setDownloadState] = useState<DownloadState>('idle')
-  const [downloadError, setDownloadError] = useState('')
   const actorId = authSummary?.user.userId ?? 'anonymous'
   const roleScope = [
     authSummary?.user.roleCodes.join('|') ?? '',
@@ -91,15 +91,15 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
 
   async function handleDownload() {
     setDownloadState('pending')
-    setDownloadError('')
 
     try {
       const blob = await downloadStoreMonthlyReportPackage({ period })
       downloadBlob(blob, `magaza-izleyis-${period}.xlsx`)
       setDownloadState('idle')
+      actionToast.success('Excel indirildi')
     } catch {
       setDownloadState('error')
-      setDownloadError('Excel indirilemedi. Dönemi kontrol edip tekrar deneyin.')
+      actionToast.error(null, 'Excel indirilemedi. Dönemi kontrol edip tekrar deneyin.')
     }
   }
 
@@ -176,7 +176,6 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
             </Button>
           </div>
 
-          {downloadError ? <p className="src-error-copy">{downloadError}</p> : null}
           <div className="src-package-foot">
             <span>{model.coverageLabel}</span>
             <span>{packageQuery.data?.isCurrentPeriod ? 'Ay içi kapsam' : 'Tam dönem'}</span>

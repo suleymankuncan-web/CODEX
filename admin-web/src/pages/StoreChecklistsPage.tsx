@@ -21,12 +21,12 @@ import {
   type MobileChecklistTodayResponse,
 } from '../features/checklists/api'
 import { useLocalization } from '../features/localization/useLocalization'
+import { actionToast } from '../lib/action-toast'
 import { getUserFacingErrorMessage } from '../lib/format'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   buildChecklistSearch,
   createInitialStoreChecklistsState,
-  storeChecklistCommandNotice,
   storeChecklistsReducer,
   type ChecklistCompletedInstance,
   type ChecklistResponseDraft,
@@ -130,7 +130,6 @@ function useStoreChecklistsPageContent(input: {
   }, [location.pathname, location.search, navigate])
   const {
     ackNotes,
-    ackNotice,
     scores,
     comments,
     selectedSessionKey,
@@ -160,8 +159,7 @@ function useStoreChecklistsPageContent(input: {
     ? typeFilter
     : templateTypeOptions[0]?.value ?? 'all'
   const showCommandNotice = (message: string) => {
-    storeChecklistCommandNotice(message)
-    dispatchPageState({ type: 'setAckNotice', message })
+    actionToast.success(message)
   }
   const checklistsQuery = useQuery({
     queryKey: ['checklist-acknowledgements'],
@@ -193,6 +191,7 @@ function useStoreChecklistsPageContent(input: {
       )
       showCommandNotice(result.command.message)
     },
+    onError: (error) => actionToast.error(error, 'Sonuç kabul edilemedi.'),
   })
   const startVisitMutation = useMutation({
     mutationFn: startMobileChecklistInstance,
@@ -215,6 +214,7 @@ function useStoreChecklistsPageContent(input: {
       })
       showCommandNotice(result.command.message)
     },
+    onError: (error) => actionToast.error(error, 'Checklist başlatılamadı.'),
   })
   const saveResponseMutation = useMutation({
     mutationFn: saveMobileChecklistResponse,
@@ -302,6 +302,7 @@ function useStoreChecklistsPageContent(input: {
         rowKey: variables.rowKey,
       })
     },
+    onError: (error) => actionToast.error(error, 'Checklist tamamlanamadı.'),
   })
   const queueResponseAutoSave = (draft: ChecklistResponseDraft) => {
     const key = getChecklistResponseDraftKey(draft)
@@ -507,7 +508,6 @@ function useStoreChecklistsPageContent(input: {
     selectedMonth === 'all'
       ? getStaticCopy(locale, 'Tüm aylar', 'All months')
       : formatMonthKey(selectedMonth, locale)
-  const commandNotice = ackNotice ?? (completeVisitMutation.isSuccess ? t('storeChecklists.completeSuccess') : null)
   const checklistTabs: ChecklistTabOption[] = [
     ...(canManageVisits
       ? [
@@ -675,8 +675,6 @@ function useStoreChecklistsPageContent(input: {
               onChange={selectChecklistTab}
             />
           ) : null}
-
-          {commandNotice ? <p className="store-checklists-inline-notice">{commandNotice}</p> : null}
 
           {canManageVisits ? (
             <>

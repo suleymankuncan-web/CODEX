@@ -30,12 +30,12 @@ import {
   revokeRolePermission,
 } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
+import { actionToast } from '../lib/action-toast'
 import { getErrorMessage } from '../lib/format'
 
 export function AuthCatalogPage() {
   const { t } = useLocalization()
   const [search, setSearch] = useState('')
-  const [feedback, setFeedback] = useState<string | null>(null)
   const [draftByRole, setDraftByRole] = useState<Record<string, string>>({})
   const deferredSearch = useDeferredValue(search)
   const queryClient = useQueryClient()
@@ -51,17 +51,19 @@ export function AuthCatalogPage() {
   const grantMutation = useMutation({
     mutationFn: grantRolePermission,
     onSuccess: async (response, variables) => {
-      setFeedback(response.command.message)
+      actionToast.success(response.command.message)
       setDraftByRole((current) => ({ ...current, [variables.roleId]: '' }))
       await queryClient.invalidateQueries({ queryKey: ['auth-roles'] })
     },
+    onError: (error) => actionToast.error(error, 'Yetki eklenemedi.'),
   })
   const revokeMutation = useMutation({
     mutationFn: revokeRolePermission,
     onSuccess: async (response) => {
-      setFeedback(response.command.message)
+      actionToast.info(response.command.message)
       await queryClient.invalidateQueries({ queryKey: ['auth-roles'] })
     },
+    onError: (error) => actionToast.error(error, 'Yetki kaldırılamadı.'),
   })
   const roles = useMemo(() => rolesQuery.data?.items ?? [], [rolesQuery.data?.items])
   const permissions = useMemo(
@@ -180,8 +182,6 @@ export function AuthCatalogPage() {
           },
         ]}
       />
-
-      {feedback ? <AdminStatePanel title={feedback} tone="success" /> : null}
 
       <section className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
         <AdminSurfaceSection

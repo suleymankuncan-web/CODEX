@@ -123,7 +123,7 @@ test('super admin reads incentive projections and submits an audited correction'
   await page.getByLabel('Gerekçe').fill('Admin onaylı satış hedef primi düzeltmesi')
   await page.getByRole('button', { name: 'Düzeltme uygula' }).click()
 
-  await expect(page.getByText('Düzeltme kaydedildi')).toBeVisible()
+  await expect(page.locator('.hr-axis-toast__title').getByText('Düzeltme kaydedildi')).toBeVisible()
   expect(correctionBody).toMatchObject({
     period: '2026-05',
     storeId,

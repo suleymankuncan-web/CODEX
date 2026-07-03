@@ -35,6 +35,7 @@ import {
 } from '../features/feed/contracts'
 import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
+import { actionToast } from '../lib/action-toast'
 import { formatDate, formatDateTime, getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
@@ -121,8 +122,6 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   const isRegionManagerOnly = !isGlobalWriter && roles.includes('REGION_MANAGER')
   const defaultRegionId = input.authSummary?.user.readScope.regionIds[0] ?? ''
   const queryClient = useQueryClient()
-  const [notice, setNotice] = useState<string | null>(null)
-  const [errorNotice, setErrorNotice] = useState<string | null>(null)
   const [form, setForm] = useState<FeedFormState>(() => createInitialForm(isRegionManagerOnly, defaultRegionId))
   const adminFeedQueryKey = getAdminFeedQueryKey(input.authSummary)
   const visibleFeedQueryKey = getVisibleFeedQueryKey(input.authSummary)
@@ -147,8 +146,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
   const createMutation = useMutation({
     mutationFn: createFeedPost,
     onSuccess: async (response) => {
-      setNotice(response.command.message)
-      setErrorNotice(null)
+      actionToast.success(response.command.message)
       setForm(createInitialForm(isRegionManagerOnly, defaultRegionId))
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
@@ -158,14 +156,13 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
       ])
     },
     onError: (error) => {
-      setErrorNotice(getErrorMessage(error))
+      actionToast.error(error, 'Gönderi oluşturulamadı.')
     },
   })
   const publishMutation = useMutation({
     mutationFn: publishFeedPost,
     onSuccess: async (response) => {
-      setNotice(response.command.message)
-      setErrorNotice(null)
+      actionToast.success(response.command.message)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
@@ -173,13 +170,12 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
         queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
-    onError: (error) => setErrorNotice(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Gönderi yayınlanamadı.'),
   })
   const pinMutation = useMutation({
     mutationFn: pinFeedPost,
     onSuccess: async (response) => {
-      setNotice(response.command.message)
-      setErrorNotice(null)
+      actionToast.success(response.command.message)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
@@ -187,13 +183,12 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
         queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
-    onError: (error) => setErrorNotice(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Gönderi sabitlenemedi.'),
   })
   const unpinMutation = useMutation({
     mutationFn: unpinFeedPost,
     onSuccess: async (response) => {
-      setNotice(response.command.message)
-      setErrorNotice(null)
+      actionToast.info(response.command.message)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
@@ -201,13 +196,12 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
         queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
-    onError: (error) => setErrorNotice(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Gönderi sabitlemeden kaldırılamadı.'),
   })
   const archiveMutation = useMutation({
     mutationFn: archiveFeedPost,
     onSuccess: async (response) => {
-      setNotice(response.command.message)
-      setErrorNotice(null)
+      actionToast.info(response.command.message)
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-feed'] }),
         queryClient.invalidateQueries({ queryKey: ['visible-feed'] }),
@@ -215,7 +209,7 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
         queryClient.invalidateQueries({ queryKey: visibleFeedQueryKey }),
       ])
     },
-    onError: (error) => setErrorNotice(getErrorMessage(error)),
+    onError: (error) => actionToast.error(error, 'Gönderi arşivlenemedi.'),
   })
 
   if (!isGlobalWriter && !isRegionManagerOnly) {
@@ -339,9 +333,6 @@ export function AdminFeedPage(input: { authSummary: AuthSessionSummary | null })
           },
         ]}
       />
-
-      {notice ? <div className="shell-notice">{notice}</div> : null}
-      {errorNotice ? <div className="shell-notice shell-notice-warning">{errorNotice}</div> : null}
 
       <div className="tw:grid tw:grid-cols-1 tw:gap-4 tw:xl:grid-cols-[minmax(0,1.35fr)_minmax(20rem,0.65fr)]">
         <AdminFeedComposerPanel
