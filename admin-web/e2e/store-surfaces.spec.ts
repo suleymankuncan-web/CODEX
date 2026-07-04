@@ -687,6 +687,38 @@ test('store self-performance does not treat raw net sales as HG percent when tar
   await expect(page.locator('[data-testid="store-me-kpi-dialog"]')).not.toContainText(/9\.200\.202%/)
 })
 
+test('store self-performance displays target achievement above one hundred percent', async ({ page }) => {
+  const aboveTargetFixture = {
+    ...myPerformanceFixture,
+    supporting: {
+      ...myPerformanceFixture.supporting,
+      netSalesValue: 136000,
+    },
+    metrics: myPerformanceFixture.metrics.map((metric) =>
+      metric.code === 'TARGET_ACHIEVEMENT'
+        ? {
+            ...metric,
+            actualValue: 1.36,
+            achievementRate: 1.36,
+            contributionValue: 40,
+          }
+        : metric,
+    ),
+  }
+
+  await page.unroute('**/api/reports/my-performance**')
+  await page.route('**/api/reports/my-performance**', async (route) => {
+    await route.fulfill({ json: aboveTargetFixture })
+  })
+
+  await page.goto('/store/me')
+
+  const targetProgressCard = page.locator('[data-testid="store-me-target-progress-card"]')
+  await expect(targetProgressCard).toContainText('%136')
+  await expect(targetProgressCard).toContainText('136%')
+  await expect(targetProgressCard).not.toContainText('%100')
+})
+
 test('store self-performance tolerates ISO period timestamps from live API', async ({ page }) => {
   const pageErrors: string[] = []
   page.on('pageerror', (error) => {
@@ -805,12 +837,12 @@ test('store self-performance requests exact loaded day without inventing unloade
   await page.locator('button[aria-expanded]').first().click()
   await page.getByRole('radio', { name: /^G.*n$/ }).click()
 
-  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
-  await expect(page.getByLabel('25 Nis 2026')).toBeChecked()
-  await expect(page.getByLabel('26 Nis 2026')).toHaveCount(0)
-  await page.getByLabel('25 Nis 2026').uncheck()
-  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
-  await expect(page.getByLabel('25 Nis 2026')).not.toBeChecked()
+  const calendar = page.locator('[data-slot="calendar"]')
+  await expect(calendar).toBeVisible()
+  await expect(calendar.locator('button[data-day="4/24/2026"]')).toBeEnabled()
+  await expect(calendar.locator('button[data-day="4/25/2026"]')).toBeEnabled()
+  await expect(calendar.locator('button[data-day="4/26/2026"]')).toBeDisabled()
+  await calendar.locator('button[data-day="4/24/2026"]').click()
 
   await expect.poll(() =>
     myPerformanceRequests.some(
@@ -2828,19 +2860,14 @@ test('store personnel profile date filter exposes loaded months and days', async
 
   await expect(page.getByRole('radio', { name: 'Ay', exact: true })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Gün', exact: true })).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: '2026', exact: true })).toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'Nisan 2026', exact: true })).toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true })).toBeChecked()
-  await page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true }).uncheck()
-  await expect(page.getByRole('checkbox', { name: 'Nisan 2026', exact: true })).toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'Mayıs 2026', exact: true })).not.toBeChecked()
+  await expect(page.getByRole('button', { name: 'Yüklü ay seçimi' })).toContainText('Nisan 2026')
 
   await page.getByRole('radio', { name: 'Gün', exact: true }).click()
-  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
-  await expect(page.getByLabel('25 Nis 2026')).toBeChecked()
-  await page.getByLabel('25 Nis 2026').uncheck()
-  await expect(page.getByLabel('24 Nis 2026')).toBeChecked()
-  await expect(page.getByLabel('25 Nis 2026')).not.toBeChecked()
+  const calendar = page.locator('[data-slot="calendar"]')
+  await expect(calendar).toBeVisible()
+  await expect(calendar.locator('button[data-day="4/24/2026"]')).toBeEnabled()
+  await expect(calendar.locator('button[data-day="4/25/2026"]')).toBeEnabled()
+  await calendar.locator('button[data-day="4/24/2026"]').click()
 
   await expect.poll(() =>
     personnelPerformanceRequests.some(
@@ -2891,8 +2918,7 @@ test('store personnel profile derives date filters from the active period when t
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
   await expect(page.getByText('Yüklü dönem yok')).toHaveCount(0)
-  await expect(page.getByRole('checkbox', { name: '2026', exact: true })).toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'Mart 2026', exact: true })).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Yüklü ay seçimi' })).toContainText('Mart 2026')
 })
 
 test('store personnel profile opens daily data when requested month has no rows', async ({ page }) => {
@@ -3095,17 +3121,15 @@ test('store personnel profile uses employee periods instead of global closed sna
 
   await expect(page.getByText('Kapanmış performans kaydı seçimi')).toHaveCount(0)
   await expect(page.getByText('Kapanmış gün')).toHaveCount(0)
-  await expect(page.getByText('Yıl')).toBeVisible()
-  await expect(page.getByRole('checkbox', { name: '2026', exact: true })).toBeChecked()
-  await expect(page.getByRole('checkbox', { name: 'Mart 2026', exact: true })).toBeChecked()
+  await expect(page.getByRole('button', { name: 'Yüklü ay seçimi' })).toContainText('Mart 2026')
   await expect(page.getByText('Nisan 2026')).toHaveCount(0)
 
   await page.getByRole('radio', { name: 'Gün', exact: true }).click()
-  await expect(page.getByLabel('1 Mar 2026')).toBeChecked()
-  await expect(page.getByLabel('2 Mar 2026')).toBeChecked()
-  await page.getByLabel('2 Mar 2026').uncheck()
-  await expect(page.getByLabel('1 Mar 2026')).toBeChecked()
-  await expect(page.getByLabel('2 Mar 2026')).not.toBeChecked()
+  const personnelCalendar = page.locator('[data-slot="calendar"]')
+  await expect(personnelCalendar).toBeVisible()
+  await expect(personnelCalendar.locator('button[data-day="3/1/2026"]')).toBeEnabled()
+  await expect(personnelCalendar.locator('button[data-day="3/2/2026"]')).toBeEnabled()
+  await personnelCalendar.locator('button[data-day="3/1/2026"]').click()
 
   await expect.poll(() =>
     personnelPerformanceRequests.some(

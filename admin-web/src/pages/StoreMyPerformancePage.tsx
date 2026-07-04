@@ -81,6 +81,7 @@ type StoreMyPerformancePageExperienceProps = {
   performanceEmployeeName: string
   incentiveProjection: SalesTargetIncentiveProjection | null
   selectedClosedSnapshotRunId: string
+  selectedLivePeriodStart: string
   selectedLivePeriodType: LivePeriodType
   sourceMode: StorePerformanceSourceMode
   t: TranslateFunction
@@ -259,12 +260,8 @@ export function StoreMyPerformancePage(input: {
 
   const periodHandlers = createStoreMyPerformancePeriodHandlers({
     availableDailyPeriods: periodModel.availableDailyPeriods,
-    availableLiveMonthOptions: periodModel.availableLiveMonthOptions,
-    availableLiveYearOptions: periodModel.availableLiveYearOptions,
     availableMonthlyPeriods: periodModel.availableMonthlyPeriods,
     dispatch,
-    scopedAvailableDailyPeriods: periodModel.scopedAvailableDailyPeriods,
-    selectedLiveDayStarts,
     selectedLiveMonthKeys,
     selectedLivePeriodType,
     selectedLiveYears,
@@ -393,6 +390,7 @@ export function StoreMyPerformancePage(input: {
       performanceEmployeeName={performance.employee.displayName}
       incentiveProjection={incentiveProjection}
       selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
+      selectedLivePeriodStart={selectedLivePeriodStart}
       selectedLivePeriodType={selectedLivePeriodType}
       sourceMode={sourceMode}
       t={t}
@@ -417,6 +415,7 @@ function StoreMyPerformancePageExperience({
   performanceEmployeeName,
   incentiveProjection,
   selectedClosedSnapshotRunId,
+  selectedLivePeriodStart,
   selectedLivePeriodType,
   sourceMode,
   t,
@@ -432,7 +431,6 @@ function StoreMyPerformancePageExperience({
     introCopy,
     liveDayFilterOptions,
     liveMonthFilterOptions,
-    liveYearFilterOptions,
     loadedPeriodCount,
     metricCards,
     monthlyDetailRows,
@@ -471,20 +469,20 @@ function StoreMyPerformancePageExperience({
             activeClosedSnapshotRunId={activeClosedSnapshotRunId}
             availableClosedSnapshotRuns={closedSnapshotRunOptions}
             availableLiveMonthOptions={liveMonthFilterOptions}
-            availableLiveYearOptions={liveYearFilterOptions}
             dataQualityLabel={dataQualityLabel}
             isDateFilterOpen={isDateFilterOpen}
             isPartial={partial.isPartial}
+            locale={locale}
             loadedPeriodCount={loadedPeriodCount}
             onChangeLivePeriodType={periodHandlers.changeLivePeriodType}
             onSelectClosedSnapshotRun={onSelectClosedSnapshotRun}
+            onSelectLiveDay={periodHandlers.selectLiveDay}
+            onSelectLiveMonth={periodHandlers.selectLiveMonth}
             onSelectSourceMode={onSelectSourceMode}
             onToggleDateFilter={onToggleDateFilter}
-            onToggleLiveDay={periodHandlers.toggleLiveDaySelection}
-            onToggleLiveMonth={periodHandlers.toggleLiveMonthSelection}
-            onToggleLiveYear={periodHandlers.toggleLiveYearSelection}
             scopedAvailableDailyPeriods={liveDayFilterOptions}
             selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
+            selectedLivePeriodStart={selectedLivePeriodStart}
             selectedLivePeriodType={selectedLivePeriodType}
             selectedPeriodLabel={selectedPeriodLabel}
             sourceMode={sourceMode}
