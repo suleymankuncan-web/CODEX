@@ -4365,12 +4365,42 @@ test('store approvals page paginates request center rows after fifteen records',
   await expect(targetAction).toHaveAttribute('href', /requestMonth=2026-05/)
   await expect(targetAction).toHaveAttribute('href', new RegExp(`storeId=${demoStoreId}`))
   await expect(targetAction).toHaveAttribute('href', /status=pending/)
+  await expect(targetAction).toHaveAttribute('href', /tab=approval/)
   await expect(targetAction).toHaveCSS('color', 'rgb(76, 42, 165)')
   await expect(visibleRows).toHaveCount(15)
   await page.getByRole('button', { name: 'Sayfa 2' }).click()
   await expect(visibleRows).toHaveCount(3)
   await page.getByRole('radio', { name: 'Tamamlanan' }).click()
   await expect(visibleRows).toHaveCount(2)
+})
+
+test('store approvals page sends store manager target handoff to distribution status', async ({ page }) => {
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['STORE_MANAGER'],
+    readStoreIds: [demoStoreId],
+    scopeStoreIds: [demoStoreId],
+    actionStoreIds: [demoStoreId],
+    legacyAssignedStoreIds: [demoStoreId],
+    assignedStoreTypes: ['company'],
+  }))
+
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    await route.fulfill({ json: pendingTargetDistributionRequestsFixture })
+  })
+
+  await page.goto('/store/approvals')
+
+  const targetAction = page
+    .locator('[data-testid="store-approvals-request-row"]:visible')
+    .getByRole('link', { name: 'Hedefe git' })
+    .first()
+  await expect(targetAction).toBeVisible()
+  await expect(targetAction).toHaveAttribute('href', /requestMonth=2026-05/)
+  await expect(targetAction).toHaveAttribute('href', new RegExp(`storeId=${demoStoreId}`))
+  await expect(targetAction).toHaveAttribute('href', /status=pending/)
+  await expect(targetAction).toHaveAttribute('href', /tab=distribution/)
+  await expect(targetAction).not.toHaveAttribute('href', /tab=approval/)
 })
 
 test('store approvals page switches to English request center copy and persists locale', async ({ page }) => {

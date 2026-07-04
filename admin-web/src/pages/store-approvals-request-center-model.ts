@@ -271,7 +271,7 @@ function mapTargetRequestToRow(input: {
     bucket: isApproved ? 'done' : 'open',
     rowTone: input.request.status === 'pending_region_approval' ? 'urgent' : 'neutral',
     actionLabel: isApproved ? input.copy.detailAction : input.copy.targetAction,
-    actionTo: createTargetHandoffUrl(input.request),
+    actionTo: createTargetHandoffUrl(input.request, input.persona),
     actionPrimary: input.request.status === 'pending_region_approval',
   }
 }
@@ -363,7 +363,7 @@ function resolveStatus(status: string, copy: RequestCenterCopy) {
   }
 }
 
-function createTargetHandoffUrl(request: TargetDistributionRequest) {
+function createTargetHandoffUrl(request: TargetDistributionRequest, persona: StoreApprovalsPersona) {
   const params = new URLSearchParams({
     requestMonth: request.requestMonth.slice(0, 7),
     storeId: request.storeId,
@@ -374,7 +374,7 @@ function createTargetHandoffUrl(request: TargetDistributionRequest) {
     params.set('tab', 'approved')
   } else {
     params.set('status', 'pending')
-    params.set('tab', 'approval')
+    params.set('tab', persona === 'storeManager' ? 'distribution' : 'approval')
   }
 
   return `/store/targets?${params.toString()}`
