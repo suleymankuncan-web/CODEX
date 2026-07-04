@@ -6,8 +6,8 @@ export const storeIncentivesTr = {
   'storeIncentives.foundation': 'Hazırlık',
 
   'storeIncentives.heroEyebrow': 'Prim görünümü',
-  'storeIncentives.routeUnavailableTitle': 'Rota kullanılamıyor',
-  'storeIncentives.routeUnavailableCopy': 'Bu mağaza alanı mevcut oturum için açık değil.',
+  'storeIncentives.routeUnavailableTitle': 'Prim görünümü açık değil',
+  'storeIncentives.routeUnavailableCopy': 'Bu prim görünümü hesabınız için açık değil.',
   'storeIncentives.loadingTitle': 'Prim görünümü yükleniyor',
   'storeIncentives.loadingCopy': 'Güncel satış hedefi ve prim satırları hazırlanıyor.',
   'storeIncentives.errorTitle': 'Prim görünümü açılamadı',
@@ -209,9 +209,9 @@ export const storeIncentivesTr = {
 
   'storeIncentives.notImplemented': 'Henüz uygulanmadı',
   'storeIncentives.notPretendTitle': 'Bu sayfa neyi yapıyormuş gibi görünmemeli',
-  'storeIncentives.emptyTitle': 'Prim kaydı bulunamadı',
+  'storeIncentives.emptyTitle': 'Bu dönem için prim verisi hazırlanmadı.',
   'storeIncentives.emptyCopy':
-    'Seçili dönem için prim kaydı yok. Dönemi değiştirerek geçmiş kayıtları kontrol edebilirsin.',
+    'Dönemi değiştirerek önceki ayları kontrol edebilirsiniz.',
 
   'storeIncentives.nextEvolution': 'Sonraki evrim',
   'storeIncentives.nextTitle': 'Bu temelden sonra ne yapılmalı',
@@ -250,8 +250,8 @@ export const storeIncentivesEn: Record<keyof typeof storeIncentivesTr, string> =
   'storeIncentives.foundation': 'Setup',
 
   'storeIncentives.heroEyebrow': 'Incentive view',
-  'storeIncentives.routeUnavailableTitle': 'Route not available',
-  'storeIncentives.routeUnavailableCopy': 'This store area is not available for the current session.',
+  'storeIncentives.routeUnavailableTitle': 'Incentive view is not enabled',
+  'storeIncentives.routeUnavailableCopy': 'This incentive view is not enabled for your account.',
   'storeIncentives.loadingTitle': 'Loading incentive view',
   'storeIncentives.loadingCopy': 'Current sales targets and incentive rows are being prepared.',
   'storeIncentives.errorTitle': 'Incentive view could not load',
@@ -453,9 +453,9 @@ export const storeIncentivesEn: Record<keyof typeof storeIncentivesTr, string> =
 
   'storeIncentives.notImplemented': 'Not implemented yet',
   'storeIncentives.notPretendTitle': 'What this page should not pretend to do',
-  'storeIncentives.emptyTitle': 'No incentive records found',
+  'storeIncentives.emptyTitle': 'Incentive data is not ready for this period.',
   'storeIncentives.emptyCopy':
-    'There are no incentive records for the selected period. Change the period to check past records.',
+    'Change the period to check previous months.',
 
   'storeIncentives.nextEvolution': 'Next evolution',
   'storeIncentives.nextTitle': 'What should be built after this foundation',

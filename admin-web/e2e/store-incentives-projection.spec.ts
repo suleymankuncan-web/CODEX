@@ -260,7 +260,19 @@ test('store incentives empty period keeps the period picker available', async ({
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByText('Prim kaydı bulunamadı').first()).toBeVisible()
+  await expect(page.getByText('Bu dönem için prim verisi hazırlanmadı.').first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Haziran 2026' })).toBeVisible()
+})
+
+test('store manager sees authorized empty incentive period instead of access denial', async ({ page }) => {
+  await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['company'] }))
+  await routeStoreIncentives(page, emptyIncentiveFixture)
+
+  await page.goto('/store/incentives')
+
+  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
+  await expect(page.getByText('Bu dönem için prim verisi hazırlanmadı.').first()).toBeVisible()
+  await expect(page.getByText('Bu prim görünümü hesabınız için açık değil.')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Haziran 2026' })).toBeVisible()
 })
 
@@ -314,7 +326,7 @@ test('cashier and non-company store users do not see incentive surfaces', async 
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByText('Prim kaydı bulunamadı')).toHaveCount(0)
+  await expect(page.getByText('Bu dönem için prim verisi hazırlanmadı.')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Haziran 2026' })).toHaveCount(0)
   await expect(page.getByTestId('store-incentives-page')).toHaveCount(0)
 })

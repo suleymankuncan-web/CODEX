@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CalendarDays, CircleDollarSign, Target, TrendingUp, UsersRound, WalletCards } from 'lucide-react'
+import { CircleDollarSign, Target, TrendingUp, UsersRound, WalletCards } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   createStoreSalesTargetIncentiveRegionCorrection,
@@ -89,7 +89,6 @@ export function StoreIncentivesPage(input: {
   const queryClient = useQueryClient()
   const enabled = canReadStoreIncentives(input.authSummary)
   const [period, setPeriod] = useState<string | undefined>(undefined)
-  const [periodWasSelected, setPeriodWasSelected] = useState(false)
   const [pendingReviewStoreIds, setPendingReviewStoreIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
@@ -98,7 +97,6 @@ export function StoreIncentivesPage(input: {
   )
   const handlePeriodChange = (nextPeriod: string) => {
     setPeriod(nextPeriod)
-    setPeriodWasSelected(true)
   }
   const incentivesQueryIdentity = useMemo(
     () => getSalesTargetIncentiveQueryIdentity(input.authSummary),
@@ -297,18 +295,6 @@ export function StoreIncentivesPage(input: {
 
   const data = response.data
   if (data.projections.length === 0) {
-    const canBrowseEmptyPeriod = data.roleScope === 'region' || periodWasSelected
-    if (!canBrowseEmptyPeriod) {
-      return (
-        <StoreSurfacePage ariaLabel={t('storeIncentives.heroEyebrow')}>
-          <StoreErrorState
-            title={t('storeIncentives.routeUnavailableTitle')}
-            description={t('storeIncentives.routeUnavailableCopy')}
-          />
-        </StoreSurfacePage>
-      )
-    }
-
     return (
       <StoreIncentivesEmptyPeriod
         onPeriodChange={handlePeriodChange}
@@ -434,14 +420,6 @@ function StoreManagerIncentivesView(input: {
         title={input.t('storeIncentives.storeManagerTitle')}
         description={input.t('storeIncentives.storeManagerCopy')}
         icon={<CircleDollarSign size={23} />}
-        actions={[
-          {
-            label: input.t('storeIncentives.regionManagerSelectPeriod'),
-            icon: <CalendarDays data-icon="inline-start" />,
-            onClick: () => undefined,
-            variant: 'outline',
-          },
-        ]}
       />
 
       <StoreFinanceBand
