@@ -98,9 +98,11 @@ test('store manager pilot navigation keeps reports hidden and personnel profile 
 
 test('store shell renders registered routes instead of duplicating path-specific guards', () => {
   assert.match(shellSource, /getStoreRouteDefinitions\(\)\.flatMap/u)
+  assert.match(shellSource, /getStoreLandingPath\(input\.authSummary\)/u)
   assert.match(shellSource, /isStoreRouteAllowed\(route, input\.authSummary\)/u)
   assert.match(shellSource, /location\.pathname === '\/store'/u)
-  assert.match(shellSource, /<Navigate to=\{input\.firstAllowedPath\} replace \/>/u)
+  assert.match(shellSource, /storeLandingPath !== '\/store\/home'/u)
+  assert.match(shellSource, /<Navigate to=\{storeLandingPath\} replace \/>/u)
   assert.doesNotMatch(shellSource, /path="\/store\/incentives"/u)
   assert.doesNotMatch(shellSource, /storeIncentivesAllowed/u)
   assert.doesNotMatch(shellSource, /storeWorkforceAllowed/u)

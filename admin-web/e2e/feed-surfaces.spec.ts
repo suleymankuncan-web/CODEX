@@ -262,7 +262,7 @@ test('store home links to announcements without rendering pinned feed preview', 
   await seedMockSession(page, 'STORE_PERSONNEL', 'store-home-feed-smoke-user')
   await routeFeedApi(page, storeSessionFixture)
 
-  await page.goto('/store')
+  await page.goto('/store/home')
 
   await expect(page.locator('.store-command-home')).toBeVisible()
   await expect(
