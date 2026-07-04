@@ -33,10 +33,10 @@
 | `/store/targets` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target distribution requests, coverage and approval state by scope | yes |
 | `/store/checklists` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `VISUAL_MERCHANDISER`, `REPORT_VIEWER`, `SUPER_ADMIN` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks/results by store scope; `STORE_PERSONNEL` is forbidden | yes |
 | `/store/tasks` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` is forbidden | direct navigation only for eligible roles; region manager sees scoped read-only remediation rows | must return to same route after auth verification | workflow inbox and Store Action task visibility by read/action scope; Store Action commands remain assigned-store scoped | yes |
-| `/store/kpis` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
+| `/store/kpis` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` uses `/store/me` for personal KPI | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
 | `/store/feed` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store announcements | yes |
-| `/store/competitions` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store-visible competitions | yes |
-| `/store/incentives` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store incentives preview | no |
+| `/store/competitions` | store | secondary | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation only | must return to same route after auth verification | store-visible competitions | no |
+| `/store/incentives` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER` for company stores; `STORE_PERSONNEL` sees own incentive through `/store/me` | direct navigation only | must return to same route after auth verification | store incentives preview | no |
 | `/store/workforce` | store | secondary | `STORE_MANAGER` with assigned action store, `REGION_MANAGER` with read store or read region scope | direct navigation only | must return to same route after auth verification | norm kadro and active workforce state by store/read scope | yes |
 | `/store/reports` | store | secondary | `SUPER_ADMIN`, `REPORT_VIEWER`, `AUDITOR`, `REGION_MANAGER`; `STORE_MANAGER` is forbidden for now | direct navigation only | must return to same route after auth verification | monthly store report package by read scope | yes |
 
@@ -82,3 +82,18 @@ The contract keeps `/store/reports` forbidden for `STORE_MANAGER`, keeps
 Region Manager-only incentive approval controls out of the Store Manager
 surface, and verifies that checklist result acknowledgement stays available
 without exposing raw identifiers in the UI.
+
+## Store Personnel Pilot Gate
+
+Store Personnel pilot readiness is covered by a named smoke and e2e contract:
+
+```powershell
+npm.cmd --prefix admin-web run test:e2e:store-personnel -- --workers=1
+npm.cmd --prefix admin-web run smoke:auth:staging:store-personnel
+```
+
+The contract keeps `/store` landing on `/store/me`, keeps management routes
+(`/store/tasks`, `/store/checklists`, `/store/approvals`, `/store/targets`,
+`/store/workforce`, `/store/reports`, `/store/kpis`, `/store/incentives`)
+unavailable before their protected data requests fire, and verifies that feed
+and home stay read-only for personnel sessions.

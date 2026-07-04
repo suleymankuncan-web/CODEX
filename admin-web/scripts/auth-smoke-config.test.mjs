@@ -68,6 +68,10 @@ test('package exposes explicit staging auth smoke scripts', () => {
     packageJson.scripts['smoke:auth:staging:store-manager'],
     'node scripts/auth-store-manager-cookie-session-smoke.mjs --staging',
   )
+  assert.equal(
+    packageJson.scripts['smoke:auth:staging:store-personnel'],
+    'node scripts/auth-store-personnel-cookie-session-smoke.mjs --staging',
+  )
 
   const storeManagerSmokeSource = readFileSync(
     join(appRoot, 'scripts/auth-store-manager-cookie-session-smoke.mjs'),
@@ -76,4 +80,12 @@ test('package exposes explicit staging auth smoke scripts', () => {
   assert.match(storeManagerSmokeSource, /PILOT_SM_USERNAME/u)
   assert.match(storeManagerSmokeSource, /AUTH_SMOKE_EXPECTED_ROLE = 'STORE_MANAGER'/u)
   assert.match(storeManagerSmokeSource, /AUTH_SMOKE_EXPECTED_LANDING = '\/store\/home'/u)
+
+  const storePersonnelSmokeSource = readFileSync(
+    join(appRoot, 'scripts/auth-store-personnel-cookie-session-smoke.mjs'),
+    'utf8',
+  )
+  assert.match(storePersonnelSmokeSource, /PILOT_SP_USERNAME/u)
+  assert.match(storePersonnelSmokeSource, /AUTH_SMOKE_EXPECTED_ROLE = 'STORE_PERSONNEL'/u)
+  assert.match(storePersonnelSmokeSource, /AUTH_SMOKE_EXPECTED_LANDING = '\/store\/me'/u)
 })

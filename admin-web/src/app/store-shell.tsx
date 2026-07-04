@@ -91,6 +91,10 @@ export function StoreShell(input: {
     )
   }
 
+  if (location.pathname === '/store' && input.firstAllowedPath !== '/store') {
+    return <Navigate to={input.firstAllowedPath} replace />
+  }
+
   return (
     <div
       className={`store-shell store-command-app${
