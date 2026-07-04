@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test:e2e": "playwright test",
+    "test:e2e:store-manager": "playwright test store-manager-persona.spec.ts",
     "test:scripts": "node --test scripts/*.test.mjs",
     "guard:auth:evidence": "node scripts/auth-evidence-guard.mjs",
     "smoke:auth:live": "node scripts/auth-live-smoke.mjs",

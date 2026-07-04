@@ -68,3 +68,17 @@ Current landing resolution in `admin-web/src/App.tsx`:
 - `STORE_PERSONNEL` is intentionally excluded from `/store/tasks`; personal
   next-step context should remain on `/store/me`, `/store/home`, or
   `/store/rankings` until a separate personal task surface is scoped.
+
+## Store Manager Pilot Gate
+
+Store Manager pilot readiness is covered by a named smoke and e2e contract:
+
+```powershell
+npm.cmd --prefix admin-web run test:e2e:store-manager -- --workers=1
+npm.cmd --prefix admin-web run smoke:auth:staging:store-manager
+```
+
+The contract keeps `/store/reports` forbidden for `STORE_MANAGER`, keeps
+Region Manager-only incentive approval controls out of the Store Manager
+surface, and verifies that checklist result acknowledgement stays available
+without exposing raw identifiers in the UI.
