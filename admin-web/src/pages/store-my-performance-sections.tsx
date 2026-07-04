@@ -1,9 +1,8 @@
-import { useId } from 'react'
 import { CalendarDays, ChevronDown } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Dialog,
   DialogContent,
@@ -31,7 +30,8 @@ import {
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
-import { cn } from '../lib/utils'
+import type { AppLocale } from '../lib/i18n'
+import { MonthYearPeriodPicker } from './store-month-year-period-picker'
 export {
   StoreMyPerformanceTopbar,
 } from './store-my-performance-navigation'
@@ -56,21 +56,17 @@ type StoreMyPerformanceDateFilterProps = {
     key: string
     label: string
   }>
-  availableLiveYearOptions: Array<{
-    checked: boolean
-    key: string
-  }>
   dataQualityLabel: string
   isDateFilterOpen: boolean
   isPartial: boolean
+  locale: AppLocale
   loadedPeriodCount: number
   onChangeLivePeriodType: (periodType: LivePeriodType) => void
   onSelectClosedSnapshotRun: (snapshotRunId: string) => void
+  onSelectLiveDay: (period: LiveDayPeriod) => void
+  onSelectLiveMonth: (monthKey: string) => void
   onSelectSourceMode: (mode: StorePerformanceSourceMode) => void
   onToggleDateFilter: () => void
-  onToggleLiveDay: (period: LiveDayPeriod) => void
-  onToggleLiveMonth: (monthKey: string) => void
-  onToggleLiveYear: (year: string) => void
   scopedAvailableDailyPeriods: Array<{
     checked: boolean
     key: string
@@ -78,6 +74,7 @@ type StoreMyPerformanceDateFilterProps = {
     period: LiveDayPeriod
   }>
   selectedClosedSnapshotRunId: string
+  selectedLivePeriodStart: string
   selectedLivePeriodType: LivePeriodType
   selectedPeriodLabel: string
   sourceMode: StorePerformanceSourceMode
@@ -126,60 +123,56 @@ function progressFromWidth(width: string) {
   return clampProgress(Number.parseFloat(width.replace('%', '')))
 }
 
-function PeriodCheck({
-  checked,
-  children,
-  disabled,
-  onChange,
-}: {
-  checked: boolean
-  children: string
-  disabled: boolean
-  onChange: () => void
-}) {
-  const id = useId()
+function getDateKey(input: string | null | undefined) {
+  const match = input?.trim().match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : ''
+}
 
-  return (
-    <label
-      htmlFor={id}
-      className={cn(
-        'tw:inline-flex tw:min-h-8 tw:min-w-0 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background tw:px-2.5 tw:text-sm tw:font-medium tw:text-muted-foreground',
-        checked && 'tw:bg-muted tw:text-foreground',
-        disabled && 'tw:cursor-not-allowed tw:opacity-50',
-      )}
-    >
-      <Checkbox
-        id={id}
-        checked={checked}
-        disabled={disabled}
-        onCheckedChange={(value) => {
-          if (value === 'indeterminate') return
-          onChange()
-        }}
-      />
-      <span className="tw:min-w-0 tw:truncate">{children}</span>
-    </label>
-  )
+function getMonthKey(input: string | null | undefined) {
+  return getDateKey(input).slice(0, 7)
+}
+
+function dateFromKey(input: string | null | undefined) {
+  const dateKey = getDateKey(input)
+  if (!dateKey) return undefined
+  const [yearInput, monthInput, dayInput] = dateKey.split('-')
+  const year = Number(yearInput)
+  const month = Number(monthInput)
+  const day = Number(dayInput)
+
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return undefined
+  }
+
+  return new Date(year, month - 1, day)
+}
+
+function dateKeyFromDate(input: Date) {
+  return [
+    input.getFullYear(),
+    String(input.getMonth() + 1).padStart(2, '0'),
+    String(input.getDate()).padStart(2, '0'),
+  ].join('-')
 }
 
 export function StoreMyPerformanceDateFilter({
   activeClosedSnapshotRunId,
   availableClosedSnapshotRuns,
   availableLiveMonthOptions,
-  availableLiveYearOptions,
   dataQualityLabel,
   isDateFilterOpen,
   isPartial,
+  locale,
   loadedPeriodCount,
   onChangeLivePeriodType,
   onSelectClosedSnapshotRun,
+  onSelectLiveDay,
+  onSelectLiveMonth,
   onSelectSourceMode,
   onToggleDateFilter,
-  onToggleLiveDay,
-  onToggleLiveMonth,
-  onToggleLiveYear,
   scopedAvailableDailyPeriods,
   selectedClosedSnapshotRunId,
+  selectedLivePeriodStart,
   selectedLivePeriodType,
   selectedPeriodLabel,
   sourceMode,
@@ -188,6 +181,18 @@ export function StoreMyPerformanceDateFilter({
 }: StoreMyPerformanceDateFilterProps) {
   const selectedClosedValue =
     selectedClosedSnapshotRunId || activeClosedSnapshotRunId || LATEST_CLOSED_SNAPSHOT_VALUE
+  const selectedDateKey = getDateKey(selectedLivePeriodStart)
+  const selectedMonthKey =
+    getMonthKey(selectedLivePeriodStart) || availableLiveMonthOptions[0]?.key || ''
+  const availableMonthValues = availableLiveMonthOptions.map((month) => month.key)
+  const availableDayEntries = scopedAvailableDailyPeriods.map((period) => ({
+    dateKey: getDateKey(period.period.periodStart),
+    period,
+  }))
+  const availableDayKeys = new Set(availableDayEntries.map((entry) => entry.dateKey).filter(Boolean))
+  const selectedDayEntry =
+    availableDayEntries.find((entry) => entry.dateKey === selectedDateKey) ?? availableDayEntries[0]
+  const selectedDailyDate = dateFromKey(selectedDayEntry?.dateKey)
 
   return (
     <section className="tw:relative tw:grid tw:gap-3" aria-label={t('storeMe.dateFilter')}>
@@ -265,69 +270,58 @@ export function StoreMyPerformanceDateFilter({
 
           <Separator />
 
-          <div className="tw:grid tw:gap-3 tw:lg:grid-cols-3">
-            <div className="tw:grid tw:gap-2">
-              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.loadedYears')}</span>
-              <div className="tw:flex tw:max-h-36 tw:flex-wrap tw:gap-2 tw:overflow-auto">
-                {availableLiveYearOptions.length ? (
-                  availableLiveYearOptions.map((year) => (
-                    <PeriodCheck
-                      key={year.key}
-                      checked={year.checked}
-                      disabled={sourceMode !== 'live'}
-                      onChange={() => onToggleLiveYear(year.key)}
-                    >
-                      {year.key}
-                    </PeriodCheck>
-                  ))
-                ) : (
-                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
-                )}
-              </div>
-            </div>
-
-            <div className="tw:grid tw:gap-2">
-              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.loadedMonthBuckets')}</span>
-              <div className="tw:flex tw:max-h-36 tw:flex-wrap tw:gap-2 tw:overflow-auto">
-                {availableLiveMonthOptions.length ? (
-                  availableLiveMonthOptions.map((month) => (
-                    <PeriodCheck
-                      key={month.key}
-                      checked={month.checked}
-                      disabled={sourceMode !== 'live'}
-                      onChange={() => onToggleLiveMonth(month.key)}
-                    >
-                      {month.label}
-                    </PeriodCheck>
-                  ))
-                ) : (
-                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
-                )}
-              </div>
-            </div>
-
-            {selectedLivePeriodType === 'daily' ? (
+          {sourceMode === 'live' ? (
+            selectedLivePeriodType === 'daily' ? (
               <div className="tw:grid tw:gap-2">
-                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.loadedDays')}</span>
-                <div className="tw:flex tw:max-h-36 tw:flex-wrap tw:gap-2 tw:overflow-auto">
-                  {scopedAvailableDailyPeriods.length ? (
-                    scopedAvailableDailyPeriods.map((period) => (
-                      <PeriodCheck
-                        key={`${period.period.periodType}-${period.key}`}
-                        checked={period.checked}
-                        disabled={sourceMode !== 'live'}
-                        onChange={() => onToggleLiveDay(period.period)}
-                      >
-                        {period.label}
-                      </PeriodCheck>
-                    ))
-                  ) : (
-                    <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
-                  )}
-                </div>
+                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.liveDay')}</span>
+                {availableDayEntries.length ? (
+                  <Calendar
+                    mode="single"
+                    {...(selectedDailyDate
+                      ? {
+                          defaultMonth: selectedDailyDate,
+                          selected: selectedDailyDate,
+                        }
+                      : {})}
+                    captionLayout="dropdown"
+                    className="tw:rounded-xl tw:border"
+                    disabled={(date) => !availableDayKeys.has(dateKeyFromDate(date))}
+                    onSelect={(date) => {
+                      if (!date) return
+                      const dateKey = dateKeyFromDate(date)
+                      const match = availableDayEntries.find((entry) => entry.dateKey === dateKey)
+                      if (match) {
+                        onSelectLiveDay(match.period.period)
+                        onToggleDateFilter()
+                      }
+                    }}
+                  />
+                ) : (
+                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
+                )}
               </div>
-            ) : null}
-          </div>
+            ) : (
+              <div className="tw:grid tw:gap-2">
+                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.liveMonth')}</span>
+                {availableMonthValues.length ? (
+                  <MonthYearPeriodPicker
+                    ariaLabel={t('storeMe.loadedMonthSelect')}
+                    availableValues={availableMonthValues}
+                    locale={locale}
+                    onValueChange={(value) => {
+                      onSelectLiveMonth(value)
+                      onToggleDateFilter()
+                    }}
+                    title={t('storeMe.liveMonth')}
+                    triggerClassName="tw:w-full tw:justify-between"
+                    value={selectedMonthKey}
+                  />
+                ) : (
+                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
+                )}
+              </div>
+            )
+          ) : null}
 
           {usesClosedSnapshotMode ? (
             <div className="tw:grid tw:gap-2">
@@ -412,7 +406,7 @@ export function StoreMyPerformanceKpiDialog({
     >
       <DialogContent
         closeLabel={t('storeMe.closeKpiDetails')}
-        className="tw:max-h-[min(44rem,calc(100vh-2rem))] tw:max-w-5xl tw:overflow-auto"
+        className="tw:max-h-[min(46rem,calc(100vh-2rem))] tw:w-[min(72rem,calc(100vw-2rem))] tw:max-w-none tw:overflow-auto"
         data-testid="store-me-kpi-dialog"
       >
         <DialogHeader>
@@ -423,42 +417,44 @@ export function StoreMyPerformanceKpiDialog({
           </DialogTitle>
           <DialogDescription>{t('storeMe.monthlyPerformanceCopy')}</DialogDescription>
         </DialogHeader>
-        <Table aria-label={t('storeMe.monthlyPerformanceTable')}>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t('storeMe.month')}</TableHead>
-              <TableHead>{t('storeMe.score')}</TableHead>
-              <TableHead>{t('storeMe.metric.uptShort')}</TableHead>
-              <TableHead>{t('storeMe.metric.atvShort')}</TableHead>
-              <TableHead>{t('storeMe.metric.hgShort')}</TableHead>
-              <TableHead>{t('storeMe.monthlyTrend')}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {monthlyDetailRows.map((row) => (
-              <TableRow key={row.key}>
-                <TableCell>
-                  <div className="tw:grid tw:gap-1">
-                    <strong className="tw:font-medium">{row.label}</strong>
-                    <span className="tw:text-xs tw:text-muted-foreground">{row.periodNote}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{row.scoreLabel}</TableCell>
-                <TableCell>{row.uptLabel}</TableCell>
-                <TableCell>{row.atvLabel}</TableCell>
-                <TableCell>{row.targetLabel}</TableCell>
-                <TableCell>
-                  <div className="tw:grid tw:min-w-40 tw:gap-1">
-                    <Progress value={progressFromWidth(row.trendWidth)} className="tw:h-2" />
-                    <span className="tw:text-xs tw:text-muted-foreground">
-                      {row.trendLabel ?? t('storeMe.noTrendData')}
-                    </span>
-                  </div>
-                </TableCell>
+        <div className="tw:overflow-x-auto">
+          <Table aria-label={t('storeMe.monthlyPerformanceTable')} className="tw:min-w-[52rem]">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="tw:min-w-44 tw:whitespace-nowrap">{t('storeMe.month')}</TableHead>
+                <TableHead className="tw:whitespace-nowrap">{t('storeMe.score')}</TableHead>
+                <TableHead className="tw:whitespace-nowrap">{t('storeMe.metric.uptShort')}</TableHead>
+                <TableHead className="tw:whitespace-nowrap">{t('storeMe.metric.atvShort')}</TableHead>
+                <TableHead className="tw:whitespace-nowrap">{t('storeMe.metric.hgShort')}</TableHead>
+                <TableHead className="tw:min-w-48 tw:whitespace-nowrap">{t('storeMe.monthlyTrend')}</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {monthlyDetailRows.map((row) => (
+                <TableRow key={row.key}>
+                  <TableCell className="tw:min-w-44 tw:whitespace-nowrap">
+                    <div className="tw:grid tw:gap-1">
+                      <strong className="tw:font-medium">{row.label}</strong>
+                      <span className="tw:text-xs tw:text-muted-foreground">{row.periodNote}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="tw:whitespace-nowrap">{row.scoreLabel}</TableCell>
+                  <TableCell className="tw:whitespace-nowrap">{row.uptLabel}</TableCell>
+                  <TableCell className="tw:whitespace-nowrap">{row.atvLabel}</TableCell>
+                  <TableCell className="tw:whitespace-nowrap">{row.targetLabel}</TableCell>
+                  <TableCell>
+                    <div className="tw:grid tw:min-w-48 tw:gap-1">
+                      <Progress value={progressFromWidth(row.trendWidth)} className="tw:h-2" />
+                      <span className="tw:whitespace-nowrap tw:text-xs tw:text-muted-foreground">
+                        {row.trendLabel ?? t('storeMe.noTrendData')}
+                      </span>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </DialogContent>
     </Dialog>
   )

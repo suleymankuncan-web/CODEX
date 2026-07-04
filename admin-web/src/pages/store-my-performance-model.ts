@@ -267,7 +267,7 @@ function getTargetProgressPercent(metrics: MyPerformanceMetric[]) {
     return 0
   }
 
-  return Math.max(0, Math.min(100, Math.round(source * 100)))
+  return Math.max(0, Math.round(source * 100))
 }
 
 export function getPeriodDateKey(input: string | null | undefined) {
@@ -420,7 +420,7 @@ function getMetricProgressPercent(metric: MyPerformanceMetric | null) {
     return 0
   }
 
-  return Math.max(0, Math.min(100, Math.round(source)))
+  return Math.max(0, Math.round(source))
 }
 
 function getMetricTone(code: string) {
@@ -703,12 +703,8 @@ export function useStoreMyPerformancePeriodModel(input: {
 
 export function createStoreMyPerformancePeriodHandlers(input: {
   availableDailyPeriods: LivePeriodOption[]
-  availableLiveMonthOptions: string[]
-  availableLiveYearOptions: string[]
   availableMonthlyPeriods: LivePeriodOption[]
   dispatch: Dispatch<StoreMyPerformancePageAction>
-  scopedAvailableDailyPeriods: LivePeriodOption[]
-  selectedLiveDayStarts: string[]
   selectedLiveMonthKeys: string[]
   selectedLivePeriodType: LivePeriodType
   selectedLiveYears: string[]
@@ -722,7 +718,7 @@ export function createStoreMyPerformancePeriodHandlers(input: {
     const periodType = selection?.periodType ?? input.selectedLivePeriodType
     const selectedYears = selection?.years ?? input.selectedLiveYears
     const selectedMonths = selection?.months ?? input.selectedLiveMonthKeys
-    const selectedDays = selection?.days ?? input.selectedLiveDayStarts
+    const selectedDays = selection?.days ?? []
     const yearSet = selectedYears.length ? new Set(selectedYears) : null
     const monthSet = selectedMonths.length ? new Set(selectedMonths) : null
     const daySet = periodType === 'daily' && selectedDays.length ? new Set(selectedDays) : null
@@ -744,28 +740,6 @@ export function createStoreMyPerformancePeriodHandlers(input: {
     })
   }
 
-  function getNextSelectionKeys(selection: {
-    currentKeys: string[]
-    optionKeys: string[]
-    key: string
-  }) {
-    const currentKeys = selection.currentKeys.length > 0 ? selection.currentKeys : selection.optionKeys
-    const nextKeySet = new Set(currentKeys)
-
-    if (nextKeySet.has(selection.key)) {
-      nextKeySet.delete(selection.key)
-    } else {
-      nextKeySet.add(selection.key)
-    }
-
-    if (nextKeySet.size === 0) {
-      return null
-    }
-
-    const nextKeys = selection.optionKeys.filter((optionKey) => nextKeySet.has(optionKey))
-    return nextKeys.length === selection.optionKeys.length ? [] : nextKeys
-  }
-
   function changeLivePeriodType(periodType: LivePeriodType) {
     const nextPeriods = getPeriodsForSelection({ periodType })
     input.dispatch({
@@ -775,85 +749,41 @@ export function createStoreMyPerformancePeriodHandlers(input: {
     })
   }
 
-  function toggleLiveYearSelection(year: string) {
-    const nextYears = getNextSelectionKeys({
-      currentKeys: input.selectedLiveYears,
-      optionKeys: input.availableLiveYearOptions,
-      key: year,
-    })
-    if (nextYears === null) {
-      return
-    }
-
-    const nextPeriods = getPeriodsForSelection({ years: nextYears })
-    if (nextPeriods.length === 0) {
-      return
-    }
-
-    input.dispatch({
-      type: 'setLiveYearSelection',
-      years: nextYears,
-      periodStart: getLatestAvailablePeriodStart(nextPeriods),
-    })
-  }
-
-  function toggleLiveMonthSelection(monthKey: string) {
-    const nextMonths = getNextSelectionKeys({
-      currentKeys: input.selectedLiveMonthKeys,
-      optionKeys: input.availableLiveMonthOptions,
-      key: monthKey,
-    })
-    if (nextMonths === null) {
-      return
-    }
-
-    const nextPeriods = getPeriodsForSelection({ months: nextMonths })
+  function selectLiveMonth(monthKey: string) {
+    const nextPeriods = getPeriodsForSelection({ periodType: 'monthly', months: [monthKey] })
     if (nextPeriods.length === 0) {
       return
     }
 
     input.dispatch({
       type: 'setLiveMonthSelection',
-      monthKeys: nextMonths,
+      monthKeys: [monthKey],
       periodStart: getLatestAvailablePeriodStart(nextPeriods),
     })
   }
 
-  function toggleLiveDaySelection(period: { periodStart: string }) {
+  function selectLiveDay(period: { periodStart: string }) {
     const key = getLivePeriodOptionKey(period)
     if (!key) {
       return
     }
 
-    const nextDays = getNextSelectionKeys({
-      currentKeys: input.selectedLiveDayStarts,
-      optionKeys: input.scopedAvailableDailyPeriods.flatMap((item) => {
-        const optionKey = getLivePeriodOptionKey(item)
-        return optionKey ? [optionKey] : []
-      }),
-      key,
-    })
-    if (nextDays === null) {
-      return
-    }
-
-    const nextPeriods = getPeriodsForSelection({ periodType: 'daily', days: nextDays })
+    const nextPeriods = getPeriodsForSelection({ periodType: 'daily', days: [key] })
     if (nextPeriods.length === 0) {
       return
     }
 
     input.dispatch({
       type: 'setLiveDaySelection',
-      dayStarts: nextDays,
+      dayStarts: [key],
       periodStart: getLatestAvailablePeriodStart(nextPeriods),
     })
   }
 
   return {
     changeLivePeriodType,
-    toggleLiveDaySelection,
-    toggleLiveMonthSelection,
-    toggleLiveYearSelection,
+    selectLiveDay,
+    selectLiveMonth,
   }
 }
 

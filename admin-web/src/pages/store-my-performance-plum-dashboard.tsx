@@ -108,7 +108,7 @@ const donutSegmentColors = [
   'var(--store-me-purple-soft)',
 ]
 
-function clampPercent(value: number) {
+function clampBarPercent(value: number) {
   if (!Number.isFinite(value)) {
     return 0
   }
@@ -116,12 +116,20 @@ function clampPercent(value: number) {
   return Math.min(100, Math.max(0, Math.round(value)))
 }
 
+function formatWholePercent(value: number) {
+  if (!Number.isFinite(value)) {
+    return '0'
+  }
+
+  return String(Math.max(0, Math.round(value)))
+}
+
 function progressStyle(value: number): CSSProperties {
-  return { '--store-me-progress': `${clampPercent(value)}%` } as CSSProperties
+  return { '--store-me-progress': `${clampBarPercent(value)}%` } as CSSProperties
 }
 
 function contributionStyle(value: number): CSSProperties {
-  return { '--store-me-contribution': `${clampPercent(value)}%` } as CSSProperties
+  return { '--store-me-contribution': `${clampBarPercent(value)}%` } as CSSProperties
 }
 
 function donutStyle(metrics: MetricCard[]): CSSProperties {
@@ -211,26 +219,34 @@ function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number, fallba
 }
 
 function KpiProgress({
+  displayValue,
   label,
   value,
 }: {
+  displayValue?: string
   label: string
   value: number
 }) {
+  const hasCustomDisplay = displayValue !== undefined
+  const displayPercent = displayValue ?? `${clampBarPercent(value)}%`
+  const ariaValue = hasCustomDisplay
+    ? Math.max(0, Math.round(Number.isFinite(value) ? value : 0))
+    : clampBarPercent(value)
+
   return (
     <div
       className="store-me-kpi-progress"
       style={progressStyle(value)}
       role="progressbar"
       aria-label={label}
-      aria-valuenow={clampPercent(value)}
+      aria-valuenow={ariaValue}
       aria-valuemin={0}
-      aria-valuemax={100}
+      aria-valuemax={hasCustomDisplay ? Math.max(100, ariaValue) : 100}
     >
       <div className="store-me-progress-track" aria-hidden="true">
         <span />
       </div>
-      <strong>{clampPercent(value)}%</strong>
+      <strong>{displayPercent}</strong>
     </div>
   )
 }
@@ -395,13 +411,17 @@ export function StoreMyPerformancePlumDashboard({
           <div className="store-me-target-metric-frame" data-testid="store-me-metric-card">
             <div className="store-me-kpi-body">
               <h2>{t('storeMe.targetProgress')}</h2>
-              <strong>%{clampPercent(targetProgressPercent)}</strong>
+              <strong>%{formatWholePercent(targetProgressPercent)}</strong>
               <p>
                 {targetMetricLabel} · {targetMetric?.statusLabel ?? targetStatusLabel} ·{' '}
-                {t('storeMe.targetProgressPercent', { value: clampPercent(targetProgressPercent) })}
+                {t('storeMe.targetProgressPercent', { value: formatWholePercent(targetProgressPercent) })}
               </p>
             </div>
-            <KpiProgress label={t('storeMe.targetProgress')} value={targetProgressPercent} />
+            <KpiProgress
+              displayValue={`${formatWholePercent(targetProgressPercent)}%`}
+              label={t('storeMe.targetProgress')}
+              value={targetProgressPercent}
+            />
             <div className="store-me-target-strip">
               <span>
                 <small>{t('storeMe.target')}</small>
@@ -557,7 +577,7 @@ export function StoreMyPerformancePlumDashboard({
               </span>
               <span>
                 <small>{t('storeMe.weight')}</small>
-                <strong>%{breakdownRows.reduce((total, row) => total + clampPercent(row.weightPercent), 0)}</strong>
+                <strong>%{breakdownRows.reduce((total, row) => total + clampBarPercent(row.weightPercent), 0)}</strong>
               </span>
               <span>
                 <small>{t('storeMe.scored')}</small>
