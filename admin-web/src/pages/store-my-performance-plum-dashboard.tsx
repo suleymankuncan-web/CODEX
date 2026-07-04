@@ -302,6 +302,12 @@ function MetricKpiCard({
   t: TranslateFunction
 }) {
   const Icon = metricIconByCode[metric.code] ?? ChartNoAxesColumnIncreasing
+  const progressDisplay =
+    metric.progressPercent > 100
+      ? t('storeMe.progressOverTarget')
+      : metric.progressPercent >= 100
+        ? t('storeMe.progressFullContribution')
+        : undefined
 
   return (
     <article
@@ -319,7 +325,11 @@ function MetricKpiCard({
         <strong>{metric.displayValue}</strong>
         <p>{metric.delta ?? t('storeMe.noTrendData')}</p>
       </div>
-      <KpiProgress label={metric.label} value={metric.progressPercent} />
+      <KpiProgress
+        {...(progressDisplay ? { displayValue: progressDisplay } : {})}
+        label={metric.label}
+        value={metric.progressPercent}
+      />
       <RankStrip
         regionPopulationLabel={metric.regionPopulationLabel}
         regionRankLabel={metric.regionRankLabel}
