@@ -78,6 +78,11 @@ implemented and verified.
   out of placeholder status. The production route now owns the month/year
   report package surface and scoped Excel export; Store Manager visibility is
   intentionally excluded.
+- `docs/prototypes/hr-axis-performance-share-card-v1.md` is the locked
+  Store Me external-share performance card contract. It defines the HR Axis
+  palette story card, Turkey-ranking-only content, badge priority, long-name
+  behavior, sensitive-data exclusions, and PNG export acceptance checks for
+  `Performans Kartı Oluştur`.
 
 ## Locked Prototype Contracts
 
@@ -115,6 +120,7 @@ Important production boundary:
 | `docs/prototypes/admin-auth-access-workbench-v1.tsx` | `/admin/auth` Admin Auth access workbench | `DFDBC11C2CD9D7B451CF8B5AEEEB16455D3E370E1C60B8B310E42F2F7BF34069` |
 | `admin-web/src/prototypes/admin/master-data-command-v1.tsx` | `/admin/master-data` Admin Master Data control center | `FD21F8D6491250F38791FD208BF5A7148A8FA0F1767AD3A60F15D61BA6951486` |
 | `admin-web/src/prototypes/admin/master-data-command-v1.css` | `/admin/master-data` Admin Master Data control center styles | `514305117DD8187871D622202447B430D193780843E2FAE42C4C33734D721DE3` |
+| `docs/prototypes/hr-axis-performance-share-card-v1.md` | `/store/me` Store Me external-share performance card contract | `9ABA65949B76BCBD6D0EF5D8341A46476262BE4AB3D8E77F84CC70F597BFE0AD` |
 
 ## Prototype Implementation Evidence
 
