@@ -9,6 +9,15 @@ import {
   canApplyWorkforceRequestTransition,
   type WorkforceRequestStatus,
 } from "./workforce-request-transition.policy";
+import {
+  normalizeWorkforceListLimit,
+  normalizeWorkforceListOffset,
+  resolveWorkforceRequestStoreIds,
+} from "./workforce-list-query.helpers";
+import {
+  mapOffboardingRequest,
+  mapSellerCodeRequest,
+} from "./workforce-request-mappers";
 
 @Injectable()
 export class WorkforceService {
@@ -64,10 +73,14 @@ export class WorkforceService {
     limit?: number;
     offset?: number;
   }) {
-    const limit = this.normalizeListLimit(input.limit);
-    const offset = this.normalizeListOffset(input.offset);
+    const limit = normalizeWorkforceListLimit(input.limit);
+    const offset = normalizeWorkforceListOffset(input.offset);
     const listScope = this.resolveWorkforceRequestListScope(input);
-    const requestedStoreIds = await this.resolveWorkforceRequestStoreFilter(input, input.storeId, listScope);
+    const requestedStoreIds = await resolveWorkforceRequestStoreIds({
+      requestedStoreId: input.storeId,
+      listScope,
+      canReadStore: (storeId) => this.canReadWorkforceStore(input, storeId),
+    });
     const result = await this.workforceRequestRepository.listSellerCodeRequests({
       companyIds: listScope.companyIds,
       regionIds: listScope.regionIds,
@@ -78,7 +91,7 @@ export class WorkforceService {
     });
 
     return buildListResponse(
-      result.items.map((row) => this.mapSellerCodeRequest(row)),
+      result.items.map((row) => mapSellerCodeRequest(row)),
       {
         total: result.total,
         limit,
@@ -219,7 +232,7 @@ export class WorkforceService {
       status: "submitted",
       message: "Seller code request submitted for HR approval",
       data: {
-        request: this.mapSellerCodeRequest(request),
+        request: mapSellerCodeRequest(request),
       },
     });
   }
@@ -273,7 +286,7 @@ export class WorkforceService {
       status: "approved",
       message: "Seller code request approved",
       data: {
-        request: this.mapSellerCodeRequest(request),
+        request: mapSellerCodeRequest(request),
       },
     });
   }
@@ -320,7 +333,7 @@ export class WorkforceService {
       status: "rejected",
       message: "Seller code request returned to store",
       data: {
-        request: this.mapSellerCodeRequest(request),
+        request: mapSellerCodeRequest(request),
       },
     });
   }
@@ -387,7 +400,7 @@ export class WorkforceService {
       status: "resubmitted",
       message: "Seller code request resubmitted for HR approval",
       data: {
-        request: this.mapSellerCodeRequest(request),
+        request: mapSellerCodeRequest(request),
       },
     });
   }
@@ -407,10 +420,14 @@ export class WorkforceService {
     limit?: number;
     offset?: number;
   }) {
-    const limit = this.normalizeListLimit(input.limit);
-    const offset = this.normalizeListOffset(input.offset);
+    const limit = normalizeWorkforceListLimit(input.limit);
+    const offset = normalizeWorkforceListOffset(input.offset);
     const listScope = this.resolveWorkforceRequestListScope(input);
-    const requestedStoreIds = await this.resolveWorkforceRequestStoreFilter(input, input.storeId, listScope);
+    const requestedStoreIds = await resolveWorkforceRequestStoreIds({
+      requestedStoreId: input.storeId,
+      listScope,
+      canReadStore: (storeId) => this.canReadWorkforceStore(input, storeId),
+    });
     const result = await this.workforceRequestRepository.listOffboardingRequests({
       companyIds: listScope.companyIds,
       regionIds: listScope.regionIds,
@@ -421,7 +438,7 @@ export class WorkforceService {
     });
 
     return buildListResponse(
-      result.items.map((row) => this.mapOffboardingRequest(row)),
+      result.items.map((row) => mapOffboardingRequest(row)),
       {
         total: result.total,
         limit,
@@ -473,7 +490,7 @@ export class WorkforceService {
       status: "submitted",
       message: "Offboarding request submitted for HR approval",
       data: {
-        request: this.mapOffboardingRequest(request),
+        request: mapOffboardingRequest(request),
       },
     });
   }
@@ -515,7 +532,7 @@ export class WorkforceService {
       status: "approved",
       message: "Offboarding request approved",
       data: {
-        request: this.mapOffboardingRequest(approval.request),
+        request: mapOffboardingRequest(approval.request),
         accessClosure: approval.accessClosure,
       },
     });
@@ -563,7 +580,7 @@ export class WorkforceService {
       status: "rejected",
       message: "Offboarding request returned to store",
       data: {
-        request: this.mapOffboardingRequest(request),
+        request: mapOffboardingRequest(request),
       },
     });
   }
@@ -626,7 +643,7 @@ export class WorkforceService {
       status: "resubmitted",
       message: "Offboarding request resubmitted for HR approval",
       data: {
-        request: this.mapOffboardingRequest(request),
+        request: mapOffboardingRequest(request),
       },
     });
   }
@@ -777,163 +794,6 @@ export class WorkforceService {
         input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
           ? []
           : storeIds,
-    };
-  }
-
-  private async resolveWorkforceRequestStoreFilter(
-    input: {
-      actorScope: {
-        companyIds: string[];
-        regionIds: string[];
-        storeIds: string[];
-      };
-      actorActionScope?: {
-        assignedStoreIds: string[];
-      };
-      actorRoleCodes: string[];
-    },
-    requestedStoreId: string | undefined,
-    listScope: {
-      companyIds: string[];
-      regionIds: string[];
-      storeIds: string[];
-    },
-  ) {
-    if (!requestedStoreId) {
-      return listScope.storeIds;
-    }
-
-    if (!(await this.canReadWorkforceStore(input, requestedStoreId))) {
-      throw new ForbiddenException("Bu mağazanın personel taleplerine erişemezsiniz.");
-    }
-
-    return [requestedStoreId];
-  }
-
-  private normalizeListLimit(limit?: number) {
-    if (!limit || Number.isNaN(limit)) {
-      return 50;
-    }
-
-    return Math.min(Math.max(Math.trunc(limit), 1), 100);
-  }
-
-  private normalizeListOffset(offset?: number) {
-    if (!offset || Number.isNaN(offset)) {
-      return 0;
-    }
-
-    return Math.max(Math.trunc(offset), 0);
-  }
-
-  private mapSellerCodeRequest(row: {
-    seller_code_request_id: string;
-    company_id: string;
-    region_id: string;
-    store_id: string;
-    store_code: string;
-    store_name: string;
-    store_type: string;
-    request_type: string;
-    request_status: string;
-    first_name: string;
-    last_name: string;
-    national_id_last4: string;
-    phone_number: string;
-    requested_hire_date: string;
-    requested_position_id: string;
-    position_code: string;
-    position_name: string;
-    employment_type: string;
-    requested_seller_code: string | null;
-    approved_seller_code: string | null;
-    last_reference_seller_code: string | null;
-    submitted_by_user_id: string;
-    reviewed_by_user_id: string | null;
-    reviewed_at: string | null;
-    review_note: string | null;
-    created_at: string;
-    updated_at: string;
-    employee_id?: string | null;
-  }) {
-    return {
-      requestId: row.seller_code_request_id,
-      companyId: row.company_id,
-      regionId: row.region_id,
-      storeId: row.store_id,
-      storeCode: row.store_code,
-      storeName: row.store_name,
-      storeType: row.store_type,
-      requestType: row.request_type,
-      status: row.request_status,
-      firstName: row.first_name,
-      lastName: row.last_name,
-      nationalIdLast4: row.national_id_last4,
-      phoneNumber: row.phone_number,
-      hireDate: row.requested_hire_date,
-      requestedPositionId: row.requested_position_id,
-      positionCode: row.position_code,
-      positionName: row.position_name,
-      employmentType: row.employment_type,
-      requestedSellerCode: row.requested_seller_code,
-      approvedSellerCode: row.approved_seller_code,
-      lastReferenceSellerCode: row.last_reference_seller_code,
-      submittedByUserId: row.submitted_by_user_id,
-      reviewedByUserId: row.reviewed_by_user_id,
-      reviewedAt: row.reviewed_at,
-      reviewNote: row.review_note,
-      employeeId: row.employee_id ?? null,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    };
-  }
-
-  private mapOffboardingRequest(row: {
-    offboarding_request_id: string;
-    company_id: string;
-    region_id: string;
-    store_id: string;
-    store_code: string;
-    store_name: string;
-    employee_id: string;
-    external_employee_ref: string | null;
-    first_name: string;
-    last_name: string;
-    position_code: string | null;
-    position_name: string | null;
-    request_status: string;
-    requested_termination_date: string;
-    termination_reason: string;
-    request_reason: string | null;
-    submitted_by_user_id: string;
-    reviewed_by_user_id: string | null;
-    reviewed_at: string | null;
-    review_note: string | null;
-    created_at: string;
-    updated_at: string;
-  }) {
-    return {
-      requestId: row.offboarding_request_id,
-      companyId: row.company_id,
-      regionId: row.region_id,
-      storeId: row.store_id,
-      storeCode: row.store_code,
-      storeName: row.store_name,
-      employeeId: row.employee_id,
-      displayName: `${row.first_name} ${row.last_name}`.trim(),
-      externalEmployeeRef: row.external_employee_ref,
-      positionCode: row.position_code,
-      positionName: row.position_name,
-      status: row.request_status,
-      terminationDate: row.requested_termination_date,
-      terminationReason: row.termination_reason,
-      requestReason: row.request_reason,
-      submittedByUserId: row.submitted_by_user_id,
-      reviewedByUserId: row.reviewed_by_user_id,
-      reviewedAt: row.reviewed_at,
-      reviewNote: row.review_note,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
     };
   }
 }

@@ -215,7 +215,7 @@ describe("Workforce offboarding requests", () => {
         sql.includes("FROM ops.employee_offboarding_request eor") &&
         sql.includes("ORDER BY eor.created_at DESC")
       ) {
-        expect(params).toEqual([[storeId], "pending_hr_approval"]);
+        expect(params).toEqual([[storeId], "pending_hr_approval", 50, 0]);
         return {
           rowCount: 1,
           rows: [pendingRequestRow],
