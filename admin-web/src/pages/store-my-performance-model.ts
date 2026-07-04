@@ -931,21 +931,13 @@ export function buildStoreMyPerformanceViewModel(input: {
   const metricCards = samePeriodMetrics.map((metricDelta) => {
     const metric = findMetric(personnelMetrics, metricDelta.code)
     const metricRank = metricRanksByCode.get(metricDelta.code)
-    const displayValue = getMetricDisplayValue(input.locale, input.t, personnelMetrics, metricDelta.code)
-    const progressPercent = getMetricProgressPercent(metric)
-    const actionMetricValue = getMetricNumericValue(personnelMetrics, metricDelta.code)
-    const actionValueAvailable =
-      actionMetricValue !== null &&
-      metric?.scoreStatus !== 'missing_reference' &&
-      metric?.scoreStatus !== 'pending_normalization' &&
-      metric?.dataStatus !== 'missing' &&
-      metric?.status !== 'missing'
-
     return {
       ...metricDelta,
-      actionValueAvailable,
-      displayValue,
-      progressPercent,
+      actionValueAvailable: getMetricNumericValue(personnelMetrics, metricDelta.code) !== null &&
+        metric?.scoreStatus !== 'missing_reference' && metric?.scoreStatus !== 'pending_normalization' &&
+        metric?.dataStatus !== 'missing' && metric?.status !== 'missing',
+      displayValue: getMetricDisplayValue(input.locale, input.t, personnelMetrics, metricDelta.code),
+      progressPercent: getMetricProgressPercent(metric),
       contributionValue: getFiniteMetricNumber(metric?.contributionValue) ?? 0,
       weightPercent: getFiniteMetricNumber(metric?.weightPercent) ?? 0,
       ...formatRegionRankLabels(metricRank, input.t),

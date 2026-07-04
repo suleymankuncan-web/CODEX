@@ -22,6 +22,11 @@ const dashboardCssSource = await readFile(
   new URL('../src/styles/store-me-plum-dashboard.css', import.meta.url),
   'utf8',
 )
+const compactCssSource = await readFile(
+  new URL('../src/styles/store-me-compact-surface.css', import.meta.url),
+  'utf8',
+)
+const storeMeCssSource = `${dashboardCssSource}\n${compactCssSource}`
 
 test('store me today actions are threshold-driven instead of filler coaching', () => {
   assert.match(actionsSource, /KPI_AVERAGE_THRESHOLD_PERCENT\s*=\s*100/u)
@@ -50,9 +55,9 @@ test('store me production surface keeps compact prototype primitives', () => {
   assert.match(dashboardSource, /todayActionsEmptyTitle/u)
   assert.match(dashboardSource, /<StoreMeTrendChart points=\{chart\.chartPoints\}/u)
   assert.doesNotMatch(dashboardSource, /<svg[\s\S]*store-me-line-chart/u)
-  assert.match(dashboardCssSource, /\.store-me-kpi-head/u)
-  assert.match(dashboardCssSource, /\.store-me-target-strip\s*\{[\s\S]*grid-template-columns:\s*1fr/u)
-  assert.doesNotMatch(dashboardCssSource, /\.store-me-line-chart/u)
+  assert.match(storeMeCssSource, /\.store-me-kpi-head/u)
+  assert.match(storeMeCssSource, /\.store-me-target-strip\s*\{[\s\S]*grid-template-columns:\s*1fr/u)
+  assert.doesNotMatch(storeMeCssSource, /\.store-me-line-chart/u)
 })
 
 test('store me visible Turkish copy is explicit and mojibake-free', () => {
