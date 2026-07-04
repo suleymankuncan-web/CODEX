@@ -7,6 +7,7 @@ import { formatSnapshotOptionLabel } from '../features/reports/snapshot-labels'
 import { formatDate } from '../lib/format'
 import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import { buildStoreMyPerformanceTodayActions } from './store-my-performance-actions'
+import { buildStoreMeShareCardViewModel } from './store-me-share-card-model'
 import { formatPopulation, formatRank, formatRegionRankLabels } from './store-my-performance-rank-labels'
 
 export type LivePeriodType = 'monthly' | 'daily'
@@ -954,11 +955,11 @@ export function buildStoreMyPerformanceViewModel(input: {
   const todayActions = buildStoreMyPerformanceTodayActions({ metricCards, partial, pendingNormalizationLabels, samePeriodScoreDelta, samePeriodScoreDeltaValue, t: input.t, targetProgressPercent })
   const targetMetric = findMetric(personnelMetrics, 'TARGET_ACHIEVEMENT')
   const targetSalesValue = typeof targetMetric?.targetValue === 'number' && Number.isFinite(targetMetric.targetValue) && targetMetric.targetValue > 0 ? targetMetric.targetValue : null
-  const remainingTargetValue =
-    targetSalesValue !== null && supporting.netSalesValue !== null ? Math.max(0, targetSalesValue - supporting.netSalesValue) : null
+  const remainingTargetValue = targetSalesValue !== null && supporting.netSalesValue !== null ? Math.max(0, targetSalesValue - supporting.netSalesValue) : null
   const trendPoints = buildTrendPoints(monthlyDetailRows)
   const employeeStore = input.performance.employee?.storeName ?? input.t('storeMe.noStore')
   const periodLabelWithSource = `${periodLabel} \u00B7 ${formatSourceMode(input.t, input.performance.source.mode)}`
+  const shareCard = buildStoreMeShareCardViewModel({ isPartial: partial.isPartial, performance: input.performance, periodKey: getPeriodDateKey(getPeriodStart(input.performance)), periodLabel, previousPerformance: previousMonthlyIndex >= 0 ? monthlyPerformanceData[previousMonthlyIndex] : null, previousPeriodScore: previousMonthlyRow?.scoreValue ?? null, scoreRows: monthlyDetailRows, storeName: employeeStore, targetMetric, targetProgressPercent, t: input.t })
 
   return {
     actualSalesLabel: formatCurrency(input.locale, input.t, supporting.netSalesValue),
@@ -969,8 +970,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     dataQualityLabel: partial.isPartial ? input.t('storeMe.missingDataExists') : input.t('storeMe.completeData'),
     employeeHeading: `${input.performance.employee?.displayName ?? ''} \u00B7 ${employeeStore}`,
     gradeLabel: `${performanceGrade.code} - ${input.t(`storeMe.grade.${performanceGrade.code}` as TranslationKey)}`,
-    introCopy:
-      input.profileMode === 'personnel' ? input.t('storeMe.personnelProfileIntro') : input.t('storeMe.v2Intro'),
+    introCopy: input.profileMode === 'personnel' ? input.t('storeMe.personnelProfileIntro') : input.t('storeMe.v2Intro'),
     liveDayFilterOptions: input.scopedAvailableDailyPeriods.map((period) => {
       const periodKey = getLivePeriodOptionKey(period)
 
@@ -990,10 +990,7 @@ export function buildStoreMyPerformanceViewModel(input: {
       key: year,
       checked: isSelectionKeyChecked(input.selectedLiveYears, year),
     })),
-    loadedPeriodCount:
-      input.sourceMode === 'closed'
-        ? input.availableClosedSnapshotRuns.length
-        : input.effectiveSelectedLivePeriods.length || monthlyDetailRows.length || input.availableLivePeriods.length,
+    loadedPeriodCount: input.sourceMode === 'closed' ? input.availableClosedSnapshotRuns.length : input.effectiveSelectedLivePeriods.length || monthlyDetailRows.length || input.availableLivePeriods.length,
     metricCards,
     monthlyDetailRows,
     partial,
@@ -1005,6 +1002,7 @@ export function buildStoreMyPerformanceViewModel(input: {
     scoreDeltaLabel: samePeriodScoreDelta ?? input.t('storeMe.noTrendData'),
     scoreMeaning,
     scoreValue: Math.round(input.performance.score.value),
+    shareCard,
     ...formatRegionRankLabels(input.performance.rankings, input.t),
     selectedPeriodLabel: periodLabelWithSource,
     storePopulationLabel: formatPopulation(input.performance.rankings.storePopulation, input.t),

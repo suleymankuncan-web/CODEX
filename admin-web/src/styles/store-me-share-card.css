@@ -1,0 +1,359 @@
+.store-me-share-dialog {
+  --share-card-bg: #050711;
+  --share-card-ink: #ffffff;
+  --share-card-muted: rgba(227, 236, 255, 0.72);
+  --share-card-plum: #7048ff;
+  --share-card-cyan: #14b8d5;
+  --share-card-mint: #9be7e4;
+  --share-card-gold: #f3ce69;
+}
+
+.store-me-share-preview-shell {
+  display: grid;
+  justify-items: center;
+  overflow: auto;
+  max-height: min(72vh, 700px);
+  padding: 0.25rem 0.25rem 0.5rem;
+}
+
+.store-me-share-card {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto minmax(9.6rem, 1fr) auto auto auto;
+  gap: clamp(0.62rem, 1.8vw, 0.95rem);
+  width: min(100%, 340px);
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border: 1px solid rgba(158, 132, 255, 0.42);
+  border-radius: 2.125rem;
+  padding: clamp(1.35rem, 4vw, 1.75rem);
+  color: var(--share-card-ink);
+  background:
+    radial-gradient(circle at 42% 33%, rgba(109, 92, 255, 0.34), transparent 27%),
+    radial-gradient(circle at 84% 19%, rgba(15, 181, 197, 0.5), transparent 34%),
+    linear-gradient(155deg, #25124f 0%, #0e1630 48%, #06313b 100%);
+  box-shadow: 0 26px 70px rgba(5, 7, 17, 0.42);
+}
+
+.store-me-share-card::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: "";
+  background:
+    linear-gradient(120deg, transparent 0 30%, rgba(255, 255, 255, 0.085) 31% 45%, transparent 46%),
+    radial-gradient(circle at 50% 58%, rgba(10, 193, 204, 0.22), transparent 34%);
+}
+
+.store-me-share-card::after {
+  position: absolute;
+  inset: 0.55rem;
+  z-index: -1;
+  content: "";
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1.6rem;
+}
+
+.store-me-share-card-aura {
+  position: absolute;
+  inset: auto -7rem 9rem auto;
+  z-index: -1;
+  width: 16rem;
+  height: 16rem;
+  border-radius: 999px;
+  background: rgba(20, 184, 213, 0.18);
+  filter: blur(18px);
+}
+
+.store-me-share-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.store-me-share-card-header span {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.store-me-share-card-header strong {
+  font-size: 1.05rem;
+  line-height: 1;
+  letter-spacing: 0.13em;
+}
+
+.store-me-share-card-header small {
+  color: var(--share-card-muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.store-me-share-card-header em {
+  border: 1px solid rgba(155, 231, 228, 0.34);
+  border-radius: 999px;
+  padding: 0.6rem 0.8rem;
+  color: #e4feff;
+  background: rgba(20, 184, 213, 0.16);
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.store-me-share-score {
+  position: relative;
+  align-self: center;
+  justify-self: center;
+  display: grid;
+  place-items: center;
+  width: clamp(9.15rem, 48vw, 11rem);
+  aspect-ratio: 1;
+}
+
+.store-me-share-score-ring,
+.store-me-share-score-core {
+  grid-area: 1 / 1;
+  border-radius: 999px;
+}
+
+.store-me-share-score-ring {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle, transparent 0 70%, rgba(255, 255, 255, 0.16) 71% 72%, transparent 73%),
+    conic-gradient(
+      from 224deg,
+      rgba(155, 231, 228, 0.98),
+      rgba(20, 184, 213, 0.98),
+      rgba(60, 98, 255, 0.95),
+      rgba(112, 72, 255, 0.94),
+      rgba(211, 252, 252, 0.98)
+    );
+  box-shadow:
+    0 0 0 0.86rem rgba(255, 255, 255, 0.038),
+    0 1.15rem 3.1rem rgba(20, 184, 213, 0.2);
+}
+
+.store-me-share-score-core {
+  display: grid;
+  place-items: center;
+  width: 86%;
+  height: 86%;
+  background: radial-gradient(circle at 50% 42%, #172035, #060a14 72%);
+  box-shadow: inset 0 0 2rem rgba(0, 0, 0, 0.45);
+}
+
+.store-me-share-score-core small {
+  align-self: end;
+  color: rgba(225, 212, 255, 0.7);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.store-me-share-score-core strong {
+  align-self: start;
+  margin-top: -0.25rem;
+  font-size: clamp(3.8rem, 16vw, 5.1rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  text-shadow: 0 0.6rem 2rem rgba(255, 255, 255, 0.16);
+}
+
+.store-me-share-badge {
+  justify-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2rem;
+  border: 1px solid rgba(155, 231, 228, 0.3);
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  color: #f9fbff;
+  background: rgba(17, 56, 77, 0.7);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.store-me-share-badge svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.store-me-share-badge-gold {
+  border-color: rgba(243, 206, 105, 0.48);
+  background: rgba(110, 77, 22, 0.62);
+  color: #fff7d7;
+}
+
+.store-me-share-badge-plum {
+  border-color: rgba(155, 231, 228, 0.35);
+  background: rgba(58, 42, 120, 0.65);
+}
+
+.store-me-share-badge-mint {
+  border-color: rgba(89, 220, 165, 0.44);
+  background: rgba(21, 89, 74, 0.66);
+}
+
+.store-me-share-badge-cyan {
+  border-color: rgba(20, 184, 213, 0.48);
+  background: rgba(9, 86, 103, 0.66);
+}
+
+.store-me-share-person {
+  display: grid;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.store-me-share-person h2 {
+  margin: 0;
+  font-size: clamp(2.1rem, 8.5vw, 3rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -0.06em;
+  text-wrap: balance;
+}
+
+.store-me-share-person-long h2 {
+  font-size: clamp(1.55rem, 6.6vw, 2.28rem);
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+
+.store-me-share-person p {
+  margin: 0;
+  color: rgba(235, 247, 255, 0.82);
+  font-size: 0.83rem;
+  font-weight: 750;
+}
+
+.store-me-share-rank {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(155, 231, 228, 0.16);
+  border-radius: 1.25rem;
+  padding: 0.85rem;
+  background: linear-gradient(130deg, rgba(112, 72, 255, 0.22), rgba(20, 184, 213, 0.24));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.store-me-share-rank-icon {
+  display: grid;
+  place-items: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 1rem;
+  color: #f7db86;
+  background: rgba(243, 206, 105, 0.18);
+}
+
+.store-me-share-rank-icon svg {
+  width: 1.35rem;
+  height: 1.35rem;
+}
+
+.store-me-share-rank span:last-child {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.store-me-share-rank small {
+  color: rgba(229, 237, 255, 0.72);
+  font-size: 0.66rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+}
+
+.store-me-share-rank strong {
+  font-size: 1.32rem;
+  line-height: 1;
+}
+
+.store-me-share-rank em {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  color: #caffff;
+  background: rgba(20, 184, 213, 0.22);
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.store-me-share-unavailable {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem;
+  color: var(--foreground);
+  background: var(--muted);
+}
+
+.store-me-share-unavailable p {
+  margin: 0;
+  color: var(--muted-foreground);
+}
+
+.store-me-share-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.store-me-share-actions > span {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 520px) {
+  .store-me-share-dialog {
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+    padding: 0.75rem;
+  }
+
+  .store-me-share-preview-shell {
+    max-height: none;
+  }
+
+  .store-me-share-card {
+    width: min(100%, 318px);
+    border-radius: 1.5rem;
+    padding: 1.15rem;
+  }
+
+  .store-me-share-card-header em {
+    padding: 0.5rem 0.62rem;
+    font-size: 0.56rem;
+  }
+
+  .store-me-share-card-header small {
+    font-size: 0.54rem;
+    letter-spacing: 0.11em;
+  }
+
+  .store-me-share-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .store-me-share-actions > span {
+    grid-column: 1 / -1;
+  }
+}
