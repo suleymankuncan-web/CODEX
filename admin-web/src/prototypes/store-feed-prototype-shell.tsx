@@ -33,7 +33,7 @@ const prototypeNavItems = [
 
 export function StoreFeedPrototypeShell() {
   return (
-    <div className="store-shell store-command-app store-feed-prototype-shell">
+    <div className="store-shell store-command-app store-feed-command-shell">
       <aside className="store-command-sidebar" aria-label="Mağaza navigasyonu">
         <div className="store-command-brand">
           <div className="store-command-brand-mark store-command-brand-logo" aria-hidden="true">

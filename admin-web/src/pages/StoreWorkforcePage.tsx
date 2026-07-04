@@ -36,6 +36,7 @@ import {
 } from '../features/workforce/api'
 import { formatDateTime, formatNumber, getUserFacingErrorMessage } from '../lib/format'
 import { StoreRequestFeedback } from './store-approvals-atoms'
+import { StoreWorkforceFilterSelect } from './store-workforce-filter-select'
 import { OffboardingRequestForm } from './store-approvals-offboarding-form'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
 import { SellerCodeRequestForm } from './store-approvals-seller-code-form'
@@ -525,34 +526,28 @@ function StoreManagerWorkforce(input: { authSummary: AuthSessionSummary | null }
                 onChange={(event) => setPersonnelSearch(event.target.value)}
               />
             </label>
-            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
-              <BriefcaseBusiness className="tw:size-4 tw:text-[#647194]" />
-              <select
-                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
-                value={positionFilter}
-                aria-label={t('storeWorkforce.positionFilterAria')}
-                onChange={(event) => setPositionFilter(event.target.value)}
-              >
-                <option value="all">{t('storeWorkforce.allPositions')}</option>
-                {positionOptions.map((position) => (
-                  <option key={position} value={position}>{position}</option>
-                ))}
-              </select>
-            </label>
-            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
-              <ClipboardList className="tw:size-4 tw:text-[#647194]" />
-              <select
-                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
-                value={statusFilter}
-                aria-label={t('storeWorkforce.statusFilterAria')}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                <option value="all">{t('storeWorkforce.allStatuses')}</option>
-                <option value="active">{t('storeWorkforce.statusActive')}</option>
-                <option value="codeWaiting">{t('storeWorkforce.statusCodeWaiting')}</option>
-                <option value="offboarding">{t('storeWorkforce.statusOffboarding')}</option>
-              </select>
-            </label>
+            <StoreWorkforceFilterSelect
+              icon={<BriefcaseBusiness className="tw:size-4 tw:text-[#647194]" />}
+              value={positionFilter}
+              ariaLabel={t('storeWorkforce.positionFilterAria')}
+              options={[
+                { value: 'all', label: t('storeWorkforce.allPositions') },
+                ...positionOptions.map((position) => ({ value: position, label: position })),
+              ]}
+              onChange={setPositionFilter}
+            />
+            <StoreWorkforceFilterSelect
+              icon={<ClipboardList className="tw:size-4 tw:text-[#647194]" />}
+              value={statusFilter}
+              ariaLabel={t('storeWorkforce.statusFilterAria')}
+              options={[
+                { value: 'all', label: t('storeWorkforce.allStatuses') },
+                { value: 'active', label: t('storeWorkforce.statusActive') },
+                { value: 'codeWaiting', label: t('storeWorkforce.statusCodeWaiting') },
+                { value: 'offboarding', label: t('storeWorkforce.statusOffboarding') },
+              ]}
+              onChange={setStatusFilter}
+            />
           </div>
 
           <section

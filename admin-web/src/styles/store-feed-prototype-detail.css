@@ -276,7 +276,7 @@
 }
 
 @media (max-width: 1120px) {
-  .store-feed-prototype-shell .store-command-main {
+  .store-feed-command-shell .store-command-main {
     width: min(100%, 920px);
   }
 
@@ -290,11 +290,11 @@
 }
 
 @media (max-width: 760px) {
-  .feed-prototype {
+  .feed-command {
     padding: 16px 0 32px;
   }
 
-  .feed-prototype-hero,
+  .feed-command-hero,
   .feed-command-card,
   .feed-list-head,
   .feed-composer-footer,
@@ -303,11 +303,11 @@
     flex-direction: column;
   }
 
-  .feed-prototype-hero h1 {
+  .feed-command-hero h1 {
     font-size: 44px;
   }
 
-  .feed-prototype-actions,
+  .feed-command-actions,
   .feed-command-card .feed-button {
     width: 100%;
   }

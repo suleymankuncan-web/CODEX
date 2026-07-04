@@ -1,4 +1,4 @@
-﻿.store-feed-prototype-shell {
+﻿.store-feed-command-shell {
   --feed-ink: #171421;
   --feed-muted: #6d6479;
   --feed-soft: rgba(255, 255, 255, 0.72);
@@ -19,13 +19,13 @@
   background-size: 72px 72px, 72px 72px, auto;
 }
 
-.store-feed-prototype-shell .store-command-main {
+.store-feed-command-shell .store-command-main {
   box-sizing: border-box;
   margin: 0;
   width: min(1360px, calc(100vw - var(--store-command-sidebar) - 36px));
 }
 
-.feed-prototype {
+.feed-command {
   color: var(--feed-ink);
   display: flex;
   flex-direction: column;
@@ -33,14 +33,14 @@
   padding: 30px 0 42px;
 }
 
-.feed-prototype button,
-.feed-prototype input,
-.feed-prototype textarea,
-.feed-prototype select {
+.feed-command button,
+.feed-command input,
+.feed-command textarea,
+.feed-command select {
   font: inherit;
 }
 
-.feed-prototype-hero {
+.feed-command-hero {
   align-items: flex-start;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.94), rgba(245, 242, 255, 0.86) 48%, rgba(224, 249, 250, 0.76));
   border: 1px solid var(--feed-line);
@@ -53,12 +53,12 @@
   padding: 24px;
 }
 
-.feed-prototype-title-block {
+.feed-command-title-block {
   min-width: 0;
 }
 
-.feed-prototype-pills,
-.feed-prototype-actions,
+.feed-command-pills,
+.feed-command-actions,
 .feed-post-badges,
 .feed-post-meta,
 .feed-composer-footer,
@@ -71,7 +71,7 @@
   gap: 8px;
 }
 
-.feed-prototype-hero h1 {
+.feed-command-hero h1 {
   font-size: clamp(42px, 4.4vw, 64px);
   font-weight: 620;
   letter-spacing: 0;
@@ -79,7 +79,7 @@
   margin: 26px 0 8px;
 }
 
-.feed-prototype-hero p,
+.feed-command-hero p,
 .feed-command-card p,
 .feed-list-head p,
 .feed-side-header p,
