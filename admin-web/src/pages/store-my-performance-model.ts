@@ -933,9 +933,17 @@ export function buildStoreMyPerformanceViewModel(input: {
     const metricRank = metricRanksByCode.get(metricDelta.code)
     const displayValue = getMetricDisplayValue(input.locale, input.t, personnelMetrics, metricDelta.code)
     const progressPercent = getMetricProgressPercent(metric)
+    const actionMetricValue = getMetricNumericValue(personnelMetrics, metricDelta.code)
+    const actionValueAvailable =
+      actionMetricValue !== null &&
+      metric?.scoreStatus !== 'missing_reference' &&
+      metric?.scoreStatus !== 'pending_normalization' &&
+      metric?.dataStatus !== 'missing' &&
+      metric?.status !== 'missing'
 
     return {
       ...metricDelta,
+      actionValueAvailable,
       displayValue,
       progressPercent,
       contributionValue: getFiniteMetricNumber(metric?.contributionValue) ?? 0,

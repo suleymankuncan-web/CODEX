@@ -32,9 +32,6 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { AppLocale } from '../lib/i18n'
 import { MonthYearPeriodPicker } from './store-month-year-period-picker'
-export {
-  StoreMyPerformanceTopbar,
-} from './store-my-performance-navigation'
 
 type StorePerformanceSourceMode = 'live' | 'closed'
 type LivePeriodType = 'monthly' | 'daily'
@@ -181,6 +178,7 @@ export function StoreMyPerformanceDateFilter({
 }: StoreMyPerformanceDateFilterProps) {
   const selectedClosedValue =
     selectedClosedSnapshotRunId || activeClosedSnapshotRunId || LATEST_CLOSED_SNAPSHOT_VALUE
+  const [selectedPeriodPrimaryLabel, selectedPeriodMetaLabel] = selectedPeriodLabel.split(' · ')
   const selectedDateKey = getDateKey(selectedLivePeriodStart)
   const selectedMonthKey =
     getMonthKey(selectedLivePeriodStart) || availableLiveMonthOptions[0]?.key || ''
@@ -206,7 +204,10 @@ export function StoreMyPerformanceDateFilter({
         <CalendarDays data-icon="inline-start" />
         <span className="tw:grid tw:min-w-0 tw:flex-1 tw:gap-0.5 tw:text-left">
           <span className="tw:text-xs tw:text-muted-foreground">{t('storeMe.dateFilter')}</span>
-          <strong className="tw:truncate tw:text-sm tw:font-medium">{selectedPeriodLabel}</strong>
+          <strong className="tw:truncate tw:text-sm tw:font-medium">
+            <span data-testid="store-me-period-pill">{selectedPeriodPrimaryLabel || selectedPeriodLabel}</span>
+            {selectedPeriodMetaLabel ? <span> · {selectedPeriodMetaLabel}</span> : null}
+          </strong>
         </span>
         <span className="tw:hidden tw:items-center tw:gap-2 tw:md:flex">
           <Badge variant="outline">{t('storeMe.loadedPeriodCount', { count: loadedPeriodCount })}</Badge>
@@ -406,7 +407,7 @@ export function StoreMyPerformanceKpiDialog({
     >
       <DialogContent
         closeLabel={t('storeMe.closeKpiDetails')}
-        className="tw:max-h-[min(46rem,calc(100vh-2rem))] tw:w-[min(72rem,calc(100vw-2rem))] tw:max-w-none tw:overflow-auto"
+        className="tw:max-h-[min(46rem,calc(100vh-2rem))] tw:w-[calc(100vw-2rem)] tw:max-w-[72rem] tw:overflow-auto tw:sm:max-w-[72rem]"
         data-testid="store-me-kpi-dialog"
       >
         <DialogHeader>

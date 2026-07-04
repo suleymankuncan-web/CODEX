@@ -4,11 +4,12 @@ import {
   CircleCheck,
   Database,
   LineChart,
-  ListChecks,
   Package,
   ShoppingBag,
   Target,
+  type LucideIcon,
 } from 'lucide-react'
+import { Area, AreaChart, CartesianGrid, LabelList, ResponsiveContainer, XAxis, YAxis } from 'recharts'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
@@ -74,29 +75,22 @@ type StoreMyPerformancePlumDashboardProps = {
   turkeyRankLabel: string
 }
 
-type ChartPoint = {
+type StoreMeTrendChartPoint = {
   key: string
   label: string
   scoreLabel: string
-  x: number
-  y: number
+  scoreValue: number
+  trendLabel: string | null
 }
 
-const chartWidth = 720
-const chartHeight = 292
-const chartTop = 64
-const chartBottom = 198
-const chartLeft = 92
-const chartRight = 628
-
-const actionIconById: Record<TodayAction['icon'], typeof ListChecks> = {
+const actionIconById: Record<TodayAction['icon'], LucideIcon> = {
   data: Database,
   metric: ChartNoAxesColumnIncreasing,
   rhythm: LineChart,
   target: Target,
 }
 
-const metricIconByCode: Record<string, typeof Target> = {
+const metricIconByCode: Record<string, LucideIcon> = {
   ATV: ShoppingBag,
   TARGET_ACHIEVEMENT: Target,
   UPT: Package,
@@ -166,11 +160,17 @@ function getMetric(metricCards: MetricCard[], code: string) {
 
 function compactChartLabel(label: string) {
   const trimmed = label.trim()
-  if (trimmed.length <= 11) {
+  const monthYearMatch = trimmed.match(/^(\S+)\s+20\d{2}$/u)
+
+  if (monthYearMatch?.[1]) {
+    return monthYearMatch[1].slice(0, 3)
+  }
+
+  if (trimmed.length <= 8) {
     return trimmed
   }
 
-  return trimmed.replace(/\s+20\d{2}$/u, '').slice(0, 11)
+  return trimmed.slice(0, 8)
 }
 
 function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number, fallbackLabel: string) {
@@ -184,37 +184,21 @@ function buildTrendChart(rows: MonthlyDetailRow[], fallbackScore: number, fallba
         scoreValue: fallbackScore,
         trendLabel: null,
       }]
-  const scores = chartRows.map((row) => row.scoreValue ?? 0)
-  const minScore = Math.min(...scores, 0)
-  const maxScore = Math.max(...scores, 100)
-  const scoreRange = Math.max(1, maxScore - minScore)
-  const points: ChartPoint[] = chartRows.map((row, index) => {
-    const x =
-      chartRows.length === 1
-        ? chartWidth / 2
-        : chartLeft + ((chartRight - chartLeft) * index) / (chartRows.length - 1)
-    const normalized = ((row.scoreValue ?? 0) - minScore) / scoreRange
-
-    return {
-      key: row.key,
-      label: compactChartLabel(row.label),
-      scoreLabel: row.scoreLabel,
-      x: Math.round(x),
-      y: Math.round(chartBottom - normalized * (chartBottom - chartTop)),
-    }
-  })
-  const linePath = points.map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ')
-  const areaPath = `${linePath} L ${points[points.length - 1]?.x ?? chartRight} ${chartBottom + 16} L ${points[0]?.x ?? chartLeft} ${chartBottom + 16} Z`
+  const chartPoints: StoreMeTrendChartPoint[] = chartRows.map((row) => ({
+    key: row.key,
+    label: compactChartLabel(row.label),
+    scoreLabel: row.scoreLabel,
+    scoreValue: row.scoreValue ?? 0,
+    trendLabel: row.trendLabel,
+  }))
   const firstChartRow = chartRows[0]!
   const bestRow = chartRows.reduce((best, row) => ((row.scoreValue ?? 0) > (best.scoreValue ?? 0) ? row : best), firstChartRow)
   const currentRow = chartRows[chartRows.length - 1]!
 
   return {
-    areaPath,
     bestRow,
+    chartPoints,
     currentRow,
-    linePath,
-    points,
   }
 }
 
@@ -247,6 +231,62 @@ function KpiProgress({
         <span />
       </div>
       <strong>{displayPercent}</strong>
+    </div>
+  )
+}
+
+function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
+  return (
+    <ResponsiveContainer width="100%" height={288}>
+      <AreaChart data={points} margin={{ top: 28, right: 18, bottom: 16, left: 8 }}>
+        <defs>
+          <linearGradient id="storeMePlumLine" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="var(--store-me-purple)" />
+            <stop offset="52%" stopColor="var(--store-me-blue)" />
+            <stop offset="100%" stopColor="var(--store-me-teal)" />
+          </linearGradient>
+          <linearGradient id="storeMePlumArea" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--store-me-teal)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--store-me-purple)" stopOpacity="0.04" />
+          </linearGradient>
+        </defs>
+        <CartesianGrid stroke="rgba(92, 86, 116, 0.18)" strokeDasharray="6 8" vertical={false} />
+        <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} />
+        <YAxis hide domain={['dataMin - 8', 'dataMax + 8']} />
+        <Area
+          type="monotone"
+          dataKey="scoreValue"
+          stroke="url(#storeMePlumLine)"
+          strokeWidth={4}
+          fill="url(#storeMePlumArea)"
+          dot={{ r: 5, stroke: 'url(#storeMePlumLine)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
+          activeDot={{ r: 7, stroke: 'var(--store-me-purple)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
+        >
+          <LabelList dataKey="scoreLabel" position="top" className="store-me-chart-value" />
+        </Area>
+      </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+
+function KpiCardHead({
+  Icon,
+  label,
+  value,
+}: {
+  Icon: LucideIcon
+  label: string
+  value: string | number
+}) {
+  return (
+    <div className="store-me-kpi-head">
+      <span className="store-me-icon-bubble" aria-hidden="true">
+        <Icon />
+      </span>
+      <span>
+        <small>{label}</small>
+        <strong>{value}</strong>
+      </span>
     </div>
   )
 }
@@ -307,22 +347,17 @@ function MetricKpiCard({
       ? t('storeMe.progressOverTarget')
       : metric.progressPercent >= 100
         ? t('storeMe.progressFullContribution')
-        : undefined
+        : metric.progressPercent > 0
+          ? t('storeMe.progressUnderAverage')
+          : undefined
 
   return (
     <article
       className={`store-me-plum-card store-me-kpi-card store-me-kpi-${metric.tone}`}
       data-testid="store-me-metric-card"
     >
-      <div className="store-me-card-topline">
-        <span className="store-me-icon-bubble" aria-hidden="true">
-          <Icon />
-        </span>
-        <Badge variant="secondary">{metric.statusLabel}</Badge>
-      </div>
-      <div className="store-me-kpi-body">
-        <h2>{metric.label}</h2>
-        <strong>{metric.displayValue}</strong>
+      <KpiCardHead Icon={Icon} label={metric.label} value={metric.displayValue} />
+      <div className="store-me-kpi-body store-me-kpi-copy">
         <p>{metric.delta ?? t('storeMe.noTrendData')}</p>
       </div>
       <KpiProgress
@@ -345,7 +380,6 @@ function MetricKpiCard({
 
 export function StoreMyPerformancePlumDashboard({
   actualSalesLabel,
-  gradeLabel,
   isPartial,
   metricCards,
   monthlyDetailRows,
@@ -368,8 +402,6 @@ export function StoreMyPerformancePlumDashboard({
   turkeyPopulationLabel,
   turkeyRankLabel,
 }: StoreMyPerformancePlumDashboardProps) {
-  const targetMetric = getMetric(metricCards, 'TARGET_ACHIEVEMENT')
-  const targetMetricLabel = targetMetric?.label ?? t('storeMe.metric.hgShort')
   const displayMetrics = ['UPT', 'ATV']
     .map((code) => getMetric(metricCards, code))
     .filter((metric): metric is MetricCard => metric !== null)
@@ -379,22 +411,14 @@ export function StoreMyPerformancePlumDashboard({
     scorePointsLabel: t('storeMe.scorePoints', { value: scorePointLabel(metric.contributionValue) }),
   }))
   const totalContribution = breakdownRows.reduce((total, metric) => total + Math.max(0, metric.contributionValue), 0)
-  const scoreBadgeLabel = isPartial ? t('storeMe.incompleteData') : gradeLabel
 
   return (
     <section className="store-me-plum-dashboard" aria-label={t('storeMe.performanceSummary')}>
       <section className="store-me-kpi-grid" aria-label={t('storeMe.kpiDetails')}>
         <article className="store-me-plum-card store-me-kpi-card store-me-kpi-score">
-          <div className="store-me-card-topline">
-            <span className="store-me-icon-bubble" aria-hidden="true">
-              <ChartNoAxesColumnIncreasing />
-            </span>
-            <Badge variant={isPartial ? 'destructive' : 'secondary'}>{scoreBadgeLabel}</Badge>
-          </div>
-          <div className="store-me-kpi-body">
-            <h2>{t('storeMe.performanceScore')}</h2>
-            <strong>{scoreValue}</strong>
-            <p>{scoreConfidence}</p>
+          <KpiCardHead Icon={ChartNoAxesColumnIncreasing} label={t('storeMe.performanceScore')} value={scoreValue} />
+          <div className="store-me-kpi-body store-me-kpi-copy">
+            <p>{isPartial ? `${t('storeMe.incompleteData')} · ${scoreConfidence}` : scoreConfidence}</p>
           </div>
           <KpiProgress label={t('storeMe.performanceScore')} value={scoreValue} />
           <RankStrip
@@ -411,19 +435,16 @@ export function StoreMyPerformancePlumDashboard({
         <article
           className="store-me-plum-card store-me-kpi-card store-me-kpi-target"
           data-testid="store-me-target-progress-card"
+          aria-label={`${targetStatusLabel} ${t('storeMe.targetProgress')}`}
         >
-          <div className="store-me-card-topline">
-            <span className="store-me-icon-bubble" aria-hidden="true">
-              <Target />
-            </span>
-            <Badge variant="secondary">{targetStatusLabel}</Badge>
-          </div>
           <div className="store-me-target-metric-frame" data-testid="store-me-metric-card">
-            <div className="store-me-kpi-body">
-              <h2>{t('storeMe.targetProgress')}</h2>
-              <strong>%{formatWholePercent(targetProgressPercent)}</strong>
+            <KpiCardHead
+              Icon={Target}
+              label={t('storeMe.targetProgress')}
+              value={`%${formatWholePercent(targetProgressPercent)}`}
+            />
+            <div className="store-me-kpi-body store-me-kpi-copy">
               <p>
-                {targetMetricLabel} · {targetMetric?.statusLabel ?? targetStatusLabel} ·{' '}
                 {t('storeMe.targetProgressPercent', { value: formatWholePercent(targetProgressPercent) })}
               </p>
             </div>
@@ -479,43 +500,7 @@ export function StoreMyPerformancePlumDashboard({
           </div>
 
           <div className="store-me-chart-frame">
-            <svg
-              className="store-me-line-chart"
-              viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              role="img"
-              aria-label={t('storeMe.progressLine')}
-            >
-              <defs>
-                <linearGradient id="storeMePlumLine" x1="0" x2="1" y1="0" y2="0">
-                  <stop offset="0%" stopColor="var(--store-me-purple)" />
-                  <stop offset="52%" stopColor="var(--store-me-blue)" />
-                  <stop offset="100%" stopColor="var(--store-me-teal)" />
-                </linearGradient>
-                <linearGradient id="storeMePlumArea" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="var(--store-me-teal)" stopOpacity="0.28" />
-                  <stop offset="100%" stopColor="var(--store-me-purple)" stopOpacity="0.04" />
-                </linearGradient>
-              </defs>
-              {[0, 1, 2, 3].map((line) => {
-                const y = chartTop + ((chartBottom - chartTop) * line) / 3
-
-                return <line key={line} x1={chartLeft - 20} x2={chartRight + 20} y1={y} y2={y} />
-              })}
-              <path d={chart.areaPath} fill="url(#storeMePlumArea)" />
-              <path d={chart.linePath} fill="none" stroke="rgba(124, 58, 237, 0.16)" strokeLinecap="round" strokeWidth="14" />
-              <path d={chart.linePath} fill="none" stroke="url(#storeMePlumLine)" strokeLinecap="round" strokeWidth="8" />
-              {chart.points.map((point) => (
-                <g key={point.key}>
-                  <circle cx={point.x} cy={point.y} r="9" />
-                  <text className="checkpoint-value" x={point.x} y={point.y - 16}>
-                    {point.scoreLabel}
-                  </text>
-                  <text className="checkpoint-label" x={point.x} y="262">
-                    {point.label}
-                  </text>
-                </g>
-              ))}
-            </svg>
+            <StoreMeTrendChart points={chart.chartPoints} />
           </div>
 
           <div className="store-me-summary-strip">
@@ -545,22 +530,29 @@ export function StoreMyPerformancePlumDashboard({
             </div>
           </div>
           <div className="store-me-action-list">
-            {todayActions.map((action) => {
-              const Icon = actionIconById[action.icon]
+            {todayActions.length > 0 ? (
+              todayActions.map((action) => {
+                const Icon = actionIconById[action.icon]
 
-              return (
-                <div className="store-me-action-row" key={action.id}>
-                  <span className="store-me-action-icon" aria-hidden="true">
-                    <Icon />
-                  </span>
-                  <span>
-                    <strong>{action.title}</strong>
-                    <small>{action.copy}</small>
-                  </span>
-                  <Badge variant={action.variant}>{action.badge}</Badge>
-                </div>
-              )
-            })}
+                return (
+                  <div className="store-me-action-row" key={action.id}>
+                    <span className="store-me-action-icon" aria-hidden="true">
+                      <Icon />
+                    </span>
+                    <span>
+                      <strong>{action.title}</strong>
+                      <small>{action.copy}</small>
+                    </span>
+                    <Badge variant={action.variant}>{action.badge}</Badge>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="store-me-action-empty">
+                <strong>{t('storeMe.todayActionsEmptyTitle')}</strong>
+                <small>{t('storeMe.todayActionsEmptyCopy')}</small>
+              </div>
+            )}
           </div>
         </article>
       </section>
