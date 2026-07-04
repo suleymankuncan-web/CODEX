@@ -1,21 +1,27 @@
-import { ArrowLeft, CalendarDays } from 'lucide-react'
+import { ArrowLeft, CalendarDays, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 type StoreMyPerformanceTopbarProps = {
   employeeHeading: string
   introCopy: string
+  isShareCardDisabled?: boolean
   onReturn?: () => void
+  onOpenShareCard?: () => void
   periodLabel: string
   returnLabel?: string
+  shareCardLabel?: string
 }
 
 export function StoreMyPerformanceTopbar({
   employeeHeading,
   introCopy,
+  isShareCardDisabled,
   onReturn,
+  onOpenShareCard,
   periodLabel,
   returnLabel,
+  shareCardLabel,
 }: StoreMyPerformanceTopbarProps) {
   return (
     <header className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-start tw:md:justify-between">
@@ -38,14 +44,29 @@ export function StoreMyPerformanceTopbar({
           {introCopy}
         </p>
       </div>
-      <Badge
-        variant="secondary"
-        className="tw:h-auto tw:min-h-8 tw:self-start tw:px-3"
-        data-testid="store-me-period-pill"
-      >
-        <CalendarDays data-icon="inline-start" />
-        {periodLabel}
-      </Badge>
+      <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:md:justify-end">
+        {onOpenShareCard && shareCardLabel ? (
+          <Button
+            type="button"
+            variant="default"
+            className="tw:shadow-sm"
+            disabled={isShareCardDisabled}
+            onClick={onOpenShareCard}
+            data-testid="store-me-share-card-button"
+          >
+            <Sparkles data-icon="inline-start" />
+            {shareCardLabel}
+          </Button>
+        ) : null}
+        <Badge
+          variant="secondary"
+          className="tw:h-auto tw:min-h-8 tw:self-start tw:px-3"
+          data-testid="store-me-period-pill"
+        >
+          <CalendarDays data-icon="inline-start" />
+          {periodLabel}
+        </Badge>
+      </div>
     </header>
   )
 }

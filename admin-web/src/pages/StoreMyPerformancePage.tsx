@@ -1,6 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { useEffect, useReducer } from 'react'
+import { useEffect, useReducer, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
@@ -37,6 +37,7 @@ import {
   StoreMyPerformanceTopbar,
 } from './store-my-performance-sections'
 import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
+import { StoreMeShareCardDialog } from './store-me-share-card-dialog'
 import { StoreMeIncentiveCard } from './store-incentives-widgets'
 import {
   StoreErrorState,
@@ -422,6 +423,7 @@ function StoreMyPerformancePageExperience({
   usesClosedSnapshotMode,
   viewModel,
 }: StoreMyPerformancePageExperienceProps) {
+  const [isShareCardOpen, setShareCardOpen] = useState(false)
   const {
     actualSalesLabel,
     closedSnapshotRunOptions,
@@ -444,6 +446,7 @@ function StoreMyPerformancePageExperience({
     scoreMeaning,
     scoreValue,
     selectedPeriodLabel,
+    shareCard,
     storePopulationLabel,
     storeRankLabel,
     targetProgressPercent,
@@ -461,8 +464,10 @@ function StoreMyPerformancePageExperience({
           <StoreMyPerformanceTopbar
             employeeHeading={employeeHeading}
             introCopy={introCopy}
+            onOpenShareCard={() => setShareCardOpen(true)}
             {...(onReturnToRankings ? { onReturn: onReturnToRankings, returnLabel: t('storeMe.backToRankings') } : {})}
             periodLabel={periodLabel}
+            shareCardLabel={t('storeMe.shareCardButton')}
           />
 
           <StoreMyPerformanceDateFilter
@@ -537,6 +542,12 @@ function StoreMyPerformancePageExperience({
         isOpen={isKpiDetailOpen}
         monthlyDetailRows={monthlyDetailRows}
         onClose={onCloseKpiDetails}
+        t={t}
+      />
+      <StoreMeShareCardDialog
+        card={shareCard}
+        isOpen={isShareCardOpen}
+        onClose={() => setShareCardOpen(false)}
         t={t}
       />
     </>
