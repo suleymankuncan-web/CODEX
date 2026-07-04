@@ -3,7 +3,6 @@ import {
   canListTargetDistributionRequests,
   canOpenStoreChecklists,
   canOpenStoreWorkforce,
-  getAssignedStoreTypes,
   hasAnyRole,
 } from '../features/auth/authorization'
 import type { TranslationKey } from '../features/localization/dictionary'
@@ -143,20 +142,11 @@ export function resolveStorePersona(authSummary: AuthSessionSummary | null): Sto
 }
 
 export function canOpenCompanyStoreIncentives(authSummary: AuthSessionSummary | null) {
-  if (hasAnyRole(authSummary, ['REGION_MANAGER'])) {
-    return true
-  }
-
-  if (!hasAnyRole(authSummary, ['STORE_MANAGER'])) {
-    return false
-  }
-
-  return getAssignedStoreTypes(authSummary).includes('company')
+  return hasAnyRole(authSummary, ['REGION_MANAGER'])
 }
 
 export function canOpenStoreIncentives(authSummary: AuthSessionSummary | null) {
-  return hasAnyRole(authSummary, ['STORE_MANAGER', 'REGION_MANAGER']) &&
-    canOpenCompanyStoreIncentives(authSummary)
+  return canOpenCompanyStoreIncentives(authSummary)
 }
 
 const authenticated = (authSummary: AuthSessionSummary | null) => authSummary !== null
@@ -357,7 +347,6 @@ const navigationByPersona: Record<StorePersona, StoreRouteId[]> = {
     'rankings',
     'approvals',
     'targets',
-    'incentives',
     'workforce',
     'tasks',
     'checklists',

@@ -3,11 +3,6 @@ import type { ReactNode } from 'react'
 import { useEffect, useReducer, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { AuthSessionSummary } from '../features/auth/api'
-import {
-  getMySalesTargetIncentives,
-  mySalesTargetIncentivesQueryKey,
-  type SalesTargetIncentiveProjection,
-} from '../features/incentives/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
@@ -38,7 +33,6 @@ import {
 } from './store-my-performance-sections'
 import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
 import { StoreMeShareCardDialog } from './store-me-share-card-dialog'
-import { StoreMeIncentiveCard } from './store-incentives-widgets'
 import {
   StoreErrorState,
   StoreLoadingState,
@@ -60,10 +54,6 @@ function canUsePersonnelPerformance(authSummary: AuthSessionSummary | null) {
   )
 }
 
-function canUseOwnIncentiveProjection(authSummary: AuthSessionSummary | null) {
-  return authSummary?.user.roleCodes.includes('STORE_PERSONNEL') ?? false
-}
-
 type StoreMyPerformanceViewModel = ReturnType<typeof buildStoreMyPerformanceViewModel>
 type StoreMyPerformancePeriodHandlers = ReturnType<typeof createStoreMyPerformancePeriodHandlers>
 
@@ -80,7 +70,6 @@ type StoreMyPerformancePageExperienceProps = {
   onToggleDateFilter: () => void
   periodHandlers: StoreMyPerformancePeriodHandlers
   performanceEmployeeName: string
-  incentiveProjection: SalesTargetIncentiveProjection | null
   selectedClosedSnapshotRunId: string
   selectedLivePeriodStart: string
   selectedLivePeriodType: LivePeriodType
@@ -154,13 +143,6 @@ export function StoreMyPerformancePage(input: {
         offset: 0,
       }),
     enabled: enabled && usesClosedSnapshotMode && sourceMode === 'closed',
-    ...transientQueryRetryOptions,
-  })
-
-  const incentiveQuery = useQuery({
-    queryKey: mySalesTargetIncentivesQueryKey(),
-    queryFn: () => getMySalesTargetIncentives(),
-    enabled: profileMode === 'self' && canUseOwnIncentiveProjection(input.authSummary),
     ...transientQueryRetryOptions,
   })
 
@@ -366,11 +348,6 @@ export function StoreMyPerformancePage(input: {
     sourceMode,
     t,
   })
-  const incentiveProjection =
-    incentiveQuery.isSuccess
-      ? (incentiveQuery.data.data.projections[0] ?? null)
-      : null
-
   return (
     <StoreMyPerformancePageExperience
       activeClosedSnapshotRunId={activeClosedSnapshotRun?.snapshotRunId ?? ''}
@@ -389,7 +366,6 @@ export function StoreMyPerformancePage(input: {
       onToggleDateFilter={() => dispatch({ type: 'toggleDateFilter' })}
       periodHandlers={periodHandlers}
       performanceEmployeeName={performance.employee.displayName}
-      incentiveProjection={incentiveProjection}
       selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
       selectedLivePeriodStart={selectedLivePeriodStart}
       selectedLivePeriodType={selectedLivePeriodType}
@@ -414,7 +390,6 @@ function StoreMyPerformancePageExperience({
   onToggleDateFilter,
   periodHandlers,
   performanceEmployeeName,
-  incentiveProjection,
   selectedClosedSnapshotRunId,
   selectedLivePeriodStart,
   selectedLivePeriodType,
@@ -501,13 +476,6 @@ function StoreMyPerformancePageExperience({
             pendingNormalizationLabels={pendingNormalizationLabels}
             t={t}
           />
-
-          {incentiveProjection ? (
-            <StoreMeIncentiveCard
-              locale={locale}
-              projection={incentiveProjection}
-            />
-          ) : null}
 
           <StoreMyPerformancePlumDashboard
             actualSalesLabel={actualSalesLabel}

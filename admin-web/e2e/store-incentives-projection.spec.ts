@@ -31,39 +31,29 @@ test.beforeEach(async ({ page }) => {
   await routePerformanceApi(page)
 })
 
-test('store personnel sees own incentive card on My Performance without store incentive navigation', async ({ page }) => {
+test('store personnel does not see incentive card or store incentive navigation', async ({ page }) => {
   await routeAuthSession(page, createAuthSession(['STORE_PERSONNEL']))
   await routeOwnIncentive(page, ownIncentiveFixture)
   await routeStoreIncentives(page, storeIncentiveFixture)
 
   await page.goto('/store/me')
 
-  await expect(page.getByTestId('store-me-incentive-card')).toBeVisible()
-  await expect(page.getByText('Hak edilen prim')).toBeVisible()
-  await expect(page.getByText('12.300,00 TL')).toBeVisible()
-  await expect(page.getByLabel(/personeli prim tablosu/i)).toBeVisible()
+  await expect(page.getByTestId('store-me-incentive-card')).toHaveCount(0)
+  await expect(page.getByText('Hak edilen prim')).toHaveCount(0)
   await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toHaveCount(0)
 })
 
-test('store manager sees incentive navigation and store projection rows without approval flow', async ({ page }) => {
+test('store manager does not see incentive navigation or route surface', async ({ page }) => {
   await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['company'] }))
   await routeStoreIncentives(page, storeIncentiveFixture)
 
   await page.goto('/store/home')
 
-  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toBeVisible()
-  await page.locator('.store-command-nav').getByRole('link', { name: 'Primler' }).click()
+  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toHaveCount(0)
 
-  await expect(page).toHaveURL(/\/store\/incentives$/)
-  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Mağaza primleri' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Onaya gönder/i })).toHaveCount(0)
-  await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toHaveCount(0)
-  await expect(page.getByText('Mağaza müdürü prim tablosu')).toBeVisible()
-  await expect(page.getByText('Satış personeli prim tablosu')).toBeVisible()
-  await expect(page.getByText('15.000,00 TL').first()).toBeVisible()
-  await expect(page.getByText('Store Personnel')).toBeVisible()
-  await expect(page.getByText('16.500,00 TL').first()).toBeVisible()
+  await page.goto('/store/incentives')
+  await expect(page.getByTestId('store-incentives-page')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
 })
 
 test('region manager sees incentive navigation before incentive rows resolve', async ({ page }) => {
@@ -264,16 +254,14 @@ test('store incentives empty period keeps the period picker available', async ({
   await expect(page.getByRole('button', { name: 'Haziran 2026' })).toBeVisible()
 })
 
-test('store manager sees authorized empty incentive period instead of access denial', async ({ page }) => {
+test('store manager sees route unavailable instead of an empty incentive period', async ({ page }) => {
   await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['company'] }))
   await routeStoreIncentives(page, emptyIncentiveFixture)
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
-  await expect(page.getByText('Bu dönem için prim verisi hazırlanmadı.').first()).toBeVisible()
-  await expect(page.getByText('Bu prim görünümü hesabınız için açık değil.')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Haziran 2026' })).toBeVisible()
+  await expect(page.getByTestId('store-incentives-page')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
 })
 
 test('region manager submits the reviewed period package once all stores are checked', async ({ page }) => {
@@ -331,27 +319,29 @@ test('cashier and non-company store users do not see incentive surfaces', async 
   await expect(page.getByTestId('store-incentives-page')).toHaveCount(0)
 })
 
-test('captures responsive visual evidence for eligible incentive state', async ({ page }) => {
+test('captures responsive visual evidence for company store manager hidden incentive state', async ({ page }) => {
   mkdirSync(evidenceDir, { recursive: true })
 
   await routeAuthSession(page, createAuthSession(['STORE_MANAGER'], { assignedStoreTypes: ['company'] }))
   await routeStoreIncentives(page, storeIncentiveFixture)
 
   await page.setViewportSize({ width: 1440, height: 1100 })
-  await page.goto('/store/incentives')
-  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
+  await page.goto('/store/home')
+  await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
+  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
   await page.screenshot({
-    path: join(evidenceDir, 'store-incentives-manager-desktop.png'),
+    path: join(evidenceDir, 'store-incentives-company-manager-hidden-desktop.png'),
     fullPage: true,
   })
 
   await page.setViewportSize({ width: 390, height: 1200 })
-  await page.goto('/store/incentives')
-  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
+  await page.goto('/store/home')
+  await expect(page.getByTestId('store-home-dashboard')).toBeVisible()
+  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Primler' })).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
   await page.screenshot({
-    path: join(evidenceDir, 'store-incentives-manager-mobile-390.png'),
+    path: join(evidenceDir, 'store-incentives-company-manager-hidden-mobile-390.png'),
     fullPage: true,
   })
 })
