@@ -227,13 +227,18 @@ describe("StoreActionPlanService", () => {
     const result = await service.listPlans({
       actorActionScope: { assignedStoreIds: [assignedStoreId] },
       status: "open",
+      statuses: ["open", "blocked"],
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
       limit: 500,
       offset: -4,
     });
 
     expect(storeActionPlanRepository.listPlans).toHaveBeenCalledWith({
       storeIds: [assignedStoreId],
-      status: "open",
+      statuses: ["open", "blocked"],
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
       limit: 100,
       offset: 0,
     });

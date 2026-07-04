@@ -166,7 +166,9 @@ export class StoreActionPlanRepository {
 
   async listPlans(input: {
     storeIds: readonly string[];
-    status?: StoreActionPlanStatus;
+    statuses?: readonly StoreActionPlanStatus[];
+    periodStart?: string;
+    periodEnd?: string;
     limit: number;
     offset: number;
   }) {
@@ -180,9 +182,25 @@ export class StoreActionPlanRepository {
     const params: unknown[] = [[...input.storeIds]];
     const filters = ["p.store_id = ANY($1::uuid[])"];
 
-    if (input.status) {
-      params.push(input.status);
-      filters.push(`p.status = $${params.length}`);
+    if (input.statuses?.length) {
+      params.push([...input.statuses]);
+      filters.push(`p.status = ANY($${params.length}::text[])`);
+    }
+
+    if (input.periodStart && input.periodEnd) {
+      params.push(input.periodStart);
+      const periodStartParam = params.length;
+      params.push(input.periodEnd);
+      const periodEndParam = params.length;
+      filters.push(`(
+        p.due_on BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
+        OR (
+          p.status IN ('open', 'in_progress', 'blocked')
+          AND p.due_on < $${periodStartParam}::date
+        )
+        OR p.closed_at::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
+        OR p.cancelled_at::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
+      )`);
     }
 
     const whereSql = filters.join(" AND ");

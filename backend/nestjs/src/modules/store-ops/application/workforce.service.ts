@@ -60,21 +60,29 @@ export class WorkforceService {
     };
     actorRoleCodes: string[];
     status?: WorkforceRequestStatus;
+    storeId?: string;
+    limit?: number;
+    offset?: number;
   }) {
+    const limit = this.normalizeListLimit(input.limit);
+    const offset = this.normalizeListOffset(input.offset);
     const listScope = this.resolveWorkforceRequestListScope(input);
-    const rows = await this.workforceRequestRepository.listSellerCodeRequests({
+    const requestedStoreIds = await this.resolveWorkforceRequestStoreFilter(input, input.storeId, listScope);
+    const result = await this.workforceRequestRepository.listSellerCodeRequests({
       companyIds: listScope.companyIds,
       regionIds: listScope.regionIds,
-      storeIds: listScope.storeIds,
+      storeIds: requestedStoreIds,
       status: input.status,
+      limit,
+      offset,
     });
 
     return buildListResponse(
-      rows.map((row) => this.mapSellerCodeRequest(row)),
+      result.items.map((row) => this.mapSellerCodeRequest(row)),
       {
-        total: rows.length,
-        limit: rows.length || 50,
-        offset: 0,
+        total: result.total,
+        limit,
+        offset,
       },
     );
   }
@@ -395,21 +403,29 @@ export class WorkforceService {
     };
     actorRoleCodes: string[];
     status?: WorkforceRequestStatus;
+    storeId?: string;
+    limit?: number;
+    offset?: number;
   }) {
+    const limit = this.normalizeListLimit(input.limit);
+    const offset = this.normalizeListOffset(input.offset);
     const listScope = this.resolveWorkforceRequestListScope(input);
-    const rows = await this.workforceRequestRepository.listOffboardingRequests({
+    const requestedStoreIds = await this.resolveWorkforceRequestStoreFilter(input, input.storeId, listScope);
+    const result = await this.workforceRequestRepository.listOffboardingRequests({
       companyIds: listScope.companyIds,
       regionIds: listScope.regionIds,
-      storeIds: listScope.storeIds,
+      storeIds: requestedStoreIds,
       status: input.status,
+      limit,
+      offset,
     });
 
     return buildListResponse(
-      rows.map((row) => this.mapOffboardingRequest(row)),
+      result.items.map((row) => this.mapOffboardingRequest(row)),
       {
-        total: rows.length,
-        limit: rows.length || 50,
-        offset: 0,
+        total: result.total,
+        limit,
+        offset,
       },
     );
   }
@@ -762,6 +778,52 @@ export class WorkforceService {
           ? []
           : storeIds,
     };
+  }
+
+  private async resolveWorkforceRequestStoreFilter(
+    input: {
+      actorScope: {
+        companyIds: string[];
+        regionIds: string[];
+        storeIds: string[];
+      };
+      actorActionScope?: {
+        assignedStoreIds: string[];
+      };
+      actorRoleCodes: string[];
+    },
+    requestedStoreId: string | undefined,
+    listScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    },
+  ) {
+    if (!requestedStoreId) {
+      return listScope.storeIds;
+    }
+
+    if (!(await this.canReadWorkforceStore(input, requestedStoreId))) {
+      throw new ForbiddenException("Bu mağazanın personel taleplerine erişemezsiniz.");
+    }
+
+    return [requestedStoreId];
+  }
+
+  private normalizeListLimit(limit?: number) {
+    if (!limit || Number.isNaN(limit)) {
+      return 50;
+    }
+
+    return Math.min(Math.max(Math.trunc(limit), 1), 100);
+  }
+
+  private normalizeListOffset(offset?: number) {
+    if (!offset || Number.isNaN(offset)) {
+      return 0;
+    }
+
+    return Math.max(Math.trunc(offset), 0);
   }
 
   private mapSellerCodeRequest(row: {

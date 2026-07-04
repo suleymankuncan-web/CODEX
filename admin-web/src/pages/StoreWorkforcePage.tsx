@@ -144,12 +144,12 @@ function StoreManagerWorkforce(input: { authSummary: AuthSessionSummary | null }
   })
   const sellerCodeRequestsQuery = useQuery({
     queryKey: ['seller-code-requests', 'store-workforce', scopeKey],
-    queryFn: () => getSellerCodeRequests(),
+    queryFn: () => getSellerCodeRequests({ storeId, limit: 50, offset: 0 }),
     enabled,
   })
   const offboardingRequestsQuery = useQuery({
     queryKey: ['offboarding-requests', 'store-workforce', scopeKey],
-    queryFn: () => getOffboardingRequests(),
+    queryFn: () => getOffboardingRequests({ storeId, limit: 50, offset: 0 }),
     enabled,
   })
 

@@ -91,6 +91,9 @@ export class WorkforceController {
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
       status: query.status,
+      storeId: query.storeId,
+      limit: query.limit,
+      offset: query.offset,
     });
   }
 
@@ -197,6 +200,9 @@ export class WorkforceController {
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
       status: query.status,
+      storeId: query.storeId,
+      limit: query.limit,
+      offset: query.offset,
     });
   }
 

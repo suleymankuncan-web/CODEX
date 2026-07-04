@@ -26,6 +26,11 @@ export type EmployeeOffboardingRequestRow = {
   updated_at: string;
 };
 
+export type EmployeeOffboardingRequestListResult = {
+  items: EmployeeOffboardingRequestRow[];
+  total: number;
+};
+
 @Injectable()
 export class WorkforceOffboardingReadRepository {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -35,6 +40,8 @@ export class WorkforceOffboardingReadRepository {
     regionIds: string[];
     storeIds: string[];
     status?: string;
+    limit: number;
+    offset: number;
   }) {
     const params: unknown[] = [];
     const clauses: string[] = [];
@@ -57,6 +64,19 @@ export class WorkforceOffboardingReadRepository {
       clauses.push(`eor.request_status = $${params.length}`);
     }
 
+    const whereSql = clauses.join(" AND ");
+    const countResult = await this.databaseService.query<{ total: number }>(
+      `
+        SELECT COUNT(*)::int AS total
+        FROM ops.employee_offboarding_request eor
+        WHERE ${whereSql}
+      `,
+      params,
+    );
+
+    const listParams = [...params, input.limit, input.offset];
+    const limitParam = params.length + 1;
+    const offsetParam = params.length + 2;
     const result = await this.databaseService.query<EmployeeOffboardingRequestRow>(
       `
         SELECT
@@ -99,14 +119,18 @@ export class WorkforceOffboardingReadRepository {
         ) assignment ON TRUE
         LEFT JOIN ops.position p
           ON p.position_id = assignment.position_id
-        WHERE ${clauses.join(" AND ")}
+        WHERE ${whereSql}
         ORDER BY eor.created_at DESC, eor.offboarding_request_id DESC
-        LIMIT 50
+        LIMIT $${limitParam}
+        OFFSET $${offsetParam}
       `,
-      params,
+      listParams,
     );
 
-    return result.rows;
+    return {
+      items: result.rows,
+      total: Number(countResult.rows[0]?.total ?? 0),
+    };
   }
 
   async getOffboardingRequestById(requestId: string) {

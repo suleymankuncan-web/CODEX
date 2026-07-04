@@ -75,11 +75,31 @@ function resolveTaskPersona(authSummary: AuthSessionSummary | null): StoreTasksP
   return 'readOnly'
 }
 
-async function listStoreActionPlansByStatuses(statuses: readonly StoreActionPlanStatus[]) {
+function getSelectedPeriodRange(periodKey: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(periodKey)
+  if (!match) {
+    return undefined
+  }
+
+  const year = Number(match[1])
+  const monthIndex = Number(match[2]) - 1
+  const end = new Date(Date.UTC(year, monthIndex + 1, 0))
+
+  return {
+    periodStart: `${match[1]}-${match[2]}-01`,
+    periodEnd: `${end.getUTCFullYear()}-${String(end.getUTCMonth() + 1).padStart(2, '0')}-${String(end.getUTCDate()).padStart(2, '0')}`,
+  }
+}
+
+async function listStoreActionPlansByStatuses(
+  statuses: readonly StoreActionPlanStatus[],
+  periodRange: { periodStart: string; periodEnd: string } | undefined,
+) {
   const responses = await Promise.all(
     statuses.map((status) =>
       listStoreActionPlans({
         status,
+        ...periodRange,
         limit: STORE_ACTION_PLAN_INDEX_LIMIT,
         offset: 0,
       }),
@@ -100,6 +120,7 @@ export function StoreTasksPage(input: {
   const persona = resolveTaskPersona(input.authSummary)
   const [storeActionPlansOffset, setStoreActionPlansOffset] = useState(0)
   const [selectedPeriod, setSelectedPeriod] = useState(() => getCurrentMonthKey())
+  const selectedPeriodRange = useMemo(() => getSelectedPeriodRange(selectedPeriod), [selectedPeriod])
   const regionMode = 'results'
   const [activeFilter, setActiveFilter] = useState<StoreTaskFilter>('all')
   const [search, setSearch] = useState('')
@@ -108,16 +129,16 @@ export function StoreTasksPage(input: {
     [input.authSummary],
   )
   const storeActionPlansPageKey = useMemo(
-    () => storeActionPlansPageQueryKey(input.authSummary, storeActionPlansOffset),
-    [input.authSummary, storeActionPlansOffset],
+    () => storeActionPlansPageQueryKey(input.authSummary, storeActionPlansOffset, selectedPeriod),
+    [input.authSummary, selectedPeriod, storeActionPlansOffset],
   )
   const activeStoreActionPlansQueryKey = useMemo(
-    () => storeActionPlansActiveIndexQueryKey(input.authSummary),
-    [input.authSummary],
+    () => storeActionPlansActiveIndexQueryKey(input.authSummary, selectedPeriod),
+    [input.authSummary, selectedPeriod],
   )
   const resultStoreActionPlansQueryKey = useMemo(
-    () => storeActionPlansResultIndexQueryKey(input.authSummary),
-    [input.authSummary],
+    () => storeActionPlansResultIndexQueryKey(input.authSummary, selectedPeriod),
+    [input.authSummary, selectedPeriod],
   )
   const checklistAcknowledgementsQueryKey = useMemo(
     () => storeChecklistAcknowledgementsQueryKey(input.authSummary),
@@ -134,6 +155,7 @@ export function StoreTasksPage(input: {
     queryKey: storeActionPlansPageKey,
     queryFn: () =>
       listStoreActionPlans({
+        ...selectedPeriodRange,
         limit: STORE_ACTION_PLAN_PAGE_SIZE,
         offset: storeActionPlansOffset,
       }),
@@ -142,13 +164,13 @@ export function StoreTasksPage(input: {
   })
   const activeStoreActionPlansQuery = useQuery({
     queryKey: activeStoreActionPlansQueryKey,
-    queryFn: () => listStoreActionPlansByStatuses(ACTIVE_STORE_ACTION_PLAN_STATUSES),
+    queryFn: () => listStoreActionPlansByStatuses(ACTIVE_STORE_ACTION_PLAN_STATUSES, selectedPeriodRange),
     enabled: storeActionPlansEnabled && persona !== 'regionManager',
     ...transientQueryRetryOptions,
   })
   const resultStoreActionPlansQuery = useQuery({
     queryKey: resultStoreActionPlansQueryKey,
-    queryFn: () => listStoreActionPlansByStatuses(RESULT_STORE_ACTION_PLAN_STATUSES),
+    queryFn: () => listStoreActionPlansByStatuses(RESULT_STORE_ACTION_PLAN_STATUSES, selectedPeriodRange),
     enabled: storeActionPlansEnabled,
     ...transientQueryRetryOptions,
   })
@@ -291,7 +313,10 @@ export function StoreTasksPage(input: {
         pageMeta={storeActionPlansPageQuery.data?.meta}
         onSearchChange={setSearch}
         onActiveFilterChange={setActiveFilter}
-        onSelectedPeriodChange={setSelectedPeriod}
+        onSelectedPeriodChange={(period) => {
+          setSelectedPeriod(period)
+          setStoreActionPlansOffset(0)
+        }}
         onRefresh={() => {
           void Promise.all([
             inboxQuery.refetch(),

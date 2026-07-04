@@ -104,18 +104,28 @@ describe("StoreActionPlanRepository", () => {
 
     const result = await repository.listPlans({
       storeIds: [planRow.store_id],
-      status: "open",
+      statuses: ["open", "blocked"],
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
       limit: 25,
       offset: 10,
     });
 
     expect(String(query.mock.calls[0][0])).toContain("COUNT(*)::int AS total");
     expect(String(query.mock.calls[0][0])).toContain("store_id = ANY($1::uuid[])");
-    expect(String(query.mock.calls[0][0])).toContain("status = $2");
+    expect(String(query.mock.calls[0][0])).toContain("status = ANY($2::text[])");
+    expect(String(query.mock.calls[0][0])).toContain("p.due_on BETWEEN $3::date AND $4::date");
     expect(String(query.mock.calls[1][0])).toContain("INNER JOIN ops.store s");
     expect(String(query.mock.calls[1][0])).toContain("owner_display_name");
     expect(String(query.mock.calls[1][0])).toContain("ORDER BY p.due_on ASC, p.updated_at DESC");
-    expect(query.mock.calls[1][1]).toEqual([[planRow.store_id], "open", 25, 10]);
+    expect(query.mock.calls[1][1]).toEqual([
+      [planRow.store_id],
+      ["open", "blocked"],
+      "2026-06-01",
+      "2026-06-30",
+      25,
+      10,
+    ]);
     expect(result).toEqual({
       items: [
         expect.objectContaining({

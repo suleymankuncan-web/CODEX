@@ -67,6 +67,9 @@ describe("StoreActionPlanController", () => {
     await controller.listPlans(createRequest(), {
       storeId: assignedStoreId,
       status: "open",
+      statuses: ["open", "blocked"],
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
       limit: 25,
       offset: 5,
     });
@@ -75,6 +78,9 @@ describe("StoreActionPlanController", () => {
       actorActionScope: { assignedStoreIds: [assignedStoreId] },
       storeId: assignedStoreId,
       status: "open",
+      statuses: ["open", "blocked"],
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
       limit: 25,
       offset: 5,
     });
@@ -96,6 +102,9 @@ describe("StoreActionPlanController", () => {
       actorActionScope: { assignedStoreIds: [assignedStoreId] },
       storeId: undefined,
       status: "open",
+      statuses: undefined,
+      periodStart: undefined,
+      periodEnd: undefined,
       limit: 25,
       offset: 0,
     });
@@ -118,6 +127,9 @@ describe("StoreActionPlanController", () => {
       actorActionScope: { assignedStoreIds: [] },
       storeId: undefined,
       status: "open",
+      statuses: undefined,
+      periodStart: undefined,
+      periodEnd: undefined,
       limit: 25,
       offset: 0,
     });

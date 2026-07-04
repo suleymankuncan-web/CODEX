@@ -1,4 +1,5 @@
 type MutableOperation = {
+  parameters?: Array<Record<string, unknown>>;
   requestBody?: Record<string, unknown>;
   responses?: Record<string, Record<string, unknown>>;
 };
@@ -13,6 +14,7 @@ type MutableOpenApiDocument = {
 };
 
 const storeActionPlanSourceTypeEnum = ["kpi_exception", "checklist_remediation"];
+const storeActionPlanStatusEnum = ["open", "in_progress", "blocked", "closed", "cancelled"];
 
 const storeActionPlanSchema = {
   type: "object",
@@ -63,7 +65,7 @@ const storeActionPlanSchema = {
     priority: { type: "string", enum: ["high", "medium", "low"] },
     status: {
       type: "string",
-      enum: ["open", "in_progress", "blocked", "closed", "cancelled"],
+      enum: storeActionPlanStatusEnum,
     },
     dueOn: { type: "string" },
     resolutionNote: { type: "string", nullable: true },
@@ -175,6 +177,25 @@ export function applyStoreActionPlanOpenApi(document: MutableOpenApiDocument) {
     "Paginated store action plans visible inside the current actor action-store assignments.",
     "StoreActionPlanListResponse",
   );
+  setQueryParameters(document.paths, "/api/store-actions/plans", "get", [
+    queryParameter("storeId", { type: "string" }),
+    queryParameter("status", { type: "string", enum: storeActionPlanStatusEnum }),
+    {
+      name: "statuses",
+      in: "query",
+      required: false,
+      style: "form",
+      explode: true,
+      schema: {
+        type: "array",
+        items: { type: "string", enum: storeActionPlanStatusEnum },
+      },
+    },
+    queryParameter("periodStart", { type: "string", format: "date" }),
+    queryParameter("periodEnd", { type: "string", format: "date" }),
+    queryParameter("limit", { type: "integer", minimum: 1, maximum: 100 }),
+    queryParameter("offset", { type: "integer", minimum: 0 }),
+  ]);
   setJsonResponseSchema(
     document.paths,
     "/api/store-actions/plans/{actionPlanId}",
@@ -235,6 +256,32 @@ export function applyStoreActionPlanOpenApi(document: MutableOpenApiDocument) {
     "Command result with the cancelled store action plan.",
     "StoreActionPlanCommandResponse",
   );
+}
+
+function queryParameter(name: string, schema: Record<string, unknown>) {
+  return {
+    name,
+    in: "query",
+    required: false,
+    schema,
+  };
+}
+
+function setQueryParameters(
+  paths: Record<string, unknown>,
+  path: string,
+  method: string,
+  parameters: Array<Record<string, unknown>>,
+) {
+  const operation = (paths[path] as MutablePathItem | undefined)?.[method];
+  if (!operation) {
+    return;
+  }
+
+  operation.parameters = [
+    ...(operation.parameters ?? []).filter((parameter) => parameter.in !== "query"),
+    ...parameters,
+  ];
 }
 
 function commandResponseSchema(dataSchema: Record<string, unknown>) {

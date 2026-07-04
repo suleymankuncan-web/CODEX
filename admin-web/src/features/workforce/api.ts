@@ -75,17 +75,27 @@ export type OffboardingAccessClosure = {
   revokedMobileSessions: number
 }
 
+type WorkforceRequestListInput = {
+  status?: string
+  storeId?: string
+  limit?: number
+  offset?: number
+}
+
 export async function getSellerCodeReference() {
   return fetchOpenApiJson('/api/workforce/seller-code-reference', {
     query: new URLSearchParams({ storeType: 'franchise' }),
   })
 }
 
-export async function getSellerCodeRequests(input?: { status?: string }) {
+export async function getSellerCodeRequests(input?: WorkforceRequestListInput) {
   const params = new URLSearchParams()
   if (input?.status) {
     params.set('status', input.status)
   }
+  appendOptionalQueryParam(params, 'storeId', input?.storeId)
+  appendOptionalQueryParam(params, 'limit', input?.limit)
+  appendOptionalQueryParam(params, 'offset', input?.offset)
 
   return fetchOpenApiJson('/api/workforce/seller-code-requests', { query: params })
 }
@@ -198,11 +208,14 @@ export async function getOrgStores() {
   return fetchJson<OrgStoresResponse>('/org/stores')
 }
 
-export async function getOffboardingRequests(input?: { status?: string }) {
+export async function getOffboardingRequests(input?: WorkforceRequestListInput) {
   const params = new URLSearchParams()
   if (input?.status) {
     params.set('status', input.status)
   }
+  appendOptionalQueryParam(params, 'storeId', input?.storeId)
+  appendOptionalQueryParam(params, 'limit', input?.limit)
+  appendOptionalQueryParam(params, 'offset', input?.offset)
 
   return fetchOpenApiJson('/api/workforce/offboarding-requests', { query: params })
 }
@@ -295,4 +308,12 @@ export async function resubmitOffboardingRequest(input: {
       },
     },
   )
+}
+
+function appendOptionalQueryParam(params: URLSearchParams, key: string, value: string | number | undefined) {
+  if (value === undefined || value === null || value === '') {
+    return
+  }
+
+  params.set(key, String(value))
 }

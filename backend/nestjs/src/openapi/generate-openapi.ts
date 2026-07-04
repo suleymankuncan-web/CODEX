@@ -11,6 +11,7 @@ import {
   nullableStringProperties,
   setJsonRequestSchema,
   setJsonResponseSchema,
+  setQueryParameters,
 } from "./openapi-schema-helpers";
 import {
   applyMasterDataResponseSchemas,
@@ -4680,6 +4681,12 @@ async function generateOpenApi(): Promise<void> {
     "Paginated seller code requests visible to workforce reviewers.",
     "WorkforceSellerCodeRequestsResponse",
   );
+  setQueryParameters(document.paths, "/api/workforce/seller-code-requests", "get", [
+    workforceRequestStatusQueryParameter(),
+    queryParameter("storeId", { type: "string" }),
+    queryParameter("limit", { type: "integer", minimum: 1, maximum: 100 }),
+    queryParameter("offset", { type: "integer", minimum: 0 }),
+  ]);
 
   setJsonResponseSchema(
     document.paths,
@@ -4688,6 +4695,12 @@ async function generateOpenApi(): Promise<void> {
     "Paginated employee offboarding requests visible to workforce reviewers.",
     "WorkforceOffboardingRequestsResponse",
   );
+  setQueryParameters(document.paths, "/api/workforce/offboarding-requests", "get", [
+    workforceRequestStatusQueryParameter(),
+    queryParameter("storeId", { type: "string" }),
+    queryParameter("limit", { type: "integer", minimum: 1, maximum: 100 }),
+    queryParameter("offset", { type: "integer", minimum: 0 }),
+  ]);
 
   setJsonResponseSchema(
     document.paths,
@@ -5134,4 +5147,21 @@ async function generateOpenApi(): Promise<void> {
 
   await app.close();
 }
+
+function queryParameter(name: string, schema: Record<string, unknown>) {
+  return {
+    name,
+    in: "query",
+    required: false,
+    schema,
+  };
+}
+
+function workforceRequestStatusQueryParameter() {
+  return queryParameter("status", {
+    type: "string",
+    enum: ["pending_hr_approval", "approved", "rejected"],
+  });
+}
+
 void generateOpenApi();

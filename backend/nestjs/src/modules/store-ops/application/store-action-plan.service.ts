@@ -48,11 +48,16 @@ export class StoreActionPlanService {
     };
     storeId?: string;
     status?: StoreActionPlanStatus;
+    statuses?: StoreActionPlanStatus[];
+    periodStart?: string;
+    periodEnd?: string;
     limit?: number;
     offset?: number;
   }) {
     const limit = this.normalizeLimit(input.limit);
     const offset = this.normalizeOffset(input.offset);
+    const statuses = this.normalizeStatuses(input.status, input.statuses);
+    const period = this.normalizePeriodFilter(input.periodStart, input.periodEnd);
     const storeIds = this.resolveAssignedStoreFilter(input.actorActionScope, input.storeId);
 
     if (storeIds.length === 0) {
@@ -65,7 +70,9 @@ export class StoreActionPlanService {
 
     const result = await this.storeActionPlanRepository.listPlans({
       storeIds,
-      status: input.status,
+      statuses,
+      periodStart: period?.periodStart,
+      periodEnd: period?.periodEnd,
       limit,
       offset,
     });
@@ -311,6 +318,30 @@ export class StoreActionPlanService {
     }
 
     return Math.max(Math.trunc(offset), 0);
+  }
+
+  private normalizeStatuses(
+    status?: StoreActionPlanStatus,
+    statuses?: StoreActionPlanStatus[],
+  ) {
+    const values = statuses?.length ? statuses : status ? [status] : [];
+    return [...new Set(values)];
+  }
+
+  private normalizePeriodFilter(periodStart?: string, periodEnd?: string) {
+    if (!periodStart && !periodEnd) {
+      return undefined;
+    }
+
+    if (!periodStart || !periodEnd) {
+      throw new BadRequestException("Both periodStart and periodEnd are required");
+    }
+
+    if (periodStart > periodEnd) {
+      throw new BadRequestException("periodStart must be before periodEnd");
+    }
+
+    return { periodStart, periodEnd };
   }
 }
 
