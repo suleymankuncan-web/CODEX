@@ -261,22 +261,38 @@ export class ChecklistService {
       assignedStoreIds: string[];
     };
     actorRoleCodes: string[];
+    checklistInstanceId?: string;
+    includeResponses?: boolean;
+    limit?: number;
+    offset?: number;
+    period?: string;
+    status?: "pending_acknowledgement" | "acknowledged";
+    storeId?: string;
   }) {
     const listScope = this.resolveChecklistAcknowledgementListScope(input);
     const allowedTemplateTypes = this.resolveReadableAcknowledgementTemplateTypes(
       input.actorRoleCodes,
     );
-    const items = await this.checklistAcknowledgementRepository.listChecklistAcknowledgements({
+    const limit = this.normalizeListLimit(input.limit);
+    const offset = this.normalizeListOffset(input.offset);
+    const page = await this.checklistAcknowledgementRepository.listChecklistAcknowledgements({
       companyIds: listScope.companyIds,
       regionIds: listScope.regionIds,
       storeIds: listScope.storeIds,
       allowedTemplateTypes,
+      includeResponses: input.includeResponses ?? true,
+      limit,
+      offset,
+      ...(input.checklistInstanceId ? { checklistInstanceId: input.checklistInstanceId } : {}),
+      ...(input.period ? { period: input.period } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.storeId ? { storeId: input.storeId } : {}),
     });
 
-    return buildListResponse(items, {
-      total: items.length,
-      limit: 50,
-      offset: 0,
+    return buildListResponse(page.items, {
+      total: page.total,
+      limit,
+      offset,
     });
   }
 
@@ -492,6 +508,22 @@ export class ChecklistService {
     if (!actionScope?.assignedStoreIds.includes(storeId)) {
       throw new ForbiddenException(message);
     }
+  }
+
+  private normalizeListLimit(value: number | undefined) {
+    if (!Number.isFinite(value)) {
+      return 50;
+    }
+
+    return Math.min(Math.max(Math.trunc(Number(value)), 1), 100);
+  }
+
+  private normalizeListOffset(value: number | undefined) {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+
+    return Math.max(Math.trunc(Number(value)), 0);
   }
 
   private resolveChecklistAcknowledgementListScope(input: {

@@ -69,14 +69,14 @@ export class WorkflowInboxService {
     if (canSeeAcknowledgements) {
       try {
         const acknowledgementScope = this.resolveAcknowledgementScope(input);
-        const acknowledgements =
+        const acknowledgementPage =
           await this.checklistAcknowledgementRepository.listChecklistAcknowledgements({
             companyIds: acknowledgementScope.companyIds,
             regionIds: acknowledgementScope.regionIds,
             storeIds: acknowledgementScope.storeIds,
           });
         items.push(
-          ...acknowledgements
+          ...acknowledgementPage.items
             .filter((item) => item.acknowledgement === null)
             .map((item) => toChecklistAcknowledgementInboxItem(item)),
         );

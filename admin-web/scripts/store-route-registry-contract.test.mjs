@@ -10,6 +10,10 @@ const shellSource = await readFile(
   new URL('../src/app/store-shell.tsx', import.meta.url),
   'utf8',
 )
+const storeSidebarSource = await readFile(
+  new URL('../src/app/store-sidebar.tsx', import.meta.url),
+  'utf8',
+)
 const modulePreloaderSource = await readFile(
   new URL('../src/app/route-preloaders.ts', import.meta.url),
   'utf8',
@@ -106,7 +110,13 @@ test('store route preloading and data prefetch resolve through the registry', ()
 
   assert.match(dataPreloaderSource, /findStoreRouteDefinition\(pathname\)/u)
   assert.match(dataPreloaderSource, /getStoreRoutePrefetchTasks\(storeRoute\.id, authSummary\)/u)
+  assert.match(
+    dataPreloaderSource,
+    /storeRouteDataPrefetchAllowedRoutes = new Set<StoreRouteId>\(\['home', 'feed'\]\)/u,
+  )
   assert.doesNotMatch(dataPreloaderSource, /if \(pathname === '\/store\/incentives'\)/u)
+  assert.doesNotMatch(storeSidebarSource, /prefetchRouteData/u)
+  assert.doesNotMatch(storeSidebarSource, /route-data-preloaders/u)
 })
 
 test('store route state primitive defines the shared route-state contract', () => {

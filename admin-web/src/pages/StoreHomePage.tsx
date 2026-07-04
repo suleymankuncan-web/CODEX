@@ -86,7 +86,7 @@ export function StoreHomePage(input: {
   const workflowInboxQueryKey = storeWorkflowInboxQueryKey(input.authSummary)
   const checklistAcknowledgementsQuery = useQuery({
     queryKey: checklistAcknowledgementsQueryKey,
-    queryFn: getChecklistAcknowledgements,
+    queryFn: () => getChecklistAcknowledgements(),
     enabled: canReadChecklistInbox && persona !== 'personnel',
     ...transientQueryRetryOptions,
   })

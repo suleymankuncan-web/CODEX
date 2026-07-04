@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Req } from "@nestjs/common";
+import { ApiBody } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { ChecklistService } from "../application/checklist.service";
 import { RequireActionScope, RequireScope } from "../../auth/decorators/scope.decorator";
@@ -6,6 +7,7 @@ import { CreateChecklistInstanceDto } from "./dto/create-checklist-instance.dto"
 import { AddChecklistResponseDto } from "./dto/add-checklist-response.dto";
 import { CompleteChecklistInstanceDto } from "./dto/complete-checklist-instance.dto";
 import { AcknowledgeChecklistInstanceDto } from "./dto/acknowledge-checklist-instance.dto";
+import { ListChecklistAcknowledgementsDto } from "./dto/list-checklist-acknowledgements.dto";
 
 @Controller("checklists")
 export class ChecklistController {
@@ -113,6 +115,7 @@ export class ChecklistController {
   }
 
   @Post("acknowledgements/list")
+  @ApiBody({ required: false, type: ListChecklistAcknowledgementsDto })
   @RequireScope("authenticated")
   @RequireRoles(
     "STORE_MANAGER",
@@ -136,11 +139,21 @@ export class ChecklistController {
         roleCodes: string[];
       };
     },
+    @Body() body?: ListChecklistAcknowledgementsDto,
   ) {
+    const filters = body ?? {};
+
     return this.checklistService.listChecklistAcknowledgements({
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
+      checklistInstanceId: filters.checklistInstanceId,
+      includeResponses: filters.includeResponses,
+      limit: filters.limit,
+      offset: filters.offset,
+      period: filters.period,
+      status: filters.status,
+      storeId: filters.storeId,
     });
   }
 }

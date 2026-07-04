@@ -234,7 +234,7 @@ export function StoreTasksPage(input: {
 
     void queryClient.prefetchQuery({
       queryKey: checklistAcknowledgementsQueryKey,
-      queryFn: getChecklistAcknowledgements,
+      queryFn: () => getChecklistAcknowledgements(),
       ...transientQueryRetryOptions,
     }).catch(() => undefined)
   }, [checklistAcknowledgementsQueryKey, items, queryClient])

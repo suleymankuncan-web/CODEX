@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-03T22:40:09.325Z",
+  "generatedAt": "2026-07-03T23:41:06.279Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -1326,7 +1326,7 @@
       "exportedFunction": "getMobileChecklistToday",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 109
+        "line": 119
       }
     },
     {
@@ -1341,7 +1341,7 @@
       "exportedFunction": "startMobileChecklistInstance",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 116
+        "line": 126
       }
     },
     {
@@ -1356,7 +1356,7 @@
       "exportedFunction": "saveMobileChecklistResponse",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 131
+        "line": 141
       }
     },
     {
@@ -1371,7 +1371,7 @@
       "exportedFunction": "completeMobileChecklistInstance",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 147
+        "line": 157
       }
     },
     {
@@ -1386,7 +1386,7 @@
       "exportedFunction": "getChecklistAcknowledgements",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 165
+        "line": 175
       }
     },
     {
@@ -1401,7 +1401,7 @@
       "exportedFunction": "createAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 172
+        "line": 201
       }
     },
     {
@@ -1416,7 +1416,7 @@
       "exportedFunction": "publishAdminChecklistTemplate",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 182
+        "line": 211
       }
     },
     {
@@ -1431,7 +1431,7 @@
       "exportedFunction": "acknowledgeChecklist",
       "source": {
         "file": "admin-web/src/features/checklists/api.ts",
-        "line": 198
+        "line": 227
       }
     },
     {
@@ -3908,7 +3908,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 115
+        "line": 117
       }
     },
     {
@@ -3922,7 +3922,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 14
+        "line": 16
       }
     },
     {
@@ -3936,7 +3936,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 89
+        "line": 91
       }
     },
     {
@@ -3950,7 +3950,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 63
+        "line": 65
       }
     },
     {
@@ -3964,7 +3964,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist.controller.ts",
-        "line": 37
+        "line": 39
       }
     },
     {
