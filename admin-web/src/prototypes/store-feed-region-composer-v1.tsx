@@ -178,13 +178,13 @@ export function StoreFeedRegionComposerV1Prototype() {
 
   return (
     <section
-      className="feed-prototype"
-      aria-labelledby="feed-prototype-title"
+      className="feed-command"
+      aria-labelledby="feed-command-title"
       onClick={() => setOpenPostMenuId(null)}
     >
-      <header className="feed-prototype-hero">
-        <div className="feed-prototype-title-block">
-          <div className="feed-prototype-pills">
+      <header className="feed-command-hero">
+        <div className="feed-command-title-block">
+          <div className="feed-command-pills">
             <span className="feed-pill feed-pill-primary">
               <Megaphone size={15} />
               Duyurular
@@ -192,10 +192,10 @@ export function StoreFeedRegionComposerV1Prototype() {
             <span className="feed-pill">Bölge müdürü</span>
             <span className="feed-pill feed-pill-soft">Onur Kaytan Bölgesi</span>
           </div>
-          <h1 id="feed-prototype-title">Duyurular</h1>
+          <h1 id="feed-command-title">Duyurular</h1>
           <p>Bölge mağazalarına giden hızlı duyuru ve paylaşım akışı.</p>
         </div>
-        <div className="feed-prototype-actions">
+        <div className="feed-command-actions">
           <button type="button" className="feed-button feed-button-muted">
             <RefreshCcw size={16} />
             Yenile

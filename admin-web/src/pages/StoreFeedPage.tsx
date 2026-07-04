@@ -320,13 +320,13 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
 
   return (
     <section
-      className="feed-prototype store-feed-command-page"
+      className="feed-command store-feed-command-page"
       aria-labelledby="feed-production-title"
       onClick={() => setOpenPostMenuId(null)}
     >
-      <header className="feed-prototype-hero">
-        <div className="feed-prototype-title-block">
-          <div className="feed-prototype-pills">
+      <header className="feed-command-hero">
+        <div className="feed-command-title-block">
+          <div className="feed-command-pills">
             <span className="feed-pill feed-pill-primary">
               <Megaphone size={15} />
               Duyurular
@@ -337,7 +337,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
           <h1 id="feed-production-title">Duyurular</h1>
           <p>Bölge mağazalarına giden hızlı duyuru ve paylaşım akışı.</p>
         </div>
-        <div className="feed-prototype-actions">
+        <div className="feed-command-actions">
           <button
             type="button"
             className="feed-button feed-button-muted"

@@ -9,6 +9,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   BriefcaseBusiness,
   ClipboardList,
   Clock3,
@@ -525,34 +532,40 @@ function StoreManagerWorkforce(input: { authSummary: AuthSessionSummary | null }
                 onChange={(event) => setPersonnelSearch(event.target.value)}
               />
             </label>
-            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
+            <div className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
               <BriefcaseBusiness className="tw:size-4 tw:text-[#647194]" />
-              <select
-                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
-                value={positionFilter}
-                aria-label={t('storeWorkforce.positionFilterAria')}
-                onChange={(event) => setPositionFilter(event.target.value)}
-              >
-                <option value="all">{t('storeWorkforce.allPositions')}</option>
-                {positionOptions.map((position) => (
-                  <option key={position} value={position}>{position}</option>
-                ))}
-              </select>
-            </label>
-            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
+              <Select value={positionFilter} onValueChange={setPositionFilter}>
+                <SelectTrigger
+                  aria-label={t('storeWorkforce.positionFilterAria')}
+                  className="tw:h-auto tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:px-0 tw:py-0 tw:text-sm tw:font-medium tw:text-[#071333] tw:shadow-none tw:focus-visible:ring-0"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('storeWorkforce.allPositions')}</SelectItem>
+                  {positionOptions.map((position) => (
+                    <SelectItem key={position} value={position}>{position}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
               <ClipboardList className="tw:size-4 tw:text-[#647194]" />
-              <select
-                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none"
-                value={statusFilter}
-                aria-label={t('storeWorkforce.statusFilterAria')}
-                onChange={(event) => setStatusFilter(event.target.value)}
-              >
-                <option value="all">{t('storeWorkforce.allStatuses')}</option>
-                <option value="active">{t('storeWorkforce.statusActive')}</option>
-                <option value="codeWaiting">{t('storeWorkforce.statusCodeWaiting')}</option>
-                <option value="offboarding">{t('storeWorkforce.statusOffboarding')}</option>
-              </select>
-            </label>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger
+                  aria-label={t('storeWorkforce.statusFilterAria')}
+                  className="tw:h-auto tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:px-0 tw:py-0 tw:text-sm tw:font-medium tw:text-[#071333] tw:shadow-none tw:focus-visible:ring-0"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">{t('storeWorkforce.allStatuses')}</SelectItem>
+                  <SelectItem value="active">{t('storeWorkforce.statusActive')}</SelectItem>
+                  <SelectItem value="codeWaiting">{t('storeWorkforce.statusCodeWaiting')}</SelectItem>
+                  <SelectItem value="offboarding">{t('storeWorkforce.statusOffboarding')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <section
