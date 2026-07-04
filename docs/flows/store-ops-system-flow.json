@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-03T23:41:06.279Z",
+  "generatedAt": "2026-07-04T01:36:44.437Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2886,7 +2886,7 @@
       "exportedFunction": "listStoreActionPlans",
       "source": {
         "file": "admin-web/src/features/store-actions/api.ts",
-        "line": 55
+        "line": 63
       }
     },
     {
@@ -2901,7 +2901,7 @@
       "exportedFunction": "getStoreActionPlan",
       "source": {
         "file": "admin-web/src/features/store-actions/api.ts",
-        "line": 59
+        "line": 67
       }
     },
     {
@@ -2916,7 +2916,7 @@
       "exportedFunction": "createStoreActionPlan",
       "source": {
         "file": "admin-web/src/features/store-actions/api.ts",
-        "line": 65
+        "line": 73
       }
     },
     {
@@ -2931,7 +2931,7 @@
       "exportedFunction": "updateStoreActionPlanStatus",
       "source": {
         "file": "admin-web/src/features/store-actions/api.ts",
-        "line": 75
+        "line": 83
       }
     },
     {
@@ -2946,7 +2946,7 @@
       "exportedFunction": "closeStoreActionPlan",
       "source": {
         "file": "admin-web/src/features/store-actions/api.ts",
-        "line": 86
+        "line": 94
       }
     },
     {
@@ -2961,7 +2961,7 @@
       "exportedFunction": "cancelStoreActionPlan",
       "source": {
         "file": "admin-web/src/features/store-actions/api.ts",
-        "line": 97
+        "line": 105
       }
     },
     {
@@ -3066,7 +3066,7 @@
       "exportedFunction": "getSellerCodeReference",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 79
+        "line": 86
       }
     },
     {
@@ -3081,7 +3081,7 @@
       "exportedFunction": "getSellerCodeRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 90
+        "line": 100
       }
     },
     {
@@ -3096,7 +3096,7 @@
       "exportedFunction": "approveSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 98
+        "line": 108
       }
     },
     {
@@ -3111,7 +3111,7 @@
       "exportedFunction": "rejectSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 114
+        "line": 124
       }
     },
     {
@@ -3126,7 +3126,7 @@
       "exportedFunction": "resubmitSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 136
+        "line": 146
       }
     },
     {
@@ -3141,7 +3141,7 @@
       "exportedFunction": "getPositionOptions",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 156
+        "line": 166
       }
     },
     {
@@ -3156,7 +3156,7 @@
       "exportedFunction": "getStoreEmployees",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 161
+        "line": 171
       }
     },
     {
@@ -3171,7 +3171,7 @@
       "exportedFunction": "getStoreHeadcountGap",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 174
+        "line": 184
       }
     },
     {
@@ -3186,7 +3186,7 @@
       "exportedFunction": "getOrgStores",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 198
+        "line": 208
       }
     },
     {
@@ -3201,7 +3201,7 @@
       "exportedFunction": "getOffboardingRequests",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 207
+        "line": 220
       }
     },
     {
@@ -3216,7 +3216,7 @@
       "exportedFunction": "createSellerCodeRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 222
+        "line": 235
       }
     },
     {
@@ -3231,7 +3231,7 @@
       "exportedFunction": "createOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 238
+        "line": 251
       }
     },
     {
@@ -3246,7 +3246,7 @@
       "exportedFunction": "approveOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 251
+        "line": 264
       }
     },
     {
@@ -3261,7 +3261,7 @@
       "exportedFunction": "rejectOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 268
+        "line": 281
       }
     },
     {
@@ -3276,7 +3276,7 @@
       "exportedFunction": "resubmitOffboardingRequest",
       "source": {
         "file": "admin-web/src/features/workforce/api.ts",
-        "line": 286
+        "line": 299
       }
     }
   ],
@@ -5532,7 +5532,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
-        "line": 49
+        "line": 52
       }
     },
     {
@@ -5546,7 +5546,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
-        "line": 36
+        "line": 39
       }
     },
     {
@@ -5560,7 +5560,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
-        "line": 98
+        "line": 101
       }
     },
     {
@@ -5574,7 +5574,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
-        "line": 82
+        "line": 85
       }
     },
     {
@@ -5588,7 +5588,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
-        "line": 65
+        "line": 68
       }
     },
     {
@@ -5784,7 +5784,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 176
+        "line": 179
       }
     },
     {
@@ -5798,7 +5798,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 203
+        "line": 209
       }
     },
     {
@@ -5812,7 +5812,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 295
+        "line": 301
       }
     },
     {
@@ -5826,7 +5826,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 312
+        "line": 318
       }
     },
     {
@@ -5840,7 +5840,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 329
+        "line": 335
       }
     },
     {
@@ -5854,7 +5854,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 97
+        "line": 100
       }
     },
     {
@@ -5896,7 +5896,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 148
+        "line": 151
       }
     },
     {
@@ -5910,7 +5910,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 231
+        "line": 237
       }
     },
     {
@@ -5924,7 +5924,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 249
+        "line": 255
       }
     },
     {
@@ -5938,7 +5938,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 266
+        "line": 272
       }
     },
     {
@@ -5952,7 +5952,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
-        "line": 121
+        "line": 124
       }
     }
   ],

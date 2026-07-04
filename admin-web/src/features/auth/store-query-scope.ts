@@ -51,14 +51,15 @@ export function storeWorkflowInboxQueryKey(authSummary: AuthSessionSummary | nul
 export function storeActionPlansPageQueryKey(
   authSummary: AuthSessionSummary | null,
   offset: number,
+  periodKey?: string,
 ) {
-  return ['store-action-plans', 'store-tasks', 'page', getStoreQueryScopeSignature(authSummary), offset] as const
+  return ['store-action-plans', 'store-tasks', 'page', getStoreQueryScopeSignature(authSummary), periodKey ?? 'all-periods', offset] as const
 }
 
-export function storeActionPlansActiveIndexQueryKey(authSummary: AuthSessionSummary | null) {
-  return ['store-action-plans', 'store-tasks', 'active-index', getStoreQueryScopeSignature(authSummary)] as const
+export function storeActionPlansActiveIndexQueryKey(authSummary: AuthSessionSummary | null, periodKey?: string) {
+  return ['store-action-plans', 'store-tasks', 'active-index', getStoreQueryScopeSignature(authSummary), periodKey ?? 'all-periods'] as const
 }
 
-export function storeActionPlansResultIndexQueryKey(authSummary: AuthSessionSummary | null) {
-  return ['store-action-plans', 'store-tasks', 'result-index', getStoreQueryScopeSignature(authSummary)] as const
+export function storeActionPlansResultIndexQueryKey(authSummary: AuthSessionSummary | null, periodKey?: string) {
+  return ['store-action-plans', 'store-tasks', 'result-index', getStoreQueryScopeSignature(authSummary), periodKey ?? 'all-periods'] as const
 }

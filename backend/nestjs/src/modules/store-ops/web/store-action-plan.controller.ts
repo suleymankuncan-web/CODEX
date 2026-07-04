@@ -28,6 +28,9 @@ export class StoreActionPlanController {
       actorActionScope: request.user.actionScope,
       storeId: query.storeId,
       status: query.status,
+      statuses: query.statuses,
+      periodStart: query.periodStart,
+      periodEnd: query.periodEnd,
       limit: query.limit,
       offset: query.offset,
     });

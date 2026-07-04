@@ -324,7 +324,7 @@ describe("Workforce seller code requests", () => {
   it("keeps store manager seller code request lists limited to assigned stores even when company scope is present", async () => {
     const query = jest.fn(async (sql: string, params?: unknown[]) => {
       if (sql.includes("FROM ops.seller_code_request scr") && sql.includes("ORDER BY scr.created_at DESC")) {
-        expect(params).toEqual([[storeId], "pending_hr_approval"]);
+        expect(params).toEqual([[storeId], "pending_hr_approval", 50, 0]);
         return {
           rowCount: 1,
           rows: [

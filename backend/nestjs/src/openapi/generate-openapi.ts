@@ -23,6 +23,7 @@ import {
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyBrowserSessionOpenApi } from "./browser-session-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
+import { applyWorkforceOpenApi } from "./workforce-openapi";
 const publicOperations = [
   { path: "/api/auth/bootstrap", method: "get" },
   { path: "/api/health", method: "get" },
@@ -4649,45 +4650,7 @@ async function generateOpenApi(): Promise<void> {
     "SnapshotRunAuditResponse",
   );
 
-  setJsonResponseSchema(
-    document.paths,
-    "/api/workforce/seller-code-reference",
-    "get",
-    "Latest franchise seller code reference and next preview.",
-    "WorkforceSellerCodeReferenceResponse",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/workforce/position-options",
-    "get",
-    "Store position options available for workforce requests.",
-    "WorkforcePositionOptionsResponse",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/workforce/store-employees",
-    "get",
-    "Active store employees available for offboarding requests.",
-    "WorkforceStoreEmployeesResponse",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/workforce/seller-code-requests",
-    "get",
-    "Paginated seller code requests visible to workforce reviewers.",
-    "WorkforceSellerCodeRequestsResponse",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/workforce/offboarding-requests",
-    "get",
-    "Paginated employee offboarding requests visible to workforce reviewers.",
-    "WorkforceOffboardingRequestsResponse",
-  );
+  applyWorkforceOpenApi(document);
 
   setJsonResponseSchema(
     document.paths,
@@ -5134,4 +5097,5 @@ async function generateOpenApi(): Promise<void> {
 
   await app.close();
 }
+
 void generateOpenApi();

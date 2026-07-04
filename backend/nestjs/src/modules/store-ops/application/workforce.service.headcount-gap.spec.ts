@@ -26,8 +26,8 @@ describe("WorkforceService headcount gap access", () => {
         region_id: input?.storeRegionId ?? regionId,
         store_id: storeId,
       }),
-      listSellerCodeRequests: jest.fn().mockResolvedValue([]),
-      listOffboardingRequests: jest.fn().mockResolvedValue([]),
+      listSellerCodeRequests: jest.fn().mockResolvedValue({ items: [], total: 0 }),
+      listOffboardingRequests: jest.fn().mockResolvedValue({ items: [], total: 0 }),
     };
 
     return {
@@ -108,6 +108,9 @@ describe("WorkforceService headcount gap access", () => {
       },
       actorRoleCodes: ["STORE_MANAGER"],
       status: "pending_hr_approval" as const,
+      storeId: assignedStoreId,
+      limit: 500,
+      offset: -2,
     };
 
     await service.listSellerCodeRequests(scopeInput);
@@ -118,12 +121,16 @@ describe("WorkforceService headcount gap access", () => {
       regionIds: [],
       storeIds: [assignedStoreId],
       status: "pending_hr_approval",
+      limit: 100,
+      offset: 0,
     });
     expect(workforceRequestRepository.listOffboardingRequests).toHaveBeenCalledWith({
       companyIds: [],
       regionIds: [],
       storeIds: [assignedStoreId],
       status: "pending_hr_approval",
+      limit: 100,
+      offset: 0,
     });
   });
 });

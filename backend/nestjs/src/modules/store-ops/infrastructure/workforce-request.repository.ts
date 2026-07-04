@@ -197,6 +197,8 @@ export class WorkforceRequestRepository {
     regionIds: string[];
     storeIds: string[];
     status?: string;
+    limit: number;
+    offset: number;
   }) {
     return this.sellerCodeReadRepository.listSellerCodeRequests(input);
   }
@@ -459,6 +461,8 @@ export class WorkforceRequestRepository {
     regionIds: string[];
     storeIds: string[];
     status?: string;
+    limit: number;
+    offset: number;
   }) {
     return this.offboardingReadRepository.listOffboardingRequests(input);
   }

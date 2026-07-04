@@ -42,6 +42,9 @@ export type CancelStoreActionPlanResponse = ApiMutationResponse<
 export function listStoreActionPlans(input: {
   storeId?: string
   status?: StoreActionPlanStatus
+  statuses?: readonly StoreActionPlanStatus[]
+  periodStart?: string
+  periodEnd?: string
   limit?: number
   offset?: number
 } = {}) {
@@ -49,6 +52,11 @@ export function listStoreActionPlans(input: {
 
   appendQueryParam(params, 'storeId', input.storeId)
   appendQueryParam(params, 'status', input.status)
+  for (const status of input.statuses ?? []) {
+    params.append('statuses', status)
+  }
+  appendQueryParam(params, 'periodStart', input.periodStart)
+  appendQueryParam(params, 'periodEnd', input.periodEnd)
   appendQueryParam(params, 'limit', input.limit)
   appendQueryParam(params, 'offset', input.offset)
 

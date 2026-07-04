@@ -93,3 +93,20 @@ export function setJsonResponseSchema(
     },
   };
 }
+
+export function setQueryParameters(
+  paths: Record<string, unknown>,
+  path: string,
+  method: string,
+  parameters: Array<Record<string, unknown>>,
+) {
+  const operation = (paths[path] as MutablePathItem | undefined)?.[method];
+  if (!operation) {
+    return;
+  }
+
+  operation.parameters = [
+    ...(operation.parameters ?? []).filter((parameter) => parameter.in !== "query"),
+    ...parameters,
+  ];
+}
