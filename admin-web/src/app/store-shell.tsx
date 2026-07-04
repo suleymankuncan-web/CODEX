@@ -32,6 +32,7 @@ import {
 import {
   findStoreRouteDefinition,
   getStoreRouteDefinitions,
+  getStoreLandingPath,
   isStoreRouteAllowed,
   type StoreRouteDefinition,
   type StoreRouteId,
@@ -48,6 +49,7 @@ export function StoreShell(input: {
   const checklistOnly = isVisualMerchandiserOnly(input.authSummary)
   const location = useLocation()
   const activeStoreRoute = findStoreRouteDefinition(location.pathname)
+  const storeLandingPath = getStoreLandingPath(input.authSummary)
   const storeHomeRoute = activeStoreRoute?.id === 'home'
   const storeMeRoute = activeStoreRoute?.id === 'me'
   const storePersonnelRoute = activeStoreRoute?.id === 'personnel'
@@ -89,6 +91,10 @@ export function StoreShell(input: {
         />
       </StoreSurfacePage>
     )
+  }
+
+  if (location.pathname === '/store' && storeLandingPath !== '/store/home') {
+    return <Navigate to={storeLandingPath} replace />
   }
 
   return (
