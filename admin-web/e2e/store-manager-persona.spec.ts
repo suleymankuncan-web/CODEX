@@ -32,7 +32,7 @@ test('store manager sees pilot routes and stays blocked from reports', async ({ 
   await expect(nav.getByRole('link', { name: 'Checklist' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Talep Merkezi' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Hedefler' })).toBeVisible()
-  await expect(nav.getByRole('link', { name: 'Primler' })).toBeVisible()
+  await expect(nav.getByRole('link', { name: 'Primler' })).toHaveCount(0)
   await expect(nav.getByRole('link', { name: 'Norm Kadro' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Görevler' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Duyurular' })).toBeVisible()
@@ -121,11 +121,8 @@ test('store manager critical pages keep correct workflow boundaries', async ({ p
   await expect(page).not.toHaveURL(/tab=approval/)
 
   await page.goto('/store/incentives')
-  await expect(page.getByTestId('store-incentives-page')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Mağaza primleri' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Onaya gönder/i })).toHaveCount(0)
-  await expect(page.getByRole('checkbox', { name: 'Kontrol edildi' })).toHaveCount(0)
-  await expect(page.getByText('Store Personnel')).toBeVisible()
+  await expect(page.getByTestId('store-incentives-page')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
 
   await page.goto('/store/workforce')
   await expect(page.getByTestId('store-workforce-page')).toBeVisible()

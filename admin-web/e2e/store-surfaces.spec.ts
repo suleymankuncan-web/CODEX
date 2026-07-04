@@ -3962,21 +3962,18 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
   await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
 })
 
-test('store incentives page switches to English copy and persists locale', async ({ page }) => {
+test('store incentives unavailable state switches to English copy and persists locale', async ({ page }) => {
   await page.goto('/store/incentives')
   const incentiveSurface = page.getByTestId('store-incentives-page')
 
-  await expect(page.getByRole('heading', { name: /primleri$/i })).toBeVisible()
-  await expect(incentiveSurface.getByText('Primler', { exact: true })).toBeVisible()
-  await expect(incentiveSurface.getByText('Toplam hakediş')).toBeVisible()
+  await expect(incentiveSurface).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: /rota kullan/i })).toBeVisible()
   await expect(page.getByText('Store Incentives')).toHaveCount(0)
 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store incentives/i })).toBeVisible()
-  await expect(incentiveSurface.getByText('Incentives', { exact: true })).toBeVisible()
-  await expect(incentiveSurface.getByText('Total entitlement')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Route not available/i })).toBeVisible()
   await expect(page.getByText('Mağaza primleri')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
@@ -3985,7 +3982,7 @@ test('store incentives page switches to English copy and persists locale', async
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: /Store incentives/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Route not available/i })).toBeVisible()
 })
 
 test('store competitions page renders visible contribution details', async ({ page }) => {

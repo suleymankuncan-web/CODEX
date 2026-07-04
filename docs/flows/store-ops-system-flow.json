@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-04T01:36:44.437Z",
+  "generatedAt": "2026-07-04T20:55:05.045Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 155,
     "openApiEndpointCount": 191,
-    "routeApiEdgeCount": 228,
+    "routeApiEdgeCount": 226,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0
   },
@@ -691,7 +691,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 169
+        "line": 159
       }
     },
     {
@@ -708,7 +708,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 270
+        "line": 260
       }
     },
     {
@@ -726,7 +726,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 181
+        "line": 171
       }
     },
     {
@@ -743,7 +743,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 259
+        "line": 249
       }
     },
     {
@@ -761,7 +761,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 247
+        "line": 237
       }
     },
     {
@@ -778,7 +778,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 168
+        "line": 158
       }
     },
     {
@@ -795,7 +795,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 281
+        "line": 271
       }
     },
     {
@@ -812,7 +812,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 206
+        "line": 196
       }
     },
     {
@@ -829,7 +829,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 217
+        "line": 207
       }
     },
     {
@@ -846,7 +846,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 228
+        "line": 218
       }
     },
     {
@@ -863,7 +863,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 236
+        "line": 226
       }
     },
     {
@@ -880,7 +880,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 328
+        "line": 318
       }
     },
     {
@@ -898,7 +898,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 292
+        "line": 282
       }
     },
     {
@@ -915,7 +915,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 304
+        "line": 294
       }
     },
     {
@@ -932,7 +932,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 195
+        "line": 185
       }
     },
     {
@@ -949,7 +949,7 @@
       ],
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 317
+        "line": 307
       }
     }
   ],
@@ -8097,11 +8097,6 @@
         "apiCallId": "api:113"
       },
       {
-        "id": "edge:route:store:/store/me:api:63",
-        "routeId": "route:store:/store/me",
-        "apiCallId": "api:63"
-      },
-      {
         "id": "edge:route:store:/store/personnel/:employeeId:api:104",
         "routeId": "route:store:/store/personnel/:employeeId",
         "apiCallId": "api:104"
@@ -8120,11 +8115,6 @@
         "id": "edge:route:store:/store/personnel/:employeeId:api:113",
         "routeId": "route:store:/store/personnel/:employeeId",
         "apiCallId": "api:113"
-      },
-      {
-        "id": "edge:route:store:/store/personnel/:employeeId:api:63",
-        "routeId": "route:store:/store/personnel/:employeeId",
-        "apiCallId": "api:63"
       },
       {
         "id": "edge:route:store:/store/rankings:api:116",
