@@ -9,13 +9,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   BriefcaseBusiness,
   ClipboardList,
   Clock3,
@@ -43,6 +36,7 @@ import {
 } from '../features/workforce/api'
 import { formatDateTime, formatNumber, getUserFacingErrorMessage } from '../lib/format'
 import { StoreRequestFeedback } from './store-approvals-atoms'
+import { StoreWorkforceFilterSelect } from './store-workforce-filter-select'
 import { OffboardingRequestForm } from './store-approvals-offboarding-form'
 import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
 import { SellerCodeRequestForm } from './store-approvals-seller-code-form'
@@ -532,40 +526,28 @@ function StoreManagerWorkforce(input: { authSummary: AuthSessionSummary | null }
                 onChange={(event) => setPersonnelSearch(event.target.value)}
               />
             </label>
-            <div className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
-              <BriefcaseBusiness className="tw:size-4 tw:text-[#647194]" />
-              <Select value={positionFilter} onValueChange={setPositionFilter}>
-                <SelectTrigger
-                  aria-label={t('storeWorkforce.positionFilterAria')}
-                  className="tw:h-auto tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:px-0 tw:py-0 tw:text-sm tw:font-medium tw:text-[#071333] tw:shadow-none tw:focus-visible:ring-0"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('storeWorkforce.allPositions')}</SelectItem>
-                  {positionOptions.map((position) => (
-                    <SelectItem key={position} value={position}>{position}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
-              <ClipboardList className="tw:size-4 tw:text-[#647194]" />
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger
-                  aria-label={t('storeWorkforce.statusFilterAria')}
-                  className="tw:h-auto tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:px-0 tw:py-0 tw:text-sm tw:font-medium tw:text-[#071333] tw:shadow-none tw:focus-visible:ring-0"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('storeWorkforce.allStatuses')}</SelectItem>
-                  <SelectItem value="active">{t('storeWorkforce.statusActive')}</SelectItem>
-                  <SelectItem value="codeWaiting">{t('storeWorkforce.statusCodeWaiting')}</SelectItem>
-                  <SelectItem value="offboarding">{t('storeWorkforce.statusOffboarding')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <StoreWorkforceFilterSelect
+              icon={<BriefcaseBusiness className="tw:size-4 tw:text-[#647194]" />}
+              value={positionFilter}
+              ariaLabel={t('storeWorkforce.positionFilterAria')}
+              options={[
+                { value: 'all', label: t('storeWorkforce.allPositions') },
+                ...positionOptions.map((position) => ({ value: position, label: position })),
+              ]}
+              onChange={setPositionFilter}
+            />
+            <StoreWorkforceFilterSelect
+              icon={<ClipboardList className="tw:size-4 tw:text-[#647194]" />}
+              value={statusFilter}
+              ariaLabel={t('storeWorkforce.statusFilterAria')}
+              options={[
+                { value: 'all', label: t('storeWorkforce.allStatuses') },
+                { value: 'active', label: t('storeWorkforce.statusActive') },
+                { value: 'codeWaiting', label: t('storeWorkforce.statusCodeWaiting') },
+                { value: 'offboarding', label: t('storeWorkforce.statusOffboarding') },
+              ]}
+              onChange={setStatusFilter}
+            />
           </div>
 
           <section
