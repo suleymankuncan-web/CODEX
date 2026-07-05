@@ -27,7 +27,7 @@ test('store manager sees pilot routes and stays blocked from reports', async ({ 
 
   const nav = page.locator('.store-command-nav')
   await expect(nav.getByRole('link', { name: 'Ana Sayfa' })).toBeVisible()
-  await expect(nav.getByRole('link', { name: 'Rankings' })).toBeVisible()
+  await expect(nav.getByRole('link', { name: 'Türkiye Sıralaması' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Mağaza KPI' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Checklist' })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Talep Merkezi' })).toBeVisible()

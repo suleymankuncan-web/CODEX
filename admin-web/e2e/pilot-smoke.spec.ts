@@ -191,7 +191,7 @@ test('protected route refresh returns to the same route', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Ay filtresi' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Gün filtresi' })).toBeVisible()
   await expect(page.getByLabel('Bölge müdürü filtresi')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Filtreleri temizle' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Temizle' })).toBeVisible()
   await expectHealthySurface(page)
   await monitor.expectClean()
 })

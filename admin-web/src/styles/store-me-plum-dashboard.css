@@ -60,9 +60,9 @@
 .store-me-kpi-card {
   display: grid;
   align-content: start;
-  gap: 10px;
-  min-height: 224px;
-  padding: 18px;
+  gap: 9px;
+  min-height: 204px;
+  padding: 16px;
 }
 
 .store-me-card-topline,
@@ -74,10 +74,10 @@
   gap: 12px;
 }
 
-.store-me-card-topline .store-me-icon-bubble {
+.store-me-icon-bubble {
   display: inline-flex;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
@@ -85,11 +85,11 @@
   background: var(--store-me-purple-soft);
 }
 
-.store-me-card-topline svg,
+.store-me-icon-bubble svg,
 .store-me-action-icon svg,
 .store-me-quote-card svg:first-child {
-  width: 21px;
-  height: 21px;
+  width: 19px;
+  height: 19px;
 }
 
 .store-me-kpi-hg .store-me-icon-bubble,
@@ -115,7 +115,7 @@
 }
 
 .store-me-kpi-copy {
-  min-height: 36px;
+  min-height: 30px;
   align-content: start;
 }
 
@@ -144,7 +144,7 @@
 .store-me-score-meta small {
   margin: 0;
   color: var(--store-me-muted);
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.45;
 }
 
@@ -277,16 +277,16 @@
 
 .store-me-target-strip {
   grid-template-columns: 1fr;
-  min-height: 95px;
+  min-height: 86px;
   align-content: center;
   gap: 6px;
   padding-block: 9px;
 }
 
 .store-me-target-strip span {
-  grid-template-columns: 66px minmax(0, 1fr);
+  grid-template-columns: 78px minmax(0, 1fr);
   align-items: baseline;
-  gap: 5px;
+  gap: 8px;
 }
 
 .store-me-target-strip small::after {
@@ -294,7 +294,7 @@
 }
 
 .store-me-target-strip strong {
-  font-size: 12.5px;
+  font-size: 12px;
   text-align: left;
 }
 

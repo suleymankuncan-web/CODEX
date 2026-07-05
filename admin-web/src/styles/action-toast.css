@@ -13,9 +13,11 @@ body.hr-axis-toast-sheet-open {
 
 [data-sonner-toaster] {
   z-index: 80;
+  pointer-events: none;
 }
 
 [data-sonner-toast].hr-axis-toast {
+  pointer-events: none;
   border: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
   border-radius: 18px;
   background:
@@ -24,6 +26,10 @@ body.hr-axis-toast-sheet-open {
   color: var(--foreground);
   font-family: inherit;
   padding: 14px 16px;
+}
+
+[data-sonner-toast].hr-axis-toast :is(button, a, [role='button']) {
+  pointer-events: auto;
 }
 
 [data-sonner-toast].hr-axis-toast[data-type='success'],

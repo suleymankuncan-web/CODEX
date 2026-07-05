@@ -32,7 +32,7 @@ import {
   formatNumber,
   formatPeriod,
   getLatestRankingFromCache,
-  getMetricLabel,
+  getMetricHeaderLabel,
   getReferenceMetricValue,
   getVisibleWindow,
   personnelMetricCodes,
@@ -228,6 +228,14 @@ export function StoreRankingsPage(input: {
         activeList={activeList}
       />
 
+      <RankingReferenceBar
+        ranking={ranking}
+        rows={activeList === 'stores' ? storeRows : personnelRows}
+        activeList={activeList}
+        locale={locale}
+        t={t}
+      />
+
       <RankingControls
         ranking={ranking}
         isPrivileged={Boolean(isPrivileged)}
@@ -242,14 +250,6 @@ export function StoreRankingsPage(input: {
         onDayOfMonthChange={setFilter('dayOfMonth')}
         onSearchChange={setFilter('search')}
         onClearFilters={() => dispatchPageState({ type: 'clearFilters' })}
-        locale={locale}
-        t={t}
-      />
-
-      <RankingReferenceBar
-        ranking={ranking}
-        rows={activeList === 'stores' ? storeRows : personnelRows}
-        activeList={activeList}
         locale={locale}
         t={t}
       />
@@ -343,7 +343,7 @@ function RankingSummaryStrip(input: {
       <RankingMetricCard
         icon={<CalendarCheck aria-hidden="true" />}
         label={input.t('storeRankings.activePeriod')}
-        value={formatPeriod(input.ranking.source, input.locale, input.t)}
+        value={formatPeriodMonthName(input.ranking.source.periodStart, input.locale) ?? formatPeriod(input.ranking.source, input.locale, input.t)}
         badge={
           input.ranking.source.periodType === 'daily'
             ? input.t('storeRankings.currentDailyView')
@@ -399,6 +399,43 @@ function RankingMetricCard(input: {
       </div>
     </article>
   )
+}
+
+function formatPeriodMonthName(value: string | null | undefined, locale: AppLocale) {
+  const parsed = parseRankingPeriod(value)
+
+  if (!parsed) {
+    return null
+  }
+
+  return new Intl.DateTimeFormat(getIntlLocale(locale), { month: 'long' }).format(
+    new Date(parsed.year, parsed.month - 1, 1),
+  )
+}
+
+function formatRegionManagerLabel(value: string | null | undefined, fallback: string) {
+  const label = value?.trim()
+
+  if (!label) {
+    return fallback
+  }
+
+  const localPart = label.includes('@') ? (label.split('@')[0] ?? label) : label
+  const cleaned = localPart
+    .replace(/^pilot[._-]?bm[._-]?/i, '')
+    .replace(/\+.*$/u, '')
+    .replace(/clerk[_-]?test/giu, '')
+    .replace(/[._-]+/gu, ' ')
+    .trim()
+
+  if (!cleaned) {
+    return fallback
+  }
+
+  return cleaned
+    .split(/\s+/u)
+    .map((part) => part.charAt(0).toLocaleUpperCase('tr-TR') + part.slice(1))
+    .join(' ')
 }
 
 function RankingControls(input: {
@@ -539,19 +576,23 @@ function RankingControls(input: {
             ariaLabel={input.t('storeRankings.regionManagerFilterLabel')}
             icon={<UserCheck data-icon="inline-start" aria-hidden="true" />}
             summary={
-              input.ranking.filters.regionManagers.find((option) => option.id === input.regionManagerUserId)?.label ??
+              formatRegionManagerLabel(
+                input.ranking.filters.regionManagers.find((option) => option.id === input.regionManagerUserId)?.label,
+                input.t('storeRankings.regionManager'),
+              ) ??
               input.t('storeRankings.regionManager')
             }
             open={openFilter === 'region-manager'}
             onOpenChange={(open) => setOpenFilter(open ? 'region-manager' : null)}
             options={input.ranking.filters.regionManagers.map((option) => ({
               value: option.id,
-              label: option.label,
+              label: formatRegionManagerLabel(option.label, input.t('storeRankings.regionManager')) ?? input.t('storeRankings.regionManager'),
               checked: input.regionManagerUserId === option.id,
               onCheckedChange: (checked) => {
                 input.onRegionManagerChange(checked ? option.id : '')
               },
             }))}
+            gridClassName="store-rankings-date-grid-names"
           />
         ) : null}
 
@@ -689,7 +730,7 @@ function RankingReferenceBar(input: {
       {metricCodes.map((code) => (
         <RankingReferenceItem
           key={code}
-          label={getMetricLabel(input.t, code)}
+          label={getMetricHeaderLabel(input.t, code)}
           value={formatMetricValue(
             input.locale,
             input.t,

@@ -123,7 +123,7 @@ export const storeRankingsTr = {
   'storeRankings.searchPersonnel': 'Personel ara',
   'storeRankings.searchPlaceholder': 'Ad veya mağaza',
   'storeRankings.searchLabel': 'Personel arama',
-  'storeRankings.clearFilters': 'Filtreleri temizle',
+  'storeRankings.clearFilters': 'Temizle',
   'storeRankings.previousPageLabel': 'Önceki sıralama sayfası',
   'storeRankings.nextPageLabel': 'Sonraki sıralama sayfası',
 
@@ -284,7 +284,7 @@ export const storeRankingsEn: Record<keyof typeof storeRankingsTr, string> = {
   'storeRankings.searchPersonnel': 'Search personnel',
   'storeRankings.searchPlaceholder': 'Name or store',
   'storeRankings.searchLabel': 'Personnel search',
-  'storeRankings.clearFilters': 'Clear filters',
+  'storeRankings.clearFilters': 'Clear',
   'storeRankings.previousPageLabel': 'Previous ranking page',
   'storeRankings.nextPageLabel': 'Next ranking page',
 

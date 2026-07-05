@@ -238,7 +238,7 @@ function KpiProgress({
 function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
   return (
     <ResponsiveContainer width="100%" height={288}>
-      <AreaChart data={points} margin={{ top: 28, right: 18, bottom: 16, left: 8 }}>
+      <AreaChart data={points} margin={{ top: 34, right: 28, bottom: 16, left: 20 }}>
         <defs>
           <linearGradient id="storeMePlumLine" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0%" stopColor="var(--store-me-purple)" />
@@ -251,7 +251,7 @@ function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
           </linearGradient>
         </defs>
         <CartesianGrid stroke="rgba(92, 86, 116, 0.18)" strokeDasharray="6 8" vertical={false} />
-        <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} />
+        <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} padding={{ left: 16, right: 16 }} />
         <YAxis hide domain={['dataMin - 8', 'dataMax + 8']} />
         <Area
           type="monotone"
@@ -262,7 +262,7 @@ function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
           dot={{ r: 5, stroke: 'url(#storeMePlumLine)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
           activeDot={{ r: 7, stroke: 'var(--store-me-purple)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
         >
-          <LabelList dataKey="scoreLabel" position="top" className="store-me-chart-value" />
+          <LabelList dataKey="scoreLabel" position="top" offset={8} className="store-me-chart-value" />
         </Area>
       </AreaChart>
     </ResponsiveContainer>
@@ -358,7 +358,11 @@ function MetricKpiCard({
     >
       <KpiCardHead Icon={Icon} label={metric.label} value={metric.displayValue} />
       <div className="store-me-kpi-body store-me-kpi-copy">
-        <p>{metric.delta ?? t('storeMe.noTrendData')}</p>
+        <p>
+          {metric.delta
+            ? t('storeMe.previousMonthDeltaValue', { value: metric.delta })
+            : t('storeMe.noTrendData')}
+        </p>
       </div>
       <KpiProgress
         {...(progressDisplay ? { displayValue: progressDisplay } : {})}

@@ -2,7 +2,6 @@ import { useQueries, useQuery } from '@tanstack/react-query'
 import { Sparkles, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useReducer, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
@@ -68,7 +67,6 @@ type StoreMyPerformancePageExperienceProps = {
   onOpenKpiDetails: () => void
   onSelectClosedSnapshotRun: (snapshotRunId: string) => void
   onSelectSourceMode: (mode: StorePerformanceSourceMode) => void
-  onReturnToRankings?: () => void
   onToggleDateFilter: () => void
   periodHandlers: StoreMyPerformancePeriodHandlers
   performanceEmployeeName: string
@@ -85,9 +83,7 @@ type StoreMeCompactHeaderProps = {
   children: ReactNode
   employeeHeading: string
   onOpenShareCard: () => void
-  onReturnToRankings?: () => void
   periodLabel: string
-  returnLabel: string
   shareCardLabel: string
   t: TranslateFunction
 }
@@ -101,7 +97,6 @@ export function StoreMyPerformancePage(input: {
   returnTo?: string
 }) {
   const { locale, t } = useLocalization()
-  const navigate = useNavigate()
   const profileMode = input.profileMode ?? 'self'
   const targetEmployeeId = input.employeeId?.trim() ?? ''
   const enabled =
@@ -373,9 +368,6 @@ export function StoreMyPerformancePage(input: {
         dispatch({ type: 'setClosedSnapshotRunId', snapshotRunId })
       }
       onSelectSourceMode={(mode) => dispatch({ type: 'setSourceMode', mode })}
-      {...(profileMode === 'personnel' && input.returnTo
-        ? { onReturnToRankings: () => navigate(input.returnTo as string) }
-        : {})}
       onToggleDateFilter={() => dispatch({ type: 'toggleDateFilter' })}
       periodHandlers={periodHandlers}
       performanceEmployeeName={performance.employee.displayName}
@@ -399,7 +391,6 @@ function StoreMyPerformancePageExperience({
   onOpenKpiDetails,
   onSelectClosedSnapshotRun,
   onSelectSourceMode,
-  onReturnToRankings,
   onToggleDateFilter,
   periodHandlers,
   performanceEmployeeName,
@@ -452,9 +443,7 @@ function StoreMyPerformancePageExperience({
             t={t}
             employeeHeading={employeeHeading}
             onOpenShareCard={() => setShareCardOpen(true)}
-            {...(onReturnToRankings ? { onReturnToRankings } : {})}
             periodLabel={periodLabel}
-            returnLabel={t('storeMe.backToRankings')}
             shareCardLabel={t('storeMe.shareCardButton')}
           >
             <StoreMyPerformanceDateFilter
@@ -539,9 +528,7 @@ function StoreMeCompactHeader({
   children,
   employeeHeading,
   onOpenShareCard,
-  onReturnToRankings,
   periodLabel,
-  returnLabel,
   shareCardLabel,
   t,
 }: StoreMeCompactHeaderProps) {
@@ -564,11 +551,6 @@ function StoreMeCompactHeader({
         </div>
       </div>
       <div className="store-me-compact-actions">
-        {onReturnToRankings ? (
-          <Button type="button" variant="outline" onClick={onReturnToRankings}>
-            {returnLabel}
-          </Button>
-        ) : null}
         <Button className="store-me-share-trigger" type="button" onClick={onOpenShareCard}>
           <Sparkles data-icon="inline-start" />
           {shareCardLabel}

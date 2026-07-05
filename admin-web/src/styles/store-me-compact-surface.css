@@ -66,6 +66,8 @@
 }
 
 .store-me-share-trigger {
+  min-height: 42px;
+  padding-inline: 14px;
   background: linear-gradient(90deg, var(--store-me-purple), var(--store-me-blue), var(--store-me-teal));
   color: #fff;
   box-shadow: 0 16px 32px rgba(124, 58, 237, 0.2);
@@ -78,8 +80,8 @@
 
 .store-me-compact-date-filter {
   position: relative;
-  width: min(100%, 24rem);
-  min-width: 18rem;
+  width: min(100%, 16rem);
+  min-width: 13.5rem;
 }
 
 .store-me-compact-date-filter > button {
@@ -107,8 +109,8 @@
 .store-me-kpi-head small {
   overflow: hidden;
   color: var(--store-me-ink);
-  font-size: 14px;
-  font-weight: 610;
+  font-size: 13px;
+  font-weight: 650;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -117,8 +119,8 @@
 .store-me-kpi-head strong {
   overflow: hidden;
   color: var(--store-me-ink);
-  font-size: clamp(24px, 2vw, 30px);
-  font-weight: 650;
+  font-size: clamp(22px, 1.8vw, 27px);
+  font-weight: 620;
   letter-spacing: 0;
   line-height: 1.05;
   text-overflow: ellipsis;

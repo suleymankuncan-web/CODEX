@@ -3,6 +3,7 @@
   right: 1rem;
   bottom: 1rem;
   z-index: 45;
+  pointer-events: none;
   display: grid;
   justify-items: end;
   gap: 0.5rem;
@@ -11,6 +12,7 @@
 
 .pilot-feedback-trigger,
 .pilot-feedback-close {
+  pointer-events: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -69,6 +71,7 @@ body:has([data-slot='sheet-content'][data-state='open']) .pilot-feedback-control
   position: fixed;
   inset: 0;
   z-index: 80;
+  pointer-events: auto;
   display: grid;
   align-items: end;
   justify-items: end;
