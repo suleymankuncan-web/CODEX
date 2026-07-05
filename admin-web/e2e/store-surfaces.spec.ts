@@ -2544,9 +2544,9 @@ test('store rankings personnel detail opens the selected personnel performance p
   await expect.poll(() => new URL(page.url()).searchParams.get('periodType')).toBe('monthly')
   await expect.poll(() => new URL(page.url()).searchParams.get('periodStart')).toBe('2026-04-01')
   await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
-  await expect(
-    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
-  ).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.locator('[data-testid="store-me-metric-card"]')).toHaveCount(3)
   await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'CR' })).toHaveCount(0)
   await expect
@@ -2780,9 +2780,9 @@ test('store personnel profile falls back when ranking period has no personnel da
   await expect.poll(() =>
     personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
   ).toBe(true)
-  await expect(
-    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
-  ).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 
@@ -3023,9 +3023,9 @@ test('store personnel profile opens daily data when requested month has no rows'
         requestUrl.searchParams.get('periodStart') === '2026-04-24',
     ),
   ).toBe(true)
-  await expect(
-    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
-  ).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 
