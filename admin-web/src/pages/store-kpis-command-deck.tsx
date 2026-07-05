@@ -235,7 +235,7 @@ function ScoreOrbit(input: {
               key={code}
               type="button"
               className="tw:size-7 tw:rounded-full tw:border tw:border-white tw:shadow-sm tw:ring-offset-2 focus-visible:tw:outline-none focus-visible:tw:ring-2 focus-visible:tw:ring-[#6d4df7]"
-              style={{ backgroundColor: metricColors[code] ?? '#94a3b8' }}
+              style={{ backgroundColor: getMetricColor(code) }}
               title={label}
               aria-label={label}
               onMouseEnter={() => input.setActiveDot(code)}
@@ -602,7 +602,10 @@ function calculatePersonnelPrimaryContribution(
 }
 
 function ScoreSourceCard({ model, missingChecklistCodes }: { model: StoreKpiHighlightsPageModel; missingChecklistCodes: string[] }) {
-  const kpiContribution = model.weightedScore.contributions.filter((item) => !item.metric.code.includes('CHECKLIST')).reduce((sum, item) => sum + item.weightedContribution * 100, 0)
+  const kpiContribution = model.weightedScore.contributions
+    .filter((item) => !isChecklistMetric(item.metric.code) && !isGsmMetric(item.metric.code))
+    .reduce((sum, item) => sum + item.weightedContribution * 100, 0)
+  const gsmContribution = findContribution(model, 'GSM_ONAY')?.weightedContribution ?? null
   const bmContribution = findContribution(model, 'BM_CHECKLIST')?.weightedContribution ?? null
   const vmContribution = findContribution(model, 'VM_CHECKLIST')?.weightedContribution ?? null
 
@@ -612,6 +615,7 @@ function ScoreSourceCard({ model, missingChecklistCodes }: { model: StoreKpiHigh
       <p className="tw:mt-1 tw:text-sm tw:font-normal tw:text-[#65708d]">{model.t('storeKpis.commandScoreSourceCopy')}</p>
       <div className="tw:mt-5 tw:space-y-3">
         <SourceLine label={model.t('storeKpis.commandPersonnelImpact')} value={formatNumber(model.locale, kpiContribution, 1)} tone="good" />
+        <SourceLine label={model.t('storeKpis.metric.gsmOnay')} value={gsmContribution === null ? model.t('storeKpis.commandPassive') : formatNumber(model.locale, gsmContribution * 100, 1)} tone={gsmContribution === null ? 'warn' : 'good'} />
         <SourceLine label="BM Checklist" value={bmContribution === null ? model.t('storeKpis.commandPassive') : formatNumber(model.locale, bmContribution * 100, 1)} tone={bmContribution === null ? 'warn' : 'good'} />
         <SourceLine label="VM Checklist" value={vmContribution === null ? model.t('storeKpis.commandPassive') : formatNumber(model.locale, vmContribution * 100, 1)} tone={vmContribution === null ? 'warn' : 'good'} />
       </div>
@@ -645,7 +649,23 @@ function findContribution(model: StoreKpiHighlightsPageModel, code: string) {
 }
 
 function normalizeKpiCode(input: string) {
-  return input.trim().toLowerCase()
+  const normalized = input.trim().toLowerCase()
+  if (normalized === 'gsm_onay' || normalized === 'gsm_approval') {
+    return 'gsm_approval'
+  }
+  return normalized
+}
+
+function isChecklistMetric(code: string) {
+  return normalizeKpiCode(code).includes('checklist')
+}
+
+function isGsmMetric(code: string) {
+  return normalizeKpiCode(code) === 'gsm_approval'
+}
+
+function getMetricColor(code: string) {
+  return metricColors[code] ?? metricColors[normalizeKpiCode(code)] ?? '#94a3b8'
 }
 
 function emptyRow(code: string): DisplayKpiRow {
@@ -657,7 +677,7 @@ function buildScoreGradient(model: StoreKpiHighlightsPageModel) {
   const segments = model.weightedScore.contributions.map((item) => {
     const start = cursor
     cursor += Math.max(0, item.metric.weightPercent)
-    return `${metricColors[item.metric.code] ?? '#94a3b8'} ${start}% ${cursor}%`
+    return `${getMetricColor(item.metric.code)} ${start}% ${cursor}%`
   })
   return `conic-gradient(${segments.join(', ')})`
 }

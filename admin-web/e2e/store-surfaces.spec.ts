@@ -782,7 +782,7 @@ test('store self-performance tolerates ISO period timestamps from live API', asy
   expect(pageErrors).toEqual([])
 })
 
-test('store self-performance requests exact loaded day without inventing unloaded days', async ({ page }) => {
+test('store self-performance requests exact loaded month without exposing daily filters', async ({ page }) => {
   const myPerformanceRequests: URL[] = []
   const loadedPeriods = [
     {
@@ -795,16 +795,6 @@ test('store self-performance requests exact loaded day without inventing unloade
       periodStart: '2026-05-01',
       periodEnd: '2026-05-31',
     },
-    {
-      periodType: 'daily',
-      periodStart: '2026-04-24',
-      periodEnd: '2026-04-24',
-    },
-    {
-      periodType: 'daily',
-      periodStart: '2026-04-25',
-      periodEnd: '2026-04-25',
-    },
   ]
 
   await page.unroute('**/api/reports/my-performance**')
@@ -813,56 +803,35 @@ test('store self-performance requests exact loaded day without inventing unloade
     const requestedPeriodStart = requestUrl.searchParams.get('periodStart')
     myPerformanceRequests.push(requestUrl)
 
-    if (requestUrl.searchParams.get('periodType') === 'daily') {
-      const periodStart = requestedPeriodStart || '2026-04-25'
-      await route.fulfill({
-        json: {
-          ...myPerformanceFixture,
-          period: {
-            periodStart,
-            periodEnd: periodStart,
-          },
-          score: {
-            value: periodStart === '2026-04-24' ? 88.4 : 89.1,
-            matchedMetrics: 3,
-            totalMetrics: 3,
-          },
-          availablePeriods: loadedPeriods,
-        },
-      })
-      return
-    }
-
     await route.fulfill({
       json: {
         ...myPerformanceFixture,
+        period: {
+          periodStart: requestedPeriodStart || '2026-04-01',
+          periodEnd: requestedPeriodStart?.startsWith('2026-05') ? '2026-05-31' : '2026-04-30',
+        },
         availablePeriods: loadedPeriods,
       },
     })
   })
 
   await page.goto('/store/me')
-  await page.locator('button[aria-expanded]').first().click()
-  await page.getByRole('radio', { name: /^G.*n$/ }).click()
+  await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
-  const calendar = page.locator('[data-slot="calendar"]')
-  await expect(calendar).toBeVisible()
-  await expect(calendar.locator('button[data-day="4/24/2026"]')).toBeEnabled()
-  await expect(calendar.locator('button[data-day="4/25/2026"]')).toBeEnabled()
-  await expect(calendar.locator('button[data-day="4/26/2026"]')).toBeDisabled()
-  await calendar.locator('button[data-day="4/24/2026"]').click()
+  await expect(page.getByRole('radio', { name: /^G.*n$/ })).toHaveCount(0)
+  await expect(page.locator('[data-slot="calendar"]')).toHaveCount(0)
+  await page.getByRole('button', { name: /^May/i }).click()
 
   await expect.poll(() =>
     myPerformanceRequests.some(
       (requestUrl) =>
-        requestUrl.searchParams.get('periodType') === 'daily' &&
-        requestUrl.searchParams.get('periodStart') === '2026-04-24',
+        requestUrl.searchParams.get('periodType') === 'monthly' &&
+        requestUrl.searchParams.get('periodStart') === '2026-05-01',
     ),
   ).toBe(true)
-  await expect(page.locator('[data-testid="store-me-period-pill"]')).toHaveText('24 Nis 2026 - 24 Nis 2026')
 
   await page.getByRole('button', { name: /KPI detay/i }).click()
-  await expect(page.getByRole('dialog', { name: /ay ay performans/i })).toContainText('24 Nis 2026')
+  await expect(page.getByRole('dialog', { name: /ay ay performans/i })).toContainText('Mayıs 2026')
 })
 
 test('store self-performance switches to English copy and persists locale', async ({ page }) => {
@@ -986,17 +955,14 @@ test('store self-performance handles live no-data responses without supporting m
   expect(pageErrors).toEqual([])
 })
 
-test('store self-performance closed mode uses readable snapshot labels', async ({ page }) => {
+test('store self-performance date filter stays month-only without closed snapshot controls', async ({ page }) => {
   await page.goto('/store/me')
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
-  await page.getByRole('radio', { name: 'Kapanmış gün' }).click()
-  await page.getByRole('combobox').click()
 
-  await expect(
-    page.getByRole('option', {
-      name: /24 Nis 2026 kapanışı/,
-    }),
-  ).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Kapanmış gün' })).toHaveCount(0)
+  await expect(page.getByText('Kapanmış performans kaydı seçimi')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Nis$/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^May$/ })).toBeVisible()
 })
 
 test('store KPI highlights page explains metric source semantics', async ({ page }) => {
@@ -1117,6 +1083,7 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByText('Global Top Personnel')).toHaveCount(0)
   await expect(page.getByText(/Skor kayna/)).toBeVisible()
   await expect(page.getByText('Personel KPI etkisi')).toBeVisible()
+  await expect(page.locator('aside').filter({ hasText: /Skor kayna/ })).toContainText(/GSM Onay/)
   await expect(page.getByText('Store KPI Highlights')).toHaveCount(0)
   await expect(page.getByText('Store skor yorumu')).toHaveCount(0)
   await expect(page.getByText('Weighted Score Summary')).toHaveCount(0)
@@ -2786,7 +2753,7 @@ test('store personnel profile falls back when ranking period has no personnel da
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 
-test('store personnel profile date filter exposes loaded months and days', async ({ page }) => {
+test('store personnel profile date filter exposes loaded months without daily controls', async ({ page }) => {
   const personnelPerformanceRequests: URL[] = []
   const loadedPeriods = [
     {
@@ -2799,36 +2766,7 @@ test('store personnel profile date filter exposes loaded months and days', async
       periodStart: '2026-05-01',
       periodEnd: '2026-05-31',
     },
-    {
-      periodType: 'daily',
-      periodStart: '2026-04-24',
-      periodEnd: '2026-04-24',
-    },
-    {
-      periodType: 'daily',
-      periodStart: '2026-04-25',
-      periodEnd: '2026-04-25',
-    },
   ]
-  const dailyPerformanceFixture = {
-    ...myPerformanceFixture,
-    period: {
-      periodStart: '2026-04-24',
-      periodEnd: '2026-04-24',
-    },
-    score: {
-      value: 88.4,
-      matchedMetrics: 3,
-      totalMetrics: 3,
-    },
-    availablePeriods: loadedPeriods,
-    employee: {
-      ...myPerformanceFixture.employee,
-      employeeId: demoEmployeeId,
-      displayName: 'Store Personnel - 1',
-      storeName: 'IstinyePark Demo Store',
-    },
-  }
 
   await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => {
@@ -2847,47 +2785,44 @@ test('store personnel profile date filter exposes loaded months and days', async
   await page.unroute('**/api/reports/personnel-performance/**')
   await page.route('**/api/reports/personnel-performance/**', async (route) => {
     const requestUrl = new URL(route.request().url())
+    const requestedPeriodStart = requestUrl.searchParams.get('periodStart')
     personnelPerformanceRequests.push(requestUrl)
 
     await route.fulfill({
-      json:
-        requestUrl.searchParams.get('periodType') === 'daily'
-          ? dailyPerformanceFixture
-          : {
-              ...myPerformanceFixture,
-              availablePeriods: loadedPeriods,
-              employee: {
-                ...myPerformanceFixture.employee,
-                employeeId: demoEmployeeId,
-                displayName: 'Store Personnel - 1',
-                storeName: 'IstinyePark Demo Store',
-              },
-            },
+      json: {
+        ...myPerformanceFixture,
+        period: {
+          periodStart: requestedPeriodStart || '2026-04-01',
+          periodEnd: requestedPeriodStart?.startsWith('2026-05') ? '2026-05-31' : '2026-04-30',
+        },
+        availablePeriods: loadedPeriods,
+        employee: {
+          ...myPerformanceFixture.employee,
+          employeeId: demoEmployeeId,
+          displayName: 'Store Personnel - 1',
+          storeName: 'IstinyePark Demo Store',
+        },
+      },
     })
   })
 
   await page.goto(`/store/personnel/${demoEmployeeId}?mode=live&periodType=monthly&periodStart=2026-04-01`)
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
-  await expect(page.getByRole('radio', { name: 'Ay', exact: true })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Gün', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Yüklü ay seçimi' })).toContainText('Nisan 2026')
+  await expect(page.getByRole('radio', { name: 'Gün', exact: true })).toHaveCount(0)
+  await expect(page.locator('[data-slot="calendar"]')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Nis$/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^May$/ })).toBeVisible()
 
-  await page.getByRole('radio', { name: 'Gün', exact: true }).click()
-  const calendar = page.locator('[data-slot="calendar"]')
-  await expect(calendar).toBeVisible()
-  await expect(calendar.locator('button[data-day="4/24/2026"]')).toBeEnabled()
-  await expect(calendar.locator('button[data-day="4/25/2026"]')).toBeEnabled()
-  await calendar.locator('button[data-day="4/24/2026"]').click()
+  await page.getByRole('button', { name: /^May$/ }).click()
 
   await expect.poll(() =>
     personnelPerformanceRequests.some(
       (requestUrl) =>
-        requestUrl.searchParams.get('periodType') === 'daily' &&
-        requestUrl.searchParams.get('periodStart') === '2026-04-24',
+        requestUrl.searchParams.get('periodType') === 'monthly' &&
+        requestUrl.searchParams.get('periodStart') === '2026-05-01',
     ),
   ).toBe(true)
-  await expect(page.locator('[data-testid="store-me-period-pill"]')).toHaveText('24 Nis 2026 - 24 Nis 2026')
 })
 
 test('store personnel profile derives date filters from the active period when the period list is empty', async ({ page }) => {
@@ -2929,7 +2864,7 @@ test('store personnel profile derives date filters from the active period when t
   await page.getByRole('button', { name: /Tarih filtresi/i }).click()
 
   await expect(page.getByText('Yüklü dönem yok')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Yüklü ay seçimi' })).toContainText('Mart 2026')
+  await expect(page.getByRole('button', { name: /^Mar$/ })).toBeVisible()
 })
 
 test('store personnel profile opens daily data when requested month has no rows', async ({ page }) => {
@@ -3132,24 +3067,10 @@ test('store personnel profile uses employee periods instead of global closed sna
 
   await expect(page.getByText('Kapanmış performans kaydı seçimi')).toHaveCount(0)
   await expect(page.getByText('Kapanmış gün')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Yüklü ay seçimi' })).toContainText('Mart 2026')
+  await expect(page.getByRole('button', { name: /^Mar$/ })).toBeVisible()
   await expect(page.getByText('Nisan 2026')).toHaveCount(0)
-
-  await page.getByRole('radio', { name: 'Gün', exact: true }).click()
-  const personnelCalendar = page.locator('[data-slot="calendar"]')
-  await expect(personnelCalendar).toBeVisible()
-  await expect(personnelCalendar.locator('button[data-day="3/1/2026"]')).toBeEnabled()
-  await expect(personnelCalendar.locator('button[data-day="3/2/2026"]')).toBeEnabled()
-  await personnelCalendar.locator('button[data-day="3/1/2026"]').click()
-
-  await expect.poll(() =>
-    personnelPerformanceRequests.some(
-      (requestUrl) =>
-        requestUrl.searchParams.get('periodType') === 'daily' &&
-        requestUrl.searchParams.get('periodStart') === '2026-03-01',
-    ),
-  ).toBe(true)
-  await expect(page.locator('[data-testid="store-me-period-pill"]')).toHaveText('1 Mar 2026 - 1 Mar 2026')
+  await expect(page.getByRole('radio', { name: 'Gün', exact: true })).toHaveCount(0)
+  await expect(page.locator('[data-slot="calendar"]')).toHaveCount(0)
   expect(snapshotRunRequests).toEqual([])
 })
 

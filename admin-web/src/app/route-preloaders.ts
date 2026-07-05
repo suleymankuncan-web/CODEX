@@ -1,4 +1,6 @@
 import { findStoreRouteDefinition } from './store-route-registry'
+import type { QueryClient } from '@tanstack/react-query'
+import type { AuthSessionSummary } from '../features/auth/api'
 
 const routePreloaders: Array<{
   match: (pathname: string) => boolean
@@ -49,4 +51,22 @@ export function preloadRouteModule(pathname: string) {
   if (!preload) return
 
   void preload().catch(() => undefined)
+}
+
+export function preloadRoute(input: {
+  pathname: string
+  authSummary: AuthSessionSummary | null
+  queryClient: QueryClient
+}) {
+  preloadRouteModule(input.pathname)
+
+  if (!input.authSummary) {
+    return
+  }
+
+  void import('./route-data-preloaders')
+    .then(({ prefetchRouteData }) => {
+      prefetchRouteData(input)
+    })
+    .catch(() => undefined)
 }
