@@ -26,7 +26,10 @@ Approvals Split V1 line through PR #659 and final closeout evidence, and the
 Store bugfix/refactor follow-up through PR #666, plus the Store Workforce
 norm/fiili binding fix through PR #672, and Project Health Uplift PR Train V1
 through PR #679.
-It is the starting point for continuing in a fresh window.
+It is the starting point for continuing in a fresh window. The freshest
+verified delta is the 2026-07-05 block under `Latest Git State`; use that block
+over the historical PR summary when deciding the current branch, merge state,
+and next safe step.
 
 For the documentation library entry point, use `docs/README.md`. It maps the
 operating, pilot, readiness, architecture, domain, evidence, and historical
@@ -62,6 +65,31 @@ Primary app endpoints:
 - Authorization source of truth: application DB role/scope/action-store assignments
 
 ## Latest Git State
+
+Fresh verified state on 2026-07-05:
+
+- Root workspace is `D:\store-ops-workspace` on `main` at
+  `d188d212 Refine Store Me surface and action contract (#875)`, aligned with
+  `origin/main`.
+- The latest Store Me closeout line is merged through PR #875:
+  - PR #870 fixed Store Me KPI percent/detail UI behavior.
+  - PR #871 clarified UPT/ATV progress labels.
+  - PR #872 locked the Store Me performance card prototype.
+  - PR #873 added the Store Me performance share card.
+  - PR #874 hid incentives from Store Manager surfaces.
+  - PR #875 refined the Store Me surface and added the today-actions contract.
+- PR #875 was verified as merged on GitHub:
+  `https://github.com/suleymankuncan-web/CODEX/pull/875`.
+- Cleanup performed after the merge:
+  - `codex/store-me-full-surface-parity-v1` worktree was removed.
+  - Local branches `codex/store-me-full-surface-parity-v1` and
+    `codex/store-me-share-card-production-v1` were deleted.
+  - Remote branch `origin/codex/store-me-full-surface-parity-v1` was deleted.
+  - Pre-cleanup dirty Store Me scratch work was preserved in stash
+    `codex cleanup backup before current-state refresh 2026-07-05`; do not
+    drop it unless the user explicitly approves.
+- Older historical sections below are still useful context, but this fresh
+  block supersedes any stale branch, date, or PR-number statement in them.
 
 As of 2026-05-24, `origin/main` includes the Controlled Pilot Scenario
 Rehearsal V1 runbook, the first evidence pass, the assisted persona route
