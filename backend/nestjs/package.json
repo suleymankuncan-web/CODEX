@@ -17,6 +17,7 @@
     "perf:baseline": "ts-node scripts/performance-baseline.ts",
     "smoke:release": "ts-node scripts/release-smoke.ts",
     "smoke:store-me": "ts-node scripts/store-me-smoke.ts",
+    "pilot:roster-dry-run": "ts-node scripts/pilot-roster-reconciliation-dry-run.ts",
     "rehearse:release": "npm run check:release && ts-node scripts/release-rehearsal.ts"
   },
   "jest": {
