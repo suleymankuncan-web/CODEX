@@ -20,6 +20,7 @@ import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell
 import { StoreChecklistSessionModalV1Prototype } from './prototypes/store-checklist-session-modal-v1'
 import { StoreHomeCommandV1Prototype } from './prototypes/store-home-command-v1'
 import { StoreIncentivesPrototypeShell } from './prototypes/store-incentives-prototype-shell'
+import { StoreMeReferenceV1Prototype } from './prototypes/store-me-reference-v1'
 import { AdminMasterDataCommandV1Prototype } from './prototypes/admin/master-data-command-v1'
 
 function App() {
@@ -41,6 +42,10 @@ function App() {
     import.meta.env.DEV &&
     pathname === '/store/checklists' &&
     new URLSearchParams(location.search).get('prototype') === 'session-modal-v1'
+  const isStoreMeReferencePrototype =
+    import.meta.env.DEV &&
+    pathname === '/store/me' &&
+    new URLSearchParams(location.search).get('prototype') === 'reference-v1'
   const isAdminMasterDataPrototype =
     import.meta.env.DEV &&
     pathname === '/admin/master-data' &&
@@ -50,6 +55,7 @@ function App() {
     isStoreHomePrototype ||
     isStoreFeedPrototype ||
     isStoreChecklistSessionPrototype ||
+    isStoreMeReferencePrototype ||
     isAdminMasterDataPrototype
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -203,6 +209,10 @@ function App() {
 
   if (isStoreChecklistSessionPrototype) {
     return <StoreChecklistSessionModalV1Prototype />
+  }
+
+  if (isStoreMeReferencePrototype) {
+    return <StoreMeReferenceV1Prototype />
   }
 
   if (isAdminMasterDataPrototype) {
