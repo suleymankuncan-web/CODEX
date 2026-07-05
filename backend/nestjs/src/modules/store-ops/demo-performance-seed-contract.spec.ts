@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { personnelKpiScoreProfile } from "./application/kpi-config.contract";
+import { officialPersonnelRankingMinimumNetSalesValue } from "./application/personnel-ranking-eligibility.contract";
 
 const projectRoot = join(process.cwd(), "..", "..");
 const schemaSql = readFileSync(join(projectRoot, "db", "schema.sql"), "utf8");
@@ -37,6 +38,7 @@ const seededDemoEmployees = [
   },
 ];
 const seededPersonnelKpiCodes = ["TARGET_ACHIEVEMENT", "ATV", "UPT"];
+const storeMeSmokeEmployeeId = "00000000-0000-0000-0000-000000000202";
 const expectedPersonnelWeights = new Map([
   ["TARGET_ACHIEVEMENT", 40],
   ["ATV", 30],
@@ -94,6 +96,19 @@ describe("demo performance seed contract", () => {
     for (const primitiveMetricCode of ["NET_SALES", "TICKET_COUNT", "ITEM_COUNT"]) {
       expect(seedSql).toContain(`'${primitiveMetricCode}',`);
     }
+  });
+
+  it("keeps the /store/me smoke employee eligible for official personnel ranking", () => {
+    const netSalesMatch = seedSql.match(
+      new RegExp(
+        `\\('${storeMeSmokeEmployeeId}'::uuid,\\s*'[^']+'::uuid,\\s*'NET_SALES',\\s*([0-9.]+)\\)`,
+      ),
+    );
+
+    expect(netSalesMatch).not.toBeNull();
+    expect(Number(netSalesMatch?.[1])).toBeGreaterThanOrEqual(
+      officialPersonnelRankingMinimumNetSalesValue,
+    );
   });
 
   it("seeds closed daily ranking snapshots required by /store/rankings browser checks", () => {
