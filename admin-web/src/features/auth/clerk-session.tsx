@@ -11,6 +11,7 @@ import { readStoredAppLocale } from '../../lib/i18n'
 import { translate } from '../localization/dictionary'
 import { useLocalization } from '../localization/useLocalization'
 import { useSession } from '../session/session-context-value'
+import { isSessionReady } from '../session/session-storage'
 import { isClerkAuthEnabled, resolveClerkPublishableKey } from './clerk-config'
 import { sanitizeAuthReturnPath } from './return-path'
 
@@ -150,6 +151,7 @@ export function ClerkLogoutEffect(input: { onFallback: () => void }) {
 function ClerkSessionBridge() {
   const {
     clearProviderSession,
+    session,
     startProviderSession,
     setProviderSessionHydrating,
   } = useSession()
@@ -158,6 +160,7 @@ function ClerkSessionBridge() {
   const lastProviderSessionRef = useRef<string | null>(null)
   const template = (import.meta.env.VITE_CLERK_JWT_TEMPLATE ?? '').trim() || undefined
   const providerSessionKey = isSignedIn ? `${userId ?? 'unknown-user'}:${sessionId ?? 'unknown-session'}` : null
+  const appSessionReady = isSessionReady(session)
   const getClerkToken = useCallback((input?: { skipCache?: boolean }) => {
     const options: { template?: string; skipCache?: boolean } = {}
     if (template) {
@@ -233,7 +236,7 @@ function ClerkSessionBridge() {
       try {
         const token = await getClerkToken()
 
-        if (cancelled || !token || token === lastTokenRef.current) {
+        if (cancelled || !token || (token === lastTokenRef.current && appSessionReady)) {
           return
         }
 
@@ -263,6 +266,7 @@ function ClerkSessionBridge() {
     }
   }, [
     clearProviderSession,
+    appSessionReady,
     getClerkToken,
     isLoaded,
     isSignedIn,
