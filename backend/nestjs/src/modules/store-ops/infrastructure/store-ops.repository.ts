@@ -118,6 +118,19 @@ export class StoreOpsRepository {
           AND kd.kpi_code = 'NET_SALES'
         INNER JOIN ops.employee e
           ON e.employee_id = ka.employee_id
+        INNER JOIN LATERAL (
+          SELECT eah.position_id
+          FROM ops.employee_assignment_history eah
+          WHERE eah.employee_id = e.employee_id
+            AND eah.store_id = $1::uuid
+            AND eah.assignment_status = 'active'
+            AND eah.end_date IS NULL
+          ORDER BY eah.is_primary_assignment DESC, eah.start_date DESC
+          LIMIT 1
+        ) active_assignment ON TRUE
+        INNER JOIN ops.position position
+          ON position.position_id = active_assignment.position_id
+         AND position.position_code <> 'STORE_MANAGER'
         ORDER BY e.first_name ASC, e.last_name ASC, e.employee_id ASC
       `,
       [input.storeId],

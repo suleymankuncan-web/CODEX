@@ -37,6 +37,21 @@ describe("StoreOpsRepository", () => {
     );
   });
 
+  it("excludes store managers from personnel target distribution rows", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [] });
+    const repository = new StoreOpsRepository({ query } as never);
+
+    await repository.listStorePersonnelTargetingRows({
+      storeId: "00000000-0000-0000-0000-000000000100",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("INNER JOIN ops.position position");
+    expect(sql).toContain("position.position_code <> 'STORE_MANAGER'");
+    expect(sql).toContain("eah.assignment_status = 'active'");
+    expect(sql).toContain("eah.end_date IS NULL");
+  });
+
   it("projects shortage metadata with the headcount gap", async () => {
     const storeId = "00000000-0000-0000-0000-000000000100";
     const query = jest.fn().mockResolvedValue({

@@ -41,6 +41,10 @@ import {
   UnrankedPersonnelRankingRow,
   UnrankedStoreRankingRow,
 } from "./ranking-list.helpers";
+import {
+  resolvePersonnelRankingEligibility,
+  type PersonnelRankingEligibilityResult,
+} from "./personnel-ranking-eligibility.contract";
 
 type RawStoreRankingKpiRow = {
   store_id: string;
@@ -66,10 +70,17 @@ type RawPersonnelRankingKpiRow = {
   region_name: string | null;
   region_manager_user_id: string | null;
   region_manager_name: string | null;
+  position_code?: string | null;
+  net_sales_value?: string | null;
+  store_net_sales_value?: string | null;
   kpi_code: string;
   kpi_name: string | null;
   actual_value: string | null;
   target_value: string | null;
+};
+
+type UnrankedPersonnelRankingCandidate = UnrankedPersonnelRankingRow & {
+  rankingEligibility: PersonnelRankingEligibilityResult;
 };
 
 type ActivePersonnelAssignmentScope = Awaited<
@@ -208,12 +219,15 @@ export class RankingService {
         benchmarkLookup: storeBenchmarkLookup,
       }),
     );
+    const personnelCandidates = this.buildPersonnelRows({
+      rows: rawPersonnelRows,
+      profile: personnelProfile,
+      benchmarkLookup: personnelBenchmarkLookup,
+    });
     const personnelRows = rankPersonnelRows(
-      this.buildPersonnelRows({
-        rows: rawPersonnelRows,
-        profile: personnelProfile,
-        benchmarkLookup: personnelBenchmarkLookup,
-      }),
+      personnelCandidates
+        .filter((row) => row.rankingEligibility.isEligible)
+        .map(({ rankingEligibility: _rankingEligibility, ...row }) => row),
     );
     const reference = {
       store: this.buildReferenceGroup({
@@ -433,13 +447,6 @@ export class RankingService {
       );
     }
 
-    if (input.roleCodes.includes("STORE_MANAGER")) {
-      return (
-        input.assignment.store_id !== null &&
-        input.storeIds.includes(input.assignment.store_id)
-      );
-    }
-
     return false;
   }
 
@@ -654,7 +661,7 @@ export class RankingService {
     rows: RawPersonnelRankingKpiRow[];
     profile: KpiScoreProfile;
     benchmarkLookup: Map<string, number | null>;
-  }): UnrankedPersonnelRankingRow[] {
+  }): UnrankedPersonnelRankingCandidate[] {
     const grouped = new Map<
       string,
       {
@@ -666,6 +673,9 @@ export class RankingService {
         regionName: string | null;
         regionManagerUserId: string | null;
         regionManagerName: string | null;
+        positionCode: string | null;
+        netSalesValue: number | null;
+        storeNetSalesValue: number | null;
         values: Map<
           string,
           {
@@ -687,8 +697,16 @@ export class RankingService {
         regionName: row.region_name,
         regionManagerUserId: row.region_manager_user_id,
         regionManagerName: row.region_manager_name,
+        positionCode: row.position_code ?? null,
+        netSalesValue: toFiniteNumber(row.net_sales_value ?? null),
+        storeNetSalesValue: toFiniteNumber(row.store_net_sales_value ?? null),
         values: new Map(),
       };
+      current.positionCode = current.positionCode ?? row.position_code ?? null;
+      current.netSalesValue =
+        current.netSalesValue ?? toFiniteNumber(row.net_sales_value ?? null);
+      current.storeNetSalesValue =
+        current.storeNetSalesValue ?? toFiniteNumber(row.store_net_sales_value ?? null);
       current.values.set(row.kpi_code, {
         label: row.kpi_name ?? row.kpi_code,
         actualValue: toFiniteNumber(row.actual_value),
@@ -709,6 +727,11 @@ export class RankingService {
           .filter(Boolean)
           .join(" ")
           .trim();
+        const rankingEligibility = resolvePersonnelRankingEligibility({
+          positionCode: value.positionCode,
+          netSalesValue: value.netSalesValue,
+          storeNetSalesValue: value.storeNetSalesValue,
+        });
 
         return {
           subject: "personnel" as const,
@@ -722,6 +745,7 @@ export class RankingService {
           regionManagerName: value.regionManagerName,
           scoreValue: scoring.scoreValue,
           canOpenProfile: false,
+          rankingEligibility,
           metrics: scoring.metrics,
         };
       })

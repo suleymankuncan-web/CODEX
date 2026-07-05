@@ -284,6 +284,29 @@ describe("ReportingRepository personnel target reference queries", () => {
     );
   });
 
+  it("projects live peer position and sales totals for official ranking eligibility", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getPeerEmployeePerformanceRows({
+      metricCodes: ["TARGET_ACHIEVEMENT"],
+      companyId: "00000000-0000-4000-8000-000000000001",
+      storeId: null,
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("position.position_code");
+    expect(sql).toContain("employee_sales.net_sales_value::text AS net_sales_value");
+    expect(sql).toContain(
+      "store_sales.store_net_sales_value::text AS store_net_sales_value",
+    );
+    expect(sql).toContain("AND net_kd.kpi_code = 'NET_SALES'");
+    expect(sql).toContain("net_ka.employee_id = ka.employee_id");
+    expect(sql).toContain("net_ka.store_id = store.store_id");
+    expect(sql.match(/COALESCE\(net_ka\.source_type, ''\) <> 'demo_seed'/g)).toHaveLength(2);
+  });
+
 });
 
 describe("ReportingRepository personnel period compatibility", () => {
