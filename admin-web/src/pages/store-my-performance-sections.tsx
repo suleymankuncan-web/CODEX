@@ -149,8 +149,9 @@ export function StoreMyPerformancePartialAlert({
 
   return (
     <Alert variant="destructive" aria-label={t('storeMe.partialTitle')}>
-      <AlertTitle>{t('storeMe.partialTitle')}</AlertTitle>
+      <AlertTitle>{t('storeMe.missingDataExists')}</AlertTitle>
       <AlertDescription>
+        <p>{t('storeMe.partialTitle')}</p>
         <p>
           {t('storeMe.missingMetrics', {
             labels: missingMetricLabels.join(', ') || t('storeMe.noMetricDetail'),
