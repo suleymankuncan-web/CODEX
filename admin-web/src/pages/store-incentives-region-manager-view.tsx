@@ -155,10 +155,10 @@ export function RegionManagerIncentivesView(input: {
   return (
     <StoreSurfacePage
       ariaLabel={t('storeIncentives.regionManagerAria')}
-      className="tw:max-w-[1240px] tw:gap-5"
+      className="tw:max-w-[1240px] tw:gap-3"
       testId="store-incentives-page"
     >
-      <section className="tw:rounded-[1.75rem] tw:border tw:border-border/80 tw:bg-[radial-gradient(circle_at_80%_10%,color-mix(in_oklab,var(--accent)_18%,transparent),transparent_36%),radial-gradient(circle_at_14%_12%,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_34%),color-mix(in_oklab,var(--card)_86%,transparent)] tw:p-5 tw:shadow-[0_24px_70px_color-mix(in_oklab,var(--foreground)_10%,transparent)] tw:md:p-7">
+      <section className="tw:rounded-[1.75rem] tw:border tw:border-border/80 tw:bg-[radial-gradient(circle_at_80%_10%,color-mix(in_oklab,var(--accent)_18%,transparent),transparent_36%),radial-gradient(circle_at_14%_12%,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_34%),color-mix(in_oklab,var(--card)_86%,transparent)] tw:p-5 tw:shadow-[0_24px_70px_color-mix(in_oklab,var(--foreground)_10%,transparent)] tw:md:p-6">
         <div className="tw:flex tw:flex-col tw:gap-5 tw:lg:flex-row tw:lg:items-start tw:lg:justify-between">
           <div className="tw:min-w-0">
             <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2.5">
@@ -212,7 +212,7 @@ export function RegionManagerIncentivesView(input: {
 
         <div
           aria-label={t('storeIncentives.regionManagerSummaryAria')}
-          className="tw:mt-7 tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
+          className="tw:mt-5 tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
         >
           <RegionSignalCard
             title="Dönem toplamı"

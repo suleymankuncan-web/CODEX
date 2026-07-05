@@ -89,7 +89,7 @@ const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']
 const routePrefetchStaleTimeMs = 30_000
-const storeRouteDataPrefetchAllowedRoutes = new Set<StoreRouteId>(['home', 'feed'])
+const storeRouteDataPrefetchAllowedRoutes = new Set<StoreRouteId>(['home', 'feed', 'incentives'])
 
 export function prefetchRouteData(input: RouteDataPrefetchInput) {
   const tasks = resolveRoutePrefetchTasks(input.pathname, input.authSummary)

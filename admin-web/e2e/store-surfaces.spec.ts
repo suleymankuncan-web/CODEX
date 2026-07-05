@@ -1088,7 +1088,7 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await page.goto('/store/kpis')
 
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
-  await expect(page.getByText('Store KPI', { exact: true })).toBeVisible()
+  await expect(page.getByText('Store KPI', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /KPI/ }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Personel KPI' })).toBeVisible()
   await expect(page.getByText('104,6').first()).toBeVisible()

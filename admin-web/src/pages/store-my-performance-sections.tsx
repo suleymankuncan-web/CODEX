@@ -217,7 +217,7 @@ export function StoreMyPerformanceDateFilter({
       </Button>
 
       {isDateFilterOpen ? (
-        <div className="tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-3 tw:text-card-foreground tw:shadow-sm">
+        <div className="tw:absolute tw:left-0 tw:right-0 tw:top-[calc(100%+0.5rem)] tw:z-50 tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-3 tw:text-card-foreground tw:shadow-lg tw:sm:left-auto tw:sm:w-[min(34rem,calc(100vw-2rem))]">
           <div className="tw:flex tw:flex-wrap tw:gap-2 tw:md:hidden" aria-hidden="true">
             <Badge variant="outline">{t('storeMe.loadedPeriodCount', { count: loadedPeriodCount })}</Badge>
             <Badge variant={isPartial ? 'destructive' : 'secondary'}>{dataQualityLabel}</Badge>

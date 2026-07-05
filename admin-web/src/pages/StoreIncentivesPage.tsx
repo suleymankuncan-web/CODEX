@@ -114,6 +114,8 @@ export function StoreIncentivesPage(input: {
     queryKey: incentivesQueryKey,
     queryFn: () => getStoreSalesTargetIncentives(period ? { period } : undefined),
     enabled,
+    placeholderData: (previousData) => previousData,
+    refetchOnWindowFocus: false,
     staleTime: 30_000,
     ...transientQueryRetryOptions,
   })

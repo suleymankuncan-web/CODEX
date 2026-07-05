@@ -117,7 +117,7 @@ test('store route preloading and data prefetch resolve through the registry', ()
   assert.match(dataPreloaderSource, /getStoreRoutePrefetchTasks\(storeRoute\.id, authSummary\)/u)
   assert.match(
     dataPreloaderSource,
-    /storeRouteDataPrefetchAllowedRoutes = new Set<StoreRouteId>\(\['home', 'feed'\]\)/u,
+    /storeRouteDataPrefetchAllowedRoutes = new Set<StoreRouteId>\(\['home', 'feed', 'incentives'\]\)/u,
   )
   assert.doesNotMatch(dataPreloaderSource, /if \(pathname === '\/store\/incentives'\)/u)
   assert.doesNotMatch(storeSidebarSource, /prefetchRouteData/u)
