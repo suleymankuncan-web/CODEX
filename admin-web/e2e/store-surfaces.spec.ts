@@ -572,19 +572,22 @@ test('store self-performance page renders live score, metrics, and ranks', async
   await page.goto('/store/me')
 
   await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Store Personnel · IstinyePark Demo Store/i })).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.locator('.store-me-plum-dashboard')).toBeVisible()
   await expect(page.locator('.store-me-kpi-grid')).toBeVisible()
-  await expect(page.locator('.store-me-line-chart')).toBeVisible()
+  await expect(page.locator('.store-me-chart-frame .recharts-wrapper')).toBeVisible()
   await expect(page.locator('.store-me-score-breakdown')).toBeVisible()
   await expect(page.locator('.store-me-quote-card')).toBeVisible()
   await expect(page.getByText('Mağaza', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Bölge', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Türkiye', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Bugün Yapılacaklar')).toBeVisible()
-  await expect(page.locator('#store-me-actions').getByText(/Ritmi koru|HG% çizgisini kapat/)).toBeVisible()
+  await expect(page.locator('#store-me-actions').getByText(/HG% çizgisini kapat|Bugün için net aksiyon yok/)).toBeVisible()
+  await expect(page.locator('#store-me-actions')).not.toContainText('Ritmi koru')
   await expect(page.getByText('Gelişim çizgisi')).toBeVisible()
-  await expect(page.getByText('Hedef gerçekleşme barı')).toBeVisible()
+  await expect(page.getByText('Hedef Gerçekleştirme')).toBeVisible()
   await expect(page.getByText('Skor kırılımı')).toBeVisible()
   await expect(page.getByText('Aynı dönem farkı')).toBeVisible()
   await expect(page.getByRole('button', { name: /Tarih filtresi/i })).toBeVisible()
@@ -599,11 +602,11 @@ test('store self-performance page renders live score, metrics, and ranks', async
   const atvMetricCard = page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'ATV' })
   await expect(uptMetricCard).toBeVisible()
   await expect(atvMetricCard).toBeVisible()
-  await expect(uptMetricCard.locator('.store-me-kpi-progress')).toContainText('Hedef üstü')
-  await expect(atvMetricCard.locator('.store-me-kpi-progress')).toContainText('Hedef üstü')
+  await expect(uptMetricCard.locator('.store-me-kpi-progress')).toContainText('Ortalama Üstü')
+  await expect(atvMetricCard.locator('.store-me-kpi-progress')).toContainText('Ortalama Üstü')
   await expect(uptMetricCard.locator('.store-me-kpi-progress')).not.toContainText('100%')
   await expect(atvMetricCard.locator('.store-me-kpi-progress')).not.toContainText('100%')
-  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'HG%' })).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Hedef Gerçekleştirme')
   await expect(page.locator('.store-metric-grid')).toHaveCount(0)
   await expect(page.locator('.stacked-row')).toHaveCount(0)
   await expect(page.locator('.store-hero-panel')).toHaveCount(0)
@@ -684,9 +687,8 @@ test('store self-performance does not treat raw net sales as HG percent when tar
   await page.goto('/store/me')
 
   await expect(page.getByText(/Hedefin %0/)).toBeVisible()
-  await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Hedef bekleniyor')
   await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Veri yok')
-  await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'HG%' })).toContainText('Eksik referans')
+  await expect(page.locator('[data-testid="store-me-target-progress-card"]')).toContainText('Hedef Gerçekleştirme')
   await expect(page.getByText(/9\.200\.202%/)).toHaveCount(0)
 
   await page.getByRole('button', { name: /KPI detay/i }).click()
@@ -870,15 +872,18 @@ test('store self-performance switches to English copy and persists locale', asyn
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Store Personnel · IstinyePark Demo Store/i })).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.locator('.store-me-plum-dashboard')).toBeVisible()
   await expect(page.locator('.store-me-kpi-grid')).toBeVisible()
-  await expect(page.locator('.store-me-line-chart')).toBeVisible()
+  await expect(page.locator('.store-me-chart-frame .recharts-wrapper')).toBeVisible()
   await expect(page.locator('.store-me-score-breakdown')).toBeVisible()
   await expect(page.getByText("Today's Actions")).toBeVisible()
-  await expect(page.locator('#store-me-actions').getByText(/Maintain the rhythm|Close the HG% gap/)).toBeVisible()
+  await expect(page.locator('#store-me-actions').getByText(/Close the HG% gap|No clear action for today/)).toBeVisible()
+  await expect(page.locator('#store-me-actions')).not.toContainText('Maintain the rhythm')
   await expect(page.getByText('Progress line')).toBeVisible()
-  await expect(page.getByText('Target achievement bar')).toBeVisible()
+  await expect(page.locator('[data-testid="store-me-target-progress-card"]').getByText('Target achievement', { exact: true })).toBeVisible()
   await expect(page.getByText('Score breakdown')).toBeVisible()
   await expect(page.getByText('Same-period difference')).toBeVisible()
   await expect(page.getByText('Score meaning')).toHaveCount(0)
@@ -2539,9 +2544,9 @@ test('store rankings personnel detail opens the selected personnel performance p
   await expect.poll(() => new URL(page.url()).searchParams.get('periodType')).toBe('monthly')
   await expect.poll(() => new URL(page.url()).searchParams.get('periodStart')).toBe('2026-04-01')
   await expect(page.locator('[data-testid="store-me-page"]')).toBeVisible()
-  await expect(
-    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
-  ).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.locator('[data-testid="store-me-metric-card"]')).toHaveCount(3)
   await expect(page.locator('[data-testid="store-me-metric-card"]').filter({ hasText: 'CR' })).toHaveCount(0)
   await expect
@@ -2775,9 +2780,9 @@ test('store personnel profile falls back when ranking period has no personnel da
   await expect.poll(() =>
     personnelPerformanceRequests.some((requestUrl) => requestUrl.searchParams.get('periodStart') === '2026-04-01'),
   ).toBe(true)
-  await expect(
-    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
-  ).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 
@@ -3018,9 +3023,9 @@ test('store personnel profile opens daily data when requested month has no rows'
         requestUrl.searchParams.get('periodStart') === '2026-04-24',
     ),
   ).toBe(true)
-  await expect(
-    page.getByRole('heading', { name: /Store Personnel - 1 . IstinyePark Demo Store/i }),
-  ).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel - 1/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
   await expect(page.getByText('Unknown employee')).toHaveCount(0)
 })
 

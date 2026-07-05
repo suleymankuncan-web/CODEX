@@ -1,7 +1,10 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
+import { Sparkles, UserRound } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useReducer, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
@@ -29,7 +32,6 @@ import {
   StoreMyPerformanceDateFilter,
   StoreMyPerformanceKpiDialog,
   StoreMyPerformancePartialAlert,
-  StoreMyPerformanceTopbar,
 } from './store-my-performance-sections'
 import { StoreMyPerformancePlumDashboard } from './store-my-performance-plum-dashboard'
 import { StoreMeShareCardDialog } from './store-me-share-card-dialog'
@@ -77,6 +79,17 @@ type StoreMyPerformancePageExperienceProps = {
   t: TranslateFunction
   usesClosedSnapshotMode: boolean
   viewModel: StoreMyPerformanceViewModel
+}
+
+type StoreMeCompactHeaderProps = {
+  children: ReactNode
+  employeeHeading: string
+  onOpenShareCard: () => void
+  onReturnToRankings?: () => void
+  periodLabel: string
+  returnLabel: string
+  shareCardLabel: string
+  t: TranslateFunction
 }
 
 export function StoreMyPerformancePage(input: {
@@ -405,7 +418,6 @@ function StoreMyPerformancePageExperience({
     dataQualityLabel,
     employeeHeading,
     gradeLabel,
-    introCopy,
     liveDayFilterOptions,
     liveMonthFilterOptions,
     loadedPeriodCount,
@@ -436,39 +448,40 @@ function StoreMyPerformancePageExperience({
     <>
       <PerformanceSurface ariaLabel={t('storeMe.title')}>
         <section className="tw:mx-auto tw:grid tw:max-w-7xl tw:gap-4" aria-label={t('storeMe.title')}>
-          <StoreMyPerformanceTopbar
-            employeeHeading={employeeHeading}
-            introCopy={introCopy}
-            onOpenShareCard={() => setShareCardOpen(true)}
-            {...(onReturnToRankings ? { onReturn: onReturnToRankings, returnLabel: t('storeMe.backToRankings') } : {})}
-            periodLabel={periodLabel}
-            shareCardLabel={t('storeMe.shareCardButton')}
-          />
-
-          <StoreMyPerformanceDateFilter
-            activeClosedSnapshotRunId={activeClosedSnapshotRunId}
-            availableClosedSnapshotRuns={closedSnapshotRunOptions}
-            availableLiveMonthOptions={liveMonthFilterOptions}
-            dataQualityLabel={dataQualityLabel}
-            isDateFilterOpen={isDateFilterOpen}
-            isPartial={partial.isPartial}
-            locale={locale}
-            loadedPeriodCount={loadedPeriodCount}
-            onChangeLivePeriodType={periodHandlers.changeLivePeriodType}
-            onSelectClosedSnapshotRun={onSelectClosedSnapshotRun}
-            onSelectLiveDay={periodHandlers.selectLiveDay}
-            onSelectLiveMonth={periodHandlers.selectLiveMonth}
-            onSelectSourceMode={onSelectSourceMode}
-            onToggleDateFilter={onToggleDateFilter}
-            scopedAvailableDailyPeriods={liveDayFilterOptions}
-            selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
-            selectedLivePeriodStart={selectedLivePeriodStart}
-            selectedLivePeriodType={selectedLivePeriodType}
-            selectedPeriodLabel={selectedPeriodLabel}
-            sourceMode={sourceMode}
+          <StoreMeCompactHeader
             t={t}
-            usesClosedSnapshotMode={usesClosedSnapshotMode}
-          />
+            employeeHeading={employeeHeading}
+            onOpenShareCard={() => setShareCardOpen(true)}
+            {...(onReturnToRankings ? { onReturnToRankings } : {})}
+            periodLabel={periodLabel}
+            returnLabel={t('storeMe.backToRankings')}
+            shareCardLabel={t('storeMe.shareCardButton')}
+          >
+            <StoreMyPerformanceDateFilter
+              activeClosedSnapshotRunId={activeClosedSnapshotRunId}
+              availableClosedSnapshotRuns={closedSnapshotRunOptions}
+              availableLiveMonthOptions={liveMonthFilterOptions}
+              dataQualityLabel={dataQualityLabel}
+              isDateFilterOpen={isDateFilterOpen}
+              isPartial={partial.isPartial}
+              locale={locale}
+              loadedPeriodCount={loadedPeriodCount}
+              onChangeLivePeriodType={periodHandlers.changeLivePeriodType}
+              onSelectClosedSnapshotRun={onSelectClosedSnapshotRun}
+              onSelectLiveDay={periodHandlers.selectLiveDay}
+              onSelectLiveMonth={periodHandlers.selectLiveMonth}
+              onSelectSourceMode={onSelectSourceMode}
+              onToggleDateFilter={onToggleDateFilter}
+              scopedAvailableDailyPeriods={liveDayFilterOptions}
+              selectedClosedSnapshotRunId={selectedClosedSnapshotRunId}
+              selectedLivePeriodStart={selectedLivePeriodStart}
+              selectedLivePeriodType={selectedLivePeriodType}
+              selectedPeriodLabel={selectedPeriodLabel}
+              sourceMode={sourceMode}
+              t={t}
+              usesClosedSnapshotMode={usesClosedSnapshotMode}
+            />
+          </StoreMeCompactHeader>
 
           <StoreMyPerformancePartialAlert
             isPartial={partial.isPartial}
@@ -519,6 +532,52 @@ function StoreMyPerformancePageExperience({
         t={t}
       />
     </>
+  )
+}
+
+function StoreMeCompactHeader({
+  children,
+  employeeHeading,
+  onOpenShareCard,
+  onReturnToRankings,
+  periodLabel,
+  returnLabel,
+  shareCardLabel,
+  t,
+}: StoreMeCompactHeaderProps) {
+  const [employeeName, storeName] = employeeHeading.split('·').map((part) => part.trim())
+  const displayName = employeeName || employeeHeading
+  const displayStore = storeName || t('storeMe.noStore')
+
+  return (
+    <header className="store-me-compact-header">
+      <div className="store-me-compact-identity">
+        <span className="store-me-compact-avatar" aria-hidden="true">
+          <UserRound />
+        </span>
+        <div>
+          <div className="store-me-compact-titleline">
+            <h1>{displayName}</h1>
+            <Badge variant="secondary">{t('storeMe.personalScoreCard')}</Badge>
+          </div>
+          <p>{displayStore}</p>
+        </div>
+      </div>
+      <div className="store-me-compact-actions">
+        {onReturnToRankings ? (
+          <Button type="button" variant="outline" onClick={onReturnToRankings}>
+            {returnLabel}
+          </Button>
+        ) : null}
+        <Button className="store-me-share-trigger" type="button" onClick={onOpenShareCard}>
+          <Sparkles data-icon="inline-start" />
+          {shareCardLabel}
+        </Button>
+        <div className="store-me-compact-date-filter" aria-label={periodLabel}>
+          {children}
+        </div>
+      </div>
+    </header>
   )
 }
 

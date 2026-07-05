@@ -11,6 +11,7 @@ export type StoreMyPerformanceTodayAction = {
 }
 
 type TodayActionMetricCard = {
+  actionValueAvailable?: boolean
   code: string
   deltaValue: number | null
   displayValue: string
@@ -18,8 +19,38 @@ type TodayActionMetricCard = {
   progressPercent: number
 }
 
+const KPI_AVERAGE_THRESHOLD_PERCENT = 100
+const SIGNIFICANT_REGRESSION_PERCENT = -5
+const TARGET_BEHIND_THRESHOLD_PERCENT = 100
+
+type MetricAttentionReason = 'below-average' | 'regression'
+
 function uniqueLabels(labels: string[]) {
   return Array.from(new Set(labels.map((label) => label.trim()).filter(Boolean)))
+}
+
+function hasActionValue(metricCard: TodayActionMetricCard | null) {
+  return Boolean(metricCard?.actionValueAvailable ?? true)
+}
+
+function getMetricAttentionReason(metricCard: TodayActionMetricCard | null): MetricAttentionReason | null {
+  if (!metricCard || !hasActionValue(metricCard)) {
+    return null
+  }
+
+  if (metricCard.progressPercent > 0 && metricCard.progressPercent < KPI_AVERAGE_THRESHOLD_PERCENT) {
+    return 'below-average'
+  }
+
+  if (
+    metricCard.progressPercent >= KPI_AVERAGE_THRESHOLD_PERCENT &&
+    metricCard.deltaValue !== null &&
+    metricCard.deltaValue <= SIGNIFICANT_REGRESSION_PERCENT
+  ) {
+    return 'regression'
+  }
+
+  return null
 }
 
 export function buildStoreMyPerformanceTodayActions(input: {
@@ -57,7 +88,12 @@ export function buildStoreMyPerformanceTodayActions(input: {
     })
   }
 
-  if (targetCard && input.targetProgressPercent > 0 && input.targetProgressPercent < 100) {
+  if (
+    targetCard &&
+    hasActionValue(targetCard) &&
+    input.targetProgressPercent > 0 &&
+    input.targetProgressPercent < TARGET_BEHIND_THRESHOLD_PERCENT
+  ) {
     pushAction({
       id: 'target-behind',
       icon: 'target',
@@ -68,29 +104,52 @@ export function buildStoreMyPerformanceTodayActions(input: {
     })
   }
 
-  if (atvCard && (atvCard.progressPercent < 80 || (atvCard.deltaValue ?? 0) < 0)) {
+  const atvAttentionReason = getMetricAttentionReason(atvCard)
+
+  if (atvCard && atvAttentionReason !== null) {
     pushAction({
-      id: 'atv-watch',
+      id: atvAttentionReason === 'regression' ? 'atv-regression' : 'atv-below-average',
       icon: 'metric',
       variant: 'outline',
       badge: input.t('storeMe.opportunity'),
-      title: input.t('storeMe.action.atvWatch.title'),
-      copy: input.t('storeMe.action.atvWatch.copy', { value: atvCard.displayValue }),
+      title:
+        atvAttentionReason === 'regression'
+          ? input.t('storeMe.action.atvRegression.title')
+          : input.t('storeMe.action.atvWatch.title'),
+      copy: input.t(
+        atvAttentionReason === 'regression'
+          ? 'storeMe.action.atvRegression.copy'
+          : 'storeMe.action.atvWatch.copy',
+        { value: atvCard.displayValue },
+      ),
     })
   }
 
-  if (uptCard && (uptCard.progressPercent < 80 || (uptCard.deltaValue ?? 0) < 0)) {
+  const uptAttentionReason = getMetricAttentionReason(uptCard)
+
+  if (uptCard && uptAttentionReason !== null) {
     pushAction({
-      id: 'upt-watch',
+      id: uptAttentionReason === 'regression' ? 'upt-regression' : 'upt-below-average',
       icon: 'metric',
       variant: 'outline',
       badge: input.t('storeMe.opportunity'),
-      title: input.t('storeMe.action.uptWatch.title'),
-      copy: input.t('storeMe.action.uptWatch.copy', { value: uptCard.displayValue }),
+      title:
+        uptAttentionReason === 'regression'
+          ? input.t('storeMe.action.uptRegression.title')
+          : input.t('storeMe.action.uptWatch.title'),
+      copy: input.t(
+        uptAttentionReason === 'regression'
+          ? 'storeMe.action.uptRegression.copy'
+          : 'storeMe.action.uptWatch.copy',
+        { value: uptCard.displayValue },
+      ),
     })
   }
 
-  if ((input.samePeriodScoreDeltaValue ?? 0) < 0) {
+  if (
+    input.samePeriodScoreDeltaValue !== null &&
+    input.samePeriodScoreDeltaValue <= SIGNIFICANT_REGRESSION_PERCENT
+  ) {
     pushAction({
       id: 'score-trend',
       icon: 'rhythm',
@@ -99,24 +158,6 @@ export function buildStoreMyPerformanceTodayActions(input: {
       title: input.t('storeMe.action.scoreTrend.title'),
       copy: input.t('storeMe.action.scoreTrend.copy', {
         delta: input.samePeriodScoreDelta ?? input.t('storeMe.noTrendData'),
-      }),
-    })
-  }
-
-  if (actions.length === 0) {
-    const strongestMetric = input.metricCards
-      .filter((card) => card.progressPercent > 0)
-      .toSorted((left, right) => right.progressPercent - left.progressPercent)
-      .at(0)
-
-    pushAction({
-      id: 'maintain-rhythm',
-      icon: 'rhythm',
-      variant: 'secondary',
-      badge: input.t('storeMe.follow'),
-      title: input.t('storeMe.action.maintain.title'),
-      copy: input.t('storeMe.action.maintain.copy', {
-        metric: strongestMetric?.label ?? input.t('storeMe.score'),
       }),
     })
   }

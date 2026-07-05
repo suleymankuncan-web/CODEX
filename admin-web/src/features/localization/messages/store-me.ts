@@ -29,10 +29,11 @@ export const storeMeTr = {
   'storeMe.personalScoreCard': 'Kişisel skor kartı',
   'storeMe.coachingMode': 'Koçluk modu',
   'storeMe.performanceFocusTitle': 'Bugünkü performans odağı',
-  'storeMe.targetProgress': 'Hedef gerçekleşme barı',
+  'storeMe.targetProgress': 'Hedef Gerçekleştirme',
   'storeMe.targetProgressPercent': 'Hedefin %{value} seviyesi gerçekleşti',
   'storeMe.progressFullContribution': 'Tam katkı',
-  'storeMe.progressOverTarget': 'Hedef üstü',
+  'storeMe.progressOverTarget': 'Ortalama Üstü',
+  'storeMe.progressUnderAverage': 'Ortalama Altı',
   'storeMe.samePeriodComparison': 'Aynı gün kıyaslaması',
   'storeMe.samePeriodSummary': 'Seçili dönem önceki aya göre {value} seviyesinde.',
   'storeMe.noTrendData': 'Trend için önceki dönem bekleniyor',
@@ -70,6 +71,8 @@ export const storeMeTr = {
   'storeMe.todayCoaching': 'Bugün Yapılacaklar',
   'storeMe.todayCoachingCopy':
     'Seçili dönem KPI verisine göre oluşan aksiyonlar.',
+  'storeMe.todayActionsEmptyTitle': 'Bugün için net aksiyon yok',
+  'storeMe.todayActionsEmptyCopy': 'Seçili dönem verisi aksiyon eşiğine takılan bir KPI göstermiyor.',
   'storeMe.metricStatus.strong': 'En güçlü alan',
   'storeMe.metricStatus.rising': 'Yükselişte',
   'storeMe.metricStatus.stable': 'Stabil',
@@ -89,16 +92,19 @@ export const storeMeTr = {
     'Hedef gerçekleşme %{value}. Kapanıştan önce hedef açığını kontrol et.',
   'storeMe.action.atvWatch.title': 'ATV sepetini toparla',
   'storeMe.action.atvWatch.copy':
-    'ATV {value} seviyesinde. Sepet değerini yükseltecek tamamlayıcı öneriye odaklan.',
+    'ATV {value} seviyesinde ve ortalama altı. Sepet değerini yükseltecek tamamlayıcı öneriye odaklan.',
+  'storeMe.action.atvRegression.title': 'ATV düşüşünü izle',
+  'storeMe.action.atvRegression.copy':
+    'ATV {value} seviyesinde ve ortalamanın üstünde; ancak önceki döneme göre düşüş var. Sepet ritmini kaybetmemeye odaklan.',
   'storeMe.action.uptWatch.title': 'UPT ritmini yükselt',
   'storeMe.action.uptWatch.copy':
-    'UPT {value} seviyesinde. Fiş başı ürün önerisini güçlendir.',
+    'UPT {value} seviyesinde ve ortalama altı. Fiş başı ürün önerisini güçlendir.',
+  'storeMe.action.uptRegression.title': 'UPT düşüşünü izle',
+  'storeMe.action.uptRegression.copy':
+    'UPT {value} seviyesinde ve ortalamanın üstünde; ancak önceki döneme göre düşüş var. Fiş başı ürün ritmini koru.',
   'storeMe.action.scoreTrend.title': 'Skor düşüşünü tersine çevir',
   'storeMe.action.scoreTrend.copy':
     'Aynı dönem farkı {delta}. En düşük katkılı KPI ile başla.',
-  'storeMe.action.maintain.title': 'Ritmi koru',
-  'storeMe.action.maintain.copy':
-    '{metric} güçlü görünüyor. Bu ritmi koruyup zayıflayan ilk KPI’yı takip et.',
   'storeMe.priorityOne': 'Öncelik 1',
   'storeMe.opportunity': 'Fırsat',
   'storeMe.follow': 'Takip',
@@ -285,10 +291,11 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.personalScoreCard': 'Personal score card',
   'storeMe.coachingMode': 'Coaching mode',
   'storeMe.performanceFocusTitle': "Today's performance focus",
-  'storeMe.targetProgress': 'Target achievement bar',
+  'storeMe.targetProgress': 'Target achievement',
   'storeMe.targetProgressPercent': '%{value} of the target has been achieved',
   'storeMe.progressFullContribution': 'Full contribution',
-  'storeMe.progressOverTarget': 'Above target',
+  'storeMe.progressOverTarget': 'Above average',
+  'storeMe.progressUnderAverage': 'Below average',
   'storeMe.samePeriodComparison': 'Same-day comparison',
   'storeMe.samePeriodSummary': 'Selected period is {value} versus the previous month.',
   'storeMe.noTrendData': 'Previous period needed for trend',
@@ -326,6 +333,8 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
   'storeMe.todayCoaching': "Today's Actions",
   'storeMe.todayCoachingCopy':
     'Actions generated from the selected period KPI data.',
+  'storeMe.todayActionsEmptyTitle': 'No clear action for today',
+  'storeMe.todayActionsEmptyCopy': 'Selected period data does not show a KPI crossing an action threshold.',
   'storeMe.metricStatus.strong': 'Strongest area',
   'storeMe.metricStatus.rising': 'Rising',
   'storeMe.metricStatus.stable': 'Stable',
@@ -345,16 +354,19 @@ export const storeMeEn: Record<keyof typeof storeMeTr, string> = {
     'Target achievement is %{value}. Check the remaining gap before close.',
   'storeMe.action.atvWatch.title': 'Recover the ATV basket',
   'storeMe.action.atvWatch.copy':
-    'ATV is at {value}. Focus on complementary suggestions that lift basket value.',
+    'ATV is at {value} and below average. Focus on complementary suggestions that lift basket value.',
+  'storeMe.action.atvRegression.title': 'Watch the ATV decline',
+  'storeMe.action.atvRegression.copy':
+    'ATV is at {value} and above average, but declined versus the previous period. Keep the basket rhythm from slipping.',
   'storeMe.action.uptWatch.title': 'Lift the UPT rhythm',
   'storeMe.action.uptWatch.copy':
-    'UPT is at {value}. Strengthen product suggestions per ticket.',
+    'UPT is at {value} and below average. Strengthen product suggestions per ticket.',
+  'storeMe.action.uptRegression.title': 'Watch the UPT decline',
+  'storeMe.action.uptRegression.copy':
+    'UPT is at {value} and above average, but declined versus the previous period. Keep the units-per-ticket rhythm steady.',
   'storeMe.action.scoreTrend.title': 'Reverse the score decline',
   'storeMe.action.scoreTrend.copy':
     'Same-period difference is {delta}. Start with the lowest-contributing KPI.',
-  'storeMe.action.maintain.title': 'Maintain the rhythm',
-  'storeMe.action.maintain.copy':
-    '{metric} looks strong. Keep this rhythm and watch the first weakening KPI.',
   'storeMe.priorityOne': 'Priority 1',
   'storeMe.opportunity': 'Opportunity',
   'storeMe.follow': 'Follow',

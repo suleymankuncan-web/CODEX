@@ -28,7 +28,9 @@ test('store personnel lands on personal performance and only sees personnel navi
 
   await expect(page).toHaveURL(/\/store\/me(?:$|\?)/)
   await expect(page.getByTestId('store-me-page')).toBeVisible()
-  await expect(page.getByRole('heading', { name: /Store Personnel.*IstinyePark Demo Store/i })).toBeVisible()
+  const storeMeHeader = page.locator('.store-me-compact-header')
+  await expect(storeMeHeader.getByRole('heading', { name: /Store Personnel/i })).toBeVisible()
+  await expect(storeMeHeader).toContainText('IstinyePark Demo Store')
 
   const nav = page.locator('.store-command-nav')
   await expect(nav.locator('a[href="/store/home"]')).toBeVisible()

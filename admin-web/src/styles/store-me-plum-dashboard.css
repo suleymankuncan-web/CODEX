@@ -23,7 +23,7 @@
 
 .store-me-plum-page header h1 {
   color: var(--store-me-ink);
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0;
 }
 
@@ -36,6 +36,8 @@
 }
 
 .store-me-plum-dashboard {
+  position: relative;
+  z-index: 1;
   display: grid;
   gap: 18px;
 }
@@ -58,9 +60,9 @@
 .store-me-kpi-card {
   display: grid;
   align-content: start;
-  gap: 12px;
-  min-height: 264px;
-  padding: 20px;
+  gap: 10px;
+  min-height: 224px;
+  padding: 18px;
 }
 
 .store-me-card-topline,
@@ -74,8 +76,8 @@
 
 .store-me-card-topline .store-me-icon-bubble {
   display: inline-flex;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
@@ -112,18 +114,23 @@
   gap: 8px;
 }
 
+.store-me-kpi-copy {
+  min-height: 36px;
+  align-content: start;
+}
+
 .store-me-kpi-body h2 {
   margin: 0;
   color: var(--store-me-ink);
   font-size: 15px;
-  font-weight: 640;
+  font-weight: 610;
   letter-spacing: 0;
 }
 
 .store-me-kpi-body strong {
   color: var(--store-me-ink);
   font-size: clamp(30px, 2.55vw, 34px);
-  font-weight: 680;
+  font-weight: 650;
   letter-spacing: 0;
   line-height: 1;
 }
@@ -268,6 +275,29 @@
   padding: 10px;
 }
 
+.store-me-target-strip {
+  grid-template-columns: 1fr;
+  min-height: 95px;
+  align-content: center;
+  gap: 6px;
+  padding-block: 9px;
+}
+
+.store-me-target-strip span {
+  grid-template-columns: 66px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 5px;
+}
+
+.store-me-target-strip small::after {
+  content: ':';
+}
+
+.store-me-target-strip strong {
+  font-size: 12.5px;
+  text-align: left;
+}
+
 .store-me-kpi-target .store-me-target-strip strong {
   white-space: normal;
   overflow-wrap: anywhere;
@@ -297,45 +327,6 @@
 .store-me-trend-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.store-me-chart-frame {
-  margin-top: 18px;
-  overflow: hidden;
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.48)),
-    linear-gradient(135deg, rgba(124, 58, 237, 0.06), rgba(19, 167, 179, 0.08));
-}
-
-.store-me-line-chart {
-  display: block;
-  width: 100%;
-  min-height: 288px;
-}
-
-.store-me-line-chart line {
-  stroke: rgba(92, 86, 116, 0.24);
-  stroke-dasharray: 6 8;
-}
-
-.store-me-line-chart circle {
-  fill: var(--store-me-surface-strong);
-  stroke: url(#storeMePlumLine);
-  stroke-width: 6;
-}
-
-.store-me-line-chart text {
-  fill: var(--store-me-muted);
-  font-size: 12px;
-  font-weight: 520;
-  text-anchor: middle;
-}
-
-.store-me-line-chart .checkpoint-value {
-  fill: var(--store-me-ink);
-  font-size: 13px;
-  font-weight: 620;
 }
 
 .store-me-summary-strip {
@@ -375,7 +366,7 @@
   display: block;
   color: var(--store-me-ink);
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 620;
 }
 
 .store-me-bottom-grid {
@@ -561,18 +552,6 @@
 
   .store-me-main-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .store-me-line-chart {
-    min-height: 228px;
-  }
-
-  .store-me-line-chart .checkpoint-value {
-    font-size: 11px;
-  }
-
-  .store-me-line-chart .checkpoint-label {
-    font-size: 10px;
   }
 
   .store-me-action-row {
