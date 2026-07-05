@@ -82,20 +82,12 @@
   min-width: 18rem;
 }
 
-.store-me-compact-date-filter > section {
-  gap: 0;
-}
-
-.store-me-compact-date-filter > section > button {
+.store-me-compact-date-filter > button {
   min-height: 42px;
+  width: 100%;
+  justify-content: space-between;
   padding: 9px 12px;
   background: rgba(255, 255, 255, 0.72);
-}
-
-.store-me-compact-date-filter > section > div {
-  position: static;
-  width: 100%;
-  margin-top: 8px;
 }
 
 .store-me-kpi-head {
@@ -218,10 +210,6 @@
   .store-me-compact-date-filter {
     width: 100%;
     min-width: 0;
-  }
-
-  .store-me-compact-date-filter > section > div {
-    width: min(100%, calc(100vw - 40px));
   }
 
   .store-me-chart-frame .recharts-wrapper {

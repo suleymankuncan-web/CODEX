@@ -1,8 +1,4 @@
-import { CalendarDays, ChevronDown } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
 import {
   Dialog,
   DialogContent,
@@ -12,15 +8,6 @@ import {
 } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import {
   Table,
   TableBody,
   TableCell,
@@ -28,7 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { AppLocale } from '../lib/i18n'
 import { MonthYearPeriodPicker } from './store-month-year-period-picker'
@@ -106,8 +92,6 @@ type StoreMyPerformanceKpiDialogProps = {
   t: TranslateFunction
 }
 
-const LATEST_CLOSED_SNAPSHOT_VALUE = '__latest_closed_snapshot__'
-
 function clampProgress(value: number) {
   if (!Number.isFinite(value)) {
     return 0
@@ -129,232 +113,27 @@ function getMonthKey(input: string | null | undefined) {
   return getDateKey(input).slice(0, 7)
 }
 
-function dateFromKey(input: string | null | undefined) {
-  const dateKey = getDateKey(input)
-  if (!dateKey) return undefined
-  const [yearInput, monthInput, dayInput] = dateKey.split('-')
-  const year = Number(yearInput)
-  const month = Number(monthInput)
-  const day = Number(dayInput)
-
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-    return undefined
-  }
-
-  return new Date(year, month - 1, day)
-}
-
-function dateKeyFromDate(input: Date) {
-  return [
-    input.getFullYear(),
-    String(input.getMonth() + 1).padStart(2, '0'),
-    String(input.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
 export function StoreMyPerformanceDateFilter({
-  activeClosedSnapshotRunId,
-  availableClosedSnapshotRuns,
   availableLiveMonthOptions,
-  dataQualityLabel,
-  isDateFilterOpen,
-  isPartial,
   locale,
-  loadedPeriodCount,
-  onChangeLivePeriodType,
-  onSelectClosedSnapshotRun,
-  onSelectLiveDay,
   onSelectLiveMonth,
-  onSelectSourceMode,
-  onToggleDateFilter,
-  scopedAvailableDailyPeriods,
-  selectedClosedSnapshotRunId,
   selectedLivePeriodStart,
-  selectedLivePeriodType,
-  selectedPeriodLabel,
-  sourceMode,
   t,
-  usesClosedSnapshotMode,
 }: StoreMyPerformanceDateFilterProps) {
-  const selectedClosedValue =
-    selectedClosedSnapshotRunId || activeClosedSnapshotRunId || LATEST_CLOSED_SNAPSHOT_VALUE
-  const [selectedPeriodPrimaryLabel, selectedPeriodMetaLabel] = selectedPeriodLabel.split(' · ')
-  const selectedDateKey = getDateKey(selectedLivePeriodStart)
   const selectedMonthKey =
     getMonthKey(selectedLivePeriodStart) || availableLiveMonthOptions[0]?.key || ''
   const availableMonthValues = availableLiveMonthOptions.map((month) => month.key)
-  const availableDayEntries = scopedAvailableDailyPeriods.map((period) => ({
-    dateKey: getDateKey(period.period.periodStart),
-    period,
-  }))
-  const availableDayKeys = new Set(availableDayEntries.map((entry) => entry.dateKey).filter(Boolean))
-  const selectedDayEntry =
-    availableDayEntries.find((entry) => entry.dateKey === selectedDateKey) ?? availableDayEntries[0]
-  const selectedDailyDate = dateFromKey(selectedDayEntry?.dateKey)
 
   return (
-    <section className="tw:relative tw:grid tw:gap-3" aria-label={t('storeMe.dateFilter')}>
-      <Button
-        className="tw:h-auto tw:w-full tw:justify-between tw:gap-3 tw:rounded-xl tw:p-3"
-        type="button"
-        variant="outline"
-        aria-expanded={isDateFilterOpen}
-        onClick={onToggleDateFilter}
-      >
-        <CalendarDays data-icon="inline-start" />
-        <span className="tw:grid tw:min-w-0 tw:flex-1 tw:gap-0.5 tw:text-left">
-          <span className="tw:text-xs tw:text-muted-foreground">{t('storeMe.dateFilter')}</span>
-          <strong className="tw:truncate tw:text-sm tw:font-medium">
-            <span data-testid="store-me-period-pill">{selectedPeriodPrimaryLabel || selectedPeriodLabel}</span>
-            {selectedPeriodMetaLabel ? <span> · {selectedPeriodMetaLabel}</span> : null}
-          </strong>
-        </span>
-        <span className="tw:hidden tw:items-center tw:gap-2 tw:md:flex">
-          <Badge variant="outline">{t('storeMe.loadedPeriodCount', { count: loadedPeriodCount })}</Badge>
-          <Badge variant={isPartial ? 'destructive' : 'secondary'}>{dataQualityLabel}</Badge>
-        </span>
-        <ChevronDown data-icon="inline-end" />
-      </Button>
-
-      {isDateFilterOpen ? (
-        <div className="tw:absolute tw:left-0 tw:right-0 tw:top-[calc(100%+0.5rem)] tw:z-50 tw:grid tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card tw:p-3 tw:text-card-foreground tw:shadow-lg tw:sm:left-auto tw:sm:w-[min(34rem,calc(100vw-2rem))]">
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:md:hidden" aria-hidden="true">
-            <Badge variant="outline">{t('storeMe.loadedPeriodCount', { count: loadedPeriodCount })}</Badge>
-            <Badge variant={isPartial ? 'destructive' : 'secondary'}>{dataQualityLabel}</Badge>
-          </div>
-
-          <div className="tw:grid tw:gap-3 tw:lg:grid-cols-2">
-            {usesClosedSnapshotMode ? (
-              <div className="tw:grid tw:gap-2">
-                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.view')}</span>
-                <ToggleGroup
-                  type="single"
-                  value={sourceMode}
-                  onValueChange={(value) => {
-                    if (value === 'live' || value === 'closed') {
-                      onSelectSourceMode(value)
-                    }
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="tw:flex-wrap"
-                >
-                  <ToggleGroupItem value="live">{t('storeMe.liveStatus')}</ToggleGroupItem>
-                  <ToggleGroupItem value="closed">{t('storeMe.closedDay')}</ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-            ) : null}
-
-            <div className="tw:grid tw:gap-2">
-              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.liveGranularity')}</span>
-              <ToggleGroup
-                type="single"
-                value={selectedLivePeriodType}
-                onValueChange={(value) => {
-                  if (value === 'monthly' || value === 'daily') {
-                    onChangeLivePeriodType(value)
-                  }
-                }}
-                variant="outline"
-                size="sm"
-                className="tw:flex-wrap"
-              >
-                <ToggleGroupItem value="monthly" disabled={sourceMode !== 'live'}>
-                  {t('storeMe.liveMonth')}
-                </ToggleGroupItem>
-                <ToggleGroupItem value="daily" disabled={sourceMode !== 'live'}>
-                  {t('storeMe.liveDay')}
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-          </div>
-
-          <Separator />
-
-          {sourceMode === 'live' ? (
-            selectedLivePeriodType === 'daily' ? (
-              <div className="tw:grid tw:gap-2">
-                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.liveDay')}</span>
-                {availableDayEntries.length ? (
-                  <Calendar
-                    mode="single"
-                    {...(selectedDailyDate
-                      ? {
-                          defaultMonth: selectedDailyDate,
-                          selected: selectedDailyDate,
-                        }
-                      : {})}
-                    captionLayout="dropdown"
-                    className="tw:rounded-xl tw:border"
-                    disabled={(date) => !availableDayKeys.has(dateKeyFromDate(date))}
-                    onSelect={(date) => {
-                      if (!date) return
-                      const dateKey = dateKeyFromDate(date)
-                      const match = availableDayEntries.find((entry) => entry.dateKey === dateKey)
-                      if (match) {
-                        onSelectLiveDay(match.period.period)
-                        onToggleDateFilter()
-                      }
-                    }}
-                  />
-                ) : (
-                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
-                )}
-              </div>
-            ) : (
-              <div className="tw:grid tw:gap-2">
-                <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.liveMonth')}</span>
-                {availableMonthValues.length ? (
-                  <MonthYearPeriodPicker
-                    ariaLabel={t('storeMe.loadedMonthSelect')}
-                    availableValues={availableMonthValues}
-                    locale={locale}
-                    onValueChange={(value) => {
-                      onSelectLiveMonth(value)
-                      onToggleDateFilter()
-                    }}
-                    title={t('storeMe.liveMonth')}
-                    triggerClassName="tw:w-full tw:justify-between"
-                    value={selectedMonthKey}
-                  />
-                ) : (
-                  <span className="tw:text-sm tw:text-muted-foreground">{t('storeMe.noLoadedPeriods')}</span>
-                )}
-              </div>
-            )
-          ) : null}
-
-          {usesClosedSnapshotMode ? (
-            <div className="tw:grid tw:gap-2">
-              <span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{t('storeMe.closedSnapshotSelect')}</span>
-              <Select
-                value={selectedClosedValue}
-                onValueChange={(value) =>
-                  onSelectClosedSnapshotRun(value === LATEST_CLOSED_SNAPSHOT_VALUE ? '' : value)
-                }
-                disabled={sourceMode !== 'closed' || availableClosedSnapshotRuns.length === 0}
-              >
-                <SelectTrigger className="tw:w-full">
-                  <SelectValue placeholder={t('storeMe.latestClosedSnapshot')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value={LATEST_CLOSED_SNAPSHOT_VALUE}>
-                      {t('storeMe.latestClosedSnapshot')}
-                    </SelectItem>
-                    {availableClosedSnapshotRuns.map((run) => (
-                      <SelectItem key={run.snapshotRunId} value={run.snapshotRunId}>
-                        {run.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
+    <MonthYearPeriodPicker
+      ariaLabel={t('storeMe.dateFilter')}
+      availableValues={availableMonthValues}
+      locale={locale}
+      onValueChange={onSelectLiveMonth}
+      title={t('storeMe.dateFilter')}
+      triggerClassName="tw:h-10 tw:w-full tw:justify-between tw:rounded-xl tw:border-border tw:bg-white/75 tw:px-3 tw:text-sm tw:font-medium"
+      value={selectedMonthKey}
+    />
   )
 }
 

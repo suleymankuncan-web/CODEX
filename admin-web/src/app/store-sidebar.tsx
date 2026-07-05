@@ -20,19 +20,15 @@ import {
 import { NavLink } from 'react-router-dom'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { getVisibleFeedPosts, getVisibleFeedQueryKey } from '../features/feed/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import { resolveUserDisplayLabel } from '../lib/display-labels'
-import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   getRoleAwareStoreNavigation,
   getStorePersonaLabelKey,
   resolveStorePersona,
   type StoreNavIconId,
 } from './store-navigation'
-import { preloadRouteModule } from './route-preloaders'
-
-const feedPrefetchStaleTimeMs = 30_000
+import { preloadRoute } from './route-preloaders'
 
 const iconById: Record<StoreNavIconId, LucideIcon> = {
   approvals: ReceiptText,
@@ -76,18 +72,12 @@ export function StoreSidebar(input: {
       : assignedStoreCount > 0
       ? t('storeHome.sidebar.assignedStores', { count: assignedStoreCount })
       : t('storeHome.sidebar.scopedStores', { count: scopedStoreCount })
-  const warmStoreRoute = (path: string, routeId: string) => {
-    preloadRouteModule(path)
-    if ((routeId !== 'feed' && path !== '/store/feed') || !input.authSummary) {
-      return
-    }
-
-    void queryClient.prefetchQuery({
-      queryKey: getVisibleFeedQueryKey(input.authSummary),
-      queryFn: getVisibleFeedPosts,
-      staleTime: feedPrefetchStaleTimeMs,
-      ...transientQueryRetryOptions,
-    }).catch(() => undefined)
+  const warmStoreRoute = (path: string) => {
+    preloadRoute({
+      authSummary: input.authSummary,
+      pathname: path,
+      queryClient,
+    })
   }
 
   return (
@@ -118,10 +108,10 @@ export function StoreSidebar(input: {
               }
               {...(item.end === undefined ? {} : { end: item.end })}
               key={item.id}
-              onFocus={() => warmStoreRoute(item.path, item.id)}
-              onMouseEnter={() => warmStoreRoute(item.path, item.id)}
-              onPointerDown={() => warmStoreRoute(item.path, item.id)}
-              onPointerEnter={() => warmStoreRoute(item.path, item.id)}
+              onFocus={() => warmStoreRoute(item.path)}
+              onMouseEnter={() => warmStoreRoute(item.path)}
+              onPointerDown={() => warmStoreRoute(item.path)}
+              onPointerEnter={() => warmStoreRoute(item.path)}
               title={t(item.labelKey)}
               to={item.path}
             >

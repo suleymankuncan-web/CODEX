@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { type UseMutationResult } from '@tanstack/react-query'
 import {
   CircleDollarSign,
+  ClipboardCheck,
   Loader2,
+  PencilLine,
   RefreshCw,
   Search,
   Send,
   Store,
+  type LucideIcon,
 } from 'lucide-react'
 import {
   Accordion,
@@ -150,7 +153,6 @@ export function RegionManagerIncentivesView(input: {
     allStoresClosed &&
     !isPackageLocked(workflow)
   const workflowLocked = isPackageLocked(workflow)
-  const periodLabel = formatPeriodLabel(input.data.period)
 
   return (
     <StoreSurfacePage
@@ -158,46 +160,25 @@ export function RegionManagerIncentivesView(input: {
       className="tw:max-w-[1240px] tw:gap-3"
       testId="store-incentives-page"
     >
-      <section className="tw:rounded-[1.75rem] tw:border tw:border-border/80 tw:bg-[radial-gradient(circle_at_80%_10%,color-mix(in_oklab,var(--accent)_18%,transparent),transparent_36%),radial-gradient(circle_at_14%_12%,color-mix(in_oklab,var(--primary)_14%,transparent),transparent_34%),color-mix(in_oklab,var(--card)_86%,transparent)] tw:p-5 tw:shadow-[0_24px_70px_color-mix(in_oklab,var(--foreground)_10%,transparent)] tw:md:p-6">
-        <div className="tw:flex tw:flex-col tw:gap-5 tw:lg:flex-row tw:lg:items-start tw:lg:justify-between">
-          <div className="tw:min-w-0">
-            <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2.5">
-              <span className="tw:inline-flex tw:min-h-8 tw:items-center tw:rounded-full tw:bg-gradient-to-r tw:from-primary tw:to-accent tw:px-3.5 tw:text-xs tw:font-semibold tw:text-primary-foreground tw:shadow-[0_14px_32px_color-mix(in_oklab,var(--primary)_22%,transparent)]">
-                Primler
-              </span>
-              <span className="tw:inline-flex tw:min-h-8 tw:items-center tw:rounded-full tw:border tw:border-border/80 tw:bg-background/75 tw:px-3.5 tw:text-xs tw:font-semibold tw:text-foreground">
-                {periodLabel}
-              </span>
-              <span className="tw:inline-flex tw:min-h-8 tw:items-center tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/15 tw:px-3.5 tw:text-xs tw:font-semibold tw:text-chart-4">
-                {summary.pendingReviewCount} mağaza kontrol bekliyor
-              </span>
-              {summary.projectionOnlyCount > 0 ? (
-                <span className="tw:inline-flex tw:min-h-8 tw:items-center tw:rounded-full tw:border tw:border-chart-4/30 tw:bg-chart-4/15 tw:px-3.5 tw:text-xs tw:font-semibold tw:text-chart-4">
-                  Ay kapanışı bekliyor
-                </span>
-              ) : null}
-            </div>
-            <div className="tw:mt-5 tw:flex tw:items-center tw:gap-3.5">
-              <span className="tw:flex tw:size-12 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[1.15rem] tw:border tw:border-primary/20 tw:bg-gradient-to-br tw:from-primary/10 tw:to-accent/10 tw:text-primary">
-                <CircleDollarSign size={27} strokeWidth={1.8} />
-              </span>
-              <h1 className="tw:text-[clamp(2rem,4vw,3rem)] tw:font-semibold tw:leading-none tw:tracking-[-0.02em] tw:text-foreground">
-                Prim Kontrol Sayfası
-              </h1>
-            </div>
-            <p className="tw:mt-3 tw:max-w-2xl tw:text-sm tw:leading-6 tw:text-muted-foreground">
-              Mağaza ve personel hakedişleri, düzeltmeler ve dönem onayı tek akışta.
-            </p>
+      <section className="tw:rounded-[1.5rem] tw:border tw:border-border/80 tw:bg-[radial-gradient(circle_at_82%_8%,color-mix(in_oklab,var(--accent)_14%,transparent),transparent_32%),radial-gradient(circle_at_14%_10%,color-mix(in_oklab,var(--primary)_10%,transparent),transparent_30%),color-mix(in_oklab,var(--card)_88%,transparent)] tw:p-4 tw:shadow-[0_18px_48px_color-mix(in_oklab,var(--foreground)_8%,transparent)]">
+        <div className="tw:flex tw:flex-col tw:gap-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
+          <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
+            <span className="tw:flex tw:size-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[1rem] tw:border tw:border-primary/20 tw:bg-gradient-to-br tw:from-primary/10 tw:to-accent/10 tw:text-primary">
+              <CircleDollarSign size={22} strokeWidth={1.8} />
+            </span>
+            <h1 className="tw:text-[clamp(1.45rem,2.8vw,2.1rem)] tw:font-semibold tw:leading-none tw:tracking-[-0.015em] tw:text-foreground">
+              Prim Kontrol Sayfası
+            </h1>
           </div>
 
           <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
             <PeriodPicker
               period={input.selectedPeriod}
               onChange={input.onPeriodChange}
-              triggerClassName="tw:h-10 tw:min-w-[10.5rem] tw:rounded-2xl tw:bg-background/80 tw:px-3 tw:font-semibold tw:shadow-sm"
+              triggerClassName="tw:h-9 tw:min-w-[10.5rem] tw:rounded-2xl tw:bg-background/80 tw:px-3 tw:font-semibold tw:shadow-sm"
             />
             <Button
-              className={regionManagerPrimaryActionClass}
+              className={cn(regionManagerPrimaryActionClass, 'tw:h-9')}
               type="button"
               disabled={!packageCanSubmit || input.mutationState.submitPackageMutation.isPending}
               onClick={() => setSubmitDialogOpen(true)}
@@ -212,21 +193,25 @@ export function RegionManagerIncentivesView(input: {
 
         <div
           aria-label={t('storeIncentives.regionManagerSummaryAria')}
-          className="tw:mt-5 tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
+          className="tw:mt-4 tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
         >
           <RegionSignalCard
+            icon={CircleDollarSign}
             title="Dönem toplamı"
             value={formatMoneyValue(summary.payableTotal, input.locale)}
           />
           <RegionSignalCard
-            title="Hakeden personel"
-            value={summary.earningPersonnelCount}
+            icon={Store}
+            title="Kontrol bekleyen"
+            value={summary.pendingReviewCount}
           />
           <RegionSignalCard
+            icon={PencilLine}
             title="Düzeltme"
             value={summary.correctionCount}
           />
           <RegionSignalCard
+            icon={ClipboardCheck}
             title="Mağaza kontrolü"
             value={`${summary.reviewedStoreCount}/${summary.storeCount}`}
           />
@@ -297,17 +282,6 @@ export function RegionManagerIncentivesView(input: {
         aria-label={t('storeIncentives.regionManagerStoresAria')}
         className="tw:rounded-[1.5rem] tw:border tw:border-border/80 tw:bg-card/85 tw:p-3.5 tw:shadow-[0_14px_34px_color-mix(in_oklab,var(--foreground)_8%,transparent)]"
       >
-        <div className="tw:mb-3 tw:flex tw:items-center tw:justify-between tw:gap-3 tw:px-2 tw:pt-1">
-          <div>
-            <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">Mağaza paketleri</span>
-            <h2 className="tw:mt-1 tw:text-lg tw:font-semibold tw:tracking-[-0.01em] tw:text-foreground">
-              Bölge hakediş kontrolü
-            </h2>
-          </div>
-          <span className="tw:inline-flex tw:min-h-8 tw:items-center tw:rounded-full tw:bg-accent/10 tw:px-3 tw:text-xs tw:font-semibold tw:text-accent">
-            {summary.storeCount} mağaza
-          </span>
-        </div>
         {visibleProjections.length > 0 ? (
           <Accordion
             type="single"
@@ -433,13 +407,19 @@ export function RegionManagerIncentivesView(input: {
   )
 }
 
-function RegionSignalCard(input: { title: string; value: string | number }) {
+function RegionSignalCard(input: { icon: LucideIcon; title: string; value: string | number }) {
+  const Icon = input.icon
   return (
-    <article className="tw:min-h-[92px] tw:rounded-2xl tw:border tw:border-border/80 tw:bg-background/75 tw:p-4">
-      <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.title}</span>
-      <strong className="tw:mt-2 tw:block tw:text-2xl tw:font-semibold tw:leading-none tw:tracking-[-0.02em] tw:text-foreground">
-        {input.value}
-      </strong>
+    <article className="tw:grid tw:min-h-[76px] tw:grid-cols-[auto_1fr] tw:items-center tw:gap-3 tw:rounded-2xl tw:border tw:border-border/80 tw:bg-background/75 tw:p-3.5">
+      <span className="tw:flex tw:size-10 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
+        <Icon size={18} strokeWidth={1.9} />
+      </span>
+      <span className="tw:min-w-0">
+        <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.title}</span>
+        <strong className="tw:mt-1.5 tw:block tw:text-xl tw:font-semibold tw:leading-none tw:tracking-[-0.015em] tw:text-foreground">
+          {input.value}
+        </strong>
+      </span>
     </article>
   )
 }
