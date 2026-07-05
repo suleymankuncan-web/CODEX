@@ -18,6 +18,29 @@ function createReportingService(
   );
 }
 
+function withOfficialRankingEligibility<Row extends { employee_id: string; store_id: string | null }>(
+  row: Row,
+) {
+  const netSalesByEmployee = new Map([
+    ["employee-1", "120000"],
+    ["employee-2", "80000"],
+    ["employee-3", "130000"],
+  ]);
+  const storeNetSalesByStore = new Map([
+    ["store-1", "200000"],
+    ["store-2", "130000"],
+  ]);
+
+  return {
+    position_code: "SALES_ASSOCIATE",
+    net_sales_value: netSalesByEmployee.get(row.employee_id) ?? "100000",
+    store_net_sales_value: row.store_id
+      ? storeNetSalesByStore.get(row.store_id) ?? "1000000"
+      : "1000000",
+    ...row,
+  };
+}
+
 describe("ReportingService live leaderboard fallback", () => {
   it("rejects explicit live fallback store filters outside the caller scope", async () => {
     const closedRankingService = {
@@ -109,7 +132,7 @@ describe("ReportingService live leaderboard fallback", () => {
         { kpi_code: "UPT", benchmark_value: "2" },
       ]),
       getPeerEmployeePerformanceRows: jest.fn(async () => [
-        {
+        withOfficialRankingEligibility({
           employee_id: "employee-1",
           first_name: "Ada",
           last_name: "Lovelace",
@@ -121,8 +144,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: "100",
           personnel_target_reference_id: "target-1",
           actual_value: "120",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-1",
           first_name: "Ada",
           last_name: "Lovelace",
@@ -134,8 +157,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: null,
           personnel_target_reference_id: null,
           actual_value: "600",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-1",
           first_name: "Ada",
           last_name: "Lovelace",
@@ -147,8 +170,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: null,
           personnel_target_reference_id: null,
           actual_value: "3",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-2",
           first_name: "Grace",
           last_name: "Hopper",
@@ -160,8 +183,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: "100",
           personnel_target_reference_id: "target-2",
           actual_value: "80",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-2",
           first_name: "Grace",
           last_name: "Hopper",
@@ -173,8 +196,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: null,
           personnel_target_reference_id: null,
           actual_value: "550",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-2",
           first_name: "Grace",
           last_name: "Hopper",
@@ -186,8 +209,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: null,
           personnel_target_reference_id: null,
           actual_value: "2.5",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-3",
           first_name: "Katherine",
           last_name: "Johnson",
@@ -199,8 +222,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: "100",
           personnel_target_reference_id: "target-3",
           actual_value: "130",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-3",
           first_name: "Katherine",
           last_name: "Johnson",
@@ -212,8 +235,8 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: null,
           personnel_target_reference_id: null,
           actual_value: "700",
-        },
-        {
+        }),
+        withOfficialRankingEligibility({
           employee_id: "employee-3",
           first_name: "Katherine",
           last_name: "Johnson",
@@ -225,7 +248,7 @@ describe("ReportingService live leaderboard fallback", () => {
           target_value: null,
           personnel_target_reference_id: null,
           actual_value: "3.5",
-        },
+        }),
       ]),
     };
     const service = createReportingService(reportingRepository, closedRankingService);

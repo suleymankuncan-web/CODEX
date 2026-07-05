@@ -1,7 +1,14 @@
 export type ClosedRankingPeriodType = "daily" | "monthly";
 export type ClosedRankingState = "closed" | "live" | "not_closed" | "no_data";
 export type ClosedRankingStatus = "official" | "preview_only";
-export type ClosedRankingEligibilityReason = "eligible" | "needs_more_closed_days";
+export type ClosedRankingEligibilityReason =
+  | "eligible"
+  | "needs_more_closed_days"
+  | "store_manager_excluded"
+  | "missing_net_sales"
+  | "below_minimum_net_sales"
+  | "missing_store_sales"
+  | "below_minimum_store_share";
 
 export type ClosedRankingMetricRank = {
   code: string;

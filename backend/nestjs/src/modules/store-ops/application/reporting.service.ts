@@ -15,7 +15,7 @@ import { ClosedRankingRepository } from "../infrastructure/closed-ranking.reposi
 import { RankingReportingReadRepository } from "../infrastructure/ranking-reporting-read.repository";
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 import { StorePerformanceReportingReadRepository } from "../infrastructure/store-performance-reporting-read.repository";
-import { buildEmployeeScoreRankRows } from "./employee-score-rank.helpers";
+import { buildOfficialEmployeeScoreRankContext } from "./employee-score-rank.helpers";
 
 @Injectable()
 export class ReportingService {
@@ -764,17 +764,16 @@ export class ReportingService {
         ),
     );
 
-    const storeRows = latestPeriod.store_id
-      ? turkeyRows.filter((row) => row.store_id === latestPeriod.store_id)
-      : [];
     const currentRegionId = employeeRows[0]?.region_id ?? fallbackAssignment?.region_id ?? null;
-    const regionRows = currentRegionId
-      ? turkeyRows.filter((row) => row.region_id === currentRegionId)
-      : [];
-    const rankInput = { profile, benchmarkLookup, scoringService: this.kpiBenchmarkScoringService };
-    const storeScores = buildEmployeeScoreRankRows({ ...rankInput, rows: storeRows });
-    const regionScores = buildEmployeeScoreRankRows({ ...rankInput, rows: regionRows });
-    const turkeyScores = buildEmployeeScoreRankRows({ ...rankInput, rows: turkeyRows });
+    const { turkeyScores, storeScores, regionScores, officialRows } =
+      buildOfficialEmployeeScoreRankContext({
+        rows: turkeyRows,
+        profile,
+        benchmarkLookup,
+        scoringService: this.kpiBenchmarkScoringService,
+        storeId: latestPeriod.store_id,
+        regionId: currentRegionId,
+      });
 
     const storeRank =
       storeScores.findIndex((row) => row.employeeId === employeeId) >= 0
@@ -791,7 +790,7 @@ export class ReportingService {
     const metricRanks = buildLiveMetricRanks({
       employeeId,
       metricCodes,
-      rows: turkeyRows,
+      rows: officialRows,
       storeId: latestPeriod.store_id ?? null,
       regionId: currentRegionId,
     });

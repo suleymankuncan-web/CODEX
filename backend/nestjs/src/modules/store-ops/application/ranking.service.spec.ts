@@ -17,10 +17,8 @@ describe("RankingService", () => {
         store_name: `Store ${String(ordinal).padStart(3, "0")}`,
         region_id: regionId,
         region_name: regionId === "region-2" ? "Region 2" : "Region 1",
-        region_manager_user_id:
-          regionId === "region-2" ? "region-manager-2" : "region-manager-1",
-        region_manager_name:
-          regionId === "region-2" ? "Region Manager 2" : "Region Manager 1",
+        region_manager_user_id: regionId === "region-2" ? "region-manager-2" : "region-manager-1",
+        region_manager_name: regionId === "region-2" ? "Region Manager 2" : "Region Manager 1",
         kpi_code: "TARGET_ACHIEVEMENT",
         kpi_name: "Hedef gerceklestirme orani",
         actual_value: String(106 - ordinal),
@@ -44,10 +42,11 @@ describe("RankingService", () => {
         store_name: `Store ${String(ownStoreOrdinal).padStart(3, "0")}`,
         region_id: regionId,
         region_name: regionId === "region-2" ? "Region 2" : "Region 1",
-        region_manager_user_id:
-          regionId === "region-2" ? "region-manager-2" : "region-manager-1",
-        region_manager_name:
-          regionId === "region-2" ? "Region Manager 2" : "Region Manager 1",
+        region_manager_user_id: regionId === "region-2" ? "region-manager-2" : "region-manager-1",
+        region_manager_name: regionId === "region-2" ? "Region Manager 2" : "Region Manager 1",
+        position_code: "SALES_ASSOCIATE",
+        net_sales_value: "100000",
+        store_net_sales_value: "1000000",
         kpi_code: "TARGET_ACHIEVEMENT",
         kpi_name: "Hedef gerceklestirme orani",
         actual_value: String(106 - ordinal),
@@ -381,7 +380,7 @@ describe("RankingService", () => {
     expect(result.personnelLeaderboard.managedStorePersonnel[0]).toEqual(
       expect.objectContaining({
         storeId: "store-001",
-        canOpenProfile: true,
+        canOpenProfile: false,
         visibility: "detail",
         metrics: expect.arrayContaining([
           expect.objectContaining({

@@ -7,6 +7,10 @@ import type {
   ClosedRankingSummary,
 } from "./closed-ranking.contract";
 import { PerformanceScoreEvaluator } from "./performance-score-evaluator.service";
+import {
+  resolvePersonnelRankingEligibility,
+  type PersonnelRankingEligibilityResult,
+} from "./personnel-ranking-eligibility.contract";
 
 type LiveEmployeePerformanceRow = {
   employee_id: string;
@@ -15,6 +19,9 @@ type LiveEmployeePerformanceRow = {
   store_id: string | null;
   store_name?: string | null;
   region_id?: string | null;
+  position_code?: string | null;
+  net_sales_value?: string | null;
+  store_net_sales_value?: string | null;
   kpi_code: string;
   kpi_name?: string;
   target_value: string | null;
@@ -29,6 +36,7 @@ type LiveEmployeeScoreRow = {
   storeName: string | null;
   regionId: string | null;
   scoreValue: number;
+  rankingEligibility: PersonnelRankingEligibilityResult;
 };
 
 @Injectable()
@@ -147,24 +155,35 @@ export class LiveMonthlyLeaderboardService {
       profile: input.profile,
       benchmarkLookup,
     });
+    const officialScoreRows = scoreRows.filter(
+      (row) => row.rankingEligibility.isEligible,
+    );
     const limit = input.limit ?? 10;
     const storeScoreRows = storeFilter
-      ? scoreRows.filter((row) => row.storeId === storeFilter)
-      : scoreRows;
+      ? officialScoreRows.filter((row) => row.storeId === storeFilter)
+      : officialScoreRows;
     const currentScoreRow =
       scoreRows.find((row) => row.employeeId === employeeId) ?? null;
+    const officialEmployeeIds = new Set(
+      officialScoreRows.map((row) => row.employeeId),
+    );
+    const officialPeerRows = peerRows.filter((row) =>
+      officialEmployeeIds.has(row.employee_id),
+    );
     const employeeIds = this.uniqueIds([
       ...storeScoreRows.slice(0, limit).map((row) => row.employeeId),
-      currentScoreRow?.employeeId ?? null,
+      currentScoreRow?.rankingEligibility.isEligible
+        ? currentScoreRow.employeeId
+        : null,
     ]);
     const metricRanksByEmployee = this.buildLiveMetricRanksByEmployee({
-      rows: peerRows,
+      rows: officialPeerRows,
       employeeIds,
       profile: input.profile,
     });
-    const turkeyRankByEmployee = this.buildRankMap(scoreRows);
+    const turkeyRankByEmployee = this.buildRankMap(officialScoreRows);
     const storeRankByEmployee = this.buildRankMap(storeScoreRows);
-    const regionRankMapsByRegion = this.buildRegionRankMaps(scoreRows);
+    const regionRankMapsByRegion = this.buildRegionRankMaps(officialScoreRows);
     const toEmployee = (row: LiveEmployeeScoreRow): ClosedRankingEmployee => {
       const regionRank = row.regionId
         ? regionRankMapsByRegion.get(row.regionId)?.get(row.employeeId)
@@ -172,11 +191,15 @@ export class LiveMonthlyLeaderboardService {
 
       return this.mapLiveEmployeeRow({
         row,
-        turkeyRank: turkeyRankByEmployee.get(row.employeeId)?.rank ?? null,
-        turkeyPopulation: scoreRows.length,
+        turkeyRank: row.rankingEligibility.isEligible
+          ? turkeyRankByEmployee.get(row.employeeId)?.rank ?? null
+          : null,
+        turkeyPopulation: officialScoreRows.length,
         regionRank: regionRank?.rank ?? null,
         regionPopulation: regionRank?.population ?? 0,
-        storeRank: storeRankByEmployee.get(row.employeeId)?.rank ?? null,
+        storeRank: row.rankingEligibility.isEligible
+          ? storeRankByEmployee.get(row.employeeId)?.rank ?? null
+          : null,
         storePopulation: storeScoreRows.length,
         metricRanks: metricRanksByEmployee.get(row.employeeId) ?? [],
       });
@@ -212,6 +235,9 @@ export class LiveMonthlyLeaderboardService {
         storeId: string | null;
         storeName: string | null;
         regionId: string | null;
+        positionCode: string | null;
+        netSalesValue: number | null;
+        storeNetSalesValue: number | null;
         values: Map<
           string,
           {
@@ -236,8 +262,16 @@ export class LiveMonthlyLeaderboardService {
         storeId: row.store_id,
         storeName: row.store_name ?? null,
         regionId: row.region_id ?? null,
+        positionCode: row.position_code ?? null,
+        netSalesValue: parseFiniteNumber(row.net_sales_value),
+        storeNetSalesValue: parseFiniteNumber(row.store_net_sales_value),
         values: new Map(),
       };
+      current.positionCode = current.positionCode ?? row.position_code ?? null;
+      current.netSalesValue =
+        current.netSalesValue ?? parseFiniteNumber(row.net_sales_value);
+      current.storeNetSalesValue =
+        current.storeNetSalesValue ?? parseFiniteNumber(row.store_net_sales_value);
       current.values.set(row.kpi_code, {
         label: row.kpi_name ?? row.kpi_code,
         actualValue,
@@ -255,6 +289,11 @@ export class LiveMonthlyLeaderboardService {
           benchmarkFallback: "matched-only",
           useStoreChecklistFallback: false,
         });
+        const rankingEligibility = resolvePersonnelRankingEligibility({
+          positionCode: value.positionCode,
+          netSalesValue: value.netSalesValue,
+          storeNetSalesValue: value.storeNetSalesValue,
+        });
 
         return {
           employeeId,
@@ -264,6 +303,7 @@ export class LiveMonthlyLeaderboardService {
           storeName: value.storeName,
           regionId: value.regionId,
           scoreValue: scoring.scoreValue,
+          rankingEligibility,
         };
       })
       .sort(
@@ -419,8 +459,10 @@ export class LiveMonthlyLeaderboardService {
       storeId: input.row.storeId,
       storeName: input.row.storeName,
       scoreValue: input.row.scoreValue,
-      rankingStatus: "official",
-      eligibilityReason: "eligible",
+      rankingStatus: input.row.rankingEligibility.isEligible
+        ? "official"
+        : "preview_only",
+      eligibilityReason: input.row.rankingEligibility.reason,
       neededPerformanceDays: 0,
       rankings: {
         turkeyRank: input.turkeyRank,
@@ -434,7 +476,7 @@ export class LiveMonthlyLeaderboardService {
         closedDaysInPeriod: 1,
         daysWithPerformance: 1,
         minimumRequiredDays: 1,
-        isEligibleForRanking: true,
+        isEligibleForRanking: input.row.rankingEligibility.isEligible,
       },
       metricRanks: input.metricRanks,
     };
@@ -528,4 +570,13 @@ export class LiveMonthlyLeaderboardService {
       return Number.isFinite(value) && value !== 0;
     });
   }
+}
+
+function parseFiniteNumber(value: string | null | undefined) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const parsedValue = Number(value);
+  return Number.isFinite(parsedValue) ? parsedValue : null;
 }

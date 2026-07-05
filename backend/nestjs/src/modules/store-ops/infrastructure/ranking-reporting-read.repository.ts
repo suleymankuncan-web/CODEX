@@ -209,6 +209,9 @@ export class RankingReportingReadRepository {
       region_name: string | null;
       region_manager_user_id: string | null;
       region_manager_name: string | null;
+      position_code: string | null;
+      net_sales_value: string | null;
+      store_net_sales_value: string | null;
       kpi_code: string;
       kpi_name: string | null;
       actual_value: string | null;
@@ -338,6 +341,9 @@ export class RankingReportingReadRepository {
           region.region_name,
           region_manager.user_id AS region_manager_user_id,
           region_manager.display_name AS region_manager_name,
+          position.position_code,
+          employee_sales.net_sales_value::text AS net_sales_value,
+          store_sales.store_net_sales_value::text AS store_net_sales_value,
           kd.kpi_code,
           kd.kpi_name,
           ka.actual_value::text AS actual_value,
@@ -348,17 +354,45 @@ export class RankingReportingReadRepository {
         INNER JOIN ops.employee employee
           ON employee.employee_id = ka.employee_id
         LEFT JOIN LATERAL (
-          SELECT eah.store_id, eah.region_id
+          SELECT eah.store_id, eah.region_id, eah.position_id
           FROM ops.employee_assignment_history eah
           WHERE eah.employee_id = ka.employee_id
             AND eah.assignment_status = 'active'
           ORDER BY eah.is_primary_assignment DESC, eah.start_date DESC
           LIMIT 1
         ) assignment ON TRUE
+        LEFT JOIN ops.position position
+          ON position.position_id = assignment.position_id
         LEFT JOIN ops.store store
           ON store.store_id = COALESCE(ka.store_id, assignment.store_id)
         LEFT JOIN ops.region region
           ON region.region_id = COALESCE(ka.region_id, assignment.region_id, store.region_id)
+        LEFT JOIN LATERAL (
+          SELECT SUM(net_ka.actual_value)::numeric AS store_net_sales_value
+          FROM ops.kpi_actual net_ka
+          INNER JOIN ops.kpi_definition net_kd
+            ON net_kd.kpi_id = net_ka.kpi_id
+           AND net_kd.kpi_code = 'NET_SALES'
+          WHERE net_ka.scope_type = 'employee'
+            AND net_ka.store_id = store.store_id
+            AND net_ka.period_type = ka.period_type
+            AND net_ka.period_start = ka.period_start
+            AND net_ka.period_end = ka.period_end
+            AND COALESCE(net_ka.source_type, '') <> 'demo_seed'
+        ) store_sales ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT SUM(net_ka.actual_value)::numeric AS net_sales_value
+          FROM ops.kpi_actual net_ka
+          INNER JOIN ops.kpi_definition net_kd
+            ON net_kd.kpi_id = net_ka.kpi_id
+           AND net_kd.kpi_code = 'NET_SALES'
+          WHERE net_ka.scope_type = 'employee'
+            AND net_ka.employee_id = ka.employee_id
+            AND net_ka.period_type = ka.period_type
+            AND net_ka.period_start = ka.period_start
+            AND net_ka.period_end = ka.period_end
+            AND COALESCE(net_ka.source_type, '') <> 'demo_seed'
+        ) employee_sales ON TRUE
         LEFT JOIN ops.personnel_target_reference ptr
           ON ptr.employee_id = ka.employee_id
          AND ptr.period_start <= ka.period_start

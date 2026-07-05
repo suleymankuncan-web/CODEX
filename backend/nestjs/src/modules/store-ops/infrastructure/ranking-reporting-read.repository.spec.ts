@@ -154,4 +154,26 @@ describe("RankingReportingReadRepository source filters", () => {
     );
     expect(sql).toContain("ptr.target_value::text AS target_value");
   });
+
+  it("projects personnel position and sales totals for official ranking eligibility", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.listRankingPersonnelKpiRows({
+      metricCodes: ["TARGET_ACHIEVEMENT"],
+      companyIds: [],
+      periodType: "monthly",
+      periodStart: "2026-03-01",
+      periodEnd: "2026-03-31",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("position.position_code");
+    expect(sql).toContain("employee_sales.net_sales_value::text AS net_sales_value");
+    expect(sql).toContain(
+      "store_sales.store_net_sales_value::text AS store_net_sales_value",
+    );
+    expect(sql).toContain("AND net_kd.kpi_code = 'NET_SALES'");
+    expect(sql).toContain("net_ka.employee_id = ka.employee_id");
+    expect(sql).toContain("net_ka.store_id = store.store_id");
+  });
 });
