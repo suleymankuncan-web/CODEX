@@ -1400,6 +1400,32 @@ CREATE TABLE IF NOT EXISTS stg.master_data_bootstrap_row (
     CHECK (validation_status NOT IN ('needs_review', 'invalid') OR issue_code IS NOT NULL)
 );
 
+CREATE TABLE IF NOT EXISTS stg.roster_reconciliation_input (
+    roster_reconciliation_input_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_file TEXT NOT NULL,
+    source_sheet TEXT NOT NULL,
+    source_period TEXT NOT NULL DEFAULT '',
+    source_kind TEXT NOT NULL,
+    row_number INTEGER NOT NULL,
+    raw_store_name TEXT,
+    raw_store_code TEXT,
+    raw_employee_code TEXT,
+    raw_employee_name TEXT,
+    raw_position_name TEXT,
+    raw_payload JSONB NOT NULL DEFAULT '{}'::JSONB,
+    normalized_store_key TEXT NOT NULL DEFAULT '',
+    normalized_employee_key TEXT NOT NULL DEFAULT '',
+    match_status TEXT NOT NULL DEFAULT 'pending',
+    match_notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT chk_roster_reconciliation_source_kind
+      CHECK (source_kind IN ('current_roster', 'dealer_roster', 'target', 'sales_kpi')),
+    CONSTRAINT chk_roster_reconciliation_match_status
+      CHECK (match_status IN ('pending', 'matched', 'missing_store', 'missing_employee', 'ambiguous', 'ignored', 'review_required')),
+    CONSTRAINT uq_roster_reconciliation_source_row
+      UNIQUE (source_file, source_sheet, source_kind, source_period, row_number)
+);
+
 CREATE TABLE stg.external_id_map (
     external_id_map_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     integration_source_id UUID NOT NULL REFERENCES stg.integration_source(integration_source_id),
@@ -1669,6 +1695,18 @@ CREATE INDEX IF NOT EXISTS idx_master_data_bootstrap_batch_status
 CREATE INDEX IF NOT EXISTS idx_master_data_bootstrap_row_review
     ON stg.master_data_bootstrap_row (master_data_bootstrap_batch_id, validation_status, row_number);
 
+CREATE INDEX IF NOT EXISTS idx_roster_reconciliation_period_kind
+    ON stg.roster_reconciliation_input (source_period, source_kind);
+
+CREATE INDEX IF NOT EXISTS idx_roster_reconciliation_store_key
+    ON stg.roster_reconciliation_input (normalized_store_key);
+
+CREATE INDEX IF NOT EXISTS idx_roster_reconciliation_employee_key
+    ON stg.roster_reconciliation_input (normalized_employee_key);
+
+CREATE INDEX IF NOT EXISTS idx_roster_reconciliation_status
+    ON stg.roster_reconciliation_input (match_status);
+
 CREATE UNIQUE INDEX uq_import_batch_idempotency_key
     ON stg.import_batch (idempotency_key, company_ids)
     WHERE idempotency_key IS NOT NULL;
@@ -1833,5 +1871,6 @@ COMMENT ON TABLE rpt.snapshot_run IS 'Parent record for every immutable reportin
 COMMENT ON TABLE stg.import_batch IS 'Tracks lifecycle of each external data import batch.';
 COMMENT ON TABLE stg.master_data_bootstrap_batch IS 'Controlled store/personnel master-data bootstrap batches. Rows must be reviewed before live promotion.';
 COMMENT ON TABLE stg.master_data_bootstrap_row IS 'Raw and normalized master-data bootstrap rows with validation state, resolution evidence, and future promotion trace.';
+COMMENT ON TABLE stg.roster_reconciliation_input IS 'Pilot-only staging analysis table for roster, target, and sales/KPI reconciliation dry-runs. Product tables must not read from this table.';
 COMMENT ON TABLE audit.event_log IS 'Mandatory audit trail for critical business operations.';
 COMMENT ON TABLE audit.schema_migration IS 'Tracks SQL migration execution, checksums, status, and failure evidence.';
