@@ -68,9 +68,10 @@ Primary app endpoints:
 
 Fresh verified state on 2026-07-05:
 
-- Root workspace is `D:\store-ops-workspace` on `main` at
-  `d188d212 Refine Store Me surface and action contract (#875)`, aligned with
-  `origin/main`.
+- Root workspace is `D:\store-ops-workspace` on `main`, aligned with
+  `origin/main`. The latest product/runtime baseline is
+  `d188d212 Refine Store Me surface and action contract (#875)`. Later
+  docs-only current-state refresh commits do not change that runtime baseline.
 - The latest Store Me closeout line is merged through PR #875:
   - PR #870 fixed Store Me KPI percent/detail UI behavior.
   - PR #871 clarified UPT/ATV progress labels.
