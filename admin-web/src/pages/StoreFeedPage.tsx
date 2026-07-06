@@ -374,7 +374,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
             <textarea
               aria-label="Duyuru içeriği"
               className="feed-composer-body"
-              placeholder="Bölge mağazalarına ne duyurmak istiyorsun?"
+              placeholder="Ne paylaşmak istersin?"
               rows={3}
               value={body}
               onChange={(event) => setBody(event.target.value)}

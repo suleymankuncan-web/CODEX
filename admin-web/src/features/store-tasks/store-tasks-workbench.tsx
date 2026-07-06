@@ -237,15 +237,15 @@ export function StoreTasksCommandCenter(input: {
             </Button>
           </div>
         ) : null}
-        <div className="stcc-list">
-          <div className="stcc-list-head" aria-hidden="true">
-            <span />
-            <span>Görev</span>
-            <span>Kaynak</span>
-            <span>Atanma</span>
-            <span>Süre</span>
-            <span>Öncelik</span>
-            <span>Durum</span>
+        <div className="stcc-list" role="table" aria-label="Görev listesi">
+          <div className="stcc-list-head" role="row">
+            <span role="columnheader" aria-label="Kaynak türü" />
+            <span role="columnheader">Görev</span>
+            <span role="columnheader">Kaynak</span>
+            <span role="columnheader">Tarih</span>
+            <span role="columnheader">Geçen süre</span>
+            <span role="columnheader">Öncelik</span>
+            <span role="columnheader">Durum</span>
           </div>
           {input.isLoading && input.rows.length === 0 ? (
             <div className="stcc-empty">

@@ -17,11 +17,13 @@ test('personnel ranking keeps tab state and list rank after profile navigation',
   await expect(page.getByRole('heading', { name: 'Türkiye personel sıralaması' })).toBeVisible()
   const firstRank = await page.locator('[data-testid="personnel-ranking-rank"]').first().innerText()
   expect(firstRank.trim()).toBe('#6')
+  const firstRankNumber = firstRank.trim().replace(/\D/g, '')
 
   await page.getByRole('button', { name: 'Profile Git' }).first().click()
 
   await expect(page).toHaveURL(/\/store\/personnel\/employee-contract-1/)
-  await expect(page.getByText(firstRank.trim()).first()).toBeVisible()
+  await expect(page.getByText(`${firstRankNumber}.`).first()).toBeVisible()
+  await expect(page.getByText('84 kişi içinde').first()).toBeVisible()
 
   await page.goBack()
 
