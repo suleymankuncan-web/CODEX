@@ -163,6 +163,7 @@ describe("SalesTargetIncentiveReadRepository", () => {
     expect(text).toContain("ka.employee_id = assignment.employee_id");
     expect(text).toContain("ka.store_id = assignment.store_id");
     expect(text).toContain("FROM stg.kpi_raw kr");
+    expect(text).toContain("ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'");
     expect(text).toContain(
       "employee_map.internal_id = assignment.employee_id",
     );

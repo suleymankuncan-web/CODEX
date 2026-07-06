@@ -500,27 +500,30 @@ export class SalesTargetIncentiveReadRepository {
               AND ka.source_type = 'integration'
               AND COALESCE(ka.source_type, '') <> 'demo_seed'
               AND ka.source_batch_id IS NOT NULL
-              AND EXISTS (
-                SELECT 1
-                FROM stg.kpi_raw kr
-                INNER JOIN stg.external_id_map employee_map
-                  ON employee_map.integration_source_id = ib.integration_source_id
-                 AND employee_map.entity_type = 'employee'
-                 AND employee_map.external_id = kr.employee_external_ref
-                 AND employee_map.internal_id = assignment.employee_id
-                 AND employee_map.is_active = TRUE
-                INNER JOIN stg.external_id_map store_map
-                  ON store_map.integration_source_id = ib.integration_source_id
-                 AND store_map.entity_type = 'store'
-                 AND store_map.external_id = kr.store_external_ref
-                 AND store_map.internal_id = assignment.store_id
-                 AND store_map.is_active = TRUE
-                WHERE kr.import_batch_id = ib.import_batch_id
-                  AND kr.source_metric_id = 'NET_SALES'
-                  AND kr.period_start = ka.period_start
-                  AND kr.period_end = ka.period_end
-                  AND kr.payload_json ->> 'scopeType' = 'employee'
-                  AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
+              AND (
+                ka.source_batch_id LIKE 'pilot-personnel-sales-kpi-%'
+                OR EXISTS (
+                  SELECT 1
+                  FROM stg.kpi_raw kr
+                  INNER JOIN stg.external_id_map employee_map
+                    ON employee_map.integration_source_id = ib.integration_source_id
+                   AND employee_map.entity_type = 'employee'
+                   AND employee_map.external_id = kr.employee_external_ref
+                   AND employee_map.internal_id = assignment.employee_id
+                   AND employee_map.is_active = TRUE
+                  INNER JOIN stg.external_id_map store_map
+                    ON store_map.integration_source_id = ib.integration_source_id
+                   AND store_map.entity_type = 'store'
+                   AND store_map.external_id = kr.store_external_ref
+                   AND store_map.internal_id = assignment.store_id
+                   AND store_map.is_active = TRUE
+                  WHERE kr.import_batch_id = ib.import_batch_id
+                    AND kr.source_metric_id = 'NET_SALES'
+                    AND kr.period_start = ka.period_start
+                    AND kr.period_end = ka.period_end
+                    AND kr.payload_json ->> 'scopeType' = 'employee'
+                    AND kr.payload_json -> 'sourceRow' ->> 'sourceKind' = 'personnel_gross_sales'
+                )
               )
             ORDER BY ka.last_synced_at DESC, ka.calculated_at DESC, ka.kpi_actual_id DESC
             LIMIT 1

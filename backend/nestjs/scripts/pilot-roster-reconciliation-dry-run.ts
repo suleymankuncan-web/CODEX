@@ -91,6 +91,27 @@ function parseMoney(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function parseNumber(value: unknown) {
+  return parseMoney(value);
+}
+
+function deriveTicketCount(input: {
+  netSalesAmount: number | null;
+  itemCount: number | null;
+  atvValue: number | null;
+  uptValue: number | null;
+}) {
+  if (input.netSalesAmount !== null && input.atvValue !== null && input.atvValue > 0) {
+    return Number((input.netSalesAmount / input.atvValue).toFixed(6));
+  }
+
+  if (input.itemCount !== null && input.uptValue !== null && input.uptValue > 0) {
+    return Number((input.itemCount / input.uptValue).toFixed(6));
+  }
+
+  return null;
+}
+
 function inferPeriodFromName(fileName: string) {
   const normalized = key(fileName);
   for (const [monthName, monthNumber] of monthMap) {
@@ -437,6 +458,15 @@ function parseGenericSalesKpiFile(input: InputFile): RawRosterReconciliationInpu
         continue;
       }
 
+      const netSalesAmount = parseMoney(
+        readAny(row, ["SatÄ±ÅŸ TutarÄ±", "Satış Tutarı", "Net SatÄ±ÅŸ", "Net Satış", "Net Tutar (D) Toplam", "Ciro", "SatÄ±ÅŸ", "Satış"]),
+      );
+      const itemCount = parseNumber(
+        readAny(row, ["P. SatÄ±ÅŸ Adeti", "P. Satış Adeti", "P SatÄ±ÅŸ Adeti", "P Satış Adeti"]),
+      );
+      const atvValue = parseNumber(readAny(row, ["P.ATV", "P ATV", "ATV"]));
+      const uptValue = parseNumber(readAny(row, ["P.UPT", "P UPT", "UPT"]));
+
       result.push({
         sourceFile: basename(input.path),
         sourceSheet: sheet.sourceSheet,
@@ -447,9 +477,15 @@ function parseGenericSalesKpiFile(input: InputFile): RawRosterReconciliationInpu
         rawEmployeeCode: readAny(row, ["Personel Kodu", "Sicil", "Employee Code"]),
         rawEmployeeName,
         rawPositionName: readAny(row, ["Ünvan", "ÜNVANI", "Pozisyon"]),
-        netSalesAmount: parseMoney(
-          readAny(row, ["Satış Tutarı", "Net Satış", "Net Tutar (D) Toplam", "Ciro", "Satış"]),
+        netSalesAmount,
+        storeNetSalesAmount: parseMoney(
+          readAny(row, ["Mağaza Cirosu", "Store Sales"]),
         ),
+        itemCount,
+        ticketCount: deriveTicketCount({ netSalesAmount, itemCount, atvValue, uptValue }),
+        atvValue,
+        uptValue,
+        salesShare: parseNumber(readAny(row, ["Ciro Payı", "Sales Share"])),
         rawPayload: sourcePayload(row, headers),
       });
     }
