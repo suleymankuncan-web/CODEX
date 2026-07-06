@@ -49,6 +49,12 @@ export type RawRosterReconciliationInput = {
   rawPositionName?: string;
   targetAmount?: number | null;
   netSalesAmount?: number | null;
+  storeNetSalesAmount?: number | null;
+  itemCount?: number | null;
+  ticketCount?: number | null;
+  atvValue?: number | null;
+  uptValue?: number | null;
+  salesShare?: number | null;
   rawPayload?: Record<string, unknown>;
 };
 

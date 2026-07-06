@@ -46,12 +46,26 @@ export type PilotRosterTurnoverCandidate = {
   rawEmployeeName: string;
 };
 
+export type PilotRosterKpiActualScope = "store" | "employee";
+
+export type PilotRosterKpiActualCandidate = {
+  sourcePeriod: string;
+  scopeType: PilotRosterKpiActualScope;
+  normalizedStoreKey: string;
+  normalizedEmployeeKey: string | null;
+  rawEmployeeName: string | null;
+  kpiCode: string;
+  actualValue: number;
+  sourceBatchId: string;
+};
+
 export type PilotRosterApplyPlan = {
   canApplyWithoutApproval: boolean;
   approvalRequiredReasons: string[];
   activeAssignments: PilotRosterActiveAssignmentCandidate[];
   targetReferences: PilotRosterTargetReferenceCandidate[];
   turnoverEvents: PilotRosterTurnoverCandidate[];
+  kpiActuals: PilotRosterKpiActualCandidate[];
   snapshotPeriodsToRefresh: string[];
   excludedTargets: PilotRosterApplyReviewItem[];
   reviewItems: PilotRosterApplyReviewItem[];
@@ -60,6 +74,7 @@ export type PilotRosterApplyPlan = {
     activeAssignments: number;
     targetReferences: number;
     turnoverEvents: number;
+    kpiActuals: number;
     excludedTargets: number;
     reviewItems: number;
   };
@@ -96,6 +111,54 @@ function isValidPeriod(value: string | undefined): value is string {
   return value !== undefined && VALID_PERIOD_PATTERN.test(value);
 }
 
+function isPositiveFiniteNumber(value: number | null | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function sourceBatchIdForSalesPeriod(period: string) {
+  return `pilot-personnel-sales-kpi-${period}`;
+}
+
+function salesActualCandidates(input: {
+  sourcePeriod: string;
+  scopeType: PilotRosterKpiActualScope;
+  normalizedStoreKey: string;
+  normalizedEmployeeKey?: string | null;
+  rawEmployeeName?: string | null;
+  netSalesAmount?: number | null;
+  itemCount?: number | null;
+  ticketCount?: number | null;
+  atvValue?: number | null;
+  uptValue?: number | null;
+}): PilotRosterKpiActualCandidate[] {
+  const base = {
+    sourcePeriod: input.sourcePeriod,
+    scopeType: input.scopeType,
+    normalizedStoreKey: input.normalizedStoreKey,
+    normalizedEmployeeKey: input.normalizedEmployeeKey ?? null,
+    rawEmployeeName: input.rawEmployeeName ?? null,
+    sourceBatchId: sourceBatchIdForSalesPeriod(input.sourcePeriod),
+  };
+
+  const rows: PilotRosterKpiActualCandidate[] = [];
+  const push = (kpiCode: string, actualValue: number | null | undefined) => {
+    if (!isPositiveFiniteNumber(actualValue)) {
+      return;
+    }
+
+    rows.push({ ...base, kpiCode, actualValue });
+  };
+
+  push("NET_SALES", input.netSalesAmount);
+  push("TARGET_ACHIEVEMENT", input.netSalesAmount);
+  push("ITEM_COUNT", input.itemCount);
+  push("TICKET_COUNT", input.ticketCount);
+  push("ATV", input.atvValue);
+  push("UPT", input.uptValue);
+
+  return rows;
+}
+
 @Injectable()
 export class PilotRosterReconciliationService {
   buildApplyPlan(input: { rows: RawRosterReconciliationInput[] }): PilotRosterApplyPlan {
@@ -105,8 +168,20 @@ export class PilotRosterReconciliationService {
     const activeAssignments: PilotRosterActiveAssignmentCandidate[] = [];
     const targetReferences: PilotRosterTargetReferenceCandidate[] = [];
     const turnoverEvents: PilotRosterTurnoverCandidate[] = [];
+    const kpiActuals: PilotRosterKpiActualCandidate[] = [];
     const activeByLookup = new Map<string, NormalizedRosterReconciliationRow>();
     const activeStoreKeys = new Set<string>();
+    const storeSalesAccumulator = new Map<
+      string,
+      {
+        sourcePeriod: string;
+        normalizedStoreKey: string;
+        storeNetSalesAmount: number | null;
+        netSalesAmount: number;
+        itemCount: number;
+        ticketCount: number;
+      }
+    >();
 
     for (const row of rows.filter((item) => item.sourceKind === "current_roster")) {
       const reasons = this.activeRosterBlockReasons(row);
@@ -183,11 +258,68 @@ export class PilotRosterReconciliationService {
         continue;
       }
 
-      if (lookupKeys(row).some((lookupKey) => activeByLookup.has(lookupKey))) {
+      const activeMatch = lookupKeys(row)
+        .map((lookupKey) => activeByLookup.get(lookupKey))
+        .find((match): match is NormalizedRosterReconciliationRow => Boolean(match));
+      const storeIsActive = Boolean(row.normalizedStoreKey && activeStoreKeys.has(row.normalizedStoreKey));
+
+      if (storeIsActive) {
+        const accumulatorKey = `${period}:${row.normalizedStoreKey}`;
+        const current = storeSalesAccumulator.get(accumulatorKey) ?? {
+          sourcePeriod: period,
+          normalizedStoreKey: row.normalizedStoreKey,
+          storeNetSalesAmount: null,
+          netSalesAmount: 0,
+          itemCount: 0,
+          ticketCount: 0,
+        };
+        if (isPositiveFiniteNumber(row.storeNetSalesAmount)) {
+          current.storeNetSalesAmount = Math.max(
+            current.storeNetSalesAmount ?? 0,
+            row.storeNetSalesAmount,
+          );
+        }
+        current.netSalesAmount += isPositiveFiniteNumber(row.netSalesAmount)
+          ? row.netSalesAmount
+          : 0;
+        current.itemCount += isPositiveFiniteNumber(row.itemCount) ? row.itemCount : 0;
+        current.ticketCount += isPositiveFiniteNumber(row.ticketCount) ? row.ticketCount : 0;
+        storeSalesAccumulator.set(accumulatorKey, current);
+      }
+
+      if (activeMatch) {
+        if (activeMatch.normalizedStoreKey !== row.normalizedStoreKey) {
+          reviewItems.push(reviewItem(row, "sales_kpi_store_differs_from_active_assignment", "blocked"));
+          continue;
+        }
+
+        if (
+          activeMatch.roleClassification === "store_manager" ||
+          activeMatch.roleClassification === "cashier"
+        ) {
+          continue;
+        }
+
+        kpiActuals.push(
+          ...salesActualCandidates({
+            sourcePeriod: period,
+            scopeType: "employee",
+            normalizedStoreKey: row.normalizedStoreKey,
+            normalizedEmployeeKey: normalizeRosterKey(
+              activeMatch.rawEmployeeCode || activeMatch.rawEmployeeName,
+            ),
+            rawEmployeeName: row.rawEmployeeName ?? null,
+            netSalesAmount: row.netSalesAmount,
+            itemCount: row.itemCount,
+            ticketCount: row.ticketCount,
+            atvValue: row.atvValue,
+            uptValue: row.uptValue,
+          }),
+        );
         continue;
       }
 
-      if (!row.normalizedStoreKey || !activeStoreKeys.has(row.normalizedStoreKey)) {
+      if (!storeIsActive) {
         reviewItems.push(reviewItem(row, "sales_kpi_store_not_in_june_active_roster"));
         continue;
       }
@@ -205,6 +337,31 @@ export class PilotRosterReconciliationService {
       });
     }
 
+    for (const storeSales of storeSalesAccumulator.values()) {
+      const netSalesAmount =
+        storeSales.storeNetSalesAmount ?? (storeSales.netSalesAmount > 0 ? storeSales.netSalesAmount : null);
+      const atvValue =
+        netSalesAmount !== null && storeSales.ticketCount > 0
+          ? Number((netSalesAmount / storeSales.ticketCount).toFixed(6))
+          : null;
+      const uptValue =
+        storeSales.ticketCount > 0
+          ? Number((storeSales.itemCount / storeSales.ticketCount).toFixed(6))
+          : null;
+      kpiActuals.push(
+        ...salesActualCandidates({
+          sourcePeriod: storeSales.sourcePeriod,
+          scopeType: "store",
+          normalizedStoreKey: storeSales.normalizedStoreKey,
+          netSalesAmount,
+          itemCount: storeSales.itemCount,
+          ticketCount: storeSales.ticketCount,
+          atvValue,
+          uptValue,
+        }),
+      );
+    }
+
     rows
       .filter((row) => row.matchStatus === "review_required")
       .forEach((row) => {
@@ -217,6 +374,7 @@ export class PilotRosterReconciliationService {
       new Set([
         ...targetReferences.map((row) => row.sourcePeriod),
         ...turnoverEvents.map((row) => row.sourcePeriod),
+        ...kpiActuals.map((row) => row.sourcePeriod),
       ]),
     ).sort();
     return {
@@ -225,6 +383,7 @@ export class PilotRosterReconciliationService {
       activeAssignments,
       targetReferences,
       turnoverEvents,
+      kpiActuals,
       snapshotPeriodsToRefresh,
       excludedTargets,
       reviewItems,
@@ -233,6 +392,7 @@ export class PilotRosterReconciliationService {
         activeAssignments: activeAssignments.length,
         targetReferences: targetReferences.length,
         turnoverEvents: turnoverEvents.length,
+        kpiActuals: kpiActuals.length,
         excludedTargets: excludedTargets.length,
         reviewItems: reviewItems.length,
       },

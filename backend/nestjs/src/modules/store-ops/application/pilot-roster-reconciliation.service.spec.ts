@@ -177,6 +177,61 @@ describe("PilotRosterReconciliationService", () => {
     ]);
   });
 
+  it("creates employee and store KPI actual candidates from matched sales KPI rows", () => {
+    const service = new PilotRosterReconciliationService();
+
+    const plan = service.buildApplyPlan({
+      rows: [
+        ...baseRosterRows,
+        {
+          sourceFile: "Haziran satis.xlsx",
+          sourceSheet: "Sheet1",
+          sourceKind: "sales_kpi",
+          rowNumber: 9,
+          sourcePeriod: "2026-06",
+          rawStoreName: "Balikesir 10 Burda AVM",
+          rawEmployeeCode: "4139",
+          rawEmployeeName: "Ayse Demir",
+          netSalesAmount: 150000,
+          storeNetSalesAmount: 500000,
+          itemCount: 75,
+          ticketCount: 25,
+          atvValue: 6000,
+          uptValue: 3,
+        },
+      ],
+    });
+
+    expect(plan.kpiActuals).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          scopeType: "employee",
+          normalizedEmployeeKey: "4139",
+          kpiCode: "NET_SALES",
+          actualValue: 150000,
+          sourceBatchId: "pilot-personnel-sales-kpi-2026-06",
+        }),
+        expect.objectContaining({
+          scopeType: "employee",
+          kpiCode: "TARGET_ACHIEVEMENT",
+          actualValue: 150000,
+        }),
+        expect.objectContaining({
+          scopeType: "store",
+          normalizedEmployeeKey: null,
+          kpiCode: "NET_SALES",
+          actualValue: 500000,
+        }),
+        expect.objectContaining({
+          scopeType: "store",
+          kpiCode: "UPT",
+          actualValue: 3,
+        }),
+      ]),
+    );
+    expect(plan.snapshotPeriodsToRefresh).toContain("2026-06");
+  });
+
   it("allows explicit review override while keeping review evidence visible", () => {
     const service = new PilotRosterReconciliationService();
     const plan = service.buildApplyPlan({
