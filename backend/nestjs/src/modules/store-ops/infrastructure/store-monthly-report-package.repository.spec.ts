@@ -98,4 +98,26 @@ describe("StoreMonthlyReportPackageRepository", () => {
     expect(managerNameCte).toContain("ROW_NUMBER() OVER");
     expect(managerNameCte).not.toContain("ops.user_action_store_assignment action_scope");
   });
+
+  it("projects year-to-date turnover from assignments and turnover events", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getStoreMonthlyReportPackageRows({
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-14",
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      regionManagerUserId: "00000000-0000-4000-8000-000000000900",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+
+    expect(sql).toContain("turnover_state AS");
+    expect(sql).toContain("ops.turnover_event turnover_event");
+    expect(sql).toContain("turnover_event.event_type = 'termination'");
+    expect(sql).toContain("turnover_event.event_date BETWEEN DATE_TRUNC('year', $2::date)::date AND $2::date");
+    expect(sql).toContain("turnover_state.leaver_count");
+    expect(sql).toContain("turnover_state.turnover_rate");
+  });
 });

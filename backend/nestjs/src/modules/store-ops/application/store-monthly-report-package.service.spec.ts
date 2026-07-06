@@ -96,6 +96,8 @@ describe("StoreMonthlyReportPackageService", () => {
         incentive_total_amount: null,
         planned_headcount: null,
         active_headcount: "4",
+        leaver_count: "0",
+        turnover_rate: null,
         last_visit_date: null,
         days_since_visit: null,
       },
@@ -123,10 +125,11 @@ describe("StoreMonthlyReportPackageService", () => {
       normFiili: "Veri yok",
       turnover: "Veri yok",
       daysSinceVisit: "Veri yok",
+      dataNote: "Skor kaynağı yok; Turnover kaynağı yok; Norm kaynağı yok",
     });
   });
 
-  it("builds the expected worksheet and headers", async () => {
+  it("builds the expected worksheet, headers, and row values", async () => {
     const { service } = createService([
       {
         region_manager_name: "Onur Kaytan",
@@ -150,8 +153,37 @@ describe("StoreMonthlyReportPackageService", () => {
         incentive_total_amount: "1286450.75",
         planned_headcount: "6",
         active_headcount: "5",
+        leaver_count: "2",
+        turnover_rate: "12.50",
         last_visit_date: "2026-05-30",
         days_since_visit: "15",
+      },
+      {
+        region_manager_name: "Eda Doğanay",
+        store_id: "00000000-0000-4000-8000-000000000101",
+        store_name: "Düzce Dmall AVM",
+        store_type: "company",
+        region_name: "Eda Doğanay Bölgesi",
+        score_value: null,
+        upt_value: null,
+        atv_value: null,
+        cr_value: null,
+        hg_value: null,
+        gsm_value: null,
+        bm_checklist_score: null,
+        vm_checklist_score: null,
+        pending_ack_count: "0",
+        open_action_count: "0",
+        closed_action_count: "0",
+        target_status: null,
+        incentive_status: null,
+        incentive_total_amount: null,
+        planned_headcount: null,
+        active_headcount: "0",
+        leaver_count: "0",
+        turnover_rate: null,
+        last_visit_date: null,
+        days_since_visit: null,
       },
     ]);
 
@@ -168,10 +200,16 @@ describe("StoreMonthlyReportPackageService", () => {
 
     expect(workbookResult.fileName).toBe("magaza-izleyis-2026-06.xlsx");
     expect(workbook.SheetNames).toContain("Mağaza İzleyiş");
+    expect(rows).toHaveLength(3);
     expect(rows[0]).toEqual(STORE_MONTHLY_REPORT_PACKAGE_HEADERS);
     expect(rows[1]).toContain("Onur Kaytan");
+    expect(rows[1]).toContain("Onur Kaytan Bölgesi");
     expect(rows[1]).toContain("%22,32");
+    expect(rows[1]).toContain("%12,50 / 2 ayrılan");
+    expect(rows[1]).toContain("15 gün");
     expect(rows[1]).toContain("Devam ediyor");
+    expect(rows[1]).toContain("Tamam");
+    expect(rows[2]).toContain("Veri yok");
     expect(worksheet["A1"].s).toMatchObject({
       fgColor: { rgb: "3F2A8C" },
       patternType: "solid",

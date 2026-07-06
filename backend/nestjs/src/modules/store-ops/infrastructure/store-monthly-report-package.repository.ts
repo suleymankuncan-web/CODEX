@@ -210,6 +210,48 @@ workforce_state AS (
    AND assignment.start_date <= $2::date
    AND (assignment.end_date IS NULL OR assignment.end_date >= $2::date)
   GROUP BY scoped.store_id
+),
+turnover_state AS (
+  SELECT
+    scoped.store_id,
+    turnover_projection.leaver_count::text AS leaver_count,
+    CASE
+      WHEN turnover_projection.leaver_count > 0
+        AND ((turnover_projection.opening_headcount + turnover_projection.closing_headcount) / 2.0) > 0
+        THEN (
+          (
+            turnover_projection.leaver_count /
+            ((turnover_projection.opening_headcount + turnover_projection.closing_headcount) / 2.0)
+          ) * 100
+        )::numeric(10,2)::text
+      ELSE NULL
+    END AS turnover_rate
+  FROM scoped_stores scoped
+  CROSS JOIN LATERAL (
+    SELECT
+      (
+        SELECT COUNT(*)::numeric(10,2)
+        FROM ops.employee_assignment_history assignment
+        WHERE assignment.store_id = scoped.store_id
+          AND assignment.start_date <= DATE_TRUNC('year', $2::date)::date
+          AND (assignment.end_date IS NULL OR assignment.end_date >= DATE_TRUNC('year', $2::date)::date)
+      ) AS opening_headcount,
+      (
+        SELECT COUNT(*)::numeric(10,2)
+        FROM ops.employee_assignment_history assignment
+        WHERE assignment.store_id = scoped.store_id
+          AND assignment.assignment_status = 'active'
+          AND assignment.start_date <= $2::date
+          AND (assignment.end_date IS NULL OR assignment.end_date >= $2::date)
+      ) AS closing_headcount,
+      (
+        SELECT COUNT(*)::numeric(10,2)
+        FROM ops.turnover_event turnover_event
+        WHERE turnover_event.store_id = scoped.store_id
+          AND turnover_event.event_type = 'termination'
+          AND turnover_event.event_date BETWEEN DATE_TRUNC('year', $2::date)::date AND $2::date
+      ) AS leaver_count
+  ) turnover_projection
 )
 SELECT
   region_manager_names.region_manager_name,
@@ -233,6 +275,8 @@ SELECT
   incentive_state.incentive_total_amount,
   workforce_state.planned_headcount,
   workforce_state.active_headcount,
+  turnover_state.leaver_count,
+  turnover_state.turnover_rate,
   latest_visit.last_visit_date,
   latest_visit.days_since_visit
 FROM scoped_stores scoped
@@ -252,6 +296,8 @@ LEFT JOIN incentive_state
   ON incentive_state.store_id = scoped.store_id
 LEFT JOIN workforce_state
   ON workforce_state.store_id = scoped.store_id
+LEFT JOIN turnover_state
+  ON turnover_state.store_id = scoped.store_id
 ORDER BY scoped.store_name ASC
 `;
 
