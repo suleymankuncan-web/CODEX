@@ -2008,7 +2008,7 @@ test('store home keeps the command surface stable when English locale persists',
   await expect(page.getByText('Store operations run from one command surface.')).toHaveCount(0)
   await expect(page.getByText('Store performance and requests share one entry.')).toHaveCount(0)
   await expect(storeNav.getByRole('link', { name: 'Store KPIs', exact: true })).toBeVisible()
-  await expect(storeNav.getByRole('link', { name: 'Rankings', exact: true })).toBeVisible()
+  await expect(storeNav.getByRole('link', { name: 'Turkey Ranking', exact: true })).toBeVisible()
   await expect(storeNav.getByRole('link', { name: 'Request Center', exact: true })).toBeVisible()
   await expect(storeSidebar.locator('a[href="/store/settings"]')).toBeVisible()
   await expect(page.getByText('Mağaza alanı')).toHaveCount(0)
@@ -2125,7 +2125,7 @@ test('store sidebar transitions across visible manager pages without requiring m
     ready: page.getByRole('heading', { name: /KPI çalışma alanı/ }),
   })
   await verifyStoreNavTransition(page, storeNav, {
-    linkName: 'Rankings',
+    linkName: 'Türkiye Sıralaması',
     path: '/store/rankings',
     ready: page.getByRole('heading', { name: 'Sıralamalar' }),
   })
@@ -2286,6 +2286,7 @@ test('store rankings page renders Plum ranking table without signal chrome', asy
   await page.getByRole('button', { name: 'Gün filtresi' }).click()
   await expect(page.getByRole('checkbox', { name: 'Nis' })).toHaveCount(0)
   await expect(page.getByRole('checkbox', { name: 'Tüm ay' })).toBeChecked()
+  await page.getByRole('button', { name: 'Gün filtresi' }).click()
   await expect(page.getByTestId('store-rankings-page')).toBeVisible()
   await expect(page.getByText('Top 100 görünüm', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Seçili görünüm referansı')).toContainText('Türkiye Referansı')
@@ -2522,7 +2523,7 @@ test('store rankings personnel detail opens the selected personnel performance p
     )
     .toBe(true)
 
-  await page.getByRole('button', { name: 'Sıralamaya dön' }).click()
+  await page.goBack()
   await expect(page).toHaveURL(/\/store\/rankings\?/)
   const returnedParams = new URL(page.url()).searchParams
   expect(returnedParams.get('list')).toBe('personnel')
