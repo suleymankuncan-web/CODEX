@@ -401,7 +401,10 @@ function StoreRankingTableRow(input: {
 
   return (
     <TableRow className={input.current ? 'store-rankings-own-row' : undefined}>
-      <TableCell className="store-rankings-cell-rank" data-label={input.t('storeRankings.rankColumn')}>
+      <TableCell
+        className="store-rankings-cell-rank"
+        data-label={input.t('storeRankings.rankColumn')}
+      >
         <RankChip rank={row.rank} t={input.t} />
       </TableCell>
       <TableCell className="store-rankings-cell-entity" data-label={input.t('storeRankings.store')}>
@@ -438,8 +441,15 @@ function PersonnelRankingTableRow(input: {
   const row = input.row
 
   return (
-    <TableRow className={input.current ? 'store-rankings-own-row' : undefined}>
-      <TableCell className="store-rankings-cell-rank" data-label={input.t('storeRankings.rankColumn')}>
+    <TableRow
+      className={input.current ? 'store-rankings-own-row' : undefined}
+      data-testid="personnel-ranking-row"
+    >
+      <TableCell
+        className="store-rankings-cell-rank"
+        data-label={input.t('storeRankings.rankColumn')}
+        data-testid="personnel-ranking-rank"
+      >
         <RankChip rank={row.rank} t={input.t} />
       </TableCell>
       <TableCell className="store-rankings-cell-entity" data-label={input.t('storeRankings.personnel')}>
