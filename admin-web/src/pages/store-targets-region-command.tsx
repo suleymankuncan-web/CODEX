@@ -169,16 +169,38 @@ export function StoreTargetsRegionCommand(input: {
       </header>
 
       <div className="targets-metrics" aria-label="Hedef özeti">
-        <MetricCard icon={<Store size={20} />} label="Toplam mağaza" note="Bölge portföyü" value={String(storeRows.length)} tone="plum" />
+        <MetricCard
+          icon={<Store size={20} />}
+          label="Toplam mağaza"
+          note="Bölge portföyü"
+          testId="store-targets-region-store-metric"
+          value={String(storeRows.length)}
+          tone="plum"
+        />
         <MetricCard
           icon={<UsersRound size={20} />}
           label="Personel hedefli"
           note={`${input.coverageSummary.coveredEmployees} / ${input.coverageSummary.totalEmployees} personel`}
+          testId="store-targets-region-personnel-metric"
           value={formatCoveragePercent(input.coverageSummary.coverageRate)}
           tone="cyan"
         />
-        <MetricCard icon={<Clock3 size={20} />} label="Onay bekleyen" note="Bölge kararı" value={String(pendingCount)} tone="amber" />
-        <MetricCard icon={<AlertTriangle size={20} />} label="Hedefsiz mağaza" note="Bu dönem aksiyon bekliyor" value={String(missingCount)} tone="rose" />
+        <MetricCard
+          icon={<Clock3 size={20} />}
+          label="Onay bekleyen"
+          note="Bölge kararı"
+          testId="store-targets-region-decision-metric"
+          value={String(pendingCount)}
+          tone="amber"
+        />
+        <MetricCard
+          icon={<AlertTriangle size={20} />}
+          label="Hedefsiz mağaza"
+          note="Bu dönem aksiyon bekliyor"
+          testId="store-targets-region-no-request-metric"
+          value={String(missingCount)}
+          tone="rose"
+        />
       </div>
 
       <section className="targets-toolbar" aria-label="Hedef filtreleri">
@@ -717,11 +739,12 @@ function MetricCard(input: {
   icon: ReactNode
   label: string
   note: string
+  testId?: string
   tone: string
   value: string
 }) {
   return (
-    <article className={`targets-metric targets-metric-${input.tone}`}>
+    <article className={`targets-metric targets-metric-${input.tone}`} data-testid={input.testId}>
       <span className="targets-metric-icon">{input.icon}</span>
       <div>
         <span>{input.label}</span>
