@@ -106,6 +106,7 @@ export class PilotRosterReconciliationService {
     const targetReferences: PilotRosterTargetReferenceCandidate[] = [];
     const turnoverEvents: PilotRosterTurnoverCandidate[] = [];
     const activeByLookup = new Map<string, NormalizedRosterReconciliationRow>();
+    const activeStoreKeys = new Set<string>();
 
     for (const row of rows.filter((item) => item.sourceKind === "current_roster")) {
       const reasons = this.activeRosterBlockReasons(row);
@@ -124,6 +125,7 @@ export class PilotRosterReconciliationService {
         roleClassification: row.roleClassification,
       };
       activeAssignments.push(candidate);
+      activeStoreKeys.add(row.normalizedStoreKey);
       lookupKeys(row).forEach((lookupKey) => activeByLookup.set(lookupKey, row));
     }
 
@@ -182,6 +184,11 @@ export class PilotRosterReconciliationService {
       }
 
       if (lookupKeys(row).some((lookupKey) => activeByLookup.has(lookupKey))) {
+        continue;
+      }
+
+      if (!row.normalizedStoreKey || !activeStoreKeys.has(row.normalizedStoreKey)) {
+        reviewItems.push(reviewItem(row, "sales_kpi_store_not_in_june_active_roster"));
         continue;
       }
 

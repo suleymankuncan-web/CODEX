@@ -143,6 +143,26 @@ describe("pilot roster reconciliation contract", () => {
         rawEmployeeName: "Geçici Personel",
         targetAmount: 500000,
       },
+      {
+        sourceFile: "Mayıs personel.xlsx",
+        sourceSheet: "Export",
+        sourceKind: "sales_kpi",
+        sourcePeriod: "2026-05",
+        rowNumber: 4,
+        rawStoreName: "Alanya Akdeniz Park AVM",
+        rawEmployeeName: "Satışta Var Ayrılmış",
+        netSalesAmount: 120000,
+      },
+      {
+        sourceFile: "Mayıs personel.xlsx",
+        sourceSheet: "Export",
+        sourceKind: "sales_kpi",
+        sourcePeriod: "2026-05",
+        rowNumber: 5,
+        rawStoreName: "Dış Mağaza",
+        rawEmployeeName: "Dış Personel",
+        netSalesAmount: 120000,
+      },
     ];
 
     const summary = buildRosterReconciliationDryRun(rows);
@@ -152,7 +172,7 @@ describe("pilot roster reconciliation contract", () => {
     expect(summary.totals.cashiers).toBe(1);
     expect(summary.totals.targetRows).toBe(3);
     expect(summary.totals.matchedTargets).toBe(1);
-    expect(summary.totals.monthlyLeavers).toBe(2);
+    expect(summary.totals.monthlyLeavers).toBe(1);
     expect(summary.sections.riskyMatches.some((row) => row.rawStoreName === "Eyüp Axis Pop Up"))
       .toBe(true);
   });

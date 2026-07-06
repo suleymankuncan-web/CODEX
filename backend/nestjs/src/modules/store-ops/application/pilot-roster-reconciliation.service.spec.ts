@@ -147,6 +147,17 @@ describe("PilotRosterReconciliationService", () => {
           rawEmployeeName: "Hedefte Var Satis Yok",
           targetAmount: 75000,
         },
+        {
+          sourceFile: "Mayis satis.xlsx",
+          sourceSheet: "Sheet1",
+          sourceKind: "sales_kpi",
+          rowNumber: 11,
+          sourcePeriod: "2026-05",
+          rawStoreName: "Dis Magaza",
+          rawEmployeeCode: "8888",
+          rawEmployeeName: "Dis Magaza Personeli",
+          netSalesAmount: 50000,
+        },
       ],
     });
 
@@ -159,6 +170,9 @@ describe("PilotRosterReconciliationService", () => {
     expect(plan.reviewItems).toEqual([
       expect.objectContaining({
         reason: "target_employee_not_in_june_active_roster",
+      }),
+      expect.objectContaining({
+        reason: "sales_kpi_store_not_in_june_active_roster",
       }),
     ]);
   });

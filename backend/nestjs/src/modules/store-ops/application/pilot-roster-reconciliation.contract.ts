@@ -298,11 +298,11 @@ export function buildRosterReconciliationDryRun(
   }
 
   const targetRows = rows.filter((row) => row.sourceKind === "target");
-  const historicalRows = rows.filter((row) =>
-    row.sourceKind === "target" || row.sourceKind === "sales_kpi",
-  );
-  const monthlyLeavers = historicalRows.filter(
+  const monthlyLeavers = rows.filter(
     (row) =>
+      row.sourceKind === "sales_kpi" &&
+      Boolean(row.normalizedStoreKey) &&
+      activeStoreKeys.has(row.normalizedStoreKey) &&
       employeeLookupKeys(row).length > 0 &&
       employeeLookupKeys(row).every((lookupKey) => !activeKeys.has(lookupKey)),
   );
