@@ -29,6 +29,8 @@ export type StoreMonthlyReportPackageRow = {
   incentive_total_amount: string | null;
   planned_headcount: string | null;
   active_headcount: string | null;
+  leaver_count: string | null;
+  turnover_rate: string | null;
   last_visit_date: string | null;
   days_since_visit: string | null;
 };

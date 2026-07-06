@@ -65,7 +65,7 @@ const TURKISH_MONTHS = [
 export const STORE_MONTHLY_REPORT_PACKAGE_HEADERS = [
   "Bölge Müdürü",
   "Mağaza",
-  "Şehir",
+  "Bölge",
   "Dönem",
   "Rapor aralığı",
   "Skor",
@@ -331,9 +331,10 @@ function toPackageItem(input: {
 }): StoreMonthlyReportPackageItem {
   const normFiili = formatNormFiili(input.row);
   const missingDays = formatMissingDays(input.row);
+  const turnover = formatTurnover(input.row);
   const dataNotes = [
     input.row.score_value === null ? "Skor kaynağı yok" : null,
-    "Turnover kaynağı yok",
+    turnover === EMPTY_VALUE ? "Turnover kaynağı yok" : null,
     normFiili === EMPTY_VALUE ? "Norm kaynağı yok" : null,
   ].filter((item): item is string => Boolean(item));
 
@@ -356,7 +357,7 @@ function toPackageItem(input: {
     incentiveStatus: formatIncentiveStatus(input.row),
     normFiili,
     missingDays,
-    turnover: EMPTY_VALUE,
+    turnover,
     lastVisit: formatDate(input.row.last_visit_date),
     daysSinceVisit: formatDaysSinceVisit(input.row.days_since_visit),
     dataNote: dataNotes.length > 0 ? dataNotes.join("; ") : "Tamam",
@@ -487,6 +488,22 @@ function formatIncentiveStatus(row: StoreMonthlyReportPackageRow): string {
   const amount = formatMoney(row.incentive_total_amount);
 
   return amount === EMPTY_VALUE ? status : `${status} / ${amount}`;
+}
+
+function formatTurnover(row: StoreMonthlyReportPackageRow): string {
+  const leaverCount = Number(row.leaver_count ?? 0);
+  if (row.turnover_rate === null || !Number.isFinite(leaverCount) || leaverCount <= 0) {
+    return EMPTY_VALUE;
+  }
+
+  const turnoverRate = formatPercent(row.turnover_rate);
+  if (turnoverRate === EMPTY_VALUE) {
+    return EMPTY_VALUE;
+  }
+
+  return `${turnoverRate} / ${leaverCount.toLocaleString("tr-TR", {
+    maximumFractionDigits: 0,
+  })} ayrılan`;
 }
 
 function formatMoney(value: string | null): string {
