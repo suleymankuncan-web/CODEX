@@ -65,7 +65,7 @@ test('store personnel home and feed stay read-only', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
   await expect(page.getByText('Pilot mağaza duyurusu')).toBeVisible()
-  await expect(page.getByPlaceholder('Bölge mağazalarına ne duyurmak istiyorsun?')).toHaveCount(0)
+  await expect(page.getByPlaceholder('Ne paylaşmak istersin?')).toHaveCount(0)
   await expect(page.getByLabel('Gönderi seçenekleri')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Paylaş' })).toHaveCount(0)
 })

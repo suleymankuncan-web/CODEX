@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "test:e2e": "playwright test",
-    "test:e2e:store-contracts": "playwright test store-page-contracts.spec.ts store-checklists-contracts.spec.ts store-rankings-contracts.spec.ts store-kpis-contracts.spec.ts store-incentives-contracts.spec.ts store-targets-contracts.spec.ts store-workforce-contracts.spec.ts",
+    "test:e2e:store-contracts": "playwright test store-page-contracts.spec.ts store-checklists-contracts.spec.ts store-rankings-contracts.spec.ts store-kpis-contracts.spec.ts store-incentives-contracts.spec.ts store-targets-contracts.spec.ts store-workforce-contracts.spec.ts store-tasks-contracts.spec.ts store-feed-contracts.spec.ts store-reports-contracts.spec.ts store-home-contracts.spec.ts store-me-contracts.spec.ts store-personnel-contracts.spec.ts",
     "test:e2e:store-manager": "playwright test store-manager-persona.spec.ts",
     "test:e2e:store-personnel": "playwright test store-personnel-persona.spec.ts",
     "test:scripts": "node --test scripts/*.test.mjs",

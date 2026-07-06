@@ -151,7 +151,7 @@ test('store feed renders prototype-parity read-only surface for store personnel'
   await expect(page.getByText('Sabitlenen')).toBeVisible()
   await expect(page.getByText('Bugün paylaşılan')).toBeVisible()
   await expect(page.getByText('Bölge mağazası')).toBeVisible()
-  await expect(page.getByPlaceholder('Bölge mağazalarına ne duyurmak istiyorsun?')).toHaveCount(0)
+  await expect(page.getByPlaceholder('Ne paylaşmak istersin?')).toHaveCount(0)
   await expect(page.getByLabel('Gönderi seçenekleri')).toHaveCount(0)
 
   const postRow = page.getByTestId('store-feed-post-row').filter({ hasText: 'UPT focus window for the current month.' })
@@ -207,10 +207,10 @@ test('region manager store feed supports composer, edit, pin menu, archive undo,
 
   await page.goto('/store/feed')
 
-  await expect(page.getByPlaceholder('Bölge mağazalarına ne duyurmak istiyorsun?')).toBeVisible()
+  await expect(page.getByPlaceholder('Ne paylaşmak istersin?')).toBeVisible()
   await expect(page.getByLabel('Gönderi seçenekleri').first()).toBeVisible()
 
-  await page.getByPlaceholder('Bölge mağazalarına ne duyurmak istiyorsun?').fill('Bölge toplantısı bugün 15:00')
+  await page.getByPlaceholder('Ne paylaşmak istersin?').fill('Bölge toplantısı bugün 15:00')
   await page.getByRole('button', { name: 'Sabitle' }).click()
   await page.getByRole('button', { name: 'Paylaş' }).click()
 

@@ -201,15 +201,34 @@ function emptyList(url: URL) {
 }
 
 function createFeedPosts(url: URL) {
+  const publishedAt = '2026-07-01T09:00:00.000Z'
+
   return {
     ...emptyList(url),
     items: [
       {
-        authorName: 'Onur Kaytan',
         body: 'Haftalık mağaza duyurusu yayınlandı.',
-        createdAt: '2026-07-01T09:00:00.000Z',
-        id: 'feed-contract-1',
+        challengeEndsOn: null,
+        challengeStartsOn: null,
+        createdAt: publishedAt,
+        createdByUserId: 'regionManager-contract-user',
+        endsAt: null,
+        feedPostId: 'feed-contract-1',
         isPinned: true,
+        linkLabel: null,
+        linkUrl: null,
+        metricCode: null,
+        metricLabel: null,
+        postType: 'announcement',
+        publishStatus: 'published',
+        publishedAt,
+        startsAt: null,
+        targetRoute: null,
+        title: 'Haftalık mağaza duyurusu',
+        updatedAt: publishedAt,
+        updatedByUserId: 'regionManager-contract-user',
+        visibilityScopeIds: [regionId],
+        visibilityScopeType: 'region',
       },
     ],
   }
