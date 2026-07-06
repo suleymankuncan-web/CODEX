@@ -38,10 +38,15 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
     >
       <div className="tw:mx-auto tw:grid tw:max-w-[1420px] tw:gap-4">
         <header className="tw:grid tw:items-start tw:gap-4 tw:lg:grid-cols-[minmax(0,1fr)_auto]">
-          <section className="tw:grid tw:min-h-24 tw:content-center tw:gap-2.5 tw:rounded-[1.5rem] tw:border tw:border-[#c8d4e7]/70 tw:bg-[linear-gradient(110deg,rgba(255,255,255,0.9),rgba(230,250,255,0.78)),radial-gradient(circle_at_4%_8%,rgba(109,76,255,0.16),transparent_32%)] tw:p-5 tw:shadow-[0_22px_60px_rgba(40,55,93,0.14)]">
-            <h1 className="tw:text-3xl tw:font-semibold tw:leading-none tw:tracking-[-0.03em] tw:text-[#071332] tw:sm:text-4xl">
-              {model.t('storeKpis.regionCommandTitle')}
-            </h1>
+          <section className="tw:grid tw:min-h-[4.5rem] tw:content-center tw:gap-2 tw:rounded-[1.25rem] tw:border tw:border-[#c8d4e7]/70 tw:bg-[linear-gradient(110deg,rgba(255,255,255,0.9),rgba(230,250,255,0.78)),radial-gradient(circle_at_4%_8%,rgba(109,76,255,0.14),transparent_32%)] tw:p-3.5 tw:shadow-[0_16px_42px_rgba(40,55,93,0.12)]">
+            <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2.5">
+              <span className="tw:grid tw:size-9 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
+                <Gauge className="tw:size-[18px]" />
+              </span>
+              <h1 className="tw:m-0 tw:text-2xl tw:font-semibold tw:leading-none tw:tracking-[-0.02em] tw:text-[#071332] tw:sm:text-[1.8rem]">
+                {model.t('storeKpis.regionCommandTitle')}
+              </h1>
+            </div>
             <div className="tw:flex tw:flex-wrap tw:gap-2">
               <RegionMeta label={model.t('storeKpis.regionCommandKpiView')} />
               <RegionMeta label={model.t('storeKpis.regionOverviewStoreCount', { count: summary.storeCount })} />

@@ -289,7 +289,7 @@ test('region manager approval controls stay disabled before month close', async 
 
   await page.goto('/store/incentives')
 
-  await expect(page.getByText(/Ay kapan.*bekliyor/).first()).toBeVisible()
+  await expect(page.getByText(/Ay kapan.*bekliyor/)).toHaveCount(0)
   await expect(page.getByRole('button', { name: /Onaya gönder/i })).toBeDisabled()
   await openDemoStore(page)
   await expect(page.getByRole('checkbox', { name: 'Kontrol et' }).first()).toBeDisabled()

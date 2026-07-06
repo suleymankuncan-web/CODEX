@@ -95,7 +95,7 @@ export function getProjectionWorkflowStatus(projection: SalesTargetIncentiveProj
 } {
   const review = getReviewState(projection.review)
   if (isProjectionOnlyReview(review)) {
-    return { label: 'Ay kapanışı bekliyor', tone: 'warning' }
+    return { label: 'Final hesap bekleniyor', tone: 'warning' }
   }
   if (review.workflowLockedReason === 'package_submitted') {
     return { label: 'Admin onayında', tone: 'accent' }
@@ -132,7 +132,7 @@ export function getSubmitDisabledReason(input: {
   if (!input.workflow?.regionId) return 'Bölge seçimi tamamlanmadı'
   if (input.workflow.regionPackageStatus === 'submitted') return 'Admin onayında'
   if (input.workflow.regionPackageStatus === 'admin_approved') return 'Admin onayladı'
-  if (!input.allStoresClosed) return 'Ay kapanışı bekleniyor'
+  if (!input.allStoresClosed) return 'Final hesap bekleniyor'
   if (!input.allStoresReviewed) return 'Kontrol bekleyen mağaza var'
   return null
 }

@@ -75,7 +75,6 @@ import {
   getRegionSummary,
   getReviewState,
   isPackageLocked,
-  isProjectionOnlyReview,
   matchesStoreFilter,
   type SelectedIncentiveRow,
   type StoreStatusFilter,
@@ -160,13 +159,13 @@ export function RegionManagerIncentivesView(input: {
       className="tw:max-w-[1240px] tw:gap-3"
       testId="store-incentives-page"
     >
-      <section className="tw:rounded-[1.5rem] tw:border tw:border-border/80 tw:bg-[radial-gradient(circle_at_82%_8%,color-mix(in_oklab,var(--accent)_14%,transparent),transparent_32%),radial-gradient(circle_at_14%_10%,color-mix(in_oklab,var(--primary)_10%,transparent),transparent_30%),color-mix(in_oklab,var(--card)_88%,transparent)] tw:p-4 tw:shadow-[0_18px_48px_color-mix(in_oklab,var(--foreground)_8%,transparent)]">
-        <div className="tw:flex tw:flex-col tw:gap-4 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
+      <section className="tw:rounded-[1.35rem] tw:border tw:border-border/80 tw:bg-[radial-gradient(circle_at_82%_8%,color-mix(in_oklab,var(--accent)_12%,transparent),transparent_30%),radial-gradient(circle_at_14%_10%,color-mix(in_oklab,var(--primary)_8%,transparent),transparent_28%),color-mix(in_oklab,var(--card)_88%,transparent)] tw:p-3.5 tw:shadow-[0_14px_38px_color-mix(in_oklab,var(--foreground)_7%,transparent)]">
+        <div className="tw:flex tw:flex-col tw:gap-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
           <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
-            <span className="tw:flex tw:size-10 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[1rem] tw:border tw:border-primary/20 tw:bg-gradient-to-br tw:from-primary/10 tw:to-accent/10 tw:text-primary">
-              <CircleDollarSign size={22} strokeWidth={1.8} />
+            <span className="tw:flex tw:size-9 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-[0.9rem] tw:border tw:border-primary/20 tw:bg-gradient-to-br tw:from-primary/10 tw:to-accent/10 tw:text-primary">
+              <CircleDollarSign size={19} strokeWidth={1.8} />
             </span>
-            <h1 className="tw:text-[clamp(1.45rem,2.8vw,2.1rem)] tw:font-semibold tw:leading-none tw:tracking-[-0.015em] tw:text-foreground">
+            <h1 className="tw:text-[clamp(1.25rem,2.2vw,1.75rem)] tw:font-semibold tw:leading-none tw:tracking-[-0.01em] tw:text-foreground">
               Prim Kontrol Sayfası
             </h1>
           </div>
@@ -193,7 +192,7 @@ export function RegionManagerIncentivesView(input: {
 
         <div
           aria-label={t('storeIncentives.regionManagerSummaryAria')}
-          className="tw:mt-4 tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
+          className="tw:mt-3 tw:grid tw:gap-2.5 tw:md:grid-cols-2 tw:xl:grid-cols-4"
         >
           <RegionSignalCard
             icon={CircleDollarSign}
@@ -280,7 +279,7 @@ export function RegionManagerIncentivesView(input: {
 
       <section
         aria-label={t('storeIncentives.regionManagerStoresAria')}
-        className="tw:rounded-[1.5rem] tw:border tw:border-border/80 tw:bg-card/85 tw:p-3.5 tw:shadow-[0_14px_34px_color-mix(in_oklab,var(--foreground)_8%,transparent)]"
+        className="tw:rounded-[1.5rem] tw:border tw:border-border/80 tw:bg-muted/35 tw:p-3 tw:shadow-[0_14px_34px_color-mix(in_oklab,var(--foreground)_8%,transparent)]"
       >
         {visibleProjections.length > 0 ? (
           <Accordion
@@ -410,9 +409,9 @@ export function RegionManagerIncentivesView(input: {
 function RegionSignalCard(input: { icon: LucideIcon; title: string; value: string | number }) {
   const Icon = input.icon
   return (
-    <article className="tw:grid tw:min-h-[76px] tw:grid-cols-[auto_1fr] tw:items-center tw:gap-3 tw:rounded-2xl tw:border tw:border-border/80 tw:bg-background/75 tw:p-3.5">
-      <span className="tw:flex tw:size-10 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
-        <Icon size={18} strokeWidth={1.9} />
+    <article className="tw:grid tw:min-h-[68px] tw:grid-cols-[auto_1fr] tw:items-center tw:gap-3 tw:rounded-2xl tw:border tw:border-border/80 tw:bg-background/75 tw:p-3">
+      <span className="tw:flex tw:size-9 tw:items-center tw:justify-center tw:rounded-xl tw:bg-primary/10 tw:text-primary">
+        <Icon size={17} strokeWidth={1.9} />
       </span>
       <span className="tw:min-w-0">
         <span className="tw:block tw:text-xs tw:font-medium tw:text-muted-foreground">{input.title}</span>
@@ -477,19 +476,17 @@ function RegionStoreCard(input: {
     : visualState === 'checked'
       ? 'calm'
       : 'warning'
-  const isWaitingForMonthClose = isProjectionOnlyReview(review)
-
   return (
     <AccordionItem
       className={cn(
-        'tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-sm tw:data-[state=open]:border-primary/35 tw:data-[state=open]:shadow-xl tw:data-[state=open]:ring-1 tw:data-[state=open]:ring-primary/15',
+        'tw:overflow-hidden tw:rounded-2xl tw:border-0 tw:bg-transparent tw:shadow-none tw:data-[state=open]:shadow-xl',
       )}
       data-slot="card"
       value={input.projection.storeId}
     >
       <AccordionTrigger
         className={cn(
-          'tw:relative tw:overflow-hidden tw:px-4 tw:py-4 tw:hover:no-underline',
+          'tw:relative tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border/65 tw:px-4 tw:py-4 tw:shadow-sm tw:hover:no-underline tw:data-[state=open]:rounded-b-none tw:data-[state=open]:border-primary/35 tw:data-[state=open]:ring-1 tw:data-[state=open]:ring-primary/15',
           visualSurfaceClass,
         )}
         >
@@ -522,9 +519,6 @@ function RegionStoreCard(input: {
             <Progress value={achievementProgress} />
           </div>
           <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:lg:justify-end">
-            {isWaitingForMonthClose ? (
-              <StoreStatusBadge tone="warning">Ay kapanışı bekliyor</StoreStatusBadge>
-            ) : null}
             <StoreStatusBadge tone={visualBadgeTone}>{visualStatusLabel}</StoreStatusBadge>
           </div>
           <span className="tw:text-right tw:text-xs tw:font-semibold tw:text-primary">
@@ -532,7 +526,7 @@ function RegionStoreCard(input: {
           </span>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="tw:border-t tw:border-border tw:bg-muted/20 tw:p-3">
+      <AccordionContent className="tw:rounded-b-2xl tw:border-x tw:border-b tw:border-border/65 tw:bg-card/85 tw:p-3">
         <div className="tw:mb-3 tw:flex tw:flex-col tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-card/80 tw:p-3 tw:lg:flex-row tw:lg:items-center tw:lg:justify-between">
           <label
             className={cn(

@@ -323,6 +323,16 @@ export class StorePerformanceReportingReadRepository {
           ON ff.store_id = ticket_count.store_id
           AND ff.kpi_code = 'FF'
         WHERE ticket_count.kpi_code = 'TICKET_COUNT'
+        UNION ALL
+        SELECT 'gsm_approval' AS kpi_code,
+               AVG(scoped_actual.actual_value)::text AS benchmark_value
+        FROM scoped_actual
+        WHERE scoped_actual.kpi_code IN ('gsm_approval', 'GSM_ONAY')
+        UNION ALL
+        SELECT 'GSM_ONAY' AS kpi_code,
+               AVG(scoped_actual.actual_value)::text AS benchmark_value
+        FROM scoped_actual
+        WHERE scoped_actual.kpi_code IN ('gsm_approval', 'GSM_ONAY')
       `,
       params,
     );
