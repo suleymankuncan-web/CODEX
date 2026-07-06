@@ -25,7 +25,7 @@ export const storeCompetitionsTr = {
   'storeCompetitions.readOnly': 'Sadece okuma',
   'storeCompetitions.noVisibleTitle': 'Görünür yarışma yok',
   'storeCompetitions.noVisibleCopy':
-    'Yetkili mağazalardan en az biri katıldığında yarışmalar burada görünür.',
+    'Mağazalardan en az biri katıldığında yarışmalar burada görünür.',
   'storeCompetitions.review': 'İncele',
   'storeCompetitions.type': 'Tür',
   'storeCompetitions.state': 'Durum',

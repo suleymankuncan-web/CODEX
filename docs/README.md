@@ -72,6 +72,7 @@ Use for daily direction and working discipline.
 - `docs/plans/project-debt-ledger.md`
 - `docs/plans/project-progress-plan-v1.md`
 - `docs/plans/store-workforce-and-approvals-split-v1-plan.md`
+- `docs/contracts/store-page-qa-contract-v1.md`
 
 ### Pilot Shelf
 
