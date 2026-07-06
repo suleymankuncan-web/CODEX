@@ -576,7 +576,7 @@ export class PilotRosterReconciliationRepository {
           0,
           0
         FROM source
-        ON CONFLICT (integration_source_id, entity_type, source_batch_id, company_ids)
+        ON CONFLICT (integration_source_id, entity_type, source_batch_id)
         WHERE source_batch_id IS NOT NULL
         DO UPDATE SET
           source_payload_hash = EXCLUDED.source_payload_hash,

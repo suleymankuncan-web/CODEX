@@ -187,7 +187,7 @@ describe("ReportingRepository benchmark queries", () => {
     return { query, repository };
   }
 
-  it("calculates personnel ATV UPT benchmarks from PowerBI-compatible KPI averages", async () => {
+  it("calculates personnel ATV UPT benchmarks from transaction components", async () => {
     const { query, repository } = createRepository();
 
     await repository.getEmployeeTurkeyBenchmarkValues({
@@ -198,11 +198,11 @@ describe("ReportingRepository benchmark queries", () => {
 
     const sql = String(query.mock.calls[0][0]);
     expect(sql).toContain("scope_type = 'employee'");
-    expect(sql).toContain("AVG(ka.actual_value)::text AS benchmark_value");
-    expect(sql).toContain("kd.kpi_code IN ('ATV', 'UPT')");
-    expect(sql).not.toContain("SUM(net_sales.actual_value)");
-    expect(sql).not.toContain("SUM(item_count.actual_value)");
-    expect(sql).not.toContain("SUM(ticket_count.actual_value)");
+    expect(sql).toContain("kd.kpi_code IN ('ATV', 'UPT', 'NET_SALES', 'ITEM_COUNT', 'TICKET_COUNT')");
+    expect(sql).toContain("SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)");
+    expect(sql).toContain("SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0)");
+    expect(sql).not.toContain("AVG(actual_value)::text AS benchmark_value");
+    expect(sql).not.toContain("direct_benchmark");
   });
 
   it("excludes demo seed KPI rows from personnel ranking Turkey benchmarks", async () => {

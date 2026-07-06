@@ -308,7 +308,10 @@ export class SalesTargetIncentiveApiService {
       assignmentAsOfDate: readiness.periodEnd,
       closeCutoffAt,
     });
-    const storesByCompany = groupStoresByCompany(projection.stores);
+    const finalizableStores = projection.stores.filter(
+      (store) => store.storeTargetAmount && store.storeNetSalesImportBatchId,
+    );
+    const storesByCompany = groupStoresByCompany(finalizableStores);
 
     if (storesByCompany.size === 0) {
       throw new BadRequestException("No company-store incentive projections are available to close");
@@ -815,11 +818,9 @@ export class SalesTargetIncentiveApiService {
 
 function groupStoresByCompany(stores: SalesTargetIncentiveProjectionStore[]) {
   const grouped = new Map<string, SalesTargetIncentiveProjectionStore[]>();
-
   for (const store of stores) {
     grouped.set(store.companyId, [...(grouped.get(store.companyId) ?? []), store]);
   }
-
   return grouped;
 }
 
@@ -871,7 +872,6 @@ function resolveFinalAmount(input: {
   const adjustment = input.adjustmentAmount ? parseMoneyCents(input.adjustmentAmount) : 0n;
   return formatCents(base + correction + adjustment);
 }
-
 function formatMoney2(value: string) {
   return formatCents(parseMoneyCents(value));
 }

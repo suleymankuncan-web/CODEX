@@ -153,6 +153,10 @@ describe("PilotRosterReconciliationRepository", () => {
     expect(sql).toContain("Pilot roster reconciliation");
     expect(sql).toContain("pilot-personnel-sales-kpi");
     expect(sql).toContain("ON CONFLICT (kpi_id, store_id, period_type, period_start, period_end)");
+    expect(sql).toContain("ON CONFLICT (integration_source_id, entity_type, source_batch_id)");
+    expect(sql).not.toContain(
+      "ON CONFLICT (integration_source_id, entity_type, source_batch_id, company_ids)",
+    );
     expect(sql).toContain("source_type");
     expect(sql).toContain("'integration'");
   });
