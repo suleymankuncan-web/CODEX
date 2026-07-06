@@ -27,6 +27,7 @@ workflow or visual regressions manually.
 - Raporlar
 - Duyurular
 - Store Me
+- Personel
 
 ## PR Rule
 
@@ -39,3 +40,8 @@ npm.cmd run test:e2e:store-contracts
 
 If local dependencies are incomplete, record the exact dependency failure in
 the PR notes and do not claim the contract passed.
+
+## Evidence
+
+Coverage mode, mocked/live boundaries, and intentionally deferred checks are
+tracked in `docs/evidence/store-page-qa-contract-v1/README.md`.

@@ -164,6 +164,8 @@ a second source of truth.
 Use to verify claims. Evidence files are not automatically active direction.
 
 - Start with `docs/evidence/README.md`.
+- `docs/evidence/store-page-qa-contract-v1/` for Store Page QA Contract
+  mocked/live/deferred coverage mode and PR preflight evidence.
 - `docs/evidence/pilot-readiness/` for pilot sessions, route checks, and pilot
   decisions.
 - `docs/evidence/readiness/` for release, provider, alert, Redis, restore, and

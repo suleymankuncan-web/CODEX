@@ -202,6 +202,28 @@ Use this process whenever a Store/Admin prototype is requested.
 11. Preserve role/scope/permission behavior.
 12. Record intentional deviations with production reasons.
 
+## Store Page QA Contract Gate
+
+Before opening a PR that touches any `/store/*` page:
+
+```bash
+npm.cmd run test:scripts
+npm.cmd run test:e2e:store-contracts
+```
+
+If dependency installation is incomplete, record the exact command output. Do
+not claim the contract passed.
+
+The store contract suite is the minimum automated guard for route access,
+persona scope, Turkish copy, UUID/internal id leaks, horizontal overflow,
+primary drawer/dialog flows, ranking alignment, KPI source visibility, and
+store workflow regressions.
+
+Evidence for this gate lives in
+`docs/evidence/store-page-qa-contract-v1/README.md`. Update that file when a
+contract moves from mocked coverage to live/staging coverage, or when a
+deferral is closed.
+
 ## Acceptance Check
 
 A Store/Admin surface is standard-compliant only when:
