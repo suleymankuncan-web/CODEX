@@ -69,6 +69,55 @@ describe("ReportingService KPI benchmark scoring", () => {
     expect((upt as Record<string, unknown> | undefined)?.scoreContribution).toBe(18);
   });
 
+  it("keeps GSM approval scoring target-based while exposing Turkey average as display reference", async () => {
+    const reportingRepository = {
+      getStoreNameById: jest.fn(async () => "Marmara Park"),
+      listStoreKpiPeriods: jest.fn(async () => [
+        {
+          period_type: "monthly",
+          period_start: "2026-06-01",
+          period_end: "2026-06-30",
+        },
+      ]),
+      getLatestStoreKpiPeriod: jest.fn(async () => ({
+        period_type: "monthly",
+        period_start: "2026-06-01",
+        period_end: "2026-06-30",
+      })),
+      getStorePerformanceRows: jest.fn(async () => [
+        {
+          kpi_code: "GSM_ONAY",
+          kpi_name: "GSM Onay",
+          actual_value: "40",
+          target_value: null,
+          achievement_rate: "0.4",
+          store_name: "Marmara Park",
+        },
+      ]),
+      listRankingStoreChecklistRows: jest.fn(async () => []),
+      getPeerStorePerformanceRows: jest.fn(async () => []),
+      getStoreTurkeyBenchmarkValues: jest.fn(async () => [
+        { kpi_code: "GSM_ONAY", benchmark_value: "72" },
+      ]),
+    };
+    const service = createReportingService(reportingRepository);
+
+    const result = await service.getStoreKpiHighlights({
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: ["store-1"],
+      periodType: "monthly",
+    });
+
+    const gsm = result.metrics.find((metric) => metric.code === "gsm_approval");
+    expect((gsm as Record<string, unknown> | undefined)?.actualValue).toBe(40);
+    expect((gsm as Record<string, unknown> | undefined)?.benchmarkSource).toBe("TURKEY_AVERAGE");
+    expect((gsm as Record<string, unknown> | undefined)?.benchmarkValue).toBe(72);
+    expect((gsm as Record<string, unknown> | undefined)?.achievementRate).toBe(0.4);
+    expect((gsm as Record<string, unknown> | undefined)?.scoreContribution).toBe(2);
+    expect((gsm as Record<string, unknown> | undefined)?.scoreStatus).toBe("scored");
+  });
+
   it("feeds completed BM and VM checklist visits into live store KPI highlights", async () => {
     const reportingRepository = {
       getStoreNameById: jest.fn(async () => "Marmara Park"),

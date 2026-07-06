@@ -180,25 +180,25 @@
 
 .store-checklists-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1.2fr) minmax(142px, 0.62fr) minmax(152px, 0.72fr) minmax(152px, 0.72fr) 148px;
-  gap: 12px;
-  align-items: stretch;
+  grid-template-columns: minmax(240px, 1.2fr) minmax(142px, 0.62fr) minmax(152px, 0.72fr) minmax(152px, 0.72fr) 150px;
+  gap: 10px;
+  align-items: center;
   border: 1px solid var(--checklist-line);
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.82);
   box-shadow: 0 18px 44px rgba(25, 34, 70, 0.065);
-  padding: 12px;
+  padding: 10px;
 }
 
 .store-checklists-filter {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 3px;
-  min-height: 46px;
+  min-height: 44px;
   border: 1px solid var(--checklist-line);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.86);
-  padding: 8px 12px;
+  padding: 7px 12px;
 }
 
 .store-checklists-filter span {
@@ -247,7 +247,7 @@
 
 .store-checklists-reset-button {
   align-self: stretch;
-  min-height: 46px;
+  min-height: 44px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.86);
   color: var(--checklist-ink);
@@ -426,14 +426,14 @@
 .store-checklists-visit-table .store-checklists-table-head,
 .store-checklists-visit-row {
   display: grid;
-  grid-template-columns: minmax(210px, 1.5fr) minmax(104px, 0.72fr) minmax(104px, 0.72fr) minmax(118px, 0.68fr) minmax(118px, 0.58fr);
-  gap: 14px;
+  grid-template-columns: minmax(210px, 1.5fr) minmax(100px, 0.62fr) minmax(100px, 0.62fr) minmax(116px, 0.62fr) minmax(132px, 0.58fr) minmax(116px, 0.55fr);
+  gap: 12px;
   align-items: center;
 }
 
 .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-table-head,
 .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row {
-  grid-template-columns: minmax(240px, 1.6fr) minmax(112px, 0.72fr) minmax(118px, 0.68fr) minmax(118px, 0.58fr);
+  grid-template-columns: minmax(240px, 1.6fr) minmax(112px, 0.66fr) minmax(116px, 0.62fr) minmax(132px, 0.58fr) minmax(116px, 0.55fr);
 }
 
 .store-checklists-table-head {

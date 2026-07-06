@@ -217,16 +217,19 @@ export class ReportingStoreKpiReadService {
         isGsmApprovalKpiCode(metric.code) && importedAchievementRate !== null
           ? 1
           : targetValue;
-      const benchmarkSource =
+      const scoringBenchmarkSource =
         isChecklistMetric
           ? "TARGET"
           : metric.code === "TARGET_ACHIEVEMENT"
             ? "TARGET"
             : metric.benchmarkSource ??
               (scoringTargetValue !== null ? "TARGET" : "TURKEY_AVERAGE");
+      const displayBenchmarkSource = isGsmApprovalKpiCode(metric.code)
+        ? "TURKEY_AVERAGE"
+        : scoringBenchmarkSource;
       const benchmarkValue =
-        !isChecklistMetric && benchmarkSource === "TURKEY_AVERAGE" && row
-          ? benchmarkLookup.get(row.kpi_code) ?? null
+        !isChecklistMetric && displayBenchmarkSource === "TURKEY_AVERAGE" && row
+          ? this.getBenchmarkValue(benchmarkLookup, matchingCodes)
           : null;
       const metricScore = this.kpiBenchmarkScoringService.scoreMetric({
         metricCode: metric.code,
@@ -235,7 +238,7 @@ export class ReportingStoreKpiReadService {
         targetValue: scoringTargetValue,
         weightPercent: metric.weightPercent,
         direction: metric.direction ?? "HIGHER_IS_BETTER",
-        benchmarkSource,
+        benchmarkSource: scoringBenchmarkSource,
         capRatio: isChecklistMetric ? 1 : metric.capRatio ?? 1.2,
       });
       const achievementRate = metricScore.actualRatio;
@@ -260,7 +263,7 @@ export class ReportingStoreKpiReadService {
         actualValue,
         targetValue,
         benchmarkValue,
-        benchmarkSource,
+        benchmarkSource: displayBenchmarkSource,
         achievementRate,
         actualRatio: metricScore.actualRatio,
         scoredRatio: metricScore.scoredRatio,
@@ -427,6 +430,20 @@ export class ReportingStoreKpiReadService {
       const value = Number(row.benchmark_value);
       return Number.isFinite(value) && value !== 0;
     });
+  }
+
+  private getBenchmarkValue(
+    benchmarkLookup: Map<string, number | null>,
+    matchingCodes: string[],
+  ) {
+    for (const code of matchingCodes) {
+      const value = benchmarkLookup.get(code);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    return null;
   }
 
   private async assertCanReadStore(input: {

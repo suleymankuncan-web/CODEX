@@ -27,7 +27,7 @@ test('completed checklist source keeps past month visit rows visible without mon
 
   const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
   await expect(visitRow).toBeVisible()
-  await expect(visitRow.locator('.store-checklists-date-cell')).toContainText('Apr 12, 2026')
+  await expect(visitRow.locator('.store-checklists-date-cell').first()).toContainText('Apr 12, 2026')
 })
 
 async function routeChecklistMonthFilterApi(page: Page) {

@@ -233,6 +233,7 @@ function StoreChecklistsVisitTable(input: {
         >
           {getStaticCopy(input.locale, 'Son ziyaret', 'Last visit')}
         </SortButton>
+        <span>{getStaticCopy(input.locale, 'Ziyaretten Geçen Süre', 'Days since visit')}</span>
         <span>{getStaticCopy(input.locale, 'Aksiyon', 'Action')}</span>
       </div>
 
@@ -353,6 +354,7 @@ function StoreChecklistsVisitRow(input: {
         />
       ) : null}
       <ChecklistVisitDateCell date={visitDate} locale={input.locale} />
+      <ChecklistVisitElapsedCell date={visitDate} locale={input.locale} />
       <Button
         className={`store-checklists-action-button${
           actionIsPrimary ? ' store-checklists-action-button-primary' : ' store-checklists-action-button-muted'
@@ -386,6 +388,26 @@ function StoreChecklistsVisitRow(input: {
         <ChevronRight data-icon="inline-end" />
       </Button>
     </article>
+  )
+}
+
+function ChecklistVisitElapsedCell(input: { date: string | null | undefined; locale: AppLocale }) {
+  const elapsedDays = getElapsedDaysSinceDate(input.date)
+
+  if (elapsedDays === null) {
+    return (
+      <span className="store-checklists-date-cell store-checklists-elapsed-cell store-checklists-date-cell-empty">
+        {getStaticCopy(input.locale, 'Yok', 'None')}
+      </span>
+    )
+  }
+
+  return (
+    <span className="store-checklists-date-cell store-checklists-elapsed-cell">
+      <strong>
+        {getStaticCopy(input.locale, `${elapsedDays} gün`, `${elapsedDays} day${elapsedDays === 1 ? '' : 's'}`)}
+      </strong>
+    </span>
   )
 }
 
@@ -424,4 +446,19 @@ function ChecklistVisitDateCell(input: { date: string | null | undefined; locale
       <small>{time}</small>
     </span>
   )
+}
+
+function getElapsedDaysSinceDate(input: string | null | undefined) {
+  if (!input) return null
+
+  const date = new Date(input)
+  if (Number.isNaN(date.getTime())) return null
+
+  const today = new Date()
+  const visitDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
+  const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  const elapsedMs = todayDay.getTime() - visitDay.getTime()
+
+  if (elapsedMs < 0) return 0
+  return Math.floor(elapsedMs / 86_400_000)
 }
