@@ -35,7 +35,7 @@ export const storeHomeTr = {
   'storeHome.sidebar.collapse': 'Menüyü daralt',
   'storeHome.sidebar.navAria': 'Pozisyon bazlı sekmeler',
   'storeHome.sidebar.assignedStores': '{count} atanmış mağaza',
-  'storeHome.sidebar.scopedStores': '{count} yetkili mağaza',
+  'storeHome.sidebar.scopedStores': '{count} mağaza',
   'storeHome.sidebar.adminScope': 'Şirket geneli',
   'storeHome.sidebar.contextAria': 'Store oturum bağlamı',
   'storeHome.sidebar.languagePreference': 'Dil: {locale} · kayıtlı tercih',

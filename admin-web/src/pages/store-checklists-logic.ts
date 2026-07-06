@@ -467,13 +467,13 @@ export function doesCoverageRowMatchFilters(
   if (filters.type !== 'all' && row.template.templateType !== filters.type) return false
   if (filters.month !== 'all') {
     const rowMonths = [getMonthKey(row.summary?.monthStart), getMonthKey(row.completedAt), getMonthKey(row.active?.updatedAt), getMonthKey(row.active?.startedAt)]
-    const isCurrentMissingRow =
-      filters.month === getCurrentMonthKey() && getCoverageStatus(row) === 'missing'
+    const coverageStatus = getCoverageStatus(row)
+    const isOpenCoverageRow = coverageStatus === 'missing' || coverageStatus === 'draft'
     const isCurrentLocalCompletion =
       filters.month === getCurrentMonthKey() &&
-      getCoverageStatus(row) === 'completed' &&
+      coverageStatus === 'completed' &&
       row.completedCount > 0
-    if (!rowMonths.includes(filters.month) && !isCurrentMissingRow && !isCurrentLocalCompletion) return false
+    if (!rowMonths.includes(filters.month) && !isOpenCoverageRow && !isCurrentLocalCompletion) return false
   }
   if (!doesStatusMatch(getCoverageStatus(row), filters.status)) return false
 
