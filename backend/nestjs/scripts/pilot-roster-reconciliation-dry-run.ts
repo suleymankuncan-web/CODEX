@@ -62,10 +62,31 @@ function parseMoney(value: unknown) {
     return null;
   }
 
-  const normalized = raw
-    .replace(/[₺\s]/gu, "")
-    .replace(/\./gu, "")
-    .replace(/,/gu, ".");
+  const monetary = raw.replace(/[₺\s]/gu, "");
+  const lastCommaIndex = monetary.lastIndexOf(",");
+  const lastDotIndex = monetary.lastIndexOf(".");
+  const hasComma = lastCommaIndex !== -1;
+  const hasDot = lastDotIndex !== -1;
+  let normalized = monetary;
+
+  if (hasComma && hasDot) {
+    normalized =
+      lastDotIndex > lastCommaIndex
+        ? monetary.replace(/,/gu, "")
+        : monetary.replace(/\./gu, "").replace(/,/gu, ".");
+  } else if (hasComma) {
+    const decimalLength = monetary.length - lastCommaIndex - 1;
+    normalized =
+      decimalLength === 3
+        ? monetary.replace(/,/gu, "")
+        : monetary.replace(/,/gu, ".");
+  } else if (hasDot) {
+    const decimalLength = monetary.length - lastDotIndex - 1;
+    normalized =
+      decimalLength === 3
+        ? monetary.replace(/\./gu, "")
+        : monetary;
+  }
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -116,6 +137,22 @@ function discoverDefaultInputs(downloadDir: string): InputFile[] {
 
   addIfExists("yeni.xlsx", "current_roster");
   addIfExists("lis.xlsx", "dealer_roster");
+
+  const salesKpiFiles: Array<[string, string]> = [
+    ["2026-01", "ocak personel.xlsx"],
+    ["2026-02", "şubat personel.xlsx"],
+    ["2026-03", "mart personel verileri.xlsx"],
+    ["2026-04", "nisan personel.xlsx"],
+    ["2026-05", "mayis personel.xlsx"],
+    ["2026-06", "haziran personel.xlsx"],
+  ];
+
+  for (const [sourcePeriod, fileName] of salesKpiFiles) {
+    const filePath = join(downloadDir, fileName);
+    if (existsSync(filePath)) {
+      inputs.push({ path: filePath, sourceKind: "sales_kpi", sourcePeriod });
+    }
+  }
 
   for (const fileName of names) {
     const lowered = key(fileName);
@@ -394,7 +431,7 @@ function parseGenericSalesKpiFile(input: InputFile): RawRosterReconciliationInpu
         continue;
       }
 
-      const rawEmployeeName = readAny(row, ["Personel", "Personel İsmi", "Adı-Soyadı"]);
+      const rawEmployeeName = readAny(row, ["Adı", "Personel", "Personel İsmi", "Adı-Soyadı"]);
       const rawStoreName = readAny(row, ["Mağaza", "Mağaza Adı", "Store"]);
       if (!rawEmployeeName && !rawStoreName) {
         continue;
@@ -410,7 +447,9 @@ function parseGenericSalesKpiFile(input: InputFile): RawRosterReconciliationInpu
         rawEmployeeCode: readAny(row, ["Personel Kodu", "Sicil", "Employee Code"]),
         rawEmployeeName,
         rawPositionName: readAny(row, ["Ünvan", "ÜNVANI", "Pozisyon"]),
-        netSalesAmount: parseMoney(readAny(row, ["Net Satış", "Ciro", "Satış"])),
+        netSalesAmount: parseMoney(
+          readAny(row, ["Satış Tutarı", "Net Satış", "Net Tutar (D) Toplam", "Ciro", "Satış"]),
+        ),
         rawPayload: sourcePayload(row, headers),
       });
     }
@@ -450,9 +489,15 @@ function sectionRows(
 
   return rows
     .slice(0, 8)
-    .map((row) =>
-      `- ${row.sourcePeriod ?? "-"} | ${row.rawStoreName ?? "-"} | ${row.rawEmployeeName ?? "-"} | ${row.rawPositionName ?? "-"} | ${row.matchStatus} | ${row.matchNotes.join(", ") || "-"}`,
-    )
+    .map((row) => {
+      const amount =
+        row.targetAmount !== null && row.targetAmount !== undefined
+          ? `target=${row.targetAmount}`
+          : row.netSalesAmount !== null && row.netSalesAmount !== undefined
+            ? `sales=${row.netSalesAmount}`
+            : "-";
+      return `- ${row.sourcePeriod ?? "-"} | ${row.rawStoreName ?? "-"} | ${row.rawEmployeeName ?? "-"} | ${row.rawPositionName ?? "-"} | ${amount} | ${row.matchStatus} | ${row.matchNotes.join(", ") || "-"}`;
+    })
     .join("\n");
 }
 
