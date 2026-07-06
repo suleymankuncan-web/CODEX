@@ -353,13 +353,18 @@ function ContributionRow({ model, code, row }: { model: StoreKpiHighlightsPageMo
   const Icon = metricIcons[code] ?? Target
   const contribution = findContribution(model, code)
   const checklistMissing = code.includes('CHECKLIST') && (!row || row.scoreStatus !== 'scored')
+  const displayLabel = formatKpiMetricLabel(model.t, code, row?.kpiName ?? row?.kpiCode ?? code)
+  const secondaryLabel = row ? getSafeKpiSecondaryLabel(row.kpiCode ?? code) : model.t('storeKpis.kpiRowWaiting')
 
   return (
     <tr className="tw:border-t tw:border-border/70">
       <td className="tw:px-4 tw:py-3">
         <div className="tw:flex tw:items-center tw:gap-3">
           <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-xl tw:bg-[#efe9ff] tw:text-[#6d4df7]"><Icon className="tw:size-4" /></span>
-          <div><strong className="tw:block tw:text-sm tw:font-semibold tw:text-[#071332]">{formatKpiMetricLabel(model.t, code, row?.kpiName ?? code)}</strong><span className="tw:text-xs tw:text-[#65708d]">{row?.kpiCode ?? model.t('storeKpis.kpiRowWaiting')}</span></div>
+          <div>
+            <strong className="tw:block tw:text-sm tw:font-semibold tw:text-[#071332]">{displayLabel}</strong>
+            {secondaryLabel ? <span className="tw:text-xs tw:text-[#65708d]">{secondaryLabel}</span> : null}
+          </div>
         </div>
       </td>
       <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-medium">{checklistMissing ? model.t('storeKpis.commandNotDone') : formatMetricValue(model.locale, model.t, row?.actualValue ?? null, code)}</td>
@@ -640,6 +645,15 @@ function StatusPill({ tone, label }: { tone: MetricTone; label: string }) {
 
 function findMetricRow(rows: DisplayKpiRow[], code: string) {
   return rows.find((row) => normalizeKpiCode(row.kpiCode) === normalizeKpiCode(code))
+}
+
+function getSafeKpiSecondaryLabel(code: string) {
+  const normalized = normalizeKpiCode(code)
+  if (normalized === 'upt' || normalized === 'atv' || normalized === 'cr') {
+    return normalized.toUpperCase()
+  }
+
+  return null
 }
 
 function findContribution(model: StoreKpiHighlightsPageModel, code: string) {
