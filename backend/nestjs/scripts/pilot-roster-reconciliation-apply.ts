@@ -44,6 +44,8 @@ type PositionLookupRow = {
 
 type ReferenceData = {
   storesByKey: Map<string, StoreLookupRow>;
+  storesByTightKey: Map<string, StoreLookupRow[]>;
+  stores: StoreLookupRow[];
   employeesByCompanyAndKey: Map<string, EmployeeLookupRow>;
   positionsByCompanyAndCode: Map<string, PositionLookupRow>;
 };
@@ -52,6 +54,7 @@ type ResolveIssue = {
   kind: string;
   key: string;
   reason: string;
+  candidates?: string[];
 };
 
 type ResolvedPlan = {
@@ -175,6 +178,76 @@ function companyEmployeeKey(companyId: string, value: string | null | undefined)
   return `${companyId}:${normalizeRosterKey(value)}`;
 }
 
+function tightRosterKey(value: string | null | undefined) {
+  return normalizeRosterKey(value).replace(/\s+/g, "");
+}
+
+const STORE_MATCH_STOPWORDS = new Set(["AVM", "OUTLET", "MAGAZA", "MAGAZASI"]);
+
+const PILOT_STORE_CODE_ALIASES = new Map([
+  ["SM135", "SAKARYA AGORA AVM"],
+  ["SM139", "IZMIR AGORA AVM"],
+]);
+
+function storeMatchTokens(value: string) {
+  return normalizeRosterKey(value)
+    .split(" ")
+    .filter((token) => token.length >= 3 && !STORE_MATCH_STOPWORDS.has(token));
+}
+
+function resolveStore(
+  references: ReferenceData,
+  normalizedStoreKey: string,
+  rawStoreCode?: string | null,
+): { store: StoreLookupRow | null; reason?: string; candidates?: string[] } {
+  const aliasKey = PILOT_STORE_CODE_ALIASES.get(normalizeRosterKey(rawStoreCode));
+  const aliasStore = aliasKey ? references.storesByKey.get(aliasKey) : null;
+  if (aliasStore) {
+    return { store: aliasStore };
+  }
+
+  const direct =
+    references.storesByKey.get(normalizedStoreKey) ??
+    references.storesByKey.get(normalizeRosterKey(rawStoreCode));
+  if (direct) {
+    return { store: direct };
+  }
+
+  const tightCandidates = references.storesByTightKey.get(tightRosterKey(normalizedStoreKey)) ?? [];
+  if (tightCandidates.length === 1) {
+    return { store: tightCandidates[0] };
+  }
+  if (tightCandidates.length > 1) {
+    return {
+      store: null,
+      reason: "store_ambiguous",
+      candidates: tightCandidates.map((store) => store.store_name),
+    };
+  }
+
+  const tokens = storeMatchTokens(normalizedStoreKey);
+  if (tokens.length === 0) {
+    return { store: null, reason: "store_not_found" };
+  }
+
+  const fuzzyCandidates = references.stores.filter((store) => {
+    const normalizedName = normalizeRosterKey(store.store_name);
+    return tokens.every((token) => normalizedName.includes(token));
+  });
+  if (fuzzyCandidates.length === 1) {
+    return { store: fuzzyCandidates[0] };
+  }
+  if (fuzzyCandidates.length > 1) {
+    return {
+      store: null,
+      reason: "store_ambiguous",
+      candidates: fuzzyCandidates.map((store) => store.store_name),
+    };
+  }
+
+  return { store: null, reason: "store_not_found" };
+}
+
 function splitName(rawName: string) {
   const parts = rawName.split(/\s+/u).filter(Boolean);
   if (parts.length === 0) {
@@ -217,11 +290,16 @@ async function loadReferenceData(databaseService: DatabaseService): Promise<Refe
   ]);
 
   const storesByKey = new Map<string, StoreLookupRow>();
+  const storesByTightKey = new Map<string, StoreLookupRow[]>();
   stores.rows.forEach((store) => {
     [store.store_code, store.store_name].forEach((value) => {
       const key = normalizeRosterKey(value);
       if (key && !storesByKey.has(key)) {
         storesByKey.set(key, store);
+      }
+      const tightKey = tightRosterKey(value);
+      if (tightKey) {
+        storesByTightKey.set(tightKey, [...(storesByTightKey.get(tightKey) ?? []), store]);
       }
     });
   });
@@ -244,7 +322,13 @@ async function loadReferenceData(databaseService: DatabaseService): Promise<Refe
     );
   });
 
-  return { storesByKey, employeesByCompanyAndKey, positionsByCompanyAndCode };
+  return {
+    storesByKey,
+    storesByTightKey,
+    stores: stores.rows,
+    employeesByCompanyAndKey,
+    positionsByCompanyAndCode,
+  };
 }
 
 async function ensureEmployee(input: {
@@ -336,14 +420,18 @@ async function resolvePlan(input: {
   const employeeByRosterKey = new Map<string, string>();
 
   for (const candidate of input.plan.activeAssignments) {
-    const store =
-      input.references.storesByKey.get(candidate.normalizedStoreKey) ??
-      input.references.storesByKey.get(normalizeRosterKey(candidate.rawStoreCode));
+    const storeResolution = resolveStore(
+      input.references,
+      candidate.normalizedStoreKey,
+      candidate.rawStoreCode,
+    );
+    const store = storeResolution.store;
     if (!store) {
       issues.push({
         kind: "active_assignment",
         key: candidate.normalizedStoreKey,
-        reason: "store_not_found",
+        reason: storeResolution.reason ?? "store_not_found",
+        candidates: storeResolution.candidates,
       });
       continue;
     }
@@ -401,12 +489,14 @@ async function resolvePlan(input: {
     sourcePeriod?: string;
     createInactive?: boolean;
   }) => {
-    const store = input.references.storesByKey.get(inputRow.normalizedStoreKey);
+    const storeResolution = resolveStore(input.references, inputRow.normalizedStoreKey);
+    const store = storeResolution.store;
     if (!store) {
       issues.push({
         kind: inputRow.kind,
         key: inputRow.normalizedStoreKey,
-        reason: "store_not_found",
+        reason: storeResolution.reason ?? "store_not_found",
+        candidates: storeResolution.candidates,
       });
       return null;
     }
@@ -544,18 +634,37 @@ async function main() {
 
   try {
     const references = await loadReferenceData(databaseService);
-    const resolved = await resolvePlan({
+    const preflight = await resolvePlan({
       databaseService,
       references,
       plan,
-      allowCreateEmployees: args.shouldApply,
+      allowCreateEmployees: false,
     });
+    const blockingPreflightIssues = preflight.issues.filter(
+      (issue) => issue.reason !== "employee_not_found",
+    );
+    const resolved =
+      args.shouldApply && blockingPreflightIssues.length === 0
+        ? await resolvePlan({
+            databaseService,
+            references,
+            plan,
+            allowCreateEmployees: true,
+          })
+        : preflight;
     const summary = {
       mode: args.shouldApply ? "apply" : "dry-run",
       inputRows: plan.totals.inputRows,
       planTotals: plan.totals,
       reviewItems: plan.reviewItems.length,
       approvalRequiredReasons: plan.approvalRequiredReasons,
+      preflight: {
+        blockingIssues: blockingPreflightIssues.length,
+        blockingIssueSamples: blockingPreflightIssues.slice(0, 20),
+        wouldCreateEmployees: preflight.issues.filter(
+          (issue) => issue.reason === "employee_not_found",
+        ).length,
+      },
       resolved: {
         activeAssignments: resolved.activeAssignments.length,
         targetReferences: resolved.targetReferences.length,
@@ -569,6 +678,12 @@ async function main() {
     if (!args.shouldApply) {
       console.log(JSON.stringify(summary, null, 2));
       return;
+    }
+
+    if (blockingPreflightIssues.length > 0) {
+      throw new Error(
+        `Resolved apply has ${blockingPreflightIssues.length} blocking preflight issues.`,
+      );
     }
 
     if (resolved.issues.length > 0) {
