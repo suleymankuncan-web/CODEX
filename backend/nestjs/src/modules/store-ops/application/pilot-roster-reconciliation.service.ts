@@ -182,6 +182,18 @@ export class PilotRosterReconciliationService {
         ticketCount: number;
       }
     >();
+    const employeeSalesAccumulator = new Map<
+      string,
+      {
+        sourcePeriod: string;
+        normalizedStoreKey: string;
+        normalizedEmployeeKey: string;
+        rawEmployeeName: string | null;
+        netSalesAmount: number;
+        itemCount: number;
+        ticketCount: number;
+      }
+    >();
 
     for (const row of rows.filter((item) => item.sourceKind === "current_roster")) {
       const reasons = this.activeRosterBlockReasons(row);
@@ -300,22 +312,25 @@ export class PilotRosterReconciliationService {
           continue;
         }
 
-        kpiActuals.push(
-          ...salesActualCandidates({
-            sourcePeriod: period,
-            scopeType: "employee",
-            normalizedStoreKey: row.normalizedStoreKey,
-            normalizedEmployeeKey: normalizeRosterKey(
-              activeMatch.rawEmployeeCode || activeMatch.rawEmployeeName,
-            ),
-            rawEmployeeName: row.rawEmployeeName ?? null,
-            netSalesAmount: row.netSalesAmount,
-            itemCount: row.itemCount,
-            ticketCount: row.ticketCount,
-            atvValue: row.atvValue,
-            uptValue: row.uptValue,
-          }),
+        const normalizedEmployeeKey = normalizeRosterKey(
+          activeMatch.rawEmployeeCode || activeMatch.rawEmployeeName,
         );
+        const accumulatorKey = `${period}:${row.normalizedStoreKey}:${normalizedEmployeeKey}`;
+        const current = employeeSalesAccumulator.get(accumulatorKey) ?? {
+          sourcePeriod: period,
+          normalizedStoreKey: row.normalizedStoreKey,
+          normalizedEmployeeKey,
+          rawEmployeeName: row.rawEmployeeName ?? null,
+          netSalesAmount: 0,
+          itemCount: 0,
+          ticketCount: 0,
+        };
+        current.netSalesAmount += isPositiveFiniteNumber(row.netSalesAmount)
+          ? row.netSalesAmount
+          : 0;
+        current.itemCount += isPositiveFiniteNumber(row.itemCount) ? row.itemCount : 0;
+        current.ticketCount += isPositiveFiniteNumber(row.ticketCount) ? row.ticketCount : 0;
+        employeeSalesAccumulator.set(accumulatorKey, current);
         continue;
       }
 
@@ -335,6 +350,31 @@ export class PilotRosterReconciliationService {
         normalizedEmployeeKey: row.normalizedEmployeeKey,
         rawEmployeeName: row.rawEmployeeName ?? "",
       });
+    }
+
+    for (const employeeSales of employeeSalesAccumulator.values()) {
+      const atvValue =
+        employeeSales.netSalesAmount > 0 && employeeSales.ticketCount > 0
+          ? Number((employeeSales.netSalesAmount / employeeSales.ticketCount).toFixed(6))
+          : null;
+      const uptValue =
+        employeeSales.ticketCount > 0
+          ? Number((employeeSales.itemCount / employeeSales.ticketCount).toFixed(6))
+          : null;
+      kpiActuals.push(
+        ...salesActualCandidates({
+          sourcePeriod: employeeSales.sourcePeriod,
+          scopeType: "employee",
+          normalizedStoreKey: employeeSales.normalizedStoreKey,
+          normalizedEmployeeKey: employeeSales.normalizedEmployeeKey,
+          rawEmployeeName: employeeSales.rawEmployeeName,
+          netSalesAmount: employeeSales.netSalesAmount,
+          itemCount: employeeSales.itemCount,
+          ticketCount: employeeSales.ticketCount,
+          atvValue,
+          uptValue,
+        }),
+      );
     }
 
     for (const storeSales of storeSalesAccumulator.values()) {

@@ -13,7 +13,7 @@ const XLSX = require("@e965/xlsx");
 
 type MatrixRow = Array<string | number | boolean | null | undefined>;
 
-type InputFile = {
+export type PilotRosterInputFile = {
   path: string;
   sourceKind: RosterReconciliationSourceKind;
   sourcePeriod?: string;
@@ -142,13 +142,13 @@ function readNextArg(args: string[], index: number) {
   return { name, value: args[index + 1] ?? "", nextIndex: index + 1 };
 }
 
-function discoverDefaultInputs(downloadDir: string): InputFile[] {
+export function discoverDefaultRosterInputs(downloadDir: string): PilotRosterInputFile[] {
   if (!existsSync(downloadDir)) {
     return [];
   }
 
   const names = readdirSync(downloadDir);
-  const inputs: InputFile[] = [];
+  const inputs: PilotRosterInputFile[] = [];
   const addIfExists = (fileName: string, sourceKind: RosterReconciliationSourceKind) => {
     const filePath = join(downloadDir, fileName);
     if (existsSync(filePath)) {
@@ -191,8 +191,8 @@ function discoverDefaultInputs(downloadDir: string): InputFile[] {
   return inputs;
 }
 
-function parseArgs(args: string[]) {
-  const inputs: InputFile[] = [];
+export function parseRosterReconciliationArgs(args: string[]) {
+  const inputs: PilotRosterInputFile[] = [];
   let outputPath = defaultOutputPath;
   let jsonOnly = false;
   let useDefaults = true;
@@ -254,7 +254,7 @@ function parseArgs(args: string[]) {
 
   if (useDefaults && !hasExplicitInput) {
     const defaultDir = process.env.PILOT_ROSTER_INPUT_DIR ?? join(homedir(), "Downloads");
-    inputs.unshift(...discoverDefaultInputs(defaultDir));
+    inputs.unshift(...discoverDefaultRosterInputs(defaultDir));
   }
 
   return { inputs, outputPath, jsonOnly };
@@ -317,7 +317,7 @@ function extractStoreCode(value: unknown) {
   return match?.[1] ?? "";
 }
 
-function parseCurrentRosterFile(input: InputFile): RawRosterReconciliationInput[] {
+function parseCurrentRosterFile(input: PilotRosterInputFile): RawRosterReconciliationInput[] {
   const result: RawRosterReconciliationInput[] = [];
 
   for (const sheet of readWorkbookMatrix(input.path)) {
@@ -354,7 +354,7 @@ function parseCurrentRosterFile(input: InputFile): RawRosterReconciliationInput[
   return result;
 }
 
-function parseHeaderedRosterFile(input: InputFile): RawRosterReconciliationInput[] {
+function parseHeaderedRosterFile(input: PilotRosterInputFile): RawRosterReconciliationInput[] {
   const result: RawRosterReconciliationInput[] = [];
 
   for (const sheet of readWorkbookMatrix(input.path)) {
@@ -396,7 +396,7 @@ function parseHeaderedRosterFile(input: InputFile): RawRosterReconciliationInput
   return result;
 }
 
-function parseTargetFile(input: InputFile): RawRosterReconciliationInput[] {
+function parseTargetFile(input: PilotRosterInputFile): RawRosterReconciliationInput[] {
   const result: RawRosterReconciliationInput[] = [];
 
   for (const sheet of readWorkbookMatrix(input.path)) {
@@ -429,7 +429,7 @@ function parseTargetFile(input: InputFile): RawRosterReconciliationInput[] {
   return result;
 }
 
-function parseGenericSalesKpiFile(input: InputFile): RawRosterReconciliationInput[] {
+function parseGenericSalesKpiFile(input: PilotRosterInputFile): RawRosterReconciliationInput[] {
   const result: RawRosterReconciliationInput[] = [];
 
   for (const sheet of readWorkbookMatrix(input.path)) {
@@ -494,7 +494,7 @@ function parseGenericSalesKpiFile(input: InputFile): RawRosterReconciliationInpu
   return result;
 }
 
-function parseInputFile(input: InputFile): RawRosterReconciliationInput[] {
+export function parseRosterReconciliationInputFile(input: PilotRosterInputFile): RawRosterReconciliationInput[] {
   if (!existsSync(input.path)) {
     throw new Error(`Input file not found: ${input.path}`);
   }
@@ -537,7 +537,7 @@ function sectionRows(
     .join("\n");
 }
 
-function buildMarkdown(summary: RosterReconciliationSummary, inputs: InputFile[]) {
+function buildMarkdown(summary: RosterReconciliationSummary, inputs: PilotRosterInputFile[]) {
   return `# Pilot Roster Reconciliation Dry-Run Evidence - ${new Date().toISOString().slice(0, 10)}
 
 ## Scope
@@ -616,12 +616,12 @@ No normalized product table was mutated by this script. PR2 must consume only an
 }
 
 function main() {
-  const { inputs, outputPath, jsonOnly } = parseArgs(process.argv.slice(2));
+  const { inputs, outputPath, jsonOnly } = parseRosterReconciliationArgs(process.argv.slice(2));
   if (inputs.length === 0) {
     throw new Error("No input files found. Pass explicit files or set PILOT_ROSTER_INPUT_DIR.");
   }
 
-  const rows = inputs.flatMap(parseInputFile);
+  const rows = inputs.flatMap(parseRosterReconciliationInputFile);
   const summary = buildRosterReconciliationDryRun(rows);
 
   if (jsonOnly) {
@@ -647,4 +647,6 @@ function main() {
   );
 }
 
-main();
+if (require.main === module) {
+  main();
+}
