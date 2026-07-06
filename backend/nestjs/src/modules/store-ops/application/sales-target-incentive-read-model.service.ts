@@ -156,21 +156,28 @@ export class SalesTargetIncentiveReadModelService {
       timezone: SALES_TARGET_INCENTIVE_TIMEZONE,
       stores: storeRows
         .filter((row) => row.store_type === "company")
-        .map((row) => ({
-          companyId: row.company_id,
-          regionId: row.region_id,
-          storeId: row.store_id,
-          storeName: row.store_name,
-          storeType: "company" as const,
-          storeTargetRequestId: row.store_target_request_id,
-          storeTargetAmount: row.store_target_amount,
-          storeNetSalesAmount: row.store_net_sales_amount,
-          storeNetSalesSourceBatchId: row.store_net_sales_source_batch_id,
-          storeNetSalesImportBatchId: row.store_net_sales_import_batch_id,
-          storeNetSalesLastSyncedAt: row.store_net_sales_last_synced_at,
-          manager: this.mapManager(row),
-          personnel: personnelByStore.get(row.store_id) ?? [],
-        })),
+        .map((row) => {
+          const manager = this.mapManager(row);
+          const personnel = personnelByStore
+            .get(row.store_id)
+            ?.filter((participant) => participant.employeeId !== manager?.employeeId) ?? [];
+
+          return {
+            companyId: row.company_id,
+            regionId: row.region_id,
+            storeId: row.store_id,
+            storeName: row.store_name,
+            storeType: "company" as const,
+            storeTargetRequestId: row.store_target_request_id,
+            storeTargetAmount: row.store_target_amount,
+            storeNetSalesAmount: row.store_net_sales_amount,
+            storeNetSalesSourceBatchId: row.store_net_sales_source_batch_id,
+            storeNetSalesImportBatchId: row.store_net_sales_import_batch_id,
+            storeNetSalesLastSyncedAt: row.store_net_sales_last_synced_at,
+            manager,
+            personnel,
+          };
+        }),
     };
   }
 
@@ -243,7 +250,11 @@ export class SalesTargetIncentiveReadModelService {
       closeCutoffAt: input.closeCutoffAt,
     });
 
-    if (hasIncompleteCloseCalculation(projection)) {
+    const closeCandidateStores = projection.stores.filter(isCloseReadinessStoreCandidate);
+    if (
+      closeCandidateStores.length === 0 ||
+      hasIncompleteCloseCalculation({ ...projection, stores: closeCandidateStores })
+    ) {
       return {
         periodKey: input.periodKey,
         periodStart: period.periodStart,
@@ -450,12 +461,14 @@ function hasIncompleteCloseCalculation(
   projection: SalesTargetIncentiveProjectionReadModel,
 ) {
   return projection.stores.some((store) => {
-    if (!store.storeTargetAmount || !store.storeNetSalesImportBatchId) {
+    if (!store.storeNetSalesImportBatchId) {
+      return false;
+    }
+
+    if (!store.storeTargetAmount) {
       return true;
     }
 
-    const hasImportedStoreTargetOnly =
-      !store.storeTargetRequestId && Boolean(store.storeTargetAmount);
     const participants = [
       ...(store.manager ? [store.manager] : []),
       ...store.personnel,
@@ -463,24 +476,34 @@ function hasIncompleteCloseCalculation(
 
     return participants.some(
       (participant) =>
-        isCloseBlockingParticipantCalculation(participant, {
-          hasImportedStoreTargetOnly,
-        }),
+        isCloseBlockingParticipantCalculation(participant),
     );
   });
 }
 
+function isCloseReadinessStoreCandidate(
+  store: SalesTargetIncentiveProjectionStore,
+) {
+  return Boolean(store.storeNetSalesImportBatchId);
+}
+
 function isCloseBlockingParticipantCalculation(
   participant: SalesTargetIncentiveParticipantProjection,
-  input: { hasImportedStoreTargetOnly: boolean },
 ) {
+  if (participant.calculation.status === "projected") {
+    return false;
+  }
+
   if (
-    input.hasImportedStoreTargetOnly &&
     participant.participantType === "personnel" &&
     participant.calculation.status === "blocked" &&
     participant.calculation.blockedReason === "missing_personnel_target" &&
     hasHistoricalPersonnelSalesEvidence(participant)
   ) {
+    return false;
+  }
+
+  if (!hasParticipantSalesEvidence(participant)) {
     return false;
   }
 
@@ -498,4 +521,18 @@ function hasHistoricalPersonnelSalesEvidence(
     participant.source.personnelSalesSourceBatchId !== null &&
     participant.source.personnelSalesImportBatchId !== null
   );
+}
+
+function hasParticipantSalesEvidence(
+  participant: SalesTargetIncentiveParticipantProjection,
+) {
+  if (participant.participantType === "store_manager") {
+    return (
+      participant.actualAmount !== null &&
+      participant.source.storeNetSalesSourceBatchId !== null &&
+      participant.source.storeNetSalesImportBatchId !== null
+    );
+  }
+
+  return hasHistoricalPersonnelSalesEvidence(participant);
 }

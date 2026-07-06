@@ -150,6 +150,30 @@ describe("SalesTargetIncentiveReadModelService", () => {
     );
   });
 
+  it("does not duplicate the store manager as a personnel incentive participant", async () => {
+    const { service } = createService({
+      personnelRows: [
+        {
+          ...personnelSource,
+          employee_id: storeSource.manager_employee_id,
+          user_id: storeSource.manager_user_id,
+          first_name: storeSource.manager_first_name,
+          last_name: storeSource.manager_last_name,
+        },
+      ],
+    });
+
+    const result = await service.buildCurrentProjection({
+      periodKey: "2026-05",
+      companyIds: ["company-1"],
+      regionIds: [],
+      storeIds: [],
+    });
+
+    expect(result.stores[0].manager?.employeeId).toBe(storeSource.manager_employee_id);
+    expect(result.stores[0].personnel).toHaveLength(0);
+  });
+
   it("resolves the default period from the latest available scoped incentive source", async () => {
     const { repository, service } = createService();
 
@@ -381,7 +405,33 @@ describe("SalesTargetIncentiveReadModelService", () => {
     );
   });
 
-  it("blocks imported-target close readiness when missing personnel targets have no sales import", async () => {
+  it("does not block close readiness when personnel sales exist without a personnel target", async () => {
+    const { service } = createService({
+      personnelRows: [
+        {
+          ...personnelSource,
+          personnel_target_reference_id: null,
+          personnel_target_amount: null,
+        },
+      ],
+    });
+
+    const result = await service.getCloseReadiness({
+      periodKey: "2026-05",
+      companyIds: ["company-1"],
+      nowIso: "2026-06-01T02:05:00.000+03:00",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "ready",
+        canClose: true,
+      }),
+    );
+  });
+
+  it("does not block imported-target close readiness when missing personnel targets have no sales import", async () => {
     const { service } = createService({
       storeRows: [{ ...storeSource, store_target_request_id: null }],
       personnelRows: [
@@ -406,8 +456,8 @@ describe("SalesTargetIncentiveReadModelService", () => {
 
     expect(result).toEqual(
       expect.objectContaining({
-        status: "blocked_by_calculation",
-        canClose: false,
+        status: "ready",
+        canClose: true,
       }),
     );
   });

@@ -541,8 +541,6 @@ describe("SalesTargetIncentiveCloseRepository", () => {
       .mockResolvedValueOnce({ rows: [{ close_run_id: closeRunId }] })
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ final_snapshot_id: finalSnapshotId }] })
-      .mockResolvedValueOnce({ rows: [{ assignment_snapshot_id: personnelAssignmentSnapshotId }] })
-      .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({
         rows: [
           {
@@ -558,21 +556,29 @@ describe("SalesTargetIncentiveCloseRepository", () => {
             failed_reason: null,
             source_import_batch_ids: [storeImportBatchId],
             final_snapshot_count: 1,
-            final_row_count: 1,
+            final_row_count: 0,
           },
         ],
       });
 
-    await expect(
-      repository.createSucceededCloseRun({
-        companyId,
-        periodKey: "2026-05",
-        periodStart: "2026-05-01",
-        periodEnd: "2026-05-31",
-        closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
-        actorUserId,
-        stores: [importedTargetStore],
+    const result = await repository.createSucceededCloseRun({
+      companyId,
+      periodKey: "2026-05",
+      periodStart: "2026-05-01",
+      periodEnd: "2026-05-31",
+      closeCutoffAt: "2026-06-01T02:00:00.000+03:00",
+      actorUserId,
+      stores: [importedTargetStore],
+    });
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        status: "succeeded",
+        finalSnapshotCount: 1,
+        finalRowCount: 0,
       }),
-    ).rejects.toThrow("Incentive participant is not finalizable");
+    );
+    const sql = query.mock.calls.map(([statement]) => String(statement)).join("\n");
+    expect(sql).not.toContain("INSERT INTO rpt.sales_target_incentive_final_row");
   });
 });

@@ -235,7 +235,7 @@ export class ReportingRepository {
       `ka.scope_type = 'employee'`,
       `ka.period_start >= $1::date`,
       `ka.period_end <= $2::date`,
-      `kd.kpi_code IN ('ATV', 'UPT')`,
+      `kd.kpi_code IN ('ATV', 'UPT', 'NET_SALES', 'ITEM_COUNT', 'TICKET_COUNT')`,
       `COALESCE(ka.source_type, '') <> 'demo_seed'`,
     ];
 
@@ -254,15 +254,41 @@ export class ReportingRepository {
       benchmark_value: string | null;
     }>(
       `
+        WITH scoped_actual AS (
+          SELECT
+            ka.employee_id,
+            kd.kpi_code,
+            SUM(ka.actual_value) AS actual_value
+          FROM ops.kpi_actual ka
+          INNER JOIN ops.kpi_definition kd
+            ON kd.kpi_id = ka.kpi_id
+          WHERE ${clauses.join(" AND ")}
+          GROUP BY ka.employee_id, kd.kpi_code
+        ),
+        component_benchmark AS (
+          SELECT 'ATV' AS kpi_code,
+                 (SUM(net_sales.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+          FROM scoped_actual net_sales
+          INNER JOIN scoped_actual ticket_count
+            ON ticket_count.employee_id = net_sales.employee_id
+           AND ticket_count.kpi_code = 'TICKET_COUNT'
+          WHERE net_sales.kpi_code = 'NET_SALES'
+          UNION ALL
+          SELECT 'UPT' AS kpi_code,
+                 (SUM(item_count.actual_value) / NULLIF(SUM(ticket_count.actual_value), 0))::text AS benchmark_value
+          FROM scoped_actual item_count
+          INNER JOIN scoped_actual ticket_count
+            ON ticket_count.employee_id = item_count.employee_id
+           AND ticket_count.kpi_code = 'TICKET_COUNT'
+          WHERE item_count.kpi_code = 'ITEM_COUNT'
+        )
         SELECT
-          kd.kpi_code,
-          AVG(ka.actual_value)::text AS benchmark_value
-        FROM ops.kpi_actual ka
-        INNER JOIN ops.kpi_definition kd
-          ON kd.kpi_id = ka.kpi_id
-        WHERE ${clauses.join(" AND ")}
-        GROUP BY kd.kpi_code
-        ORDER BY kd.kpi_code ASC
+          requested.kpi_code,
+          component_benchmark.benchmark_value AS benchmark_value
+        FROM (VALUES ('ATV'), ('UPT')) AS requested(kpi_code)
+        LEFT JOIN component_benchmark
+          ON component_benchmark.kpi_code = requested.kpi_code
+        ORDER BY requested.kpi_code ASC
       `,
       params,
     );

@@ -180,7 +180,7 @@ export class SalesTargetIncentiveCloseRepository {
         const participants = [
           ...(store.manager ? [store.manager] : []),
           ...store.personnel,
-        ];
+        ].filter((participant) => isPersistableFinalParticipant(store, participant));
         for (const participant of participants) {
           const isImportedHistoricalPersonnelPlaceholder =
             isImportedHistoricalPersonnelTargetPlaceholder(store, participant);
@@ -788,12 +788,21 @@ function isFinalizableParticipant(participant: SalesTargetIncentiveParticipantPr
   );
 }
 
+function isPersistableFinalParticipant(
+  store: SalesTargetIncentiveProjectionStore,
+  participant: SalesTargetIncentiveParticipantProjection,
+) {
+  return (
+    isFinalizableParticipant(participant) ||
+    isImportedHistoricalPersonnelTargetPlaceholder(store, participant)
+  );
+}
+
 function isImportedHistoricalPersonnelTargetPlaceholder(
   store: SalesTargetIncentiveProjectionStore,
   participant: SalesTargetIncentiveParticipantProjection,
 ) {
   return (
-    !store.storeTargetRequestId &&
     store.storeTargetAmount !== null &&
     participant.participantType === "personnel" &&
     participant.assignmentStartedOn !== null &&
