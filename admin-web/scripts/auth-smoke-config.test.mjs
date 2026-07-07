@@ -73,6 +73,13 @@ test('package exposes explicit staging auth smoke scripts', () => {
     'node scripts/auth-store-personnel-cookie-session-smoke.mjs --staging',
   )
 
+  const cookieSessionSmokeSource = readFileSync(
+    join(appRoot, 'scripts/auth-cookie-session-live-smoke.mjs'),
+    'utf8',
+  )
+  assert.match(cookieSessionSmokeSource, /storeScopedExpectedRoles/u)
+  assert.match(cookieSessionSmokeSource, /storeScopedExpectedRoles\.has\(expectedRole\)/u)
+
   const storeManagerSmokeSource = readFileSync(
     join(appRoot, 'scripts/auth-store-manager-cookie-session-smoke.mjs'),
     'utf8',

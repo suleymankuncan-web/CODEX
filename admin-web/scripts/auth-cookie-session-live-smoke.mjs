@@ -35,6 +35,12 @@ const expectedCookieDomain = envValue(
   new URL(apiBaseUrl).hostname,
 )
 const smokeEnvironment = envValue('AUTH_SMOKE_ENVIRONMENT', stagingMode ? 'staging' : 'local')
+const storeScopedExpectedRoles = new Set([
+  'REGION_MANAGER',
+  'STORE_MANAGER',
+  'STORE_PERSONNEL',
+  'VISUAL_MERCHANDISER',
+])
 
 function assert(condition, message) {
   if (!condition) {
@@ -543,7 +549,9 @@ function assertSessionProof(session) {
     `session roleCodes did not include ${expectedRole}`,
   )
   assert(session.companyScopeCount > 0, 'session read company scope was empty')
-  assert(session.assignedStoreCount > 0, 'session assigned action store scope was empty')
+  if (storeScopedExpectedRoles.has(expectedRole)) {
+    assert(session.assignedStoreCount > 0, 'session assigned action store scope was empty')
+  }
 }
 
 function sanitizeUrl(inputUrl) {
