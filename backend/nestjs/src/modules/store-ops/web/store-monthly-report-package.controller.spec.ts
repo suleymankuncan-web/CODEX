@@ -42,6 +42,15 @@ describe("StoreMonthlyReportPackageController", () => {
       regionIds: [],
       storeIds: ["store-1"],
       regionManagerUserId: "region-manager-1",
+      rankingContext: {
+        userId: "region-manager-1",
+        employeeId: undefined,
+        roleCodes: ["REGION_MANAGER"],
+        companyIds: ["company-1"],
+        regionIds: ["region-1"],
+        storeIds: [],
+        assignedStoreIds: ["store-1"],
+      },
     });
   });
 
@@ -76,6 +85,15 @@ describe("StoreMonthlyReportPackageController", () => {
       regionIds: [],
       storeIds: [],
       regionManagerUserId: undefined,
+      rankingContext: {
+        userId: "admin-1",
+        employeeId: undefined,
+        roleCodes: ["SUPER_ADMIN"],
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: [],
+        assignedStoreIds: [],
+      },
     });
     expect(response.setHeader).toHaveBeenCalledWith(
       "Content-Type",

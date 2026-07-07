@@ -44,7 +44,7 @@ region_manager_names AS (
       scoped.store_id,
       COALESCE(
         NULLIF(TRIM(CONCAT(employee.first_name, ' ', employee.last_name)), ''),
-        NULLIF(TRIM(REGEXP_REPLACE(scoped.region_name, '\\s+Bölgesi$', '', 'i')), ''),
+        NULLIF(TRIM(REGEXP_REPLACE(scoped.region_name, '\\s+B(?:ö|o)lgesi$', '', 'i')), ''),
         user_account.username,
         user_account.email,
         user_account.user_id::text

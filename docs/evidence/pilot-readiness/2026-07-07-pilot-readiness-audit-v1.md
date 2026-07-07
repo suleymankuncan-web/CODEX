@@ -104,6 +104,7 @@ Secrets policy: no passwords, OTPs, cookies, bearer tokens, database URLs, priva
 | Finding ID | Status | Evidence | Notes |
 | --- | --- | --- | --- |
 | PRA-20260707-03 | fixed_data_readback | `docs/evidence/pilot-readiness/2026-07-07-incentive-june-close-readback.md` | Haziran close lock root cause was missing store-level targets for two company stores. Source targets were inserted into `ops.kpi_target`; existing close flow rebuilt June with 33 store snapshots and 127 final rows. |
+| PRA-20260707-02 | fixed_code_readback | `docs/evidence/pilot-readiness/2026-07-07-reports-ranking-score-readback.md` | Store report export now maps scores from the central ranking score service and strips `Bolgesi` fallback manager names. Remaining turnover anomaly is recorded as data-hygiene risk. |
 
 ## Data Readback Matrix
 

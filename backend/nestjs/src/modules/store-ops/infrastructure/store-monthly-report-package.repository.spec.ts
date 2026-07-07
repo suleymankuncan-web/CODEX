@@ -95,6 +95,7 @@ describe("StoreMonthlyReportPackageRepository", () => {
 
     expect(managerNameCte).toContain("ops.user_role_assignment");
     expect(managerNameCte).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(managerNameCte).toContain("\\s+B(?:ö|o)lgesi$");
     expect(managerNameCte).toContain("ROW_NUMBER() OVER");
     expect(managerNameCte).not.toContain("ops.user_action_store_assignment action_scope");
   });
