@@ -12,6 +12,14 @@ export type ResolvedPilotRosterActiveAssignment = {
   assignmentStatus?: "active" | "inactive";
 };
 
+export type ResolvedPilotRosterInactiveAssignment = {
+  companyId: string;
+  storeId: string;
+  employeeId: string;
+  positionId: string;
+  endDate: string;
+};
+
 export type ResolvedPilotRosterTargetReference = {
   companyId: string;
   regionId: string;
@@ -45,6 +53,7 @@ export type ResolvedPilotRosterKpiActual = {
 
 export type PilotRosterApplyResult = {
   activeAssignmentsTouched: number;
+  inactiveAssignmentsTouched: number;
   targetReferencesTouched: number;
   turnoverEventsTouched: number;
   kpiActualsTouched: number;
@@ -58,6 +67,7 @@ export class PilotRosterReconciliationRepository {
   async applyResolvedPlan(input: {
     actorUserId: string;
     activeAssignments: ResolvedPilotRosterActiveAssignment[];
+    inactiveAssignments?: ResolvedPilotRosterInactiveAssignment[];
     targetReferences: ResolvedPilotRosterTargetReference[];
     turnoverEvents: ResolvedPilotRosterTurnoverEvent[];
     kpiActuals?: ResolvedPilotRosterKpiActual[];
@@ -65,12 +75,17 @@ export class PilotRosterReconciliationRepository {
   }): Promise<PilotRosterApplyResult> {
     return this.databaseService.withTransaction(async (client) => {
       let activeAssignmentsTouched = 0;
+      let inactiveAssignmentsTouched = 0;
       let targetReferencesTouched = 0;
       let turnoverEventsTouched = 0;
       let kpiActualsTouched = 0;
 
       for (const assignment of input.activeAssignments) {
         activeAssignmentsTouched += await this.upsertActiveAssignment(client, assignment);
+      }
+
+      for (const assignment of input.inactiveAssignments ?? []) {
+        inactiveAssignmentsTouched += await this.closeInactiveAssignment(client, assignment);
       }
 
       for (const target of input.targetReferences) {
@@ -91,6 +106,7 @@ export class PilotRosterReconciliationRepository {
 
       return {
         activeAssignmentsTouched,
+        inactiveAssignmentsTouched,
         targetReferencesTouched,
         turnoverEventsTouched,
         kpiActualsTouched,
@@ -159,6 +175,53 @@ export class PilotRosterReconciliationRepository {
         assignment.startDate,
         assignment.assignmentStatus ?? "active",
       ],
+    );
+
+    return result.rowCount ?? 0;
+  }
+
+  private async closeInactiveAssignment(
+    client: PoolClient,
+    assignment: ResolvedPilotRosterInactiveAssignment,
+  ) {
+    const result = await client.query(
+      `
+        UPDATE ops.employee_assignment_history
+        SET
+          end_date = GREATEST(start_date, $4::date),
+          assignment_status = 'inactive'
+        WHERE employee_id = $1::uuid
+          AND store_id = $2::uuid
+          AND position_id = $3::uuid
+          AND assignment_status = 'active'
+          AND end_date IS NULL
+      `,
+      [
+        assignment.employeeId,
+        assignment.storeId,
+        assignment.positionId,
+        assignment.endDate,
+      ],
+    );
+
+    await client.query(
+      `
+        UPDATE ops.employee
+        SET
+          employment_status = 'inactive',
+          termination_date = $3::date,
+          updated_at = NOW()
+        WHERE employee_id = $1::uuid
+          AND company_id = $2::uuid
+          AND NOT EXISTS (
+            SELECT 1
+            FROM ops.employee_assignment_history active_assignment
+            WHERE active_assignment.employee_id = $1::uuid
+              AND active_assignment.assignment_status = 'active'
+              AND active_assignment.end_date IS NULL
+          )
+      `,
+      [assignment.employeeId, assignment.companyId, assignment.endDate],
     );
 
     return result.rowCount ?? 0;

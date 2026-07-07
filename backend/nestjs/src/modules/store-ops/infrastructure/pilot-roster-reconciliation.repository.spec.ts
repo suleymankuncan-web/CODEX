@@ -74,6 +74,7 @@ describe("PilotRosterReconciliationRepository", () => {
     expect(withTransaction).toHaveBeenCalledTimes(1);
     expect(result).toEqual({
       activeAssignmentsTouched: 1,
+      inactiveAssignmentsTouched: 0,
       targetReferencesTouched: 1,
       turnoverEventsTouched: 1,
       kpiActualsTouched: 1,
@@ -124,6 +125,34 @@ describe("PilotRosterReconciliationRepository", () => {
     expect(sql).toContain("UPDATE ops.target_distribution_request request");
     expect(sql).toContain("termination_reason_code = 'pilot_monthly_snapshot_absence'");
     expect(sql).toContain("target_label = 'pilot_imported_personnel_targets'");
+  });
+
+  it("closes stale active assignments without deleting employees", async () => {
+    const { repository, queries } = createHarness();
+
+    await repository.applyResolvedPlan({
+      actorUserId: "pilot-admin",
+      activeAssignments: [],
+      inactiveAssignments: [
+        {
+          companyId: "00000000-0000-4000-8000-000000000001",
+          storeId: "00000000-0000-4000-8000-000000000003",
+          employeeId: "00000000-0000-4000-8000-000000000004",
+          positionId: "00000000-0000-4000-8000-000000000005",
+          endDate: "2026-05-31",
+        },
+      ],
+      targetReferences: [],
+      turnoverEvents: [],
+      snapshotPeriodsToRefresh: [],
+    });
+
+    const sql = queries.map((item) => item.sql).join("\n");
+    expect(sql).toContain("UPDATE ops.employee_assignment_history");
+    expect(sql).toContain("assignment_status = 'inactive'");
+    expect(sql).toContain("end_date = GREATEST(start_date, $4::date)");
+    expect(sql).toContain("UPDATE ops.employee");
+    expect(sql).toContain("NOT EXISTS");
   });
 
   it("writes pilot KPI actuals with an import batch envelope", async () => {

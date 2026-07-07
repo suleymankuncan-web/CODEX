@@ -10,6 +10,7 @@ import { PilotRosterReconciliationService } from "../src/modules/store-ops/appli
 import {
   PilotRosterReconciliationRepository,
   type ResolvedPilotRosterActiveAssignment,
+  type ResolvedPilotRosterInactiveAssignment,
   type ResolvedPilotRosterKpiActual,
   type ResolvedPilotRosterTargetReference,
   type ResolvedPilotRosterTurnoverEvent,
@@ -42,12 +43,20 @@ type PositionLookupRow = {
   position_name: string;
 };
 
+type ActiveCompanyAssignmentLookupRow = {
+  company_id: string;
+  employee_id: string;
+  store_id: string;
+  position_id: string;
+};
+
 type ReferenceData = {
   storesByKey: Map<string, StoreLookupRow>;
   storesByTightKey: Map<string, StoreLookupRow[]>;
   stores: StoreLookupRow[];
   employeesByCompanyAndKey: Map<string, EmployeeLookupRow>;
   positionsByCompanyAndCode: Map<string, PositionLookupRow>;
+  activeCompanyAssignments: ActiveCompanyAssignmentLookupRow[];
 };
 
 type ResolveIssue = {
@@ -59,6 +68,7 @@ type ResolveIssue = {
 
 type ResolvedPlan = {
   activeAssignments: ResolvedPilotRosterActiveAssignment[];
+  inactiveAssignments: ResolvedPilotRosterInactiveAssignment[];
   targetReferences: ResolvedPilotRosterTargetReference[];
   turnoverEvents: ResolvedPilotRosterTurnoverEvent[];
   kpiActuals: ResolvedPilotRosterKpiActual[];
@@ -178,6 +188,14 @@ function companyEmployeeKey(companyId: string, value: string | null | undefined)
   return `${companyId}:${normalizeRosterKey(value)}`;
 }
 
+function assignmentKey(input: {
+  employeeId: string;
+  storeId: string;
+  positionId: string;
+}) {
+  return `${input.employeeId}:${input.storeId}:${input.positionId}`;
+}
+
 function tightRosterKey(value: string | null | undefined) {
   return normalizeRosterKey(value).replace(/\s+/g, "");
 }
@@ -263,7 +281,7 @@ function splitName(rawName: string) {
 }
 
 async function loadReferenceData(databaseService: DatabaseService): Promise<ReferenceData> {
-  const [stores, employees, positions] = await Promise.all([
+  const [stores, employees, positions, activeCompanyAssignments] = await Promise.all([
     databaseService.query<StoreLookupRow>(
       `
         SELECT store_id, company_id, region_id, store_code, store_name
@@ -285,6 +303,21 @@ async function loadReferenceData(databaseService: DatabaseService): Promise<Refe
       `
         SELECT position_id, company_id, position_code, position_name
         FROM ops.position
+      `,
+    ),
+    databaseService.query<ActiveCompanyAssignmentLookupRow>(
+      `
+        SELECT
+          s.company_id,
+          eah.employee_id,
+          eah.store_id,
+          eah.position_id
+        FROM ops.employee_assignment_history eah
+        JOIN ops.store s ON s.store_id = eah.store_id
+        WHERE eah.assignment_status = 'active'
+          AND eah.end_date IS NULL
+          AND s.store_type = 'company'
+          AND COALESCE(s.status, 'active') = 'active'
       `,
     ),
   ]);
@@ -328,6 +361,7 @@ async function loadReferenceData(databaseService: DatabaseService): Promise<Refe
     stores: stores.rows,
     employeesByCompanyAndKey,
     positionsByCompanyAndCode,
+    activeCompanyAssignments: activeCompanyAssignments.rows,
   };
 }
 
@@ -414,6 +448,7 @@ async function resolvePlan(input: {
 }): Promise<ResolvedPlan> {
   const issues: ResolveIssue[] = [];
   const activeAssignments: ResolvedPilotRosterActiveAssignment[] = [];
+  const inactiveAssignments: ResolvedPilotRosterInactiveAssignment[] = [];
   const targetReferences: ResolvedPilotRosterTargetReference[] = [];
   const turnoverEvents: ResolvedPilotRosterTurnoverEvent[] = [];
   const kpiActuals: ResolvedPilotRosterKpiActual[] = [];
@@ -478,6 +513,31 @@ async function resolvePlan(input: {
       employeeId,
       positionId: position.position_id,
       startDate: "2026-06-01",
+    });
+  }
+
+  const rosterStoreIds = new Set(activeAssignments.map((assignment) => assignment.storeId));
+  const currentAssignmentKeys = new Set(activeAssignments.map(assignmentKey));
+  for (const assignment of input.references.activeCompanyAssignments) {
+    if (!rosterStoreIds.has(assignment.store_id)) {
+      continue;
+    }
+
+    const key = assignmentKey({
+      employeeId: assignment.employee_id,
+      storeId: assignment.store_id,
+      positionId: assignment.position_id,
+    });
+    if (currentAssignmentKeys.has(key)) {
+      continue;
+    }
+
+    inactiveAssignments.push({
+      companyId: assignment.company_id,
+      employeeId: assignment.employee_id,
+      storeId: assignment.store_id,
+      positionId: assignment.position_id,
+      endDate: "2026-05-31",
     });
   }
 
@@ -614,7 +674,7 @@ async function resolvePlan(input: {
     });
   }
 
-  return { activeAssignments, targetReferences, turnoverEvents, kpiActuals, issues };
+  return { activeAssignments, inactiveAssignments, targetReferences, turnoverEvents, kpiActuals, issues };
 }
 
 async function main() {
@@ -667,6 +727,7 @@ async function main() {
       },
       resolved: {
         activeAssignments: resolved.activeAssignments.length,
+        inactiveAssignments: resolved.inactiveAssignments.length,
         targetReferences: resolved.targetReferences.length,
         turnoverEvents: resolved.turnoverEvents.length,
         kpiActuals: resolved.kpiActuals.length,
@@ -694,6 +755,7 @@ async function main() {
     const result = await repository.applyResolvedPlan({
       actorUserId: args.actorUserId,
       activeAssignments: resolved.activeAssignments,
+      inactiveAssignments: resolved.inactiveAssignments,
       targetReferences: resolved.targetReferences,
       turnoverEvents: resolved.turnoverEvents,
       kpiActuals: resolved.kpiActuals,
