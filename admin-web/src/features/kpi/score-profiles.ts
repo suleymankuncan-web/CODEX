@@ -4,9 +4,20 @@ export function matchesKpiMetricCode(
   metric: KpiScoreProfileMetric,
   candidateCode: string,
 ) {
-  if (metric.code === candidateCode) {
+  if (normalizeMetricCode(metric.code) === normalizeMetricCode(candidateCode)) {
     return true
   }
 
-  return metric.aliases?.includes(candidateCode) ?? false
+  return metric.aliases?.some(
+    (alias) => normalizeMetricCode(alias) === normalizeMetricCode(candidateCode),
+  ) ?? false
+}
+
+function normalizeMetricCode(input: string) {
+  const normalized = input.trim().toLowerCase()
+  if (normalized === 'gsm_approval' || normalized === 'gsm_onay') {
+    return 'gsm_approval'
+  }
+
+  return normalized
 }

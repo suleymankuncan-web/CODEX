@@ -436,14 +436,34 @@ export class ReportingStoreKpiReadService {
     benchmarkLookup: Map<string, number | null>,
     matchingCodes: string[],
   ) {
+    const normalizedLookup = new Map(
+      Array.from(benchmarkLookup.entries()).map(([code, value]) => [
+        this.normalizeBenchmarkCode(code),
+        value,
+      ]),
+    );
+
     for (const code of matchingCodes) {
       const value = benchmarkLookup.get(code);
       if (value !== undefined) {
         return value;
       }
+
+      const normalizedValue = normalizedLookup.get(
+        this.normalizeBenchmarkCode(code),
+      );
+      if (normalizedValue !== undefined) {
+        return normalizedValue;
+      }
     }
 
     return null;
+  }
+
+  private normalizeBenchmarkCode(code: string) {
+    return isGsmApprovalKpiCode(code)
+      ? "gsm_approval"
+      : code.trim().toLowerCase();
   }
 
   private async assertCanReadStore(input: {
