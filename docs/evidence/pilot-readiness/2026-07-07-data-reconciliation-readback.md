@@ -152,3 +152,116 @@ Source reconciliation is idempotent:
 | Reports Excel content must be validated after source refresh | open_for_pr4 |
 | Live persona smoke must verify the UI sees the refreshed source data | open_for_pr3 |
 
+## Public DB Rerun - 2026-07-07
+
+Status: verified_after_public_connection
+
+The database readback was repeated after the user switched the connection from private to public. The rerun used the local `admin-web/.env.local` database key without printing or recording the value. No data mutation was executed.
+
+### Rerun Connection
+
+| Check | Result |
+| --- | --- |
+| `DATABASE_URL` present | yes |
+| `DB_SSL_MODE` present | yes |
+| `pg` client available | yes |
+| Read-only connection | pass |
+| Secrets printed | no |
+
+### Current Store Inventory
+
+| Store type | Status | KPI import | Stores |
+| --- | --- | --- | ---: |
+| company | active | true | 35 |
+| company | closed | false | 1 |
+| company | closed | true | 3 |
+| franchise | active | true | 107 |
+| operator | active | true | 16 |
+
+### Region Scope Readback
+
+| Region scope | Active stores |
+| --- | ---: |
+| Onur Kaytan Bolgesi | 30 |
+| Eda Doganay Bolgesi | 28 |
+| Eyup Buyukyilmaz Bolgesi | 20 |
+| Levent Yilmaz Bolgesi | 22 |
+| Mehmet Unlu Bolgesi | 20 |
+| Oktay Unsal Bolgesi | 14 |
+| Ugur Buyukburc Bolgesi | 14 |
+| Sercan Pohrenkci Bolgesi | 9 |
+
+### Monthly Snapshot Coverage
+
+| Period | Store KPI stores | Store KPI rows | Employee performance rows |
+| --- | ---: | ---: | ---: |
+| 2026-01 | 153 | 1363 | 0 |
+| 2026-02 | 153 | 1367 | 0 |
+| 2026-03 | 154 | 1380 | 0 |
+| 2026-04 | 157 | 1383 | 0 |
+| 2026-05 | 154 | 1369 | 0 |
+| 2026-06 | 156 | 1380 | 0 |
+
+Note: monthly employee performance snapshot rows are still zero. Current personnel ranking/read surfaces must therefore continue to be validated through the live KPI actual/ranking service path rather than assuming `rpt.employee_performance_snapshot` is populated.
+
+### Approved Personnel Targets
+
+| Period | Target rows | Employees | Stores | Total target |
+| --- | ---: | ---: | ---: | ---: |
+| 2026-01 | 17 | 17 | 7 | 15,810,446.00 |
+| 2026-02 | 22 | 22 | 9 | 20,395,667.00 |
+| 2026-03 | 26 | 26 | 9 | 25,240,283.70 |
+| 2026-04 | 31 | 31 | 10 | 21,583,482.32 |
+| 2026-05 | 42 | 42 | 11 | 29,838,897.42 |
+| 2026-06 | 32 | 32 | 9 | 31,165,100.45 |
+
+### Monthly Net Sales Actual Coverage
+
+| Period | Scope | Stores | Employees | Rows | Total actual |
+| --- | --- | ---: | ---: | ---: | ---: |
+| 2026-01 | employee | 152 | 582 | 582 | 434,614,595.73 |
+| 2026-01 | store | 153 | 0 | 153 | 495,460,244.54 |
+| 2026-02 | employee | 153 | 631 | 631 | 320,409,168.03 |
+| 2026-02 | store | 153 | 0 | 153 | 336,356,014.39 |
+| 2026-03 | employee | 154 | 727 | 727 | 531,205,124.21 |
+| 2026-03 | store | 154 | 0 | 154 | 523,662,829.31 |
+| 2026-04 | employee | 154 | 675 | 675 | 366,493,061.06 |
+| 2026-04 | store | 154 | 0 | 154 | 372,450,726.44 |
+| 2026-05 | employee | 154 | 632 | 632 | 575,946,719.56 |
+| 2026-05 | store | 154 | 0 | 154 | 624,502,451.87 |
+| 2026-06 | employee | 155 | 580 | 580 | 417,737,307.76 |
+| 2026-06 | store | 153 | 0 | 153 | 502,693,094.11 |
+
+### Active Assignment Position Split
+
+| Position | Active employees | Stores |
+| --- | ---: | ---: |
+| SALES_ASSOCIATE | 608 | 155 |
+| STORE_MANAGER | 129 | 121 |
+| SHIFT_LEAD | 38 | 37 |
+| ASSISTANT_MANAGER | 24 | 24 |
+| CASHIER | 1 | 1 |
+
+### Ranking Eligibility Rerun
+
+| Period | Eligible | Store managers excluded | Below 50,000 TL | Below 2% share | Missing store sales |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 2026-01 | 523 | 41 | 13 | 5 | 0 |
+| 2026-02 | 558 | 43 | 25 | 5 | 0 |
+| 2026-03 | 616 | 51 | 50 | 10 | 0 |
+| 2026-04 | 593 | 46 | 33 | 3 | 0 |
+| 2026-05 | 546 | 51 | 27 | 8 | 0 |
+| 2026-06 | 486 | 51 | 30 | 9 | 4 |
+
+This confirms the official personnel ranking eligibility policy is active in data readback: store managers are excluded, rows below 50,000 TL are excluded, and rows below 2% store sales share are excluded.
+
+### Norm Kadro Demo Readback
+
+| Store | Active | Norm | Gap | YTD leavers |
+| --- | ---: | ---: | ---: | ---: |
+| Bursa Downtown Avm | 3 | 3 | 0 | 92 |
+| Bursa Marka Park Avm | 7 | 8 | 1 | 1 |
+| Istanbul Marmara forum Avm | 8 | 8 | 0 | 1 |
+
+The Bursa Downtown leaver count is intentionally left as a data-hygiene risk instead of being patched in a snapshot table. If it affects the pilot view, the source turnover event set must be reviewed and corrected through the reconciliation/source-data path.
+
