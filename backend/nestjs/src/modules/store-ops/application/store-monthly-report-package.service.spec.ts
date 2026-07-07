@@ -5,15 +5,22 @@ import {
   STORE_MONTHLY_REPORT_PACKAGE_HEADERS,
   StoreMonthlyReportPackageService,
 } from "./store-monthly-report-package.service";
+import { RankingService } from "./ranking.service";
 import { StoreMonthlyReportPackageRepository } from "../infrastructure/store-monthly-report-package.repository";
 import { StoreMonthlyReportPackageRow } from "../infrastructure/store-monthly-report-package.types";
 
 describe("StoreMonthlyReportPackageService", () => {
-  function createService(rows: StoreMonthlyReportPackageRow[] = []) {
+  function createService(
+    rows: StoreMonthlyReportPackageRow[] = [],
+    rankingService?: Pick<RankingService, "getRankings">,
+  ) {
     const repository = {
       getStoreMonthlyReportPackageRows: jest.fn(async () => rows),
     } as unknown as jest.Mocked<StoreMonthlyReportPackageRepository>;
-    const service = new StoreMonthlyReportPackageService(repository);
+    const service = new StoreMonthlyReportPackageService(
+      repository,
+      rankingService as RankingService | undefined,
+    );
 
     return { repository, service };
   }
@@ -126,6 +133,84 @@ describe("StoreMonthlyReportPackageService", () => {
       turnover: "Veri yok",
       daysSinceVisit: "Veri yok",
       dataNote: "Skor kaynağı yok; Turnover kaynağı yok; Norm kaynağı yok",
+    });
+  });
+
+  it("uses ranking store scores when the report row has no stored score", async () => {
+    const storeId = "00000000-0000-4000-8000-000000000100";
+    const rankingService = {
+      getRankings: jest.fn(async () => ({
+        storeLeaderboard: {
+          items: [
+            {
+              storeId,
+              scoreValue: 88.42,
+            },
+            {
+              storeId: "00000000-0000-4000-8000-000000000999",
+              scoreValue: 12,
+            },
+          ],
+        },
+      })),
+    } as unknown as Pick<RankingService, "getRankings">;
+    const { service } = createService(
+      [
+        {
+          region_manager_name: "Onur Kaytan",
+          store_id: storeId,
+          store_name: "Balıkesir 10 Burda AVM",
+          store_type: "company",
+          region_name: "Onur Kaytan Bölgesi",
+          score_value: null,
+          upt_value: "3.09",
+          atv_value: "3628.54",
+          cr_value: "0.2232",
+          hg_value: "1.2355",
+          gsm_value: "0.95",
+          bm_checklist_score: null,
+          vm_checklist_score: null,
+          pending_ack_count: "0",
+          open_action_count: "0",
+          closed_action_count: "0",
+          target_status: null,
+          incentive_status: null,
+          incentive_total_amount: null,
+          planned_headcount: "4",
+          active_headcount: "4",
+          leaver_count: "0",
+          turnover_rate: null,
+          last_visit_date: null,
+          days_since_visit: null,
+        },
+      ],
+      rankingService,
+    );
+
+    const summary = await service.getSummary({
+      period: "2026-06",
+      today: "2026-06-14",
+      ...scope,
+      rankingContext: {
+        userId: "00000000-0000-4000-8000-000000000900",
+        roleCodes: ["REGION_MANAGER"],
+        companyIds: scope.companyIds,
+        regionIds: [],
+        storeIds: [],
+        assignedStoreIds: [storeId],
+      },
+    });
+
+    expect(rankingService.getRankings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        periodType: "monthly",
+        periodStart: "2026-06-01",
+        limit: 500,
+      }),
+    );
+    expect(summary.items[0]).toMatchObject({
+      score: "88,42",
+      dataNote: "Turnover kaynağı yok",
     });
   });
 

@@ -12,6 +12,7 @@ type HeaderResponse = {
 type ReportPackageRequest = {
   user: {
     userId: string;
+    employeeId?: string;
     roleCodes: string[];
     scope: {
       companyIds: string[];
@@ -117,6 +118,7 @@ export class StoreMonthlyReportPackageController {
     return this.storeMonthlyReportPackageService.getSummary({
       period: query.period,
       ...this.resolveReadScope(request.user),
+      rankingContext: this.resolveRankingContext(request.user),
     });
   }
 
@@ -139,6 +141,7 @@ export class StoreMonthlyReportPackageController {
     const workbook = await this.storeMonthlyReportPackageService.buildWorkbook({
       period: query.period,
       ...this.resolveReadScope(request.user),
+      rankingContext: this.resolveRankingContext(request.user),
     });
 
     response.setHeader(
@@ -168,6 +171,18 @@ export class StoreMonthlyReportPackageController {
       regionIds: storeReadScope.regionIds,
       storeIds: storeReadScope.storeIds,
       regionManagerUserId: isRegionManagerRead ? user.userId : undefined,
+    };
+  }
+
+  private resolveRankingContext(user: ReportPackageRequest["user"]) {
+    return {
+      userId: user.userId,
+      employeeId: user.employeeId,
+      roleCodes: user.roleCodes,
+      companyIds: user.scope.companyIds,
+      regionIds: user.scope.regionIds,
+      storeIds: user.scope.storeIds,
+      assignedStoreIds: user.actionScope?.assignedStoreIds ?? [],
     };
   }
 

@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Optional } from "@nestjs/common";
 import * as XLSX from "xlsx-js-style";
+import { RankingService } from "./ranking.service";
 import { StoreMonthlyReportPackageRepository } from "../infrastructure/store-monthly-report-package.repository";
 import {
   StoreMonthlyReportPackageItem,
@@ -122,12 +123,23 @@ export function resolveMonthlyRange(period: string, today = getIstanbulToday()) 
 type StoreMonthlyReportPackageInput = StoreMonthlyReportPackageScope & {
   period: string;
   today?: string;
+  rankingContext?: {
+    userId: string;
+    employeeId?: string;
+    roleCodes: string[];
+    companyIds: string[];
+    regionIds: string[];
+    storeIds: string[];
+    assignedStoreIds: string[];
+  };
 };
 
 @Injectable()
 export class StoreMonthlyReportPackageService {
   constructor(
     private readonly storeMonthlyReportPackageRepository: StoreMonthlyReportPackageRepository,
+    @Optional()
+    private readonly rankingService?: RankingService,
   ) {}
 
   async getSummary(input: StoreMonthlyReportPackageInput): Promise<StoreMonthlyReportPackageSummary> {
@@ -140,6 +152,11 @@ export class StoreMonthlyReportPackageService {
       storeIds: input.storeIds,
       regionManagerUserId: input.regionManagerUserId,
     });
+    const scoreByStoreId = await this.getRankingScoresByStoreId({
+      input,
+      periodStart: range.periodStart,
+      storeIds: rows.map((row) => row.store_id),
+    });
     const periodLabel = formatPeriodLabel(input.period);
     const coverageLabel = formatCoverageLabel({
       period: input.period,
@@ -150,6 +167,7 @@ export class StoreMonthlyReportPackageService {
         row,
         periodLabel,
         coverageLabel,
+        scoreValue: scoreByStoreId.get(row.store_id) ?? null,
       }),
     );
 
@@ -210,6 +228,41 @@ export class StoreMonthlyReportPackageService {
       ),
       fileName: `magaza-izleyis-${input.period}.xlsx`,
     };
+  }
+
+  private async getRankingScoresByStoreId(input: {
+    input: StoreMonthlyReportPackageInput;
+    periodStart: string;
+    storeIds: string[];
+  }) {
+    const scopedStoreIds = new Set(input.storeIds);
+    if (
+      !this.rankingService ||
+      !input.input.rankingContext ||
+      scopedStoreIds.size === 0
+    ) {
+      return new Map<string, number>();
+    }
+
+    const ranking = await this.rankingService.getRankings({
+      userId: input.input.rankingContext.userId,
+      employeeId: input.input.rankingContext.employeeId,
+      roleCodes: input.input.rankingContext.roleCodes,
+      companyIds: input.input.rankingContext.companyIds,
+      regionIds: input.input.rankingContext.regionIds,
+      storeIds: input.input.rankingContext.storeIds,
+      assignedStoreIds: input.input.rankingContext.assignedStoreIds,
+      periodType: "monthly",
+      periodStart: input.periodStart,
+      limit: 500,
+      offset: 0,
+    });
+
+    return new Map(
+      ranking.storeLeaderboard.items
+        .filter((item) => scopedStoreIds.has(item.storeId))
+        .map((item) => [item.storeId, item.scoreValue]),
+    );
   }
 }
 
@@ -328,12 +381,14 @@ function toPackageItem(input: {
   row: StoreMonthlyReportPackageRow;
   periodLabel: string;
   coverageLabel: string;
+  scoreValue: number | null;
 }): StoreMonthlyReportPackageItem {
   const normFiili = formatNormFiili(input.row);
   const missingDays = formatMissingDays(input.row);
   const turnover = formatTurnover(input.row);
+  const scoreValue = input.scoreValue ?? input.row.score_value;
   const dataNotes = [
-    input.row.score_value === null ? "Skor kaynağı yok" : null,
+    scoreValue === null ? "Skor kaynağı yok" : null,
     turnover === EMPTY_VALUE ? "Turnover kaynağı yok" : null,
     normFiili === EMPTY_VALUE ? "Norm kaynağı yok" : null,
   ].filter((item): item is string => Boolean(item));
@@ -344,7 +399,7 @@ function toPackageItem(input: {
     city: valueOrEmpty(input.row.region_name),
     period: input.periodLabel,
     reportRange: input.coverageLabel,
-    score: formatNumber(input.row.score_value),
+    score: formatNumber(scoreValue),
     upt: formatNumber(input.row.upt_value),
     atv: formatNumber(input.row.atv_value),
     cr: formatPercent(input.row.cr_value),
@@ -379,7 +434,7 @@ function valueOrEmpty(value: string | null | undefined): string {
   return value && value.trim().length > 0 ? value : EMPTY_VALUE;
 }
 
-function formatNumber(value: string | null): string {
+function formatNumber(value: string | number | null): string {
   if (value === null) {
     return EMPTY_VALUE;
   }
