@@ -60,7 +60,7 @@
 .store-me-kpi-card {
   display: grid;
   align-content: start;
-  gap: 9px;
+  gap: 10px;
   min-height: 204px;
   padding: 16px;
 }
@@ -76,8 +76,8 @@
 
 .store-me-icon-bubble {
   display: inline-flex;
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
@@ -122,15 +122,15 @@
 .store-me-kpi-body h2 {
   margin: 0;
   color: var(--store-me-ink);
-  font-size: 15px;
-  font-weight: 610;
+  font-size: 14px;
+  font-weight: 620;
   letter-spacing: 0;
 }
 
 .store-me-kpi-body strong {
   color: var(--store-me-ink);
-  font-size: clamp(30px, 2.55vw, 34px);
-  font-weight: 650;
+  font-size: clamp(27px, 2.25vw, 31px);
+  font-weight: 590;
   letter-spacing: 0;
   line-height: 1;
 }
@@ -144,7 +144,7 @@
 .store-me-score-meta small {
   margin: 0;
   color: var(--store-me-muted);
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -192,8 +192,8 @@
 
 .store-me-kpi-progress strong {
   color: var(--store-me-ink);
-  font-size: 14px;
-  font-weight: 650;
+  font-size: 13px;
+  font-weight: 620;
 }
 
 .store-me-rank-strip,
@@ -254,8 +254,8 @@
 .store-me-score-meta strong {
   overflow: hidden;
   color: var(--store-me-ink);
-  font-size: 15px;
-  font-weight: 650;
+  font-size: 14px;
+  font-weight: 600;
   line-height: 1.05;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -277,16 +277,16 @@
 
 .store-me-target-strip {
   grid-template-columns: 1fr;
-  min-height: 86px;
+  min-height: 98px;
   align-content: center;
-  gap: 6px;
-  padding-block: 9px;
+  gap: 7px;
+  padding-block: 10px;
 }
 
 .store-me-target-strip span {
-  grid-template-columns: 78px minmax(0, 1fr);
-  align-items: baseline;
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 3px;
 }
 
 .store-me-target-strip small::after {
@@ -294,7 +294,7 @@
 }
 
 .store-me-target-strip strong {
-  font-size: 12px;
+  font-size: 13px;
   text-align: left;
 }
 

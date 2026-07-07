@@ -237,8 +237,8 @@ function KpiProgress({
 
 function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
   return (
-    <ResponsiveContainer width="100%" height={288}>
-      <AreaChart data={points} margin={{ top: 34, right: 28, bottom: 16, left: 20 }}>
+    <ResponsiveContainer width="100%" height={296}>
+      <AreaChart data={points} margin={{ top: 44, right: 30, bottom: 18, left: 34 }}>
         <defs>
           <linearGradient id="storeMePlumLine" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0%" stopColor="var(--store-me-purple)" />
@@ -251,7 +251,7 @@ function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
           </linearGradient>
         </defs>
         <CartesianGrid stroke="rgba(92, 86, 116, 0.18)" strokeDasharray="6 8" vertical={false} />
-        <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} padding={{ left: 16, right: 16 }} />
+        <XAxis dataKey="label" axisLine={false} tickLine={false} interval={0} padding={{ left: 22, right: 18 }} />
         <YAxis hide domain={['dataMin - 8', 'dataMax + 8']} />
         <Area
           type="monotone"
@@ -262,7 +262,7 @@ function StoreMeTrendChart({ points }: { points: StoreMeTrendChartPoint[] }) {
           dot={{ r: 5, stroke: 'url(#storeMePlumLine)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
           activeDot={{ r: 7, stroke: 'var(--store-me-purple)', strokeWidth: 3, fill: 'var(--store-me-surface-strong)' }}
         >
-          <LabelList dataKey="scoreLabel" position="top" offset={8} className="store-me-chart-value" />
+          <LabelList dataKey="scoreLabel" position="top" offset={12} className="store-me-chart-value" />
         </Area>
       </AreaChart>
     </ResponsiveContainer>
