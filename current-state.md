@@ -27,7 +27,7 @@ Store bugfix/refactor follow-up through PR #666, plus the Store Workforce
 norm/fiili binding fix through PR #672, and Project Health Uplift PR Train V1
 through PR #679.
 It is the starting point for continuing in a fresh window. The freshest
-verified delta is the 2026-07-05 block under `Latest Git State`; use that block
+verified delta is the 2026-07-07 block under `Latest Git State`; use that block
 over the historical PR summary when deciding the current branch, merge state,
 and next safe step.
 
@@ -65,6 +65,36 @@ Primary app endpoints:
 - Authorization source of truth: application DB role/scope/action-store assignments
 
 ## Latest Git State
+
+Fresh verified state on 2026-07-07:
+
+- Root workspace is `D:\store-ops-workspace` on `main`, aligned with
+  `origin/main`. The latest merged commit is
+  `d0e9f1eb docs: record pilot data rerun evidence (#909)`.
+- Pilot Readiness Audit V1 PR train is closed for the recorded findings:
+  - PR #898 created the pilot readiness audit matrix.
+  - PR #899 reconciled pilot roster source data.
+  - PR #900 added persona smoke evidence.
+  - PR #901 and PR #907 corrected and verified Store reports export data.
+  - PR #903, PR #904, and PR #905 handled Store Me, Rankings, and Checklist
+    pilot surface polish.
+  - PR #906 recorded June incentive close readback.
+  - PR #908 reran checklist/session evidence after the public/private access
+    issue was corrected.
+  - PR #909 reran Jan-Jun data reconciliation readback through the public DB
+    connection and updated the PR2 matrix without DB mutation.
+- Canonical closeout references:
+  - `docs/evidence/pilot-readiness/2026-07-07-pilot-readiness-audit-v1.md`
+  - `docs/evidence/pilot-readiness/2026-07-07-data-reconciliation-readback.md`
+  - `docs/evidence/pilot-readiness/2026-07-07-persona-smoke-matrix.md`
+  - `docs/evidence/pilot-readiness/2026-07-07-reports-ranking-score-readback.md`
+  - `docs/evidence/pilot-readiness/2026-07-07-incentive-june-close-readback.md`
+- Current posture:
+  - Controlled pilot / patron demo evidence line is refreshed.
+  - Broad production readiness is still not claimed from this train.
+  - Remaining risks are evidence-driven follow-ups: admin live jank if
+    reproduced, source turnover anomaly if it affects demo reports, and
+    browser-specific login bounce only if a trace reproduces it.
 
 Fresh verified state on 2026-07-05:
 

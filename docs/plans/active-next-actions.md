@@ -16,6 +16,28 @@ Documentation entry point:
 
 ## Current Position
 
+As of 7 July 2026, the Pilot Readiness Audit V1 PR train is closed for the
+recorded findings through PR #909.
+
+- Latest closeout evidence:
+  `docs/evidence/pilot-readiness/2026-07-07-pilot-readiness-audit-v1.md`
+- Jan-Jun data reconciliation public DB rerun:
+  `docs/evidence/pilot-readiness/2026-07-07-data-reconciliation-readback.md`
+- Latest current-state block:
+  `current-state.md` under `Fresh verified state on 2026-07-07`
+
+Next practical action:
+
+1. Do not start a new module, redesign, Nebim/provider integration, or broad
+   architecture track before the patron demo.
+2. Run a controlled pilot / patron demo rehearsal with the current data and
+   routes.
+3. If a blocker appears, record it against the relevant evidence file with route,
+   persona, period, expected behavior, actual behavior, and screenshot/trace if
+   available.
+4. Fix only concrete P0/P1 blockers before the demo. P2 visual friction stays
+   parked unless it blocks the demo story.
+
 As of 2 June 2026, the project is no longer in generic foundation-building
 mode. The free-tier controlled-pilot ops posture is closed for the current
 scoped staging/internal pilot. The production readiness roadmap still provides

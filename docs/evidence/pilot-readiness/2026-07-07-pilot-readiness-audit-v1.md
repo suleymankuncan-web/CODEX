@@ -1,6 +1,6 @@
 # Pilot Readiness Audit V1 Evidence - 2026-07-07
 
-Status: in_progress  
+Status: completed_pr6_closeout
 Scope: controlled pilot / patron demo readiness  
 Branch: `codex/pilot-readiness-audit-v1`  
 Evidence mode: audit-first, fix-after-evidence  
@@ -39,12 +39,12 @@ Secrets policy: no passwords, OTPs, cookies, bearer tokens, database URLs, priva
 | Area | Status | Notes |
 | --- | --- | --- |
 | Workspace hygiene | pass_pr1 | Branch exists; only PR1 plan/evidence files are untracked before commit. |
-| Persona access | partial evidence | Route registry and e2e contracts exist; live persona readback still needed. |
-| Data completeness | runtime_readback_needed | Contract exists; Jan-Jun DB readback not yet recorded in this PR. |
-| Store surfaces | partial evidence | Existing e2e coverage covers several known issues; user-reported visual/data issues remain finding candidates. |
+| Persona access | verified_PR3 | Persona smoke matrix and rerun e2e evidence are recorded. |
+| Data completeness | verified_PR2 | Jan-Jun DB readback reran after public connection and is recorded without DB mutation. |
+| Store surfaces | verified_PR5_with_parked_risks | Store Me, Rankings, Checklist, and Store KPI polish evidence exists. Checklist modal issue was not reproduced in current e2e. |
 | Admin surfaces | runtime_readback_needed | Admin auth/master-data previously touched; current live behavior not read back here. |
-| Reports/export | partial evidence | Backend workbook unit test exists; staging/live Excel content issue still needs readback. |
-| Session stability | partial evidence | `store-return-to.spec.ts` covers return-state; user-reported login bounce needs runtime/root-cause pass. |
+| Reports/export | fixed_PR4 | Reports export integrity and ranking-score readback evidence are recorded. |
+| Session stability | current_e2e_pass | Return-to and cookie-session e2e reruns passed after public/private access correction. |
 
 ## Persona Route Matrix
 
@@ -119,8 +119,8 @@ This PR records the readback requirements. It does not mutate DB data.
 | Personnel target/sales Jan-Jun | active personnel, personnel with sales, personnel with target, store target | verified_PR2 |
 | Ranking eligibility | excluded store managers, excluded under 50,000 TL, excluded under 2% share, visible ranked personnel | verified_PR2 |
 | Norm kadro | active/norm/status/missing days/turnover for demo stores | verified_PR2 |
-| Reports Excel | file opens, period, rows, BM names, KPI columns, target/incentive/norm/visit columns | pending_PR4 |
-| Persona smoke | Admin, BM, SM, Personel route allow/deny and visible names | pending_PR3 |
+| Reports Excel | file opens, period, rows, BM names, KPI columns, target/incentive/norm/visit columns | fixed_PR4 |
+| Persona smoke | Admin, BM, SM, Personel route allow/deny and visible names | verified_PR3 |
 
 ## PR Split Decision
 
@@ -132,6 +132,29 @@ This PR records the readback requirements. It does not mutate DB data.
 | PR4 Reports Export Integrity | after PR1 | Must reference PRA-20260707-02. |
 | PR5 Store Surface Pilot Polish | after PR1 and after P1 work is not blocked | Must batch only same-surface/same-risk P2 findings. |
 | PR6 Closeout/Runbook | after PR2-PR5 or explicit parked-risk decision | Must update `current-state.md` and active next action. |
+
+## PR Train Closeout
+
+Status: controlled_pilot_readiness_evidence_refreshed
+
+| Slice | Result | Evidence |
+| --- | --- | --- |
+| PR1 Audit matrix | completed | This file and `docs/superpowers/plans/2026-07-07-pilot-readiness-audit-v1.md` |
+| PR2 Data reconciliation | completed | `docs/evidence/pilot-readiness/2026-07-07-data-reconciliation-readback.md` |
+| PR3 Persona smoke/session | completed_with_live_followup_if_reproduced | `docs/evidence/pilot-readiness/2026-07-07-persona-smoke-matrix.md`; rerun e2e commands in the resolution log |
+| PR4 Reports export | completed_with_data_hygiene_risk | `docs/evidence/pilot-readiness/2026-07-07-reports-export-integrity.md`; `docs/evidence/pilot-readiness/2026-07-07-reports-ranking-score-readback.md` |
+| PR5 Store surface polish | completed_for_recorded_findings | `docs/evidence/pilot-readiness/2026-07-07-store-me-pilot-polish.md`; `docs/evidence/pilot-readiness/2026-07-07-rankings-filter-polish.md`; `docs/evidence/pilot-readiness/2026-07-07-checklists-visit-elapsed-polish.md`; `docs/evidence/pilot-readiness/2026-07-07-store-kpis-gsm-reference-polish.md` |
+
+This closeout does not claim broad production readiness. It records that the current controlled pilot / patron demo evidence line is refreshed and that remaining issues should enter the controlled pilot feedback loop with concrete reproduction evidence.
+
+## Parked Risks After Closeout
+
+| Risk | Why parked | Next trigger |
+| --- | --- | --- |
+| Admin auth/master-data live jank | Not part of this Store/pilot PR train. | Reproduce on staging with browser trace or admin operator workflow evidence. |
+| Turnover anomaly in reports | Source turnover events include repeated month-end absence events for some stores; workbook-only patch would hide the source issue. | Open a source-data reconciliation decision if turnover appears in the patron demo path. |
+| Browser-specific login bounce | Current e2e and smoke reruns pass. | Capture browser/storage/network trace if it recurs. |
+| Checklist fill modal runtime mismatch | Current targeted e2e did not reproduce read-only fill state. | Capture store/template/status tuple if user sees it again. |
 
 ## Verification Plan For PR1
 
