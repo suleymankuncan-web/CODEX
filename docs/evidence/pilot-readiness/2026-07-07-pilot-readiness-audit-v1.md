@@ -107,6 +107,7 @@ Secrets policy: no passwords, OTPs, cookies, bearer tokens, database URLs, priva
 | PRA-20260707-02 | fixed_code_readback | `docs/evidence/pilot-readiness/2026-07-07-reports-ranking-score-readback.md` | Store report export now maps scores from the central ranking score service and strips `Bolgesi` fallback manager names. Remaining turnover anomaly is recorded as data-hygiene risk. |
 | PRA-20260707-05 / PRA-20260707-13 | current_readback_not_reproduced | `npm.cmd --prefix admin-web run test:e2e -- checklist-session-modal-policy.spec.ts store-checklists-contracts.spec.ts checklist-month-filter.spec.ts` | Current DB/code readback shows Onur Kaytan-style BM action scope has 30 assigned stores and both BM/VM published templates cover all 30 stores. Targeted checklist e2e passed, including BM-only filter retaining assigned store population and fill modal policy. No code fix applied without runtime reproduction. |
 | PRA-20260707-10 | current_e2e_pass | `npm.cmd --prefix admin-web run test:e2e -- store-return-to.spec.ts`; `npm.cmd --prefix admin-web run test:e2e -- auth-cookie-session.spec.ts integration-upload-csrf.spec.ts` | Return-to, cookie session creation/rotation, and stale CSRF recovery tests pass after rerun. User-side public/private access change should be rechecked live; if login bounce repeats, capture browser console/network trace before code change. |
+| PRA-20260707-08 | verified_current_readback | `docs/evidence/pilot-readiness/2026-07-07-data-reconciliation-readback.md` | Public DB connection rerun completed on 2026-07-07. Jan-Jun monthly snapshot runs, store KPI snapshot coverage, personnel target reference coverage, monthly net sales actual coverage, ranking eligibility split, active assignment position split, and norm kadro demo readback were rechecked without DB mutation. |
 
 ## Data Readback Matrix
 
@@ -114,10 +115,10 @@ This PR records the readback requirements. It does not mutate DB data.
 
 | Domain | Required readback | Status |
 | --- | --- | --- |
-| Store count Jan-Jun | ranking stores, company stores, region assigned stores, KPI actual stores, target stores | pending_PR2 |
-| Personnel target/sales Jan-Jun | active personnel, personnel with sales, personnel with target, store target | pending_PR2 |
-| Ranking eligibility | excluded store managers, excluded under 50,000 TL, excluded under 2% share, visible ranked personnel | pending_PR2 |
-| Norm kadro | active/norm/status/missing days/turnover for demo stores | pending_PR2 |
+| Store count Jan-Jun | ranking stores, company stores, region assigned stores, KPI actual stores, target stores | verified_PR2 |
+| Personnel target/sales Jan-Jun | active personnel, personnel with sales, personnel with target, store target | verified_PR2 |
+| Ranking eligibility | excluded store managers, excluded under 50,000 TL, excluded under 2% share, visible ranked personnel | verified_PR2 |
+| Norm kadro | active/norm/status/missing days/turnover for demo stores | verified_PR2 |
 | Reports Excel | file opens, period, rows, BM names, KPI columns, target/incentive/norm/visit columns | pending_PR4 |
 | Persona smoke | Admin, BM, SM, Personel route allow/deny and visible names | pending_PR3 |
 
