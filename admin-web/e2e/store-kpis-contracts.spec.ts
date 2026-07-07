@@ -16,6 +16,8 @@ test('store KPI score source renders configured GSM and checklist contributors w
   await expect(page.getByText('GSM Onayı').first()).toBeVisible()
   await expect(page.getByText('BM Checklist').first()).toBeVisible()
   await expect(page.getByText('VM Checklist').first()).toBeVisible()
+  const gsmRow = page.getByRole('row', { name: /GSM Onay/ })
+  await expect(gsmRow.getByText('%56,2')).toBeVisible()
   await expect(page.locator('body')).not.toContainText('gsm_approval')
   await expect(page.locator('body')).not.toContainText('TARGET_ACHIEVEMENT')
 })
@@ -107,7 +109,7 @@ function createStoreKpiHighlightsFixture() {
       metricRow('UPT', 'Fiş başı ürün', 4.15, 3.09, 1.34, 18),
       metricRow('ATV', 'Ortalama sepet', 5503.99, 3628.54, 1.52, 18),
       metricRow('CR', 'CR', 0.1834, 0.1405, 1.31, 24),
-      metricRow('gsm_approval', 'GSM Onayı', 40, 40, 1, 5),
+      metricRow('gsm_approval', 'GSM Onayı', 40, 56.2, 0.4, 2, { targetValue: null }),
       metricRow('BM_CHECKLIST', 'BM Checklist', 80, 100, 0.8, 4),
       metricRow('VM_CHECKLIST', 'VM Checklist', 90, 100, 0.9, 4.5),
     ],
@@ -182,7 +184,12 @@ function metricRow(
   benchmarkValue: number,
   achievementRate: number,
   scoreContribution: number,
+  options: { targetValue?: number | null } = {},
 ) {
+  const targetValue = Object.prototype.hasOwnProperty.call(options, 'targetValue')
+    ? options.targetValue
+    : benchmarkValue
+
   return {
     achievementRate,
     actualRatio: achievementRate,
@@ -198,7 +205,7 @@ function metricRow(
     scoreContribution,
     scoreStatus: 'scored',
     statusBand: 'on_track',
-    targetValue: benchmarkValue,
+    targetValue,
     weightPercent: code === 'TARGET_ACHIEVEMENT' ? 35 : code === 'CR' ? 20 : code === 'GSM_ONAY' || code === 'gsm_approval' || code.includes('CHECKLIST') ? 5 : 15,
   }
 }
