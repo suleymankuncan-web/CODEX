@@ -194,22 +194,39 @@ incentive_state AS (
     ON final_row.final_snapshot_id = final_snapshot.sales_target_incentive_final_snapshot_id
   GROUP BY scoped.store_id
 ),
-workforce_state AS (
+workforce_norm_state AS (
   SELECT
     scoped.store_id,
-    SUM(norm_plan.planned_headcount)::text AS planned_headcount,
-    COUNT(DISTINCT assignment.employee_id)::text AS active_headcount
+    SUM(norm_plan.planned_headcount)::text AS planned_headcount
   FROM scoped_stores scoped
   LEFT JOIN ops.workforce_norm_plan norm_plan
     ON norm_plan.store_id = scoped.store_id
    AND norm_plan.period_start <= $2::date
    AND norm_plan.period_end >= $1::date
+  GROUP BY scoped.store_id
+),
+workforce_active_state AS (
+  SELECT
+    scoped.store_id,
+    COUNT(DISTINCT assignment.employee_id)::text AS active_headcount
+  FROM scoped_stores scoped
   LEFT JOIN ops.employee_assignment_history assignment
     ON assignment.store_id = scoped.store_id
    AND assignment.assignment_status = 'active'
    AND assignment.start_date <= $2::date
    AND (assignment.end_date IS NULL OR assignment.end_date >= $2::date)
   GROUP BY scoped.store_id
+),
+workforce_state AS (
+  SELECT
+    scoped.store_id,
+    workforce_norm_state.planned_headcount,
+    workforce_active_state.active_headcount
+  FROM scoped_stores scoped
+  LEFT JOIN workforce_norm_state
+    ON workforce_norm_state.store_id = scoped.store_id
+  LEFT JOIN workforce_active_state
+    ON workforce_active_state.store_id = scoped.store_id
 ),
 turnover_state AS (
   SELECT

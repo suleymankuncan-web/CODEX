@@ -120,4 +120,26 @@ describe("StoreMonthlyReportPackageRepository", () => {
     expect(sql).toContain("turnover_state.leaver_count");
     expect(sql).toContain("turnover_state.turnover_rate");
   });
+
+  it("aggregates planned norm and active headcount separately to avoid row multiplication", async () => {
+    const { query, repository } = createRepository();
+
+    await repository.getStoreMonthlyReportPackageRows({
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-14",
+      companyIds: [],
+      regionIds: [],
+      storeIds: [],
+      regionManagerUserId: "00000000-0000-4000-8000-000000000900",
+    });
+
+    const sql = String(query.mock.calls[0][0]);
+
+    expect(sql).toContain("workforce_norm_state AS");
+    expect(sql).toContain("workforce_active_state AS");
+    expect(sql).toContain("LEFT JOIN workforce_norm_state");
+    expect(sql).toContain("LEFT JOIN workforce_active_state");
+    expect(sql).toContain("SUM(norm_plan.planned_headcount)::text AS planned_headcount");
+    expect(sql).toContain("COUNT(DISTINCT assignment.employee_id)::text AS active_headcount");
+  });
 });
