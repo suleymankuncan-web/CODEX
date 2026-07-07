@@ -105,6 +105,8 @@ Secrets policy: no passwords, OTPs, cookies, bearer tokens, database URLs, priva
 | --- | --- | --- | --- |
 | PRA-20260707-03 | fixed_data_readback | `docs/evidence/pilot-readiness/2026-07-07-incentive-june-close-readback.md` | Haziran close lock root cause was missing store-level targets for two company stores. Source targets were inserted into `ops.kpi_target`; existing close flow rebuilt June with 33 store snapshots and 127 final rows. |
 | PRA-20260707-02 | fixed_code_readback | `docs/evidence/pilot-readiness/2026-07-07-reports-ranking-score-readback.md` | Store report export now maps scores from the central ranking score service and strips `Bolgesi` fallback manager names. Remaining turnover anomaly is recorded as data-hygiene risk. |
+| PRA-20260707-05 / PRA-20260707-13 | current_readback_not_reproduced | `npm.cmd --prefix admin-web run test:e2e -- checklist-session-modal-policy.spec.ts store-checklists-contracts.spec.ts checklist-month-filter.spec.ts` | Current DB/code readback shows Onur Kaytan-style BM action scope has 30 assigned stores and both BM/VM published templates cover all 30 stores. Targeted checklist e2e passed, including BM-only filter retaining assigned store population and fill modal policy. No code fix applied without runtime reproduction. |
+| PRA-20260707-10 | current_e2e_pass | `npm.cmd --prefix admin-web run test:e2e -- store-return-to.spec.ts`; `npm.cmd --prefix admin-web run test:e2e -- auth-cookie-session.spec.ts integration-upload-csrf.spec.ts` | Return-to, cookie session creation/rotation, and stale CSRF recovery tests pass after rerun. User-side public/private access change should be rechecked live; if login bounce repeats, capture browser console/network trace before code change. |
 
 ## Data Readback Matrix
 
