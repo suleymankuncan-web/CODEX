@@ -116,15 +116,13 @@ export function createRegionTargetRows(input: {
 }
 
 export function resolveApprovalState(store: RegionTargetRow, draft: ApprovalDraft | undefined) {
-  const evidenceOriginalTotal = Number(store.request?.originalTotalTargetValue)
-  const evidenceApprovedTotal = Number(store.request?.approvedTotalTargetValue)
-  const finalTotal = Number.isFinite(evidenceApprovedTotal)
-    ? evidenceApprovedTotal
-    : Number(store.storeTarget || 0)
-  const originalTotal = Number.isFinite(evidenceOriginalTotal)
-    ? evidenceOriginalTotal
-    : finalTotal
-  const effectiveTotal = Number.isFinite(draft?.totalTargetValue) ? Number(draft?.totalTargetValue) : finalTotal
+  const requestTotal = toFiniteNumberOrNull(store.request?.totalTargetValue)
+  const evidenceOriginalTotal = toFiniteNumberOrNull(store.request?.originalTotalTargetValue)
+  const evidenceApprovedTotal = toFiniteNumberOrNull(store.request?.approvedTotalTargetValue)
+  const storeTarget = toFiniteNumberOrNull(store.storeTarget)
+  const finalTotal = evidenceApprovedTotal ?? requestTotal ?? storeTarget ?? 0
+  const originalTotal = evidenceOriginalTotal ?? requestTotal ?? finalTotal
+  const effectiveTotal = toFiniteNumberOrNull(draft?.totalTargetValue) ?? finalTotal
   const originalAllocationsByEmployee = new Map(
     (store.request?.originalAllocations ?? []).map((allocation) => [
       allocation.employeeId,
@@ -227,7 +225,7 @@ function createRegionTargetRow(input: {
       : request.allocations
     : createAllocationsFromCoverage(input.coverageRows)
   const storeTarget = request
-    ? Number(request.approvedTotalTargetValue ?? request.totalTargetValue ?? 0)
+    ? (toFiniteNumberOrNull(request.approvedTotalTargetValue) ?? toFiniteNumberOrNull(request.totalTargetValue) ?? 0)
     : sumNullable(input.coverageRows.map((row) => row.targetValue ?? row.pendingTargetValue))
   const totalDistributed = allocations.length > 0
     ? allocations.reduce((sum, allocation) => sum + Number(allocation.targetValue || 0), 0)
@@ -263,6 +261,13 @@ function createAllocationsFromCoverage(rows: TargetCoverageRow[]): TargetDistrib
         ...(note ? { note } : {}),
       }
     })
+}
+
+function toFiniteNumberOrNull(value: unknown) {
+  if (value === null || value === undefined || value === '') return null
+
+  const numberValue = Number(value)
+  return Number.isFinite(numberValue) ? numberValue : null
 }
 
 function groupCoverageByStore(rows: TargetCoverageRow[]) {

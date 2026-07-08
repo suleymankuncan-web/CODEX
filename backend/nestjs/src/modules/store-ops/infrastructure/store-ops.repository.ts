@@ -97,6 +97,18 @@ export class StoreOpsRepository {
             AND kd.kpi_code = 'NET_SALES'
           ORDER BY ka.period_start DESC, ka.period_end DESC
           LIMIT 1
+        ),
+        active_assignments AS (
+          SELECT
+            eah.*,
+            ROW_NUMBER() OVER (
+              PARTITION BY eah.employee_id, eah.store_id
+              ORDER BY eah.is_primary_assignment DESC, eah.start_date DESC, eah.assignment_id DESC
+            ) AS assignment_rank
+          FROM ops.employee_assignment_history eah
+          WHERE eah.store_id = $1::uuid
+            AND eah.assignment_status = 'active'
+            AND eah.end_date IS NULL
         )
         SELECT
           e.employee_id,
@@ -106,31 +118,26 @@ export class StoreOpsRepository {
           lp.period_start,
           lp.period_end,
           ka.actual_value::text AS net_sales_value
-        FROM latest_period lp
-        INNER JOIN ops.kpi_actual ka
+        FROM active_assignments eah
+        INNER JOIN ops.employee e
+          ON e.employee_id = eah.employee_id
+        INNER JOIN ops.position position
+          ON position.position_id = eah.position_id
+         AND position.position_code NOT IN ('STORE_MANAGER', 'CASHIER')
+        LEFT JOIN latest_period lp
+          ON TRUE
+        LEFT JOIN ops.kpi_definition kd
+          ON kd.kpi_code = 'NET_SALES'
+        LEFT JOIN ops.kpi_actual ka
           ON ka.scope_type = 'employee'
-          AND ka.store_id = $1::uuid
+          AND ka.store_id = eah.store_id
+          AND ka.employee_id = e.employee_id
           AND ka.period_type = 'monthly'
           AND ka.period_start = lp.period_start
           AND ka.period_end = lp.period_end
-        INNER JOIN ops.kpi_definition kd
-          ON kd.kpi_id = ka.kpi_id
-          AND kd.kpi_code = 'NET_SALES'
-        INNER JOIN ops.employee e
-          ON e.employee_id = ka.employee_id
-        INNER JOIN LATERAL (
-          SELECT eah.position_id
-          FROM ops.employee_assignment_history eah
-          WHERE eah.employee_id = e.employee_id
-            AND eah.store_id = $1::uuid
-            AND eah.assignment_status = 'active'
-            AND eah.end_date IS NULL
-          ORDER BY eah.is_primary_assignment DESC, eah.start_date DESC
-          LIMIT 1
-        ) active_assignment ON TRUE
-        INNER JOIN ops.position position
-          ON position.position_id = active_assignment.position_id
-         AND position.position_code <> 'STORE_MANAGER'
+          AND ka.kpi_id = kd.kpi_id
+        WHERE eah.assignment_rank = 1
+          AND e.employment_status = 'active'
         ORDER BY e.first_name ASC, e.last_name ASC, e.employee_id ASC
       `,
       [input.storeId],

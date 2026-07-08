@@ -37,7 +37,7 @@ describe("StoreOpsRepository", () => {
     );
   });
 
-  it("excludes store managers from personnel target distribution rows", async () => {
+  it("lists active targetable personnel without requiring a sales snapshot row", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const repository = new StoreOpsRepository({ query } as never);
 
@@ -46,10 +46,16 @@ describe("StoreOpsRepository", () => {
     });
 
     const sql = String(query.mock.calls[0][0]);
+    expect(sql).toContain("FROM ops.employee_assignment_history eah");
+    expect(sql).toContain("ROW_NUMBER() OVER");
+    expect(sql).toContain("eah.assignment_rank = 1");
+    expect(sql).toContain("LEFT JOIN latest_period lp");
+    expect(sql).toContain("LEFT JOIN ops.kpi_actual ka");
     expect(sql).toContain("INNER JOIN ops.position position");
-    expect(sql).toContain("position.position_code <> 'STORE_MANAGER'");
+    expect(sql).toContain("position.position_code NOT IN ('STORE_MANAGER', 'CASHIER')");
     expect(sql).toContain("eah.assignment_status = 'active'");
     expect(sql).toContain("eah.end_date IS NULL");
+    expect(sql).toContain("e.employment_status = 'active'");
   });
 
   it("projects shortage metadata with the headcount gap", async () => {
