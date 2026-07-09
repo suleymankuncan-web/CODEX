@@ -225,8 +225,10 @@ Metadata details live in `docs/plans/docs-library-metadata-standard-v1.md`.
 
 The active sequence is:
 
-- finish operating-truth alignment and the no-delete workspace inventory,
-- perform a full project/code analysis before opening a new runtime train,
+- treat operating-truth alignment and the no-delete workspace inventory as
+  closed by PR #914,
+- review the completed full project/code analysis before opening a new runtime
+  train,
 - use a real pilot/demo P0/P1 finding first if one arrives,
 - keep broad production, separate mobile implementation, broad redesign, new
   modules, provider/source integrations, and generic architecture work parked

@@ -35,9 +35,10 @@ The project is in controlled pilot execution mode.
 
 ## What We Do Now
 
-1. Finish the operating-truth alignment and no-delete workspace inventory.
-2. Perform the owner-requested full project/code analysis before opening a new
-   runtime train.
+1. Treat the operating-truth alignment and no-delete workspace inventory as
+   closed by PR #914.
+2. Review the completed owner-requested project/code analysis before opening a
+   new runtime train.
 3. If a real pilot/demo finding arrives first, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
 4. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
@@ -97,9 +98,9 @@ The project is in controlled pilot execution mode.
 If no newer user instruction overrides this board, the next best default action
 is:
 
-1. close the operating-truth alignment docs/process PR,
-2. perform a full project/code analysis,
-3. compare analysis findings with real pilot/demo evidence,
+1. keep PR #914 as the closed operating-truth baseline,
+2. treat the requested step to perform a full project/code analysis as complete,
+3. compare the analysis findings with real pilot/demo evidence,
 4. recommend one evidence-backed next slice or explicitly keep runtime work
    parked,
 5. update registries only when a decision or procedure changes.

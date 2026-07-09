@@ -53,7 +53,7 @@ This registry is a map, not a replacement for the source documents.
 | Norm Kadro / Workforce Planning Read-Only V1 | active evidence | Do not create a new module now; use existing workforce norm plan, snapshot/reporting, and headcount-gap reads as read-only planning context. | `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` | A mutable baseline editor, new API, Store Action source, approval flow, payroll, scheduling, or labor-policy behavior is proposed. |
 | Separate mobile app | parked | Discovery, persona order, offline posture, and prototype sequence are documented; implementation is not active. | `docs/plans/mobile-app-discovery-v1.md` | Owner approves implementation after project analysis and a screen/data/auth/offline intake. |
 | Workspace hygiene cleanup | guarded | Inventory is classified as merged/superseded/dirty/unknown/preserve; no deletion is authorized. | `docs/plans/workspace-hygiene-inventory-2026-07-09.md` | Owner approves a separately verified proposed-delete list. |
-| Next runtime train | parked | Finish docs/process alignment, then perform a full project/code analysis before selecting implementation work. | `current-state.md`, `docs/plans/project-control-board-v1.md` | Project analysis or a real P0/P1 pilot/demo finding produces one reviewable next slice. |
+| Next runtime train | parked | Docs/process alignment closed in PR #914 and the project/code analysis is complete; no implementation line is selected automatically. | `current-state.md`, `docs/plans/project-control-board-v1.md` | Owner selects one reviewable slice backed by the analysis or a real P0/P1 pilot/demo finding. |
 
 ## Update Rule
 
