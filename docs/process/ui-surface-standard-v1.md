@@ -55,6 +55,8 @@ Production Store/Admin UI uses:
 - semantic tokens instead of raw color values,
 - lucide icons only where icons help recognition or scan speed,
 - shared Admin/Store surface primitives where the page belongs to those shells,
+- feature folders for page-specific API, query keys, model mapping,
+  formatting, components, and tests,
 - taste-skill as an anti-slop pass, not as permission to override product
   contracts.
 
