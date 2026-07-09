@@ -1,0 +1,161 @@
+name: Required Release Gate
+
+on:
+  pull_request:
+
+concurrency:
+  group: required-release-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  checks: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  scope:
+    name: required-release-gate-scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      mode: ${{ steps.scope.outputs.mode }}
+      run_root_release: ${{ steps.scope.outputs.run_root_release }}
+      observe_frontend_release: ${{ steps.scope.outputs.observe_frontend_release }}
+      observe_rehearsal: ${{ steps.scope.outputs.observe_rehearsal }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Determine required release scope
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-status "$BASE_SHA" "$HEAD_SHA" > "$RUNNER_TEMP/required-release-gate-files.txt"
+          node scripts/required-release-gate.mjs --scope "$RUNNER_TEMP/required-release-gate-files.txt" >> "$GITHUB_OUTPUT"
+
+  docs-process-contracts:
+    name: docs-process-contracts
+    needs: scope
+    if: needs.scope.outputs.mode == 'docs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Check documentation whitespace
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: git diff --check "$BASE_SHA" "$HEAD_SHA"
+
+      - name: Run root script and contract tests
+        run: npm run test:scripts
+
+  root-release:
+    name: root-release
+    needs: scope
+    if: needs.scope.outputs.run_root_release == 'true'
+    uses: ./.github/workflows/release-check.yml
+    permissions:
+      contents: read
+      pull-requests: read
+
+  frontend-release-observer:
+    name: frontend-release-observer
+    needs: scope
+    if: needs.scope.outputs.observe_frontend_release == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Wait for the frontend release child on the latest head SHA
+        env:
+          REQUIRED_RELEASE_GATE_CHECK_NAME: frontend-release-check
+          REQUIRED_RELEASE_GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REQUIRED_RELEASE_GATE_MAX_ATTEMPTS: "80"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/required-release-gate.mjs --observe
+
+  release-rehearsal-observer:
+    name: release-rehearsal-observer
+    needs: scope
+    if: needs.scope.outputs.observe_rehearsal == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Wait for the release rehearsal child on the latest head SHA
+        env:
+          REQUIRED_RELEASE_GATE_CHECK_NAME: release-rehearsal
+          REQUIRED_RELEASE_GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REQUIRED_RELEASE_GATE_MAX_ATTEMPTS: "50"
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/required-release-gate.mjs --observe
+
+  required-release-gate:
+    name: required-release-gate
+    needs:
+      - scope
+      - docs-process-contracts
+      - root-release
+      - frontend-release-observer
+      - release-rehearsal-observer
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Fail closed unless every selected child succeeded
+        env:
+          REQUIRED_RELEASE_GATE_MODE: ${{ needs.scope.outputs.mode }}
+          REQUIRED_RELEASE_GATE_SCOPE_RESULT: ${{ needs.scope.result }}
+          REQUIRED_RELEASE_GATE_DOCS_RESULT: ${{ needs.docs-process-contracts.result }}
+          REQUIRED_RELEASE_GATE_ROOT_RELEASE_RESULT: ${{ needs.root-release.result }}
+          REQUIRED_RELEASE_GATE_FRONTEND_OBSERVER_RESULT: ${{ needs.frontend-release-observer.result }}
+          REQUIRED_RELEASE_GATE_REHEARSAL_OBSERVER_RESULT: ${{ needs.release-rehearsal-observer.result }}
+          REQUIRED_RELEASE_GATE_OBSERVE_FRONTEND: ${{ needs.scope.outputs.observe_frontend_release }}
+          REQUIRED_RELEASE_GATE_OBSERVE_REHEARSAL: ${{ needs.scope.outputs.observe_rehearsal }}
+        run: node scripts/required-release-gate.mjs --final
