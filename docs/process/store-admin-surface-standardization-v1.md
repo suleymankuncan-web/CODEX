@@ -100,6 +100,10 @@ Production uses project shadcn components and Store/Admin primitives. A
 standalone HTML prototype is acceptable only when every visible control has a
 known production component mapping.
 
+Route files stay thin, feature folders own API/query keys, model, components,
+and tests, and Admin pages use a list/detail/edit workbench pattern instead of
+dashboard-style layout by default.
+
 Default mappings:
 
 | Surface need | Production component direction |
@@ -201,6 +205,9 @@ Use this process whenever a Store/Admin prototype is requested.
 10. During production, map every visible value and action to real data.
 11. Preserve role/scope/permission behavior.
 12. Record intentional deviations with production reasons.
+13. Keep the production route orchestration-first; move API, query keys, model
+    mapping, formatting, drawer internals, and table/list components into the
+    owning feature folder.
 
 ## Store Page QA Contract Gate
 
@@ -229,6 +236,8 @@ deferral is closed.
 A Store/Admin surface is standard-compliant only when:
 
 - the page matches the approved operational surface rhythm,
+- the route file is thin and feature-specific logic lives in the owning feature
+  folder,
 - controls are shadcn or shared primitives,
 - native select is absent from product toolbar filters,
 - metric cards include one meaningful lucide icon each,
