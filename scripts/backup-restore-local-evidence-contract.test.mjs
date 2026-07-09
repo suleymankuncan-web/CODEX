@@ -6,7 +6,7 @@ const evidence = readFileSync(
   "docs/plans/backup-restore-drill-local-evidence-2026-04-30.md",
   "utf8",
 );
-const currentState = readFileSync("current-state.md", "utf8");
+const currentState = readFileSync("docs/history/current-state-through-pr-913-2026-07-09.md", "utf8");
 const activeNextActions = readFileSync("docs/plans/active-next-actions.md", "utf8");
 const debtLedger = readFileSync("docs/plans/project-debt-ledger.md", "utf8");
 const migration037 = readFileSync(

@@ -22,7 +22,7 @@ function requireAll(text, expectedValues) {
 const snapshotPath = 'docs/plans/project-health-snapshot-2026-05-01.md'
 const snapshot = readText(snapshotPath)
 const activeNextActions = readText('docs/plans/active-next-actions.md')
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const riskScan = readText('docs/plans/project-risk-scan-2026-04-30.md')
 
 test('project health snapshot separates local health from pilot approval', () => {

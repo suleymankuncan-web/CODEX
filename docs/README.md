@@ -1,5 +1,9 @@
 # HR Axis / Store Ops Documentation Library
 
+Status: active
+Shelf: operating
+Last verified: 2026-07-09
+
 ## Reader And Action
 
 Reader:
@@ -39,6 +43,8 @@ Use this directory like an operating library, not a diary.
 | Execute the next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` | Ordered plan for feedback, data quality, operations, coaching, auth preview, rules, workforce planning, and production ops. |
 | Pick the next practical task | `docs/plans/active-next-actions.md` | Current working list and pilot-vs-production split. |
 | Check whether a debt is open | `docs/plans/project-debt-ledger.md` | Closed debts, blocked dependencies, and strategic backlog. |
+| Inspect workspace cleanup candidates | `docs/plans/workspace-hygiene-inventory-2026-07-09.md` | No-delete branch, worktree, remote-ref, and stash classification. |
+| Reconstruct the former long handoff | `docs/history/current-state-through-pr-913-2026-07-09.md` | Historical PR/evidence context that must not steer current work. |
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
 | Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` | Feedback intake, P0/P1/P2/P3 triage, PR sequence, autonomy limits, and closeout criteria. |
 | Check launch browser-session evidence | `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md` and `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md` | Local implementation is guarded and real Region Manager staging cookie-session proof passed; rerun with `npm.cmd --prefix admin-web run smoke:auth:staging:cookie-session`; broad production remains `No-Go`. |
@@ -71,6 +77,7 @@ Use for daily direction and working discipline.
 - `docs/plans/project-growth-execution-roadmap-v1.md`
 - `docs/plans/active-next-actions.md`
 - `docs/plans/project-debt-ledger.md`
+- `docs/plans/workspace-hygiene-inventory-2026-07-09.md`
 - `docs/plans/project-progress-plan-v1.md`
 - `docs/plans/store-workforce-and-approvals-split-v1-plan.md`
 - `docs/plans/mobile-app-discovery-v1.md`
@@ -185,6 +192,7 @@ decision exists.
 - `docs/superpowers/specs/`
 - older `docs/plans/phase-*` docs
 - superseded readiness and preflight notes
+- `docs/history/current-state-through-pr-913-2026-07-09.md`
 
 ## Status Vocabulary
 
@@ -215,14 +223,14 @@ Metadata details live in `docs/plans/docs-library-metadata-standard-v1.md`.
 
 ## Current Direction
 
-The active direction is controlled pilot execution:
+The active sequence is:
 
-- run scoped sessions,
-- record feedback,
-- classify P0/P1/P2/P3,
-- fix concrete blockers,
-- keep broad production, broad redesign, and new modules behind explicit
-  decisions.
+- finish operating-truth alignment and the no-delete workspace inventory,
+- perform a full project/code analysis before opening a new runtime train,
+- use a real pilot/demo P0/P1 finding first if one arrives,
+- keep broad production, separate mobile implementation, broad redesign, new
+  modules, provider/source integrations, and generic architecture work parked
+  until analysis/evidence plus an explicit owner decision reopen them.
 
 Broad production remains separate from the controlled pilot and is still a
 No-Go until the remaining provider, recovery, Redis, and incident posture

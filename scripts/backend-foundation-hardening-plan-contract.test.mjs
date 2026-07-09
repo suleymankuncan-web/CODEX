@@ -15,7 +15,7 @@ function requireText(text, expected) {
 
 const planPath = 'docs/plans/backend-foundation-hardening-plan-v1.md'
 const plan = readText(planPath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 

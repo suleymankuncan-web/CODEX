@@ -29,7 +29,7 @@ function extractNumberedItems(section) {
 }
 
 function extractLastDebtLedgerBlock(text) {
-  const marker = 'Debt ledger:'
+  const marker = 'Debt ledger snapshot remains canonical'
   const start = text.lastIndexOf(marker)
   assert.notEqual(start, -1, `Missing latest ${marker} block`)
   const nextHeading = text.indexOf('\n## ', start + marker.length)
@@ -37,6 +37,9 @@ function extractLastDebtLedgerBlock(text) {
 }
 
 const currentState = readText('current-state.md')
+const historicalHandoff = readText(
+  'docs/history/current-state-through-pr-913-2026-07-09.md',
+)
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 
@@ -90,5 +93,8 @@ test('controlled pilot operating checklist is counted as closed evidence work', 
   requireText(debtLedger, '91. Controlled Pilot Operating Checklist V1')
   requireText(debtLedger, 'Controlled Pilot Operating Checklist V1 is counted as paid because')
   requireText(activeNextActions, 'Controlled Pilot Operating Checklist V1 is counted as paid')
-  requireText(currentState, '`docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1')
+  requireText(
+    historicalHandoff,
+    '`docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1',
+  )
 })

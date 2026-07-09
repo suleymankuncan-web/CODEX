@@ -1,5 +1,9 @@
 # Active Next Actions
 
+Status: active
+Shelf: operating
+Last verified: 2026-07-09
+
 ## Purpose
 
 This is the short working list for the next practical steps. It keeps the project from scattering into many half-started ideas.
@@ -16,27 +20,38 @@ Documentation entry point:
 
 ## Current Position
 
-As of 7 July 2026, the Pilot Readiness Audit V1 PR train is closed for the
-recorded findings through PR #909.
+As of 9 July 2026, the Pilot Readiness Audit V1 PR train is closed through
+PR #910, the target roster/approval default follow-up is merged in PR #911,
+mobile discovery is documented by PR #912, and the former long handoff was
+refreshed by PR #913 before the operating-truth alignment line.
 
 - Latest closeout evidence:
   `docs/evidence/pilot-readiness/2026-07-07-pilot-readiness-audit-v1.md`
 - Jan-Jun data reconciliation public DB rerun:
   `docs/evidence/pilot-readiness/2026-07-07-data-reconciliation-readback.md`
-- Latest current-state block:
-  `current-state.md` under `Fresh verified state on 2026-07-07`
+- Current short handoff: `current-state.md`.
+- Historical handoff archive:
+  `docs/history/current-state-through-pr-913-2026-07-09.md`.
+- No-delete workspace inventory:
+  `docs/plans/workspace-hygiene-inventory-2026-07-09.md`.
 
 Next practical action:
 
-1. Do not start a new module, redesign, Nebim/provider integration, or broad
-   architecture track before the patron demo.
-2. Run a controlled pilot / patron demo rehearsal with the current data and
-   routes.
-3. If a blocker appears, record it against the relevant evidence file with route,
-   persona, period, expected behavior, actual behavior, and screenshot/trace if
-   available.
-4. Fix only concrete P0/P1 blockers before the demo. P2 visual friction stays
-   parked unless it blocks the demo story.
+1. Finish the docs/process-only operating-truth alignment and merge it after
+   required checks.
+2. Perform the owner-requested full project/code analysis before choosing a new
+   runtime train.
+3. If a pilot/demo blocker appears first, record route, persona, period,
+   expected behavior, actual behavior, and sanitized screenshot/trace evidence.
+4. Keep new modules, separate mobile implementation, broad production, broad
+   redesign, provider/source integration, and generic architecture work parked
+   until analysis or a real P0/P1 finding reopens one path.
+
+## Historical Working Log
+
+Everything below this heading is retained for reconstruction. Dated `current`,
+`next`, or `active` statements below do not override the current position above,
+`current-state.md`, live git/GitHub state, or the user's newest instruction.
 
 As of 2 June 2026, the project is no longer in generic foundation-building
 mode. The free-tier controlled-pilot ops posture is closed for the current

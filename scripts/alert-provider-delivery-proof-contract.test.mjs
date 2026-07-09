@@ -15,7 +15,7 @@ function requireText(text, value) {
 }
 
 const evidence = readText(evidencePath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 
 test('alert provider delivery proof records the proven staging channel', () => {

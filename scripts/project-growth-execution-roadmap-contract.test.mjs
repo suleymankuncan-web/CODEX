@@ -20,7 +20,7 @@ function requireText(text, value) {
 const roadmapPath = 'docs/plans/project-growth-execution-roadmap-v1.md'
 const roadmap = readText(roadmapPath)
 const library = readText('docs/README.md')
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const decisionRegistry = readText('docs/plans/decision-registry-v1.md')
 const runbookRegistry = readText('docs/plans/runbook-registry-v1.md')

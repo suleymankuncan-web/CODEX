@@ -5,7 +5,7 @@ import { test } from "node:test";
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 const script = readFileSync("scripts/migration-fresh-db-smoke.mjs", "utf8");
 const runbook = readFileSync("docs/plans/migration-fresh-db-smoke-v1.md", "utf8");
-const currentState = readFileSync("current-state.md", "utf8");
+const currentState = readFileSync("docs/history/current-state-through-pr-913-2026-07-09.md", "utf8");
 const activeNextActions = readFileSync("docs/plans/active-next-actions.md", "utf8");
 const debtLedger = readFileSync("docs/plans/project-debt-ledger.md", "utf8");
 

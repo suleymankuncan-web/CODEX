@@ -18,7 +18,7 @@ function requireAll(text, values) {
 
 const gatePath = 'docs/plans/pilot-readiness-gate-v1.md'
 const gate = readText(gatePath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 
