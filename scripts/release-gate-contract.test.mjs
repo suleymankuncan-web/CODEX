@@ -57,9 +57,11 @@ test('package release scripts include production audit gates', () => {
   assert.match(frontendPackage.scripts['check:release'], /npm audit --omit=dev/)
 })
 
-test('github release workflow delegates to the root release gate on Node 24', () => {
+test('github release workflow is reusable and delegates to the root release gate on Node 24', () => {
   const workflow = readText('.github/workflows/release-check.yml')
 
+  assert.match(workflow, /workflow_call:\s*\n/)
+  assert.doesNotMatch(workflow, /^\s*pull_request:/m)
   assert.match(workflow, /node-version:\s*24/)
   assert.match(workflow, /cache-dependency-path:\s*\|\s*\n\s*backend\/nestjs\/package-lock\.json\s*\n\s*admin-web\/package-lock\.json/)
   assert.match(workflow, /working-directory:\s*backend\/nestjs\s*\n\s*run:\s*npm ci/)
