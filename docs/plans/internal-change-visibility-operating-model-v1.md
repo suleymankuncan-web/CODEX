@@ -202,4 +202,5 @@ Future static in-app notes:
 2. `npm.cmd --prefix admin-web run lint`,
 3. `npm.cmd --prefix admin-web run build`,
 4. targeted Playwright for visibility, empty state, and private-text absence,
-5. Codex review before merge.
+5. final local adversarial review and mergeability confirmation; do not request
+   or await GitHub Codex review while the owner-disabled policy is active.

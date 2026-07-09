@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 Sokrates is the default decision-quality rule for the HR Axis / Store Ops
 workspace. It is part of the four-file operating set:
@@ -610,8 +610,8 @@ Work is done only when:
 - Any known caveat or skipped gate is explicitly recorded.
 - Risk and rollback shape are understandable.
 - If a PR was opened, required GitHub checks, Vercel checks when relevant, and
-  mergeability are satisfied. Default Codex review evidence or an explicit
-  owner waiver is recorded when the review policy applies.
+  mergeability are satisfied, and the final local adversarial review is clean.
+  GitHub Codex review is owner-disabled and is not requested or awaited.
 - If merged, `origin/main` has been fetched and the merge commit is verified.
 
 Passing tests are necessary, not sufficient. Also verify that the diff matches
@@ -654,7 +654,7 @@ Stop and report instead of pushing forward when:
 - API/auth/DB behavior changes unintentionally.
 - A batch PR cannot be explained in one paragraph.
 - Rollback becomes ambiguous.
-- GitHub checks, Vercel, or Codex review shows a real issue.
+- GitHub checks, Vercel, or an actionable human/tool review shows a real issue.
 - Branch protection or mergeability blocks the PR.
 - The fix required is larger or riskier than the approved slice.
 - You cannot explain the change, risk, and rollback in plain language.
@@ -799,7 +799,7 @@ Use the cheapest useful signal first, then climb only as needed:
 6. Targeted integration or E2E tests.
 7. Full backend or frontend gate when blast radius warrants it.
 8. GitHub checks and Vercel checks when a PR is opened.
-9. Codex review/comment or approval reaction before merge.
+9. Final local adversarial diff review and mergeability confirmation.
 10. Fetch `origin/main` and verify the merge commit after merge.
 
 Do not call a task complete just because the code "looks right".
@@ -826,21 +826,14 @@ it locally.
 - Use a separate branch/worktree when useful for isolation.
 - Before push: inspect diff, confirm scope, and run local gates.
 - After PR open: wait for required GitHub checks, Vercel checks when relevant,
-  and mergeability. Use Codex GitHub review by default unless the owner has
-  explicitly waived it for the PR or PR train.
-- Use the single canonical 30-second polling loop from `discipline.md`. When
-  Codex review is active, inspect issue comments, reviews, inline comments,
-  reactions, and timeline instead of relying on one slow path.
-- If the user reports seeing the Codex thumbs-up in GitHub UI, and checks are
-  green, the PR is mergeable, and the diff scope is already verified, treat
-  that as user-provided approval evidence. Do not wait several more minutes for
-  delayed API visibility.
-- Merge only when required checks are green and the PR is mergeable. If Codex
-  review is active, require its clean approval signal. If the owner waived it,
-  require the recorded waiver plus a fresh final diff review; the waiver does
-  not bypass any required check.
-- If Codex finds an actionable issue, fix it, rerun local gates, push again,
-  and wait for review/checks again.
+  and mergeability. GitHub Codex review is owner-disabled: do not trigger
+  `@codex review`, request it elsewhere, or wait for bot reactions/comments.
+- Use the single canonical 30-second polling loop from `discipline.md` for
+  checks, deployment status, status rollup, and mergeability.
+- Merge only when required checks are green, the PR is mergeable, and a fresh
+  final local adversarial diff review is clean.
+- If a human or another required tool finds an actionable issue, fix it, rerun
+  local gates, push again, and wait for checks again.
 - Prefer squash merge for controlled slices and batch PRs, then fetch
   `origin/main` and verify the merge commit before continuing.
 
@@ -879,7 +872,7 @@ Calibration triggers:
 
 - after three related PRs,
 - after a failed or flaky gate changes the plan,
-- after Codex/GitHub review catches a real issue,
+- after GitHub checks or an actionable human/tool review catches a real issue,
 - after the user corrects priority,
 - after a process rule feels slower than the risk it protects,
 - after a bug reaches staging despite local checks.

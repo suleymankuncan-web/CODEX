@@ -108,6 +108,10 @@ Success means:
 - **FR-17:** This plan **MUST NOT** authorize deletion, movement, application,
   dropping, reset, or rewrite of inventory branches, worktrees, remote refs, or
   stashes.
+- **FR-18:** GitHub Codex review **MUST NOT** be requested, triggered with
+  `@codex review`, or awaited while the owner-disabled policy is active.
+  Required checks, mergeability, local adversarial review, and verification
+  **MUST** remain merge gates.
 
 ## 4. Non-Functional Requirements
 
@@ -177,6 +181,10 @@ Success means:
 - **AC-15 (FR-17):** Given the workspace hygiene inventory, when any plan PR
   closes, then branch/worktree/remote-ref/stash counts may be re-read but no
   inventory item has been mutated without a separate explicit owner approval.
+- **AC-16 (FR-18):** Given an opened PR while the owner-disabled review policy
+  is active, when closeout runs, then no GitHub Codex review request is created
+  or awaited and merge still requires green required checks, mergeability, and
+  a clean final local adversarial review.
 
 ## 6. Edge Cases And Failure Modes
 
@@ -454,6 +462,9 @@ also require:
 - GitHub ruleset readback;
 - latest-head SHA verification;
 - cancellation/failure reasoning before merge.
+
+Do not trigger or wait for GitHub Codex review while the owner-disabled policy
+is active. This does not reduce the local or remote verification ladder.
 
 Runtime finding PRs additionally require the finding-specific test matrix and
 the root release gate. External claims require staging/provider evidence.

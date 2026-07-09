@@ -35,7 +35,7 @@ test('project analysis implementation plan has the mandatory spec sections', () 
 test('requirements and acceptance criteria are complete and traceable', () => {
   const requirementIds = new Set()
 
-  for (let index = 1; index <= 17; index += 1) {
+  for (let index = 1; index <= 18; index += 1) {
     const id = `FR-${index}`
     requireText(plan, `**${id}:`)
     requirementIds.add(id)
@@ -47,7 +47,7 @@ test('requirements and acceptance criteria are complete and traceable', () => {
     requirementIds.add(id)
   }
 
-  for (let index = 1; index <= 15; index += 1) {
+  for (let index = 1; index <= 16; index += 1) {
     const id = `AC-${index}`
     const line = plan.split(/\r?\n/).find((item) => item.startsWith(`- **${id} (`))
     assert.ok(line, `missing acceptance criterion: ${id}`)
@@ -72,6 +72,7 @@ test('execution order keeps runtime and broad production behind explicit gates',
     'an approved P0/P1 finding',
     'Broad-production work **MUST** remain blocked',
     'This plan **MUST NOT** authorize deletion',
+    'GitHub Codex review **MUST NOT** be requested',
   ]) {
     requireText(plan, expected)
   }

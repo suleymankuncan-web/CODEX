@@ -74,7 +74,9 @@ test('store performance replay surface spec defines verification before UI', () 
     'targeted Playwright',
     'mobile viewport screenshot/browser check',
     'route/scope matrix evidence update if visibility changes',
-    'Codex review before merge',
+    'final local adversarial review and mergeability confirmation',
+    'do not request',
+    'GitHub Codex review while the owner-disabled policy is active',
   ]) {
     requireText(spec, phrase)
   }

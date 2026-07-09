@@ -203,4 +203,5 @@ Visible surface:
 2. targeted Playwright for role visibility and copy,
 3. mobile viewport check,
 4. evidence note showing no individual surveillance claim,
-5. Codex review before merge.
+5. final local adversarial review and mergeability confirmation; do not request
+   or await GitHub Codex review while the owner-disabled policy is active.

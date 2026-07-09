@@ -135,16 +135,18 @@ standard before changing the page.
 - Local adversarial review and scope-appropriate verification are required.
 - GitHub required checks, deployment checks when applicable, and mergeability
   are required.
-- Codex GitHub review is the default external review path, not a branch-ruleset
-  requirement.
-- The owner may explicitly waive Codex review for a PR or PR train. The waiver
-  must be recorded in the PR body/comment or current handoff and does not waive
-  required checks, mergeability, local diff review, or verification.
+- GitHub Codex review is disabled by explicit owner direction as of 2026-07-10.
+  Do not trigger `@codex review`, request it through another integration, or
+  wait for bot reactions/comments.
+- GitHub Codex review becomes active again only after a newer explicit owner
+  instruction. Required checks, mergeability, local adversarial review, and
+  verification remain mandatory.
 - When polling is needed, use the canonical 30-second GitHub status loop from
   `discipline.md`; stop polling once the required decision evidence is complete.
 
-PR #914 used the owner-approved Codex-review waiver recorded in the initiating
-conversation. Required checks and diff review remained mandatory.
+PR #914 used the earlier owner-approved Codex-review waiver. The newer policy
+above supersedes per-PR waiver handling by disabling GitHub Codex review until
+the owner explicitly re-enables it.
 
 ## Workspace Hygiene Snapshot
 

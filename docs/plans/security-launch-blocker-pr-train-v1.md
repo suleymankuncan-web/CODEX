@@ -276,7 +276,8 @@ Stop and ask for explicit owner input before:
 - removing bearer support from protected smoke scripts;
 - changing API response contracts outside the new session endpoints;
 - claiming protected staging evidence without a real session;
-- merging any PR with red local, GitHub, Vercel, or Codex review state.
+- merging any PR with red local, GitHub, or Vercel state, blocked mergeability,
+  or an unresolved actionable human/tool review finding.
 
 ## PR Train Overview
 
@@ -741,7 +742,9 @@ Additional remote gates before merge:
 
 - GitHub checks green;
 - Vercel preview checks green where frontend/deploy config is touched;
-- Codex review has no major unresolved findings;
+- final local adversarial review is clean and any human/tool review has no
+  unresolved actionable finding; GitHub Codex review is not requested or
+  awaited while the owner-disabled policy is active;
 - PR body includes verification, rollback, and `Contract Impact`.
 
 ## Acceptance Criteria

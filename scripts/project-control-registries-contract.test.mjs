@@ -54,6 +54,7 @@ test('decision registry keeps source documents and change triggers visible', () 
     '| Decision | Status | Current stance | Source of truth | Change trigger |',
     'Controlled pilot execution',
     'Broad production rollout',
+    'GitHub Codex review is owner-disabled and must not be requested or awaited',
     'Store Action V1B',
     'Auth source of truth',
     'Redis/BullMQ posture',

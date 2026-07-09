@@ -100,7 +100,8 @@ An agent may do these without further user input once this train is authorized:
 - update docs, evidence templates, and runbook links,
 - run local verification,
 - open PRs,
-- request Codex review,
+- do not request or await GitHub Codex review while the owner-disabled policy
+  remains active; run a fresh local adversarial diff review instead,
 - watch GitHub checks and Vercel preview status,
 - merge green docs-only or low-risk PRs if the user has explicitly granted PR
   and merge authority,
@@ -550,8 +551,9 @@ Also run the targeted gate for the PR risk class.
 After opening a PR:
 
 - confirm the PR has one review story,
-- request Codex review when the PR is not trivial docs-only,
-- inspect issue comments, inline comments, review submissions, and reactions,
+- do not request or await GitHub Codex review; run a fresh final local
+  adversarial diff review,
+- inspect actionable human/tool comments or review submissions when present,
 - wait for GitHub checks and Vercel checks when applicable,
 - do not merge while checks are running, failing, or unexplained,
 - do not merge if the PR body does not state what did not change.

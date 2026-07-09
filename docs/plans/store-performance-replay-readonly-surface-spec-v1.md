@@ -251,7 +251,8 @@ Visible surface:
 2. targeted Playwright for the owning route,
 3. mobile viewport screenshot/browser check,
 4. route/scope matrix evidence update if visibility changes,
-5. Codex review before merge.
+5. final local adversarial review and mergeability confirmation; do not request
+   or await GitHub Codex review while the owner-disabled policy is active.
 
 ## Go / No-Go
 
