@@ -19,7 +19,7 @@ function requireAll(text, expectedValues) {
 const checklistPath = 'docs/plans/controlled-pilot-operating-checklist-v1.md'
 const consolidationPath =
   'docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md'
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const pilotGate = readText('docs/plans/pilot-readiness-gate-v1.md')
 
 test('controlled pilot operating checklist exists and keeps the pilot boundary', () => {

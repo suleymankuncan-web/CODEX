@@ -20,7 +20,7 @@ function requireText(text, value) {
 const policyPath = 'docs/plans/usage-performance-correlation-policy-v1.md'
 const policy = readText(policyPath)
 const library = readText('docs/README.md')
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const p2Plan = readText('docs/plans/p2-product-intelligence-execution-v1.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 

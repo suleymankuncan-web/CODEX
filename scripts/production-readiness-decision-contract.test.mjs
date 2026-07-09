@@ -15,7 +15,7 @@ function requireText(text, value) {
 }
 
 const decision = readText(decisionPath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 const readinessProgress = readText('docs/superpowers/plans/2026-05-18-readiness-progress.md')

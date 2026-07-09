@@ -15,7 +15,7 @@ function requireText(text, value) {
 }
 
 const evidence = readText(evidencePath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 
 test('live evidence proof pass records proven and blocked items separately', () => {
   for (const phrase of [

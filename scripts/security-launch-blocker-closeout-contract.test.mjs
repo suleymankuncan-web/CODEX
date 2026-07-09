@@ -21,7 +21,7 @@ function requireText(text, value) {
 }
 
 const closeout = readText(closeoutPath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const controlBoard = readText('docs/plans/project-control-board-v1.md')
 const runbookRegistry = readText('docs/plans/runbook-registry-v1.md')

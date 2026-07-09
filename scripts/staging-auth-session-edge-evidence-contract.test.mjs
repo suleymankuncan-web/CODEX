@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const guardDocPath = 'docs/plans/staging-auth-session-edge-evidence-guard-v1.md'
-const currentStatePath = 'current-state.md'
+const currentStatePath = 'docs/history/current-state-through-pr-913-2026-07-09.md'
 const gatePath = 'docs/plans/pilot-readiness-gate-v1.md'
 const checklistPath = 'docs/plans/controlled-pilot-operating-checklist-v1.md'
 const runbookPath = 'docs/plans/phase-7-staging-auth-smoke-runbook.md'

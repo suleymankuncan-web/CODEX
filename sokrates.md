@@ -1,5 +1,9 @@
 # Sokrates Working Principle
 
+Status: active
+Shelf: operating
+Last verified: 2026-07-09
+
 Sokrates is the default decision-quality rule for the HR Axis / Store Ops
 workspace. It is part of the four-file operating set:
 `CONTRIBUTING.md`, `current-state.md`, `sokrates.md`, and `discipline.md`.
@@ -68,13 +72,18 @@ At the start of a new session or after context loss:
 
 1. Read `CONTRIBUTING.md`.
 2. Read `current-state.md`.
-3. Read this file.
-4. Read `discipline.md`.
-5. Check git status before touching files.
-6. Identify unrelated dirty files and leave them alone.
-7. Identify the current branch and whether `origin/main` is relevant to the
+3. Check git status before touching files.
+4. Identify unrelated dirty files and leave them alone.
+5. Identify the current branch and whether `origin/main` is relevant to the
    request.
-8. Restate the active goal, known caveats, and immediate next safe step.
+6. Restate the active goal, known caveats, and immediate next safe step.
+
+Then read this file for medium/high-risk decisions, ambiguity, prioritization,
+architecture, auth/API/DB/provider work, or `what next`. Read the relevant
+`discipline.md` sections before implementation, PR, verification, merge,
+UI/refactor, or workspace-hygiene work. Read all four completely for a new
+multi-PR line, high-risk work, or real context recovery when the narrower path
+is insufficient.
 
 Do not restart old work from memory when local handoff files provide fresher
 context.
@@ -600,8 +609,9 @@ Work is done only when:
 - Relevant local checks have passed.
 - Any known caveat or skipped gate is explicitly recorded.
 - Risk and rollback shape are understandable.
-- If a PR was opened, GitHub checks, Vercel checks when relevant, and Codex
-  review/comment or approval reaction are satisfied.
+- If a PR was opened, required GitHub checks, Vercel checks when relevant, and
+  mergeability are satisfied. Default Codex review evidence or an explicit
+  owner waiver is recorded when the review policy applies.
 - If merged, `origin/main` has been fetched and the merge commit is verified.
 
 Passing tests are necessary, not sufficient. Also verify that the diff matches
@@ -815,19 +825,20 @@ it locally.
   PR once the work is meaningful.
 - Use a separate branch/worktree when useful for isolation.
 - Before push: inspect diff, confirm scope, and run local gates.
-- After PR open: wait for GitHub checks, Vercel checks when relevant, and Codex
-  GitHub review/comment or approval reaction.
-- Check Codex approval signals quickly once checks are green or nearly green:
-  use a short 15-20 second loop and inspect issue comments, PR reviews, PR
-  review comments, reaction endpoints, and timeline instead of relying on one
-  slow `gh pr view` path.
+- After PR open: wait for required GitHub checks, Vercel checks when relevant,
+  and mergeability. Use Codex GitHub review by default unless the owner has
+  explicitly waived it for the PR or PR train.
+- Use the single canonical 30-second polling loop from `discipline.md`. When
+  Codex review is active, inspect issue comments, reviews, inline comments,
+  reactions, and timeline instead of relying on one slow path.
 - If the user reports seeing the Codex thumbs-up in GitHub UI, and checks are
   green, the PR is mergeable, and the diff scope is already verified, treat
   that as user-provided approval evidence. Do not wait several more minutes for
   delayed API visibility.
-- Merge only when checks are green, the PR is mergeable, and Codex says a form
-  of "found no major issue", "didn't find any major issues", or gives clear
-  approval/thumbs-up.
+- Merge only when required checks are green and the PR is mergeable. If Codex
+  review is active, require its clean approval signal. If the owner waived it,
+  require the recorded waiver plus a fresh final diff review; the waiver does
+  not bypass any required check.
 - If Codex finds an actionable issue, fix it, rerun local gates, push again,
   and wait for review/checks again.
 - Prefer squash merge for controlled slices and batch PRs, then fetch

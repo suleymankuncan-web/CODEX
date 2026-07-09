@@ -1,5 +1,9 @@
 # Work Discipline
 
+Status: active
+Shelf: operating
+Last verified: 2026-07-09
+
 Bu dosya HR Axis / Store Ops projesinde Codex ile kullanilan pratik calisma
 disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
 gundelik is akisini, PR ritmini, dogrulama disiplinini ve durma kurallarini
@@ -51,28 +55,27 @@ isletim sistemi buradadir. Hizli navigasyon icin:
 
 ## Baslangic Ritueli
 
-Her yeni oturumda veya context kaybi sonrasi:
+Her yeni oturumda veya context kaybi sonrasi minimum baslangic:
 
 1. `CONTRIBUTING.md` oku.
 2. `current-state.md` oku.
-3. `sokrates.md` oku.
-4. Bu dosyayi oku.
-5. `origin/main` ve local git durumunu kontrol et.
-6. Root working tree kirliyse unrelated degisikliklere dokunma.
-7. En guncel talebi eski plandan ustte tut.
-8. Hedefi, riskleri, ilk guvenli adimi ve dogrulama yolunu netlestir.
+3. `origin/main` ve local git durumunu kontrol et.
+4. Root working tree kirliyse unrelated degisikliklere dokunma.
+5. En guncel talebi eski plandan ustte tut.
+6. Hedefi, riskleri, ilk guvenli adimi ve dogrulama yolunu netlestir.
 
-Her otonom `/goal`, multi-PR veya uzun sureli uygulama promptu varsayilan
-olarak su read-first blogunu tasir:
+Sonra riske gore katmanli oku:
 
-- `CONTRIBUTING.md`
-- `current-state.md`
-- `sokrates.md`
-- `discipline.md`
+- karar, belirsizlik, onceliklendirme veya orta/yuksek risk varsa
+  `sokrates.md`;
+- implementasyon, PR, verification, merge, UI/refactor veya workspace hygiene
+  varsa bu dosyanin ilgili bolumleri;
+- yeni multi-PR hat, yuksek risk veya gercek context recovery varsa dort dosya
+  tamamen.
 
-Kullanici promptta bu dosyalari tek tek yazmasa bile bu dortlu isleme dahil
-edilir. Sadece kullanici acikca tek bir read-only soru veya dar belge inceleme
-istediyse kapsam daraltilabilir.
+Dar read-only soru veya dusuk riskli mekanik iste tam dortlu okuma zorunlu
+seremoni degildir. `current-state.md` tarih arsivi olarak kullanilmaz; eski PR
+treni gerekiyorsa onun linkledigi historical archive acilir.
 
 ## Ana Ilke
 
@@ -430,14 +433,23 @@ Stop kurali:
 
 ## Merge Disiplini
 
-Merge icin hepsi gerekir:
+Merge icin her zaman gerekenler:
 
 - Local verification gecti.
 - GitHub/Vercel checks yesil.
 - PR mergeable.
-- Codex review onayi geldi.
 
-Codex onayi su sekillerde kabul edilir:
+Varsayilan dis review yolu Codex GitHub review'dur. Ancak owner bir PR veya PR
+treni icin Codex review'u acikca waive edebilir. Waiver:
+
+- PR body/comment veya `current-state.md` icinde kaydedilir,
+- sessizlikten veya aceleden varsayilmaz,
+- required check, mergeability, local adversarial review veya verification'i
+  waive etmez,
+- son push sonrasi diff scope'u yeniden okunmadan merge izni sayilmaz.
+
+Codex review zorunlu/default olarak kullaniliyorsa onay su sekillerde kabul
+edilir:
 
 - `found no major issue`,
 - `didn't find any major issues`,
@@ -450,7 +462,7 @@ gorunen bot `+1` reaction'i da bu kapsamdadir. Son push'tan sonra gelmis ve
 actionable Codex yorumu bulunmuyorsa, ayrica metin olarak "no major issues"
 yorumunu beklemek gerekmez.
 
-Bu onay sinyali son push'tan sonra gelmis olmalidir. Onceki commit'e ait
+Review waive edilmediyse onay sinyali son push'tan sonra gelmis olmalidir. Onceki commit'e ait
 temiz yorum veya reaksiyon yeni push sonrasinda merge onayi sayilmaz. Sadece
 `eyes` reaksiyonu onay degildir. Actionable Codex yorumu varsa merge edilmez;
 once duzeltilir, testler yeniden kosulur, tekrar review beklenir.
@@ -465,8 +477,8 @@ okunur:
 - status check rollup.
 
 GitHub kontrolu tek seferlik snapshot degildir. PR acildiktan veya branch'e yeni
-push geldikten sonra merge karari verilene kadar GitHub durumu 30 saniyede bir
-loop ile tekrar cekilir ve birlikte degerlendirilir:
+push geldikten sonra merge karari verilene kadar gereken durum 30 saniyede bir
+kanonik loop ile tekrar cekilir ve birlikte degerlendirilir:
 
 - GitHub Actions checks,
 - Vercel/deploy checks,
@@ -477,8 +489,9 @@ loop ile tekrar cekilir ve birlikte degerlendirilir:
 - status check rollup,
 - mergeability / branch state.
 
-Bu 30 saniyelik loop ancak tum checks yesil, PR mergeable, Codex review kanallari
-temiz/onayli ve yeni actionable yorum olmadigi goruldugunde biter. Failed check,
+Bu 30 saniyelik loop tum required checks yesil, PR mergeable ve Codex review
+kullaniliyorsa kanallari temiz/onayli oldugunda; owner waiver varsa waiver
+kaydi ile final diff review dogrulandiginda biter. Failed check,
 pending belirsizlik, yeni yorum veya actionable Codex notu gorulurse merge
 yapilmaz; once sebep okunur, gerekirse duzeltme push'lanir ve loop yeniden
 baslatilir.
@@ -702,9 +715,10 @@ Store Me refactorundan cikan tekrar kullanilabilir sayfa kurali:
   route'larinda eski primitive/class/copy taranir, role disi toolbar linkleri
   kontrol edilir, parked route istisnalari acikca belgelenir, mobil/desktop
   verification kosulur ve current-state/evidence guncellenir.
-- Parked Store route'lari sessizce yeni urun UI'ina alinmaz. Ornek:
-  `/store/incentives` kullanici tarafindan yeniden kapsamlanana kadar toolbar'a
-  eklenmez ve Store Me kalitesinde productize edilmis sayilmaz.
+- Parked Store route'lari sessizce yeni urun UI'ina alinmaz. Bir route ancak
+  owner onu acikca kapsamladiginda ve real data/role/workflow contract'i
+  tanimlandiginda productize edilir. `/store/incentives` bu kosulu daha sonra
+  Sales Target Incentive V1 ile saglamistir; artik parked route ornegi degildir.
 
 ### Prototype to Product
 
@@ -867,7 +881,8 @@ Bir is ancak su durumda bitti sayilir:
 - diff okundu,
 - local gate gecti,
 - gerekiyorsa PR acildi,
-- checks ve Codex onayi tamamlandi,
+- required checks tamamlandi; Codex review kullanildiysa onay, waive edildiyse
+  explicit owner waiver kaydi var,
 - merge sonrasi `origin/main` dogrulandi,
 - gelecekteki devam icin gereken docs/current-state/evidence guncellendi,
 - kalan riskler acikca soylendi.

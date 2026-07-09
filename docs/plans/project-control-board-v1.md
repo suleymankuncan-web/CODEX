@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-06-12
+Last verified: 2026-07-09
 
 ## Reader And Action
 
@@ -23,29 +23,33 @@ The project is in controlled pilot execution mode.
 - Controlled pilot expansion: `Continue` for scoped users and flows already
   proven.
 - Broad production rollout: `No-Go`.
-- Broad UI redesign: `Parked until user starts that track`.
+- Pilot Readiness Audit V1: `Closed` for the recorded findings through PR #910.
+- Patron demo / controlled pilot rehearsal: `Active next product signal`.
+- Targeted Store/Admin modernization: completed in scoped trains; broad redesign
+  remains `Parked` without a new owner decision.
 - New product modules: `Parked behind feature intake and source-of-truth
   decisions`.
+- Separate mobile app: discovery is documented; implementation is `Parked`.
+- Generic architecture/refactor train: `Parked` without a concrete project
+  analysis finding or runtime blocker.
 
 ## What We Do Now
 
-1. Run real controlled pilot sessions.
-2. Record feedback in the controlled pilot feedback log.
-3. Classify issues as `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or
-   `P3 backlog`.
-4. Fix P0/P1 concrete blockers first.
-5. Batch P2 fixes only when they share surface, risk, verification, and
-   rollback story.
-6. Keep evidence sanitized.
-7. If feedback is unavailable and launch-readiness work is needed, choose the
-   next local-only readiness slice through this board; the local Security
-   Launch Blocker PR Train V1 implementation is already closed.
+1. Finish the operating-truth alignment and no-delete workspace inventory.
+2. Perform the owner-requested full project/code analysis before opening a new
+   runtime train.
+3. If a real pilot/demo finding arrives first, record and classify it as
+   `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
+4. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
+   surface, risk, verification, and rollback match.
+5. Keep evidence sanitized.
 
 ## What We Do Not Do Now
 
 - Do not claim broad-production readiness from docs-only or local checks.
-- Do not start broad UI redesign until the user starts the design phase.
-- Do not add Norm Kadro or other new modules without feature intake.
+- Do not start another broad UI redesign without a new owner decision.
+- Do not add a new module or start separate mobile implementation before the
+  project analysis and explicit feature intake.
 - Do not reopen broad refactor without a concrete trigger.
 - Do not change auth, API response shape, DB, provider config, queue posture,
   KPI scoring, checklist weights, import lifecycle, or workflow semantics
@@ -66,6 +70,8 @@ The project is in controlled pilot execution mode.
 | Execute launch security blocker train | `docs/plans/security-launch-blocker-pr-train-v1.md` |
 | Check next practical work | `docs/plans/active-next-actions.md` |
 | Check debt/backlog state | `docs/plans/project-debt-ledger.md` |
+| Inspect workspace cleanup classifications | `docs/plans/workspace-hygiene-inventory-2026-07-09.md` |
+| Reconstruct the former long handoff | `docs/history/current-state-through-pr-913-2026-07-09.md` |
 | Add a feature safely | `docs/plans/feature-integration-spine-v1.md` |
 | Check domain boundaries | `docs/domains/` |
 | Verify evidence classes | `docs/evidence/README.md` |
@@ -81,21 +87,22 @@ The project is in controlled pilot execution mode.
 | Launch browser session security | Guarded / staging proof passed | Local implementation and guards are closed in `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`; real Region Manager staging cookie-session proof is recorded in `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`. |
 | Imports | Continue current Excel/Power BI path | JSON provider integration remains parked. |
 | Refactor | Closed as broad workstream | Only concrete product/risk/refactor triggers reopen code movement. |
-| UI redesign | Parked | User said large visual changes will come later. |
+| UI redesign | Targeted trains closed / broad work parked | Store/Admin surfaces have scoped modernization evidence; another broad redesign needs a new owner decision. |
 | New modules | Parked | Future modules start with feature intake, not implementation. |
+| Separate mobile app | Discovery only / implementation parked | Mobile discovery exists, but no implementation train is active. |
+| Generic architecture work | Parked | Reopen only from the upcoming project analysis or a concrete runtime/reviewability blocker. |
 
 ## Next Best Default Action
 
 If no newer user instruction overrides this board, the next best default action
 is:
 
-1. run a scoped pilot session,
-2. record the session,
-3. fix only concrete blockers,
-4. if feedback is unavailable, choose the next local-only readiness slice
-   instead of inventing pilot evidence,
-5. update the decision/runbook registries only if a decision or procedure
-   changes.
+1. close the operating-truth alignment docs/process PR,
+2. perform a full project/code analysis,
+3. compare analysis findings with real pilot/demo evidence,
+4. recommend one evidence-backed next slice or explicitly keep runtime work
+   parked,
+5. update registries only when a decision or procedure changes.
 
 ## Stop Rules
 

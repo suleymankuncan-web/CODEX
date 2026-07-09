@@ -416,6 +416,11 @@ UI status note:
 
 ## Repo Hygiene Note
 
+The current no-delete branch/worktree/remote-ref/stash snapshot is
+`docs/plans/workspace-hygiene-inventory-2026-07-09.md`. Its classifications are
+operational cleanup state, not additions to the product-quality debt counts
+above. A merged or superseded classification is not deletion authorization.
+
 Current repo hygiene is not counted as active debt in this ledger because:
 
 - `.gitignore` exists.

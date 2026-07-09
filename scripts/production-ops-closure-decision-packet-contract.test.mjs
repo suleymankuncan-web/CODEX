@@ -20,7 +20,7 @@ function requireText(text, expected) {
 const packetPath =
   'docs/evidence/readiness/2026-05-23-production-ops-closure-decision-packet-v1.md'
 const packet = readText(packetPath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const growthRoadmap = readText('docs/plans/project-growth-execution-roadmap-v1.md')
 const readinessShelf = readText('docs/domains/readiness-ops.md')
 const decisionRegistry = readText('docs/plans/decision-registry-v1.md')

@@ -22,7 +22,7 @@ function requireAll(text, values) {
 const evidencePath = 'docs/evidence/pilot-readiness/2026-05-01-preflight-no-go.md'
 const evidence = readText(evidencePath)
 const gate = readText('docs/plans/pilot-readiness-gate-v1.md')
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 
 test('pilot preflight evidence is explicitly not pilot approval', () => {

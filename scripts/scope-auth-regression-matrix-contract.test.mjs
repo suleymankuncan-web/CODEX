@@ -28,7 +28,7 @@ function splitMatrixRow(row) {
 
 const matrixPath = 'docs/plans/scope-auth-regression-matrix-v1.md'
 const matrix = readText(matrixPath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 

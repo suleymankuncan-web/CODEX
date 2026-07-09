@@ -20,7 +20,7 @@ function requireText(text, value) {
 const specPath = 'docs/plans/store-performance-replay-readonly-surface-spec-v1.md'
 const spec = readText(specPath)
 const library = readText('docs/README.md')
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const p2Plan = readText('docs/plans/p2-product-intelligence-execution-v1.md')
 
 test('store performance replay surface spec is discoverable', () => {

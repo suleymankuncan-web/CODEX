@@ -19,7 +19,7 @@ function requireText(text, expected) {
 
 const evidencePath = 'docs/evidence/norm-kadro-workforce-planning-readonly-v1.md'
 const evidence = readText(evidencePath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const growthRoadmap = readText('docs/plans/project-growth-execution-roadmap-v1.md')
 const featureBacklog = readText('docs/plans/feature-backlog.md')
 const decisionRegistry = readText('docs/plans/decision-registry-v1.md')

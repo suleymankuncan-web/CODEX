@@ -15,7 +15,7 @@ function requireText(text, expected) {
 
 const inventoryPath = 'docs/plans/refactor-completion-inventory-v1.md'
 const inventory = readText(inventoryPath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const technicalRoadmap = readText('docs/plans/technical-debt-resolution-roadmap-v1.md')
 
 test('refactor completion inventory closes broad refactor as a standing theme', () => {

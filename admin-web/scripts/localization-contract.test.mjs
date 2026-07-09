@@ -114,8 +114,11 @@ test('localization strategy records pilot closeout status with correct Turkish c
   }
 })
 
-test('active handoff records the localization closeout boundary', () => {
-  const handoff = readFileSync(join(repoRoot, 'current-state.md'), 'utf8')
+test('historical handoff preserves the localization closeout boundary', () => {
+  const handoff = readFileSync(
+    join(repoRoot, 'docs/history/current-state-through-pr-913-2026-07-09.md'),
+    'utf8',
+  )
 
   assert.match(handoff, /Pilot localization closeout: `guarded`/)
   assert.match(handoff, /Full product bilingual depth remains a future UI\/design-system investment/)

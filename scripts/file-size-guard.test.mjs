@@ -129,7 +129,7 @@ function formatViolation({ path, lines, maxLines, standard, isFrozenBaseline }) 
 
 test('file size guard policy is recorded in handoff docs', () => {
   const discipline = readFileSync('discipline.md', 'utf8')
-  const currentState = readFileSync('current-state.md', 'utf8')
+  const currentState = readFileSync('docs/history/current-state-through-pr-913-2026-07-09.md', 'utf8')
   const refactorInventory = readFileSync('docs/plans/refactor-completion-inventory-v1.md', 'utf8')
 
   for (const text of [discipline, currentState, refactorInventory]) {

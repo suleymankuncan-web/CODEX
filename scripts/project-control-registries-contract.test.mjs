@@ -107,7 +107,9 @@ test('project control board preserves current go no-go boundaries', () => {
     'The project is in controlled pilot execution mode.',
     'Controlled staging/internal pilot: `Conditional Go`.',
     'Broad production rollout: `No-Go`.',
-    'Broad UI redesign: `Parked until user starts that track`.',
+    'Targeted Store/Admin modernization: completed in scoped trains',
+    'Separate mobile app: discovery is documented; implementation is `Parked`.',
+    'Generic architecture/refactor train: `Parked`',
     '## What We Do Now',
     '## What We Do Not Do Now',
     '## Go / No-Go Board',
@@ -118,5 +120,5 @@ test('project control board preserves current go no-go boundaries', () => {
   }
 
   requireText(docs.controlBoard, 'Do not change auth, API response shape, DB, provider config')
-  requireText(docs.controlBoard, 'run a scoped pilot session')
+  requireText(docs.controlBoard, 'perform a full project/code analysis')
 })

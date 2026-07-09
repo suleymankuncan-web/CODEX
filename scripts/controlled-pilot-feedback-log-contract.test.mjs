@@ -7,7 +7,7 @@ const pilot005EvidencePath =
   'docs/evidence/pilot-readiness/2026-05-22-pilot-005-store-approvals-personnel-ux.md'
 const checklistPath = 'docs/plans/controlled-pilot-operating-checklist-v1.md'
 const gatePath = 'docs/plans/pilot-readiness-gate-v1.md'
-const currentStatePath = 'current-state.md'
+const currentStatePath = 'docs/history/current-state-through-pr-913-2026-07-09.md'
 
 function readText(path) {
   return readFileSync(path, 'utf8')

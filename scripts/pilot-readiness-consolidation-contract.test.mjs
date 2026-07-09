@@ -18,7 +18,7 @@ function requireAll(text, expectedValues) {
 
 const evidencePath =
   'docs/evidence/pilot-readiness/2026-05-06-controlled-pilot-conditional-go-consolidation.md'
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const gate = readText('docs/plans/pilot-readiness-gate-v1.md')
 
 test('controlled pilot consolidation evidence exists and records the current decision', () => {

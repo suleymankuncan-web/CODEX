@@ -15,7 +15,7 @@ function requireText(text, value) {
 }
 
 const decision = readText(decisionPath)
-const currentState = readText('current-state.md')
+const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const liveEvidence = readText('docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md')
 const productionBlockers = readText('docs/evidence/readiness/2026-05-22-production-evidence-blockers-v2.md')
