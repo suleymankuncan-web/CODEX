@@ -21,10 +21,9 @@ Use the freshest verifiable source in this order:
 3. This handoff and the current control documents.
 4. Historical plans, evidence, and the archived handoff.
 
-This file intentionally does not claim its own future squash-merge SHA. The
-verified base before the operating-truth alignment PR is:
+The verified base after the operating-truth alignment closeout is:
 
-- `main` / `origin/main`: `3991976c` (`docs: refresh current-state handoff`, PR #913).
+- `main` / `origin/main`: `1028d5a2` (`docs: align operating truth and archive handoff`, PR #914).
 - Latest runtime baseline: `c7653a22` (`Fix target roster source and approval defaults`, PR #911).
 - Latest product-planning baseline: `b36732dd` (`Document mobile app discovery`, PR #912).
 
@@ -77,6 +76,8 @@ pilot evidence or start work only because an old plan says `next`.
 - PR #911 fixed the targetable roster source and approval defaults.
 - PR #912 documented separate mobile-app discovery.
 - PR #913 refreshed the former handoff before this operating-doc alignment.
+- PR #914 closed operating-truth alignment, archived the long handoff, and
+  recorded the no-delete workspace inventory.
 
 Canonical July evidence:
 
@@ -142,13 +143,12 @@ standard before changing the page.
 - When polling is needed, use the canonical 30-second GitHub status loop from
   `discipline.md`; stop polling once the required decision evidence is complete.
 
-The operating-truth alignment work uses the owner-approved Codex-review waiver
-recorded in the initiating conversation. Required checks and diff review remain
-mandatory.
+PR #914 used the owner-approved Codex-review waiver recorded in the initiating
+conversation. Required checks and diff review remained mandatory.
 
 ## Workspace Hygiene Snapshot
 
-Verified before this alignment PR:
+Verified before PR #914:
 
 - Root workspace: clean on `main` and aligned with `origin/main`.
 - Local branches: 95.
@@ -167,16 +167,19 @@ evidence.
 
 Now:
 
-- Finish operating-truth alignment, short-handoff migration, and the no-delete
-  workspace inventory.
-- Keep the change docs/process-only; no runtime behavior change belongs here.
+- Operating-truth alignment, short-handoff migration, and the no-delete
+  workspace inventory are closed in PR #914.
+- The requested full project/code analysis is complete; review its findings
+  before selecting implementation work.
 
 Next:
 
-- After this PR closes, perform a separate full project/code analysis before
-  choosing another implementation track.
+- The prior instruction, `After this PR closes, perform a separate full project/code analysis`,
+  was completed after PR #914.
+- Select a runtime slice only with an explicit owner decision backed by the
+  analysis or real pilot/demo evidence; otherwise keep runtime work parked.
 - If a real pilot/demo finding arrives first, classify it as P0/P1/P2/P3 and
-  use it as the input to that analysis.
+  prioritize it over speculative implementation work.
 
 Park:
 

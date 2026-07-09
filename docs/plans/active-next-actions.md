@@ -23,7 +23,9 @@ Documentation entry point:
 As of 9 July 2026, the Pilot Readiness Audit V1 PR train is closed through
 PR #910, the target roster/approval default follow-up is merged in PR #911,
 mobile discovery is documented by PR #912, and the former long handoff was
-refreshed by PR #913 before the operating-truth alignment line.
+refreshed by PR #913 before the operating-truth alignment line. PR #914 then
+closed that alignment, archived the long handoff, and recorded the no-delete
+workspace inventory.
 
 - Latest closeout evidence:
   `docs/evidence/pilot-readiness/2026-07-07-pilot-readiness-audit-v1.md`
@@ -37,10 +39,9 @@ refreshed by PR #913 before the operating-truth alignment line.
 
 Next practical action:
 
-1. Finish the docs/process-only operating-truth alignment and merge it after
-   required checks.
-2. Perform the owner-requested full project/code analysis before choosing a new
-   runtime train.
+1. Treat the docs/process-only operating-truth alignment as closed by PR #914.
+2. Review the completed project/code analysis and choose no runtime train until
+   the owner selects an evidence-backed slice.
 3. If a pilot/demo blocker appears first, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
 4. Keep new modules, separate mobile implementation, broad production, broad
