@@ -158,7 +158,8 @@ Stop and report instead of merging if any of these happen:
 - Local lint/build or targeted tests fail.
 - GitHub checks fail.
 - The PR is not mergeable.
-- GitHub Codex review does not explicitly say `found no major issue`.
+- Required checks fail, mergeability is blocked, or final local adversarial
+  review finds an unresolved issue.
 
 ## Merge Gate
 
@@ -167,5 +168,6 @@ Every slice uses a separate worktree and branch. A PR can be squash-merged only 
 - Local verification passed.
 - GitHub checks are green.
 - GitHub reports the PR as mergeable.
-- GitHub Codex review/comment explicitly includes `found no major issue`.
+- Final local adversarial review is clean. GitHub Codex review remains
+  owner-disabled and is not requested or awaited.
 

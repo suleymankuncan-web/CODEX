@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 ## Reader And Action
 
@@ -33,7 +33,7 @@ This registry is a map, not a replacement for the source documents.
 | Broad production rollout | blocked_external | No-Go. Local gates and staging proof are not enough for broad production. | `docs/evidence/readiness/2026-05-18-production-readiness-decision.md` | Production owner accepts Redis, alerting, backup/PITR/RPO/RTO, incident, and provider posture. |
 | Documentation library | guarded | `docs/README.md` is the front door; important docs carry status/shelf metadata. | `docs/plans/docs-library-metadata-standard-v1.md` | New docs become undiscoverable or active/parked/historical status drifts. |
 | Project growth execution | closed | The first eight post-foundation tracks are complete; the roadmap is reference, not automatic next work. | `docs/plans/project-growth-execution-roadmap-v1.md` | Full project analysis or pilot evidence identifies a new ordered growth line. |
-| Sokrates and work discipline | active | Use layered reading. Codex review is default but may be explicitly waived by the owner; required checks and final diff review remain mandatory. | `CONTRIBUTING.md`, `sokrates.md`, `discipline.md` | Real misses show the process is too heavy, too loose, or stale. |
+| Sokrates and work discipline | active | Use layered reading. GitHub Codex review is owner-disabled and must not be requested or awaited; required checks, mergeability, verification, and final local adversarial review remain mandatory. | `CONTRIBUTING.md`, `sokrates.md`, `discipline.md` | A newer explicit owner instruction re-enables GitHub Codex review, or real misses show the process is too heavy, too loose, or stale. |
 | Refactor workstream | closed | Broad refactor is closed as a standing theme; refactor only when a concrete product/risk slice needs it. | `docs/plans/refactor-completion-inventory-v1.md` | File-size guard fails, reviewability degrades, or a product slice exposes a boundary problem. |
 | API contract drift | guarded | OpenAPI/generated client approach is established; do not hand-roll new frontend API contracts casually. | `docs/plans/api-contract-drift-plan.md` | New endpoint family or contract drift risk appears. |
 | Store Action V1B | guarded | Persisted manager command path and checklist remediation are implemented in controlled scope; target projection runtime generation remains parked. | `docs/domains/store-action.md`, `docs/evidence/store-action-checklist-remediation-v1-closeout-2026-06-02.md` | Target projection runtime, wider sources/actions, comments/attachments/escalation, region-manager verification, or broader roles are proposed. |
@@ -53,7 +53,8 @@ This registry is a map, not a replacement for the source documents.
 | Norm Kadro / Workforce Planning Read-Only V1 | active evidence | Do not create a new module now; use existing workforce norm plan, snapshot/reporting, and headcount-gap reads as read-only planning context. | `docs/evidence/norm-kadro-workforce-planning-readonly-v1.md` | A mutable baseline editor, new API, Store Action source, approval flow, payroll, scheduling, or labor-policy behavior is proposed. |
 | Separate mobile app | parked | Discovery, persona order, offline posture, and prototype sequence are documented; implementation is not active. | `docs/plans/mobile-app-discovery-v1.md` | Owner approves implementation after project analysis and a screen/data/auth/offline intake. |
 | Workspace hygiene cleanup | guarded | Inventory is classified as merged/superseded/dirty/unknown/preserve; no deletion is authorized. | `docs/plans/workspace-hygiene-inventory-2026-07-09.md` | Owner approves a separately verified proposed-delete list. |
-| Next runtime train | parked | Docs/process alignment closed in PR #914 and the project/code analysis is complete; no implementation line is selected automatically. | `current-state.md`, `docs/plans/project-control-board-v1.md` | Owner selects one reviewable slice backed by the analysis or a real P0/P1 pilot/demo finding. |
+| Project-analysis implementation | guarded/draft | Follow `project-analysis-implementation-plan-v1.md`; implementation is not approved by document creation alone. Required-gate alignment comes before a runtime PR, and pilot evidence may run in parallel. | `docs/plans/project-analysis-implementation-plan-v1.md` | Owner explicitly approves/amends the sequence. |
+| Next runtime train | parked | Docs/process alignment and analysis are complete, but no runtime line is selected automatically. | `current-state.md`, `docs/plans/project-control-board-v1.md`, `docs/plans/project-analysis-implementation-plan-v1.md` | An approved P0/P1 pilot/demo finding produces one reviewable finding-specific spec. |
 
 ## Update Rule
 

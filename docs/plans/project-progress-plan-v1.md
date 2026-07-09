@@ -58,7 +58,9 @@ Already strong:
 - Backend and frontend are separated correctly.
 - API contract drift has been reduced with OpenAPI and generated frontend types/clients.
 - Store approvals and checklists have real workflows and targeted E2E coverage.
-- Release checks, Vercel checks, GitHub checks, and Codex review are part of the merge rhythm.
+- Release checks, Vercel checks, GitHub checks, mergeability, and final local
+  adversarial review are part of the merge rhythm. GitHub Codex review is
+  owner-disabled and is not requested or awaited.
 - Readiness guardrails exist for deployments, security headers, observability, rate limit, queue durability, backup/restore, upload guardrails, Supabase boundary, env drift, and final readiness decisions.
 
 Still not done:

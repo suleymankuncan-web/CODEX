@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 ## Reader And Action
 
@@ -38,6 +38,7 @@ Use this directory like an operating library, not a diary.
 | Continue work from a cold session | `current-state.md` | Short active handoff and latest safe direction. |
 | Know how Codex should work here | `sokrates.md` and `discipline.md` | Decision quality, PR rhythm, verification, and stop rules. |
 | See the current control board | `docs/plans/project-control-board-v1.md` | Current project mode, go/no-go board, and what is parked. |
+| Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Draft guarded sequence for required CI gate alignment, pilot evidence, conditional fixes, and parked production work. |
 | Find an active decision | `docs/plans/decision-registry-v1.md` | Decision status, source document, and change trigger. |
 | Choose an operating checklist | `docs/plans/runbook-registry-v1.md` | Repeatable runbooks, required input, output, and stop condition. |
 | Execute the next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` | Ordered plan for feedback, data quality, operations, coaching, auth preview, rules, workforce planning, and production ops. |
@@ -227,8 +228,10 @@ The active sequence is:
 
 - treat operating-truth alignment and the no-delete workspace inventory as
   closed by PR #914,
-- review the completed full project/code analysis before opening a new runtime
-  train,
+- review and explicitly approve/amend the guarded project-analysis
+  implementation plan,
+- if approved, fix truthful required-gate enforcement before the next runtime
+  PR while controlled pilot evidence may proceed in parallel,
 - use a real pilot/demo P0/P1 finding first if one arrives,
 - keep broad production, separate mobile implementation, broad redesign, new
   modules, provider/source integrations, and generic architecture work parked

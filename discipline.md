@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 Bu dosya HR Axis / Store Ops projesinde Codex ile kullanilan pratik calisma
 disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
@@ -268,13 +268,12 @@ birden fazla risk tasiyorsa bolunur.
 
 ### PR Oncesi Adversarial Review
 
-GitHub Codex review'u merge oncesi son dis denetimdir; PR acmadan once ayni
-sinif hatalari lokal olarak yakalamak zorunludur. Amac Codex'in yerine gecmek
-degil, basit bypass ve test bosluklarini GitHub round-trip'ine birakmamaktir.
+GitHub Codex review owner karariyla devre disidir. Lokal adversarial review,
+acik hata siniflarini PR acilmadan yakalayan aktif review backstop'udur.
 
 Bu kural proje geneli calisma prensibidir; sadece hardening, guard veya mimari
-PR'lar icin degildir. Her PR acilmadan once ve review isteyen her yeni push
-oncesinde lokal Codex-review simulasyonu yapilir.
+PR'lar icin degildir. Her PR acilmadan once ve her yeni push oncesinde lokal
+adversarial review yapilir.
 
 Zorunlu lokal review pass:
 
@@ -289,8 +288,8 @@ Zorunlu lokal review pass:
    class'lari, debug/handoff copy ve mobile/desktop kirilma riski ara.
 6. PR slice'ina uygun targeted verification'i PR description yazmadan once
    calistir.
-7. GitHub Codex'in yazmasi muhtemel P1/P2 yorumlari kendin listele; actionable
-   olanlari PR acmadan once duzelt.
+7. Sert bir reviewer'in bulmasi muhtemel P1/P2 notlarini kendin listele;
+   actionable olanlari PR acmadan once duzelt.
 
 Her PR acilmadan veya review isteyen yeni push'tan once diff'e su gozle bak:
 
@@ -338,11 +337,11 @@ Roller:
   Scope, risk, rollback ve verification ladder'i netlestirir.
 - `Worker`: Sadece onaylanan slice'i uygular. Business workflow, auth, API,
   DB, scoring, queue veya provider davranisini gizlice degistirmez.
-- `Reviewer`: Worker diff'ini yeni gozle okur. P1/P2 sinifi muhtemel Codex
-  yorumlarini, guard bypass'larini, test bosluklarini, fake veri riskini ve
+- `Reviewer`: Worker diff'ini yeni gozle okur. P1/P2 sinifi muhtemel reviewer
+  notlarini, guard bypass'larini, test bosluklarini, fake veri riskini ve
   scope creep'i PR acilmadan yakalamaya calisir.
-- `Closer`: PR acma, GitHub/Vercel checks, Codex review kanallari, merge ve
-  merge sonrasi `origin/main` dogrulamasini yurutur.
+- `Closer`: PR acma, GitHub/Vercel checks, mergeability, final lokal review,
+  merge ve merge sonrasi `origin/main` dogrulamasini yurutur.
 
 Kullanim kurali:
 
@@ -353,14 +352,15 @@ Kullanim kurali:
   refactorlerinde roller acikca ayrilir.
 - Reviewer pass, Worker'in kendi diff'ine bagli kalmaz; mumkunse once git
   diff okunur, sonra test/guard edge'leri dusunulur, sonra PR metni yazilir.
-- Reviewer "bunu Codex soyler mi?" sorusunu pratik olarak sorar. Cevap evetse
+- Reviewer "sert bir reviewer bunu sorun eder mi?" sorusunu pratik olarak
+  sorar. Cevap evetse
   PR acmadan once duzeltme yapilir.
 - Her rol repo kanitina dayanir. Gercek veri/API/model yoksa uydurma metrik,
   fake workflow, sahte skor veya temsili business sonucu eklenmez.
 
 Bu model `PR Oncesi Adversarial Review` kuralini genisletir. GitHub Codex
-review'u yine zorunlu dis denetim olarak kalir; lokal subagent modeli sadece
-round-trip kaybini azaltmak ve PR kalitesini yukseltmek icindir.
+review owner-disabled kalir; lokal reviewer modeli final diff kalitesini ve
+guard/test bosluklarinin erken bulunmasini guclendirir.
 
 ### Pilot Subagent Orchestration Discipline
 
@@ -439,42 +439,17 @@ Merge icin her zaman gerekenler:
 - GitHub/Vercel checks yesil.
 - PR mergeable.
 
-Varsayilan dis review yolu Codex GitHub review'dur. Ancak owner bir PR veya PR
-treni icin Codex review'u acikca waive edebilir. Waiver:
+Owner'in 2026-07-10 tarihli acik karariyla GitHub Codex review devre disidir:
 
-- PR body/comment veya `current-state.md` icinde kaydedilir,
-- sessizlikten veya aceleden varsayilmaz,
-- required check, mergeability, local adversarial review veya verification'i
-  waive etmez,
-- son push sonrasi diff scope'u yeniden okunmadan merge izni sayilmaz.
+- `@codex review` yazilmaz,
+- baska bir entegrasyon uzerinden Codex review istenmez,
+- bot reaction/comment beklenmez ve merge kapisi sayilmaz,
+- ancak daha yeni acik owner talimatiyla yeniden etkinlestirilir.
 
-Codex review zorunlu/default olarak kullaniliyorsa onay su sekillerde kabul
-edilir:
-
-- `found no major issue`,
-- `didn't find any major issues`,
-- PR govdesinde veya en son review istegi/comment reaction grubunda
-  `chatgpt-codex-connector[bot]` tarafindan verilmis acik `+1` / thumbs-up
-  reaksiyonu.
-
-GitHub PR timeline'inda PR govdesi veya ilgili comment/review kartinin altinda
-gorunen bot `+1` reaction'i da bu kapsamdadir. Son push'tan sonra gelmis ve
-actionable Codex yorumu bulunmuyorsa, ayrica metin olarak "no major issues"
-yorumunu beklemek gerekmez.
-
-Review waive edilmediyse onay sinyali son push'tan sonra gelmis olmalidir. Onceki commit'e ait
-temiz yorum veya reaksiyon yeni push sonrasinda merge onayi sayilmaz. Sadece
-`eyes` reaksiyonu onay degildir. Actionable Codex yorumu varsa merge edilmez;
-once duzeltilir, testler yeniden kosulur, tekrar review beklenir.
-
-Codex review kontrolu sadece tek ekrandan yapilmaz. Su kanallar birlikte
-okunur:
-
-- PR issue comments,
-- latest reviews,
-- inline PR review comments,
-- reaction gruplari,
-- status check rollup.
+Bu karar required check, Vercel/deploy check, mergeability, local adversarial
+review, diff scope okuma veya verification'i waive etmez. Insan reviewer ya da
+baska bir otomatik kontrol actionable yorum birakirsa normal sekilde okunur ve
+cozulur.
 
 GitHub kontrolu tek seferlik snapshot degildir. PR acildiktan veya branch'e yeni
 push geldikten sonra merge karari verilene kadar gereken durum 30 saniyede bir
@@ -482,19 +457,13 @@ kanonik loop ile tekrar cekilir ve birlikte degerlendirilir:
 
 - GitHub Actions checks,
 - Vercel/deploy checks,
-- PR issue comments,
-- latest reviews,
-- inline PR review comments,
-- reaction gruplari,
 - status check rollup,
 - mergeability / branch state.
 
-Bu 30 saniyelik loop tum required checks yesil, PR mergeable ve Codex review
-kullaniliyorsa kanallari temiz/onayli oldugunda; owner waiver varsa waiver
-kaydi ile final diff review dogrulandiginda biter. Failed check,
-pending belirsizlik, yeni yorum veya actionable Codex notu gorulurse merge
-yapilmaz; once sebep okunur, gerekirse duzeltme push'lanir ve loop yeniden
-baslatilir.
+Bu 30 saniyelik loop tum required checks yesil, PR mergeable ve final lokal
+diff review temiz oldugunda biter. Failed check, pending belirsizlik veya yeni
+actionable insan/tool yorumu gorulurse merge yapilmaz; once sebep okunur,
+gerekirse duzeltme push'lanir ve loop yeniden baslatilir.
 
 ## Verification Ladder
 
@@ -881,8 +850,8 @@ Bir is ancak su durumda bitti sayilir:
 - diff okundu,
 - local gate gecti,
 - gerekiyorsa PR acildi,
-- required checks tamamlandi; Codex review kullanildiysa onay, waive edildiyse
-  explicit owner waiver kaydi var,
+- required checks tamamlandi, PR mergeable ve final lokal adversarial review
+  temiz; owner-disabled GitHub Codex review tetiklenmedi,
 - merge sonrasi `origin/main` dogrulandi,
 - gelecekteki devam icin gereken docs/current-state/evidence guncellendi,
 - kalan riskler acikca soylendi.

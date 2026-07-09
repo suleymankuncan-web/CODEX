@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 This repository is operated through small, reversible PRs. The project is not
 debt-free, and broad rewrites are not allowed as a substitute for scoped
@@ -60,10 +60,11 @@ and record the conflict in the PR.
 - Before opening a PR, run the local pre-PR review pass described below.
 - Merge only after local verification, required GitHub checks, Vercel checks
   when applicable, and mergeability are clean.
-- Codex GitHub review is the default external review path. The owner may
-  explicitly waive it for a PR or PR train; record the waiver in the PR
-  body/comment or current handoff. A waiver never bypasses required checks,
-  mergeability, local diff review, or verification.
+- GitHub Codex review is disabled by explicit owner direction. Do not trigger
+  `@codex review`, request Codex review, or wait for a Codex reaction/comment.
+  It becomes a merge gate again only if the owner explicitly re-enables it.
+  Required checks, mergeability, local diff review, and verification remain
+  mandatory.
 - After merge, verify `origin/main`, update `current-state.md` when the handoff
   state changed, then start the next PR.
 
@@ -85,9 +86,8 @@ define the verification ladder before editing code.
 
 ## Pre-PR Local Review Pass
 
-GitHub Codex review is a remote backstop, not the first place obvious problems
-should be found. Before opening a PR, and before every new push that requests
-review, run a local adversarial review pass:
+Local adversarial review is the active review backstop. Before opening a PR and
+before every new push, run this pass without triggering GitHub Codex review:
 
 - Inspect `git diff --stat` and confirm the diff still has one review story.
 - Run `git diff --check`.
@@ -189,8 +189,9 @@ Every merged PR must leave the project easier to continue:
 
 - PR description states what changed and what did not change.
 - Verification commands and results are recorded.
-- Default Codex review evidence or an explicit owner waiver is recorded when
-  the review policy matters to the PR.
+- Required checks, mergeability, and final local adversarial review are
+  recorded. GitHub Codex review is not requested while the owner-disabled
+  policy remains active.
 - Follow-up risk is documented when it remains.
 - `current-state.md` is updated when the project handoff, architecture posture,
   merged PR line, external evidence, or next-action state changed.

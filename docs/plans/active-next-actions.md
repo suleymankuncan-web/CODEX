@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 ## Purpose
 
@@ -36,15 +36,19 @@ workspace inventory.
   `docs/history/current-state-through-pr-913-2026-07-09.md`.
 - No-delete workspace inventory:
   `docs/plans/workspace-hygiene-inventory-2026-07-09.md`.
+- Project-analysis implementation plan:
+  `docs/plans/project-analysis-implementation-plan-v1.md`.
 
 Next practical action:
 
 1. Treat the docs/process-only operating-truth alignment as closed by PR #914.
-2. Review the completed project/code analysis and choose no runtime train until
-   the owner selects an evidence-backed slice.
-3. If a pilot/demo blocker appears first, record route, persona, period,
+2. Review and explicitly approve or amend the draft/guarded implementation
+   plan; the document alone does not authorize code work.
+3. If approved, execute PR-A1 truthful required-gate alignment before the next
+   runtime PR. Pilot/demo evidence may proceed in parallel.
+4. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
-4. Keep new modules, separate mobile implementation, broad production, broad
+5. Keep new modules, separate mobile implementation, broad production, broad
    redesign, provider/source integration, and generic architecture work parked
    until analysis or a real P0/P1 finding reopens one path.
 
