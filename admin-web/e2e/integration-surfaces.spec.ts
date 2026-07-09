@@ -182,6 +182,9 @@ test('admin store master edits bulk save from master data and keep latest values
 
   const storePanel = page.getByRole('main').getByLabel('Ana veri detayı')
   const marmaraType = storePanel.getByRole('combobox', { name: 'Mağaza tipi' })
+  const saveToast = page
+    .locator('.hr-axis-toast__title')
+    .getByText('Değişiklikler kaydedildi')
 
   await selectRadixOption(page, marmaraType, 'Franchise')
   await expect(marmaraType).toContainText('Franchise')
@@ -197,13 +200,13 @@ test('admin store master edits bulk save from master data and keep latest values
   })
 
   releaseFirstPatch()
-  await expect(page.locator('.hr-axis-toast__title').getByText('Değişiklikler kaydedildi')).toBeVisible()
+  await expect(saveToast.last()).toBeVisible()
   await expect(marmaraType).toContainText('Franchise')
 
   await selectRadixOption(page, marmaraType, 'Operator')
   await expect(storePanel.getByText('1 kaydedilmemiş değişiklik')).toBeVisible()
   await storePanel.getByRole('button', { name: 'Kaydet' }).click()
-  await expect(page.locator('.hr-axis-toast__title').getByText('Değişiklikler kaydedildi')).toBeVisible()
+  await expect(saveToast.last()).toBeVisible()
   expect(patchBodies[patchBodies.length - 1]).toMatchObject({
     storeType: 'operator',
     regionId: '22222222-2222-4222-8222-222222222222',
