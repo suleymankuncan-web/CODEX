@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking the current product posture, or choosing the next safe action
 Do not use when: reconstructing the full PR history or replacing live git/provider verification
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A
 cold reader should be able to recover the current mode, caveats, and next safe
@@ -169,15 +169,20 @@ Now:
 
 - Operating-truth alignment, short-handoff migration, and the no-delete
   workspace inventory are closed in PR #914.
-- The requested full project/code analysis is complete; review its findings
-  before selecting implementation work.
+- The requested full project/code analysis is complete and converted into
+  `docs/plans/project-analysis-implementation-plan-v1.md`.
+- The plan is draft/guarded. It does not authorize implementation until the
+  owner explicitly approves the sequence.
 
 Next:
 
 - The prior instruction, `After this PR closes, perform a separate full project/code analysis`,
   was completed after PR #914.
-- Select a runtime slice only with an explicit owner decision backed by the
-  analysis or real pilot/demo evidence; otherwise keep runtime work parked.
+- Review and approve/amend the implementation plan. If approved, execute the
+  truthful required release-gate slice before the next runtime PR while pilot
+  evidence collection may proceed in parallel.
+- Select a runtime slice only from an approved P0/P1 pilot/demo finding;
+  otherwise keep runtime work parked.
 - If a real pilot/demo finding arrives first, classify it as P0/P1/P2/P3 and
   prioritize it over speculative implementation work.
 
@@ -213,6 +218,7 @@ Current control references:
 - `docs/plans/decision-registry-v1.md` - active decision map.
 - `docs/plans/runbook-registry-v1.md` - repeatable runbooks.
 - `docs/plans/project-debt-ledger.md` - canonical debt counts.
+- `docs/plans/project-analysis-implementation-plan-v1.md` - guarded execution plan from the full project analysis.
 - `docs/plans/workspace-hygiene-inventory-2026-07-09.md` - no-delete workspace snapshot.
 - `docs/history/current-state-through-pr-913-2026-07-09.md` - historical handoff archive.
 - `scripts/repo-hygiene-contract.test.mjs` - Repo Hygiene Guard V1.

@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-09
+Last verified: 2026-07-10
 
 ## Reader And Action
 
@@ -37,13 +37,16 @@ The project is in controlled pilot execution mode.
 
 1. Treat the operating-truth alignment and no-delete workspace inventory as
    closed by PR #914.
-2. Review the completed owner-requested project/code analysis before opening a
-   new runtime train.
-3. If a real pilot/demo finding arrives first, record and classify it as
+2. Review and approve/amend
+   `docs/plans/project-analysis-implementation-plan-v1.md`; draft plan creation
+   does not authorize implementation.
+3. If approved, align the truthful required GitHub gate before the next runtime
+   PR while controlled pilot evidence may proceed in parallel.
+4. If a real pilot/demo finding arrives, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
-4. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
+5. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
    surface, risk, verification, and rollback match.
-5. Keep evidence sanitized.
+6. Keep evidence sanitized.
 
 ## What We Do Not Do Now
 
@@ -63,6 +66,7 @@ The project is in controlled pilot execution mode.
 | Need | Open |
 | --- | --- |
 | Start from the library | `docs/README.md` |
+| Execute project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` |
 | See active decisions | `docs/plans/decision-registry-v1.md` |
 | Pick an operating checklist | `docs/plans/runbook-registry-v1.md` |
 | Execute next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` |
@@ -99,9 +103,10 @@ If no newer user instruction overrides this board, the next best default action
 is:
 
 1. keep PR #914 as the closed operating-truth baseline,
-2. treat the requested step to perform a full project/code analysis as complete,
-3. compare the analysis findings with real pilot/demo evidence,
-4. recommend one evidence-backed next slice or explicitly keep runtime work
+2. treat the requested step to perform a full project/code analysis as complete
+   and review its guarded implementation plan,
+3. if approved, execute required-gate alignment and collect pilot/demo evidence,
+4. select only a P0/P1 finding-specific runtime spec or explicitly keep runtime work
    parked,
 5. update registries only when a decision or procedure changes.
 
