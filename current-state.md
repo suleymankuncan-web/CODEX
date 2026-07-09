@@ -66,11 +66,21 @@ Primary app endpoints:
 
 ## Latest Git State
 
-Fresh verified state on 2026-07-07:
+Fresh verified state on 2026-07-09:
 
 - Root workspace is `D:\store-ops-workspace` on `main`, aligned with
   `origin/main`. The latest merged commit is
-  `d0e9f1eb docs: record pilot data rerun evidence (#909)`.
+  `b36732dd Document mobile app discovery`.
+- The latest runtime delta after the pilot readiness closeout is
+  `c7653a22 Fix target roster source and approval defaults`.
+  It adjusts the Store targets region command model and Store Ops repository
+  target roster/approval defaults with matching repository coverage.
+- The latest docs/product-planning delta is
+  `b36732dd Document mobile app discovery`. It adds
+  `docs/plans/mobile-app-discovery-v1.md`, links it from `docs/README.md`,
+  and extends Store/Admin UI standards for future separate mobile app discovery.
+- Pilot Readiness Audit V1 PR train is closed through
+  `4898b77e docs: close pilot readiness audit train (#910)`.
 - Pilot Readiness Audit V1 PR train is closed for the recorded findings:
   - PR #898 created the pilot readiness audit matrix.
   - PR #899 reconciled pilot roster source data.
@@ -83,14 +93,20 @@ Fresh verified state on 2026-07-07:
     issue was corrected.
   - PR #909 reran Jan-Jun data reconciliation readback through the public DB
     connection and updated the PR2 matrix without DB mutation.
+  - PR #910 closed the audit train and updated the active next-action record.
 - Canonical closeout references:
   - `docs/evidence/pilot-readiness/2026-07-07-pilot-readiness-audit-v1.md`
   - `docs/evidence/pilot-readiness/2026-07-07-data-reconciliation-readback.md`
   - `docs/evidence/pilot-readiness/2026-07-07-persona-smoke-matrix.md`
   - `docs/evidence/pilot-readiness/2026-07-07-reports-ranking-score-readback.md`
   - `docs/evidence/pilot-readiness/2026-07-07-incentive-june-close-readback.md`
+  - `docs/plans/mobile-app-discovery-v1.md`
 - Current posture:
   - Controlled pilot / patron demo evidence line is refreshed.
+  - Target roster source and approval defaults have a post-closeout runtime fix
+    on `main`.
+  - Separate mobile app work is documented as discovery/planning, not an active
+    implementation train.
   - Broad production readiness is still not claimed from this train.
   - Remaining risks are evidence-driven follow-ups: admin live jank if
     reproduced, source turnover anomaly if it affects demo reports, and
