@@ -1602,7 +1602,7 @@ guards, and documentation and explicitly changes no runtime behavior.
 | PR-4 Bounded Target Request Queues | complete | PR #930 merged as `bfa2f83c`; Admin and Store target reads are bounded, Store Approvals uses a scoped paged request-center read, and target/workforce mutation, DB, and authorization contracts remain unchanged |
 | PR-5 Europe/Istanbul Business Date Contract | complete | PR #931 merged as `7495624f`; shared Europe/Istanbul business-date defaults and calendar arithmetic are guarded while UTC timestamp instants, API, DB, and authorization contracts remain unchanged |
 | PR-6 Active Surface Localization Closure | complete | PR #932 merged as `2bc612d2`; typed TR/EN ownership, source/technical allowlists, EN-to-TR acceptance tests, bounded raw-copy/mojibake guard, required checks, and Vercel are green |
-| PR-7 Keyboard And Accessibility Foundation | in_progress | Finding-specific spec, RED-to-GREEN native selection/skip-link tests, and initial implementation are on `codex/pr7-keyboard-accessibility`; bounded axe seed and full verification remain open |
+| PR-7 Keyboard And Accessibility Foundation | in_progress | Native Master Data selection, Admin/Store skip links, and two bounded axe seeds are implemented; targeted browser packs, lint, build, frontend tests, and 531 root guards are green, while the canonical release and remote PR checks remain open |
 | PR-8 System-Flow Transitive Precision And Target Typing | planned | Source-confirmed P2 |
 | PR-9 Database Invariant Preflight Evidence | planned_input_gated | Live execution needs safe DB target |
 | PR-10 Database Integrity Constraints | blocked_external | DG-2 |

@@ -1,6 +1,6 @@
 # Keyboard And Accessibility Foundation Specification V1
 
-Status: implementation active; bounded axe seed and full verification pending
+Status: implementation complete; canonical release and PR checks pending
 Shelf: active plan
 Author: Codex
 Owner: Product owner
@@ -149,6 +149,21 @@ change.
 - Existing `master-data-surfaces.spec.ts`, relevant integration/admin routing
   tests, and protected shell tests.
 - Frontend lint, build, unit/script tests, root guards, and one canonical release.
+
+Local evidence before the canonical release:
+
+- Master Data, Admin routing, and integration surfaces: 40/40 green.
+- Full Store surface pack: 91/91 green after rebuilding the rebased preview.
+- Bounded axe states: 2/2 green; the Store seed also exposed and closed an
+  invalid `role="list"`/button-child relationship without disabling a rule.
+- Frontend unit/script tests: 25/25 Vitest and 103/103 script contracts green.
+- Root script contracts: 531/531 green after regenerating authorization truth
+  and system-flow line evidence from the changed route shells.
+- Frontend lint and production build: green.
+
+The canonical release and remote PR checks remain the only open verification
+items. The first 40-test routing run had one non-reproducing Turkish-default
+failure; the isolated test and the exact 40-test pack both passed unchanged.
 
 ## 9. Contract Impact
 

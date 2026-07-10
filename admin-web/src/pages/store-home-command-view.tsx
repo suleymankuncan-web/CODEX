@@ -117,7 +117,7 @@ export function StoreHomeCommandView(input: { model: StoreHomeCommandModel; onRe
               ))}
             </div>
 
-            <div className="sh-priority-list" role="list">
+            <div className="sh-priority-list">
               {visiblePriorities.length ? (
                 visiblePriorities.map((priority) => {
                   const isSelected = priority.id === selectedPriority?.id
