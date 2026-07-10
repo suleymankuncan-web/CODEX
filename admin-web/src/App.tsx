@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { AdminShell } from './app/admin-shell'
@@ -12,7 +12,13 @@ import {
 } from './app/shell-state'
 import { preloadRouteModule } from './app/route-preloaders'
 import { StoreShell } from './app/store-shell'
+import { RouteProgressState } from './app/route-states'
 import { getAuthSession } from './features/auth/api'
+import {
+  shouldRefreshShellSessionForBearerRenewal,
+  useAuthorizationCacheBoundary,
+} from './features/session/authorization-cache-boundary'
+import { useLocalization } from './features/localization/useLocalization'
 import { useSession } from './features/session/session-context-value'
 import { getBearerSessionCacheKey, isCookieBrowserSession } from './features/session/session-storage'
 import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
@@ -65,9 +71,8 @@ function App() {
   const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
   const cookieSessionKey = session.browserSessionKey.trim() || 'cookie-session-missing'
   const shellBearerSessionKey = isCookieBrowserSession(session) ? cookieSessionKey : bearerSessionKey
-  const currentReturnPath = getCurrentReturnPath(location)
-  const sessionQuery = useQuery({
-    queryKey:
+  const shellSessionQueryKey = useMemo(
+    () =>
       session.mode === 'bearer'
         ? [
             'shell-session',
@@ -88,6 +93,24 @@ function App() {
             session.mockRegionIds,
             session.mockReadRegionIds,
           ],
+    [
+      bearerTokenReadiness,
+      session.browserSessionTransport,
+      session.mockAssignedStoreIds,
+      session.mockCompanyIds,
+      session.mockReadRegionIds,
+      session.mockReadStoreIds,
+      session.mockRegionIds,
+      session.mockRoleCodes,
+      session.mockStoreIds,
+      session.mockUserId,
+      session.mode,
+      shellBearerSessionKey,
+    ],
+  )
+  const currentReturnPath = getCurrentReturnPath(location)
+  const sessionQuery = useQuery({
+    queryKey: shellSessionQueryKey,
     queryFn: getAuthSession,
     enabled: isReady && !isPrototypeRoute,
     retry: false,
@@ -110,28 +133,48 @@ function App() {
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
   }, [currentReturnPath, expireSession, navigate])
 
-  useEffect(() => {
-    if (session.mode !== 'bearer') {
+  const authSummary = sessionQuery.data ?? null
+  const previousBearerSessionRef = useRef({
+    token: session.bearerToken,
+    sessionKey: bearerSessionKey,
+  })
+  const refetchShellSession = sessionQuery.refetch
+
+  useLayoutEffect(() => {
+    const previous = previousBearerSessionRef.current
+    previousBearerSessionRef.current = {
+      token: session.bearerToken,
+      sessionKey: bearerSessionKey,
+    }
+
+    if (!shouldRefreshShellSessionForBearerRenewal({
+      mode: session.mode,
+      browserSessionTransport: session.browserSessionTransport,
+      previousToken: previous.token,
+      currentToken: session.bearerToken,
+      previousSessionKey: previous.sessionKey,
+      currentSessionKey: bearerSessionKey,
+    })) {
       return
     }
 
-    if (session.browserSessionTransport !== 'cookie' && bearerTokenReadiness !== 'token-present') {
-      return
-    }
-
-    void queryClient.invalidateQueries({
-      predicate: (query) => query.queryKey[0] !== 'shell-session',
-    })
+    void refetchShellSession()
   }, [
     bearerSessionKey,
-    bearerTokenReadiness,
-    cookieSessionKey,
-    queryClient,
+    refetchShellSession,
+    session.bearerToken,
     session.browserSessionTransport,
     session.mode,
   ])
 
-  const authSummary = sessionQuery.data ?? null
+  const authorizationCacheReady = useAuthorizationCacheBoundary({
+    queryClient,
+    authSummary,
+    activeShellSessionQueryKey: shellSessionQueryKey,
+    isSessionReady: isReady,
+    isShellSessionPending: sessionQuery.isPending,
+  })
+  const protectedShellReady = authorizationCacheReady && !sessionQuery.isFetching
   const visibleSessionNotice = ['/admin/session', '/auth/login'].includes(pathname)
     ? sessionNotice
     : null
@@ -147,7 +190,7 @@ function App() {
     isReady,
     authSummary,
     authError: sessionQuery.isError,
-    authLoading: sessionQuery.isLoading,
+    authLoading: sessionQuery.isLoading || !protectedShellReady,
     authErrorDetail: sessionQuery.error,
     firstAllowedPath,
     sessionNotice: visibleSessionNotice,
@@ -223,6 +266,10 @@ function App() {
     return <AuthFlowShell shellState={shellState} firstAllowedPath={firstAllowedPath} />
   }
 
+  if (!protectedShellReady) {
+    return <AuthorizationCacheTransitionState />
+  }
+
   if (pathname.startsWith('/store')) {
     return (
       <StoreShell
@@ -247,3 +294,14 @@ function App() {
 }
 
 export default App
+
+function AuthorizationCacheTransitionState() {
+  const { t } = useLocalization()
+
+  return (
+    <RouteProgressState
+      title={t('adminShell.routeVerifyingTitle')}
+      copy={t('adminShell.routeVerifyingCopy')}
+    />
+  )
+}
