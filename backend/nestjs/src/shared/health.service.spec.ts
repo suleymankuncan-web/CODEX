@@ -17,6 +17,7 @@ import { HealthService } from "./health.service";
 
 function createService(input: {
   databaseQuery?: jest.Mock;
+  databaseTransportStatus?: "disabled" | "encrypted-unverified" | "encrypted-verified";
   queueBackend?: "in-memory" | "bullmq";
   rateLimitBackend?: "memory" | "redis";
   redisUrl?: string;
@@ -24,6 +25,7 @@ function createService(input: {
   return new HealthService(
     {
       appName: "store-ops-backend",
+      databaseTransportStatus: input.databaseTransportStatus ?? "disabled",
       queueBackend: input.queueBackend ?? "in-memory",
       rateLimitBackend: input.rateLimitBackend ?? "memory",
       redisUrl: input.redisUrl ?? "redis://localhost:6379",
@@ -55,6 +57,11 @@ describe("HealthService", () => {
     const result = await service.getHealth();
 
     expect(result.status).toBe("ok");
+    expect(result.checks.database.transport).toEqual({
+      certificateVerified: false,
+      encrypted: false,
+      status: "disabled",
+    });
     expect(result.queueBackend).toBe("in-memory");
     expect(result.queue).toEqual({
       backend: "in-memory",
@@ -70,6 +77,41 @@ describe("HealthService", () => {
         "Redis health check skipped because queue backend is not bullmq and rate limit backend is not redis",
     });
     expect(redisConstructorMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["encrypted-unverified", true, false],
+    ["encrypted-verified", true, true],
+  ] as const)(
+    "reports non-secret database transport posture %s on dependency success",
+    async (status, encrypted, certificateVerified) => {
+      const service = createService({ databaseTransportStatus: status });
+
+      const result = await service.getHealth();
+
+      expect(result.checks.database.transport).toEqual({
+        certificateVerified,
+        encrypted,
+        status,
+      });
+      expect(JSON.stringify(result.checks.database.transport)).not.toContain("provider-ca");
+    },
+  );
+
+  it("retains database transport posture when the dependency query fails", async () => {
+    const service = createService({
+      databaseQuery: jest.fn().mockRejectedValue(new Error("database unavailable")),
+      databaseTransportStatus: "encrypted-unverified",
+    });
+
+    const result = await service.getHealth();
+
+    expect(result.status).toBe("error");
+    expect(result.checks.database.transport).toEqual({
+      certificateVerified: false,
+      encrypted: true,
+      status: "encrypted-unverified",
+    });
   });
 
   it("checks Redis when Redis-backed rate limiting is enabled with an in-memory queue", async () => {

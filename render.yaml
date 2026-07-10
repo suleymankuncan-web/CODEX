@@ -19,6 +19,14 @@ services:
         sync: false
       - key: DB_POOL_MAX
         value: "5"
+      - key: DB_CONNECTION_TIMEOUT_MS
+        value: "5000"
+      - key: DB_IDLE_TIMEOUT_MS
+        value: "30000"
+      - key: DB_QUERY_TIMEOUT_MS
+        value: "65000"
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: "60000"
       - key: DB_SSL_MODE
         value: require
       - key: AUTH_MODE
@@ -72,6 +80,14 @@ services:
         sync: false
       - key: DB_POOL_MAX
         value: "5"
+      - key: DB_CONNECTION_TIMEOUT_MS
+        value: "5000"
+      - key: DB_IDLE_TIMEOUT_MS
+        value: "30000"
+      - key: DB_QUERY_TIMEOUT_MS
+        value: "65000"
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: "60000"
       - key: DB_SSL_MODE
         value: require
       - key: QUEUE_BACKEND

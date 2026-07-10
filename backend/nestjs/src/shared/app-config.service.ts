@@ -3,11 +3,17 @@ import { ConfigService } from "@nestjs/config";
 
 export type QueueBackend = "in-memory" | "bullmq";
 export type BrowserSessionSameSite = "lax" | "strict" | "none";
+export type DatabaseSslMode = "disable" | "require" | "verify-full";
+export type DatabaseTransportStatus =
+  | "disabled"
+  | "encrypted-unverified"
+  | "encrypted-verified";
 
 @Injectable()
 export class AppConfigService {
   constructor(private readonly configService: ConfigService) {
     this.assertBrowserSessionContract();
+    this.assertDatabaseNumericContract();
   }
 
   private readString(key: string, fallback: string): string {
@@ -335,22 +341,78 @@ export class AppConfigService {
   }
 
   get dbPoolMax(): number {
-    return Number(this.readString("DB_POOL_MAX", "20"));
+    return this.readPositiveInteger("DB_POOL_MAX", "20");
   }
 
-  get dbSslMode(): string {
-    const value = this.readString("DB_SSL_MODE", "disable");
-    const allowedValues = new Set(["disable", "require"]);
+  get dbConnectionTimeoutMs(): number {
+    return this.readPositiveInteger("DB_CONNECTION_TIMEOUT_MS", "5000");
+  }
 
-    if (!allowedValues.has(value)) {
-      throw new Error("DB_SSL_MODE must be one of disable, require");
-    }
+  get dbIdleTimeoutMs(): number {
+    return this.readPositiveInteger("DB_IDLE_TIMEOUT_MS", "30000");
+  }
 
-    if (this.isProduction && value !== "require") {
-      throw new Error("DB_SSL_MODE=require is required in production");
+  get dbQueryTimeoutMs(): number {
+    return this.readPositiveInteger("DB_QUERY_TIMEOUT_MS", "65000");
+  }
+
+  get dbStatementTimeoutMs(): number {
+    const value = this.readPositiveInteger("DB_STATEMENT_TIMEOUT_MS", "60000");
+
+    if (value > this.dbQueryTimeoutMs) {
+      throw new Error(
+        "DB_QUERY_TIMEOUT_MS must be greater than or equal to DB_STATEMENT_TIMEOUT_MS",
+      );
     }
 
     return value;
+  }
+
+  get dbSslMode(): DatabaseSslMode {
+    const value = this.readString("DB_SSL_MODE", "disable");
+    const allowedValues = new Set(["disable", "require", "verify-full"]);
+
+    if (!allowedValues.has(value)) {
+      throw new Error("DB_SSL_MODE must be one of disable, require, verify-full");
+    }
+
+    if (this.isProduction && value === "disable") {
+      throw new Error("DB_SSL_MODE=require or verify-full is required in production");
+    }
+
+    if (
+      this.isProduction &&
+      this.readinessProfile === "broad-production" &&
+      value !== "verify-full"
+    ) {
+      throw new Error(
+        "DB_SSL_MODE=verify-full is required when READINESS_PROFILE=broad-production",
+      );
+    }
+
+    if (value === "verify-full" && !this.readDatabaseSslCa()) {
+      throw new Error("DB_SSL_CA must be configured when DB_SSL_MODE=verify-full");
+    }
+
+    return value as DatabaseSslMode;
+  }
+
+  get dbSslCa(): string | undefined {
+    if (this.dbSslMode !== "verify-full") {
+      return undefined;
+    }
+
+    return this.readDatabaseSslCa();
+  }
+
+  get databaseTransportStatus(): DatabaseTransportStatus {
+    if (this.dbSslMode === "disable") {
+      return "disabled";
+    }
+
+    return this.dbSslMode === "verify-full"
+      ? "encrypted-verified"
+      : "encrypted-unverified";
   }
 
   get jwtAudience(): string {
@@ -574,7 +636,7 @@ export class AppConfigService {
   }
 
   get dailyClosurePollMinutes(): number {
-    return Number(this.readString("DAILY_CLOSURE_POLL_MINUTES", "15"));
+    return this.readPositiveInteger("DAILY_CLOSURE_POLL_MINUTES", "15");
   }
 
   get dailyClosureActorUserId(): string {
@@ -598,6 +660,24 @@ export class AppConfigService {
     this.browserSessionTtlSeconds;
     this.browserSessionRenewalWindowSeconds;
     this.browserSessionSameSite;
+  }
+
+  private assertDatabaseNumericContract(): void {
+    this.dbPoolMax;
+    this.dbConnectionTimeoutMs;
+    this.dbIdleTimeoutMs;
+    this.dbStatementTimeoutMs;
+    this.dailyClosurePollMinutes;
+  }
+
+  private readDatabaseSslCa(): string | undefined {
+    const value = this.readOptionalString("DB_SSL_CA");
+
+    if (!value?.trim()) {
+      return undefined;
+    }
+
+    return value.replace(/\\n/g, "\n");
   }
 
   private validateBrowserSessionSecret(

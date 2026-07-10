@@ -12,6 +12,7 @@ describe("HealthController (integration)", () => {
       },
       appConfigService: {
         appName: "store-ops-backend",
+        databaseTransportStatus: "disabled",
         queueBackend: "in-memory",
         redisUrl: "redis://localhost:6379",
       },
@@ -35,6 +36,11 @@ describe("HealthController (integration)", () => {
         readinessProfile: "controlled-pilot",
       });
       expect(response.body.checks.database.status).toBe("ok");
+      expect(response.body.checks.database.transport).toEqual({
+        certificateVerified: false,
+        encrypted: false,
+        status: "disabled",
+      });
       expect(response.body.queue).toMatchObject({
         backend: "in-memory",
         durable: false,
@@ -54,6 +60,7 @@ describe("HealthController (integration)", () => {
       },
       appConfigService: {
         appName: "store-ops-backend",
+        databaseTransportStatus: "encrypted-unverified",
         queueBackend: "in-memory",
         redisUrl: "redis://localhost:6379",
       },
@@ -69,6 +76,11 @@ describe("HealthController (integration)", () => {
       expect(response.headers["x-correlation-id"]).toBe("corr-health-test");
       expect(response.body.checks.database.status).toBe("error");
       expect(response.body.checks.database.message).toContain("database unavailable");
+      expect(response.body.checks.database.transport).toEqual({
+        certificateVerified: false,
+        encrypted: true,
+        status: "encrypted-unverified",
+      });
       expect(response.body.checks.redis.status).toBe("skipped");
     } finally {
       await app.close();
@@ -82,6 +94,7 @@ describe("HealthController (integration)", () => {
       },
       appConfigService: {
         appName: "store-ops-backend",
+        databaseTransportStatus: "disabled",
         queueBackend: "in-memory",
         redisUrl: "redis://localhost:6379",
       },
@@ -107,6 +120,7 @@ describe("HealthController (integration)", () => {
       },
       appConfigService: {
         appName: "store-ops-backend",
+        databaseTransportStatus: "disabled",
         queueBackend: "in-memory",
         redisUrl: "redis://localhost:6379",
       },
@@ -132,6 +146,7 @@ describe("HealthController (integration)", () => {
       },
       appConfigService: {
         appName: "store-ops-backend",
+        databaseTransportStatus: "disabled",
         queueBackend: "in-memory",
         redisUrl: "redis://localhost:6379",
       },
@@ -163,6 +178,7 @@ describe("HealthController (integration)", () => {
       },
       appConfigService: {
         appName: "store-ops-backend",
+        databaseTransportStatus: "encrypted-verified",
         queueBackend: "in-memory",
         redisUrl: "redis://localhost:6379",
       },

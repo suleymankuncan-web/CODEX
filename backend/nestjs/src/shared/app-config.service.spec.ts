@@ -7,6 +7,87 @@ function createConfig(values: Record<string, string | undefined>) {
 }
 
 describe("AppConfigService", () => {
+  it.each([
+    ["DB_POOL_MAX", "0"],
+    ["DB_POOL_MAX", "1.5"],
+    ["DB_CONNECTION_TIMEOUT_MS", "not-a-number"],
+    ["DB_IDLE_TIMEOUT_MS", "-1"],
+    ["DB_QUERY_TIMEOUT_MS", "Infinity"],
+    ["DB_STATEMENT_TIMEOUT_MS", "0"],
+    ["DAILY_CLOSURE_POLL_MINUTES", "2.5"],
+  ])("rejects invalid resilience numeric config %s=%s during construction", (key, value) => {
+    expect(() => createConfig({ [key]: value })).toThrow(`${key} must be a positive integer`);
+  });
+
+  it("maps valid database timeout and scheduler polling configuration", () => {
+    const config = createConfig({
+      DAILY_CLOSURE_POLL_MINUTES: "30",
+      DB_CONNECTION_TIMEOUT_MS: "7000",
+      DB_IDLE_TIMEOUT_MS: "45000",
+      DB_POOL_MAX: "8",
+      DB_QUERY_TIMEOUT_MS: "95000",
+      DB_STATEMENT_TIMEOUT_MS: "90000",
+    });
+
+    expect(config.dbPoolMax).toBe(8);
+    expect(config.dbConnectionTimeoutMs).toBe(7000);
+    expect(config.dbIdleTimeoutMs).toBe(45000);
+    expect(config.dbQueryTimeoutMs).toBe(95000);
+    expect(config.dbStatementTimeoutMs).toBe(90000);
+    expect(config.dailyClosurePollMinutes).toBe(30);
+  });
+
+  it("rejects a client query timeout shorter than the server statement timeout", () => {
+    expect(() =>
+      createConfig({
+        DB_QUERY_TIMEOUT_MS: "59999",
+        DB_STATEMENT_TIMEOUT_MS: "60000",
+      }),
+    ).toThrow("DB_QUERY_TIMEOUT_MS must be greater than or equal to DB_STATEMENT_TIMEOUT_MS");
+  });
+
+  it("keeps controlled-pilot production deployable with encrypted-unverified TLS", () => {
+    const config = createConfig({
+      DB_SSL_MODE: "require",
+      NODE_ENV: "production",
+      READINESS_PROFILE: "controlled-pilot",
+    });
+
+    expect(config.dbSslMode).toBe("require");
+    expect(config.databaseTransportStatus).toBe("encrypted-unverified");
+  });
+
+  it("requires verify-full and provider CA input for broad production", () => {
+    expect(
+      () =>
+        createConfig({
+          DB_SSL_MODE: "require",
+          NODE_ENV: "production",
+          READINESS_PROFILE: "broad-production",
+        }).dbSslMode,
+    ).toThrow("DB_SSL_MODE=verify-full is required when READINESS_PROFILE=broad-production");
+
+    expect(
+      () =>
+        createConfig({
+          DB_SSL_MODE: "verify-full",
+          NODE_ENV: "production",
+          READINESS_PROFILE: "broad-production",
+        }).dbSslMode,
+    ).toThrow("DB_SSL_CA must be configured when DB_SSL_MODE=verify-full");
+  });
+
+  it("normalizes secret-boundary CA newlines without exposing the value in status", () => {
+    const config = createConfig({
+      DB_SSL_CA: "-----BEGIN CERTIFICATE-----\\nprovider-ca\\n-----END CERTIFICATE-----",
+      DB_SSL_MODE: "verify-full",
+    });
+
+    expect(config.dbSslCa).toContain("\nprovider-ca\n");
+    expect(config.databaseTransportStatus).toBe("encrypted-verified");
+    expect(config.databaseTransportStatus).not.toContain("provider-ca");
+  });
+
   it("keeps the development JWT secret fallback for local work", () => {
     const config = createConfig({
       NODE_ENV: "development",
@@ -138,7 +219,7 @@ describe("AppConfigService", () => {
         DB_SSL_MODE: "disable",
         NODE_ENV: "production",
       }).dbSslMode,
-    ).toThrow("DB_SSL_MODE=require is required in production");
+    ).toThrow("DB_SSL_MODE=require or verify-full is required in production");
 
     expect(
       createConfig({
@@ -153,7 +234,7 @@ describe("AppConfigService", () => {
       createConfig({
         DB_SSL_MODE: "prefer",
       }).dbSslMode,
-    ).toThrow("DB_SSL_MODE must be one of disable, require");
+    ).toThrow("DB_SSL_MODE must be one of disable, require, verify-full");
   });
 
   it("parses comma-separated CORS origins", () => {

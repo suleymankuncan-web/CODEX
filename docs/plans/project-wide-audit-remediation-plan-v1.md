@@ -1605,9 +1605,9 @@ guards, and documentation and explicitly changes no runtime behavior.
 | PR-6 Active Surface Localization Closure | complete | PR #932 merged as `2bc612d2`; typed TR/EN ownership, source/technical allowlists, EN-to-TR acceptance tests, bounded raw-copy/mojibake guard, required checks, and Vercel are green |
 | PR-7 Keyboard And Accessibility Foundation | complete | PR #933 merged as `4639bd05`; native Master Data selection, Admin/Store skip links, two bounded axe seeds, local canonical release, required aggregate, targeted frontend, and Vercel are green |
 | PR-8 System-Flow Transitive Precision And Target Typing | complete | PR #934 merged as `f53c274d`; transitive called-wrapper evidence, cycle/duplicate safety, unresolved-path classification, current request-center fixture, deterministic skip-link evidence, root release, aggregate gate, and Vercel are green |
-| PR-9 Database Invariant Preflight Evidence | in_progress_input_gated | Read-only runner, redaction/classification tests, 59-migration clean disposable smoke, exact known-violation fixture, and rollback proof are green locally; approved staging evidence and business decisions remain blocked |
+| PR-9 Database Invariant Preflight Evidence | partial_complete_input_gated | PR #935 merged as `5b93988b`; read-only runner, redaction/classification tests, 59-migration clean disposable smoke, exact known-violation fixture, rollback proof, root release, aggregate gate, and Vercel are green; approved staging evidence and business decisions remain blocked |
 | PR-10 Database Integrity Constraints | blocked_external | DG-2 |
-| PR-11 Database Client TLS And Timeout Resilience | planned_input_gated | DG-3 for verify-full |
+| PR-11 Database Client TLS And Timeout Resilience | in_progress_input_gated | Validated pool/polling/timeouts, verify-full-capable secret-safe CA mapping, honest TLS readiness, 1155 backend tests, and 541 root contracts are green locally; exact-head canonical release is pending and DG-3 still blocks provider activation/smoke |
 | PR-12 Real External Error Delivery | blocked_external | DG-4 |
 
 Update this table only from verified current state. Do not record a pull request
