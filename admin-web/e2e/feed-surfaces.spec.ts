@@ -161,7 +161,7 @@ test('store feed renders prototype-parity read-only surface for store personnel'
   await expect(page.getByRole('link', { name: 'Open rankings' })).toHaveAttribute('href', '/store/rankings')
 })
 
-test('store feed keeps pinned posts first and Turkish copy clean after locale changes', async ({ page }) => {
+test('store feed keeps pinned posts first and source copy stable across locale changes', async ({ page }) => {
   await seedMockSession(page, 'STORE_PERSONNEL', 'store-feed-english-user')
   await routeFeedApi(page, storeSessionFixture)
 
@@ -170,13 +170,13 @@ test('store feed keeps pinned posts first and Turkish copy clean after locale ch
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
-  await expect(page.getByText('Bölge mağazalarına giden hızlı duyuru ve paylaşım akışı.')).toBeVisible()
-  await expect(page.getByText('Görünür duyuru', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible()
+  await expect(page.getByText('A fast announcement and sharing feed for region stores.')).toBeVisible()
+  await expect(page.getByText('Visible announcements', { exact: true })).toBeVisible()
 
   const rows = page.getByTestId('store-feed-post-row')
   await expect(rows.first()).toContainText('UPT focus window for the current month.')
-  await expect(rows.first().getByText('Sabit', { exact: true })).toBeVisible()
+  await expect(rows.first().getByText('Pinned', { exact: true })).toBeVisible()
   await expect(page.locator('body')).not.toContainText('Ãƒ')
   await expect(page.locator('body')).not.toContainText('Ã„')
   await expect(page.locator('body')).not.toContainText('Ã…')
@@ -184,7 +184,12 @@ test('store feed keeps pinned posts first and Turkish copy clean after locale ch
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible()
+
+  await setStoredLocale(page, 'tr')
+
   await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
+  await expect(rows.first()).toContainText('UPT focus window for the current month.')
 })
 
 test('region manager store feed supports composer, edit, pin menu, archive undo, and unclipped last menu', async ({ page }) => {

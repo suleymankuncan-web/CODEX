@@ -10,6 +10,7 @@ import {
   type SalesTargetIncentiveProjection,
   type SalesTargetIncentiveRow,
 } from '../features/incentives/api'
+import type { TranslateFunction } from '../features/localization/dictionary'
 import { normalizeDisplayLabel } from '../lib/display-labels'
 import { getErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
@@ -37,6 +38,7 @@ export function AdminRegionPackageReviewSection(input: {
   expandedRegionId: string | null
   returnNotes: Record<string, string>
   locale: AppLocale
+  t: TranslateFunction
   mutation: UseMutationResult<
     AdminSalesTargetIncentiveRegionPackageReviewResponse,
     Error,
@@ -49,21 +51,32 @@ export function AdminRegionPackageReviewSection(input: {
   if (input.packages.length === 0) {
     return (
       <AdminSurfaceSection
-        title="Bölge müdürü onay paketleri"
-        description="Bu dönem için bölge müdürü onay paketi yok."
-        badge={<AdminSurfaceBadge tone="neutral">0 paket</AdminSurfaceBadge>}
+        title={input.t('adminIncentives.packages.title')}
+        description={input.t('adminIncentives.packages.emptyDescription')}
+        badge={(
+          <AdminSurfaceBadge tone="neutral">
+            {input.t('adminIncentives.packages.packageCount', { count: 0 })}
+          </AdminSurfaceBadge>
+        )}
         testId="admin-incentive-region-packages"
       >
-        <AdminSurfaceEmpty title="Paket bulunamadı" copy="Seçili dönem için bölge müdürü gönderimi yok." />
+        <AdminSurfaceEmpty
+          title={input.t('adminIncentives.packages.emptyTitle')}
+          copy={input.t('adminIncentives.packages.emptyCopy')}
+        />
       </AdminSurfaceSection>
     )
   }
 
   return (
     <AdminSurfaceSection
-      title="Bölge müdürü onay paketleri"
-      description="Bölge müdürü gönderimlerini, düzeltme notlarını ve nihai onay kararını buradan yönetin."
-      badge={<AdminSurfaceBadge tone="cyan">{input.packages.length} bölge</AdminSurfaceBadge>}
+      title={input.t('adminIncentives.packages.title')}
+      description={input.t('adminIncentives.packages.description')}
+      badge={(
+        <AdminSurfaceBadge tone="cyan">
+          {input.t('adminIncentives.packages.regionCount', { count: input.packages.length })}
+        </AdminSurfaceBadge>
+      )}
       testId="admin-incentive-region-packages"
     >
       <div className="tw:grid tw:gap-3">
@@ -78,12 +91,15 @@ export function AdminRegionPackageReviewSection(input: {
             item.row.regionCorrection.status !== 'draft' &&
             item.row.regionCorrection.status !== 'voided',
           )
-          const status = getRegionPackageStatus(packageSummary.status)
+          const status = getRegionPackageStatus(packageSummary.status, input.t)
           const regionLabel = normalizeDisplayLabel(
             packageSummary.regionManagerName ?? packageSummary.regionName,
-            'Bölge müdürü',
+            input.t('adminIncentives.packages.regionManagerFallback'),
           )
-          const regionName = normalizeDisplayLabel(packageSummary.regionName, 'Bölge adı yok')
+          const regionName = normalizeDisplayLabel(
+            packageSummary.regionName,
+            input.t('adminIncentives.packages.regionNameFallback'),
+          )
           const isSubmitted = packageSummary.status === 'submitted'
           const returnNote = input.returnNotes[packageSummary.regionId] ?? ''
           const isMutatingThis =
@@ -116,10 +132,14 @@ export function AdminRegionPackageReviewSection(input: {
                 <span className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:md:justify-end">
                   <AdminSurfaceBadge tone={status.tone}>{status.label}</AdminSurfaceBadge>
                   <AdminSurfaceBadge tone="neutral">
-                    {packageSummary.submittedStoreCount} mağaza
+                    {input.t('adminIncentives.packages.storeCount', {
+                      count: packageSummary.submittedStoreCount,
+                    })}
                   </AdminSurfaceBadge>
                   <AdminSurfaceBadge tone={packageSummary.submittedCorrectionCount > 0 ? 'warning' : 'neutral'}>
-                    {packageSummary.submittedCorrectionCount} düzeltme
+                    {input.t('adminIncentives.packages.correctionCount', {
+                      count: packageSummary.submittedCorrectionCount,
+                    })}
                   </AdminSurfaceBadge>
                 </span>
               </button>
@@ -127,35 +147,48 @@ export function AdminRegionPackageReviewSection(input: {
               {isExpanded ? (
                 <div className="tw:mt-4 tw:grid tw:gap-4">
                   <div className="tw:grid tw:gap-2 tw:md:grid-cols-4">
-                    <PackageStat label="Kontrol" value={`${packageSummary.reviewedStoreCount}/${packageSummary.storeCount}`} />
-                    <PackageStat label="Gönderilen mağaza" value={packageSummary.submittedStoreCount} />
-                    <PackageStat label="Taslak düzeltme" value={packageSummary.draftCorrectionCount} />
-                    <PackageStat label="Gönderilen düzeltme" value={packageSummary.submittedCorrectionCount} />
+                    <PackageStat label={input.t('adminIncentives.packages.review')} value={`${packageSummary.reviewedStoreCount}/${packageSummary.storeCount}`} />
+                    <PackageStat label={input.t('adminIncentives.packages.submittedStores')} value={packageSummary.submittedStoreCount} />
+                    <PackageStat label={input.t('adminIncentives.packages.draftCorrections')} value={packageSummary.draftCorrectionCount} />
+                    <PackageStat label={input.t('adminIncentives.packages.submittedCorrections')} value={packageSummary.submittedCorrectionCount} />
                   </div>
 
                   <div className="tw:grid tw:gap-1 tw:text-xs tw:text-muted-foreground">
                     <span>
-                      Gönderen: {packageSummary.submittedByName ?? 'Bekleniyor'}
+                      {input.t('adminIncentives.packages.submittedBy', {
+                        name: packageSummary.submittedByName ?? input.t('adminIncentives.packages.waiting'),
+                      })}
                       {packageSummary.submittedAt ? ` / ${formatDateTimeLabel(packageSummary.submittedAt, input.locale)}` : ''}
                     </span>
                     {packageSummary.reviewedAt ? (
                       <span>
-                        Admin kararı: {packageSummary.reviewedByName ?? 'Admin'} / {formatDateTimeLabel(packageSummary.reviewedAt, input.locale)}
+                        {input.t('adminIncentives.packages.adminDecision', {
+                          name: packageSummary.reviewedByName ?? 'Admin',
+                          date: formatDateTimeLabel(packageSummary.reviewedAt, input.locale),
+                        })}
                       </span>
                     ) : null}
-                    {packageSummary.reviewNote ? <span>Admin notu: {packageSummary.reviewNote}</span> : null}
+                    {packageSummary.reviewNote ? (
+                      <span>
+                        {input.t('adminIncentives.packages.adminNote', {
+                          note: packageSummary.reviewNote,
+                        })}
+                      </span>
+                    ) : null}
                   </div>
 
-                  <RegionCorrectionRows rows={correctionRows} locale={input.locale} />
+                  <RegionCorrectionRows rows={correctionRows} locale={input.locale} t={input.t} />
 
                   <div className="tw:grid tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-muted/25 tw:p-3">
                     <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-                      Revizyon notu
+                      {input.t('adminIncentives.packages.revisionNote')}
                       <Textarea
-                        aria-label={`${regionLabel} revizyon notu`}
+                        aria-label={input.t('adminIncentives.packages.revisionNoteAria', {
+                          region: regionLabel,
+                        })}
                         disabled={!isSubmitted || isMutatingThis}
                         onChange={(event) => input.onReturnNoteChange(packageSummary.regionId, event.target.value)}
-                        placeholder="Revizyon gerekçesini yazın"
+                        placeholder={input.t('adminIncentives.packages.revisionPlaceholder')}
                         value={returnNote}
                       />
                     </label>
@@ -166,7 +199,7 @@ export function AdminRegionPackageReviewSection(input: {
                         type="button"
                       >
                         <CheckCircle2 size={14} />
-                        Onayla
+                        {input.t('adminIncentives.packages.approve')}
                       </Button>
                       <Button
                         disabled={!isSubmitted || !returnNote.trim() || isMutatingThis}
@@ -175,7 +208,7 @@ export function AdminRegionPackageReviewSection(input: {
                         variant="outline"
                       >
                         <RotateCcw size={14} />
-                        Revizyon iste
+                        {input.t('adminIncentives.packages.requestRevision')}
                       </Button>
                     </AdminActionRow>
                   </div>
@@ -188,7 +221,7 @@ export function AdminRegionPackageReviewSection(input: {
 
       {input.mutation.isError ? (
         <AdminStatePanel
-          title="Paket kararı kaydedilemedi"
+          title={input.t('adminIncentives.packages.decisionError')}
           description={getErrorMessage(input.mutation.error)}
           tone="danger"
         />
@@ -197,12 +230,16 @@ export function AdminRegionPackageReviewSection(input: {
   )
 }
 
-function RegionCorrectionRows(input: { rows: RegionPackageRow[]; locale: AppLocale }) {
+function RegionCorrectionRows(input: {
+  rows: RegionPackageRow[]
+  locale: AppLocale
+  t: TranslateFunction
+}) {
   if (input.rows.length === 0) {
     return (
       <AdminSurfaceEmpty
-        title="Düzeltme yok"
-        copy="Bu pakette bölge müdürü düzeltmesi bulunmuyor."
+        title={input.t('adminIncentives.packages.noCorrectionsTitle')}
+        copy={input.t('adminIncentives.packages.noCorrectionsCopy')}
       />
     )
   }
@@ -212,13 +249,13 @@ function RegionCorrectionRows(input: { rows: RegionPackageRow[]; locale: AppLoca
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Mağaza</TableHead>
-            <TableHead>Personel</TableHead>
-            <TableHead className="tw:text-right">Eski tutar</TableHead>
-            <TableHead className="tw:text-right">Final tutar</TableHead>
-            <TableHead className="tw:text-right">Fark</TableHead>
-            <TableHead>BM notu</TableHead>
-            <TableHead>Gönderim</TableHead>
+            <TableHead>{input.t('adminIncentives.column.store')}</TableHead>
+            <TableHead>{input.t('adminIncentives.column.personnel')}</TableHead>
+            <TableHead className="tw:text-right">{input.t('adminIncentives.packages.beforeAmount')}</TableHead>
+            <TableHead className="tw:text-right">{input.t('adminIncentives.packages.finalAmount')}</TableHead>
+            <TableHead className="tw:text-right">{input.t('adminIncentives.packages.difference')}</TableHead>
+            <TableHead>{input.t('adminIncentives.packages.managerNote')}</TableHead>
+            <TableHead>{input.t('adminIncentives.packages.submission')}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -230,12 +267,20 @@ function RegionCorrectionRows(input: { rows: RegionPackageRow[]; locale: AppLoca
               <TableRow key={`${item.id}:region-correction`}>
                 <TableCell className="tw:min-w-44 tw:font-medium">{item.projection.storeName}</TableCell>
                 <TableCell className="tw:min-w-44">{item.row.displayName}</TableCell>
-                <TableCell className="tw:text-right">{formatMoneyValue(correction.beforeAmount, input.locale)}</TableCell>
-                <TableCell className="tw:text-right tw:font-semibold">{formatMoneyValue(correction.finalAmount, input.locale)}</TableCell>
-                <TableCell className="tw:text-right">{formatMoneyValue(correction.adjustmentAmount, input.locale)}</TableCell>
+                <TableCell className="tw:text-right">
+                  {formatRegionMoneyValue(correction.beforeAmount, input.locale, input.t)}
+                </TableCell>
+                <TableCell className="tw:text-right tw:font-semibold">
+                  {formatRegionMoneyValue(correction.finalAmount, input.locale, input.t)}
+                </TableCell>
+                <TableCell className="tw:text-right">
+                  {formatRegionMoneyValue(correction.adjustmentAmount, input.locale, input.t)}
+                </TableCell>
                 <TableCell className="tw:min-w-64">{correction.reasonNote}</TableCell>
                 <TableCell className="tw:min-w-40">
-                  {correction.submittedAt ? formatDateTimeLabel(correction.submittedAt, input.locale) : 'Bekleniyor'}
+                  {correction.submittedAt
+                    ? formatDateTimeLabel(correction.submittedAt, input.locale)
+                    : input.t('adminIncentives.packages.waiting')}
                 </TableCell>
               </TableRow>
             )
@@ -257,17 +302,18 @@ function PackageStat(input: { label: string; value: number | string }) {
 
 function getRegionPackageStatus(
   status: SalesTargetIncentiveAdminRegionPackageSummary['status'],
+  t: TranslateFunction,
 ): { label: string; tone: AdminSurfaceTone } {
   if (status === 'submitted') {
-    return { label: 'Bölge müdürü tarafından onaya gönderildi', tone: 'accent' }
+    return { label: t('adminIncentives.packages.statusSubmitted'), tone: 'accent' }
   }
   if (status === 'admin_approved') {
-    return { label: 'Admin tarafından onaylandı', tone: 'success' }
+    return { label: t('adminIncentives.packages.statusApproved'), tone: 'success' }
   }
   if (status === 'admin_returned') {
-    return { label: 'Revizyon istendi', tone: 'warning' }
+    return { label: t('adminIncentives.packages.statusReturned'), tone: 'warning' }
   }
-  return { label: 'Onaya gönderilmedi', tone: 'neutral' }
+  return { label: t('adminIncentives.packages.statusNotSubmitted'), tone: 'neutral' }
 }
 
 function formatDateTimeLabel(value: string, locale: AppLocale) {
@@ -276,6 +322,17 @@ function formatDateTimeLabel(value: string, locale: AppLocale) {
     timeStyle: 'short',
     timeZone: INCENTIVE_TIMEZONE,
   }).format(new Date(value))
+}
+
+function formatRegionMoneyValue(
+  value: string | null | undefined,
+  locale: AppLocale,
+  t: TranslateFunction,
+) {
+  const formatted = formatMoneyValue(value, locale)
+  return formatted === formatMoneyValue(null, locale)
+    ? t('adminIncentives.noSource')
+    : formatted
 }
 
 function flattenPackageRows(projections: SalesTargetIncentiveProjection[]): RegionPackageRow[] {

@@ -1,4 +1,5 @@
 import type { StoreMonthlyReportPackage } from '../features/reports/api'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
 
 export type StoreReportMetricTone = 'plum' | 'cyan' | 'mint' | 'amber'
 
@@ -17,21 +18,25 @@ export type StoreReportSection = {
   status: 'ready' | 'partial' | 'missing'
 }
 
-const sectionFallbacks: StoreReportSection[] = [
-  { code: 'kpis', label: 'KPI kolonları', value: 'Veri bekleniyor', status: 'missing' },
-  { code: 'approval_scores', label: 'Onay skorları', value: 'Veri bekleniyor', status: 'missing' },
-  { code: 'actions', label: 'Aksiyon durumu', value: 'Veri bekleniyor', status: 'missing' },
-  { code: 'targets', label: 'Hedefler', value: 'Veri bekleniyor', status: 'missing' },
-  { code: 'incentives', label: 'Primler', value: 'Veri bekleniyor', status: 'missing' },
-  { code: 'workforce', label: 'Norm Kadro', value: 'Veri bekleniyor', status: 'missing' },
-  { code: 'visits', label: 'Ziyaret', value: 'Veri bekleniyor', status: 'missing' },
+const sectionFallbacks: Array<{ code: string; labelKey: TranslationKey }> = [
+  { code: 'kpis', labelKey: 'storeReports.section.kpis' },
+  { code: 'approval_scores', labelKey: 'storeReports.section.approvalScores' },
+  { code: 'actions', labelKey: 'storeReports.section.actions' },
+  { code: 'targets', labelKey: 'storeReports.section.targets' },
+  { code: 'incentives', labelKey: 'storeReports.section.incentives' },
+  { code: 'workforce', labelKey: 'storeReports.section.workforce' },
+  { code: 'visits', labelKey: 'storeReports.section.visits' },
 ]
 
-export function buildStoreReportsViewModel(summary: StoreMonthlyReportPackage | null) {
-  const sections = normalizeSections(summary)
+export function buildStoreReportsViewModel(
+  summary: StoreMonthlyReportPackage | null,
+  t: TranslateFunction,
+  labels: { period?: string | undefined; coverage?: string | undefined } = {},
+) {
+  const sections = normalizeSections(summary, t)
   const readySections = sections.filter((section) => section.status === 'ready').length
-  const periodLabel = summary?.periodLabel ?? 'Dönem seç'
-  const coverageLabel = summary?.coverageLabel ?? 'Dönem kapsamı'
+  const periodLabel = labels.period ?? summary?.periodLabel ?? t('storeReports.periodFallback')
+  const coverageLabel = labels.coverage ?? summary?.coverageLabel ?? t('storeReports.coverageFallback')
   const storeCount = summary?.storeCount ?? 0
   const isReady = sections.length > 0 && readySections === sections.length
 
@@ -43,38 +48,52 @@ export function buildStoreReportsViewModel(summary: StoreMonthlyReportPackage | 
     metrics: [
       {
         id: 'period-package',
-        label: 'Dönem paketi',
+        label: t('storeReports.metric.periodPackage'),
         value: '1',
-        copy: 'Birleşik Excel',
+        copy: t('storeReports.metric.combinedExcel'),
         tone: 'plum',
       },
       {
         id: 'scope',
-        label: 'Kapsam',
+        label: t('storeReports.metric.scope'),
         value: String(sections.length),
-        copy: 'Süreç birlikte',
+        copy: t('storeReports.metric.processesTogether'),
         tone: 'cyan',
       },
       {
         id: 'detail-output',
-        label: 'Detay çıktı',
+        label: t('storeReports.metric.detailOutput'),
         value: String(readySections),
-        copy: 'Tek dosyada',
+        copy: t('storeReports.metric.singleFile'),
         tone: 'mint',
       },
       {
         id: 'period-state',
         label: periodLabel,
-        value: isReady ? 'Hazır' : 'Bekliyor',
-        copy: storeCount > 0 && !isReady ? 'Kontrol bekliyor' : storeCount > 0 ? 'Bölge özeti' : 'Veri bekleniyor',
+        value: isReady ? t('storeReports.state.ready') : t('storeReports.state.waiting'),
+        copy: storeCount > 0 && !isReady
+          ? t('storeReports.state.reviewPending')
+          : storeCount > 0
+            ? t('storeReports.state.regionSummary')
+            : t('storeReports.state.dataPending'),
         tone: 'amber',
       },
     ] satisfies StoreReportMetric[],
   }
 }
 
-function normalizeSections(summary: StoreMonthlyReportPackage | null): StoreReportSection[] {
-  if (!summary?.sections?.length) return sectionFallbacks
+function normalizeSections(
+  summary: StoreMonthlyReportPackage | null,
+  t: TranslateFunction,
+): StoreReportSection[] {
+  if (!summary?.sections?.length) {
+    return sectionFallbacks.map((fallback) => ({
+      code: fallback.code,
+      label: t(fallback.labelKey),
+      value: t('storeReports.state.dataPending'),
+      status: 'missing',
+    }))
+  }
 
   const byCode = new Map(summary.sections.map((section) => [section.code, section]))
 
@@ -82,8 +101,8 @@ function normalizeSections(summary: StoreMonthlyReportPackage | null): StoreRepo
     const source = byCode.get(fallback.code)
     return {
       code: fallback.code,
-      label: source?.label?.trim() || fallback.label,
-      value: source?.value?.trim() || fallback.value,
+      label: source?.label?.trim() || t(fallback.labelKey),
+      value: source?.value?.trim() || t('storeReports.state.dataPending'),
       status: source?.status ?? 'missing',
     }
   })

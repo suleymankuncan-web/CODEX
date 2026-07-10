@@ -1600,8 +1600,8 @@ guards, and documentation and explicitly changes no runtime behavior.
 | PR-2 Store Authorization Runtime Alignment | blocked_decision | DG-1 |
 | PR-3 Session-Scoped Query Cache Isolation | complete | PR #929 merged as `46d20262`; effective-authorization changes now remove prior protected query/mutation state before the new shell renders, while same-authorization renewal remains stable |
 | PR-4 Bounded Target Request Queues | complete | PR #930 merged as `bfa2f83c`; Admin and Store target reads are bounded, Store Approvals uses a scoped paged request-center read, and target/workforce mutation, DB, and authorization contracts remain unchanged |
-| PR-5 Europe/Istanbul Business Date Contract | in_progress | Approved finding-specific spec, shared helper, four caller migrations, and targeted evidence are on `codex/pr5-istanbul-business-date`; canonical release/PR/merge evidence remains open |
-| PR-6 Active Surface Localization Closure | planned | Source-confirmed P2 |
+| PR-5 Europe/Istanbul Business Date Contract | complete | PR #931 merged as `7495624f`; shared Europe/Istanbul business-date defaults and calendar arithmetic are guarded while UTC timestamp instants, API, DB, and authorization contracts remain unchanged |
+| PR-6 Active Surface Localization Closure | in_progress | Typed TR/EN ownership, source/technical allowlists, EN-to-TR acceptance tests, bounded raw-copy/mojibake guard, and a green 12m24s canonical local release are on `codex/pr6-active-localization`; PR/merge evidence remains open |
 | PR-7 Keyboard And Accessibility Foundation | planned | Source-confirmed P2 |
 | PR-8 System-Flow Transitive Precision And Target Typing | planned | Source-confirmed P2 |
 | PR-9 Database Invariant Preflight Evidence | planned_input_gated | Live execution needs safe DB target |

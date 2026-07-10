@@ -16,6 +16,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
+import type { TranslateFunction, TranslationKey } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import {
   archiveFeedPost,
   createFeedPost,
@@ -29,6 +31,7 @@ import {
 import type { FeedPost } from '../features/feed/contracts'
 import { actionToast } from '../lib/action-toast'
 import { getUserFacingErrorMessage } from '../lib/format'
+import { getIntlLocale, type AppLocale } from '../lib/i18n'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 
 type FeedTone = 'plum' | 'cyan' | 'mint' | 'amber'
@@ -48,10 +51,9 @@ type MetricCard = {
 }
 
 const archiveUndoDelayMs = 4500
-const feedActionErrorCopy = 'Duyuru işlemi şu anda tamamlanamadı.'
-const feedLoadErrorCopy = 'Duyurular şu anda yüklenemedi.'
 
 export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null }) {
+  const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
   const visibleFeedQueryKey = getVisibleFeedQueryKey(input.authSummary)
   const adminFeedQueryKey = getAdminFeedQueryKey(input.authSummary)
@@ -73,9 +75,9 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
   }, [input.authSummary])
   const activeRegionId = regionIds[0] ?? ''
   const canComposeRegionFeed = roleCodes.includes('REGION_MANAGER') && activeRegionId.length > 0
-  const roleLabel = formatRoleLabel(roleCodes)
-  const contextLabel = canComposeRegionFeed ? 'Bölge mağazaları' : roleLabel
-  const [notice, setNotice] = useState<string | null>(null)
+  const roleLabel = formatRoleLabel(roleCodes, t)
+  const contextLabel = canComposeRegionFeed ? t('storeFeed.context.regionStores') : roleLabel
+  const [notice, setNotice] = useState<TranslationKey | null>(null)
   const [body, setBody] = useState('')
   const [pinNextPost, setPinNextPost] = useState(false)
   const [openPostMenuId, setOpenPostMenuId] = useState<string | null>(null)
@@ -104,34 +106,34 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
 
   const metricCards = useMemo<MetricCard[]>(() => [
     {
-      label: 'Görünür duyuru',
+      label: t('storeFeed.metric.visible'),
       value: String(visiblePosts.length),
-      note: 'Bölge mağazalarına açık',
+      note: t('storeFeed.metric.visibleNote'),
       icon: Megaphone,
       tone: 'plum',
     },
     {
-      label: 'Sabitlenen',
+      label: t('storeFeed.metric.pinned'),
       value: String(pinnedPosts.length),
-      note: 'Üstte kalan paylaşım',
+      note: t('storeFeed.metric.pinnedNote'),
       icon: Pin,
       tone: 'amber',
     },
     {
-      label: 'Bugün paylaşılan',
+      label: t('storeFeed.metric.today'),
       value: String(todayPosts.length),
-      note: 'Bugün',
+      note: t('storeFeed.metric.todayNote'),
       icon: Clock3,
       tone: 'cyan',
     },
     {
-      label: 'Bölge mağazası',
+      label: t('storeFeed.metric.regionStores'),
       value: String(storeCount),
-      note: 'Duyuru kapsamı',
+      note: t('storeFeed.metric.regionStoresNote'),
       icon: Store,
       tone: 'mint',
     },
-  ], [pinnedPosts.length, storeCount, todayPosts.length, visiblePosts.length])
+  ], [pinnedPosts.length, storeCount, t, todayPosts.length, visiblePosts.length])
 
   const createMutation = useMutation({
     mutationFn: createFeedPost,
@@ -142,11 +144,13 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       setPinNextPost(false)
       setRemovedPostSnapshot(null)
       setNotice(null)
-      actionToast.success(response.data.feedPost.isPinned ? 'Bölge duyurusu sabitlenerek paylaşıldı.' : 'Bölge duyurusu paylaşıldı.')
+      actionToast.success(response.data.feedPost.isPinned
+        ? t('storeFeed.toast.createdPinned')
+        : t('storeFeed.toast.created'))
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
     onError: (error) => {
-      actionToast.error(error, feedActionErrorCopy)
+      actionToast.error(error, t('storeFeed.actionError'))
     },
   })
   const updateMutation = useMutation({
@@ -158,11 +162,11 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       setEditingBody('')
       setRemovedPostSnapshot(null)
       setNotice(null)
-      actionToast.success('Gönderi güncellendi.')
+      actionToast.success(t('storeFeed.toast.updated'))
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
     onError: (error) => {
-      actionToast.error(error, feedActionErrorCopy)
+      actionToast.error(error, t('storeFeed.actionError'))
     },
   })
   const pinMutation = useMutation({
@@ -171,10 +175,10 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       upsertFeedPost(queryClient, visibleFeedQueryKey, response.data.feedPost)
       upsertFeedPost(queryClient, adminFeedQueryKey, response.data.feedPost)
       setNotice(null)
-      actionToast.success('Gönderi sabitlendi.')
+      actionToast.success(t('storeFeed.toast.pinned'))
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
-    onError: (error) => actionToast.error(error, feedActionErrorCopy),
+    onError: (error) => actionToast.error(error, t('storeFeed.actionError')),
   })
   const unpinMutation = useMutation({
     mutationFn: unpinFeedPost,
@@ -182,10 +186,10 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       upsertFeedPost(queryClient, visibleFeedQueryKey, response.data.feedPost)
       upsertFeedPost(queryClient, adminFeedQueryKey, response.data.feedPost)
       setNotice(null)
-      actionToast.info('Gönderi sabitlemeden kaldırıldı.')
+      actionToast.info(t('storeFeed.toast.unpinned'))
       await invalidateFeedQueries(queryClient, visibleFeedQueryKey, adminFeedQueryKey)
     },
-    onError: (error) => actionToast.error(error, feedActionErrorCopy),
+    onError: (error) => actionToast.error(error, t('storeFeed.actionError')),
   })
   const archiveMutation = useMutation({
     mutationFn: archiveFeedPost,
@@ -198,7 +202,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
         next.delete(feedPostId)
         return next
       })
-      actionToast.error(error, feedActionErrorCopy)
+      actionToast.error(error, t('storeFeed.actionError'))
     },
   })
 
@@ -286,7 +290,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
     setHiddenPostIds((current) => new Set(current).add(post.feedPostId))
     setOpenPostMenuId(null)
     setRemovedPostSnapshot({ post })
-    setNotice('Gönderi yayından kaldırıldı.')
+    setNotice('storeFeed.notice.removed')
 
     if (editingPostId === post.feedPostId) {
       cancelEditingPost()
@@ -315,7 +319,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       return next
     })
     setRemovedPostSnapshot(null)
-    setNotice('Gönderi geri alındı.')
+    setNotice('storeFeed.notice.restored')
   }
 
   return (
@@ -329,13 +333,13 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
           <div className="feed-command-pills">
             <span className="feed-pill feed-pill-primary">
               <Megaphone size={15} />
-              Duyurular
+              {t('storeFeed.heroEyebrow')}
             </span>
             <span className="feed-pill">{roleLabel}</span>
             <span className="feed-pill feed-pill-soft">{contextLabel}</span>
           </div>
-          <h1 id="feed-production-title">Duyurular</h1>
-          <p>Bölge mağazalarına giden hızlı duyuru ve paylaşım akışı.</p>
+          <h1 id="feed-production-title">{t('storeFeed.heroEyebrow')}</h1>
+          <p>{t('storeFeed.productionHeroCopy')}</p>
         </div>
         <div className="feed-command-actions">
           <button
@@ -344,7 +348,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
             onClick={() => void feedQuery.refetch()}
           >
             <RefreshCcw size={16} />
-            Yenile
+            {t('storeFeed.refresh')}
           </button>
         </div>
       </header>
@@ -366,15 +370,18 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       </div>
 
       {canComposeRegionFeed ? (
-        <section className="feed-composer-card feed-composer-card-compact" aria-label="Bölge duyurusu paylaş">
+        <section
+          className="feed-composer-card feed-composer-card-compact"
+          aria-label={t('storeFeed.composerAria')}
+        >
           <div className="feed-composer-avatar" aria-hidden="true">
             <Megaphone size={20} />
           </div>
           <div className="feed-composer-form">
             <textarea
-              aria-label="Duyuru içeriği"
+              aria-label={t('storeFeed.composerBodyAria')}
               className="feed-composer-body"
-              placeholder="Ne paylaşmak istersin?"
+              placeholder={t('storeFeed.composerPlaceholder')}
               rows={3}
               value={body}
               onChange={(event) => setBody(event.target.value)}
@@ -389,7 +396,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
                   onClick={() => setPinNextPost((current) => !current)}
                 >
                   <Pin size={15} />
-                  Sabitle
+                  {t('storeFeed.pinAction')}
                 </button>
                 <button
                   type="button"
@@ -398,7 +405,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
                   onClick={publishPost}
                 >
                   <Send size={16} />
-                  Paylaş
+                  {t('storeFeed.shareAction')}
                 </button>
               </div>
             </div>
@@ -410,11 +417,11 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
         <div className="feed-notice">
           <span className="feed-notice-copy">
             <Check size={16} />
-            {notice}
+            {t(notice)}
           </span>
           {removedPostSnapshot ? (
             <button type="button" className="feed-notice-action" onClick={undoRemovePost}>
-              Geri al
+              {t('storeFeed.undoAction')}
             </button>
           ) : null}
         </div>
@@ -423,34 +430,41 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
       <section className="feed-list-panel feed-list-panel-full">
         <div className="feed-list-head">
           <div>
-            <h2>Bölge akışı</h2>
-            <p>En yeni duyurular ve bölge paylaşımları.</p>
+            <h2>{t('storeFeed.regionFeed')}</h2>
+            <p>{t('storeFeed.regionFeedCopy')}</p>
           </div>
-          <span>{visiblePosts.length} kayıt</span>
+          <span>{t('storeFeed.recordCount', { count: visiblePosts.length })}</span>
         </div>
 
         <div className="feed-list">
           {feedQuery.isLoading ? (
-            <FeedStateRow title="Duyurular yükleniyor" copy="Mağaza akışı hazırlanıyor." />
+            <FeedStateRow
+              title={t('storeFeed.loadingTitle')}
+              copy={t('storeFeed.loadingCopy')}
+            />
           ) : null}
 
           {feedQuery.isError ? (
             <FeedStateRow
-              title="Duyurular açılamadı"
-              copy={getUserFacingErrorMessage(feedQuery.error, feedLoadErrorCopy)}
-              actionLabel="Tekrar dene"
+              title={t('storeFeed.errorTitle')}
+              copy={getUserFacingErrorMessage(feedQuery.error, t('storeFeed.loadError'))}
+              actionLabel={t('storeFeed.retryAction')}
               onAction={() => void feedQuery.refetch()}
             />
           ) : null}
 
           {!feedQuery.isLoading && !feedQuery.isError && visiblePosts.length === 0 ? (
-            <FeedStateRow title="Sana uygun duyuru yok" copy="Yeni duyurular burada görünecek." />
+            <FeedStateRow
+              title={t('storeFeed.emptyTitle')}
+              copy={t('storeFeed.productionEmptyCopy')}
+            />
           ) : null}
 
           {!feedQuery.isLoading && !feedQuery.isError
             ? visiblePosts.map((post, index) => (
                 <FeedPostRow
                   key={post.feedPostId}
+                  locale={locale}
                   canManage={canComposeRegionFeed}
                   editingBody={editingBody}
                   isEditing={editingPostId === post.feedPostId}
@@ -472,6 +486,7 @@ export function StoreFeedPage(input: { authSummary: AuthSessionSummary | null })
                   onStartEdit={() => startEditingPost(post)}
                   onTogglePin={() => togglePostPin(post)}
                   post={post}
+                  t={t}
                 />
               ))
             : null}
@@ -487,6 +502,7 @@ function FeedPostRow(input: {
   isEditing: boolean
   isMenuOpen: boolean
   isMutationPending: boolean
+  locale: AppLocale
   opensUp: boolean
   onCancelEdit: () => void
   onEditBodyChange: (value: string) => void
@@ -496,6 +512,7 @@ function FeedPostRow(input: {
   onStartEdit: () => void
   onTogglePin: () => void
   post: FeedPost
+  t: TranslateFunction
 }) {
   const rowType = getPostRowType(input.post)
   const destination = input.post.targetRoute ?? input.post.linkUrl
@@ -516,7 +533,7 @@ function FeedPostRow(input: {
             type="button"
             className="feed-post-menu-button"
             aria-expanded={input.isMenuOpen}
-            aria-label="Gönderi seçenekleri"
+            aria-label={input.t('storeFeed.postOptionsAria')}
             onClick={input.onMenuToggle}
           >
             <MoreVertical size={18} />
@@ -525,15 +542,17 @@ function FeedPostRow(input: {
             <div className="feed-post-menu" role="menu">
               <button type="button" role="menuitem" onClick={input.onStartEdit}>
                 <Pencil size={15} />
-                Düzenle
+                {input.t('storeFeed.editAction')}
               </button>
               <button type="button" role="menuitem" onClick={input.onTogglePin}>
                 <Pin size={15} />
-                {input.post.isPinned ? 'Sabitlemeden kaldır' : 'Sabitle'}
+                {input.post.isPinned
+                  ? input.t('storeFeed.unpinAction')
+                  : input.t('storeFeed.pinAction')}
               </button>
               <button type="button" role="menuitem" className="feed-post-menu-danger" onClick={input.onRemove}>
                 <Trash2 size={15} />
-                Yayından kaldır
+                {input.t('storeFeed.archiveAction')}
               </button>
             </div>
           ) : null}
@@ -547,13 +566,13 @@ function FeedPostRow(input: {
           <div className="feed-post-edit">
             <textarea
               className="feed-post-editor"
-              aria-label="Gönderi metnini düzenle"
+              aria-label={input.t('storeFeed.editBodyAria')}
               value={input.editingBody}
               onChange={(event) => input.onEditBodyChange(event.target.value)}
             />
             <div className="feed-post-edit-actions">
               <button type="button" className="feed-button feed-button-muted" onClick={input.onCancelEdit}>
-                Vazgeç
+                {input.t('storeFeed.cancelAction')}
               </button>
               <button
                 type="button"
@@ -562,7 +581,7 @@ function FeedPostRow(input: {
                 onClick={input.onSaveEdit}
               >
                 <Check size={15} />
-                Kaydet
+                {input.t('storeFeed.saveAction')}
               </button>
             </div>
           </div>
@@ -572,12 +591,24 @@ function FeedPostRow(input: {
         <div className="feed-post-meta">
           <span className="feed-post-time">
             <Clock3 size={14} />
-            {formatPostTimestamp(input.post.publishedAt ?? input.post.createdAt)}
+            {formatPostTimestamp(
+              input.post.publishedAt ?? input.post.createdAt,
+              input.locale,
+              input.t,
+            )}
           </span>
-          {input.post.isPinned ? <span className="feed-post-meta-pin">Sabit</span> : null}
-          {isEditedPost(input.post) ? <span className="feed-post-meta-edited">Düzenlendi</span> : null}
-          <span className="feed-post-meta-live">Yayında</span>
-          <span>{rowType === 'focus' ? 'Bölge odağı' : 'Duyuru'}</span>
+          {input.post.isPinned ? (
+            <span className="feed-post-meta-pin">{input.t('storeFeed.pinned')}</span>
+          ) : null}
+          {isEditedPost(input.post) ? (
+            <span className="feed-post-meta-edited">{input.t('storeFeed.edited')}</span>
+          ) : null}
+          <span className="feed-post-meta-live">{input.t('storeFeed.published')}</span>
+          <span>
+            {rowType === 'focus'
+              ? input.t('storeFeed.regionFocus')
+              : input.t('storeFeed.type.announcement')}
+          </span>
           {input.post.metricLabel ? <span>{input.post.metricLabel}</span> : null}
           {destination && input.post.linkLabel ? (
             <Link className="feed-post-meta-link" to={destination}>
@@ -656,12 +687,12 @@ function isToday(input: string) {
   )
 }
 
-function formatPostTimestamp(input: string) {
+function formatPostTimestamp(input: string, locale: AppLocale, t: TranslateFunction) {
   const date = new Date(input)
   const today = new Date()
   const yesterday = new Date(today)
   yesterday.setDate(today.getDate() - 1)
-  const time = new Intl.DateTimeFormat('tr-TR', {
+  const time = new Intl.DateTimeFormat(getIntlLocale(locale), {
     hour: '2-digit',
     minute: '2-digit',
   }).format(date)
@@ -671,7 +702,7 @@ function formatPostTimestamp(input: string) {
     date.getMonth() === today.getMonth() &&
     date.getDate() === today.getDate()
   ) {
-    return `Bugün ${time}`
+    return t('storeFeed.todayAt', { time })
   }
 
   if (
@@ -679,10 +710,10 @@ function formatPostTimestamp(input: string) {
     date.getMonth() === yesterday.getMonth() &&
     date.getDate() === yesterday.getDate()
   ) {
-    return `Dün ${time}`
+    return t('storeFeed.yesterdayAt', { time })
   }
 
-  return new Intl.DateTimeFormat('tr-TR', {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
     day: 'numeric',
     month: 'long',
     hour: '2-digit',
@@ -690,13 +721,13 @@ function formatPostTimestamp(input: string) {
   }).format(date)
 }
 
-function formatRoleLabel(roleCodes: string[]) {
-  if (roleCodes.includes('REGION_MANAGER')) return 'Bölge müdürü'
-  if (roleCodes.includes('STORE_MANAGER')) return 'Mağaza müdürü'
-  if (roleCodes.includes('STORE_PERSONNEL')) return 'Personel'
-  if (roleCodes.includes('VISUAL_MERCHANDISER')) return 'VM'
+function formatRoleLabel(roleCodes: string[], t: TranslateFunction) {
+  if (roleCodes.includes('REGION_MANAGER')) return t('storeFeed.role.regionManager')
+  if (roleCodes.includes('STORE_MANAGER')) return t('storeFeed.role.storeManager')
+  if (roleCodes.includes('STORE_PERSONNEL')) return t('storeFeed.role.personnel')
+  if (roleCodes.includes('VISUAL_MERCHANDISER')) return t('storeFeed.role.visualMerchandiser')
 
-  return 'Mağaza'
+  return t('storeFeed.role.store')
 }
 
 function upsertFeedPost(
