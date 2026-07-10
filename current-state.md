@@ -56,8 +56,10 @@ approval did not authorize speculative runtime work or broad production.
   the frontend child is targeted and reusable, not a duplicate full suite.
 - PR #919 (A3) kept all 371 Playwright tests, uses two CI-only workers with
   serial files, and preserves failure-only Playwright artifacts.
-- PR #920 (B1) records all five current pilot flows as `blocked_external`; no
-  flow was claimed as run and no runtime change was authorized.
+- PR #920 (B1) established the five-flow blocker record. A later owner
+  attestation records successful 5 July checklist approval, Store Action task
+  closure, and target submission/editing with no issue; remaining B1 evidence
+  stays external and no runtime change is authorized.
 - PR #921 (E1) reconciles Visual Merchandiser-only Store routes and starts an
   incremental archive-guard migration register without a bulk archive rewrite.
 - PR #923 (D1) adds one bounded Vitest seed for Store My Performance state and Region
@@ -85,16 +87,22 @@ coverage. Source:
 
 ### B1 Controlled Pilot Evidence
 
-The next fresh pilot work is blocked on safe, approved external inputs:
+The product owner attested that checklist approval, Store Action task closure,
+target submission, and target editing were used successfully on 5 July 2026.
+No issue or P0/P1 finding was reported. This is partial positive evidence, not
+a protected-session trace or a complete five-flow pass.
 
-- current approved authenticated browser sessions for Admin, Region Manager,
-  Store Manager, and Store Personnel, with only sanitized evidence retained;
-- an assigned store plus explicit mutation/rollback authority for Store Action;
-- a current checklist template/visit and completion/acknowledgement authority;
-- approved read-only persona sessions and a personnel/profile test subject;
-- a confirmed reporting period, package, and role-scoped sessions.
+Remaining external inputs are:
 
-Use `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
+- sanitized persona/session and negative-scope evidence for the partially
+  observed Store Action and checklist flows;
+- login, refresh, logout, and recovery evidence for the four pilot personas;
+- read-only rankings/personnel-profile positive and negative scope evidence;
+- a confirmed reporting period/package plus role-scoped reports and incentive
+  totals/export readback.
+
+Use `docs/evidence/pilot-readiness/2026-07-05-owner-attested-mutation-flows.md`
+and `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
 Do not create a runtime PR merely to resolve an absent session, approval, or
 test-data input.
 
@@ -150,11 +158,14 @@ Now:
 - Keep the truthful release gate and targeted frontend boundary stable.
 - Observe A3's next ten successful root-release PR runs; record the dated p95
   decision only after the sample exists.
-- Preserve B1's `blocked_external` state until approved pilot inputs exist.
+- Preserve the 5 July owner-attested B1 facts and keep only the remaining
+  persona/session, negative-scope, rankings/profile, and reports/incentives
+  evidence blocked.
 
 Next:
 
-1. Obtain one safe B1 input bundle and execute only the authorized flow(s).
+1. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
+   repeat the successful 5 July mutations solely to improve documentation.
 2. If evidence produces a P0/P1 finding, create one finding-specific spec and
    PR with reproduction, scope, verification, and rollback.
 3. If no P0/P1 exists, keep runtime parked and make no speculative code train.

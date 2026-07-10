@@ -35,8 +35,9 @@ The project is in controlled pilot execution mode.
 - Process/CI alignment: A1/A2/A3 and the bounded D1 unit-test seed are
   implemented; A3's ten-run p95 observation remains pending external PR
   traffic.
-- Fresh B1 pilot evidence: `blocked_external` until the named safe sessions,
-  data, and authority inputs are supplied.
+- B1 pilot evidence: partial owner-attested positive evidence exists for
+  checklist approval, Store Action task closure, and target submit/edit; the
+  remaining persona/session and readback evidence is `blocked_external`.
 
 ## What We Do Now
 
@@ -44,8 +45,9 @@ The project is in controlled pilot execution mode.
    owner stable; do not reintroduce duplicate merge-decision E2E work.
 2. Observe the next ten successful root-release PR runs and record A3's dated
    p95/no-change decision without reducing test coverage.
-3. Keep B1's five-flow record `blocked_external` until safe approved input is
-   available; do not create a runtime PR for missing access or data.
+3. Preserve the successful 5 July owner-attested mutation observations and
+   obtain only the remaining safe read-only B1 evidence; do not create a
+   runtime PR for missing access, context, or trace detail.
 4. If a real pilot/demo finding arrives, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
 5. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when

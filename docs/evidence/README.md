@@ -36,7 +36,9 @@ proof, pilot issue closure, and pilot continue/pause decisions.
 Current anchors:
 
 - `2026-07-10-controlled-pilot-b1-external-blockers.md` - current B1
-  `blocked_external` assessment; not a completed pilot pass.
+  partial/`blocked_external` assessment; not a completed pilot pass.
+- `2026-07-05-owner-attested-mutation-flows.md` - owner-attested checklist,
+  Store Action, and target workflow observations with explicit proof limits.
 - `2026-05-05-controlled-pilot-feedback-log.md`
 - `2026-05-23-assisted-persona-rehearsal-v1.md`
 - `2026-05-23-store-action-command-live-proof-v1.md`
