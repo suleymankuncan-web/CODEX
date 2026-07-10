@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 import { readComputedStyle } from './style-test-utils'
+import { expectNoCriticalAxeViolations } from './axe-test-utils'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoRegionId = '00000000-0000-0000-0000-000000000010'
@@ -107,6 +108,13 @@ test('store shell skip link moves focus to localized main landmark', async ({ pa
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(main).toBeFocused()
+})
+
+test('stable store home shell has no critical WCAG 2 A or AA violations', async ({ page }) => {
+  await page.goto('/store/home')
+  await expect(page.getByRole('main')).toBeVisible()
+
+  await expectNoCriticalAxeViolations(page)
 })
 
 test('store workforce route is visible for store manager true action scope', async ({ page }) => {

@@ -1,6 +1,6 @@
 # Keyboard And Accessibility Foundation Specification V1
 
-Status: approved through project-wide remediation plan; implementation pending
+Status: implementation active; bounded axe seed and full verification pending
 Shelf: active plan
 Author: Codex
 Owner: Product owner

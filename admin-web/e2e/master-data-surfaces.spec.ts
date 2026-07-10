@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
+import { expectNoCriticalAxeViolations } from './axe-test-utils'
 
 const legacyAdminSelector = [
   '.master-data-command-page',
@@ -97,6 +98,13 @@ test('admin shell skip link moves focus to localized main landmark', async ({ pa
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(main).toBeFocused()
+})
+
+test('loaded master data issues state has no critical WCAG 2 A or AA violations', async ({ page }) => {
+  await page.goto('/admin/master-data')
+  await expect(page.getByRole('heading', { name: 'Ana Veri Kontrolü' })).toBeVisible()
+
+  await expectNoCriticalAxeViolations(page)
 })
 
 test('master data import detail keeps validation and process actions', async ({ page }) => {
