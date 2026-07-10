@@ -169,7 +169,7 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-- Close PR-7 after its locally green native Master Data controls, protected-shell skip links, and bounded axe seed pass the canonical release and remote checks.
+- Close PR-7 after its locally and canonically green native Master Data controls, protected-shell skip links, and bounded axe seed pass remote checks.
 - Keep the truthful required gate, exact-tree post-merge proof/fallback, and
   targeted frontend boundary stable.
 - Observe A3's next ten successful root-release PR runs; record the dated p95
