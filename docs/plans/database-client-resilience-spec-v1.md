@@ -1,25 +1,26 @@
 # Database Client TLS And Timeout Resilience Specification V1
 
-Status: implementation complete locally; canonical release pending; DG-3 provider activation blocked
+Status: implementation merged in PR #936; DG-3 provider activation blocked
 Shelf: active plan
 Author: Codex
 Last verified: 2026-07-10
 
 ## 1. Reader And Action
 
-This specification is for the engineer changing the shared NestJS PostgreSQL
-client. Implement the bounded configuration and truthful readiness contract in
-this document without changing database schema, API behavior, provider state,
-or broad-production readiness.
+This specification is for the engineer maintaining the shared NestJS
+PostgreSQL client or activating provider-verified TLS after DG-3 arrives.
+Preserve the bounded configuration and truthful readiness contract without
+changing database schema, API behavior, provider state, or broad-production
+readiness by implication.
 
 ## 2. Problem And Current Evidence
 
-The shared `pg.Pool` currently validates neither `DB_POOL_MAX` nor the daily
-closure polling interval. It has no explicit connection, idle, query, or
-statement timeouts. Production TLS uses `rejectUnauthorized: false`, so the
-connection is encrypted but the server certificate is not verified. Health
-checks report only query success or failure and cannot distinguish unencrypted,
-encrypted-unverified, and encrypted-verified transport.
+Before PR #936, the shared `pg.Pool` validated neither `DB_POOL_MAX` nor the
+daily closure polling interval, had no explicit connection, idle, query, or
+statement timeouts, and could not report its TLS trust level. PR #936 added
+those validations, timeout budgets, and the non-secret transport status.
+Current controlled-pilot production still uses `rejectUnauthorized: false`, so
+its connection is encrypted but the server certificate is not verified.
 
 DG-3 is unavailable. There is no provider CA chain, staging verify-full proof,
 or rotation/expiry owner in repository evidence. The implementation may add a
@@ -150,13 +151,15 @@ certificate verification silently.
 
 ## 10. Current Verification Snapshot
 
-Verified on 2026-07-10 against main `5b93988b`:
+Verified on 2026-07-10 on the PR head based on main `5b93988b`:
 
 - focused config, pool, health, and health integration tests: `77/77` passed;
 - full backend suite: `185/185` suites and `1155/1155` tests passed;
 - root script contracts: `541/541` passed;
-- backend lint and build passed before the final status-only documentation
-  update and will run again in the exact-head canonical release;
+- exact-head canonical release passed in `12m34.6s` locally;
+- remote root release passed in `11m22s`, backend/Docker rehearsal passed in
+  `1m54s`, the observer passed in `2m9s`, and required aggregate plus Vercel
+  passed before PR #936 merged as `271bba3f`;
 - DG-3 provider CA/staging/rotation evidence remains absent, so provider smoke
   is skipped and Render remains on controlled-pilot `DB_SSL_MODE=require`;
 - no raw connection string, CA material, provider secret, schema change,

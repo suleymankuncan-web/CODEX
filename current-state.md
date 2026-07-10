@@ -62,7 +62,7 @@ completed PR-1 without runtime behavior change; its contract covers 54 routes,
 completed PR-3: authorization changes now clear protected frontend cache state
 before a new shell renders. PR #930 completed PR-4: target and request-center
 reads are bounded without mutation, DB, or authorization-policy changes. PR
-#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR-8 system-flow transitive precision is active.
+#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS-readiness configuration; provider-verified TLS activation remains DG-3-gated.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
@@ -169,25 +169,22 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-- Complete PR-8 transitive wrapper resolution and current Store Approvals request-center edge evidence without changing runtime API behavior.
-- Keep the truthful required gate, exact-tree post-merge proof/fallback, and
-  targeted frontend boundary stable.
-- Observe A3's next ten successful root-release PR runs; record the dated p95
-  decision only after the sample exists.
-- Preserve the 5 July owner-attested B1 facts and keep only the remaining
-  persona/session, negative-scope, rankings/profile, and reports/incentives
-  evidence blocked.
+- Keep the audit remediation runtime train parked after PR #936; all remaining
+  implementation slices require an owner, safe-database, or provider gate.
+- Keep the truthful release boundary stable while A3 measurement and remaining
+  B1 external evidence continue under their sections above.
 
 Next:
-1. Complete PR-8; PR-2 remains blocked on DG-1, so continue only through the
-   next unblocked specified audit slice.
-2. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
+1. Supply DG-1's four authorization product decisions before PR-2 changes any
+   runtime access.
+2. Approve an exact staging database identity and run the read-only PR-9
+   preflight; classify every non-zero result before DG-2 can open PR-10.
+3. Supply DG-3's provider CA or documented secure method, staging proof, and
+   rotation/expiry owner before activating `verify-full`.
+4. Supply DG-4's error provider, environment/release naming, secret owner,
+   retention/privacy policy, and sanitized receipt before PR-12.
+5. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
    repeat the successful 5 July mutations solely to improve documentation.
-3. If evidence produces a P0/P1 finding, create one finding-specific spec and
-   PR with reproduction, scope, verification, and rollback.
-4. If no P0/P1 exists, keep runtime parked and make no speculative code train.
-5. Update this handoff only when a current decision, proof state, or next safe
-   action materially changes.
 
 Park:
 

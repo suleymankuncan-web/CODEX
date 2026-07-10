@@ -1607,11 +1607,16 @@ guards, and documentation and explicitly changes no runtime behavior.
 | PR-8 System-Flow Transitive Precision And Target Typing | complete | PR #934 merged as `f53c274d`; transitive called-wrapper evidence, cycle/duplicate safety, unresolved-path classification, current request-center fixture, deterministic skip-link evidence, root release, aggregate gate, and Vercel are green |
 | PR-9 Database Invariant Preflight Evidence | partial_complete_input_gated | PR #935 merged as `5b93988b`; read-only runner, redaction/classification tests, 59-migration clean disposable smoke, exact known-violation fixture, rollback proof, root release, aggregate gate, and Vercel are green; approved staging evidence and business decisions remain blocked |
 | PR-10 Database Integrity Constraints | blocked_external | DG-2 |
-| PR-11 Database Client TLS And Timeout Resilience | in_progress_input_gated | Validated pool/polling/timeouts, verify-full-capable secret-safe CA mapping, honest TLS readiness, 1155 backend tests, and 541 root contracts are green locally; exact-head canonical release is pending and DG-3 still blocks provider activation/smoke |
+| PR-11 Database Client TLS And Timeout Resilience | partial_complete_input_gated | PR #936 merged as `271bba3f`; validated pool/polling/timeouts, verify-full-capable secret-safe CA mapping, honest TLS readiness, 1155 backend tests, 541 root contracts, exact-head local/root remote release, rehearsal, aggregate, and Vercel are green; DG-3 still blocks provider activation/smoke |
 | PR-12 Real External Error Delivery | blocked_external | DG-4 |
 
 Update this table only from verified current state. Do not record a pull request
 as complete before merge and post-merge verification.
+
+Repository-actionable implementation is exhausted at this point. PR-2, PR-10,
+verify-full activation, and PR-12 must remain parked until DG-1, DG-2, DG-3,
+or DG-4 respectively receives the named real input; local tests or docs cannot
+substitute for those gates.
 
 ## 23. Definition Of Done
 
