@@ -159,7 +159,7 @@ async function waitForActiveMutations(queryClient: QueryClient) {
   }
 
   await new Promise<void>((resolve) => {
-    let unsubscribe = () => undefined
+    let unsubscribe: () => void = () => undefined
     const finishWhenIdle = () => {
       if (queryClient.isMutating() !== 0) {
         return

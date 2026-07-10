@@ -190,7 +190,7 @@ describe('effective authorization fingerprint', () => {
   it('drains an old identity mutation before the final protected cache removal', async () => {
     const queryClient = new QueryClient()
     const activeShellSessionQueryKey = ['shell-session', 'bearer', 'cookie', 'user-b']
-    let releaseMutation = () => undefined
+    let releaseMutation: () => void = () => undefined
     const mutationGate = new Promise<void>((resolve) => {
       releaseMutation = resolve
     })
@@ -220,7 +220,7 @@ describe('effective authorization fingerprint', () => {
   it('skips an outdated final sweep when a newer authorization transition wins', async () => {
     const queryClient = new QueryClient()
     let transitionIsCurrent = true
-    let releaseMutation = () => undefined
+    let releaseMutation: () => void = () => undefined
     const mutationGate = new Promise<void>((resolve) => {
       releaseMutation = resolve
     })
