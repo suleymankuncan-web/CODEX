@@ -16,7 +16,6 @@ const legacyAdminSelector = [
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem('store-ops-app-locale', 'tr')
     window.localStorage.setItem(
       'store-ops-admin-session',
       JSON.stringify({
@@ -74,12 +73,18 @@ test('master data row selection uses named native controls and ignores non-contr
   const secondRow = page.locator('tbody tr').filter({ hasText: 'Satıcı kodu eksik' })
   await secondRow.locator('td').nth(1).click()
   await expect(firstControl).toHaveAttribute('aria-pressed', 'true')
+
+  await setStoredLocale(page, 'en')
+  await expect(page.getByRole('button', {
+    name: 'Fix Bölge müdürü ataması eksik',
+  })).toBeVisible()
 })
 
 test('admin shell skip link moves focus to localized main landmark', async ({ page }) => {
   await page.goto('/admin/master-data')
 
   const main = page.getByRole('main')
+  await focusDocumentStart(page)
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Ana içeriğe geç' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -87,6 +92,7 @@ test('admin shell skip link moves focus to localized main landmark', async ({ pa
   await expect(main).toHaveAttribute('id', 'application-main-content')
 
   await setStoredLocale(page, 'en')
+  await focusDocumentStart(page)
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -230,6 +236,13 @@ const masterDataQualityIssuesFixture = {
     entityType: { store: 1, personnel: 1, assignment: 0, import: 0 },
   },
   meta: { count: 2, total: 2, limit: 50, offset: 0 },
+}
+
+async function focusDocumentStart(page: Page) {
+  await page.evaluate(() => {
+    document.body.tabIndex = -1
+    document.body.focus()
+  })
 }
 
 const storeMasterListFixture = {

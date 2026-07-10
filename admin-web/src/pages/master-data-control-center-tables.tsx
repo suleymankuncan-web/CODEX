@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '../components/ui/button'
+import { useLocalization } from '../features/localization/useLocalization'
 import type {
   MasterDataAuditRow,
   MasterDataImportWorkbenchRow,
@@ -29,6 +30,8 @@ export function MasterDataWorkbenchTable(input: {
   onSelectPersonnel: (id: string) => void
   onSelectStore: (id: string) => void
 }) {
+  const { t } = useLocalization()
+
   if (input.isLoading) {
     return (
       <div className="master-data-control-center__table-wrap">
@@ -43,12 +46,12 @@ export function MasterDataWorkbenchTable(input: {
         <table className="master-data-control-center__table master-data-control-center__table--issues">
           <thead>
             <tr>
-              <th>Konu</th>
-              <th>Kayıt</th>
-              <th>Tip</th>
-              <th>Öncelik</th>
-              <th>Etki</th>
-              <th>Karar</th>
+              <th scope="col">Konu</th>
+              <th scope="col">Kayıt</th>
+              <th scope="col">Tip</th>
+              <th scope="col">Öncelik</th>
+              <th scope="col">Etki</th>
+              <th scope="col">Karar</th>
             </tr>
           </thead>
           <tbody>
@@ -57,7 +60,6 @@ export function MasterDataWorkbenchTable(input: {
                 className="master-data-control-center__row"
                 data-selected={input.selectedIssueId === issue.id}
                 key={issue.id}
-                onClick={() => input.onSelectIssue(issue.id)}
               >
                 <td>
                   <NameBlock title={issue.problem} subtitle={issue.action} />
@@ -67,8 +69,15 @@ export function MasterDataWorkbenchTable(input: {
                 <td><Status tone={severityTone(issue.severity)}>{formatSeverity(issue.severity)}</Status></td>
                 <td>{issue.affectedModules.join(', ') || 'Etki yok'}</td>
                 <td>
-                  <Button size="xs" variant="secondary">
-                    Düzelt <ChevronRight data-icon="inline-end" aria-hidden="true" />
+                  <Button
+                    aria-label={t('adminMasterData.rowFixAria', { name: issue.problem })}
+                    aria-pressed={input.selectedIssueId === issue.id}
+                    onClick={() => input.onSelectIssue(issue.id)}
+                    size="xs"
+                    variant="secondary"
+                  >
+                    {t('adminMasterData.rowFixAction')}
+                    <ChevronRight data-icon="inline-end" aria-hidden="true" />
                   </Button>
                 </td>
               </tr>
@@ -85,12 +94,12 @@ export function MasterDataWorkbenchTable(input: {
         <table className="master-data-control-center__table">
           <thead>
             <tr>
-              <th>Mağaza</th>
-              <th>Tip</th>
-              <th>Bölge</th>
-              <th>Durum</th>
-              <th>KPI</th>
-              <th>Kontrol</th>
+              <th scope="col">Mağaza</th>
+              <th scope="col">Tip</th>
+              <th scope="col">Bölge</th>
+              <th scope="col">Durum</th>
+              <th scope="col">KPI</th>
+              <th scope="col">Kontrol</th>
             </tr>
           </thead>
           <tbody>
@@ -99,7 +108,6 @@ export function MasterDataWorkbenchTable(input: {
                 className="master-data-control-center__row"
                 data-selected={input.selectedStoreId === store.id}
                 key={store.id}
-                onClick={() => input.onSelectStore(store.id)}
               >
                 <td><NameBlock title={store.title} subtitle={store.subtitle} /></td>
                 <td>{store.typeLabel}</td>
@@ -107,8 +115,15 @@ export function MasterDataWorkbenchTable(input: {
                 <td><Status tone={storeStatusTone(store.record.status)}>{store.statusLabel}</Status></td>
                 <td><Status tone={store.record.kpiImportEnabled ? 'success' : 'neutral'}>{store.kpiLabel}</Status></td>
                 <td>
-                  <Button size="xs" variant="secondary">
-                    Aç <ChevronRight data-icon="inline-end" aria-hidden="true" />
+                  <Button
+                    aria-label={t('adminMasterData.rowOpenAria', { name: store.title })}
+                    aria-pressed={input.selectedStoreId === store.id}
+                    onClick={() => input.onSelectStore(store.id)}
+                    size="xs"
+                    variant="secondary"
+                  >
+                    {t('adminMasterData.rowOpenAction')}
+                    <ChevronRight data-icon="inline-end" aria-hidden="true" />
                   </Button>
                 </td>
               </tr>
@@ -125,12 +140,12 @@ export function MasterDataWorkbenchTable(input: {
         <table className="master-data-control-center__table">
           <thead>
             <tr>
-              <th>Personel</th>
-              <th>Satıcı kodu</th>
-              <th>Mağaza</th>
-              <th>Pozisyon</th>
-              <th>Durum</th>
-              <th>Kontrol</th>
+              <th scope="col">Personel</th>
+              <th scope="col">Satıcı kodu</th>
+              <th scope="col">Mağaza</th>
+              <th scope="col">Pozisyon</th>
+              <th scope="col">Durum</th>
+              <th scope="col">Kontrol</th>
             </tr>
           </thead>
           <tbody>
@@ -139,7 +154,6 @@ export function MasterDataWorkbenchTable(input: {
                 className="master-data-control-center__row"
                 data-selected={input.selectedPersonnelId === personnel.id}
                 key={personnel.id}
-                onClick={() => input.onSelectPersonnel(personnel.id)}
               >
                 <td><NameBlock title={personnel.title} subtitle={personnel.subtitle} /></td>
                 <td>{personnel.sellerCodeLabel}</td>
@@ -147,8 +161,15 @@ export function MasterDataWorkbenchTable(input: {
                 <td>{personnel.position}</td>
                 <td><Status tone={personnelStatusTone(personnel.record.employmentStatus)}>{personnel.statusLabel}</Status></td>
                 <td>
-                  <Button size="xs" variant="secondary">
-                    Aç <ChevronRight data-icon="inline-end" aria-hidden="true" />
+                  <Button
+                    aria-label={t('adminMasterData.rowOpenAria', { name: personnel.title })}
+                    aria-pressed={input.selectedPersonnelId === personnel.id}
+                    onClick={() => input.onSelectPersonnel(personnel.id)}
+                    size="xs"
+                    variant="secondary"
+                  >
+                    {t('adminMasterData.rowOpenAction')}
+                    <ChevronRight data-icon="inline-end" aria-hidden="true" />
                   </Button>
                 </td>
               </tr>
@@ -165,12 +186,12 @@ export function MasterDataWorkbenchTable(input: {
         <table className="master-data-control-center__table">
           <thead>
             <tr>
-              <th>Parti</th>
-              <th>Kapsam</th>
-              <th>Satır</th>
-              <th>Hazır</th>
-              <th>Bekleyen</th>
-              <th>Karar</th>
+              <th scope="col">Parti</th>
+              <th scope="col">Kapsam</th>
+              <th scope="col">Satır</th>
+              <th scope="col">Hazır</th>
+              <th scope="col">Bekleyen</th>
+              <th scope="col">Karar</th>
             </tr>
           </thead>
           <tbody>
@@ -179,14 +200,27 @@ export function MasterDataWorkbenchTable(input: {
                 className="master-data-control-center__row"
                 data-selected={input.selectedImportId === item.id}
                 key={item.id}
-                onClick={() => input.onSelectImport(item.id)}
               >
                 <td><NameBlock title={item.title} subtitle={item.subtitle} /></td>
                 <td>{item.entityLabel}</td>
                 <td>{item.record.rowCount.toLocaleString('tr-TR')}</td>
                 <td>{item.record.validCount.toLocaleString('tr-TR')}</td>
                 <td>{(item.record.needsReviewCount + item.record.invalidCount).toLocaleString('tr-TR')}</td>
-                <td><Status tone={readinessTone(item.record.readiness)}>{item.statusLabel}</Status></td>
+                <td>
+                  <div className="master-data-control-center__row-actions">
+                    <Status tone={readinessTone(item.record.readiness)}>{item.statusLabel}</Status>
+                    <Button
+                      aria-label={t('adminMasterData.rowOpenAria', { name: item.title })}
+                      aria-pressed={input.selectedImportId === item.id}
+                      onClick={() => input.onSelectImport(item.id)}
+                      size="xs"
+                      variant="secondary"
+                    >
+                      {t('adminMasterData.rowOpenAction')}
+                      <ChevronRight data-icon="inline-end" aria-hidden="true" />
+                    </Button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -200,6 +234,8 @@ export function MasterDataWorkbenchTable(input: {
       <div className="master-data-control-center__timeline">
         {input.auditRows.map((event) => (
           <button
+            aria-label={t('adminMasterData.rowOpenAria', { name: event.title })}
+            aria-pressed={input.selectedAuditId === event.id}
             className="master-data-control-center__audit-row"
             data-selected={input.selectedAuditId === event.id}
             key={event.id}

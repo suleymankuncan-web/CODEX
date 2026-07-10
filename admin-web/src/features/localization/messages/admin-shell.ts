@@ -21,6 +21,7 @@ export const adminShellTr = {
   'adminShell.sessionUser': 'Admin kullanıcı',
   'adminShell.sidebar.expand': 'Menüyü genişlet',
   'adminShell.sidebar.collapse': 'Menüyü daralt',
+  'adminShell.skipToMain': 'Ana içeriğe geç',
 
   'adminShell.brandKicker': 'Mağaza Operasyon Kontrol',
   'adminShell.brandTitle':
@@ -107,6 +108,7 @@ export const adminShellEn: Record<keyof typeof adminShellTr, string> = {
   'adminShell.sessionUser': 'Admin user',
   'adminShell.sidebar.expand': 'Expand menu',
   'adminShell.sidebar.collapse': 'Collapse menu',
+  'adminShell.skipToMain': 'Skip to main content',
 
   'adminShell.brandKicker': 'Store Ops Control',
   'adminShell.brandTitle':

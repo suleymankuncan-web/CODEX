@@ -200,6 +200,10 @@ export const adminMasterDataTr = {
   'adminMasterData.resolvedEmployee': 'Çözülen personel',
   'adminMasterData.resolvedPosition': 'Çözülen pozisyon',
   'adminMasterData.notResolved': 'çözülmedi',
+  'adminMasterData.rowFixAction': 'Düzelt',
+  'adminMasterData.rowFixAria': 'Düzelt {name}',
+  'adminMasterData.rowOpenAction': 'Aç',
+  'adminMasterData.rowOpenAria': 'Aç {name}',
 
   'adminMasterData.entity.store': 'mağaza',
   'adminMasterData.entity.personnel': 'personel',
@@ -422,6 +426,10 @@ export const adminMasterDataEn: Record<keyof typeof adminMasterDataTr, string> =
   'adminMasterData.resolvedEmployee': 'Resolved employee',
   'adminMasterData.resolvedPosition': 'Resolved position',
   'adminMasterData.notResolved': 'not resolved',
+  'adminMasterData.rowFixAction': 'Fix',
+  'adminMasterData.rowFixAria': 'Fix {name}',
+  'adminMasterData.rowOpenAction': 'Open',
+  'adminMasterData.rowOpenAria': 'Open {name}',
 
   'adminMasterData.entity.store': 'store',
   'adminMasterData.entity.personnel': 'personnel',

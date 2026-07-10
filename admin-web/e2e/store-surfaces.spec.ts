@@ -20,6 +20,13 @@ async function selectComboboxOption(page: Page, trigger: Locator, optionName: st
   await option.click()
 }
 
+async function focusDocumentStart(page: Page) {
+  await page.evaluate(() => {
+    document.body.tabIndex = -1
+    document.body.focus()
+  })
+}
+
 async function routeRequestCenter(page: Page, items: Array<Record<string, unknown>>) {
   await page.unroute('**/api/workflow/request-center**')
   await page.route('**/api/workflow/request-center**', async (route) => {
@@ -87,6 +94,7 @@ test('store shell skip link moves focus to localized main landmark', async ({ pa
   await page.goto('/store/home')
 
   const main = page.getByRole('main')
+  await focusDocumentStart(page)
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Ana içeriğe geç' })).toBeFocused()
   await page.keyboard.press('Enter')
@@ -94,6 +102,7 @@ test('store shell skip link moves focus to localized main landmark', async ({ pa
   await expect(main).toHaveAttribute('id', 'application-main-content')
 
   await setStoredLocale(page, 'en')
+  await focusDocumentStart(page)
   await page.keyboard.press('Tab')
   await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
   await page.keyboard.press('Enter')
