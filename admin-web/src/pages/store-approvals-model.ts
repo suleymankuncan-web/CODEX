@@ -9,6 +9,8 @@ import type {
   SellerEmploymentType,
 } from '../features/workforce/api'
 import { formatNumber, formatState } from '../lib/format'
+import { getBusinessDateInputValue } from '../lib/business-date'
+import { createStoreApprovalsDateDefaults } from './business-date-defaults'
 import type { AppLocale } from '../lib/i18n'
 
 const approvalStatusLabelKeys = {
@@ -149,22 +151,18 @@ export type StoreApprovalsPageAction =
   | { type: 'setOffboardingRequestReason'; value: string }
   | { type: 'setOffboardingTerminationDate'; value: string }
 
-function getCurrentMonthInputValue() {
-  return new Date().toISOString().slice(0, 7)
-}
-
-function getTodayInputValue() {
-  return new Date().toISOString().slice(0, 10)
-}
-
 function getEmptyTargetAllocations(): Array<TargetDistributionAllocation> {
   return [{ employeeId: '', assigneeLabel: '', targetValue: 0, note: '' }]
 }
 
-export function createStoreApprovalsPageState(input: StoreApprovalsPageStateInput): StoreApprovalsPageState {
+export function createStoreApprovalsPageState(
+  input: StoreApprovalsPageStateInput,
+  now: Date = new Date(),
+): StoreApprovalsPageState {
+  const defaults = createStoreApprovalsDateDefaults(now)
   return {
     selectedStoreId: '',
-    requestMonth: getCurrentMonthInputValue(),
+    requestMonth: defaults.month,
     targetLabel: input.defaultTargetLabel,
     totalTargetValue: '0',
     requestReason: '',
@@ -176,14 +174,14 @@ export function createStoreApprovalsPageState(input: StoreApprovalsPageStateInpu
     sellerLastName: '',
     sellerNationalId: '',
     sellerPhoneNumber: '',
-    sellerHireDate: getTodayInputValue(),
+    sellerHireDate: defaults.date,
     sellerPositionId: '',
     sellerEmploymentType: 'full_time',
     sellerRequestReason: '',
     sellerRequestNotice: null,
     editingSellerRequestId: null,
     offboardingEmployeeId: '',
-    offboardingTerminationDate: getTodayInputValue(),
+    offboardingTerminationDate: defaults.date,
     offboardingRequestReason: '',
     offboardingNotice: null,
     editingOffboardingRequestId: null,
@@ -199,7 +197,7 @@ function resetSellerRequestState(state: StoreApprovalsPageState, notice: string 
     sellerLastName: '',
     sellerNationalId: '',
     sellerPhoneNumber: '',
-    sellerHireDate: getTodayInputValue(),
+    sellerHireDate: getBusinessDateInputValue(),
     sellerPositionId: '',
     sellerEmploymentType: 'full_time',
     sellerRequestReason: '',
@@ -212,7 +210,7 @@ function resetOffboardingRequestState(state: StoreApprovalsPageState, notice: st
     ...state,
     editingOffboardingRequestId: null,
     offboardingEmployeeId: '',
-    offboardingTerminationDate: getTodayInputValue(),
+    offboardingTerminationDate: getBusinessDateInputValue(),
     offboardingRequestReason: '',
     offboardingNotice: notice,
   }

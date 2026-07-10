@@ -1,3 +1,5 @@
+import { addCalendarDaysToDateInput } from '../../lib/business-date'
+
 export type StagePresetCode = 'region_league' | 'first_half_qualifier' | 'final_showdown'
 
 type StageType = 'qualifier' | 'league' | 'quarter_final' | 'semi_final' | 'final' | 'custom'
@@ -82,7 +84,7 @@ function resolvePresetDateRange(input: {
     }
   }
 
-  const firstHalfEndsOn = addDays(
+  const firstHalfEndsOn = addCalendarDaysToDateInput(
     input.competitionStartsOn,
     Math.max(1, Math.ceil(countInclusiveDays(input.competitionStartsOn, input.competitionEndsOn) / 2)) - 1,
   )
@@ -94,7 +96,7 @@ function resolvePresetDateRange(input: {
     }
   }
 
-  const secondHalfStartsOn = addDays(firstHalfEndsOn, 1)
+  const secondHalfStartsOn = addCalendarDaysToDateInput(firstHalfEndsOn, 1)
 
   return {
     startsOn: secondHalfStartsOn > input.competitionEndsOn ? input.competitionEndsOn : secondHalfStartsOn,
@@ -108,12 +110,6 @@ function countInclusiveDays(startsOn: string, endsOn: string) {
   const endDate = parseDate(endsOn)
 
   return Math.max(1, Math.round((endDate.getTime() - startDate.getTime()) / oneDayMs) + 1)
-}
-
-function addDays(value: string, days: number) {
-  const date = parseDate(value)
-  date.setUTCDate(date.getUTCDate() + days)
-  return date.toISOString().slice(0, 10)
 }
 
 function parseDate(value: string) {
