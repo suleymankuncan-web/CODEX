@@ -269,6 +269,43 @@ PR acmak icin minimum bar:
 PR cok kucukse ve ayni hikayenin parcasiysa bekletilebilir. PR cok buyukse veya
 birden fazla risk tasiyorsa bolunur.
 
+### PR Check Beklerken Paralel Ilerleme
+
+Owner'in 2026-07-10 tarihli acik karariyla, PR acildiktan ve lokal verification
+tamamlandiktan sonra GitHub/Vercel check suresi bos bekleme suresi degildir.
+Closer check, deployment ve mergeability durumunu arka planda izlerken sonraki
+bagimsiz PR'in Scout, Planner, test veya implementasyon calismasi ayri bir
+branch/worktree'de ilerletilir.
+
+Bu concurrency merge kapilarini kaldirmaz; yalnizca bekleme suresini verimli
+kullanir:
+
+- Acik PR'in required check'leri, deployment durumu, mergeability'si ve yeni
+  actionable yorumlari izlenmeye devam eder.
+- Sonraki calisma, acik PR'in dosya, contract, migration veya workflow'una
+  bagimliysa paralel implementasyon yapilmaz. Varsayilan izinli alan repo
+  kesfi, finding-specific spec, test tasarimi ve gercekten bagimsiz diff'tir.
+- Bagimsiz uygulama gerekiyorsa ayri `codex/` branch ve ayri worktree kullanilir.
+  Acik PR'in branch'inde ikinci review hikayesi biriktirilmez.
+- Sonraki PR acilmadan once merged `origin/main` ile yenilenir ve diff'in onceki
+  PR'i gizli dependency olarak tasimadigi dogrulanir. Stacked PR ancak dependency
+  PR body'de acikca yazilirsa kullanilir; varsayilan sira merge sonrasi acilistir.
+- Acik PR'da failed check, actionable yorum, merge conflict veya branch drift
+  gorulurse sonraki calisma guvenli bir noktada durdurulur; once acik PR
+  duzeltilir ve yeniden dogrulanir.
+- Ayni makinede iki root/full release suite eszamanli calistirilmaz. Targeted ve
+  kaynak tuketimi cakismayan kontroller paralel olabilir; agir release kosulari
+  siraya alinir.
+- Check beklerken calisilan worktree, branch, stash veya remote ref otomatik
+  temizlenmez; normal no-delete inventory kurali devam eder.
+- Sonraki PR hazir olsa bile onceki PR'in check sonucu hakkinda erken yesil veya
+  merge-ready iddiasi yapilmaz.
+
+Aktif calisma varken Closer status'u guvenli kilometre taslarinda ve merge
+kararindan hemen once yeniler. Bosta bekleme durumunda asagidaki 30 saniyelik
+kanonik loop kullanilir. Her iki modelde de merge karari ancak ayni taze
+snapshot'ta tum required durumlar temizken verilir.
+
 ### PR Oncesi Adversarial Review
 
 GitHub Codex review owner karariyla devre disidir. Lokal adversarial review,
@@ -455,18 +492,21 @@ baska bir otomatik kontrol actionable yorum birakirsa normal sekilde okunur ve
 cozulur.
 
 GitHub kontrolu tek seferlik snapshot degildir. PR acildiktan veya branch'e yeni
-push geldikten sonra merge karari verilene kadar gereken durum 30 saniyede bir
-kanonik loop ile tekrar cekilir ve birlikte degerlendirilir:
+push geldikten sonra merge karari verilene kadar gereken durum birlikte
+degerlendirilir:
 
 - GitHub Actions checks,
 - Vercel/deploy checks,
 - status check rollup,
 - mergeability / branch state.
 
-Bu 30 saniyelik loop tum required checks yesil, PR mergeable ve final lokal
-diff review temiz oldugunda biter. Failed check, pending belirsizlik veya yeni
+Bosta bekleniyorsa bu durumlar 30 saniyelik kanonik loop ile tekrar cekilir.
+Sonraki bagimsiz PR uzerinde calisiliyorsa `PR Check Beklerken Paralel Ilerleme`
+kurali uygulanir; status guvenli kilometre taslarinda ve merge kararindan hemen
+once yenilenir. Tum required checks yesil, PR mergeable ve final lokal diff
+review temiz oldugunda izleme biter. Failed check, pending belirsizlik veya yeni
 actionable insan/tool yorumu gorulurse merge yapilmaz; once sebep okunur,
-gerekirse duzeltme push'lanir ve loop yeniden baslatilir.
+gerekirse duzeltme push'lanir ve izleme yeniden baslatilir.
 
 ## Verification Ladder
 

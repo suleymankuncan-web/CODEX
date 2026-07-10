@@ -1592,7 +1592,7 @@ guards, and documentation and explicitly changes no runtime behavior.
 
 | Pull request | Status | Decision/evidence |
 | --- | --- | --- |
-| PR-1 Authorization Operating Truth Contract | planned | First implementation PR; must include this plan |
+| PR-1 Authorization Operating Truth Contract | complete | PR #927 merged as `3f04c24e`; 54 active routes, 33 direct matrix routes, three route/preview drifts, and three route/backend drifts are machine-visible without runtime authorization changes |
 | PR-2 Store Authorization Runtime Alignment | blocked_decision | DG-1 |
 | PR-3 Session-Scoped Query Cache Isolation | planned | Source-confirmed P1 |
 | PR-4 Bounded Target Request Queues | planned | Source-confirmed P1 |
