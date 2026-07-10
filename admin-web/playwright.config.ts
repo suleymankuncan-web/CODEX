@@ -1,11 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const useSystemChrome = process.env.PLAYWRIGHT_USE_SYSTEM_CHROME === '1'
+const ciWorkerCount = process.env.CI ? 2 : 1
 
 export default defineConfig({
   testDir: './e2e',
   timeout: 30_000,
-  workers: 1,
+  workers: ciWorkerCount,
   expect: {
     timeout: 10_000,
   },

@@ -65,3 +65,12 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
         run: npm run check:release
+
+      - name: Upload Playwright failure artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: admin-web/test-results
+          if-no-files-found: ignore
+          retention-days: 14
