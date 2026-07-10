@@ -30,30 +30,33 @@ The project is in controlled pilot execution mode.
 - New product modules: `Parked behind feature intake and source-of-truth
   decisions`.
 - Separate mobile app: discovery is documented; implementation is `Parked`.
-- Generic architecture/refactor train: `Parked` without a concrete project
-  analysis finding or runtime blocker.
+- Generic architecture/refactor train: `Parked`; the completed project analysis
+  did not authorize a broad code train without a concrete runtime blocker.
+- Process/CI alignment: A1/A2/A3 are implemented; A3's ten-run p95 observation
+  remains pending external PR traffic.
+- Fresh B1 pilot evidence: `blocked_external` until the named safe sessions,
+  data, and authority inputs are supplied.
 
 ## What We Do Now
 
-1. Treat the operating-truth alignment and no-delete workspace inventory as
-   closed by PR #914.
-2. Review and approve/amend
-   `docs/plans/project-analysis-implementation-plan-v1.md`; draft plan creation
-   does not authorize implementation.
-3. If approved, align the truthful required GitHub gate before the next runtime
-   PR while controlled pilot evidence may proceed in parallel.
+1. Keep PR #917's required-release aggregate and PR #918's single full-release
+   owner stable; do not reintroduce duplicate merge-decision E2E work.
+2. Observe the next ten successful root-release PR runs and record A3's dated
+   p95/no-change decision without reducing test coverage.
+3. Keep B1's five-flow record `blocked_external` until safe approved input is
+   available; do not create a runtime PR for missing access or data.
 4. If a real pilot/demo finding arrives, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
 5. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
    surface, risk, verification, and rollback match.
-6. Keep evidence sanitized.
+6. Keep evidence sanitized and maintain the no-delete workspace boundary.
 
 ## What We Do Not Do Now
 
 - Do not claim broad-production readiness from docs-only or local checks.
 - Do not start another broad UI redesign without a new owner decision.
-- Do not add a new module or start separate mobile implementation before the
-  project analysis and explicit feature intake.
+- Do not add a new module or start separate mobile implementation without an
+  explicit owner feature intake that clears the parked boundary.
 - Do not reopen broad refactor without a concrete trigger.
 - Do not change auth, API response shape, DB, provider config, queue posture,
   KPI scoring, checklist weights, import lifecycle, or workflow semantics
@@ -95,20 +98,18 @@ The project is in controlled pilot execution mode.
 | UI redesign | Targeted trains closed / broad work parked | Store/Admin surfaces have scoped modernization evidence; another broad redesign needs a new owner decision. |
 | New modules | Parked | Future modules start with feature intake, not implementation. |
 | Separate mobile app | Discovery only / implementation parked | Mobile discovery exists, but no implementation train is active. |
-| Generic architecture work | Parked | Reopen only from the upcoming project analysis or a concrete runtime/reviewability blocker. |
+| Generic architecture work | Parked | The project analysis is complete; reopen only from a concrete runtime/reviewability blocker. |
 
 ## Next Best Default Action
 
 If no newer user instruction overrides this board, the next best default action
 is:
 
-1. keep PR #914 as the closed operating-truth baseline,
-2. treat the requested step to perform a full project/code analysis as complete
-   and review its guarded implementation plan,
-3. if approved, execute required-gate alignment and collect pilot/demo evidence,
-4. select only a P0/P1 finding-specific runtime spec or explicitly keep runtime work
-   parked,
-5. update registries only when a decision or procedure changes.
+1. observe the A3 ten-run root-release sample without opening another CI train,
+2. obtain the approved B1 input needed for one factual controlled-pilot flow,
+3. select only a P0/P1 finding-specific runtime spec or explicitly keep runtime
+   work parked,
+4. update registries only when a decision or procedure changes.
 
 ## Stop Rules
 

@@ -38,7 +38,7 @@ Use this directory like an operating library, not a diary.
 | Continue work from a cold session | `current-state.md` | Short active handoff and latest safe direction. |
 | Know how Codex should work here | `sokrates.md` and `discipline.md` | Decision quality, PR rhythm, verification, and stop rules. |
 | See the current control board | `docs/plans/project-control-board-v1.md` | Current project mode, go/no-go board, and what is parked. |
-| Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Draft guarded sequence for required CI gate alignment, pilot evidence, conditional fixes, and parked production work. |
+| Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Owner-approved, evidence-gated sequence: CI truth is implemented; A3 p95 observation and B1 external pilot inputs remain pending. |
 | Reconcile role-route or archive-guard drift | `docs/architecture/pilot-route-role-matrix.md` and `docs/plans/archive-guard-migration-register-v1.md` | Current Store role-route behavior and the incremental rule for removing historical handoff guard dependencies. |
 | Find an active decision | `docs/plans/decision-registry-v1.md` | Decision status, source document, and change trigger. |
 | Choose an operating checklist | `docs/plans/runbook-registry-v1.md` | Repeatable runbooks, required input, output, and stop condition. |
@@ -46,7 +46,7 @@ Use this directory like an operating library, not a diary.
 | Pick the next practical task | `docs/plans/active-next-actions.md` | Current working list and pilot-vs-production split. |
 | Check whether a debt is open | `docs/plans/project-debt-ledger.md` | Closed debts, blocked dependencies, and strategic backlog. |
 | Inspect workspace cleanup candidates | `docs/plans/workspace-hygiene-inventory-2026-07-09.md` | No-delete branch, worktree, remote-ref, and stash classification. |
-| Reconstruct the former long handoff | `docs/history/current-state-through-pr-913-2026-07-09.md` | Historical PR/evidence context that must not steer current work. |
+| Reconstruct historical handoff/PR context | `docs/history/current-state-through-pr-913-2026-07-09.md` and `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md` | Historical context that must not steer current work. |
 | Run the controlled pilot loop | `docs/plans/controlled-pilot-execution-roadmap-v1.md` | Real session, feedback, blocker, and fix workflow. |
 | Execute the pilot feedback PR train | `docs/plans/controlled-pilot-feedback-loop-pr-train-v1.md` | Feedback intake, P0/P1/P2/P3 triage, PR sequence, autonomy limits, and closeout criteria. |
 | Check launch browser-session evidence | `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md` and `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md` | Local implementation is guarded and real Region Manager staging cookie-session proof passed; rerun with `npm.cmd --prefix admin-web run smoke:auth:staging:cookie-session`; broad production remains `No-Go`. |
@@ -197,6 +197,7 @@ decision exists.
 - older `docs/plans/phase-*` docs
 - superseded readiness and preflight notes
 - `docs/history/current-state-through-pr-913-2026-07-09.md`
+- `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`
 
 ## Status Vocabulary
 
@@ -229,16 +230,14 @@ Metadata details live in `docs/plans/docs-library-metadata-standard-v1.md`.
 
 The active sequence is:
 
-- treat operating-truth alignment and the no-delete workspace inventory as
-  closed by PR #914,
-- review and explicitly approve/amend the guarded project-analysis
-  implementation plan,
-- if approved, fix truthful required-gate enforcement before the next runtime
-  PR while controlled pilot evidence may proceed in parallel,
-- use a real pilot/demo P0/P1 finding first if one arrives,
+- preserve A1/A2's truthful single-owner release gate behavior,
+- observe A3's next ten successful root-release runs before declaring its p95
+  outcome,
+- obtain safe B1 inputs before executing any fresh pilot flow,
+- use a factual pilot/demo P0/P1 finding first if one arrives,
 - keep broad production, separate mobile implementation, broad redesign, new
   modules, provider/source integrations, and generic architecture work parked
-  until analysis/evidence plus an explicit owner decision reopen them.
+  until evidence plus an explicit owner decision reopen them.
 
 Broad production remains separate from the controlled pilot and is still a
 No-Go until the remaining provider, recovery, Redis, and incident posture

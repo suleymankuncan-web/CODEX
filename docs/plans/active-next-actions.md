@@ -20,37 +20,32 @@ Documentation entry point:
 
 ## Current Position
 
-As of 9 July 2026, the Pilot Readiness Audit V1 PR train is closed through
-PR #910, the target roster/approval default follow-up is merged in PR #911,
-mobile discovery is documented by PR #912, and the former long handoff was
-refreshed by PR #913 before the operating-truth alignment line. PR #914 then
-closed that alignment, archived the long handoff, and recorded the no-delete
-workspace inventory.
+As of 10 July 2026, owner-approved plan execution has merged A1 required-gate
+alignment (#917), A2 frontend full-release deduplication (#918), A3 bounded
+E2E concurrency (#919), the B1 `blocked_external` pilot record (#920), and E1
+role/archive ownership cleanup (#921). No product/runtime train was opened.
 
-- Latest closeout evidence:
-  `docs/evidence/pilot-readiness/2026-07-07-pilot-readiness-audit-v1.md`
-- Jan-Jun data reconciliation public DB rerun:
-  `docs/evidence/pilot-readiness/2026-07-07-data-reconciliation-readback.md`
 - Current short handoff: `current-state.md`.
-- Historical handoff archive:
-  `docs/history/current-state-through-pr-913-2026-07-09.md`.
+- Execution plan: `docs/plans/project-analysis-implementation-plan-v1.md`.
+- A3 evidence: `docs/evidence/performance/2026-07-10-e2e-worker-concurrency-a3.md`.
+- B1 blocker record:
+  `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
 - No-delete workspace inventory:
   `docs/plans/workspace-hygiene-inventory-2026-07-09.md`.
-- Project-analysis implementation plan:
-  `docs/plans/project-analysis-implementation-plan-v1.md`.
+- Historical transition record:
+  `docs/history/operating-truth-alignment-plan-execution-2026-07-10.md`.
 
 Next practical action:
 
-1. Treat the docs/process-only operating-truth alignment as closed by PR #914.
-2. Review and explicitly approve or amend the draft/guarded implementation
-   plan; the document alone does not authorize code work.
-3. If approved, execute PR-A1 truthful required-gate alignment before the next
-   runtime PR. Pilot/demo evidence may proceed in parallel.
-4. If a pilot/demo blocker appears, record route, persona, period,
+1. Observe the next ten successful root-release PR runs and record A3's dated
+   p95 or justified no-change outcome without weakening coverage.
+2. Obtain the approved B1 sessions/data/authority for one factual flow; until
+   then retain `blocked_external` and `no_runtime_change`.
+3. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
-5. Keep new modules, separate mobile implementation, broad production, broad
+4. Keep new modules, separate mobile implementation, broad production, broad
    redesign, provider/source integration, and generic architecture work parked
-   until analysis or a real P0/P1 finding reopens one path.
+   until a real P0/P1 finding or explicit owner decision reopens one path.
 
 ## Historical Working Log
 
