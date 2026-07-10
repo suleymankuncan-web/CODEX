@@ -52,6 +52,20 @@ were excluded from the implementation diff.
 Local wall times support the isolation decision only. GitHub Actions remains
 the source for the release-gate p95 and the required live proof.
 
+## Live CI Proof
+
+The post-change proof on [PR #919](https://github.com/suleymankuncan-web/CODEX/pull/919)
+completed on commit `b0ca81978575b64e0fba86790805f0c47849bbd1`:
+
+- root release job: 10 minutes 27 seconds;
+- official release gate: 9 minutes 55 seconds;
+- Playwright: `Running 371 tests using 2 workers` and `371 passed (8.1m)`;
+- required aggregate, targeted frontend child, rehearsal, and Vercel: passed;
+- the failure-artifact step skipped on the successful run, as designed.
+
+This one live proof validates the latest code change. It is not a ten-run p95
+claim.
+
 ## Safety Boundary
 
 - `fullyParallel` remains disabled, so each file keeps its serial execution
