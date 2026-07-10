@@ -92,7 +92,9 @@ function readTargetClass(): TargetClass {
 }
 
 function assertExecutionBoundary(targetClass: TargetClass) {
-  if (process.env.NODE_ENV === "production") throw new Error("production_refused");
+  if ((process.env.NODE_ENV ?? "").trim().toLowerCase() === "production") {
+    throw new Error("production_refused");
+  }
   if (process.env.DATABASE_INVARIANT_PREFLIGHT_ACK !== requiredAcknowledgement) {
     throw new Error("approval_missing");
   }

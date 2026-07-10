@@ -102,6 +102,7 @@ test('database invariant runner proves read-only mode and keeps output sanitized
   assert.match(runner, /read-only-approved/)
   assert.match(runner, /DATABASE_INVARIANT_PREFLIGHT_EXPECTED_HOST/)
   assert.match(runner, /DATABASE_INVARIANT_PREFLIGHT_EXPECTED_DATABASE/)
+  assert.match(runner, /toLowerCase\(\)/)
   assert.match(runner, /blocked_live_evidence/)
   assert.doesNotMatch(runner, /console\.(?:log|error)\([^\n]*(?:DATABASE_URL|connectionString)/)
 })

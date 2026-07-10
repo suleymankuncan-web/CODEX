@@ -77,10 +77,15 @@ async function main() {
 }
 
 function readDisposableDatabaseUrl() {
-  if (process.env.NODE_ENV === "production") throw new Error("production_refused");
+  if ((process.env.NODE_ENV ?? "").trim().toLowerCase() === "production") {
+    throw new Error("production_refused");
+  }
   const raw = process.env.DATABASE_URL;
   if (!raw) throw new Error("database_url_missing");
   const parsed = new URL(raw);
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol)) {
+    throw new Error("invalid_database_protocol");
+  }
   if (!["localhost", "127.0.0.1"].includes(parsed.hostname)) {
     throw new Error("non_local_fixture_target_refused");
   }
@@ -167,7 +172,8 @@ function classifyFixtureError(error: unknown) {
   if (error instanceof Error && [
     "database_url_missing",
     "fixture_rollback_failed",
-    "fixture_violation_counts_mismatch",
+      "fixture_violation_counts_mismatch",
+      "invalid_database_protocol",
     "non_disposable_fixture_database_refused",
     "non_local_fixture_target_refused",
     "production_refused",
