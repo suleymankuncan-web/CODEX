@@ -14,7 +14,6 @@ function requireText(text, expected) {
 }
 
 const spec = readText('docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md')
-const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 
@@ -68,7 +67,7 @@ test('mobile checklist today design names the mobile read model and non-goals', 
 })
 
 test('mobile checklist today design is linked from handoff and debt docs', () => {
-  for (const text of [currentState, activeNextActions, debtLedger]) {
+  for (const text of [activeNextActions, debtLedger]) {
     requireText(text, 'Mobile Checklist Today V1 Design')
     requireText(text, 'docs/superpowers/specs/2026-04-28-mobile-checklist-today-v1-design.md')
   }

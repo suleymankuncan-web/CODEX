@@ -7,6 +7,18 @@
 - `secondary`: store-facing feature surface that is not part of the current pilot-critical path.
 - `legacy/pilot`: temporary, debug, demo, or transitional surface.
 
+## Authority
+
+The runtime Store route registry and route guard own frontend route entitlement.
+This matrix describes their current behavior and must be updated with the same
+review story when that behavior changes. Backend catalog membership and endpoint
+role checks remain separate authority layers; a catalog role alone does not
+grant a frontend route.
+
+A Visual Merchandiser-only session lands on `/store/checklists` and may use
+only `/store/checklists`, `/store/feed`, and `/store/settings`. It is denied
+every other Store route unless a broader role changes its Store persona.
+
 ## Route Matrix
 
 | Route | Shell | Classification | Roles | Landing Behavior | Refresh/Return Expectation | Data Boundary | Primary Nav |
@@ -26,7 +38,7 @@
 | `/admin/auth` | admin | core | `SUPER_ADMIN` | direct navigation only | must return to same route after auth verification | auth admin catalog and assignment scope | yes |
 | `/admin/audit` | admin | core | `SUPER_ADMIN`, `AUDITOR` | first landing for auditor | must return to same route after auth verification | audit event read scope | yes |
 | `/admin/session` | admin | ops | any authenticated admin shell session | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |
-| `/store` | store | core | authenticated store shell session | first landing family varies by role: `STORE_PERSONNEL` resolves to `/store/me`; `STORE_MANAGER`, `REGION_MANAGER`, and broad store sessions resolve to `/store/home` | must return to same route after auth verification | current store shell overview | yes |
+| `/store` | store | core | authenticated store shell session | first landing family varies by role: visual merchandiser-only resolves to `/store/checklists`; `STORE_PERSONNEL` resolves to `/store/me`; `STORE_MANAGER`, `REGION_MANAGER`, and broad store sessions resolve to `/store/home` | must return to same route after auth verification | current store shell overview | yes |
 | `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |
 | `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles, full list for privileged roles | yes |
 | `/store/approvals` | store | core | `STORE_MANAGER`, `REGION_MANAGER`, `REPORT_VIEWER`, `SUPER_ADMIN`; write actions remain action-store scoped | direct navigation or store landing link for eligible roles only | must return to same route after auth verification | target/workforce request ledger by read/action scope | yes |
@@ -34,7 +46,8 @@
 | `/store/checklists` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `VISUAL_MERCHANDISER`, `REPORT_VIEWER`, `SUPER_ADMIN` | first landing for visual merchandiser-only sessions | must return to same route after auth verification | checklist tasks/results by store scope; `STORE_PERSONNEL` is forbidden | yes |
 | `/store/tasks` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` is forbidden | direct navigation only for eligible roles; region manager sees scoped read-only remediation rows | must return to same route after auth verification | workflow inbox and Store Action task visibility by read/action scope; Store Action commands remain assigned-store scoped | yes |
 | `/store/kpis` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER`; `STORE_PERSONNEL` uses `/store/me` for personal KPI | direct navigation only | must return to same route after auth verification | current store KPI highlights | no |
-| `/store/feed` | store | secondary | authenticated store shell session except visual merchandiser-only | direct navigation only | must return to same route after auth verification | store announcements | yes |
+| `/store/feed` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted | direct navigation only | must return to same route after auth verification | store announcements | yes |
+| `/store/settings` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted | direct navigation only | must return to same route after auth verification | local language preference and session-visible shell settings | yes |
 | `/store/competitions` | store | secondary | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation only | must return to same route after auth verification | store-visible competitions | no |
 | `/store/incentives` | store | secondary | `STORE_MANAGER`, `REGION_MANAGER` for company stores; `STORE_PERSONNEL` sees own incentive through `/store/me` | direct navigation only | must return to same route after auth verification | store incentives preview | no |
 | `/store/workforce` | store | secondary | `STORE_MANAGER` with assigned action store, `REGION_MANAGER` with read store or read region scope | direct navigation only | must return to same route after auth verification | norm kadro and active workforce state by store/read scope | yes |
@@ -42,7 +55,7 @@
 
 ## Landing Order
 
-Current landing resolution in `admin-web/src/App.tsx`:
+Current landing resolution:
 
 1. unauthenticated or unconfigured session: `/auth/login`
 2. `SUPER_ADMIN` or `INTEGRATION_ADMIN`: `/admin/integrations`
@@ -50,7 +63,7 @@ Current landing resolution in `admin-web/src/App.tsx`:
 4. `HR_ADMIN`: `/admin/competitions`
 5. `REPORT_VIEWER`: `/admin/reports`
 6. `AUDITOR`: `/admin/audit`
-7. `VISUAL_MERCHANDISER`: `/store/checklists`
+7. `VISUAL_MERCHANDISER`-only session: `/store/checklists`
 8. `STORE_PERSONNEL` without manager/region role: `/store/me`
 9. `REGION_MANAGER`, `STORE_MANAGER`, or broad store sessions: `/store/home`
 
@@ -59,6 +72,10 @@ Current landing resolution in `admin-web/src/App.tsx`:
 - No route should be removed from navigation until this matrix is reviewed.
 - `needs decision` screens stay visible until a product decision moves them to `core`, `ops`, `secondary`, or `legacy/pilot`.
 - Store role detail visibility is enforced by page/API access rules, not by hiding the route alone.
+- Catalog inclusion for `VISUAL_MERCHANDISER` does not imply a Store route
+  entitlement. Visual Merchandiser-only behavior is the three-route boundary
+  stated in the Authority section; endpoint authorization remains independently
+  enforced.
 - `STORE_PERSONNEL` is intentionally excluded from `/store/approvals` until a
   scoped read-only personnel approvals product requirement exists.
 - `STORE_PERSONNEL` is intentionally excluded from `/store/checklists`; personal

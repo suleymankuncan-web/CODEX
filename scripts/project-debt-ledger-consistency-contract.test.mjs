@@ -37,9 +37,6 @@ function extractLastDebtLedgerBlock(text) {
 }
 
 const currentState = readText('current-state.md')
-const historicalHandoff = readText(
-  'docs/history/current-state-through-pr-913-2026-07-09.md',
-)
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 
@@ -89,12 +86,10 @@ test('handoff docs record the project debt ledger consistency guard', () => {
   }
 })
 
-test('controlled pilot operating checklist is counted as closed evidence work', () => {
+test('controlled pilot operating checklist is counted as closed evidence work without archive handoff', () => {
   requireText(debtLedger, '91. Controlled Pilot Operating Checklist V1')
   requireText(debtLedger, 'Controlled Pilot Operating Checklist V1 is counted as paid because')
   requireText(activeNextActions, 'Controlled Pilot Operating Checklist V1 is counted as paid')
-  requireText(
-    historicalHandoff,
-    '`docs/plans/controlled-pilot-operating-checklist-v1.md` - Controlled Pilot Operating Checklist V1',
-  )
+  requireText(activeNextActions, 'docs/plans/controlled-pilot-operating-checklist-v1.md')
+  requireText(debtLedger, 'docs/plans/controlled-pilot-operating-checklist-v1.md')
 })
