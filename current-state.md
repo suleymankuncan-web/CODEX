@@ -60,6 +60,10 @@ approval did not authorize speculative runtime work or broad production.
   flow was claimed as run and no runtime change was authorized.
 - PR #921 (E1) reconciles Visual Merchandiser-only Store routes and starts an
   incremental archive-guard migration register without a bulk archive rewrite.
+- PR-D1 adds one bounded Vitest seed for Store My Performance state and Region
+  Manager incentive money/correction logic through the existing frontend and
+  root release paths. It removes no E2E coverage and does not begin a
+  whole-suite migration.
 
 The historical transition record carries PR narrative and proof links. This
 section intentionally retains only the current operating consequences.
@@ -163,7 +167,8 @@ Park:
   redesign, and generic architecture/refactor work.
 - Provider/Nebim/JSON implementation without a real source contract and owner
   decision.
-- Frontend unit-test or bundle work without its named conditional trigger.
+- Further frontend unit-test migration or bundle work without its named
+  conditional trigger.
 
 Stop:
 

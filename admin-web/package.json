@@ -11,7 +11,8 @@
     "test:e2e:store-contracts": "playwright test store-page-contracts.spec.ts store-checklists-contracts.spec.ts store-rankings-contracts.spec.ts store-kpis-contracts.spec.ts store-incentives-contracts.spec.ts store-targets-contracts.spec.ts store-workforce-contracts.spec.ts store-tasks-contracts.spec.ts store-feed-contracts.spec.ts store-reports-contracts.spec.ts store-home-contracts.spec.ts store-me-contracts.spec.ts store-personnel-contracts.spec.ts",
     "test:e2e:store-manager": "playwright test store-manager-persona.spec.ts",
     "test:e2e:store-personnel": "playwright test store-personnel-persona.spec.ts",
-    "test:scripts": "node --test scripts/*.test.mjs",
+    "test:unit": "vitest run",
+    "test:scripts": "npm run test:unit && node --test scripts/*.test.mjs",
     "guard:auth:evidence": "node scripts/auth-evidence-guard.mjs",
     "smoke:auth:live": "node scripts/auth-live-smoke.mjs",
     "smoke:auth:action": "node scripts/auth-live-smoke.mjs --include-action-smoke",
@@ -66,6 +67,7 @@
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.0",
-    "vite": "^8.0.4"
+    "vite": "^8.0.4",
+    "vitest": "^4.1.10"
   }
 }
