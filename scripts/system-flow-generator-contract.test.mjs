@@ -5,7 +5,9 @@ import test from 'node:test'
 import { fileURLToPath } from 'node:url'
 import {
   buildSystemFlow,
+  classifyFrontendApiCallTargets,
   renderSystemFlowHtml,
+  resolveTransitiveApiCallIds,
 } from './generate-system-flow.mjs'
 
 const normalizedRootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -137,6 +139,10 @@ test('system flow links representative product routes to their backend API surfa
     routeApiPaths(flow, '/admin/auth').includes('GET /api/auth/users'),
     'auth admin dashboard should link to user admin reads',
   )
+  assert.ok(
+    routeApiPaths(flow, '/store/approvals').includes('GET /api/workflow/request-center'),
+    'store approvals should link through its called request-center wrapper',
+  )
 })
 
 test('system flow does not treat route preload registries as route API fanout', () => {
@@ -166,4 +172,52 @@ test('system flow endpoint filters use the full API-to-endpoint edge set', () =>
     renderSystemFlowHtml(flow).includes('linkedEndpointIds'),
     'backend endpoint filtering should use full API-to-endpoint edges instead of the truncated hotspot sample',
   )
+})
+
+test('transitive API wrapper resolution deduplicates converging calls and stops cycles', () => {
+  const apiFunctionIndex = new Map([
+    ['feature/api.ts#loadRows', ['api:rows']],
+    ['feature/api.ts#loadSummary', ['api:summary', 'api:rows']],
+    ['feature/api.ts#unusedCall', ['api:unused']],
+  ])
+  const dependencies = new Map([
+    ['feature/wrapper-a.ts#loadDashboard', ['feature/wrapper-b.ts#loadDashboardData']],
+    ['feature/wrapper-b.ts#loadDashboardData', [
+      'feature/api.ts#loadRows',
+      'feature/api.ts#loadSummary',
+      'feature/wrapper-a.ts#loadDashboard',
+    ]],
+    ['feature/wrapper-a.ts#unusedExport', ['feature/api.ts#unusedCall']],
+  ])
+
+  assert.deepEqual(
+    resolveTransitiveApiCallIds(
+      'feature/wrapper-a.ts#loadDashboard',
+      apiFunctionIndex,
+      dependencies,
+    ),
+    ['api:rows', 'api:summary'],
+  )
+})
+
+test('dynamic API wrapper paths stay explicitly unresolved instead of being guessed', () => {
+  const classified = classifyFrontendApiCallTargets(`
+    export function loadKnown() {
+      return fetchOpenApiJson('/api/workflow/request-center')
+    }
+    export function loadDynamic(path) {
+      return fetchOpenApiJson(path)
+    }
+  `)
+
+  assert.deepEqual(classified.literalCalls, [{
+    functionName: 'fetchOpenApiJson',
+    method: 'GET',
+    path: '/api/workflow/request-center',
+  }])
+  assert.deepEqual(classified.unresolvedCalls, [{
+    functionName: 'fetchOpenApiJson',
+    method: 'GET',
+    reason: 'non_literal_path',
+  }])
 })

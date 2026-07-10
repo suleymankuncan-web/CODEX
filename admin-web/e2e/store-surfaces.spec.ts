@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 import { readComputedStyle } from './style-test-utils'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
+import { pressTabFromDocumentStart } from './keyboard-test-utils'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const demoRegionId = '00000000-0000-0000-0000-000000000010'
@@ -19,13 +20,6 @@ async function selectComboboxOption(page: Page, trigger: Locator, optionName: st
     await trigger.click()
   }
   await option.click()
-}
-
-async function focusDocumentStart(page: Page) {
-  await page.evaluate(() => {
-    document.body.tabIndex = -1
-    document.body.focus()
-  })
 }
 
 async function routeRequestCenter(page: Page, items: Array<Record<string, unknown>>) {
@@ -95,17 +89,17 @@ test('store shell skip link moves focus to localized main landmark', async ({ pa
   await page.goto('/store/home')
 
   const main = page.getByRole('main')
-  await focusDocumentStart(page)
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('link', { name: 'Ana içeriğe geç' })).toBeFocused()
+  const turkishSkipLink = page.getByRole('link', { name: 'Ana içeriğe geç' })
+  await pressTabFromDocumentStart(page, turkishSkipLink)
+  await expect(turkishSkipLink).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(main).toBeFocused()
   await expect(main).toHaveAttribute('id', 'application-main-content')
 
   await setStoredLocale(page, 'en')
-  await focusDocumentStart(page)
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
+  const englishSkipLink = page.getByRole('link', { name: 'Skip to main content' })
+  await pressTabFromDocumentStart(page, englishSkipLink)
+  await expect(englishSkipLink).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(main).toBeFocused()
 })
