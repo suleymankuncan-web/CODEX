@@ -1,10 +1,13 @@
 # Europe/Istanbul Business Date Contract V1
 
-Status: approved for implementation through the owner-approved
-`project-wide-audit-remediation-plan-v1.md` PR train
-
+Status: approved
+Shelf: active plan
+Author: Codex
+Owner: Product owner
+Approved through: owner-approved `project-wide-audit-remediation-plan-v1.md`
+Date: 2026-07-10
+Review: local adversarial review; GitHub Codex review is owner-disabled
 Target pull request: PR-5
-
 Change type: frontend pure logic and regression evidence
 
 ## 1. Problem
