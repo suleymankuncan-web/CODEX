@@ -1604,8 +1604,8 @@ guards, and documentation and explicitly changes no runtime behavior.
 | PR-5 Europe/Istanbul Business Date Contract | complete | PR #931 merged as `7495624f`; shared Europe/Istanbul business-date defaults and calendar arithmetic are guarded while UTC timestamp instants, API, DB, and authorization contracts remain unchanged |
 | PR-6 Active Surface Localization Closure | complete | PR #932 merged as `2bc612d2`; typed TR/EN ownership, source/technical allowlists, EN-to-TR acceptance tests, bounded raw-copy/mojibake guard, required checks, and Vercel are green |
 | PR-7 Keyboard And Accessibility Foundation | complete | PR #933 merged as `4639bd05`; native Master Data selection, Admin/Store skip links, two bounded axe seeds, local canonical release, required aggregate, targeted frontend, and Vercel are green |
-| PR-8 System-Flow Transitive Precision And Target Typing | in_progress | Called exported wrappers, cycle/duplicate safety, unresolved-path classification, the current Store Approvals request-center fixture, and 533 root contracts are green locally; final release and remote checks remain open |
-| PR-9 Database Invariant Preflight Evidence | planned_input_gated | Live execution needs safe DB target |
+| PR-8 System-Flow Transitive Precision And Target Typing | complete | PR #934 merged as `f53c274d`; transitive called-wrapper evidence, cycle/duplicate safety, unresolved-path classification, current request-center fixture, deterministic skip-link evidence, root release, aggregate gate, and Vercel are green |
+| PR-9 Database Invariant Preflight Evidence | in_progress_input_gated | Read-only runner, redaction/classification tests, 59-migration clean disposable smoke, exact known-violation fixture, and rollback proof are green locally; approved staging evidence and business decisions remain blocked |
 | PR-10 Database Integrity Constraints | blocked_external | DG-2 |
 | PR-11 Database Client TLS And Timeout Resilience | planned_input_gated | DG-3 for verify-full |
 | PR-12 Real External Error Delivery | blocked_external | DG-4 |
