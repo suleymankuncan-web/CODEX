@@ -147,6 +147,13 @@ Status: controlled_pilot_readiness_evidence_refreshed
 
 This closeout does not claim broad production readiness. It records that the current controlled pilot / patron demo evidence line is refreshed and that remaining issues should enter the controlled pilot feedback loop with concrete reproduction evidence.
 
+## Current Successor
+
+The fresh five-flow B1 pass is recorded separately in
+`docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
+It is currently `blocked_external`; this July audit must not be used as a
+substitute for current persona, period, template, or mutation-authority proof.
+
 ## Parked Risks After Closeout
 
 | Risk | Why parked | Next trigger |
