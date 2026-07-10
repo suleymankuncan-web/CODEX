@@ -4,6 +4,7 @@ Status: blocked_external
 Shelf: evidence
 Evidence class: docs_decision
 Assessment at: 2026-07-10T04:05:14+03:00
+Assessment updated at: 2026-07-10T10:35:12+03:00
 
 ## Reader And Action
 
@@ -12,30 +13,35 @@ Reader:
 - the owner, pilot operator, or future engineer preparing the next controlled
   pilot or patron-demo session.
 
-After reading, they should know which five B1 flows still need a fresh session,
-which external input unlocks each one, and why this record does not authorize a
-runtime change.
+After reading, they should know which B1 flows have partial owner-attested
+evidence, which external input is still missing, and why this record does not
+authorize a runtime change.
 
 ## Decision
 
-No B1 critical flow was executed in this assessment. Each flow is recorded as
-`blocked_external`, not as a passed flow, a product defect, or an absence of a
-defect. The decision is `no_runtime_change`: keep the runtime train parked
-until a real or explicitly approved assisted session creates factual evidence.
+The initial assessment had no fresh executable input and recorded every B1 flow
+as `blocked_external`. The product owner later attested that checklist approval,
+Store Action task closure, target submission, and target editing were used
+successfully on 5 July 2026. Those facts are now preserved as partial positive
+evidence; no issue or P0/P1 finding was reported.
 
-Earlier July pilot evidence remains useful historical context, but it cannot
-close this fresh pass because current personas, store assignments, templates,
-period data, and mutation authority were not reverified.
+The decision remains `no_runtime_change`. The attestation does not include the
+persona, exact route/session, store/template/period context, negative scope
+checks, screenshot, or browser trace needed to claim that every B1 acceptance
+point is complete.
+
+Source:
+`docs/evidence/pilot-readiness/2026-07-05-owner-attested-mutation-flows.md`.
 
 ## Critical Flow Record
 
 | Record | Persona and route/workflow | Expected evidence | Actual assessment | Status and decision | External input required |
 | --- | --- | --- | --- | --- | --- |
 | B1-20260710-01 | Admin, Region Manager, Store Manager, Store Personnel; login, refresh, logout, and recovery | Landing, role/scope summary, refresh/logout result | Not run: no approved current browser sessions were in scope. | `blocked_external`; no finding or severity classification; `no_runtime_change` | Sanitized assisted sessions for the four personas, with consent to observe refresh and logout. |
-| B1-20260710-02 | Region Manager and Store Manager; Store Home to Tasks/Store Action | Visible queue, assigned-store boundary, command result | Not run: no current assigned-store context or explicit command mutation/rollback authority was provided. | `blocked_external`; no finding or severity classification; `no_runtime_change` | One assigned store, approved command state, explicit mutation scope, and a named rollback owner. |
-| B1-20260710-03 | Region Manager or VM plus Store Manager; checklist visit and acknowledgement | BM/VM selection, completion, acknowledgement | Not run: no current template, visit, or approved completion/acknowledgement action was in scope. | `blocked_external`; no finding or severity classification; `no_runtime_change` | Current pilot template/visit, allowed personas, and written completion/acknowledgement plus rollback approval. |
+| B1-20260710-02 | Region Manager and Store Manager; Store Home to Tasks/Store Action | Visible queue, assigned-store boundary, command result | Owner attested that a Store Action task was closed successfully on 5 July; persona, assigned-store context, queue readback, and negative scope were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona/route and assigned-store plus negative-scope readback. Do not rerun a mutation without explicit scope and rollback authority. |
+| B1-20260710-03 | Region Manager or VM plus Store Manager; checklist visit and acknowledgement | BM/VM selection, completion, acknowledgement | Owner attested that checklist approval was used successfully on 5 July; persona, visit/template, completion detail, and acknowledgement readback were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona, visit/template, completion, and acknowledgement readback. Do not rerun a mutation without explicit scope and rollback authority. |
 | B1-20260710-04 | Store Manager, Store Personnel, Region Manager; rankings to personnel profile | Visible rows, profile permission, direct-route denial | Not run: no current scoped sessions or approved personnel/profile test subject was supplied. | `blocked_external`; no finding or severity classification; `no_runtime_change` | Read-only current persona sessions and an approved personnel/profile subject for positive and negative checks. |
-| B1-20260710-05 | Region Manager and applicable admin; reports and incentive readback | Period, roster, target, KPI, export/readback totals | Not run: no verified current period package or role-scoped browser session was supplied. | `blocked_external`; no finding or severity classification; `no_runtime_change` | A confirmed reporting period (prefer the current June close when applicable), approved roster/target/KPI package, and read-only persona sessions. |
+| B1-20260710-05 | Region Manager and applicable admin; reports and incentive readback | Period, roster, target, KPI, export/readback totals | Owner attested that targets were submitted and edited successfully on 5 July. Reports/incentives totals, export, period package, and persona readback were not captured. | `partial_owner_attested` supporting target-workflow evidence; no finding; `no_runtime_change` | A confirmed reporting period, approved roster/target/KPI package, and read-only role-scoped reports/incentives readback. |
 
 ## Required Evidence Record When Unblocked
 

@@ -24,7 +24,9 @@ provider, broad-production, or cleanup gate.
   root-release-run p95 observation required by NFR-3 remains pending external
   PR traffic.
 - B1 is complete as an honest `blocked_external` record in PR #920. No runtime
-  finding or runtime change was claimed.
+  finding or runtime change was claimed. A later owner attestation adds partial
+  positive evidence for 5 July checklist approval, Store Action task closure,
+  and target submit/edit; remaining B1 acceptance points stay input-gated.
 - E1 is complete in PR #921: VM-only route documentation is aligned and five
   safe archive-guard reads moved; the remaining reader inventory is explicit.
 - D1 is complete in PR #923: a bounded Vitest seed covers Store My Performance

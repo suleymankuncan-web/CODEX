@@ -31,6 +31,8 @@ seed (#923). No product/runtime train was opened.
 - A3 evidence: `docs/evidence/performance/2026-07-10-e2e-worker-concurrency-a3.md`.
 - B1 blocker record:
   `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
+- B1 owner-attested positive observations:
+  `docs/evidence/pilot-readiness/2026-07-05-owner-attested-mutation-flows.md`.
 - No-delete workspace inventory:
   `docs/plans/workspace-hygiene-inventory-2026-07-09.md`.
 - Historical transition record:
@@ -40,8 +42,9 @@ Next practical action:
 
 1. Observe the next ten successful root-release PR runs and record A3's dated
    p95 or justified no-change outcome without weakening coverage.
-2. Obtain the approved B1 sessions/data/authority for one factual flow; until
-   then retain `blocked_external` and `no_runtime_change`.
+2. Obtain a safe read-only B1 bundle for one remaining gap: login/session,
+   rankings/profile scope, or reports/incentives readback. Preserve the 5 July
+   mutation observations and do not rerun them only to improve documentation.
 3. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
 4. Keep new modules, separate mobile implementation, broad production, broad
