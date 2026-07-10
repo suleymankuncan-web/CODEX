@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './test-fixtures'
+import { setStoredLocale } from './locale-test-utils'
 
 const companyId = '00000000-0000-0000-0000-000000000001'
 const regionId = '00000000-0000-0000-0000-000000000010'
@@ -133,6 +134,31 @@ test('super admin reads incentive projections and submits an audited correction'
     reasonCode: 'manual_review',
     reasonNote: 'Admin onaylı satış hedef primi düzeltmesi',
   })
+})
+
+test('admin incentives switches owned product copy to English and preserves source rows', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'admin-incentive-user',
+        mockRoleCodes: 'SUPER_ADMIN,INTEGRATION_ADMIN,HR_ADMIN,REPORT_VIEWER,AUDITOR',
+        mockCompanyIds: '00000000-0000-0000-0000-000000000001',
+        bearerToken: '',
+      }),
+    )
+  })
+  await routeAuthSession(page, createAuthSession(['SUPER_ADMIN', 'INTEGRATION_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'AUDITOR']))
+  await routeAdminIncentives(page)
+  await page.goto('/admin/incentives')
+  await setStoredLocale(page, 'en')
+
+  await expect(page.getByRole('heading', { name: 'Incentive management' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Export to Excel' })).toBeVisible()
+  await expect(page.getByRole('columnheader', { name: 'Store' })).toBeVisible()
+  await expect(page.getByText('Ali Can')).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Prim y.*netimi/ })).toHaveCount(0)
 })
 
 test('admin incentive period filter requests the selected year and month', async ({ page }) => {

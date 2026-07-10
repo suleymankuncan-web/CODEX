@@ -2161,6 +2161,17 @@ test('store sidebar prefetches announcement data before opening feed', async ({ 
   await expect.poll(() => feedRequests, { timeout: 1000 }).toBe(prefetchedFeedRequests)
 })
 
+test('store feed switches owned product copy to English and preserves source posts', async ({ page }) => {
+  await page.goto('/store/feed')
+  await setStoredLocale(page, 'en')
+
+  await expect(page.getByRole('heading', { name: 'Announcements' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Refresh' })).toBeVisible()
+  await expect(page.getByText('Region feed')).toBeVisible()
+  await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Duyurular' })).toHaveCount(0)
+})
+
 test('store sidebar transitions across visible manager pages without requiring manual refresh', async ({ page }) => {
   const storeNav = page.locator('.store-command-nav')
   await page.goto('/store/home')
@@ -2289,6 +2300,27 @@ test('store reports package is visible for region managers and stays mobile-safe
     }),
   ).toBe(true)
   await expect(page.getByText('KPI kolonları')).toBeVisible()
+})
+
+test('store reports switches owned package copy to English', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-06-29T12:00:00.000Z'))
+  await routeAuthSession(page, createStoreAuthSession({
+    roleCodes: ['REGION_MANAGER'],
+    readStoreIds: [demoStoreId, regionSecondStoreId],
+    readRegionIds: [demoRegionId],
+    scopeStoreIds: [],
+    scopeRegionIds: [demoRegionId],
+    actionStoreIds: [],
+    legacyAssignedStoreIds: [],
+  }))
+  await page.goto('/store/reports')
+  await setStoredLocale(page, 'en')
+
+  await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Download Excel/i })).toBeVisible()
+  await expect(page.getByText('Package contents')).toBeVisible()
+  await expect(page.getByText('KPI columns')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Raporlar' })).toHaveCount(0)
 })
 
 test('store route navigation does not blank the shell with a global transition layer', async ({ page }) => {
