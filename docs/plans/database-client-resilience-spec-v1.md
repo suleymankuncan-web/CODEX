@@ -1,6 +1,6 @@
 # Database Client TLS And Timeout Resilience Specification V1
 
-Status: approved implementation contract; DG-3 provider activation blocked
+Status: implementation complete locally; canonical release pending; DG-3 provider activation blocked
 Shelf: active plan
 Author: Codex
 Last verified: 2026-07-10
@@ -147,4 +147,18 @@ pilot `require` connection posture. Do not disable production TLS. If provider
 verification fails, retain `require`, restore the readiness status to
 `encrypted-unverified`, and record the DG-3 blocker instead of weakening
 certificate verification silently.
+
+## 10. Current Verification Snapshot
+
+Verified on 2026-07-10 against main `5b93988b`:
+
+- focused config, pool, health, and health integration tests: `77/77` passed;
+- full backend suite: `185/185` suites and `1155/1155` tests passed;
+- root script contracts: `541/541` passed;
+- backend lint and build passed before the final status-only documentation
+  update and will run again in the exact-head canonical release;
+- DG-3 provider CA/staging/rotation evidence remains absent, so provider smoke
+  is skipped and Render remains on controlled-pilot `DB_SSL_MODE=require`;
+- no raw connection string, CA material, provider secret, schema change,
+  migration, or broad-production activation was introduced.
 
