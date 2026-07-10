@@ -11,6 +11,7 @@ import {
 import { useLocalization } from '../features/localization/useLocalization'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { actionToast } from '../lib/action-toast'
+import { getChecklistTemplateEffectiveDate } from './business-date-defaults'
 import { AdminChecklistTemplatesExperience } from './AdminChecklistTemplateSurface'
 
 export type DraftChecklistItem = {
@@ -67,8 +68,6 @@ const templateOptions: TemplateOption[] = [
 ]
 const defaultTemplateOption = templateOptions[0] as TemplateOption
 const vmTemplateOption = templateOptions[1] as TemplateOption
-
-const today = new Date().toISOString().slice(0, 10)
 
 const initialSections: DraftChecklistSection[] = [
   {
@@ -207,17 +206,20 @@ function cloneSections(sections: DraftChecklistSection[]) {
   }))
 }
 
-function createInitialDrafts(): Record<ChecklistTemplateType, TemplateDraft> {
+function createInitialDrafts(
+  now: Date = new Date(),
+): Record<ChecklistTemplateType, TemplateDraft> {
+  const effectiveFrom = getChecklistTemplateEffectiveDate(now)
   return {
     BM_STORE_VISIT: {
-      effectiveFrom: today,
+      effectiveFrom,
       isDirty: true,
       savedTemplate: null,
       sections: cloneSections(initialSections),
       templateName: defaultTemplateOption.templateName,
     },
     VM_STORE_VISIT: {
-      effectiveFrom: today,
+      effectiveFrom,
       isDirty: true,
       savedTemplate: null,
       sections: cloneSections(vmInitialSections),

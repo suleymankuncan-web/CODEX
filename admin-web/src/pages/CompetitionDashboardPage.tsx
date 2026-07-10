@@ -29,6 +29,7 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { formatDate, formatState, getErrorMessage } from '../lib/format'
+import { createCompetitionDraftDateDefaults } from './business-date-defaults'
 import { normalizeDisplayLabel } from '../lib/display-labels'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
@@ -55,17 +56,15 @@ import {
   CompetitionTextareaField,
 } from '../features/competitions/competition-admin-surface-primitives'
 
-function nextDraftPayload() {
-  const startsOn = new Date()
-  const endsOn = new Date(startsOn.getTime() + 14 * 24 * 60 * 60 * 1000)
-  const dateCode = startsOn.toISOString().slice(0, 10).replaceAll('-', '_')
+function nextDraftPayload(now: Date = new Date()) {
+  const { dateCode, endsOn, startsOn } = createCompetitionDraftDateDefaults(now)
 
   return {
     competitionCode: `REGION_CHALLENGE_${dateCode}`,
     competitionName: 'Region Challenge Draft',
     competitionType: 'region_challenge' as const,
-    startsOn: startsOn.toISOString().slice(0, 10),
-    endsOn: endsOn.toISOString().slice(0, 10),
+    startsOn,
+    endsOn,
   }
 }
 

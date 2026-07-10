@@ -18,6 +18,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { downloadCsv } from '../lib/download-csv'
+import { createIntegrationPeriodDefaults } from './business-date-defaults'
 import {
   IntegrationEvidenceValue,
   IntegrationField,
@@ -74,15 +75,10 @@ import { AdminOperationalHeader, AdminOperationalMetrics, AdminOperationalPage }
 const PAGE_SIZE = 12
 const trNumberFormatter = new Intl.NumberFormat('tr-TR')
 
-function getCurrentIsoDate() {
-  return new Date().toISOString().slice(0, 10)
-}
-
-function getCurrentIsoMonth() {
-  return getCurrentIsoDate().slice(0, 7)
-}
-
-function createInitialIntegrationDashboardState(): IntegrationDashboardState {
+function createInitialIntegrationDashboardState(
+  now: Date = new Date(),
+): IntegrationDashboardState {
+  const period = createIntegrationPeriodDefaults(now)
   return {
     activeTab: 'uploads',
     search: '',
@@ -96,9 +92,9 @@ function createInitialIntegrationDashboardState(): IntegrationDashboardState {
     selectedTemplateSourceCode: '',
     powerBiSourceCode: '',
     powerBiPeriodType: 'monthly',
-    powerBiPeriodMonth: getCurrentIsoMonth(),
-    powerBiPeriodStart: getCurrentIsoDate(),
-    powerBiPeriodEnd: getCurrentIsoDate(),
+    powerBiPeriodMonth: period.month,
+    powerBiPeriodStart: period.start,
+    powerBiPeriodEnd: period.end,
     personnelFile: null,
     storeFile: null,
   }
