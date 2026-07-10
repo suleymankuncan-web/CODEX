@@ -1,6 +1,6 @@
 # System-Flow Transitive Precision Specification V1
 
-Status: implementation complete; predecessor merge and final release pending
+Status: rebased implementation complete; final release and remote checks pending
 Shelf: active plan
 Author: Codex
 Last verified: 2026-07-10

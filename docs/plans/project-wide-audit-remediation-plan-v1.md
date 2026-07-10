@@ -729,8 +729,8 @@ Recommendation:
   to the active main landmark.
 - AC-16: Given the first axe seed routes, no critical accessibility violation
   is reported.
-- AC-17: Given Store Approvals in the generated flow, the target request
-  endpoint appears in its route-to-API edge set.
+- AC-17: Given Store Approvals in the generated flow, its current bounded
+  request-center endpoint appears in the route-to-API edge set.
 - AC-18: Given cyclic helper imports, system-flow generation terminates and
   does not duplicate edges.
 - AC-19: Given database preflight, every cross-company organization mismatch,
@@ -1253,7 +1253,8 @@ Scope:
 
 - transitive frontend wrapper call resolution;
 - cycle and duplicate protection;
-- Store Approvals target edge fixture;
+- Store Approvals request-center edge fixture (the target-edge example was
+  superseded by PR-4's bounded read model);
 - remove the target approval double cast if the OpenAPI response can represent
   it without an API change.
 
@@ -1602,8 +1603,8 @@ guards, and documentation and explicitly changes no runtime behavior.
 | PR-4 Bounded Target Request Queues | complete | PR #930 merged as `bfa2f83c`; Admin and Store target reads are bounded, Store Approvals uses a scoped paged request-center read, and target/workforce mutation, DB, and authorization contracts remain unchanged |
 | PR-5 Europe/Istanbul Business Date Contract | complete | PR #931 merged as `7495624f`; shared Europe/Istanbul business-date defaults and calendar arithmetic are guarded while UTC timestamp instants, API, DB, and authorization contracts remain unchanged |
 | PR-6 Active Surface Localization Closure | complete | PR #932 merged as `2bc612d2`; typed TR/EN ownership, source/technical allowlists, EN-to-TR acceptance tests, bounded raw-copy/mojibake guard, required checks, and Vercel are green |
-| PR-7 Keyboard And Accessibility Foundation | in_progress | Native Master Data selection, Admin/Store skip links, two bounded axe seeds, targeted browser packs, and the 12m56s canonical release are green; remote PR checks remain open |
-| PR-8 System-Flow Transitive Precision And Target Typing | planned | Source-confirmed P2 |
+| PR-7 Keyboard And Accessibility Foundation | complete | PR #933 merged as `4639bd05`; native Master Data selection, Admin/Store skip links, two bounded axe seeds, local canonical release, required aggregate, targeted frontend, and Vercel are green |
+| PR-8 System-Flow Transitive Precision And Target Typing | in_progress | Called exported wrappers, cycle/duplicate safety, unresolved-path classification, the current Store Approvals request-center fixture, and 533 root contracts are green locally; final release and remote checks remain open |
 | PR-9 Database Invariant Preflight Evidence | planned_input_gated | Live execution needs safe DB target |
 | PR-10 Database Integrity Constraints | blocked_external | DG-2 |
 | PR-11 Database Client TLS And Timeout Resilience | planned_input_gated | DG-3 for verify-full |
