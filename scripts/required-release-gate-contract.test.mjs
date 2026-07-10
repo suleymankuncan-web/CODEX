@@ -197,6 +197,7 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   const workflow = readText('.github/workflows/required-release-gate.yml')
   const rehearsalWorkflow = readText('.github/workflows/release-rehearsal.yml')
   const frontendWorkflow = readText('.github/workflows/frontend-release-check.yml')
+  const releaseWorkflow = readText('.github/workflows/release-check.yml')
 
   assert.match(workflow, /name:\s*Required Release Gate/)
   assert.match(workflow, /on:\s*\n\s+pull_request:\s*\n\s*\nconcurrency:/)
@@ -222,4 +223,8 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.doesNotMatch(frontendWorkflow, /playwright test|npm audit/i)
   assert.doesNotMatch(rehearsalWorkflow, /continue-on-error/)
   assert.doesNotMatch(frontendWorkflow, /continue-on-error/)
+  assert.match(releaseWorkflow, /name:\s*Upload Playwright failure artifacts/)
+  assert.match(releaseWorkflow, /if:\s*\$\{\{ failure\(\) \}\}/)
+  assert.match(releaseWorkflow, /uses:\s*actions\/upload-artifact@v4/)
+  assert.match(releaseWorkflow, /path:\s*admin-web\/test-results/)
 })

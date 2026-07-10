@@ -93,6 +93,11 @@ Folder: `docs/evidence/performance/`
 Use for performance snapshots and budgets when a measured performance question
 exists.
 
+Current anchor:
+
+- `2026-07-10-e2e-worker-concurrency-a3.md` - measured CI E2E worker decision
+  and rollback boundary.
+
 ## Evidence Safety Rules
 
 Do not record:
