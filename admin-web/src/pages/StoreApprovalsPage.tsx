@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { RefreshCcw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -13,28 +13,18 @@ import {
 } from '@/components/ui/table'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import type { AuthSessionSummary } from '../features/auth/api'
-import {
-  canListTargetDistributionRequests,
-  getAssignedStoreIds,
-  getReadStoreIds,
-} from '../features/auth/authorization'
+import { canListTargetDistributionRequests } from '../features/auth/authorization'
 import { useLocalization } from '../features/localization/useLocalization'
-import { getAllTargetDistributionRequests } from '../features/targets/api'
-import {
-  getOffboardingRequests,
-  getSellerCodeRequests,
-} from '../features/workforce/api'
+import { getRequestCenterPage } from '../features/store-approvals/request-center-api'
 import { getUserFacingErrorMessage } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 import {
-  buildRequestRows,
+  buildRequestCenterRows,
   createPeriodOptions,
   formatCopy,
-  matchesStatusFilter,
   PAGE_SIZE,
   requestCenterCopy,
   type RequestCenterCopy,
-  type RequestCenterRow,
   type RequestCenterStatus,
   type RequestCenterTab,
   type RequestCenterType,
@@ -60,60 +50,16 @@ export function StoreApprovalsPage(input: {
   const { locale } = useLocalization()
   const copy = requestCenterCopy[locale]
   const persona = resolveStoreApprovalsPersona(input.authSummary)
-  const assignedStoreIds = getAssignedStoreIds(input.authSummary)
-  const readStoreIds = getReadStoreIds(input.authSummary)
-  const scopeStoreIds = useMemo(
-    () => Array.from(new Set([...assignedStoreIds, ...readStoreIds])),
-    [assignedStoreIds, readStoreIds],
-  )
   const canReadTargets = canListTargetDistributionRequests(input.authSummary)
-  const shouldReadWorkforce = persona === 'storeManager' && assignedStoreIds.length > 0
   const scopeKey = [
     persona,
+    input.authSummary?.user.userId ?? 'anonymous',
     input.authSummary?.user.roleCodes.join('|') ?? '',
-    assignedStoreIds.join('|'),
-    readStoreIds.join('|'),
+    input.authSummary?.user.readScope.companyIds.join('|') ?? '',
+    input.authSummary?.user.readScope.regionIds.join('|') ?? '',
+    input.authSummary?.user.readScope.storeIds.join('|') ?? '',
+    input.authSummary?.user.actionScope.assignedStoreIds.join('|') ?? '',
   ].join(':')
-
-  const targetRequestsQuery = useQuery({
-    queryKey: ['target-distribution-requests', 'store-approvals-request-center', scopeKey],
-    queryFn: () => getAllTargetDistributionRequests(),
-    enabled: canReadTargets && persona !== 'readOnly',
-  })
-  const sellerCodeRequestsQuery = useQuery({
-    queryKey: ['seller-code-requests', 'store-approvals-request-center', scopeKey],
-    queryFn: () => getSellerCodeRequests(),
-    enabled: shouldReadWorkforce,
-  })
-  const offboardingRequestsQuery = useQuery({
-    queryKey: ['offboarding-requests', 'store-approvals-request-center', scopeKey],
-    queryFn: () => getOffboardingRequests(),
-    enabled: shouldReadWorkforce,
-  })
-
-  const isInitialLoading =
-    (targetRequestsQuery.isLoading && !targetRequestsQuery.data) ||
-    (shouldReadWorkforce &&
-      ((sellerCodeRequestsQuery.isLoading && !sellerCodeRequestsQuery.data) ||
-        (offboardingRequestsQuery.isLoading && !offboardingRequestsQuery.data)))
-
-  if (isInitialLoading) {
-    return <StoreLoadingState title={copy.loadingTitle} description={copy.loadingCopy} />
-  }
-
-  if (targetRequestsQuery.isError) {
-    return (
-      <StoreSurfacePage ariaLabel={copy.aria}>
-        <StoreErrorState
-          title={copy.errorTitle}
-          description={getUserFacingErrorMessage(
-            targetRequestsQuery.error,
-            'Talep merkezi verisi alınamadı. Dönemi kontrol edip tekrar deneyin.',
-          )}
-        />
-      </StoreSurfacePage>
-    )
-  }
 
   if (persona === 'readOnly') {
     return (
@@ -132,39 +78,23 @@ export function StoreApprovalsPage(input: {
     )
   }
 
-  const rows = buildRequestRows({
-    copy,
-    locale,
-    offboardingRequests: offboardingRequestsQuery.data?.items ?? [],
-    persona,
-    scopeStoreIds,
-    sellerCodeRequests: sellerCodeRequestsQuery.data?.items ?? [],
-    targetRequests: targetRequestsQuery.data?.items ?? [],
-  })
-
   return (
     <RequestCenterSurface
+      canRead={canReadTargets}
       copy={copy}
       locale={locale}
-      offboardingError={offboardingRequestsQuery.error}
-      offboardingErrorVisible={shouldReadWorkforce && offboardingRequestsQuery.isError}
       persona={persona}
-      rows={rows}
-      sellerCodeError={sellerCodeRequestsQuery.error}
-      sellerCodeErrorVisible={shouldReadWorkforce && sellerCodeRequestsQuery.isError}
+      scopeKey={scopeKey}
     />
   )
 }
 
 function RequestCenterSurface(input: {
+  canRead: boolean
   copy: RequestCenterCopy
   locale: AppLocale
-  offboardingError: unknown
-  offboardingErrorVisible: boolean
   persona: StoreApprovalsPersona
-  rows: RequestCenterRow[]
-  sellerCodeError: unknown
-  sellerCodeErrorVisible: boolean
+  scopeKey: string
 }) {
   const [activeTab, setActiveTab] = useState<RequestCenterTab>('open')
   const [page, setPage] = useState(1)
@@ -172,43 +102,86 @@ function RequestCenterSurface(input: {
   const [typeFilter, setTypeFilter] = useState<RequestCenterType>('all')
   const [statusFilter, setStatusFilter] = useState<RequestCenterStatus>('all')
   const [periodFilter, setPeriodFilter] = useState('all')
-  const periodOptions = useMemo(() => createPeriodOptions(input.rows, input.locale), [input.rows, input.locale])
-  const filteredRows = useMemo(
-    () =>
-      input.rows.filter((row) => {
-        if (row.bucket !== activeTab) return false
-        if (typeFilter !== 'all' && row.type !== typeFilter) return false
-        if (statusFilter !== 'all' && !matchesStatusFilter(row.status, statusFilter)) return false
-        if (periodFilter !== 'all' && row.updatedAt.slice(0, 7) !== periodFilter) return false
-
-        const normalizedQuery = query.trim().toLocaleLowerCase('tr-TR')
-        if (!normalizedQuery) return true
-
-        return [
-          row.title,
-          row.subtitle,
-          row.scopeTitle,
-          row.scopeSubtitle,
-          row.statusLabel,
-          row.sourceLabel,
-        ].some((value) => value.toLocaleLowerCase('tr-TR').includes(normalizedQuery))
-      }),
-    [activeTab, input.rows, periodFilter, query, statusFilter, typeFilter],
+  const offset = (page - 1) * PAGE_SIZE
+  const normalizedQuery = query.trim()
+  const requestCenterQuery = useQuery({
+    queryKey: [
+      'request-center',
+      input.scopeKey,
+      activeTab,
+      typeFilter,
+      statusFilter,
+      periodFilter,
+      normalizedQuery.length >= 2 ? normalizedQuery : '',
+      PAGE_SIZE,
+      offset,
+    ],
+    queryFn: () => getRequestCenterPage({
+      bucket: activeTab,
+      type: typeFilter,
+      status: statusFilter,
+      ...(periodFilter !== 'all' ? { period: periodFilter } : {}),
+      ...(normalizedQuery.length >= 2 ? { query: normalizedQuery } : {}),
+      limit: PAGE_SIZE,
+      offset,
+    }),
+    enabled: input.canRead && input.persona !== 'readOnly',
+  })
+  const pageRows = useMemo(
+    () => buildRequestCenterRows({
+      copy: input.copy,
+      locale: input.locale,
+      persona: input.persona,
+      items: requestCenterQuery.data?.items ?? [],
+    }),
+    [input.copy, input.locale, input.persona, requestCenterQuery.data?.items],
   )
-  const openCount = input.rows.filter((row) => row.bucket === 'open').length
-  const doneCount = input.rows.filter((row) => row.bucket === 'done').length
-  const returnedCount = input.rows.filter((row) => matchesStatusFilter(row.status, 'returned')).length
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / PAGE_SIZE))
+  const periodOptions = useMemo(
+    () => createPeriodOptions(pageRows, input.locale),
+    [pageRows, input.locale],
+  )
+  const total = requestCenterQuery.data?.meta.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
-  const pageRows = filteredRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
-  const from = filteredRows.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1
-  const to = Math.min(safePage * PAGE_SIZE, filteredRows.length)
+  const from = total === 0 ? 0 : offset + 1
+  const to = Math.min(offset + pageRows.length, total)
+  const summary = requestCenterQuery.data?.summary ?? { open: 0, done: 0, returned: 0 }
+  const visiblePageNumbers = Array.from(
+    new Set([Math.max(1, safePage - 1), safePage, Math.min(totalPages, safePage + 1)]),
+  )
+
+  useEffect(() => {
+    if (!requestCenterQuery.data || page === safePage) {
+      return
+    }
+    const timeoutId = window.setTimeout(() => setPage(safePage), 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [page, requestCenterQuery.data, safePage])
+
   const resetFilters = () => {
     setQuery('')
     setTypeFilter('all')
     setStatusFilter('all')
     setPeriodFilter('all')
     setPage(1)
+  }
+
+  if (requestCenterQuery.isLoading && !requestCenterQuery.data) {
+    return <StoreLoadingState title={input.copy.loadingTitle} description={input.copy.loadingCopy} />
+  }
+
+  if (requestCenterQuery.isError) {
+    return (
+      <StoreSurfacePage ariaLabel={input.copy.aria}>
+        <StoreErrorState
+          title={input.copy.errorTitle}
+          description={getUserFacingErrorMessage(
+            requestCenterQuery.error,
+            'Talep merkezi verisi alınamadı. Dönemi kontrol edip tekrar deneyin.',
+          )}
+        />
+      </StoreSurfacePage>
+    )
   }
 
   return (
@@ -221,33 +194,10 @@ function RequestCenterSurface(input: {
       <RequestCenterHeader copy={input.copy} />
       <RequestCenterMetrics
         copy={input.copy}
-        doneCount={doneCount}
-        openCount={openCount}
-        returnedCount={returnedCount}
+        doneCount={summary.done}
+        openCount={summary.open}
+        returnedCount={summary.returned}
       />
-
-      {input.sellerCodeErrorVisible || input.offboardingErrorVisible ? (
-        <div className="tw:grid tw:gap-2">
-          {input.sellerCodeErrorVisible ? (
-            <StoreErrorState
-              title={input.copy.errorTitle}
-              description={getUserFacingErrorMessage(
-                input.sellerCodeError,
-                'Personel kodu talepleri alınamadı. Dönemi kontrol edip tekrar deneyin.',
-              )}
-            />
-          ) : null}
-          {input.offboardingErrorVisible ? (
-            <StoreErrorState
-              title={input.copy.errorTitle}
-              description={getUserFacingErrorMessage(
-                input.offboardingError,
-                'Ayrılış talepleri alınamadı. Dönemi kontrol edip tekrar deneyin.',
-              )}
-            />
-          ) : null}
-        </div>
-      ) : null}
 
       <section
         aria-label="Talep merkezi filtreleri"
@@ -347,12 +297,12 @@ function RequestCenterSurface(input: {
           </ToggleGroup>
           <span className="tw:rounded-full tw:bg-primary/10 tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-primary">
             {formatCopy(activeTab === 'open' ? input.copy.countOpen : input.copy.countDone, {
-              count: String(filteredRows.length),
+              count: String(total),
             })}
           </span>
         </CardHeader>
         <CardContent className="tw:p-0">
-          {filteredRows.length === 0 ? (
+          {total === 0 ? (
             <div className="tw:p-4">
               <StoreEmptyState
                 title={input.copy.emptyTitle}
@@ -407,11 +357,11 @@ function RequestCenterSurface(input: {
               {formatCopy(input.copy.pager, {
                 from: String(from),
                 to: String(to),
-                total: String(filteredRows.length),
+                total: String(total),
               })}
             </span>
             <div className="tw:flex tw:flex-wrap tw:gap-2">
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              {visiblePageNumbers.map((pageNumber) => (
                 <Button
                   key={pageNumber}
                   type="button"

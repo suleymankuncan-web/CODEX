@@ -78,6 +78,7 @@ test('store personnel direct management routes stop before protected data loads'
     ['checklist-acknowledgements', '**/api/checklists/acknowledgements/list'],
     ['mobile-checklists', '**/api/mobile/checklists/today'],
     ['target-requests', '**/api/target-distributions/requests**'],
+    ['request-center', '**/api/workflow/request-center**'],
     ['target-coverage', '**/api/target-distributions/coverage**'],
     ['target-personnel', '**/api/target-distributions/store-personnel**'],
     ['workforce-employees', '**/api/workforce/store-employees**'],

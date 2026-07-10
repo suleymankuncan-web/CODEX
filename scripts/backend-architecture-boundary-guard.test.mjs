@@ -273,7 +273,7 @@ const storeOpsModuleGraphLimits = new Map([
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-targets.module.ts',
-    { controllers: 5, providers: 12, exports: 5 },
+    { controllers: 5, providers: 13, exports: 5 },
   ],
 ])
 
@@ -1039,6 +1039,7 @@ test('guard rejects fake Store Ops internal module provider growth', () => {
               J,
               K,
               L,
+              M,
               NewProvider,
             ],
             exports: [A, B, C, D, E],
@@ -1047,7 +1048,7 @@ test('guard rejects fake Store Ops internal module provider growth', () => {
         `)
 
   assert.match(violations.join('\n'), /store-ops-targets\.module\.ts/)
-  assert.match(violations.join('\n'), /providers graph has 13 entries/)
+  assert.match(violations.join('\n'), /providers graph has 14 entries/)
 })
 
 test('guard rejects an ungoverned fake Store Ops internal module', () => {
@@ -1149,13 +1150,13 @@ test('guard counts module graph entries from @Module metadata only', () => {
 
           @Module({
             controllers: [A],
-            providers: [A, B, C, D, E, F, G, H, I, J, K, L, M],
+            providers: [A, B, C, D, E, F, G, H, I, J, K, L, M, N],
             exports: [A],
           })
           export class StoreOpsTargetsModule {}
         `)
 
-  assert.match(violations.join('\n'), /providers graph has 13 entries/)
+  assert.match(violations.join('\n'), /providers graph has 14 entries/)
 })
 
 test('guard ignores comment delimiters while counting module graph entries', () => {
@@ -1166,14 +1167,14 @@ test('guard ignores comment delimiters while counting module graph entries', () 
             controllers: [A],
             providers: [
               A, // ] comment must not close the array
-              B, C, D, E, F, G, H, I, J, K, L, M,
+              B, C, D, E, F, G, H, I, J, K, L, M, N,
             ],
             exports: [A],
           })
           export class StoreOpsTargetsModule {}
         `)
 
-  assert.match(violations.join('\n'), /providers graph has 13 entries/)
+  assert.match(violations.join('\n'), /providers graph has 14 entries/)
 })
 
 test('guard rejects non-literal module graph expressions instead of partially counting them', () => {

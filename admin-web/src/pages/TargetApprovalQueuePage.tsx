@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle2,
@@ -18,7 +18,7 @@ import {
 } from '../features/auth/authorization'
 import {
   approveTargetDistributionRequest,
-  getAllTargetDistributionRequests,
+  getTargetDistributionRequests,
   getTargetCoverage,
   type TargetCoverageRow,
   type TargetDistributionRequest,
@@ -44,6 +44,8 @@ import {
   type AdminOperationalTone as AdminSurfaceTone,
 } from './admin-operational-primitives'
 
+const PENDING_PAGE_SIZE = 50
+
 export function TargetApprovalQueuePage(input: {
   authSummary: AuthSessionSummary | null
 }) {
@@ -51,10 +53,30 @@ export function TargetApprovalQueuePage(input: {
   const queryClient = useQueryClient()
   const [approvalNotes, setApprovalNotes] = useState<Record<string, string>>({})
   const [approvalNotice, setApprovalNotice] = useState<string | null>(null)
+  const [pendingOffset, setPendingOffset] = useState(0)
   const currentRequestMonth = getCurrentRequestMonth()
-  const approvalsQuery = useQuery({
-    queryKey: ['target-distribution-requests', 'approval-queue'],
-    queryFn: () => getAllTargetDistributionRequests(),
+  const pendingApprovalsQuery = useQuery({
+    queryKey: [
+      'target-distribution-requests',
+      'approval-queue',
+      'pending',
+      PENDING_PAGE_SIZE,
+      pendingOffset,
+    ],
+    queryFn: () => getTargetDistributionRequests({
+      status: 'pending_region_approval',
+      limit: PENDING_PAGE_SIZE,
+      offset: pendingOffset,
+    }),
+    staleTime: 30_000,
+  })
+  const recentApprovalsQuery = useQuery({
+    queryKey: ['target-distribution-requests', 'approval-queue', 'approved-recent', 5, 0],
+    queryFn: () => getTargetDistributionRequests({
+      status: 'approved',
+      limit: 5,
+      offset: 0,
+    }),
     staleTime: 30_000,
   })
   const coverageQuery = useQuery({
@@ -62,6 +84,18 @@ export function TargetApprovalQueuePage(input: {
     queryFn: () => getTargetCoverage({ requestMonth: currentRequestMonth }),
     staleTime: 30_000,
   })
+  useEffect(() => {
+    const total = pendingApprovalsQuery.data?.meta.total
+    if (total === undefined || pendingOffset === 0 || pendingOffset < total) {
+      return
+    }
+
+    const lastOffset = total > 0
+      ? Math.floor((total - 1) / PENDING_PAGE_SIZE) * PENDING_PAGE_SIZE
+      : 0
+    const timeoutId = window.setTimeout(() => setPendingOffset(lastOffset), 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [pendingApprovalsQuery.data?.meta.total, pendingOffset])
   const approveMutation = useMutation({
     mutationFn: approveTargetDistributionRequest,
     onSuccess: (result) => {
@@ -71,7 +105,7 @@ export function TargetApprovalQueuePage(input: {
     },
   })
 
-  if (approvalsQuery.isLoading) {
+  if (pendingApprovalsQuery.isLoading || recentApprovalsQuery.isLoading) {
     return (
       <AdminSurfacePage ariaLabel={t('adminTargets.loadingTitle')}>
         <AdminStatePanel
@@ -83,24 +117,24 @@ export function TargetApprovalQueuePage(input: {
     )
   }
 
-  if (approvalsQuery.isError) {
+  if (pendingApprovalsQuery.isError || recentApprovalsQuery.isError) {
     return (
       <AdminSurfacePage ariaLabel={t('adminTargets.errorTitle')}>
         <AdminStatePanel
           title={t('adminTargets.errorTitle')}
-          description={getErrorMessage(approvalsQuery.error)}
+          description={getErrorMessage(
+            pendingApprovalsQuery.error ?? recentApprovalsQuery.error,
+          )}
           tone="danger"
         />
       </AdminSurfacePage>
     )
   }
 
-  const items = approvalsQuery.data?.items ?? []
-  const inboxItems = items.map((item) => toTargetApprovalInboxItem(item))
-  const pendingItems = items.filter((item) => item.status === 'pending_region_approval')
-  const approvedItems = items.filter((item) => item.status === 'approved').slice(0, 5)
-  const pendingCount = inboxItems.filter((item) => item.inboxStatus === 'needs_attention').length
-  const approvedCount = inboxItems.filter((item) => item.inboxStatus === 'completed').length
+  const pendingItems = pendingApprovalsQuery.data?.items ?? []
+  const approvedItems = recentApprovalsQuery.data?.items ?? []
+  const pendingCount = pendingApprovalsQuery.data?.meta.total ?? 0
+  const approvedCount = recentApprovalsQuery.data?.meta.total ?? 0
   const coverageRows = coverageQuery.data?.items ?? []
   const coverageSummary = coverageQuery.data?.summary ?? createEmptyCoverageSummary(currentRequestMonth)
   const attentionCoverageRows = coverageRows
@@ -275,6 +309,36 @@ export function TargetApprovalQueuePage(input: {
         )}
 
         {approvalNotice ? <AdminStatePanel title={approvalNotice} tone="success" /> : null}
+
+        {pendingCount > PENDING_PAGE_SIZE ? (
+          <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3">
+            <span className="tw:text-sm tw:text-muted-foreground">
+              {t('adminTargets.pendingPager', {
+                from: String(pendingOffset + 1),
+                to: String(Math.min(pendingOffset + pendingItems.length, pendingCount)),
+                total: String(pendingCount),
+              })}
+            </span>
+            <div className="tw:flex tw:gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pendingOffset === 0}
+                onClick={() => setPendingOffset((current) => Math.max(0, current - PENDING_PAGE_SIZE))}
+              >
+                {t('adminTargets.previous')}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={pendingOffset + PENDING_PAGE_SIZE >= pendingCount}
+                onClick={() => setPendingOffset((current) => current + PENDING_PAGE_SIZE)}
+              >
+                {t('adminTargets.next')}
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </AdminSurfaceSection>
 
       <AdminSurfaceSection

@@ -20,6 +20,52 @@ async function selectComboboxOption(page: Page, trigger: Locator, optionName: st
   await option.click()
 }
 
+async function routeRequestCenter(page: Page, items: Array<Record<string, unknown>>) {
+  await page.unroute('**/api/workflow/request-center**')
+  await page.route('**/api/workflow/request-center**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const bucket = requestUrl.searchParams.get('bucket') ?? 'open'
+    const type = requestUrl.searchParams.get('type') ?? 'all'
+    const status = requestUrl.searchParams.get('status') ?? 'all'
+    const period = requestUrl.searchParams.get('period')
+    const query = requestUrl.searchParams.get('q')?.toLocaleLowerCase('tr-TR') ?? ''
+    const limit = Number(requestUrl.searchParams.get('limit') ?? 15)
+    const offset = Number(requestUrl.searchParams.get('offset') ?? 0)
+    const scopedItems = items.filter((item) => {
+      if (type !== 'all' && item.requestType !== type) return false
+      if (period && String(item.updatedAt).slice(0, 7) !== period) return false
+      if (query && !JSON.stringify(item).toLocaleLowerCase('tr-TR').includes(query)) return false
+      return true
+    })
+    const selectedItems = scopedItems.filter((item) => {
+      const itemStatus = String(item.status)
+      if (bucket === 'done' && itemStatus !== 'approved') return false
+      if (bucket === 'open' && itemStatus === 'approved') return false
+      if (status === 'pending' && ['approved', 'rejected'].includes(itemStatus)) return false
+      if (status === 'returned' && itemStatus !== 'rejected') return false
+      if (status === 'approved' && itemStatus !== 'approved') return false
+      return true
+    })
+
+    await route.fulfill({
+      json: {
+        items: selectedItems.slice(offset, offset + limit),
+        meta: {
+          count: Math.min(limit, Math.max(0, selectedItems.length - offset)),
+          total: selectedItems.length,
+          limit,
+          offset,
+        },
+        summary: {
+          open: scopedItems.filter((item) => item.status !== 'approved').length,
+          done: scopedItems.filter((item) => item.status === 'approved').length,
+          returned: scopedItems.filter((item) => item.status === 'rejected').length,
+        },
+      },
+    })
+  })
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.localStorage.setItem(
@@ -4149,28 +4195,20 @@ test('store approvals page keeps region manager request center free of workforce
   expect(workforceCalls).toEqual([])
 })
 
-test('store approvals page presents workforce request load failures as alerts', async ({ page }) => {
-  await page.unroute('**/api/workforce/seller-code-requests**')
-  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
+test('store approvals page presents bounded ledger load failures as an alert', async ({ page }) => {
+  await page.unroute('**/api/workflow/request-center**')
+  await page.route('**/api/workflow/request-center**', async (route) => {
     await route.fulfill({
       status: 500,
-      body: 'Returned seller queue unavailable',
-    })
-  })
-  await page.unroute('**/api/workforce/offboarding-requests**')
-  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
-    await route.fulfill({
-      status: 500,
-      body: 'Returned offboarding queue unavailable',
+      body: 'Request center unavailable',
     })
   })
 
   await page.goto('/store/approvals')
 
   const alerts = page.getByRole('alert')
-  await expect(alerts).toHaveCount(2)
-  await expect(alerts.filter({ hasText: 'Returned seller queue unavailable' })).toBeVisible()
-  await expect(alerts.filter({ hasText: 'Returned offboarding queue unavailable' })).toBeVisible()
+  await expect(alerts).toHaveCount(1)
+  await expect(alerts.filter({ hasText: 'Request center unavailable' })).toBeVisible()
 })
 
 test('store approvals page hands returned workforce corrections to workforce with identity', async ({ page }) => {
@@ -4207,6 +4245,39 @@ test('store approvals page hands returned workforce corrections to workforce wit
     })
   })
 
+  await routeRequestCenter(page, [
+    {
+      requestId: rejectedSellerCodeRequestFixture.requestId,
+      requestType: 'sellerCode',
+      storeId: rejectedSellerCodeRequestFixture.storeId,
+      storeName: rejectedSellerCodeRequestFixture.storeName,
+      status: rejectedSellerCodeRequestFixture.status,
+      updatedAt: rejectedSellerCodeRequestFixture.updatedAt,
+      targetLabel: null,
+      requestMonth: null,
+      allocationCount: null,
+      approvalMode: null,
+      personDisplayName: `${rejectedSellerCodeRequestFixture.firstName} ${rejectedSellerCodeRequestFixture.lastName}`,
+      nationalIdLast4: rejectedSellerCodeRequestFixture.nationalIdLast4,
+      externalEmployeeRef: null,
+    },
+    {
+      requestId: rejectedOffboardingRequestFixture.requestId,
+      requestType: 'offboarding',
+      storeId: rejectedOffboardingRequestFixture.storeId,
+      storeName: rejectedOffboardingRequestFixture.storeName,
+      status: rejectedOffboardingRequestFixture.status,
+      updatedAt: rejectedOffboardingRequestFixture.updatedAt,
+      targetLabel: null,
+      requestMonth: null,
+      allocationCount: null,
+      approvalMode: null,
+      personDisplayName: rejectedOffboardingRequestFixture.displayName,
+      nationalIdLast4: null,
+      externalEmployeeRef: rejectedOffboardingRequestFixture.externalEmployeeRef,
+    },
+  ])
+
   await page.goto('/store/approvals')
 
   const sellerRow = page
@@ -4238,22 +4309,38 @@ test('store approvals page hands returned workforce corrections to workforce wit
 })
 
 test('store approvals page keeps pending workforce read actions generic', async ({ page }) => {
-  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [sellerCodeRequestFixture],
-        meta: { count: 1, total: 1, limit: 50, offset: 0 },
-      },
-    })
-  })
-  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [offboardingRequestFixture],
-        meta: { count: 1, total: 1, limit: 50, offset: 0 },
-      },
-    })
-  })
+  await routeRequestCenter(page, [
+    {
+      requestId: sellerCodeRequestFixture.requestId,
+      requestType: 'sellerCode',
+      storeId: sellerCodeRequestFixture.storeId,
+      storeName: sellerCodeRequestFixture.storeName,
+      status: sellerCodeRequestFixture.status,
+      updatedAt: sellerCodeRequestFixture.updatedAt,
+      targetLabel: null,
+      requestMonth: null,
+      allocationCount: null,
+      approvalMode: null,
+      personDisplayName: `${sellerCodeRequestFixture.firstName} ${sellerCodeRequestFixture.lastName}`,
+      nationalIdLast4: sellerCodeRequestFixture.nationalIdLast4,
+      externalEmployeeRef: null,
+    },
+    {
+      requestId: offboardingRequestFixture.requestId,
+      requestType: 'offboarding',
+      storeId: offboardingRequestFixture.storeId,
+      storeName: offboardingRequestFixture.storeName,
+      status: offboardingRequestFixture.status,
+      updatedAt: offboardingRequestFixture.updatedAt,
+      targetLabel: null,
+      requestMonth: null,
+      allocationCount: null,
+      approvalMode: null,
+      personDisplayName: offboardingRequestFixture.displayName,
+      nationalIdLast4: null,
+      externalEmployeeRef: offboardingRequestFixture.externalEmployeeRef,
+    },
+  ])
 
   await page.goto('/store/approvals')
 
@@ -4302,14 +4389,21 @@ test('store approvals page paginates request center rows after fifteen records',
     updatedAt: `2026-05-${String(20 - index).padStart(2, '0')}T10:00:00.000Z`,
   }))
 
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({
-      json: {
-        items,
-        meta: { count: items.length, total: items.length, limit: 200, offset: 0 },
-      },
-    })
-  })
+  await routeRequestCenter(page, items.map((item) => ({
+    requestId: item.requestId,
+    requestType: 'target',
+    storeId: item.storeId,
+    storeName: item.storeName,
+    status: item.status,
+    updatedAt: item.updatedAt,
+    targetLabel: item.targetLabel,
+    requestMonth: item.requestMonth,
+    allocationCount: item.allocationCount,
+    approvalMode: item.approvalMode,
+    personDisplayName: null,
+    nationalIdLast4: null,
+    externalEmployeeRef: null,
+  })))
 
   await page.goto('/store/approvals')
 
@@ -4338,10 +4432,24 @@ test('store approvals page sends store manager target handoff to distribution st
     assignedStoreTypes: ['company'],
   }))
 
-  await page.unroute('**/api/target-distributions/requests**')
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({ json: pendingTargetDistributionRequestsFixture })
-  })
+  await routeRequestCenter(
+    page,
+    pendingTargetDistributionRequestsFixture.items.map((item) => ({
+      requestId: item.requestId,
+      requestType: 'target',
+      storeId: item.storeId,
+      storeName: item.storeName,
+      status: item.status,
+      updatedAt: item.updatedAt,
+      targetLabel: item.targetLabel,
+      requestMonth: item.requestMonth,
+      allocationCount: item.allocationCount,
+      approvalMode: item.approvalMode,
+      personDisplayName: null,
+      nationalIdLast4: null,
+      externalEmployeeRef: null,
+    })),
+  )
 
   await page.goto('/store/approvals')
 
@@ -4805,6 +4913,25 @@ async function routeStoreSurfaceApi(page: Page) {
   await page.route('**/api/workflow/inbox', async (route) => {
     await route.fulfill({ json: workflowInboxFixture })
   })
+
+  await routeRequestCenter(
+    page,
+    targetDistributionRequestsFixture.items.map((item) => ({
+      requestId: item.requestId,
+      requestType: 'target',
+      storeId: item.storeId,
+      storeName: item.storeName,
+      status: item.status,
+      updatedAt: item.updatedAt,
+      targetLabel: item.targetLabel,
+      requestMonth: item.requestMonth,
+      allocationCount: item.allocationCount,
+      approvalMode: item.approvalMode,
+      personDisplayName: null,
+      nationalIdLast4: null,
+      externalEmployeeRef: null,
+    })),
+  )
 
   await page.route('**/api/store-actions/plans**', async (route) => {
     await route.fulfill({

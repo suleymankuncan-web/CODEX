@@ -58,9 +58,10 @@ split and every create/approve/workforce command contract.
   create a query key and request that represent that exact server-side slice.
 - FR-11: Store Approvals route prefetch MUST request only the default first
   page; it MUST NOT prefetch later pages or complete histories.
-- FR-12: Read scope MUST be resolved from the existing effective read-scope
-  policy. Assigned-store action scope MUST continue to control commands and
-  MUST NOT be widened by the new read model.
+- FR-12: Request-center scope MUST preserve the existing target-list resolver:
+  company/region scope for broad read roles and assigned-store fallback for a
+  Store Manager. Assigned-store command checks remain independently enforced;
+  this performance PR MUST NOT widen either read or action scope.
 - FR-13: A requested `storeId` outside effective read scope MUST return an empty
   scoped list or the repository's established scoped-empty behavior; the read
   MUST NOT widen scope or disclose existence.
@@ -128,9 +129,10 @@ split and every create/approve/workforce command contract.
 - AC-07 (FR-10): Given the operator changes any server-owned filter, when the
   selection commits, then offset resets to zero and stale data from the prior
   query key is not presented as the new filtered result.
-- AC-08 (FR-12, FR-13, NFR-03): Given two actors with different read/action
-  scopes, when both request the same filters, then each total/items set is
-  read-scoped and neither receives command authority for an unassigned store.
+- AC-08 (FR-12, FR-13, NFR-03): Given two actors with different effective
+  target-list/action scopes, when both request the same filters, then each
+  total/items set follows the existing target-list resolver and neither receives
+  command authority for an unassigned store.
 - AC-09 (FR-14, FR-15, NFR-05): Given target create and approval regression
   fixtures, when commands succeed or fail, then request/response validation and
   audit semantics match the pre-PR contract; success refreshes bounded lists.
@@ -172,9 +174,9 @@ split and every create/approve/workforce command contract.
   still returns exact metadata.
 - EC-09: Type is `all`. All three authorized branches participate in one
   globally ordered page and one exact total.
-- EC-10: Store Manager has assigned action stores but narrower/different read
-  scope. Ledger visibility follows read scope; action links and backend commands
-  continue to enforce assigned action scope.
+- EC-10: Store Manager legacy/read scope differs from assigned stores. Ledger
+  visibility preserves the existing assigned-store fallback; this PR neither
+  widens the read nor changes backend command enforcement.
 - EC-11: REPORT_VIEWER can read scoped rows but cannot approve. The page does
   not gain mutation controls from the read endpoint.
 - EC-12: A source row lacks optional name/reference evidence. Existing unknown
@@ -222,7 +224,7 @@ type RequestCenterQuery = {
   status?: 'all' | 'pending' | 'returned' | 'approved'   // default: all
   period?: string                // YYYY-MM; omitted means all
   storeId?: string               // UUID; optional scoped narrowing
-  q?: string                     // trimmed bounded search term
+  q?: string                     // trimmed search term; 2..100 characters
   limit?: number                 // 1..50; client default 15
   offset?: number                // >= 0; client default 0
 }
@@ -252,8 +254,17 @@ type RequestCenterResponse = {
     limit: number
     offset: number
   }
+  summary: {
+    open: number
+    done: number
+    returned: number
+  }
 }
 ```
+
+`summary` is computed for the current type/period/store/search scope while
+ignoring the selected tab/status, so the three existing Store Approvals metrics
+remain exact without additional browser requests.
 
 Success uses the repository's standard list response. Invalid query values use
 the standard sanitized validation error envelope. Authentication/role failure

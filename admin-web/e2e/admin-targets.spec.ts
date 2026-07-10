@@ -69,7 +69,17 @@ async function routeAdminTargetsApi(page: Page) {
   })
 
   await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({ json: targetDistributionRequestsFixture })
+    const requestUrl = new URL(route.request().url())
+    const status = requestUrl.searchParams.get('status')
+    const items = status
+      ? targetDistributionRequestsFixture.items.filter((item) => item.status === status)
+      : targetDistributionRequestsFixture.items
+    await route.fulfill({
+      json: {
+        items,
+        meta: { ...targetDistributionRequestsFixture.meta, count: items.length, total: items.length },
+      },
+    })
   })
 
   await page.route('**/api/target-distributions/coverage**', async (route) => {

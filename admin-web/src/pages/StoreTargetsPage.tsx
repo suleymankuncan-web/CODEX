@@ -34,7 +34,7 @@ import { useLocalization } from '../features/localization/useLocalization'
 import {
   approveTargetDistributionRequest,
   createTargetDistributionRequest,
-  getAllTargetDistributionRequests,
+  getTargetDistributionRequests,
   getStoreTargetingPersonnel,
   getTargetCoverage,
   type TargetDistributionAllocation,
@@ -204,9 +204,11 @@ export function StoreTargetsPage(input: {
       effectiveSelectedStoreId || 'all',
     ],
     queryFn: () =>
-      getAllTargetDistributionRequests({
+      getTargetDistributionRequests({
         ...(hasExplicitRequestMonth ? { requestMonth: requestMonthStart } : {}),
         ...(effectiveSelectedStoreId ? { storeId: effectiveSelectedStoreId } : {}),
+        limit: 200,
+        offset: 0,
       }),
     enabled: canReadTargets,
     staleTime: 30_000,

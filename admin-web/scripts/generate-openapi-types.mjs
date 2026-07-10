@@ -124,6 +124,7 @@ const selectedOperations = [
   { path: '/api/workforce/seller-code-requests', method: 'get' },
   { path: '/api/workforce/store-employees', method: 'get' },
   { path: '/api/workflow/inbox', method: 'get' },
+  { path: '/api/workflow/request-center', method: 'get' },
 ]
 validateSelectedOperations(document, selectedOperations)
 const selectedSchemaNames = collectReferencedSchemaNames(document, selectedOperations)

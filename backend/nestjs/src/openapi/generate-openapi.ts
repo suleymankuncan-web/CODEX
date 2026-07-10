@@ -2293,6 +2293,68 @@ const workflowInboxResponseSchema = {
   },
 };
 
+const requestCenterItemSchema = {
+  type: "object",
+  required: [
+    "requestId",
+    "requestType",
+    "storeId",
+    "storeName",
+    "status",
+    "updatedAt",
+    "targetLabel",
+    "requestMonth",
+    "allocationCount",
+    "approvalMode",
+    "personDisplayName",
+    "nationalIdLast4",
+    "externalEmployeeRef",
+  ],
+  properties: {
+    requestId: { type: "string" },
+    requestType: {
+      type: "string",
+      enum: ["target", "sellerCode", "offboarding"],
+    },
+    storeId: { type: "string" },
+    storeName: { type: "string", nullable: true },
+    status: { type: "string" },
+    updatedAt: { type: "string" },
+    targetLabel: { type: "string", nullable: true },
+    requestMonth: { type: "string", nullable: true },
+    allocationCount: { type: "integer", minimum: 0, nullable: true },
+    approvalMode: {
+      type: "string",
+      enum: ["direct", "adjusted"],
+      nullable: true,
+    },
+    personDisplayName: { type: "string", nullable: true },
+    nationalIdLast4: { type: "string", nullable: true },
+    externalEmployeeRef: { type: "string", nullable: true },
+  },
+};
+
+const requestCenterResponseSchema = {
+  type: "object",
+  required: ["items", "meta", "summary"],
+  properties: {
+    items: {
+      type: "array",
+      items: requestCenterItemSchema,
+    },
+    meta: listResponseMetaSchema,
+    summary: {
+      type: "object",
+      required: ["open", "done", "returned"],
+      properties: {
+        open: { type: "integer", minimum: 0 },
+        done: { type: "integer", minimum: 0 },
+        returned: { type: "integer", minimum: 0 },
+      },
+    },
+  },
+};
+
 const workforceSellerCodeReferenceResponseSchema = {
   type: "object",
   required: ["storeType", "prefix", "lastSellerCode", "nextSellerCodePreview"],
@@ -4426,6 +4488,7 @@ async function generateOpenApi(): Promise<void> {
     TargetCoverageResponse: targetCoverageResponseSchema,
     StoreTargetingPersonnelResponse: storeTargetingPersonnelResponseSchema,
     WorkflowInboxResponse: workflowInboxResponseSchema,
+    RequestCenterResponse: requestCenterResponseSchema,
     SnapshotOverviewResponse: snapshotOverviewResponseSchema,
     DailyClosureStatusResponse: dailyClosureStatusResponseSchema,
     SnapshotNeedsActionResponse: snapshotNeedsActionResponseSchema,
@@ -4592,6 +4655,14 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Shared workflow inbox items visible to the current actor.",
     "WorkflowInboxResponse",
+  );
+
+  setJsonResponseSchema(
+    document.paths,
+    "/api/workflow/request-center",
+    "get",
+    "Bounded target and workforce request ledger visible to the current actor.",
+    "RequestCenterResponse",
   );
 
   setJsonResponseSchema(

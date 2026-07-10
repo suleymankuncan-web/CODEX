@@ -112,8 +112,28 @@ async function routeMasterDataControlApi(page: Page) {
 }
 
 async function routeStoreApprovalsMinimalApi(page: Page) {
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({ json: pendingTargetRequests })
+  await page.route('**/api/workflow/request-center**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: pendingTargetRequests.items.map((item) => ({
+          requestId: item.requestId,
+          requestType: 'target',
+          storeId: item.storeId,
+          storeName: item.storeName,
+          status: item.status,
+          updatedAt: item.updatedAt,
+          targetLabel: item.targetLabel,
+          requestMonth: item.requestMonth,
+          allocationCount: item.allocationCount,
+          approvalMode: item.approvalMode,
+          personDisplayName: null,
+          nationalIdLast4: null,
+          externalEmployeeRef: null,
+        })),
+        meta: { count: 1, total: 1, limit: 15, offset: 0 },
+        summary: { open: 1, done: 0, returned: 0 },
+      },
+    })
   })
   await page.route('**/api/target-distributions/store-personnel?**', async (route) => {
     await route.fulfill({ json: emptyList })

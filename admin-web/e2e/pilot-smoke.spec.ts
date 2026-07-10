@@ -600,6 +600,17 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/workflow/request-center')) {
+      await route.fulfill({
+        json: {
+          items: [],
+          meta: { count: 0, total: 0, limit: 15, offset: 0 },
+          summary: { open: 0, done: 0, returned: 0 },
+        },
+      })
+      return
+    }
+
     if (pathname.endsWith('/api/store-actions/plans')) {
       await route.fulfill({ json: storeActionPlansFixture })
       return

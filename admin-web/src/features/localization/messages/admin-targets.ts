@@ -52,6 +52,10 @@ export const adminTargetsTr = {
   'adminTargets.noPendingCopy':
     'Mağaza müdürleri henüz bölge onayı gerektiren hedef dağıtım talebi göndermedi.',
 
+  'adminTargets.pendingPager': '{from}-{to} / {total} bekleyen talep',
+  'adminTargets.previous': 'Önceki',
+  'adminTargets.next': 'Sonraki',
+
   'adminTargets.recentHistory': 'Yakın geçmiş',
   'adminTargets.recentlyApprovedTitle': 'Son onaylanan hedef talepleri',
   'adminTargets.visible': 'Görünür',
@@ -153,6 +157,10 @@ export const adminTargetsEn: Record<keyof typeof adminTargetsTr, string> = {
   'adminTargets.noPendingTitle': 'No pending requests',
   'adminTargets.noPendingCopy':
     'Store managers have not submitted any target distribution requests that require region approval yet.',
+
+  'adminTargets.pendingPager': '{from}-{to} / {total} pending requests',
+  'adminTargets.previous': 'Previous',
+  'adminTargets.next': 'Next',
 
   'adminTargets.recentHistory': 'Recent History',
   'adminTargets.recentlyApprovedTitle': 'Recently approved target requests',

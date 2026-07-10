@@ -1,0 +1,124 @@
+import { expect, test } from './test-fixtures'
+
+const storeId = '00000000-0000-4000-8000-000000000100'
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'mock',
+        mockUserId: 'bounded-target-queue-user',
+        mockRoleCodes: 'SUPER_ADMIN',
+        mockCompanyIds: '00000000-0000-4000-8000-000000000001',
+        bearerToken: '',
+      }),
+    )
+  })
+  await page.route('**/api/auth/session', async (route) => {
+    await route.fulfill({
+      json: {
+        authMode: 'mock',
+        authenticated: true,
+        user: {
+          userId: 'bounded-target-queue-user',
+          roleCodes: ['SUPER_ADMIN'],
+          scope: { companyIds: ['00000000-0000-4000-8000-000000000001'], regionIds: [], storeIds: [] },
+          readScope: { companyIds: ['00000000-0000-4000-8000-000000000001'], regionIds: [], storeIds: [] },
+          actionScope: { assignedStoreIds: [storeId] },
+          assignedStoreIds: [storeId],
+        },
+        scopeSummary: { companyCount: 1, regionCount: 0, storeCount: 0, assignedStoreCount: 1 },
+      },
+    })
+  })
+})
+
+test('admin and Store target queues request only bounded visible slices', async ({ page }) => {
+  const targetCalls: URL[] = []
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    targetCalls.push(requestUrl)
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: {
+          count: 0,
+          total: requestUrl.searchParams.get('status') === 'approved' ? 10_000 : 0,
+          limit: Number(requestUrl.searchParams.get('limit')),
+          offset: Number(requestUrl.searchParams.get('offset')),
+        },
+      },
+    })
+  })
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 50, offset: 0 },
+        summary: {
+          requestMonth: '2026-07-01',
+          totalEmployees: 0,
+          coveredEmployees: 0,
+          missingEmployees: 0,
+          pendingEmployees: 0,
+          conflictEmployees: 0,
+          staleEmployees: 0,
+          uncoveredEmployees: 0,
+          coverageRate: 0,
+        },
+      },
+    })
+  })
+
+  await page.goto('/admin/targets')
+  await expect(page.getByRole('heading', { name: 'Bekleyen hedef dağıtım talepleri' })).toBeVisible()
+
+  expect(targetCalls).toHaveLength(2)
+  expect(targetCalls.map((url) => url.searchParams.toString()).sort()).toEqual([
+    'status=approved&limit=5&offset=0',
+    'status=pending_region_approval&limit=50&offset=0',
+  ])
+
+  const ledgerCalls: URL[] = []
+  const ledgerItems = Array.from({ length: 20 }, (_, index) => ({
+    requestId: `request-${String(index + 1).padStart(2, '0')}`,
+    requestType: 'target',
+    storeId,
+    storeName: `Store ${index + 1}`,
+    status: 'pending_region_approval',
+    updatedAt: `2026-07-${String(20 - index).padStart(2, '0')}T09:00:00.000Z`,
+    targetLabel: `Target ${index + 1}`,
+    requestMonth: '2026-07-01',
+    allocationCount: 2,
+    approvalMode: null,
+    personDisplayName: null,
+    nationalIdLast4: null,
+    externalEmployeeRef: null,
+  }))
+  await page.route('**/api/workflow/request-center**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    ledgerCalls.push(requestUrl)
+    const limit = Number(requestUrl.searchParams.get('limit'))
+    const offset = Number(requestUrl.searchParams.get('offset'))
+    await route.fulfill({
+      json: {
+        items: ledgerItems.slice(offset, offset + limit),
+        meta: { count: Math.min(limit, ledgerItems.length - offset), total: 20, limit, offset },
+        summary: { open: 20, done: 0, returned: 0 },
+      },
+    })
+  })
+
+  await page.goto('/store/approvals')
+  await expect(page.getByTestId('store-approvals-ledger')).toBeVisible()
+  expect(ledgerCalls).toHaveLength(1)
+  expect(ledgerCalls[0].searchParams.get('limit')).toBe('15')
+  expect(ledgerCalls[0].searchParams.get('offset')).toBe('0')
+
+  await page.getByRole('button', { name: 'Sayfa 2' }).click()
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(5)
+  expect(ledgerCalls).toHaveLength(2)
+  expect(ledgerCalls[1].searchParams.get('limit')).toBe('15')
+  expect(ledgerCalls[1].searchParams.get('offset')).toBe('15')
+})

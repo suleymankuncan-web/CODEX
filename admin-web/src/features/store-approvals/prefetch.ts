@@ -2,15 +2,9 @@ import type { QueryKey } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../auth/api'
 import {
   canListTargetDistributionRequests,
-  getAssignedStoreIds,
-  getReadStoreIds,
   hasAnyRole,
 } from '../auth/authorization'
-import { getAllTargetDistributionRequests } from '../targets/api'
-import {
-  getOffboardingRequests,
-  getSellerCodeRequests,
-} from '../workforce/api'
+import { getRequestCenterPage } from './request-center-api'
 
 type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
 
@@ -24,33 +18,28 @@ export function getStoreApprovalsPrefetchTasks(
   authSummary: AuthSessionSummary | null,
 ): StoreApprovalsPrefetchTask[] {
   const persona = resolveStoreApprovalsPersona(authSummary)
-  const assignedStoreIds = getAssignedStoreIds(authSummary)
-  const readStoreIds = getReadStoreIds(authSummary)
-  const roleKey = (authSummary?.user.roleCodes ?? []).join('|')
   const scopeKey = [
     persona,
-    roleKey,
-    assignedStoreIds.join('|'),
-    readStoreIds.join('|'),
+    authSummary?.user.userId ?? 'anonymous',
+    authSummary?.user.roleCodes.join('|') ?? '',
+    authSummary?.user.readScope.companyIds.join('|') ?? '',
+    authSummary?.user.readScope.regionIds.join('|') ?? '',
+    authSummary?.user.readScope.storeIds.join('|') ?? '',
+    authSummary?.user.actionScope.assignedStoreIds.join('|') ?? '',
   ].join(':')
   const canListRequests = canListTargetDistributionRequests(authSummary)
-  const showWorkforceQueues = persona === 'storeManager' && assignedStoreIds.length > 0
 
   return [
     {
-      queryKey: ['target-distribution-requests', 'store-approvals-request-center', scopeKey],
-      queryFn: () => getAllTargetDistributionRequests(),
+      queryKey: ['request-center', scopeKey, 'open', 'all', 'all', 'all', '', 15, 0],
+      queryFn: () => getRequestCenterPage({
+        bucket: 'open',
+        type: 'all',
+        status: 'all',
+        limit: 15,
+        offset: 0,
+      }),
       enabled: canListRequests && persona !== 'readOnly',
-    },
-    {
-      queryKey: ['seller-code-requests', 'store-approvals-request-center', scopeKey],
-      queryFn: () => getSellerCodeRequests(),
-      enabled: showWorkforceQueues,
-    },
-    {
-      queryKey: ['offboarding-requests', 'store-approvals-request-center', scopeKey],
-      queryFn: () => getOffboardingRequests(),
-      enabled: showWorkforceQueues,
     },
   ]
 }
