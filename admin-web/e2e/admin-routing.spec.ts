@@ -197,6 +197,13 @@ test('admin sidebar prefetches target queue data before opening targets', async 
 
   await page.route('**/api/target-distributions/requests**', async (route) => {
     requestsCalls += 1
+    const status = new URL(route.request().url()).searchParams.get('status')
+    if (status === 'approved') {
+      await route.fulfill({
+        json: { items: [], meta: { count: 0, total: 0, limit: 5, offset: 0 } },
+      })
+      return
+    }
     await route.fulfill({ json: targetDistributionRequestsPrefetchFixture })
   })
   await page.route('**/api/target-distributions/coverage**', async (route) => {
@@ -223,7 +230,7 @@ test('admin sidebar prefetches target queue data before opening targets', async 
 
   await targetLink.hover()
 
-  await expect.poll(() => requestsCalls).toBeGreaterThanOrEqual(1)
+  await expect.poll(() => requestsCalls).toBe(2)
   await expect.poll(() => coverageCalls).toBeGreaterThanOrEqual(1)
   const prefetchedRequestsCalls = requestsCalls
   const prefetchedCoverageCalls = coverageCalls

@@ -1,4 +1,5 @@
 import type { TargetDistributionRequest } from '../features/targets/api'
+import type { RequestCenterItem } from '../features/store-approvals/request-center-api'
 import type { OffboardingRequest, SellerCodeRequest } from '../features/workforce/api'
 import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDateTime } from '../lib/format'
@@ -163,6 +164,86 @@ export const requestCenterCopy = {
 
 export type RequestCenterCopy = (typeof requestCenterCopy)[AppLocale]
 
+export function buildRequestCenterRows(input: {
+  copy: RequestCenterCopy
+  locale: AppLocale
+  persona: StoreApprovalsPersona
+  items: RequestCenterItem[]
+}) {
+  return input.items.map((item): RequestCenterRow => {
+    const isApproved = item.status === 'approved'
+    const isReturned = item.status === 'rejected'
+    const status =
+      item.requestType === 'target' && isApproved && item.approvalMode === 'adjusted'
+        ? { label: input.copy.adjustedApprovedStatus, tone: 'calm' as StoreSurfaceTone }
+        : resolveStatus(item.status, input.copy)
+
+    if (item.requestType === 'target') {
+      return {
+        id: `target:${item.requestId}`,
+        type: 'target',
+        title: item.targetLabel || input.copy.targetType,
+        subtitle: input.copy.targetSubtitle,
+        scopeTitle: normalizeDisplayLabel(item.storeName, input.copy.unknownStore),
+        scopeSubtitle:
+          input.persona === 'regionManager'
+            ? input.copy.regionSubtitle
+            : formatCopy(input.copy.targetScopeSubtitle, {
+              count: String(item.allocationCount ?? 0),
+            }),
+        status: item.status,
+        statusLabel: status.label,
+        statusTone: status.tone,
+        sourceLabel: input.copy.targetSource,
+        updatedAt: item.updatedAt,
+        updatedLabel: formatDateTime(item.updatedAt, input.locale),
+        bucket: isApproved ? 'done' : 'open',
+        rowTone: item.status === 'pending_region_approval' ? 'urgent' : 'neutral',
+        actionLabel: isApproved ? input.copy.detailAction : input.copy.targetAction,
+        actionTo: createTargetHandoffUrl({
+          requestMonth: item.requestMonth ?? '',
+          storeId: item.storeId,
+          status: item.status,
+        }, input.persona),
+        actionPrimary: item.status === 'pending_region_approval',
+      }
+    }
+
+    const isSellerCode = item.requestType === 'sellerCode'
+    return {
+      id: `${item.requestType}:${item.requestId}`,
+      type: item.requestType,
+      title:
+        item.personDisplayName ||
+        (isSellerCode ? input.copy.sellerCodeType : input.copy.offboardingType),
+      subtitle: isSellerCode ? input.copy.sellerSubtitle : input.copy.offboardingSubtitle,
+      scopeTitle: normalizeDisplayLabel(item.storeName, input.copy.unknownStore),
+      scopeSubtitle: isSellerCode
+        ? formatCopy(input.copy.sellerScopeSubtitle, {
+          last4: item.nationalIdLast4 ?? input.copy.noReference,
+        })
+        : formatCopy(input.copy.offboardingScopeSubtitle, {
+          ref: item.externalEmployeeRef ?? input.copy.noReference,
+        }),
+      status: item.status,
+      statusLabel: status.label,
+      statusTone: status.tone,
+      sourceLabel: input.copy.workforceSource,
+      updatedAt: item.updatedAt,
+      updatedLabel: formatDateTime(item.updatedAt, input.locale),
+      bucket: isApproved ? 'done' : 'open',
+      rowTone: isReturned ? 'returned' : 'neutral',
+      actionLabel: isReturned ? input.copy.workforceAction : input.copy.workforceReadAction,
+      actionTo: createWorkforceHandoffUrl({
+        ...(isReturned ? { requestId: item.requestId } : {}),
+        storeId: item.storeId,
+        type: item.requestType,
+      }),
+      actionPrimary: isReturned,
+    }
+  })
+}
+
 export function buildRequestRows(input: {
   copy: RequestCenterCopy
   locale: AppLocale
@@ -217,10 +298,9 @@ export function matchesStatusFilter(status: string, filter: RequestCenterStatus)
   return status !== 'approved' && status !== 'rejected'
 }
 
-export function createPeriodOptions(rows: RequestCenterRow[], locale: AppLocale) {
-  const periods = Array.from(new Set(rows.map((row) => row.updatedAt.slice(0, 7)))).filter(Boolean)
-
-  return periods
+export function createPeriodOptions(periods: string[], locale: AppLocale) {
+  return Array.from(new Set(periods))
+    .filter(Boolean)
     .sort((a, b) => b.localeCompare(a))
     .map((period) => ({
       value: period,
@@ -363,11 +443,14 @@ function resolveStatus(status: string, copy: RequestCenterCopy) {
   }
 }
 
-function createTargetHandoffUrl(request: TargetDistributionRequest, persona: StoreApprovalsPersona) {
-  const params = new URLSearchParams({
-    requestMonth: request.requestMonth.slice(0, 7),
-    storeId: request.storeId,
-  })
+function createTargetHandoffUrl(
+  request: Pick<TargetDistributionRequest, 'requestMonth' | 'storeId' | 'status'>,
+  persona: StoreApprovalsPersona,
+) {
+  const params = new URLSearchParams({ storeId: request.storeId })
+  if (request.requestMonth) {
+    params.set('requestMonth', request.requestMonth.slice(0, 7))
+  }
 
   if (request.status === 'approved') {
     params.set('status', 'approved')

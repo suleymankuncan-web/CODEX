@@ -70,43 +70,6 @@ export async function getTargetDistributionRequests(input?: {
   return fetchOpenApiJson('/api/target-distributions/requests', { query: params })
 }
 
-export async function getAllTargetDistributionRequests(input?: {
-  requestMonth?: string
-  status?: string
-  storeId?: string
-}) {
-  const limit = 200
-  let offset = 0
-  const items: TargetDistributionRequests['items'] = []
-  let total = 0
-
-  do {
-    const page = await getTargetDistributionRequests({
-      ...input,
-      limit,
-      offset,
-    })
-
-    items.push(...page.items)
-    total = page.meta.total
-    offset += page.meta.count
-
-    if (page.meta.count === 0) {
-      break
-    }
-  } while (offset < total)
-
-  return {
-    items,
-    meta: {
-      count: items.length,
-      total,
-      limit,
-      offset: 0,
-    },
-  }
-}
-
 export async function createTargetDistributionRequest(input: {
   storeId: string
   requestMonth: string

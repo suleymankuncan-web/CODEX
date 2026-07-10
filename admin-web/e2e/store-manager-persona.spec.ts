@@ -150,6 +150,15 @@ async function routeStoreManagerApi(page: Page) {
   await page.route('**/api/workflow/inbox', async (route) => {
     await route.fulfill({ json: { items: [workflowKpiItem], meta: { count: 1, total: 1, limit: 30, offset: 0 } } })
   })
+  await page.route('**/api/workflow/request-center**', async (route) => {
+    await route.fulfill({
+      json: {
+        items: [],
+        meta: { count: 0, total: 0, limit: 15, offset: 0 },
+        summary: { open: 0, done: 0, returned: 0, periods: [] },
+      },
+    })
+  })
   await page.route('**/api/store-actions/plans**', async (route) => {
     await route.fulfill({ json: { items: [], meta: { count: 0, total: 0, limit: 20, offset: 0 } } })
   })

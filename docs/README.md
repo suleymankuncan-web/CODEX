@@ -41,6 +41,7 @@ Use this directory like an operating library, not a diary.
 | Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Owner-approved, evidence-gated sequence: CI truth is implemented; A3 p95 observation and B1 external pilot inputs remain pending. |
 | Remediate the page, authorization, codebase, and database audit | `docs/plans/project-wide-audit-remediation-plan-v1.md` | Detailed spec-first PR train for route-role truth, session cache isolation, bounded target queues, UI correctness, data integrity, and production-gated resilience. |
 | Implement session-scoped query cache isolation | `docs/plans/session-scoped-query-cache-isolation-spec-v1.md` | Approved PR-3 contract for effective-authorization fingerprinting, the public query allowlist, no-flash cache removal, renewal, logout, expiry, and same-context persona switching. |
+| Bound target request queues | `docs/plans/bounded-target-request-queues-spec-v1.md` | Approved PR-4 contract for paged Admin Targets, a scoped Store request-center read model, bounded route prefetch, exact totals, and mutation non-change. |
 | Reconcile role-route or archive-guard drift | `docs/architecture/authorization-operating-truth-v1.json`, `docs/architecture/pilot-route-role-matrix.md`, and `docs/plans/archive-guard-migration-register-v1.md` | Source-derived complete route/preview drift, current human route policy, and the incremental rule for removing historical handoff guard dependencies. |
 | Find an active decision | `docs/plans/decision-registry-v1.md` | Decision status, source document, and change trigger. |
 | Choose an operating checklist | `docs/plans/runbook-registry-v1.md` | Repeatable runbooks, required input, output, and stop condition. |
@@ -137,6 +138,7 @@ Use for project shape, growth rules, API contracts, and system boundaries.
 - `docs/plans/docs-library-metadata-standard-v1.md`
 - `docs/plans/project-wide-audit-remediation-plan-v1.md`
 - `docs/plans/session-scoped-query-cache-isolation-spec-v1.md`
+- `docs/plans/bounded-target-request-queues-spec-v1.md`
 - `docs/plans/feature-integration-spine-v1.md`
 - `docs/plans/new-module-template.md`
 - `docs/plans/technical-debt-resolution-roadmap-v1.md`

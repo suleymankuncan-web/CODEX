@@ -45,7 +45,7 @@ import { getOperationsHealth } from '../features/operations/api'
 import { getSnapshotNeedsAction, getSnapshotOverview } from '../features/snapshots/api'
 import { getStoreApprovalsPrefetchTasks } from '../features/store-approvals/prefetch'
 import {
-  getAllTargetDistributionRequests,
+  getTargetDistributionRequests,
   getStoreTargetingPersonnel,
   getTargetCoverage,
 } from '../features/targets/api'
@@ -373,9 +373,11 @@ function getStoreTargetsPrefetchTasks(authSummary: AuthSessionSummary | null): P
         assignedStoreId || 'all',
       ],
       queryFn: () =>
-        getAllTargetDistributionRequests({
+        getTargetDistributionRequests({
           requestMonth: currentRequestMonth,
           ...(assignedStoreId ? { storeId: assignedStoreId } : {}),
+          limit: 200,
+          offset: 0,
         }),
       enabled,
     },
@@ -560,8 +562,21 @@ function getAdminTargetsPrefetchTasks(authSummary: AuthSessionSummary | null): P
 
   return [
     {
-      queryKey: ['target-distribution-requests', 'approval-queue'],
-      queryFn: () => getAllTargetDistributionRequests(),
+      queryKey: ['target-distribution-requests', 'approval-queue', 'pending', 50, 0],
+      queryFn: () => getTargetDistributionRequests({
+        status: 'pending_region_approval',
+        limit: 50,
+        offset: 0,
+      }),
+      enabled,
+    },
+    {
+      queryKey: ['target-distribution-requests', 'approval-queue', 'approved-recent', 5, 0],
+      queryFn: () => getTargetDistributionRequests({
+        status: 'approved',
+        limit: 5,
+        offset: 0,
+      }),
       enabled,
     },
     {

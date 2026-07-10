@@ -5263,6 +5263,27 @@
           "IntegrationMasterDataQuality"
         ]
       }
+    },
+    "/api/workflow/request-center": {
+      "get": {
+        "operationId": "WorkflowInboxController_listRequestCenter",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Bounded target and workforce request ledger visible to the current actor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestCenterResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "WorkflowInbox"
+        ]
+      }
     }
   },
   "info": {
@@ -20259,6 +20280,153 @@
           },
           "includeResponses": {
             "type": "boolean"
+          }
+        }
+      },
+      "RequestCenterResponse": {
+        "type": "object",
+        "required": [
+          "items",
+          "meta",
+          "summary"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "requestId",
+                "requestType",
+                "storeId",
+                "storeName",
+                "status",
+                "updatedAt",
+                "targetLabel",
+                "requestMonth",
+                "allocationCount",
+                "approvalMode",
+                "personDisplayName",
+                "nationalIdLast4",
+                "externalEmployeeRef"
+              ],
+              "properties": {
+                "requestId": {
+                  "type": "string"
+                },
+                "requestType": {
+                  "type": "string",
+                  "enum": [
+                    "target",
+                    "sellerCode",
+                    "offboarding"
+                  ]
+                },
+                "storeId": {
+                  "type": "string"
+                },
+                "storeName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                },
+                "targetLabel": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "requestMonth": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "allocationCount": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "nullable": true
+                },
+                "approvalMode": {
+                  "type": "string",
+                  "enum": [
+                    "direct",
+                    "adjusted"
+                  ],
+                  "nullable": true
+                },
+                "personDisplayName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "nationalIdLast4": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "externalEmployeeRef": {
+                  "type": "string",
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "count",
+              "total",
+              "limit",
+              "offset"
+            ],
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "summary": {
+            "type": "object",
+            "required": [
+              "open",
+              "done",
+              "returned",
+              "periods"
+            ],
+            "properties": {
+              "open": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "done": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "returned": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "periods": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+                }
+              }
+            }
           }
         }
       }

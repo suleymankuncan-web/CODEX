@@ -24,6 +24,10 @@ import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyBrowserSessionOpenApi } from "./browser-session-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 import { applyWorkforceOpenApi } from "./workforce-openapi";
+import {
+  applyBoundedTargetQueueResponses,
+  createRequestCenterResponseSchema,
+} from "./request-center-openapi";
 const publicOperations = [
   { path: "/api/auth/bootstrap", method: "get" },
   { path: "/api/health", method: "get" },
@@ -2293,6 +2297,8 @@ const workflowInboxResponseSchema = {
   },
 };
 
+const requestCenterResponseSchema = createRequestCenterResponseSchema(listResponseMetaSchema);
+
 const workforceSellerCodeReferenceResponseSchema = {
   type: "object",
   required: ["storeType", "prefix", "lastSellerCode", "nextSellerCodePreview"],
@@ -4426,6 +4432,7 @@ async function generateOpenApi(): Promise<void> {
     TargetCoverageResponse: targetCoverageResponseSchema,
     StoreTargetingPersonnelResponse: storeTargetingPersonnelResponseSchema,
     WorkflowInboxResponse: workflowInboxResponseSchema,
+    RequestCenterResponse: requestCenterResponseSchema,
     SnapshotOverviewResponse: snapshotOverviewResponseSchema,
     DailyClosureStatusResponse: dailyClosureStatusResponseSchema,
     SnapshotNeedsActionResponse: snapshotNeedsActionResponseSchema,
@@ -4562,29 +4569,7 @@ async function generateOpenApi(): Promise<void> {
     "CompetitionStagePackagePlanAuditResponse",
   );
 
-  setJsonResponseSchema(
-    document.paths,
-    "/api/target-distributions/requests",
-    "get",
-    "Target distribution approval requests visible to the current actor.",
-    "TargetDistributionRequestsResponse",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/target-distributions/coverage",
-    "get",
-    "Target distribution coverage rows and summary visible to the current actor.",
-    "TargetCoverageResponse",
-  );
-
-  setJsonResponseSchema(
-    document.paths,
-    "/api/target-distributions/store-personnel",
-    "get",
-    "Store personnel available for target distribution requests.",
-    "StoreTargetingPersonnelResponse",
-  );
+  applyBoundedTargetQueueResponses(document.paths);
 
   setJsonResponseSchema(
     document.paths,

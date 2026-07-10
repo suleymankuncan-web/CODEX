@@ -16,6 +16,7 @@ import { SnapshotReportingReadRepository } from "./infrastructure/snapshot-repor
 import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.repository";
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
 import { TargetDistributionRepository } from "./infrastructure/target-distribution.repository";
+import { RequestCenterReadRepository } from "./infrastructure/request-center-read.repository";
 
 @Module({
   controllers: [
@@ -38,6 +39,7 @@ import { TargetDistributionRepository } from "./infrastructure/target-distributi
     FeedRepository,
     PilotFeedbackRepository,
     StoreOpsRepository,
+    RequestCenterReadRepository,
   ],
   exports: [
     TargetDistributionService,

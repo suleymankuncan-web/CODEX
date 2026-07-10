@@ -12,6 +12,7 @@ import { ChecklistAcknowledgementRepository } from "../infrastructure/checklist-
 import { TargetDistributionRepository } from "../infrastructure/target-distribution.repository";
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 import { StoreActionPlanRepository } from "../infrastructure/store-action-plan.repository";
+import { RequestCenterReadRepository } from "../infrastructure/request-center-read.repository";
 
 const activeStoreActionPlanStatuses = ["open", "in_progress", "blocked"] as const;
 const regionChecklistRemediationStatuses = [
@@ -28,6 +29,7 @@ export class WorkflowInboxService {
     private readonly checklistAcknowledgementRepository: ChecklistAcknowledgementRepository,
     private readonly snapshotReportingReadRepository: SnapshotReportingReadRepository,
     private readonly storeActionPlanRepository: StoreActionPlanRepository,
+    private readonly requestCenterReadRepository: RequestCenterReadRepository,
   ) {}
 
   async listInbox(input: {
@@ -200,6 +202,71 @@ export class WorkflowInboxService {
       limit: 50,
       offset: 0,
     });
+  }
+
+  async listRequestCenter(input: {
+    actorRoles: string[];
+    actorScope: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
+    actorActionScope?: {
+      assignedStoreIds: string[];
+    };
+    bucket: "open" | "done";
+    type: "all" | "target" | "sellerCode" | "offboarding";
+    status: "all" | "pending" | "returned" | "approved";
+    period?: string;
+    storeId?: string;
+    query?: string;
+    limit: number;
+    offset: number;
+  }) {
+    const readScope = this.resolveStoreReadScope(input, [
+      "REGION_MANAGER",
+      "REPORT_VIEWER",
+      "SUPER_ADMIN",
+    ]);
+    const page = await this.requestCenterReadRepository.listRequests({
+      companyIds: readScope.companyIds,
+      regionIds: readScope.regionIds,
+      storeIds: readScope.storeIds,
+      bucket: input.bucket,
+      type: input.type,
+      status: input.status,
+      period: input.period,
+      storeId: input.storeId,
+      query: input.query,
+      limit: input.limit,
+      offset: input.offset,
+    });
+
+    return {
+      ...buildListResponse(
+      page.items.map((item) => ({
+        requestId: item.request_id,
+        requestType: item.request_type,
+        storeId: item.store_id,
+        storeName: item.store_name,
+        status: item.request_status,
+        updatedAt: item.updated_at,
+        targetLabel: item.target_label,
+        requestMonth: item.request_month,
+        allocationCount: item.allocation_count,
+        approvalMode: item.approval_mode,
+        personDisplayName: item.person_display_name,
+        nationalIdLast4: item.national_id_last4,
+        externalEmployeeRef: item.external_employee_ref,
+      })),
+      {
+        total: page.total,
+        limit: page.limit,
+        offset: page.offset,
+      },
+      ),
+      summary: page.summary,
+    };
   }
 
   private resolveAcknowledgementScope(input: {

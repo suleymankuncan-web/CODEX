@@ -2262,6 +2262,35 @@ export type components = {
         "offset": number
       }
     }
+    "RequestCenterResponse": {
+      "items": Array<{
+          "requestId": string
+          "requestType": "target" | "sellerCode" | "offboarding"
+          "storeId": string
+          "storeName": string | null
+          "status": string
+          "updatedAt": string
+          "targetLabel": string | null
+          "requestMonth": string | null
+          "allocationCount": number | null
+          "approvalMode": "direct" | "adjusted" | null
+          "personDisplayName": string | null
+          "nationalIdLast4": string | null
+          "externalEmployeeRef": string | null
+        }>
+      "meta": {
+        "count": number
+        "total": number
+        "limit": number
+        "offset": number
+      }
+      "summary": {
+        "open": number
+        "done": number
+        "returned": number
+        "periods": string[]
+      }
+    }
     "ReviewSalesTargetIncentiveRegionPackageDto": {
       "period": string
       "regionId": string
@@ -4111,6 +4140,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["WorkflowInboxResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/workflow/request-center": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["RequestCenterResponse"]
           }
         }
       }

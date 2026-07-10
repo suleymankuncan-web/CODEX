@@ -7,6 +7,12 @@ function createEmptyStoreActionPlanRepository() {
   };
 }
 
+function createEmptyRequestCenterReadRepository() {
+  return {
+    listRequests: jest.fn(async () => ({ items: [], total: 0, limit: 15, offset: 0 })),
+  };
+}
+
 describe("WorkflowInboxService", () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -27,6 +33,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
+      createEmptyRequestCenterReadRepository() as never,
     );
 
     await service.listInbox({
@@ -84,6 +91,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
+      createEmptyRequestCenterReadRepository() as never,
     );
 
     const result = await service.listInbox({
@@ -160,6 +168,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       snapshotReportingReadRepository as never,
       storeActionPlanRepository as never,
+      createEmptyRequestCenterReadRepository() as never,
     );
 
     const result = await service.listInbox({
@@ -238,6 +247,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       snapshotReportingReadRepository as never,
       storeActionPlanRepository as never,
+      createEmptyRequestCenterReadRepository() as never,
     );
 
     const result = await service.listInbox({
@@ -306,6 +316,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
+      createEmptyRequestCenterReadRepository() as never,
     );
 
     const result = await service.listInbox({
@@ -347,6 +358,7 @@ describe("WorkflowInboxService", () => {
       checklistAcknowledgementRepository as never,
       snapshotReportingReadRepository as never,
       createEmptyStoreActionPlanRepository() as never,
+      createEmptyRequestCenterReadRepository() as never,
     );
 
     await service.listInbox({

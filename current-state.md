@@ -58,7 +58,7 @@ any permission behavior changes. DG-1 still blocks authorization behavior;
 DG-2, DG-3, and DG-4 still block live DB constraints, verified provider TLS,
 and real external error delivery. Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
-33 direct matrix routes, and three preview plus three backend drifts. PR-3 is next.
+33 direct matrix routes, and three preview plus three backend drifts. PR #929 completed PR-3: authorization changes now clear protected frontend cache state before a new shell renders. PR-4 bounded target queues is active; PR/release/merge evidence remains open.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
@@ -76,11 +76,6 @@ completed PR-1 without runtime behavior change; its contract covers 54 routes,
   stays external and no runtime change is authorized.
 - PR #921 (E1) reconciles Visual Merchandiser-only Store routes and starts an
   incremental archive-guard migration register without a bulk archive rewrite.
-- PR #923 (D1) adds one bounded Vitest seed for Store My Performance state and Region
-  Manager incentive money/correction logic through the existing frontend and
-  root release paths. It removes no E2E coverage and does not begin a
-  whole-suite migration.
-
 The historical transition record carries PR narrative and proof links. This
 section intentionally retains only the current operating consequences.
 
@@ -170,7 +165,7 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-
+- Complete PR-4 bounded target queues without changing mutations, DB schema, or authorization policy.
 - Keep the truthful required gate, exact-tree post-merge proof/fallback, and
   targeted frontend boundary stable.
 - Observe A3's next ten successful root-release PR runs; record the dated p95
@@ -180,13 +175,13 @@ Now:
   evidence blocked.
 
 Next:
-
-1. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
+1. After PR-4 merges, continue the audit order; PR-2 remains blocked on DG-1, so advance only to the next unblocked specified slice.
+2. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
    repeat the successful 5 July mutations solely to improve documentation.
-2. If evidence produces a P0/P1 finding, create one finding-specific spec and
+3. If evidence produces a P0/P1 finding, create one finding-specific spec and
    PR with reproduction, scope, verification, and rollback.
-3. If no P0/P1 exists, keep runtime parked and make no speculative code train.
-4. Update this handoff only when a current decision, proof state, or next safe
+4. If no P0/P1 exists, keep runtime parked and make no speculative code train.
+5. Update this handoff only when a current decision, proof state, or next safe
    action materially changes.
 
 Park:
