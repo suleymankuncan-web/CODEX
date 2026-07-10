@@ -35,7 +35,7 @@ replace the session transport, token storage, or backend authorization model.
 - FR-01: The frontend MUST derive a deterministic effective-authorization
   fingerprint from `authenticated`, `userId`, sorted unique role codes, legacy
   scope company/region/store IDs, read-scope company/region/store IDs, and
-  action-scope assigned store IDs and store types.
+  canonical plus legacy action-scope assigned store IDs and store types.
 - FR-02: Fingerprint generation MUST be order-independent for every set-like
   array and MUST NOT include bearer tokens, provider tokens, display name,
   username, email, or other presentation data.
@@ -49,9 +49,9 @@ replace the session transport, token storage, or backend authorization model.
 - FR-06: The exact active `shell-session` query MAY be preserved during the
   boundary transition. Old or inactive `shell-session` query variants MUST be
   removed.
-- FR-07: A fingerprint change MUST clear TanStack Query mutation-cache state so
-  old optimistic, pending, success, or error state is not presented to the new
-  identity.
+- FR-07: A fingerprint change MUST keep the new shell closed while already
+  active mutations settle, then clear mutation-cache state and perform the
+  final protected query removal so late callbacks cannot repopulate old data.
 - FR-08: A raw bearer-token renewal for the same identity MUST refresh the
   active shell-session query without changing its stable query key. Cache
   removal MUST occur only if the refreshed effective authorization differs.
@@ -69,6 +69,9 @@ replace the session transport, token storage, or backend authorization model.
 - FR-13: The implementation MUST expose pure fingerprint, preservation, and
   cache-isolation functions that can be tested against one `QueryClient`
   instance without a browser or real credentials.
+- FR-14: A saved mock-session transition MUST persist the normalized request
+  header source before activating its new shell-session query key. A new query
+  key MUST NOT fetch the previous persona's session headers.
 
 ## 3. Non-Functional Requirements
 
@@ -78,8 +81,9 @@ replace the session transport, token storage, or backend authorization model.
   query key, test name, assertion message, console output, or committed fixture.
 - NFR-03 Reliability: Same-authorization token renewal MUST complete without an
   infinite refetch, repeated cache clear, or permanently blank shell.
-- NFR-04 Performance: A boundary transition MUST scan the current query and
-  mutation caches once. It MUST NOT add per-page cache scans or a polling loop.
+- NFR-04 Performance: After any active mutation drain, a boundary transition
+  MUST perform one final query removal and mutation clear. It MUST NOT add
+  per-page cache scans or a polling loop.
 - NFR-05 Compatibility: No backend endpoint, OpenAPI shape, database schema,
   role policy, scope policy, query retry policy, or public login behavior may
   change.
@@ -126,6 +130,9 @@ replace the session transport, token storage, or backend authorization model.
 - AC-10 (NFR-05): Given the completed diff, when contract impact is reviewed,
   then backend, OpenAPI, database, role/scope semantics, retry policy, and login
   endpoint behavior are unchanged.
+- AC-11 (FR-11, FR-14): Given mock User A is active, when the operator saves
+  mock User B in the same page, then the first shell-session request associated
+  with User B carries User B headers and resolves User B authorization.
 
 ## 5. Edge Cases
 
@@ -138,13 +145,14 @@ replace the session transport, token storage, or backend authorization model.
   legacy scope fields during compatibility fallback.
 - EC-04: A protected query is fetching during a transition. Cancel it before
   removal so its old response cannot remain as cached data.
-- EC-05: Mutation cache contains an optimistic or failed mutation from User A.
-  Clear it even when there are no protected query entries.
+- EC-05: Mutation cache contains an optimistic, pending, or failed mutation from
+  User A. Keep the shell gate closed until pending callbacks finish, then clear
+  their state and any query data they wrote.
 - EC-06: The public bootstrap query is pending or failed. Preserve its state;
   login owns its retry and error behavior.
 - EC-07: Multiple rapid session transitions occur. Only the latest fingerprint
-  may release the shell render gate; an older asynchronous cleanup completion
-  must not mark a newer transition ready.
+  may run the final sweep or release the shell render gate; an older
+  asynchronous cleanup must not remove the newer active shell query.
 - EC-08: React Strict Mode invokes effects twice in development. Cache cleanup
   MUST be idempotent and MUST NOT cause repeated session refetch.
 - EC-09: A token expires while a protected page request is in flight. The expiry
@@ -152,6 +160,8 @@ replace the session transport, token storage, or backend authorization model.
   unauthenticated with no protected cache.
 - EC-10: The current active shell-session query is absent. Isolation still
   succeeds and the normal shell query lifecycle may fetch it.
+- EC-11: React state activation and persisted mock-header state occur in one
+  transition. Persistence must precede the state update that enables a query.
 
 ## 6. API Contracts
 
@@ -163,9 +173,8 @@ type EffectiveAuthorizationInput = AuthSessionSummary | null
 
 type AuthorizationCacheBoundaryInput = {
   queryClient: QueryClient
-  previousFingerprint: string
-  nextFingerprint: string
   activeShellSessionQueryKey: QueryKey
+  isCurrent?: () => boolean
 }
 
 function buildEffectiveAuthorizationFingerprint(
@@ -202,6 +211,7 @@ No persisted data model changes are authorized.
 | `readScope.storeIds` | string[] | sorted unique | Read boundary |
 | `actionScope.assignedStoreIds` | string[] | sorted unique | Action boundary |
 | `actionScope.assignedStoreTypes` | string[] | sorted unique | Action-type boundary |
+| `assignedStoreIds` | string[] | sorted unique | Legacy action compatibility boundary |
 | `authorizationFingerprint` | string | deterministic, non-token, non-PII | In-memory transition identity |
 | `committedFingerprint` | string | in-memory only | Shell render gate state |
 
@@ -231,6 +241,7 @@ Required test mapping:
 | Fingerprint normalization unit tests | FR-01, FR-02, FR-03; AC-01; EC-01–EC-03 |
 | Shared QueryClient isolation unit tests | FR-04–FR-07, FR-13; AC-02, AC-06, AC-09; EC-04–EC-06, EC-10 |
 | Renewal lifecycle unit/contract tests | FR-08–FR-10; AC-03–AC-05; EC-07–EC-09 |
+| Mock persona handoff Playwright assertion | FR-14; AC-11; EC-11 |
 | App render-gate contract test | FR-12; AC-08 |
 | Playwright same-context persona switch | FR-11; AC-07; NFR-01, NFR-02, NFR-06 |
 

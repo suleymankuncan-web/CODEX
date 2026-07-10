@@ -69,6 +69,7 @@ export function SessionProvider(input: { children: ReactNode }) {
       clearClientBearerSession()
     }
 
+    persistClientSession(nextSession)
     setSession(nextSession)
   }, [])
 
