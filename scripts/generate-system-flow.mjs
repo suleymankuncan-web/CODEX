@@ -2,6 +2,16 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseStoreRouteRegistryRoutes } from './system-flow-store-route-registry.mjs'
+import {
+  buildApiFunctionDependencyIndex,
+  findImportedApiFunctionCallIds,
+  parseFrontendApiCallTargets,
+} from './system-flow-api-call-graph.mjs'
+
+export {
+  classifyFrontendApiCallTargets,
+  resolveTransitiveApiCallIds,
+} from './system-flow-api-call-graph.mjs'
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url))
 const defaultRootDir = path.resolve(scriptDir, '..')
@@ -61,9 +71,11 @@ export function buildSystemFlow(input = {}) {
       routeApiEdgeCount: routeToApiEdges.length,
       routesWithoutApiCallCount: routesWithoutApiCalls.length,
       unmatchedFrontendApiCallCount: unmatchedApiCalls.length,
+      unresolvedFrontendApiCallCount: apiUsageResult.unresolvedApiCalls.length,
     },
     frontendRoutes,
     frontendApiCalls: apiUsageResult.apiCalls,
+    unresolvedFrontendApiCalls: apiUsageResult.unresolvedApiCalls,
     backendEndpoints,
     openApiEndpoints,
     edges: {
@@ -81,6 +93,7 @@ export function buildSystemFlow(input = {}) {
       backendEndpointsWithoutFrontendCalls,
       routesWithoutApiCalls,
       unmatchedApiCalls,
+      unresolvedFrontendApiCalls: apiUsageResult.unresolvedApiCalls.map((call) => call.id),
     },
   }
 }
@@ -859,7 +872,9 @@ function parseOpenApiEndpoints(rootDir) {
 function parseFrontendApiUsage(rootDir) {
   const files = walkFiles(path.join(rootDir, 'admin-web', 'src'), (file) => /\.(ts|tsx)$/.test(file))
   const apiCalls = []
+  const unresolvedApiCalls = []
   const apiFunctionIndex = new Map()
+  const exportedFunctionIndex = new Map()
 
   for (const file of files) {
     const text = readFileSync(file, 'utf8')
@@ -870,7 +885,35 @@ function parseFrontendApiUsage(rootDir) {
 
     const functionRanges = extractExportedFunctionRanges(text)
 
-    for (const call of extractApiCalls(text)) {
+    for (const range of functionRanges) {
+      exportedFunctionIndex.set(`${repoFile}#${range.name}`, {
+        body: text.slice(range.bodyStart, range.bodyEnd + 1),
+        file,
+        text,
+      })
+    }
+
+    const extractedCalls = parseFrontendApiCallTargets(text)
+
+    for (const unresolved of extractedCalls.unresolved) {
+      const exportedFunction = functionRanges.find(
+        (range) => unresolved.index >= range.start && unresolved.index <= range.end,
+      )
+      unresolvedApiCalls.push({
+        id: `unresolved-api:${unresolvedApiCalls.length + 1}`,
+        client: unresolved.client,
+        functionName: unresolved.functionName,
+        method: unresolved.method,
+        reason: 'non_literal_path',
+        exportedFunction: exportedFunction?.name ?? null,
+        source: {
+          file: repoFile,
+          line: lineNumberAt(text, unresolved.index),
+        },
+      })
+    }
+
+    for (const call of extractedCalls.calls) {
       const exportedFunction = functionRanges.find((range) => call.index >= range.start && call.index <= range.end)
       const apiCall = {
         id: `api:${apiCalls.length + 1}`,
@@ -900,56 +943,20 @@ function parseFrontendApiUsage(rootDir) {
 
   return {
     apiCalls: sortBy(apiCalls, (call) => `${call.source.file}:${String(call.source.line).padStart(5, '0')}:${call.id}`),
+    apiFunctionDependencyIndex: buildApiFunctionDependencyIndex({
+      exportedFunctionIndex,
+      parseNamedImportStatements,
+      parseNamedImports,
+      resolveModulePath,
+      rootDir,
+      toRepoPath,
+    }),
     apiFunctionIndex,
+    unresolvedApiCalls: sortBy(
+      unresolvedApiCalls,
+      (call) => `${call.source.file}:${String(call.source.line).padStart(5, '0')}:${call.id}`,
+    ),
   }
-}
-
-function extractApiCalls(text) {
-  const calls = []
-  const functionRegex = /\b(fetchOpenApiJson|sendOpenApiJson|fetchJson|sendJson|sendFormData)\b/g
-
-  for (const match of text.matchAll(functionRegex)) {
-    const functionName = match[1]
-    const index = match.index ?? 0
-    let cursor = index + functionName.length
-    cursor = skipWhitespace(text, cursor)
-    cursor = skipTypeArguments(text, cursor)
-    cursor = skipWhitespace(text, cursor)
-    if (text[cursor] !== '(') continue
-
-    let argumentCursor = skipWhitespace(text, cursor + 1)
-    const quoted = readQuoted(text, argumentCursor)
-    if (!quoted) continue
-
-    const callText = readBalancedCall(text, cursor)
-    const method = resolveApiCallMethod(functionName, callText)
-    if (!method) continue
-
-    calls.push({
-      client: resolveClientType(functionName),
-      functionName,
-      index,
-      method,
-      rawPath: quoted.value,
-    })
-  }
-
-  return calls
-}
-
-function resolveApiCallMethod(functionName, callText) {
-  if (functionName === 'fetchJson' || functionName === 'fetchOpenApiJson') {
-    return 'GET'
-  }
-
-  const methodMatch = callText.match(/\bmethod\s*:\s*['"`](GET|POST|PUT|PATCH|DELETE)['"`]/i)
-  return methodMatch ? methodMatch[1].toUpperCase() : null
-}
-
-function resolveClientType(functionName) {
-  if (functionName.includes('OpenApi')) return 'openapi-generated'
-  if (functionName === 'sendFormData') return 'form-data'
-  return 'legacy-json'
 }
 
 function extractExportedFunctionRanges(text) {
@@ -960,7 +967,13 @@ function extractExportedFunctionRanges(text) {
     const start = match.index ?? 0
     const bodyRange = extractFunctionBodyRange(text, start, match[0].length)
     if (!bodyRange) continue
-    ranges.push({ name: match[1], start, end: bodyRange.end })
+    ranges.push({
+      name: match[1],
+      start,
+      end: bodyRange.end,
+      bodyStart: bodyRange.start,
+      bodyEnd: bodyRange.end,
+    })
   }
 
   return ranges
@@ -1005,7 +1018,6 @@ function linkApiUsageToBackend(apiCalls, backendEndpoints, openApiEndpoints) {
 function linkRoutesToApiCalls(rootDir, frontendRoutes, routeLoaders, apiUsageResult) {
   const apiCallIdsByRoute = new Map()
   const apiCallById = new Map(apiUsageResult.apiCalls.map((call) => [call.id, call]))
-  const apiFunctionIndex = apiUsageResult.apiFunctionIndex
 
   for (const route of frontendRoutes) {
     if (!route.componentFile) continue
@@ -1017,7 +1029,17 @@ function linkRoutesToApiCalls(rootDir, frontendRoutes, routeLoaders, apiUsageRes
       const repoFile = toRepoPath(rootDir, file)
       const text = readFileSync(file, 'utf8')
 
-      for (const callId of findImportedApiFunctionCallIds(rootDir, file, text, apiFunctionIndex)) {
+      for (const callId of findImportedApiFunctionCallIds({
+        apiFunctionDependencyIndex: apiUsageResult.apiFunctionDependencyIndex,
+        apiFunctionIndex: apiUsageResult.apiFunctionIndex,
+        file,
+        parseNamedImportStatements,
+        parseNamedImports,
+        resolveModulePath,
+        rootDir,
+        text,
+        toRepoPath,
+      })) {
         apiCallIds.add(callId)
       }
 
@@ -1087,34 +1109,6 @@ function extractRelativeImports(text) {
   }
 
   return imports
-}
-
-function findImportedApiFunctionCallIds(rootDir, file, text, apiFunctionIndex) {
-  const ids = new Set()
-
-  for (const statement of parseNamedImportStatements(text)) {
-    if (statement.isTypeOnly || !statement.specifier.endsWith('/api')) continue
-
-    const importedModule = resolveModulePath(path.dirname(file), statement.specifier)
-    if (!importedModule) continue
-    const importedModuleRepoPath = toRepoPath(rootDir, importedModule)
-
-    for (const importedName of parseNamedImports(statement.imports)) {
-      const key = `${importedModuleRepoPath}#${importedName.imported}`
-      const functionCallIds = apiFunctionIndex.get(key) ?? []
-      if (!functionCallIds.length) continue
-
-      const usedAsCall = new RegExp(`\\b${escapeRegExp(importedName.local)}\\s*\\(`).test(text)
-      const usedAsQueryFn = new RegExp(`\\b(?:queryFn|mutationFn)\\s*:\\s*${escapeRegExp(importedName.local)}\\b`).test(text)
-      if (usedAsCall || usedAsQueryFn) {
-        for (const callId of functionCallIds) {
-          ids.add(callId)
-        }
-      }
-    }
-  }
-
-  return ids
 }
 
 function parseNamedImportStatements(text) {

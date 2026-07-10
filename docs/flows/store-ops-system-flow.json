@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-10T15:11:42.271Z",
+  "generatedAt": "2026-07-10T15:40:05.372Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,9 +12,10 @@
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 156,
     "openApiEndpointCount": 192,
-    "routeApiEdgeCount": 226,
-    "routesWithoutApiCallCount": 2,
-    "unmatchedFrontendApiCallCount": 0
+    "routeApiEdgeCount": 227,
+    "routesWithoutApiCallCount": 1,
+    "unmatchedFrontendApiCallCount": 0,
+    "unresolvedFrontendApiCallCount": 0
   },
   "frontendRoutes": [
     {
@@ -3436,6 +3437,7 @@
       }
     }
   ],
+  "unresolvedFrontendApiCalls": [],
   "backendEndpoints": [
     {
       "id": "endpoint:POST:/api/admin/checklist-templates",
@@ -8108,6 +8110,11 @@
         "apiCallId": "api:29"
       },
       {
+        "id": "edge:route:store:/store/approvals:api:135",
+        "routeId": "route:store:/store/approvals",
+        "apiCallId": "api:135"
+      },
+      {
         "id": "edge:route:store:/store/checklists:api:25",
         "routeId": "route:store:/store/checklists",
         "apiCallId": "api:25"
@@ -9570,9 +9577,9 @@
       "endpoint:GET:/api/snapshots/runs/summary"
     ],
     "routesWithoutApiCalls": [
-      "route:store:/store/approvals",
       "route:store:/store/settings"
     ],
-    "unmatchedApiCalls": []
+    "unmatchedApiCalls": [],
+    "unresolvedFrontendApiCalls": []
   }
 }

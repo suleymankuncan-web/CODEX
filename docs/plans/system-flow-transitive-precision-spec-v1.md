@@ -1,6 +1,6 @@
 # System-Flow Transitive Precision Specification V1
 
-Status: specified; RED contract pending implementation
+Status: implementation complete; predecessor merge and final release pending
 Shelf: active plan
 Author: Codex
 Last verified: 2026-07-10
@@ -127,6 +127,23 @@ blocked reason and the cast remains unchanged.
   endpoint-edge tests.
 - Regenerated `docs/flows/store-ops-system-flow.json` and `.html` exactness.
 - Root script contracts and the applicable release gate once.
+
+Local evidence before predecessor merge:
+
+- Production fixture moved RED to GREEN: `/store/approvals` now owns
+  `GET /api/workflow/request-center`.
+- The route/API edge diff adds exactly that one edge and removes none.
+- Direct, transitive, unused-export, convergence, cycle, non-literal path, and
+  preload-exclusion contracts are green.
+- Generated summary is reproducible at 227 route/API edges, one page route
+  without an API edge, zero unmatched API calls, and zero current unresolved
+  non-literal calls.
+- Root script contracts: 533/533 green.
+- The new call-graph logic lives in a 242-line helper module; the frozen main
+  generator baseline was reduced from 1433 to 1427 lines rather than raised.
+- The target approval double cast remains because the generated PATCH response
+  is still `Record<string, never>` and no response schema is present to support
+  a truthful replacement.
 
 ## 7. Rollback And Stop Rules
 
