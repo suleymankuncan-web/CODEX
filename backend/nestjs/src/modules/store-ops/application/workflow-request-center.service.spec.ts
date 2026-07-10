@@ -32,7 +32,7 @@ describe("WorkflowInboxService request center", () => {
           },
         ],
         total: 31,
-        summary: { open: 20, done: 11, returned: 2 },
+        summary: { open: 20, done: 11, returned: 2, periods: ["2026-07"] },
         limit: 15,
         offset: 15,
       })),
@@ -82,7 +82,7 @@ describe("WorkflowInboxService request center", () => {
         limit: 15,
         offset: 15,
       },
-      summary: { open: 20, done: 11, returned: 2 },
+      summary: { open: 20, done: 11, returned: 2, periods: ["2026-07"] },
     });
   });
 
@@ -91,7 +91,7 @@ describe("WorkflowInboxService request center", () => {
       listRequests: jest.fn(async () => ({
         items: [],
         total: 0,
-        summary: { open: 0, done: 0, returned: 0 },
+        summary: { open: 0, done: 0, returned: 0, periods: [] },
         limit: 15,
         offset: 0,
       })),

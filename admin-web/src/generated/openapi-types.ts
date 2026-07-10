@@ -2288,6 +2288,7 @@ export type components = {
         "open": number
         "done": number
         "returned": number
+        "periods": string[]
       }
     }
     "ReviewSalesTargetIncentiveRegionPackageDto": {

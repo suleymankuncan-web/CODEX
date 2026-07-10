@@ -155,7 +155,7 @@ async function routeStoreManagerApi(page: Page) {
       json: {
         items: [],
         meta: { count: 0, total: 0, limit: 15, offset: 0 },
-        summary: { open: 0, done: 0, returned: 0 },
+        summary: { open: 0, done: 0, returned: 0, periods: [] },
       },
     })
   })

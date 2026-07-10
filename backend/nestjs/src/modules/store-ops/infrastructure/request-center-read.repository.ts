@@ -117,6 +117,7 @@ export class RequestCenterReadRepository {
   async listRequests(input: RequestCenterListInput) {
     const params: unknown[] = [];
     const scopeClauses: string[] = [];
+    const periodClauses: string[] = [];
     const selectionClauses: string[] = [];
 
     if (input.storeIds.length > 0) {
@@ -153,9 +154,11 @@ export class RequestCenterReadRepository {
 
     if (input.period) {
       params.push(`${input.period}-01`);
-      scopeClauses.push(
-        `updated_at >= $${params.length}::date AND ` +
-          `updated_at < ($${params.length}::date + INTERVAL '1 month')`,
+      periodClauses.push(
+        `updated_at >= ($${params.length}::date::timestamp ` +
+          `AT TIME ZONE 'Europe/Istanbul') AND ` +
+          `updated_at < (($${params.length}::date + INTERVAL '1 month')::timestamp ` +
+          `AT TIME ZONE 'Europe/Istanbul')`,
       );
     }
 
@@ -166,25 +169,38 @@ export class RequestCenterReadRepository {
 
     const requestRowsSql = this.buildRequestRowsSql(input.type);
     const scopeWhereSql = scopeClauses.join(" AND ");
+    const periodWhereSql = periodClauses.join(" AND ") || "TRUE";
     const selectionWhereSql = selectionClauses.join(" AND ");
-    const whereSql = `${scopeWhereSql} AND ${selectionWhereSql}`;
+    const whereSql = `${scopeWhereSql} AND ${periodWhereSql} AND ${selectionWhereSql}`;
     const countResult = await this.databaseService.query<{
       total_count: string;
       open_count: string;
       done_count: string;
       returned_count: string;
+      available_periods: string[] | null;
     }>(
       `
         WITH request_rows AS (
           ${requestRowsSql}
+        ), scoped_rows AS (
+          SELECT *
+          FROM request_rows
+          WHERE ${scopeWhereSql}
         )
         SELECT
           COUNT(*) FILTER (WHERE ${selectionWhereSql})::text AS total_count,
           COUNT(*) FILTER (WHERE request_status <> 'approved')::text AS open_count,
           COUNT(*) FILTER (WHERE request_status = 'approved')::text AS done_count,
-          COUNT(*) FILTER (WHERE request_status = 'rejected')::text AS returned_count
-        FROM request_rows
-        WHERE ${scopeWhereSql}
+          COUNT(*) FILTER (WHERE request_status = 'rejected')::text AS returned_count,
+          (SELECT COALESCE(
+             ARRAY_AGG(
+               DISTINCT TO_CHAR(updated_at AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM')
+               ORDER BY TO_CHAR(updated_at AT TIME ZONE 'Europe/Istanbul', 'YYYY-MM') DESC
+             ),
+             ARRAY[]::text[]
+           ) FROM scoped_rows) AS available_periods
+        FROM scoped_rows
+        WHERE ${periodWhereSql}
       `,
       params,
     );
@@ -227,6 +243,7 @@ export class RequestCenterReadRepository {
         open: Number(countResult.rows[0]?.open_count ?? 0),
         done: Number(countResult.rows[0]?.done_count ?? 0),
         returned: Number(countResult.rows[0]?.returned_count ?? 0),
+        periods: countResult.rows[0]?.available_periods ?? [],
       },
       limit: input.limit,
       offset: input.offset,

@@ -20403,7 +20403,8 @@
             "required": [
               "open",
               "done",
-              "returned"
+              "returned",
+              "periods"
             ],
             "properties": {
               "open": {
@@ -20417,6 +20418,13 @@
               "returned": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "periods": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+                }
               }
             }
           }

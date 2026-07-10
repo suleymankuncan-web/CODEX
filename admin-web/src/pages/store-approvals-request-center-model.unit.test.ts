@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { RequestCenterItem } from '../features/store-approvals/request-center-api'
-import { buildRequestCenterRows, requestCenterCopy } from './store-approvals-request-center-model'
+import {
+  buildRequestCenterRows,
+  createPeriodOptions,
+  requestCenterCopy,
+} from './store-approvals-request-center-model'
 
 const baseItem = {
   requestId: 'request-1',
@@ -58,5 +62,12 @@ describe('bounded request center rows', () => {
     expect(rows[0]).toEqual(expect.objectContaining({ bucket: 'open', actionPrimary: true }))
     expect(rows[1]).toEqual(expect.objectContaining({ rowTone: 'returned' }))
     expect(rows[2]).toEqual(expect.objectContaining({ bucket: 'done' }))
+  })
+
+  it('builds period filters from the exact server summary instead of the current page', () => {
+    expect(createPeriodOptions(['2026-06', '2026-07', '2026-06'], 'en')).toEqual([
+      { value: '2026-07', label: 'July 2026' },
+      { value: '2026-06', label: 'June 2026' },
+    ])
   })
 })

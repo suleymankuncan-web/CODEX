@@ -53,11 +53,15 @@ export function createRequestCenterResponseSchema(listResponseMetaSchema: object
       meta: listResponseMetaSchema,
       summary: {
         type: "object",
-        required: ["open", "done", "returned"],
+        required: ["open", "done", "returned", "periods"],
         properties: {
           open: { type: "integer", minimum: 0 },
           done: { type: "integer", minimum: 0 },
           returned: { type: "integer", minimum: 0 },
+          periods: {
+            type: "array",
+            items: { type: "string", pattern: "^[0-9]{4}-(0[1-9]|1[0-2])$" },
+          },
         },
       },
     },

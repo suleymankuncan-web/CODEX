@@ -258,13 +258,18 @@ type RequestCenterResponse = {
     open: number
     done: number
     returned: number
+    periods: string[]
   }
 }
 ```
 
-`summary` is computed for the current type/period/store/search scope while
-ignoring the selected tab/status, so the three existing Store Approvals metrics
-remain exact without additional browser requests.
+The three numeric `summary` values are computed for the current
+type/period/store/search scope while ignoring the selected tab/status, so the
+existing Store Approvals metrics remain exact without additional browser
+requests. `summary.periods` contains the exact authorized `YYYY-MM` values for
+the current type/store/search scope while intentionally ignoring the selected
+period, tab, and status. This keeps the period selector independent from both
+the current 15-row page and the currently selected period.
 
 Success uses the repository's standard list response. Invalid query values use
 the standard sanitized validation error envelope. Authentication/role failure

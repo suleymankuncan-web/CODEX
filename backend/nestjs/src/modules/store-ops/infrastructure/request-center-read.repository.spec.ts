@@ -22,7 +22,13 @@ describe("RequestCenterReadRepository", () => {
       query: jest
         .fn()
         .mockResolvedValueOnce({
-          rows: [{ total_count: "10000", open_count: "10001", done_count: "22", returned_count: "1" }],
+          rows: [{
+            total_count: "10000",
+            open_count: "10001",
+            done_count: "22",
+            returned_count: "1",
+            available_periods: ["2026-07", "2026-06"],
+          }],
         })
         .mockResolvedValueOnce({ rows: [requestRow] }),
     };
@@ -44,7 +50,12 @@ describe("RequestCenterReadRepository", () => {
     expect(result).toEqual({
       items: [requestRow],
       total: 10000,
-      summary: { open: 10001, done: 22, returned: 1 },
+      summary: {
+        open: 10001,
+        done: 22,
+        returned: 1,
+        periods: ["2026-07", "2026-06"],
+      },
       limit: 15,
       offset: 30,
     });
@@ -62,6 +73,9 @@ describe("RequestCenterReadRepository", () => {
     expect(countSql).toContain("region_id = ANY");
     expect(countSql).toContain("request_status NOT IN ('approved', 'rejected')");
     expect(countSql).toContain("updated_at >=");
+    expect(countSql).toContain("AT TIME ZONE 'Europe/Istanbul'");
+    expect(countSql).toContain("ARRAY_AGG");
+    expect(countSql).toContain("scoped_rows");
     expect(countSql).toContain("search_text ILIKE");
     expect(pageSql).toContain(
       "ORDER BY updated_at DESC, request_type ASC, request_id DESC",

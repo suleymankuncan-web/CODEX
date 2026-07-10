@@ -298,10 +298,9 @@ export function matchesStatusFilter(status: string, filter: RequestCenterStatus)
   return status !== 'approved' && status !== 'rejected'
 }
 
-export function createPeriodOptions(rows: RequestCenterRow[], locale: AppLocale) {
-  const periods = Array.from(new Set(rows.map((row) => row.updatedAt.slice(0, 7)))).filter(Boolean)
-
-  return periods
+export function createPeriodOptions(periods: string[], locale: AppLocale) {
+  return Array.from(new Set(periods))
+    .filter(Boolean)
     .sort((a, b) => b.localeCompare(a))
     .map((period) => ({
       value: period,

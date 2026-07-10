@@ -137,15 +137,15 @@ function RequestCenterSurface(input: {
     [input.copy, input.locale, input.persona, requestCenterQuery.data?.items],
   )
   const periodOptions = useMemo(
-    () => createPeriodOptions(pageRows, input.locale),
-    [pageRows, input.locale],
+    () => createPeriodOptions(requestCenterQuery.data?.summary.periods ?? [], input.locale),
+    [input.locale, requestCenterQuery.data?.summary.periods],
   )
   const total = requestCenterQuery.data?.meta.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const from = total === 0 ? 0 : offset + 1
   const to = Math.min(offset + pageRows.length, total)
-  const summary = requestCenterQuery.data?.summary ?? { open: 0, done: 0, returned: 0 }
+  const summary = requestCenterQuery.data?.summary ?? { open: 0, done: 0, returned: 0, periods: [] }
   const visiblePageNumbers = Array.from(
     new Set([Math.max(1, safePage - 1), safePage, Math.min(totalPages, safePage + 1)]),
   )

@@ -11,7 +11,7 @@ describe("Request center read API", () => {
     listRequestCenter: jest.fn(async () => ({
       items: [],
       meta: { count: 0, total: 10_000, limit: 15, offset: 30 },
-      summary: { open: 9_990, done: 10, returned: 2 },
+      summary: { open: 9_990, done: 10, returned: 2, periods: ["2026-07"] },
     })),
   };
 
@@ -57,6 +57,7 @@ describe("Request center read API", () => {
       .expect(200);
 
     expect(response.body.meta).toEqual({ count: 0, total: 10_000, limit: 15, offset: 30 });
+    expect(response.body.summary.periods).toEqual(["2026-07"]);
     expect(workflowInboxService.listRequestCenter).toHaveBeenCalledWith({
       actorRoles: ["REGION_MANAGER"],
       actorScope: { companyIds: [], regionIds: ["region-1"], storeIds: [] },

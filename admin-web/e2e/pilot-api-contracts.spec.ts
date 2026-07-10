@@ -131,7 +131,7 @@ async function routeStoreApprovalsMinimalApi(page: Page) {
           externalEmployeeRef: null,
         })),
         meta: { count: 1, total: 1, limit: 15, offset: 0 },
-        summary: { open: 1, done: 0, returned: 0 },
+        summary: { open: 1, done: 0, returned: 0, periods: ['2026-07'] },
       },
     })
   })

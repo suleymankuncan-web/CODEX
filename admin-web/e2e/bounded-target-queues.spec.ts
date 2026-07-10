@@ -105,7 +105,7 @@ test('admin and Store target queues request only bounded visible slices', async 
       json: {
         items: ledgerItems.slice(offset, offset + limit),
         meta: { count: Math.min(limit, ledgerItems.length - offset), total: 20, limit, offset },
-        summary: { open: 20, done: 0, returned: 0 },
+        summary: { open: 20, done: 0, returned: 0, periods: ['2026-07'] },
       },
     })
   })
