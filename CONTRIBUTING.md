@@ -65,8 +65,16 @@ and record the conflict in the PR.
   It becomes a merge gate again only if the owner explicitly re-enables it.
   Required checks, mergeability, local diff review, and verification remain
   mandatory.
+- After a PR opens, keep its checks, deployment state, mergeability, and
+  actionable feedback monitored in the background while independent next-PR
+  work proceeds in a separate branch/worktree. Do not mix review stories,
+  hide dependencies, or run two full release suites concurrently on one
+  machine. A failure or conflict on the open PR takes priority.
+- Refresh the next branch from merged `origin/main` before opening its PR, and
+  refresh the predecessor's complete status immediately before merge. See
+  `PR Check Beklerken Paralel Ilerleme` in `discipline.md` for the full rule.
 - After merge, verify `origin/main`, update `current-state.md` when the handoff
-  state changed, then start the next PR.
+  state changed, then refresh and finalize the already prepared next PR.
 
 ## Risk Separation
 

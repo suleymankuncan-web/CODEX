@@ -56,7 +56,9 @@ slice is the authorization operating-truth contract: complete route ownership,
 preview/runtime drift, and backend-endpoint drift become machine-visible before
 any permission behavior changes. DG-1 still blocks authorization behavior;
 DG-2, DG-3, and DG-4 still block live DB constraints, verified provider TLS,
-and real external error delivery. Broad production remains `No-Go`.
+and real external error delivery. Broad production remains `No-Go`. PR #927
+completed PR-1 without runtime behavior change; its contract covers 54 routes,
+33 direct matrix routes, and three preview plus three backend drifts. PR-3 is next.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
@@ -142,9 +144,9 @@ test-data input.
   wait for bot reactions/comments.
 - GitHub Codex review becomes active again only after a newer explicit owner
   instruction. The other verification requirements remain mandatory.
-- When polling is needed, use the canonical 30-second GitHub status loop from
-  `discipline.md`; poll required checks, deployment state, and mergeability
-  together, then stop once decision evidence is complete.
+- PR check wait is active: monitor it while independent next-PR work proceeds
+  in a separate worktree; predecessor failures take priority. Never run two full
+  release suites concurrently. Use the canonical 30-second GitHub status loop while idle; refresh complete status immediately before merge.
 - Main protection requires the `required-release-gate` aggregate. Its child
   selection is fail-closed and requires the branch to be current with main.
   Post-merge exact-tree reuse does not weaken this gate: a missing or mismatched
