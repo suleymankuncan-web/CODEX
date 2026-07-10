@@ -60,7 +60,7 @@ approval did not authorize speculative runtime work or broad production.
   flow was claimed as run and no runtime change was authorized.
 - PR #921 (E1) reconciles Visual Merchandiser-only Store routes and starts an
   incremental archive-guard migration register without a bulk archive rewrite.
-- PR-D1 adds one bounded Vitest seed for Store My Performance state and Region
+- PR #923 (D1) adds one bounded Vitest seed for Store My Performance state and Region
   Manager incentive money/correction logic through the existing frontend and
   root release paths. It removes no E2E coverage and does not begin a
   whole-suite migration.

@@ -22,8 +22,9 @@ Documentation entry point:
 
 As of 10 July 2026, owner-approved plan execution has merged A1 required-gate
 alignment (#917), A2 frontend full-release deduplication (#918), A3 bounded
-E2E concurrency (#919), the B1 `blocked_external` pilot record (#920), and E1
-role/archive ownership cleanup (#921). No product/runtime train was opened.
+E2E concurrency (#919), the B1 `blocked_external` pilot record (#920), E1
+role/archive ownership cleanup (#921), and the bounded D1 pure-logic unit-test
+seed (#923). No product/runtime train was opened.
 
 - Current short handoff: `current-state.md`.
 - Execution plan: `docs/plans/project-analysis-implementation-plan-v1.md`.

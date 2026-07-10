@@ -34,6 +34,7 @@ test('project analysis implementation plan has the mandatory spec sections', () 
   requireText(plan, 'A1 is complete in PR #917')
   requireText(plan, 'B1 is complete as an honest `blocked_external` record in PR #920')
   requireText(plan, 'E1 is complete in PR #921')
+  requireText(plan, 'D1 is complete in PR #923')
 })
 
 test('requirements and acceptance criteria are complete and traceable', () => {
