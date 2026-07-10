@@ -24,6 +24,7 @@ const docs = {
   decisionRegistry: readText('docs/plans/decision-registry-v1.md'),
   runbookRegistry: readText('docs/plans/runbook-registry-v1.md'),
   controlBoard: readText('docs/plans/project-control-board-v1.md'),
+  archiveGuardMigrationRegister: readText('docs/plans/archive-guard-migration-register-v1.md'),
 }
 
 const controlDocs = [
@@ -57,6 +58,7 @@ test('decision registry keeps source documents and change triggers visible', () 
     'GitHub Codex review is owner-disabled and must not be requested or awaited',
     'Store Action V1B',
     'Auth source of truth',
+    'VISUAL_MERCHANDISER',
     'Redis/BullMQ posture',
     'Supabase recovery posture',
     'UI redesign',
@@ -122,4 +124,22 @@ test('project control board preserves current go no-go boundaries', () => {
 
   requireText(docs.controlBoard, 'Do not change auth, API response shape, DB, provider config')
   requireText(docs.controlBoard, 'perform a full project/code analysis')
+})
+
+test('archive guard migration register preserves its incremental boundary', () => {
+  requireText(docs.library, 'docs/plans/archive-guard-migration-register-v1.md')
+
+  for (const phrase of [
+    '# Archive Guard Migration Register V1',
+    'Status: active',
+    'add a new executable dependency on it.',
+    'group removes five safe dependencies.',
+    'The 41 entries below are the remaining',
+    '35 safe on-touch migrations, two primary-source',
+    'three triage decisions',
+    'one deliberate provenance',
+    'count is permanently fixed.',
+  ]) {
+    requireText(docs.archiveGuardMigrationRegister, phrase)
+  }
 })

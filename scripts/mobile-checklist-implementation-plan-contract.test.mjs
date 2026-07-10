@@ -14,7 +14,6 @@ function requireText(text, expected) {
 }
 
 const plan = readText('docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md')
-const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const activeNextActions = readText('docs/plans/active-next-actions.md')
 const debtLedger = readText('docs/plans/project-debt-ledger.md')
 
@@ -68,12 +67,11 @@ test('mobile checklist implementation plan defines verification and debt timing'
 })
 
 test('mobile checklist implementation is linked from handoff docs and counted after release gates', () => {
-  for (const text of [currentState, activeNextActions, debtLedger]) {
+  for (const text of [activeNextActions, debtLedger]) {
     requireText(text, 'Mobile Checklist Today V1')
     requireText(text, 'docs/superpowers/plans/2026-04-28-mobile-checklist-today-v1.md')
   }
 
-  requireText(currentState, 'Root release: `npm.cmd run check:release`')
   requireText(activeNextActions, 'Mobile Checklist Today V1 is implemented')
   requireText(debtLedger, 'Mobile Checklist Today V1 is counted as paid')
 })

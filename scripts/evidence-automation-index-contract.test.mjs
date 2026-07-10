@@ -22,7 +22,6 @@ const index = readText(indexPath)
 const docsReadme = readText('docs/README.md')
 const runbookRegistry = readText('docs/plans/runbook-registry-v1.md')
 const p3Triggers = readText('docs/plans/p3-operating-triggers-v1.md')
-const currentState = readText('docs/history/current-state-through-pr-913-2026-07-09.md')
 const packageJson = readText('package.json')
 const adminPackageJson = readText('admin-web/package.json')
 const backendPackageJson = readText('backend/nestjs/package.json')
@@ -30,7 +29,7 @@ const backendPackageJson = readText('backend/nestjs/package.json')
 test('evidence automation index is discoverable from operating docs', () => {
   requirePath(indexPath)
 
-  for (const text of [docsReadme, runbookRegistry, p3Triggers, currentState]) {
+  for (const text of [docsReadme, runbookRegistry, p3Triggers]) {
     requireText(text, indexPath)
   }
 })

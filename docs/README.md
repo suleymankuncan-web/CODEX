@@ -39,6 +39,7 @@ Use this directory like an operating library, not a diary.
 | Know how Codex should work here | `sokrates.md` and `discipline.md` | Decision quality, PR rhythm, verification, and stop rules. |
 | See the current control board | `docs/plans/project-control-board-v1.md` | Current project mode, go/no-go board, and what is parked. |
 | Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Draft guarded sequence for required CI gate alignment, pilot evidence, conditional fixes, and parked production work. |
+| Reconcile role-route or archive-guard drift | `docs/architecture/pilot-route-role-matrix.md` and `docs/plans/archive-guard-migration-register-v1.md` | Current Store role-route behavior and the incremental rule for removing historical handoff guard dependencies. |
 | Find an active decision | `docs/plans/decision-registry-v1.md` | Decision status, source document, and change trigger. |
 | Choose an operating checklist | `docs/plans/runbook-registry-v1.md` | Repeatable runbooks, required input, output, and stop condition. |
 | Execute the next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` | Ordered plan for feedback, data quality, operations, coaching, auth preview, rules, workforce planning, and production ops. |
@@ -136,6 +137,8 @@ Use for project shape, growth rules, API contracts, and system boundaries.
 - `docs/plans/new-module-template.md`
 - `docs/plans/technical-debt-resolution-roadmap-v1.md`
 - `docs/plans/refactor-completion-inventory-v1.md`
+- `docs/architecture/pilot-route-role-matrix.md`
+- `docs/plans/archive-guard-migration-register-v1.md`
 - `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`
 - `docs/implementation/sales-target-incentive-v1-fixtures.md`
 - `docs/plans/api-contract-drift-plan.md`

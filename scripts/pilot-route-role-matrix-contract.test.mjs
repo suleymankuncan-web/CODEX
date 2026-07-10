@@ -20,6 +20,7 @@ const appRouteSource = [
   readText('admin-web/src/app/admin-shell.tsx'),
   readText('admin-web/src/app/store-shell.tsx'),
   readText('admin-web/src/app/store-route-registry.ts'),
+  readText('admin-web/src/app/route-states.tsx'),
 ].join('\n')
 
 const requiredRoutes = [
@@ -46,6 +47,7 @@ const requiredRoutes = [
   '/store/tasks',
   '/store/kpis',
   '/store/feed',
+  '/store/settings',
   '/store/competitions',
   '/store/incentives',
   '/store/targets',
@@ -81,4 +83,31 @@ test('pilot route matrix locks the first stabilization classifications', () => {
   ]) {
     requireText(matrix, row, 'route matrix')
   }
+})
+
+test('pilot route matrix locks the visual merchandiser-only route boundary', () => {
+  for (const expected of [
+    '## Authority',
+    'A Visual Merchandiser-only session lands on `/store/checklists` and may use',
+    'only `/store/checklists`, `/store/feed`, and `/store/settings`.',
+    '| `/store/feed` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
+    '| `/store/settings` | store | secondary | authenticated store shell session; visual merchandiser-only is permitted |',
+    'Catalog inclusion for `VISUAL_MERCHANDISER` does not imply a Store route',
+    '7. `VISUAL_MERCHANDISER`-only session: `/store/checklists`',
+  ]) {
+    requireText(matrix, expected, 'route matrix')
+  }
+
+  requireText(appRouteSource, "visualMerchandiser: ['checklists', 'feed', 'settings']", 'store route source')
+  requireText(
+    appRouteSource,
+    'if (isVisualMerchandiserOnly(input.authSummary) && !input.allowVm)',
+    'store route guard',
+  )
+  requireText(
+    appRouteSource,
+    'return <StoreForbiddenRoute firstAllowedPath="/store/checklists" />',
+    'store route guard',
+  )
+  assert.equal((appRouteSource.match(/allowVisualMerchandiser: true/g) ?? []).length, 3)
 })
