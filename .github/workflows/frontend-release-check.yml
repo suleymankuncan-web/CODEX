@@ -30,6 +30,18 @@ jobs:
         working-directory: admin-web
         run: npm ci
 
+      # `test:scripts` includes a local pilot-live-smoke contract that opens a
+      # browser against an in-process server. This is not the Playwright e2e
+      # suite; keep it on the known system-Chrome path used by the root gate.
+      - name: Ensure system Chrome for script contracts
+        timeout-minutes: 5
+        run: |
+          if ! command -v google-chrome >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y google-chrome-stable
+          fi
+          google-chrome --version
+
       - name: Check generated API client
         working-directory: admin-web
         run: npm run api:check
@@ -40,6 +52,8 @@ jobs:
 
       - name: Run frontend script contracts
         working-directory: admin-web
+        env:
+          PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
         run: npm run test:scripts
 
       - name: Build frontend
