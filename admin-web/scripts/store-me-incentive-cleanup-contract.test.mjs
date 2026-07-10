@@ -20,8 +20,9 @@ test('store me performance surface does not load or render incentive projections
 
 test('store manager incentives route stays closed while region manager route remains open', () => {
   assert.match(routeRegistrySource, /function canOpenStoreIncentives/u)
-  assert.match(routeRegistrySource, /hasAnyRole\(authSummary, \['REGION_MANAGER'\]\)/u)
-  assert.doesNotMatch(routeRegistrySource, /hasAnyRole\(authSummary, \['STORE_MANAGER'/u)
+  assert.match(routeRegistrySource, /const storeIncentiveRoles = \['REGION_MANAGER'\]/u)
+  assert.match(routeRegistrySource, /hasAnyRole\(authSummary, storeIncentiveRoles\)/u)
+  assert.doesNotMatch(routeRegistrySource, /const storeIncentiveRoles = \[[^\]]*'STORE_MANAGER'/u)
 
   const storeManagerNavigation = routeRegistrySource.match(/storeManager: \[([\s\S]*?)\],/u)
   const regionManagerNavigation = routeRegistrySource.match(/regionManager: \[([\s\S]*?)\],/u)

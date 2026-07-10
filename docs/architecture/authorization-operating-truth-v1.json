@@ -1,0 +1,1518 @@
+{
+  "schemaVersion": 1,
+  "sourceOfTruth": {
+    "routes": [
+      "admin-web/src/app/admin-shell.tsx",
+      "admin-web/src/app/auth-flow-shell.tsx",
+      "admin-web/src/app/store-route-registry.ts"
+    ],
+    "preview": "admin-web/src/features/auth/role-permission-preview.ts",
+    "backendDriftEvidence": [
+      "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts",
+      "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts"
+    ]
+  },
+  "roleCatalog": [
+    "AUDITOR",
+    "HR_ADMIN",
+    "INTEGRATION_ADMIN",
+    "REGION_MANAGER",
+    "REPORT_VIEWER",
+    "SNAPSHOT_OPERATOR",
+    "STORE_MANAGER",
+    "STORE_PERSONNEL",
+    "SUPER_ADMIN",
+    "VISUAL_MERCHANDISER"
+  ],
+  "summary": {
+    "routeCount": 54,
+    "directMatrixRouteCount": 33,
+    "routePreviewDriftCount": 3,
+    "endpointDriftCount": 3,
+    "previewOrphanCount": 0
+  },
+  "routes": [
+    {
+      "id": "route:admin:*",
+      "surface": "admin",
+      "path": "*",
+      "kind": "redirect",
+      "classification": "non_product_fallback",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "not_applicable",
+      "previewOwnership": "not_applicable",
+      "runtimeRoles": [],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 214
+      }
+    },
+    {
+      "id": "route:auth:*",
+      "surface": "auth",
+      "path": "*",
+      "kind": "redirect",
+      "classification": "non_product_fallback",
+      "aliasOf": null,
+      "policyOwner": "auth_flow_shell",
+      "matrixOwnership": "not_applicable",
+      "previewOwnership": "not_applicable",
+      "runtimeRoles": [],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/auth-flow-shell.tsx",
+        "line": 33
+      }
+    },
+    {
+      "id": "route:admin:/",
+      "surface": "admin",
+      "path": "/",
+      "kind": "redirect",
+      "classification": "shell_redirect",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "not_applicable",
+      "previewOwnership": "not_applicable",
+      "runtimeRoles": [],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 88
+      }
+    },
+    {
+      "id": "route:admin:/admin/audit",
+      "surface": "admin",
+      "path": "/admin/audit",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 210
+      }
+    },
+    {
+      "id": "route:admin:/admin/audit/action-store-assignments/:assignmentId/audit",
+      "surface": "admin",
+      "path": "/admin/audit/action-store-assignments/:assignmentId/audit",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/audit",
+      "runtimeRoles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 206
+      }
+    },
+    {
+      "id": "route:admin:/admin/audit/role-assignments/:assignmentId/audit",
+      "surface": "admin",
+      "path": "/admin/audit/role-assignments/:assignmentId/audit",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/audit",
+      "runtimeRoles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 202
+      }
+    },
+    {
+      "id": "route:admin:/admin/audit/users/:userId/audit",
+      "surface": "admin",
+      "path": "/admin/audit/users/:userId/audit",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/audit",
+      "runtimeRoles": [
+        "AUDITOR",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 198
+      }
+    },
+    {
+      "id": "route:admin:/admin/auth",
+      "surface": "admin",
+      "path": "/admin/auth",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 178
+      }
+    },
+    {
+      "id": "route:admin:/admin/auth/action-store-assignments/:assignmentId/audit",
+      "surface": "admin",
+      "path": "/admin/auth/action-store-assignments/:assignmentId/audit",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/auth",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 194
+      }
+    },
+    {
+      "id": "route:admin:/admin/auth/catalog",
+      "surface": "admin",
+      "path": "/admin/auth/catalog",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/auth",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 182
+      }
+    },
+    {
+      "id": "route:admin:/admin/auth/role-assignments/:assignmentId/audit",
+      "surface": "admin",
+      "path": "/admin/auth/role-assignments/:assignmentId/audit",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/auth",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 190
+      }
+    },
+    {
+      "id": "route:admin:/admin/auth/users/:userId/audit",
+      "surface": "admin",
+      "path": "/admin/auth/users/:userId/audit",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/auth",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 186
+      }
+    },
+    {
+      "id": "route:admin:/admin/checklists",
+      "surface": "admin",
+      "path": "/admin/checklists",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "HR_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "HR_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 130
+      }
+    },
+    {
+      "id": "route:admin:/admin/competitions",
+      "surface": "admin",
+      "path": "/admin/competitions",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 134
+      }
+    },
+    {
+      "id": "route:admin:/admin/data-quality",
+      "surface": "admin",
+      "path": "/admin/data-quality",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 94
+      }
+    },
+    {
+      "id": "route:admin:/admin/feed",
+      "surface": "admin",
+      "path": "/admin/feed",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 126
+      }
+    },
+    {
+      "id": "route:admin:/admin/inbox",
+      "surface": "admin",
+      "path": "/admin/inbox",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "HR_ADMIN",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "HR_ADMIN",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 122
+      }
+    },
+    {
+      "id": "route:admin:/admin/incentives",
+      "surface": "admin",
+      "path": "/admin/incentives",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 166
+      }
+    },
+    {
+      "id": "route:admin:/admin/integrations",
+      "surface": "admin",
+      "path": "/admin/integrations",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 98
+      }
+    },
+    {
+      "id": "route:admin:/admin/integrations/:batchId",
+      "surface": "admin",
+      "path": "/admin/integrations/:batchId",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/integrations",
+      "runtimeRoles": [
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 102
+      }
+    },
+    {
+      "id": "route:admin:/admin/kpi-config",
+      "surface": "admin",
+      "path": "/admin/kpi-config",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 170
+      }
+    },
+    {
+      "id": "route:admin:/admin/master-data",
+      "surface": "admin",
+      "path": "/admin/master-data",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 106
+      }
+    },
+    {
+      "id": "route:admin:/admin/master-data/:batchId",
+      "surface": "admin",
+      "path": "/admin/master-data/:batchId",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/master-data",
+      "runtimeRoles": [
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 110
+      }
+    },
+    {
+      "id": "route:admin:/admin/operations",
+      "surface": "admin",
+      "path": "/admin/operations",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 90
+      }
+    },
+    {
+      "id": "route:admin:/admin/pilot-feedback",
+      "surface": "admin",
+      "path": "/admin/pilot-feedback",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 174
+      }
+    },
+    {
+      "id": "route:admin:/admin/reports",
+      "surface": "admin",
+      "path": "/admin/reports",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 138
+      }
+    },
+    {
+      "id": "route:admin:/admin/reports/checklists/:snapshotRunId",
+      "surface": "admin",
+      "path": "/admin/reports/checklists/:snapshotRunId",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/reports",
+      "runtimeRoles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 154
+      }
+    },
+    {
+      "id": "route:admin:/admin/reports/kpis/:snapshotRunId",
+      "surface": "admin",
+      "path": "/admin/reports/kpis/:snapshotRunId",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/reports",
+      "runtimeRoles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 150
+      }
+    },
+    {
+      "id": "route:admin:/admin/reports/snapshot-runs",
+      "surface": "admin",
+      "path": "/admin/reports/snapshot-runs",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/reports",
+      "runtimeRoles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 142
+      }
+    },
+    {
+      "id": "route:admin:/admin/reports/turnover/:snapshotRunId",
+      "surface": "admin",
+      "path": "/admin/reports/turnover/:snapshotRunId",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/reports",
+      "runtimeRoles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 158
+      }
+    },
+    {
+      "id": "route:admin:/admin/reports/workforce/:snapshotRunId",
+      "surface": "admin",
+      "path": "/admin/reports/workforce/:snapshotRunId",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/reports",
+      "runtimeRoles": [
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 146
+      }
+    },
+    {
+      "id": "route:admin:/admin/session",
+      "surface": "admin",
+      "path": "/admin/session",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 89
+      }
+    },
+    {
+      "id": "route:admin:/admin/snapshots",
+      "surface": "admin",
+      "path": "/admin/snapshots",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "SNAPSHOT_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "SNAPSHOT_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 114
+      }
+    },
+    {
+      "id": "route:admin:/admin/snapshots/:snapshotRunId",
+      "surface": "admin",
+      "path": "/admin/snapshots/:snapshotRunId",
+      "kind": "page",
+      "classification": "detail_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "inherited",
+      "previewOwnership": "inherits:/admin/snapshots",
+      "runtimeRoles": [
+        "SNAPSHOT_OPERATOR",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 118
+      }
+    },
+    {
+      "id": "route:admin:/admin/targets",
+      "surface": "admin",
+      "path": "/admin/targets",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "admin_shell",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/admin-shell.tsx",
+        "line": 162
+      }
+    },
+    {
+      "id": "route:auth:/auth/callback",
+      "surface": "auth",
+      "path": "/auth/callback",
+      "kind": "page",
+      "classification": "auth_flow",
+      "aliasOf": null,
+      "policyOwner": "auth_flow_shell",
+      "matrixOwnership": "not_applicable",
+      "previewOwnership": "not_applicable",
+      "runtimeRoles": [],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/auth-flow-shell.tsx",
+        "line": 31
+      }
+    },
+    {
+      "id": "route:auth:/auth/login",
+      "surface": "auth",
+      "path": "/auth/login",
+      "kind": "page",
+      "classification": "auth_flow",
+      "aliasOf": null,
+      "policyOwner": "auth_flow_shell",
+      "matrixOwnership": "not_applicable",
+      "previewOwnership": "not_applicable",
+      "runtimeRoles": [],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/auth-flow-shell.tsx",
+        "line": 21
+      }
+    },
+    {
+      "id": "route:auth:/auth/logout",
+      "surface": "auth",
+      "path": "/auth/logout",
+      "kind": "page",
+      "classification": "auth_flow",
+      "aliasOf": null,
+      "policyOwner": "auth_flow_shell",
+      "matrixOwnership": "not_applicable",
+      "previewOwnership": "not_applicable",
+      "runtimeRoles": [],
+      "previewRoles": null,
+      "authorization": null,
+      "source": {
+        "file": "admin-web/src/app/auth-flow-shell.tsx",
+        "line": 32
+      }
+    },
+    {
+      "id": "route:store:/store",
+      "surface": "store",
+      "path": "/store",
+      "kind": "page",
+      "classification": "alias",
+      "aliasOf": "/store/home",
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "authorization": {
+        "routeAccess": "authenticated_landing_alias",
+        "readScope": "session",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 182
+      }
+    },
+    {
+      "id": "route:store:/store/approvals",
+      "surface": "store",
+      "path": "/store/approvals",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "assigned_store"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 337
+      }
+    },
+    {
+      "id": "route:store:/store/checklists",
+      "surface": "store",
+      "path": "/store/checklists",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "assigned_store"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 200
+      }
+    },
+    {
+      "id": "route:store:/store/competitions",
+      "surface": "store",
+      "path": "/store/competitions",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "STORE_MANAGER",
+        "STORE_PERSONNEL"
+      ],
+      "previewRoles": [
+        "STORE_MANAGER",
+        "STORE_PERSONNEL"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 320
+      }
+    },
+    {
+      "id": "route:store:/store/feed",
+      "surface": "store",
+      "path": "/store/feed",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "authorization": {
+        "routeAccess": "authenticated",
+        "readScope": "session",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 302
+      }
+    },
+    {
+      "id": "route:store:/store/home",
+      "surface": "store",
+      "path": "/store/home",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "authenticated",
+        "readScope": "session",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 181
+      }
+    },
+    {
+      "id": "route:store:/store/incentives",
+      "surface": "store",
+      "path": "/store/incentives",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "region_scoped"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 354
+      }
+    },
+    {
+      "id": "route:store:/store/kpis",
+      "surface": "store",
+      "path": "/store/kpis",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 237
+      }
+    },
+    {
+      "id": "route:store:/store/me",
+      "surface": "store",
+      "path": "/store/me",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "STORE_MANAGER",
+        "STORE_PERSONNEL"
+      ],
+      "previewRoles": [
+        "STORE_MANAGER",
+        "STORE_PERSONNEL"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "self",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 254
+      }
+    },
+    {
+      "id": "route:store:/store/personnel/:employeeId",
+      "surface": "store",
+      "path": "/store/personnel/:employeeId",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 271
+      }
+    },
+    {
+      "id": "route:store:/store/rankings",
+      "surface": "store",
+      "path": "/store/rankings",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 285
+      }
+    },
+    {
+      "id": "route:store:/store/reports",
+      "surface": "store",
+      "path": "/store/reports",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "AUDITOR",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 425
+      }
+    },
+    {
+      "id": "route:store:/store/settings",
+      "surface": "store",
+      "path": "/store/settings",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
+      ],
+      "authorization": {
+        "routeAccess": "authenticated",
+        "readScope": "session",
+        "actionScope": "none"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 371
+      }
+    },
+    {
+      "id": "route:store:/store/targets",
+      "surface": "store",
+      "path": "/store/targets",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "assigned_store"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 389
+      }
+    },
+    {
+      "id": "route:store:/store/tasks",
+      "surface": "store",
+      "path": "/store/tasks",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ],
+      "previewRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "assigned_store"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 220
+      }
+    },
+    {
+      "id": "route:store:/store/workforce",
+      "surface": "store",
+      "path": "/store/workforce",
+      "kind": "page",
+      "classification": "product_route",
+      "aliasOf": null,
+      "policyOwner": "store_route_registry",
+      "matrixOwnership": "direct",
+      "previewOwnership": "direct",
+      "runtimeRoles": [
+        "REGION_MANAGER",
+        "STORE_MANAGER"
+      ],
+      "previewRoles": [
+        "REGION_MANAGER",
+        "STORE_MANAGER"
+      ],
+      "authorization": {
+        "routeAccess": "role_and_scope",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "assigned_store"
+      },
+      "source": {
+        "file": "admin-web/src/app/store-route-registry.ts",
+        "line": 408
+      }
+    }
+  ],
+  "routePreviewDrifts": [
+    {
+      "id": "store-incentives-preview-extra-roles",
+      "route": "/store/incentives",
+      "previewExtraRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ],
+      "previewMissingRoles": [],
+      "gate": "DG-1",
+      "status": "decision_gated"
+    },
+    {
+      "id": "store-personnel-preview-missing-report-viewer",
+      "route": "/store/personnel/:employeeId",
+      "previewExtraRoles": [],
+      "previewMissingRoles": [
+        "REPORT_VIEWER"
+      ],
+      "gate": "DG-1",
+      "status": "decision_gated"
+    },
+    {
+      "id": "store-tasks-preview-extra-roles",
+      "route": "/store/tasks",
+      "previewExtraRoles": [
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "SNAPSHOT_OPERATOR",
+        "STORE_PERSONNEL"
+      ],
+      "previewMissingRoles": [],
+      "gate": "DG-1",
+      "status": "decision_gated"
+    }
+  ],
+  "endpointDrifts": [
+    {
+      "id": "store-incentives-store-manager-backend-only",
+      "route": "/store/incentives",
+      "endpoint": "GET /api/store/incentives",
+      "direction": "backend_declares_role_missing_from_route",
+      "roles": [
+        "STORE_MANAGER"
+      ],
+      "gate": "DG-1",
+      "status": "decision_gated",
+      "source": "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts"
+    },
+    {
+      "id": "store-kpi-report-viewer-frontend-only",
+      "route": "/store/kpis",
+      "endpoint": "GET /api/reports/store-kpi-highlights",
+      "direction": "route_role_missing_from_backend_decorator",
+      "roles": [
+        "REPORT_VIEWER"
+      ],
+      "gate": "DG-1",
+      "status": "decision_gated",
+      "source": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts"
+    },
+    {
+      "id": "store-personnel-report-viewer-frontend-only",
+      "route": "/store/personnel/:employeeId",
+      "endpoint": "GET /api/reports/personnel-performance/:employeeId",
+      "direction": "route_role_missing_from_backend_decorator",
+      "roles": [
+        "REPORT_VIEWER"
+      ],
+      "gate": "DG-1",
+      "status": "decision_gated",
+      "source": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts"
+    }
+  ],
+  "previewOrphans": []
+}

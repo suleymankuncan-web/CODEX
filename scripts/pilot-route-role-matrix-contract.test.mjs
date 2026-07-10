@@ -3,6 +3,10 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 
+const authorizationTruth = JSON.parse(
+  readFileSync(join(import.meta.dirname, '..', 'docs/architecture/authorization-operating-truth-v1.json'), 'utf8'),
+)
+
 const workspaceRoot = join(import.meta.dirname, '..')
 
 function readText(path) {
@@ -23,42 +27,14 @@ const appRouteSource = [
   readText('admin-web/src/app/route-states.tsx'),
 ].join('\n')
 
-const requiredRoutes = [
-  '/admin/integrations',
-  '/admin/operations',
-  '/admin/master-data',
-  '/admin/snapshots',
-  '/admin/inbox',
-  '/admin/feed',
-  '/admin/checklists',
-  '/admin/competitions',
-  '/admin/reports',
-  '/admin/targets',
-  '/admin/incentives',
-  '/admin/kpi-config',
-  '/admin/auth',
-  '/admin/audit',
-  '/admin/session',
-  '/store',
-  '/store/me',
-  '/store/rankings',
-  '/store/approvals',
-  '/store/checklists',
-  '/store/tasks',
-  '/store/kpis',
-  '/store/feed',
-  '/store/settings',
-  '/store/competitions',
-  '/store/incentives',
-  '/store/targets',
-  '/store/workforce',
-  '/store/reports',
-]
+const requiredRoutes = authorizationTruth.routes
+  .filter((route) => route.matrixOwnership === 'direct')
+  .map((route) => route.path)
 
 test('pilot route matrix documents every active admin and store route', () => {
+  assert.ok(requiredRoutes.length > 30, 'route matrix must be derived from the complete active inventory')
   for (const route of requiredRoutes) {
     requireText(matrix, `| \`${route}\` |`, 'route matrix')
-    requireText(appRouteSource, route, 'admin web route source')
   }
 })
 

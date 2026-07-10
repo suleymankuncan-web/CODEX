@@ -6,6 +6,10 @@ const registrySource = await readFile(
   new URL('../src/app/store-route-registry.ts', import.meta.url),
   'utf8',
 )
+const authorizationSource = await readFile(
+  new URL('../src/features/auth/authorization.ts', import.meta.url),
+  'utf8',
+)
 const shellSource = await readFile(
   new URL('../src/app/store-shell.tsx', import.meta.url),
   'utf8',
@@ -64,6 +68,22 @@ test('store route registry owns every store route with explicit access and prelo
     assert.match(route.source, /routePath: '\/store/u, `${route.id} should declare a shell route path`)
     assert.match(route.source, /modulePreload:/u, `${route.id} should declare a module preload`)
     assert.match(route.source, /access:/u, `${route.id} should declare explicit access`)
+    assert.match(route.source, /operatingPolicy:/u, `${route.id} should declare operating policy metadata`)
+    assert.match(route.source, /catalogRoles:/u, `${route.id} should declare catalog roles`)
+    assert.match(route.source, /routeAccess:/u, `${route.id} should separate route access`)
+    assert.match(route.source, /readScope:/u, `${route.id} should separate read scope`)
+    assert.match(route.source, /actionScope:/u, `${route.id} should separate action scope`)
+  }
+})
+
+test('route policy metadata reuses authorization role sources for helper-guarded routes', () => {
+  for (const exportedRoles of [
+    'checklistResultReadRoles',
+    'storeWorkforceRouteRoles',
+    'targetRequestListRoles',
+  ]) {
+    assert.match(authorizationSource, new RegExp(`export const ${exportedRoles} =`, 'u'))
+    assert.match(registrySource, new RegExp(`catalogRoles: ${exportedRoles}`, 'u'))
   }
 })
 

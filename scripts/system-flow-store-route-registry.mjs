@@ -2,10 +2,16 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 
 const registryFile = 'admin-web/src/app/store-route-registry.ts'
+const authorizationFile = 'admin-web/src/features/auth/authorization.ts'
 
 export function parseStoreRouteRegistryRoutes(rootDir) {
   const registryPath = path.join(rootDir, fromRepoPath(registryFile))
   const text = readFileSync(registryPath, 'utf8')
+  const authorizationText = readFileSync(
+    path.join(rootDir, fromRepoPath(authorizationFile)),
+    'utf8',
+  )
+  const roleConstants = parseStringArrayConstants(`${authorizationText}\n${text}`)
   const arrayStart = text.indexOf('export const storeRouteDefinitions')
   const assignmentStart = arrayStart === -1 ? -1 : text.indexOf('=', arrayStart)
   const bracketStart = assignmentStart === -1 ? -1 : text.indexOf('[', assignmentStart)
@@ -16,7 +22,8 @@ export function parseStoreRouteRegistryRoutes(rootDir) {
   for (const definition of extractObjectBlocks(text, bracketStart + 1, bracketEnd)) {
     const routePath = extractQuotedProperty(definition.text, 'routePath')
     const moduleSpecifier = extractModulePreloadSpecifier(definition.text)
-    if (!routePath || !moduleSpecifier) continue
+    const operatingPolicy = extractOperatingPolicy(definition.text, roleConstants)
+    if (!routePath || !moduleSpecifier || !operatingPolicy) continue
 
     const resolvedModule = resolveModulePath(path.dirname(registryPath), moduleSpecifier)
     const component = resolvedModule ? path.basename(resolvedModule).replace(/\.[jt]sx?$/, '') : null
@@ -29,6 +36,7 @@ export function parseStoreRouteRegistryRoutes(rootDir) {
     ]
 
     for (const route of paths) {
+      const isStoreLandingAlias = route.path === '/store'
       routes.push({
         id: `route:store:${route.path}`,
         path: route.path,
@@ -38,9 +46,14 @@ export function parseStoreRouteRegistryRoutes(rootDir) {
         component,
         componentFile: resolvedModule ? toRepoPath(rootDir, resolvedModule) : null,
         guard: 'StoreRouteGuard',
-        roles: definition.text.includes('allowVisualMerchandiser: true')
-          ? ['STORE_ACCESS', 'VISUAL_MERCHANDISER']
-          : ['STORE_ACCESS'],
+        roles: isStoreLandingAlias
+          ? [...new Set([...operatingPolicy.catalogRoles, 'VISUAL_MERCHANDISER'])].sort()
+          : operatingPolicy.catalogRoles,
+        authorization: {
+          routeAccess: isStoreLandingAlias ? 'authenticated_landing_alias' : operatingPolicy.routeAccess,
+          readScope: operatingPolicy.readScope,
+          actionScope: operatingPolicy.actionScope,
+        },
         source: {
           file: registryFile,
           line: route.line,
@@ -50,6 +63,50 @@ export function parseStoreRouteRegistryRoutes(rootDir) {
   }
 
   return routes
+}
+
+function parseStringArrayConstants(text) {
+  const unresolved = new Map()
+  for (const match of text.matchAll(/(?:export\s+)?const\s+(\w+)\s*=\s*\[([\s\S]*?)\]/g)) {
+    unresolved.set(match[1], match[2])
+  }
+
+  const resolved = new Map()
+  let changed = true
+  while (changed && unresolved.size > 0) {
+    changed = false
+    for (const [name, body] of unresolved) {
+      const references = [...body.matchAll(/\.\.\.(\w+)/g)].map((match) => match[1])
+      if (references.some((reference) => !resolved.has(reference))) continue
+
+      const values = [...body.matchAll(/(['"])([^'"]+)\1/g)].map((match) => match[2])
+      for (const reference of references) values.push(...resolved.get(reference))
+      resolved.set(name, [...new Set(values)].sort())
+      unresolved.delete(name)
+      changed = true
+    }
+  }
+
+  return resolved
+}
+
+function extractOperatingPolicy(text, roleConstants) {
+  const match = /\boperatingPolicy\s*:\s*\{([\s\S]*?)\n\s*\}/.exec(text)
+  if (!match) return null
+
+  const block = match[1]
+  const rolesMatch = /\bcatalogRoles\s*:\s*(\w+|\[[\s\S]*?\])/.exec(block)
+  if (!rolesMatch) return null
+
+  const catalogRoles = rolesMatch[1].startsWith('[')
+    ? [...rolesMatch[1].matchAll(/(['"])([^'"]+)\1/g)].map((role) => role[2]).sort()
+    : roleConstants.get(rolesMatch[1])
+  const routeAccess = extractQuotedProperty(block, 'routeAccess')?.value
+  const readScope = extractQuotedProperty(block, 'readScope')?.value
+  const actionScope = extractQuotedProperty(block, 'actionScope')?.value
+  if (!catalogRoles || !routeAccess || !readScope || !actionScope) return null
+
+  return { catalogRoles, routeAccess, readScope, actionScope }
 }
 
 function extractObjectBlocks(text, start, end) {

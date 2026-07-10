@@ -50,6 +50,14 @@ The owner approved autonomous execution of
 `docs/plans/project-analysis-implementation-plan-v1.md` on 2026-07-10. That
 approval did not authorize speculative runtime work or broad production.
 
+The owner also approved autonomous execution of
+`docs/plans/project-wide-audit-remediation-plan-v1.md` on 2026-07-10. Its first
+slice is the authorization operating-truth contract: complete route ownership,
+preview/runtime drift, and backend-endpoint drift become machine-visible before
+any permission behavior changes. DG-1 still blocks authorization behavior;
+DG-2, DG-3, and DG-4 still block live DB constraints, verified provider TLS,
+and real external error delivery. Broad production remains `No-Go`.
+
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
 - PR #918 (A2) made root release the one canonical full frontend-release owner;
@@ -217,6 +225,10 @@ Current control references:
 - Repeatable runbooks: `docs/plans/runbook-registry-v1.md`.
 - Owner-approved, evidence-gated implementation plan:
   `docs/plans/project-analysis-implementation-plan-v1.md`.
+- Owner-approved project-wide audit remediation plan:
+  `docs/plans/project-wide-audit-remediation-plan-v1.md`.
+- Source-derived authorization operating truth:
+  `docs/architecture/authorization-operating-truth-v1.json`.
 - Current practical actions: `docs/plans/active-next-actions.md`.
 - Canonical debt counts: `docs/plans/project-debt-ledger.md`.
 - Incremental historical-guard ownership:
