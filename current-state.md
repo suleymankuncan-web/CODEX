@@ -56,6 +56,10 @@ approval did not authorize speculative runtime work or broad production.
   the frontend child is targeted and reusable, not a duplicate full suite.
 - PR #919 (A3) kept all 371 Playwright tests, uses two CI-only workers with
   serial files, and preserves failure-only Playwright artifacts.
+- The release path keeps one full PR release as the canonical proof. Relevant
+  main pushes reuse that proof only when merged PR, base parent, latest green
+  gate, completion time, and tree hash agree; every uncertain case falls back
+  to the full release.
 - PR #920 (B1) established the five-flow blocker record. A later owner
   attestation records successful 5 July checklist approval, Store Action task
   closure, and target submission/editing with no issue; remaining B1 evidence
@@ -134,7 +138,9 @@ test-data input.
   `discipline.md`; poll required checks, deployment state, and mergeability
   together, then stop once decision evidence is complete.
 - Main protection requires the `required-release-gate` aggregate. Its child
-  selection is fail-closed; do not replace it with an advisory local selector.
+  selection is fail-closed and requires the branch to be current with main.
+  Post-merge exact-tree reuse does not weaken this gate: a missing or mismatched
+  proof runs the full release instead.
 
 ## Workspace Hygiene
 
@@ -155,7 +161,8 @@ The no-delete inventory is
 
 Now:
 
-- Keep the truthful release gate and targeted frontend boundary stable.
+- Keep the truthful required gate, exact-tree post-merge proof/fallback, and
+  targeted frontend boundary stable.
 - Observe A3's next ten successful root-release PR runs; record the dated p95
   decision only after the sample exists.
 - Preserve the 5 July owner-attested B1 facts and keep only the remaining

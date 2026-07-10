@@ -1,0 +1,118 @@
+name: Post-Merge Verification
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "admin-web/**"
+      - "backend/nestjs/**"
+      - "docs/api/**"
+      - "db/**"
+      - "infra/**"
+      - "package.json"
+      - "scripts/**"
+      - "!scripts/current-state-handoff-contract.test.mjs"
+      - "!scripts/project-control-registries-contract.test.mjs"
+      - ".github/workflows/frontend-release-check.yml"
+      - ".github/workflows/release-check.yml"
+      - ".github/workflows/release-rehearsal.yml"
+      - ".github/workflows/required-release-gate.yml"
+      - ".github/workflows/post-merge-verification.yml"
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  proof:
+    name: exact-tree-proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      reuse_pr_gate: ${{ steps.proof.outputs.reuse_pr_gate }}
+      reason: ${{ steps.proof.outputs.reason }}
+      pr_number: ${{ steps.proof.outputs.pr_number }}
+      proof_run_id: ${{ steps.proof.outputs.proof_run_id }}
+      tree_sha: ${{ steps.proof.outputs.tree_sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Verify the merged tree against the latest PR gate
+        id: proof
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          POST_MERGE_SHA: ${{ github.sha }}
+        run: node scripts/post-merge-release-proof.mjs --proof >> "$GITHUB_OUTPUT"
+
+  fast-post-merge:
+    name: fast-post-merge
+    needs: proof
+    if: needs.proof.outputs.reuse_pr_gate == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Check merged diff whitespace
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: git diff --check "$BEFORE_SHA" "$AFTER_SHA"
+
+      - name: Run root script and contract tests
+        run: npm run test:scripts
+
+  fallback-full-release:
+    name: fallback-full-release
+    needs: proof
+    if: ${{ always() && needs.proof.outputs.reuse_pr_gate != 'true' }}
+    uses: ./.github/workflows/release-check.yml
+    permissions:
+      contents: read
+      pull-requests: read
+
+  post-merge-verification:
+    name: post-merge-verification
+    needs:
+      - proof
+      - fast-post-merge
+      - fallback-full-release
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Fail closed unless the selected path succeeded
+        env:
+          POST_MERGE_PROOF_RESULT: ${{ needs.proof.result }}
+          POST_MERGE_REUSE_PROOF: ${{ needs.proof.outputs.reuse_pr_gate }}
+          POST_MERGE_FAST_RESULT: ${{ needs.fast-post-merge.result }}
+          POST_MERGE_FALLBACK_RESULT: ${{ needs.fallback-full-release.result }}
+        run: node scripts/post-merge-release-proof.mjs --final

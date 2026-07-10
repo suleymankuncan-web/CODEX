@@ -38,13 +38,42 @@ Frontend currently owns:
 
 ## CI Contract
 
-The GitHub Actions workflow `.github/workflows/release-check.yml` installs backend and frontend dependencies, installs Playwright Chromium, and delegates to the same root command:
+The GitHub Actions workflow `.github/workflows/release-check.yml` is the one
+full-release implementation. It is reusable from another workflow and remains
+manually dispatchable. It installs backend and frontend dependencies, ensures
+system Chrome, and delegates to the same root command:
 
 ```powershell
 npm run check:release
 ```
 
 CI uses Node.js 24 to match the current local runtime family used by the project scripts.
+
+For pull requests, `.github/workflows/required-release-gate.yml` selects the
+scope. Release-impacting changes call the full release workflow once before
+merge. Docs/process-only changes use root script and contract tests without a
+full release.
+
+For relevant pushes to `main` or `master`,
+`.github/workflows/post-merge-verification.yml` avoids repeating the same full
+release when all of these facts agree:
+
+- GitHub associates exactly one merged pull request with the pushed commit;
+- the pushed commit has one parent and that parent is the pull request's
+  recorded base SHA;
+- the latest `required-release-gate` attempt for the pull request head is
+  completed successfully and records the same tree as the pushed commit;
+- the required run completed before the pull request merged.
+
+When the proof is exact, post-merge verification runs `git diff --check` and
+the root script/contract tests. Missing PR association, merge commits, rebase
+shapes, stale bases, changed trees, late checks, cancelled checks, failed
+checks, API failures, or any other uncertainty select the reusable full release
+as a fail-safe fallback.
+
+The main ruleset keeps `required-release-gate` strict/up-to-date. This makes an
+exact proof the normal path while the tree and parent checks remain the runtime
+backstop. GitHub Codex review is not part of this contract.
 
 ## Fresh DB Migration Smoke Policy
 

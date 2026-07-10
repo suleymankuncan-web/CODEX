@@ -13,6 +13,11 @@ const rootProcessFiles = new Set([
   'sokrates.md',
 ])
 
+const docsProcessContractFiles = new Set([
+  'scripts/current-state-handoff-contract.test.mjs',
+  'scripts/project-control-registries-contract.test.mjs',
+])
+
 function unique(values) {
   return [...new Set(values.filter(Boolean))]
 }
@@ -33,6 +38,7 @@ function isDocsProcessPath(file) {
   return (
     file.startsWith('docs/') ||
     rootProcessFiles.has(file) ||
+    docsProcessContractFiles.has(file) ||
     (!file.includes('/') && file.endsWith('.md'))
   )
 }

@@ -32,6 +32,8 @@ test('docs/process-only scope uses local diff and root script contracts without 
   const scope = selectRequiredReleaseGateScope([
     'docs/plans/project-analysis-implementation-plan-v1.md',
     'current-state.md',
+    'scripts/current-state-handoff-contract.test.mjs',
+    'scripts/project-control-registries-contract.test.mjs',
   ])
 
   assert.equal(scope.mode, 'docs')
@@ -39,6 +41,20 @@ test('docs/process-only scope uses local diff and root script contracts without 
   assert.equal(scope.runFrontendTargeted, false)
   assert.equal(scope.observeRehearsal, false)
   assert.equal(scope.affectedVerification.fullReleaseRequired, false)
+})
+
+test('only explicitly named docs guard scripts bypass the full release', () => {
+  const docsGuard = selectRequiredReleaseGateScope([
+    'scripts/current-state-handoff-contract.test.mjs',
+  ])
+  const unknownScript = selectRequiredReleaseGateScope([
+    'scripts/new-doc-looking-contract.test.mjs',
+  ])
+
+  assert.equal(docsGuard.mode, 'docs')
+  assert.equal(docsGuard.runRootRelease, false)
+  assert.equal(unknownScript.mode, 'release')
+  assert.equal(unknownScript.runRootRelease, true)
 })
 
 test('frontend scope runs the root gate and reusable targeted frontend child', () => {
@@ -198,6 +214,7 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   const rehearsalWorkflow = readText('.github/workflows/release-rehearsal.yml')
   const frontendWorkflow = readText('.github/workflows/frontend-release-check.yml')
   const releaseWorkflow = readText('.github/workflows/release-check.yml')
+  const postMergeWorkflow = readText('.github/workflows/post-merge-verification.yml')
 
   assert.match(workflow, /name:\s*Required Release Gate/)
   assert.match(workflow, /on:\s*\n\s+pull_request:\s*\n\s*\nconcurrency:/)
@@ -227,4 +244,26 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.match(releaseWorkflow, /if:\s*\$\{\{ failure\(\) \}\}/)
   assert.match(releaseWorkflow, /uses:\s*actions\/upload-artifact@v4/)
   assert.match(releaseWorkflow, /path:\s*admin-web\/test-results/)
+  assert.doesNotMatch(releaseWorkflow, /^\s*push:/m)
+  assert.match(releaseWorkflow, /workflow_call:\s*\n/)
+  assert.match(releaseWorkflow, /workflow_dispatch:\s*\n/)
+  assert.match(postMergeWorkflow, /name:\s*Post-Merge Verification/)
+  assert.match(postMergeWorkflow, /^\s*push:\s*$/m)
+  assert.match(postMergeWorkflow, /!scripts\/current-state-handoff-contract\.test\.mjs/)
+  assert.match(postMergeWorkflow, /!scripts\/project-control-registries-contract\.test\.mjs/)
+  assert.ok(
+    postMergeWorkflow.indexOf('"scripts/**"') <
+      postMergeWorkflow.indexOf('"!scripts/current-state-handoff-contract.test.mjs"'),
+  )
+  assert.ok(
+    postMergeWorkflow.indexOf('"scripts/**"') <
+      postMergeWorkflow.indexOf('"!scripts/project-control-registries-contract.test.mjs"'),
+  )
+  assert.doesNotMatch(postMergeWorkflow, /^concurrency:/m)
+  assert.match(postMergeWorkflow, /permissions:\s*\n\s+actions:\s*read/)
+  assert.match(postMergeWorkflow, /node scripts\/post-merge-release-proof\.mjs --proof/)
+  assert.match(postMergeWorkflow, /run:\s*npm run test:scripts/)
+  assert.match(postMergeWorkflow, /always\(\).*reuse_pr_gate != 'true'/)
+  assert.match(postMergeWorkflow, /uses:\s*\.\/\.github\/workflows\/release-check\.yml/)
+  assert.match(postMergeWorkflow, /node scripts\/post-merge-release-proof\.mjs --final/)
 })
