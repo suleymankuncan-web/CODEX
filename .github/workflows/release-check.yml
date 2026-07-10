@@ -13,6 +13,7 @@ on:
       - "infra/**"
       - "package.json"
       - "scripts/**"
+      - ".github/workflows/frontend-release-check.yml"
       - ".github/workflows/release-check.yml"
   workflow_call:
   workflow_dispatch:

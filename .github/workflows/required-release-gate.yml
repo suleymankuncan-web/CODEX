@@ -20,7 +20,7 @@ jobs:
     outputs:
       mode: ${{ steps.scope.outputs.mode }}
       run_root_release: ${{ steps.scope.outputs.run_root_release }}
-      observe_frontend_release: ${{ steps.scope.outputs.observe_frontend_release }}
+      run_frontend_targeted: ${{ steps.scope.outputs.run_frontend_targeted }}
       observe_rehearsal: ${{ steps.scope.outputs.observe_rehearsal }}
 
     steps:
@@ -79,29 +79,13 @@ jobs:
       contents: read
       pull-requests: read
 
-  frontend-release-observer:
-    name: frontend-release-observer
+  frontend-targeted:
+    name: frontend-targeted
     needs: scope
-    if: needs.scope.outputs.observe_frontend_release == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Wait for the frontend release child on the latest head SHA
-        env:
-          REQUIRED_RELEASE_GATE_CHECK_NAME: frontend-release-check
-          REQUIRED_RELEASE_GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          REQUIRED_RELEASE_GATE_MAX_ATTEMPTS: "80"
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node scripts/required-release-gate.mjs --observe
+    if: needs.scope.outputs.run_frontend_targeted == 'true'
+    uses: ./.github/workflows/frontend-release-check.yml
+    permissions:
+      contents: read
 
   release-rehearsal-observer:
     name: release-rehearsal-observer
@@ -133,7 +117,7 @@ jobs:
       - scope
       - docs-process-contracts
       - root-release
-      - frontend-release-observer
+      - frontend-targeted
       - release-rehearsal-observer
     if: ${{ always() }}
     runs-on: ubuntu-latest
@@ -154,8 +138,8 @@ jobs:
           REQUIRED_RELEASE_GATE_SCOPE_RESULT: ${{ needs.scope.result }}
           REQUIRED_RELEASE_GATE_DOCS_RESULT: ${{ needs.docs-process-contracts.result }}
           REQUIRED_RELEASE_GATE_ROOT_RELEASE_RESULT: ${{ needs.root-release.result }}
-          REQUIRED_RELEASE_GATE_FRONTEND_OBSERVER_RESULT: ${{ needs.frontend-release-observer.result }}
+          REQUIRED_RELEASE_GATE_FRONTEND_TARGETED_RESULT: ${{ needs.frontend-targeted.result }}
           REQUIRED_RELEASE_GATE_REHEARSAL_OBSERVER_RESULT: ${{ needs.release-rehearsal-observer.result }}
-          REQUIRED_RELEASE_GATE_OBSERVE_FRONTEND: ${{ needs.scope.outputs.observe_frontend_release }}
+          REQUIRED_RELEASE_GATE_RUN_FRONTEND_TARGETED: ${{ needs.scope.outputs.run_frontend_targeted }}
           REQUIRED_RELEASE_GATE_OBSERVE_REHEARSAL: ${{ needs.scope.outputs.observe_rehearsal }}
         run: node scripts/required-release-gate.mjs --final
