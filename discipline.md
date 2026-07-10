@@ -160,8 +160,9 @@ Yeni worktree'de ilk gate oncesi ihtiyaca gore bootstrap yap:
 - Frontend isi varsa: `npm.cmd --prefix admin-web ci`.
 - Backend isi varsa: backend dependency kurulumu yap.
 - Playwright gerekiyorsa browser kurulum/check adimini dogrula.
-- Sadece docs-only is varsa dependency kurulumu yapma; `git diff --check`
-  yeterlidir.
+- Sadece docs-only is varsa full release icin dependency kurulumu yapma.
+  `git diff --check` minimumdur; active docs veya contract degisiyorsa uygun
+  root script/contract testi de calistirilir.
 
 Kural:
 
@@ -172,8 +173,10 @@ Kural:
 - Worktree'ler arasi `node_modules` symlink/junction paylasimi varsayilan
   cozum degildir; hiz kazandirabilir ama garip Windows ve lockfile sorunlari
   yaratabilir.
-- Merge edilmis ve artik kullanilmayan worktree'ler periyodik olarak
-  temizlenebilir, ama once branch/PR/merge durumu dogrulanir.
+- Merge edilmis ve artik kullanilmayan worktree'ler status dogrulamasiyla
+  otomatik temizlenmez. Branch, worktree, stash veya remote ref silme/tasima,
+  drop, reset ya da rewrite ancak ayri dogrulanmis owner-onayli proposed-delete
+  listesinde acikca yer aliyorsa yapilabilir.
 
 ## Slice Disiplini
 
@@ -470,7 +473,12 @@ gerekirse duzeltme push'lanir ve loop yeniden baslatilir.
 Docs-only:
 
 - `git diff --check`.
-- Gerekirse diff okunur ve belge linkleri dogrulanir.
+- Diff okunur ve belge linkleri dogrulanir.
+- Active docs veya docs/contract guard degisiyorsa `npm.cmd run test:scripts`
+  calistirilir; GitHub docs-process contract da ayni root script setini calistirir.
+- Sadece docs-only oldugu icin `npm.cmd run check:release` calistirmak gerekmez;
+  ancak GitHub aggregate'in sectigi docs-process sonucu ve required check yine
+  merge icin zorunludur.
 
 Frontend:
 

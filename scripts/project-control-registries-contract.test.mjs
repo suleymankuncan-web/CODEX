@@ -123,7 +123,8 @@ test('project control board preserves current go no-go boundaries', () => {
   }
 
   requireText(docs.controlBoard, 'Do not change auth, API response shape, DB, provider config')
-  requireText(docs.controlBoard, 'perform a full project/code analysis')
+  requireText(docs.controlBoard, 'A3\'s ten-run p95 observation')
+  requireText(docs.controlBoard, 'B1 pilot evidence: `blocked_external`')
 })
 
 test('archive guard migration register preserves its incremental boundary', () => {

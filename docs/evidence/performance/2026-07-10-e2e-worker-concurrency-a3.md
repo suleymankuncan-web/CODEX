@@ -54,8 +54,9 @@ the source for the release-gate p95 and the required live proof.
 
 ## Live CI Proof
 
-The post-change proof on [PR #919](https://github.com/suleymankuncan-web/CODEX/pull/919)
-completed on commit `b0ca81978575b64e0fba86790805f0c47849bbd1`:
+The initial post-change proof on [PR #919](https://github.com/suleymankuncan-web/CODEX/pull/919)
+completed on commit `b0ca81978575b64e0fba86790805f0c47849bbd1`
+([run 29061500263](https://github.com/suleymankuncan-web/CODEX/actions/runs/29061500263)):
 
 - root release job: 10 minutes 27 seconds;
 - official release gate: 9 minutes 55 seconds;
@@ -63,8 +64,16 @@ completed on commit `b0ca81978575b64e0fba86790805f0c47849bbd1`:
 - required aggregate, targeted frontend child, rehearsal, and Vercel: passed;
 - the failure-artifact step skipped on the successful run, as designed.
 
-This one live proof validates the latest code change. It is not a ten-run p95
-claim.
+The final PR head `5804ea686746975af9279506978faa060f7cddf0` also passed
+([run 29062087361](https://github.com/suleymankuncan-web/CODEX/actions/runs/29062087361)):
+
+- root release job: 10 minutes 54 seconds;
+- Playwright: `Running 371 tests using 2 workers` and `371 passed (8.4m)`;
+- required aggregate, targeted frontend child, rehearsal, and Vercel: passed;
+- the failure-artifact step again skipped on the successful run.
+
+These two live proofs validate the implementation and final PR head. They are
+not a ten-run p95 claim.
 
 ## Safety Boundary
 

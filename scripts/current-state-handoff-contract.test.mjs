@@ -7,6 +7,10 @@ const archive = readFileSync(
   'docs/history/current-state-through-pr-913-2026-07-09.md',
   'utf8',
 )
+const transitionArchive = readFileSync(
+  'docs/history/operating-truth-alignment-plan-execution-2026-07-10.md',
+  'utf8',
+)
 
 function requireText(text, expected) {
   assert.ok(text.includes(expected), `expected text: ${expected}`)
@@ -23,8 +27,15 @@ test('active handoff stays short and points historical detail to the archive', (
     currentState,
     'docs/history/current-state-through-pr-913-2026-07-09.md',
   )
+  requireText(
+    currentState,
+    'docs/history/operating-truth-alignment-plan-execution-2026-07-10.md',
+  )
   requireText(archive, 'Status: historical')
   requireText(archive, 'Superseded by: `current-state.md`')
+  requireText(transitionArchive, 'Status: historical')
+  requireText(transitionArchive, 'Shelf: historical')
+  requireText(transitionArchive, 'Superseded by: `current-state.md`')
 })
 
 test('active handoff records the owner-approved operating truth', () => {
@@ -32,7 +43,9 @@ test('active handoff records the owner-approved operating truth', () => {
     'Controlled staging/internal pilot: `Conditional Go / Continue`',
     'Broad production rollout: `No-Go`',
     'Separate mobile app: discovery/planning only; implementation is not active',
-    'After this PR closes, perform a separate full project/code analysis',
+    'The owner approved autonomous execution of',
+    'The next ten successful root-release PR runs must be measured',
+    'The next fresh pilot work is blocked on safe, approved external inputs',
     'GitHub Codex review is disabled by explicit owner direction as of 2026-07-10',
     'Do not trigger `@codex review`, request it through another integration, or',
     'GitHub Codex review becomes active again only after a newer explicit owner',

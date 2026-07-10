@@ -1,8 +1,8 @@
 # Project Analysis Implementation Plan V1
 
-Status: guarded
+Status: active
 Shelf: architecture
-Spec status: Draft - implementation requires explicit owner approval
+Spec status: Owner-approved execution; runtime slices remain evidence-gated
 Author: Codex
 Reviewer: repository owner
 Use when: converting the 9 July 2026 full-project analysis into ordered, reviewable work
@@ -10,7 +10,31 @@ Do not use when: inventing runtime work without pilot evidence or widening broad
 Last verified: 2026-07-10
 Source of truth: `current-state.md` plus live git, GitHub, staging, and provider evidence
 
+## Execution Status - 2026-07-10
+
+The owner approved autonomous execution on 2026-07-10. That approval applies
+to this ordered process/documentation plan; it does not waive a runtime,
+provider, broad-production, or cleanup gate.
+
+- A1 is complete in PR #917: `required-release-gate` is the live required
+  aggregate and the main ruleset readback was verified.
+- A2 is complete in PR #918: root release owns the full frontend suite and the
+  frontend child is targeted/reusable.
+- A3 is implemented in PR #919 with two green live proofs. The ten successful
+  root-release-run p95 observation required by NFR-3 remains pending external
+  PR traffic.
+- B1 is complete as an honest `blocked_external` record in PR #920. No runtime
+  finding or runtime change was claimed.
+- E1 is complete in PR #921: VM-only route documentation is aligned and five
+  safe archive-guard reads moved; the remaining reader inventory is explicit.
+- The next runtime train remains parked unless a real B1 or pilot/demo P0/P1
+  finding produces one scoped specification.
+
 ## 1. Context
+
+The inventory numbers in this section are the 9 July 2026 analysis snapshot,
+not a live repository count. Use live git and current test output for present
+totals.
 
 The repository is technically mature enough for the current controlled pilot,
 but its implementation and verification surface is no longer small:
@@ -24,8 +48,9 @@ but its implementation and verification surface is no longer small:
 - 501 root script/contract tests;
 - 628 Markdown files under `docs/`.
 
-The project analysis did not prove a current P0 runtime defect. It did prove
-four structural risks:
+The analysis did not prove a current P0 runtime defect. At analysis time it
+identified four structural risks; the execution status above supersedes the
+first two as current posture:
 
 1. GitHub requires only `release-rehearsal`; the official root and frontend
    release workflows can still be running when a PR merges.
@@ -271,17 +296,20 @@ The pilot evidence record is a document contract with these required fields:
 
 ### PR-0 - This plan
 
-Story: establish the approved execution contract; no implementation.
+Story: establish the owner-approved execution contract; no implementation.
 
 Exit gate:
 
-- owner approves or amends the sequence;
-- implementation approval changes from pending to approved;
+- owner approves or amends the sequence (completed on 2026-07-10);
+- implementation approval changes from pending to approved (completed);
 - no runtime code changes are included.
 
 ### PR-A1 - Required Release Gate Alignment
 
 Priority: P1 process blocker; required before the next runtime PR.
+
+Execution: completed in PR #917 with live ruleset readback and a green
+latest-head aggregate proof.
 
 Scope:
 
@@ -304,6 +332,9 @@ Rollback: restore the previous ruleset context and workflow revision together.
 
 Depends on: PR-A1.
 
+Execution: completed in PR #918. Root release remains the one full frontend
+owner; the frontend workflow is a targeted reusable child.
+
 Scope:
 
 - choose root release as the canonical full release owner;
@@ -325,6 +356,10 @@ Rollback: restore the standalone workflow trigger without changing tests.
 
 Depends on: PR-A2. Conditional on measured CI duration remaining above NFR-3.
 
+Execution: implemented in PR #919. The first live proof is green with all 371
+tests; ten post-stabilization successful root releases still need a dated p95
+or justified no-change outcome.
+
 Scope:
 
 - measure per-file duration and shared-state assumptions;
@@ -341,6 +376,9 @@ Stop if:
 ### Pilot-B1 - Controlled Pilot/Demo Evidence Pass
 
 May run in parallel with PR-A1 because it changes no runtime behavior.
+
+Execution: completed as `blocked_external` in PR #920. No flow was run; the
+record names the exact safe inputs needed before a factual flow can begin.
 
 Scope:
 
@@ -404,6 +442,10 @@ No optimization PR is authorized by this measurement step alone.
 ### PR-E1 - Operating Documentation Drift Cleanup
 
 Priority: P2 docs/process; independent of runtime work.
+
+Execution: completed in PR #921. The archive register preserves incremental
+migration, named triage, and a narrow provenance exception; it does not
+authorize a bulk historical rewrite.
 
 Scope:
 

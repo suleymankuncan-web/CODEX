@@ -28,8 +28,12 @@ test('project analysis implementation plan has the mandatory spec sections', () 
     requireText(plan, section)
   }
 
-  requireText(plan, 'Status: guarded')
-  requireText(plan, 'Spec status: Draft - implementation requires explicit owner approval')
+  requireText(plan, 'Status: active')
+  requireText(plan, 'Spec status: Owner-approved execution; runtime slices remain evidence-gated')
+  requireText(plan, '## Execution Status - 2026-07-10')
+  requireText(plan, 'A1 is complete in PR #917')
+  requireText(plan, 'B1 is complete as an honest `blocked_external` record in PR #920')
+  requireText(plan, 'E1 is complete in PR #921')
 })
 
 test('requirements and acceptance criteria are complete and traceable', () => {
@@ -78,7 +82,7 @@ test('execution order keeps runtime and broad production behind explicit gates',
   }
 })
 
-test('operating documents point to the guarded plan', () => {
+test('operating documents point to the active evidence-gated plan', () => {
   for (const path of [
     'current-state.md',
     'docs/README.md',
