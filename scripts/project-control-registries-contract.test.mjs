@@ -134,8 +134,9 @@ test('archive guard migration register preserves its incremental boundary', () =
     'Status: active',
     'add a new executable dependency on it.',
     'group removes five safe dependencies.',
-    'The 40 entries below are the remaining',
+    'The 41 entries below are the remaining',
     '35 safe on-touch migrations, two primary-source',
+    'three triage decisions',
     'one deliberate provenance',
     'count is permanently fixed.',
   ]) {

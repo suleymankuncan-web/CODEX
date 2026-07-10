@@ -38,9 +38,9 @@ readers.
 
 ## Remaining Reader Inventory
 
-Inventory baseline: `origin/main` had 45 executable readers of
+Inventory baseline: `origin/main` had 46 executable readers of
 `docs/history/current-state-through-pr-913-2026-07-09.md`. The first completed
-group removes five safe dependencies. The 40 entries below are the remaining
+group removes five safe dependencies. The 41 entries below are the remaining
 2026-07-10 snapshot, including the one deliberate archive-boundary guard.
 They are an on-touch migration queue, not authority to bulk-edit the readers.
 
@@ -55,6 +55,7 @@ They are an on-touch migration queue, not authority to bulk-edit the readers.
 | `scripts/controlled-pilot-round-1-outcome-contract.test.mjs` | round-one provenance | `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`; `docs/plans/pilot-readiness-gate-v1.md` | safe |
 | `scripts/controlled-pilot-round-2-stabilization-contract.test.mjs` | round-two provenance | `docs/evidence/pilot-readiness/2026-05-05-controlled-pilot-feedback-log.md`; `docs/plans/active-next-actions.md` | safe |
 | `scripts/current-state-handoff-contract.test.mjs` | archive supersession boundary | `docs/history/current-state-through-pr-913-2026-07-09.md` only for its named historical-status assertion | retain: narrow provenance exception |
+| `admin-web/scripts/localization-contract.test.mjs` | localization closeout history | `docs/plans/ui-localization-strategy.md`; `docs/plans/decision-registry-v1.md`; `docs/plans/active-next-actions.md` | triage: choose active-strategy assertion or a named historical-provenance exception |
 | `scripts/db-health-migration-evidence-contract.test.mjs` | DB/migration plan and debt | `docs/plans/active-next-actions.md`; `docs/plans/project-debt-ledger.md` | safe |
 | `scripts/excel-import-runbook-contract.test.mjs` | import operator runbook | `docs/domains/import-master-data.md`; `docs/plans/pilot-readiness-gate-v1.md` | safe |
 | `scripts/import-upload-authorization-decision-contract.test.mjs` | upload authorization decision | `docs/plans/import-upload-authorization-decision-v1.md`; `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md`; `docs/evidence/readiness/2026-05-22-production-evidence-blockers-v2.md` | rewrite archive-only assertion against primary sources |
@@ -88,7 +89,7 @@ They are an on-touch migration queue, not authority to bulk-edit the readers.
 | `scripts/usage-performance-correlation-policy-contract.test.mjs` | privacy/correlation policy | `docs/plans/usage-performance-correlation-policy-v1.md`; `docs/README.md`; `docs/plans/p2-product-intelligence-execution-v1.md`; `docs/plans/active-next-actions.md` | safe |
 
 The snapshot therefore has 35 safe on-touch migrations, two primary-source
-assertion rewrites, two triage decisions, and one deliberate provenance
+assertion rewrites, three triage decisions, and one deliberate provenance
 exception. Update this table when a listed reader is touched; do not claim the
 count is permanently fixed.
 
