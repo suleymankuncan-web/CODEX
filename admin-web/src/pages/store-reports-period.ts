@@ -1,29 +1,45 @@
-export const reportMonthLabels = [
-  'Ocak',
-  'Şubat',
-  'Mart',
-  'Nisan',
-  'Mayıs',
-  'Haziran',
-  'Temmuz',
-  'Ağustos',
-  'Eylül',
-  'Ekim',
-  'Kasım',
-  'Aralık',
-]
+import { getIntlLocale, type AppLocale } from '../lib/i18n'
 
-export function formatReportPeriodLabel(period: string) {
-  const { year, month } = parseReportPeriod(period)
-  return `${reportMonthLabels[month - 1]} ${year}`
+export function getReportMonthLabels(locale: AppLocale, width: 'long' | 'short' = 'long') {
+  return Array.from({ length: 12 }, (_, index) => formatReportMonth(index + 1, locale, width))
 }
 
-export function formatReportCoverageLabel(input: { period: string; today: Date }) {
+export function formatReportPeriodLabel(period: string, locale: AppLocale) {
+  const { year, month } = parseReportPeriod(period)
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: 'long',
+  }).format(new Date(Date.UTC(year, month - 1, 1)))
+}
+
+export function formatReportCoverageLabel(input: {
+  period: string
+  today: Date
+  locale: AppLocale
+}) {
   const { year, month } = parseReportPeriod(input.period)
   const todayParts = getIstanbulDateParts(input.today)
   const isCurrentPeriod = todayParts.year === year && todayParts.month === month
   const endDay = isCurrentPeriod ? todayParts.day : new Date(Date.UTC(year, month, 0)).getUTCDate()
-  return `1-${endDay} ${reportMonthLabels[month - 1]}`
+  return formatReportDayRange({ startDay: 1, endDay, month, locale: input.locale })
+}
+
+export function formatSourceReportCoverageLabel(input: {
+  coverageLabel: string | null | undefined
+  period: string
+  locale: AppLocale
+}) {
+  const match = input.coverageLabel?.match(/(\d+)\s*[-–]\s*(\d+)/)
+  if (!match) return input.coverageLabel?.trim() || null
+
+  const { month } = parseReportPeriod(input.period)
+  return formatReportDayRange({
+    startDay: Number(match[1]),
+    endDay: Number(match[2]),
+    month,
+    locale: input.locale,
+  })
 }
 
 export function isFutureReportPeriod(input: { period: string; today: Date }) {
@@ -52,6 +68,25 @@ export function parseReportPeriod(period: string) {
   }
 
   return { year, month }
+}
+
+function formatReportMonth(month: number, locale: AppLocale, width: 'long' | 'short') {
+  return new Intl.DateTimeFormat(getIntlLocale(locale), {
+    timeZone: 'UTC',
+    month: width,
+  }).format(new Date(Date.UTC(2026, month - 1, 1)))
+}
+
+function formatReportDayRange(input: {
+  startDay: number
+  endDay: number
+  month: number
+  locale: AppLocale
+}) {
+  const monthLabel = formatReportMonth(input.month, input.locale, 'long')
+  return input.locale === 'en'
+    ? `${monthLabel} ${input.startDay}–${input.endDay}`
+    : `${input.startDay}-${input.endDay} ${monthLabel}`
 }
 
 function getIstanbulDateParts(date: Date) {

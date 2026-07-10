@@ -30,6 +30,8 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { AuthSessionSummary } from '../features/auth/api'
+import type { TranslateFunction } from '../features/localization/dictionary'
+import { useLocalization } from '../features/localization/useLocalization'
 import {
   downloadStoreMonthlyReportPackage,
   getStoreMonthlyReportPackage,
@@ -38,11 +40,12 @@ import { actionToast } from '../lib/action-toast'
 import { buildStoreReportsViewModel, type StoreReportMetricTone } from './store-reports-model'
 import {
   formatReportPeriodLabel,
+  formatSourceReportCoverageLabel,
   getCurrentReportPeriod,
+  getReportMonthLabels,
   isFutureReportPeriod,
   listReportYearOptions,
   parseReportPeriod,
-  reportMonthLabels,
 } from './store-reports-period'
 
 type StoreReportsPageProps = {
@@ -69,6 +72,7 @@ const sectionIcons = {
 }
 
 export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) {
+  const { locale, t } = useLocalization()
   const [period, setPeriod] = useState(() => getCurrentReportPeriod())
   const [downloadState, setDownloadState] = useState<DownloadState>('idle')
   const actorId = authSummary?.user.userId ?? 'anonymous'
@@ -83,10 +87,22 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
     queryFn: () => getStoreMonthlyReportPackage({ period }),
   })
   const model = useMemo(
-    () => buildStoreReportsViewModel(packageQuery.data ?? null),
-    [packageQuery.data],
+    () => {
+      const summary = packageQuery.data ?? null
+      return buildStoreReportsViewModel(summary, t, {
+        period: summary?.period ? formatReportPeriodLabel(summary.period, locale) : undefined,
+        coverage: summary?.period
+          ? formatSourceReportCoverageLabel({
+              coverageLabel: summary.coverageLabel,
+              period: summary.period,
+              locale,
+            }) ?? undefined
+          : undefined,
+      })
+    },
+    [locale, packageQuery.data, t],
   )
-  const personaLabel = resolvePersonaLabel(authSummary)
+  const personaLabel = resolvePersonaLabel(authSummary, t)
   const downloading = downloadState === 'pending'
 
   async function handleDownload() {
@@ -96,34 +112,34 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
       const blob = await downloadStoreMonthlyReportPackage({ period })
       downloadBlob(blob, `magaza-izleyis-${period}.xlsx`)
       setDownloadState('idle')
-      actionToast.success('Excel indirildi')
+      actionToast.success(t('storeReports.downloadSuccess'))
     } catch {
       setDownloadState('error')
-      actionToast.error(null, 'Excel indirilemedi. Dönemi kontrol edip tekrar deneyin.')
+      actionToast.error(null, t('storeReports.downloadError'))
     }
   }
 
   return (
-    <section className="store-reports-command" aria-label="Raporlar">
+    <section className="store-reports-command" aria-label={t('storeReports.title')}>
       <header className="src-hero">
         <div className="src-hero-copy">
           <div className="src-kicker">
             <span className="src-pill src-pill-primary">
               <BarChart3 aria-hidden="true" />
-              Raporlar
+              {t('storeReports.title')}
             </span>
             <span className="src-pill">{model.periodLabel}</span>
             <span className="src-pill">{personaLabel}</span>
           </div>
-          <h1>Raporlar</h1>
-          <p>Dönem rapor paketi, modül özetleri ve detay dışa aktarım.</p>
+          <h1>{t('storeReports.title')}</h1>
+          <p>{t('storeReports.heroCopy')}</p>
         </div>
         <div className="src-hero-actions">
           <StoreReportsPeriodPicker period={period} onPeriodChange={setPeriod} />
         </div>
       </header>
 
-      <div className="src-metrics" aria-label="Rapor özeti">
+      <div className="src-metrics" aria-label={t('storeReports.summaryAria')}>
         {model.metrics.map((metric) => {
           const Icon = metricIcons[metric.id as keyof typeof metricIcons] ?? FileSpreadsheet
           return (
@@ -142,24 +158,21 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
       </div>
 
       <main className="src-package">
-        <section className="src-package-card" aria-label="Ana çıktı">
-          <span className="src-section-label">Ana çıktı</span>
-          <h2>{model.periodLabel} Mağaza İzleyiş Exceli</h2>
-          <p>
-            {model.storeCount} mağazanın CR, GSM, checklist, aksiyon, hedef, prim,
-            norm kadro ve ziyaret verileri tek tabloda birleşir.
-          </p>
+        <section className="src-package-card" aria-label={t('storeReports.primaryOutputAria')}>
+          <span className="src-section-label">{t('storeReports.primaryOutput')}</span>
+          <h2>{t('storeReports.excelTitle', { period: model.periodLabel })}</h2>
+          <p>{t('storeReports.packageCopy', { count: model.storeCount })}</p>
 
           {packageQuery.isLoading ? (
-            <div className="src-state src-state-loading">Rapor paketi hazırlanıyor.</div>
+            <div className="src-state src-state-loading">{t('storeReports.loading')}</div>
           ) : null}
 
           {packageQuery.isError ? (
             <div className="src-state src-state-error">
-              <strong>Rapor verisi alınamadı.</strong>
-              <span>Bağlantı düzeldiğinde tekrar deneyin.</span>
+              <strong>{t('storeReports.errorTitle')}</strong>
+              <span>{t('storeReports.errorCopy')}</span>
               <Button type="button" variant="outline" onClick={() => packageQuery.refetch()}>
-                Tekrar dene
+                {t('storeReports.retry')}
               </Button>
             </div>
           ) : null}
@@ -172,17 +185,21 @@ export function StoreReportsPage({ authSummary = null }: StoreReportsPageProps) 
               type="button"
             >
               <Download data-icon="inline-start" />
-              {downloading ? 'Hazırlanıyor' : 'Excel indir'}
+              {downloading ? t('storeReports.downloadPreparing') : t('storeReports.download')}
             </Button>
           </div>
 
           <div className="src-package-foot">
             <span>{model.coverageLabel}</span>
-            <span>{packageQuery.data?.isCurrentPeriod ? 'Ay içi kapsam' : 'Tam dönem'}</span>
+            <span>
+              {packageQuery.data?.isCurrentPeriod
+                ? t('storeReports.currentPeriodCoverage')
+                : t('storeReports.fullPeriodCoverage')}
+            </span>
           </div>
         </section>
 
-        <section className="src-section-list" aria-label="Paket içeriği">
+        <section className="src-section-list" aria-label={t('storeReports.packageContentsAria')}>
           {model.sections.map((section) => {
             const Icon = sectionIcons[section.code as keyof typeof sectionIcons] ?? FileSpreadsheet
             const tone: StoreReportMetricTone = section.status === 'ready' ? 'cyan' : 'amber'
@@ -209,11 +226,13 @@ function StoreReportsPeriodPicker(input: {
   period: string
   onPeriodChange: (period: string) => void
 }) {
+  const { locale, t } = useLocalization()
   const [open, setOpen] = useState(false)
   const today = useMemo(() => new Date(), [])
   const parsed = parseReportPeriod(input.period)
   const [year, setYear] = useState(parsed.year)
   const yearOptions = listReportYearOptions(today)
+  const monthLabels = getReportMonthLabels(locale, 'short')
 
   function selectMonth(month: number) {
     const nextPeriod = `${year}-${String(month).padStart(2, '0')}`
@@ -233,17 +252,17 @@ function StoreReportsPeriodPicker(input: {
       <PopoverTrigger asChild>
         <Button className="src-period-trigger" type="button" variant="outline">
           <CalendarDays data-icon="inline-start" />
-          {formatReportPeriodLabel(input.period)}
+          {formatReportPeriodLabel(input.period, locale)}
           <ChevronDown data-icon="inline-end" />
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="src-period-popover">
         <PopoverHeader>
-          <PopoverTitle>Dönem seç</PopoverTitle>
+          <PopoverTitle>{t('storeReports.selectPeriod')}</PopoverTitle>
         </PopoverHeader>
         <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
-          <SelectTrigger aria-label="Yıl seç" className="src-year-select">
-            <SelectValue placeholder="Yıl" />
+          <SelectTrigger aria-label={t('storeReports.selectYear')} className="src-year-select">
+            <SelectValue placeholder={t('storeReports.year')} />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
@@ -256,7 +275,7 @@ function StoreReportsPeriodPicker(input: {
           </SelectContent>
         </Select>
         <div className="src-month-grid">
-          {reportMonthLabels.map((label, index) => {
+          {monthLabels.map((label, index) => {
             const month = index + 1
             const nextPeriod = `${year}-${String(month).padStart(2, '0')}`
             const selected = nextPeriod === input.period
@@ -271,7 +290,7 @@ function StoreReportsPeriodPicker(input: {
                 type="button"
                 variant={selected ? 'default' : 'outline'}
               >
-                {label.slice(0, 3)}
+                {label}
               </Button>
             )
           })}
@@ -281,12 +300,12 @@ function StoreReportsPeriodPicker(input: {
   )
 }
 
-function resolvePersonaLabel(authSummary: AuthSessionSummary | null) {
+function resolvePersonaLabel(authSummary: AuthSessionSummary | null, t: TranslateFunction) {
   const roles = new Set(authSummary?.user.roleCodes ?? [])
-  if (roles.has('REGION_MANAGER')) return 'Bölge müdürü'
-  if (roles.has('SUPER_ADMIN')) return 'Admin'
-  if (roles.has('AUDITOR')) return 'Denetçi'
-  return 'Rapor yetkisi'
+  if (roles.has('REGION_MANAGER')) return t('storeReports.persona.regionManager')
+  if (roles.has('SUPER_ADMIN')) return t('storeReports.persona.admin')
+  if (roles.has('AUDITOR')) return t('storeReports.persona.auditor')
+  return t('storeReports.persona.authorized')
 }
 
 function downloadBlob(blob: Blob, fileName: string) {

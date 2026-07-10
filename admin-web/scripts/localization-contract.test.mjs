@@ -13,6 +13,7 @@ const localizationFiles = [
   'src/features/localization/messages/admin-checklists.ts',
   'src/features/localization/messages/admin-feed.ts',
   'src/features/localization/messages/admin-inbox.ts',
+  'src/features/localization/messages/admin-incentives.ts',
   'src/features/localization/messages/auth-audit-details.ts',
   'src/features/localization/messages/auth-admin.ts',
   'src/features/localization/messages/auth-catalog.ts',
@@ -42,18 +43,22 @@ const localizationFiles = [
   'src/features/localization/messages/store-me.ts',
   'src/features/localization/messages/store-kpis.ts',
   'src/features/localization/messages/store-rankings.ts',
+  'src/features/localization/messages/store-reports.ts',
   'src/features/localization/messages/store-tasks.ts',
   'src/features/localization/messages/index.ts',
   'src/features/localization/dictionary.ts',
 ]
 
 const localizedPageFiles = [
+  'src/pages/AdminIncentivesPage.tsx',
   'src/pages/AdminInboxPage.tsx',
   'src/pages/CompetitionDashboardPage.tsx',
   'src/pages/IntegrationDashboardPage.tsx',
   'src/pages/MasterDataBootstrapPage.tsx',
   'src/pages/StoreCompetitionsPage.tsx',
   'src/pages/StoreMyPerformancePage.tsx',
+  'src/pages/StoreFeedPage.tsx',
+  'src/pages/StoreReportsPage.tsx',
   'src/pages/TargetApprovalQueuePage.tsx',
 ]
 

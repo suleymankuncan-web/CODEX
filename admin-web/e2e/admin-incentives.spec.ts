@@ -159,6 +159,10 @@ test('admin incentives switches owned product copy to English and preserves sour
   await expect(page.getByRole('columnheader', { name: 'Store' })).toBeVisible()
   await expect(page.getByText('Ali Can')).toBeVisible()
   await expect(page.getByRole('heading', { name: /Prim y.*netimi/ })).toHaveCount(0)
+
+  await setStoredLocale(page, 'tr')
+  await expect(page.getByRole('heading', { name: 'Prim yönetimi' })).toBeVisible()
+  await expect(page.getByText('Ali Can')).toBeVisible()
 })
 
 test('admin incentive period filter requests the selected year and month', async ({ page }) => {

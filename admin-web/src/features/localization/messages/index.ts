@@ -6,6 +6,7 @@ import { authCatalogEn, authCatalogTr } from './auth-catalog'
 import { authFlowEn, authFlowTr } from './auth-flow'
 import { adminFeedEn, adminFeedTr } from './admin-feed'
 import { adminInboxEn, adminInboxTr } from './admin-inbox'
+import { adminIncentivesEn, adminIncentivesTr } from './admin-incentives'
 import { adminIntegrationsEn, adminIntegrationsTr } from './admin-integrations'
 import { adminKpiConfigEn, adminKpiConfigTr } from './admin-kpi-config'
 import { adminMasterDataEn, adminMasterDataTr } from './admin-master-data'
@@ -36,6 +37,7 @@ import { storeIncentivesEn, storeIncentivesTr } from './store-incentives'
 import { storeKpisEn, storeKpisTr } from './store-kpis'
 import { storeMeEn, storeMeTr } from './store-me'
 import { storeRankingsEn, storeRankingsTr } from './store-rankings'
+import { storeReportsEn, storeReportsTr } from './store-reports'
 import { storeSettingsEn, storeSettingsTr } from './store-settings'
 import { storeTasksEn, storeTasksTr } from './store-tasks'
 import { storeUtilityEn, storeUtilityTr } from './store-utility'
@@ -50,6 +52,7 @@ const tr = {
   ...authFlowTr,
   ...adminFeedTr,
   ...adminInboxTr,
+  ...adminIncentivesTr,
   ...adminIntegrationsTr,
   ...adminKpiConfigTr,
   ...adminMasterDataTr,
@@ -80,6 +83,7 @@ const tr = {
   ...storeKpisTr,
   ...storeMeTr,
   ...storeRankingsTr,
+  ...storeReportsTr,
   ...storeSettingsTr,
   ...storeTasksTr,
   ...storeUtilityTr,
@@ -95,6 +99,7 @@ const en: Record<keyof typeof tr, string> = {
   ...authFlowEn,
   ...adminFeedEn,
   ...adminInboxEn,
+  ...adminIncentivesEn,
   ...adminIntegrationsEn,
   ...adminKpiConfigEn,
   ...adminMasterDataEn,
@@ -125,6 +130,7 @@ const en: Record<keyof typeof tr, string> = {
   ...storeKpisEn,
   ...storeMeEn,
   ...storeRankingsEn,
+  ...storeReportsEn,
   ...storeSettingsEn,
   ...storeTasksEn,
   ...storeUtilityEn,

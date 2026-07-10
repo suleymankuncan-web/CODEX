@@ -26,6 +26,7 @@ import {
   type SalesTargetIncentiveStatus,
 } from '../features/incentives/api'
 import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
+import type { TranslateFunction } from '../features/localization/dictionary'
 import { useLocalization } from '../features/localization/useLocalization'
 import { actionToast } from '../lib/action-toast'
 import { getErrorMessage } from '../lib/format'
@@ -71,7 +72,7 @@ const statusTone: Record<SalesTargetIncentiveStatus, AdminSurfaceTone> = {
 const INCENTIVE_TIMEZONE = 'Europe/Istanbul'
 
 export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | null }) {
-  const { locale } = useLocalization()
+  const { locale, t } = useLocalization()
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState(() => resolveCurrentPeriodKey())
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null)
@@ -96,24 +97,26 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
     onSuccess: async () => {
       setAdjustmentAmount('')
       setReasonNote('')
-      actionToast.success('Düzeltme kaydedildi')
+      actionToast.success(t('adminIncentives.toast.correctionSaved'))
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-sales-target-incentives'] }),
         queryClient.invalidateQueries({ queryKey: ['store-sales-target-incentives'] }),
       ])
     },
-    onError: (error) => actionToast.error(error, 'Düzeltme kaydedilemedi.'),
+    onError: (error) => actionToast.error(error, t('adminIncentives.toast.correctionError')),
   })
   const packageReviewMutation = useMutation({
     mutationFn: reviewAdminSalesTargetIncentiveRegionPackage,
     onSuccess: async (_response, variables) => {
-      actionToast.success(variables.decision === 'approve' ? 'Paket onaylandı' : 'Paket iade edildi')
+      actionToast.success(variables.decision === 'approve'
+        ? t('adminIncentives.toast.packageApproved')
+        : t('adminIncentives.toast.packageReturned'))
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['admin-sales-target-incentives'] }),
         queryClient.invalidateQueries({ queryKey: ['store-sales-target-incentives'] }),
       ])
     },
-    onError: (error) => actionToast.error(error, 'Paket kararı kaydedilemedi.'),
+    onError: (error) => actionToast.error(error, t('adminIncentives.toast.packageError')),
   })
 
   const data = incentivesQuery.data?.data ?? null
@@ -161,7 +164,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
       periodLabel: displayedPeriodLabel,
       rows,
     })
-    actionToast.success('Excel indirildi')
+    actionToast.success(t('adminIncentives.toast.excelDownloaded'))
   }
 
   function submitPackageReview(
@@ -182,7 +185,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
 
   if (incentivesQuery.isLoading) {
     return (
-      <AdminSurfacePage ariaLabel="Prim yönetimi">
+      <AdminSurfacePage ariaLabel={t('adminIncentives.aria')}>
         <AdminSurfaceSkeleton />
       </AdminSurfacePage>
     )
@@ -190,15 +193,15 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
 
   if (incentivesQuery.isError) {
     return (
-      <AdminSurfacePage ariaLabel="Prim yönetimi">
+      <AdminSurfacePage ariaLabel={t('adminIncentives.aria')}>
         <AdminStatePanel
-          title="Prim verisi alınamadı"
+          title={t('adminIncentives.errorTitle')}
           description={getErrorMessage(incentivesQuery.error)}
           tone="danger"
           action={(
             <Button type="button" variant="outline" onClick={() => incentivesQuery.refetch()}>
               <RefreshCcw size={14} />
-              Yeniden dene
+              {t('adminIncentives.retry')}
             </Button>
           )}
         />
@@ -207,30 +210,32 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
   }
 
   return (
-    <AdminSurfacePage ariaLabel="Prim yönetimi">
+    <AdminSurfacePage ariaLabel={t('adminIncentives.aria')}>
       <div className="tw:grid tw:gap-4" data-testid="admin-incentives-page">
         <AdminSurfaceHeader
-          eyebrow="Satış hedef primi"
-          title="Prim yönetimi"
-          description="Şirket mağazaları için hesaplanan mağaza müdürü ve satış personeli primlerini dönem, hedef, satış ve hak ediş kırılımıyla izleyin."
+          eyebrow={t('adminIncentives.eyebrow')}
+          title={t('adminIncentives.title')}
+          description={t('adminIncentives.description')}
           icon={<CircleDollarSign size={20} />}
           meta={(
             <>
-              <AdminSurfaceBadge tone="cyan">Dönem: {displayedPeriodLabel}</AdminSurfaceBadge>
+              <AdminSurfaceBadge tone="cyan">
+                {t('adminIncentives.periodBadge', { period: displayedPeriodLabel })}
+              </AdminSurfaceBadge>
               <AdminSurfaceBadge tone="neutral">{displayedPeriodRange}</AdminSurfaceBadge>
-              <AdminSurfaceBadge tone="success">Sadece şirket mağazası</AdminSurfaceBadge>
-              <AdminSurfaceBadge tone="neutral">Kasa sorumlusu kapsam dışı</AdminSurfaceBadge>
+              <AdminSurfaceBadge tone="success">{t('adminIncentives.companyOnly')}</AdminSurfaceBadge>
+              <AdminSurfaceBadge tone="neutral">{t('adminIncentives.cashierExcluded')}</AdminSurfaceBadge>
             </>
           )}
           actions={(
             <>
               <Button type="button" variant="outline" disabled={rows.length === 0} onClick={exportRows}>
                 <Download size={14} />
-                Excel'e aktar
+                {t('adminIncentives.export')}
               </Button>
               <Button type="button" variant="outline" onClick={() => incentivesQuery.refetch()}>
                 <RefreshCcw size={14} />
-                Yenile
+                {t('adminIncentives.refresh')}
               </Button>
             </>
           )}
@@ -238,9 +243,9 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
 
         <AdminFilterBar>
           <div className="tw:grid tw:min-w-32 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-            <span>Yıl</span>
+            <span>{t('adminIncentives.year')}</span>
             <Select value={selectedYear} onValueChange={updateYear}>
-              <SelectTrigger id="admin-incentive-year" aria-label="Yıl" className="tw:w-full tw:min-w-28">
+              <SelectTrigger id="admin-incentive-year" aria-label={t('adminIncentives.year')} className="tw:w-full tw:min-w-28">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -251,9 +256,9 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
             </Select>
           </div>
           <div className="tw:grid tw:min-w-44 tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground">
-            <span>Ay</span>
+            <span>{t('adminIncentives.month')}</span>
             <Select value={selectedMonth} onValueChange={updateMonth}>
-              <SelectTrigger id="admin-incentive-month" aria-label="Ay" className="tw:w-full tw:min-w-36">
+              <SelectTrigger id="admin-incentive-month" aria-label={t('adminIncentives.month')} className="tw:w-full tw:min-w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -264,7 +269,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
             </Select>
           </div>
           <span className="tw:text-xs tw:leading-5 tw:text-muted-foreground" data-testid="admin-incentive-period-summary">
-            Seçili dönem {displayedPeriodLabel}. Ocak, Şubat, Mart, Nisan ve Mayıs gibi geçmiş yüklemeler aynı filtreyle açılır.
+            {t('adminIncentives.periodSummary', { period: displayedPeriodLabel })}
           </span>
         </AdminFilterBar>
 
@@ -272,33 +277,33 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
           items={[
             {
               id: 'stores',
-              label: 'Mağaza',
+              label: t('adminIncentives.metric.stores'),
               value: data?.projections.length ?? 0,
-              description: 'Prim kapsamındaki şirket mağazaları.',
+              description: t('adminIncentives.metric.storesCopy'),
               icon: <Store size={18} />,
               tone: 'cyan',
             },
             {
               id: 'personnel-sales-source',
-              label: 'Personel satış kaynağı',
+              label: t('adminIncentives.metric.personnelSource'),
               value: `${personnelSalesSourceCount}/${personnelRows.length}`,
-              description: 'Satış tutarı bağlanan personel satırları.',
+              description: t('adminIncentives.metric.personnelSourceCopy'),
               icon: <TrendingUp size={18} />,
               tone: personnelRows.length === 0 || personnelSalesSourceCount < personnelRows.length ? 'warning' : 'success',
             },
             {
               id: 'payable',
-              label: 'Toplam hak ediş',
-              value: formatMoneyValue(payableTotal, locale),
-              description: 'Düzeltme/final varsa nihai tutar kullanılır.',
+              label: t('adminIncentives.metric.payable'),
+              value: formatAdminMoneyValue(payableTotal, locale, t),
+              description: t('adminIncentives.metric.payableCopy'),
               icon: <CircleDollarSign size={18} />,
               tone: 'success',
             },
             {
               id: 'corrections',
-              label: 'Düzeltmeli satır',
+              label: t('adminIncentives.metric.corrected'),
               value: correctedRows.length,
-              description: `${blockedCount} satır kaynak veya hesaplama bekliyor.`,
+              description: t('adminIncentives.metric.blockedCopy', { count: blockedCount }),
               icon: <SlidersHorizontal size={18} />,
               tone: correctedRows.length > 0 ? 'accent' : 'neutral',
             },
@@ -319,36 +324,41 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
           packages={regionPackages}
           projections={data?.projections ?? []}
           returnNotes={returnNotes}
+          t={t}
         />
 
         {rows.length === 0 ? (
           <AdminSurfaceEmpty
-            title="Prim satırı bulunamadı"
-            copy="Bu dönem için şirket mağazası prim hesabı yok veya kaynaklar henüz oluşmadı."
+            title={t('adminIncentives.emptyTitle')}
+            copy={t('adminIncentives.emptyCopy')}
           />
         ) : (
           <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,1fr)_360px]">
             <AdminSurfaceSection
-              title="Prim satırları"
-              description="Hedef, satış, gerçekleşme, hak ediş ve kayıtlı düzeltme etkisini aynı satırda izleyin."
-              badge={<AdminSurfaceBadge tone="neutral">{rows.length} satır</AdminSurfaceBadge>}
+              title={t('adminIncentives.rowsTitle')}
+              description={t('adminIncentives.rowsCopy')}
+              badge={(
+                <AdminSurfaceBadge tone="neutral">
+                  {t('adminIncentives.rowCount', { count: rows.length })}
+                </AdminSurfaceBadge>
+              )}
               testId="admin-incentive-projections"
             >
               <div className="tw:overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Mağaza</TableHead>
-                      <TableHead>Personel</TableHead>
-                      <TableHead>Görev</TableHead>
-                      <TableHead className="tw:text-right">Hedef</TableHead>
-                      <TableHead className="tw:text-right">Satış</TableHead>
-                      <TableHead className="tw:text-right">Gerçekleşme</TableHead>
-                      <TableHead className="tw:text-right">Hak ediş</TableHead>
-                      <TableHead className="tw:text-right">Düzeltme</TableHead>
-                      <TableHead className="tw:text-right">Nihai</TableHead>
-                      <TableHead>Durum</TableHead>
-                      <TableHead className="tw:text-right">Aksiyon</TableHead>
+                      <TableHead>{t('adminIncentives.column.store')}</TableHead>
+                      <TableHead>{t('adminIncentives.column.personnel')}</TableHead>
+                      <TableHead>{t('adminIncentives.column.position')}</TableHead>
+                      <TableHead className="tw:text-right">{t('adminIncentives.column.target')}</TableHead>
+                      <TableHead className="tw:text-right">{t('adminIncentives.column.sales')}</TableHead>
+                      <TableHead className="tw:text-right">{t('adminIncentives.column.achievement')}</TableHead>
+                      <TableHead className="tw:text-right">{t('adminIncentives.column.earned')}</TableHead>
+                      <TableHead className="tw:text-right">{t('adminIncentives.column.correction')}</TableHead>
+                      <TableHead className="tw:text-right">{t('adminIncentives.column.final')}</TableHead>
+                      <TableHead>{t('adminIncentives.column.status')}</TableHead>
+                      <TableHead className="tw:text-right">{t('adminIncentives.column.action')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -356,20 +366,30 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
                       <TableRow key={item.id} data-testid="admin-incentive-row">
                         <TableCell className="tw:min-w-44 tw:font-medium">{item.projection.storeName}</TableCell>
                         <TableCell className="tw:min-w-44">{item.row.displayName}</TableCell>
-                        <TableCell className="tw:min-w-36">{getIncentivePositionLabel(item.row.positionCode)}</TableCell>
-                        <TableCell className="tw:text-right">{formatMoneyValue(item.row.target, locale)}</TableCell>
-                        <TableCell className="tw:text-right">
-                          <SalesAmountCell row={item.row} locale={locale} />
+                        <TableCell className="tw:min-w-36">
+                          {getAdminIncentivePositionLabel(item.row.positionCode, t)}
                         </TableCell>
-                        <TableCell className="tw:text-right">{formatPercentValue(item.row.achievementPct, locale)}</TableCell>
-                        <TableCell className="tw:text-right tw:font-semibold">{formatMoneyValue(item.row.payableAmount, locale)}</TableCell>
                         <TableCell className="tw:text-right">
-                          <AdjustmentAmountsCell row={item.row} locale={locale} />
+                          {formatAdminMoneyValue(item.row.target, locale, t)}
                         </TableCell>
-                        <TableCell className="tw:text-right tw:font-semibold">{formatMoneyValue(item.row.finalAmount ?? item.row.payableAmount, locale)}</TableCell>
+                        <TableCell className="tw:text-right">
+                          <SalesAmountCell row={item.row} locale={locale} t={t} />
+                        </TableCell>
+                        <TableCell className="tw:text-right">
+                          {formatAdminPercentValue(item.row.achievementPct, locale, t)}
+                        </TableCell>
+                        <TableCell className="tw:text-right tw:font-semibold">
+                          {formatAdminMoneyValue(item.row.payableAmount, locale, t)}
+                        </TableCell>
+                        <TableCell className="tw:text-right">
+                          <AdjustmentAmountsCell row={item.row} locale={locale} t={t} />
+                        </TableCell>
+                        <TableCell className="tw:text-right tw:font-semibold">
+                          {formatAdminMoneyValue(item.row.finalAmount ?? item.row.payableAmount, locale, t)}
+                        </TableCell>
                         <TableCell>
                           <AdminSurfaceBadge tone={statusTone[item.row.status]}>
-                            {getIncentiveStatusLabel(item.row.status)}
+                            {getAdminIncentiveStatusLabel(item.row.status, t)}
                           </AdminSurfaceBadge>
                         </TableCell>
                         <TableCell className="tw:text-right">
@@ -379,7 +399,7 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
                             variant={selectedRow?.id === item.id ? 'default' : 'outline'}
                             onClick={() => setSelectedRowId(item.id)}
                           >
-                            Seç
+                            {t('adminIncentives.select')}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -390,58 +410,64 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
             </AdminSurfaceSection>
 
             <AdminSurfaceSection
-              title="Manuel düzeltme"
-              description="Düzeltme satış kaynağını değiştirmez; ayrı işlem kaydı oluşturur."
-              badge={<AdminSurfaceBadge tone="warning">Yönetici yetkisi</AdminSurfaceBadge>}
+              title={t('adminIncentives.correctionTitle')}
+              description={t('adminIncentives.correctionCopy')}
+              badge={(
+                <AdminSurfaceBadge tone="warning">
+                  {t('adminIncentives.managerAuthority')}
+                </AdminSurfaceBadge>
+              )}
               testId="admin-incentive-correction-panel"
             >
               {selectedRow ? (
                 <form className="tw:grid tw:gap-3" onSubmit={submitCorrection}>
-                  <SelectedRowSummary item={selectedRow} locale={locale} />
+                  <SelectedRowSummary item={selectedRow} locale={locale} t={t} />
                   <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground" htmlFor="admin-incentive-adjustment-amount">
-                    Düzeltme tutarı
+                    {t('adminIncentives.adjustmentAmount')}
                     <Input
                       id="admin-incentive-adjustment-amount"
                       inputMode="decimal"
                       onChange={(event) => setAdjustmentAmount(event.target.value)}
-                      placeholder="125.25 veya -50.00"
+                      placeholder={t('adminIncentives.adjustmentPlaceholder')}
                       required
                       value={adjustmentAmount}
                     />
                   </label>
                   <label className="tw:grid tw:gap-1 tw:text-xs tw:font-medium tw:text-muted-foreground" htmlFor="admin-incentive-reason-note">
-                    Gerekçe
+                    {t('adminIncentives.reason')}
                     <Textarea
                       id="admin-incentive-reason-note"
                       onChange={(event) => setReasonNote(event.target.value)}
-                      placeholder="Düzeltme gerekçesini yazın"
+                      placeholder={t('adminIncentives.reasonPlaceholder')}
                       required
                       value={reasonNote}
                     />
                   </label>
                   {correctionMutation.isError ? (
                     <AdminStatePanel
-                      title="Düzeltme uygulanamadı"
+                      title={t('adminIncentives.correctionErrorTitle')}
                       description={getErrorMessage(correctionMutation.error)}
                       tone="danger"
                     />
                   ) : null}
                   {correctionMutation.isSuccess ? (
                     <AdminStatePanel
-                      title="Düzeltme kaydedildi"
-                      description="Prim listesi yeniden yüklendi; işlem kaydı oluşturuldu."
+                      title={t('adminIncentives.correctionSuccessTitle')}
+                      description={t('adminIncentives.correctionSuccessCopy')}
                       tone="success"
                     />
                   ) : null}
                   <AdminActionRow>
                     <Button type="submit" disabled={correctionMutation.isPending}>
                       <ShieldCheck size={14} />
-                      {correctionMutation.isPending ? 'Kaydediliyor' : 'Düzeltme uygula'}
+                      {correctionMutation.isPending
+                        ? t('adminIncentives.saving')
+                        : t('adminIncentives.applyCorrection')}
                     </Button>
                   </AdminActionRow>
                 </form>
               ) : (
-                <AdminSurfaceEmpty copy="Düzeltme için bir prim satırı seçin." />
+                <AdminSurfaceEmpty copy={t('adminIncentives.selectRowEmpty')} />
               )}
             </AdminSurfaceSection>
           </div>
@@ -454,21 +480,24 @@ export function AdminIncentivesPage(input: { authSummary: AuthSessionSummary | n
 function SelectedRowSummary(input: {
   item: AdminIncentiveRow
   locale: AppLocale
+  t: TranslateFunction
 }) {
   return (
     <div className="tw:grid tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:p-3">
       <div>
-        <div className="tw:text-xs tw:font-medium tw:text-muted-foreground">Seçili satır</div>
+        <div className="tw:text-xs tw:font-medium tw:text-muted-foreground">
+          {input.t('adminIncentives.selectedRow')}
+        </div>
         <div className="tw:mt-1 tw:text-sm tw:font-semibold tw:text-foreground">{input.item.row.displayName}</div>
         <div className="tw:text-xs tw:text-muted-foreground">{input.item.projection.storeName}</div>
       </div>
       <div className="tw:grid tw:grid-cols-2 tw:gap-2 tw:text-xs">
-        <SummaryValue label="Hedef" value={formatMoneyValue(input.item.row.target, input.locale)} />
-        <SummaryValue label="Satış" value={formatMoneyValue(input.item.row.actualPositiveSales, input.locale)} />
-        <SummaryValue label="Gerçekleşme" value={formatPercentValue(input.item.row.achievementPct, input.locale)} />
-        <SummaryValue label="Oran" value={input.item.row.rate ?? '0.0000'} />
-        <SummaryValue label="Hak ediş" value={formatMoneyValue(input.item.row.payableAmount, input.locale)} />
-        <SummaryValue label="Nihai" value={formatMoneyValue(input.item.row.finalAmount ?? input.item.row.payableAmount, input.locale)} />
+        <SummaryValue label={input.t('adminIncentives.column.target')} value={formatAdminMoneyValue(input.item.row.target, input.locale, input.t)} />
+        <SummaryValue label={input.t('adminIncentives.column.sales')} value={formatAdminMoneyValue(input.item.row.actualPositiveSales, input.locale, input.t)} />
+        <SummaryValue label={input.t('adminIncentives.column.achievement')} value={formatAdminPercentValue(input.item.row.achievementPct, input.locale, input.t)} />
+        <SummaryValue label={input.t('adminIncentives.summary.rate')} value={input.item.row.rate ?? '0.0000'} />
+        <SummaryValue label={input.t('adminIncentives.column.earned')} value={formatAdminMoneyValue(input.item.row.payableAmount, input.locale, input.t)} />
+        <SummaryValue label={input.t('adminIncentives.column.final')} value={formatAdminMoneyValue(input.item.row.finalAmount ?? input.item.row.payableAmount, input.locale, input.t)} />
       </div>
     </div>
   )
@@ -477,18 +506,19 @@ function SelectedRowSummary(input: {
 function AdjustmentAmountsCell(input: {
   row: SalesTargetIncentiveRow
   locale: AppLocale
+  t: TranslateFunction
 }) {
   const values = [
     input.row.correctionAmount
-      ? { id: 'correction', label: 'Düzeltme', amount: input.row.correctionAmount }
+      ? { id: 'correction', label: input.t('adminIncentives.adjustment.correction'), amount: input.row.correctionAmount }
       : null,
     input.row.adjustmentAmount
-      ? { id: 'adjustment', label: 'Kapanış', amount: input.row.adjustmentAmount }
+      ? { id: 'adjustment', label: input.t('adminIncentives.adjustment.closing'), amount: input.row.adjustmentAmount }
       : null,
   ].filter((value): value is { id: string; label: string; amount: string } => value !== null)
 
   if (values.length === 0) {
-    return <>{formatMoneyValue(null, input.locale)}</>
+    return <>{input.t('adminIncentives.noSource')}</>
   }
 
   return (
@@ -506,11 +536,12 @@ function AdjustmentAmountsCell(input: {
 function SalesAmountCell(input: {
   row: SalesTargetIncentiveRow
   locale: AppLocale
+  t: TranslateFunction
 }) {
   if (!input.row.actualPositiveSales) {
     return (
       <span className="tw:text-muted-foreground">
-        Kaynak yok
+        {input.t('adminIncentives.noSource')}
       </span>
     )
   }
@@ -551,12 +582,11 @@ function resolveCurrentPeriodKey(date = new Date()) {
 }
 
 function periodMonths(locale: AppLocale) {
-  const labels = locale === 'tr'
-    ? ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
-    : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-
-  return labels.map((label, index) => ({
-    label,
+  return Array.from({ length: 12 }, (_, index) => ({
+    label: new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', {
+      month: 'long',
+      timeZone: 'UTC',
+    }).format(new Date(Date.UTC(2026, index, 1))),
     value: String(index + 1).padStart(2, '0'),
   }))
 }
@@ -589,6 +619,56 @@ function formatPeriodBoundsLabel(period: string, locale: AppLocale) {
   const month = Number(match[2])
   const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate()
   return formatDateRangeLabel(`${period}-01`, `${period}-${String(lastDay).padStart(2, '0')}`, locale)
+}
+
+function getAdminIncentiveStatusLabel(
+  status: SalesTargetIncentiveStatus,
+  t: TranslateFunction,
+) {
+  const labels = {
+    adjusted: t('adminIncentives.status.adjusted'),
+    blocked: t('adminIncentives.status.blocked'),
+    closed: t('adminIncentives.status.closed'),
+    corrected: t('adminIncentives.status.corrected'),
+    no_source: t('adminIncentives.status.noSource'),
+    projected: t('adminIncentives.status.projected'),
+  } satisfies Record<SalesTargetIncentiveStatus, string>
+  return labels[status] ?? status
+}
+
+function getAdminIncentivePositionLabel(
+  positionCode: SalesTargetIncentiveRow['positionCode'],
+  t: TranslateFunction,
+) {
+  const labels = {
+    ASSISTANT_MANAGER: t('adminIncentives.position.assistantManager'),
+    SALES_ASSOCIATE: t('adminIncentives.position.salesAssociate'),
+    SENIOR_SALES_CONSULTANT: t('adminIncentives.position.seniorSalesConsultant'),
+    STORE_MANAGER: t('adminIncentives.position.storeManager'),
+  } satisfies Record<SalesTargetIncentiveRow['positionCode'], string>
+  return labels[positionCode] ?? positionCode
+}
+
+function formatAdminMoneyValue(
+  value: string | null | undefined,
+  locale: AppLocale,
+  t: TranslateFunction,
+) {
+  const formatted = formatMoneyValue(value, locale)
+  return formatted === formatMoneyValue(null, locale)
+    ? t('adminIncentives.noSource')
+    : formatted
+}
+
+function formatAdminPercentValue(
+  value: string | null | undefined,
+  locale: AppLocale,
+  t: TranslateFunction,
+) {
+  const formatted = formatPercentValue(value, locale)
+  return formatted === formatPercentValue(null, locale)
+    ? t('adminIncentives.noSource')
+    : formatted
 }
 
 function flattenRows(projections: SalesTargetIncentiveProjection[]): AdminIncentiveRow[] {

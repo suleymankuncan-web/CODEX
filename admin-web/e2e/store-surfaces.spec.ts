@@ -2170,6 +2170,10 @@ test('store feed switches owned product copy to English and preserves source pos
   await expect(page.getByText('Region feed')).toBeVisible()
   await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Duyurular' })).toHaveCount(0)
+
+  await setStoredLocale(page, 'tr')
+  await expect(page.getByRole('heading', { name: 'Duyurular' })).toBeVisible()
+  await expect(page.getByText('Pilot store shell announcement.')).toBeVisible()
 })
 
 test('store sidebar transitions across visible manager pages without requiring manual refresh', async ({ page }) => {
@@ -2318,9 +2322,13 @@ test('store reports switches owned package copy to English', async ({ page }) =>
 
   await expect(page.getByRole('heading', { name: 'Reports' })).toBeVisible()
   await expect(page.getByRole('button', { name: /Download Excel/i })).toBeVisible()
-  await expect(page.getByText('Package contents')).toBeVisible()
-  await expect(page.getByText('KPI columns')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Package contents' })).toBeVisible()
+  await expect(page.getByText('KPI kolonları')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Raporlar' })).toHaveCount(0)
+
+  await setStoredLocale(page, 'tr')
+  await expect(page.getByRole('heading', { name: 'Raporlar' })).toBeVisible()
+  await expect(page.getByText('KPI kolonları')).toBeVisible()
 })
 
 test('store route navigation does not blank the shell with a global transition layer', async ({ page }) => {

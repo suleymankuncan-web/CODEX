@@ -23,6 +23,11 @@ async function importTranspiled(path, options = {}) {
 }
 
 const reportsModel = await importTranspiled('../src/pages/store-reports-model.ts')
+const reportsMessages = await importTranspiled('../src/features/localization/messages/store-reports.ts')
+const storeReportsT = (key, params = {}) => reportsMessages.storeReportsTr[key].replace(
+  /\{([A-Za-z0-9_]+)\}/g,
+  (match, paramKey) => params[paramKey] ?? match,
+)
 const checklistLogic = await importTranspiled('../src/pages/store-checklists-logic.ts', {
   stripImports: true,
   prepend: `
@@ -45,7 +50,7 @@ const workforceModelSource = await readFile(
 )
 
 test('store reports do not mark empty backend packages as ready', () => {
-  const model = reportsModel.buildStoreReportsViewModel(null)
+  const model = reportsModel.buildStoreReportsViewModel(null, storeReportsT)
 
   assert.equal(model.metrics.find((metric) => metric.id === 'period-state')?.value, 'Bekliyor')
   assert.equal(model.metrics.find((metric) => metric.id === 'detail-output')?.value, '0')
@@ -59,7 +64,7 @@ test('store reports mark missing sections as waiting when package scope exists',
     periodLabel: 'Haziran 2026',
     sections: [],
     storeCount: 30,
-  })
+  }, storeReportsT)
 
   assert.equal(model.metrics.find((metric) => metric.id === 'period-state')?.value, 'Bekliyor')
   assert.equal(model.metrics.find((metric) => metric.id === 'detail-output')?.value, '0')
@@ -76,7 +81,7 @@ test('store reports preserve backend section readiness', () => {
       { code: 'actions', label: 'Aksiyon durumu', status: 'partial', value: 'Eksik kayıt var' },
     ],
     storeCount: 30,
-  })
+  }, storeReportsT)
 
   assert.equal(model.sections.find((section) => section.code === 'kpis')?.status, 'ready')
   assert.equal(model.sections.find((section) => section.code === 'actions')?.status, 'partial')
