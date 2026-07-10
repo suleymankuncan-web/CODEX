@@ -58,7 +58,11 @@ any permission behavior changes. DG-1 still blocks authorization behavior;
 DG-2, DG-3, and DG-4 still block live DB constraints, verified provider TLS,
 and real external error delivery. Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
-33 direct matrix routes, and three preview plus three backend drifts. PR #929 completed PR-3: authorization changes now clear protected frontend cache state before a new shell renders. PR #930 completed PR-4: target and request-center reads are bounded without mutation, DB, or authorization-policy changes. PR-5 Europe/Istanbul business dates is active; release/PR/merge evidence remains open.
+33 direct matrix routes, and three preview plus three backend drifts. PR #929
+completed PR-3: authorization changes now clear protected frontend cache state
+before a new shell renders. PR #930 completed PR-4: target and request-center
+reads are bounded without mutation, DB, or authorization-policy changes. PR
+#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR-6 active-surface localization closure is active.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
@@ -165,7 +169,7 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-- Complete PR-5 Europe/Istanbul business-date alignment without changing timestamp-instant, API, DB, or authorization contracts.
+- Complete PR-6 typed TR/EN localization ownership for Store Feed, Store Reports, and Admin Incentives without translating source or technical data.
 - Keep the truthful required gate, exact-tree post-merge proof/fallback, and
   targeted frontend boundary stable.
 - Observe A3's next ten successful root-release PR runs; record the dated p95
@@ -175,7 +179,8 @@ Now:
   evidence blocked.
 
 Next:
-1. Complete PR-5; PR-2 remains blocked on DG-1, so continue only through the next unblocked specified audit slice.
+1. Complete PR-6; PR-2 remains blocked on DG-1, so continue only through the
+   next unblocked specified audit slice.
 2. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
    repeat the successful 5 July mutations solely to improve documentation.
 3. If evidence produces a P0/P1 finding, create one finding-specific spec and
