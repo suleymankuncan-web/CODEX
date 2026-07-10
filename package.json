@@ -4,6 +4,7 @@
   "scripts": {
     "check:release": "npm run test:scripts && node scripts/check-release.mjs",
     "system-flow:generate": "node scripts/generate-system-flow.mjs",
+    "authorization-truth:generate": "node scripts/authorization-operating-truth.mjs",
     "perf:public": "node scripts/public-performance-baseline.mjs",
     "perf:protected": "node scripts/protected-performance-baseline.mjs",
     "capacity:read": "node scripts/capacity-read-baseline.mjs",

@@ -1,16 +1,17 @@
 import type { AuthSessionSummary } from './api'
 
-const targetRequestListRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
+export const targetRequestListRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const targetRequestCreateRoles = ['STORE_MANAGER', 'SUPER_ADMIN']
 const targetRequestApproveRoles = ['SUPER_ADMIN', 'REGION_MANAGER']
 const checklistAcknowledgementRoles = ['STORE_MANAGER', 'SUPER_ADMIN']
-const checklistResultReadRoles = [
+export const checklistResultReadRoles = [
   'STORE_MANAGER',
   'SUPER_ADMIN',
   'REPORT_VIEWER',
   'REGION_MANAGER',
   'VISUAL_MERCHANDISER',
 ]
+export const storeWorkforceRouteRoles = ['STORE_MANAGER', 'REGION_MANAGER']
 
 export function hasAnyRole(authSummary: AuthSessionSummary | null, requiredRoles: string[]) {
   const roles = authSummary?.user.roleCodes ?? []

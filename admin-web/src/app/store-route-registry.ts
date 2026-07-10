@@ -3,7 +3,10 @@ import {
   canListTargetDistributionRequests,
   canOpenStoreChecklists,
   canOpenStoreWorkforce,
+  checklistResultReadRoles,
   hasAnyRole,
+  storeWorkforceRouteRoles,
+  targetRequestListRoles,
 } from '../features/auth/authorization'
 import type { TranslationKey } from '../features/localization/dictionary'
 
@@ -62,9 +65,17 @@ export type StoreRouteDefinition = {
   aliases?: string[]
   nav?: Omit<StoreNavigationItem, 'id' | 'path'>
   allowVisualMerchandiser?: boolean
+  operatingPolicy: StoreRouteOperatingPolicy
   modulePreload: () => Promise<unknown>
   access: (authSummary: AuthSessionSummary | null) => boolean
   match?: (pathname: string) => boolean
+}
+
+export type StoreRouteOperatingPolicy = {
+  catalogRoles: readonly string[]
+  routeAccess: 'authenticated' | 'role' | 'role_and_scope'
+  readScope: 'session' | 'self' | 'role_scoped' | 'store_or_region_scoped'
+  actionScope: 'none' | 'assigned_store' | 'region_scoped'
 }
 
 const adminLandingRoles = new Set([
@@ -85,12 +96,24 @@ const vmBroadRoles = new Set([
 ])
 
 const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
+const authenticatedStoreRoles = [
+  'SUPER_ADMIN',
+  'HR_ADMIN',
+  'INTEGRATION_ADMIN',
+  'SNAPSHOT_OPERATOR',
+  'REPORT_VIEWER',
+  'REGION_MANAGER',
+  'AUDITOR',
+  'STORE_MANAGER',
+  'STORE_PERSONNEL',
+]
+const allAuthenticatedStoreRoles = [...authenticatedStoreRoles, 'VISUAL_MERCHANDISER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_MANAGER']
 const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
 const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
-const storeTargetsRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storePersonnelPerformanceRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
+const storeIncentiveRoles = ['REGION_MANAGER']
 
 function roleSet(authSummary: AuthSessionSummary | null) {
   return new Set(authSummary?.user.roleCodes ?? [])
@@ -142,7 +165,7 @@ export function resolveStorePersona(authSummary: AuthSessionSummary | null): Sto
 }
 
 export function canOpenCompanyStoreIncentives(authSummary: AuthSessionSummary | null) {
-  return hasAnyRole(authSummary, ['REGION_MANAGER'])
+  return hasAnyRole(authSummary, storeIncentiveRoles)
 }
 
 export function canOpenStoreIncentives(authSummary: AuthSessionSummary | null) {
@@ -162,6 +185,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       icon: 'home',
       end: true,
     },
+    operatingPolicy: {
+      catalogRoles: authenticatedStoreRoles,
+      routeAccess: 'authenticated',
+      readScope: 'session',
+      actionScope: 'none',
+    },
     modulePreload: () => import('../pages/StoreHomePage'),
     access: authenticated,
   },
@@ -174,6 +203,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       icon: 'checklist',
     },
     allowVisualMerchandiser: true,
+    operatingPolicy: {
+      catalogRoles: checklistResultReadRoles,
+      routeAccess: 'role',
+      readScope: 'role_scoped',
+      actionScope: 'assigned_store',
+    },
     modulePreload: () => import('../pages/StoreChecklistsPage'),
     access: (authSummary) =>
       resolveStorePersona(authSummary) !== 'personnel' &&
@@ -187,6 +222,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       labelKey: 'storeHome.nav.tasks',
       icon: 'tasks',
     },
+    operatingPolicy: {
+      catalogRoles: storeTasksRoles,
+      routeAccess: 'role',
+      readScope: 'role_scoped',
+      actionScope: 'assigned_store',
+    },
     modulePreload: () => import('../pages/StoreTasksPage'),
     access: (authSummary) => hasAnyRole(authSummary, storeTasksRoles),
   },
@@ -197,6 +238,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     nav: {
       labelKey: 'storeHome.nav.storeKpis',
       icon: 'kpi',
+    },
+    operatingPolicy: {
+      catalogRoles: storeKpiRoles,
+      routeAccess: 'role',
+      readScope: 'store_or_region_scoped',
+      actionScope: 'none',
     },
     modulePreload: () => import('../pages/StoreKpiHighlightsPage'),
     access: (authSummary) => hasAnyRole(authSummary, storeKpiRoles),
@@ -209,6 +256,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       labelKey: 'storeHome.nav.myPerformance',
       icon: 'me',
     },
+    operatingPolicy: {
+      catalogRoles: ['STORE_PERSONNEL', 'STORE_MANAGER'],
+      routeAccess: 'role',
+      readScope: 'self',
+      actionScope: 'none',
+    },
     modulePreload: () => import('../pages/StoreMyPerformancePage'),
     access: (authSummary) => hasAnyRole(authSummary, ['STORE_PERSONNEL', 'STORE_MANAGER']),
   },
@@ -216,6 +269,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     id: 'personnel',
     path: '/store/personnel/:employeeId',
     routePath: '/store/personnel/:employeeId',
+    operatingPolicy: {
+      catalogRoles: storePersonnelPerformanceRoles,
+      routeAccess: 'role',
+      readScope: 'store_or_region_scoped',
+      actionScope: 'none',
+    },
     modulePreload: () => import('../pages/StorePersonnelPerformancePage'),
     access: (authSummary) => hasAnyRole(authSummary, storePersonnelPerformanceRoles),
     match: (pathname) => pathname.startsWith('/store/personnel/'),
@@ -227,6 +286,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     nav: {
       labelKey: 'storeHome.nav.rankings',
       icon: 'rankings',
+    },
+    operatingPolicy: {
+      catalogRoles: rankingRoles,
+      routeAccess: 'role',
+      readScope: 'role_scoped',
+      actionScope: 'none',
     },
     modulePreload: () => import('../pages/StoreRankingsPage'),
     access: (authSummary) => hasAnyRole(authSummary, rankingRoles),
@@ -240,6 +305,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       icon: 'feed',
     },
     allowVisualMerchandiser: true,
+    operatingPolicy: {
+      catalogRoles: allAuthenticatedStoreRoles,
+      routeAccess: 'authenticated',
+      readScope: 'session',
+      actionScope: 'none',
+    },
     modulePreload: () => import('../pages/StoreFeedPage'),
     access: authenticated,
   },
@@ -250,6 +321,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     nav: {
       labelKey: 'storeHome.nav.competitions',
       icon: 'competitions',
+    },
+    operatingPolicy: {
+      catalogRoles: storeCompetitionRoles,
+      routeAccess: 'role',
+      readScope: 'role_scoped',
+      actionScope: 'none',
     },
     modulePreload: () => import('../pages/StoreCompetitionsPage'),
     access: (authSummary) => hasAnyRole(authSummary, storeCompetitionRoles),
@@ -262,6 +339,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       labelKey: 'storeHome.nav.requestsApprovals',
       icon: 'approvals',
     },
+    operatingPolicy: {
+      catalogRoles: targetRequestListRoles,
+      routeAccess: 'role',
+      readScope: 'store_or_region_scoped',
+      actionScope: 'assigned_store',
+    },
     modulePreload: () => import('../pages/StoreApprovalsPage'),
     access: (authSummary) => canListTargetDistributionRequests(authSummary),
   },
@@ -272,6 +355,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     nav: {
       labelKey: 'storeHome.nav.incentives',
       icon: 'incentives',
+    },
+    operatingPolicy: {
+      catalogRoles: storeIncentiveRoles,
+      routeAccess: 'role',
+      readScope: 'store_or_region_scoped',
+      actionScope: 'region_scoped',
     },
     modulePreload: () => import('../pages/StoreIncentivesPage'),
     access: canOpenStoreIncentives,
@@ -285,6 +374,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       icon: 'settings',
     },
     allowVisualMerchandiser: true,
+    operatingPolicy: {
+      catalogRoles: allAuthenticatedStoreRoles,
+      routeAccess: 'authenticated',
+      readScope: 'session',
+      actionScope: 'none',
+    },
     modulePreload: () => import('../pages/StoreSettingsPage'),
     access: authenticated,
   },
@@ -296,9 +391,15 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
       labelKey: 'storeHome.nav.targets',
       icon: 'targets',
     },
+    operatingPolicy: {
+      catalogRoles: targetRequestListRoles,
+      routeAccess: 'role',
+      readScope: 'store_or_region_scoped',
+      actionScope: 'assigned_store',
+    },
     modulePreload: () => import('../pages/StoreTargetsPage'),
     access: (authSummary) =>
-      hasAnyRole(authSummary, storeTargetsRoles) &&
+      hasAnyRole(authSummary, targetRequestListRoles) &&
       canListTargetDistributionRequests(authSummary),
   },
   {
@@ -308,6 +409,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     nav: {
       labelKey: 'storeHome.nav.workforce',
       icon: 'workforce',
+    },
+    operatingPolicy: {
+      catalogRoles: storeWorkforceRouteRoles,
+      routeAccess: 'role_and_scope',
+      readScope: 'store_or_region_scoped',
+      actionScope: 'assigned_store',
     },
     modulePreload: () => import('../pages/StoreWorkforcePage'),
     access: (authSummary) => canOpenStoreWorkforce(authSummary),
@@ -319,6 +426,12 @@ export const storeRouteDefinitions: StoreRouteDefinition[] = [
     nav: {
       labelKey: 'storeHome.nav.reports',
       icon: 'reports',
+    },
+    operatingPolicy: {
+      catalogRoles: storeReportingRoles,
+      routeAccess: 'role',
+      readScope: 'store_or_region_scoped',
+      actionScope: 'none',
     },
     modulePreload: () => import('../pages/StoreReportsPage'),
     access: (authSummary) => hasAnyRole(authSummary, storeReportingRoles),

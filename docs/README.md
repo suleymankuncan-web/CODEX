@@ -39,7 +39,8 @@ Use this directory like an operating library, not a diary.
 | Know how Codex should work here | `sokrates.md` and `discipline.md` | Decision quality, PR rhythm, verification, and stop rules. |
 | See the current control board | `docs/plans/project-control-board-v1.md` | Current project mode, go/no-go board, and what is parked. |
 | Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Owner-approved, evidence-gated sequence: CI truth is implemented; A3 p95 observation and B1 external pilot inputs remain pending. |
-| Reconcile role-route or archive-guard drift | `docs/architecture/pilot-route-role-matrix.md` and `docs/plans/archive-guard-migration-register-v1.md` | Current Store role-route behavior and the incremental rule for removing historical handoff guard dependencies. |
+| Remediate the page, authorization, codebase, and database audit | `docs/plans/project-wide-audit-remediation-plan-v1.md` | Detailed spec-first PR train for route-role truth, session cache isolation, bounded target queues, UI correctness, data integrity, and production-gated resilience. |
+| Reconcile role-route or archive-guard drift | `docs/architecture/authorization-operating-truth-v1.json`, `docs/architecture/pilot-route-role-matrix.md`, and `docs/plans/archive-guard-migration-register-v1.md` | Source-derived complete route/preview drift, current human route policy, and the incremental rule for removing historical handoff guard dependencies. |
 | Find an active decision | `docs/plans/decision-registry-v1.md` | Decision status, source document, and change trigger. |
 | Choose an operating checklist | `docs/plans/runbook-registry-v1.md` | Repeatable runbooks, required input, output, and stop condition. |
 | Execute the next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` | Ordered plan for feedback, data quality, operations, coaching, auth preview, rules, workforce planning, and production ops. |
@@ -133,10 +134,12 @@ evidence, incident posture, and recovery.
 Use for project shape, growth rules, API contracts, and system boundaries.
 
 - `docs/plans/docs-library-metadata-standard-v1.md`
+- `docs/plans/project-wide-audit-remediation-plan-v1.md`
 - `docs/plans/feature-integration-spine-v1.md`
 - `docs/plans/new-module-template.md`
 - `docs/plans/technical-debt-resolution-roadmap-v1.md`
 - `docs/plans/refactor-completion-inventory-v1.md`
+- `docs/architecture/authorization-operating-truth-v1.json`
 - `docs/architecture/pilot-route-role-matrix.md`
 - `docs/plans/archive-guard-migration-register-v1.md`
 - `docs/superpowers/plans/2026-06-17-sales-target-incentive-v1.md`

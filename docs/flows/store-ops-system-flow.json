@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-07T19:11:37.911Z",
+  "generatedAt": "2026-07-10T09:54:23.451Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -687,11 +687,25 @@
       "componentFile": "admin-web/src/pages/StoreHomePage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
+        "VISUAL_MERCHANDISER"
       ],
+      "authorization": {
+        "routeAccess": "authenticated_landing_alias",
+        "readScope": "session",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 159
+        "line": 182
       }
     },
     {
@@ -704,11 +718,19 @@
       "componentFile": "admin-web/src/pages/StoreApprovalsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "assigned_store"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 260
+        "line": 337
       }
     },
     {
@@ -721,12 +743,20 @@
       "componentFile": "admin-web/src/pages/StoreChecklistsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN",
         "VISUAL_MERCHANDISER"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "assigned_store"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 171
+        "line": 200
       }
     },
     {
@@ -739,11 +769,17 @@
       "componentFile": "admin-web/src/pages/StoreCompetitionsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "STORE_MANAGER",
+        "STORE_PERSONNEL"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 249
+        "line": 320
       }
     },
     {
@@ -756,12 +792,25 @@
       "componentFile": "admin-web/src/pages/StoreFeedPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS",
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
         "VISUAL_MERCHANDISER"
       ],
+      "authorization": {
+        "routeAccess": "authenticated",
+        "readScope": "session",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 237
+        "line": 302
       }
     },
     {
@@ -774,11 +823,24 @@
       "componentFile": "admin-web/src/pages/StoreHomePage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "authenticated",
+        "readScope": "session",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 158
+        "line": 181
       }
     },
     {
@@ -791,11 +853,16 @@
       "componentFile": "admin-web/src/pages/StoreIncentivesPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "region_scoped"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 271
+        "line": 354
       }
     },
     {
@@ -808,11 +875,19 @@
       "componentFile": "admin-web/src/pages/StoreKpiHighlightsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 196
+        "line": 237
       }
     },
     {
@@ -825,11 +900,17 @@
       "componentFile": "admin-web/src/pages/StoreMyPerformancePage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "STORE_MANAGER",
+        "STORE_PERSONNEL"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "self",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 207
+        "line": 254
       }
     },
     {
@@ -842,11 +923,20 @@
       "componentFile": "admin-web/src/pages/StorePersonnelPerformancePage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 218
+        "line": 271
       }
     },
     {
@@ -859,11 +949,19 @@
       "componentFile": "admin-web/src/pages/StoreRankingsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 226
+        "line": 285
       }
     },
     {
@@ -876,11 +974,19 @@
       "componentFile": "admin-web/src/pages/StoreReportsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "AUDITOR",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 318
+        "line": 425
       }
     },
     {
@@ -893,12 +999,25 @@
       "componentFile": "admin-web/src/pages/StoreSettingsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS",
+        "AUDITOR",
+        "HR_ADMIN",
+        "INTEGRATION_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "SNAPSHOT_OPERATOR",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN",
         "VISUAL_MERCHANDISER"
       ],
+      "authorization": {
+        "routeAccess": "authenticated",
+        "readScope": "session",
+        "actionScope": "none"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 282
+        "line": 371
       }
     },
     {
@@ -911,11 +1030,19 @@
       "componentFile": "admin-web/src/pages/StoreTargetsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "assigned_store"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 294
+        "line": 389
       }
     },
     {
@@ -928,11 +1055,19 @@
       "componentFile": "admin-web/src/pages/StoreTasksPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
       ],
+      "authorization": {
+        "routeAccess": "role",
+        "readScope": "role_scoped",
+        "actionScope": "assigned_store"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 185
+        "line": 220
       }
     },
     {
@@ -945,11 +1080,17 @@
       "componentFile": "admin-web/src/pages/StoreWorkforcePage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
-        "STORE_ACCESS"
+        "REGION_MANAGER",
+        "STORE_MANAGER"
       ],
+      "authorization": {
+        "routeAccess": "role_and_scope",
+        "readScope": "store_or_region_scoped",
+        "actionScope": "assigned_store"
+      },
       "source": {
         "file": "admin-web/src/app/store-route-registry.ts",
-        "line": 307
+        "line": 408
       }
     }
   ],
