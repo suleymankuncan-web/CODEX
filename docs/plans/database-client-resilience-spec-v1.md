@@ -164,4 +164,3 @@ Verified on 2026-07-10 on the PR head based on main `5b93988b`:
   is skipped and Render remains on controlled-pilot `DB_SSL_MODE=require`;
 - no raw connection string, CA material, provider secret, schema change,
   migration, or broad-production activation was introduced.
-
