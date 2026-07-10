@@ -1,6 +1,7 @@
 import { expect, test, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
+import { pressTabFromDocumentStart } from './keyboard-test-utils'
 
 const legacyAdminSelector = [
   '.master-data-command-page',
@@ -85,17 +86,17 @@ test('admin shell skip link moves focus to localized main landmark', async ({ pa
   await page.goto('/admin/master-data')
 
   const main = page.getByRole('main')
-  await focusDocumentStart(page)
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('link', { name: 'Ana içeriğe geç' })).toBeFocused()
+  const turkishSkipLink = page.getByRole('link', { name: 'Ana içeriğe geç' })
+  await pressTabFromDocumentStart(page, turkishSkipLink)
+  await expect(turkishSkipLink).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(main).toBeFocused()
   await expect(main).toHaveAttribute('id', 'application-main-content')
 
   await setStoredLocale(page, 'en')
-  await focusDocumentStart(page)
-  await page.keyboard.press('Tab')
-  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
+  const englishSkipLink = page.getByRole('link', { name: 'Skip to main content' })
+  await pressTabFromDocumentStart(page, englishSkipLink)
+  await expect(englishSkipLink).toBeFocused()
   await page.keyboard.press('Enter')
   await expect(main).toBeFocused()
 })
@@ -244,13 +245,6 @@ const masterDataQualityIssuesFixture = {
     entityType: { store: 1, personnel: 1, assignment: 0, import: 0 },
   },
   meta: { count: 2, total: 2, limit: 50, offset: 0 },
-}
-
-async function focusDocumentStart(page: Page) {
-  await page.evaluate(() => {
-    document.body.tabIndex = -1
-    document.body.focus()
-  })
 }
 
 const storeMasterListFixture = {
