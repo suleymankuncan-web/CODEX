@@ -83,6 +83,23 @@ test.beforeEach(async ({ page }) => {
   await routeStoreSurfaceApi(page)
 })
 
+test('store shell skip link moves focus to localized main landmark', async ({ page }) => {
+  await page.goto('/store/home')
+
+  const main = page.getByRole('main')
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Ana içeriğe geç' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(main).toBeFocused()
+  await expect(main).toHaveAttribute('id', 'application-main-content')
+
+  await setStoredLocale(page, 'en')
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(main).toBeFocused()
+})
+
 test('store workforce route is visible for store manager true action scope', async ({ page }) => {
   await routeAuthSession(page, createStoreAuthSession({
     roleCodes: ['STORE_MANAGER'],

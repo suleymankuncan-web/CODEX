@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './test-fixtures'
+import { setStoredLocale } from './locale-test-utils'
 
 const legacyAdminSelector = [
   '.master-data-command-page',
@@ -46,6 +47,50 @@ test('master data control center shows the approved workbench surface', async ({
   await expect(main.getByRole('button', { name: /Değişiklikleri kaydet/ })).toBeDisabled()
   await expect(main.locator(legacyAdminSelector)).toHaveCount(0)
   await expectNoHorizontalOverflow(page)
+})
+
+test('master data row selection uses named native controls and ignores non-control cells', async ({ page }) => {
+  await page.goto('/admin/master-data')
+
+  const firstControl = page.getByRole('button', {
+    name: 'Düzelt Bölge müdürü ataması eksik',
+  })
+  const secondControl = page.getByRole('button', {
+    name: 'Düzelt Satıcı kodu eksik',
+  })
+
+  await expect(firstControl).toHaveAttribute('aria-pressed', 'true')
+  await firstControl.focus()
+  await page.keyboard.press('Tab')
+  await expect(secondControl).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(secondControl).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('heading', { name: 'Satıcı kodu eksik' })).toBeVisible()
+
+  await firstControl.focus()
+  await page.keyboard.press('Space')
+  await expect(firstControl).toHaveAttribute('aria-pressed', 'true')
+
+  const secondRow = page.locator('tbody tr').filter({ hasText: 'Satıcı kodu eksik' })
+  await secondRow.locator('td').nth(1).click()
+  await expect(firstControl).toHaveAttribute('aria-pressed', 'true')
+})
+
+test('admin shell skip link moves focus to localized main landmark', async ({ page }) => {
+  await page.goto('/admin/master-data')
+
+  const main = page.getByRole('main')
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Ana içeriğe geç' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(main).toBeFocused()
+  await expect(main).toHaveAttribute('id', 'application-main-content')
+
+  await setStoredLocale(page, 'en')
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'Skip to main content' })).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(main).toBeFocused()
 })
 
 test('master data import detail keeps validation and process actions', async ({ page }) => {
@@ -165,12 +210,26 @@ const masterDataQualityIssuesFixture = {
       lastSeenAt: '2026-06-30T10:00:00.000Z',
       source: 'store-master',
     },
+    {
+      id: 'issue-seller-code-missing',
+      issueCode: 'personnel_missing_seller_code',
+      severity: 'warning',
+      entityType: 'personnel',
+      entityId: '00000000-0000-0000-0000-000000000200',
+      entityLabel: 'Emine Çavuş',
+      secondaryLabel: 'Personel kaydı',
+      problemLabel: 'Satıcı kodu eksik',
+      recommendedAction: 'Personel satıcı kodunu doğrulayın.',
+      affectedModules: ['KPI', 'Hedefler'],
+      lastSeenAt: '2026-06-30T10:05:00.000Z',
+      source: 'personnel-master',
+    },
   ],
   summary: {
-    severity: { critical: 1, warning: 0, info: 0 },
-    entityType: { store: 1, personnel: 0, assignment: 0, import: 0 },
+    severity: { critical: 1, warning: 1, info: 0 },
+    entityType: { store: 1, personnel: 1, assignment: 0, import: 0 },
   },
-  meta: { count: 1, total: 1, limit: 50, offset: 0 },
+  meta: { count: 2, total: 2, limit: 50, offset: 0 },
 }
 
 const storeMasterListFixture = {
