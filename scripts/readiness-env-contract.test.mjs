@@ -62,7 +62,13 @@ const frontendEnvExample = readText('admin-web/.env.example')
 const criticalVariables = [
   'NODE_ENV',
   'DATABASE_URL',
+  'DB_POOL_MAX',
+  'DB_CONNECTION_TIMEOUT_MS',
+  'DB_IDLE_TIMEOUT_MS',
+  'DB_QUERY_TIMEOUT_MS',
+  'DB_STATEMENT_TIMEOUT_MS',
   'DB_SSL_MODE',
+  'DB_SSL_CA',
   'AUTH_MODE',
   'AUTH_PROVIDER_KEY',
   'ALLOW_MOCK_AUTH',
@@ -130,7 +136,7 @@ test('production env contract guard records owner location classification and de
 test('critical secret and public env boundaries are explicit', () => {
   const rows = extractTableRowsAfterHeading(inventory, '## Production Env Contract Guard')
 
-  for (const variable of ['DATABASE_URL', 'REDIS_URL', 'JWT_SECRET', 'VITE_BEARER_TOKEN']) {
+  for (const variable of ['DATABASE_URL', 'DB_SSL_CA', 'REDIS_URL', 'JWT_SECRET', 'VITE_BEARER_TOKEN']) {
     assert.equal(rows.get(variable)?.Classification, 'Secret')
   }
 
@@ -167,6 +173,7 @@ test('render and vercel env verification remains manual and no-secret', () => {
 test('committed env examples keep production-only secrets out of frontend and placeholders in backend', () => {
   assert.equal(readEnvExampleValue(frontendEnvExample, 'VITE_BEARER_TOKEN'), '')
   assert.equal(readEnvExampleValue(backendEnvExample, 'ERROR_TRACKING_DSN'), '')
+  assert.equal(readEnvExampleValue(backendEnvExample, 'DB_SSL_CA'), '')
   assert.equal(readEnvExampleValue(backendEnvExample, 'JWT_SECRET'), 'change-me')
 
   assert.doesNotMatch(frontendEnvExample, /^VITE_.*(?:SECRET|PASSWORD|PRIVATE_KEY)=.+$/m)

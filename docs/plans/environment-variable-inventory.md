@@ -4,7 +4,7 @@
 
 - Status: V1 deployment inventory.
 - Owner: Platform, backend, frontend, and release operator.
-- Last updated: 2026-05-18.
+- Last updated: 2026-07-10.
 - Purpose: Keep environment variables visible before staging, pilot, or production deployment.
 
 ## Decision Rule
@@ -22,7 +22,13 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | --- | --- | --- | --- | --- | --- |
 | `NODE_ENV` | Platform owner | Render backend env | Internal | Must be `production` for production-like backend runtime so fail-closed behavior is active. | `development` |
 | `DATABASE_URL` | Backend/Data owner | Render backend env | Secret | Must point to the target Supabase/PostgreSQL database, never local development. | Local example uses disposable local PostgreSQL. |
-| `DB_SSL_MODE` | Backend/Data owner | Render backend env | Internal | Must match the provider-required database SSL mode; Supabase/Render staging uses `require`. | `disable` |
+| `DB_POOL_MAX` | Backend/Data owner | Render backend env | Internal | Must be a positive integer sized for the hosting/database tier. | `20` |
+| `DB_CONNECTION_TIMEOUT_MS` | Backend/Data owner | Render backend env | Internal | Must be a positive integer connection budget. | `5000` |
+| `DB_IDLE_TIMEOUT_MS` | Backend/Data owner | Render backend env | Internal | Must be a positive integer idle-client eviction budget. | `30000` |
+| `DB_QUERY_TIMEOUT_MS` | Backend/Data owner | Render backend env | Internal | Must be a positive integer and no lower than `DB_STATEMENT_TIMEOUT_MS`. | `65000` |
+| `DB_STATEMENT_TIMEOUT_MS` | Backend/Data owner | Render backend env | Internal | Must be a positive integer no greater than `DB_QUERY_TIMEOUT_MS`. | `60000` |
+| `DB_SSL_MODE` | Backend/Data owner | Render backend env | Internal | Production requires `require` or `verify-full`; broad production requires provider-proven `verify-full`. Current controlled-pilot staging uses `require` and is encrypted-unverified. | `disable` |
+| `DB_SSL_CA` | Backend/Data owner | Render backend secret env | Secret | Required only for `verify-full`; populate only from the DG-3 provider certificate contract. | Empty placeholder. |
 | `AUTH_MODE` | Auth owner | Render backend env | Internal | Must be `jwt` for real environments. | `mock` |
 | `AUTH_PROVIDER_KEY` | Auth owner | Render backend env | Public | Must match the provider namespace used in `ops.user_account.auth_provider`; Clerk environments use `clerk`. | `oidc` |
 | `ALLOW_MOCK_AUTH` | Auth owner | Render backend env | Internal | Must be `false` or unset in production-like environments. | `true` |
@@ -78,7 +84,12 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `NODE_ENV` | P0 | Must be `production` in production. | Controls production auth fail-closed behavior. |
 | `DATABASE_URL` | P0 | Must point to target DB, never local development. | Secret-bearing connection string. |
 | `DB_POOL_MAX` | P1 | Size for hosting tier. | Defaults to `20`. |
-| `DB_SSL_MODE` | P0 | Use provider-required SSL mode. | Local default is `disable`; production should be reviewed. |
+| `DB_CONNECTION_TIMEOUT_MS` | P1 | Positive connection-acquisition budget. | Defaults to `5000`. |
+| `DB_IDLE_TIMEOUT_MS` | P1 | Positive idle-client eviction budget. | Defaults to `30000`. |
+| `DB_QUERY_TIMEOUT_MS` | P1 | Positive client query budget no lower than the statement timeout. | Defaults to `65000`. |
+| `DB_STATEMENT_TIMEOUT_MS` | P1 | Positive server statement budget no greater than the query timeout. | Defaults to `60000`. |
+| `DB_SSL_MODE` | P0 | Production requires `require` or `verify-full`; broad production requires provider-proven `verify-full`. | Local default is `disable`; controlled-pilot staging `require` is reported as encrypted-unverified. |
+| `DB_SSL_CA` | P0 conditional | Required for `verify-full`; must come from the DG-3 provider certificate contract. | Secret; committed example remains empty. |
 | `AUTH_MODE` | P0 | Must be `jwt` for real environments. | Local may use `mock`. |
 | `AUTH_PROVIDER_KEY` | P0 | Must match the provider subject namespace, such as `clerk` for Clerk staging. | Default `oidc`; used when mapping JWT `sub` to `ops.user_account.auth_provider/provider_subject`. |
 | `ALLOW_MOCK_AUTH` | P0 | Must be `false` or unset in production. | Production must not allow mock auth. |

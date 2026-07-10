@@ -1,6 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import IORedis from "ioredis";
-import { AppConfigService } from "./app-config.service";
+import {
+  AppConfigService,
+  DatabaseTransportStatus,
+} from "./app-config.service";
 import { DatabaseService } from "./database/database.service";
 import { ObservabilityService } from "./observability/observability.service";
 
@@ -8,6 +11,14 @@ type DependencyCheck = {
   status: "ok" | "error" | "skipped";
   latencyMs: number;
   message?: string;
+};
+
+type DatabaseDependencyCheck = DependencyCheck & {
+  transport: {
+    certificateVerified: boolean;
+    encrypted: boolean;
+    status: DatabaseTransportStatus;
+  };
 };
 
 type QueueHealth = {
@@ -55,22 +66,35 @@ export class HealthService {
     };
   }
 
-  private async checkDatabase(): Promise<DependencyCheck> {
+  private async checkDatabase(): Promise<DatabaseDependencyCheck> {
     const startedAt = Date.now();
+    const transport = this.buildDatabaseTransportHealth();
 
     try {
       await this.databaseService.query("SELECT 1");
       return {
         status: "ok",
         latencyMs: Date.now() - startedAt,
+        transport,
       };
     } catch (error) {
       return {
         status: "error",
         latencyMs: Date.now() - startedAt,
         message: sanitizeDependencyErrorMessage(error),
+        transport,
       };
     }
+  }
+
+  private buildDatabaseTransportHealth(): DatabaseDependencyCheck["transport"] {
+    const status = this.appConfigService.databaseTransportStatus;
+
+    return {
+      certificateVerified: status === "encrypted-verified",
+      encrypted: status !== "disabled",
+      status,
+    };
   }
 
   private async checkRedis(): Promise<DependencyCheck> {

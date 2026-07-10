@@ -21,6 +21,18 @@ function configureDefaultAuthMode() {
   delete process.env.JWT_JWKS_URL;
 }
 
+const DEFAULT_TEST_DATABASE_CONFIG = {
+  databaseTransportStatus: "disabled",
+  databaseUrl: "postgres://postgres:postgres@localhost:5432/store_ops",
+  dbConnectionTimeoutMs: 5_000,
+  dbIdleTimeoutMs: 30_000,
+  dbPoolMax: 20,
+  dbQueryTimeoutMs: 65_000,
+  dbSslCa: undefined,
+  dbSslMode: "disable",
+  dbStatementTimeoutMs: 60_000,
+};
+
 export async function createIntegrationApp(overrides?: {
   databaseService?: object;
   jobDispatcher?: object;
@@ -49,7 +61,10 @@ export async function createIntegrationApp(overrides?: {
   if (overrides?.appConfigService) {
     testingModuleBuilder
       .overrideProvider(AppConfigService)
-      .useValue(overrides.appConfigService);
+      .useValue({
+        ...DEFAULT_TEST_DATABASE_CONFIG,
+        ...overrides.appConfigService,
+      });
   }
 
   testingModuleBuilder.overrideProvider(BullMqJobDispatcherService).useValue({
