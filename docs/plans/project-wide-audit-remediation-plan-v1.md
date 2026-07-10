@@ -1598,8 +1598,8 @@ guards, and documentation and explicitly changes no runtime behavior.
 | --- | --- | --- |
 | PR-1 Authorization Operating Truth Contract | complete | PR #927 merged as `3f04c24e`; 54 active routes, 33 direct matrix routes, three route/preview drifts, and three route/backend drifts are machine-visible without runtime authorization changes |
 | PR-2 Store Authorization Runtime Alignment | blocked_decision | DG-1 |
-| PR-3 Session-Scoped Query Cache Isolation | in_progress | Approved finding-specific spec is implemented on `codex/pr3-session-cache-isolation`; merge and post-merge verification remain open |
-| PR-4 Bounded Target Request Queues | planned | Source-confirmed P1 |
+| PR-3 Session-Scoped Query Cache Isolation | complete | PR #929 merged as `46d20262`; effective-authorization changes now remove prior protected query/mutation state before the new shell renders, while same-authorization renewal remains stable |
+| PR-4 Bounded Target Request Queues | in_progress | Approved finding-specific spec and bounded read implementation are on `codex/pr4-bounded-target-queues`; PR/release/merge evidence remains open |
 | PR-5 Europe/Istanbul Business Date Contract | planned | Source-confirmed P2 |
 | PR-6 Active Surface Localization Closure | planned | Source-confirmed P2 |
 | PR-7 Keyboard And Accessibility Foundation | planned | Source-confirmed P2 |
