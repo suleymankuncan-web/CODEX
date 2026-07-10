@@ -62,7 +62,7 @@ completed PR-1 without runtime behavior change; its contract covers 54 routes,
 completed PR-3: authorization changes now clear protected frontend cache state
 before a new shell renders. PR #930 completed PR-4: target and request-center
 reads are bounded without mutation, DB, or authorization-policy changes. PR
-#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR-6 active-surface localization closure is active.
+#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR-6 has green local implementation/release evidence; PR and merge evidence remain open.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.

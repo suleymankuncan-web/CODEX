@@ -1,6 +1,6 @@
 # Active Surface Localization Closure Specification V1
 
-Status: approved
+Status: implemented locally; pull request and merge evidence pending
 Shelf: active plan
 Author: Codex
 Owner: Product owner
@@ -130,3 +130,17 @@ Revert message ownership and caller adoption together. No data, backend,
 database, or API rollback is required. If only one surface must roll back, keep
 its prior TR copy and document the temporary EN gap rather than mixing partial
 message ownership inside that surface.
+
+## 10. Local Verification Evidence
+
+- Store Feed, Store Reports, and Admin Incentives use typed TR/EN namespaces;
+  source posts, source rows, technical values, payloads, and export contracts
+  remain unchanged.
+- The bounded raw-copy guard rejects a synthetic product literal and checks the
+  six owned page/helper files plus three message catalogs for mojibake.
+- Three EN-to-TR acceptance tests, all eight feed-surface tests, and the 97-test
+  related regression pack passed.
+- Frontend build, lint, 25 unit tests, 103 script tests, and all 531 root guards
+  passed.
+- The canonical local release passed in 12 minutes 24 seconds. GitHub checks,
+  pull request, merge, and post-merge evidence remain open.
