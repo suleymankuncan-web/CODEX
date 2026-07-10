@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Pool, type PoolClient } from "pg";
 import {
+  assertConnectionBoundary,
   classifySafeError,
   mapCheckResult,
   resolveDecision,
@@ -16,6 +17,10 @@ async function main() {
   const targetClass = readTargetClass();
   assertExecutionBoundary(targetClass);
   const connectionString = readRequiredSecret("DATABASE_URL");
+  assertConnectionBoundary(targetClass, connectionString, {
+    database: process.env.DATABASE_INVARIANT_PREFLIGHT_EXPECTED_DATABASE,
+    host: process.env.DATABASE_INVARIANT_PREFLIGHT_EXPECTED_HOST,
+  });
   const query = readFileSync(
     join(__dirname, "..", "..", "..", "db", "preflight", "database-invariant-preflight-v1.sql"),
     "utf8",

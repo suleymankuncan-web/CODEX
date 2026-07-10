@@ -17,6 +17,11 @@ type ClassificationContext = {
   targetClass: TargetClass;
 };
 
+type ExpectedStagingIdentity = {
+  database?: string;
+  host?: string;
+};
+
 const safeSampleReference = /^[a-f0-9]{12}$/;
 
 export function mapCheckResult(row: CheckRow, context: ClassificationContext) {
@@ -98,10 +103,16 @@ export function classifySafeError(error: unknown) {
       "approval_missing",
       "database_url_missing",
       "invalid_target_class",
+      "invalid_database_protocol",
+      "invalid_database_url",
       "invalid_violation_count",
+      "non_disposable_target_refused",
       "production_refused",
+      "production_target_refused",
       "read_only_not_enforced",
       "staging_approval_missing",
+      "staging_target_identity_mismatch",
+      "staging_target_identity_missing",
       "too_many_sample_refs",
       "unsafe_sample_ref",
     ].includes(error.message)
@@ -109,6 +120,59 @@ export function classifySafeError(error: unknown) {
     return error.message;
   }
   return "database_preflight_failed";
+}
+
+export function assertConnectionBoundary(
+  targetClass: TargetClass,
+  connectionString: string,
+  expectedStaging: ExpectedStagingIdentity,
+) {
+  let parsed: URL;
+  try {
+    parsed = new URL(connectionString);
+  } catch {
+    throw new Error("invalid_database_url");
+  }
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol)) {
+    throw new Error("invalid_database_protocol");
+  }
+
+  let database: string;
+  try {
+    database = decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
+  } catch {
+    throw new Error("invalid_database_url");
+  }
+  if (!parsed.hostname || !database || database.includes("/")) {
+    throw new Error("invalid_database_url");
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (targetClass === "disposable") {
+    if (
+      !["localhost", "127.0.0.1"].includes(host) ||
+      !/^store_ops_fresh_migration_smoke_preflight(?:_[a-z0-9_]+)?$/.test(database)
+    ) {
+      throw new Error("non_disposable_target_refused");
+    }
+    return;
+  }
+
+  const expectedHost = expectedStaging.host?.trim().toLowerCase();
+  const expectedDatabase = expectedStaging.database?.trim();
+  if (!expectedHost || !expectedDatabase) {
+    throw new Error("staging_target_identity_missing");
+  }
+  if (host !== expectedHost || database !== expectedDatabase) {
+    throw new Error("staging_target_identity_mismatch");
+  }
+  if (isProductionMarker(host) || isProductionMarker(database)) {
+    throw new Error("production_target_refused");
+  }
+}
+
+function isProductionMarker(value: string) {
+  return /(^|[._-])(prod|production)([._-]|$)/i.test(value);
 }
 
 function readSafeSampleReferences(value: unknown) {

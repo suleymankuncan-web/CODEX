@@ -1,4 +1,5 @@
 import {
+  assertConnectionBoundary,
   classifyCandidate,
   classifySafeError,
   mapCheckResult,
@@ -91,6 +92,37 @@ describe("database invariant preflight core", () => {
     expect(classifySafeError(new Error("postgres://user:secret@host/db"))).toBe(
       "database_preflight_failed",
     );
+  });
+
+  it("binds disposable and staging labels to an explicit database identity", () => {
+    expect(() => assertConnectionBoundary(
+      "disposable",
+      "postgres://user:secret@localhost:54329/store_ops_fresh_migration_smoke_preflight",
+      {},
+    )).not.toThrow();
+    expect(() => assertConnectionBoundary(
+      "disposable",
+      "postgres://user:secret@database.example/store_ops_live",
+      {},
+    )).toThrow("non_disposable_target_refused");
+
+    const stagingUrl = "postgres://user:secret@staging.db.example/store_ops_staging";
+    expect(() => assertConnectionBoundary("staging", stagingUrl, {})).toThrow(
+      "staging_target_identity_missing",
+    );
+    expect(() => assertConnectionBoundary("staging", stagingUrl, {
+      database: "wrong_database",
+      host: "staging.db.example",
+    })).toThrow("staging_target_identity_mismatch");
+    expect(() => assertConnectionBoundary("staging", stagingUrl, {
+      database: "store_ops_staging",
+      host: "staging.db.example",
+    })).not.toThrow();
+    expect(() => assertConnectionBoundary(
+      "staging",
+      "postgres://user:secret@prod.db.example/store_ops_production",
+      { database: "store_ops_production", host: "prod.db.example" },
+    )).toThrow("production_target_refused");
   });
 });
 

@@ -40,6 +40,9 @@ Execution requires all of:
 - an explicit target class of `disposable` or `staging`;
 - an explicit acknowledgement value `read-only-approved`;
 - a database URL supplied only through process environment;
+- a disposable URL whose host is localhost and whose database name matches the
+  fixed disposable preflight namespace; or, for staging, separately supplied
+  expected host and database values that exactly match the URL;
 - `NODE_ENV` not equal to `production`;
 - a transaction proven by `SHOW transaction_read_only` after `BEGIN READ ONLY`;
 - a bounded local statement timeout.
@@ -49,6 +52,10 @@ numbers, seller codes, and external references must never be printed.
 
 No live run is authorized until a safe database target is supplied and
 approved. Missing input is a recorded block, not evidence of clean data.
+Staging execution additionally requires
+`DATABASE_INVARIANT_PREFLIGHT_EXPECTED_HOST` and
+`DATABASE_INVARIANT_PREFLIGHT_EXPECTED_DATABASE`. Host or database names marked
+`prod` or `production` are refused even if the staging approval flag is set.
 
 ## 4. Check Inventory
 
