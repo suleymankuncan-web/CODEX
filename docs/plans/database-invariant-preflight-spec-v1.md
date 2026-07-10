@@ -1,6 +1,6 @@
 # Database Invariant Preflight Specification V1
 
-Status: specified; local tooling implementation pending
+Status: implemented locally; approved safe-target evidence pending
 Shelf: active plan
 Author: Codex
 Owner: Product owner
@@ -84,8 +84,10 @@ The command emits one JSON document:
 - at most five stable sample references created as truncated hashes of internal
   identifiers;
 - candidate classification and reason;
-- overall decision: `clean_local`, `blocked_violations`, or
-  `blocked_live_evidence`.
+- local/approved-target decision: `clean_local`, `blocked_violations`, or
+  `blocked_business_decision`;
+- independent `liveEvidence`: `blocked_live_evidence` for disposable runs or
+  `safe_target_run` for an explicitly approved staging run.
 
 No raw identifier or row payload is emitted. A non-zero count returns a
 non-success process status after printing sanitized evidence.
@@ -105,6 +107,16 @@ non-success process status after printing sanitized evidence.
 
 ASSIGN-01 remains `requires_business_decision` even when a disposable fixture is
 clean. A clean fixture proves tooling, not the owner-approved temporal rule.
+TARGET-02 and TARGET-03 also remain `requires_business_decision` at zero because
+the owner has not selected generated state, duplicate-state removal, a trigger,
+or another enforcement model. KEY-01 remains
+`deferred_lock_or_performance` while the composite keys are absent and staging
+validation/lock cost is unmeasured.
+
+Zero counts from a disposable target are classified `blocked_live_evidence`,
+not `safe_to_enforce`. Only an approved staging zero can produce
+`safe_to_enforce`, and that still does not override independent business or
+lock/performance blocks.
 
 ## 7. Acceptance Criteria
 
@@ -170,7 +182,38 @@ Stop immediately if:
 - validation cost or lock behavior is claimed without measurement;
 - the target is production or its classification is uncertain.
 
-## 10. Contract Impact
+## 10. Local Disposable Evidence — 2026-07-10
+
+Command: `npm run smoke:database:invariants`
+
+- 59/59 migrations applied to the fixed local disposable database;
+- all 11 clean checks returned zero;
+- the known-violation fixture returned the exact expected non-zero IDs and
+  counts;
+- fixture writes were rolled back and marker residue was zero;
+- all emitted samples remained bounded 12-character hashes;
+- the local provider was PostgreSQL 16; this is not staging/provider evidence;
+- both candidate parent composite unique constraints are absent in the current
+  schema;
+- no validation-cost or lock claim was made from an empty database.
+
+| Candidate | Local count | Current classification | PR-10 prerequisite |
+| --- | ---: | --- | --- |
+| ORG-01 through ORG-04 | 0 | `blocked_live_evidence` | Approved staging counts and domain constraint order |
+| AUTH-01 and AUTH-02 | 0 | `blocked_live_evidence` | Approved staging counts and service/catalog compatibility |
+| ASSIGN-01 | 0 | `requires_business_decision` | Owner-approved temporal overlap semantics plus staging count |
+| TARGET-01 | 0 | `blocked_live_evidence` | Approved staging count |
+| TARGET-02 and TARGET-03 | 0 | `requires_business_decision` | Owner-approved duplicate-state enforcement model plus staging count |
+| KEY-01 | 0 | `deferred_lock_or_performance` | Approved staging count and measured validation/lock strategy |
+| ENV-01 | PostgreSQL 16 local | `blocked_live_evidence` | Approved provider target metadata and extension inventory |
+
+PR-10 decision: **No-Go / blocked**. Disposable evidence proves the query,
+runner, redaction, known-violation detection, clean migration behavior, and
+rollback. It does not prove live data cleanliness or choose unresolved business
+semantics. No PR-10 branch, migration, repair, or constraint is authorized by
+this result.
+
+## 11. Contract Impact
 
 Contract Impact: none.
 
