@@ -1,20 +1,6 @@
 name: Release Check
 
 on:
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - "admin-web/**"
-      - "backend/nestjs/**"
-      - "docs/api/**"
-      - "db/**"
-      - "infra/**"
-      - "package.json"
-      - "scripts/**"
-      - ".github/workflows/frontend-release-check.yml"
-      - ".github/workflows/release-check.yml"
   workflow_call:
   workflow_dispatch:
 

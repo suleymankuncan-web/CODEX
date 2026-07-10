@@ -61,7 +61,9 @@ test('github release workflow is reusable and delegates to the root release gate
   const workflow = readText('.github/workflows/release-check.yml')
 
   assert.match(workflow, /workflow_call:\s*\n/)
+  assert.match(workflow, /workflow_dispatch:\s*\n/)
   assert.doesNotMatch(workflow, /^\s*pull_request:/m)
+  assert.doesNotMatch(workflow, /^\s*push:/m)
   assert.match(workflow, /node-version:\s*24/)
   assert.match(workflow, /cache-dependency-path:\s*\|\s*\n\s*backend\/nestjs\/package-lock\.json\s*\n\s*admin-web\/package-lock\.json/)
   assert.match(workflow, /working-directory:\s*backend\/nestjs\s*\n\s*run:\s*npm ci/)

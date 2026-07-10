@@ -338,7 +338,10 @@ Rollback: restore the previous ruleset context and workflow revision together.
 Depends on: PR-A1.
 
 Execution: completed in PR #918. Root release remains the one full frontend
-owner; the frontend workflow is a targeted reusable child.
+owner; the frontend workflow is a targeted reusable child. A later exact-tree
+post-merge proof/fallback closes the remaining normal PR/main duplicate without
+removing a test: matching trees take a short contract path, while missing or
+mismatched proof runs the full release.
 
 Scope:
 
