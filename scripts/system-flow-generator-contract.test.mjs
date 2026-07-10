@@ -137,6 +137,10 @@ test('system flow links representative product routes to their backend API surfa
     routeApiPaths(flow, '/admin/auth').includes('GET /api/auth/users'),
     'auth admin dashboard should link to user admin reads',
   )
+  assert.ok(
+    routeApiPaths(flow, '/store/approvals').includes('GET /api/workflow/request-center'),
+    'store approvals should link through its called request-center wrapper',
+  )
 })
 
 test('system flow does not treat route preload registries as route API fanout', () => {
