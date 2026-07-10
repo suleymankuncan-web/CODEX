@@ -5,6 +5,7 @@ import { useLocalization } from '../features/localization/useLocalization'
 import { PilotFeedbackControl } from '../features/pilot-feedback/PilotFeedbackControl'
 import type { SessionMode } from '../features/session/session-storage'
 import { AdminSidebar } from './admin-sidebar'
+import { ApplicationSkipLink, applicationMainContentId } from './application-skip-link'
 import type { NavDefinition } from './admin-navigation'
 import {
   AdminChecklistTemplatesPage,
@@ -72,6 +73,7 @@ export function AdminShell(input: {
       ].filter(Boolean).join(' ')}
       data-admin-surface-foundation="v1"
     >
+      <ApplicationSkipLink />
       <AdminSidebar
         allowedAdminNav={input.allowedAdminNav}
         authSummary={input.authSummary}
@@ -80,7 +82,12 @@ export function AdminShell(input: {
       />
       {input.shellState.mode === 'ready' ? <PilotFeedbackControl /> : null}
 
-      <main className="admin-command-main" aria-label={t('adminShell.adminWorkspaceAria')}>
+      <main
+        className="admin-command-main"
+        aria-label={t('adminShell.adminWorkspaceAria')}
+        id={applicationMainContentId}
+        tabIndex={-1}
+      >
         <RouteTransitionFrame>
           <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
             <Suspense fallback={<RouteLoadingState />}>

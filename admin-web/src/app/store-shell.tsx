@@ -39,6 +39,7 @@ import {
 } from './store-route-registry'
 import { StoreSidebar } from './store-sidebar'
 import { StoreErrorState, StoreSurfacePage } from '../pages/store-surface-primitives'
+import { ApplicationSkipLink, applicationMainContentId } from './application-skip-link'
 
 export function StoreShell(input: {
   shellState: ShellState
@@ -113,6 +114,7 @@ export function StoreShell(input: {
         storeReportsRoute ? ' store-shell-store-reports' : ''
       }`}
     >
+      <ApplicationSkipLink />
       {checklistOnlyRoute ? null : (
         <StoreSidebar
           authSummary={input.authSummary}
@@ -120,7 +122,12 @@ export function StoreShell(input: {
       )}
       {checklistOnlyRoute ? null : <PilotFeedbackControl />}
 
-      <main className="store-main store-command-main" aria-label={t('adminShell.storeWorkspaceAria')}>
+      <main
+        className="store-main store-command-main"
+        aria-label={t('adminShell.storeWorkspaceAria')}
+        id={applicationMainContentId}
+        tabIndex={-1}
+      >
         <RouteTransitionFrame>
           <RouteRecoveryBoundary firstAllowedPath={input.firstAllowedPath}>
             <Suspense fallback={<RouteLoadingState />}>

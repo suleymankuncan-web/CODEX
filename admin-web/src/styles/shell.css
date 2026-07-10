@@ -1,3 +1,26 @@
+.application-skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 100;
+  transform: translateY(calc(-100% - 24px));
+  border: 2px solid var(--ring);
+  border-radius: 10px;
+  background: var(--background);
+  padding: 10px 14px;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 750;
+  text-decoration: none;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--foreground) 18%, transparent);
+}
+
+.application-skip-link:focus-visible {
+  transform: translateY(0);
+  outline: 3px solid color-mix(in srgb, var(--ring) 35%, transparent);
+  outline-offset: 2px;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
