@@ -167,6 +167,8 @@ safe-target result can classify live data cleanliness.
 
 - static SQL mutation guard and required-check inventory;
 - pure output/classification/redaction tests;
+- spawned CLI refusal tests that prove missing/mismatched target inputs exit
+  before connection without printing the URL;
 - disposable known-violation transaction smoke;
 - disposable clean migration smoke;
 - root script contracts;
