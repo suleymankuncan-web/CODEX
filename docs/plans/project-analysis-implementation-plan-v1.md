@@ -27,6 +27,9 @@ provider, broad-production, or cleanup gate.
   finding or runtime change was claimed.
 - E1 is complete in PR #921: VM-only route documentation is aligned and five
   safe archive-guard reads moved; the remaining reader inventory is explicit.
+- D1 is complete in PR #923: a bounded Vitest seed covers Store My Performance
+  state/date and Region Manager incentive money/correction logic through the
+  existing release paths. No E2E test was removed and no suite migration began.
 - The next runtime train remains parked unless a real B1 or pilot/demo P0/P1
   finding produces one scoped specification.
 
@@ -413,6 +416,11 @@ Mandatory verification:
 
 Conditional: no active P0/P1 blocker, or a finding exposes repeated pure-logic
 E2E cost.
+
+Execution: completed in PR #923. The seed covers Store My Performance
+state/date and Region Manager incentive money/correction logic, runs through
+the existing frontend and root release paths, preserves the 371-test Playwright
+suite, and does not authorize a whole-suite migration.
 
 Scope:
 

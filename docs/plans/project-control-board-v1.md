@@ -32,8 +32,9 @@ The project is in controlled pilot execution mode.
 - Separate mobile app: discovery is documented; implementation is `Parked`.
 - Generic architecture/refactor train: `Parked`; the completed project analysis
   did not authorize a broad code train without a concrete runtime blocker.
-- Process/CI alignment: A1/A2/A3 are implemented; A3's ten-run p95 observation
-  remains pending external PR traffic.
+- Process/CI alignment: A1/A2/A3 and the bounded D1 unit-test seed are
+  implemented; A3's ten-run p95 observation remains pending external PR
+  traffic.
 - Fresh B1 pilot evidence: `blocked_external` until the named safe sessions,
   data, and authority inputs are supplied.
 
