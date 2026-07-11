@@ -1,17 +1,17 @@
 # Database Client TLS And Timeout Resilience Specification V1
 
-Status: implementation merged in PR #936; DG-3 provider activation blocked
+Status: implementation merged in PR #936; DG-3 verify-full activation in progress
 Shelf: active plan
 Author: Codex
-Last verified: 2026-07-10
+Last verified: 2026-07-11
 
 ## 1. Reader And Action
 
 This specification is for the engineer maintaining the shared NestJS
-PostgreSQL client or activating provider-verified TLS after DG-3 arrives.
-Preserve the bounded configuration and truthful readiness contract without
-changing database schema, API behavior, provider state, or broad-production
-readiness by implication.
+PostgreSQL client or activating provider-verified TLS for the Supabase staging
+target after the owner-approved DG-3 decision. Preserve the bounded
+configuration and truthful readiness contract without changing database schema,
+API behavior, or broad-production readiness by implication.
 
 ## 2. Problem And Current Evidence
 
@@ -22,10 +22,11 @@ those validations, timeout budgets, and the non-secret transport status.
 Current controlled-pilot production still uses `rejectUnauthorized: false`, so
 its connection is encrypted but the server certificate is not verified.
 
-DG-3 is unavailable. There is no provider CA chain, staging verify-full proof,
-or rotation/expiry owner in repository evidence. The implementation may add a
-verification-capable contract, but it must not activate or claim provider-
-verified TLS.
+DG-3 activation is in progress. The Supabase staging target is identified and
+the repository/Render blueprint now targets `verify-full`; provider CA
+installation, staging smoke proof, and rotation/review evidence are still
+pending. The application must not claim `encrypted-verified` until the secret
+is installed and the staging health check proves the transport posture.
 
 ## 3. Scope And Non-Goals
 
@@ -40,8 +41,9 @@ PR-11 will:
 - require CA material when `verify-full` is selected;
 - require `verify-full` for a broad-production profile;
 - expose a non-secret database transport posture in readiness;
-- retain the current controlled-pilot staging mode as encrypted-unverified;
-- document DG-3 as the activation blocker.
+- target the controlled-pilot staging API and worker at provider-verified TLS;
+- document the CA secret, staging smoke, and rollback evidence required to
+  close DG-3.
 
 PR-11 will not:
 
@@ -90,9 +92,10 @@ connection string may be emitted while doing so.
   `encrypted-unverified`.
 - `READINESS_PROFILE=broad-production` must fail startup unless
   `DB_SSL_MODE=verify-full` and `DB_SSL_CA` is present.
-- Repository and Render defaults remain controlled-pilot and do not receive
-  fabricated CA material.
-- Provider staging smoke is skipped, not passed, while DG-3 inputs are absent.
+- Repository and Render defaults target controlled-pilot `verify-full` but do
+  not contain CA material; activation remains pending until the secret is
+  entered through the provider secret boundary.
+- Provider staging smoke is required before any `encrypted-verified` claim.
 
 ## 6. Readiness Contract
 
@@ -118,8 +121,9 @@ behavior remain unchanged.
    untrusted certificates are not accepted by configuration.
 5. Health reports the exact non-secret transport posture on both success and
    failure.
-6. Existing controlled-pilot Render API and worker definitions remain
-   deployable on `DB_SSL_MODE=require` and are honestly classified.
+6. Controlled-pilot Render API and worker definitions target
+   `DB_SSL_MODE=verify-full` and remain deployable once `DB_SSL_CA` is supplied
+   through the secret boundary.
 7. No provider smoke or verified-provider claim is recorded without DG-3.
 8. Backend lint, unit/integration tests, build, root contracts, and the single
    canonical release path pass.
@@ -136,10 +140,12 @@ Required local evidence:
 - root contract suite;
 - one uninterrupted canonical root release for the PR decision.
 
-Conditional evidence:
+Required provider evidence after secret installation:
 
-- provider staging smoke only when a separately confirmed safe staging target
-  and DG-3 CA/secure-method inputs exist.
+- provider staging smoke against the confirmed Supabase target;
+- `/api/health` reports `encrypted-verified` and `certificateVerified: true`;
+- rotation/review date and the single-operator rollback path are recorded
+  without recording CA material.
 
 ## 9. Rollback
 
@@ -160,7 +166,7 @@ Verified on 2026-07-10 on the PR head based on main `5b93988b`:
 - remote root release passed in `11m22s`, backend/Docker rehearsal passed in
   `1m54s`, the observer passed in `2m9s`, and required aggregate plus Vercel
   passed before PR #936 merged as `271bba3f`;
-- DG-3 provider CA/staging/rotation evidence remains absent, so provider smoke
-  is skipped and Render remains on controlled-pilot `DB_SSL_MODE=require`;
+- DG-3 repository target now uses `DB_SSL_MODE=verify-full` for the Render API
+  and worker; provider CA installation and staging proof remain pending;
 - no raw connection string, CA material, provider secret, schema change,
   migration, or broad-production activation was introduced.

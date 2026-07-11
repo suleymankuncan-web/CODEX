@@ -53,7 +53,8 @@ Render backend env:
 
 ```env
 DATABASE_URL=<Supabase session pooler URI>
-DB_SSL_MODE=require
+DB_SSL_MODE=verify-full
+DB_SSL_CA=<Render secret: Supabase provider root CA; never commit or paste into chat>
 DB_POOL_MAX=5
 ```
 
@@ -126,7 +127,9 @@ Port notu:
 
 ## 3. Backend Env
 
-`render.yaml` sabit public env'leri tanimliyor. Render ilk blueprint kurulumunda `DATABASE_URL` icin secret isteyecek.
+`render.yaml` sabit public env'leri tanimliyor. Render ilk blueprint kurulumunda
+`DATABASE_URL` ve `DB_SSL_CA` icin secret isteyecek. `DB_SSL_CA`, Supabase'in
+provider root CA materyalidir; repo'ya, chat'e veya log'a yazilmaz.
 
 Kontrol listesi:
 
@@ -135,7 +138,8 @@ NODE_ENV=production
 APP_NAME=hr-axis-staging-api
 DATABASE_URL=<Supabase session pooler URI>
 DB_POOL_MAX=5
-DB_SSL_MODE=require
+DB_SSL_MODE=verify-full
+DB_SSL_CA=<Render secret: Supabase provider root CA>
 AUTH_MODE=jwt
 AUTH_PROVIDER_KEY=clerk
 ALLOW_MOCK_AUTH=false
@@ -161,7 +165,8 @@ NODE_ENV=production
 APP_NAME=hr-axis-staging-worker
 DATABASE_URL=<Supabase session pooler URI>
 DB_POOL_MAX=5
-DB_SSL_MODE=require
+DB_SSL_MODE=verify-full
+DB_SSL_CA=<Render secret: Supabase provider root CA>
 QUEUE_BACKEND=bullmq
 REDIS_URL=<Render Key Value internal URL>
 READINESS_PROFILE=controlled-pilot
@@ -193,7 +198,8 @@ Render build-step migration kullanilamiyorsa Supabase staging DB migration'i lok
 cd D:\store-ops-workspace\backend\nestjs
 $env:NODE_ENV="production"
 $env:DATABASE_URL="<Supabase session pooler URI>"
-$env:DB_SSL_MODE="require"
+$env:DB_SSL_MODE="verify-full"
+$env:DB_SSL_CA="<provider root CA loaded through a secret-safe path>"
 $env:DB_POOL_MAX="5"
 $env:TRUST_PROXY_HOPS="1"
 $env:RATE_LIMIT_WINDOW_MS="60000"
