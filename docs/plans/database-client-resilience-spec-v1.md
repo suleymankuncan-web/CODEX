@@ -1,6 +1,6 @@
 # Database Client TLS And Timeout Resilience Specification V1
 
-Status: implementation merged in PR #936; DG-3 verify-full activation in progress
+Status: implementation merged in PR #936; DG-3 verify-full decision locked, provider activation pending
 Shelf: active plan
 Author: Codex
 Last verified: 2026-07-11
@@ -22,11 +22,12 @@ those validations, timeout budgets, and the non-secret transport status.
 Current controlled-pilot production still uses `rejectUnauthorized: false`, so
 its connection is encrypted but the server certificate is not verified.
 
-DG-3 activation is in progress. The Supabase staging target is identified and
-the repository/Render blueprint now targets `verify-full`; provider CA
-installation, staging smoke proof, and rotation/review evidence are still
-pending. The application must not claim `encrypted-verified` until the secret
-is installed and the staging health check proves the transport posture.
+DG-3 is locked to provider-verified `verify-full`. The Supabase staging target
+is identified and the repository/Render blueprint now targets `verify-full`;
+provider CA installation, staging smoke proof, and rotation/review evidence
+are still pending. The application must not claim `encrypted-verified` until
+the secret is installed and the staging health check proves the transport
+posture.
 
 ## 3. Scope And Non-Goals
 

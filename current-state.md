@@ -56,8 +56,9 @@ slice is the authorization operating-truth contract: complete route ownership,
 preview/runtime drift, and backend-endpoint drift become machine-visible before
 any permission behavior changes. DG-1 product decisions are locked but their
 runtime implementation remains unopened; DG-2 still gates live DB cleanup,
-DG-3 verify-full activation is now configured in the repository and awaits
-provider CA/health proof, and DG-4 still gates real external error delivery.
+DG-3 verify-full is now locked as the staging TLS decision and configured in
+the repository; provider CA/health proof still gates activation, and DG-4
+still gates real external error delivery.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
 33 direct matrix routes, and three preview plus three backend drifts. PR #929

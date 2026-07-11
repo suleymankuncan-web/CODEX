@@ -32,7 +32,7 @@ test('database client resilience spec keeps the bounded implementation contract'
 
 test('database client resilience spec preserves honest provider and TLS gates', () => {
   for (const expected of [
-    'DG-3 activation is in progress',
+    'DG-3 verify-full decision locked',
     'encrypted-unverified',
     'encrypted-verified',
     'rejectUnauthorized: true',
@@ -42,7 +42,7 @@ test('database client resilience spec preserves honest provider and TLS gates', 
     assert.match(spec, new RegExp(expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   }
 
-  assert.match(spec, /must not claim `encrypted-verified` until the secret/)
+  assert.match(spec, /must not claim `encrypted-verified` until\s+the secret/)
 })
 
 test('database client resilience spec forbids secrets and unrelated runtime changes', () => {
