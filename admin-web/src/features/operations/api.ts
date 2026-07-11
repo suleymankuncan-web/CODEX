@@ -22,6 +22,7 @@ export type OperationsHealth = {
     status: 'ok' | 'degraded' | string
     errorTracking: {
       dsnConfigured: boolean
+      enabled: boolean
       environment: string
       externalDelivery: string
       mode: string

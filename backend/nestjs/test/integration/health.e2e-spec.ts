@@ -29,6 +29,7 @@ describe("HealthController (integration)", () => {
         status: "ok",
         errorTracking: {
           dsnConfigured: false,
+          enabled: false,
           externalDelivery: "not-enabled",
           mode: "log-only",
         },

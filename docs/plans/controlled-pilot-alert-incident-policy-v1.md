@@ -14,8 +14,8 @@ Reader:
 
 After reading, they should be able to run the right smoke, know which alert
 signals are accepted for pilot, know which production alerting requirements
-remain parked, and avoid adding paid/app-level telemetry without an owner
-decision.
+remain parked, and distinguish the owner-approved free Sentry app-level slice
+from the existing health/platform signals.
 
 ## Purpose
 
@@ -23,14 +23,16 @@ Close the controlled-pilot alerting posture without buying paid observability
 or pretending the project has full production incident management.
 
 The controlled pilot needs a real external health signal and a clear first
-response path. It does not need app-level exception tracking, SMS/phone
-escalation, or broad-production incident policy before the pilot can continue.
+response path. The owner has also approved a zero-cost, opt-in Sentry
+application-error slice; SMS/phone escalation and broad-production incident
+policy remain out of scope.
 
 ## Non-Goals
 
-- Do not add Sentry or any other paid app-level error tracking provider.
-- Do not add provider secrets, DSNs, API keys, webhooks, or private alert
-  destinations.
+- Do not add a paid app-level error tracking provider or paid integrations.
+- Do not expose provider secrets, DSNs, API keys, webhooks, or private alert
+  destinations in source/evidence. The approved Sentry DSN stays in provider
+  env boundaries only.
 - Do not change application logging, exception handling, health endpoint
   behavior, auth, API, DB, queue, import, snapshot, scoring, workflow, or UI
   behavior.
@@ -54,6 +56,7 @@ Use these sources:
 | Better Stack public health monitor | accepted | An external provider monitors `https://api-staging.hr-axis.com/api/health` and can send an email test alert. | It does not prove app-level stack traces, SMS/phone escalation, or production incident management. |
 | Render platform notifications | accepted as backup/supporting signal | Platform failure/deploy/service notifications can help detect hosting events. | It does not replace external uptime monitoring or app-level exception diagnostics. |
 | Backend `/api/health` alertable fields | accepted | Staging health exposes service, DB, Redis/BullMQ, observability, and readiness profile signals for smoke checks. | It does not prove protected route behavior or app-level exception capture. |
+| Sentry Developer app-level delivery | selected, receipt pending | The opt-in backend/worker/frontend adapter can deliver sanitized exception events to the owner email destination. | It does not prove production incident assignment, source maps, replay, tracing, or paid escalation. |
 | `smoke:alert-routing` | accepted gate | The repository can verify alert runbook text, provider metadata shape, and public backend health signal. | It does not prove real provider delivery unless provider metadata/evidence is supplied. |
 
 ## Parked Production Requirements
@@ -100,6 +103,7 @@ Continue controlled pilot when:
 - provider metadata is either present and complete or explicitly not needed for
   the current tokenless smoke,
 - Better Stack proof remains the current external email alert evidence,
+- Sentry staging delivery is either not yet activated or has a sanitized receipt,
 - incident response skeleton still names owner roles and guarded commands.
 
 Pause controlled pilot alert posture when:
@@ -108,7 +112,8 @@ Pause controlled pilot alert posture when:
 - alert routing docs lose the required incident path,
 - provider delivery is assumed without evidence,
 - no first responder or owner path exists for the pilot session,
-- app-level exception tracking is required for the pilot claim.
+- app-level exception tracking is required for the pilot claim but its Sentry
+  receipt is missing or contains unsafe data.
 
 ### 3. First Response Path
 
@@ -155,7 +160,8 @@ Controlled pilot:
 
 - Go for Better Stack external health email alert proof plus Render platform
   notifications as backup/supporting signal.
-- App-level paid exception tracking is not a controlled-pilot blocker.
+- Sentry Developer is the selected free app-level exception provider; close DG4
+  only after the sanitized staging receipt is recorded.
 - Keep `smoke:alert-routing` as the repeatable local/public gate.
 
 Broad production:
@@ -166,10 +172,9 @@ Broad production:
 
 ## Rollback
 
-This policy is docs-only. Rollback is a docs revert.
-
-No provider reconfiguration, secret rotation, runtime rollback, migration, data
-repair, or incident replay is required.
+Runtime rollback is flag-only: disable `ERROR_TRACKING_ENABLED` on Render and
+`VITE_SENTRY_ENABLED` on Vercel, then restart/redeploy. No database migration,
+data repair, or user-facing API change is required.
 
 ## Verification
 

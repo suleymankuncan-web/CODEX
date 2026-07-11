@@ -305,6 +305,14 @@ export class AppConfigService {
     );
   }
 
+  get errorTrackingEnabled(): boolean {
+    return this.errorTrackingEnableRequested && Boolean(this.errorTrackingDsn);
+  }
+
+  get errorTrackingEnableRequested(): boolean {
+    return this.readBoolean("ERROR_TRACKING_ENABLED", false);
+  }
+
   get errorTrackingEnvironment(): string {
     return this.readString(
       "ERROR_TRACKING_ENVIRONMENT",
@@ -314,6 +322,14 @@ export class AppConfigService {
 
   get errorTrackingRelease(): string | undefined {
     return this.readOptionalString("ERROR_TRACKING_RELEASE");
+  }
+
+  get errorTrackingSmokeEnabled(): boolean {
+    return (
+      this.readBoolean("ERROR_TRACKING_SMOKE", false) &&
+      this.errorTrackingEnvironment === "staging" &&
+      this.readinessProfile === "controlled-pilot"
+    );
   }
 
   get readinessProfile(): string {

@@ -1,4 +1,10 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from "@nestjs/common";
 import { Job } from "bullmq";
 import { Worker } from "bullmq";
 import IORedis from "ioredis";
@@ -7,6 +13,7 @@ import { SnapshotService } from "../../modules/store-ops/application/snapshot.se
 import { AppConfigService } from "../app-config.service";
 import { ImportBatchJobPayload, SnapshotRunJobPayload } from "./job-payloads";
 import { logStructuredError, logStructuredMessage } from "../structured-log";
+import { ObservabilityService } from "../observability/observability.service";
 
 @Injectable()
 export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
@@ -18,6 +25,7 @@ export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
     private readonly appConfigService: AppConfigService,
     private readonly materializationService: MaterializationService,
     private readonly snapshotService: SnapshotService,
+    @Optional() private readonly observabilityService?: ObservabilityService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -56,6 +64,15 @@ export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
             queueName: this.appConfigService.importQueueName,
             batchId: job.data.batchId,
           });
+          this.observabilityService?.captureException(error, {
+            event: "job.execution.failed",
+            source: "bullmq.import-worker",
+            severity: "error",
+            metadata: {
+              jobType: job.name,
+              queueName: this.appConfigService.importQueueName,
+            },
+          });
           throw error;
         }
       },
@@ -90,6 +107,15 @@ export class BullMqWorkerHostService implements OnModuleInit, OnModuleDestroy {
             jobType: job.name,
             queueName: this.appConfigService.snapshotQueueName,
             snapshotRunId: job.data.snapshotRunId,
+          });
+          this.observabilityService?.captureException(error, {
+            event: "job.execution.failed",
+            source: "bullmq.snapshot-worker",
+            severity: "error",
+            metadata: {
+              jobType: job.name,
+              queueName: this.appConfigService.snapshotQueueName,
+            },
           });
           throw error;
         }

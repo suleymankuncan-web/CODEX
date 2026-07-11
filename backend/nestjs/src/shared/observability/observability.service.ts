@@ -1,8 +1,12 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable, Logger, Optional } from "@nestjs/common";
 import type { LogLevel } from "@nestjs/common";
 import { AppConfigService } from "../app-config.service";
 import { RequestContextStore } from "../request-context";
 import { redactSensitiveLogValue } from "../structured-log";
+import {
+  SentryErrorDelivery,
+  type SentryRuntime,
+} from "./sentry-error-delivery";
 
 type ObservabilitySeverity = "error" | "fatal" | "warning";
 
@@ -16,15 +20,17 @@ type CaptureExceptionInput = {
   severity?: ObservabilitySeverity;
   source: string;
   statusCode?: number;
+  metadata?: Record<string, string | number | null>;
 };
 
 type ObservabilityStatus = {
   status: "ok" | "degraded";
   errorTracking: {
     dsnConfigured: boolean;
+    enabled: boolean;
     environment: string;
-    externalDelivery: "not-enabled";
-    mode: "log-only";
+    externalDelivery: "not-enabled" | "enabled";
+    mode: "log-only" | "log+external";
     release?: string;
   };
   logLevel: string;
@@ -47,8 +53,12 @@ export function resolveNestLogLevels(value: string | undefined): LogLevel[] {
 export class ObservabilityService {
   private static processHandlersInstalled = false;
   private readonly logger = new Logger("Observability");
+  private runtime: SentryRuntime = "unknown";
 
-  constructor(private readonly config: AppConfigService) {}
+  constructor(
+    private readonly config: AppConfigService,
+    @Optional() private readonly sentryDelivery?: SentryErrorDelivery,
+  ) {}
 
   captureException(error: unknown, input: CaptureExceptionInput): void {
     const context = RequestContextStore.get();
@@ -68,35 +78,56 @@ export class ObservabilityService {
           path: input.path,
           statusCode: input.statusCode,
           errorCode: input.errorCode,
+          metadata: input.metadata,
           errorName: errorShape.name,
           errorMessage: errorShape.message,
           errorTracking: {
             dsnConfigured: Boolean(this.config.errorTrackingDsn),
-            externalDelivery: "not-enabled",
-            mode: "log-only",
+            enabled: this.sentryDelivery?.isEnabled() ?? false,
+            externalDelivery: this.sentryDelivery?.isEnabled()
+              ? "enabled"
+              : "not-enabled",
+            mode: this.sentryDelivery?.isEnabled()
+              ? "log+external"
+              : "log-only",
           },
           environment: this.resolveEnvironment(),
           release: this.config.errorTrackingRelease,
         }),
       ),
     );
+
+    this.sentryDelivery?.captureException(error, {
+      event,
+      source: input.source,
+      severity: input.severity ?? "error",
+      runtime: this.runtime,
+      correlationId: input.correlationId ?? context?.correlationId ?? null,
+      errorCode: input.errorCode,
+      method: input.method,
+      normalizedPath: normalizeSafePath(input.path),
+      statusCode: input.statusCode,
+      metadata: input.metadata,
+    });
   }
 
   getStatus(): ObservabilityStatus {
     const dsnConfigured = Boolean(this.config.errorTrackingDsn);
+    const enabled = this.sentryDelivery?.isEnabled() ?? false;
     const readinessProfile = this.config.readinessProfile ?? "controlled-pilot";
-    const broadProductionMissingDsn =
+    const broadProductionMissingExternalDelivery =
       this.config.isProduction &&
       readinessProfile === "broad-production" &&
-      !dsnConfigured;
+      !enabled;
 
     return {
-      status: broadProductionMissingDsn ? "degraded" : "ok",
+      status: broadProductionMissingExternalDelivery ? "degraded" : "ok",
       errorTracking: {
         dsnConfigured,
+        enabled,
         environment: this.resolveEnvironment(),
-        externalDelivery: "not-enabled",
-        mode: "log-only",
+        externalDelivery: enabled ? "enabled" : "not-enabled",
+        mode: enabled ? "log+external" : "log-only",
         release: this.config.errorTrackingRelease,
       },
       logLevel: this.config.logLevel ?? "info",
@@ -125,11 +156,12 @@ export class ObservabilityService {
         severity: "fatal",
         source: "process.uncaughtException",
       });
-      process.exit(1);
+      void this.flushBeforeExit();
     });
   }
 
   logStartupState(runtime: "api" | "worker"): void {
+    this.runtime = runtime;
     const status = this.getStatus();
 
     this.logger.log(
@@ -140,6 +172,16 @@ export class ObservabilityService {
       }),
     );
 
+    if (this.config.errorTrackingSmokeEnabled && this.sentryDelivery?.isEnabled()) {
+      this.sentryDelivery.captureException(new Error("DG4 staging Sentry smoke"), {
+        event: "observability.staging_smoke",
+        source: "observability.startup",
+        severity: "error",
+        runtime: this.runtime,
+        metadata: { smoke: "staging" },
+      });
+    }
+
     if (status.status === "degraded") {
       this.logger.error(
         JSON.stringify({
@@ -148,9 +190,17 @@ export class ObservabilityService {
           environment: status.errorTracking.environment,
           readinessProfile: status.readinessProfile,
           reason:
-            "ERROR_TRACKING_DSN is not configured while broad production readiness was requested",
+            "External error delivery is not enabled while broad production readiness was requested",
         }),
       );
+    }
+  }
+
+  private async flushBeforeExit(): Promise<void> {
+    try {
+      await this.sentryDelivery?.flush(2000);
+    } finally {
+      process.exit(1);
     }
   }
 
@@ -174,4 +224,28 @@ export class ObservabilityService {
       (this.config.isProduction ? "production" : "development")
     );
   }
+}
+
+export function normalizeSafePath(path: string | undefined): string | undefined {
+  if (!path) {
+    return undefined;
+  }
+
+  const pathname = path.split(/[?#]/, 1)[0] || "/";
+
+  return pathname
+    .split("/")
+    .map((segment) => {
+      if (
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+          segment,
+        ) ||
+        /^\d+$/.test(segment)
+      ) {
+        return ":id";
+      }
+
+      return segment;
+    })
+    .join("/");
 }

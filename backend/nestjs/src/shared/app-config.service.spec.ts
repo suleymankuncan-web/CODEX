@@ -551,16 +551,21 @@ describe("AppConfigService", () => {
 
     expect(config.logLevel).toBe("info");
     expect(config.errorTrackingDsn).toBeUndefined();
+    expect(config.errorTrackingEnableRequested).toBe(false);
+    expect(config.errorTrackingEnabled).toBe(false);
     expect(config.errorTrackingEnvironment).toBe("development");
     expect(config.errorTrackingRelease).toBeUndefined();
+    expect(config.errorTrackingSmokeEnabled).toBe(false);
     expect(config.readinessProfile).toBe("controlled-pilot");
   });
 
   it("accepts explicit production observability settings", () => {
     const config = createConfig({
       ERROR_TRACKING_DSN: "https://example.invalid/123",
+      ERROR_TRACKING_ENABLED: "true",
       ERROR_TRACKING_ENVIRONMENT: "staging",
       ERROR_TRACKING_RELEASE: "a1b2c3d",
+      ERROR_TRACKING_SMOKE: "true",
       LOG_LEVEL: "warn",
       NODE_ENV: "production",
       READINESS_PROFILE: "broad-production",
@@ -568,9 +573,22 @@ describe("AppConfigService", () => {
 
     expect(config.logLevel).toBe("warn");
     expect(config.errorTrackingDsn).toBe("https://example.invalid/123");
+    expect(config.errorTrackingEnableRequested).toBe(true);
+    expect(config.errorTrackingEnabled).toBe(true);
     expect(config.errorTrackingEnvironment).toBe("staging");
     expect(config.errorTrackingRelease).toBe("a1b2c3d");
+    expect(config.errorTrackingSmokeEnabled).toBe(false);
     expect(config.readinessProfile).toBe("broad-production");
+  });
+
+  it("allows the startup smoke only for controlled staging", () => {
+    const config = createConfig({
+      ERROR_TRACKING_ENVIRONMENT: "staging",
+      ERROR_TRACKING_SMOKE: "true",
+      READINESS_PROFILE: "controlled-pilot",
+    });
+
+    expect(config.errorTrackingSmokeEnabled).toBe(true);
   });
 
   it("rejects invalid observability config values", () => {
@@ -592,6 +610,23 @@ describe("AppConfigService", () => {
         NODE_ENV: "production",
       }).errorTrackingDsn,
     ).toThrow("ERROR_TRACKING_DSN must use https in production");
+
+    expect(() =>
+      createConfig({
+        ERROR_TRACKING_ENABLED: "sometimes",
+      }).errorTrackingEnabled,
+    ).toThrow("ERROR_TRACKING_ENABLED must be true or false");
+
+    expect(
+      createConfig({
+        ERROR_TRACKING_ENABLED: "true",
+      }).errorTrackingEnabled,
+    ).toBe(false);
+    expect(
+      createConfig({
+        ERROR_TRACKING_ENABLED: "true",
+      }).errorTrackingEnableRequested,
+    ).toBe(true);
   });
 
   it("requires authorization code flow and https provider endpoints in production", () => {
