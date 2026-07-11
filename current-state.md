@@ -173,7 +173,7 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-- DG1-C runtime removal is `blocked_external` on fresh `codex/dg1-c-runtime-removal`: PR #945 merged the static classification, but the owner-approved provider usage window is missing. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
+- DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
 - Keep the truthful release boundary stable while A3 measurement and remaining B1 external evidence continue under their sections above.
 
 Next:
