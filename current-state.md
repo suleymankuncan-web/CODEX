@@ -180,9 +180,8 @@ Next:
    runtime access.
 2. Approve an exact staging database identity and run the read-only PR-9
    preflight; classify every non-zero result before DG-2 can open PR-10.
-3. Open the docs/process PR for the now-proven `verify-full` staging
-   activation and its documented rotation/review path; do not merge without
-   owner approval.
+3. PR #939 is draft for the docs/process activation and rotation path; root
+   release is pending. Do not merge without owner approval.
 4. Supply DG-4's error provider, environment/release naming, secret owner,
    retention/privacy policy, and sanitized receipt before PR-12.
 5. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
