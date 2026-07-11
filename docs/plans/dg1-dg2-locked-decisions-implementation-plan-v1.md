@@ -41,7 +41,11 @@ Follow these rules literally.
 2. Use the `codex/` branch prefix unless the owner gives a newer instruction.
 3. Implement one slice story at a time. Do not mix the next slice into the current
    diff.
-4. Do not merge. The product owner controls merge timing.
+4. The owner has explicitly authorized autonomous PR closeout and merge for
+   this train. After the `hr-axis-pr-closeout` gates are satisfied, merge each
+   PR non-interactively, sync `origin/main`, verify the merge commit, and
+   continue from the merged SHA. Do not merge a red, non-mergeable, unclear,
+   or actionable-review-blocked PR.
 5. Do not request, trigger, mention as required, or wait for GitHub Codex
    review. It is disabled by explicit owner instruction.
 6. Local review, relevant tests, required GitHub checks, mergeability, and
@@ -1077,7 +1081,8 @@ made.
 Use this document as the execution authority. Start with DG1-A on the branch
 that carries this plan. Do not implement later slices in that diff. Preserve the
 locked read/action/data boundaries, run the named verification, open no Codex
-review, never merge, and continue preparing independent work while GitHub
-checks run. After each predecessor merges, fetch origin, fast-forward local
-main, and create the next branch from that exact main SHA. Stop rather than
-guess whenever Section 16 applies.
+review, and use `hr-axis-pr-closeout` to monitor checks, close, and merge each
+authorized PR. While checks run, prepare only independent next-PR work in a
+separate worktree. After each merge, fetch origin, fast-forward local main,
+verify the merge commit and post-merge state, then create the next branch from
+that exact main SHA. Stop rather than guess whenever Section 16 applies.

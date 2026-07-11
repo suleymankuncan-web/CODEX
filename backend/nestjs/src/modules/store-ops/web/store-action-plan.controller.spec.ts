@@ -220,11 +220,13 @@ describe("StoreActionPlanController", () => {
       "STORE_MANAGER",
       "SUPER_ADMIN",
       "REGION_MANAGER",
+      "REPORT_VIEWER",
     ]);
     expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("getPlan"))).toEqual([
       "STORE_MANAGER",
       "SUPER_ADMIN",
       "REGION_MANAGER",
+      "REPORT_VIEWER",
     ]);
     expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, controllerMethod("createPlan"))).toEqual([
       "STORE_MANAGER",

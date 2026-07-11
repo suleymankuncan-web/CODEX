@@ -164,7 +164,30 @@ export class StoreActionPlanRepository {
     return result.rows[0] ? this.mapPlan(result.rows[0]) : null;
   }
 
+  async getPlanByIdInCompanyScope(input: {
+    actionPlanId: string;
+    companyIds: readonly string[];
+  }) {
+    if (input.companyIds.length === 0) {
+      return null;
+    }
+
+    const result = await this.databaseService.query<StoreActionPlanRow>(
+      `
+        SELECT ${STORE_ACTION_PLAN_READ_COLUMNS}
+        FROM ops.store_action_plan p
+        ${STORE_ACTION_PLAN_READ_JOINS}
+        WHERE p.store_action_plan_id = $1::uuid
+          AND p.company_id = ANY($2::uuid[])
+      `,
+      [input.actionPlanId, [...input.companyIds]],
+    );
+
+    return result.rows[0] ? this.mapPlan(result.rows[0]) : null;
+  }
+
   async listPlans(input: {
+    companyIds?: readonly string[];
     storeIds: readonly string[];
     statuses?: readonly StoreActionPlanStatus[];
     periodStart?: string;
@@ -172,15 +195,25 @@ export class StoreActionPlanRepository {
     limit: number;
     offset: number;
   }) {
-    if (input.storeIds.length === 0) {
+    if (input.storeIds.length === 0 && (input.companyIds?.length ?? 0) === 0) {
       return {
         items: [],
         total: 0,
       };
     }
 
-    const params: unknown[] = [[...input.storeIds]];
-    const filters = ["p.store_id = ANY($1::uuid[])"];
+    const params: unknown[] = [];
+    const filters: string[] = [];
+
+    if (input.storeIds.length > 0) {
+      params.push([...input.storeIds]);
+      filters.push(`p.store_id = ANY($${params.length}::uuid[])`);
+    }
+
+    if (input.companyIds?.length) {
+      params.push([...input.companyIds]);
+      filters.push(`p.company_id = ANY($${params.length}::uuid[])`);
+    }
 
     if (input.statuses?.length) {
       params.push([...input.statuses]);

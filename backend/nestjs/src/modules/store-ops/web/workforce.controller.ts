@@ -15,6 +15,7 @@ import { ListOffboardingRequestsQueryDto } from "./dto/list-offboarding-requests
 import { RejectWorkforceRequestDto } from "./dto/reject-workforce-request.dto";
 import { ResubmitSellerCodeRequestDto } from "./dto/resubmit-seller-code-request.dto";
 import { ResubmitOffboardingRequestDto } from "./dto/resubmit-offboarding-request.dto";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 type WorkforceActorRequest = {
   user: {
@@ -33,7 +34,7 @@ export class WorkforceController {
   constructor(private readonly workforceService: WorkforceService) {}
 
   @Get("headcount-gap")
-  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN", "REPORT_VIEWER")
   async getHeadcountGap(
     @Req()
     request: {
@@ -47,14 +48,28 @@ export class WorkforceController {
           assignedStoreIds: string[];
         };
         roleCodes: string[];
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
       };
     },
     @Query() query: HeadcountGapQueryDto,
   ) {
+    const actorReadScope = request.user.roleCodes.includes("REPORT_VIEWER")
+      ? resolveReportViewerCompanyScope({
+          actorRoleCodes: request.user.roleCodes,
+          actorScope: request.user.scope,
+          roleScopes: request.user.roleScopes,
+        })
+      : undefined;
+
     return this.workforceService.getStoreHeadcountGap({
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
+      ...(actorReadScope ? { actorReadScope } : {}),
       storeId: query.storeId,
       periodStart: query.periodStart,
       periodEnd: query.periodEnd,
@@ -122,7 +137,7 @@ export class WorkforceController {
   }
 
   @Get("store-employees")
-  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "HR_ADMIN", "SUPER_ADMIN", "REPORT_VIEWER")
   async listStoreEmployees(
     @Req()
     request: {
@@ -136,14 +151,28 @@ export class WorkforceController {
           assignedStoreIds: string[];
         };
         roleCodes: string[];
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
       };
     },
     @Query() query: ListStoreEmployeesQueryDto,
   ) {
+    const actorReadScope = request.user.roleCodes.includes("REPORT_VIEWER")
+      ? resolveReportViewerCompanyScope({
+          actorRoleCodes: request.user.roleCodes,
+          actorScope: request.user.scope,
+          roleScopes: request.user.roleScopes,
+        })
+      : undefined;
+
     return this.workforceService.listActiveStoreEmployees({
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
+      ...(actorReadScope ? { actorReadScope } : {}),
       storeId: query.storeId,
     });
   }

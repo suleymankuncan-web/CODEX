@@ -27,6 +27,12 @@ type StoreActionPlanActionScopeInput = {
   actorActionScope?: {
     assignedStoreIds: readonly string[];
   };
+  actorReadScope?: {
+    companyIds: readonly string[];
+    regionIds: readonly string[];
+    storeIds: readonly string[];
+  };
+  actorRoleCodes?: readonly string[];
 };
 
 type StoreActionPlanActorScope = {
@@ -46,6 +52,12 @@ export class StoreActionPlanService {
     actorActionScope?: {
       assignedStoreIds: readonly string[];
     };
+    actorReadScope?: {
+      companyIds: readonly string[];
+      regionIds: readonly string[];
+      storeIds: readonly string[];
+    };
+    actorRoleCodes?: readonly string[];
     storeId?: string;
     status?: StoreActionPlanStatus;
     statuses?: StoreActionPlanStatus[];
@@ -58,9 +70,15 @@ export class StoreActionPlanService {
     const offset = this.normalizeOffset(input.offset);
     const statuses = this.normalizeStatuses(input.status, input.statuses);
     const period = this.normalizePeriodFilter(input.periodStart, input.periodEnd);
-    const storeIds = this.resolveAssignedStoreFilter(input.actorActionScope, input.storeId);
+    const isReportViewer = input.actorRoleCodes?.includes("REPORT_VIEWER") ?? false;
+    const storeIds = isReportViewer
+      ? input.storeId
+        ? [input.storeId]
+        : []
+      : this.resolveAssignedStoreFilter(input.actorActionScope, input.storeId);
+    const companyIds = isReportViewer ? input.actorReadScope?.companyIds ?? [] : [];
 
-    if (storeIds.length === 0) {
+    if (storeIds.length === 0 && companyIds.length === 0) {
       return buildListResponse([], {
         total: 0,
         limit,
@@ -69,6 +87,7 @@ export class StoreActionPlanService {
     }
 
     const result = await this.storeActionPlanRepository.listPlans({
+      ...(isReportViewer ? { companyIds } : {}),
       storeIds,
       statuses,
       periodStart: period?.periodStart,
@@ -85,12 +104,20 @@ export class StoreActionPlanService {
   }
 
   async getPlan(input: StoreActionPlanActionScopeInput & { actionPlanId: string }) {
-    const plan = await this.storeActionPlanRepository.getPlanById(input.actionPlanId);
+    const plan =
+      input.actorRoleCodes?.includes("REPORT_VIEWER") && input.actorReadScope
+        ? await this.storeActionPlanRepository.getPlanByIdInCompanyScope({
+            actionPlanId: input.actionPlanId,
+            companyIds: input.actorReadScope.companyIds,
+          })
+        : await this.storeActionPlanRepository.getPlanById(input.actionPlanId);
     if (!plan) {
       throw new NotFoundException("Store action plan was not found");
     }
 
-    this.assertAssignedActionStore(input.actorActionScope, plan.storeId);
+    if (!input.actorRoleCodes?.includes("REPORT_VIEWER")) {
+      this.assertAssignedActionStore(input.actorActionScope, plan.storeId);
+    }
 
     return {
       data: {

@@ -334,9 +334,28 @@ export class ReportingStoreKpiReadService {
   async getStoreMonthlyScoreBreakdown(input: {
     snapshotRunId: string;
     storeId: string;
+    companyIds?: string[];
     storeIds: string[];
   }) {
-    if (!input.storeIds.includes(input.storeId)) {
+    if (input.storeIds.length === 0 && (input.companyIds?.length ?? 0) > 0) {
+      const storeScope =
+        await this.storePerformanceReportingReadRepository.getStoreScopeById(
+          input.storeId,
+        );
+      if (
+        !storeScope ||
+        storeScope.company_id === null ||
+        !input.companyIds?.includes(storeScope.company_id)
+      ) {
+        throw new ForbiddenException(
+          "Store score breakdown is outside current company scope.",
+        );
+      }
+    }
+
+    const isCompanyScoped =
+      input.storeIds.length === 0 && (input.companyIds?.length ?? 0) > 0;
+    if (!isCompanyScoped && !input.storeIds.includes(input.storeId)) {
       throw new ForbiddenException(
         "Store score breakdown is outside current store scope.",
       );

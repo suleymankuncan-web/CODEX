@@ -7,6 +7,7 @@ describe("ReportingController", () => {
       getStoreKpiHighlights: jest.fn(async () => ({ ok: true })),
       getStoreMonthlyScoreBreakdown: jest.fn(async () => ({ ok: true })),
       getPersonnelPerformance: jest.fn(async () => ({ ok: true })),
+      getRankings: jest.fn(async () => ({ ok: true })),
     };
     const rankingService = {};
 
@@ -249,5 +250,78 @@ describe("ReportingController", () => {
     );
 
     expect(roles).toEqual(expect.arrayContaining(["STORE_MANAGER", "REGION_MANAGER"]));
+  });
+
+  it("uses the Report Viewer role company scope for KPI highlights", async () => {
+    const { controller, reportingService } = createController();
+
+    await controller.getStoreKpiHighlights(
+      {
+        user: {
+          userId: "report-viewer-user",
+          roleCodes: ["STORE_MANAGER", "REPORT_VIEWER"],
+          scope: {
+            companyIds: ["company-from-manager"],
+            regionIds: ["region-from-manager"],
+            storeIds: ["store-from-manager"],
+          },
+          roleScopes: {
+            REPORT_VIEWER: {
+              companyIds: ["company-a"],
+              regionIds: [],
+              storeIds: [],
+            },
+          },
+          actionScope: { assignedStoreIds: ["store-from-manager"] },
+        },
+      },
+      { periodType: "monthly", storeId: "store-a" },
+    );
+
+    expect(reportingService.getStoreKpiHighlights).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyIds: ["company-a"],
+        regionIds: [],
+        storeIds: [],
+        storeId: "store-a",
+      }),
+    );
+  });
+
+  it("uses the Report Viewer company scope for personnel detail", async () => {
+    const { controller, reportingService } = createController();
+
+    await controller.getPersonnelPerformance(
+      {
+        user: {
+          userId: "report-viewer-user",
+          roleCodes: ["REPORT_VIEWER"],
+          scope: {
+            companyIds: ["company-b"],
+            regionIds: [],
+            storeIds: [],
+          },
+          roleScopes: {
+            REPORT_VIEWER: {
+              companyIds: ["company-a"],
+              regionIds: [],
+              storeIds: [],
+            },
+          },
+          actionScope: { assignedStoreIds: [] },
+        },
+      },
+      "employee-a",
+      { mode: "live", periodType: "monthly" },
+    );
+
+    expect(reportingService.getPersonnelPerformance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        identityCompanyIds: ["company-a"],
+        companyIds: ["company-a"],
+        regionIds: [],
+        storeIds: [],
+      }),
+    );
   });
 });

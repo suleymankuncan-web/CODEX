@@ -9,6 +9,7 @@ function createHarness() {
   const storeActionPlanRepository = {
     createPlan: jest.fn(),
     getPlanById: jest.fn(),
+    getPlanByIdInCompanyScope: jest.fn(),
     listPlans: jest.fn(),
     updateStatus: jest.fn(),
     closePlan: jest.fn(),
@@ -262,6 +263,54 @@ describe("StoreActionPlanService", () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(storeActionPlanRepository.listPlans).not.toHaveBeenCalled();
+  });
+
+  it("lists Report Viewer plans by role-specific company scope", async () => {
+    const { service, storeActionPlanRepository } = createHarness();
+    storeActionPlanRepository.listPlans.mockResolvedValue({
+      items: [existingPlan()],
+      total: 1,
+    });
+
+    await service.listPlans({
+      actorRoleCodes: ["REPORT_VIEWER"],
+      actorReadScope: {
+        companyIds: ["00000000-0000-0000-0000-000000000001"],
+        regionIds: [],
+        storeIds: [],
+      },
+      actorActionScope: { assignedStoreIds: [unassignedStoreId] },
+      limit: 25,
+      offset: 0,
+    });
+
+    expect(storeActionPlanRepository.listPlans).toHaveBeenCalledWith({
+      companyIds: ["00000000-0000-0000-0000-000000000001"],
+      storeIds: [],
+      statuses: [],
+      periodStart: undefined,
+      periodEnd: undefined,
+      limit: 25,
+      offset: 0,
+    });
+  });
+
+  it("does not return a cross-company Report Viewer plan", async () => {
+    const { service, storeActionPlanRepository } = createHarness();
+    storeActionPlanRepository.getPlanByIdInCompanyScope.mockResolvedValue(null);
+
+    await expect(
+      service.getPlan({
+        actorRoleCodes: ["REPORT_VIEWER"],
+        actorReadScope: {
+          companyIds: ["company-a"],
+          regionIds: [],
+          storeIds: [],
+        },
+        actorActionScope: { assignedStoreIds: [] },
+        actionPlanId: "00000000-0000-0000-0000-000000000701",
+      }),
+    ).rejects.toThrow("Store action plan was not found");
   });
 
   it("returns plan detail only inside assigned action stores", async () => {

@@ -3,6 +3,7 @@ import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { WorkflowInboxService } from "../application/workflow-inbox.service";
 import { ListRequestCenterQueryDto } from "./dto/list-request-center.query";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 @Controller("workflow")
 export class WorkflowInboxController {
@@ -24,13 +25,27 @@ export class WorkflowInboxController {
         actionScope: {
           assignedStoreIds: string[];
         };
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
       };
     },
   ) {
+    const actorReadScope = request.user.roleCodes.includes("REPORT_VIEWER")
+      ? resolveReportViewerCompanyScope({
+          actorRoleCodes: request.user.roleCodes,
+          actorScope: request.user.scope,
+          roleScopes: request.user.roleScopes,
+        })
+      : undefined;
+
     return this.workflowInboxService.listInbox({
       actorRoles: request.user.roleCodes,
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      ...(actorReadScope ? { actorReadScope } : {}),
     });
   }
 
@@ -50,14 +65,28 @@ export class WorkflowInboxController {
         actionScope: {
           assignedStoreIds: string[];
         };
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
       };
     },
     @Query() query: ListRequestCenterQueryDto,
   ) {
+    const actorReadScope = request.user.roleCodes.includes("REPORT_VIEWER")
+      ? resolveReportViewerCompanyScope({
+          actorRoleCodes: request.user.roleCodes,
+          actorScope: request.user.scope,
+          roleScopes: request.user.roleScopes,
+        })
+      : undefined;
+
     return this.workflowInboxService.listRequestCenter({
       actorRoles: request.user.roleCodes,
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      ...(actorReadScope ? { actorReadScope } : {}),
       bucket: query.bucket ?? "open",
       type: query.type ?? "all",
       status: query.status ?? "all",
