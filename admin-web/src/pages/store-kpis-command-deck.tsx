@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Button } from '../components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import {
   getRankings,
   getStoreKpiHighlights,
@@ -135,6 +136,7 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
 function CommandDeckControls({ model }: { model: StoreKpiHighlightsPageModel }) {
   return (
     <>
+      {model.isReportViewer ? <StoreKpiStoreSelector model={model} /> : null}
       <PeriodControls model={model} />
       <Button
         type="button"
@@ -146,6 +148,30 @@ function CommandDeckControls({ model }: { model: StoreKpiHighlightsPageModel }) 
         {model.t('storeKpis.refreshData')}
       </Button>
     </>
+  )
+}
+
+function StoreKpiStoreSelector({ model }: { model: StoreKpiHighlightsPageModel }) {
+  return (
+    <div className="tw:flex tw:items-center tw:gap-2">
+      <span className="tw:text-xs tw:font-semibold tw:text-muted-foreground">{model.t('storeKpis.storeSelectorLabel')}</span>
+      <Select value={model.selectedStoreId} onValueChange={model.setSelectedStoreId}>
+        <SelectTrigger
+          aria-label={model.t('storeKpis.storeSelectorLabel')}
+          className="tw:h-10 tw:min-w-52 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-foreground"
+          data-testid="store-kpi-company-store-selector"
+        >
+          <SelectValue placeholder={model.t('storeKpis.storeSelectorPlaceholder')} />
+        </SelectTrigger>
+        <SelectContent>
+          {model.storeOptions.map((store) => (
+            <SelectItem key={store.storeId} value={store.storeId}>
+              {store.storeName}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 

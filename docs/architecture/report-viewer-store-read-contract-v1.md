@@ -70,12 +70,27 @@ own focused tests or the owning existing test family:
 - no POST/PATCH/PUT/DELETE, approval, assignment, checklist execution,
   workforce request, target request, or Store Action command becomes available.
 
+## DG1-B frontend evidence
+
+The company-safe backend contract is now mounted behind an explicit frontend
+allowlist. `REPORT_VIEWER` receives the Store navigation entries and direct
+routes listed above, while `/store/me` and `/store/incentives` remain denied.
+Workforce resolves to `RegionWorkforceView`; Store Action and checklist pages
+keep read-only modes; KPI selection uses only the company-filtered
+`GET /api/org/stores` response and never a global first-store fallback.
+
+The dedicated proof is `admin-web/e2e/store-report-viewer-persona.spec.ts`:
+it visits every allowlisted route, checks the two forbidden routes before
+protected requests, and rejects target/workforce/checklist/competition/action
+mutations. The pure company-store selection cases live in
+`admin-web/src/pages/store-kpi-highlights-model.unit.test.ts`.
+
 ## Implementation evidence
 
 DG1-A introduces the reusable
 `resolveReportViewerCompanyScope` boundary and applies it to the controllers
 and read services above. The successful response shapes remain unchanged.
 No database schema, migration, business-row DML, new personnel field, or
-action-scope widening is part of this contract. The next DG1-B slice may expose
-the frontend portfolio only after this inventory and the backend isolation
-tests remain green.
+action-scope widening is part of this contract. DG1-A keeps backend
+authorization authoritative; DG1-B is defense-in-depth UI exposure and does
+not widen mutation or action scope.

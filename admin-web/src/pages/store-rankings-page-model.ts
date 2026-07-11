@@ -9,7 +9,7 @@ import type {
 import { formatDate, formatNumber as formatIntlNumber } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
 
-export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN']
+export const privilegedRankingRoles = ['REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 export const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', ...privilegedRankingRoles]
 export const storeMetricCodes = ['UPT', 'ATV', 'CR', 'TARGET_ACHIEVEMENT', 'gsm_approval', 'BM_CHECKLIST', 'VM_CHECKLIST'] as const
 export const personnelMetricCodes = ['UPT', 'ATV', 'TARGET_ACHIEVEMENT'] as const

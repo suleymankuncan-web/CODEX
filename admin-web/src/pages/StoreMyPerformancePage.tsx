@@ -51,7 +51,8 @@ function canUsePersonnelPerformance(authSummary: AuthSessionSummary | null) {
     roles.includes('STORE_PERSONNEL') ||
     roles.includes('STORE_MANAGER') ||
     roles.includes('REGION_MANAGER') ||
-    roles.includes('SUPER_ADMIN')
+    roles.includes('SUPER_ADMIN') ||
+    roles.includes('REPORT_VIEWER')
   )
 }
 

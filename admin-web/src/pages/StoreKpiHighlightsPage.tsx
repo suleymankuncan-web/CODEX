@@ -35,6 +35,31 @@ export function StoreKpiHighlightsPage(input: {
     )
   }
 
+  if (model.isReportViewer && model.companyStoreQuery.isError) {
+    return (
+      <StoreSurfacePage ariaLabel={t('storeKpis.companyStoresErrorTitle')}>
+        <StoreErrorState
+          title={t('storeKpis.companyStoresErrorTitle')}
+          description={getUserFacingErrorMessage(
+            model.companyStoreQuery.error,
+            'Mağaza listesi alınamadı. Daha sonra tekrar deneyin.',
+          )}
+        />
+      </StoreSurfacePage>
+    )
+  }
+
+  if (model.isReportViewer && model.companyStoreQuery.isSuccess && model.storeOptions.length === 0) {
+    return (
+      <StoreSurfacePage ariaLabel={t('storeKpis.companyStoresEmptyTitle')}>
+        <StoreErrorState
+          title={t('storeKpis.companyStoresEmptyTitle')}
+          description={t('storeKpis.companyStoresEmptyCopy')}
+        />
+      </StoreSurfacePage>
+    )
+  }
+
   if (model.configQuery.isError && !model.configForbidden) {
     return (
       <StoreSurfacePage ariaLabel={t('storeKpis.configErrorTitle')}>

@@ -75,7 +75,7 @@ type WorkforceMode = 'region' | 'store'
 type WorkforceDialog = 'sellerCodeRequest' | 'offboardingRequest' | 'returnedRequests'
 function resolveWorkforceMode(authSummary: AuthSessionSummary | null): WorkforceMode {
   const roles = authSummary?.user.roleCodes ?? []
-  return roles.includes('REGION_MANAGER') ? 'region' : 'store'
+  return roles.includes('REGION_MANAGER') || roles.includes('REPORT_VIEWER') ? 'region' : 'store'
 }
 
 export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | null }) {

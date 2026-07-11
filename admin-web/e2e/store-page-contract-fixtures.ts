@@ -5,6 +5,7 @@ export type StoreContractPersona =
   | 'storeManager'
   | 'storePersonnel'
   | 'visualMerchandiser'
+  | 'reportViewer'
 
 export const companyId = 'company-contract-1'
 export const regionId = 'region-contract-1'
@@ -22,6 +23,7 @@ const roleByPersona: Record<StoreContractPersona, string> = {
   storeManager: 'STORE_MANAGER',
   storePersonnel: 'STORE_PERSONNEL',
   visualMerchandiser: 'VISUAL_MERCHANDISER',
+  reportViewer: 'REPORT_VIEWER',
 }
 
 const personaDisplayName: Record<StoreContractPersona, string> = {
@@ -29,12 +31,13 @@ const personaDisplayName: Record<StoreContractPersona, string> = {
   storeManager: 'Mert Alcan',
   storePersonnel: 'Ayşe Yılmaz',
   visualMerchandiser: 'Visual Merchandiser',
+  reportViewer: 'Report Viewer',
 }
 
 export function createStoreContractSession(persona: StoreContractPersona) {
   const roleCode = roleByPersona[persona]
   const isRegionManager = persona === 'regionManager'
-  const isStoreScoped = persona !== 'regionManager'
+  const isStoreScoped = persona !== 'regionManager' && persona !== 'reportViewer'
   const assignedStoreIds = persona === 'storeManager' ? [storeIds[0]] : []
   const readStoreIds = isRegionManager ? [...storeIds] : isStoreScoped ? [storeIds[0]] : []
   const actionStoreIds = persona === 'storeManager' ? [storeIds[0]] : []
@@ -152,6 +155,13 @@ function resolveStoreContractApiFallback(method: string, url: URL): JsonBody | n
   if (path === '/auth/session' || path === '/auth/bootstrap') return null
 
   if (path === '/workflow/inbox') return emptyList(url)
+  if (path === '/workflow/request-center') {
+    return {
+      ...emptyList(url),
+      summary: { done: 0, open: 0, periods: [], returned: 0 },
+    }
+  }
+  if (path === '/org/stores') return createOrgStores()
   if (path === '/feed' || path === '/feed/posts') return createFeedPosts(url)
   if (path === '/store-actions/plans') return emptyList(url)
   if (path === '/competitions') return emptyList(url)
@@ -178,11 +188,41 @@ function resolveStoreContractApiFallback(method: string, url: URL): JsonBody | n
   if (path === '/workforce/offboarding-requests') return emptyList(url)
   if (path === '/workforce/position-options') return emptyList(url)
   if (path === '/workforce/store-employees') return emptyList(url)
+  if (path === '/workforce/headcount-gap') return createHeadcountGap(url)
   if (path === '/store/me/incentives') return createStoreIncentives('own')
   if (path === '/store/incentives') return createStoreIncentives('region')
   if (path === '/admin/incentives') return createStoreIncentives('admin')
 
   return null
+}
+
+function createOrgStores() {
+  return {
+    items: storeIds.map((storeId, index) => ({
+      company_id: companyId,
+      region_id: regionId,
+      status: 'active',
+      store_code: `CONTRACT-${index + 1}`,
+      store_id: storeId,
+      store_name: ['BalÄ±kesir 10 Burda AVM', 'Bursa Downtown AVM', 'Ä°stanbul MOI AVM'][index],
+    })),
+    meta: { total: storeIds.length },
+  }
+}
+
+function createHeadcountGap(url: URL) {
+  const storeId = url.searchParams.get('storeId') ?? storeIds[0]
+  return {
+    active_headcount: '2.00',
+    active_fte: '2.00',
+    fte_gap: '0.00',
+    headcount_gap: '0.00',
+    planned_fte: '2.00',
+    planned_headcount: '2.00',
+    shortage_days: null,
+    shortage_started_on: null,
+    store_id: storeId,
+  }
 }
 
 function emptyList(url: URL) {

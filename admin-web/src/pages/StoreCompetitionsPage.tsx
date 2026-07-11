@@ -39,7 +39,7 @@ import {
 
 function canUseStoreCompetitions(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
-  return roles.includes('STORE_MANAGER') || roles.includes('STORE_PERSONNEL')
+  return roles.includes('STORE_MANAGER') || roles.includes('STORE_PERSONNEL') || roles.includes('REPORT_VIEWER')
 }
 
 function formatScore(value: number | null, partialLabel: string) {

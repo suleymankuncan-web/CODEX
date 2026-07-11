@@ -67,7 +67,7 @@ completed PR-1 without runtime behavior change; its contract covers 54 routes,
 completed PR-3: authorization changes now clear protected frontend cache state
 before a new shell renders. PR #930 completed PR-4: target and request-center
 reads are bounded without mutation, DB, or authorization-policy changes. PR
-#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS configuration; PR #939 closed provider-CA verify-full staging proof plus rotation/rollback ownership.
+#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS configuration; PR #939 closed provider-CA verify-full staging proof plus rotation/rollback ownership. PR #943 completed DG1-A: Report Viewer backend reads are bounded by role-specific company scope with cross-company, empty-scope, and mixed-role tests; frontend exposure remains the DG1-B gate.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
@@ -174,14 +174,14 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-- Begin DG1-A of the locked DG1-DG2 implementation plan from fresh main. Keep
-  every slice PR to one authorization, presentation, or evidence story.
-- Keep the truthful release boundary stable while A3 measurement and remaining
-  B1 external evidence continue under their sections above.
+- Execute DG1-B on fresh `codex/dg1-b-frontend-portfolio`: expose the explicit
+  Report Viewer Store read-only portfolio, company selector, and forbidden-
+  route/no-request proof. Keep this PR to one authorization/presentation story.
+- Keep the truthful release boundary stable while A3 measurement and remaining B1 external evidence continue under their sections above.
 
 Next:
-1. Implement the role-specific Report Viewer company-read backend boundary and
-   its positive, negative, empty-scope, and mixed-role tests.
+1. Merge DG1-B only after targeted persona, truth, lint/build, and canonical
+   release checks are green; then start DG1-C incentive closure from fresh main.
 2. Follow the DG1-DG2 train; never run staging preflight before verify-full + CA.
 3. Then approve exact staging identity and record sanitized read-only counts;
    any non-zero result blocks PR-10 and triggers no repair.

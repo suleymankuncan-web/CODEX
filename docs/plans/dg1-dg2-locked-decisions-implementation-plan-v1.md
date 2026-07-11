@@ -535,24 +535,24 @@ Required backend allowlist changes:
 
 Tasks:
 
-- [ ] Resolve company IDs from `roleScopes.REPORT_VIEWER`, with only the
+- [x] Resolve company IDs from `roleScopes.REPORT_VIEWER`, with only the
       documented development fallback.
-- [ ] Generate and review the exhaustive route-to-GET inventory before adding
+- [x] Generate and review the exhaustive route-to-GET inventory before adding
       any new frontend entitlement.
-- [ ] Audit and, where necessary, fix every existing allowlisted GET so it does
+- [x] Audit and, where necessary, fix every existing allowlisted GET so it does
       not authorize Report Viewer from a unioned scope.
-- [ ] Reject Report Viewer with an empty company scope.
-- [ ] Apply company filters in list repository SQL.
-- [ ] For direct store, employee, and action-plan IDs, resolve target company
+- [x] Reject Report Viewer with an empty company scope.
+- [x] Apply company filters in list repository SQL.
+- [x] For direct store, employee, and action-plan IDs, resolve target company
       and reject cross-company reads before returning data.
-- [ ] Use current active-assignment company for personnel authorization.
-- [ ] Keep every POST/PATCH, action-scope, and action-assisted lookup contract
+- [x] Use current active-assignment company for personnel authorization.
+- [x] Keep every POST/PATCH, action-scope, and action-assisted lookup contract
       unchanged.
-- [ ] Add same-company, cross-company, empty-scope, and mixed-role escalation
+- [x] Add same-company, cross-company, empty-scope, and mixed-role escalation
       tests for every changed endpoint family.
-- [ ] Prove cross-company denials return no target payload and do not run an
+- [x] Prove cross-company denials return no target payload and do not run an
       unscoped repository read.
-- [ ] Link this plan from `docs/README.md` and update `current-state.md`.
+- [x] Link this plan from `docs/README.md` and update `current-state.md`.
 
 Do not change frontend route access in DG1-A. Backend must be safe before the
 company portfolio is exposed.
@@ -583,27 +583,27 @@ Primary frontend points:
 
 Tasks:
 
-- [ ] Encode the exact allowlist; do not use a generic “all Store routes” role
+- [x] Encode the exact allowlist; do not use a generic “all Store routes” role
       shortcut.
-- [ ] Add Report Viewer to rankings, competitions, workforce, and any missing
+- [x] Add Report Viewer to rankings, competitions, workforce, and any missing
       read-only navigation entries.
-- [ ] Keep `/store/me` and `/store/incentives` forbidden.
-- [ ] Use a company store selector/portfolio for KPI and workforce when no
+- [x] Keep `/store/me` and `/store/incentives` forbidden.
+- [x] Use a company store selector/portfolio for KPI and workforce when no
       store ID is preselected; never select an arbitrary first global store.
-- [ ] Use `GET /api/org/stores` only after DG1-A proves or fixes its
+- [x] Use `GET /api/org/stores` only after DG1-A proves or fixes its
       role-specific Report Viewer company scope.
-- [ ] Hide all mutation controls, request/form modes, visit execution, and
+- [x] Hide all mutation controls, request/form modes, visit execution, and
       action-assisted lookup controls for Report Viewer.
-- [ ] Add one dedicated Report Viewer Playwright persona that visits every
+- [x] Add one dedicated Report Viewer Playwright persona that visits every
       allowlisted route and asserts forbidden routes make no protected request.
-- [ ] Add negative UI/network assertions for target approval/create, Store
+- [x] Add negative UI/network assertions for target approval/create, Store
       Action commands, workforce requests, checklist execution, competition
       writes, and incentives.
-- [ ] Update Auth Admin preview, `pilot-route-role-matrix.md`, and
+- [x] Update Auth Admin preview, `pilot-route-role-matrix.md`, and
       `pilot-access-matrix-v1.md` to describe company read versus no action.
-- [ ] Improve the authorization truth generator so approved endpoint
+- [x] Improve the authorization truth generator so approved endpoint
       expectations are assertions, not only three hard-coded drift fixtures.
-- [ ] Regenerate operating truth and require zero approved route/endpoint
+- [x] Regenerate operating truth and require zero approved route/endpoint
       drift without hiding an unrelated mismatch.
 
 Rollback: revert frontend allowlist/persona/truth changes together. DG1-A's safe

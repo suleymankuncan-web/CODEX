@@ -29,6 +29,7 @@ spec and the normal release check required by the changed files.
 | Checklist, rankings and KPI surfaces | Mocked contract coverage | `store-checklists-contracts.spec.ts`, `store-rankings-contracts.spec.ts`, and `store-kpis-contracts.spec.ts` lock the high-risk filters, ranking/profile alignment, checklist BM/VM visibility, and score-source rows. |
 | Incentives, targets and workforce surfaces | Mocked contract coverage | `store-incentives-contracts.spec.ts`, `store-targets-contracts.spec.ts`, and `store-workforce-contracts.spec.ts` lock review/edit surfaces, month/year controls, workforce row behavior, and core role boundaries. |
 | Tasks, feed, reports, home, Store Me and personnel surfaces | Mocked contract coverage | `store-tasks-contracts.spec.ts`, `store-feed-contracts.spec.ts`, `store-reports-contracts.spec.ts`, `store-home-contracts.spec.ts`, `store-me-contracts.spec.ts`, and `store-personnel-contracts.spec.ts` lock remaining store workflows and persona boundaries. |
+| Report Viewer company portfolio | Mocked persona coverage | `store-report-viewer-persona.spec.ts` visits the explicit company read allowlist, checks `/store/me` and `/store/incentives` denial, and asserts no action/request network calls. |
 | Staging provider behavior | Live/staging coverage | Use the existing staging auth and persona smoke commands when Clerk/session/provider behavior changes. The store contract suite does not prove provider availability. |
 | Real production data quality | Intentionally deferred | The contract suite uses stable fixtures. It does not prove Nebim feed quality, live Supabase row completeness, or pilot roster reconciliation unless a live/staging smoke is run and recorded separately. |
 
@@ -39,6 +40,7 @@ The `test:e2e:store-contracts` script must include every store contract spec:
 - `store-page-contracts.spec.ts`
 - `store-checklists-contracts.spec.ts`
 - `store-rankings-contracts.spec.ts`
+- `store-report-viewer-persona.spec.ts`
 - `store-kpis-contracts.spec.ts`
 - `store-incentives-contracts.spec.ts`
 - `store-targets-contracts.spec.ts`

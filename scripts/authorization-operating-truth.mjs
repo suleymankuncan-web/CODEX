@@ -14,37 +14,87 @@ const routeDriftIds = new Map([
   ['/store/personnel/:employeeId', 'store-personnel-preview-missing-report-viewer'],
   ['/store/tasks', 'store-tasks-preview-extra-roles'],
 ])
+const routeDriftGates = new Map([
+  ['/store/incentives', 'DG1-C'],
+])
 
-const endpointDrifts = [
+const endpointRoleExpectations = [
   {
-    id: 'store-incentives-store-manager-backend-only',
+    id: 'store-incentives-read-roles',
     route: '/store/incentives',
     endpoint: 'GET /api/store/incentives',
-    direction: 'backend_declares_role_missing_from_route',
-    roles: ['STORE_MANAGER'],
-    gate: 'DG-1',
+    method: 'Get',
+    decorator: 'incentives',
+    expectedRoles: ['REGION_MANAGER'],
+    gate: 'DG1-C',
     status: 'decision_gated',
     source: 'backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts',
   },
   {
-    id: 'store-kpi-report-viewer-frontend-only',
+    id: 'store-kpi-read-roles',
     route: '/store/kpis',
     endpoint: 'GET /api/reports/store-kpi-highlights',
-    direction: 'route_role_missing_from_backend_decorator',
-    roles: ['REPORT_VIEWER'],
-    gate: 'DG-1',
-    status: 'decision_gated',
+    method: 'Get',
+    decorator: 'store-kpi-highlights',
+    expectedRoles: ['STORE_MANAGER', 'REGION_MANAGER', 'REPORT_VIEWER'],
+    gate: null,
+    status: 'approved',
     source: 'backend/nestjs/src/modules/store-ops/web/reporting.controller.ts',
   },
   {
-    id: 'store-personnel-report-viewer-frontend-only',
+    id: 'store-personnel-read-roles',
     route: '/store/personnel/:employeeId',
     endpoint: 'GET /api/reports/personnel-performance/:employeeId',
-    direction: 'route_role_missing_from_backend_decorator',
-    roles: ['REPORT_VIEWER'],
-    gate: 'DG-1',
-    status: 'decision_gated',
+    method: 'Get',
+    decorator: 'personnel-performance/:employeeId',
+    expectedRoles: ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'],
+    gate: null,
+    status: 'approved',
     source: 'backend/nestjs/src/modules/store-ops/web/reporting.controller.ts',
+  },
+  {
+    id: 'store-ranking-read-roles',
+    route: '/store/rankings',
+    endpoint: 'GET /api/reports/rankings',
+    method: 'Get',
+    decorator: 'rankings',
+    expectedRoles: ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'],
+    gate: null,
+    status: 'approved',
+    source: 'backend/nestjs/src/modules/store-ops/web/reporting.controller.ts',
+  },
+  {
+    id: 'store-competition-read-roles',
+    route: '/store/competitions',
+    endpoint: 'GET /api/competitions',
+    method: 'Get',
+    decorator: '',
+    expectedRoles: ['SUPER_ADMIN', 'HR_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL'],
+    gate: null,
+    status: 'approved',
+    source: 'backend/nestjs/src/modules/store-ops/web/competition.controller.ts',
+  },
+  {
+    id: 'store-action-plan-read-roles',
+    route: '/store/tasks',
+    endpoint: 'GET /api/store-actions/plans',
+    method: 'Get',
+    decorator: 'plans',
+    expectedRoles: ['STORE_MANAGER', 'SUPER_ADMIN', 'REGION_MANAGER', 'REPORT_VIEWER'],
+    gate: null,
+    status: 'approved',
+    source: 'backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts',
+  },
+  {
+    id: 'store-workforce-read-roles',
+    route: '/store/workforce',
+    endpoint: 'GET /api/workforce/store-employees',
+    method: 'Get',
+    decorator: 'store-employees',
+    expectedRoles: ['STORE_MANAGER', 'REGION_MANAGER', 'HR_ADMIN', 'SUPER_ADMIN', 'REPORT_VIEWER'],
+    gate: null,
+    status: 'approved',
+    source: 'backend/nestjs/src/modules/store-ops/web/workforce.controller.ts',
   },
 ]
 
@@ -110,7 +160,7 @@ export function buildAuthorizationOperatingTruth(input = {}) {
     .map((drift) => ({
       id: routeDriftIds.get(drift.route) ?? `unclassified:${drift.route}`,
       ...drift,
-      gate: 'DG-1',
+      gate: routeDriftGates.get(drift.route) ?? 'DG-1',
       status: 'decision_gated',
     }))
     .sort((left, right) => left.id.localeCompare(right.id))
@@ -119,6 +169,38 @@ export function buildAuthorizationOperatingTruth(input = {}) {
     .filter((row) => !activeRouteKeys.has(routeKey(row.surface, row.route)))
     .map((row) => ({ surface: row.surface, route: row.route }))
     .sort((left, right) => routeKey(left.surface, left.route).localeCompare(routeKey(right.surface, right.route)))
+
+  const endpointRoleEvidence = endpointRoleExpectations.map((expectation) => ({
+    ...expectation,
+    actualRoles: parseEndpointRoles(rootDir, expectation),
+  }))
+  const endpointDrifts = endpointRoleEvidence
+    .map((expectation) => {
+      const expected = new Set(expectation.expectedRoles)
+      const actual = new Set(expectation.actualRoles)
+      const missingRoles = [...expected].filter((role) => !actual.has(role)).sort()
+      const extraRoles = [...actual].filter((role) => !expected.has(role)).sort()
+      if (missingRoles.length === 0 && extraRoles.length === 0) return null
+
+      return {
+        id: expectation.id === 'store-incentives-read-roles'
+          ? 'store-incentives-store-manager-backend-only'
+          : `${expectation.id}-mismatch`,
+        route: expectation.route,
+        endpoint: expectation.endpoint,
+        direction: extraRoles.length > 0
+          ? 'backend_declares_role_missing_from_route'
+          : 'route_role_missing_from_backend_decorator',
+        roles: extraRoles.length > 0 ? extraRoles : missingRoles,
+        expectedRoles: expectation.expectedRoles,
+        actualRoles: expectation.actualRoles,
+        gate: expectation.gate,
+        status: expectation.status === 'approved' ? 'contract_failed' : expectation.status,
+        source: expectation.source,
+      }
+    })
+    .filter((drift) => drift !== null)
+    .sort((left, right) => left.id.localeCompare(right.id))
 
   return {
     schemaVersion: 1,
@@ -137,13 +219,29 @@ export function buildAuthorizationOperatingTruth(input = {}) {
       directMatrixRouteCount: routes.filter((route) => route.matrixOwnership === 'direct').length,
       routePreviewDriftCount: routePreviewDrifts.length,
       endpointDriftCount: endpointDrifts.length,
+      endpointExpectationCount: endpointRoleEvidence.length,
       previewOrphanCount: previewOrphans.length,
     },
     routes,
     routePreviewDrifts,
+    endpointRoleEvidence,
     endpointDrifts,
     previewOrphans,
   }
+}
+
+function parseEndpointRoles(rootDir, expectation) {
+  const source = readSource(rootDir, expectation.source)
+  const decorator = expectation.decorator
+    ? `@${expectation.method}\\("${escapeRegExp(expectation.decorator)}"\\)`
+    : `@${expectation.method}\\(\\)`
+  const match = new RegExp(`${decorator}[\\s\\S]*?@RequireRoles\\(([\\s\\S]*?)\\)`).exec(source)
+  if (!match) return []
+  return uniqueSorted([...match[1].matchAll(/(['"])([^'"]+)\1/g)].map((role) => role[2]))
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')
 }
 
 function parsePermissionPreview(rootDir) {

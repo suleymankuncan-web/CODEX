@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-11T16:39:47.976Z",
+  "generatedAt": "2026-07-11T17:39:12.910Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,7 +12,7 @@
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 156,
     "openApiEndpointCount": 192,
-    "routeApiEdgeCount": 227,
+    "routeApiEdgeCount": 228,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
@@ -770,6 +770,7 @@
       "componentFile": "admin-web/src/pages/StoreCompetitionsPage.tsx",
       "guard": "StoreRouteGuard",
       "roles": [
+        "REPORT_VIEWER",
         "STORE_MANAGER",
         "STORE_PERSONNEL"
       ],
@@ -951,6 +952,7 @@
       "guard": "StoreRouteGuard",
       "roles": [
         "REGION_MANAGER",
+        "REPORT_VIEWER",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
@@ -1082,6 +1084,7 @@
       "guard": "StoreRouteGuard",
       "roles": [
         "REGION_MANAGER",
+        "REPORT_VIEWER",
         "STORE_MANAGER"
       ],
       "authorization": {
@@ -8253,6 +8256,11 @@
         "id": "edge:route:store:/store/kpis:api:116",
         "routeId": "route:store:/store/kpis",
         "apiCallId": "api:116"
+      },
+      {
+        "id": "edge:route:store:/store/kpis:api:150",
+        "routeId": "route:store:/store/kpis",
+        "apiCallId": "api:150"
       },
       {
         "id": "edge:route:store:/store/me:api:104",

@@ -60,7 +60,7 @@ function canUseWorkflowInbox(authSummary: AuthSessionSummary | null) {
 
 function canReadStoreActionPlans(authSummary: AuthSessionSummary | null) {
   const roles = authSummary?.user.roleCodes ?? []
-  return roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN') || roles.includes('REGION_MANAGER')
+  return roles.includes('STORE_MANAGER') || roles.includes('SUPER_ADMIN') || roles.includes('REGION_MANAGER') || roles.includes('REPORT_VIEWER')
 }
 
 function canMutateStoreActionPlans(authSummary: AuthSessionSummary | null) {
