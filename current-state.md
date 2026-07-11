@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-10
+Last verified: 2026-07-11
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A
 cold reader should recover the current decision, external blockers, and next
@@ -41,8 +41,9 @@ when the decision needs them.
   integration remain parked unless a real trigger and owner decision reopen one.
 - Power BI/Excel remains the current operating data path; JSON integration is
   suspended pending a real provider contract and reconciliation plan.
-- Runtime work remains parked unless a factual P0/P1 pilot or demo finding has
-  one scoped specification, verification path, and rollback story.
+- Runtime work remains parked except for the owner-opened DG1-DG2 remediation
+  train; any other runtime line still requires a factual P0/P1 finding or a
+  newer explicit owner decision.
 
 ## Current Plan Execution Truth
 
@@ -54,16 +55,19 @@ The owner also approved autonomous execution of
 `docs/plans/project-wide-audit-remediation-plan-v1.md` on 2026-07-10. Its first
 slice is the authorization operating-truth contract: complete route ownership,
 preview/runtime drift, and backend-endpoint drift become machine-visible before
-any permission behavior changes. DG-1 product decisions are locked but their
-runtime implementation remains unopened; DG-2 still gates live DB cleanup,
-DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Vercel env boundaries configured; API, worker, and frontend staging receipts are verified, and merged PR #941 carries the exact frontend CSP ingest-origin fix. Production activation remains gated.
+any permission behavior changes. DG-1 and the real-data-preserving DG-2 policy
+are locked in `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md`:
+execute the company-read/no-action Report Viewer allowlist, incentive closure,
+read-only production Session, honest Norm Kadro projection reversal, and safe
+verify-full preflight in order. Constraints still require live evidence.
+DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Vercel env boundaries configured; API, worker, and frontend staging receipts are verified, merged PR #941 carries the frontend CSP ingest-origin fix, and merged PR #942 records the sanitized staging receipts. Production activation remains gated.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
 33 direct matrix routes, and three preview plus three backend drifts. PR #929
 completed PR-3: authorization changes now clear protected frontend cache state
 before a new shell renders. PR #930 completed PR-4: target and request-center
 reads are bounded without mutation, DB, or authorization-policy changes. PR
-#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS-readiness configuration; the DG-3 branch targets `verify-full` for the Render API and worker, and the owner has now completed provider CA installation plus staging proof.
+#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS configuration; PR #939 closed provider-CA verify-full staging proof plus rotation/rollback ownership.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
@@ -170,20 +174,18 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-- Keep the audit remediation runtime train parked after PR #936; all remaining
-  implementation slices require an owner, safe-database, or provider gate.
+- Begin DG1-A of the locked DG1-DG2 implementation plan from fresh main. Keep
+  every slice PR to one authorization, presentation, or evidence story.
 - Keep the truthful release boundary stable while A3 measurement and remaining
   B1 external evidence continue under their sections above.
 
 Next:
-1. Supply DG-1's four authorization product decisions before PR-2 changes any
-   runtime access.
-2. Approve an exact staging database identity and run the read-only PR-9
-   preflight; classify every non-zero result before DG-2 can open PR-10.
-3. PR #939 is merged with required checks passed; keep its DG-3 proof as the
-   current TLS baseline.
-4. Complete the DG-4 backend/worker PR, run the temporary staging smoke, and
-   record the sanitized Sentry receipt before enabling the frontend slice.
+1. Implement the role-specific Report Viewer company-read backend boundary and
+   its positive, negative, empty-scope, and mixed-role tests.
+2. Follow the DG1-DG2 train; never run staging preflight before verify-full + CA.
+3. Then approve exact staging identity and record sanitized read-only counts;
+   any non-zero result blocks PR-10 and triggers no repair.
+4. Keep merged DG-3/DG-4 receipts as baselines; broad production remains gated.
 5. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
    repeat the successful 5 July mutations solely to improve documentation.
 
@@ -225,8 +227,8 @@ Current control references:
 - Repeatable runbooks: `docs/plans/runbook-registry-v1.md`.
 - Owner-approved, evidence-gated implementation plan:
   `docs/plans/project-analysis-implementation-plan-v1.md`.
-- Owner-approved project-wide audit remediation plan:
-  `docs/plans/project-wide-audit-remediation-plan-v1.md`.
+- Audit source and locked DG1-DG2 execution: `docs/plans/project-wide-audit-remediation-plan-v1.md`
+  and `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md`.
 - Source-derived authorization operating truth:
   `docs/architecture/authorization-operating-truth-v1.json`.
 - Current practical actions: `docs/plans/active-next-actions.md`.

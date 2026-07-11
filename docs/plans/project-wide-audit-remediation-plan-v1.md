@@ -874,6 +874,20 @@ Default if no owner decision:
 - keep PR-2 blocked;
 - PR-1 may still make drift visible through tests and inventory.
 
+Owner resolution recorded 2026-07-11:
+
+- Report Viewer is a role-specific, company-scoped upper-management read role
+  for the explicit Store route allowlist;
+- no Report Viewer action scope or mutation role is added;
+- Store Manager and store teams do not receive incentive visibility; the
+  Region Manager route contract applies to ordinary Store roles, existing
+  Super Admin emergency bypass stays unchanged, and backend retirement requires
+  read-only consumer/usage classification;
+- non-development Admin Session is read-only while local development retains
+  diagnostics;
+- implementation is split into the bounded train in
+  `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md`.
+
 ### DG-2 — Live Database Invariant Evidence
 
 Required before: PR-10
@@ -889,6 +903,18 @@ Default if unavailable:
 
 - keep PR-10 blocked;
 - do not infer data cleanliness from schema or tests.
+
+Owner resolution recorded 2026-07-11:
+
+- staging business data is real and must be preserved;
+- the only demo cleanup is the Norm Kadro store turnover percentage projection
+  introduced for presentation; reverse that projection without data mutation;
+- this preservation decision does not supply live invariant counts or choose
+  ASSIGN/TARGET enforcement semantics;
+- the standalone preflight runner must first use the DG-3 verify-full + CA
+  connection contract, then an approved read-only staging run may provide the
+  remaining evidence;
+- PR-10 remains conditional until those inputs are complete.
 
 ### DG-3 — Database Certificate Contract
 
@@ -1598,25 +1624,25 @@ guards, and documentation and explicitly changes no runtime behavior.
 | Pull request | Status | Decision/evidence |
 | --- | --- | --- |
 | PR-1 Authorization Operating Truth Contract | complete | PR #927 merged as `3f04c24e`; 54 active routes, 33 direct matrix routes, three route/preview drifts, and three route/backend drifts are machine-visible without runtime authorization changes |
-| PR-2 Store Authorization Runtime Alignment | blocked_decision | DG-1 |
+| PR-2 Store Authorization Runtime Alignment | approved_split_not_started | DG-1 is locked; execute the Report Viewer company-read, frontend read-only portfolio, incentive closure, and production-session slices through `dg1-dg2-locked-decisions-implementation-plan-v1.md` |
 | PR-3 Session-Scoped Query Cache Isolation | complete | PR #929 merged as `46d20262`; effective-authorization changes now remove prior protected query/mutation state before the new shell renders, while same-authorization renewal remains stable |
 | PR-4 Bounded Target Request Queues | complete | PR #930 merged as `bfa2f83c`; Admin and Store target reads are bounded, Store Approvals uses a scoped paged request-center read, and target/workforce mutation, DB, and authorization contracts remain unchanged |
 | PR-5 Europe/Istanbul Business Date Contract | complete | PR #931 merged as `7495624f`; shared Europe/Istanbul business-date defaults and calendar arithmetic are guarded while UTC timestamp instants, API, DB, and authorization contracts remain unchanged |
 | PR-6 Active Surface Localization Closure | complete | PR #932 merged as `2bc612d2`; typed TR/EN ownership, source/technical allowlists, EN-to-TR acceptance tests, bounded raw-copy/mojibake guard, required checks, and Vercel are green |
 | PR-7 Keyboard And Accessibility Foundation | complete | PR #933 merged as `4639bd05`; native Master Data selection, Admin/Store skip links, two bounded axe seeds, local canonical release, required aggregate, targeted frontend, and Vercel are green |
 | PR-8 System-Flow Transitive Precision And Target Typing | complete | PR #934 merged as `f53c274d`; transitive called-wrapper evidence, cycle/duplicate safety, unresolved-path classification, current request-center fixture, deterministic skip-link evidence, root release, aggregate gate, and Vercel are green |
-| PR-9 Database Invariant Preflight Evidence | partial_complete_input_gated | PR #935 merged as `5b93988b`; read-only runner, redaction/classification tests, 59-migration clean disposable smoke, exact known-violation fixture, rollback proof, root release, aggregate gate, and Vercel are green; approved staging evidence and business decisions remain blocked |
+| PR-9 Database Invariant Preflight Evidence | partial_complete_input_gated | PR #935 merged as `5b93988b`; disposable evidence is green, but the standalone runner must reuse the verified TLS pool contract before staging because its current `verify-full` path resolves to `ssl:false`; approved staging counts and business decisions remain blocked |
 | PR-10 Database Integrity Constraints | blocked_external | DG-2 |
-| PR-11 Database Client TLS And Timeout Resilience | partial_complete_input_gated | PR #936 merged as `271bba3f`; validated pool/polling/timeouts, verify-full-capable secret-safe CA mapping, honest TLS readiness, 1155 backend tests, 541 root contracts, exact-head local/root remote release, rehearsal, aggregate, and Vercel are green; DG-3 still blocks provider activation/smoke |
-| PR-12 Real External Error Delivery | blocked_external | DG-4 |
+| PR-11 Database Client TLS And Timeout Resilience | complete_staging | PR #936 delivered validated pool/timeouts and verify-full CA mapping; PR #939 records provider CA rotation, verified API/worker staging proof, and rollback ownership. Broad production remains separately gated |
+| PR-12 Real External Error Delivery | complete_staging | PR #940 delivered gated backend/worker Sentry delivery, PR #941 delivered frontend delivery plus CSP ingest allowance, and PR #942 records sanitized API/worker/frontend receipts. Production activation remains gated |
 
 Update this table only from verified current state. Do not record a pull request
 as complete before merge and post-merge verification.
 
-Repository-actionable implementation is exhausted at this point. PR-2, PR-10,
-verify-full activation, and PR-12 must remain parked until DG-1, DG-2, DG-3,
-or DG-4 respectively receives the named real input; local tests or docs cannot
-substitute for those gates.
+Repository-actionable DG-1 implementation and DG-2 presentation/TLS-preflight
+hardening are now open through the locked implementation plan. PR-10 remains
+parked until approved read-only staging counts, classifications, semantics, and
+lock evidence exist; local tests or docs cannot substitute for those inputs.
 
 ## 23. Definition Of Done
 

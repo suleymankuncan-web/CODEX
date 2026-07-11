@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-10
+Last verified: 2026-07-11
 
 ## Reader And Action
 
@@ -32,6 +32,8 @@ The project is in controlled pilot execution mode.
 - Separate mobile app: discovery is documented; implementation is `Parked`.
 - Generic architecture/refactor train: `Parked`; the completed project analysis
   did not authorize a broad code train without a concrete runtime blocker.
+- DG1-DG2 remediation: `Active` by explicit owner decision; execute only the
+  bounded authorization, presentation-honesty, and read-only evidence train.
 - Process/CI alignment: A1/A2/A3 and the bounded D1 unit-test seed are
   implemented; A3's ten-run p95 observation remains pending external PR
   traffic.
@@ -41,18 +43,21 @@ The project is in controlled pilot execution mode.
 
 ## What We Do Now
 
-1. Keep PR #917's required-release aggregate and PR #918's single full-release
+1. Execute DG1-A of
+   `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md` from fresh
+   main; keep each later PR to its named story and stop at evidence gates.
+2. Keep PR #917's required-release aggregate and PR #918's single full-release
    owner stable; do not reintroduce duplicate merge-decision E2E work.
-2. Observe the next ten successful root-release PR runs and record A3's dated
+3. Observe the next ten successful root-release PR runs and record A3's dated
    p95/no-change decision without reducing test coverage.
-3. Preserve the successful 5 July owner-attested mutation observations and
+4. Preserve the successful 5 July owner-attested mutation observations and
    obtain only the remaining safe read-only B1 evidence; do not create a
    runtime PR for missing access, context, or trace detail.
-4. If a real pilot/demo finding arrives, record and classify it as
+5. If a real pilot/demo finding arrives, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
-5. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
+6. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
    surface, risk, verification, and rollback match.
-6. Keep evidence sanitized and maintain the no-delete workspace boundary.
+7. Keep evidence sanitized and maintain the no-delete workspace boundary.
 
 ## What We Do Not Do Now
 
@@ -63,7 +68,7 @@ The project is in controlled pilot execution mode.
 - Do not reopen broad refactor without a concrete trigger.
 - Do not change auth, API response shape, DB, provider config, queue posture,
   KPI scoring, checklist weights, import lifecycle, or workflow semantics
-  unless explicitly scoped.
+  outside the explicitly scoped DG1-DG2 train or a newer owner decision.
 - Do not persist bearer, id, access, refresh, provider, or secret values in
   browser-readable storage for a launch browser session.
 
@@ -73,6 +78,7 @@ The project is in controlled pilot execution mode.
 | --- | --- |
 | Start from the library | `docs/README.md` |
 | Execute project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` |
+| Execute locked DG1-DG2 decisions | `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md` |
 | See active decisions | `docs/plans/decision-registry-v1.md` |
 | Pick an operating checklist | `docs/plans/runbook-registry-v1.md` |
 | Execute next growth tracks | `docs/plans/project-growth-execution-roadmap-v1.md` |
@@ -94,7 +100,7 @@ The project is in controlled pilot execution mode.
 | Controlled pilot | Continue | Persona, route, Store Action, upload, staging readiness, and free-tier ops posture evidence cover the current scoped pilot path. |
 | Broad production | No-Go | Persistent Redis, managed recovery/PITR/RPO/RTO, final incident/app-level tracking posture, and owner acceptance remain production requirements. |
 | Store Action | Continue in current controlled scope | Manager assigned-store command path is proven; wider sources/actions need separate decision. |
-| Auth and scope | Guarded | Application DB assignments remain source of truth; role/scope changes require evidence rerun. |
+| Auth and scope | Guarded / bounded train active | Application DB assignments remain source of truth; only the locked DG1 company-read/incentive changes are open and require full positive/negative evidence. |
 | Launch browser session security | Guarded / staging proof passed | Local implementation and guards are closed in `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`; real Region Manager staging cookie-session proof is recorded in `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`. |
 | Imports | Continue current Excel/Power BI path | JSON provider integration remains parked. |
 | Refactor | Closed as broad workstream | Only concrete product/risk/refactor triggers reopen code movement. |
@@ -108,10 +114,10 @@ The project is in controlled pilot execution mode.
 If no newer user instruction overrides this board, the next best default action
 is:
 
-1. observe the A3 ten-run root-release sample without opening another CI train,
-2. obtain the approved B1 input needed for one factual controlled-pilot flow,
-3. select only a P0/P1 finding-specific runtime spec or explicitly keep runtime
-   work parked,
+1. execute the next bounded slice in the locked DG1-DG2 plan,
+2. observe A3 release samples and obtain one safe remaining B1 input in
+   parallel,
+3. keep every unrelated runtime line parked,
 4. update registries only when a decision or procedure changes.
 
 ## Stop Rules
