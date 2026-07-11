@@ -27,8 +27,8 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `DB_IDLE_TIMEOUT_MS` | Backend/Data owner | Render backend env | Internal | Must be a positive integer idle-client eviction budget. | `30000` |
 | `DB_QUERY_TIMEOUT_MS` | Backend/Data owner | Render backend env | Internal | Must be a positive integer and no lower than `DB_STATEMENT_TIMEOUT_MS`. | `65000` |
 | `DB_STATEMENT_TIMEOUT_MS` | Backend/Data owner | Render backend env | Internal | Must be a positive integer no greater than `DB_QUERY_TIMEOUT_MS`. | `60000` |
-| `DB_SSL_MODE` | Backend/Data owner | Render backend env | Internal | Production requires `require` or `verify-full`; broad production requires provider-proven `verify-full`. Current controlled-pilot staging uses `require` and is encrypted-unverified. | `disable` |
-| `DB_SSL_CA` | Backend/Data owner | Render backend secret env | Secret | Required only for `verify-full`; populate only from the DG-3 provider certificate contract. | Empty placeholder. |
+| `DB_SSL_MODE` | Project owner | Render backend env | Internal | Production requires `require` or `verify-full`; DG-3 target staging posture is `verify-full` and must not be called active until CA secret plus staging health proof exist. | `disable` |
+| `DB_SSL_CA` | Project owner | Render backend secret env | Secret | Required for the DG-3 `verify-full` target; populate only from the Supabase provider certificate contract and never record the value. | Empty placeholder. |
 | `AUTH_MODE` | Auth owner | Render backend env | Internal | Must be `jwt` for real environments. | `mock` |
 | `AUTH_PROVIDER_KEY` | Auth owner | Render backend env | Public | Must match the provider namespace used in `ops.user_account.auth_provider`; Clerk environments use `clerk`. | `oidc` |
 | `ALLOW_MOCK_AUTH` | Auth owner | Render backend env | Internal | Must be `false` or unset in production-like environments. | `true` |
@@ -88,8 +88,8 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `DB_IDLE_TIMEOUT_MS` | P1 | Positive idle-client eviction budget. | Defaults to `30000`. |
 | `DB_QUERY_TIMEOUT_MS` | P1 | Positive client query budget no lower than the statement timeout. | Defaults to `65000`. |
 | `DB_STATEMENT_TIMEOUT_MS` | P1 | Positive server statement budget no greater than the query timeout. | Defaults to `60000`. |
-| `DB_SSL_MODE` | P0 | Production requires `require` or `verify-full`; broad production requires provider-proven `verify-full`. | Local default is `disable`; controlled-pilot staging `require` is reported as encrypted-unverified. |
-| `DB_SSL_CA` | P0 conditional | Required for `verify-full`; must come from the DG-3 provider certificate contract. | Secret; committed example remains empty. |
+| `DB_SSL_MODE` | P0 | Production requires `require` or `verify-full`; DG-3 target staging posture is provider-proven `verify-full`. | Local default is `disable`; activation remains pending until `DB_SSL_CA` is installed and `/api/health` reports `encrypted-verified`. |
+| `DB_SSL_CA` | P0 conditional | Required for `verify-full`; must come from the Supabase provider certificate contract. | Secret; committed example remains empty and the value is never logged. |
 | `AUTH_MODE` | P0 | Must be `jwt` for real environments. | Local may use `mock`. |
 | `AUTH_PROVIDER_KEY` | P0 | Must match the provider subject namespace, such as `clerk` for Clerk staging. | Default `oidc`; used when mapping JWT `sub` to `ops.user_account.auth_provider/provider_subject`. |
 | `ALLOW_MOCK_AUTH` | P0 | Must be `false` or unset in production. | Production must not allow mock auth. |

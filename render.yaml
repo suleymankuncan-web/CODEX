@@ -28,7 +28,9 @@ services:
       - key: DB_STATEMENT_TIMEOUT_MS
         value: "60000"
       - key: DB_SSL_MODE
-        value: require
+        value: verify-full
+      - key: DB_SSL_CA
+        sync: false
       - key: AUTH_MODE
         value: jwt
       - key: AUTH_PROVIDER_KEY
@@ -89,7 +91,9 @@ services:
       - key: DB_STATEMENT_TIMEOUT_MS
         value: "60000"
       - key: DB_SSL_MODE
-        value: require
+        value: verify-full
+      - key: DB_SSL_CA
+        sync: false
       - key: QUEUE_BACKEND
         value: bullmq
       - key: REDIS_URL

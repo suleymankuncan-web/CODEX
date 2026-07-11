@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-06-12
+Last verified: 2026-07-11
 
 ## Reader And Action
 
@@ -41,6 +41,7 @@ procedures.
 | Rebuild persona evidence matrix | `docs/plans/pilot-persona-evidence-runbook-v1.md` | Persona accounts for active role set | Route visibility, backend smoke, read/action scope notes | Any role cannot be proven safely. |
 | Prove Store Action command path | `docs/evidence/pilot-readiness/2026-05-23-store-action-command-live-proof-v1.md` | Real `STORE_MANAGER` session and assigned/unassigned stores | Create/status/close/cancel plus 403 negative proof | Missing token, missing store assignment, or unsafe write target. |
 | Check deployed readiness | `docs/evidence/readiness/2026-05-22-live-evidence-proof-pass.md` | Public staging URLs, optional bearer token | Public health and protected route/load evidence | Protected claim requires token but none exists. |
+| Review, rotate, or roll back the DG-3 Supabase CA | `docs/runbooks/dg3-supabase-ca-rotation-rollback-v1.md` | Authorized Supabase/Render owner session, staging target, and sanitized deploy/health access | Provider-verified TLS health, smoke result, review date, and rollback decision without CA material | Target is not staging, CA would be exposed, or verify-full proof fails without a safe rollback. |
 | Check alert routing | `docs/evidence/readiness/2026-05-23-better-stack-email-alert-proof-v1.md` | Better Stack/Render notification path and destination | Provider delivery note and alert smoke output | Destination cannot be proven or email is assumed without delivery. |
 | Apply controlled-pilot alert policy | `docs/plans/controlled-pilot-alert-incident-policy-v1.md` | Pilot alert symptom, staging backend health, and safe provider labels when available | Pilot continue/pause decision plus owner path | Paid app-level telemetry, provider secrets, production commitments, or intentional outage would be required. |
 | Check Redis/BullMQ posture | `docs/evidence/readiness/2026-05-23-redis-production-posture-v1.md` | Render Key Value / Redis URL configured in staging | Queue backend health and durability signal | Broad production claim without persistent-tier decision. |
