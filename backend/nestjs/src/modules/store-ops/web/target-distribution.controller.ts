@@ -10,6 +10,7 @@ import {
 } from "./dto/approve-target-distribution-request.dto";
 import { ListTargetDistributionRequestsQueryDto } from "./dto/list-target-distribution-requests.query";
 import { ListTargetCoverageQueryDto } from "./dto/list-target-coverage.query";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 @ApiExtraModels(ApprovedTargetDistributionAllocationDto)
 @Controller("target-distributions")
@@ -57,12 +58,23 @@ export class TargetDistributionController {
           assignedStoreIds: string[];
         };
         roleCodes: string[];
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
       };
     },
     @Query() query: ListTargetDistributionRequestsQueryDto,
   ) {
     return this.targetDistributionService.listRequests({
-      actorScope: request.user.scope,
+      actorScope: request.user.roleCodes.includes("REPORT_VIEWER")
+        ? resolveReportViewerCompanyScope({
+            actorRoleCodes: request.user.roleCodes,
+            actorScope: request.user.scope,
+            roleScopes: request.user.roleScopes,
+          })
+        : request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
       statuses: query.status ? [query.status] : undefined,
@@ -88,12 +100,23 @@ export class TargetDistributionController {
           assignedStoreIds: string[];
         };
         roleCodes: string[];
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
       };
     },
     @Query() query: ListTargetCoverageQueryDto,
   ) {
     return this.targetDistributionService.getTargetCoverage({
-      actorScope: request.user.scope,
+      actorScope: request.user.roleCodes.includes("REPORT_VIEWER")
+        ? resolveReportViewerCompanyScope({
+            actorRoleCodes: request.user.roleCodes,
+            actorScope: request.user.scope,
+            roleScopes: request.user.roleScopes,
+          })
+        : request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
       requestMonth: query.requestMonth,

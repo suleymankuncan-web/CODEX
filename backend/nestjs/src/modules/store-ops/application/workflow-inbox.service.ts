@@ -42,6 +42,11 @@ export class WorkflowInboxService {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    actorReadScope?: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
   }) {
     const items: WorkflowInboxItem[] = [];
     const canSeeApprovals =
@@ -51,13 +56,14 @@ export class WorkflowInboxService {
 
     if (canSeeApprovals) {
       try {
+        const approvalScope = this.resolveStoreReadScope(input, [
+          "REPORT_VIEWER",
+          "SUPER_ADMIN",
+        ]);
         const approvalsPage = await this.targetDistributionRepository.listRequests({
-          companyIds: input.actorScope.companyIds,
-          regionIds: input.actorScope.regionIds,
-          storeIds:
-            input.actorScope.companyIds.length > 0 || input.actorScope.regionIds.length > 0
-              ? []
-              : input.actorScope.storeIds,
+          companyIds: approvalScope.companyIds,
+          regionIds: approvalScope.regionIds,
+          storeIds: approvalScope.storeIds,
           statuses: ["pending_region_approval"],
         });
         items.push(...approvalsPage.items.map((item) => toTargetApprovalInboxItem(item)));
@@ -214,6 +220,11 @@ export class WorkflowInboxService {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    actorReadScope?: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
     bucket: "open" | "done";
     type: "all" | "target" | "sellerCode" | "offboarding";
     status: "all" | "pending" | "returned" | "approved";
@@ -279,6 +290,11 @@ export class WorkflowInboxService {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    actorReadScope?: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
   }) {
     return this.resolveStoreReadScope(input, ["REPORT_VIEWER", "SUPER_ADMIN"]);
   }
@@ -294,9 +310,22 @@ export class WorkflowInboxService {
       actorActionScope?: {
         assignedStoreIds: string[];
       };
+      actorReadScope?: {
+        companyIds: string[];
+        regionIds: string[];
+        storeIds: string[];
+      };
     },
     broadReadRoles: string[],
   ) {
+    if (input.actorRoles.includes("REPORT_VIEWER")) {
+      return input.actorReadScope ?? {
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+      };
+    }
+
     const canUseBroadReadScope = input.actorRoles.some((roleCode) =>
       broadReadRoles.includes(roleCode),
     );

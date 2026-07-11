@@ -428,6 +428,13 @@ export class RankingService {
       return false;
     }
 
+    if (input.roleCodes.includes("REPORT_VIEWER")) {
+      return (
+        input.assignment.company_id !== null &&
+        input.companyIds.includes(input.assignment.company_id)
+      );
+    }
+
     if (input.roleCodes.includes("SUPER_ADMIN")) {
       return (
         !this.hasPersonnelReadScope(input) ||

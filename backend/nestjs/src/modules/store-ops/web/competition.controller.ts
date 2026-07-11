@@ -13,6 +13,7 @@ import { ListCompetitionsQueryDto } from "./dto/list-competitions.query";
 import { ReviewCompetitionStagePackagePlanDto } from "./dto/review-competition-stage-package-plan.dto";
 import { UpdateCompetitionStagePackagePlanDto } from "./dto/update-competition-stage-package-plan.dto";
 import { UpdateCompetitionTeamTemplateDto } from "./dto/update-competition-team-template.dto";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 type CompetitionRequest = {
   user: {
@@ -23,6 +24,11 @@ type CompetitionRequest = {
       regionIds: string[];
       storeIds: string[];
     };
+    roleScopes?: Record<string, {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    }>;
     actionScope?: {
       assignedStoreIds: string[];
     };
@@ -48,7 +54,13 @@ export class CompetitionController {
   ) {
     return this.competitionService.listCompetitions({
       actorUserId: request.user.userId,
-      actorScope: request.user.scope,
+      actorScope: request.user.roleCodes.includes("REPORT_VIEWER")
+        ? resolveReportViewerCompanyScope({
+            actorRoleCodes: request.user.roleCodes,
+            actorScope: request.user.scope,
+            roleScopes: request.user.roleScopes,
+          })
+        : request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
       limit: query.limit,
@@ -84,7 +96,13 @@ export class CompetitionController {
     return this.competitionService.getCompetitionDetail({
       competitionId,
       actorUserId: request.user.userId,
-      actorScope: request.user.scope,
+      actorScope: request.user.roleCodes.includes("REPORT_VIEWER")
+        ? resolveReportViewerCompanyScope({
+            actorRoleCodes: request.user.roleCodes,
+            actorScope: request.user.scope,
+            roleScopes: request.user.roleScopes,
+          })
+        : request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
       includeStoreDetails: true,

@@ -68,4 +68,41 @@ describe("OrgController", () => {
       storeId: undefined,
     });
   });
+
+  it("uses only Report Viewer role companies for the store portfolio", async () => {
+    const orgService = {
+      listStoresByScope: jest.fn(async () => ({ items: [] })),
+    };
+    const controller = new OrgController(orgService as never);
+
+    await controller.listStores(
+      {
+        user: {
+          roleCodes: ["STORE_MANAGER", "REPORT_VIEWER"],
+          scope: {
+            companyIds: ["company-from-manager"],
+            regionIds: ["region-from-manager"],
+            storeIds: ["store-from-manager"],
+          },
+          roleScopes: {
+            REPORT_VIEWER: {
+              companyIds: ["company-a"],
+              regionIds: [],
+              storeIds: [],
+            },
+          },
+          actionScope: { assignedStoreIds: ["store-from-manager"] },
+        },
+      },
+      {},
+    );
+
+    expect(orgService.listStoresByScope).toHaveBeenCalledWith(
+      expect.objectContaining({
+        companyIds: ["company-a"],
+        regionIds: [],
+        storeIds: [],
+      }),
+    );
+  });
 });

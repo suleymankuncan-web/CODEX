@@ -3,6 +3,7 @@ import { AuthenticatedUser } from "../../auth/auth-context.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireActionScope, RequireScope } from "../../auth/decorators/scope.decorator";
 import { StoreActionPlanService } from "../application/store-action-plan.service";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 import { CancelStoreActionPlanDto } from "./dto/cancel-store-action-plan.dto";
 import { CloseStoreActionPlanDto } from "./dto/close-store-action-plan.dto";
 import { CreateStoreActionPlanDto } from "./dto/create-store-action-plan.dto";
@@ -19,13 +20,24 @@ export class StoreActionPlanController {
 
   @Get("plans")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REGION_MANAGER")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REGION_MANAGER", "REPORT_VIEWER")
   async listPlans(
     @Req() request: StoreActionPlanRequest,
     @Query() query: ListStoreActionPlansQueryDto,
   ) {
+    const actorReadScope = request.user.roleCodes.includes("REPORT_VIEWER")
+      ? resolveReportViewerCompanyScope({
+          actorRoleCodes: request.user.roleCodes,
+          actorScope: request.user.scope,
+          roleScopes: request.user.roleScopes,
+        })
+      : undefined;
+
     return this.storeActionPlanService.listPlans({
       actorActionScope: request.user.actionScope,
+      ...(actorReadScope
+        ? { actorReadScope, actorRoleCodes: request.user.roleCodes }
+        : {}),
       storeId: query.storeId,
       status: query.status,
       statuses: query.statuses,
@@ -38,13 +50,24 @@ export class StoreActionPlanController {
 
   @Get("plans/:actionPlanId")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REGION_MANAGER")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN", "REGION_MANAGER", "REPORT_VIEWER")
   async getPlan(
     @Req() request: StoreActionPlanRequest,
     @Param("actionPlanId") actionPlanId: string,
   ) {
+    const actorReadScope = request.user.roleCodes.includes("REPORT_VIEWER")
+      ? resolveReportViewerCompanyScope({
+          actorRoleCodes: request.user.roleCodes,
+          actorScope: request.user.scope,
+          roleScopes: request.user.roleScopes,
+        })
+      : undefined;
+
     return this.storeActionPlanService.getPlan({
       actorActionScope: request.user.actionScope,
+      ...(actorReadScope
+        ? { actorReadScope, actorRoleCodes: request.user.roleCodes }
+        : {}),
       actionPlanId,
     });
   }

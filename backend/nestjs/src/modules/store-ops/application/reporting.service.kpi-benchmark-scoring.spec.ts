@@ -23,6 +23,30 @@ function createReportingService(
 }
 
 describe("ReportingService KPI benchmark scoring", () => {
+  it("denies Report Viewer personnel reads outside the assigned company", async () => {
+    const reportingRepository = {
+      resolveEmployeeIdForAuthIdentity: jest.fn(async () => null),
+      getActiveEmployeeAssignmentScope: jest.fn(async () => ({
+        employee_id: "00000000-0000-0000-0000-000000000202",
+        company_id: "00000000-0000-0000-0000-000000000002",
+        region_id: "00000000-0000-0000-0000-000000000020",
+        store_id: "00000000-0000-0000-0000-000000000202",
+      })),
+    };
+    const service = createReportingService(reportingRepository);
+
+    await expect(service.getPersonnelPerformance({
+      userId: "00000000-0000-0000-0000-000000000901",
+      targetEmployeeId: "00000000-0000-0000-0000-000000000202",
+      roleCodes: ["REPORT_VIEWER"],
+      identityCompanyIds: ["00000000-0000-0000-0000-000000000001"],
+      companyIds: ["00000000-0000-0000-0000-000000000001"],
+      regionIds: [],
+      storeIds: [],
+      assignedStoreIds: [],
+    })).rejects.toThrow("Personnel profile is outside the current user's scope");
+  });
+
   it("returns capped benchmark metadata for store live KPI highlights", async () => {
     const reportingRepository = {
       getStoreNameById: jest.fn(async () => "Marmara Park"),

@@ -4,6 +4,7 @@ import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { StoreMonthlyReportPackageService } from "../application/store-monthly-report-package.service";
 import { GetStoreMonthlyReportPackageQueryDto } from "./dto/get-store-monthly-report-package.query";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 type HeaderResponse = {
   setHeader(name: string, value: string): unknown;
@@ -19,6 +20,11 @@ type ReportPackageRequest = {
       regionIds: string[];
       storeIds: string[];
     };
+    roleScopes?: Record<string, {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    }>;
     actionScope?: {
       assignedStoreIds: string[];
     };
@@ -161,10 +167,13 @@ export class StoreMonthlyReportPackageController {
       actorRoleCodes: user.roleCodes,
       actorScope: user.scope,
       actorActionScope: user.actionScope,
+      roleScopes: user.roleScopes,
       broadReadRoles: ["REPORT_VIEWER", "AUDITOR", "SUPER_ADMIN"],
     });
     const isRegionManagerRead =
-      user.roleCodes.includes("REGION_MANAGER") && !user.roleCodes.includes("SUPER_ADMIN");
+      user.roleCodes.includes("REGION_MANAGER") &&
+      !user.roleCodes.includes("SUPER_ADMIN") &&
+      !user.roleCodes.includes("REPORT_VIEWER");
 
     return {
       companyIds: storeReadScope.companyIds,
@@ -175,13 +184,19 @@ export class StoreMonthlyReportPackageController {
   }
 
   private resolveRankingContext(user: ReportPackageRequest["user"]) {
+    const scope = resolveReportViewerCompanyScope({
+      actorRoleCodes: user.roleCodes,
+      actorScope: user.scope,
+      roleScopes: user.roleScopes,
+    });
+
     return {
       userId: user.userId,
       employeeId: user.employeeId,
       roleCodes: user.roleCodes,
-      companyIds: user.scope.companyIds,
-      regionIds: user.scope.regionIds,
-      storeIds: user.scope.storeIds,
+      companyIds: scope.companyIds,
+      regionIds: scope.regionIds,
+      storeIds: scope.storeIds,
       assignedStoreIds: user.actionScope?.assignedStoreIds ?? [],
     };
   }
@@ -196,8 +211,21 @@ export class StoreMonthlyReportPackageController {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    roleScopes?: Record<string, {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    }>;
     broadReadRoles: string[];
   }) {
+    if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+      return resolveReportViewerCompanyScope({
+        actorRoleCodes: input.actorRoleCodes,
+        actorScope: input.actorScope,
+        roleScopes: input.roleScopes,
+      });
+    }
+
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
       input.broadReadRoles.includes(roleCode),
     );

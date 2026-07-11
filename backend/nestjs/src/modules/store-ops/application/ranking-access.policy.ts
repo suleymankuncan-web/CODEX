@@ -9,7 +9,7 @@ export type RankingAccess = {
   canSeeManagedStorePersonnelDetails: boolean;
 };
 
-const privilegedRoles = new Set(["REGION_MANAGER", "SUPER_ADMIN"]);
+const privilegedRoles = new Set(["REGION_MANAGER", "REPORT_VIEWER", "SUPER_ADMIN"]);
 
 export function sanitizeRankingPagination(input: {
   limit?: number;

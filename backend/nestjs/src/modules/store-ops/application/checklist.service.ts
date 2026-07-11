@@ -261,6 +261,11 @@ export class ChecklistService {
       assignedStoreIds: string[];
     };
     actorRoleCodes: string[];
+    actorReadScope?: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
     checklistInstanceId?: string;
     includeResponses?: boolean;
     limit?: number;
@@ -536,7 +541,20 @@ export class ChecklistService {
       assignedStoreIds: string[];
     };
     actorRoleCodes: string[];
+    actorReadScope?: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
   }) {
+    if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+      return {
+        companyIds: input.actorReadScope?.companyIds ?? [],
+        regionIds: [],
+        storeIds: [],
+      };
+    }
+
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
       ["REPORT_VIEWER", "SUPER_ADMIN"].includes(roleCode),
     );

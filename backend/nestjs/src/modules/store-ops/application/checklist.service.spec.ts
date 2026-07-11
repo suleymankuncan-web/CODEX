@@ -467,6 +467,11 @@ describe("ChecklistService", () => {
         storeIds: [],
       },
       actorRoleCodes: ["REPORT_VIEWER"],
+      actorReadScope: {
+        companyIds: ["company-1"],
+        regionIds: [],
+        storeIds: [],
+      },
     });
 
     expect(acknowledgementRepository.listChecklistAcknowledgements).toHaveBeenCalledWith({

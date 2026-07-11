@@ -56,11 +56,11 @@ test('endpoint drift register reflects current backend role decorators', () => {
 
   assert.match(
     reporting,
-    /@Get\("personnel-performance\/:employeeId"\)[\s\S]*?@RequireRoles\("STORE_PERSONNEL", "STORE_MANAGER", "REGION_MANAGER", "SUPER_ADMIN"\)/,
+    /@Get\("personnel-performance\/:employeeId"\)[\s\S]*?@RequireRoles\("STORE_PERSONNEL", "STORE_MANAGER", "REGION_MANAGER", "SUPER_ADMIN", "REPORT_VIEWER"\)/,
   )
   assert.match(
     reporting,
-    /@Get\("store-kpi-highlights"\)[\s\S]*?@RequireRoles\("STORE_MANAGER", "REGION_MANAGER"\)/,
+    /@Get\("store-kpi-highlights"\)[\s\S]*?@RequireRoles\("STORE_MANAGER", "REGION_MANAGER", "REPORT_VIEWER"\)/,
   )
   assert.match(
     incentives,

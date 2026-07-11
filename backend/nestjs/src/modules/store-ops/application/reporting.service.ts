@@ -301,6 +301,7 @@ export class ReportingService {
   async getStoreMonthlyScoreBreakdown(input: {
     snapshotRunId: string;
     storeId: string;
+    companyIds?: string[];
     storeIds: string[];
   }) {
     return this.storeKpiReadService.getStoreMonthlyScoreBreakdown(input);
@@ -390,10 +391,9 @@ export class ReportingService {
     const managerStoreIds = input.assignedStoreIds.length > 0
       ? input.assignedStoreIds
       : input.storeIds;
-
     if (
-      input.roleCodes.includes("SUPER_ADMIN") &&
-      (
+      (input.roleCodes.includes("SUPER_ADMIN") &&
+        (
         !this.hasPersonnelReadScope({
           companyIds: input.companyIds,
           regionIds: input.regionIds,
@@ -402,7 +402,7 @@ export class ReportingService {
         (assignment.company_id && input.companyIds.includes(assignment.company_id)) ||
         (assignment.region_id && input.regionIds.includes(assignment.region_id)) ||
         (assignment.store_id && managerStoreIds.includes(assignment.store_id))
-      )
+        )) || (input.roleCodes.includes("REPORT_VIEWER") && assignment.company_id !== null && input.companyIds.includes(assignment.company_id))
     ) {
       return;
     }

@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-10
+Last verified: 2026-07-11
 
 ## Purpose
 
@@ -20,14 +20,17 @@ Documentation entry point:
 
 ## Current Position
 
-As of 10 July 2026, owner-approved plan execution has merged A1 required-gate
+As of 11 July 2026, owner-approved plan execution has merged A1 required-gate
 alignment (#917), A2 frontend full-release deduplication (#918), A3 bounded
 E2E concurrency (#919), the B1 `blocked_external` pilot record (#920), E1
 role/archive ownership cleanup (#921), and the bounded D1 pure-logic unit-test
-seed (#923). No product/runtime train was opened.
+seed (#923). The owner has now opened the locked DG1-DG2 remediation train; all
+other speculative runtime work remains parked.
 
 - Current short handoff: `current-state.md`.
 - Execution plan: `docs/plans/project-analysis-implementation-plan-v1.md`.
+- Locked DG1-DG2 execution contract:
+  `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md`.
 - A3 evidence: `docs/evidence/performance/2026-07-10-e2e-worker-concurrency-a3.md`.
 - B1 blocker record:
   `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
@@ -40,14 +43,18 @@ seed (#923). No product/runtime train was opened.
 
 Next practical action:
 
-1. Observe the next ten successful root-release PR runs and record A3's dated
+1. Execute DG1-A of the locked DG1-DG2 plan: role-specific Report Viewer
+   company-read backend scope with positive and negative authorization proof.
+2. Continue that plan one slice at a time. Do not run the live database invariant
+   preflight until its standalone TLS path is verify-full + CA safe.
+3. Observe the next ten successful root-release PR runs and record A3's dated
    p95 or justified no-change outcome without weakening coverage.
-2. Obtain a safe read-only B1 bundle for one remaining gap: login/session,
+4. Obtain a safe read-only B1 bundle for one remaining gap: login/session,
    rankings/profile scope, or reports/incentives readback. Preserve the 5 July
    mutation observations and do not rerun them only to improve documentation.
-3. If a pilot/demo blocker appears, record route, persona, period,
+5. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
-4. Keep new modules, separate mobile implementation, broad production, broad
+6. Keep new modules, separate mobile implementation, broad production, broad
    redesign, provider/source integration, and generic architecture work parked
    until a real P0/P1 finding or explicit owner decision reopens one path.
 

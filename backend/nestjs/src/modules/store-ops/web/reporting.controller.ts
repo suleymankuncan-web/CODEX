@@ -11,6 +11,15 @@ import { GetStoreKpiHighlightsQueryDto } from "./dto/get-store-kpi-highlights.qu
 import { GetTurnoverReportQueryDto } from "./dto/get-turnover-report.query";
 import { GetWorkforceReportQueryDto } from "./dto/get-workforce-report.query";
 import { ListSnapshotRunsQueryDto } from "./dto/list-snapshot-runs.query";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+
+type StoreReadScope = {
+  companyIds: string[];
+  regionIds: string[];
+  storeIds: string[];
+};
+
+type ReportViewerRoleScopes = Record<string, StoreReadScope>;
 
 @Controller("reports")
 export class ReportingController {
@@ -112,11 +121,8 @@ export class ReportingController {
     request: {
       user: {
         roleCodes: string[];
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -127,9 +133,7 @@ export class ReportingController {
     return this.reportingService.getWorkforceReport({
       snapshotRunId: query.snapshotRunId,
       storeId: query.storeId,
-      companyIds: request.user.scope.companyIds,
-      regionIds: request.user.scope.regionIds,
-      storeIds: request.user.scope.storeIds,
+      ...this.resolveReadScope(request.user),
       limit: query.limit,
       offset: query.offset,
     });
@@ -143,11 +147,8 @@ export class ReportingController {
     request: {
       user: {
         roleCodes: string[];
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -166,6 +167,7 @@ export class ReportingController {
       actorRoleCodes: request.user.roleCodes,
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      roleScopes: request.user.roleScopes,
       broadReadRoles: ["AUDITOR", "REPORT_VIEWER", "SUPER_ADMIN"],
     });
 
@@ -190,11 +192,7 @@ export class ReportingController {
       user: {
         userId: string;
         employeeId?: string;
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
       };
     },
     @Query() query: GetMyPerformanceQueryDto,
@@ -214,7 +212,7 @@ export class ReportingController {
 
   @Get("personnel-performance/:employeeId")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_PERSONNEL", "STORE_MANAGER", "REGION_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("STORE_PERSONNEL", "STORE_MANAGER", "REGION_MANAGER", "SUPER_ADMIN", "REPORT_VIEWER")
   async getPersonnelPerformance(
     @Req()
     request: {
@@ -222,11 +220,8 @@ export class ReportingController {
         userId: string;
         employeeId?: string;
         roleCodes: string[];
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -239,6 +234,7 @@ export class ReportingController {
       actorRoleCodes: request.user.roleCodes,
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      roleScopes: request.user.roleScopes,
     });
 
     return this.reportingService.getPersonnelPerformance({
@@ -246,7 +242,7 @@ export class ReportingController {
       employeeId: request.user.employeeId,
       targetEmployeeId: employeeId,
       roleCodes: request.user.roleCodes,
-      identityCompanyIds: request.user.scope.companyIds,
+      identityCompanyIds: this.resolveReadScope(request.user).companyIds,
       companyIds: personnelProfileReadScope.companyIds,
       regionIds: personnelProfileReadScope.regionIds,
       storeIds: personnelProfileReadScope.storeIds,
@@ -260,18 +256,15 @@ export class ReportingController {
 
   @Get("store-kpi-highlights")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "REGION_MANAGER")
+  @RequireRoles("STORE_MANAGER", "REGION_MANAGER", "REPORT_VIEWER")
   async getStoreKpiHighlights(
     @Req()
     request: {
       user: {
         userId?: string;
         roleCodes: string[];
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -279,6 +272,8 @@ export class ReportingController {
     },
     @Query() query: GetStoreKpiHighlightsQueryDto,
   ) {
+    const reportViewerScope = this.resolveReadScope(request.user);
+    const isReportViewer = request.user.roleCodes.includes("REPORT_VIEWER");
     const assignedStoreIds = request.user.actionScope?.assignedStoreIds.length
       ? request.user.actionScope.assignedStoreIds
       : request.user.scope.storeIds;
@@ -286,7 +281,9 @@ export class ReportingController {
       request.user.roleCodes.includes("REGION_MANAGER") &&
       !request.user.roleCodes.includes("SUPER_ADMIN");
     const storeReadScope =
-      isRegionManagerRead
+      isReportViewer
+        ? reportViewerScope
+        : isRegionManagerRead
         ? {
             companyIds: [],
             regionIds: [],
@@ -306,23 +303,21 @@ export class ReportingController {
       periodType: query.periodType,
       periodStart: query.periodStart,
       storeId: query.storeId,
-      regionManagerUserId: isRegionManagerRead ? request.user.userId : undefined,
+      regionManagerUserId:
+        isRegionManagerRead && !isReportViewer ? request.user.userId : undefined,
     });
   }
 
   @Get("store-score-breakdown")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER")
+  @RequireRoles("STORE_MANAGER", "REPORT_VIEWER")
   async getStoreScoreBreakdown(
     @Req()
     request: {
       user: {
         roleCodes: string[];
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -338,19 +333,23 @@ export class ReportingController {
       actorRoleCodes: request.user.roleCodes,
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      roleScopes: request.user.roleScopes,
       broadReadRoles: ["SUPER_ADMIN"],
     });
 
     return this.reportingService.getStoreMonthlyScoreBreakdown({
       snapshotRunId: query.snapshotRunId,
       storeId: query.storeId,
+      ...(request.user.roleCodes.includes("REPORT_VIEWER")
+        ? { companyIds: storeReadScope.companyIds }
+        : {}),
       storeIds: storeReadScope.storeIds,
     });
   }
 
   @Get("rankings")
   @RequireScope("authenticated")
-  @RequireRoles("STORE_MANAGER", "STORE_PERSONNEL", "REGION_MANAGER", "SUPER_ADMIN")
+  @RequireRoles("STORE_MANAGER", "STORE_PERSONNEL", "REGION_MANAGER", "SUPER_ADMIN", "REPORT_VIEWER")
   async getRankings(
     @Req()
     request: {
@@ -358,11 +357,8 @@ export class ReportingController {
         userId: string;
         employeeId?: string;
         roleCodes: string[];
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -374,9 +370,7 @@ export class ReportingController {
       userId: request.user.userId,
       employeeId: request.user.employeeId,
       roleCodes: request.user.roleCodes,
-      companyIds: request.user.scope.companyIds,
-      regionIds: request.user.scope.regionIds,
-      storeIds: request.user.scope.storeIds,
+      ...this.resolveReadScope(request.user),
       assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
       periodType: query.periodType ?? "monthly",
       periodStart: query.periodStart,
@@ -401,11 +395,8 @@ export class ReportingController {
         userId: string;
         employeeId?: string;
         roleCodes: string[];
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -416,9 +407,7 @@ export class ReportingController {
     return this.reportingService.getClosedLeaderboard({
       userId: request.user.userId,
       employeeId: request.user.employeeId,
-      companyIds: request.user.scope.companyIds,
-      regionIds: request.user.scope.regionIds,
-      storeIds: request.user.scope.storeIds,
+      ...this.resolveReadScope(request.user),
       roleCodes: request.user.roleCodes,
       assignedStoreIds: request.user.actionScope?.assignedStoreIds ?? [],
       periodType: query.periodType,
@@ -436,11 +425,9 @@ export class ReportingController {
     @Req()
     request: {
       user: {
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        roleCodes: string[];
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
       };
     },
     @Query() query: GetChecklistReportQueryDto,
@@ -449,9 +436,7 @@ export class ReportingController {
       snapshotRunId: query.snapshotRunId,
       storeId: query.storeId,
       checklistTemplateId: query.checklistTemplateId,
-      companyIds: request.user.scope.companyIds,
-      regionIds: request.user.scope.regionIds,
-      storeIds: request.user.scope.storeIds,
+      ...this.resolveReadScope(request.user),
       limit: query.limit,
       offset: query.offset,
     });
@@ -464,11 +449,9 @@ export class ReportingController {
     @Req()
     request: {
       user: {
-        scope: {
-          companyIds: string[];
-          regionIds: string[];
-          storeIds: string[];
-        };
+        roleCodes: string[];
+        scope: StoreReadScope;
+        roleScopes?: ReportViewerRoleScopes;
       };
     },
     @Query() query: GetTurnoverReportQueryDto,
@@ -479,12 +462,14 @@ export class ReportingController {
       companyId: query.companyId,
       regionId: query.regionId,
       storeId: query.storeId,
-      companyIds: request.user.scope.companyIds,
-      regionIds: request.user.scope.regionIds,
-      storeIds: request.user.scope.storeIds,
+      ...this.resolveReadScope(request.user),
       limit: query.limit,
       offset: query.offset,
     });
+  }
+
+  private resolveReadScope(user: { roleCodes: string[]; scope: StoreReadScope; roleScopes?: ReportViewerRoleScopes }) {
+    return resolveReportViewerCompanyScope({ actorRoleCodes: user.roleCodes, actorScope: user.scope, roleScopes: user.roleScopes });
   }
 
   private resolvePersonnelProfileReadScope(input: {
@@ -497,7 +482,16 @@ export class ReportingController {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    roleScopes?: ReportViewerRoleScopes;
   }) {
+    if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+      return resolveReportViewerCompanyScope({
+        actorRoleCodes: input.actorRoleCodes,
+        actorScope: input.actorScope,
+        roleScopes: input.roleScopes,
+      });
+    }
+
     const storeIds = input.actorActionScope?.assignedStoreIds.length
       ? input.actorActionScope.assignedStoreIds
       : input.actorScope.storeIds;
@@ -552,7 +546,16 @@ export class ReportingController {
       assignedStoreIds: string[];
     };
     broadReadRoles: string[];
+    roleScopes?: ReportViewerRoleScopes;
   }) {
+    if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+      return resolveReportViewerCompanyScope({
+        actorRoleCodes: input.actorRoleCodes,
+        actorScope: input.actorScope,
+        roleScopes: input.roleScopes,
+      });
+    }
+
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
       input.broadReadRoles.includes(roleCode),
     );

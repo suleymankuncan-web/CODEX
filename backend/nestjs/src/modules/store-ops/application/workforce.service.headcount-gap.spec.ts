@@ -133,4 +133,52 @@ describe("WorkforceService headcount gap access", () => {
       offset: 0,
     });
   });
+
+  it("allows Report Viewer headcount reads only inside assigned companies", async () => {
+    const { service, storeOpsRepository } = createService();
+
+    await expect(service.getStoreHeadcountGap({
+      actorScope: {
+        companyIds: ["company-from-manager"],
+        regionIds: ["region-from-manager"],
+        storeIds: ["store-from-manager"],
+      },
+      actorReadScope: {
+        companyIds: [companyId],
+        regionIds: [],
+        storeIds: [],
+      },
+      actorActionScope: { assignedStoreIds: ["store-from-manager"] },
+      actorRoleCodes: ["STORE_MANAGER", "REPORT_VIEWER"],
+      storeId,
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
+    })).resolves.toBeDefined();
+
+    expect(storeOpsRepository.getStoreHeadcountGap).toHaveBeenCalled();
+  });
+
+  it("fails closed for Report Viewer without a company scope", async () => {
+    const { service, storeOpsRepository } = createService();
+
+    await expect(service.getStoreHeadcountGap({
+      actorScope: {
+        companyIds: [companyId],
+        regionIds: [regionId],
+        storeIds: [storeId],
+      },
+      actorReadScope: {
+        companyIds: [],
+        regionIds: [],
+        storeIds: [],
+      },
+      actorActionScope: { assignedStoreIds: [storeId] },
+      actorRoleCodes: ["REPORT_VIEWER"],
+      storeId,
+      periodStart: "2026-06-01",
+      periodEnd: "2026-06-30",
+    })).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(storeOpsRepository.getStoreHeadcountGap).not.toHaveBeenCalled();
+  });
 });

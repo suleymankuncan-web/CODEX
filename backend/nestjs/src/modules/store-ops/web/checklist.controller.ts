@@ -8,6 +8,7 @@ import { AddChecklistResponseDto } from "./dto/add-checklist-response.dto";
 import { CompleteChecklistInstanceDto } from "./dto/complete-checklist-instance.dto";
 import { AcknowledgeChecklistInstanceDto } from "./dto/acknowledge-checklist-instance.dto";
 import { ListChecklistAcknowledgementsDto } from "./dto/list-checklist-acknowledgements.dto";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 @Controller("checklists")
 export class ChecklistController {
@@ -137,16 +138,30 @@ export class ChecklistController {
           assignedStoreIds: string[];
         };
         roleCodes: string[];
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
       };
     },
     @Body() body?: ListChecklistAcknowledgementsDto,
   ) {
     const filters = body ?? {};
 
+    const actorReadScope = request.user.roleCodes.includes("REPORT_VIEWER")
+      ? resolveReportViewerCompanyScope({
+          actorRoleCodes: request.user.roleCodes,
+          actorScope: request.user.scope,
+          roleScopes: request.user.roleScopes,
+        })
+      : undefined;
+
     return this.checklistService.listChecklistAcknowledgements({
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
       actorRoleCodes: request.user.roleCodes,
+      ...(actorReadScope ? { actorReadScope } : {}),
       checklistInstanceId: filters.checklistInstanceId,
       includeResponses: filters.includeResponses,
       limit: filters.limit,

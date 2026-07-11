@@ -464,11 +464,11 @@ describe("Auth scope integration", () => {
 
     expect(response.status).toBe(200);
     const workforceQuery = queries.find((item) => item.sql.includes("FROM rpt.store_workforce_snapshot"));
-    expect(workforceQuery?.sql).toContain("s.region_id = ANY($3::uuid[])");
+    expect(workforceQuery?.sql).toContain("s.company_id = ANY($3::uuid[])");
     expect(workforceQuery?.params).toEqual([
       "11111111-1111-4111-8111-111111111111",
       "11111111-1111-4111-8111-111111111111",
-      ["33333333-3333-4333-8333-333333333333"],
+      ["00000000-0000-0000-0000-000000000001"],
       50,
       0,
     ]);
@@ -525,11 +525,11 @@ describe("Auth scope integration", () => {
 
     expect(response.status).toBe(200);
     const turnoverQuery = queries.find((item) => item.sql.includes("FROM rpt.turnover_snapshot"));
-    expect(turnoverQuery?.sql).toContain("ts.region_id = ANY($3::uuid[])");
+    expect(turnoverQuery?.sql).toContain("ts.company_id = ANY($3::uuid[])");
     expect(turnoverQuery?.params).toEqual([
       "11111111-1111-4111-8111-111111111111",
       "11111111-1111-4111-8111-111111111111",
-      ["33333333-3333-4333-8333-333333333333"],
+      ["00000000-0000-0000-0000-000000000001"],
       50,
       0,
     ]);

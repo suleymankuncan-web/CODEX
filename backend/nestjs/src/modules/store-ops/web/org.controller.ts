@@ -2,6 +2,7 @@ import { Controller, Get, Query, Req } from "@nestjs/common";
 import { OrgService } from "../application/org.service";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { ListStoresQueryDto } from "./dto/list-stores.query";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 @Controller("org")
 export class OrgController {
@@ -19,6 +20,11 @@ export class OrgController {
           regionIds: string[];
           storeIds: string[];
         };
+        roleScopes?: Record<string, {
+          companyIds: string[];
+          regionIds: string[];
+          storeIds: string[];
+        }>;
         actionScope?: {
           assignedStoreIds: string[];
         };
@@ -30,6 +36,7 @@ export class OrgController {
       actorRoleCodes: request.user.roleCodes,
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
+      roleScopes: request.user.roleScopes,
     });
 
     return this.orgService.listStoresByScope({
@@ -52,7 +59,20 @@ export class OrgController {
     actorActionScope?: {
       assignedStoreIds: string[];
     };
+    roleScopes?: Record<string, {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    }>;
   }) {
+    if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
+      return resolveReportViewerCompanyScope({
+        actorRoleCodes: input.actorRoleCodes,
+        actorScope: input.actorScope,
+        roleScopes: input.roleScopes,
+      });
+    }
+
     const canUseBroadReadScope = input.actorRoleCodes.some((roleCode) =>
       [
         "AUDITOR",

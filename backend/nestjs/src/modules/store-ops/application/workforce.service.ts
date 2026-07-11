@@ -36,6 +36,11 @@ export class WorkforceService {
       assignedStoreIds: string[];
     };
     actorRoleCodes: string[];
+    actorReadScope?: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
     storeId: string;
     periodStart: string;
     periodEnd: string;
@@ -143,6 +148,11 @@ export class WorkforceService {
       assignedStoreIds: string[];
     };
     actorRoleCodes?: string[];
+    actorReadScope?: {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    };
     storeId: string;
   }) {
     if (!(await this.canReadWorkforceStore(input, input.storeId))) {
@@ -685,10 +695,24 @@ export class WorkforceService {
         assignedStoreIds: string[];
       };
       actorRoleCodes?: string[];
+      actorReadScope?: {
+        companyIds: string[];
+        regionIds: string[];
+        storeIds: string[];
+      };
     },
     storeId: string,
   ) {
     const actorRoleCodes = input.actorRoleCodes ?? [];
+    if (actorRoleCodes.includes("REPORT_VIEWER")) {
+      if (!input.actorReadScope || input.actorReadScope.companyIds.length === 0) {
+        return false;
+      }
+
+      const store = await this.workforceRequestRepository.getStoreForSellerCodeRequest(storeId);
+      return Boolean(store && input.actorReadScope.companyIds.includes(store.company_id));
+    }
+
     const assignedStoreIds = input.actorActionScope?.assignedStoreIds ?? [];
     const hasActionStore = assignedStoreIds.includes(storeId);
     const canUseReadScope = (input.actorRoleCodes ?? []).some((roleCode) =>

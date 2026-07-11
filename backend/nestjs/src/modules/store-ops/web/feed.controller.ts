@@ -4,6 +4,7 @@ import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { FeedService } from "../application/feed.service";
 import { CreateFeedPostDto } from "./dto/create-feed-post.dto";
 import { UpdateFeedPostDto } from "./dto/update-feed-post.dto";
+import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
 
 type FeedRequest = {
   user: {
@@ -19,6 +20,11 @@ type FeedRequest = {
       regionIds: string[];
       storeIds: string[];
     };
+    roleScopes?: Record<string, {
+      companyIds: string[];
+      regionIds: string[];
+      storeIds: string[];
+    }>;
   };
 };
 
@@ -124,7 +130,11 @@ export class FeedController {
     return {
       actorUserId: request.user.userId,
       actorRoles: request.user.roleCodes,
-      actorScope: request.user.readScope ?? request.user.scope,
+      actorScope: resolveReportViewerCompanyScope({
+        actorRoleCodes: request.user.roleCodes,
+        actorScope: request.user.readScope ?? request.user.scope,
+        roleScopes: request.user.roleScopes,
+      }),
     };
   }
 
