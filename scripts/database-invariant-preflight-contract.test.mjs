@@ -8,6 +8,7 @@ const runnerPath = 'backend/nestjs/scripts/database-invariant-preflight.ts'
 const runnerConfigPath = 'backend/nestjs/scripts/database-invariant-preflight-config.ts'
 const fixtureSmokePath = 'backend/nestjs/scripts/database-invariant-preflight-fixture-smoke.ts'
 const smokePath = 'scripts/database-invariant-preflight-smoke.mjs'
+const stagingEvidencePath = 'docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md'
 
 test('database invariant preflight specification freezes the no-mutation boundary', () => {
   const spec = readFileSync(specPath, 'utf8')
@@ -114,6 +115,49 @@ test('database invariant runner proves read-only mode and keeps output sanitized
   assert.doesNotMatch(runner, /rejectUnauthorized:\s*false/)
   assert.doesNotMatch(runnerConfig, /rejectUnauthorized:\s*false/)
   assert.doesNotMatch(runner, /console\.(?:log|error)\([^\n]*(?:DATABASE_URL|connectionString)/)
+})
+
+test('DG2-C staging receipt is complete, sanitized, read only, and No-Go', () => {
+  assert.equal(existsSync(stagingEvidencePath), true, `Missing ${stagingEvidencePath}`)
+  const evidence = readFileSync(stagingEvidencePath, 'utf8')
+
+  for (const phrase of [
+    '8ed6886c77ec26df78d62fe4840461dbb3980f68',
+    'transactionReadOnly=true',
+    'DB_SSL_MODE=verify-full',
+    'PostgreSQL version',
+    'No-Go for DB-CONSTRAINTS',
+    'No-Mutation Statement',
+    'No automatic repair',
+  ]) {
+    assert.match(evidence, new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'))
+  }
+
+  const expectedCounts = new Map([
+    ['ASSIGN-01', 2],
+    ['AUTH-01', 0],
+    ['AUTH-02', 0],
+    ['KEY-01', 0],
+    ['ORG-01', 0],
+    ['ORG-02', 3],
+    ['ORG-03', 0],
+    ['ORG-04', 11],
+    ['TARGET-01', 0],
+    ['TARGET-02', 54],
+    ['TARGET-03', 0],
+  ])
+  for (const [checkId, count] of expectedCounts) {
+    assert.match(evidence, new RegExp('\\| `' + checkId + '` \\|[^\\n]*\\| ' + count + ' \\|'))
+  }
+  assert.match(evidence, /\| \*\*Total\*\* \|\s*\| \*\*70\*\* \|/)
+
+  assert.doesNotMatch(evidence, /postgres(?:ql)?:\/\//i)
+  assert.doesNotMatch(evidence, /(?:db\.[a-z0-9-]+\.supabase\.co|pooler\.supabase\.com)/i)
+  assert.doesNotMatch(evidence, /-----BEGIN (?:CERTIFICATE|PRIVATE KEY)-----/)
+  assert.doesNotMatch(evidence, /\b(?:\d{1,3}\.){3}\d{1,3}\b/)
+  assert.doesNotMatch(evidence, /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+  assert.doesNotMatch(evidence, /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/i)
+  assert.doesNotMatch(evidence, /"event"\s*:/)
 })
 
 function stripSqlComments(sql) {

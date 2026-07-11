@@ -776,14 +776,14 @@ not a cleanup or migration PR.
 
 Preconditions:
 
-- [ ] DG2-B is merged and fresh main contains it.
-- [ ] The owner confirms the exact staging host and database identity out of
+- [x] DG2-B is merged and fresh main contains it.
+- [x] The owner confirms the exact staging host and database identity out of
       band.
-- [ ] `DATABASE_URL` and `DB_SSL_CA` are injected without echoing or committing
+- [x] `DATABASE_URL` and `DB_SSL_CA` are injected without echoing or committing
       them.
-- [ ] Target class is `staging`, acknowledgement is
+- [x] Target class is `staging`, acknowledgement is
       `read-only-approved`, and environment is not production.
-- [ ] `DB_SSL_MODE=verify-full`.
+- [x] `DB_SSL_MODE=verify-full`.
 
 Execution:
 
