@@ -39,8 +39,10 @@ const projectHealthPr5ObservabilityScout = readText(
 test('observability env contract is documented and example-only', () => {
   for (const variable of [
     'ERROR_TRACKING_DSN',
+    'ERROR_TRACKING_ENABLED',
     'ERROR_TRACKING_ENVIRONMENT',
     'ERROR_TRACKING_RELEASE',
+    'ERROR_TRACKING_SMOKE',
     'LOG_LEVEL',
     'READINESS_PROFILE',
   ]) {
@@ -49,18 +51,19 @@ test('observability env contract is documented and example-only', () => {
     requireText(envInventory, `\`${variable}\``)
   }
 
-  requireText(envInventory, 'Broad production without `ERROR_TRACKING_DSN`')
+  requireText(envInventory, 'Broad production without enabled external error delivery')
   requireText(backendEnvExample, 'ERROR_TRACKING_DSN=')
 })
 
-test('observability service captures log-only backend failure signals', () => {
+test('observability service captures log-only and explicitly gated external signals', () => {
   for (const expected of [
     'captureException',
+    'SentryErrorDelivery',
     'installProcessHandlers',
     'process.unhandled_rejection',
     'process.uncaught_exception',
-    'externalDelivery: "not-enabled"',
     'mode: "log-only"',
+    'log+external',
     'redactSensitiveLogValue',
   ]) {
     requireText(observabilityService, expected)
@@ -78,6 +81,7 @@ test('standard error filter sends 5xx failures to observability without changing
 test('health endpoint exposes observability status without making secrets public', () => {
   requireText(healthService, 'observability: this.observabilityService.getStatus()')
   requireText(observabilityService, 'dsnConfigured')
+  requireText(observabilityService, 'enabled')
   assert.doesNotMatch(observabilityService, /ERROR_TRACKING_DSN.*logger\.(log|warn|error)/)
 })
 

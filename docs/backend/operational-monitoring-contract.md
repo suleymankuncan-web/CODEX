@@ -42,6 +42,7 @@
     "status": "ok",
     "errorTracking": {
       "dsnConfigured": false,
+      "enabled": false,
       "environment": "production",
       "externalDelivery": "not-enabled",
       "mode": "log-only"
@@ -189,7 +190,7 @@ Required alert routes:
 | `snapshot-worker-failure` | Snapshot run `healthTotals.stuck`, repeated retry-ready state, or worker logs show failed snapshot execution. | P1 | Data owner + Backend owner | Pause dependent reporting decisions, review snapshot lineage, and rerun only after dependency cause is known. | Snapshot run id, parent run id, failure reason, queue backend, correlation id. |
 | `database-latency-high` | `/api/health` database latency exceeds target for repeated checks or DB check fails. | P1/P0 if app unavailable | Backend owner | Check DB provider health, pool pressure, migrations, and recent query-heavy changes. | Health latency samples, DB provider status, release SHA, migration status. |
 | `frontend-unreachable` | Frontend root, SPA fallback, or static asset checks fail. | P0/P1 | Frontend owner + Release operator | Run `npm.cmd run smoke:deployed-readiness`; verify Vercel deployment, rewrites, and asset content types. | Frontend URL, Vercel deployment URL, failed asset URL, deployed smoke output. |
-| `observability-degraded` | `/api/health` reports `observability.status=degraded` or broad-production profile lacks `ERROR_TRACKING_DSN`. | P1 before rollout, P0 if broad production is already live | Incident lead + Backend owner | Keep rollout at Conditional Go/No-Go until provider decision or accepted risk is recorded. | Health observability block, env inventory note, approval/Conditional Go record. |
+| `observability-degraded` | `/api/health` reports `observability.status=degraded` or broad-production profile lacks enabled external error delivery. | P1 before rollout, P0 if broad production is already live | Incident lead + Backend owner | Keep rollout at Conditional Go/No-Go until provider delivery is proven or accepted risk is recorded. | Health observability block, env inventory note, approval/Conditional Go record. |
 
 Alert routing smoke must pass before staging or production sign-off unless a written Conditional Go names the owner, missing provider capability, and due date.
 

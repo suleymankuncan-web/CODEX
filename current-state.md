@@ -56,7 +56,7 @@ slice is the authorization operating-truth contract: complete route ownership,
 preview/runtime drift, and backend-endpoint drift become machine-visible before
 any permission behavior changes. DG-1 product decisions are locked but their
 runtime implementation remains unopened; DG-2 still gates live DB cleanup,
-DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 still gates real external error delivery.
+DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is now owner-selected with Render/Vercel env boundaries configured; backend/worker implementation is on `codex/dg4-sentry-error-delivery`, and sanitized staging receipt remains the activation proof.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
 33 direct matrix routes, and three preview plus three backend drifts. PR #929
@@ -180,10 +180,10 @@ Next:
    runtime access.
 2. Approve an exact staging database identity and run the read-only PR-9
    preflight; classify every non-zero result before DG-2 can open PR-10.
-3. PR #939 is draft for the docs/process activation and rotation path; root
-   release is pending. Do not merge without owner approval.
-4. Supply DG-4's error provider, environment/release naming, secret owner,
-   retention/privacy policy, and sanitized receipt before PR-12.
+3. PR #939 is merged with required checks passed; keep its DG-3 proof as the
+   current TLS baseline.
+4. Complete the DG-4 backend/worker PR, run the temporary staging smoke, and
+   record the sanitized Sentry receipt before enabling the frontend slice.
 5. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
    repeat the successful 5 July mutations solely to improve documentation.
 

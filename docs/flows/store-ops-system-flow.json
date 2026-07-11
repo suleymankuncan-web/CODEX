@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-10T15:40:05.372Z",
+  "generatedAt": "2026-07-11T12:58:07.628Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2578,7 +2578,7 @@
       "exportedFunction": "getOperationsHealth",
       "source": {
         "file": "admin-web/src/features/operations/api.ts",
-        "line": 40
+        "line": 41
       }
     },
     {

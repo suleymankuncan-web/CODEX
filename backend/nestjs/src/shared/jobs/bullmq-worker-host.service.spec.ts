@@ -140,6 +140,51 @@ describe("BullMqWorkerHostService", () => {
     expect(redisQuitMock).toHaveBeenCalledTimes(1);
   });
 
+  it("captures failed jobs without swallowing the BullMQ error", async () => {
+    const failure = new Error("materialization failed");
+    const captureException = jest.fn();
+    const materializeBatch = jest.fn().mockRejectedValue(failure);
+
+    const service = new BullMqWorkerHostService(
+      {
+        queueBackend: "bullmq",
+        redisUrl: "redis://localhost:6379",
+        importQueueName: "imports",
+        snapshotQueueName: "snapshots",
+      } as never,
+      { materializeBatch } as never,
+      { executeSnapshotRun: jest.fn() } as never,
+      { captureException } as never,
+    );
+
+    await service.onModuleInit();
+    const importProcessor = workerConstructorMock.mock.calls[0][1] as (job: {
+      id: string;
+      name: string;
+      data: { batchId: string };
+    }) => Promise<void>;
+
+    await expect(
+      importProcessor({
+        id: "job-1",
+        name: "materialize",
+        data: { batchId: "batch-1" },
+      }),
+    ).rejects.toBe(failure);
+
+    expect(captureException).toHaveBeenCalledWith(
+      failure,
+      expect.objectContaining({
+        event: "job.execution.failed",
+        source: "bullmq.import-worker",
+        metadata: {
+          jobType: "materialize",
+          queueName: "imports",
+        },
+      }),
+    );
+  });
+
   it("wires worker jobs through the focused worker module instead of broad feature modules", () => {
     const imports = Reflect.getMetadata(MODULE_METADATA.IMPORTS, WorkerModule) ?? [];
 

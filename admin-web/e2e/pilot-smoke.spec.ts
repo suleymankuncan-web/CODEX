@@ -935,6 +935,7 @@ const healthFixture = {
     status: 'ok',
     errorTracking: {
       dsnConfigured: false,
+      enabled: false,
       environment: 'staging',
       externalDelivery: 'not-enabled',
       mode: 'log-only',

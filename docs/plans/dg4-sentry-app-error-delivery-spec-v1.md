@@ -157,6 +157,7 @@ unchanged. Sentry is an outbound side effect, not a new public API.
 | `ERROR_TRACKING_ENABLED` | boolean string | Exact `true`/`false`; default `false` |
 | `ERROR_TRACKING_ENVIRONMENT` | string | `staging` for current rollout; no secrets |
 | `ERROR_TRACKING_RELEASE` | string | Optional deployed commit/release identifier; no secrets |
+| `ERROR_TRACKING_SMOKE` | boolean string | Temporary staging-only startup smoke; set `false` after one receipt |
 | `VITE_SENTRY_DSN` | string | Browser-visible ingest DSN in Vercel env; never hardcoded |
 | `VITE_SENTRY_ENABLED` | boolean string | Exact `true`/`false`; default `false` |
 | `VITE_SENTRY_ENVIRONMENT` | string | `staging` for the current Vercel project |
@@ -177,4 +178,3 @@ Preview environments use the frontend keys. No DSN is stored in GitHub,
   frontend product/UI redesign.
 - **OS-6:** Paid Sentry plan, Slack/SMS/webhook escalation, or multi-tenant
   incident assignment.
-

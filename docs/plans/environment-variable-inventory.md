@@ -103,10 +103,12 @@ These values are read by `backend/nestjs/src/shared/app-config.service.ts`.
 | `UPLOAD_PARSE_MAX_CONCURRENCY` | P0 for broad production, P1 for controlled pilot | Required when `READINESS_PROFILE=broad-production`; controlled pilot default is `1`. | Limits concurrent Power BI export parsing inside the API process. Increase only after CPU/memory evidence is reviewed. |
 | `UPLOAD_PARSE_TIMEOUT_MS` | P0 for broad production, P1 for controlled pilot | Required when `READINESS_PROFILE=broad-production`; controlled pilot default is `15000`. | Retryable timeout budget for upload parsing. Sustained timeouts mean parsing should move out of the API request path. |
 | `LOG_LEVEL` | P1 | Use `info`, `warn`, or `error` unless debugging a controlled incident. | Controls Nest logger verbosity; local default is `info`. |
-| `ERROR_TRACKING_DSN` | P1 until provider is approved | Leave empty for log-only mode; use HTTPS DSN only when an error tracking provider is approved. | V1 does not add a provider package; public logs remain the active error signal. |
-| `ERROR_TRACKING_ENVIRONMENT` | P1 | Stable environment label such as `staging` or `production`. | Included in structured observability events. |
-| `ERROR_TRACKING_RELEASE` | P1 | Current deployed commit or release id when known. | Included in structured observability events; do not store secrets. |
-| `READINESS_PROFILE` | P0 | `controlled-pilot` until broad production rollout is approved; `broad-production` requires explicit observability review. | Broad production without `ERROR_TRACKING_DSN` is marked degraded and logs a startup warning. |
+| `ERROR_TRACKING_DSN` | P1 | Leave empty for log-only mode; use the HTTPS Sentry DSN from the provider secret boundary. | Render API and worker secret; never commit, log, or paste into evidence/chat. |
+| `ERROR_TRACKING_ENABLED` | P1 | Exact `true`/`false`; default is `false` so a DSN alone cannot activate external delivery. | Enables the Sentry adapter only after the staging provider and redaction setup are ready. |
+| `ERROR_TRACKING_ENVIRONMENT` | P1 | Stable environment label such as `staging` or `production`. | Included in structured observability events and Sentry issue metadata. |
+| `ERROR_TRACKING_RELEASE` | P1 | Current deployed commit or release id when known. | Included in structured observability events and Sentry issue metadata; do not store secrets. |
+| `ERROR_TRACKING_SMOKE` | P1 temporary | Set `true` only for a controlled staging startup receipt, then return to `false`. | Emits one sanitized DG4 startup event per API/worker restart; no public endpoint. |
+| `READINESS_PROFILE` | P0 | `controlled-pilot` until broad production rollout is approved; `broad-production` requires explicit observability review. | Broad production without enabled external error delivery is marked degraded and logs a startup warning. |
 | `JWT_AUDIENCE` | P0 | Must match accepted access token audience. | Defaults to `store-ops-api`. |
 | `JWT_ISSUER` | P0 | Must exactly match provider issuer. | Production rejects issuer mismatch. |
 | `JWT_JWKS_URL` | P0 | Required for real IdP JWT verification. | Preferred over shared secret verification. |
@@ -240,7 +242,7 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `LOG_LEVEL` is set to the intended runtime verbosity.
 - [ ] `ERROR_TRACKING_ENVIRONMENT` and `ERROR_TRACKING_RELEASE` identify the deploy in structured observability events.
 - [ ] `READINESS_PROFILE=controlled-pilot` unless broad production rollout is explicitly approved.
-- [ ] If `READINESS_PROFILE=broad-production`, `ERROR_TRACKING_DSN` is either configured through a provider-approved path or an accepted Conditional Go risk is recorded.
+- [ ] If `READINESS_PROFILE=broad-production`, external error delivery is enabled through a provider-approved path or an accepted Conditional Go risk is recorded.
 - [ ] `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_JWKS_URL` match real provider.
 - [ ] `JWT_SECRET` is empty when JWKS is used, or explicitly approved for non-JWKS mode.
 - [ ] Provider authorize/token/logout URLs are filled.

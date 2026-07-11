@@ -117,7 +117,7 @@ describe("ObservabilityService", () => {
     expect(warnSpy).not.toHaveBeenCalled();
     expect(errorSpy).toHaveBeenCalledTimes(1);
     expect(errorSpy.mock.calls[0][0]).toContain(
-      "ERROR_TRACKING_DSN is not configured",
+      "External error delivery is not enabled",
     );
   });
 });

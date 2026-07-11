@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: readiness and operations
-Last verified: 2026-05-24
+Last verified: 2026-07-11
 
 ## Reader And Action
 
@@ -22,9 +22,11 @@ After reading, they should know:
 
 Decision:
 
-- Keep controlled pilot on the existing log-only application observability.
-- Do not add an external error-tracking SDK until the owner chooses a provider,
-  destination, retention posture, and redaction policy.
+- Keep log-only behavior as the safe fallback, but activate a bounded Sentry
+  Developer ($0) application-error slice for staging after the owner-selected
+  provider and env boundary are verified.
+- The owner selected Sentry, the owner email destination, a 30-day/free-tier
+  retention posture, and the redaction policy recorded in the DG4 spec/runbook.
 - Broad production stays blocked if app-level error tracking is required but no
   provider smoke proof exists.
 - Incident ownership, rollback authority, security preflight, evidence expiry,
@@ -33,7 +35,8 @@ Decision:
 Why now:
 
 - The ranked readiness backlog has P0 trust items that can easily become vague.
-  The project needs an execution map before any SDK, provider, or rollout work.
+  The project now needs a small implementation/evidence loop rather than a
+  broad observability platform rollout.
 
 Evidence:
 
@@ -50,9 +53,9 @@ Evidence:
 
 Counterargument:
 
-- Adding Sentry, Better Stack error tracking, or another SDK now could look like
-  faster progress. That would be fake precision without a real owner decision
-  about provider, destination, retention, sampling, and redaction.
+- A provider SDK without an owner decision would be fake precision. That gate is
+  now satisfied for the Sentry Developer staging slice; delivery remains
+  unproven until the sanitized receipt is recorded.
 
 Risk:
 
@@ -80,10 +83,10 @@ Already implemented and safe to rely on for controlled pilot:
 - Redis/BullMQ staging proof with controlled-pilot tier caveat;
 - Supabase logical restore proof with broad-production caveat.
 
-Not implemented as production-grade app-level error tracking:
+Not yet proven as production-grade app-level error tracking:
 
-- external SDK delivery,
-- frontend browser exception capture,
+- staging Sentry event receipt,
+- frontend browser exception capture and receipt,
 - release/source-map grouping,
 - provider retention and access policy,
 - incident assignment inside an external tracking provider.
@@ -94,11 +97,13 @@ Not implemented as production-grade app-level error tracking:
 
 Current stance:
 
-- log-only backend observability is acceptable for controlled pilot;
-- external provider delivery is blocked until the owner chooses the provider and
-  destination.
+- log-only backend observability remains the rollback/fallback mode;
+- Sentry Developer is the selected provider and the staging env boundary is in
+  place;
+- backend/worker adapter implementation is allowed and staging receipt is the
+  remaining activation proof.
 
-First allowed code slice after provider decision:
+First allowed code slice:
 
 1. Add a narrow backend error-tracking adapter behind env flags.
 2. Preserve existing API response shape and standard error behavior.
@@ -108,7 +113,8 @@ First allowed code slice after provider decision:
    server exception.
 5. Prove a sanitized staging smoke event without recording raw secrets.
 
-Frontend capture is a second slice after backend capture works.
+Frontend capture is a second slice after backend tests and staging backend
+delivery are accepted.
 
 Stop if:
 
@@ -245,8 +251,8 @@ No-Go if:
 
 ## Durust Yorum
 
-The project is not missing "some random observability package." It is missing
-the final human/provider commitments that make error tracking useful during an
-incident. Until those are named, the correct engineering move is to keep the
-current log-only controlled-pilot posture honest and make the next provider
-slice small, testable, and reversible.
+The project is not missing "some random observability package." The provider,
+destination, secret boundary, and redaction decisions are now named. The
+remaining work is deliberately small: prove backend/worker delivery, prove the
+browser slice, record sanitized evidence, and keep the flag-based rollback
+available.
