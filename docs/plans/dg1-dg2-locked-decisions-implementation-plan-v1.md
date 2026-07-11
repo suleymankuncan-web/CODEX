@@ -705,19 +705,19 @@ Exact scope:
 
 Tasks:
 
-- [ ] Remove `turnover_rate` from the Norm Kadro headcount-gap projection and
+- [x] Remove `turnover_rate` from the Norm Kadro headcount-gap projection and
       API mapping.
-- [ ] Restore the Region Manager Norm Kadro turnover values to `null` and the
+- [x] Restore the Region Manager Norm Kadro turnover values to `null` and the
       existing controlled `Veri yok` / empty-history state.
-- [ ] Ensure no numeric regional average, row percentage, detail percentage,
+- [x] Ensure no numeric regional average, row percentage, detail percentage,
       progress bar percentage, or CSV percentage is produced.
-- [ ] Keep the existing label/empty-state layout unless a focused layout test
+- [x] Keep the existing label/empty-state layout unless a focused layout test
       proves an empty element is unusable. Do not invent a replacement metric.
-- [ ] Add a data-honesty source guard so this surface cannot silently reconnect
+- [x] Add a data-honesty source guard so this surface cannot silently reconnect
       to live turnover values without an explicit future decision.
-- [ ] Keep prototype-only static examples inside the prototype shelf only.
-- [ ] Assert the diff contains no `db/**` path and no mutation statement.
-- [ ] Do not touch canonical turnover reporting files.
+- [x] Keep prototype-only static examples inside the prototype shelf only.
+- [x] Assert the diff contains no `db/**` path and no mutation statement.
+- [x] Do not touch canonical turnover reporting files.
 
 Required targeted commands, in order:
 

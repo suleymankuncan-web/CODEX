@@ -68,8 +68,10 @@ completed PR-3: authorization changes now clear protected frontend cache state
 before a new shell renders. PR #930 completed PR-4: target and request-center
 reads are bounded without mutation, DB, or authorization-policy changes. PR
 #931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS configuration; PR #939 closed provider-CA verify-full staging proof plus rotation/rollback ownership. PR #943 completed DG1-A: Report Viewer backend reads are bounded by role-specific company scope with cross-company, empty-scope, and mixed-role tests; frontend exposure remains the DG1-B gate.
-PR #944 completed DG1-B after all required checks passed and was squash-merged to
-`main`; the next working branch is `codex/dg1-c-incentive-closure`.
+PR #944 completed DG1-B. PR #948 completed DG1-D: non-development Admin
+Session is read-only while the local diagnostics editor remains development-only.
+DG1-C endpoint retirement remains usage-gated; DG2-A is the active safe slice,
+followed by verify-full runner hardening in DG2-B.
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch aggregate and verified the ruleset readback.
 - PR #918 (A2) made root release the one canonical full frontend-release owner; the frontend child is targeted and reusable, not a duplicate full suite.
 - PR #919 (A3) kept all 371 Playwright tests, uses two CI-only workers with
@@ -174,7 +176,7 @@ The no-delete inventory is
 
 Now:
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
-- Keep the truthful release boundary stable while A3 measurement and remaining B1 external evidence continue under their sections above.
+- DG2-A removes only the demo-era Norm Kadro percentage projection; staging business rows and canonical turnover reports remain untouched.
 
 Next:
 1. Obtain the sanitized provider usage window and owner sign-off; if usage is
