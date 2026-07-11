@@ -4,7 +4,12 @@ export const sessionReadinessTr = {
   'sessionReadiness.heroTitle': 'Gerçek auth akışına geçerken yerel hızı koru.',
   'sessionReadiness.heroCopy':
     'Backend geliştirme için mock-header auth yolunu ve production yolu için JWT doğrulamayı zaten destekliyor. Bu ekran iki modu açık ve değiştirilebilir tutar; bearer tokenları uzun ömürlü tarayıcı storage alanında bırakmaz.',
+  'sessionReadiness.readOnlyEyebrow': 'Oturum durumu',
+  'sessionReadiness.readOnlyHeroTitle': 'Mevcut oturumu güvenle doğrulayın.',
+  'sessionReadiness.readOnlyHeroCopy':
+    'Oturum türünü, bağlantı durumunu ve yetki kapsamı özetini değiştirmeden kontrol edin.',
   'sessionReadiness.mode': 'Mod',
+  'sessionReadiness.transport': 'Bağlantı',
   'sessionReadiness.mockHeaders': "Mock header'lar",
   'sessionReadiness.ready': 'Hazır',
   'sessionReadiness.yes': 'Evet',
@@ -29,6 +34,14 @@ export const sessionReadinessTr = {
     'Cookie oturumu backend tarafında temizlenemedi. Mevcut oturum korunuyor; tekrar deneyin veya yeniden giriş yapın.',
   'sessionReadiness.verifyCurrentSession': 'Mevcut oturumu doğrula',
   'sessionReadiness.resetToDefaults': 'Varsayılanlara dön',
+  'sessionReadiness.readOnlyStatusTitle': 'Salt okunur oturum',
+  'sessionReadiness.readOnlyStatusCopy':
+    'Bu ortamda oturum ayarları değiştirilemez. Mevcut oturumu doğrulayabilirsiniz.',
+  'sessionReadiness.readOnlyModeProvider': 'Kurumsal oturum',
+  'sessionReadiness.readOnlyModeLocal': 'Yerel oturum',
+  'sessionReadiness.readOnlyTransportCookie': 'Güvenli tarayıcı oturumu',
+  'sessionReadiness.readOnlyTransportBearer': 'Sağlayıcı oturumu',
+  'sessionReadiness.readOnlyTransportLocal': 'Yerel geliştirme oturumu',
   'sessionReadiness.requestPreview': 'İstek önizlemesi',
   'sessionReadiness.requestPreviewTitle': 'İstemcinin göndereceği bilgiler',
   'sessionReadiness.noTokenSetYet': 'Henüz token yok',
@@ -52,13 +65,18 @@ export const sessionReadinessTr = {
   'sessionReadiness.idle': 'Boşta',
   'sessionReadiness.verificationEmpty':
     'Mevcut auth modunun korumalı backend routeuna erişebildiğini doğrulamak için oturumu kaydet ve doğrulamayı çalıştır.',
+  'sessionReadiness.verificationReadOnlyEmpty':
+    'Mevcut oturumun erişim durumunu ve kapsam özetini görmek için doğrulamayı çalıştırın.',
   'sessionReadiness.verifyingTitle': 'Oturum doğrulanıyor',
   'sessionReadiness.verifyingCopy': 'Kaydedilmiş auth modu ile /api/auth/session çağrılıyor.',
+  'sessionReadiness.verificationReadOnlyCopy': 'Mevcut oturum kontrol ediliyor.',
   'sessionReadiness.verificationFailed': 'Doğrulama başarısız oldu',
   'sessionReadiness.unexpectedVerificationError': 'Beklenmeyen auth doğrulama hatası',
   'sessionReadiness.backendAccepted': 'Backend oturumu kabul etti',
   'sessionReadiness.backendAcceptedCopy':
     '{userId} kullanıcısı {roles} rolleriyle doğrulandı.',
+  'sessionReadiness.verificationReadOnlyAcceptedCopy':
+    'Oturum doğrulandı. Yetki kapsamı özeti aşağıdadır.',
   'sessionReadiness.none': 'yok',
   'sessionReadiness.notAvailable': 'n/a',
   'sessionReadiness.employeeId': 'Personel',
@@ -78,7 +96,12 @@ export const sessionReadinessEn: Record<keyof typeof sessionReadinessTr, string>
   'sessionReadiness.heroTitle': 'Prepare the shell for real auth without losing local speed.',
   'sessionReadiness.heroCopy':
     'The backend already supports mock-header auth for development and JWT verification for a production path. This screen keeps both modes explicit and swappable without leaving bearer tokens in long-lived browser storage.',
+  'sessionReadiness.readOnlyEyebrow': 'Session status',
+  'sessionReadiness.readOnlyHeroTitle': 'Verify the current session safely.',
+  'sessionReadiness.readOnlyHeroCopy':
+    'Review the session type, connection status, and authorization scope summary without changing them.',
   'sessionReadiness.mode': 'Mode',
+  'sessionReadiness.transport': 'Connection',
   'sessionReadiness.mockHeaders': 'Mock headers',
   'sessionReadiness.ready': 'Ready',
   'sessionReadiness.yes': 'Yes',
@@ -103,6 +126,14 @@ export const sessionReadinessEn: Record<keyof typeof sessionReadinessTr, string>
     'The cookie session could not be cleared by the backend. The current session is kept; retry or sign in again.',
   'sessionReadiness.verifyCurrentSession': 'Verify current session',
   'sessionReadiness.resetToDefaults': 'Reset to defaults',
+  'sessionReadiness.readOnlyStatusTitle': 'Read-only session',
+  'sessionReadiness.readOnlyStatusCopy':
+    'Session settings cannot be changed in this environment. You can verify the current session.',
+  'sessionReadiness.readOnlyModeProvider': 'Organization session',
+  'sessionReadiness.readOnlyModeLocal': 'Local session',
+  'sessionReadiness.readOnlyTransportCookie': 'Secure browser session',
+  'sessionReadiness.readOnlyTransportBearer': 'Provider session',
+  'sessionReadiness.readOnlyTransportLocal': 'Local development session',
   'sessionReadiness.requestPreview': 'Request preview',
   'sessionReadiness.requestPreviewTitle': 'What the client will send',
   'sessionReadiness.noTokenSetYet': 'No token set yet',
@@ -126,13 +157,18 @@ export const sessionReadinessEn: Record<keyof typeof sessionReadinessTr, string>
   'sessionReadiness.idle': 'Idle',
   'sessionReadiness.verificationEmpty':
     'Save the session and run verification to confirm the current auth mode can reach a protected backend route.',
+  'sessionReadiness.verificationReadOnlyEmpty':
+    'Run verification to review the current session access status and scope summary.',
   'sessionReadiness.verifyingTitle': 'Verifying session',
   'sessionReadiness.verifyingCopy': 'Calling /api/auth/session with the currently saved auth mode.',
+  'sessionReadiness.verificationReadOnlyCopy': 'Checking the current session.',
   'sessionReadiness.verificationFailed': 'Verification failed',
   'sessionReadiness.unexpectedVerificationError': 'Unexpected auth verification error',
   'sessionReadiness.backendAccepted': 'Backend accepted the session',
   'sessionReadiness.backendAcceptedCopy':
     'User {userId} is authenticated with roles {roles}.',
+  'sessionReadiness.verificationReadOnlyAcceptedCopy':
+    'Session verified. The authorization scope summary is shown below.',
   'sessionReadiness.none': 'none',
   'sessionReadiness.notAvailable': 'n/a',
   'sessionReadiness.employeeId': 'Employee',

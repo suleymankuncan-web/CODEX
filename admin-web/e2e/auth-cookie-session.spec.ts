@@ -283,29 +283,8 @@ test('PKCE callback creates cookie session without storing provider tokens', asy
   expect(feedPostCsrf).toBe(csrfToken)
   expect(feedPostAuthorization).toBeUndefined()
 
-  await page.goto('/admin/session')
-  await page.getByRole('button', { name: /Mock/ }).click()
-  await page.getByLabel(/Kullan|User/).fill('mock-cookie-clear-user')
-  await page.getByRole('button', { name: /kaydet|Save/i }).click()
-  await expect.poll(() => browserSessionClearCount).toBe(1)
-
-  await expect
-    .poll(() => page.evaluate(() => window.localStorage.getItem('store-ops-admin-session') ?? ''))
-    .toContain('"mode":"mock"')
-
-  const storageAfterMockSave = await page.evaluate(() => ({
-    bearerToken: window.sessionStorage.getItem('store-ops-admin-bearer-token'),
-    providerIdToken: window.sessionStorage.getItem('store-ops-admin-provider-id-token'),
-    persistedSession: window.localStorage.getItem('store-ops-admin-session'),
-  }))
-
-  expect(storageAfterMockSave.bearerToken).toBeNull()
-  expect(storageAfterMockSave.providerIdToken).toBeNull()
-  expect(storageAfterMockSave.persistedSession).toContain('mock-cookie-clear-user')
-  expect(storageAfterMockSave.persistedSession).toContain('"browserSessionKey":""')
-
   await page.goto('/auth/logout')
-  await expect.poll(() => browserSessionClearCount).toBe(2)
+  await expect.poll(() => browserSessionClearCount).toBe(1)
 })
 
 test('cookie callback re-login rotates the browser-session cache key', async ({ page }) => {

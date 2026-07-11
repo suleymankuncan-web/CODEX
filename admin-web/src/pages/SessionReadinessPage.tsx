@@ -1,7 +1,8 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react'
+import { useState } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { ArrowLeft, KeyRound, ShieldEllipsis, TestTubeDiagonal } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { Button } from '../components/ui/button'
 import {
   EmptyState,
   KeyValue,
@@ -19,9 +20,15 @@ import {
   defaultSession,
   getBearerSessionCacheKey,
   isCookieBrowserSession,
-  type SessionMode,
-  type SessionState,
 } from '../features/session/session-storage'
+import { SessionReadinessDevelopmentEditor } from './session-readiness-development-editor'
+import {
+  resolveSafeSessionStatus,
+  resolveSessionReadinessDisplayPolicy,
+  type SafeSessionStatus,
+} from './session-readiness-display-policy'
+
+const displayPolicy = resolveSessionReadinessDisplayPolicy(import.meta.env.DEV)
 
 export function SessionReadinessPage() {
   const { t } = useLocalization()
@@ -29,11 +36,10 @@ export function SessionReadinessPage() {
   const [draft, setDraft] = useState(session)
   const [verificationRequested, setVerificationRequested] = useState(false)
   const [saveError, setSaveError] = useState(false)
-  const sessionModeLabel = formatSessionMode(session.mode, t)
-  const readinessLabel = isReady ? t('sessionReadiness.yes') : t('sessionReadiness.needsSetup')
-  const bearerSessionKey = getBearerSessionCacheKey(session.bearerToken)
-  const cookieSessionKey = session.browserSessionKey.trim() || 'cookie-session-missing'
-  const authSessionKey = isCookieBrowserSession(session) ? cookieSessionKey : bearerSessionKey
+  const safeStatus = resolveSafeSessionStatus(session)
+  const authSessionKey = isCookieBrowserSession(session)
+    ? session.browserSessionKey.trim() || 'cookie-session-missing'
+    : getBearerSessionCacheKey(session.bearerToken)
   const sessionQuery = useQuery({
     queryKey:
       session.mode === 'bearer'
@@ -51,9 +57,14 @@ export function SessionReadinessPage() {
             session.mockReadRegionIds,
           ],
     queryFn: getAuthSession,
-    enabled: verificationRequested && isReady,
+    enabled: false,
     retry: false,
   })
+
+  const verifyCurrentSession = () => {
+    setVerificationRequested(true)
+    void sessionQuery.refetch()
+  }
 
   return (
     <section className="page-stack">
@@ -64,78 +75,93 @@ export function SessionReadinessPage() {
 
       <section className="hero-panel">
         <div>
-          <div className="eyebrow">{t('sessionReadiness.eyebrow')}</div>
-          <h2 className="hero-title">{t('sessionReadiness.heroTitle')}</h2>
-          <p className="hero-copy">{t('sessionReadiness.heroCopy')}</p>
+          <div className="eyebrow">
+            {t(
+              displayPolicy.canEditSession
+                ? 'sessionReadiness.eyebrow'
+                : 'sessionReadiness.readOnlyEyebrow',
+            )}
+          </div>
+          <h2 className="hero-title">
+            {t(
+              displayPolicy.canEditSession
+                ? 'sessionReadiness.heroTitle'
+                : 'sessionReadiness.readOnlyHeroTitle',
+            )}
+          </h2>
+          <p className="hero-copy">
+            {t(
+              displayPolicy.canEditSession
+                ? 'sessionReadiness.heroCopy'
+                : 'sessionReadiness.readOnlyHeroCopy',
+            )}
+          </p>
         </div>
         <div className="hero-metrics">
-          <MetricAccent label={t('sessionReadiness.mode')} value={sessionModeLabel} />
-          <MetricAccent label={t('sessionReadiness.ready')} value={readinessLabel} />
-          <MetricAccent label={t('sessionReadiness.backendPath')} value="Mock + JWT" />
+          <MetricAccent
+            label={t('sessionReadiness.mode')}
+            value={formatSafeMode(safeStatus.mode, t)}
+          />
+          <MetricAccent
+            label={t('sessionReadiness.ready')}
+            value={isReady ? t('sessionReadiness.yes') : t('sessionReadiness.needsSetup')}
+          />
+          <MetricAccent
+            label={t('sessionReadiness.transport')}
+            value={formatSafeTransport(safeStatus.transport, t)}
+          />
         </div>
       </section>
 
-      <section className="metric-grid">
-        <MetricCard
-          title={t('sessionReadiness.developmentMode')}
-          value={session.mode === 'mock' ? 1 : 0}
-          note={t('sessionReadiness.developmentModeNote')}
-          icon={<TestTubeDiagonal size={18} />}
-          tone="accent"
-        />
-        <MetricCard
-          title={t('sessionReadiness.productionPath')}
-          value={session.mode === 'bearer' ? 1 : 0}
-          note={t('sessionReadiness.productionPathNote')}
-          icon={<KeyRound size={18} />}
-          tone="neutral"
-        />
-        <MetricCard
-          title={t('sessionReadiness.operatorRisk')}
-          value={isReady ? 0 : 1}
-          note={t('sessionReadiness.operatorRiskNote')}
-          icon={<ShieldEllipsis size={18} />}
-          tone={isReady ? 'calm' : 'warning'}
-        />
-      </section>
+      {displayPolicy.canEditSession ? (
+        <DevelopmentMetrics isReady={isReady} mode={session.mode} />
+      ) : null}
 
-      <section className="two-up-grid">
-        <SessionModePanel
-          draft={draft}
+      {displayPolicy.canEditSession ? (
+        <section className="two-up-grid">
+          <SessionReadinessDevelopmentEditor
+            draft={draft}
+            isReady={isReady}
+            session={session}
+            setDraft={setDraft}
+            onSave={async () => {
+              setSaveError(false)
+              try {
+                await saveSession(draft)
+                setVerificationRequested(false)
+              } catch {
+                setSaveError(true)
+              }
+            }}
+            onVerify={async () => {
+              setSaveError(false)
+              try {
+                await saveSession(draft)
+                setVerificationRequested(true)
+                void sessionQuery.refetch()
+              } catch {
+                setSaveError(true)
+              }
+            }}
+            onReset={async () => {
+              setSaveError(false)
+              try {
+                await resetSession()
+                setDraft(defaultSession)
+                setVerificationRequested(false)
+              } catch {
+                setSaveError(true)
+              }
+            }}
+          />
+        </section>
+      ) : (
+        <SessionReadOnlyPanel
           isReady={isReady}
-          session={session}
-          setDraft={setDraft}
-          onSave={async () => {
-            setSaveError(false)
-            try {
-              await saveSession(draft)
-              setVerificationRequested(false)
-            } catch {
-              setSaveError(true)
-            }
-          }}
-          onVerify={async () => {
-            setSaveError(false)
-            try {
-              await saveSession(draft)
-              setVerificationRequested(true)
-              void sessionQuery.refetch()
-            } catch {
-              setSaveError(true)
-            }
-          }}
-          onReset={async () => {
-            setSaveError(false)
-            try {
-              await resetSession()
-              setDraft(defaultSession)
-              setVerificationRequested(false)
-            } catch {
-              setSaveError(true)
-            }
-          }}
+          safeStatus={safeStatus}
+          onVerify={verifyCurrentSession}
         />
-      </section>
+      )}
 
       {saveError ? (
         <ScreenState
@@ -148,242 +174,87 @@ export function SessionReadinessPage() {
       <SessionVerificationPanel
         sessionQuery={sessionQuery}
         verificationRequested={verificationRequested}
+        showDevelopmentDiagnostics={displayPolicy.canEditSession}
       />
     </section>
   )
 }
 
-function SessionModePanel(input: {
-  draft: SessionState
-  isReady: boolean
-  session: SessionState
-  setDraft: Dispatch<SetStateAction<SessionState>>
-  onSave: () => void
-  onVerify: () => void
-  onReset: () => void
-}) {
+function DevelopmentMetrics(input: { isReady: boolean; mode: 'mock' | 'bearer' }) {
   const { t } = useLocalization()
-  const mode = input.draft.mode
-  const requestPreview = useMemo(() => {
-    if (mode === 'bearer') {
-      if (isCookieBrowserSession(input.draft)) {
-        return [
-          { label: 'Cookie', value: t('sessionReadiness.cookieSessionPreview') },
-          { label: 'X-CSRF-Token', value: t('sessionReadiness.csrfMemoryPreview') },
-        ]
-      }
-
-      return input.draft.bearerToken
-        ? [{ label: 'Authorization', value: `Bearer ${truncateToken(input.draft.bearerToken)}` }]
-        : [{ label: 'Authorization', value: t('sessionReadiness.noTokenSetYet') }]
-    }
-
-    return [
-      { label: 'x-user-id', value: input.draft.mockUserId },
-      { label: 'x-role-codes', value: input.draft.mockRoleCodes },
-      { label: 'x-company-ids', value: input.draft.mockCompanyIds },
-      { label: 'x-store-ids', value: input.draft.mockStoreIds || '-' },
-      { label: 'x-read-store-ids', value: input.draft.mockReadStoreIds || '-' },
-      { label: 'x-assigned-store-ids', value: input.draft.mockAssignedStoreIds || '-' },
-      { label: 'x-region-ids', value: input.draft.mockRegionIds || '-' },
-      { label: 'x-read-region-ids', value: input.draft.mockReadRegionIds || '-' },
-    ]
-  }, [input.draft, mode, t])
 
   return (
-    <>
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('sessionReadiness.sessionMode')}</div>
-            <h3>{t('sessionReadiness.sessionModeTitle')}</h3>
-          </div>
-          <StatusPill tone={input.isReady ? 'calm' : 'warning'}>
-            {input.isReady ? t('sessionReadiness.ready') : t('sessionReadiness.needsSetup')}
-          </StatusPill>
-        </div>
+    <section className="metric-grid">
+      <MetricCard
+        title={t('sessionReadiness.developmentMode')}
+        value={input.mode === 'mock' ? 1 : 0}
+        note={t('sessionReadiness.developmentModeNote')}
+        icon={<TestTubeDiagonal size={18} />}
+        tone="accent"
+      />
+      <MetricCard
+        title={t('sessionReadiness.productionPath')}
+        value={input.mode === 'bearer' ? 1 : 0}
+        note={t('sessionReadiness.productionPathNote')}
+        icon={<KeyRound size={18} />}
+        tone="neutral"
+      />
+      <MetricCard
+        title={t('sessionReadiness.operatorRisk')}
+        value={input.isReady ? 0 : 1}
+        note={t('sessionReadiness.operatorRiskNote')}
+        icon={<ShieldEllipsis size={18} />}
+        tone={input.isReady ? 'calm' : 'warning'}
+      />
+    </section>
+  )
+}
 
-        <div className="toolbar-cluster">
-          <button
-            className={`segmented-button${mode === 'mock' ? ' segmented-button-active' : ''}`}
-            type="button"
-            onClick={() => input.setDraft((current) => ({ ...current, mode: 'mock' }))}
-          >
-            {t('sessionReadiness.mockHeaders')}
-          </button>
-          <button
-            className={`segmented-button${mode === 'bearer' ? ' segmented-button-active' : ''}`}
-            type="button"
-            onClick={() => input.setDraft((current) => ({ ...current, mode: 'bearer' }))}
-          >
-            {t('sessionReadiness.bearerToken')}
-          </button>
-        </div>
+function SessionReadOnlyPanel(input: {
+  isReady: boolean
+  safeStatus: SafeSessionStatus
+  onVerify: () => void
+}) {
+  const { t } = useLocalization()
 
-        {mode === 'mock' ? (
-          <div className="form-grid">
-            <label className="field-block">
-              <span>{t('sessionReadiness.userId')}</span>
-              <input
-                value={input.draft.mockUserId}
-                onChange={(event) =>
-                  input.setDraft((current) => ({ ...current, mockUserId: event.target.value }))
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>{t('sessionReadiness.companyIds')}</span>
-              <input
-                value={input.draft.mockCompanyIds}
-                onChange={(event) =>
-                  input.setDraft((current) => ({ ...current, mockCompanyIds: event.target.value }))
-                }
-              />
-            </label>
-            <label className="field-block field-block-full">
-              <span>{t('sessionReadiness.roleCodes')}</span>
-              <input
-                value={input.draft.mockRoleCodes}
-                onChange={(event) =>
-                  input.setDraft((current) => ({ ...current, mockRoleCodes: event.target.value }))
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>x-store-ids</span>
-              <input
-                value={input.draft.mockStoreIds}
-                onChange={(event) =>
-                  input.setDraft((current) => ({ ...current, mockStoreIds: event.target.value }))
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>x-assigned-store-ids</span>
-              <input
-                value={input.draft.mockAssignedStoreIds}
-                onChange={(event) =>
-                  input.setDraft((current) => ({
-                    ...current,
-                    mockAssignedStoreIds: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>x-read-store-ids</span>
-              <input
-                value={input.draft.mockReadStoreIds}
-                onChange={(event) =>
-                  input.setDraft((current) => ({
-                    ...current,
-                    mockReadStoreIds: event.target.value,
-                  }))
-                }
-              />
-            </label>
-            <label className="field-block">
-              <span>x-region-ids</span>
-              <input
-                value={input.draft.mockRegionIds}
-                onChange={(event) =>
-                  input.setDraft((current) => ({ ...current, mockRegionIds: event.target.value }))
-                }
-              />
-            </label>
-            <label className="field-block field-block-full">
-              <span>x-read-region-ids</span>
-              <input
-                value={input.draft.mockReadRegionIds}
-                onChange={(event) =>
-                  input.setDraft((current) => ({
-                    ...current,
-                    mockReadRegionIds: event.target.value,
-                  }))
-                }
-              />
-            </label>
-          </div>
-        ) : (
-          <label className="field-block">
-            <span>{t('sessionReadiness.bearerToken')}</span>
-            <textarea
-              className="field-textarea"
-              value={input.draft.bearerToken}
-              onChange={(event) =>
-                input.setDraft((current) => ({ ...current, bearerToken: event.target.value }))
-              }
-              placeholder={t('sessionReadiness.bearerPlaceholder')}
-            />
-          </label>
-        )}
-
-        <div className="action-cluster">
-          <button className="control-button" type="button" onClick={input.onSave}>
-            {t('sessionReadiness.saveSession')}
-          </button>
-          <button
-            className="control-button"
-            type="button"
-            onClick={input.onVerify}
-            disabled={!input.isReady}
-          >
-            {t('sessionReadiness.verifyCurrentSession')}
-          </button>
-          <button className="control-button" type="button" onClick={input.onReset}>
-            {t('sessionReadiness.resetToDefaults')}
-          </button>
+  return (
+    <section className="panel" data-testid="session-readonly-panel">
+      <div className="panel-heading">
+        <div>
+          <div className="eyebrow">{t('sessionReadiness.readOnlyEyebrow')}</div>
+          <h3>{t('sessionReadiness.readOnlyStatusTitle')}</h3>
         </div>
-      </article>
-
-      <article className="panel">
-        <div className="panel-heading">
-          <div>
-            <div className="eyebrow">{t('sessionReadiness.requestPreview')}</div>
-            <h3>{t('sessionReadiness.requestPreviewTitle')}</h3>
-          </div>
-        </div>
-
-        <div className="key-grid">
-          {requestPreview.map((item) => (
-            <KeyValue key={item.label} label={item.label} value={item.value} />
-          ))}
-        </div>
-
-        <div className="stacked-table">
-          <div className="stacked-row">
-            <div className="stacked-row-head">
-              <strong>{t('sessionReadiness.mockMode')}</strong>
-              <StatusPill tone={input.session.mode === 'mock' ? 'accent' : 'neutral'}>
-                {t('sessionReadiness.dev')}
-              </StatusPill>
-            </div>
-            <p>{t('sessionReadiness.mockModeCopy')}</p>
-          </div>
-          <div className="stacked-row">
-            <div className="stacked-row-head">
-              <strong>{t('sessionReadiness.bearerMode')}</strong>
-              <StatusPill tone={input.session.mode === 'bearer' ? 'accent' : 'neutral'}>
-                {t('sessionReadiness.prodPath')}
-              </StatusPill>
-            </div>
-            <p>{t('sessionReadiness.bearerModeCopy')}</p>
-            {isCookieBrowserSession(input.session) ? (
-              <p>{t('sessionReadiness.cookieTransportCopy')}</p>
-            ) : null}
-          </div>
-        </div>
-      </article>
-    </>
+        <StatusPill tone={input.isReady ? 'calm' : 'warning'}>
+          {input.isReady ? t('sessionReadiness.ready') : t('sessionReadiness.needsSetup')}
+        </StatusPill>
+      </div>
+      <p>{t('sessionReadiness.readOnlyStatusCopy')}</p>
+      <div className="key-grid">
+        <KeyValue
+          label={t('sessionReadiness.mode')}
+          value={formatSafeMode(input.safeStatus.mode, t)}
+        />
+        <KeyValue
+          label={t('sessionReadiness.transport')}
+          value={formatSafeTransport(input.safeStatus.transport, t)}
+        />
+      </div>
+      <div className="action-cluster">
+        <Button type="button" onClick={input.onVerify} disabled={!input.isReady}>
+          {t('sessionReadiness.verifyCurrentSession')}
+        </Button>
+      </div>
+    </section>
   )
 }
 
 function SessionVerificationPanel(input: {
   sessionQuery: UseQueryResult<AuthSessionSummary, Error>
   verificationRequested: boolean
+  showDevelopmentDiagnostics: boolean
 }) {
   const { t } = useLocalization()
-  const { sessionQuery, verificationRequested } = input
+  const { sessionQuery, verificationRequested, showDevelopmentDiagnostics } = input
 
   return (
     <section className="panel">
@@ -392,25 +263,43 @@ function SessionVerificationPanel(input: {
           <div className="eyebrow">{t('sessionReadiness.sessionVerification')}</div>
           <h3>{t('sessionReadiness.sessionVerificationTitle')}</h3>
         </div>
-        {verificationRequested ? (
-          <StatusPill tone={sessionQuery.isSuccess ? 'calm' : sessionQuery.isError ? 'danger' : 'warning'}>
-            {sessionQuery.isSuccess
+        <StatusPill
+          tone={
+            !verificationRequested
+              ? 'neutral'
+              : sessionQuery.isSuccess
+                ? 'calm'
+                : sessionQuery.isError
+                  ? 'danger'
+                  : 'warning'
+          }
+        >
+          {!verificationRequested
+            ? t('sessionReadiness.idle')
+            : sessionQuery.isSuccess
               ? t('sessionReadiness.verified')
               : sessionQuery.isError
                 ? t('sessionReadiness.rejected')
                 : t('sessionReadiness.checking')}
-          </StatusPill>
-        ) : (
-          <StatusPill tone="neutral">{t('sessionReadiness.idle')}</StatusPill>
-        )}
+        </StatusPill>
       </div>
 
       {!verificationRequested ? (
-        <EmptyState copy={t('sessionReadiness.verificationEmpty')} />
-      ) : sessionQuery.isLoading ? (
+        <EmptyState
+          copy={t(
+            showDevelopmentDiagnostics
+              ? 'sessionReadiness.verificationEmpty'
+              : 'sessionReadiness.verificationReadOnlyEmpty',
+          )}
+        />
+      ) : sessionQuery.isFetching ? (
         <ScreenState
           title={t('sessionReadiness.verifyingTitle')}
-          copy={t('sessionReadiness.verifyingCopy')}
+          copy={t(
+            showDevelopmentDiagnostics
+              ? 'sessionReadiness.verifyingCopy'
+              : 'sessionReadiness.verificationReadOnlyCopy',
+          )}
         />
       ) : sessionQuery.isError ? (
         <div className="stacked-table">
@@ -420,92 +309,85 @@ function SessionVerificationPanel(input: {
               <StatusPill tone="danger">{t('sessionReadiness.rejected')}</StatusPill>
             </div>
             <p>
-              {sessionQuery.error instanceof Error
+              {showDevelopmentDiagnostics && sessionQuery.error instanceof Error
                 ? sessionQuery.error.message
                 : t('sessionReadiness.unexpectedVerificationError')}
             </p>
           </div>
         </div>
       ) : sessionQuery.data ? (
-        <div className="stacked-table">
-          {(() => {
-            const userLabel = resolveUserDisplayLabel(
-              sessionQuery.data.user,
-              t('sessionReadiness.notAvailable'),
-            )
-            const employeeLabel = normalizeDisplayLabel(
-              sessionQuery.data.user.employeeId,
-              t('sessionReadiness.notAvailable'),
-            )
-
-            return (
-              <>
-          <div className="stacked-row">
-            <div className="stacked-row-head">
-              <strong>{t('sessionReadiness.backendAccepted')}</strong>
-              <StatusPill tone="calm">{sessionQuery.data.authMode}</StatusPill>
-            </div>
-            <p>
-              {t('sessionReadiness.backendAcceptedCopy', {
-                userId: userLabel,
-                roles: sessionQuery.data.user.roleCodes.join(', ') || t('sessionReadiness.none'),
-              })}
-            </p>
-          </div>
-
-          <div className="key-grid">
-            <KeyValue
-              label={t('sessionReadiness.employeeId')}
-              value={employeeLabel}
-            />
-            <KeyValue
-              label={t('sessionReadiness.companyScopes')}
-              value={String(sessionQuery.data.scopeSummary.companyCount)}
-            />
-            <KeyValue
-              label={t('sessionReadiness.regionScopes')}
-              value={String(sessionQuery.data.scopeSummary.regionCount)}
-            />
-            <KeyValue
-              label={t('sessionReadiness.storeScopes')}
-              value={String(sessionQuery.data.scopeSummary.storeCount)}
-            />
-          </div>
-              </>
-            )
-          })()}
-
-          <div className="stacked-row">
-            <div className="stacked-row-head">
-              <strong>{t('sessionReadiness.resolvedScope')}</strong>
-              <StatusPill tone="accent">{t('sessionReadiness.claimsAssignments')}</StatusPill>
-            </div>
-            <p>
-              {t('sessionReadiness.companyScopes')}: {sessionQuery.data.scopeSummary.companyCount}
-            </p>
-            <p>
-              {t('sessionReadiness.regionScopes')}: {sessionQuery.data.scopeSummary.regionCount}
-            </p>
-            <p>
-              {t('sessionReadiness.storeScopes')}: {sessionQuery.data.scopeSummary.storeCount}
-            </p>
-          </div>
-        </div>
+        <VerificationSuccess
+          data={sessionQuery.data}
+          showDevelopmentDiagnostics={showDevelopmentDiagnostics}
+        />
       ) : null}
     </section>
   )
 }
 
-function truncateToken(token: string) {
-  const normalized = token.trim()
+function VerificationSuccess(input: {
+  data: AuthSessionSummary
+  showDevelopmentDiagnostics: boolean
+}) {
+  const { t } = useLocalization()
+  const userLabel = resolveUserDisplayLabel(input.data.user, t('sessionReadiness.notAvailable'))
+  const employeeLabel = normalizeDisplayLabel(
+    input.data.user.employeeId,
+    t('sessionReadiness.notAvailable'),
+  )
 
-  if (normalized.length < 18) {
-    return '[redacted]'
-  }
-
-  return `${normalized.slice(0, 10)}...${normalized.slice(-6)}`
+  return (
+    <div className="stacked-table">
+      <div className="stacked-row">
+        <div className="stacked-row-head">
+          <strong>{t('sessionReadiness.backendAccepted')}</strong>
+          <StatusPill tone="calm">{t('sessionReadiness.verified')}</StatusPill>
+        </div>
+        <p>
+          {input.showDevelopmentDiagnostics
+            ? t('sessionReadiness.backendAcceptedCopy', {
+                userId: userLabel,
+                roles: input.data.user.roleCodes.join(', ') || t('sessionReadiness.none'),
+              })
+            : t('sessionReadiness.verificationReadOnlyAcceptedCopy')}
+        </p>
+      </div>
+      <div className="key-grid">
+        {input.showDevelopmentDiagnostics ? (
+          <KeyValue label={t('sessionReadiness.employeeId')} value={employeeLabel} />
+        ) : null}
+        <KeyValue
+          label={t('sessionReadiness.companyScopes')}
+          value={String(input.data.scopeSummary.companyCount)}
+        />
+        <KeyValue
+          label={t('sessionReadiness.regionScopes')}
+          value={String(input.data.scopeSummary.regionCount)}
+        />
+        <KeyValue
+          label={t('sessionReadiness.storeScopes')}
+          value={String(input.data.scopeSummary.storeCount)}
+        />
+      </div>
+    </div>
+  )
 }
 
-function formatSessionMode(mode: SessionMode, t: TranslateFunction) {
-  return mode === 'bearer' ? t('sessionReadiness.bearerToken') : t('sessionReadiness.mockHeaders')
+function formatSafeMode(mode: SafeSessionStatus['mode'], t: TranslateFunction) {
+  return mode === 'provider'
+    ? t('sessionReadiness.readOnlyModeProvider')
+    : t('sessionReadiness.readOnlyModeLocal')
+}
+
+function formatSafeTransport(
+  transport: SafeSessionStatus['transport'],
+  t: TranslateFunction,
+) {
+  if (transport === 'browser_cookie') {
+    return t('sessionReadiness.readOnlyTransportCookie')
+  }
+
+  return transport === 'provider_bearer'
+    ? t('sessionReadiness.readOnlyTransportBearer')
+    : t('sessionReadiness.readOnlyTransportLocal')
 }

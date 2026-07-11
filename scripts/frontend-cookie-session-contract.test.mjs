@@ -13,6 +13,9 @@ const api = readText('admin-web/src/lib/api.ts')
 const app = readText('admin-web/src/App.tsx')
 const clerkSession = readText('admin-web/src/features/auth/clerk-session.tsx')
 const sessionContext = readText('admin-web/src/features/session/session-context.tsx')
+const sessionSaveTransition = readText(
+  'admin-web/src/features/session/session-save-transition.ts',
+)
 const sessionStorage = readText('admin-web/src/features/session/session-storage.ts')
 const authLogoutPage = readText('admin-web/src/pages/AuthLogoutPage.tsx')
 
@@ -63,8 +66,13 @@ test('saving away from cookie transport clears the HttpOnly browser-session cook
     'clearing a browser-session cookie must preserve the CSRF nonce until the backend DELETE succeeds',
   )
   assert.match(
+    sessionSaveTransition,
+    /currentSession\.browserSessionTransport === 'cookie'[\s\S]*?!isCookieBrowserSession\(nextSession\)/,
+    'the pure save transition must require cookie clearing only when leaving cookie transport',
+  )
+  assert.match(
     sessionContext,
-    /sessionRef\.current\.browserSessionTransport === 'cookie'[\s\S]*?!isCookieBrowserSession\(nextSession\)[\s\S]*?await clearBrowserSessionCookie\(\)/,
+    /resolveSessionSaveTransition\(sessionRef\.current, next\)[\s\S]*?transition\.shouldClearBrowserSessionCookie[\s\S]*?await clearBrowserSessionCookie\(\)/,
     'manual session changes from cookie transport must clear the backend browser-session cookie before saving the next client mode',
   )
   assert.match(

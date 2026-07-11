@@ -2,14 +2,7 @@ import { expect, test } from './test-fixtures'
 
 const companyId = '00000000-0000-0000-0000-000000000001'
 
-test('persona switch never renders the prior identity protected cache', async ({ page }) => {
-  let userBSessionRequests = 0
-  let userBOverviewRequests = 0
-  let releaseUserBOverview = () => undefined
-  const userBOverviewGate = new Promise<void>((resolve) => {
-    releaseUserBOverview = resolve
-  })
-
+test('production session boundary cannot switch the protected-cache persona', async ({ page }) => {
   await page.addInitScript(({ companyId }) => {
     window.localStorage.setItem(
       'store-ops-admin-session',
@@ -31,24 +24,11 @@ test('persona switch never renders the prior identity protected cache', async ({
   }, { companyId })
 
   await page.route('**/api/auth/session', async (route) => {
-    const userId = route.request().headers()['x-user-id'] ?? 'persona-a'
-    if (userId === 'persona-b') {
-      userBSessionRequests += 1
-    }
-
-    await route.fulfill({ json: authSession(userId) })
+    await route.fulfill({ json: authSession() })
   })
-
   await page.route('**/api/integrations/import-batches/overview', async (route) => {
-    const userId = route.request().headers()['x-user-id'] ?? 'persona-a'
-    if (userId === 'persona-b') {
-      userBOverviewRequests += 1
-      await userBOverviewGate
-    }
-
-    await route.fulfill({ json: overview(userId === 'persona-b' ? 222 : 111) })
+    await route.fulfill({ json: overview(111) })
   })
-
   await page.route('**/api/integrations/import-batches/needs-action**', async (route) => {
     await route.fulfill({
       json: { items: [], meta: { count: 0, total: 0, limit: 12, offset: 0 } },
@@ -68,32 +48,24 @@ test('persona switch never renders the prior identity protected cache', async ({
   await page.goto('/admin/integrations')
   await expect(page.getByText(/111$/)).toBeVisible()
 
-  await page.evaluate(() => {
-    window.history.pushState(null, '', '/admin/session')
-    window.dispatchEvent(new PopStateEvent('popstate'))
-  })
-  await page.getByLabel(/Kullan|User/).fill('persona-b')
-  await page.getByRole('button', { name: /kaydet|Save/i }).click()
+  await page.goto('/admin/session')
 
-  await expect.poll(() => userBSessionRequests).toBeGreaterThan(0)
+  const main = page.getByRole('main')
+  await expect(main.getByTestId('session-readonly-panel')).toBeVisible()
+  await expect(main.getByTestId('session-development-editor')).toHaveCount(0)
+  await expect(main.locator('input, textarea')).toHaveCount(0)
+  await expect(main.getByRole('button', { name: /kaydet|save|reset|mock|bearer/i })).toHaveCount(0)
 
-  await page.evaluate(() => {
-    window.history.pushState(null, '', '/admin/integrations')
-    window.dispatchEvent(new PopStateEvent('popstate'))
-  })
-
-  expect(await page.getByText(/111$/).count()).toBe(0)
-  await expect.poll(() => userBOverviewRequests).toBeGreaterThan(0)
-  releaseUserBOverview()
-  await expect(page.getByText(/222$/)).toBeVisible()
+  await page.goto('/admin/integrations')
+  await expect(page.getByText(/111$/)).toBeVisible()
 })
 
-function authSession(userId: string) {
+function authSession() {
   return {
     authMode: 'mock',
     authenticated: true,
     user: {
-      userId,
+      userId: 'persona-a',
       employeeId: null,
       displayName: null,
       username: null,
