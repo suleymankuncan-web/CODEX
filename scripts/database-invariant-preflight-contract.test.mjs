@@ -5,6 +5,7 @@ import test from 'node:test'
 const specPath = 'docs/plans/database-invariant-preflight-spec-v1.md'
 const queryPath = 'db/preflight/database-invariant-preflight-v1.sql'
 const runnerPath = 'backend/nestjs/scripts/database-invariant-preflight.ts'
+const runnerConfigPath = 'backend/nestjs/scripts/database-invariant-preflight-config.ts'
 const fixtureSmokePath = 'backend/nestjs/scripts/database-invariant-preflight-fixture-smoke.ts'
 const smokePath = 'scripts/database-invariant-preflight-smoke.mjs'
 
@@ -26,6 +27,7 @@ test('database invariant preflight specification freezes the no-mutation boundar
 test('database invariant preflight implementation files exist', () => {
   assert.equal(existsSync(queryPath), true, `Missing ${queryPath}`)
   assert.equal(existsSync(runnerPath), true, `Missing ${runnerPath}`)
+  assert.equal(existsSync(runnerConfigPath), true, `Missing ${runnerConfigPath}`)
   assert.equal(existsSync(fixtureSmokePath), true, `Missing ${fixtureSmokePath}`)
   assert.equal(existsSync(smokePath), true, `Missing ${smokePath}`)
 })
@@ -94,6 +96,7 @@ test('database invariant preflight SQL is read only and covers every required ch
 
 test('database invariant runner proves read-only mode and keeps output sanitized', () => {
   const runner = readFileSync(runnerPath, 'utf8')
+  const runnerConfig = readFileSync(runnerConfigPath, 'utf8')
 
   assert.match(runner, /BEGIN READ ONLY/)
   assert.match(runner, /SHOW transaction_read_only/)
@@ -104,6 +107,12 @@ test('database invariant runner proves read-only mode and keeps output sanitized
   assert.match(runner, /DATABASE_INVARIANT_PREFLIGHT_EXPECTED_DATABASE/)
   assert.match(runner, /toLowerCase\(\)/)
   assert.match(runner, /blocked_live_evidence/)
+  assert.match(runner, /buildDatabaseInvariantPreflightPoolConfig/)
+  assert.match(runnerConfig, /buildDatabasePoolConfig/)
+  assert.match(runnerConfig, /poolMax:\s*1/)
+  assert.match(runnerConfig, /sslMode !== "verify-full"/)
+  assert.doesNotMatch(runner, /rejectUnauthorized:\s*false/)
+  assert.doesNotMatch(runnerConfig, /rejectUnauthorized:\s*false/)
   assert.doesNotMatch(runner, /console\.(?:log|error)\([^\n]*(?:DATABASE_URL|connectionString)/)
 })
 

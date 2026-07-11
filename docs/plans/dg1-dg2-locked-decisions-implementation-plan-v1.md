@@ -753,18 +753,18 @@ Primary files:
 
 Tasks:
 
-- [ ] Remove the runner's inline SSL branch that maps only `require` and turns
+- [x] Remove the runner's inline SSL branch that maps only `require` and turns
       `verify-full` into `ssl:false`.
-- [ ] Reuse the canonical database pool configuration so connection-string SSL
+- [x] Reuse the canonical database pool configuration so connection-string SSL
       overrides are stripped and verified CA handling is identical to runtime.
-- [ ] For a staging target, require `DB_SSL_MODE=verify-full` and non-empty
+- [x] For a staging target, require `DB_SSL_MODE=verify-full` and non-empty
       `DB_SSL_CA`; refuse `require`, `disable`, missing CA, or unknown mode.
-- [ ] Keep pool max at one and all existing read-only/timeout/identity gates.
-- [ ] Add tests proving verified TLS config, missing-CA refusal, `require`
+- [x] Keep pool max at one and all existing read-only/timeout/identity gates.
+- [x] Add tests proving verified TLS config, missing-CA refusal, `require`
       refusal, connection-string override removal, and secret-safe errors.
-- [ ] Add a contract assertion that the runner contains no inline
+- [x] Add a contract assertion that the runner contains no inline
       `rejectUnauthorized:false`.
-- [ ] Update the preflight spec; do not claim staging evidence.
+- [x] Update the preflight spec; do not claim staging evidence.
 
 Rollback: revert runner/config/tests/spec together. A rollback returns the live
 preflight to blocked status; it does not authorize using the older runner.

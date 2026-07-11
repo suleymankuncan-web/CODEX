@@ -104,6 +104,7 @@ export function classifySafeError(error: unknown) {
       "database_url_missing",
       "invalid_target_class",
       "invalid_database_protocol",
+      "invalid_database_ssl_mode",
       "invalid_database_url",
       "invalid_violation_count",
       "non_disposable_target_refused",
@@ -111,8 +112,10 @@ export function classifySafeError(error: unknown) {
       "production_target_refused",
       "read_only_not_enforced",
       "staging_approval_missing",
+      "staging_ssl_ca_missing",
       "staging_target_identity_mismatch",
       "staging_target_identity_missing",
+      "staging_verify_full_required",
       "too_many_sample_refs",
       "unsafe_sample_ref",
     ].includes(error.message)

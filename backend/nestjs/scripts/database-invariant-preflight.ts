@@ -9,6 +9,7 @@ import {
   type CheckRow,
   type TargetClass,
 } from "./database-invariant-preflight-core";
+import { buildDatabaseInvariantPreflightPoolConfig } from "./database-invariant-preflight-config";
 
 const requiredAcknowledgement = "read-only-approved";
 const allowedTargetClasses = new Set<TargetClass>(["disposable", "staging"]);
@@ -25,11 +26,9 @@ async function main() {
     join(__dirname, "..", "..", "..", "db", "preflight", "database-invariant-preflight-v1.sql"),
     "utf8",
   );
-  const pool = new Pool({
-    connectionString,
-    max: 1,
-    ssl: process.env.DB_SSL_MODE === "require" ? { rejectUnauthorized: false } : false,
-  });
+  const pool = new Pool(
+    buildDatabaseInvariantPreflightPoolConfig(targetClass, connectionString),
+  );
   let client: PoolClient | null = null;
 
   try {
