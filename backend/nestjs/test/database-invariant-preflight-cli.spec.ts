@@ -1,7 +1,28 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { buildDatabaseInvariantPreflightPoolConfig } from "../scripts/database-invariant-preflight-config";
 
 describe("database invariant preflight CLI boundary", () => {
+  it("builds a verified one-connection staging pool and strips URL SSL overrides", () => {
+    const result = buildDatabaseInvariantPreflightPoolConfig(
+      "staging",
+      "postgres://user:secret@staging.example/store_ops_staging?sslmode=disable&application_name=dg2",
+      {
+        DB_SSL_CA: "test-supabase-ca",
+        DB_SSL_MODE: "verify-full",
+      },
+    );
+
+    expect(result.max).toBe(1);
+    expect(result.ssl).toEqual({
+      ca: "test-supabase-ca",
+      rejectUnauthorized: true,
+    });
+    const connectionString = new URL(String(result.connectionString));
+    expect(connectionString.searchParams.has("sslmode")).toBe(false);
+    expect(connectionString.searchParams.get("application_name")).toBe("dg2");
+  });
+
   it.each([
     {
       expectedError: "invalid_target_class",
@@ -42,6 +63,26 @@ describe("database invariant preflight CLI boundary", () => {
         DATABASE_URL: "postgres://user:secret@staging.example/store_ops_staging",
       },
     },
+    {
+      expectedError: "staging_verify_full_required",
+      overrides: stagingTlsOverrides(),
+    },
+    {
+      expectedError: "staging_verify_full_required",
+      overrides: stagingTlsOverrides({ DB_SSL_MODE: "require" }),
+    },
+    {
+      expectedError: "staging_verify_full_required",
+      overrides: stagingTlsOverrides({ DB_SSL_MODE: "disable" }),
+    },
+    {
+      expectedError: "invalid_database_ssl_mode",
+      overrides: stagingTlsOverrides({ DB_SSL_MODE: "unknown" }),
+    },
+    {
+      expectedError: "staging_ssl_ca_missing",
+      overrides: stagingTlsOverrides({ DB_SSL_MODE: "verify-full" }),
+    },
   ])("refuses $expectedError before connecting and redacts the URL", ({ expectedError, overrides }) => {
     const result = runCli(overrides);
     const output = `${result.stdout}${result.stderr}`;
@@ -66,6 +107,8 @@ function runCli(overrides: Partial<Record<string, string>>) {
     "DATABASE_INVARIANT_PREFLIGHT_STAGING_APPROVED",
     "DATABASE_INVARIANT_PREFLIGHT_TARGET",
     "DATABASE_URL",
+    "DB_SSL_CA",
+    "DB_SSL_MODE",
   ]) {
     delete env[name];
   }
@@ -77,4 +120,16 @@ function runCli(overrides: Partial<Record<string, string>>) {
     ["-r", "ts-node/register", join(process.cwd(), "scripts", "database-invariant-preflight.ts")],
     { cwd: process.cwd(), encoding: "utf8", env },
   );
+}
+
+function stagingTlsOverrides(overrides: Partial<Record<string, string>> = {}) {
+  return {
+    DATABASE_INVARIANT_PREFLIGHT_ACK: "read-only-approved",
+    DATABASE_INVARIANT_PREFLIGHT_EXPECTED_DATABASE: "store_ops_staging",
+    DATABASE_INVARIANT_PREFLIGHT_EXPECTED_HOST: "staging.example",
+    DATABASE_INVARIANT_PREFLIGHT_STAGING_APPROVED: "true",
+    DATABASE_INVARIANT_PREFLIGHT_TARGET: "staging",
+    DATABASE_URL: "postgres://user:secret@staging.example/store_ops_staging",
+    ...overrides,
+  };
 }

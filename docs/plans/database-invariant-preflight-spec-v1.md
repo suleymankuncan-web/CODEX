@@ -1,6 +1,6 @@
 # Database Invariant Preflight Specification V1
 
-Status: implemented locally; approved safe-target evidence pending
+Status: implemented locally with verify-full staging gate; approved safe-target evidence pending
 Shelf: active plan
 Author: Codex
 Owner: Product owner
@@ -44,6 +44,10 @@ Execution requires all of:
   fixed disposable preflight namespace; or, for staging, separately supplied
   expected host and database values that exactly match the URL;
 - `NODE_ENV` not equal to `production`;
+- staging `DB_SSL_MODE` equal to `verify-full` and a non-empty `DB_SSL_CA`;
+- canonical runtime pool configuration, including removal of connection-string
+  SSL overrides before applying the verified CA configuration;
+- a single preflight pool connection;
 - a transaction proven by `SHOW transaction_read_only` after `BEGIN READ ONLY`;
 - a bounded local statement timeout.
 
@@ -56,6 +60,9 @@ Staging execution additionally requires
 `DATABASE_INVARIANT_PREFLIGHT_EXPECTED_HOST` and
 `DATABASE_INVARIANT_PREFLIGHT_EXPECTED_DATABASE`. Host or database names marked
 `prod` or `production` are refused even if the staging approval flag is set.
+Staging also refuses `disable`, `require`, unknown/missing SSL modes, or a
+missing CA before a pool connection is attempted. Disposable local smoke keeps
+its existing non-TLS localhost path.
 
 ## 4. Check Inventory
 
@@ -169,11 +176,13 @@ safe-target result can classify live data cleanliness.
 - pure output/classification/redaction tests;
 - spawned CLI refusal tests that prove missing/mismatched target inputs exit
   before connection without printing the URL;
+- verified TLS, missing-CA, weak/unknown-mode, and connection-string override
+  tests against the same pool builder used by runtime;
 - disposable known-violation transaction smoke;
 - disposable clean migration smoke;
 - root script contracts;
 - applicable release selector;
-- no live execution in this PR without separately approved input.
+- no live execution in DG2-B; approved staging evidence belongs to DG2-C.
 
 ## 9. Rollback And Stop Rules
 
