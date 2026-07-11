@@ -56,7 +56,7 @@ slice is the authorization operating-truth contract: complete route ownership,
 preview/runtime drift, and backend-endpoint drift become machine-visible before
 any permission behavior changes. DG-1 product decisions are locked but their
 runtime implementation remains unopened; DG-2 still gates live DB cleanup,
-DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is now owner-selected with Render/Vercel env boundaries configured; backend/worker implementation is on `codex/dg4-sentry-error-delivery`, and sanitized staging receipt remains the activation proof.
+DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 Sentry Developer is owner-selected with Render/Vercel env boundaries configured; API, worker, and frontend staging receipts are verified, and merged PR #941 carries the exact frontend CSP ingest-origin fix. Production activation remains gated.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
 33 direct matrix routes, and three preview plus three backend drifts. PR #929
