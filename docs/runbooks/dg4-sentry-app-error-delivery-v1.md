@@ -1,6 +1,6 @@
 # DG4 Sentry application error delivery runbook v1
 
-**Status:** Staging activation in progress  
+**Status:** Staging receipts verified; production activation remains gated
 **Owner:** Suleyman Kuncan  
 **Provider:** Sentry Developer plan (`$0`)  
 **Review cadence:** Before production activation and after any provider/secret/redaction change
@@ -21,7 +21,7 @@ Render services:
 
 ```text
 ERROR_TRACKING_DSN=<Sentry HTTPS DSN; Render secret>
-ERROR_TRACKING_ENABLED=false   # enable only after staging smoke is ready
+ERROR_TRACKING_ENABLED=true    # staging receipt accepted
 ERROR_TRACKING_ENVIRONMENT=staging
 ERROR_TRACKING_RELEASE=<deployed commit when known>
 ERROR_TRACKING_SMOKE=false
@@ -32,7 +32,7 @@ uses Vercel project `hr-axis-staging`:
 
 ```text
 VITE_SENTRY_DSN=<same Sentry ingest DSN>
-VITE_SENTRY_ENABLED=false     # enable only with the frontend slice
+VITE_SENTRY_ENABLED=true      # staging frontend receipt accepted
 VITE_SENTRY_ENVIRONMENT=staging
 ```
 
@@ -75,6 +75,27 @@ environments, open `https://staging.hr-axis.com` and trigger the documented
 browser error smoke. Confirm one frontend event with `environment=staging` and
 no user/request payload. Then leave the flag enabled for the staging profile.
 
+## Staging receipt — 2026-07-11
+
+The owner accepted the following sanitized Sentry tag evidence in the `hr-axis`
+project:
+
+| Runtime | Event | Environment | Result |
+| --- | --- | --- | --- |
+| `api` | `observability.staging_smoke` | `staging` | Received |
+| `worker` | `observability.staging_smoke` | `staging` | Received |
+| `frontend` | `window.error` | `staging` | Received |
+
+The API and worker smoke flags were returned to `ERROR_TRACKING_SMOKE=false`
+after receipt. `ERROR_TRACKING_ENABLED=true` remains active for staging; the
+frontend has no separate smoke flag and keeps `VITE_SENTRY_ENABLED=true`.
+
+The frontend browser delivery initially hit the CSP `connect-src` boundary.
+PR #941 adds the exact Sentry ingest origin to the Vercel and nginx policies;
+the subsequent browser request was delivered. Only event names, runtimes, and
+environment tags are retained here. DSNs, event IDs, payloads, user data, and
+provider identifiers are intentionally excluded.
+
 ## Rollback
 
 1. Set `ERROR_TRACKING_ENABLED=false` on Render API and worker; set
@@ -90,9 +111,10 @@ no user/request payload. Then leave the flag enabled for the staging profile.
 
 | Check | Status | Evidence |
 | --- | --- | --- |
-| Backend SDK/adapter tests | Pending PR verification | Targeted and full backend tests |
-| API staging receipt | Pending deployment | Sentry event with `runtime=api` |
-| Worker staging receipt | Pending deployment | Sentry event with `runtime=worker` |
-| Frontend receipt | Pending PR-2 | Sentry event with `runtime=frontend` |
-| Redaction review | Pending receipt | No DSN, PII, token, cookie, or private URL |
+| Backend SDK/adapter tests | Verified | Targeted and full backend tests in PR #940 |
+| API staging receipt | Verified | `observability.staging_smoke`, `runtime=api`, `environment=staging` |
+| Worker staging receipt | Verified | `observability.staging_smoke`, `runtime=worker`, `environment=staging` |
+| Frontend receipt | Verified | `window.error`, `runtime=frontend`, `environment=staging` in PR #941 |
+| Frontend CSP delivery | Verified | Exact Sentry ingest origin allowlisted in PR #941 |
+| Redaction review | Verified | Sanitized tags only; no DSN, PII, token, cookie, or private URL |
 
