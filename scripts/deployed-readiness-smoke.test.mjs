@@ -14,7 +14,7 @@ const backendHeaders = {
 }
 const frontendSecurityHeaders = {
   'content-security-policy':
-    "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://challenges.cloudflare.com; connect-src 'self' https://api-staging.hr-axis.com https://api.hr-axis.com https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
+    "default-src 'self'; script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://challenges.cloudflare.com; connect-src 'self' https://api-staging.hr-axis.com https://api.hr-axis.com https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://o4511716657987584.ingest.de.sentry.io; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'",
   'strict-transport-security': 'max-age=31536000; includeSubDomains',
   'x-content-type-options': 'nosniff',
   'x-frame-options': 'DENY',

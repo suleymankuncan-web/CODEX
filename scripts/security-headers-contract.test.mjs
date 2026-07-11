@@ -7,7 +7,7 @@ const workspaceRoot = join(import.meta.dirname, "..");
 const requiredCspDirectives = [
   "default-src 'self'",
   "script-src 'self' https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://challenges.cloudflare.com",
-  "connect-src 'self' https://api-staging.hr-axis.com https://api.hr-axis.com https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev",
+  "connect-src 'self' https://api-staging.hr-axis.com https://api.hr-axis.com https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://o4511716657987584.ingest.de.sentry.io",
   "frame-src https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev https://challenges.cloudflare.com",
   "img-src 'self' data: blob: https://img.clerk.com https://*.clerk.accounts.dev https://*.clerk.com https://*.clerk.dev",
   "style-src 'self' 'unsafe-inline'",

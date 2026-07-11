@@ -19,6 +19,7 @@ const FRONTEND_SECURITY_HEADERS = {
     "connect-src 'self'",
     'https://api-staging.hr-axis.com',
     'https://api.hr-axis.com',
+    'https://o4511716657987584.ingest.de.sentry.io',
     "frame-ancestors 'none'",
     "object-src 'none'",
     "base-uri 'self'",
