@@ -74,7 +74,7 @@ type PrefetchTask = {
   enabled?: boolean
 }
 
-const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
+const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const adminFeedRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'REGION_MANAGER']
 const adminInboxRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'HR_ADMIN']
 const adminInboxWorkforceRoles = ['SUPER_ADMIN', 'HR_ADMIN']
@@ -84,7 +84,7 @@ const adminMasterDataRoles = ['SUPER_ADMIN', 'HR_ADMIN', 'INTEGRATION_ADMIN']
 const adminOperationsRoles = ['SUPER_ADMIN']
 const adminDataQualityRoles = ['SUPER_ADMIN']
 const adminTargetRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
-const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
+const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_MANAGER']
 const workflowInboxRoles = ['STORE_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER', 'REGION_MANAGER']
 const checklistVisitManagerRoles = ['REGION_MANAGER', 'VISUAL_MERCHANDISER', 'SUPER_ADMIN']

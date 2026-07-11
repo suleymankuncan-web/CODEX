@@ -95,7 +95,7 @@ const vmBroadRoles = new Set([
   'SUPER_ADMIN',
 ])
 
-const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN']
+const rankingRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const authenticatedStoreRoles = [
   'SUPER_ADMIN',
   'HR_ADMIN',
@@ -109,7 +109,7 @@ const authenticatedStoreRoles = [
 ]
 const allAuthenticatedStoreRoles = [...authenticatedStoreRoles, 'VISUAL_MERCHANDISER']
 const storeReportingRoles = ['SUPER_ADMIN', 'REPORT_VIEWER', 'AUDITOR', 'REGION_MANAGER']
-const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER']
+const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storePersonnelPerformanceRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
@@ -443,6 +443,7 @@ const navigationByPersona: Record<StorePersona, StoreRouteId[]> = {
     'home',
     'rankings',
     'kpis',
+    'competitions',
     'checklists',
     'approvals',
     'targets',

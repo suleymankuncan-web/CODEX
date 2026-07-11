@@ -43,6 +43,7 @@ admin console. This doc uses aliases for protected real accounts.
 | Example pilot region manager | `pilot.bm+clerk_test@example.com` or BM account from `.env.local` | Automated or assisted Region Manager smoke. | Active Clerk-linked user, one `REGION_MANAGER` region role. Current action-store scope is finite and must be checked before BM workflow smoke. | Company-wide admin proof. |
 | Example pilot store manager | `pilot.sm+clerk_test@example.com` | Automated Store Manager smoke for company-store-only surfaces. | Active Clerk-linked user, one `STORE_MANAGER` store role for Alanya Akdenizpark Avm, one matching action-store assignment. | Admin, BM, or personnel-only proof. |
 | Example pilot personnel | `pilot.personel+clerk_test@example.com` | Automated Store Personnel smoke for own-personnel surfaces. | Active Clerk-linked user, one `STORE_PERSONNEL` store role for Alanya Akdenizpark Avm, one matching action-store assignment. | Manager/admin proof. |
+| Report Viewer fixture | `report-viewer-contract` | Automated company read-only Store persona proof. | `REPORT_VIEWER` with a non-empty company read scope; no action-store assignment is required. | `/store/me`, `/store/incentives`, request/forms, commands, or checklist execution. |
 
 ## Hard Rules
 
@@ -95,6 +96,7 @@ Use this when wrong role/scope assignments were made during pilot setup.
 | Example pilot BM | Region/store operational route allowed for assigned region. | Company-only admin routes remain outside BM proof unless role matrix allows them. | `REGION_MANAGER` route and scope match the selected BM account. |
 | Example pilot SM | `/api/store/incentives?period=YYYY-MM` for a closed or historical period. | Personnel-only `/api/store/me/incentives?period=YYYY-MM` must not be treated as SM proof. | Store scoped data returns; company-store-only incentive surface is visible. |
 | Example pilot personnel | `/api/store/me/incentives?period=YYYY-MM`. | `/api/store/incentives?period=YYYY-MM` must return forbidden. | Own-personnel data returns; manager surface is denied. |
+| Report Viewer fixture | Company-scoped Store read routes such as rankings, competitions, KPI, personnel detail, tasks, and workforce. | `/store/me` and `/store/incentives` must be blocked before protected requests; write/request endpoints must not be called. | Company portfolio reads are visible; no action or self-personnel projection is exposed. |
 | Protected real owner/admin | Assisted browser smoke after owner OTP. | No autonomous smoke without OTP. | Landing and role summary match the protected baseline. |
 | Protected real store manager | Assisted browser smoke after owner OTP. | No autonomous smoke without OTP. | Store Manager landing and store scope match the protected baseline. |
 

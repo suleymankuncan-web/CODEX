@@ -148,7 +148,7 @@ test('store workforce route stays hidden for read-scope-only store manager', asy
   await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
 })
 
-test('store workforce route stays hidden for reporting users with read scope', async ({ page }) => {
+test('store workforce route is visible read-only for reporting users with company scope', async ({ page }) => {
   await routeAuthSession(page, createStoreAuthSession({
     roleCodes: ['REPORT_VIEWER'],
     readStoreIds: [demoStoreId],
@@ -156,13 +156,14 @@ test('store workforce route stays hidden for reporting users with read scope', a
     actionStoreIds: [],
     legacyAssignedStoreIds: [],
   }))
+  await routeRegionWorkforceReadCalls(page, [])
 
   await page.goto('/store/home')
-  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Norm Kadro' })).toHaveCount(0)
+  await expect(page.locator('.store-command-nav').getByRole('link', { name: 'Norm Kadro' })).toBeVisible()
 
   await page.goto('/store/workforce')
-  await expect(page.getByTestId('store-workforce-page')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: /rota kullan|Route not available/i })).toBeVisible()
+  await expect(page.getByTestId('store-workforce-page')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
 })
 
 test('store workforce route is visible for region manager read scope', async ({ page }) => {

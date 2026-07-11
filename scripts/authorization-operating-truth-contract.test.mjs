@@ -91,8 +91,6 @@ test('route preview drift is complete, exact, and machine-visible', () => {
     truth.routePreviewDrifts.map((drift) => drift.id),
     [
       'store-incentives-preview-extra-roles',
-      'store-personnel-preview-missing-report-viewer',
-      'store-tasks-preview-extra-roles',
     ],
   )
 
@@ -100,9 +98,16 @@ test('route preview drift is complete, exact, and machine-visible', () => {
     truth.endpointDrifts.map((drift) => drift.id),
     [
       'store-incentives-store-manager-backend-only',
-      'store-kpi-report-viewer-frontend-only',
-      'store-personnel-report-viewer-frontend-only',
     ],
+  )
+
+  assert.equal(truth.summary.endpointExpectationCount, 7)
+  assert.deepEqual(
+    truth.endpointRoleEvidence
+      .filter((expectation) => expectation.status === 'approved')
+      .filter((expectation) =>
+        expectation.actualRoles.join('|') !== [...expectation.expectedRoles].sort().join('|')),
+    [],
   )
 
   const synthetic = compareRoutePreviewRoles({

@@ -25,6 +25,15 @@ import {
 } from './store-kpi-highlights-formatters'
 import { resolveLiveChecklistImpact } from './store-kpi-checklist-impact'
 import { useRegionOverviewPeriodModel } from './store-kpis-region-period-model'
+import { useReportViewerStoreSelection } from './store-kpi-company-selection'
+import {
+  getQueryValue,
+  hasGlobalStoreDetailDefault,
+  hasReportingAccess,
+  hasStoreDetailDefault,
+  hasStoreShellIntent,
+} from './store-kpi-highlights-access'
+export { resolveCompanyStoreSelection, type StoreKpiStoreOption } from './store-kpi-company-selection'
 export {
   describeLocalizedBenchmarkCap,
   formatAchievementValue,
@@ -82,49 +91,20 @@ function clampScore(input: number) {
   return Math.max(0, Math.min(input, 1.2))
 }
 
-function hasReportingAccess(authSummary: AuthSessionSummary | null) {
-  const roles = authSummary?.user.roleCodes ?? []
-  return (
-    roles.includes('SUPER_ADMIN') ||
-    roles.includes('REPORT_VIEWER') ||
-    roles.includes('AUDITOR') ||
-    roles.includes('STORE_MANAGER') ||
-    roles.includes('REGION_MANAGER')
-  )
-}
-
-function hasStoreShellIntent(authSummary: AuthSessionSummary | null) {
-  const roles = authSummary?.user.roleCodes ?? []
-  return (
-    roles.includes('STORE_MANAGER') ||
-    roles.includes('REGION_MANAGER') ||
-    Boolean(authSummary?.user.scope.storeIds.length)
-  )
-}
-
-function hasStoreDetailDefault(authSummary: AuthSessionSummary | null) {
-  return authSummary?.user.roleCodes.some((role) =>
-    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER' || role === 'AUDITOR' || role === 'STORE_MANAGER'
-  ) ?? false
-}
-
-function hasGlobalStoreDetailDefault(authSummary: AuthSessionSummary | null) {
-  return authSummary?.user.roleCodes.some((role) =>
-    role === 'SUPER_ADMIN' || role === 'REPORT_VIEWER' || role === 'AUDITOR'
-  ) ?? false
-}
-
-function getQueryValue(searchParams: URLSearchParams, key: string) {
-  return searchParams.get(key)?.trim() || ''
-}
-
 export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSessionSummary | null }) {
   const { locale, t } = useLocalization()
   const [searchParams, setSearchParams] = useSearchParams()
   const reportingAllowed = hasReportingAccess(input.authSummary)
   const primaryStoreId = input.authSummary?.user.scope.storeIds[0] ?? undefined
   const storeShellIntent = hasStoreShellIntent(input.authSummary)
-  const selectedStoreId = getQueryValue(searchParams, 'storeId')
+  const storeSelection = useReportViewerStoreSelection({
+    authSummary: input.authSummary,
+    primaryStoreId,
+    reportingAllowed,
+    searchParams,
+    setSearchParams,
+  })
+  const { companyStoreQuery, effectiveStoreId, isReportViewer, selectedStoreId, storeOptions, storeSelectionReady } = storeSelection
   const routePeriodStart = getQueryValue(searchParams, 'periodStart')
   const hasRegionManagerRole = input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false
   const regionManagerUserId = input.authSummary?.user.userId ?? ''
@@ -132,7 +112,6 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   const hasGlobalDetailDefault = hasGlobalStoreDetailDefault(input.authSummary)
   const isRegionManagerOverview = hasRegionManagerRole && !hasGlobalDetailDefault && selectedStoreId.length === 0
   const isRegionManagerStoreDetail = hasRegionManagerRole && selectedStoreId.length > 0
-  const effectiveStoreId = selectedStoreId || primaryStoreId
   const storeKpiSurfaceMode = isRegionManagerOverview
     ? 'regionOverview'
     : isRegionManagerStoreDetail ? 'regionStoreDetail' : 'storeDetail'
@@ -184,14 +163,19 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   })
 
   const liveKpiQuery = useQuery({
-    queryKey: ['store-kpis-live', selectedStoreId || primaryStoreId || 'no-selected-store', activeLivePeriodStart || 'latest-monthly'],
+    queryKey: ['store-kpis-live', effectiveStoreId || 'no-selected-store', activeLivePeriodStart || 'latest-monthly'],
     queryFn: () =>
       getStoreKpiHighlights({
         periodType: 'monthly',
         ...(activeLivePeriodStart ? { periodStart: activeLivePeriodStart } : {}),
-        ...(selectedStoreId ? { storeId: selectedStoreId } : {}),
+        ...(effectiveStoreId ? { storeId: effectiveStoreId } : {}),
       }),
-    enabled: reportingAllowed && viewMode === 'live' && !isRegionManagerOverview,
+    enabled:
+      reportingAllowed &&
+      viewMode === 'live' &&
+      !isRegionManagerOverview &&
+      storeSelectionReady &&
+      Boolean(effectiveStoreId),
     ...transientQueryRetryOptions,
   })
 
@@ -507,6 +491,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   const configForbidden = configQuery.error instanceof ApiError && configQuery.error.status === 403
   const isLoading =
     (configQuery.isLoading && !configForbidden) ||
+    (isReportViewer && companyStoreQuery.isLoading) ||
     (isRegionManagerOverview
       ? effectiveRegionOverviewQuery.isLoading
       : viewMode === 'live'
@@ -548,10 +533,12 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     closedSnapshotModeAllowed,
     configForbidden,
     configQuery,
+    companyStoreQuery,
     dailySnapshotQuery,
     effectiveStoreId,
     getRegionStoreDetailPath,
     isLoading,
+    isReportViewer,
     isRegionManagerOverview,
     isRegionManagerStoreDetail,
     kpiOwnershipMatrix,
@@ -575,6 +562,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     rows,
     selectedSnapshotRunId,
     selectedStoreId,
+    setSelectedStoreId: storeSelection.setSelectedStoreId,
     setLivePeriodStart: setLivePeriodFilter,
     setRegionOverviewPeriodStart: regionPeriodModel.setPeriodStart,
     setRegionOverviewSort,
@@ -585,6 +573,8 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     storeKpiSurfaceMode,
     storeScoreMeaning,
     storeShellIntent,
+    storeOptions,
+    storeSelectionReady,
     t,
     totals,
     topPerformer,

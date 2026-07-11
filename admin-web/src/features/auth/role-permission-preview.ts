@@ -40,10 +40,13 @@ const checklistReadRoleCodes = [
   'REPORT_VIEWER',
   'VISUAL_MERCHANDISER',
 ]
-const storePerformanceRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL']
+const storePerformanceRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'STORE_PERSONNEL', 'REPORT_VIEWER']
 const storeKpiRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
 const storeReportingRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'REPORT_VIEWER', 'AUDITOR']
 const targetRequestListRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
+const storeTaskReadRoleCodes = ['SUPER_ADMIN', 'REGION_MANAGER', 'STORE_MANAGER', 'REPORT_VIEWER']
+const storeCompetitionReadRoleCodes = ['STORE_MANAGER', 'STORE_PERSONNEL', 'REPORT_VIEWER']
+const storeWorkforceReadRoleCodes = ['STORE_MANAGER', 'REGION_MANAGER', 'REPORT_VIEWER']
 
 const adminRouteNotes: Record<string, Pick<RolePermissionPreviewRow, 'scopeNoteKey' | 'actionNoteKey'>> = {
   operations: {
@@ -181,7 +184,7 @@ const storePreviewRows: RolePermissionPreviewRow[] = [
     route: '/store/tasks',
     labelKey: 'storeHome.nav.tasks',
     shell: 'store',
-    allowedRoles: nonVisualMerchandiserStoreRouteRoles,
+    allowedRoles: storeTaskReadRoleCodes,
     scopeNoteKey: 'authAdmin.previewScopeWorkflow',
     actionNoteKey: 'authAdmin.previewActionStoreActionBoundary',
   },
@@ -208,9 +211,9 @@ const storePreviewRows: RolePermissionPreviewRow[] = [
     route: '/store/competitions',
     labelKey: 'storeHome.competitions',
     shell: 'store',
-    allowedRoles: ['STORE_MANAGER', 'STORE_PERSONNEL'],
+    allowedRoles: storeCompetitionReadRoleCodes,
     scopeNoteKey: 'authAdmin.previewScopeCompetition',
-    actionNoteKey: 'authAdmin.previewActionCompetitionBoundary',
+    actionNoteKey: 'authAdmin.previewActionReadOnlyReports',
   },
   {
     id: 'store-incentives',
@@ -244,7 +247,7 @@ const storePreviewRows: RolePermissionPreviewRow[] = [
     route: '/store/workforce',
     labelKey: 'storeHome.nav.workforce',
     shell: 'store',
-    allowedRoles: ['STORE_MANAGER', 'REGION_MANAGER'],
+    allowedRoles: storeWorkforceReadRoleCodes,
     scopeNoteKey: 'authAdmin.previewScopeCompany',
     actionNoteKey: 'authAdmin.previewActionAssignedStoreRequired',
   },

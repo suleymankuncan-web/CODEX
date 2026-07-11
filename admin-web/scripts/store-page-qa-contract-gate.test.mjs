@@ -22,6 +22,7 @@ const expectedStoreContractSpecs = [
   'store-page-contracts.spec.ts',
   'store-checklists-contracts.spec.ts',
   'store-rankings-contracts.spec.ts',
+  'store-report-viewer-persona.spec.ts',
   'store-kpis-contracts.spec.ts',
   'store-incentives-contracts.spec.ts',
   'store-targets-contracts.spec.ts',

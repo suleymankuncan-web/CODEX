@@ -55,7 +55,7 @@ test('pilot route matrix locks the first stabilization classifications', () => {
     '| `/admin/master-data` | admin | core | `SUPER_ADMIN`, `HR_ADMIN`, `INTEGRATION_ADMIN` | direct navigation only | must return to same route after auth verification | company-scoped bootstrap batches | yes |',
     '| `/admin/session` | admin | ops | any authenticated admin shell session | direct navigation only | must stay on `/admin/session` | local/session diagnostics only | yes |',
     '| `/store/me` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL` | direct navigation or store landing link | must return to same route after auth verification | current employee performance only | yes |',
-    '| `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles, full list for privileged roles | yes |',
+    '| `/store/rankings` | store | core | `STORE_MANAGER`, `STORE_PERSONNEL`, `REGION_MANAGER`, `SUPER_ADMIN`, `REPORT_VIEWER` | direct navigation or store landing link | must return to same route after auth verification | top 100 for store roles; company-scoped read for Report Viewer; no action | yes |',
   ]) {
     requireText(matrix, row, 'route matrix')
   }

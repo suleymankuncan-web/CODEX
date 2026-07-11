@@ -29,6 +29,11 @@ export const storeKpisTr = {
   'storeKpis.noOpenStoreScope': 'Açık mağaza yok',
   'storeKpis.readStatus': 'Okuma durumu',
   'storeKpis.readWaiting': 'KPI raporlama yetkisi bekliyor',
+  'storeKpis.companyStoresErrorTitle': 'Mağaza listesi açılamadı',
+  'storeKpis.companyStoresEmptyTitle': 'Yetkili mağaza bulunamadı',
+  'storeKpis.companyStoresEmptyCopy': 'Bu şirket görünümünde okunabilir mağaza bulunmuyor.',
+  'storeKpis.storeSelectorLabel': 'Mağaza seç',
+  'storeKpis.storeSelectorPlaceholder': 'Mağaza seç',
 
   'storeKpis.loadingTitle': 'Mağaza KPI verisi hazırlanıyor',
   'storeKpis.loadingCopy': 'Mağaza KPI verisi hazırlanıyor.',
@@ -403,6 +408,11 @@ export const storeKpisEn: Record<keyof typeof storeKpisTr, string> = {
   'storeKpis.dailyClosedRecord': 'Daily closed record',
   'storeKpis.readScope': 'View',
   'storeKpis.readScopeValue': 'Store KPI view',
+  'storeKpis.companyStoresErrorTitle': 'Store list could not be loaded',
+  'storeKpis.companyStoresEmptyTitle': 'No readable store found',
+  'storeKpis.companyStoresEmptyCopy': 'No readable store is available in this company view.',
+  'storeKpis.storeSelectorLabel': 'Select store',
+  'storeKpis.storeSelectorPlaceholder': 'Select store',
 
   'storeKpis.topSignalEyebrow': 'Top signal',
   'storeKpis.topSignalTitle': 'First KPI to review',

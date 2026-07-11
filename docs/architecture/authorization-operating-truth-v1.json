@@ -8,8 +8,7 @@
     ],
     "preview": "admin-web/src/features/auth/role-permission-preview.ts",
     "backendDriftEvidence": [
-      "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts",
-      "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts"
+      "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts"
     ]
   },
   "roleCatalog": [
@@ -27,8 +26,9 @@
   "summary": {
     "routeCount": 54,
     "directMatrixRouteCount": 33,
-    "routePreviewDriftCount": 3,
-    "endpointDriftCount": 3,
+    "routePreviewDriftCount": 1,
+    "endpointDriftCount": 1,
+    "endpointExpectationCount": 7,
     "previewOrphanCount": 0
   },
   "routes": [
@@ -997,10 +997,12 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
+        "REPORT_VIEWER",
         "STORE_MANAGER",
         "STORE_PERSONNEL"
       ],
       "previewRoles": [
+        "REPORT_VIEWER",
         "STORE_MANAGER",
         "STORE_PERSONNEL"
       ],
@@ -1213,6 +1215,7 @@
       ],
       "previewRoles": [
         "REGION_MANAGER",
+        "REPORT_VIEWER",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
@@ -1239,12 +1242,14 @@
       "previewOwnership": "direct",
       "runtimeRoles": [
         "REGION_MANAGER",
+        "REPORT_VIEWER",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
       ],
       "previewRoles": [
         "REGION_MANAGER",
+        "REPORT_VIEWER",
         "STORE_MANAGER",
         "STORE_PERSONNEL",
         "SUPER_ADMIN"
@@ -1384,14 +1389,9 @@
         "SUPER_ADMIN"
       ],
       "previewRoles": [
-        "AUDITOR",
-        "HR_ADMIN",
-        "INTEGRATION_ADMIN",
         "REGION_MANAGER",
         "REPORT_VIEWER",
-        "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
-        "STORE_PERSONNEL",
         "SUPER_ADMIN"
       ],
       "authorization": {
@@ -1416,10 +1416,12 @@
       "previewOwnership": "direct",
       "runtimeRoles": [
         "REGION_MANAGER",
+        "REPORT_VIEWER",
         "STORE_MANAGER"
       ],
       "previewRoles": [
         "REGION_MANAGER",
+        "REPORT_VIEWER",
         "STORE_MANAGER"
       ],
       "authorization": {
@@ -1448,32 +1450,167 @@
         "SUPER_ADMIN"
       ],
       "previewMissingRoles": [],
-      "gate": "DG-1",
+      "gate": "DG1-C",
       "status": "decision_gated"
+    }
+  ],
+  "endpointRoleEvidence": [
+    {
+      "id": "store-incentives-read-roles",
+      "route": "/store/incentives",
+      "endpoint": "GET /api/store/incentives",
+      "method": "Get",
+      "decorator": "incentives",
+      "expectedRoles": [
+        "REGION_MANAGER"
+      ],
+      "gate": "DG1-C",
+      "status": "decision_gated",
+      "source": "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts",
+      "actualRoles": [
+        "REGION_MANAGER",
+        "STORE_MANAGER"
+      ]
     },
     {
-      "id": "store-personnel-preview-missing-report-viewer",
-      "route": "/store/personnel/:employeeId",
-      "previewExtraRoles": [],
-      "previewMissingRoles": [
+      "id": "store-kpi-read-roles",
+      "route": "/store/kpis",
+      "endpoint": "GET /api/reports/store-kpi-highlights",
+      "method": "Get",
+      "decorator": "store-kpi-highlights",
+      "expectedRoles": [
+        "STORE_MANAGER",
+        "REGION_MANAGER",
         "REPORT_VIEWER"
       ],
-      "gate": "DG-1",
-      "status": "decision_gated"
+      "gate": null,
+      "status": "approved",
+      "source": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
+      "actualRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER"
+      ]
     },
     {
-      "id": "store-tasks-preview-extra-roles",
-      "route": "/store/tasks",
-      "previewExtraRoles": [
-        "AUDITOR",
+      "id": "store-personnel-read-roles",
+      "route": "/store/personnel/:employeeId",
+      "endpoint": "GET /api/reports/personnel-performance/:employeeId",
+      "method": "Get",
+      "decorator": "personnel-performance/:employeeId",
+      "expectedRoles": [
+        "STORE_PERSONNEL",
+        "STORE_MANAGER",
+        "REGION_MANAGER",
+        "SUPER_ADMIN",
+        "REPORT_VIEWER"
+      ],
+      "gate": null,
+      "status": "approved",
+      "source": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
+      "actualRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ]
+    },
+    {
+      "id": "store-ranking-read-roles",
+      "route": "/store/rankings",
+      "endpoint": "GET /api/reports/rankings",
+      "method": "Get",
+      "decorator": "rankings",
+      "expectedRoles": [
+        "STORE_PERSONNEL",
+        "STORE_MANAGER",
+        "REGION_MANAGER",
+        "SUPER_ADMIN",
+        "REPORT_VIEWER"
+      ],
+      "gate": null,
+      "status": "approved",
+      "source": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
+      "actualRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ]
+    },
+    {
+      "id": "store-competition-read-roles",
+      "route": "/store/competitions",
+      "endpoint": "GET /api/competitions",
+      "method": "Get",
+      "decorator": "",
+      "expectedRoles": [
+        "SUPER_ADMIN",
         "HR_ADMIN",
-        "INTEGRATION_ADMIN",
-        "SNAPSHOT_OPERATOR",
+        "REPORT_VIEWER",
+        "REGION_MANAGER",
+        "STORE_MANAGER",
         "STORE_PERSONNEL"
       ],
-      "previewMissingRoles": [],
-      "gate": "DG-1",
-      "status": "decision_gated"
+      "gate": null,
+      "status": "approved",
+      "source": "backend/nestjs/src/modules/store-ops/web/competition.controller.ts",
+      "actualRoles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "STORE_PERSONNEL",
+        "SUPER_ADMIN"
+      ]
+    },
+    {
+      "id": "store-action-plan-read-roles",
+      "route": "/store/tasks",
+      "endpoint": "GET /api/store-actions/plans",
+      "method": "Get",
+      "decorator": "plans",
+      "expectedRoles": [
+        "STORE_MANAGER",
+        "SUPER_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER"
+      ],
+      "gate": null,
+      "status": "approved",
+      "source": "backend/nestjs/src/modules/store-ops/web/store-action-plan.controller.ts",
+      "actualRoles": [
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ]
+    },
+    {
+      "id": "store-workforce-read-roles",
+      "route": "/store/workforce",
+      "endpoint": "GET /api/workforce/store-employees",
+      "method": "Get",
+      "decorator": "store-employees",
+      "expectedRoles": [
+        "STORE_MANAGER",
+        "REGION_MANAGER",
+        "HR_ADMIN",
+        "SUPER_ADMIN",
+        "REPORT_VIEWER"
+      ],
+      "gate": null,
+      "status": "approved",
+      "source": "backend/nestjs/src/modules/store-ops/web/workforce.controller.ts",
+      "actualRoles": [
+        "HR_ADMIN",
+        "REGION_MANAGER",
+        "REPORT_VIEWER",
+        "STORE_MANAGER",
+        "SUPER_ADMIN"
+      ]
     }
   ],
   "endpointDrifts": [
@@ -1485,33 +1622,16 @@
       "roles": [
         "STORE_MANAGER"
       ],
-      "gate": "DG-1",
+      "expectedRoles": [
+        "REGION_MANAGER"
+      ],
+      "actualRoles": [
+        "REGION_MANAGER",
+        "STORE_MANAGER"
+      ],
+      "gate": "DG1-C",
       "status": "decision_gated",
       "source": "backend/nestjs/src/modules/store-ops/web/store-sales-target-incentive.controller.ts"
-    },
-    {
-      "id": "store-kpi-report-viewer-frontend-only",
-      "route": "/store/kpis",
-      "endpoint": "GET /api/reports/store-kpi-highlights",
-      "direction": "route_role_missing_from_backend_decorator",
-      "roles": [
-        "REPORT_VIEWER"
-      ],
-      "gate": "DG-1",
-      "status": "decision_gated",
-      "source": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts"
-    },
-    {
-      "id": "store-personnel-report-viewer-frontend-only",
-      "route": "/store/personnel/:employeeId",
-      "endpoint": "GET /api/reports/personnel-performance/:employeeId",
-      "direction": "route_role_missing_from_backend_decorator",
-      "roles": [
-        "REPORT_VIEWER"
-      ],
-      "gate": "DG-1",
-      "status": "decision_gated",
-      "source": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts"
     }
   ],
   "previewOrphans": []
