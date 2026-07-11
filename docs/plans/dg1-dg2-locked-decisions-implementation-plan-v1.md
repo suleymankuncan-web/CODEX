@@ -672,17 +672,17 @@ Primary files:
 
 Tasks:
 
-- [ ] Define editing availability with compile-time `import.meta.env.DEV`, not
+- [x] Define editing availability with compile-time `import.meta.env.DEV`, not
       a runtime flag or current session mode.
-- [ ] In non-development builds, do not render mode selectors, tokens, mock
+- [x] In non-development builds, do not render mode selectors, tokens, mock
       headers, identity/scope inputs, save, or reset.
-- [ ] Keep read-only mode/transport/readiness and safe scope counts.
-- [ ] Keep a Verify action only if it calls the current session read directly
+- [x] Keep read-only mode/transport/readiness and safe scope counts.
+- [x] Keep a Verify action only if it calls the current session read directly
       and never calls `saveSession`.
-- [ ] Do not render token fragments or mock/header previews outside development.
-- [ ] Preserve the development editor and move any production-editor-dependent
+- [x] Do not render token fragments or mock/header previews outside development.
+- [x] Preserve the development editor and move any production-editor-dependent
       cookie-session proof into a unit/component test instead of deleting it.
-- [ ] Add production-build DOM assertions against every editable label/control.
+- [x] Add production-build DOM assertions against every editable label/control.
 
 Rollback: revert the display policy and tests. No backend or stored session
 data rollback exists.

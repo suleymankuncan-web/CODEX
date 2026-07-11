@@ -20,51 +20,78 @@ test.beforeEach(async ({ page }) => {
   await routeAdminShellApi(page)
 })
 
-test('session readiness page switches chrome to English copy and persists locale', async ({ page }) => {
+test('production session readiness is read-only and persists locale', async ({ page }) => {
   await page.goto('/admin/session')
 
   const main = page.getByRole('main')
   const heroMetrics = main.locator('.hero-metrics')
+  const body = page.locator('body')
 
   await expect(page).toHaveURL(/\/admin\/session$/)
-  await expect(main.getByText('Oturum hazırlığı')).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Gerçek auth akışına geçerken yerel hızı koru.' })).toBeVisible()
+  await expect(main.getByText('Oturum durumu').first()).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Mevcut oturumu güvenle doğrulayın.' })).toBeVisible()
   await expect(heroMetrics.getByText('Mod', { exact: true })).toBeVisible()
-  await expect(heroMetrics.getByText("Mock header'lar", { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Yerel oturum', { exact: true })).toBeVisible()
   await expect(heroMetrics.getByText('Hazır', { exact: true })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'İsteklerin nasıl kimlik doğrulayacağını seç' })).toBeVisible()
-  await expect(main.getByRole('button', { name: "Mock header'lar" })).toBeVisible()
-  await expect(main.getByRole('button', { name: 'Bearer token' })).toBeVisible()
-  await expect(main.getByRole('button', { name: 'Oturumu kaydet' })).toBeVisible()
+  await expect(main.getByTestId('session-readonly-panel')).toBeVisible()
   await expect(main.getByRole('button', { name: 'Mevcut oturumu doğrula' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'İstemcinin göndereceği bilgiler' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Korumalı backend el sıkışması' })).toBeVisible()
-  await expect(main.getByText('Prepare the shell for real auth')).toHaveCount(0)
-  await expect(page.locator('body')).not.toContainText('ÃƒÆ’')
-  await expect(page.locator('body')).not.toContainText('Ãƒâ€')
-  await expect(page.locator('body')).not.toContainText('Ãƒâ€¦')
+  await expect(main.getByTestId('session-development-editor')).toHaveCount(0)
+  await expect(main.getByTestId('session-development-preview')).toHaveCount(0)
+  await expect(main.locator('input, textarea')).toHaveCount(0)
+  await expect(main.getByRole('button', { name: /Mock|Bearer token|kaydet|varsayılan/i })).toHaveCount(0)
+  await expect(main).not.toContainText('admin-routing-user')
+  await expect(main).not.toContainText('00000000-0000-0000-0000-000000000001')
+  await expect(main).not.toContainText('İstek önizlemesi')
+  await expect(body).not.toContainText('ÃƒÆ’')
+  await expect(body).not.toContainText('Ãƒâ€')
+  await expect(body).not.toContainText('Ãƒâ€¦')
 
   await setStoredLocale(page, 'en')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(main.getByText('Session Readiness')).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Prepare the shell for real auth without losing local speed.' })).toBeVisible()
+  await expect(main.getByText('Session status').first()).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Verify the current session safely.' })).toBeVisible()
   await expect(heroMetrics.getByText('Mode', { exact: true })).toBeVisible()
-  await expect(heroMetrics.getByText('Mock headers', { exact: true })).toBeVisible()
+  await expect(heroMetrics.getByText('Local session', { exact: true })).toBeVisible()
   await expect(heroMetrics.getByText('Ready', { exact: true })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Choose how requests authenticate' })).toBeVisible()
-  await expect(main.getByRole('button', { name: 'Mock headers' })).toBeVisible()
-  await expect(main.getByRole('button', { name: 'Bearer token' })).toBeVisible()
-  await expect(main.getByRole('button', { name: 'Save session' })).toBeVisible()
   await expect(main.getByRole('button', { name: 'Verify current session' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'What the client will send' })).toBeVisible()
-  await expect(main.getByRole('heading', { name: 'Protected backend handshake' })).toBeVisible()
-  await expect(main.getByText('Oturum hazırlığı')).toHaveCount(0)
+  await expect(main.getByRole('button', { name: /Mock headers|Bearer token|Save session|Reset/i })).toHaveCount(0)
+  await expect(main.getByTestId('session-development-editor')).toHaveCount(0)
 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(main.getByRole('heading', { name: 'Prepare the shell for real auth without losing local speed.' })).toBeVisible()
+  await expect(main.getByRole('heading', { name: 'Verify the current session safely.' })).toBeVisible()
+})
+
+test('production session readiness never renders persisted credential fragments', async ({ page }) => {
+  await page.goto('/admin/session')
+  await page.evaluate(() => {
+    window.localStorage.setItem(
+      'store-ops-admin-session',
+      JSON.stringify({
+        mode: 'bearer',
+        browserSessionTransport: 'bearer',
+        mockUserId: 'production-secret-identity-fragment',
+        mockRoleCodes: 'SUPER_ADMIN',
+        mockCompanyIds: 'production-secret-company-fragment',
+        bearerToken: '',
+      }),
+    )
+    window.sessionStorage.setItem(
+      'store-ops-admin-bearer-token',
+      'production-secret-token-fragment',
+    )
+  })
+  await page.reload()
+
+  const main = page.getByRole('main')
+  await expect(main.getByTestId('session-readonly-panel')).toBeVisible()
+  await expect(main.locator('input, textarea')).toHaveCount(0)
+  await expect(main.getByTestId('session-development-editor')).toHaveCount(0)
+  await expect(main).not.toContainText('production-secret-token-fragment')
+  await expect(main).not.toContainText('production-secret-identity-fragment')
+  await expect(main).not.toContainText('production-secret-company-fragment')
 })
 
 test('admin shell switches chrome to English copy and persists locale', async ({ page }) => {

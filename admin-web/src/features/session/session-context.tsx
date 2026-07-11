@@ -16,7 +16,6 @@ import {
 import {
   clearClientBearerSession,
   defaultSession,
-  isCookieBrowserSession,
   isSessionReady,
   normalizeSession,
   persistClientSession,
@@ -25,6 +24,7 @@ import {
   writeClientBearerSession,
   type SessionState,
 } from './session-storage'
+import { resolveSessionSaveTransition } from './session-save-transition'
 
 export function SessionProvider(input: { children: ReactNode }) {
   const [session, setSession] = useState<SessionState>(() => readClientSession())
@@ -43,18 +43,10 @@ export function SessionProvider(input: { children: ReactNode }) {
   }, [session])
 
   const saveSession = useCallback(async (next: SessionState) => {
-    const normalizedNext = normalizeSession(next)
-    const nextSession = normalizeSession({
-      ...normalizedNext,
-      browserSessionKey: isCookieBrowserSession(normalizedNext)
-        ? normalizedNext.browserSessionKey
-        : '',
-    })
+    const transition = resolveSessionSaveTransition(sessionRef.current, next)
+    const { nextSession } = transition
 
-    if (
-      sessionRef.current.browserSessionTransport === 'cookie' &&
-      !isCookieBrowserSession(nextSession)
-    ) {
+    if (transition.shouldClearBrowserSessionCookie) {
       try {
         await clearBrowserSessionCookie()
       } catch (error) {
@@ -63,8 +55,8 @@ export function SessionProvider(input: { children: ReactNode }) {
       }
     }
 
-    if (nextSession.mode === 'bearer' && !isCookieBrowserSession(nextSession)) {
-      writeClientBearerSession(nextSession.bearerToken)
+    if (transition.bearerTokenToPersist !== null) {
+      writeClientBearerSession(transition.bearerTokenToPersist)
     } else {
       clearClientBearerSession()
     }
