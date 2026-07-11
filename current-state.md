@@ -173,15 +173,13 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
-- Execute DG1-C on fresh `codex/dg1-c-incentive-closure`: classify consumers of
-  `GET /api/store/incentives` and `GET /api/store/me/incentives` before any
-  breaking removal. Keep the slice to incentive visibility/compatibility and
-  preserve the Region Manager command surface; see
-  `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`; keep the truthful release boundary stable while A3 measurement and remaining B1 external evidence continue under their sections above.
+- DG1-C runtime removal is `blocked_external` on fresh `codex/dg1-c-runtime-removal`: PR #945 merged the static classification, but the owner-approved provider usage window is missing. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
+- Keep the truthful release boundary stable while A3 measurement and remaining B1 external evidence continue under their sections above.
 
 Next:
-1. Complete the DG1-C consumer classification and compatibility decision before removing Store Manager or Store Personnel incentive reads; if usage is
-   unknown, stop the breaking change and publish the compatibility packet.
+1. Obtain the sanitized provider usage window and owner sign-off; if usage is
+   external or unknown, keep the compatibility contract and do not open a
+   breaking runtime PR.
 2. Follow the DG1-DG2 train; never run staging preflight before verify-full + CA.
 3. Then approve exact staging identity and record sanitized read-only counts;
    any non-zero result blocks PR-10 and triggers no repair.
