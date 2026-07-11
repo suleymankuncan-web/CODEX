@@ -56,16 +56,17 @@ slice is the authorization operating-truth contract: complete route ownership,
 preview/runtime drift, and backend-endpoint drift become machine-visible before
 any permission behavior changes. DG-1 product decisions are locked but their
 runtime implementation remains unopened; DG-2 still gates live DB cleanup,
-DG-3 verify-full is now locked as the staging TLS decision and configured in
-the repository; provider CA/health proof still gates activation, and DG-4
-still gates real external error delivery.
+DG-3 verify-full is now locked as the staging TLS decision and proven on the
+Render API after provider CA installation, health verification, and a 13/14
+deployed-readiness smoke with zero failures; rotation/review evidence remains
+open, and DG-4 still gates real external error delivery.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
 33 direct matrix routes, and three preview plus three backend drifts. PR #929
 completed PR-3: authorization changes now clear protected frontend cache state
 before a new shell renders. PR #930 completed PR-4: target and request-center
 reads are bounded without mutation, DB, or authorization-policy changes. PR
-#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS-readiness configuration; the DG-3 branch now targets `verify-full` for the Render API and worker, with CA secret installation and staging proof still pending.
+#931 completed PR-5: business-date defaults and calendar arithmetic now use Europe/Istanbul while timestamp instants remain UTC. PR #932 completed PR-6: Store Feed, Store Reports, and Admin Incentives now own typed TR/EN chrome while source and technical data remain unchanged. PR #933 completed PR-7: Master Data selection is keyboard-owned, protected shells have localized skip links, and two bounded axe seeds guard critical WCAG 2 A/AA violations. PR #934 completed PR-8 with transitive called-wrapper system-flow evidence. PR #935 delivered the read-only database invariant preflight; live staging evidence and invariant decisions remain DG-2-gated. PR #936 delivered validated pool, polling, timeout, and TLS-readiness configuration; the DG-3 branch targets `verify-full` for the Render API and worker, and the owner has now completed provider CA installation plus staging proof.
 
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch
   aggregate and verified the ruleset readback.
@@ -182,9 +183,9 @@ Next:
    runtime access.
 2. Approve an exact staging database identity and run the read-only PR-9
    preflight; classify every non-zero result before DG-2 can open PR-10.
-3. Install the Supabase staging CA through the Render secret boundary, run the
-   staging smoke, and record the single-operator rotation/review path so the
-   DG-3 `verify-full` activation can be proven.
+3. Record DG-3's single-operator rotation/review path and open the
+   docs/process PR for the now-proven `verify-full` staging activation; do not
+   merge without owner approval.
 4. Supply DG-4's error provider, environment/release naming, secret owner,
    retention/privacy policy, and sanitized receipt before PR-12.
 5. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not

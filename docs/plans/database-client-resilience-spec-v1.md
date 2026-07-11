@@ -1,6 +1,6 @@
 # Database Client TLS And Timeout Resilience Specification V1
 
-Status: implementation merged in PR #936; DG-3 verify-full decision locked, provider activation pending
+Status: implementation merged in PR #936; DG-3 verify-full staging activation proven, rotation/review follow-up open
 Shelf: active plan
 Author: Codex
 Last verified: 2026-07-11
@@ -22,12 +22,14 @@ those validations, timeout budgets, and the non-secret transport status.
 Current controlled-pilot production still uses `rejectUnauthorized: false`, so
 its connection is encrypted but the server certificate is not verified.
 
-DG-3 is locked to provider-verified `verify-full`. The Supabase staging target
-is identified and the repository/Render blueprint now targets `verify-full`;
-provider CA installation, staging smoke proof, and rotation/review evidence
-are still pending. The application must not claim `encrypted-verified` until
-the secret is installed and the staging health check proves the transport
-posture.
+DG-3 is locked to provider-verified `verify-full`. The owner installed the
+provider CA in the Render API and worker secret boundaries. On 2026-07-11,
+staging `/api/health` returned HTTP 200 with `encrypted-verified` and
+`certificateVerified: true`; the deployed-readiness smoke passed 13 of 14
+checks with 0 failures (the auth check was skipped because no bearer token was
+provided). Staging activation is therefore proven. CA content is not recorded;
+the rotation/review date and single-operator rollback evidence remain an
+operational follow-up.
 
 ## 3. Scope And Non-Goals
 
@@ -93,10 +95,11 @@ connection string may be emitted while doing so.
   `encrypted-unverified`.
 - `READINESS_PROFILE=broad-production` must fail startup unless
   `DB_SSL_MODE=verify-full` and `DB_SSL_CA` is present.
-- Repository and Render defaults target controlled-pilot `verify-full` but do
-  not contain CA material; activation remains pending until the secret is
-  entered through the provider secret boundary.
-- Provider staging smoke is required before any `encrypted-verified` claim.
+- Repository and Render defaults target controlled-pilot `verify-full` and do
+  not contain CA material; the provider secret was entered outside the repo and
+  the 2026-07-11 staging proof is recorded below.
+- Provider staging smoke is required before any `encrypted-verified` claim; the
+  current staging smoke completed with 0 failures.
 
 ## 6. Readiness Contract
 
@@ -141,12 +144,16 @@ Required local evidence:
 - root contract suite;
 - one uninterrupted canonical root release for the PR decision.
 
-Required provider evidence after secret installation:
+Provider evidence recorded on 2026-07-11:
 
-- provider staging smoke against the confirmed Supabase target;
-- `/api/health` reports `encrypted-verified` and `certificateVerified: true`;
-- rotation/review date and the single-operator rollback path are recorded
-  without recording CA material.
+- owner-confirmed provider CA installation in the Render API and worker secret
+  boundaries;
+- `/api/health` returned HTTP 200 with `encrypted-verified` and
+  `certificateVerified: true`;
+- deployed-readiness smoke returned `13 passed`, `0 failed`, and `1 skipped`
+  because no bearer token was supplied;
+- rotation/review date and the single-operator rollback path remain open and
+  must be recorded without recording CA material.
 
 ## 9. Rollback
 
@@ -158,7 +165,7 @@ certificate verification silently.
 
 ## 10. Current Verification Snapshot
 
-Verified on 2026-07-10 on the PR head based on main `5b93988b`:
+Verified on 2026-07-11 on the PR head based on main `56e1e01d`:
 
 - focused config, pool, health, and health integration tests: `77/77` passed;
 - full backend suite: `185/185` suites and `1155/1155` tests passed;
@@ -167,7 +174,8 @@ Verified on 2026-07-10 on the PR head based on main `5b93988b`:
 - remote root release passed in `11m22s`, backend/Docker rehearsal passed in
   `1m54s`, the observer passed in `2m9s`, and required aggregate plus Vercel
   passed before PR #936 merged as `271bba3f`;
-- DG-3 repository target now uses `DB_SSL_MODE=verify-full` for the Render API
-  and worker; provider CA installation and staging proof remain pending;
-- no raw connection string, CA material, provider secret, schema change,
-  migration, or broad-production activation was introduced.
+- DG-3 staging evidence now proves Render API database transport as
+  `encrypted-verified` with `certificateVerified: true`; the worker received
+  the same provider secret boundary and redeploy;
+- no raw connection string or CA content was recorded in the repo or evidence;
+  no schema change, migration, or broad-production activation was introduced.
