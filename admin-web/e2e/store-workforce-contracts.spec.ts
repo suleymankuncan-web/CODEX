@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './test-fixtures'
+import { readFile } from 'node:fs/promises'
 import {
   installGenericStoreApiFallbacks,
   installStoreContractSession,
@@ -17,6 +18,28 @@ test('workforce region table uses full surface without selected-store side panel
   await expect(page.getByText('Seçili mağaza')).toHaveCount(0)
   await expect(page.getByTestId('store-workforce-region-rows')).toBeVisible()
   await expect(page.getByTestId('store-workforce-region-row')).toHaveCount(3)
+
+  const turnoverMetric = page.locator('.swc-metric-card').filter({ hasText: 'Yıl geneli turnover' })
+  await expect(turnoverMetric).toContainText('Veri yok')
+  await expect(turnoverMetric).not.toContainText('%')
+
+  const turnoverCells = page.locator('.swc-turnover-cell')
+  await expect(turnoverCells).toHaveCount(3)
+  await expect(turnoverCells).toHaveText(['Veri yok', 'Veri yok', 'Veri yok'])
+  expect(
+    await turnoverCells.locator('em').evaluateAll((elements) =>
+      elements.map((element) => element.getAttribute('style')),
+    ),
+  ).toEqual(['width: 0%;', 'width: 0%;', 'width: 0%;'])
+
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Excel dışa aktar' }).click()
+  const download = await downloadPromise
+  const downloadPath = await download.path()
+  expect(downloadPath).not.toBeNull()
+  const csv = await readFile(downloadPath!, 'utf8')
+  expect(csv).not.toContain('%')
+  expect(csv.match(/Veri yok/g)).toHaveLength(3)
 })
 
 test('workforce detail dialog keeps active tab visible and footer close action usable', async ({ page }) => {
@@ -29,6 +52,9 @@ test('workforce detail dialog keeps active tab visible and footer close action u
 
   const dialog = page.getByTestId('store-workforce-region-detail-dialog')
   await expect(dialog).toBeVisible()
+  const turnoverFact = dialog.locator('.swc-fact').filter({ hasText: 'Yıl turnover' })
+  await expect(turnoverFact).toContainText('Veri yok')
+  await expect(turnoverFact).not.toContainText('%')
   await expect(dialog.locator('.swc-tab-trigger.active', { hasText: 'Personel' })).toBeVisible()
   await dialog.getByRole('button', { name: 'Pozisyon' }).click()
   await expect(dialog.locator('.swc-tab-trigger.active', { hasText: 'Pozisyon' })).toBeVisible()
@@ -99,6 +125,5 @@ function createHeadcountGapFixture(storeId: string) {
     shortage_days: storeId === storeIds[0] ? 7 : null,
     shortage_started_on: storeId === storeIds[0] ? '2026-06-29' : null,
     store_id: storeId,
-    turnover_rate: storeId === storeIds[0] ? 12.5 : 8.1,
   }
 }

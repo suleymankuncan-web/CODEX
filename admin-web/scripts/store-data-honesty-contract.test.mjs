@@ -48,6 +48,10 @@ const workforceModelSource = await readFile(
   new URL('../src/pages/store-workforce-region-view-model.ts', import.meta.url),
   'utf8',
 )
+const workforceApiSource = await readFile(
+  new URL('../src/features/workforce/api.ts', import.meta.url),
+  'utf8',
+)
 
 test('store reports do not mark empty backend packages as ready', () => {
   const model = reportsModel.buildStoreReportsViewModel(null, storeReportsT)
@@ -198,4 +202,11 @@ test('workforce region view has honest current-snapshot year copy and no store i
   assert.match(workforceViewSource, /storeLabel:\s*'Mağaza adı yok'/u)
   assert.doesNotMatch(workforceViewSource, /storeLabel:\s*storeId/u)
   assert.match(workforceViewSource, /norm-kadro-guncel\.csv/u)
+})
+
+test('Norm Kadro keeps demo-only turnover percentages disconnected from live data', () => {
+  assert.doesNotMatch(workforceApiSource, /turnover_rate|turnoverRate/u)
+  assert.match(workforceViewSource, /turnover:\s*null/u)
+  assert.match(workforceViewSource, /label=\{copy\.turnoverMetric\}[\s\S]*?value="Veri yok"/u)
+  assert.doesNotMatch(workforceViewSource, /averageTurnover|turnoverValues/u)
 })

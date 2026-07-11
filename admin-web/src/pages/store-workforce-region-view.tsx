@@ -163,7 +163,7 @@ export function RegionWorkforceView(input: {
           shortageDays: status === 'short' ? toFiniteNumber(headcountGap?.shortageDays) : null,
           status,
           summary,
-          turnover: toFiniteNumber(headcountGap?.turnoverRate),
+          turnover: null,
         }
       }),
     [locale, now, scopedStores, storeEmployeeQueries, storeHeadcountQueries],
@@ -193,17 +193,6 @@ export function RegionWorkforceView(input: {
   const totalOpenHeadcount = rows.reduce((sum, row) => sum + (row.openHeadcount ?? 0), 0)
   const allEmployees = useMemo(() => rows.flatMap((row) => row.employees), [rows])
   const regionSummary = useMemo(() => deriveWorkforceSummary(allEmployees, now, locale), [allEmployees, locale, now])
-  const turnoverValues = useMemo(
-    () => rows.map((row) => row.turnover).filter((value): value is number => value !== null),
-    [rows],
-  )
-  const averageTurnover = useMemo(
-    () => {
-      if (turnoverValues.length === 0) return null
-      return turnoverValues.reduce((sum, value) => sum + value, 0) / turnoverValues.length
-    },
-    [turnoverValues],
-  )
   const isLoading = orgStoresQuery.isLoading || rows.some((row) => row.isLoading)
 
   const refresh = () => {
@@ -281,9 +270,9 @@ export function RegionWorkforceView(input: {
         <MetricCard
           icon={<TrendingUp />}
           label={copy.turnoverMetric}
-          note={turnoverValues.length > 0 ? `${formatNumber(turnoverValues.length, locale)} mağazada veri var` : 'Ayrılık geçmişi yok'}
+          note="Ayrılık geçmişi yok"
           tone="watch"
-          value={formatTurnover(averageTurnover)}
+          value="Veri yok"
         />
         <MetricCard
           icon={<UsersRound />}
