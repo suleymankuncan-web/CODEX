@@ -1,6 +1,6 @@
 # Database Invariant Preflight Specification V1
 
-Status: implemented locally with verify-full staging gate; approved safe-target evidence pending
+Status: verify-full staging evidence completed; DB-CONSTRAINTS No-Go
 Shelf: active plan
 Author: Codex
 Owner: Product owner
@@ -231,7 +231,18 @@ rollback. It does not prove live data cleanliness or choose unresolved business
 semantics. No PR-10 branch, migration, repair, or constraint is authorized by
 this result.
 
-## 11. Contract Impact
+## 11. Approved Staging Evidence - 2026-07-12
+
+The owner-confirmed, verify-full, read-only staging run is recorded in
+`docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`.
+It completed with 70 total check hits: `ASSIGN-01=2`, `ORG-02=3`,
+`ORG-04=11`, and `TARGET-02=54`; all other check counts were zero.
+
+Decision: **No-Go for DB-CONSTRAINTS**. Non-zero rows require a separately
+approved correction plan, while assignment/target semantics and candidate-key
+lock/validation strategy remain unresolved. No repair or mutation occurred.
+
+## 12. Contract Impact
 
 Contract Impact: none.
 
