@@ -1,5 +1,6 @@
 import { useMemo, type Dispatch, type SetStateAction } from 'react'
 import { KeyValue, StatusPill } from '../components/dashboard-primitives'
+import { Button } from '../components/ui/button'
 import { useLocalization } from '../features/localization/useLocalization'
 import {
   isCookieBrowserSession,
@@ -172,20 +173,20 @@ export function SessionReadinessDevelopmentEditor(input: {
         )}
 
         <div className="action-cluster">
-          <button className="control-button" type="button" onClick={input.onSave}>
+          <Button type="button" onClick={input.onSave}>
             {t('sessionReadiness.saveSession')}
-          </button>
-          <button
-            className="control-button"
+          </Button>
+          <Button
             type="button"
             onClick={input.onVerify}
             disabled={!input.isReady}
+            variant="outline"
           >
             {t('sessionReadiness.verifyCurrentSession')}
-          </button>
-          <button className="control-button" type="button" onClick={input.onReset}>
+          </Button>
+          <Button type="button" onClick={input.onReset} variant="outline">
             {t('sessionReadiness.resetToDefaults')}
-          </button>
+          </Button>
         </div>
       </article>
 
