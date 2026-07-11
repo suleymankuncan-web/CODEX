@@ -56,10 +56,7 @@ slice is the authorization operating-truth contract: complete route ownership,
 preview/runtime drift, and backend-endpoint drift become machine-visible before
 any permission behavior changes. DG-1 product decisions are locked but their
 runtime implementation remains unopened; DG-2 still gates live DB cleanup,
-DG-3 verify-full is now locked as the staging TLS decision and proven on the
-Render API after provider CA installation, health verification, and a 13/14
-deployed-readiness smoke with zero failures; rotation/review evidence remains
-open, and DG-4 still gates real external error delivery.
+DG-3 verify-full is locked and proven on Render API after CA installation, health verification, and 13/14 smoke with zero failures; rotation/review and single-operator rollback are documented, next review 2026-10-11. DG-4 still gates real external error delivery.
 Broad production remains `No-Go`. PR #927
 completed PR-1 without runtime behavior change; its contract covers 54 routes,
 33 direct matrix routes, and three preview plus three backend drifts. PR #929
@@ -183,9 +180,9 @@ Next:
    runtime access.
 2. Approve an exact staging database identity and run the read-only PR-9
    preflight; classify every non-zero result before DG-2 can open PR-10.
-3. Record DG-3's single-operator rotation/review path and open the
-   docs/process PR for the now-proven `verify-full` staging activation; do not
-   merge without owner approval.
+3. Open the docs/process PR for the now-proven `verify-full` staging
+   activation and its documented rotation/review path; do not merge without
+   owner approval.
 4. Supply DG-4's error provider, environment/release naming, secret owner,
    retention/privacy policy, and sanitized receipt before PR-12.
 5. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not

@@ -1,6 +1,6 @@
 # Database Client TLS And Timeout Resilience Specification V1
 
-Status: implementation merged in PR #936; DG-3 verify-full staging activation proven, rotation/review follow-up open
+Status: implementation merged in PR #936; DG-3 verify-full staging activation proven, rotation/review path documented
 Shelf: active plan
 Author: Codex
 Last verified: 2026-07-11
@@ -27,9 +27,10 @@ provider CA in the Render API and worker secret boundaries. On 2026-07-11,
 staging `/api/health` returned HTTP 200 with `encrypted-verified` and
 `certificateVerified: true`; the deployed-readiness smoke passed 13 of 14
 checks with 0 failures (the auth check was skipped because no bearer token was
-provided). Staging activation is therefore proven. CA content is not recorded;
-the rotation/review date and single-operator rollback evidence remain an
-operational follow-up.
+provided). Staging activation is therefore proven. CA content is not recorded.
+The rotation/review cadence and single-operator rollback path are documented in
+`docs/runbooks/dg3-supabase-ca-rotation-rollback-v1.md`; the next scheduled
+review is 2026-10-11.
 
 ## 3. Scope And Non-Goals
 
@@ -100,6 +101,8 @@ connection string may be emitted while doing so.
   the 2026-07-11 staging proof is recorded below.
 - Provider staging smoke is required before any `encrypted-verified` claim; the
   current staging smoke completed with 0 failures.
+- The rotation/review and single-operator rollback procedure is maintained in
+  `docs/runbooks/dg3-supabase-ca-rotation-rollback-v1.md`.
 
 ## 6. Readiness Contract
 
@@ -152,8 +155,8 @@ Provider evidence recorded on 2026-07-11:
   `certificateVerified: true`;
 - deployed-readiness smoke returned `13 passed`, `0 failed`, and `1 skipped`
   because no bearer token was supplied;
-- rotation/review date and the single-operator rollback path remain open and
-  must be recorded without recording CA material.
+- rotation/review cadence, next review date, and the single-operator rollback
+  path are recorded in the DG-3 runbook without recording CA material.
 
 ## 9. Rollback
 

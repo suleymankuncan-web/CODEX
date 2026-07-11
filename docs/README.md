@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-10
+Last verified: 2026-07-11
 
 ## Reader And Action
 
@@ -41,6 +41,7 @@ Use this directory like an operating library, not a diary.
 | Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Owner-approved, evidence-gated sequence: CI truth is implemented; A3 p95 observation and B1 external pilot inputs remain pending. |
 | Remediate the page, authorization, codebase, and database audit | `docs/plans/project-wide-audit-remediation-plan-v1.md` | Detailed spec-first PR train for route-role truth, session cache isolation, bounded target queues, UI correctness, data integrity, and production-gated resilience. |
 | Harden the shared database client | `docs/plans/database-client-resilience-spec-v1.md` | PR-11 contract for validated pool/timeouts, honest TLS readiness, secret-safe CA support, and DG-3-gated verify-full activation. |
+| Rotate or roll back the Supabase staging CA | `docs/runbooks/dg3-supabase-ca-rotation-rollback-v1.md` | Single-operator review, provider CA rotation, verify-full health proof, and time-bounded rollback without recording secrets. |
 | Correct transitive system-flow evidence | `docs/plans/system-flow-transitive-precision-spec-v1.md` | PR-8 contract for called exported wrappers, cycle/duplicate safety, preload exclusion, and honest target-cast deferral. |
 | Preflight database invariants without mutation | `docs/plans/database-invariant-preflight-spec-v1.md` | PR-9 contract for read-only hierarchy, role scope, assignment overlap, target allocation, redaction, and safe-target evidence. |
 | Implement session-scoped query cache isolation | `docs/plans/session-scoped-query-cache-isolation-spec-v1.md` | Approved PR-3 contract for effective-authorization fingerprinting, the public query allowlist, no-flash cache removal, renewal, logout, expiry, and same-context persona switching. |
@@ -126,6 +127,7 @@ evidence, incident posture, and recovery.
 - `docs/plans/security-launch-blocker-pr-train-v1.md`
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
+- `docs/runbooks/dg3-supabase-ca-rotation-rollback-v1.md`
 - `docs/plans/operational-observability-review.md`
 - `docs/plans/p0-trust-operations-execution-v1.md`
 - `docs/plans/p1-operator-support-execution-v1.md`
