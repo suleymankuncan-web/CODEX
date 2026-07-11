@@ -6,8 +6,11 @@ import { HrAxisToaster } from './components/hr-axis-toaster'
 import { ClerkSessionProvider } from './features/auth/clerk-session'
 import { LocalizationProvider } from './features/localization/LocalizationProvider'
 import { SessionProvider } from './features/session/session-context'
+import { captureFrontendException, initializeFrontendSentry } from './lib/sentry'
 import './index.css'
 import App from './App.tsx'
+
+initializeFrontendSentry()
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,7 +21,27 @@ const queryClient = new QueryClient({
   },
 })
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, {
+  onCaughtError: (error) => {
+    captureFrontendException(error, {
+      event: 'react.caught_error',
+      source: 'react.onCaughtError',
+    })
+  },
+  onUncaughtError: (error) => {
+    captureFrontendException(error, {
+      event: 'react.uncaught_error',
+      source: 'react.onUncaughtError',
+    })
+  },
+  onRecoverableError: (error) => {
+    captureFrontendException(error, {
+      event: 'react.recoverable_error',
+      source: 'react.onRecoverableError',
+      severity: 'warning',
+    })
+  },
+}).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <SessionProvider>

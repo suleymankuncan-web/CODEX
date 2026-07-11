@@ -64,6 +64,10 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `BROWSER_SESSION_RENEWAL_WINDOW_SECONDS` | Auth owner | Render backend env | Internal | Renewal window must be lower than the app-session TTL and renewal must be provider-backed. | `120` |
 | `BROWSER_SESSION_SAME_SITE` | Auth owner | Render backend env | Internal | Must be `lax` or `strict` unless `SameSite=None` has explicit owner approval and Secure cookies are active. | `lax` |
 | `VITE_API_BASE_URL` | Frontend owner | Vercel frontend env | Public | Must point to the target backend `/api` URL. | `/api` |
+| `VITE_SENTRY_DSN` | Frontend owner | Vercel frontend env | Public ingest key | Browser-visible Sentry ingest DSN; keep it in Vercel env, never source code. | Empty. |
+| `VITE_SENTRY_ENABLED` | Frontend owner | Vercel frontend env | Public | Exact `true`/`false`; default `false` until the frontend receipt is approved. | `false` |
+| `VITE_SENTRY_ENVIRONMENT` | Frontend owner | Vercel frontend env | Public | Stable Sentry environment label, `staging` for the current project. | `development` |
+| `VITE_SENTRY_RELEASE` | Frontend owner | Vercel frontend env | Public | Optional deployed release/commit label; no secrets. | Empty. |
 | `VITE_AUTH_MODE` | Frontend/Auth owner | Vercel frontend env | Public | Must be `bearer` for real environments. | `mock` |
 | `VITE_BROWSER_SESSION_TRANSPORT` | Frontend/Auth owner | Vercel frontend env | Public | Selects real browser session transport: `bearer` for legacy rollback or `cookie` after backend cookie-session support is proven. | `bearer` |
 | `VITE_AUTH_PROVIDER` | Frontend/Auth owner | Vercel frontend env | Public | Must be `clerk` when Clerk owns browser auth. | `oidc` |
@@ -151,6 +155,10 @@ These values are read by `admin-web/src`.
 | Variable | P0/P1 | Production rule | Notes |
 | --- | --- | --- | --- |
 | `VITE_API_BASE_URL` | P0 | Points to production backend `/api`. | Public value, not secret. |
+| `VITE_SENTRY_DSN` | P1 | Sentry ingest DSN for the selected project; no server secret. | Browser-visible by design; configure in Vercel only. |
+| `VITE_SENTRY_ENABLED` | P1 | Exact `true`/`false`; enable only after frontend staging receipt and redaction review. | Default `false`; rollback is flag-only. |
+| `VITE_SENTRY_ENVIRONMENT` | P1 | Stable Sentry environment label, `staging` for the current staging project. | Used in issue metadata. |
+| `VITE_SENTRY_RELEASE` | P1 | Optional deployed commit/release id. | Used for grouping when supplied; do not store secrets. |
 | `VITE_AUTH_MODE` | P0 | Must be `bearer` for real environments. | Local can use `mock`. |
 | `VITE_BROWSER_SESSION_TRANSPORT` | P0 for launch browser sessions | `bearer` preserves the legacy rollback path; `cookie` is the launch target after backend cookie sessions are proven. | Separate from `VITE_AUTH_MODE`; do not overload auth mode as the transport flag. |
 | `VITE_AUTH_PROVIDER` | P0 | Use `clerk` when Clerk owns browser authentication. | Enables Clerk frontend bridge; authorization remains in HR Axis DB. |
@@ -242,7 +250,7 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
 - [ ] `LOG_LEVEL` is set to the intended runtime verbosity.
 - [ ] `ERROR_TRACKING_ENVIRONMENT` and `ERROR_TRACKING_RELEASE` identify the deploy in structured observability events.
 - [ ] `READINESS_PROFILE=controlled-pilot` unless broad production rollout is explicitly approved.
-- [ ] If `READINESS_PROFILE=broad-production`, external error delivery is enabled through a provider-approved path or an accepted Conditional Go risk is recorded.
+- [ ] If `READINESS_PROFILE=broad-production`, enabled external error delivery is configured through a provider-approved path or an accepted Conditional Go risk is recorded.
 - [ ] `JWT_ISSUER`, `JWT_AUDIENCE`, and `JWT_JWKS_URL` match real provider.
 - [ ] `JWT_SECRET` is empty when JWKS is used, or explicitly approved for non-JWKS mode.
 - [ ] Provider authorize/token/logout URLs are filled.
@@ -262,6 +270,8 @@ These values are read by `admin-web/scripts/auth-live-smoke.mjs`.
       session support, frontend bridge, CSRF guard, and sanitized evidence are
       merged; otherwise keep `bearer` as controlled rollback.
 - [ ] `VITE_AUTH_PROVIDER` matches the browser auth provider, for example `clerk`.
+- [ ] `VITE_SENTRY_ENABLED` is enabled only after the sanitized frontend staging receipt is accepted.
+- [ ] `VITE_SENTRY_ENVIRONMENT` and `VITE_SENTRY_RELEASE` identify the frontend deploy when supplied.
 - [ ] `VITE_CLERK_PUBLISHABLE_KEY` is set only when Clerk is enabled.
 - [ ] `VITE_CLERK_JWT_TEMPLATE` is set only when backend audience verification requires a Clerk JWT template.
 - [ ] `VITE_OIDC_RESPONSE_TYPE=code` if frontend fallback provider env is used.
