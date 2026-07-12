@@ -226,6 +226,12 @@ must not be described as history-preserving until a separate implementation PR
 and tests prove the lifecycle above. The gap does not permit duplicate
 allocations inside one request and does not authorize a runtime change here.
 
+Application enforcement update: new-request and edited-approval allocations
+now reject a repeated employee before repository persistence. This does not
+repair existing rows, change pilot-import behavior, create the linked
+replacement-reference lifecycle described above, or authorize database
+enforcement. The remaining `and_db` half stays behind REM-7 and REM-8.
+
 ## 7. ORG-04: Scoped Operational Rows
 
 All 11 rows have `org.scope_region_store`. Nine belong to KPI actuals and two

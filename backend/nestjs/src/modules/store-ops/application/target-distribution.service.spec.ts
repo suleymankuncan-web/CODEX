@@ -133,6 +133,52 @@ describe("TargetDistributionService", () => {
     expect(targetDistributionRepository.createRequest).not.toHaveBeenCalled();
   });
 
+  it("rejects duplicate employees in a new target distribution request", async () => {
+    const targetDistributionRepository = {
+      createRequest: jest.fn(),
+    };
+    const storeOpsRepository = {
+      listStorePersonnelTargetingRows: jest.fn(),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      storeOpsRepository as never,
+    );
+
+    await expect(
+      service.createRequest({
+        actorUserId: "user-1",
+        actorScope: {
+          companyIds: ["00000000-0000-4000-8000-000000000001"],
+          regionIds: ["00000000-0000-4000-8000-000000000010"],
+          storeIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        actorActionScope: {
+          assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        storeId: "00000000-0000-4000-8000-000000000201",
+        requestMonth: "2026-03-01",
+        targetLabel: "Net Sales",
+        totalTargetValue: 175000,
+        allocations: [
+          {
+            employeeId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            assigneeLabel: "Ada Kaya",
+            targetValue: 100000,
+          },
+          {
+            employeeId: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA",
+            assigneeLabel: "Ada Kaya",
+            targetValue: 75000,
+          },
+        ],
+      }),
+    ).rejects.toThrow("Target allocations cannot contain the same employee more than once");
+
+    expect(storeOpsRepository.listStorePersonnelTargetingRows).not.toHaveBeenCalled();
+    expect(targetDistributionRepository.createRequest).not.toHaveBeenCalled();
+  });
+
   it("uses the requested store's canonical company and region when creating requests", async () => {
     const targetDistributionRepository = {
       createRequest: jest.fn(async () => ({
@@ -295,6 +341,49 @@ describe("TargetDistributionService", () => {
         },
       ],
     });
+  });
+
+  it("rejects duplicate employees in edited approval allocations", async () => {
+    const targetDistributionRepository = {
+      getRequestScope: jest.fn(async () => ({
+        storeId: "00000000-0000-4000-8000-000000000201",
+      })),
+      approveRequest: jest.fn(),
+    };
+    const storeOpsRepository = {
+      listStorePersonnelTargetingRows: jest.fn(),
+    };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      storeOpsRepository as never,
+    );
+
+    await expect(
+      service.approveRequest({
+        actorUserId: "region-user",
+        actorActionScope: {
+          assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+        },
+        requestId: "00000000-0000-4000-8000-000000000701",
+        approvalNote: "Bolge hedefi dengeledi",
+        approvedTotalTargetValue: 175000,
+        approvedAllocations: [
+          {
+            employeeId: "00000000-0000-4000-8000-000000000501",
+            assigneeLabel: "Ada Kaya",
+            targetValue: 100000,
+          },
+          {
+            employeeId: "00000000-0000-4000-8000-000000000501",
+            assigneeLabel: "Ada Kaya",
+            targetValue: 75000,
+          },
+        ],
+      }),
+    ).rejects.toThrow("Target allocations cannot contain the same employee more than once");
+
+    expect(storeOpsRepository.listStorePersonnelTargetingRows).not.toHaveBeenCalled();
+    expect(targetDistributionRepository.approveRequest).not.toHaveBeenCalled();
   });
 
   it("rejects edited approve payloads when allocation total does not match the approved target total", async () => {

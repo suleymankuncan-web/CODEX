@@ -36,6 +36,8 @@ export class TargetDistributionService {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
+    this.assertDistinctEmployees(input.allocations);
+
     await this.assertAllocationsBelongToStore({
       storeId: input.storeId,
       allocations: input.allocations,
@@ -218,6 +220,8 @@ export class TargetDistributionService {
         );
       }
 
+      this.assertDistinctEmployees(input.approvedAllocations);
+
       const approvedAllocationTotal = input.approvedAllocations.reduce(
         (sum, allocation) => sum + Number(allocation.targetValue || 0),
         0,
@@ -346,6 +350,15 @@ export class TargetDistributionService {
     if (hasOutOfStoreEmployee) {
       throw new ForbiddenException(
         "Target allocation contains employees outside the requested store",
+      );
+    }
+  }
+
+  private assertDistinctEmployees(allocations: Array<{ employeeId: string }>) {
+    const employeeIds = allocations.map((allocation) => allocation.employeeId.toLowerCase());
+    if (new Set(employeeIds).size !== employeeIds.length) {
+      throw new BadRequestException(
+        "Target allocations cannot contain the same employee more than once",
       );
     }
   }

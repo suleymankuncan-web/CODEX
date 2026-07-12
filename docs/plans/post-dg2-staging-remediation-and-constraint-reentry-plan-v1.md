@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_2b_merged_evidence_launcher_recovery`
+Status: `active_target_application_enforcement_then_rem_7`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -834,6 +834,13 @@ replacement approval must preserve the previous reference as `superseded`
 rather than overwrite its history. Application enforcement precedes database
 enforcement. Database enforcement remains behind REM-8 and no DDL is
 authorized by this decision.
+
+Application prerequisite state: the request-creation and edited-approval
+service boundaries reject a repeated employee before any repository write.
+This closes only the application half of `reject_app_and_db`; existing data,
+pilot-import behavior, API shape, and database enforcement remain unchanged.
+Database enforcement is still conditional on REM-7 eligibility and REM-8
+compatibility, disposable DDL, lock, rollback, and concurrency evidence.
 
 For monthly KPI actuals, region means the responsible region manager's
 portfolio. The canonical owner is the assignment effective on the last day of
