@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_8_implementation_pending_pr`
+Status: `active_rem_8_evidence_pending_pr_then_db_c5`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -1064,12 +1064,18 @@ Observe only:
 This slice does not execute DDL and does not claim measured DDL lock duration.
 Its runner merges before a separate evidence-only staging receipt PR.
 
-The repository-only V1 implementation is prepared on 2026-07-12 pending PR
-closeout. It binds the merged REM-7 receipt and current V2 TARGET count in one
+PR #964 merged the repository-only V1 implementation on 2026-07-12 at
+`b60776c033528438118322b8b09652f16909f78d`. It binds the merged REM-7 receipt and current V2 TARGET count in one
 repeatable-read/read-only snapshot; reports only sanitized capacity, write,
 transaction, lock, catalog, plan, and compatibility aggregates; and ships an
 exact-SHA/clean-branch/verify-full/one-shot evidence launcher. It contains no
 staging mutation path.
+
+Its exact-SHA one-shot staging receipt is valid: PostgreSQL 17, 61 live TARGET
+rows, zero active TARGET hits/ordinary duplicates/pilot duplicates/non-array
+rows, exact pilot unique index, absent candidate artifacts, zero long
+transactions, and no conflicting lock pressure. The only relation lock was the
+observation's granted `AccessShareLock`. No DDL occurred.
 
 ### REM-8B — Disposable restored-data DDL rehearsal
 
@@ -1087,12 +1093,21 @@ rejection, 20/20 compatible concurrent writers, successful validation, exact
 rollback, and verified removal of the disposable databases, dump, and
 container. This does not substitute for REM-8A staging observation.
 
+The post-merge exact-SHA run reproduced the receipt with matching candidate
+digests, 5,001 restored rows, expected `23514` and `55P03`, 20/20 compatible
+writers, successful validation, exact rollback, and verified cleanup.
+
 ### REM-8C — Optional staging DDL measurement package
 
 Use only when REM-8A/8B cannot close a material provider/load uncertainty. This
 is not read-only: it requires a separate package PR, owner-approved mutation
 window, exact reversible artifact, and post-merge evidence PR. If the remaining
 uncertainty can be bounded without it, omit REM-8C.
+
+REM-8A/8B close the uncertainty: staging's 61 live rows and zero pressure fit
+inside the 5,000-row/20-writer disposable envelope, package digests match, and
+cleanup is deterministic. The reviewed decision is `rem_8c_not_required` with
+`stagingDdlExecuted=false`; REM-8C is omitted.
 
 ### DB-C1 through DB-C5 — Conditional constraint slices
 
