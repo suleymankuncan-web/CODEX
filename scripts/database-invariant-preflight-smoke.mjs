@@ -47,6 +47,34 @@ if (
   fail("Clean disposable remediation diagnostic did not prove its snapshot contract.");
 }
 
+// Trace: FR-DIAG-08, FR-DIAG-11, FR-DEC-08; NFR-01..04; AC-01, AC-11, AC-12.
+const invariantV2 = parseJson(runNpmCapture("diagnose:staging:remediation:v2", {
+  DATABASE_INVARIANT_PREFLIGHT_ACK: "read-only-approved",
+  DATABASE_INVARIANT_PREFLIGHT_TARGET: "disposable",
+  DATABASE_URL: databaseUrl,
+  STAGING_REMEDIATION_INVARIANT_V2_REVIEWED_COMMIT: "b".repeat(40),
+}));
+const invariantV2ReceiptBound = /^[a-f0-9]{64}$/.test(invariantV2.receiptDigest);
+const invariantV2BridgeExact = invariantV2.queryResult?.bridge?.length === 4
+  && invariantV2.queryResult.bridge.every((item) => (
+    item.v1HitCount === 0
+    && item.v2HitCount === 0
+    && item.carriedForwardCount === 0
+    && item.revisedValidCount === 0
+    && item.v2NewCount === 0
+  ));
+if (
+  invariantV2.event !== "staging_remediation_invariant_v2.completed"
+  || invariantV2.targetClass !== "disposable"
+  || invariantV2.transactionIsolation !== "repeatable_read"
+  || invariantV2.transactionReadOnly !== true
+  || invariantV2.queryResult?.overallCheckHits?.count !== 0
+  || !invariantV2ReceiptBound
+  || !invariantV2BridgeExact
+) {
+  fail("Clean disposable V2 invariant did not prove its receipt and bridge contract.");
+}
+
 const requiredCheckIds = [
   "ASSIGN-01", "AUTH-01", "AUTH-02", "KEY-01", "ORG-01", "ORG-02",
   "ORG-03", "ORG-04", "TARGET-01", "TARGET-02", "TARGET-03",
@@ -81,6 +109,9 @@ process.stdout.write(`${JSON.stringify({
   fixtureResults: fixtureResult.results,
   fixtureRolledBack: fixtureResult.rolledBack,
   liveEvidence: cleanResult.liveEvidence,
+  invariantV2BridgeExact,
+  invariantV2QuerySet: invariantV2.queryResult.querySetVersion,
+  invariantV2ReceiptBound,
   remediationDiagnosticQuerySet: remediationDiagnostic.queryResult.querySetVersion,
   remediationDiagnosticReceiptBound: /^[a-f0-9]{64}$/.test(remediationDiagnostic.receiptDigest),
   targetClass: "disposable",

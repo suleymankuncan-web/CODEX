@@ -177,13 +177,15 @@ The no-delete inventory is
 Now:
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
 - Merged REM-1B evidence explains the stable 70 hits without mutation. `codex/rem-2-owner-decision-options` locks every owner decision: domain lifecycles, fresh encrypted backup/verified restore, affected-writer pause, one correction runner, row locks, and old-value predicates. Row-level winners/classifications and history-preserving writers remain unresolved. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` stay `NOT_READY`; DB-CONSTRAINTS remains No-Go and no backup run, service pause, second staging read, DML, DDL, paid service, runtime change, or production operation is authorized.
+- REM-2B now has a repository-only V2 implementation: ordinary targets use JSON parity, pilot imports use approved-reference parity, KPI uses the month-final effective manager portfolio, Norm Kadro and assignment region use lifecycle-aware history, support remains secondary, and inclusive primary ranges require a later successor start. V1 SQL/spec/evidence remain immutable. The V2 runner is not staging evidence until its merged SHA is executed once under a separately approved exact target and run window.
 
 Next:
-1. Review `docs/plans/rem-2-owner-decision-packet-v1.md` with the owner and lock or block decisions sequentially; recommendations are not approvals.
-2. If TARGET pilot rows are `valid_under_revised_semantics`, open REM-2B first; if any bucket is `data_defect_correct`, do not open a package until restore and concurrency decisions close.
-3. Keep DB-CONSTRAINTS blocked until decisions, approved family corrections, zero canonical reconciliation, and lock/compatibility/rollback gates close.
-4. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
-5. Keep DG-3/DG-4 receipts as baselines and broad production gated; obtain one safe read-only B1 gap bundle without repeating the successful 5 July mutations only for documentation.
+1. Merge REM-2B through normal checks, sync `main`, then create a fresh evidence-only branch pinned to the exact merged V2 runner SHA.
+2. Before any V2 staging connection, obtain one concise approval naming the exact staging target and bounded run window. Execute the merged runner once only after that gate closes; a query/runner change requires a new implementation PR.
+3. Use only the sanitized V1-to-V2 bridge and V2 family evidence to classify rows. Missing/ambiguous manager or rotation authority remains blocked; do not infer row winners or open a correction package from aggregate counts.
+4. Keep DB-CONSTRAINTS blocked until terminal family classification, applicable approved corrections, versioned reconciliation, and lock/compatibility/rollback gates close. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` remain `NOT_READY`.
+5. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
+6. Keep DG-3/DG-4 receipts as baselines and broad production gated; obtain one safe read-only B1 gap bundle without repeating the successful 5 July mutations only for documentation.
 
 Park:
 
