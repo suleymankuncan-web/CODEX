@@ -839,6 +839,14 @@ Missing dates, overlapping active rows, or missing store authority fail closed.
 The current import writer's region-only rotation gap requires a separate
 implementation PR; no replay, direct update, DML, or DDL is authorized.
 
+Multiple concurrent employee assignments are allowed for cross-store support,
+but exactly one may be open primary. Support assignments must be secondary.
+`end_date` is inclusive and a successor primary assignment starts no earlier
+than the following day; a same-day primary transfer is invalid. The two
+ASSIGN-01 pairs are therefore defects, but their primary winner remains unset
+until approved roster/lifecycle evidence is reviewed per pair. No automatic
+latest-row winner, demotion, closure, DML, or DDL is authorized.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,

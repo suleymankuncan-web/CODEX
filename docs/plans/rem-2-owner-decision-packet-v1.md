@@ -383,11 +383,34 @@ exactly one open primary” unless the business explicitly treats two stores as
 simultaneously primary. This protects headcount, turnover, targets, reporting,
 and incentive consumers without forbidding secondary work.
 
-Owner selection: `UNSET`.
+Owner selection: `multiple_assignments_exactly_one_open_primary`, approved
+2026-07-12.
 
 The owner must also state whether `end_date` is the last active day and whether
 a same-day transfer is allowed. That answer affects the future invariant even
 though it does not clear these strict overlaps.
+
+`D-ASSIGN-DATES` selection:
+`inclusive_end_next_primary_start_following_day`, approved 2026-07-12.
+
+Locked assignment-overlap rule:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-ASSIGN01-PRIMARY-SUPPORT-20260712` |
+| Ordinary employment | A person may have multiple concurrent assignments |
+| Primary ownership | Exactly one open assignment may have `is_primary_assignment = true` at a time |
+| Support work | A temporary assignment at another store is allowed only as secondary and may overlap the primary assignment |
+| End date | Inclusive: it is the employee's last active day in that assignment |
+| Primary transfer | The successor primary assignment starts no earlier than the day after the prior primary assignment ends |
+| Same-day primary handoff | Not allowed |
+| Existing two pairs | Both are strict, multi-day, open primary overlaps and are defects under this rule |
+
+The two current pairs still need `D-ASSIGN-WINNER`: approved roster/lifecycle
+evidence must identify which row remains primary and whether the other row is a
+real support assignment to demote or a stale assignment to close. Creation time
+alone is not authority. No row may be changed, demoted, or closed until that
+per-pair evidence and a separate correction authority exist.
 
 ### 9.2 `D-ASSIGN-WINNER`
 
@@ -482,8 +505,8 @@ D-ORG-HISTORY / ORG-04 workforce_norm_plan = supersede_active_future_preserve_cl
 D-INVARIANT-DEFINITION / ORG-02 assignment-region = lifecycle_aware_assignment_region (LOCKED 2026-07-12)
 D-ORG-AUTHORITY / ORG-02 assignment-region = store_master_active_assignment_history_closed (LOCKED 2026-07-12)
 
-D-INVARIANT-DEFINITION / ASSIGN-01 strict/open/cross-scope = UNSET
-D-ASSIGN-DATES = UNSET
+D-INVARIANT-DEFINITION / ASSIGN-01 strict/open/cross-scope = multiple_assignments_exactly_one_open_primary (LOCKED 2026-07-12)
+D-ASSIGN-DATES = inclusive_end_next_primary_start_following_day (LOCKED 2026-07-12)
 D-ASSIGN-WINNER = UNSET
 
 D-RESTORE = UNSET
