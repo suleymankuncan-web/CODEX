@@ -141,6 +141,7 @@ test-data input.
 
 ## Review, Release, And Merge Policy
 
+- Repo-local Codex routing is Medium execution, XHigh planning, and read-only High diagnosis/R4-R5 review; see root `AGENTS.md` and `.codex/config.toml`.
 - Local adversarial review, scope-appropriate verification, required GitHub
   checks, deployment checks when applicable, and clean mergeability are
   mandatory.
