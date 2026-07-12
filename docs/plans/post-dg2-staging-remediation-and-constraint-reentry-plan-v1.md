@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_2b_implementation_ready_evidence_gated`
+Status: `active_rem_2b_merged_evidence_launcher_recovery`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -9,7 +9,7 @@ Do not use when: changing production, auto-repairing data, treating 70 check hit
 Source of truth: merged PRs #951 and #952, `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`, and the reviewed repository contracts listed below
 Last verified: 2026-07-12
 Target executor: an autonomous implementation agent operating under the repository discipline
-Implementation authority: repository-only REM-2B query/spec/runner/contracts and local/disposable verification; no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
+Implementation authority: standing owner authorization covers the remaining in-scope staging train once every named technical prerequisite is proven; production and paid services remain excluded, and no missing evidence/manifest/restore/rollback/concurrency prerequisite is waived
 
 ## 1. Reader And Required Outcome
 
@@ -134,6 +134,28 @@ unless a reviewed correlation query proves a distinct-record count.
 13. A live correction MUST either run in an approved write-quiesced window or
     prove fail-closed concurrency control with deterministic row locks and
     old-value predicates. A time window alone is not concurrency control.
+
+### 3.1 Standing authorization addendum — 2026-07-12
+
+The product owner directed the executor to stop requesting repeated approvals
+and granted standing authorization for the remaining in-scope staging steps
+through plan completion. In this document, later phrases such as "separate
+owner action", "owner approval", or "commit authority" are satisfied by that
+standing authorization only after the exact package-specific factual gates are
+proven and recorded. The authorization does not:
+
+- identify an unknown row winner or replace authoritative lifecycle evidence;
+- approve an unknown or drifting manifest before its exact digest exists;
+- waive fresh backup/restore, rollback-only rehearsal, writer-pause,
+  deterministic-lock, old-value-predicate, side-effect, or reconciliation
+  checks;
+- permit a retry of a failed one-shot execution from the same reviewed SHA;
+- purchase or enable a paid service; or
+- permit any production operation.
+
+The executor proceeds automatically when every required fact is true and stops
+only for missing authoritative data, a failed safety check, or an out-of-scope
+operation—not for another ceremonial approval prompt.
 
 ## 4. Functional Requirements
 
@@ -884,8 +906,25 @@ Implementation state: the repository-only V2 contract is specified in
 `staging-remediation-invariant-v2` SQL/runner/typed receipt path. Its disposable
 fixture must prove non-trivial carried-forward, revised-valid, and V2-new bridge
 counts before merge. The merged implementation is not staging evidence; the
-next evidence-only branch still requires an exact target and bounded run-window
-approval.
+next evidence-only branch still requires an exact target binding and bounded
+Europe/Istanbul run window. Under the owner's 2026-07-12 standing authorization,
+those are technical prerequisites rather than recurring approval questions.
+
+PR #955 merged REM-2B at
+`b9112aa34b9ef75615caa74588169a571017726c`. The first evidence attempt from
+that SHA stopped fail-closed before receipt creation because an untracked local
+helper supplied the CA file path instead of PEM content. It produced no V2
+query result and performed no mutation. That SHA/attempt is not retried.
+
+Recovery requires a new implementation PR containing the versioned
+`evidence:staging:remediation:v2` launcher and adversarial contract tests. The
+launcher reads the CA file into certificate PEM while refusing private-key
+blocks, validates host/database plus the authenticated Supabase project-ref
+SHA-256 and exact window, pins branch/HEAD/`origin/main`, atomically records one
+attempt per reviewed commit, and binds its own SHA-256 to the safe
+attempt/summary. Only the launcher's new merged SHA may create a fresh evidence
+branch and one new standing-authorized attempt. Query or invariant meaning
+remains unchanged.
 
 ### 9.1 Family correction two-PR protocol
 
