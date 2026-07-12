@@ -205,17 +205,28 @@ export function claimEvidenceAttempt(
   return markerPath
 }
 
+export function buildMergedRunnerInvocation(platform = process.platform) {
+  const npmArgs = [
+    '--silent',
+    '--prefix',
+    'backend/nestjs',
+    'run',
+    'diagnose:staging:remediation:v2',
+  ]
+  if (platform === 'win32') {
+    return {
+      args: ['/d', '/s', '/c', ['npm.cmd', ...npmArgs].join(' ')],
+      command: 'cmd.exe',
+    }
+  }
+  return { args: npmArgs, command: 'npm' }
+}
+
 function executeMergedRunner(env) {
-  const command = process.platform === 'win32' ? 'npm.cmd' : 'npm'
+  const invocation = buildMergedRunnerInvocation()
   return spawnSync(
-    command,
-    [
-      '--silent',
-      '--prefix',
-      'backend/nestjs',
-      'run',
-      'diagnose:staging:remediation:v2',
-    ],
+    invocation.command,
+    invocation.args,
     {
       cwd: process.cwd(),
       encoding: 'utf8',
