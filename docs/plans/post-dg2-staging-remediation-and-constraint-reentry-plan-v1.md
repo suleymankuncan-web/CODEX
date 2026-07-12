@@ -1,15 +1,15 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_1a_authorized`
+Status: `active_rem_1b_evidence_ready`
 Shelf: architecture
 Author: Codex
-Reviewers: Product owner (`REM-1A approved 2026-07-12`)
+Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`)
 Use when: classifying and correcting the DG2-C staging invariant findings, then deciding whether database constraint work may re-enter
 Do not use when: changing production, auto-repairing data, treating 70 check hits as 70 people, or mixing DG1-C runtime removal into database work
-Source of truth: merged PR #951, `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`, and the reviewed repository contracts listed below
+Source of truth: merged PRs #951 and #952, `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`, and the reviewed repository contracts listed below
 Last verified: 2026-07-12
 Target executor: an autonomous implementation agent operating under the repository discipline
-Implementation authority: REM-1A implementation, PR, and autonomous closeout only; no staging execution, DML, DDL, migration, runtime change, paid service, or production operation
+Implementation authority: REM-1B evidence-only PR and autonomous closeout; the one authorized staging diagnostic is complete and no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
 
 ## 1. Reader And Required Outcome
 
@@ -65,6 +65,14 @@ multiple checks. Future receipts must continue to call these values check hits
 unless a reviewed correlation query proves a distinct-record count.
 
 ### 2.1 Repository facts already verified
+
+- PR #952 merged REM-1A at merge commit
+  `09800d367e5250f5bd08e1412d86323d86f9262f`. The merged implementation owns
+  the versioned diagnostic SQL, runner, strict contract/allowlists, and
+  adversarial fixtures. Required PR checks and post-merge verification passed.
+- `codex/rem-1b-staging-diagnostic-evidence` was created from that exact merge
+  commit. It is the only active REM-1B evidence branch and starts with no
+  runner/query change.
 
 - New target-distribution requests write `allocation_count` from
   `input.allocations.length` and write the same allocation collection to
@@ -656,9 +664,10 @@ and cannot be inferred from this read-only inventory.
 
 ## 9. Ordered PR And Execution Train
 
-The current `codex/staging-data-remediation-plan` branch is plan-only. Do not
-push it or open a plan-only PR. If the owner approves this plan, include it in
-REM-1A so the first implementation and its controlling plan land together.
+REM-1A and its controlling plan merged through PR #952. The former
+`codex/staging-data-remediation-plan` branch is historical implementation
+context, not the active evidence branch. REM-1B starts at the exact PR #952
+merge commit and must remain evidence-only.
 
 Live evidence never goes into an already merged PR. Every tool that will touch
 staging follows `implementation PR -> merge -> fresh evidence branch/PR`.
@@ -697,6 +706,74 @@ Create a fresh branch from main after REM-1A merges. Pin the merged runner SHA,
 obtain separate target confirmation, execute one read-only staging diagnostic,
 and commit only its sanitized dated receipt. Any runner/query change returns to
 a new implementation PR; it must not be mixed into this evidence PR.
+
+REM-1B is now authorized to continue, subject to this fail-closed runtime gate:
+
+1. The branch HEAD, `origin/main`, and reviewed commit MUST all equal
+   `09800d367e5250f5bd08e1412d86323d86f9262f` before execution.
+2. The owner MUST confirm the exact staging target identity and one bounded
+   immediate run window for REM-1B. The earlier DG2-C confirmation is evidence
+   of that earlier run and MUST NOT be silently reused as a new confirmation.
+3. `DATABASE_URL`, the expected host/database identity, and CA material MUST be
+   supplied only through the operator environment. Their values MUST NOT be
+   printed, copied into a command transcript, written to the repository, or
+   persisted in the evidence branch.
+4. The operator preflight MUST prove presence, without printing values, for
+   `DATABASE_URL`, `DATABASE_INVARIANT_PREFLIGHT_EXPECTED_HOST`,
+   `DATABASE_INVARIANT_PREFLIGHT_EXPECTED_DATABASE`, and `DB_SSL_CA`; target,
+   acknowledgement, approval, TLS mode, and reviewed commit MUST be pinned to
+   the merged REM-1A contract.
+5. The merged npm entry point is executed exactly once inside the approved
+   window. Stdout is captured to an ignored temporary path and is not streamed
+   into a general terminal transcript. Exit code `2` is an expected sanitized
+   evidence outcome when check hits exist; exit code `1` is a safety failure
+   and stops REM-1B without retry.
+6. The captured receipt MUST pass the merged strict schema, digest, secret/PII,
+   target-class, TLS, read-only, isolation, timeout, and reviewed-SHA checks
+   before it can be copied into a dated evidence document.
+7. The evidence PR may change only the sanitized dated receipt, this plan,
+   `current-state.md`, and documentation indexes needed to make the receipt
+   discoverable. A query, runner, allowlist, contract, package script, test, or
+   application change returns to a new implementation PR.
+8. Family totals that differ from the immutable V1 baseline are recorded as
+   time-bounded diagnostic drift, not silently treated as an error or as repair
+   authority. Any unexplained safety or schema drift stops the run.
+
+Sokrates decision record for REM-1B:
+
+- **Decision:** run one evidence-only, read-only staging diagnosis after the
+  exact target/window and secure-input gate closes.
+- **Evidence:** merged PR #952, green required/post-merge checks, immutable PR
+  #951 baseline, and the owner's 2026-07-12 continuation approval.
+- **Counterargument:** a read-only query can still target the wrong database,
+  run outside owner expectations, or leak unsafe output if prior confirmation
+  or terminal handling is reused casually.
+- **Risk / door:** HIGH external-data operation; data behavior is a two-way
+  door because the transaction is read-only, while privacy/target mistakes are
+  operationally near-one-way.
+- **Guardrails:** exact merged SHA, verify-full, explicit identity, one bounded
+  run, no retry, temp capture, strict sanitizer, no raw values, and no mutation.
+- **Change-my-mind triggers:** missing/changed target confirmation, missing
+  secure input, SHA/digest drift, runner/query diff, certificate or identity
+  failure, unsafe output, unexplained totals, or any attempted write.
+- **Next action:** close the runtime gate, run once, validate the receipt, then
+  prepare the evidence-only PR. REM-2 starts only after that PR merges.
+
+REM-1B execution outcome:
+
+- The runtime gate closed interactively and the merged runner executed once at
+  `2026-07-12T05:46:11.064Z`.
+- The sanitized receipt is
+  `docs/evidence/readiness/2026-07-12-staging-remediation-diagnostic-v1.json`;
+  its human-readable evidence record is the adjacent `.md` file.
+- `verify-full`, certificate verification, exact reviewed commit,
+  `REPEATABLE READ READ ONLY`, strict schema/digests, timeout profile, and empty
+  stderr were independently verified after execution.
+- Exit code `2` records 70 check hits, 72 source records, nine diagnostic
+  buckets, and unresolved distinct-person count. It is a completed-findings
+  result, not a runner failure.
+- The immutable V1 family totals did not drift. No mutation or repair authority
+  was created. A second REM-1B staging run is not authorized.
 
 ### REM-2 — Owner decision packet
 
