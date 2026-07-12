@@ -426,7 +426,28 @@ Sokrates recommendation, not a decision: manual per-pair selection based on
 the approved roster or lifecycle source. Do not use “latest row wins” as a
 generic rule.
 
-Owner selection: `UNSET`.
+Owner selection: `approved_effective_dated_rotation_lifecycle_source`, approved
+2026-07-12.
+
+Locked winner rule:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-ASSIGN01-WINNER-ROTATION-20260712` |
+| Authority | The approved, effective-dated personnel rotation or assignment-lifecycle record |
+| Before rotation | The previous store remains primary through the day before the approved rotation effective date |
+| On and after rotation | The new store is primary from the approved rotation effective date |
+| Prior row | Close it with `end_date = rotation effective date - 1 day`; do not delete or overwrite its history |
+| Successor row | Create it with `start_date = rotation effective date` and primary status |
+| Support assignment | Preserve it as secondary when approved support evidence exists; it does not compete for primary winner |
+| Missing or conflicting rotation evidence | `blocked`; do not use creation time, current row order, or an inferred winner |
+
+This locks the winner method, not the row-level result for the two current
+pairs. Their sanitized receipt does not contain enough lifecycle evidence to
+name the winning store. A separately authorized secure evidence review must
+bind each pair to its approved rotation record before any row is closed,
+created, or demoted. No staging read, correction, DML, or DDL is authorized by
+this decision.
 
 ## 10. Cross-Family Execution Decisions
 
@@ -507,7 +528,7 @@ D-ORG-AUTHORITY / ORG-02 assignment-region = store_master_active_assignment_hist
 
 D-INVARIANT-DEFINITION / ASSIGN-01 strict/open/cross-scope = multiple_assignments_exactly_one_open_primary (LOCKED 2026-07-12)
 D-ASSIGN-DATES = inclusive_end_next_primary_start_following_day (LOCKED 2026-07-12)
-D-ASSIGN-WINNER = UNSET
+D-ASSIGN-WINNER = approved_effective_dated_rotation_lifecycle_source (LOCKED 2026-07-12)
 
 D-RESTORE = UNSET
 D-CONCURRENCY = UNSET

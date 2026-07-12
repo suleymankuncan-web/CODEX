@@ -844,8 +844,17 @@ but exactly one may be open primary. Support assignments must be secondary.
 `end_date` is inclusive and a successor primary assignment starts no earlier
 than the following day; a same-day primary transfer is invalid. The two
 ASSIGN-01 pairs are therefore defects, but their primary winner remains unset
-until approved roster/lifecycle evidence is reviewed per pair. No automatic
+at row level until approved rotation/lifecycle evidence is reviewed per pair.
+The authority method is locked; no automatic
 latest-row winner, demotion, closure, DML, or DDL is authorized.
+
+Primary winner authority is the approved, effective-dated rotation or
+assignment-lifecycle record. The prior store stays primary through the day
+before rotation; the new store becomes primary on the rotation effective date.
+The prior row is closed, not overwritten, and an approved support row remains
+secondary. This locks the method but not the two row-level winners: they remain
+blocked until a separately authorized secure evidence review binds each pair
+to its rotation record. No staging read or mutation is authorized.
 
 ### REM-2B — Versioned invariant definition, conditional
 
