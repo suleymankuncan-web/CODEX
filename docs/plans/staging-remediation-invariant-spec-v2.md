@@ -1,9 +1,9 @@
 # Staging Remediation Invariant Specification V2
 
-Status: `implementation_ready_evidence_gated`
+Status: `implementation_merged_evidence_launcher_recovery`
 Shelf: architecture
 Owner: Product owner
-Implementation: REM-2B
+Implementation: REM-2B merged in PR #955; versioned evidence-launcher recovery active
 Last verified: 2026-07-12
 Query set: `staging-remediation-invariant-v2`
 
@@ -14,15 +14,52 @@ the immutable V1 query, specification, or evidence. It is a read-only evidence
 contract. It does not correct a row, add a constraint, change an API, or approve
 staging execution.
 
-The following gates remain closed:
+The following factual gates remain closed until their package prerequisites
+exist:
 
 - `D-STAGING-MUTATION = NOT_READY`
 - `D-CONSTRAINT-WINDOW = NOT_READY`
 
-The V2 runner may be implemented and tested against local/disposable fixtures.
-After merge, one staging execution still requires an exact target confirmation
-and bounded run-window approval. The transaction contract is
+On 2026-07-12 the product owner granted standing authorization for the
+remaining in-scope staging plan and directed the executor not to ask for
+repetitive approvals through goal completion. This closes recurring human
+approval prompts but does not turn a missing target, row authority, manifest,
+backup/restore proof, rollback rehearsal, concurrency proof, or DDL evidence
+into a satisfied prerequisite. Production and paid services remain excluded.
+
+The V2 runner is merged and tested against local/disposable fixtures. A staging
+execution still requires an exact target binding and bounded Europe/Istanbul
+run window, but the standing authorization means those are technical inputs,
+not new owner-approval questions. The transaction contract is
 `REPEATABLE READ READ ONLY`.
+
+### 1.1 Post-merge execution recovery
+
+The first evidence attempt from PR #955's merge SHA stopped fail-closed before
+emitting a V2 receipt. An untracked local helper passed the CA file path as
+`DB_SSL_CA`; the reviewed pool contract requires the PEM content. No V2 query
+result, data/schema mutation, backup, service pause, production operation, or
+committable evidence was produced. That attempt marker is retained and the
+same SHA is never retried.
+
+The recovery implementation adds the versioned root entry point
+`npm run evidence:staging:remediation:v2`. Its launcher:
+
+- reads `STAGING_REMEDIATION_CA_FILE` and passes its certificate PEM content,
+  never its path, to the merged runner; any private-key PEM block is refused;
+- validates standing authorization, host/database identity, the authenticated
+  Supabase project-ref SHA-256, `verify-full`, and an active maximum-one-hour
+  `+03:00` window before Git or runner access;
+- pins the dedicated evidence branch, `HEAD`, and `origin/main` to one reviewed
+  merged commit with a clean worktree;
+- atomically records one attempt per reviewed commit;
+- binds the launcher SHA-256 to the attempt marker and safe summary; and
+- accepts only a sanitized V2 receipt proving the reviewed commit,
+  certificate verification, `REPEATABLE READ READ ONLY`, and a valid receipt
+  digest.
+
+Traceability: `FR-DIAG-08`, `FR-DIAG-09`, `FR-DIAG-11`, `NFR-01..04`,
+`AC-01`, `AC-11`, `AC-12`, and drift edge `EC-09`.
 
 ## 2. Immutable Baseline
 

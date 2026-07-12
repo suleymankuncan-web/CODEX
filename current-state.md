@@ -176,25 +176,24 @@ The no-delete inventory is
 
 Now:
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
-- Merged REM-1B evidence explains the stable 70 hits without mutation. `codex/rem-2-owner-decision-options` locks every owner decision: domain lifecycles, fresh encrypted backup/verified restore, affected-writer pause, one correction runner, row locks, and old-value predicates. Row-level winners/classifications and history-preserving writers remain unresolved. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` stay `NOT_READY`; DB-CONSTRAINTS remains No-Go and no backup run, service pause, second staging read, DML, DDL, paid service, runtime change, or production operation is authorized.
-- REM-2B now has a repository-only V2 implementation: ordinary targets use JSON parity, pilot imports use approved-reference parity, KPI uses the month-final effective manager portfolio, Norm Kadro and assignment region use lifecycle-aware history, support remains secondary, and inclusive primary ranges require a later successor start. V1 SQL/spec/evidence remain immutable. The V2 runner is not staging evidence until its merged SHA is executed once under a separately approved exact target and run window.
+- Merged REM-1B evidence explains the stable 70 hits without mutation. All REM-2 owner decisions are locked: domain lifecycles, fresh encrypted backup/verified restore, affected-writer pause, one correction runner, row locks, and old-value predicates. Row-level winners/classifications and history-preserving writers remain unresolved. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` stay `NOT_READY`; DB-CONSTRAINTS remains No-Go. These are factual prerequisite states, not recurring approval prompts.
+- PR #955 merged the repository-only REM-2B V2 implementation at `b9112aa34b9ef75615caa74588169a571017726c`: ordinary targets use JSON parity, pilot imports use approved-reference parity, KPI uses the month-final effective manager portfolio, Norm Kadro and assignment region use lifecycle-aware history, support remains secondary, and inclusive primary ranges require a later successor start. V1 SQL/spec/evidence remain immutable.
+- The first post-#955 evidence attempt stopped fail-closed before producing a receipt because an untracked operator helper passed the CA file path instead of PEM content. That SHA is not retried. No V2 query result, DML, DDL, backup, pause, paid service, production operation, or repository evidence diff was produced by the failed attempt. A versioned launcher implementation now owns CA-file loading, exact branch/SHA pinning, one-attempt marking, safe receipt capture, and launcher-digest provenance before a new merged-SHA evidence attempt.
+- On 2026-07-12 the product owner granted standing authorization for the remaining in-scope staging plan and directed the agent not to request repetitive approvals through goal completion. Once each exact technical prerequisite is proven, this standing authorization covers the plan's read-only evidence, backup/restore, writer-pause, rollback-rehearsal, manifest-bound commit, and eligible staging-DDL execution gates. It does not supply missing row authority, permit inferred winners, waive manifests/digests/restore/rollback/concurrency checks, authorize production, or authorize paid services.
 
 Next:
-1. Merge REM-2B through normal checks, sync `main`, then create a fresh evidence-only branch pinned to the exact merged V2 runner SHA.
-2. Before any V2 staging connection, obtain one concise approval naming the exact staging target and bounded run window. Execute the merged runner once only after that gate closes; a query/runner change requires a new implementation PR.
-3. Use only the sanitized V1-to-V2 bridge and V2 family evidence to classify rows. Missing/ambiguous manager or rotation authority remains blocked; do not infer row winners or open a correction package from aggregate counts.
-4. Keep DB-CONSTRAINTS blocked until terminal family classification, applicable approved corrections, versioned reconciliation, and lock/compatibility/rollback gates close. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` remain `NOT_READY`.
+1. Merge the versioned V2 evidence launcher through normal checks, sync `main`, then create a fresh evidence-only branch pinned to that exact merged SHA. The failed #955 attempt marker is preserved and never reused or deleted to manufacture a retry.
+2. Resolve the standing-authorized technical inputs without exposing them, bind the exact staging identity and a bounded Europe/Istanbul run window, and execute the newly merged launcher once. A launcher/query/runner change requires another implementation PR rather than an evidence-branch patch.
+3. Use only the sanitized V1-to-V2 bridge and V2 family evidence to classify rows. Missing/ambiguous manager or rotation authority remains blocked; standing authorization does not permit inferred row winners or a correction package from aggregate counts.
+4. Keep DB-CONSTRAINTS blocked until terminal family classification, applicable manifest-bound corrections, versioned reconciliation, and lock/compatibility/rollback gates close. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` become ready only when their factual package prerequisites exist; no further approval prompt is required under the standing authorization.
 5. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
 6. Keep DG-3/DG-4 receipts as baselines and broad production gated; obtain one safe read-only B1 gap bundle without repeating the successful 5 July mutations only for documentation.
 
 Park:
 
-- Separate mobile implementation, new modules, broad production, broad
-  redesign, and generic architecture/refactor work.
-- Provider/Nebim/JSON implementation without a real source contract and owner
-  decision.
-- Further frontend unit-test migration or bundle work without its named
-  conditional trigger.
+- Separate mobile implementation, new modules, broad production, broad redesign, and generic architecture/refactor work.
+- Provider/Nebim/JSON implementation without a real source contract and owner decision.
+- Further frontend unit-test migration or bundle work without its named conditional trigger.
 
 Stop:
 
