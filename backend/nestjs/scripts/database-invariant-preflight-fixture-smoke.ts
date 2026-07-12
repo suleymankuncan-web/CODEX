@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Pool } from "pg";
 import { mapCheckResult, type CheckRow } from "./database-invariant-preflight-core";
+import { validateDiagnosticQueryResult } from "./staging-remediation-diagnostic-contract";
 
 const fixtureCompanyIds = [
   "10000000-0000-4000-8000-000000000001",
@@ -29,6 +30,10 @@ async function main() {
     join(__dirname, "..", "..", "..", "db", "preflight", "database-invariant-preflight-v1.sql"),
     "utf8",
   );
+  const remediationDiagnosticQuery = readFileSync(
+    join(__dirname, "..", "..", "..", "db", "preflight", "staging-remediation-diagnostic-v1.sql"),
+    "utf8",
+  );
   const pool = new Pool({ connectionString, max: 1, ssl: false });
   fixturePhase = "connect";
   const client = await pool.connect();
@@ -52,6 +57,20 @@ async function main() {
     if (JSON.stringify(actual) !== JSON.stringify(expectedViolationCounts)) {
       throw new Error("fixture_violation_counts_mismatch");
     }
+    // Trace: FR-DIAG-01..07; AC-01, AC-02; EC-01, EC-04, EC-08.
+    const diagnosticRows = await client.query<{ diagnostic: unknown }>(remediationDiagnosticQuery);
+    const diagnostic = validateDiagnosticQueryResult(diagnosticRows.rows[0]?.diagnostic);
+    const diagnosticFamilyTotals = Object.fromEntries(
+      diagnostic.familyTotals.map((item) => [item.family, item.hitCount]),
+    );
+    if (JSON.stringify(diagnosticFamilyTotals) !== JSON.stringify({
+      "ASSIGN-01": 1,
+      "ORG-02": 2,
+      "ORG-04": 2,
+      "TARGET-02": 1,
+    })) {
+      throw new Error("fixture_diagnostic_bucket_counts_mismatch");
+    }
 
     fixturePhase = "rollback_verification";
     await client.query("ROLLBACK");
@@ -63,6 +82,7 @@ async function main() {
 
     process.stdout.write(`${JSON.stringify({
       event: "database_invariant_preflight.fixture_smoke_completed",
+      diagnosticFamilyTotals,
       results: actual,
       rolledBack: true,
       targetClass: "disposable",
@@ -171,9 +191,10 @@ void main().catch((error) => {
 function classifyFixtureError(error: unknown) {
   if (error instanceof Error && [
     "database_url_missing",
+    "fixture_diagnostic_bucket_counts_mismatch",
     "fixture_rollback_failed",
-      "fixture_violation_counts_mismatch",
-      "invalid_database_protocol",
+    "fixture_violation_counts_mismatch",
+    "invalid_database_protocol",
     "non_disposable_fixture_database_refused",
     "non_local_fixture_target_refused",
     "production_refused",

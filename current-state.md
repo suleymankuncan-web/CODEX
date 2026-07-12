@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-11
+Last verified: 2026-07-12
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A
 cold reader should recover the current decision, external blockers, and next
@@ -176,16 +176,15 @@ The no-delete inventory is
 
 Now:
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
-- DG2-C staging evidence is complete at `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`: 70 check hits, read-only proof, no repair, and DB-CONSTRAINTS No-Go.
+- DG2-C staging evidence is merged at `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`: 70 check hits, read-only proof, no repair, and DB-CONSTRAINTS No-Go. The owner approved REM-1A only; staging execution, DML, DDL, paid services, and production remain unauthorized.
 
 Next:
-1. Obtain the sanitized provider usage window and owner sign-off; if usage is
-   external or unknown, keep the compatibility contract and do not open a
-   breaking runtime PR.
-2. Merge the DG2-C evidence-only PR after docs/script contracts pass; do not add runtime, DML, migration, or constraint changes.
-3. Keep DB-CONSTRAINTS blocked. Any future correction or enforcement requires separately approved semantics, correction, lock, compatibility, and rollback plans.
-4. Keep merged DG-3/DG-4 receipts as baselines; broad production remains gated.
-5. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
+1. Complete and merge REM-1A: the versioned reason-bucket query/runner, repeatable-read proof, strict sanitizer/digest receipt, and disposable adversarial tests. Do not connect it to staging in the implementation PR.
+2. After REM-1A merges, create REM-1B from the merged SHA and stop until the owner separately confirms the exact staging target and run window. REM-1B must execute the unchanged merged runner and remain evidence-only.
+3. Keep DB-CONSTRAINTS blocked until owner decisions, approved family corrections, a zero canonical rerun, and measured lock/compatibility/rollback gates all close.
+4. Independently obtain the DG1-C provider usage window; if usage is external or unknown, preserve compatibility and do not open a breaking runtime PR.
+5. Keep merged DG-3/DG-4 receipts as baselines; broad production remains gated.
+6. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
    repeat the successful 5 July mutations solely to improve documentation.
 
 Park:
@@ -228,6 +227,8 @@ Current control references:
   `docs/plans/project-analysis-implementation-plan-v1.md`.
 - Audit source and locked DG1-DG2 execution: `docs/plans/project-wide-audit-remediation-plan-v1.md`
   and `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md`.
+- Post-DG2 staging remediation and constraint re-entry:
+  `docs/plans/post-dg2-staging-remediation-and-constraint-reentry-plan-v1.md`.
 - Source-derived authorization operating truth:
   `docs/architecture/authorization-operating-truth-v1.json`.
 - Current practical actions: `docs/plans/active-next-actions.md`.
