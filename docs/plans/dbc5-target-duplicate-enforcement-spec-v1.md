@@ -1,6 +1,6 @@
 # DB-C5 TARGET Duplicate Enforcement Specification V1
 
-Status: `approved_by_locked_decisions_for_repository_only_implementation`
+Status: `repository_implementation_in_progress_no_staging_ddl`
 Shelf: architecture
 Author: Codex
 Decision owner: Product owner
@@ -48,8 +48,10 @@ same-request duplicate CHECK.
   and REM-8B receipts, their reviewed SHA, canonical digests, matching candidate
   digests, `rem_8c_not_required`, and `stagingDdlExecuted=false` before DDL.
 - **FR-02 — Exact migration:** `060_target_distribution_duplicate_employee_constraint_v1.sql`
-  MUST contain 5s/30s local timeouts followed byte-for-byte by the reviewed
-  create-function, ADD NOT VALID, and VALIDATE statements. It MUST introduce no
+  MUST contain 5s/30s local timeouts followed by LF-normalized byte-exact copies
+  of the reviewed create-function, ADD NOT VALID, and VALIDATE statements. The
+  runner MUST bind both Git LF digests and the REM-8 Windows-CRLF evidence
+  digests rather than pretending line endings are one byte identity. It MUST introduce no
   index, trigger, extension, generated column, grant, RLS, DML, or unrelated DDL.
 - **FR-03 — Canonical migration service:** Live application MUST use the merged
   `MigrationService`, preserve checksums, require migrations 001..059 succeeded,
@@ -60,7 +62,9 @@ same-request duplicate CHECK.
 - **FR-04 — Fresh preflight:** Immediately before migration, one
   `REPEATABLE READ READ ONLY` snapshot MUST re-evaluate active V2 TARGET hits,
   duplicate/non-array/pilot-index facts, candidate absence, server 17,
-  transaction pressure, locks, and migration status. Drift blocks without DDL.
+  transaction pressure, locks, and migration status. The runner MUST verify
+  `SHOW transaction_isolation` and `SHOW transaction_read_only`; drift blocks
+  without DDL.
 - **FR-05 — Persistent semantic:** After migration, duplicate string
   `employeeId` values in one allocation array, including case variants, MUST
   fail. Unique arrays, pilot empty arrays, malformed entries owned by existing
@@ -72,7 +76,9 @@ same-request duplicate CHECK.
 - **FR-07 — Strict apply receipt:** The runner MUST emit one exact sanitized,
   canonical SHA-256 receipt binding preflight, migration/candidate/runner/query
   digests, reviewed SHA, target fingerprint, verify-full, timeouts, migration
-  result, catalog proof, and `stagingDdlExecuted=true`.
+  result, catalog proof, repeatable-read/read-only proof, and
+  `stagingDdlExecuted=true`. A failure after migration starts MUST report its
+  DDL state as unverified rather than falsely claiming no DDL occurred.
 - **FR-08 — One-shot launcher:** The root launcher MUST require the exact merged
   SHA, clean dedicated evidence branch at `origin/main`, project fingerprint,
   independently confirmed target, external CA, Europe/Istanbul window, standing
@@ -176,6 +182,7 @@ Required implementation verification:
 ```powershell
 npm.cmd --prefix backend/nestjs test -- dbc5-target-constraint --runInBand
 npm.cmd run smoke:migration:fresh-db
+npm.cmd run smoke:dbc5:target:constraint
 npm.cmd run smoke:rem8:target:constraint
 npm.cmd run test:scripts
 npm.cmd run check:affected-verification

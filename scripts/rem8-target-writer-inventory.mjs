@@ -23,6 +23,9 @@ export const targetWriterInventory = Object.freeze({
   "scripts/rem8-target-constraint-disposable-smoke.mjs": {
     class: "rem8_disposable_seed", mutationCount: 2,
   },
+  "scripts/dbc5-target-constraint-disposable-smoke.mjs": {
+    class: "dbc5_disposable_semantic_fixture", mutationCount: 2,
+  },
 });
 
 // Trace: FR-02, FR-03; NFR-04, NFR-05; AC-01; EC-04.

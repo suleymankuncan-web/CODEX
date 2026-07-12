@@ -29,6 +29,7 @@
     "smoke:staging:remediation:reconciliation:fixture": "ts-node scripts/staging-remediation-reconciliation-fixture-smoke.ts",
     "rehearse:rem8:target:constraint": "ts-node scripts/rem8-target-constraint-disposable-rehearsal.ts",
     "observe:rem8:target:constraint": "ts-node scripts/rem8-target-constraint-observation.ts",
+    "apply:staging:dbc5:target": "ts-node scripts/dbc5-target-constraint-apply.ts",
     "rehearse:release": "npm run check:release && ts-node scripts/release-rehearsal.ts"
   },
   "jest": {

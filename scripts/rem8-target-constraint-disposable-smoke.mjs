@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const workspaceRoot = join(import.meta.dirname, "..");
@@ -11,6 +12,7 @@ const dumpPath = "/tmp/store_ops_rem8_target_rehearsal.dump";
 const port = "54339";
 const user = "postgres";
 const syntheticScaleRows = 5000;
+const dbc5MigrationName = "060_target_distribution_duplicate_employee_constraint_v1.sql";
 let createdContainer = false;
 
 assertLocalOnly();
@@ -33,6 +35,7 @@ try {
     cwd: backendDir,
     env: { ...process.env, DATABASE_URL: sourceUrl, NODE_ENV: "test" },
   });
+  rollbackToReviewedPreConstraintState(sourceDatabase);
   seedSyntheticSource();
   const sourceAggregate = readAggregate(sourceDatabase);
   const sourceAggregateDigest = digestAggregate(sourceAggregate);
@@ -112,6 +115,34 @@ try {
   process.stdout.write(`${JSON.stringify(receipt, null, 2)}\n`);
 } finally {
   cleanup();
+}
+
+function rollbackToReviewedPreConstraintState(database) {
+  const rollback = readFileSync(join(
+    workspaceRoot,
+    "db",
+    "constraint-packages",
+    "rem8-target-duplicate-v1",
+    "rollback.sql",
+  ), "utf8");
+  runWithInput("docker", [
+    "exec", "-i", containerName, "psql", "-v", "ON_ERROR_STOP=1", "-U", user,
+    "-d", database,
+  ], `BEGIN;\n${rollback}\nDELETE FROM audit.schema_migration WHERE migration_name = '${dbc5MigrationName}';\nCOMMIT;\n`);
+  const residue = queryScalar(database, `
+    SELECT
+      pg_catalog.to_regprocedure('ops.target_distribution_employee_ids_unique_v1(jsonb)') IS NOT NULL,
+      EXISTS (
+        SELECT 1 FROM pg_catalog.pg_constraint
+        WHERE conname = 'ck_target_distribution_employee_ids_unique_v1'
+      ),
+      EXISTS (
+        SELECT 1 FROM audit.schema_migration WHERE migration_name = '${dbc5MigrationName}'
+      );
+  `);
+  if (residue !== "f\tf\tf") {
+    fail("REM-8 pre-constraint rollback left DB-C5 residue in the disposable source.");
+  }
 }
 
 function seedSyntheticSource() {

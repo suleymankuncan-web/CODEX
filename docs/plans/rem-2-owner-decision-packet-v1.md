@@ -549,13 +549,24 @@ Current state: `NOT_READY`; this is not an owner selection.
 
 ### 10.4 `D-CONSTRAINT-WINDOW`
 
-Deferred until REM-7 reconciliation and REM-8A/8B capacity/DDL evidence.
-Current state: `NOT_READY`; this is not an owner selection.
+Owner selection for TARGET DB-C5:
+`bounded_5s_add_30s_validate_no_pause_fail_closed`, approved 2026-07-12.
 
-PR #962 merged REM-7 and its exact-SHA staging receipt is valid. TARGET-02 is
-the sole `eligible_zero` family; this opens REM-8 preparation but does not
-change this `NOT_READY` constraint-window state. ORG-02, ORG-04, and ASSIGN-01
-remain blocked on exact authoritative row evidence.
+Locked TARGET-only gate:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-DBC5-CONSTRAINT-WINDOW-20260712` |
+| ADD lock budget | `lock_timeout=5000ms`; failure aborts without retry |
+| Transaction/validation budget | `statement_timeout=30000ms` |
+| Writer posture | No pause: REM-8B proved 20/20 writer compatibility and REM-8A found zero conflicting staging pressure |
+| Failure posture | Any checksum, migration, data, lock, catalog, or timeout drift fails closed |
+| Scope | TARGET DB-C5 only; staging only; production excluded |
+| Evidence basis | Merged PRs #962, #964, #965 and exact-SHA REM-7/REM-8A/REM-8B receipts |
+| Revisit trigger | TARGET becomes non-zero, pressure exceeds the envelope, provider version drifts, or any apply/postflight check fails |
+
+ORG-02, ORG-04, and ASSIGN-01 remain blocked on exact historical authority
+evidence and receive no constraint window from this decision.
 
 ## 11. Independent DG1-C Decision
 
@@ -588,7 +599,7 @@ D-ASSIGN-WINNER = approved_effective_dated_rotation_lifecycle_source (LOCKED 202
 D-RESTORE = fresh_encrypted_logical_backup_verified_disposable_restore (LOCKED 2026-07-12)
 D-CONCURRENCY = approved_write_pause_with_locks_and_old_value_predicates (LOCKED 2026-07-12)
 D-STAGING-MUTATION = NOT_READY
-D-CONSTRAINT-WINDOW = NOT_READY
+D-CONSTRAINT-WINDOW / TARGET DB-C5 = bounded_5s_add_30s_validate_no_pause_fail_closed (LOCKED 2026-07-12)
 ```
 
 Every accepted answer must later record approver role, date, evidence basis,
