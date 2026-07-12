@@ -115,8 +115,8 @@ Remaining external inputs are:
 - account-recovery evidence or an owner decision removing it from B1;
 - fresh live cross-person rankings/profile denial remains optional and requires
   an approved negative subject; current Moi session plus row-scope contracts pass;
-- a confirmed reporting period/package plus role-scoped reports and incentive
-  totals/export readback.
+- Report Viewer binding/session/read-only contracts pass; a confirmed reporting
+  period plus live reports/incentive totals/export readback remains.
 
 Use `docs/evidence/pilot-readiness/2026-07-05-owner-attested-mutation-flows.md`
 and `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.

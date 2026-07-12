@@ -49,10 +49,10 @@ Next practical action:
 2. Preserve A3's dated ten-run result: p95 is `13.23` minutes, above the
    12-minute target. Keep all tests and the current two-worker CI setting; do
    not open another concurrency experiment without a new measured isolation plan.
-3. Preserve the four-persona sessions and Moi mixed ranking/profile pass. The
-   next safe B1 bundle is reports/incentives readback; account recovery and a
-   fresh live cross-person denial remain separate evidence/owner-scope gates.
-   Preserve the 5 July mutations; do not rerun them only for documentation.
+3. Preserve the persona sessions, Moi scope pass, and real company-scoped
+   Report Viewer binding. The next safe B1 bundle is live period totals/export
+   readback; account recovery and fresh live cross-person denial remain separate
+   gates. Preserve the 5 July mutations; do not rerun only for documentation.
 4. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
 5. Keep new modules, separate mobile implementation, broad production, broad
