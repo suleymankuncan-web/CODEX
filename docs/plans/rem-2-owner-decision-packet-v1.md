@@ -562,11 +562,17 @@ Locked TARGET-only gate:
 | Writer posture | No pause: REM-8B proved 20/20 writer compatibility and REM-8A found zero conflicting staging pressure |
 | Failure posture | Any checksum, migration, data, lock, catalog, or timeout drift fails closed |
 | Scope | TARGET DB-C5 only; staging only; production excluded |
-| Evidence basis | Merged PRs #962, #964, #965 and exact-SHA REM-7/REM-8A/REM-8B receipts |
+| Evidence basis | Merged PRs #962, #964, #965, #966; exact-SHA REM-7/REM-8A/REM-8B receipts; and the exact-SHA DB-C5 staging receipt |
 | Revisit trigger | TARGET becomes non-zero, pressure exceeds the envelope, provider version drifts, or any apply/postflight check fails |
 
 ORG-02, ORG-04, and ASSIGN-01 remain blocked on exact historical authority
 evidence and receive no constraint window from this decision.
+
+DB-C5 completed on staging from PR #966 merge SHA
+`d76d56f741b832b5d39eede8364f333e12a0e341`. Migration 060 applied exactly
+once and postflight proved the exact validated constraint/function state under
+the locked timeout profile. This does not change `D-STAGING-MUTATION=NOT_READY`
+for blocked correction families and does not authorize production.
 
 ## 11. Independent DG1-C Decision
 

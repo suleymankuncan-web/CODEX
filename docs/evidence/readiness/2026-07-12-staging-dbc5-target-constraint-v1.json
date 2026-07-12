@@ -1,0 +1,64 @@
+{
+  "candidateDigests": {
+    "evidenceCrlf": {
+      "addConstraint": "80a7a23f49efe78d6c72c914b19629fc76c9452057435c21bf51ec1864a6470c",
+      "createFunction": "1488aa9fdc1f7001b0da5f26e1a6a5d20fd7e4c047262cde772978313df4d9e0",
+      "rollback": "eb45dda5f13173f215b6be9478b3755225e25f348fc24483ff450a3d1f3080ad",
+      "validateConstraint": "5051112b749907efa2ba5cf521ed8e55a762f7df3075eb9722e957b83142c42e"
+    },
+    "gitLf": {
+      "addConstraint": "0b84f01a970053d7b4115741fd917966cea25db6f19f5ebf058b6863339606f4",
+      "createFunction": "22b650891f0227abccf60eb3f674abdc1c732eec535e27bb01d198f9a6250c5c",
+      "rollback": "887f2b36da854ce591a687c0ed3257b56072306acf74f3deba1710663eb965de",
+      "validateConstraint": "c7ef43490391d8e5cfe2a3fa98a856ccf8dad36fe7706d6a53a02e4e8f8fb203"
+    }
+  },
+  "certificateVerified": true,
+  "event": "dbc5_target_constraint.apply_completed",
+  "evidenceReceipts": {
+    "observation": "450ea647b22152a0bf476478fe472abcb398c3f55c1489c834a88e607a6f6aeb",
+    "rehearsal": "db1359e9086754ae6f7382648cbdd8ac728f90d9f5539de67448b3c9b5dbabda"
+  },
+  "migration": {
+    "appliedCount": 1,
+    "checksum": "f39c38fe4adffbf56b2632b4c0423279c1fb38577c8bf78dfc45611bc585cf6f",
+    "checksumStyles": {
+      "gitLf": 59,
+      "windowsCrlf": 0
+    },
+    "failedCount": 0,
+    "name": "060_target_distribution_duplicate_employee_constraint_v1.sql",
+    "skippedCount": 59
+  },
+  "postflight": {
+    "activeTargetV2Hits": 0,
+    "constraintState": "present_valid_exact",
+    "functionState": "present_immutable_exact",
+    "indexStrategy": "not_applicable_no_index_candidate",
+    "migrationState": "succeeded_exact",
+    "transactionReadOnly": true
+  },
+  "preflight": {
+    "lockBuckets": 1,
+    "over30sTransactions": 0,
+    "state": "eligible",
+    "targetLiveRows": 61,
+    "transactionIsolation": "repeatable_read",
+    "transactionReadOnly": true
+  },
+  "receiptDigest": "ff8b91123b56db7175bbb223d623d9bcff661b999ea807dceb73532fdbab7b19",
+  "receiptVersion": "1",
+  "reviewedCommit": "d76d56f741b832b5d39eede8364f333e12a0e341",
+  "runnerDigest": "20bf4628a88f4b30e35efd4546f5b29d1513e839c1d87869489b9e7354515045",
+  "stagingDdlExecuted": true,
+  "targetClass": "staging",
+  "targetFingerprint": "d1e123463e47d9429c7a1b3d743e42c6ba619d1d43de3787ffe8f5070f0f9400",
+  "timeoutProfile": {
+    "connectionMs": 5000,
+    "idleMs": 1000,
+    "lockMs": 5000,
+    "queryMs": 30000,
+    "statementMs": 30000
+  },
+  "tlsMode": "verify-full"
+}
