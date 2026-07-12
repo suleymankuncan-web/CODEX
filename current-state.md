@@ -182,13 +182,14 @@ Now:
 - PR #959 merged REM-2C at `9de5e68cf62cd15eda45f2c3e1d935ff54fb9e25`; its one-shot verify-full, repeatable-read/read-only staging receipt is valid. `7149` V2 check hits deduplicate to `832` authority units: ORG-04 has 739 role-not-effective, 59 multi-manager, 28 portfolio-not-effective, and one never-configured unit; ORG-02 has three and ASSIGN-01 two units with the rotation/lifecycle source absent. No winner or correction manifest is authorized.
 - The locked `D-TARGET-DUPLICATE=reject_app_and_db` decision now has application-boundary enforcement for new requests and edited approvals: duplicate employees fail before repository writes. Existing pilot-import rows, API shape, and database enforcement remain unchanged; DB enforcement stays behind REM-8 compatibility and DDL gates.
 - PR #962 merged REM-7 at `84fa69311575dcaa1aa01548853c76f0f083e4ce`. Its one-shot staging receipt is valid: verify-full, certificate-verified, `REPEATABLE READ READ ONLY`, rollback, empty stderr, and strict digest validation. TARGET-02 reconciles from V1 `54` to active `0` and is `eligible_zero`; ORG-02 is `3` hits/`3` authority units, ORG-04 is `7142` hits/`827` units, and ASSIGN-01 is `4` hits/`2` units, all `blocked`. No mutation or DDL occurred.
+- REM-8 TARGET preparation is implemented locally on `codex/rem8-target-constraint-prep` pending PR closeout. It contains only the versioned candidate SQL package, read-only REM-8A observation/one-shot launcher, strict receipts, exact writer inventory, and local REM-8B harness. The harness completed on PostgreSQL 17 after 59 migrations and a separate logical restore of 5,001 synthetic TARGET rows: existing-defect validation failed with `23514`, held-writer ADD timed out with `55P03`, 20/20 bounded writers completed during validation, duplicate new writes were rejected, and rollback/ephemeral cleanup were proven. No staging DML/DDL or production connection occurred.
 - On 2026-07-12 the product owner granted standing authorization for the remaining in-scope staging plan and directed the agent not to request repetitive approvals through goal completion. Once each exact technical prerequisite is proven, this standing authorization covers the plan's read-only evidence, backup/restore, writer-pause, rollback-rehearsal, manifest-bound commit, and eligible staging-DDL execution gates. It does not supply missing row authority, permit inferred winners, waive manifests/digests/restore/rollback/concurrency checks, authorize production, or authorize paid services.
 
 Next:
-1. Merge the evidence-only REM-7 receipt PR after its scope guard and canonical checks pass; no implementation file may enter that PR.
-2. Open repository-only REM-8A read-only capacity observation and REM-8B disposable restored-data DDL rehearsal for TARGET-02 only. Do not open staging DDL or DB enforcement yet.
-3. Keep correction packages closed until exact historical manager/rotation facts exist. Nearby/current timestamps never select winners.
-4. After REM-7 evidence, open only the repository/disposable REM-8A/8B preparation justified by TARGET eligibility; staging DML/DDL and production remain outside that slice.
+1. Close and merge the repository-only REM-8A/8B implementation PR after canonical checks; do not place a live receipt in that PR.
+2. From its exact merged SHA, run REM-8A once in `REPEATABLE READ READ ONLY` with verify-full and rerun REM-8B locally; merge only sanitized receipts/handoff documents in the evidence PR.
+3. Use the two receipts to decide REM-8C. Omit REM-8C when staging fits the conservative local envelope; otherwise open its own reversible package/evidence train before any staging DDL.
+4. If REM-8 closes without unresolved material risk, open only TARGET-owned DB-C5 enforcement. Keep ORG-02, ORG-04, and ASSIGN-01 correction/constraint work blocked until exact historical authority evidence exists; never infer winners from current timestamps.
 5. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
 
 Park:
@@ -197,7 +198,6 @@ Park:
 - Further frontend unit-test migration or bundle work without its named conditional trigger.
 
 Stop:
-
 - A proposed docs/process change crosses into runtime behavior, auth, API, DB,
   scoring, queue, provider, or workflow semantics without explicit scope.
 - A pilot action lacks safe session/data/mutation/rollback authority.
