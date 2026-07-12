@@ -41,7 +41,7 @@ Use this directory like an operating library, not a diary.
 | Execute the project-analysis findings | `docs/plans/project-analysis-implementation-plan-v1.md` | Owner-approved, evidence-gated sequence: CI truth is implemented; A3 p95 observation and B1 external pilot inputs remain pending. |
 | Remediate the page, authorization, codebase, and database audit | `docs/plans/project-wide-audit-remediation-plan-v1.md` | Detailed spec-first PR train for route-role truth, session cache isolation, bounded target queues, UI correctness, data integrity, and production-gated resilience. |
 | Execute the locked DG1-DG2 decisions | `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md` | Luna Max-ready seven-slice contract plus a conditional constraint phase for Report Viewer company reads, incentive closure, production session hardening, honest Norm Kadro presentation, and verify-full preflight. |
-| Continue the post-DG2 staging findings | `docs/plans/post-dg2-staging-remediation-and-constraint-reentry-plan-v1.md`, `docs/plans/rem-2-owner-decision-packet-v1.md`, and `docs/plans/staging-remediation-invariant-spec-v2.md` | REM-1B evidence and all REM-2 decisions are locked; PR #957's reviewed SHA produced the valid one-shot V2 receipt and exact bridge. `TARGET-02=0`; ORG/assignment findings require row-authority classification before any package. Standing authorization removes repeated prompts but does not waive technical safety or production boundaries. |
+| Continue the post-DG2 staging findings | `docs/plans/post-dg2-staging-remediation-and-constraint-reentry-plan-v1.md`, `docs/plans/rem-2-owner-decision-packet-v1.md`, `docs/plans/staging-remediation-invariant-spec-v2.md`, and `docs/plans/staging-remediation-row-authority-classifier-spec-v1.md` | PR #958 merged the valid V2 receipt: `TARGET-02=0`; ORG/assignment findings remain. REM-2C classifies ORG-04 authority roots and records the absent ORG-02/ASSIGN rotation source without inferring winners. Standing authorization removes repeated prompts but not factual safety or production boundaries. |
 | Harden the shared database client | `docs/plans/database-client-resilience-spec-v1.md` | PR-11 contract for validated pool/timeouts, honest TLS readiness, secret-safe CA support, and DG-3-gated verify-full activation. |
 | Rotate or roll back the Supabase staging CA | `docs/runbooks/dg3-supabase-ca-rotation-rollback-v1.md` | Single-operator review, provider CA rotation, verify-full health proof, and time-bounded rollback without recording secrets. |
 | Enable or roll back DG-4 application error delivery | `docs/runbooks/dg4-sentry-app-error-delivery-v1.md` | Sentry env boundary, redaction contract, staging startup/browser smoke, receipt evidence, and safe flag rollback. |
@@ -156,6 +156,7 @@ Use for project shape, growth rules, API contracts, and system boundaries.
 - `docs/plans/post-dg2-staging-remediation-and-constraint-reentry-plan-v1.md`
 - `docs/plans/rem-2-owner-decision-packet-v1.md`
 - `docs/plans/staging-remediation-invariant-spec-v2.md`
+- `docs/plans/staging-remediation-row-authority-classifier-spec-v1.md`
 - `docs/plans/session-scoped-query-cache-isolation-spec-v1.md`
 - `docs/plans/bounded-target-request-queues-spec-v1.md`
 - `docs/plans/europe-istanbul-business-date-contract-spec-v1.md`

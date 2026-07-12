@@ -75,6 +75,26 @@ if (
   fail("Clean disposable V2 invariant did not prove its receipt and bridge contract.");
 }
 
+// Trace: FR-02, FR-03, FR-11, FR-12; NFR-01..05; AC-01, AC-02, AC-05, AC-07.
+const authorityClassifier = parseJson(runNpmCapture("diagnose:staging:remediation:authority:v1", {
+  DATABASE_INVARIANT_PREFLIGHT_ACK: "read-only-approved",
+  DATABASE_INVARIANT_PREFLIGHT_TARGET: "disposable",
+  DATABASE_URL: databaseUrl,
+  STAGING_REMEDIATION_AUTHORITY_CLASSIFIER_REVIEWED_COMMIT: "c".repeat(40),
+}));
+if (
+  authorityClassifier.event !== "staging_remediation_row_authority_classifier.completed"
+  || authorityClassifier.targetClass !== "disposable"
+  || authorityClassifier.transactionIsolation !== "repeatable_read"
+  || authorityClassifier.transactionReadOnly !== true
+  || authorityClassifier.queryResult?.overall?.checkHitCount !== 0
+  || authorityClassifier.queryResult?.overall?.authorityUnitCount !== 0
+  || authorityClassifier.queryResult?.sourceContracts?.[0]?.state !== "absent"
+  || !/^[a-f0-9]{64}$/.test(authorityClassifier.receiptDigest)
+) {
+  fail("Clean disposable authority classifier did not prove its receipt and snapshot contract.");
+}
+
 const requiredCheckIds = [
   "ASSIGN-01", "AUTH-01", "AUTH-02", "KEY-01", "ORG-01", "ORG-02",
   "ORG-03", "ORG-04", "TARGET-01", "TARGET-02", "TARGET-03",
@@ -102,9 +122,21 @@ const fixtureResult = parseJson(runNpmCapture("smoke:database:invariants:fixture
 }));
 if (fixtureResult.rolledBack !== true) fail("Known-violation fixture did not prove rollback.");
 
+const authorityClassifierFixture = parseJson(runNpmCapture(
+  "smoke:staging:remediation:authority:fixture",
+  { DATABASE_URL: databaseUrl },
+));
+const authorityClassifierFixtureRolledBack = authorityClassifierFixture.rolledBack === true;
+const authorityClassifierReasons = authorityClassifierFixture.reasons;
+if (!authorityClassifierFixtureRolledBack) fail("Authority classifier fixture did not prove rollback.");
+
 process.stdout.write(`${JSON.stringify({
   cleanCheckCount: cleanIds.length,
   cleanViolationCount: cleanResult.violationCount,
+  authorityClassifierFixtureRolledBack,
+  authorityClassifierQuerySet: authorityClassifier.queryResult.querySetVersion,
+  authorityClassifierReasons,
+  authorityClassifierReceiptBound: /^[a-f0-9]{64}$/.test(authorityClassifier.receiptDigest),
   event: "database_invariant_preflight.smoke_completed",
   fixtureResults: fixtureResult.results,
   fixtureRolledBack: fixtureResult.rolledBack,

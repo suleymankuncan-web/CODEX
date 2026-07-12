@@ -940,6 +940,32 @@ correction rows. `TARGET-02` advances toward REM-7 preservation/reconciliation.
 The other families require secure row-authority classification; missing or
 ambiguous manager/rotation evidence remains blocked and selects no winner.
 
+### REM-2C — Versioned row-authority classifier
+
+Open because the V2 evidence contains shared manager-authority roots and
+aggregate counts cannot select correction rows. The approved contract is
+`docs/plans/staging-remediation-row-authority-classifier-spec-v1.md`.
+
+The implementation executes immutable V2 plus the classifier in one
+`REPEATABLE READ READ ONLY` snapshot. ORG-04 distinguishes hierarchy, never
+configured role, role outside the authority date, missing effective store
+portfolio, duplicate rows for one manager, mixed-scope managers, multiple
+distinct managers, and unique-manager region mismatch. It reports both
+`check_hits` and deduplicated authority units.
+
+Repository inspection found no owned, approved, effective-dated employee/store
+rotation or assignment-lifecycle source. REM-2C therefore classifies ORG-02 and
+ASSIGN-01 as `rotation_authority_source_absent`; current state, row timestamps,
+generic audit/import times, and an unowned change-log table select no winner.
+A future approved source requires a new classifier version rather than a V1
+reinterpretation.
+
+The implementation PR is repository/disposable only and performs no staging
+access or mutation. After merge, a fresh evidence branch runs its exact SHA
+once through the existing standing-authorization, verify-full, target/project,
+window, clean-tree and atomic-marker guards. The evidence PR contains only the
+sanitized receipt/docs. Any implementation change returns to a new package PR.
+
 ### 9.1 Family correction two-PR protocol
 
 Each REM-3 through REM-6 family uses two physical PRs:
