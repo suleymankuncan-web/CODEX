@@ -1,6 +1,6 @@
 # REM-8 TARGET Constraint Observation And Rehearsal Specification V1
 
-Status: `approved_by_locked_decisions_for_repository_only_implementation`
+Status: `implemented_locally_pending_pr_closeout`
 Shelf: architecture
 Author: Codex
 Decision owner: Product owner
@@ -19,6 +19,15 @@ exact-SHA staging receipt. That receipt records:
 - TARGET-03 ownership: `reject_app_and_db`, with application enforcement
   present on create and edited approval;
 - ORG-02, ORG-04, and ASSIGN-01: `blocked` and excluded from this slice.
+
+Local implementation evidence on 2026-07-12 completed the exact PostgreSQL 17
+REM-8B path: 59 migrations, 5,001 synthetic TARGET rows, custom-format logical
+dump into a separately named restore, source/restore aggregate parity,
+case-insensitive candidate semantics, expected `23514` validation and duplicate
+write failures, expected `55P03` ADD lock timeout, 20/20 bounded concurrent
+writers, successful validation, exact rollback, and verified ephemeral cleanup.
+These are disposable facts only; REM-8A staging observation remains post-merge
+and no staging DDL timing is claimed.
 
 TARGET has two storage representations:
 

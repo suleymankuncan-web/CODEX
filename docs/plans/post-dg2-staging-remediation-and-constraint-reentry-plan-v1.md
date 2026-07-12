@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_7_evidence_pending_pr_then_rem_8`
+Status: `active_rem_8_implementation_pending_pr`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -1064,13 +1064,28 @@ Observe only:
 This slice does not execute DDL and does not claim measured DDL lock duration.
 Its runner merges before a separate evidence-only staging receipt PR.
 
+The repository-only V1 implementation is prepared on 2026-07-12 pending PR
+closeout. It binds the merged REM-7 receipt and current V2 TARGET count in one
+repeatable-read/read-only snapshot; reports only sanitized capacity, write,
+transaction, lock, catalog, plan, and compatibility aggregates; and ships an
+exact-SHA/clean-branch/verify-full/one-shot evidence launcher. It contains no
+staging mutation path.
+
 ### REM-8B — Disposable restored-data DDL rehearsal
 
 On an isolated disposable restore, execute exact candidate DDL under
-representative synthetic writers. Measure scan/build duration, lock waits,
-write-path impact, timeout behavior, invalid-index cleanup, validation order,
-and rollback. `CREATE INDEX CONCURRENTLY` transaction boundaries are tested
-explicitly. No staging or production DDL occurs.
+representative synthetic writers. Measure ADD/validation/rollback duration,
+lock waits, write-path impact, timeout behavior, validation-failure cleanup,
+validation order, and rollback. This TARGET candidate has no index; its exact
+disposition is `not_applicable_no_index_candidate`, and introducing any index
+requires a new specification. No staging or production DDL occurs.
+
+The local V1 rehearsal completed on PostgreSQL 17 with 59 migrations and 5,001
+synthetic TARGET rows after custom-format dump/restore. It proved source/restore
+aggregate parity, expected `23514` and `55P03` failure paths, duplicate new-write
+rejection, 20/20 compatible concurrent writers, successful validation, exact
+rollback, and verified removal of the disposable databases, dump, and
+container. This does not substitute for REM-8A staging observation.
 
 ### REM-8C — Optional staging DDL measurement package
 
