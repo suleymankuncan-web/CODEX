@@ -864,6 +864,14 @@ counts, and approved invariants must reconcile. Any failure is No-Go. Earlier
 restore evidence proves only the method, and this decision authorizes no backup
 run, staging access, paid PITR, DML, or DDL now.
 
+A future correction window requires an approved pause of every identified API,
+import, worker, and operator writer that can touch the affected rows. Exactly
+one manifest-bound correction runner may execute. Deterministic row locks and
+old-value predicates remain mandatory; any conflict, count drift, lock failure,
+or unexpected writer activity aborts and rolls back the transaction. Proven
+read-only traffic may continue. This uses existing controls and authorizes no
+pause, staging access, correction window, DML, or DDL now.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,

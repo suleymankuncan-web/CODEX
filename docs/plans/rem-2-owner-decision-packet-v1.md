@@ -1,6 +1,6 @@
 # REM-2 Owner Decision Packet V1
 
-Status: `awaiting_remaining_owner_decisions`
+Status: `owner_decisions_locked_implementation_and_evidence_gated`
 Shelf: architecture
 Author: Codex
 Decision owner: Product owner
@@ -503,7 +503,29 @@ Sokrates recommendation, not a decision: prefer an approved pause of the exact
 affected writers when operationally possible; still retain deterministic locks
 and old-value predicates as defense in depth.
 
-Owner selection: `UNSET`.
+Owner selection:
+`approved_write_pause_with_locks_and_old_value_predicates`, approved
+2026-07-12.
+
+Locked concurrency gate:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-CONCURRENCY-PAUSE-LOCK-CAS-20260712` |
+| Write pause | Pause every identified API, import, worker, and operator path that can mutate the affected rows |
+| Read traffic | May continue only when it cannot mutate, promote, refresh, or lock the correction scope |
+| Execution ownership | Exactly one correction runner/operator and one reviewed manifest digest per window |
+| Database protection | Acquire deterministic row locks and use manifest-bound old-value predicates for every intended change |
+| Conflict behavior | Any missing row, changed old value, unexpected row count, lock failure, or writer activity aborts and rolls back the entire transaction |
+| Pause proof | Record sanitized start/end timestamps, affected writer inventory, owner confirmation, and post-window resume verification |
+| Failure posture | If every affected writer cannot be proven paused, the correction window is No-Go |
+| Cost posture | Uses existing staging controls and database transactions; no paid service required |
+
+The pause is scoped to affected writers, not an automatic full-site outage.
+Read-only access may continue only after its non-mutation behavior is proven.
+Locks and old-value predicates remain mandatory even with an approved pause.
+This decision defines a future safety contract; it does not authorize pausing a
+service, accessing staging, opening a correction window, or executing DML/DDL.
 
 ### 10.3 `D-STAGING-MUTATION`
 
@@ -553,7 +575,7 @@ D-ASSIGN-DATES = inclusive_end_next_primary_start_following_day (LOCKED 2026-07-
 D-ASSIGN-WINNER = approved_effective_dated_rotation_lifecycle_source (LOCKED 2026-07-12)
 
 D-RESTORE = fresh_encrypted_logical_backup_verified_disposable_restore (LOCKED 2026-07-12)
-D-CONCURRENCY = UNSET
+D-CONCURRENCY = approved_write_pause_with_locks_and_old_value_predicates (LOCKED 2026-07-12)
 D-STAGING-MUTATION = NOT_READY
 D-CONSTRAINT-WINDOW = NOT_READY
 ```
