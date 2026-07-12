@@ -1,15 +1,16 @@
 # Staging Remediation Reconciliation Specification V1
 
-Status: `repository_only_implementation_complete_pending_pr`
+Status: `staging_evidence_complete_pending_pr`
 Shelf: architecture
 Author: Codex
 Decision owner: Product owner
 Approved basis: locked REM-2 decisions and standing authorization dated 2026-07-12
 Last verified: 2026-07-12
 Target slice: REM-7 implementation followed by a separate exact-SHA evidence PR
-Implementation note: the contract, runner, application proof, disposable fixture,
-static guards, one-shot launcher, and tests are complete without a staging
-connection. Evidence execution remains a separate post-merge branch.
+Implementation note: PR #962 merged the contract, runner, application proof,
+disposable fixture, static guards, one-shot launcher, and tests. The exact-SHA
+staging receipt is valid and packaged on the separate evidence branch; it makes
+TARGET-02 the sole `eligible_zero` family and leaves the other three blocked.
 
 ## 1. Context
 

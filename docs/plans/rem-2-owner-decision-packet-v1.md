@@ -552,10 +552,10 @@ Current state: `NOT_READY`; this is not an owner selection.
 Deferred until REM-7 reconciliation and REM-8A/8B capacity/DDL evidence.
 Current state: `NOT_READY`; this is not an owner selection.
 
-REM-7 repository-only implementation is complete pending merge and exact-SHA
-staging evidence. Disposable evidence makes TARGET-02 the sole
-`eligible_zero` candidate; it does not change this `NOT_READY` state. ORG-02,
-ORG-04, and ASSIGN-01 remain blocked on exact authoritative row evidence.
+PR #962 merged REM-7 and its exact-SHA staging receipt is valid. TARGET-02 is
+the sole `eligible_zero` family; this opens REM-8 preparation but does not
+change this `NOT_READY` constraint-window state. ORG-02, ORG-04, and ASSIGN-01
+remain blocked on exact authoritative row evidence.
 
 ## 11. Independent DG1-C Decision
 

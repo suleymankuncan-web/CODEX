@@ -1,0 +1,98 @@
+{
+  "certificateVerified": true,
+  "event": "staging_remediation_reconciliation.completed",
+  "queryResult": {
+    "applicationContracts": [
+      {
+        "code": "target_duplicate_employee_rejected",
+        "sourceDigest": "f91759cb569d6125eec1f70e1921a0106cf1ba81a84e20c7bd596e0203159462",
+        "state": "present"
+      }
+    ],
+    "families": [
+      {
+        "activeCount": 0,
+        "activeQuerySetVersion": "staging-remediation-invariant-v2",
+        "constraintEligibility": "eligible_after_rem8",
+        "decisionRefs": [
+          "D-INVARIANT-DEFINITION/TARGET-02=valid_under_revised_semantics",
+          "D-TARGET-COUNT/TARGET-02=preserve",
+          "D-TARGET-DUPLICATE=reject_app_and_db"
+        ],
+        "family": "TARGET-02",
+        "nextGate": "rem_8",
+        "reason": "target_zero_locked_preserve_application_enforced",
+        "state": "eligible_zero",
+        "v1ContinuityCount": 54
+      },
+      {
+        "activeCount": 3,
+        "activeQuerySetVersion": "staging-remediation-invariant-v2",
+        "authorityUnitCount": 3,
+        "constraintEligibility": "blocked",
+        "decisionRefs": [
+          "D-ORG-AUTHORITY/ORG-02=store_master_active_assignment_history_closed",
+          "D-ASSIGN-WINNER=approved_effective_dated_rotation_lifecycle_source"
+        ],
+        "family": "ORG-02",
+        "nextGate": "authoritative_row_evidence",
+        "reason": "authoritative_row_evidence_absent",
+        "state": "blocked",
+        "v1ContinuityCount": 3
+      },
+      {
+        "activeCount": 7142,
+        "activeQuerySetVersion": "staging-remediation-invariant-v2",
+        "authorityUnitCount": 827,
+        "constraintEligibility": "blocked",
+        "decisionRefs": [
+          "D-ORG-HISTORY/ORG-04=kpi_period_end_manager_canonical",
+          "D-ORG-HISTORY/ORG-04=supersede_active_future_preserve_closed"
+        ],
+        "family": "ORG-04",
+        "nextGate": "authoritative_row_evidence",
+        "reason": "authoritative_row_evidence_absent",
+        "state": "blocked",
+        "v1ContinuityCount": 11
+      },
+      {
+        "activeCount": 4,
+        "activeQuerySetVersion": "staging-remediation-invariant-v2",
+        "authorityUnitCount": 2,
+        "constraintEligibility": "blocked",
+        "decisionRefs": [
+          "D-ASSIGN-DATES=inclusive_end_next_primary_start_following_day",
+          "D-ASSIGN-WINNER=approved_effective_dated_rotation_lifecycle_source"
+        ],
+        "family": "ASSIGN-01",
+        "nextGate": "authoritative_row_evidence",
+        "reason": "authoritative_row_evidence_absent",
+        "state": "blocked",
+        "v1ContinuityCount": 2
+      }
+    ],
+    "observedAt": "2026-07-12T15:11:38.213Z",
+    "overallState": "target_eligible_other_families_blocked",
+    "querySetVersion": "staging-remediation-reconciliation-v1",
+    "sourceDigests": {
+      "authorityClassifierV1": "6394b1af9577687b6b929485b4e933b44ff6edad781acee33ce0f2282b261a53",
+      "invariantV1": "6ab50c59e9ba03b4fe307ce604281263db4efcc49667c357b9e6139b56d15b5a",
+      "invariantV2": "8b7f9ea6950f063cc125ea979ed9d30f3a89236b198f727af86875d67d6e3ae9"
+    }
+  },
+  "receiptVersion": "1",
+  "reviewedCommit": "84fa69311575dcaa1aa01548853c76f0f083e4ce",
+  "runnerDigest": "9ddd676c45aba60e1cae4923872f53025ace4107e3723a4c077566450e711f70",
+  "targetClass": "staging",
+  "targetFingerprint": "d1e123463e47d9429c7a1b3d743e42c6ba619d1d43de3787ffe8f5070f0f9400",
+  "timeoutProfile": {
+    "connectionMs": 5000,
+    "idleMs": 1000,
+    "queryMs": 30000,
+    "statementMs": 30000
+  },
+  "tlsMode": "verify-full",
+  "transactionIsolation": "repeatable_read",
+  "transactionReadOnly": true,
+  "receiptDigest": "3763657106c2bfb75efeeae048038c32704925908408a5fc5faf1d91bacd549f"
+}
