@@ -103,14 +103,17 @@ new concurrency experiment without a measured isolation plan. Source:
 
 The product owner attested that checklist approval, Store Action task closure,
 target submission, and target editing were used successfully on 5 July 2026.
-No issue or P0/P1 finding was reported. This is partial positive evidence, not
-a protected-session trace or a complete five-flow pass.
+No issue or P0/P1 finding was reported. A current 12 July Region Manager live
+staging smoke now also proves protected landing, cookie-session readback,
+browser-storage boundaries, CSRF rejection, and logout. This is still not a
+complete four-persona or five-flow pass.
 
 Remaining external inputs are:
 
 - sanitized persona/session and negative-scope evidence for the partially
   observed Store Action and checklist flows;
-- login, refresh, logout, and recovery evidence for the four pilot personas;
+- current login/session evidence for Admin, Store Manager, and Store Personnel,
+  plus separate account-recovery evidence or an owner scope decision;
 - read-only rankings/personnel-profile positive and negative scope evidence;
 - a confirmed reporting period/package plus role-scoped reports and incentive
   totals/export readback.
