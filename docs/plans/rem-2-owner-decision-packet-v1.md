@@ -337,9 +337,31 @@ source owns these three rows. If the rule is “active assignments always follow
 the store's current region,” that statement must be explicit before selecting
 store master authority.
 
-`D-ORG-AUTHORITY` selection: `UNSET`.
+`D-ORG-AUTHORITY` selection:
+`store_master_active_assignment_history_closed`, approved 2026-07-12.
 
-`D-INVARIANT-DEFINITION` selection: `UNSET`.
+`D-INVARIANT-DEFINITION` selection:
+`lifecycle_aware_assignment_region`, approved 2026-07-12.
+
+Locked assignment-region rule:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-ORG02-ASSIGNMENT-LIFECYCLE-20260712` |
+| Active assignment | Its region must match the assigned store's current region-manager portfolio |
+| Manager/region change | Close the prior active assignment with an end date and create a successor assignment under the store's new region; do not rewrite the prior row |
+| Closed assignment | Preserve its original region as period history even if the store later moves to another manager |
+| Future assignment | Validate against the store authority when the assignment becomes active |
+| Missing dates, overlapping active rows, or missing store authority | `blocked`; do not infer or update |
+| Existing three hits | Unclassified pending assignment-status, date, and authoritative-source evidence |
+
+An active mismatch is a rebuild/supersede candidate through the assignment
+lifecycle. A closed mismatch against today's store region is valid historical
+state and must be excluded from a current-master equality invariant. The
+current pilot roster writer does not automatically rotate an otherwise matching
+active employee/store/position row when only its region changes; a separate
+implementation PR must close and recreate that lifecycle safely. This decision
+authorizes no direct update, import replay, DML, or DDL.
 
 ## 9. ASSIGN-01: Two Open Cross-Scope Primary Overlaps
 
@@ -457,8 +479,8 @@ D-ORG-HISTORY / ORG-04 kpi_actual = period_end_manager_canonical (LOCKED 2026-07
 D-INVARIANT-DEFINITION / ORG-04 workforce_norm_plan = valid_under_revised_semantics (LOCKED 2026-07-12)
 D-ORG-HISTORY / ORG-04 workforce_norm_plan = supersede_active_future_preserve_closed (LOCKED 2026-07-12)
 
-D-INVARIANT-DEFINITION / ORG-02 assignment-region = UNSET
-D-ORG-AUTHORITY / ORG-02 assignment-region = UNSET
+D-INVARIANT-DEFINITION / ORG-02 assignment-region = lifecycle_aware_assignment_region (LOCKED 2026-07-12)
+D-ORG-AUTHORITY / ORG-02 assignment-region = store_master_active_assignment_history_closed (LOCKED 2026-07-12)
 
 D-INVARIANT-DEFINITION / ASSIGN-01 strict/open/cross-scope = UNSET
 D-ASSIGN-DATES = UNSET

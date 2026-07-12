@@ -830,6 +830,15 @@ changing plan values requires a separate reasoned revision. The two current
 hits remain unclassified pending period-state and effective-manager evidence.
 There is no direct-update exception and no rebuild, DML, or DDL authorization.
 
+For employee assignment region, the store master owns an active assignment's
+current region-manager portfolio while a closed assignment preserves its
+period region. A manager/region change closes the prior active assignment and
+creates a successor; it never rewrites the historical row. The three current
+ORG-02 hits remain unclassified pending status, date, and source evidence.
+Missing dates, overlapping active rows, or missing store authority fail closed.
+The current import writer's region-only rotation gap requires a separate
+implementation PR; no replay, direct update, DML, or DDL is authorized.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,
