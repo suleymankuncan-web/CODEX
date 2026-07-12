@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import test from 'node:test'
 import {
+  buildMergedRunnerInvocation,
   buildRunnerEnvironment,
   claimEvidenceAttempt,
   executeEvidence,
@@ -457,4 +458,26 @@ test('rejects CA input that also contains private key material', () => {
   } finally {
     rmSync(directory, { force: true, recursive: true })
   }
+})
+
+test('wraps npm.cmd through cmd.exe on Windows', () => {
+  assert.deepEqual(buildMergedRunnerInvocation('win32'), {
+    args: [
+      '/d',
+      '/s',
+      '/c',
+      'npm.cmd --silent --prefix backend/nestjs run diagnose:staging:remediation:v2',
+    ],
+    command: 'cmd.exe',
+  })
+  assert.deepEqual(buildMergedRunnerInvocation('linux'), {
+    args: [
+      '--silent',
+      '--prefix',
+      'backend/nestjs',
+      'run',
+      'diagnose:staging:remediation:v2',
+    ],
+    command: 'npm',
+  })
 })

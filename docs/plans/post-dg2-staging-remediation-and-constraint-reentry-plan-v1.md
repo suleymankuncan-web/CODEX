@@ -916,6 +916,14 @@ that SHA stopped fail-closed before receipt creation because an untracked local
 helper supplied the CA file path instead of PEM content. It produced no V2
 query result and performed no mutation. That SHA/attempt is not retried.
 
+PR #956 merged the versioned launcher at
+`2e20628bd3f71216acad7c44679b50f0b22607b1`. Its one-shot attempt stopped
+before any database connection: Windows returned `EINVAL` when Node tried to
+spawn `npm.cmd` directly, with null process status and empty stdout/stderr. No
+receipt or V2 query result exists for that SHA, its marker remains consumed,
+and it is not retried. The next implementation uses the already reviewed repo
+pattern `cmd.exe /d /s /c "npm.cmd ..."` on Windows.
+
 Recovery requires a new implementation PR containing the versioned
 `evidence:staging:remediation:v2` launcher and adversarial contract tests. The
 launcher reads the CA file into certificate PEM while refusing private-key

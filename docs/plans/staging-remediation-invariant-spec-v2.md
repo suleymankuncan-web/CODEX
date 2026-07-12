@@ -42,6 +42,14 @@ result, data/schema mutation, backup, service pause, production operation, or
 committable evidence was produced. That attempt marker is retained and the
 same SHA is never retried.
 
+PR #956 merged the versioned launcher, but its first one-shot execution also
+stopped before a database connection or receipt. On Windows,
+`spawnSync('npm.cmd', ...)` returned `EINVAL` with null status and empty
+stdout/stderr. The marker remains consumed and that merged SHA is not retried.
+The next implementation uses the repository's existing reviewed Windows
+pattern: `cmd.exe /d /s /c "npm.cmd ..."`; non-Windows execution remains the
+direct `npm` command.
+
 The recovery implementation adds the versioned root entry point
 `npm run evidence:staging:remediation:v2`. Its launcher:
 
