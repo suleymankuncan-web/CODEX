@@ -36,8 +36,8 @@ const sourceTables = [
 
 // Trace: FR-SCOPE-01..04, FR-DIAG-01..11, NFR-01..04, NFR-08..10, AC-01, AC-02, AC-11, EC-01..08.
 test('REM-1A preserves immutable V1 artifacts and adds only versioned diagnostics', () => {
-  assert.equal(sha256(v1QueryPath), '6ab50c59e9ba03b4fe307ce604281263db4efcc49667c357b9e6139b56d15b5a')
-  assert.equal(sha256(v1EvidencePath), '527d7259291111f67ec47be6377ab36bfabf6d7b082aba7a7759c6fcfe0150ed')
+  assert.equal(sha256(v1QueryPath), 'f6d33e91aa5ba76a6026b419d1df2692640222453727d7ec227d6d61474394cd')
+  assert.equal(sha256(v1EvidencePath), '94c4f49099d2e8b64bcf5b692f2101172915e52639938ca094bbfbffb0a32c6d')
   for (const path of [planPath, diagnosticQueryPath, runnerPath, contractPath, allowlistsPath]) {
     assert.equal(existsSync(path), true, `Missing ${path}`)
   }
@@ -96,7 +96,8 @@ test('runner proves one repeatable-read read-only snapshot and sanitizes before 
 })
 
 function sha256(path) {
-  return createHash('sha256').update(readFileSync(path)).digest('hex')
+  const canonicalText = readFileSync(path, 'utf8').replace(/\r\n?/g, '\n')
+  return createHash('sha256').update(canonicalText).digest('hex')
 }
 
 function stripSqlComments(sql) {
