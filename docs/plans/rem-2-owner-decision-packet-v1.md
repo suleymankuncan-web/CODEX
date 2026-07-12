@@ -1,6 +1,6 @@
 # REM-2 Owner Decision Packet V1
 
-Status: `awaiting_owner_decisions`
+Status: `awaiting_remaining_owner_decisions`
 Shelf: architecture
 Author: Codex
 Decision owner: Product owner
@@ -89,7 +89,7 @@ than selecting a weak rule and rewriting valid history.
 
 | Area | Current score | Why it is not higher |
 | --- | ---: | --- |
-| TARGET-02 source and shape | 4/5 | Source path is proven; owner has not defined the pilot-import request contract |
+| TARGET-02 source and shape | 4/5 | Owner selected revised semantics/preserve; REM-2B query and V1-to-V2 bridge are not yet implemented or approved |
 | ORG-04 | 3/5 | Source table/reason are known; affected periods and historical intent are not |
 | ORG-02 | 3/5 | Exact mismatch reason is known; assignment lifecycle/source authority is not |
 | ASSIGN-01 | 3/5 | Overlap is strict/open/cross-scope; authoritative winner is unknown |
@@ -145,7 +145,25 @@ separate pilot-import contract. Select it only if the owner confirms that the
 approved personnel references, not allocation JSON, are the authoritative
 import result.
 
-Owner selection for all five buckets: `UNSET`.
+Owner selection for all five buckets: `valid_under_revised_semantics`, approved
+2026-07-12.
+
+Locked decision record:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-TARGET-02-PILOT-20260712` |
+| Approver role | Product owner |
+| Decision date | 2026-07-12 |
+| Affected buckets | All five `TARGET-02` pilot-import buckets: deltas `+1` through `+5`, 54 check hits |
+| Disposition | `valid_under_revised_semantics` |
+| Evidence basis | Merged REM-1B receipt, stable V1 totals, and repository-proven pilot import writer behavior |
+| Current active query | V1 remains active and immutable until REM-2B is separately approved |
+| Required next query | A separately reviewed V2 must validate ordinary requests against JSON and pilot-import requests against approved personnel references |
+| Constraint eligibility | `blocked` pending approved REM-2B and zero under its active semantics |
+| Revisit trigger | V2 cannot prove count/reference agreement; source attribution changes; approved personnel references are not the business authority; or the owner makes JSON universal |
+
+This decision opens REM-2B only. It authorizes no data correction or constraint.
 
 ### 6.3 `D-TARGET-COUNT` options
 
@@ -156,7 +174,11 @@ Owner selection for all five buckets: `UNSET`.
 | `json_canonical` | Set count from current JSON. | Not recommended for these buckets because JSON is empty while approved references exist. |
 | `blocked` | Make no data change. | Correct if import ownership is not approved. |
 
-Owner selection for all five buckets: `UNSET`.
+Owner selection for all five buckets: `preserve`, approved 2026-07-12.
+
+The preserved rows remain unchanged. `preserve` is paired only with the locked
+revised-semantic decision above; it is not permission to ignore these rows in
+V1 continuity evidence.
 
 ### 6.4 `D-TARGET-DUPLICATE`
 
@@ -356,8 +378,8 @@ The owner may answer sequentially. Copying this form is optional; plain-language
 answers are accepted and Codex will map them back for confirmation.
 
 ```text
-D-INVARIANT-DEFINITION / TARGET-02 five pilot buckets = UNSET
-D-TARGET-COUNT / TARGET-02 five pilot buckets = UNSET
+D-INVARIANT-DEFINITION / TARGET-02 five pilot buckets = valid_under_revised_semantics (LOCKED 2026-07-12)
+D-TARGET-COUNT / TARGET-02 five pilot buckets = preserve (LOCKED 2026-07-12)
 D-TARGET-DUPLICATE = UNSET
 
 D-INVARIANT-DEFINITION / ORG-04 kpi_actual = UNSET

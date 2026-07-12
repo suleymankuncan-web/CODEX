@@ -797,6 +797,13 @@ owner fields, and stop rules are prepared in
 until the owner explicitly selects or blocks the applicable decisions; Codex
 must not convert a recommendation into approval.
 
+Locked on 2026-07-12: all five pilot-import `TARGET-02` buckets are
+`valid_under_revised_semantics` and their current rows are `preserve`. V1 stays
+immutable; constraint eligibility is blocked until a separately approved
+REM-2B query/spec validates pilot-import counts against approved personnel
+references and publishes the exact V1-to-V2 bridge. This owner decision
+authorizes no data mutation.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,
