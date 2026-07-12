@@ -1,6 +1,6 @@
 # DB-C5 TARGET Duplicate Enforcement Specification V1
 
-Status: `repository_implementation_in_progress_no_staging_ddl`
+Status: `completed_staging_verified_production_excluded`
 Shelf: architecture
 Author: Codex
 Decision owner: Product owner
@@ -41,6 +41,14 @@ versions currently update the active reference rather than create a linked
 superseding reference. DB-C5 neither changes nor claims that behavior. It is a
 separate application-history slice and does not alter the meaning of the
 same-request duplicate CHECK.
+
+PR #966 merged the repository implementation at
+`d76d56f741b832b5d39eede8364f333e12a0e341`. Its exact-merged-SHA one-shot
+staging run completed on 2026-07-12. The strict receipt proves the fresh
+read-only preflight, sole migration 060 apply, exact checksum, validated CHECK,
+immutable function, zero active TARGET hits, no index, read-only postflight,
+verify-full, and the locked timeout profile. Production remains excluded. See
+`docs/evidence/readiness/2026-07-12-staging-dbc5-target-constraint-v1.md`.
 
 ## 2. Functional Requirements
 

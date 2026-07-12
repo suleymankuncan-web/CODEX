@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_dbc5_repository_implementation_then_exact_sha_evidence`
+Status: `completed_with_excluded_or_blocked_families`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -1137,6 +1137,15 @@ by one exact-merged-SHA evidence PR after the one-shot staging apply. Migration
 060 constrains only duplicate employee membership inside one ordinary request;
 it does not implement or claim target-reference supersession history.
 
+PR #966 merged the implementation at
+`d76d56f741b832b5d39eede8364f333e12a0e341`. The exact-merged-SHA one-shot
+staging apply then completed successfully: migration 060 applied exactly once,
+the CHECK is present and validated, the function is immutable and exact,
+active TARGET V2 hits remain zero, and the read-only postflight passed under
+verify-full. The sanitized receipt is
+`docs/evidence/readiness/2026-07-12-staging-dbc5-target-constraint-v1.json`.
+DB-C5 is complete for staging; production remains excluded.
+
 ### U-1 and optional U-2 — DG1-C provider usage
 
 This is a linked but non-blocking external track, not part of database-plan
@@ -1161,7 +1170,8 @@ Work-package labels are not physical PR counts:
   staging DDL measurement is unavoidable.
 - Each selected DB-C family adds one implementation PR plus one exact-SHA
   evidence PR. The theoretical maximum is ten, but current classification
-  selects only DB-C5, so exactly two physical PRs remain from PR #965.
+  selected only DB-C5. Its two physical PRs after #965 are now complete: #966
+  is the implementation and this exact-SHA evidence PR is the closeout.
 - U-1/U-2 are excluded; they remain one evidence and at most one runtime PR in
   their own DG1-C track.
 
@@ -1526,6 +1536,12 @@ If no family is eligible for DDL, REM-8A/8B/8C and DB-C slices are not required 
 honest `blocked_before_mutation` completion. DG1-C progress does not affect any
 database completion state. A zero count without decision provenance, rollback
 evidence, and applicable lock measurement is insufficient.
+
+Recorded outcome on 2026-07-12:
+`completed_with_excluded_or_blocked_families`. TARGET DB-C5 is independently
+verified in staging. DB-C1 through DB-C4 remain explicitly excluded/blocked on
+missing authoritative history; no correction was invented, no production
+operation occurred, and DG1-C remains an independent external track.
 
 ## 18. References
 
