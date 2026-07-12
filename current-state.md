@@ -113,7 +113,8 @@ Remaining external inputs are:
 - sanitized persona/session and negative-scope evidence for the partially
   observed Store Action and checklist flows;
 - account-recovery evidence or an owner decision removing it from B1;
-- read-only rankings/personnel-profile positive and negative scope evidence;
+- fresh live cross-person rankings/profile denial remains optional and requires
+  an approved negative subject; current Moi session plus row-scope contracts pass;
 - a confirmed reporting period/package plus role-scoped reports and incentive
   totals/export readback.
 

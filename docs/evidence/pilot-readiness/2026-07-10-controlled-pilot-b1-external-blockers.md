@@ -4,7 +4,7 @@ Status: blocked_external
 Shelf: evidence
 Evidence class: docs_decision
 Assessment at: 2026-07-10T04:05:14+03:00
-Assessment updated at: 2026-07-13T00:07:16+03:00
+Assessment updated at: 2026-07-13T00:18:55+03:00
 
 ## Reader And Action
 
@@ -51,7 +51,7 @@ Source:
 | B1-20260710-01 | Admin, Region Manager, Store Manager, Store Personnel; login, refresh, logout, and recovery | Landing, role/scope summary, refresh/logout result | All four personas passed current login, protected landing, session readback, secure cookie/storage boundaries, CSRF rejection, and logout. Account recovery was not run. | `partial_live_pass`; four-persona session slice passed; no finding; `no_runtime_change` | Separate account-recovery evidence or an owner decision removing recovery from this boundary. |
 | B1-20260710-02 | Region Manager and Store Manager; Store Home to Tasks/Store Action | Visible queue, assigned-store boundary, command result | Owner attested that a Store Action task was closed successfully on 5 July; persona, assigned-store context, queue readback, and negative scope were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona/route and assigned-store plus negative-scope readback. Do not rerun a mutation without explicit scope and rollback authority. |
 | B1-20260710-03 | Region Manager or VM plus Store Manager; checklist visit and acknowledgement | BM/VM selection, completion, acknowledgement | Owner attested that checklist approval was used successfully on 5 July; persona, visit/template, completion detail, and acknowledgement readback were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona, visit/template, completion, and acknowledgement readback. Do not rerun a mutation without explicit scope and rollback authority. |
-| B1-20260710-04 | Store Manager, Store Personnel, Region Manager; rankings to personnel profile | Visible rows, profile permission, direct-route denial | Not run: no current scoped sessions or approved personnel/profile test subject was supplied. | `blocked_external`; no finding or severity classification; `no_runtime_change` | Read-only current persona sessions and an approved personnel/profile subject for positive and negative checks. |
+| B1-20260710-04 | Store Manager, Store Personnel, Region Manager; rankings to personnel profile | Visible rows, profile permission, direct-route denial | Owner-approved Moi subject has current Store Personnel/Store Manager session context; current row-scope, own-profile, selected-profile, in-region, and denial-redaction contracts passed. No second real subject was opened. | `partial_mixed_pass`; no finding; `no_runtime_change` | For fresh live cross-person direct-route denial only: a separately approved negative subject. Do not select random real personnel. |
 | B1-20260710-05 | Region Manager and applicable admin; reports and incentive readback | Period, roster, target, KPI, export/readback totals | Owner attested that targets were submitted and edited successfully on 5 July. Reports/incentives totals, export, period package, and persona readback were not captured. | `partial_owner_attested` supporting target-workflow evidence; no finding; `no_runtime_change` | A confirmed reporting period, approved roster/target/KPI package, and read-only role-scoped reports/incentives readback. |
 
 ## Required Evidence Record When Unblocked
