@@ -4,7 +4,7 @@ Status: blocked_external
 Shelf: evidence
 Evidence class: docs_decision
 Assessment at: 2026-07-10T04:05:14+03:00
-Assessment updated at: 2026-07-13T00:42:26+03:00
+Assessment updated at: 2026-07-13T00:51:08+03:00
 
 ## Reader And Action
 
@@ -52,7 +52,7 @@ Source:
 | B1-20260710-02 | Region Manager and Store Manager; Store Home to Tasks/Store Action | Visible queue, assigned-store boundary, command result | Owner attested that a Store Action task was closed successfully on 5 July; persona, assigned-store context, queue readback, and negative scope were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona/route and assigned-store plus negative-scope readback. Do not rerun a mutation without explicit scope and rollback authority. |
 | B1-20260710-03 | Region Manager or VM plus Store Manager; checklist visit and acknowledgement | BM/VM selection, completion, acknowledgement | Owner attested that checklist approval was used successfully on 5 July; persona, visit/template, completion detail, and acknowledgement readback were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona, visit/template, completion, and acknowledgement readback. Do not rerun a mutation without explicit scope and rollback authority. |
 | B1-20260710-04 | Store Manager, Store Personnel, Region Manager; rankings to personnel profile | Visible rows, profile permission, direct-route denial | Owner-approved Moi subject has current Store Personnel/Store Manager session context; current row-scope, own-profile, selected-profile, in-region, and denial-redaction contracts passed. No second real subject was opened. | `partial_mixed_pass`; no finding; `no_runtime_change` | For fresh live cross-person direct-route denial only: a separately approved negative subject. Do not select random real personnel. |
-| B1-20260710-05 | Region Manager and applicable admin; reports and incentive readback | Period, roster, target, KPI, export/readback totals | Owner attested target mutations on 5 July. A new real Report Viewer now passes company-scoped reports landing/session evidence with zero action stores; frontend/backend read-only contracts pass. Live period totals/export comparison remains open. | `partial_live_pass`; no finding; `no_runtime_change` | A confirmed reporting period and read-only live reports/incentives totals/export readback. |
+| B1-20260710-05 | Region Manager and applicable admin; reports and incentive readback | Period, roster, target, KPI, export/readback totals | June live readback passed: Report Viewer received populated company report package/export; Super Admin received the incentive projection because DG1 denies incentives to Report Viewer. Current incentive states were recorded without mutation. | `live_pass_with_data_state`; no finding; `no_runtime_change` | Closed for the selected June package. Open a new finding only for a named blocked store/source expectation. |
 
 ## Required Evidence Record When Unblocked
 
