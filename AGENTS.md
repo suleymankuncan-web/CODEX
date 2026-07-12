@@ -58,6 +58,11 @@ merge, deploy, or make owner decisions.
   only when their scopes are genuinely independent.
 - Never assign two agents to edit the same files or workflow.
 - Never run two full release suites concurrently.
+- Monitor PR checks with native GitHub/Vercel polling or an existing background
+  shell watcher. Do not spawn a model agent only to wait or poll.
+- When a check changes state, the Medium root classifies and handles an obvious
+  failure; use `problem_solver_high` only when focused inspection cannot explain
+  the failure or a High-risk boundary is involved.
 - Stop delegating when the specialist question is answered; do not keep High
   or XHigh active for routine implementation.
 - If a configured role is unavailable, do not claim it ran. Report the

@@ -445,6 +445,11 @@ Verim ve guvenlik guardrail'leri:
   karari vermez. Bu, ayni dosyada iki implementer cakismasini engeller.
 - Varsayilan bir uzman agent'tir. Planner ve problem solver ancak gercekten
   bagimsiz sorulari varsa paralel calisir.
+- PR check polling icin model agent acilmaz. Kanonik `gh`/Vercel watcher veya
+  mevcut background shell loop bekler; bekleme suresi reasoning token'i
+  tuketmez. Durum degisince Medium sonucu siniflandirir ve acik hatayi ele alir.
+  Koku ilk odakli incelemede aciklanamiyorsa veya High-risk siniri varsa
+  `problem_solver_high` devreye girer.
 - Ayni problem icin ilk net hata mesajinda High'a cikilmaz; once Medium tek
   odakli inceleme ve en fazla iki kanitli fix denemesi yapar. Auth/security/DB
   destructive riskinde bu bekleme uygulanmaz, dogrudan High inceleme kullanilir.
