@@ -34,6 +34,20 @@ test('docs-only changes select diff check and script tests only when guarded scr
   assert.deepEqual(docsOnly.commands, ['git diff --check'])
   assert.equal(docsOnly.fullReleaseRequired, false)
 
+  const codexProcess = selectAffectedVerification([
+    'AGENTS.md',
+    '.codex/config.toml',
+    '.codex/agents/planner-xhigh.toml',
+  ])
+
+  assert.deepEqual(codexProcess.commands, ['git diff --check'])
+  assert.equal(codexProcess.fullReleaseRequired, false)
+  assert.deepEqual(codexProcess.matchedRules[0].files, [
+    'AGENTS.md',
+    '.codex/config.toml',
+    '.codex/agents/planner-xhigh.toml',
+  ])
+
   const scriptChange = selectAffectedVerification(['scripts/store-ui-refactor-guard.test.mjs'])
 
   assert.ok(scriptChange.commands.includes('git diff --check'))

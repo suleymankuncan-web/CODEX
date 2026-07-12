@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-10
+Last verified: 2026-07-12
 
 This repository is operated through small, reversible PRs. The project is not
 debt-free, and broad rewrites are not allowed as a substitute for scoped
@@ -26,6 +26,10 @@ Then use layered reading:
 
 A narrow read-only question may use only the files needed to answer it. Do not
 turn the four-file operating set into mandatory ceremony for every small task.
+
+Codex sessions also load root `AGENTS.md`. It is the concise execution entry
+point for the adaptive Medium/High/XHigh routing defined in `discipline.md`;
+it does not replace the four operating documents or their ownership rules.
 
 ## Operating Document Roles
 

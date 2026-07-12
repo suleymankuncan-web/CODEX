@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-10
+Last verified: 2026-07-12
 
 Bu dosya HR Axis / Store Ops projesinde Codex ile kullanilan pratik calisma
 disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
@@ -401,6 +401,70 @@ Kullanim kurali:
 Bu model `PR Oncesi Adversarial Review` kuralini genisletir. GitHub Codex
 review owner-disabled kalir; lokal reviewer modeli final diff kalitesini ve
 guard/test bosluklarinin erken bulunmasini guclendirir.
+
+### Adaptive Reasoning Effort Routing
+
+Codex calismasinda zeka seviyesi her adimda en yuksek tutulmaz; gorevin risk ve
+muhakeme ihtiyacina gore yonlendirilir. Kanonik yapilandirma
+`.codex/config.toml`, role overlay'leri `.codex/agents/*.toml`, otomatik
+delegasyon giris sozlesmesi ise root `AGENTS.md` dosyasidir. Bu bolum politika
+kaynagidir; `AGENTS.md` ayni politikayi Codex icin calistirilabilir ve kisa
+talimata cevirir.
+
+Varsayilan model:
+
+- `Medium root coordinator`: scope, kodlama, test, entegrasyon, PR/merge ve
+  handoff tek elde kalir. Acik plani yurutme, mekanik duzeltme, docs, check
+  takibi ve normal implementasyon Medium'da yapilir.
+- `XHigh planner`: kapsamli plan/spec, mimari veya multi-PR hat, katmanlar arasi
+  bagimlilik, acceptance/rollback/sequencing belirsizligi ya da scope,
+  acceptance, rollback ve verification'i kilitlenmemis R3-R5 is icin
+  implementasyondan once salt-okunur planlama yapar.
+- `High problem solver`: iki kanitli denemeden sonra suren hata, ilk odakli
+  incelemede nedeni bulunamayan check, celisen repo/runtime kaniti, auth,
+  security, DB, data integrity, migration, concurrency veya production safety
+  riski icin sinirli salt-okunur inceleme yapar. R4/R5 diff'te final lokal
+  adversarial review de High ile yapilir.
+
+Yonlendirme akisi:
+
+1. Ana koordinator risk sinifini ve kabul kriterini belirler.
+2. Planlama tetikleyicisi varsa `planner_xhigh` yalnizca kanit, slice, risk,
+   rollback ve verification plani uretir.
+3. Medium ana koordinator plani `sokrates.md` ile kontrol eder ve uygular.
+4. Problem tetikleyicisi cikarsa rutin uygulama guvenli noktada tutulur;
+   `problem_solver_high` dar root-cause/review sorusunu inceler.
+5. Medium ana koordinator oneriyi repo kanitiyla kabul veya reddeder, gerekli
+   degisikligi kendisi yapar ve normal verification/closeout'a doner.
+
+Verim ve guvenlik guardrail'leri:
+
+- R0 docs duzeltmesi, tek satirlik mekanik fix, acik adimlari olan onayli plan
+  veya yalniz check izleme icin High/XHigh agent acilmaz.
+- High/XHigh agent dosya edit etmez, commit/push/PR/merge/deploy yapmaz ve owner
+  karari vermez. Bu, ayni dosyada iki implementer cakismasini engeller.
+- Varsayilan bir uzman agent'tir. Planner ve problem solver ancak gercekten
+  bagimsiz sorulari varsa paralel calisir.
+- PR check polling icin model agent acilmaz. Kanonik `gh`/Vercel watcher veya
+  mevcut background shell loop bekler; bekleme suresi reasoning token'i
+  tuketmez. Durum degisince Medium sonucu siniflandirir ve acik hatayi ele alir.
+  Koku ilk odakli incelemede aciklanamiyorsa veya High-risk siniri varsa
+  `problem_solver_high` devreye girer.
+- Ayni problem icin ilk net hata mesajinda High'a cikilmaz; once Medium tek
+  odakli inceleme ve en fazla iki kanitli fix denemesi yapar. Auth/security/DB
+  destructive riskinde bu bekleme uygulanmaz, dogrudan High inceleme kullanilir.
+- Uzman sorusu cevaplaninca agent kapatilir; rutin implementation High/XHigh'da
+  surdurulmez.
+- Role konfigurasyonu istemcide yuklenmezse calismis gibi raporlanmaz. Capability
+  failure acik yazilir ve `sokrates.md` risk/stop kurali uygulanir.
+- Project config yalniz yeni Codex task'larinda garanti edilir. Acik task'in
+  reasoning seviyesi kendiliginden degisti varsayilmaz.
+
+Bu politika ana agent'in task ortasinda fiziksel olarak Medium/High/XHigh
+ayarini degistirdigi anlamina gelmez. Otomasyon, Medium ana koordinatorden
+farkli reasoning overlay'i olan salt-okunur uzman agente gorev delegasyonudur.
+Codex Plan Mode kullanilirsa `plan_mode_reasoning_effort = "xhigh"` ayrica
+uygulanir.
 
 ### Pilot Subagent Orchestration Discipline
 

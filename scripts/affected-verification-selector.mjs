@@ -17,7 +17,10 @@ const commandCatalog = {
 const rules = [
   {
     name: 'docs/process',
-    test: (file) => file.startsWith('docs/') || ['CONTRIBUTING.md', 'discipline.md', 'sokrates.md', 'current-state.md'].includes(file),
+    test: (file) =>
+      file.startsWith('docs/') ||
+      file.startsWith('.codex/') ||
+      ['AGENTS.md', 'CONTRIBUTING.md', 'discipline.md', 'sokrates.md', 'current-state.md'].includes(file),
     commands: ['diffCheck'],
     reason: 'documentation or process file changed',
   },
