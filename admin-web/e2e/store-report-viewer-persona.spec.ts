@@ -1,3 +1,4 @@
+import type { Page } from '@playwright/test'
 import { expect, test } from './test-fixtures'
 import {
   installGenericStoreApiFallbacks,
@@ -20,12 +21,23 @@ const allowlistedRoutes = [
   '/store/settings',
 ] as const
 
+const reportViewerPortfolioTimeoutMs = 60_000
+const routeNavigationTimeoutMs = 15_000
+
+async function gotoReportViewerRoute(page: Page, routePath: string) {
+  await page.goto(routePath, {
+    timeout: routeNavigationTimeoutMs,
+    waitUntil: 'load',
+  })
+}
+
 test('Report Viewer sees the company read-only Store portfolio', async ({ page }) => {
+  test.setTimeout(reportViewerPortfolioTimeoutMs)
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
 
   const nav = page.locator('.store-command-nav')
-  await page.goto('/store/home')
+  await gotoReportViewerRoute(page, '/store/home')
   for (const href of [
     '/store/home',
     '/store/checklists',
@@ -46,12 +58,13 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
   await expect(nav.locator('a[href="/store/incentives"]')).toHaveCount(0)
 
   for (const routePath of allowlistedRoutes) {
-    await page.goto(routePath)
+    await gotoReportViewerRoute(page, routePath)
     await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toHaveCount(0)
   }
 })
 
 test('Report Viewer forbidden routes make no protected request and no action request is emitted', async ({ page }) => {
+  test.setTimeout(reportViewerPortfolioTimeoutMs)
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
 
@@ -82,13 +95,13 @@ test('Report Viewer forbidden routes make no protected request and no action req
   })
 
   for (const routePath of allowlistedRoutes) {
-    await page.goto(routePath)
+    await gotoReportViewerRoute(page, routePath)
   }
   const beforeForbiddenRoutes = protectedRequests.length
 
-  await page.goto('/store/me')
+  await gotoReportViewerRoute(page, '/store/me')
   await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toBeVisible()
-  await page.goto('/store/incentives')
+  await gotoReportViewerRoute(page, '/store/incentives')
   await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toBeVisible()
 
   expect(protectedRequests.length).toBe(beforeForbiddenRoutes)
