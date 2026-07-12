@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_1b_evidence_ready`
+Status: `active_rem_2_owner_decisions_pending`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`)
@@ -9,7 +9,7 @@ Do not use when: changing production, auto-repairing data, treating 70 check hit
 Source of truth: merged PRs #951 and #952, `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`, and the reviewed repository contracts listed below
 Last verified: 2026-07-12
 Target executor: an autonomous implementation agent operating under the repository discipline
-Implementation authority: REM-1B evidence-only PR and autonomous closeout; the one authorized staging diagnostic is complete and no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
+Implementation authority: REM-2 owner-option documentation only; no owner decision is selected by Codex and no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
 
 ## 1. Reader And Required Outcome
 
@@ -73,6 +73,10 @@ unless a reviewed correlation query proves a distinct-record count.
 - `codex/rem-1b-staging-diagnostic-evidence` was created from that exact merge
   commit. It is the only active REM-1B evidence branch and starts with no
   runner/query change.
+- PR #953 merged the completed REM-1B receipt at
+  `5f972273e4aad8e97049b764fbe7bfee6d374a37`. The active work is now the REM-2
+  owner-option packet; the merged evidence branch is no longer an execution
+  surface and no second diagnostic is authorized.
 
 - New target-distribution requests write `allocation_count` from
   `input.allocations.length` and write the same allocation collection to
@@ -786,6 +790,12 @@ Scope:
 - lock restore, concurrency, operator, and execution-window decisions.
 
 This is documentation and approval truth. It still performs no mutation.
+
+The cold-reader decision options, non-binding Sokrates recommendations, unset
+owner fields, and stop rules are prepared in
+`docs/plans/rem-2-owner-decision-packet-v1.md`. The REM-2 PR remains incomplete
+until the owner explicitly selects or blocks the applicable decisions; Codex
+must not convert a recommendation into approval.
 
 ### REM-2B — Versioned invariant definition, conditional
 
