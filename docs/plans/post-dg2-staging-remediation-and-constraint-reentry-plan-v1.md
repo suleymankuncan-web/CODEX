@@ -804,6 +804,15 @@ REM-2B query/spec validates pilot-import counts against approved personnel
 references and publishes the exact V1-to-V2 bridge. This owner decision
 authorizes no data mutation.
 
+Also locked on 2026-07-12: duplicate employee allocations inside one target
+request are `reject_app_and_db`. A later revision or new target for the same
+month is a separate, reasoned request/version and may contain the employee once
+again. Only one approved reference may be active per employee/month/type;
+replacement approval must preserve the previous reference as `superseded`
+rather than overwrite its history. Application enforcement precedes database
+enforcement. Database enforcement remains behind REM-8 and no DDL is
+authorized by this decision.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,

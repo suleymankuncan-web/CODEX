@@ -197,7 +197,34 @@ business meaning, prefer application rejection first and consider database
 enforcement only after REM-8 evidence. If split allocations are legitimate,
 select `allow` and define exact aggregation behavior.
 
-Owner selection: `UNSET`.
+Owner selection: `reject_app_and_db`, approved 2026-07-12.
+
+Locked interpretation:
+
+- A duplicate means the same employee appears more than once inside one target
+  distribution request. The create boundary and any adjusted-approval boundary
+  must reject that shape.
+- A month may legitimately receive a revision or a new target request. That is
+  a new, reasoned request/version containing the intended complete allocation
+  snapshot; it is not a duplicate inside the earlier request.
+- The same employee may therefore appear once in each successive request for
+  the same month. Only one approved personnel target reference may be active
+  for that employee, month, and target type at a time.
+- Approving a later version must preserve audit history: create the replacement
+  reference, link it to the prior reference, and mark the prior reference
+  `superseded` transactionally. Closed snapshots remain anchored to the
+  reference they used unless a separately authorized rerun exists.
+- Database enforcement must distinguish same-request duplication from valid
+  cross-request version history. It is deferred to REM-8 compatibility,
+  disposable-DDL, lock, rollback, and concurrency evidence; this decision does
+  not authorize DDL.
+
+Repository gap recorded with this decision: the request UI already submits a
+revision as a new request, but the current approval writer uses an active-row
+conflict update rather than creating a linked replacement reference. That code
+must not be described as history-preserving until a separate implementation PR
+and tests prove the lifecycle above. The gap does not permit duplicate
+allocations inside one request and does not authorize a runtime change here.
 
 ## 7. ORG-04: Scoped Operational Rows
 
@@ -380,7 +407,7 @@ answers are accepted and Codex will map them back for confirmation.
 ```text
 D-INVARIANT-DEFINITION / TARGET-02 five pilot buckets = valid_under_revised_semantics (LOCKED 2026-07-12)
 D-TARGET-COUNT / TARGET-02 five pilot buckets = preserve (LOCKED 2026-07-12)
-D-TARGET-DUPLICATE = UNSET
+D-TARGET-DUPLICATE = reject_app_and_db (LOCKED 2026-07-12)
 
 D-INVARIANT-DEFINITION / ORG-04 kpi_actual = UNSET
 D-ORG-HISTORY / ORG-04 kpi_actual = UNSET
