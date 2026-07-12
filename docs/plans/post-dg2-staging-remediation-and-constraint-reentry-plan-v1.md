@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_7_implementation_pending_pr`
+Status: `active_rem_7_evidence_pending_pr_then_rem_8`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -1034,6 +1034,12 @@ four strict terminal states, and ships a one-shot exact-SHA evidence launcher.
 The migrated disposable and adversarial rollback smokes prove TARGET-02 as
 `eligible_zero` and the three authority-dependent families as `blocked`. No
 staging execution or constraint authority is claimed by the implementation PR.
+
+PR #962 then merged the implementation at
+`84fa69311575dcaa1aa01548853c76f0f083e4ce`. Its exact-SHA one-shot staging
+receipt is valid: TARGET-02 is `eligible_zero`; ORG-02, ORG-04, and ASSIGN-01
+remain `blocked`. The receipt authorizes only TARGET-scoped REM-8 preparation,
+not DDL or correction.
 
 Rerun immutable V1 for continuity and each owner-approved active query version.
 Reconcile before/after totals and assign one family state:
