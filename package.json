@@ -17,6 +17,7 @@
     "check:supabase-boundary": "node --test scripts/supabase-boundary-guard.test.mjs",
     "evidence:staging:remediation:v2": "node scripts/staging-remediation-invariant-v2-evidence-launcher.mjs",
     "evidence:staging:remediation:authority:v1": "node scripts/staging-remediation-row-authority-evidence-launcher.mjs",
+    "evidence:staging:remediation:reconciliation:v1": "node scripts/staging-remediation-reconciliation-evidence-launcher.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
     "check:pilot-stabilization": "node --test scripts/pilot-route-role-matrix-contract.test.mjs scripts/pilot-release-smoke-checklist-contract.test.mjs scripts/ranking-demo-live-boundary-contract.test.mjs scripts/pilot-stabilization-release-gate-contract.test.mjs && npm.cmd --prefix admin-web run smoke:pilot"
   }

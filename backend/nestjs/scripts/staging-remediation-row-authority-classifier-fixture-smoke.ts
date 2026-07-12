@@ -4,7 +4,7 @@ import { Pool } from "pg";
 import { buildAuthorityClassifierResult } from "./staging-remediation-row-authority-classifier-contract";
 import { validateInvariantV2QueryResult } from "./staging-remediation-invariant-v2-contract";
 
-const fixtureCompanyIds = Array.from({ length: 11 }, (_, index) =>
+export const fixtureCompanyIds = Array.from({ length: 11 }, (_, index) =>
   `11${String(index + 1).padStart(6, "0")}-0000-4000-8000-000000000001`);
 let fixturePhase = "configuration";
 
@@ -113,7 +113,7 @@ function readDisposableDatabaseUrl() {
   return raw;
 }
 
-const fixtureSql = `
+export const fixtureSql = `
   INSERT INTO ops.company (company_id, company_code, company_name)
   SELECT
     ('11' || lpad(index::text, 6, '0') || '-0000-4000-8000-000000000001')::uuid,
@@ -304,7 +304,7 @@ const fixtureSql = `
       '41000011-0000-4000-8000-000000000001', DATE '2026-02-01', NULL, TRUE, 'active');
 `;
 
-void main().catch((error) => {
+if (require.main === module) void main().catch((error) => {
   process.stderr.write(`${JSON.stringify({
     error: classifyFixtureError(error),
     event: "staging_remediation_row_authority_classifier.fixture_smoke_failed",
