@@ -4,7 +4,7 @@ Status: blocked_external
 Shelf: evidence
 Evidence class: docs_decision
 Assessment at: 2026-07-10T04:05:14+03:00
-Assessment updated at: 2026-07-10T10:35:12+03:00
+Assessment updated at: 2026-07-12T23:29:03+03:00
 
 ## Reader And Action
 
@@ -30,6 +30,12 @@ persona, exact route/session, store/template/period context, negative scope
 checks, screenshot, or browser trace needed to claim that every B1 acceptance
 point is complete.
 
+On 12 July, the configured `REGION_MANAGER` persona passed the canonical live
+staging cookie-session smoke. This is current sanitized executable evidence for
+that persona only; it does not close the other three personas or account
+recovery. Source:
+`docs/evidence/pilot-readiness/2026-07-12-b1-region-manager-cookie-session-evidence.md`.
+
 Source:
 `docs/evidence/pilot-readiness/2026-07-05-owner-attested-mutation-flows.md`.
 
@@ -37,7 +43,7 @@ Source:
 
 | Record | Persona and route/workflow | Expected evidence | Actual assessment | Status and decision | External input required |
 | --- | --- | --- | --- | --- | --- |
-| B1-20260710-01 | Admin, Region Manager, Store Manager, Store Personnel; login, refresh, logout, and recovery | Landing, role/scope summary, refresh/logout result | Not run: no approved current browser sessions were in scope. | `blocked_external`; no finding or severity classification; `no_runtime_change` | Sanitized assisted sessions for the four personas, with consent to observe refresh and logout. |
+| B1-20260710-01 | Admin, Region Manager, Store Manager, Store Personnel; login, refresh, logout, and recovery | Landing, role/scope summary, refresh/logout result | Current Region Manager staging smoke passed login, protected landing, session readback, secure cookie/storage boundaries, CSRF rejection, and logout. Account recovery was not run. | `partial_live_pass`; no finding; `no_runtime_change` | Current sanitized sessions for Admin, Store Manager, and Store Personnel, plus separate recovery evidence or an owner decision removing recovery from this boundary. |
 | B1-20260710-02 | Region Manager and Store Manager; Store Home to Tasks/Store Action | Visible queue, assigned-store boundary, command result | Owner attested that a Store Action task was closed successfully on 5 July; persona, assigned-store context, queue readback, and negative scope were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona/route and assigned-store plus negative-scope readback. Do not rerun a mutation without explicit scope and rollback authority. |
 | B1-20260710-03 | Region Manager or VM plus Store Manager; checklist visit and acknowledgement | BM/VM selection, completion, acknowledgement | Owner attested that checklist approval was used successfully on 5 July; persona, visit/template, completion detail, and acknowledgement readback were not captured. | `partial_owner_attested`; no finding; `no_runtime_change` | For full B1 closure: sanitized persona, visit/template, completion, and acknowledgement readback. Do not rerun a mutation without explicit scope and rollback authority. |
 | B1-20260710-04 | Store Manager, Store Personnel, Region Manager; rankings to personnel profile | Visible rows, profile permission, direct-route denial | Not run: no current scoped sessions or approved personnel/profile test subject was supplied. | `blocked_external`; no finding or severity classification; `no_runtime_change` | Read-only current persona sessions and an approved personnel/profile subject for positive and negative checks. |
