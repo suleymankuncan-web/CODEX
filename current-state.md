@@ -180,14 +180,15 @@ Now:
 - PR #955 merged the repository-only REM-2B V2 implementation at `b9112aa34b9ef75615caa74588169a571017726c`: ordinary targets use JSON parity, pilot imports use approved-reference parity, KPI uses the month-final effective manager portfolio, Norm Kadro and assignment region use lifecycle-aware history, support remains secondary, and inclusive primary ranges require a later successor start. V1 SQL/spec/evidence remain immutable.
 - The first post-#955 attempt stopped before receipt because CA path was passed instead of PEM; PR #956's attempt stopped before connection on Windows `EINVAL`. Both SHA markers remain consumed. PR #957 merged the reviewed Windows wrapper; PR #958 merged its valid verify-full, repeatable-read/read-only V2 receipt: `TARGET-02=0`, `ORG-02=3`, `ASSIGN-01=4`, and `ORG-04=7142`. The large ORG-04 total is failed authority resolution, not permission to infer managers or bulk-edit period rows.
 - PR #959 merged REM-2C at `9de5e68cf62cd15eda45f2c3e1d935ff54fb9e25`; its one-shot verify-full, repeatable-read/read-only staging receipt is valid. `7149` V2 check hits deduplicate to `832` authority units: ORG-04 has 739 role-not-effective, 59 multi-manager, 28 portfolio-not-effective, and one never-configured unit; ORG-02 has three and ASSIGN-01 two units with the rotation/lifecycle source absent. No winner or correction manifest is authorized.
+- The locked `D-TARGET-DUPLICATE=reject_app_and_db` decision now has application-boundary enforcement for new requests and edited approvals: duplicate employees fail before repository writes. Existing pilot-import rows, API shape, and database enforcement remain unchanged; DB enforcement stays behind REM-8 compatibility and DDL gates.
 - On 2026-07-12 the product owner granted standing authorization for the remaining in-scope staging plan and directed the agent not to request repetitive approvals through goal completion. Once each exact technical prerequisite is proven, this standing authorization covers the plan's read-only evidence, backup/restore, writer-pause, rollback-rehearsal, manifest-bound commit, and eligible staging-DDL execution gates. It does not supply missing row authority, permit inferred winners, waive manifests/digests/restore/rollback/concurrency checks, authorize production, or authorize paid services.
 
 Next:
-1. Merge the REM-2C evidence-only receipt without changing its query, runner, or launcher.
-2. Prepare a sanitized authority-gap packet for the 827 ORG-04 units and five ORG-02/ASSIGN units; require exact historical manager/rotation facts, never nearby/current timestamps.
-3. Open correction manifests only for units with resolved row authority. Preserve `TARGET-02` for REM-7 and keep DB-CONSTRAINTS blocked until corrections, reconciliation, and lock/restore/rollback gates close.
-4. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
-5. Keep DG-3/DG-4 receipts as baselines and broad production gated; obtain one safe read-only B1 gap bundle without repeating the successful 5 July mutations only for documentation.
+1. Implement REM-7 as a versioned repository-only reconciliation contract: rerun V1 plus active V2 in one read-only snapshot, classify TARGET as the only `eligible_zero` candidate, and preserve ORG-02/ORG-04/ASSIGN-01 as `blocked` without inferring winners.
+2. Merge REM-7 implementation before any staging connection; its later evidence branch must bind the exact merged SHA and emit sanitized terminal states only.
+3. Keep correction packages closed until exact historical manager/rotation facts exist. Nearby/current timestamps never select winners.
+4. After REM-7 evidence, open only the repository/disposable REM-8A/8B preparation justified by TARGET eligibility; staging DML/DDL and production remain outside that slice.
+5. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
 
 Park:
 
