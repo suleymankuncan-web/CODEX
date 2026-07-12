@@ -30,6 +30,23 @@ const cleanResult = parseJson(runNpmCapture("preflight:database:invariants", {
   DATABASE_URL: databaseUrl,
 }));
 
+// Trace: FR-DIAG-08, FR-DIAG-11; NFR-01, NFR-04; AC-01.
+const remediationDiagnostic = parseJson(runNpmCapture("diagnose:staging:remediation", {
+  DATABASE_INVARIANT_PREFLIGHT_ACK: "read-only-approved",
+  DATABASE_INVARIANT_PREFLIGHT_TARGET: "disposable",
+  DATABASE_URL: databaseUrl,
+  STAGING_REMEDIATION_DIAGNOSTIC_REVIEWED_COMMIT: "a".repeat(40),
+}));
+if (
+  remediationDiagnostic.event !== "staging_remediation_diagnostic.completed" ||
+  remediationDiagnostic.targetClass !== "disposable" ||
+  remediationDiagnostic.transactionIsolation !== "repeatable_read" ||
+  remediationDiagnostic.transactionReadOnly !== true ||
+  remediationDiagnostic.queryResult?.overallCheckHits?.count !== 0
+) {
+  fail("Clean disposable remediation diagnostic did not prove its snapshot contract.");
+}
+
 const requiredCheckIds = [
   "ASSIGN-01", "AUTH-01", "AUTH-02", "KEY-01", "ORG-01", "ORG-02",
   "ORG-03", "ORG-04", "TARGET-01", "TARGET-02", "TARGET-03",
@@ -64,6 +81,8 @@ process.stdout.write(`${JSON.stringify({
   fixtureResults: fixtureResult.results,
   fixtureRolledBack: fixtureResult.rolledBack,
   liveEvidence: cleanResult.liveEvidence,
+  remediationDiagnosticQuerySet: remediationDiagnostic.queryResult.querySetVersion,
+  remediationDiagnosticReceiptBound: /^[a-f0-9]{64}$/.test(remediationDiagnostic.receiptDigest),
   targetClass: "disposable",
 }, null, 2)}\n`);
 
