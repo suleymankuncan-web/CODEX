@@ -1,0 +1,92 @@
+{
+  "certificateVerified": true,
+  "event": "rem8_target_constraint.observation_completed",
+  "invariantV2QueryDigest": "8b7f9ea6950f063cc125ea979ed9d30f3a89236b198f727af86875d67d6e3ae9",
+  "observationQueryDigest": "bbe81f80c970274ee3aad8157081eaa8f4ece974352fa8bba604eb23d8edc1fd",
+  "planQueryDigest": "143906f36b880d1778a38d9bc91b3de078615c5c348c8592f3b5651797743ce2",
+  "queryResult": {
+    "artifacts": {
+      "constraintState": "absent",
+      "functionState": "absent"
+    },
+    "compatibility": {
+      "nonArrayRows": 0,
+      "ordinaryDuplicateRows": 0,
+      "pilotDuplicateGroups": 0,
+      "pilotUniqueIndex": "present_valid_exact",
+      "activeTargetV2Hits": 0
+    },
+    "locks": [
+      {
+        "count": 1,
+        "granted": true,
+        "mode": "AccessShareLock"
+      }
+    ],
+    "observedAt": "2026-07-12T16:37:09.422Z",
+    "querySetVersion": "rem8-target-constraint-observation-v1",
+    "server": {
+      "major": 17
+    },
+    "targetTable": {
+      "deadRows": 3,
+      "estimatedRows": 57,
+      "indexBytes": 32768,
+      "liveRows": 61,
+      "partitioned": false,
+      "tableBytes": 81920,
+      "totalBytes": 155648
+    },
+    "transactions": {
+      "activeCount": 0,
+      "maxAgeMs": 0,
+      "over30sCount": 0,
+      "over5sCount": 0
+    },
+    "writes": {
+      "deleted": 0,
+      "inserted": 115,
+      "statsAgeSeconds": 6704464,
+      "updated": 802
+    },
+    "candidate": {
+      "addConstraintDigest": "80a7a23f49efe78d6c72c914b19629fc76c9452057435c21bf51ec1864a6470c",
+      "addLock": "access_exclusive",
+      "functionDigest": "1488aa9fdc1f7001b0da5f26e1a6a5d20fd7e4c047262cde772978313df4d9e0",
+      "rollbackDigest": "eb45dda5f13173f215b6be9478b3755225e25f348fc24483ff450a3d1f3080ad",
+      "validateConstraintDigest": "5051112b749907efa2ba5cf521ed8e55a762f7df3075eb9722e957b83142c42e",
+      "validateLock": "share_update_exclusive"
+    },
+    "indexStrategy": "not_applicable_no_index_candidate",
+    "plan": {
+      "nodeTypes": [
+        "Aggregate",
+        "Seq Scan",
+        "Sort",
+        "Function Scan"
+      ],
+      "planRows": 1,
+      "totalCost": 141.83
+    },
+    "reasons": [
+      "all_prerequisites_satisfied"
+    ],
+    "rem7ReceiptDigest": "3763657106c2bfb75efeeae048038c32704925908408a5fc5faf1d91bacd549f",
+    "state": "eligible_for_disposable_rehearsal"
+  },
+  "receiptVersion": "1",
+  "reviewedCommit": "b60776c033528438118322b8b09652f16909f78d",
+  "runnerDigest": "1818f0c56915730053b25b03d5936ca4633f9909f2842d3a7814b451943b25c4",
+  "targetClass": "staging",
+  "targetFingerprint": "d1e123463e47d9429c7a1b3d743e42c6ba619d1d43de3787ffe8f5070f0f9400",
+  "timeoutProfile": {
+    "connectionMs": 5000,
+    "idleMs": 1000,
+    "queryMs": 30000,
+    "statementMs": 30000
+  },
+  "tlsMode": "verify-full",
+  "transactionIsolation": "repeatable_read",
+  "transactionReadOnly": true,
+  "receiptDigest": "450ea647b22152a0bf476478fe472abcb398c3f55c1489c834a88e607a6f6aeb"
+}

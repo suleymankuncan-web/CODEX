@@ -1,0 +1,33 @@
+{
+  "addConstraintMs": 1.9612999999999374,
+  "cleanupVerified": true,
+  "constraintValidated": true,
+  "dumpDigest": "b76435f942d53df1a54e6fc55a3277f174365befb00c50b0299b0957eb2bbc9c",
+  "duplicateWriteRejected": true,
+  "event": "rem8_target_constraint.disposable_rehearsal_completed",
+  "failureValidationSqlState": "23514",
+  "indexStrategy": "not_applicable_no_index_candidate",
+  "lockTimeoutSqlState": "55P03",
+  "migrationCount": 59,
+  "packageDigests": {
+    "addConstraint": "80a7a23f49efe78d6c72c914b19629fc76c9452057435c21bf51ec1864a6470c",
+    "createFunction": "1488aa9fdc1f7001b0da5f26e1a6a5d20fd7e4c047262cde772978313df4d9e0",
+    "rollback": "eb45dda5f13173f215b6be9478b3755225e25f348fc24483ff450a3d1f3080ad",
+    "validateConstraint": "5051112b749907efa2ba5cf521ed8e55a762f7df3075eb9722e957b83142c42e"
+  },
+  "receiptDigest": "db1359e9086754ae6f7382648cbdd8ac728f90d9f5539de67448b3c9b5dbabda",
+  "receiptVersion": "1",
+  "representativeness": "schema_writer_and_scale_contract_only",
+  "restoreAggregateDigest": "cf2c81c2e0fb6c0bbc337e4fc1dbedb1ca0b861f119fd73439f29e8bae2ca073",
+  "restoreSourceClass": "synthetic_migrated_fixture",
+  "restoredTargetRows": 5001,
+  "reviewedCommit": "b60776c033528438118322b8b09652f16909f78d",
+  "rollbackMs": 2.1055999999998676,
+  "runnerDigest": "0b37c97b90fa315c39e8f25d39753da481cde808320d53723fff26cf280bd502",
+  "sourceAggregateDigest": "cf2c81c2e0fb6c0bbc337e4fc1dbedb1ca0b861f119fd73439f29e8bae2ca073",
+  "syntheticScaleRows": 5000,
+  "validateConstraintMs": 30.978799999999865,
+  "writerAttempts": 20,
+  "writerFailures": 0,
+  "writerSuccesses": 20
+}

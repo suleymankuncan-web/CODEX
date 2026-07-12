@@ -1,6 +1,6 @@
 # REM-8 TARGET Constraint Observation And Rehearsal Specification V1
 
-Status: `implemented_locally_pending_pr_closeout`
+Status: `implementation_merged_evidence_complete_pending_pr`
 Shelf: architecture
 Author: Codex
 Decision owner: Product owner
@@ -20,14 +20,14 @@ exact-SHA staging receipt. That receipt records:
   present on create and edited approval;
 - ORG-02, ORG-04, and ASSIGN-01: `blocked` and excluded from this slice.
 
-Local implementation evidence on 2026-07-12 completed the exact PostgreSQL 17
-REM-8B path: 59 migrations, 5,001 synthetic TARGET rows, custom-format logical
-dump into a separately named restore, source/restore aggregate parity,
-case-insensitive candidate semantics, expected `23514` validation and duplicate
-write failures, expected `55P03` ADD lock timeout, 20/20 bounded concurrent
-writers, successful validation, exact rollback, and verified ephemeral cleanup.
-These are disposable facts only; REM-8A staging observation remains post-merge
-and no staging DDL timing is claimed.
+PR #964 merged the implementation at
+`b60776c033528438118322b8b09652f16909f78d`. Its exact-SHA REM-8A receipt proves
+PostgreSQL 17, 61 live TARGET rows, zero TARGET compatibility violations, exact
+pilot index state, absent candidate artifacts, zero long transactions, and no
+conflicting lock pressure. Its exact-SHA REM-8B receipt proves 59 migrations,
+5,001 restored synthetic rows, expected `23514`/`55P03`, 20/20 writers,
+successful validation, rollback, and cleanup with matching package digests.
+The reviewed result is `rem_8c_not_required`; no staging DDL timing is claimed.
 
 TARGET has two storage representations:
 
