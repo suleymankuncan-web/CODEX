@@ -95,6 +95,35 @@ if (
   fail("Clean disposable authority classifier did not prove its receipt and snapshot contract.");
 }
 
+// Trace: FR-01..13; NFR-01..04; AC-01, AC-06, AC-08; EC-01..11.
+const reconciliation = parseJson(runNpmCaptureWithStatuses(
+  "diagnose:staging:remediation:reconciliation:v1",
+  {
+    DATABASE_INVARIANT_PREFLIGHT_ACK: "read-only-approved",
+    DATABASE_INVARIANT_PREFLIGHT_TARGET: "disposable",
+    DATABASE_URL: databaseUrl,
+    STAGING_REMEDIATION_RECONCILIATION_REVIEWED_COMMIT: "d".repeat(40),
+  },
+  [2],
+));
+const reconciliationStates = Object.fromEntries(
+  reconciliation.queryResult?.families?.map((item) => [item.family, item.state]) ?? [],
+);
+if (
+  reconciliation.event !== "staging_remediation_reconciliation.completed"
+  || reconciliation.targetClass !== "disposable"
+  || reconciliation.transactionIsolation !== "repeatable_read"
+  || reconciliation.transactionReadOnly !== true
+  || reconciliation.queryResult?.overallState !== "target_eligible_other_families_blocked"
+  || reconciliationStates["TARGET-02"] !== "eligible_zero"
+  || reconciliationStates["ORG-02"] !== "blocked"
+  || reconciliationStates["ORG-04"] !== "blocked"
+  || reconciliationStates["ASSIGN-01"] !== "blocked"
+  || !/^[a-f0-9]{64}$/.test(reconciliation.receiptDigest)
+) {
+  fail("Clean disposable reconciliation did not prove terminal-state and snapshot contracts.");
+}
+
 const requiredCheckIds = [
   "ASSIGN-01", "AUTH-01", "AUTH-02", "KEY-01", "ORG-01", "ORG-02",
   "ORG-03", "ORG-04", "TARGET-01", "TARGET-02", "TARGET-03",
@@ -130,6 +159,17 @@ const authorityClassifierFixtureRolledBack = authorityClassifierFixture.rolledBa
 const authorityClassifierReasons = authorityClassifierFixture.reasons;
 if (!authorityClassifierFixtureRolledBack) fail("Authority classifier fixture did not prove rollback.");
 
+const reconciliationFixture = parseJson(runNpmCapture(
+  "smoke:staging:remediation:reconciliation:fixture",
+  { DATABASE_URL: databaseUrl },
+));
+if (
+  reconciliationFixture.rolledBack !== true
+  || reconciliationFixture.overallState !== "target_eligible_other_families_blocked"
+) {
+  fail("Reconciliation fixture did not prove terminal states and rollback.");
+}
+
 process.stdout.write(`${JSON.stringify({
   cleanCheckCount: cleanIds.length,
   cleanViolationCount: cleanResult.violationCount,
@@ -146,6 +186,10 @@ process.stdout.write(`${JSON.stringify({
   invariantV2ReceiptBound,
   remediationDiagnosticQuerySet: remediationDiagnostic.queryResult.querySetVersion,
   remediationDiagnosticReceiptBound: /^[a-f0-9]{64}$/.test(remediationDiagnostic.receiptDigest),
+  reconciliationFixtureRolledBack: reconciliationFixture.rolledBack,
+  reconciliationQuerySet: reconciliation.queryResult.querySetVersion,
+  reconciliationReceiptBound: /^[a-f0-9]{64}$/.test(reconciliation.receiptDigest),
+  reconciliationStates,
   targetClass: "disposable",
 }, null, 2)}\n`);
 
@@ -155,6 +199,14 @@ function runNpmCapture(script, extraEnvironment) {
     cwd: backendDir,
     env: { ...process.env, ...extraEnvironment },
   });
+}
+
+function runNpmCaptureWithStatuses(script, extraEnvironment, allowedStatuses) {
+  const command = npmRun(["run", "--silent", script]);
+  return runCapture(command.command, command.args, {
+    cwd: backendDir,
+    env: { ...process.env, ...extraEnvironment },
+  }, allowedStatuses);
 }
 
 function npmRun(args) {
@@ -170,10 +222,12 @@ function run(command, args, options) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-function runCapture(command, args, options) {
+function runCapture(command, args, options, allowedStatuses = [0]) {
   const result = spawnSync(command, args, { ...options, encoding: "utf8" });
   if (result.error) fail(`Failed to start ${command}: ${result.error.message}`);
-  if (result.status !== 0) fail(result.stderr || `${command} exited with status ${result.status}`);
+  if (!allowedStatuses.includes(result.status)) {
+    fail(result.stderr || `${command} exited with status ${result.status}`);
+  }
   return result.stdout.trim();
 }
 

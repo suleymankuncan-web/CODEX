@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_target_application_enforcement_then_rem_7`
+Status: `active_rem_7_implementation_pending_pr`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -1027,6 +1027,14 @@ and multiple-assignment cases.
 
 ### REM-7 — Versioned reconciliation and eligibility receipt
 
+Repository-only implementation completed on 2026-07-12 pending PR closeout. It
+consumes immutable V1, V2, and classifier V1 in one repeatable-read/read-only
+transaction, binds the target duplicate application contract, emits only the
+four strict terminal states, and ships a one-shot exact-SHA evidence launcher.
+The migrated disposable and adversarial rollback smokes prove TARGET-02 as
+`eligible_zero` and the three authority-dependent families as `blocked`. No
+staging execution or constraint authority is claimed by the implementation PR.
+
 Rerun immutable V1 for continuity and each owner-approved active query version.
 Reconcile before/after totals and assign one family state:
 
@@ -1097,7 +1105,8 @@ Work-package labels are not physical PR counts:
   when invariant meaning changes.
 - Each corrected family requires two physical PRs. All four families therefore
   add eight; a preserved/blocked family adds none. ORG-04 may split further.
-- REM-7 adds one reconciliation PR.
+- REM-7 adds one repository-only implementation PR and one exact-SHA
+  evidence-only PR.
 - REM-8A implementation/evidence plus REM-8B normally add two PRs when their
   disposable rehearsal ships with the implementation; REM-8C adds two only if
   staging DDL measurement is unavoidable.

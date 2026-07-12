@@ -23,8 +23,10 @@
     "diagnose:staging:remediation": "ts-node scripts/staging-remediation-diagnostic.ts",
     "diagnose:staging:remediation:v2": "ts-node scripts/staging-remediation-invariant-v2.ts",
     "diagnose:staging:remediation:authority:v1": "ts-node scripts/staging-remediation-row-authority-classifier.ts",
+    "diagnose:staging:remediation:reconciliation:v1": "ts-node scripts/staging-remediation-reconciliation.ts",
     "smoke:database:invariants:fixture": "ts-node scripts/database-invariant-preflight-fixture-smoke.ts",
     "smoke:staging:remediation:authority:fixture": "ts-node scripts/staging-remediation-row-authority-classifier-fixture-smoke.ts",
+    "smoke:staging:remediation:reconciliation:fixture": "ts-node scripts/staging-remediation-reconciliation-fixture-smoke.ts",
     "rehearse:release": "npm run check:release && ts-node scripts/release-rehearsal.ts"
   },
   "jest": {
