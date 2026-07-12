@@ -813,6 +813,15 @@ rather than overwrite its history. Application enforcement precedes database
 enforcement. Database enforcement remains behind REM-8 and no DDL is
 authorized by this decision.
 
+For monthly KPI actuals, region means the responsible region manager's
+portfolio. The canonical owner is the assignment effective on the last day of
+the KPI month: a mid-month change assigns the whole month to the new manager,
+while a later-month change does not rewrite closed history. ORG-04 KPI
+validation must therefore use effective-dated period-end assignment rather
+than the store's current region. The nine existing hits remain unclassified
+until that evidence exists; missing or overlapping assignment is fail-closed.
+No replay, DML, or DDL is authorized.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,

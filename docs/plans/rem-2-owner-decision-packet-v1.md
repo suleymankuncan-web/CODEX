@@ -253,7 +253,29 @@ update. Choose source rebuild if these rows should follow the approved current
 mapping; choose preserve/versioned semantics if they represent historical
 scope. The receipt does not prove which is true.
 
-Owner selection for `ops.kpi_actual`: `UNSET`.
+Owner selection for `ops.kpi_actual`: `valid_under_revised_semantics`, approved
+2026-07-12.
+
+Locked monthly ownership rule:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-ORG04-KPI-PERIOD-END-20260712` |
+| Business meaning of region | A region is the responsibility portfolio of a region manager, not an immutable geographic label |
+| Canonical monthly owner | The region-manager assignment effective on the last calendar day of the KPI month |
+| Mid-month change | The entire month belongs to the new manager if that manager is effective at month end |
+| Multiple changes in one month | The manager effective at month end owns the entire month |
+| Change after month end | It does not reassign the already closed prior month |
+| Historical rule | Preserve a closed KPI row after it is proven against the period-end assignment; do not compare it to the store's later current region |
+| Missing or overlapping assignment | `blocked`; do not guess an owner or auto-correct the KPI row |
+| Existing nine hits | Unclassified pending effective-dated period-end assignment evidence |
+
+`D-ORG-HISTORY / ORG-04 kpi_actual` is therefore
+`period_end_manager_canonical`, approved 2026-07-12. A versioned invariant must
+compare monthly KPI scope with the assignment effective at period end, not with
+the store's current `region_id`. The nine current hits may resolve as valid or
+as correction candidates only after that comparison. This decision authorizes
+no replay, direct update, DML, or DDL.
 
 ### 7.2 Norm Kadro plans: two rows
 
@@ -409,8 +431,8 @@ D-INVARIANT-DEFINITION / TARGET-02 five pilot buckets = valid_under_revised_sema
 D-TARGET-COUNT / TARGET-02 five pilot buckets = preserve (LOCKED 2026-07-12)
 D-TARGET-DUPLICATE = reject_app_and_db (LOCKED 2026-07-12)
 
-D-INVARIANT-DEFINITION / ORG-04 kpi_actual = UNSET
-D-ORG-HISTORY / ORG-04 kpi_actual = UNSET
+D-INVARIANT-DEFINITION / ORG-04 kpi_actual = valid_under_revised_semantics (LOCKED 2026-07-12)
+D-ORG-HISTORY / ORG-04 kpi_actual = period_end_manager_canonical (LOCKED 2026-07-12)
 D-INVARIANT-DEFINITION / ORG-04 workforce_norm_plan = UNSET
 D-ORG-HISTORY / ORG-04 workforce_norm_plan = UNSET
 
