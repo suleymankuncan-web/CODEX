@@ -1,15 +1,15 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_2_owner_decisions_pending`
+Status: `active_rem_2b_implementation_ready_evidence_gated`
 Shelf: architecture
 Author: Codex
-Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`)
+Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
 Use when: classifying and correcting the DG2-C staging invariant findings, then deciding whether database constraint work may re-enter
 Do not use when: changing production, auto-repairing data, treating 70 check hits as 70 people, or mixing DG1-C runtime removal into database work
 Source of truth: merged PRs #951 and #952, `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`, and the reviewed repository contracts listed below
 Last verified: 2026-07-12
 Target executor: an autonomous implementation agent operating under the repository discipline
-Implementation authority: REM-2 owner-option documentation only; no owner decision is selected by Codex and no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
+Implementation authority: repository-only REM-2B query/spec/runner/contracts and local/disposable verification; no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
 
 ## 1. Reader And Required Outcome
 
@@ -340,9 +340,9 @@ unless a reviewed correlation query proves a distinct-record count.
 
 ## 6. Required Owner Decisions
 
-The following decisions are deliberately open. REM-1A may be implemented after
-this plan is approved, but no family correction may proceed until its applicable
-decisions are locked.
+The owner decisions below were locked on 2026-07-12 as recorded in the REM-2
+packet. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` remain `NOT_READY`, and
+no family correction may proceed without their later package-specific gates.
 
 | Decision | Question to lock | Allowed outcomes |
 | --- | --- | --- |
@@ -878,6 +878,14 @@ Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,
 add a new query-set version with adversarial fixtures, publish a V1-to-new-count
 bridge, and obtain owner approval of the new active version. This PR changes no
 business row and cannot be used merely to hide a violation.
+
+Implementation state: the repository-only V2 contract is specified in
+`docs/plans/staging-remediation-invariant-spec-v2.md` and uses the separate
+`staging-remediation-invariant-v2` SQL/runner/typed receipt path. Its disposable
+fixture must prove non-trivial carried-forward, revised-valid, and V2-new bridge
+counts before merge. The merged implementation is not staging evidence; the
+next evidence-only branch still requires an exact target and bounded run-window
+approval.
 
 ### 9.1 Family correction two-PR protocol
 
