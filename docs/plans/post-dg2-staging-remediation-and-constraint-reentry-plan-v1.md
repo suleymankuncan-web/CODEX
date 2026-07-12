@@ -960,11 +960,23 @@ generic audit/import times, and an unowned change-log table select no winner.
 A future approved source requires a new classifier version rather than a V1
 reinterpretation.
 
-The implementation PR is repository/disposable only and performs no staging
-access or mutation. After merge, a fresh evidence branch runs its exact SHA
-once through the existing standing-authorization, verify-full, target/project,
-window, clean-tree and atomic-marker guards. The evidence PR contains only the
-sanitized receipt/docs. Any implementation change returns to a new package PR.
+PR #959 merged the repository/disposable implementation at
+`9de5e68cf62cd15eda45f2c3e1d935ff54fb9e25`. Its fresh evidence branch ran that
+exact SHA once through the standing-authorization, verify-full, target/project,
+window, clean-tree and atomic-marker guards. The sanitized receipt is
+`docs/evidence/readiness/2026-07-12-staging-remediation-row-authority-classifier-v1.json`.
+
+The receipt reconciles all `7149` V2 check hits into `832` authority units.
+ORG-04 has 739 role-not-effective units, 59 multiple-manager units, 28
+portfolio-not-effective units, and one never-configured unit. ORG-02 contributes
+three and ASSIGN-01 two units, all with the approved rotation/lifecycle source
+contract absent. These are authority gaps, not correction manifests. No nearby,
+current, audit, created, or updated timestamp may select a historical winner.
+
+Sokrates decision: accept the exact receipt and preserve the evidence branch as
+read-only proof; do not open any family correction package until a sanitized
+authority-gap packet receives exact source facts. Any classifier change returns
+to a new implementation PR and a new one-shot SHA.
 
 ### 9.1 Family correction two-PR protocol
 

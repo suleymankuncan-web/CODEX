@@ -1,0 +1,171 @@
+{
+  "certificateVerified": true,
+  "classifierQueryDigest": "6394b1af9577687b6b929485b4e933b44ff6edad781acee33ce0f2282b261a53",
+  "event": "staging_remediation_row_authority_classifier.completed",
+  "invariantV2QueryDigest": "8b7f9ea6950f063cc125ea979ed9d30f3a89236b198f727af86875d67d6e3ae9",
+  "queryResult": {
+    "buckets": [
+      {
+        "authorityUnitCount": 2,
+        "checkHitCount": 4,
+        "family": "ASSIGN-01",
+        "reason": "assign01.rotation_authority_source_absent",
+        "sampleAuthorityRefs": [
+          "5c0bbdfda19c",
+          "efd26a6bc2fc"
+        ],
+        "source": "authority.assignment_lifecycle_contract",
+        "units": {
+          "authority": "authority_units",
+          "findings": "check_hits"
+        }
+      },
+      {
+        "authorityUnitCount": 3,
+        "checkHitCount": 3,
+        "family": "ORG-02",
+        "reason": "org02.rotation_authority_source_absent",
+        "sampleAuthorityRefs": [
+          "1092b47283b2",
+          "3208bd96b757",
+          "a7c9046ba04f"
+        ],
+        "source": "authority.assignment_lifecycle_contract",
+        "units": {
+          "authority": "authority_units",
+          "findings": "check_hits"
+        }
+      },
+      {
+        "authorityUnitCount": 59,
+        "checkHitCount": 306,
+        "family": "ORG-04",
+        "reason": "org04.multiple_distinct_managers",
+        "sampleAuthorityRefs": [
+          "0823153de551",
+          "09ca5e7e2cbb",
+          "0ae7f2f24b0f",
+          "0c62485e4d28",
+          "107d24f31376"
+        ],
+        "source": "authority.rbac_role_assignment",
+        "units": {
+          "authority": "authority_units",
+          "findings": "check_hits"
+        }
+      },
+      {
+        "authorityUnitCount": 28,
+        "checkHitCount": 241,
+        "family": "ORG-04",
+        "reason": "org04.region_portfolio_not_effective",
+        "sampleAuthorityRefs": [
+          "04c00c5a6e07",
+          "060a97e25af5",
+          "08118a8be67f",
+          "0bc578ebc5ce",
+          "15ca5687edb3"
+        ],
+        "source": "authority.action_store_portfolio",
+        "units": {
+          "authority": "authority_units",
+          "findings": "check_hits"
+        }
+      },
+      {
+        "authorityUnitCount": 1,
+        "checkHitCount": 2,
+        "family": "ORG-04",
+        "reason": "org04.role_assignment_never_configured",
+        "sampleAuthorityRefs": [
+          "e36681d35995"
+        ],
+        "source": "authority.rbac_role_assignment",
+        "units": {
+          "authority": "authority_units",
+          "findings": "check_hits"
+        }
+      },
+      {
+        "authorityUnitCount": 739,
+        "checkHitCount": 6593,
+        "family": "ORG-04",
+        "reason": "org04.role_assignment_not_effective",
+        "sampleAuthorityRefs": [
+          "019a8efadc58",
+          "0229b6d8f8a5",
+          "02d48ff6ecc7",
+          "03448c5ef03e",
+          "0410b7093069"
+        ],
+        "source": "authority.rbac_role_assignment",
+        "units": {
+          "authority": "authority_units",
+          "findings": "check_hits"
+        }
+      }
+    ],
+    "familyTotals": [
+      {
+        "authorityUnitCount": 2,
+        "checkHitCount": 4,
+        "family": "ASSIGN-01"
+      },
+      {
+        "authorityUnitCount": 3,
+        "checkHitCount": 3,
+        "family": "ORG-02"
+      },
+      {
+        "authorityUnitCount": 827,
+        "checkHitCount": 7142,
+        "family": "ORG-04"
+      }
+    ],
+    "observedAt": "2026-07-12T13:19:55.003094+00:00",
+    "overall": {
+      "authorityUnitCount": 832,
+      "checkHitCount": 7149
+    },
+    "querySetVersion": "staging-remediation-row-authority-classifier-v1",
+    "sourceContracts": [
+      {
+        "code": "assignment_rotation_lifecycle",
+        "state": "absent"
+      }
+    ],
+    "v2FamilyTotals": [
+      {
+        "family": "ASSIGN-01",
+        "hitCount": 4
+      },
+      {
+        "family": "ORG-02",
+        "hitCount": 3
+      },
+      {
+        "family": "ORG-04",
+        "hitCount": 7142
+      },
+      {
+        "family": "TARGET-02",
+        "hitCount": 0
+      }
+    ]
+  },
+  "receiptVersion": "1",
+  "reviewedCommit": "9de5e68cf62cd15eda45f2c3e1d935ff54fb9e25",
+  "runnerDigest": "253ca7b7e3f20dc81beaaa9cde700e326da361d84d3cea7cd63241b41dbf2752",
+  "targetClass": "staging",
+  "targetFingerprint": "d1e123463e47d9429c7a1b3d743e42c6ba619d1d43de3787ffe8f5070f0f9400",
+  "timeoutProfile": {
+    "connectionMs": 5000,
+    "idleMs": 1000,
+    "queryMs": 30000,
+    "statementMs": 30000
+  },
+  "tlsMode": "verify-full",
+  "transactionIsolation": "repeatable_read",
+  "transactionReadOnly": true,
+  "receiptDigest": "850eb2eb76d6b53ebe22e332734d6b42a062da3d2f086430d2ee07e02f9637aa"
+}
