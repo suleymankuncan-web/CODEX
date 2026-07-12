@@ -30,8 +30,14 @@ function successfulRun(name) {
 
 test('docs/process-only scope uses local diff and root script contracts without a release child', () => {
   const scope = selectRequiredReleaseGateScope([
+    '.codex/agents/planner-xhigh.toml',
+    '.codex/agents/problem-solver-high.toml',
+    '.codex/config.toml',
+    'AGENTS.md',
     'docs/plans/project-analysis-implementation-plan-v1.md',
     'current-state.md',
+    'scripts/affected-verification-selector.mjs',
+    'scripts/affected-verification-selector.test.mjs',
     'scripts/current-state-handoff-contract.test.mjs',
     'scripts/project-control-registries-contract.test.mjs',
   ])

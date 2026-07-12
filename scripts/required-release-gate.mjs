@@ -14,6 +14,8 @@ const rootProcessFiles = new Set([
 ])
 
 const docsProcessContractFiles = new Set([
+  'scripts/affected-verification-selector.mjs',
+  'scripts/affected-verification-selector.test.mjs',
   'scripts/current-state-handoff-contract.test.mjs',
   'scripts/project-control-registries-contract.test.mjs',
 ])
@@ -36,6 +38,7 @@ function isDocsProcessPath(file) {
   }
 
   return (
+    file.startsWith('.codex/') ||
     file.startsWith('docs/') ||
     rootProcessFiles.has(file) ||
     docsProcessContractFiles.has(file) ||
