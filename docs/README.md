@@ -131,6 +131,8 @@ evidence, incident posture, and recovery.
 - `docs/evidence/readiness/2026-07-12-staging-remediation-diagnostic-v1.json`
 - `docs/evidence/readiness/2026-07-12-staging-remediation-invariant-v2.md`
 - `docs/evidence/readiness/2026-07-12-staging-remediation-invariant-v2.json`
+- `docs/evidence/readiness/2026-07-12-staging-remediation-row-authority-classifier-v1.md`
+- `docs/evidence/readiness/2026-07-12-staging-remediation-row-authority-classifier-v1.json`
 - `docs/plans/security-launch-blocker-pr-train-v1.md`
 - `docs/plans/production-evidence-closure-joint-plan-v1.md`
 - `docs/plans/production-staging-incident-response-skeleton.md`
