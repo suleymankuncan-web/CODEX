@@ -467,7 +467,29 @@ Sokrates recommendation, not a decision: before any rollback-only staging
 rehearsal, create a fresh logical backup and prove a disposable restore using
 existing resources. Do not purchase PITR automatically.
 
-Owner selection: `UNSET`.
+Owner selection:
+`fresh_encrypted_logical_backup_verified_disposable_restore`, approved
+2026-07-12.
+
+Locked restore gate:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-RESTORE-FRESH-VERIFIED-20260712` |
+| Timing | Create a fresh staging logical backup after exact target confirmation and immediately before any authorized correction window |
+| Security | Use verify-full transport, encrypt the backup at rest, and never print or commit credentials, CA content, target identity, or business rows |
+| Integrity | Record a sanitized checksum/digest that binds the exact backup to the reviewed correction manifest and runner SHA |
+| Restore proof | Restore the backup into a disposable, non-production database using existing resources |
+| Acceptance | Prove schema/application-table availability, sanitized count reconciliation, and the approved invariant runner against the restored copy |
+| Failure posture | Any backup, encryption, checksum, restore, or reconciliation failure is No-Go for correction |
+| Cost posture | No paid PITR or new paid service; use the existing logical-backup and disposable-restore path |
+
+The earlier restore drill proves the method only; it is not fresh recovery
+evidence for a future correction window. This decision establishes a mandatory
+precondition and does not authorize taking a backup now, accessing staging,
+running a restore, buying a service, retaining secret material, or executing
+DML/DDL. A future execution requires its own target, time-window, evidence, and
+operator authority.
 
 ### 10.2 `D-CONCURRENCY`
 
@@ -530,7 +552,7 @@ D-INVARIANT-DEFINITION / ASSIGN-01 strict/open/cross-scope = multiple_assignment
 D-ASSIGN-DATES = inclusive_end_next_primary_start_following_day (LOCKED 2026-07-12)
 D-ASSIGN-WINNER = approved_effective_dated_rotation_lifecycle_source (LOCKED 2026-07-12)
 
-D-RESTORE = UNSET
+D-RESTORE = fresh_encrypted_logical_backup_verified_disposable_restore (LOCKED 2026-07-12)
 D-CONCURRENCY = UNSET
 D-STAGING-MUTATION = NOT_READY
 D-CONSTRAINT-WINDOW = NOT_READY

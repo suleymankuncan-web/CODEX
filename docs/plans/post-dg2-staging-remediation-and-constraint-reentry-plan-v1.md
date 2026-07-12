@@ -856,6 +856,14 @@ secondary. This locks the method but not the two row-level winners: they remain
 blocked until a separately authorized secure evidence review binds each pair
 to its rotation record. No staging read or mutation is authorized.
 
+Before any separately authorized correction, create a fresh encrypted staging
+logical backup and prove it by restoring into a disposable non-production
+database using existing resources. A sanitized digest must bind the backup to
+the reviewed manifest and runner SHA; restored schema/table availability,
+counts, and approved invariants must reconcile. Any failure is No-Go. Earlier
+restore evidence proves only the method, and this decision authorizes no backup
+run, staging access, paid PITR, DML, or DDL now.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,
