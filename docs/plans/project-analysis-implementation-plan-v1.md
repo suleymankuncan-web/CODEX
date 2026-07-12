@@ -20,9 +20,10 @@ provider, broad-production, or cleanup gate.
   aggregate and the main ruleset readback was verified.
 - A2 is complete in PR #918: root release owns the full frontend suite and the
   frontend child is targeted/reusable.
-- A3 is implemented in PR #919 with two green live proofs. The ten successful
-  root-release-run p95 observation required by NFR-3 remains pending external
-  PR traffic.
+- A3 is implemented in PR #919 and its dated ten-run observation is closed:
+  nearest-rank p95 is `13.23` minutes, above NFR-3's 12-minute target. The
+  measured exception keeps two CI workers and all coverage without a new
+  concurrency experiment.
 - B1 is complete as an honest `blocked_external` record in PR #920. No runtime
   finding or runtime change was claimed. A later owner attestation adds partial
   positive evidence for 5 July checklist approval, Store Action task closure,
@@ -364,9 +365,9 @@ Rollback: restore the standalone workflow trigger without changing tests.
 
 Depends on: PR-A2. Conditional on measured CI duration remaining above NFR-3.
 
-Execution: implemented in PR #919. The first live proof is green with all 371
-tests; ten post-stabilization successful root releases still need a dated p95
-or justified no-change outcome.
+Execution: implemented in PR #919 and measured through the first ten successful
+post-stabilization root releases. All 371 tests remain selected; dated p95 is
+`13.23` minutes, so AC-6 closes through its explicit measured-exception branch.
 
 Scope:
 

@@ -123,7 +123,8 @@ test('project control board preserves current go no-go boundaries', () => {
   }
 
   requireText(docs.controlBoard, 'Do not change auth, API response shape, DB, provider config')
-  requireText(docs.controlBoard, 'A3\'s ten-run p95 observation')
+  requireText(docs.controlBoard, 'A3\'s ten-run p95 is `13.23` minutes')
+  requireText(docs.controlBoard, 'without another unmeasured concurrency experiment')
   requireText(docs.controlBoard, 'B1 pilot evidence: partial owner-attested positive evidence exists')
   requireText(docs.controlBoard, 'remaining persona/session and readback evidence is `blocked_external`')
 })

@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-11
+Last verified: 2026-07-12
 
 ## Reader And Action
 
@@ -32,32 +32,29 @@ The project is in controlled pilot execution mode.
 - Separate mobile app: discovery is documented; implementation is `Parked`.
 - Generic architecture/refactor train: `Parked`; the completed project analysis
   did not authorize a broad code train without a concrete runtime blocker.
-- DG1-DG2 remediation: `Active` by explicit owner decision; execute only the
-  bounded authorization, presentation-honesty, and read-only evidence train.
+- DG1-DG2 remediation: bounded implementation/evidence is complete or externally
+  blocked; TARGET DB-C5 staging is complete while ORG/ASSIGN and DG1-C stay gated.
 - Process/CI alignment: A1/A2/A3 and the bounded D1 unit-test seed are
-  implemented; A3's ten-run p95 observation remains pending external PR
-  traffic.
+  implemented. A3's ten-run p95 is `13.23` minutes, so the 12-minute target is
+  not met; coverage and the current two-worker setting remain unchanged.
 - B1 pilot evidence: partial owner-attested positive evidence exists for
   checklist approval, Store Action task closure, and target submit/edit; the
   remaining persona/session and readback evidence is `blocked_external`.
 
 ## What We Do Now
 
-1. Execute DG1-A of
-   `docs/plans/dg1-dg2-locked-decisions-implementation-plan-v1.md` from fresh
-   main; keep each later PR to its named story and stop at evidence gates.
-2. Keep PR #917's required-release aggregate and PR #918's single full-release
+1. Keep PR #917's required-release aggregate and PR #918's single full-release
    owner stable; do not reintroduce duplicate merge-decision E2E work.
-3. Observe the next ten successful root-release PR runs and record A3's dated
-   p95/no-change decision without reducing test coverage.
-4. Preserve the successful 5 July owner-attested mutation observations and
+2. Preserve A3's dated `13.23`-minute p95 exception; retain two workers and all
+   tests without another unmeasured concurrency experiment.
+3. Preserve the successful 5 July owner-attested mutation observations and
    obtain only the remaining safe read-only B1 evidence; do not create a
    runtime PR for missing access, context, or trace detail.
-5. If a real pilot/demo finding arrives, record and classify it as
+4. If a real pilot/demo finding arrives, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
-6. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
+5. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
    surface, risk, verification, and rollback match.
-7. Keep evidence sanitized and maintain the no-delete workspace boundary.
+6. Keep evidence sanitized and maintain the no-delete workspace boundary.
 
 ## What We Do Not Do Now
 

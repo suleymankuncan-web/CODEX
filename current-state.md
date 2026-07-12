@@ -93,15 +93,10 @@ section intentionally retains only the current operating consequences.
 
 ### A3 Release Measurement
 
-PR #919 has two green live proofs: the implementation head and the final
-documented head each ran all 371 tests with two workers, while the required
-aggregate, targeted frontend child, rehearsal, and Vercel passed. Neither is a
-ten-run p95 claim.
-
-The next ten successful root-release PR runs must be measured before claiming
-NFR-3. Record a dated p95 outcome at or below 12 minutes, or record the
-measured blocker and a no-further-concurrency-change decision without reducing
-coverage. Source:
+PR #919's A3 observation is closed from ten successful root-release jobs. The
+nearest-rank p95 is `13.23` minutes, above the 12-minute target but better than
+the 14m 01s pre-change baseline. Keep all 371 tests and two CI workers; open no
+new concurrency experiment without a measured isolation plan. Source:
 `docs/evidence/performance/2026-07-10-e2e-worker-concurrency-a3.md`.
 
 ### B1 Controlled Pilot Evidence

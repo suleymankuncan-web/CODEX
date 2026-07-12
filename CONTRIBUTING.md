@@ -64,6 +64,9 @@ and record the conflict in the PR.
 - Before opening a PR, run the local pre-PR review pass described below.
 - Merge only after local verification, required GitHub checks, Vercel checks
   when applicable, and mergeability are clean.
+- Use squash merge for controlled PRs so exact-tree post-merge proof can be
+  reused; a documented merge-commit/rebase exception accepts the fallback full
+  release cost.
 - GitHub Codex review is disabled by explicit owner direction. Do not trigger
   `@codex review`, request Codex review, or wait for a Codex reaction/comment.
   It becomes a merge gate again only if the owner explicitly re-enables it.

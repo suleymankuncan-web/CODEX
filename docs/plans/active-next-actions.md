@@ -20,13 +20,13 @@ Documentation entry point:
 
 ## Current Position
 
-As of 12 July 2026, the locked DG2 train has valid V1, V2, and row-authority
-evidence. TARGET is zero under approved active semantics; ORG/assignment rows
-still lack exact historical authority. Duplicate target employees are rejected
-at both application write paths. REM-7 plus REM-8 implementation/evidence are
-merged through PR #965. TARGET alone is `eligible_zero`, REM-8C is not required,
-and TARGET DB-C5 is the sole active constraint slice. ORG/assignment remain
-blocked on historical authority. All speculative runtime work remains parked.
+As of 12 July 2026, the locked DG2 train has valid V1, V2, row-authority, and
+TARGET DB-C5 evidence. TARGET is zero under approved active semantics;
+ORG/assignment rows still lack exact historical authority. Duplicate target
+employees are rejected at both application and staging database boundaries.
+REM-7, REM-8, DB-C5 implementation, and the exact-SHA staging receipt are
+complete through PR #966. ORG/assignment remain blocked on historical
+authority. All speculative runtime work remains parked.
 
 - Current short handoff: `current-state.md`.
 - Execution plan: `docs/plans/project-analysis-implementation-plan-v1.md`.
@@ -44,22 +44,17 @@ blocked on historical authority. All speculative runtime work remains parked.
 
 Next practical action:
 
-1. Complete and merge the repository-only TARGET DB-C5 implementation: migration
-   060, exact provenance/checksum gates, fresh read-only preflight, canonical
-   migration apply, postflight, one-shot launcher, disposable proof and rollback.
-2. From that exact merged SHA, run the one-shot staging launcher under the locked
-   5s/30s window and merge only sanitized evidence/handoff documents. Production
-   remains out.
-3. Keep the separate target-reference supersession lifecycle gap explicit; do
+1. Keep the separate target-reference supersession lifecycle gap explicit; do
    not mix it into same-request duplicate enforcement.
-4. Observe the next ten successful root-release PR runs and record A3's dated
-   p95 or justified no-change outcome without weakening coverage.
-5. Obtain a safe read-only B1 bundle for one remaining gap: login/session,
+2. Preserve A3's dated ten-run result: p95 is `13.23` minutes, above the
+   12-minute target. Keep all tests and the current two-worker CI setting; do
+   not open another concurrency experiment without a new measured isolation plan.
+3. Obtain a safe read-only B1 bundle for one remaining gap: login/session,
    rankings/profile scope, or reports/incentives readback. Preserve the 5 July
    mutation observations and do not rerun them only to improve documentation.
-6. If a pilot/demo blocker appears, record route, persona, period,
+4. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
-7. Keep new modules, separate mobile implementation, broad production, broad
+5. Keep new modules, separate mobile implementation, broad production, broad
    redesign, provider/source integration, and generic architecture work parked
    until a real P0/P1 finding or explicit owner decision reopens one path.
 
