@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_1b_evidence_ready`
+Status: `active_rem_2_owner_decisions_pending`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`)
@@ -9,7 +9,7 @@ Do not use when: changing production, auto-repairing data, treating 70 check hit
 Source of truth: merged PRs #951 and #952, `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`, and the reviewed repository contracts listed below
 Last verified: 2026-07-12
 Target executor: an autonomous implementation agent operating under the repository discipline
-Implementation authority: REM-1B evidence-only PR and autonomous closeout; the one authorized staging diagnostic is complete and no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
+Implementation authority: REM-2 owner-option documentation only; no owner decision is selected by Codex and no further staging run, DML, DDL, migration, runtime change, paid service, or production operation is authorized
 
 ## 1. Reader And Required Outcome
 
@@ -73,6 +73,10 @@ unless a reviewed correlation query proves a distinct-record count.
 - `codex/rem-1b-staging-diagnostic-evidence` was created from that exact merge
   commit. It is the only active REM-1B evidence branch and starts with no
   runner/query change.
+- PR #953 merged the completed REM-1B receipt at
+  `5f972273e4aad8e97049b764fbe7bfee6d374a37`. The active work is now the REM-2
+  owner-option packet; the merged evidence branch is no longer an execution
+  surface and no second diagnostic is authorized.
 
 - New target-distribution requests write `allocation_count` from
   `input.allocations.length` and write the same allocation collection to
@@ -786,6 +790,87 @@ Scope:
 - lock restore, concurrency, operator, and execution-window decisions.
 
 This is documentation and approval truth. It still performs no mutation.
+
+The cold-reader decision options, non-binding Sokrates recommendations, unset
+owner fields, and stop rules are prepared in
+`docs/plans/rem-2-owner-decision-packet-v1.md`. The REM-2 PR remains incomplete
+until the owner explicitly selects or blocks the applicable decisions; Codex
+must not convert a recommendation into approval.
+
+Locked on 2026-07-12: all five pilot-import `TARGET-02` buckets are
+`valid_under_revised_semantics` and their current rows are `preserve`. V1 stays
+immutable; constraint eligibility is blocked until a separately approved
+REM-2B query/spec validates pilot-import counts against approved personnel
+references and publishes the exact V1-to-V2 bridge. This owner decision
+authorizes no data mutation.
+
+Also locked on 2026-07-12: duplicate employee allocations inside one target
+request are `reject_app_and_db`. A later revision or new target for the same
+month is a separate, reasoned request/version and may contain the employee once
+again. Only one approved reference may be active per employee/month/type;
+replacement approval must preserve the previous reference as `superseded`
+rather than overwrite its history. Application enforcement precedes database
+enforcement. Database enforcement remains behind REM-8 and no DDL is
+authorized by this decision.
+
+For monthly KPI actuals, region means the responsible region manager's
+portfolio. The canonical owner is the assignment effective on the last day of
+the KPI month: a mid-month change assigns the whole month to the new manager,
+while a later-month change does not rewrite closed history. ORG-04 KPI
+validation must therefore use effective-dated period-end assignment rather
+than the store's current region. The nine existing hits remain unclassified
+until that evidence exists; missing or overlapping assignment is fail-closed.
+No replay, DML, or DDL is authorized.
+
+For Norm Kadro, closed approved plans preserve their historical scope. Active
+or future plans affected by a manager change must be replaced through an
+approved version that belongs to the new manager, while the prior version
+remains `superseded`. Ownership-only replacement preserves headcount/FTE;
+changing plan values requires a separate reasoned revision. The two current
+hits remain unclassified pending period-state and effective-manager evidence.
+There is no direct-update exception and no rebuild, DML, or DDL authorization.
+
+For employee assignment region, the store master owns an active assignment's
+current region-manager portfolio while a closed assignment preserves its
+period region. A manager/region change closes the prior active assignment and
+creates a successor; it never rewrites the historical row. The three current
+ORG-02 hits remain unclassified pending status, date, and source evidence.
+Missing dates, overlapping active rows, or missing store authority fail closed.
+The current import writer's region-only rotation gap requires a separate
+implementation PR; no replay, direct update, DML, or DDL is authorized.
+
+Multiple concurrent employee assignments are allowed for cross-store support,
+but exactly one may be open primary. Support assignments must be secondary.
+`end_date` is inclusive and a successor primary assignment starts no earlier
+than the following day; a same-day primary transfer is invalid. The two
+ASSIGN-01 pairs are therefore defects, but their primary winner remains unset
+at row level until approved rotation/lifecycle evidence is reviewed per pair.
+The authority method is locked; no automatic
+latest-row winner, demotion, closure, DML, or DDL is authorized.
+
+Primary winner authority is the approved, effective-dated rotation or
+assignment-lifecycle record. The prior store stays primary through the day
+before rotation; the new store becomes primary on the rotation effective date.
+The prior row is closed, not overwritten, and an approved support row remains
+secondary. This locks the method but not the two row-level winners: they remain
+blocked until a separately authorized secure evidence review binds each pair
+to its rotation record. No staging read or mutation is authorized.
+
+Before any separately authorized correction, create a fresh encrypted staging
+logical backup and prove it by restoring into a disposable non-production
+database using existing resources. A sanitized digest must bind the backup to
+the reviewed manifest and runner SHA; restored schema/table availability,
+counts, and approved invariants must reconcile. Any failure is No-Go. Earlier
+restore evidence proves only the method, and this decision authorizes no backup
+run, staging access, paid PITR, DML, or DDL now.
+
+A future correction window requires an approved pause of every identified API,
+import, worker, and operator writer that can touch the affected rows. Exactly
+one manifest-bound correction runner may execute. Deterministic row locks and
+old-value predicates remain mandatory; any conflict, count drift, lock failure,
+or unexpected writer activity aborts and rolls back the transaction. Proven
+read-only traffic may continue. This uses existing controls and authorizes no
+pause, staging access, correction window, DML, or DDL now.
 
 ### REM-2B — Versioned invariant definition, conditional
 
