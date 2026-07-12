@@ -822,6 +822,14 @@ than the store's current region. The nine existing hits remain unclassified
 until that evidence exists; missing or overlapping assignment is fail-closed.
 No replay, DML, or DDL is authorized.
 
+For Norm Kadro, closed approved plans preserve their historical scope. Active
+or future plans affected by a manager change must be replaced through an
+approved version that belongs to the new manager, while the prior version
+remains `superseded`. Ownership-only replacement preserves headcount/FTE;
+changing plan values requires a separate reasoned revision. The two current
+hits remain unclassified pending period-state and effective-manager evidence.
+There is no direct-update exception and no rebuild, DML, or DDL authorization.
+
 ### REM-2B — Versioned invariant definition, conditional
 
 Open only for `valid_under_revised_semantics`. Preserve V1 SQL/spec/evidence,

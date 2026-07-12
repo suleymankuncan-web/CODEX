@@ -71,7 +71,7 @@ reads are bounded without mutation, DB, or authorization-policy changes. PR
 PR #944 completed DG1-B. PR #948 completed DG1-D: non-development Admin Session is read-only while the local diagnostics editor remains development-only.
 PR #949 completed DG2-A and PR #950 completed DG2-B. The approved DG2-C read-only
 staging receipt records 70 invariant check hits and an overall DB-CONSTRAINTS
-No-Go without repair or mutation. PR #952 merged REM-1A; PR #953 merged one owner-confirmed REM-1B run with stable 70 family hits, 72 source records, nine buckets, and unresolved distinct-person count. REM-2 locked TARGET semantics and monthly KPI region ownership to the manager effective at month end; all other owner decisions remain unset. DG1-C retirement remains usage-gated.
+No-Go without repair or mutation. PR #952 merged REM-1A; PR #953 merged one owner-confirmed REM-1B run with stable 70 family hits, 72 source records, nine buckets, and unresolved distinct-person count. REM-2 locked TARGET, month-end KPI ownership, and Norm Kadro lifecycle semantics; all other owner decisions remain unset. DG1-C retirement remains usage-gated.
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch aggregate and verified the ruleset readback.
 - PR #918 (A2) made root release the one canonical full frontend-release owner; the frontend child is targeted and reusable, not a duplicate full suite.
 - PR #919 (A3) kept all 371 Playwright tests, uses two CI-only workers with
@@ -176,7 +176,7 @@ The no-delete inventory is
 
 Now:
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
-- Merged REM-1B evidence explains the stable 70 hits without mutation. `codex/rem-2-owner-decision-options` locks TARGET pilot semantics and rejects same-request employee duplicates while preserving separate revision versions. KPI region means the month-end manager portfolio; the nine ORG-04 KPI hits remain unclassified pending effective-dated proof. The current target approval writer still requires a separate history-preserving implementation. Other owner fields are UNSET; DB-CONSTRAINTS remains No-Go and no second run, DML, DDL, paid service, runtime change, or production operation is authorized.
+- Merged REM-1B evidence explains the stable 70 hits without mutation. `codex/rem-2-owner-decision-options` locks TARGET pilot semantics, month-end KPI manager ownership, and Norm Kadro lifecycle: preserve closed plans, supersede active/future plans after manager change without altering values solely for ownership. The nine KPI and two Norm Kadro hits remain unclassified pending effective-dated/period-state proof. Separate history-preserving writers are still required. Other owner fields are UNSET; DB-CONSTRAINTS remains No-Go and no second run, DML, DDL, paid service, runtime change, or production operation is authorized.
 
 Next:
 1. Review `docs/plans/rem-2-owner-decision-packet-v1.md` with the owner and lock or block decisions sequentially; recommendations are not approvals.

@@ -295,7 +295,28 @@ choosing. Rebuild/supersede active or future plans; preserve closed historical
 plans. Because REM-1B intentionally contains no business dates, the current
 safe selection is otherwise `blocked`.
 
-Owner selection for `ops.workforce_norm_plan`: `UNSET`.
+Owner selection for `ops.workforce_norm_plan`:
+`valid_under_revised_semantics`, approved 2026-07-12.
+
+Locked lifecycle rule:
+
+| Field | Value |
+| --- | --- |
+| Decision ref | `REM2-ORG04-NORM-LIFECYCLE-20260712` |
+| Closed period | Preserve the approved plan and its historical manager/region scope |
+| Active period after manager change | Create an approved replacement version under the new manager; retain the prior version as `superseded` |
+| Future period after manager change | Rebuild or supersede through the approved planning lifecycle before the period becomes active |
+| Plan values | Preserve approved headcount/FTE when only manager ownership changes; changing business values requires a separate reasoned plan revision and approval |
+| Direct row update | Forbidden; it loses approval and version history |
+| Missing period state or manager assignment | `blocked`; do not guess, rewrite, or delete |
+| Existing two hits | Unclassified pending period-state and effective manager evidence |
+
+`D-ORG-HISTORY / ORG-04 workforce_norm_plan` is therefore
+`supersede_active_future_preserve_closed`, approved 2026-07-12. This is the
+business lifecycle to implement, not proof that the two current rows already
+follow it. The repository has no normal runtime writer for these plans, so any
+replacement path requires a separate implementation and approval package. No
+rebuild, direct update, DML, or DDL is authorized here.
 
 ## 8. ORG-02: Assignment Region Versus Store Region
 
@@ -433,8 +454,8 @@ D-TARGET-DUPLICATE = reject_app_and_db (LOCKED 2026-07-12)
 
 D-INVARIANT-DEFINITION / ORG-04 kpi_actual = valid_under_revised_semantics (LOCKED 2026-07-12)
 D-ORG-HISTORY / ORG-04 kpi_actual = period_end_manager_canonical (LOCKED 2026-07-12)
-D-INVARIANT-DEFINITION / ORG-04 workforce_norm_plan = UNSET
-D-ORG-HISTORY / ORG-04 workforce_norm_plan = UNSET
+D-INVARIANT-DEFINITION / ORG-04 workforce_norm_plan = valid_under_revised_semantics (LOCKED 2026-07-12)
+D-ORG-HISTORY / ORG-04 workforce_norm_plan = supersede_active_future_preserve_closed (LOCKED 2026-07-12)
 
 D-INVARIANT-DEFINITION / ORG-02 assignment-region = UNSET
 D-ORG-AUTHORITY / ORG-02 assignment-region = UNSET
