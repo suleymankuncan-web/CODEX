@@ -1,6 +1,6 @@
 # Post-DG2 Staging Remediation And Constraint Re-entry Plan V1
 
-Status: `active_rem_8_evidence_pending_pr_then_db_c5`
+Status: `active_dbc5_repository_implementation_then_exact_sha_evidence`
 Shelf: architecture
 Author: Codex
 Reviewers: Product owner (`REM-1A approved 2026-07-12`; `REM-1B continuation approved 2026-07-12`; all REM-2 owner decisions locked 2026-07-12)
@@ -363,8 +363,13 @@ operation—not for another ceremonial approval prompt.
 ## 6. Required Owner Decisions
 
 The owner decisions below were locked on 2026-07-12 as recorded in the REM-2
-packet. `D-STAGING-MUTATION` and `D-CONSTRAINT-WINDOW` remain `NOT_READY`, and
-no family correction may proceed without their later package-specific gates.
+packet. `D-STAGING-MUTATION` remains unavailable for the blocked ORG/ASSIGN
+families. After merged REM-8A/8B evidence, `D-CONSTRAINT-WINDOW` is locked only
+for eligible TARGET DB-C5 as
+`bounded_5s_add_30s_validate_no_pause_fail_closed`: ADD waits at most five
+seconds, the migration transaction at most 30 seconds, normal writers are not
+paused, and every drift/timeout fails closed. This family-specific decision
+does not authorize production or make another family eligible.
 
 | Decision | Question to lock | Allowed outcomes |
 | --- | --- | --- |
@@ -1124,6 +1129,14 @@ separation is:
 Each slice is optional and independently approved. Unsupported or high-lock
 enforcement remains blocked instead of being forced into the train.
 
+Current exact disposition: DB-C1 through DB-C4 remain excluded/blocked.
+TARGET-owned DB-C5 is the sole selected slice and is specified in
+`docs/plans/dbc5-target-duplicate-enforcement-spec-v1.md`. It requires two
+physical PRs: one repository implementation with no staging access, followed
+by one exact-merged-SHA evidence PR after the one-shot staging apply. Migration
+060 constrains only duplicate employee membership inside one ordinary request;
+it does not implement or claim target-reference supersession history.
+
 ### U-1 and optional U-2 — DG1-C provider usage
 
 This is a linked but non-blocking external track, not part of database-plan
@@ -1146,7 +1159,9 @@ Work-package labels are not physical PR counts:
 - REM-8A implementation/evidence plus REM-8B normally add two PRs when their
   disposable rehearsal ships with the implementation; REM-8C adds two only if
   staging DDL measurement is unavoidable.
-- DB-C1 through DB-C5 add zero to five conditional PRs.
+- Each selected DB-C family adds one implementation PR plus one exact-SHA
+  evidence PR. The theoretical maximum is ten, but current classification
+  selects only DB-C5, so exactly two physical PRs remain from PR #965.
 - U-1/U-2 are excluded; they remain one evidence and at most one runtime PR in
   their own DG1-C track.
 

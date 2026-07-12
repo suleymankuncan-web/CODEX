@@ -23,6 +23,8 @@ test("REM-8 disposable smoke pins PostgreSQL 17 dump/restore and exact cleanup",
   assert.match(source, /assertContainerAbsent/);
   assert.match(source, /cleanup\(\)/);
   assert.match(source, /cleanup was not verified/);
+  assert.match(source, /rollbackToReviewedPreConstraintState/);
+  assert.match(source, /060_target_distribution_duplicate_employee_constraint_v1\.sql/);
 });
 
 test("REM-8 disposable smoke cannot target staging, production or arbitrary databases", () => {

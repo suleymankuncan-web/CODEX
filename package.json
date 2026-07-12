@@ -19,7 +19,9 @@
     "evidence:staging:remediation:authority:v1": "node scripts/staging-remediation-row-authority-evidence-launcher.mjs",
     "evidence:staging:remediation:reconciliation:v1": "node scripts/staging-remediation-reconciliation-evidence-launcher.mjs",
     "evidence:staging:rem8:target:constraint": "node scripts/rem8-target-constraint-observation-evidence-launcher.mjs",
+    "evidence:staging:dbc5:target:constraint": "node scripts/dbc5-target-constraint-evidence-launcher.mjs",
     "smoke:rem8:target:constraint": "node scripts/rem8-target-constraint-disposable-smoke.mjs",
+    "smoke:dbc5:target:constraint": "node scripts/dbc5-target-constraint-disposable-smoke.mjs",
     "test:scripts": "node --test scripts/*.test.mjs",
     "check:pilot-stabilization": "node --test scripts/pilot-route-role-matrix-contract.test.mjs scripts/pilot-release-smoke-checklist-contract.test.mjs scripts/ranking-demo-live-boundary-contract.test.mjs scripts/pilot-stabilization-release-gate-contract.test.mjs && npm.cmd --prefix admin-web run smoke:pilot"
   }

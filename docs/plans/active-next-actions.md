@@ -23,10 +23,10 @@ Documentation entry point:
 As of 12 July 2026, the locked DG2 train has valid V1, V2, and row-authority
 evidence. TARGET is zero under approved active semantics; ORG/assignment rows
 still lack exact historical authority. Duplicate target employees are rejected
-at both application write paths. REM-7 implementation and exact-SHA staging
-receipt are merged. TARGET alone is `eligible_zero`; REM-8A/8B repository-only
-preparation is implemented and PostgreSQL 17 disposable-tested pending PR. All
-speculative runtime work remains parked.
+at both application write paths. REM-7 plus REM-8 implementation/evidence are
+merged through PR #965. TARGET alone is `eligible_zero`, REM-8C is not required,
+and TARGET DB-C5 is the sole active constraint slice. ORG/assignment remain
+blocked on historical authority. All speculative runtime work remains parked.
 
 - Current short handoff: `current-state.md`.
 - Execution plan: `docs/plans/project-analysis-implementation-plan-v1.md`.
@@ -44,14 +44,14 @@ speculative runtime work remains parked.
 
 Next practical action:
 
-1. Merge the repository-only REM-8A observation and REM-8B disposable rehearsal
-   implementation after canonical checks, without staging access.
-2. From the exact merged SHA, run one verify-full/read-only REM-8A staging
-   observation plus the local REM-8B rehearsal and merge only sanitized
-   evidence/handoff documents.
-3. Decide REM-8C from those receipts. Omit it if staging fits the conservative
-   local envelope; otherwise use its own reversible package/evidence train.
-   Only then may TARGET-owned DB-C5 enforcement proceed; production remains out.
+1. Complete and merge the repository-only TARGET DB-C5 implementation: migration
+   060, exact provenance/checksum gates, fresh read-only preflight, canonical
+   migration apply, postflight, one-shot launcher, disposable proof and rollback.
+2. From that exact merged SHA, run the one-shot staging launcher under the locked
+   5s/30s window and merge only sanitized evidence/handoff documents. Production
+   remains out.
+3. Keep the separate target-reference supersession lifecycle gap explicit; do
+   not mix it into same-request duplicate enforcement.
 4. Observe the next ten successful root-release PR runs and record A3's dated
    p95 or justified no-change outcome without weakening coverage.
 5. Obtain a safe read-only B1 bundle for one remaining gap: login/session,
