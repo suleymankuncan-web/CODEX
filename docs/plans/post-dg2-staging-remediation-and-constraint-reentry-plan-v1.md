@@ -924,15 +924,21 @@ receipt or V2 query result exists for that SHA, its marker remains consumed,
 and it is not retried. The next implementation uses the already reviewed repo
 pattern `cmd.exe /d /s /c "npm.cmd ..."` on Windows.
 
-Recovery requires a new implementation PR containing the versioned
-`evidence:staging:remediation:v2` launcher and adversarial contract tests. The
-launcher reads the CA file into certificate PEM while refusing private-key
-blocks, validates host/database plus the authenticated Supabase project-ref
-SHA-256 and exact window, pins branch/HEAD/`origin/main`, atomically records one
-attempt per reviewed commit, and binds its own SHA-256 to the safe
-attempt/summary. Only the launcher's new merged SHA may create a fresh evidence
-branch and one new standing-authorized attempt. Query or invariant meaning
-remains unchanged.
+PR #957 merged that Windows invocation fix at
+`07c38414948c0af44172a52034dfb7000163bdc3`. A fresh branch from that exact SHA
+executed once under the standing authorization and produced the validated V2
+receipt at
+`docs/evidence/readiness/2026-07-12-staging-remediation-invariant-v2.json`.
+The launcher bound target/project, CA PEM, window, branch, HEAD, `origin/main`,
+one-shot marker and receipt digests; verify-full, certificate verification,
+`REPEATABLE READ READ ONLY`, typed schema and empty stderr passed.
+
+The exact V1-to-V2 bridge records `TARGET-02` as `54 -> 0` with all 54 revised
+valid, `ORG-02` as `3 -> 3`, `ASSIGN-01` as `2 -> 4`, and `ORG-04` as
+`11 -> 7142`. V2 totals are check hits, not distinct people or automatic
+correction rows. `TARGET-02` advances toward REM-7 preservation/reconciliation.
+The other families require secure row-authority classification; missing or
+ambiguous manager/rotation evidence remains blocked and selects no winner.
 
 ### 9.1 Family correction two-PR protocol
 

@@ -1,0 +1,177 @@
+{
+  "certificateVerified": true,
+  "event": "staging_remediation_invariant_v2.completed",
+  "queryDigest": "8b7f9ea6950f063cc125ea979ed9d30f3a89236b198f727af86875d67d6e3ae9",
+  "queryResult": {
+    "bridge": [
+      {
+        "carriedForwardCount": 2,
+        "family": "ASSIGN-01",
+        "revisedValidCount": 0,
+        "unit": "check_hits",
+        "v1HitCount": 2,
+        "v2HitCount": 4,
+        "v2NewCount": 2
+      },
+      {
+        "carriedForwardCount": 3,
+        "family": "ORG-02",
+        "revisedValidCount": 0,
+        "unit": "check_hits",
+        "v1HitCount": 3,
+        "v2HitCount": 3,
+        "v2NewCount": 0
+      },
+      {
+        "carriedForwardCount": 2,
+        "family": "ORG-04",
+        "revisedValidCount": 9,
+        "unit": "check_hits",
+        "v1HitCount": 11,
+        "v2HitCount": 7142,
+        "v2NewCount": 7140
+      },
+      {
+        "carriedForwardCount": 0,
+        "family": "TARGET-02",
+        "revisedValidCount": 54,
+        "unit": "check_hits",
+        "v1HitCount": 54,
+        "v2HitCount": 0,
+        "v2NewCount": 0
+      }
+    ],
+    "familyTotals": [
+      {
+        "family": "ASSIGN-01",
+        "hitCount": 4,
+        "unit": "check_hits"
+      },
+      {
+        "family": "ORG-02",
+        "hitCount": 3,
+        "unit": "check_hits"
+      },
+      {
+        "family": "ORG-04",
+        "hitCount": 7142,
+        "unit": "check_hits"
+      },
+      {
+        "family": "TARGET-02",
+        "hitCount": 0,
+        "unit": "check_hits"
+      }
+    ],
+    "hits": [
+      {
+        "count": 2,
+        "invariant": "assignment.exactly_one_open_primary",
+        "reason": "assignment.open_primary_multiple",
+        "sampleRefs": [
+          "525eb7052c7f",
+          "8481e38d943b"
+        ],
+        "sourceTable": "ops.employee_assignment_history",
+        "unit": "check_hits"
+      },
+      {
+        "count": 2,
+        "invariant": "assignment.primary_ranges_non_overlapping",
+        "reason": "assignment.primary_strict_overlap",
+        "sampleRefs": [
+          "454f7a41e1f1",
+          "64fff35e052d"
+        ],
+        "sourceTable": "ops.employee_assignment_history",
+        "unit": "check_hits"
+      },
+      {
+        "count": 3,
+        "invariant": "assignment.lifecycle_region",
+        "reason": "assignment.active_region_store_mismatch",
+        "sampleRefs": [
+          "1092b47283b2",
+          "3208bd96b757",
+          "a7c9046ba04f"
+        ],
+        "sourceTable": "ops.employee_assignment_history",
+        "unit": "check_hits"
+      },
+      {
+        "count": 61,
+        "invariant": "norm.lifecycle_manager",
+        "reason": "norm.active_manager_ambiguous",
+        "sampleRefs": [
+          "03bfa89a40f9",
+          "139674f91756",
+          "14ef1b568ef6",
+          "1acddf9d2e3e",
+          "260a2fe1a213"
+        ],
+        "sourceTable": "ops.workforce_norm_plan",
+        "unit": "check_hits"
+      },
+      {
+        "count": 2,
+        "invariant": "norm.lifecycle_manager",
+        "reason": "norm.active_manager_missing",
+        "sampleRefs": [
+          "72cdabb98526",
+          "b2899a679db2"
+        ],
+        "sourceTable": "ops.workforce_norm_plan",
+        "unit": "check_hits"
+      },
+      {
+        "count": 245,
+        "invariant": "org.kpi_period_end_manager",
+        "reason": "kpi.period_end_manager_ambiguous",
+        "sampleRefs": [
+          "00dad9962093",
+          "016df9caa49a",
+          "03033743a12b",
+          "03194eaec33c",
+          "034cb0904c78"
+        ],
+        "sourceTable": "ops.kpi_actual",
+        "unit": "check_hits"
+      },
+      {
+        "count": 6834,
+        "invariant": "org.kpi_period_end_manager",
+        "reason": "kpi.period_end_manager_missing",
+        "sampleRefs": [
+          "000b742bf811",
+          "00199b67c715",
+          "001b760568d5",
+          "001c85e5e3d0",
+          "002441e41aa9"
+        ],
+        "sourceTable": "ops.kpi_actual",
+        "unit": "check_hits"
+      }
+    ],
+    "observedAt": "2026-07-12T11:47:12.842Z",
+    "overallCheckHits": {
+      "count": 7149,
+      "unit": "check_hits"
+    },
+    "querySetVersion": "staging-remediation-invariant-v2"
+  },
+  "receiptVersion": "2",
+  "reviewedCommit": "07c38414948c0af44172a52034dfb7000163bdc3",
+  "runnerDigest": "fc8539c2001ad35248cc18d893d53e01b55751a70eadd48a8b3ee9720a7a995f",
+  "targetClass": "staging",
+  "targetFingerprint": "d1e123463e47d9429c7a1b3d743e42c6ba619d1d43de3787ffe8f5070f0f9400",
+  "timeoutProfile": {
+    "connectionMs": 5000,
+    "idleMs": 1000,
+    "queryMs": 30000,
+    "statementMs": 30000
+  },
+  "tlsMode": "verify-full",
+  "transactionIsolation": "repeatable_read",
+  "transactionReadOnly": true,
+  "receiptDigest": "f97cb2fb251735b36f7a2501d3a614da229aa653f579eb6f5a7fb2dae0685077"
+}
