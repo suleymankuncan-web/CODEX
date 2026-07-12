@@ -71,7 +71,7 @@ reads are bounded without mutation, DB, or authorization-policy changes. PR
 PR #944 completed DG1-B. PR #948 completed DG1-D: non-development Admin Session is read-only while the local diagnostics editor remains development-only.
 PR #949 completed DG2-A and PR #950 completed DG2-B. The approved DG2-C read-only
 staging receipt records 70 invariant check hits and an overall DB-CONSTRAINTS
-No-Go without repair or mutation. DG1-C retirement remains usage-gated.
+No-Go without repair or mutation. PR #952 merged REM-1A at `09800d367e5250f5bd08e1412d86323d86f9262f`; REM-1B then completed one owner-confirmed read-only run with stable 70 family hits, 72 source records, nine buckets, and unresolved distinct-person count. Its evidence-only PR is the active closeout. DG1-C retirement remains usage-gated.
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch aggregate and verified the ruleset readback.
 - PR #918 (A2) made root release the one canonical full frontend-release owner; the frontend child is targeted and reusable, not a duplicate full suite.
 - PR #919 (A3) kept all 371 Playwright tests, uses two CI-only workers with
@@ -176,16 +176,14 @@ The no-delete inventory is
 
 Now:
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
-- DG2-C staging evidence is merged at `docs/evidence/readiness/2026-07-11-dg2-staging-invariant-preflight-v1.md`: 70 check hits, read-only proof, no repair, and DB-CONSTRAINTS No-Go. The owner approved REM-1A only; staging execution, DML, DDL, paid services, and production remain unauthorized.
+- REM-1B evidence on `codex/rem-1b-staging-diagnostic-evidence` explains the stable 70 hits without mutation: TARGET-02=54, ORG-04=11, ORG-02=3, ASSIGN-01=2; 72 source records, nine buckets, people unresolved. Exact receipt/digests are in `docs/evidence/readiness/2026-07-12-staging-remediation-diagnostic-v1.*`. DB-CONSTRAINTS remains No-Go; no second run, DML, DDL, paid service, runtime change, or production operation is authorized.
 
 Next:
-1. Complete and merge REM-1A: the versioned reason-bucket query/runner, repeatable-read proof, strict sanitizer/digest receipt, and disposable adversarial tests. Do not connect it to staging in the implementation PR.
-2. After REM-1A merges, create REM-1B from the merged SHA and stop until the owner separately confirms the exact staging target and run window. REM-1B must execute the unchanged merged runner and remain evidence-only.
-3. Keep DB-CONSTRAINTS blocked until owner decisions, approved family corrections, a zero canonical rerun, and measured lock/compatibility/rollback gates all close.
-4. Independently obtain the DG1-C provider usage window; if usage is external or unknown, preserve compatibility and do not open a breaking runtime PR.
-5. Keep merged DG-3/DG-4 receipts as baselines; broad production remains gated.
-6. Obtain one safe read-only B1 bundle for a remaining evidence gap; do not
-   repeat the successful 5 July mutations solely to improve documentation.
+1. Close and merge the REM-1B evidence-only PR after docs/script contracts, receipt validation, required checks, and mergeability pass.
+2. From merged main, prepare Sokrates-based REM-2 owner options; never choose authority, history, temporal, restore, concurrency, or correction decisions for the owner.
+3. Keep DB-CONSTRAINTS blocked until decisions, approved family corrections, zero canonical reconciliation, and lock/compatibility/rollback gates close.
+4. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
+5. Keep DG-3/DG-4 receipts as baselines and broad production gated; obtain one safe read-only B1 gap bundle without repeating the successful 5 July mutations only for documentation.
 
 Park:
 

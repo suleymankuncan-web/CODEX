@@ -1,0 +1,402 @@
+{
+  "certificateVerified": true,
+  "event": "staging_remediation_diagnostic.completed",
+  "impactInventory": {
+    "catalog": [
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "audit.event_log",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.employee_assignment_history",
+        "triggerCount": 1
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.employee_offboarding_request",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.kpi_actual",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.kpi_target",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.personnel_target_reference",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.sales_target_incentive_adjustment",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.sales_target_incentive_projection",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 1,
+        "sourceTable": "ops.sales_target_incentive_region_correction",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.sales_target_incentive_region_package",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.sales_target_incentive_region_package_store",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.sales_target_incentive_store_review",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.seller_code_request",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.store_action_plan",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.target_distribution_request",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.turnover_event",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "ops.workforce_norm_plan",
+        "triggerCount": 0
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "rpt.sales_target_incentive_assignment_snapshot",
+        "triggerCount": 1
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "rpt.sales_target_incentive_final_snapshot",
+        "triggerCount": 1
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "rpt.turnover_snapshot",
+        "triggerCount": 1
+      },
+      {
+        "generatedColumnCount": 0,
+        "sourceTable": "stg.master_data_bootstrap_row",
+        "triggerCount": 0
+      }
+    ],
+    "downstreamCodes": [
+      "assignment.headcount_turnover_targets_reports_incentives",
+      "target.personnel_target_reference"
+    ],
+    "inventoryVersion": "staging-remediation-impact-v1",
+    "writePathCodes": [
+      "assignment.integration_materialization",
+      "assignment.master_data_bootstrap",
+      "assignment.pilot_roster_import",
+      "assignment.workforce_lifecycle",
+      "target.approval",
+      "target.pilot_roster_import",
+      "target.request_create"
+    ],
+    "inventoryDigest": "b80773c4da3063483c0a8f6886a090ecfa8d4c9007de5bc3d0f74b39adb073de"
+  },
+  "queryDigest": "759e857373db8f3cda846f4eafe084e17cb4a0abd650962d47d3904394e87e25",
+  "queryResult": {
+    "buckets": [
+      {
+        "dimensions": {
+          "openEnded": true,
+          "overlapKind": "strict_multi_day",
+          "scopeRelation": "cross_scope"
+        },
+        "family": "ASSIGN-01",
+        "hitCount": 2,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "assignment.strict_multi_day",
+          "assignment.open_ended",
+          "assignment.cross_scope"
+        ],
+        "sampleRefs": [
+          "22ef1605151f",
+          "99ba8aa572d5"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.employee_assignment_history",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "multipleReasons": false
+        },
+        "distinctSourceRecordCount": 3,
+        "family": "ORG-02",
+        "hitCount": 3,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "org.assignment_region_store_region"
+        ],
+        "sampleRefs": [
+          "857753927fb3",
+          "9c8b0943b143",
+          "be85ba705fe8"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.employee_assignment_history",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "multipleReasons": false
+        },
+        "distinctSourceRecordCount": 9,
+        "family": "ORG-04",
+        "hitCount": 9,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "org.scope_region_store"
+        ],
+        "sampleRefs": [
+          "1b653a5146e0",
+          "246dbd795939",
+          "376e62fd9afa",
+          "5b6a6ed290bd",
+          "7f521150869a"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.kpi_actual",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "multipleReasons": false
+        },
+        "distinctSourceRecordCount": 2,
+        "family": "ORG-04",
+        "hitCount": 2,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "org.scope_region_store"
+        ],
+        "sampleRefs": [
+          "4934b376acef",
+          "921246f98ec6"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.workforce_norm_plan",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "countDelta": 1,
+          "writeSource": "pilot_roster_import",
+          "approvalMode": "unknown",
+          "requestStatus": "approved",
+          "createdVintage": "2026_h2",
+          "approvalEvidence": "absent"
+        },
+        "distinctSourceRecordCount": 7,
+        "family": "TARGET-02",
+        "hitCount": 7,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "target.count_greater_than_json_length"
+        ],
+        "sampleRefs": [
+          "36f276c1267b",
+          "37b247df2665",
+          "45200432b9dd",
+          "b51b2195b40d",
+          "b880c646ec29"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.target_distribution_request",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "countDelta": 2,
+          "writeSource": "pilot_roster_import",
+          "approvalMode": "unknown",
+          "requestStatus": "approved",
+          "createdVintage": "2026_h2",
+          "approvalEvidence": "absent"
+        },
+        "distinctSourceRecordCount": 10,
+        "family": "TARGET-02",
+        "hitCount": 10,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "target.count_greater_than_json_length"
+        ],
+        "sampleRefs": [
+          "14ce879bcd38",
+          "213c58355d95",
+          "392622171566",
+          "42c0d0d8331c",
+          "4fdac43399e0"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.target_distribution_request",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "countDelta": 3,
+          "writeSource": "pilot_roster_import",
+          "approvalMode": "unknown",
+          "requestStatus": "approved",
+          "createdVintage": "2026_h2",
+          "approvalEvidence": "absent"
+        },
+        "distinctSourceRecordCount": 17,
+        "family": "TARGET-02",
+        "hitCount": 17,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "target.count_greater_than_json_length"
+        ],
+        "sampleRefs": [
+          "036bfddbc45a",
+          "0f5ad3f8c46b",
+          "2790dfed37ca",
+          "2a7e77e78476",
+          "2f9e340910f6"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.target_distribution_request",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "countDelta": 4,
+          "writeSource": "pilot_roster_import",
+          "approvalMode": "unknown",
+          "requestStatus": "approved",
+          "createdVintage": "2026_h2",
+          "approvalEvidence": "absent"
+        },
+        "distinctSourceRecordCount": 15,
+        "family": "TARGET-02",
+        "hitCount": 15,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "target.count_greater_than_json_length"
+        ],
+        "sampleRefs": [
+          "0dad37bd3ed6",
+          "268807706828",
+          "4766ceba186f",
+          "52f7abc03fdb",
+          "631a657782b1"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.target_distribution_request",
+        "unit": "check_hits"
+      },
+      {
+        "dimensions": {
+          "countDelta": 5,
+          "writeSource": "pilot_roster_import",
+          "approvalMode": "unknown",
+          "requestStatus": "approved",
+          "createdVintage": "2026_h2",
+          "approvalEvidence": "absent"
+        },
+        "distinctSourceRecordCount": 5,
+        "family": "TARGET-02",
+        "hitCount": 5,
+        "querySetVersion": "staging-remediation-diagnostic-v1",
+        "reasonCodes": [
+          "target.count_greater_than_json_length"
+        ],
+        "sampleRefs": [
+          "0b9576c5ae25",
+          "6fb516c7b13e",
+          "c33321051416",
+          "d292f972072a",
+          "d5d1cea37feb"
+        ],
+        "sourceClass": "operational",
+        "sourceTable": "ops.target_distribution_request",
+        "unit": "check_hits"
+      }
+    ],
+    "cooccurrences": [],
+    "distinctPeople": {
+      "status": "distinct_count_unresolved"
+    },
+    "distinctSourceRecords": {
+      "count": 72,
+      "unit": "source_records"
+    },
+    "familyTotals": [
+      {
+        "family": "ASSIGN-01",
+        "hitCount": 2,
+        "unit": "check_hits"
+      },
+      {
+        "family": "ORG-02",
+        "hitCount": 3,
+        "unit": "check_hits"
+      },
+      {
+        "family": "ORG-04",
+        "hitCount": 11,
+        "unit": "check_hits"
+      },
+      {
+        "family": "TARGET-02",
+        "hitCount": 54,
+        "unit": "check_hits"
+      }
+    ],
+    "observedAt": "2026-07-12T05:46:11.064Z",
+    "overallCheckHits": {
+      "count": 70,
+      "unit": "check_hits"
+    },
+    "querySetVersion": "staging-remediation-diagnostic-v1"
+  },
+  "receiptVersion": "1",
+  "reviewedCommit": "09800d367e5250f5bd08e1412d86323d86f9262f",
+  "runnerDigest": "4d25b8c6ec4d50b36615a7729be2b42c43d1fa611cda1ce362cfe6ada01b13bb",
+  "targetClass": "staging",
+  "targetFingerprint": "d1e123463e47d9429c7a1b3d743e42c6ba619d1d43de3787ffe8f5070f0f9400",
+  "timeoutProfile": {
+    "connectionMs": 5000,
+    "idleMs": 1000,
+    "queryMs": 30000,
+    "statementMs": 30000
+  },
+  "tlsMode": "verify-full",
+  "transactionIsolation": "repeatable_read",
+  "transactionReadOnly": true,
+  "receiptDigest": "9eb679e8c22a343cee813a707b92bf3df06d8aaf7bbdc9892566087aa4e62e50"
+}
