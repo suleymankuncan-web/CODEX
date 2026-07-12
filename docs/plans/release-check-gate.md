@@ -71,6 +71,12 @@ shapes, stale bases, changed trees, late checks, cancelled checks, failed
 checks, API failures, or any other uncertainty select the reusable full release
 as a fail-safe fallback.
 
+Controlled PRs use squash merge by default. The resulting single-parent commit
+preserves the exact base/tree relationship required for post-merge proof reuse
+and avoids a second full release. Merge-commit or rebase merge is allowed only
+for a documented exception that accepts the fail-safe post-merge full release;
+it is not the normal controlled-PR closeout path.
+
 The main ruleset keeps `required-release-gate` strict/up-to-date. This makes an
 exact proof the normal path while the tree and parent checks remain the runtime
 backstop. GitHub Codex review is not part of this contract.

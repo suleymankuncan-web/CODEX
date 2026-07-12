@@ -26,10 +26,10 @@ or broad test-sharding program.
 
 ## Measured Baseline
 
-The required gate proof for PR #918 measured the root release job at 14 minutes
-and 1 second. The Playwright command took 10 minutes and 55 seconds, about 78%
-of the root job. The latest ten successful PR root jobs had a nearest-rank p95
-of 14 minutes and 1 second, above the 12-minute target.
+The pre-change required gate proof for PR #918 measured the root release job at
+14 minutes and 1 second. The Playwright command took 10 minutes and 55 seconds,
+about 78% of the root job. The pre-change ten-run nearest-rank p95 was 14
+minutes and 1 second, above the 12-minute target.
 
 The same root proof discovered 371 tests in 56 files. No test was removed,
 renamed, skipped, or narrowed for this change.
@@ -75,6 +75,36 @@ The final PR head `5804ea686746975af9279506978faa060f7cddf0` also passed
 These two live proofs validate the implementation and final PR head. They are
 not a ten-run p95 claim.
 
+## Ten-Run Outcome - 2026-07-12
+
+The first ten successful post-stabilization PR root-release jobs were read from
+GitHub Actions. Durations are job wall times, not inferred workflow totals:
+
+| Run | Head | Duration |
+| --- | --- | ---: |
+| `29206865377` | `77889d1b` | 12m 48s |
+| `29204653376` | `89cdfe3a` | 11m 40s |
+| `29203135745` | `eda1b9ef` | 13m 14s |
+| `29199988675` | `891c5774` | 9m 59s |
+| `29197004787` | `195e6406` | 9m 58s |
+| `29195125937` | `6a9c77c2` | 11m 48s |
+| `29193782087` | `437e3325` | 12m 16s |
+| `29191086178` | `02869db6` | 9m 58s |
+| `29190535724` | `c0b45524` | 12m 03s |
+| `29187201049` | `4e0ed951` | 11m 35s |
+
+Sorted durations are `598, 598, 599, 695, 700, 708, 723, 736, 768, 794`
+seconds. With ten samples, nearest-rank p95 is the tenth value: `794` seconds,
+or `13.23` minutes. NFR-3's 12-minute target is therefore **not met**.
+
+The result is still measurably better than the pre-change 14m 01s baseline.
+All 371 Playwright tests remain selected and file-local serial behavior remains
+unchanged. No evidence attributes the recorded failures around this window to
+cross-worker interference; PR #968 separately repaired the bounded Report
+Viewer multi-route timeout without weakening full-load semantics. Keep two CI
+workers, open no new concurrency experiment, and reduce no coverage. Revisit
+only with a new measured isolation plan or a worker-related failure signal.
+
 ## Safety Boundary
 
 - `fullyParallel` remains disabled, so each file keeps its serial execution
@@ -85,16 +115,13 @@ not a ten-run p95 claim.
 - Page-local request fixtures and browser contexts remain the isolation unit.
 - A failed root release preserves its Playwright failure results as a bounded
   CI artifact; successful runs do not upload an extra artifact.
-- A green CI proof is required before treating this as a release-gate
-  improvement. The following ten successful root PR runs must be measured
-  before claiming the p95 target is met.
+- The dated ten-run result above is the final A3 observation. It records an
+  improvement but does not claim the 12-minute p95 target was met.
 
-After those ten runs, record one dated outcome: keep the setting when p95 is at
-or below 12 minutes; otherwise record the measured p95 and cause as an
-insufficient-improvement/no-further-concurrency-change decision. In the latter
-case, retain two workers only if they are flake-free and measurably better than
-the serial baseline; otherwise revert to one worker. Neither outcome permits
-coverage reduction, hidden retries, or another unmeasured shard change.
+The decision is `insufficient_improvement_keep_two_workers`: p95 is above 12
+minutes, but the bounded setting remains measurably better than the serial
+baseline and has no worker-interference signal. Coverage reduction, hidden
+retries, or another unmeasured shard/concurrency change remain forbidden.
 
 ## Rollback And Stop Rule
 

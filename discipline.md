@@ -543,6 +543,11 @@ Merge icin her zaman gerekenler:
 - GitHub/Vercel checks yesil.
 - PR mergeable.
 
+Kontrollu PR'larda varsayilan strateji squash merge'dir. Tek parent ve ayni tree
+kaniti post-merge exact-tree reuse yolunu korur ve gereksiz ikinci full release'i
+onler. Merge commit veya rebase merge ancak belgelenmis bir istisna ve fail-safe
+post-merge full release maliyeti kabul edilerek kullanilir.
+
 Owner'in 2026-07-10 tarihli acik karariyla GitHub Codex review devre disidir:
 
 - `@codex review` yazilmaz,
