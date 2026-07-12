@@ -13,6 +13,10 @@ rows over a `5000`-row synthetic scale envelope, and proved the source/restore
 aggregate digests equal. The dump, both disposable databases, and the exact
 container were removed in `finally`.
 
+The rehearsal itself completed once. Its first independent post-run validator
+was invoked from the wrong dependency directory; the already-written receipt was
+then validated from the backend directory without rerunning the rehearsal.
+
 The exact candidate package proved:
 
 - case-insensitive duplicate semantics plus unique/malformed/pilot-empty cases;

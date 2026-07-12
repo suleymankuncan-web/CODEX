@@ -13,6 +13,12 @@ transaction, the reviewed 5/1/30/30 second timeout profile, and empty stderr.
 No DML, DDL, migration, writer pause, provider change, or production operation
 occurred.
 
+Two local input-preparation commands stopped before the launcher, attempt marker,
+or database connection (PowerShell quoting, then ambiguous history selection).
+The project-fingerprint-bound preparation then passed validation and invoked the
+merged launcher once. Only that invocation consumed the SHA and produced the
+receipt.
+
 TARGET is `eligible_for_disposable_rehearsal`:
 
 - PostgreSQL major version: `17`;
