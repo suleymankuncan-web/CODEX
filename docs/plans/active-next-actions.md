@@ -44,8 +44,9 @@ authority. All speculative runtime work remains parked.
 
 Next practical action:
 
-1. Keep the separate target-reference supersession lifecycle gap explicit; do
-   not mix it into same-request duplicate enforcement.
+1. Preserve the implemented target-reference supersession boundary: ordinary
+   approvals are append-only, pilot import is initial/exact-replay-only, and
+   no writer may restore `ON CONFLICT DO UPDATE` business replacement.
 2. Preserve A3's dated ten-run result: p95 is `13.23` minutes, above the
    12-minute target. Keep all tests and the current two-worker CI setting; do
    not open another concurrency experiment without a new measured isolation plan.
@@ -57,7 +58,9 @@ Next practical action:
 4. Preserve the completed OT-1, INC-1, AUTH-1, and TREF-1 findings train. The
    June `13 blocked + 3 no_source` rows are all `owner_input_required` with
    `no_runtime_change`; browser sessions are account-status fresh; target
-   supersession is an approved specification, not implementation authority.
+   supersession implementation authority is the separate approved
+   `target-reference-supersession-implementation-plan-v1.md`; TREF-1 alone
+   remains a specification rather than blanket runtime authority.
 5. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
 6. Keep new modules, separate mobile implementation, broad production, broad

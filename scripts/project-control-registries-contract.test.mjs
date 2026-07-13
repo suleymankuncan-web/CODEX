@@ -146,7 +146,8 @@ test('project control board preserves current go no-go boundaries', () => {
   requireText(docs.controlBoard, 'optional follow-ups, not current pilot blockers')
   requireText(docs.controlBoard, 'all June `13 blocked + 3')
   requireText(docs.controlBoard, 'PR #978 makes protected cookie-session reads fail `401`')
-  requireText(docs.controlBoard, 'completed OT-1 -> INC-1 -> AUTH-1 -> TREF-1 line')
+  requireText(docs.controlBoard, 'completed OT-1 -> INC-1 -> AUTH-1 -> TREF-1 evidence')
+  requireText(docs.controlBoard, 'separately authorized append-only TREF implementation')
 })
 
 test('archive guard migration register preserves its incremental boundary', () => {
@@ -217,7 +218,8 @@ test('TREF-1 freezes the selected schema, transaction, and writer boundaries', (
     "status = 'approved' RETURNING",
     'Never use `ON CONFLICT DO UPDATE`.',
     'Pilot import MUST NOT supersede or update an active reference.',
-    'No implementation is authorized by TREF-1.',
+    'TREF-1 alone authorizes no implementation.',
+    'target-reference-supersession-implementation-plan-v1.md',
     'Run no staging evidence or mutation without separate explicit authority.',
   ]) {
     requireText(docs.targetReferenceSpec, literal)

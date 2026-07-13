@@ -24,10 +24,7 @@ import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
 import { applyBrowserSessionOpenApi } from "./browser-session-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 import { applyWorkforceOpenApi } from "./workforce-openapi";
-import {
-  applyBoundedTargetQueueResponses,
-  createRequestCenterResponseSchema,
-} from "./request-center-openapi";
+import * as requestCenterOpenApi from "./request-center-openapi";
 const publicOperations = [
   { path: "/api/auth/bootstrap", method: "get" },
   { path: "/api/health", method: "get" },
@@ -2297,7 +2294,7 @@ const workflowInboxResponseSchema = {
   },
 };
 
-const requestCenterResponseSchema = createRequestCenterResponseSchema(listResponseMetaSchema);
+const requestCenterResponseSchema = requestCenterOpenApi.createRequestCenterResponseSchema(listResponseMetaSchema);
 
 const workforceSellerCodeReferenceResponseSchema = {
   type: "object",
@@ -4431,6 +4428,7 @@ async function generateOpenApi(): Promise<void> {
     TargetDistributionRequestsResponse: targetDistributionRequestsResponseSchema,
     TargetCoverageResponse: targetCoverageResponseSchema,
     StoreTargetingPersonnelResponse: storeTargetingPersonnelResponseSchema,
+    TargetRevisionBasisResponse: requestCenterOpenApi.targetRevisionBasisResponseSchema,
     WorkflowInboxResponse: workflowInboxResponseSchema,
     RequestCenterResponse: requestCenterResponseSchema,
     SnapshotOverviewResponse: snapshotOverviewResponseSchema,
@@ -4569,7 +4567,7 @@ async function generateOpenApi(): Promise<void> {
     "CompetitionStagePackagePlanAuditResponse",
   );
 
-  applyBoundedTargetQueueResponses(document.paths);
+  requestCenterOpenApi.applyBoundedTargetQueueResponses(document.paths);
 
   setJsonResponseSchema(
     document.paths,

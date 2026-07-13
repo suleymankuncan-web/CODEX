@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 
 const root = join(__dirname, "../../../../..");
@@ -8,6 +8,29 @@ const migrationSql = readFileSync(
   "utf8",
 );
 const combinedSql = `${schemaSql}\n${migrationSql}`;
+const allowedTargetReferenceWriterPaths = [
+  "src/modules/store-ops/infrastructure/target-distribution.repository.ts",
+  "src/modules/store-ops/infrastructure/pilot-roster-reconciliation.repository.ts",
+];
+const backendRoot = join(__dirname, "../../..");
+
+function listRuntimeTypeScriptFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = join(directory, entry.name);
+    if (entry.isDirectory()) return listRuntimeTypeScriptFiles(absolutePath);
+    if (!entry.isFile() || !entry.name.endsWith(".ts") || /\.(spec|test)\.ts$/.test(entry.name)) {
+      return [];
+    }
+    return [absolutePath];
+  });
+}
+
+const targetReferenceWriterSources = listRuntimeTypeScriptFiles(join(backendRoot, "src"))
+  .map((absolutePath) => ({
+    relativePath: absolutePath.slice(backendRoot.length + 1).replace(/\\/g, "/"),
+    source: readFileSync(absolutePath, "utf8"),
+  }))
+  .filter(({ source }) => /INSERT\s+INTO\s+ops\.personnel_target_reference/i.test(source));
 
 describe("target reference schema contract", () => {
   it("defines approved personnel target references", () => {
@@ -56,5 +79,18 @@ describe("target reference schema contract", () => {
     expect(combinedSql).toContain(
       "COMMENT ON TABLE ops.personnel_target_reference IS 'Approved personnel target references promoted from region-approved target distribution requests for scoring.'",
     );
+  });
+
+  it("keeps every direct target-reference writer append-only", () => {
+    expect(targetReferenceWriterSources.map(({ relativePath }) => relativePath).sort()).toEqual(
+      [...allowedTargetReferenceWriterPaths].sort(),
+    );
+    for (const writer of targetReferenceWriterSources) {
+      const targetInsert = writer.source.match(
+        /INSERT INTO ops\.personnel_target_reference[\s\S]{0,2200}/,
+      )?.[0];
+      expect(targetInsert).toBeDefined();
+      expect(targetInsert).not.toContain("ON CONFLICT");
+    }
   });
 });

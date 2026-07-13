@@ -58,6 +58,9 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/target-distributions/store-personnel**', async (route) => {
     await route.fulfill({ json: storeTargetingPersonnelFixture })
   })
+  await page.route('**/api/target-distributions/revision-basis**', async (route) => {
+    await route.fulfill({ json: targetRevisionBasisFixture })
+  })
 })
 
 test('store targets page submits target distribution allocations with employee ids', async ({ page }) => {
@@ -570,16 +573,18 @@ test('store targets page submits revision requests from approved target snapshot
       targetLabel: 'Mayis hedef dagitimi revize',
       totalTargetValue: 145000,
       requestReason: 'Ay ici kadro degisikligi',
+      revision: {
+        baseReferenceIds: [
+          '00000000-0000-4000-8000-000000000901',
+          '00000000-0000-4000-8000-000000000902',
+        ],
+        removedEmployeeIds: [demoEmployeeId],
+      },
       allocations: [
-        {
-          employeeId: demoEmployeeId,
-          assigneeLabel: 'Store Personnel',
-          targetValue: 40000,
-        },
         {
           employeeId: '00000000-0000-0000-0000-000000000203',
           assigneeLabel: 'Store Personnel Covered',
-          targetValue: 105000,
+          targetValue: 145000,
         },
       ],
     })
@@ -606,17 +611,92 @@ test('store targets page submits revision requests from approved target snapshot
   await selectTargetPeriod(page, '2026-05')
   await page.getByRole('radio', { name: /Revize Talebi/ }).click()
   await page.getByRole('button', { name: 'Revize oluştur' }).click()
-  await page.getByLabel('Store Personnel Revize talebi gönder').fill('40000')
+  await page.getByLabel('Store Personnel Revize talebi gönder').fill('0')
   await expect(page.getByText('Revize toplam onaylı toplamla eşleşmeli.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Revize talebi gönder' })).toBeDisabled()
 
-  await page.getByLabel('Store Personnel Covered Revize talebi gönder').fill('105000')
+  await page.getByLabel('Store Personnel Covered Revize talebi gönder').fill('145000')
   await expect(page.getByRole('button', { name: 'Revize talebi gönder' })).toBeDisabled()
 
   await page.getByLabel('Revize notu').fill('Ay ici kadro degisikligi')
   await page.getByRole('button', { name: 'Revize talebi gönder' }).click()
 
   await expect(page.getByText('Revision request submitted for region approval')).toBeVisible()
+  expect(capturedPayload).not.toBeNull()
+})
+
+test('store targets page can revise an inherited basis without a local approved request', async ({ page }) => {
+  let capturedPayload: Record<string, unknown> | null = null
+
+  await page.unroute('**/api/target-distributions/requests**')
+  await page.unroute('**/api/target-distributions/coverage**')
+  await page.unroute('**/api/target-distributions/store-personnel**')
+  await page.route('**/api/target-distributions/coverage**', async (route) => {
+    await route.fulfill({ json: approvedTargetCoverageFixture })
+  })
+  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
+    await route.fulfill({ json: storeTargetingPersonnelFixture })
+  })
+  await page.route('**/api/target-distributions/requests**', async (route) => {
+    const request = route.request()
+
+    if (request.method() === 'GET') {
+      await route.fulfill({ json: targetDistributionRequestsFixture })
+      return
+    }
+
+    capturedPayload = request.postDataJSON() as Record<string, unknown>
+    expect(capturedPayload).toEqual(
+      expect.objectContaining({
+        storeId: demoStoreId,
+        requestMonth: '2026-05-01',
+        totalTargetValue: 145000,
+        requestReason: 'Yeni magazada devralinan hedef zinciri',
+        revision: {
+          baseReferenceIds: [
+            '00000000-0000-4000-8000-000000000901',
+            '00000000-0000-4000-8000-000000000902',
+          ],
+          removedEmployeeIds: [demoEmployeeId],
+        },
+        allocations: [
+          {
+            employeeId: '00000000-0000-0000-0000-000000000203',
+            assigneeLabel: 'Store Personnel Covered',
+            targetValue: 145000,
+          },
+        ],
+      }),
+    )
+
+    await route.fulfill({
+      json: {
+        command: {
+          status: 'submitted',
+          message: 'Inherited target basis revision submitted',
+        },
+        data: {
+          request: {
+            ...pendingTargetDistributionRequestsFixture.items[0],
+            requestReason: 'Yeni magazada devralinan hedef zinciri',
+          },
+        },
+      },
+    })
+  })
+
+  await page.goto('/store/targets')
+
+  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
+  await selectTargetPeriod(page, '2026-05')
+  await page.getByRole('radio', { name: /Revize Talebi/ }).click()
+  await page.getByRole('button', { name: /Revize olu/ }).click()
+  await page.getByLabel(/Store Personnel Revize talebi/).fill('0')
+  await page.getByLabel(/Store Personnel Covered Revize talebi/).fill('145000')
+  await page.getByLabel('Revize notu').fill('Yeni magazada devralinan hedef zinciri')
+  await page.getByRole('button', { name: /Revize talebi g/ }).click()
+
+  await expect(page.getByText('Inherited target basis revision submitted')).toBeVisible()
   expect(capturedPayload).not.toBeNull()
 })
 
@@ -658,6 +738,26 @@ const targetDistributionRequestsFixture = {
     limit: 30,
     offset: 0,
   },
+}
+
+const targetRevisionBasisFixture = {
+  storeId: demoStoreId,
+  requestMonth: '2026-05-01',
+  periodClosed: false,
+  items: [
+    {
+      employeeId: demoEmployeeId,
+      targetReferenceId: '00000000-0000-4000-8000-000000000901',
+      displayName: 'Store Personnel',
+      targetValue: 45000,
+    },
+    {
+      employeeId: '00000000-0000-0000-0000-000000000203',
+      targetReferenceId: '00000000-0000-4000-8000-000000000902',
+      displayName: 'Store Personnel Covered',
+      targetValue: 100000,
+    },
+  ],
 }
 
 const pendingTargetDistributionRequestsFixture = {

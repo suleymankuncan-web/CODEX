@@ -179,6 +179,68 @@ describe("TargetDistributionService", () => {
     expect(targetDistributionRepository.createRequest).not.toHaveBeenCalled();
   });
 
+  it("rejects revision evidence without a non-empty reason before repository access", async () => {
+    const targetDistributionRepository = { createRequest: jest.fn() };
+    const storeOpsRepository = { listStorePersonnelTargetingRows: jest.fn() };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      storeOpsRepository as never,
+    );
+
+    await expect(service.createRequest({
+      actorUserId: "user-1",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [] },
+      actorActionScope: {
+        assignedStoreIds: ["00000000-0000-4000-8000-000000000201"],
+      },
+      storeId: "00000000-0000-4000-8000-000000000201",
+      requestMonth: "2026-03-01",
+      targetLabel: "Net Sales revize",
+      totalTargetValue: 100000,
+      requestReason: "   ",
+      allocations: [{
+        employeeId: "00000000-0000-4000-8000-000000000501",
+        assigneeLabel: "Ada Kaya",
+        targetValue: 100000,
+      }],
+      revision: {
+        baseReferenceIds: ["00000000-0000-4000-8000-000000000901"],
+        removedEmployeeIds: [],
+      },
+    })).rejects.toMatchObject({
+      response: { code: "target_revision_incomplete" },
+    });
+
+    expect(storeOpsRepository.listStorePersonnelTargetingRows).not.toHaveBeenCalled();
+    expect(targetDistributionRepository.createRequest).not.toHaveBeenCalled();
+  });
+
+  it("rejects a request whose allocation sum differs from its declared total", async () => {
+    const targetDistributionRepository = { createRequest: jest.fn() };
+    const storeOpsRepository = { listStorePersonnelTargetingRows: jest.fn() };
+    const service = new TargetDistributionService(
+      targetDistributionRepository as never,
+      storeOpsRepository as never,
+    );
+
+    await expect(service.createRequest({
+      actorUserId: "user-1",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [] },
+      actorActionScope: { assignedStoreIds: ["00000000-0000-4000-8000-000000000201"] },
+      storeId: "00000000-0000-4000-8000-000000000201",
+      requestMonth: "2026-03-01",
+      targetLabel: "Net Sales",
+      totalTargetValue: 100000,
+      allocations: [{
+        employeeId: "00000000-0000-4000-8000-000000000501",
+        assigneeLabel: "Ada Kaya",
+        targetValue: 99999,
+      }],
+    })).rejects.toThrow("Target allocation total must match the requested target total");
+
+    expect(targetDistributionRepository.createRequest).not.toHaveBeenCalled();
+  });
+
   it("uses the requested store's canonical company and region when creating requests", async () => {
     const targetDistributionRepository = {
       createRequest: jest.fn(async () => ({

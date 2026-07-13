@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Patch, Post, Query, Req } from "@nestjs/common";
-import { ApiExtraModels } from "@nestjs/swagger";
+import { ApiExtraModels, ApiQuery } from "@nestjs/swagger";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireActionScope } from "../../auth/decorators/scope.decorator";
 import { TargetDistributionService } from "../application/target-distribution.service";
@@ -11,11 +11,34 @@ import {
 import { ListTargetDistributionRequestsQueryDto } from "./dto/list-target-distribution-requests.query";
 import { ListTargetCoverageQueryDto } from "./dto/list-target-coverage.query";
 import { resolveReportViewerCompanyScope } from "../application/report-viewer-company-scope";
+import { GetTargetRevisionBasisQueryDto } from "./dto/get-target-revision-basis.query";
 
 @ApiExtraModels(ApprovedTargetDistributionAllocationDto)
 @Controller("target-distributions")
 export class TargetDistributionController {
   constructor(private readonly targetDistributionService: TargetDistributionService) {}
+
+  @Get("revision-basis")
+  @ApiQuery({ name: "storeId", type: String })
+  @ApiQuery({ name: "requestMonth", type: String })
+  @RequireActionScope("store")
+  @RequireRoles("STORE_MANAGER", "SUPER_ADMIN")
+  async getRevisionBasis(
+    @Req() request: {
+      user: {
+        scope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
+        actionScope: { assignedStoreIds: string[] };
+      };
+    },
+    @Query() query: GetTargetRevisionBasisQueryDto,
+  ) {
+    return this.targetDistributionService.getRevisionBasis({
+      actorScope: request.user.scope,
+      actorActionScope: request.user.actionScope,
+      storeId: query.storeId,
+      requestMonth: query.requestMonth,
+    });
+  }
 
   @Get("store-personnel")
   @RequireActionScope("store")

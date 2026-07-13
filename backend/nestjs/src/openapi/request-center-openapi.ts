@@ -1,5 +1,28 @@
 import { setJsonResponseSchema } from "./openapi-schema-helpers";
 
+export const targetRevisionBasisResponseSchema = {
+  type: "object",
+  required: ["storeId", "requestMonth", "periodClosed", "items"],
+  properties: {
+    storeId: { type: "string" },
+    requestMonth: { type: "string" },
+    periodClosed: { type: "boolean" },
+    items: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["employeeId", "targetReferenceId", "displayName", "targetValue"],
+        properties: {
+          employeeId: { type: "string" },
+          targetReferenceId: { type: "string" },
+          displayName: { type: "string" },
+          targetValue: { type: "number" },
+        },
+      },
+    },
+  },
+};
+
 const requestCenterItemSchema = {
   type: "object",
   required: [
@@ -71,6 +94,13 @@ export function createRequestCenterResponseSchema(listResponseMetaSchema: object
 export function applyBoundedTargetQueueResponses(
   paths: Record<string, unknown>,
 ) {
+  setJsonResponseSchema(
+    paths,
+    "/api/target-distributions/revision-basis",
+    "get",
+    "Complete active target reference basis for an exact store and month.",
+    "TargetRevisionBasisResponse",
+  );
   setJsonResponseSchema(
     paths,
     "/api/target-distributions/requests",

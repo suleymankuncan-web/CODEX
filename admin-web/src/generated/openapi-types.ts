@@ -734,6 +734,7 @@ export type components = {
       "totalTargetValue": number
       "requestReason"?: string
       "allocations": components['schemas']["TargetDistributionAllocationDto"][]
+      "revision"?: components['schemas']["TargetDistributionRevisionDto"]
     }
     "CreateUserAccountDto": {
       "employeeId"?: string
@@ -2697,6 +2698,21 @@ export type components = {
         "offset": number
       }
     }
+    "TargetDistributionRevisionDto": {
+      "baseReferenceIds": string[]
+      "removedEmployeeIds": string[]
+    }
+    "TargetRevisionBasisResponse": {
+      "storeId": string
+      "requestMonth": string
+      "periodClosed": boolean
+      "items": Array<{
+          "employeeId": string
+          "targetReferenceId": string
+          "displayName": string
+          "targetValue": number
+        }>
+    }
     "UpdateKpiImportStoreScopeDto": {
       "storeType": "company" | "franchise" | "operator"
       "regionId": string
@@ -4026,6 +4042,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["TargetCoverageResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/target-distributions/revision-basis": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["TargetRevisionBasisResponse"]
           }
         }
       }

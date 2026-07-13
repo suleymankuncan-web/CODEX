@@ -55,6 +55,7 @@ describe("StoreOpsRepository", () => {
     expect(sql).toContain("position.position_code NOT IN ('STORE_MANAGER', 'CASHIER')");
     expect(sql).toContain("eah.assignment_status = 'active'");
     expect(sql).toContain("eah.end_date IS NULL");
+    expect(sql).toContain("eah.is_primary_assignment = TRUE");
     expect(sql).toContain("e.employment_status = 'active'");
   });
 

@@ -555,6 +555,18 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/target-distributions/revision-basis')) {
+      await route.fulfill({
+        json: {
+          storeId,
+          requestMonth: new URL(request.url()).searchParams.get('requestMonth') ?? '2026-05-01',
+          periodClosed: false,
+          items: [],
+        },
+      })
+      return
+    }
+
     if (pathname.endsWith('/api/workforce/position-options')) {
       await route.fulfill({ json: positionOptionsFixture })
       return

@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { ConflictException, Injectable } from "@nestjs/common";
 import { PoolClient } from "pg";
 import { DatabaseService } from "../../../shared/database/database.service";
 
@@ -232,6 +232,10 @@ export class PilotRosterReconciliationRepository {
     actorUserId: string,
     target: ResolvedPilotRosterTargetReference,
   ) {
+    await client.query(
+      `SELECT store_id FROM ops.store WHERE store_id = $1::uuid FOR UPDATE`,
+      [target.storeId],
+    );
     const requestResult = await client.query<{ target_distribution_request_id: string }>(
       `
         WITH existing AS (
@@ -298,9 +302,30 @@ export class PilotRosterReconciliationRepository {
       throw new Error("Pilot roster target request could not be created or reused");
     }
 
-    const result = await client.query(
+    await client.query(
+      `SELECT employee_id FROM ops.employee WHERE employee_id = $1::uuid FOR UPDATE`,
+      [target.employeeId],
+    );
+
+    const result = await client.query<{ outcome: "inserted" | "replayed" | "conflict" }>(
       `
-        INSERT INTO ops.personnel_target_reference (
+        WITH active AS (
+          SELECT
+            source_request_id,
+            company_id,
+            region_id,
+            store_id,
+            target_value
+          FROM ops.personnel_target_reference
+          WHERE employee_id = $5::uuid
+            AND period_start = $6::date
+            AND period_end = ($6::date + INTERVAL '1 month' - INTERVAL '1 day')::date
+            AND target_type = 'monthly_sales_target'
+            AND status = 'approved'
+          FOR UPDATE
+        ),
+        inserted AS (
+          INSERT INTO ops.personnel_target_reference (
           source_request_id,
           company_id,
           region_id,
@@ -314,7 +339,7 @@ export class PilotRosterReconciliationRepository {
           approved_by_user_id,
           approved_at
         )
-        VALUES (
+          SELECT
           $1::uuid,
           $2::uuid,
           $3::uuid,
@@ -327,17 +352,23 @@ export class PilotRosterReconciliationRepository {
           'approved',
           $8,
           NOW()
+          WHERE NOT EXISTS (SELECT 1 FROM active)
+          RETURNING 1
         )
-        ON CONFLICT (employee_id, period_start, period_end, target_type)
-        WHERE status = 'approved'
-        DO UPDATE SET
-          source_request_id = EXCLUDED.source_request_id,
-          company_id = EXCLUDED.company_id,
-          region_id = EXCLUDED.region_id,
-          store_id = EXCLUDED.store_id,
-          target_value = EXCLUDED.target_value,
-          approved_by_user_id = EXCLUDED.approved_by_user_id,
-          approved_at = EXCLUDED.approved_at
+        SELECT 'inserted'::text AS outcome FROM inserted
+        UNION ALL
+        SELECT
+          CASE
+            WHEN active.company_id = $2::uuid
+             AND active.source_request_id = $1::uuid
+             AND active.region_id = $3::uuid
+             AND active.store_id = $4::uuid
+             AND active.target_value = $7::numeric
+            THEN 'replayed'::text
+            ELSE 'conflict'::text
+          END AS outcome
+        FROM active
+        LIMIT 1
       `,
       [
         requestId,
@@ -350,31 +381,40 @@ export class PilotRosterReconciliationRepository {
         actorUserId,
       ],
     );
+    const outcome = result.rows[0]?.outcome;
+    if (outcome === "conflict" || !outcome) {
+      throw new ConflictException({
+        code: "target_revision_import_replacement_forbidden",
+        message: "Pilot import cannot replace an active target reference",
+      });
+    }
 
-    await client.query(
-      `
-        UPDATE ops.target_distribution_request request
-        SET
-          total_target_value = totals.total_target_value,
-          allocation_count = totals.allocation_count,
-          updated_at = NOW()
-        FROM (
-          SELECT
-            source_request_id,
-            COALESCE(SUM(target_value), 0)::numeric AS total_target_value,
-            COUNT(*)::integer AS allocation_count
-          FROM ops.personnel_target_reference
-          WHERE source_request_id = $1::uuid
-            AND target_type = 'monthly_sales_target'
-            AND status = 'approved'
-          GROUP BY source_request_id
-        ) totals
-        WHERE request.target_distribution_request_id = totals.source_request_id
-      `,
-      [requestId],
-    );
+    if (outcome === "inserted") {
+      await client.query(
+        `
+          UPDATE ops.target_distribution_request request
+          SET
+            total_target_value = totals.total_target_value,
+            allocation_count = totals.allocation_count,
+            updated_at = NOW()
+          FROM (
+            SELECT
+              source_request_id,
+              COALESCE(SUM(target_value), 0)::numeric AS total_target_value,
+              COUNT(*)::integer AS allocation_count
+            FROM ops.personnel_target_reference
+            WHERE source_request_id = $1::uuid
+              AND target_type = 'monthly_sales_target'
+              AND status = 'approved'
+            GROUP BY source_request_id
+          ) totals
+          WHERE request.target_distribution_request_id = totals.source_request_id
+        `,
+        [requestId],
+      );
+    }
 
-    return result.rowCount ?? 0;
+    return outcome === "inserted" ? 1 : 0;
   }
 
   private async upsertTurnoverEvent(

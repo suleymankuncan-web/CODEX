@@ -11,11 +11,14 @@ export const targetWriterInventory = Object.freeze({
   "backend/nestjs/scripts/rem8-target-constraint-disposable-rehearsal.ts": {
     class: "rem8_disposable_fixture", mutationCount: 7,
   },
+  "backend/nestjs/scripts/verify-target-reference-supersession-postgres.mjs": {
+    class: "tref_disposable_repository_proof", mutationCount: 1,
+  },
   "backend/nestjs/src/modules/store-ops/infrastructure/pilot-roster-reconciliation.repository.ts": {
     class: "runtime_pilot_reference_writer", mutationCount: 2,
   },
   "backend/nestjs/src/modules/store-ops/infrastructure/target-distribution.repository.ts": {
-    class: "runtime_ordinary_create_and_approval_writer", mutationCount: 2,
+    class: "runtime_ordinary_create_and_approval_writer", mutationCount: 3,
   },
   "db/seeds/001_reference_seed.sql": {
     class: "demo_reference_seed", mutationCount: 1,

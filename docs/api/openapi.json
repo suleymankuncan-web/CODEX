@@ -5284,6 +5284,44 @@
           "WorkflowInbox"
         ]
       }
+    },
+    "/api/target-distributions/revision-basis": {
+      "get": {
+        "operationId": "TargetDistributionController_getRevisionBasis",
+        "parameters": [
+          {
+            "name": "requestMonth",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "storeId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete active target reference basis for an exact store and month.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetRevisionBasisResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TargetDistribution"
+        ]
+      }
     }
   },
   "info": {
@@ -5993,6 +6031,9 @@
             "items": {
               "$ref": "#/components/schemas/TargetDistributionAllocationDto"
             }
+          },
+          "revision": {
+            "$ref": "#/components/schemas/TargetDistributionRevisionDto"
           }
         },
         "required": [
@@ -20424,6 +20465,74 @@
                 "items": {
                   "type": "string",
                   "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$"
+                }
+              }
+            }
+          }
+        }
+      },
+      "TargetDistributionRevisionDto": {
+        "type": "object",
+        "properties": {
+          "baseReferenceIds": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "removedEmployeeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "baseReferenceIds",
+          "removedEmployeeIds"
+        ]
+      },
+      "TargetRevisionBasisResponse": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "requestMonth",
+          "periodClosed",
+          "items"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "requestMonth": {
+            "type": "string"
+          },
+          "periodClosed": {
+            "type": "boolean"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "employeeId",
+                "targetReferenceId",
+                "displayName",
+                "targetValue"
+              ],
+              "properties": {
+                "employeeId": {
+                  "type": "string"
+                },
+                "targetReferenceId": {
+                  "type": "string"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "targetValue": {
+                  "type": "number"
                 }
               }
             }
