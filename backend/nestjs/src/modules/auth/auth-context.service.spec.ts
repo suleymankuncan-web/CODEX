@@ -18,9 +18,21 @@ describe("AuthContextService", () => {
       is_active: boolean;
     } | null;
     roleAssignmentErrorMessage?: string;
+    accountStatusErrorMessage?: string;
+    throwOnAccountStatus?: boolean;
     throwOnRoleAssignments?: boolean;
   } = {}) {
     return {
+      getUserAccountStatusById: jest.fn(async () => {
+        if (input.throwOnAccountStatus) {
+          throw new Error(
+            input.accountStatusErrorMessage ??
+              "connect ECONNREFUSED 127.0.0.1:5432",
+          );
+        }
+
+        return { is_active: true };
+      }),
       getUserAccountByProviderSubject: jest.fn(
         async () => input.mappedProviderUser ?? null,
       ),
@@ -665,6 +677,57 @@ describe("AuthContextService", () => {
       expect(renderedLogs).toContain("token=[redacted]");
       expect(renderedLogs).not.toContain("abc123");
       expect(renderedLogs).not.toContain("prod-user-1");
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("fails closed when a production cookie-session account lookup throws", async () => {
+    const errorSpy = jest.spyOn(Logger.prototype, "error").mockImplementation(() => undefined);
+    const repository = buildAuthorizationRepository({
+      accountStatusErrorMessage: "db failed password=secret-value",
+      throwOnAccountStatus: true,
+    });
+    const jwtAuthProvider = {
+      resolveUser: jest.fn(async () => null),
+    };
+    const service = new AuthContextService(
+      {
+        authMode: "jwt",
+        allowMockAuth: false,
+        browserSessionCookieEnabled: true,
+        browserSessionCookieName: "hr_axis_browser_session",
+        isProduction: true,
+      } as never,
+      repository,
+      { resolveUser: jest.fn() } as never,
+      jwtAuthProvider as never,
+      {
+        verifySession: jest.fn(() => ({
+          user: {
+            userId: "90000000-0000-4000-8000-000000000099",
+            roleCodes: ["REPORT_VIEWER"],
+            readScope: {
+              companyIds: ["00000000-0000-0000-0000-000000000001"],
+              regionIds: [],
+              storeIds: [],
+            },
+            actionScope: { assignedStoreIds: [] },
+          },
+        })),
+      } as never,
+    );
+
+    try {
+      await expect(
+        service.resolveUser({
+          headers: { cookie: "hr_axis_browser_session=signed-value" },
+        }),
+      ).rejects.toThrow("Authorization context is unavailable");
+      expect(repository.getUserAccountByProviderSubject).not.toHaveBeenCalled();
+      const renderedLogs = errorSpy.mock.calls.flat().map(String).join("\n");
+      expect(renderedLogs).toContain("password=[redacted]");
+      expect(renderedLogs).not.toContain("secret-value");
     } finally {
       errorSpy.mockRestore();
     }

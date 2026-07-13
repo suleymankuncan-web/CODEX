@@ -122,6 +122,7 @@ export class AuthContextService {
       if (bearerUser) {
         return {
           mapProviderSubject: this.appConfigService.authMode === "jwt",
+          requireFreshAccount: false,
           user: bearerUser,
         };
       }
@@ -130,6 +131,7 @@ export class AuthContextService {
       if (browserSessionUser) {
         return {
           mapProviderSubject: false,
+          requireFreshAccount: true,
           user: browserSessionUser,
         };
       }
@@ -141,11 +143,13 @@ export class AuthContextService {
         }
         return {
           mapProviderSubject: false,
+          requireFreshAccount: false,
           user: await this.mockAuthProvider.resolveUser(request),
         };
       case "jwt":
         return {
           mapProviderSubject: true,
+          requireFreshAccount: false,
           user: null,
         };
       default:
@@ -160,6 +164,7 @@ export class AuthContextService {
     return this.resolveAuthorizationContext(
       buildAuthenticatedUser(providerUser.user),
       providerUser.mapProviderSubject,
+      providerUser.requireFreshAccount,
     );
   }
 
@@ -207,6 +212,7 @@ export class AuthContextService {
   private async resolveAuthorizationContext(
     providerUser: AuthenticatedUser,
     mapProviderSubject: boolean,
+    requireFreshAccount = false,
   ): Promise<AuthenticatedUser> {
     let appUser = providerUser;
 
@@ -218,6 +224,16 @@ export class AuthContextService {
     > = [];
 
     try {
+      if (requireFreshAccount) {
+        const account =
+          await this.authAuthorizationRepository.getUserAccountStatusById(
+            providerUser.userId,
+          );
+        if (!account?.is_active) {
+          throw new UnauthorizedException("User account is inactive or missing");
+        }
+      }
+
       if (
         mapProviderSubject &&
         providerUser.userId !== "unknown-user"
@@ -284,6 +300,12 @@ export class AuthContextService {
     ]);
 
     if (assignments.length === 0) {
+      if (requireFreshAccount) {
+        throw new UnauthorizedException(
+          "User account has no active role assignments",
+        );
+      }
+
       if (
         this.appConfigService.authMode === "jwt" &&
         this.appConfigService.isProduction
