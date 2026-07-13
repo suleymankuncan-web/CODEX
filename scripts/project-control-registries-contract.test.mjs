@@ -25,6 +25,22 @@ const docs = {
   runbookRegistry: readText('docs/plans/runbook-registry-v1.md'),
   controlBoard: readText('docs/plans/project-control-board-v1.md'),
   archiveGuardMigrationRegister: readText('docs/plans/archive-guard-migration-register-v1.md'),
+  targetReferenceSpec: readText('docs/plans/target-reference-supersession-spec-v1.md'),
+}
+
+const normalizedTargetReferenceSpec = docs.targetReferenceSpec.replace(/\s+/g, ' ')
+
+function targetReferenceIds(prefix) {
+  return [...docs.targetReferenceSpec.matchAll(new RegExp(`\\*\\*${prefix}-(\\d{2})`, 'g'))].map(
+    (match) => `${prefix}-${match[1]}`,
+  )
+}
+
+function exactIdRange(prefix, end) {
+  return Array.from(
+    { length: end },
+    (_, index) => `${prefix}-${String(index + 1).padStart(2, '0')}`,
+  )
 }
 
 const controlDocs = [
@@ -128,6 +144,9 @@ test('project control board preserves current go no-go boundaries', () => {
   requireText(docs.controlBoard, 'B1 pilot evidence: owner-attested checklist approval')
   requireText(docs.controlBoard, 'PRs #971-#975 close the current Admin')
   requireText(docs.controlBoard, 'optional follow-ups, not current pilot blockers')
+  requireText(docs.controlBoard, 'all June `13 blocked + 3')
+  requireText(docs.controlBoard, 'PR #978 makes protected cookie-session reads fail `401`')
+  requireText(docs.controlBoard, 'completed OT-1 -> INC-1 -> AUTH-1 -> TREF-1 line')
 })
 
 test('archive guard migration register preserves its incremental boundary', () => {
@@ -145,5 +164,75 @@ test('archive guard migration register preserves its incremental boundary', () =
     'count is permanently fixed.',
   ]) {
     requireText(docs.archiveGuardMigrationRegister, phrase)
+  }
+})
+
+test('TREF-1 records every approved owner decision without an unresolved gate', () => {
+  requireText(docs.targetReferenceSpec, 'Status: `approved_spec`')
+  assert.ok(!docs.targetReferenceSpec.includes('Owner selection: `UNSET`'))
+  for (const decision of [
+    'Period close: `completed_snapshot`',
+    'Open-month revision: `whole_month_latest_approved`',
+    'Closed/past revision: `explicit_rerun_only`',
+    'Explicit removal: `supersede_without_successor`',
+    'Pilot import: `initial_create_only`',
+    'Manager-only change: `responsibility_only`',
+  ]) {
+    requireText(docs.targetReferenceSpec, decision)
+  }
+})
+
+test('TREF-1 has complete requirement, acceptance, and edge-case identifiers', () => {
+  assert.deepEqual([...new Set(targetReferenceIds('FR'))], exactIdRange('FR', 16))
+  assert.deepEqual([...new Set(targetReferenceIds('NFR'))], exactIdRange('NFR', 8))
+  assert.deepEqual([...new Set(targetReferenceIds('AC'))], exactIdRange('AC', 14))
+  assert.deepEqual([...new Set(targetReferenceIds('EC'))], exactIdRange('EC', 15))
+})
+
+test('every TREF-1 requirement is traced by a Given/When/Then acceptance criterion', () => {
+  const acceptanceSection = docs.targetReferenceSpec
+    .split('## 12. Acceptance Criteria')[1]
+    ?.split('## 13. Edge Cases')[0]
+  assert.ok(acceptanceSection)
+
+  for (const requirement of [...exactIdRange('FR', 16), ...exactIdRange('NFR', 8)]) {
+    assert.match(acceptanceSection, new RegExp(`\\b${requirement}\\b`))
+  }
+
+  for (const criterion of acceptanceSection.matchAll(
+    /\*\*AC-\d{2} \([^)]*\):\*\* ([\s\S]*?)(?=\n- \*\*AC-|$)/g,
+  )) {
+    assert.match(criterion[1], /Given\s/i)
+    assert.match(criterion[1], /when\s/i)
+    assert.match(criterion[1], /then\s/i)
+  }
+})
+
+test('TREF-1 freezes the selected schema, transaction, and writer boundaries', () => {
+  for (const literal of [
+    'A migration is not required for the selected first implementation contract.',
+    '## 9. API And Command Contracts',
+    '## 10. Data Models',
+    'FOR UPDATE',
+    "status = 'approved' RETURNING",
+    'Never use `ON CONFLICT DO UPDATE`.',
+    'Pilot import MUST NOT supersede or update an active reference.',
+    'No implementation is authorized by TREF-1.',
+    'Run no staging evidence or mutation without separate explicit authority.',
+  ]) {
+    requireText(docs.targetReferenceSpec, literal)
+  }
+})
+
+test('TREF-1 keeps history, support, rotation, and privacy fail-closed', () => {
+  for (const literal of [
+    'an existing snapshot retains its stored reference ID.',
+    'a support-store assignment does not move target ownership.',
+    'same-day predecessor-end/successor-start is invalid',
+    'Later manager changes never rewrite it.',
+    'Silent omission or an extra removal introduced only during adjusted approval MUST fail closed.',
+    'It MUST NOT store labels, target amounts, raw allocations, or personnel attributes.',
+  ]) {
+    assert.ok(normalizedTargetReferenceSpec.includes(literal), `missing locked literal: ${literal}`)
   }
 })

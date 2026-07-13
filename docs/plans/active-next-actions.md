@@ -54,10 +54,10 @@ Next practical action:
    and fresh live cross-person denial remain optional evidence, not current
    pilot blockers. Preserve the 5 July mutations; do not rerun only for
    documentation.
-4. Execute `docs/plans/project-findings-remediation-plan-v1.md`: align operating
-   truth, classify the June `13 blocked + 3 no_source` reasons read-only, close
-   browser-session account-deactivation freshness, then lock target-reference
-   supersession semantics before implementation.
+4. Preserve the completed OT-1, INC-1, AUTH-1, and TREF-1 findings train. The
+   June `13 blocked + 3 no_source` rows are all `owner_input_required` with
+   `no_runtime_change`; browser sessions are account-status fresh; target
+   supersession is an approved specification, not implementation authority.
 5. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
 6. Keep new modules, separate mobile implementation, broad production, broad

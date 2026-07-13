@@ -1,6 +1,6 @@
 # Project Findings Remediation Plan V1
 
-Status: approved_execution
+Status: completed
 Shelf: operating
 Last verified: 2026-07-13
 
@@ -154,6 +154,15 @@ ambiguous.
 
 ## Completion
 
-The authorized line is complete only when all four PRs are squash-merged,
-`main` equals `origin/main`, required checks and post-merge verification are
-green, and unresolved conditional gates are reported without being executed.
+The authorized line completed in order:
+
+| Slice | Result | Merge evidence |
+| --- | --- | --- |
+| OT-1 | Operating truth aligned | PR #976, `75e6f1a46ced9f8930f1fb4160f1607804bee347` |
+| INC-1 | All 16 June non-projected rows classified `owner_input_required`; decision `no_runtime_change` | PR #977, `3fbd26ad6449d89fec1c8a7ead265b138e7ded48` |
+| AUTH-1 | Stale browser sessions fail closed against fresh application-account status | PR #978, `cca1b3cbccdc063bf66a96227c33c01787af5378` |
+| TREF-1 | Owner decisions and mechanically testable specification locked | This TREF-1 squash commit |
+
+Completion of this train does not authorize the conditional work above. TREF
+implementation, DG1-C contraction, ORG/ASSIGN correction, and broad production
+remain behind their recorded gates.
