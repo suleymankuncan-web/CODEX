@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-12
+Last verified: 2026-07-13
 
 ## Purpose
 
@@ -50,12 +50,17 @@ Next practical action:
    12-minute target. Keep all tests and the current two-worker CI setting; do
    not open another concurrency experiment without a new measured isolation plan.
 3. Preserve the persona sessions, Moi scope pass, Report Viewer binding, and
-   June reports/incentive readback. Account recovery and fresh live cross-person
-   denial remain separate optional gates. Preserve the 5 July mutations; do not
-   rerun only for documentation.
-4. If a pilot/demo blocker appears, record route, persona, period,
+   June reports/incentive readback closed in PRs #971-#975. Account recovery
+   and fresh live cross-person denial remain optional evidence, not current
+   pilot blockers. Preserve the 5 July mutations; do not rerun only for
+   documentation.
+4. Execute `docs/plans/project-findings-remediation-plan-v1.md`: align operating
+   truth, classify the June `13 blocked + 3 no_source` reasons read-only, close
+   browser-session account-deactivation freshness, then lock target-reference
+   supersession semantics before implementation.
+5. If a pilot/demo blocker appears, record route, persona, period,
    expected behavior, actual behavior, and sanitized screenshot/trace evidence.
-5. Keep new modules, separate mobile implementation, broad production, broad
+6. Keep new modules, separate mobile implementation, broad production, broad
    redesign, provider/source integration, and generic architecture work parked
    until a real P0/P1 finding or explicit owner decision reopens one path.
 

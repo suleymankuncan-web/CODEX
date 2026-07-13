@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-12
+Last verified: 2026-07-13
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A
 cold reader should recover the current decision, external blockers, and next
@@ -82,8 +82,10 @@ No-Go without repair or mutation. PR #952 merged REM-1A; PR #953 merged one owne
   to the full release.
 - PR #920 (B1) established the five-flow blocker record. A later owner
   attestation records successful 5 July checklist approval, Store Action task
-  closure, and target submission/editing with no issue; remaining B1 evidence
-  stays external and no runtime change is authorized.
+  closure, and target submission/editing with no issue. PRs #971-#975 add live
+  Admin, Region Manager, Store Manager, Store Personnel, Report Viewer, Moi
+  ranking/profile, June report/export, and incentive-readback evidence. No P0/P1
+  finding or runtime change is authorized by those successful reads.
 - PR #921 (E1) reconciles Visual Merchandiser-only Store routes and starts an
   incremental archive-guard migration register without a bulk archive rewrite.
 The historical transition record carries PR narrative and proof links. This
@@ -105,18 +107,18 @@ The product owner attested that checklist approval, Store Action task closure,
 target submission, and target editing were used successfully on 5 July 2026.
 No issue or P0/P1 finding was reported. Current 12-13 July live staging smokes
 prove protected landing, cookie-session readback, browser-storage boundaries,
-CSRF rejection, and logout for Admin, Region Manager, Store Manager, and Store
-Personnel. This is still not a complete recovery or five-flow pass.
+CSRF rejection, and logout for Admin, Region Manager, Store Manager, Store
+Personnel, and Report Viewer. Moi ranking/profile scope and June Report Viewer
+package/export plus Super Admin incentive readback also pass.
 
-Remaining external inputs are:
-
-- sanitized persona/session and negative-scope evidence for the partially
-  observed Store Action and checklist flows;
-- account-recovery evidence or an owner decision removing it from B1;
+Optional follow-up evidence is:
+- account-recovery evidence if recovery becomes a pilot requirement;
 - fresh live cross-person rankings/profile denial remains optional and requires
   an approved negative subject; current Moi session plus row-scope contracts pass;
-- June Report Viewer package/export and Super Admin incentive readback pass;
-  current incentive data includes projected, blocked, and no-source states.
+
+Current incentive data includes projected, blocked, and no-source states. The
+next evidence action is a sanitized read-only reason classification, not a
+runtime correction.
 
 Use `docs/evidence/pilot-readiness/2026-07-05-owner-attested-mutation-flows.md`
 and `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
@@ -186,10 +188,10 @@ Now:
 - On 2026-07-12 the product owner granted standing authorization for the remaining in-scope staging plan and directed the agent not to request repetitive approvals through goal completion. Once each exact technical prerequisite is proven, this standing authorization covers the plan's read-only evidence, backup/restore, writer-pause, rollback-rehearsal, manifest-bound commit, and eligible staging-DDL execution gates. It does not supply missing row authority, permit inferred winners, waive manifests/digests/restore/rollback/concurrency checks, authorize production, or authorize paid services.
 
 Next:
-1. Keep ORG-02, ORG-04, and ASSIGN-01 correction/constraint work blocked until exact historical authority evidence exists; never infer winners from current timestamps.
-2. Keep target-reference supersession as a separately scoped application-history gap; do not mix it into the completed DB-C5 slice.
-3. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
-4. Open no additional post-DG2 database PR unless new authoritative evidence changes a blocked/excluded family.
+1. Execute `docs/plans/project-findings-remediation-plan-v1.md` in the locked OT-1 -> INC-1 -> AUTH-1 -> TREF-1 order.
+2. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open unplanned runtime work.
+3. Keep ORG-02, ORG-04, and ASSIGN-01 correction/constraint work blocked until exact historical authority evidence exists; never infer winners from current timestamps.
+4. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
 Park:
 - Separate mobile implementation, new modules, broad production, broad redesign, and generic architecture/refactor work.
 - Provider/Nebim/JSON implementation without a real source contract and owner decision.
