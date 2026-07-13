@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-12
+Last verified: 2026-07-13
 
 ## Reader And Action
 
@@ -37,9 +37,11 @@ The project is in controlled pilot execution mode.
 - Process/CI alignment: A1/A2/A3 and the bounded D1 unit-test seed are
   implemented. A3's ten-run p95 is `13.23` minutes, so the 12-minute target is
   not met; coverage and the current two-worker setting remain unchanged.
-- B1 pilot evidence: partial owner-attested positive evidence exists for
-  checklist approval, Store Action task closure, and target submit/edit; the
-  remaining persona/session and readback evidence is `blocked_external`.
+- B1 pilot evidence: owner-attested checklist approval, Store Action task
+  closure, and target submit/edit pass. PRs #971-#975 close the current Admin,
+  Region Manager, Store Manager, Store Personnel, Report Viewer, Moi scope,
+  June report/export, and incentive-readback evidence. Account recovery and a
+  fresh cross-person denial are optional follow-ups, not current pilot blockers.
 
 ## What We Do Now
 
@@ -47,14 +49,15 @@ The project is in controlled pilot execution mode.
    owner stable; do not reintroduce duplicate merge-decision E2E work.
 2. Preserve A3's dated `13.23`-minute p95 exception; retain two workers and all
    tests without another unmeasured concurrency experiment.
-3. Preserve the successful 5 July owner-attested mutation observations and
-   obtain only the remaining safe read-only B1 evidence; do not create a
-   runtime PR for missing access, context, or trace detail.
-4. If a real pilot/demo finding arrives, record and classify it as
+3. Preserve the successful 5 July mutation observations and the #971-#975
+   read/session evidence; do not rerun successful flows only for documentation.
+4. Classify the June `13 blocked + 3 no_source` incentive state by sanitized
+   reason/source aggregates before proposing any correction.
+5. If a real pilot/demo finding arrives, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
-5. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
+6. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
    surface, risk, verification, and rollback match.
-6. Keep evidence sanitized and maintain the no-delete workspace boundary.
+7. Keep evidence sanitized and maintain the no-delete workspace boundary.
 
 ## What We Do Not Do Now
 
@@ -111,10 +114,11 @@ The project is in controlled pilot execution mode.
 If no newer user instruction overrides this board, the next best default action
 is:
 
-1. execute the next bounded slice in the locked DG1-DG2 plan,
-2. observe A3 release samples and obtain one safe remaining B1 input in
-   parallel,
-3. keep every unrelated runtime line parked,
+1. execute `docs/plans/project-findings-remediation-plan-v1.md` in its locked
+   OT-1 -> INC-1 -> AUTH-1 -> TREF-1 order,
+2. use controlled-pilot feedback as the primary product signal,
+3. keep every unrelated runtime, ORG/ASSIGN, DG1-C, broad-production, and broad
+   refactor line parked behind its recorded gate,
 4. update registries only when a decision or procedure changes.
 
 ## Stop Rules
