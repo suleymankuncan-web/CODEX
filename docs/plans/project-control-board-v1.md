@@ -115,8 +115,9 @@ If no newer user instruction overrides this board, the next best default action
 is:
 
 1. use controlled-pilot feedback as the primary product signal,
-2. treat the completed OT-1 -> INC-1 -> AUTH-1 -> TREF-1 line as operating
-   evidence, not authority for conditional TREF implementation,
+2. preserve the completed OT-1 -> INC-1 -> AUTH-1 -> TREF-1 evidence and the
+   separately authorized append-only TREF implementation; TREF-1 alone is not
+   blanket authority for later runtime or data work,
 3. keep every unrelated runtime, ORG/ASSIGN, DG1-C, broad-production, and broad
    refactor line parked behind its recorded gate,
 4. update registries only when a decision or procedure changes.

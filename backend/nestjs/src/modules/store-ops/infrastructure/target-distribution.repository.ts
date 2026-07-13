@@ -1,154 +1,23 @@
-import { Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import { RequestContextStore } from "../../../shared/request-context";
 import { DatabaseService } from "../../../shared/database/database.service";
+import {
+  reconcileTargetRevision,
+  isValidNextDayPrimaryRotation,
+  TargetRevisionConflict,
+} from "./target-reference-lifecycle";
+import {
+  parseApprovalEvidence,
+  parseTargetDistributionAllocations,
+  parseTargetRevisionEvidence,
+  throwTargetRevisionError,
+  type TargetCoverageRow,
+  type TargetDistributionAllocation,
+  type TargetDistributionRow,
+  type TargetRevisionInput,
+} from "./target-distribution-contract";
 
-type TargetDistributionRow = {
-  target_distribution_request_id: string;
-  company_id: string;
-  region_id: string;
-  store_id: string;
-  store_name: string;
-  request_month: string;
-  target_label: string;
-  total_target_value: string;
-  allocation_count: number;
-  request_status: string;
-  request_reason: string | null;
-  allocation_json: unknown;
-  submitted_by_user_id: string;
-  approved_by_user_id: string | null;
-  approved_at: string | null;
-  approval_note: string | null;
-  created_at: string;
-  updated_at: string;
-  total_count?: string | number;
-  original_allocation_json?: unknown;
-  original_total_target_value?: string | null;
-  approval_evidence_json?: unknown;
-};
-
-type TargetDistributionAllocation = {
-  employeeId: string;
-  assigneeLabel: string;
-  targetValue: number;
-  note?: string;
-};
-
-type TargetDistributionApprovalEvidence = {
-  approvalMode: "direct" | "adjusted";
-  originalTotalTargetValue: number;
-  approvedTotalTargetValue: number;
-  originalAllocations: TargetDistributionAllocation[];
-  approvedAllocations: TargetDistributionAllocation[];
-};
-
-type TargetCoverageRow = {
-  store_id: string;
-  store_name: string;
-  employee_id: string;
-  first_name: string;
-  last_name: string;
-  external_employee_ref: string | null;
-  personnel_target_reference_id: string | null;
-  target_value: string | null;
-  pending_request_id: string | null;
-  pending_target_value: string | null;
-  stale_target_reference_id: string | null;
-  target_status:
-    | "approved"
-    | "pending_region_approval"
-    | "pending_change_conflict"
-    | "stale_reference"
-    | "missing";
-};
-
-function parseTargetDistributionAllocations(
-  value: unknown,
-): TargetDistributionAllocation[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .map((item) => {
-      if (!item || typeof item !== "object") {
-        return null;
-      }
-
-      const allocation = item as Record<string, unknown>;
-      const employeeId =
-        typeof allocation.employeeId === "string" ? allocation.employeeId : "";
-      const assigneeLabel =
-        typeof allocation.assigneeLabel === "string"
-          ? allocation.assigneeLabel
-          : "";
-      const targetValue = Number(allocation.targetValue);
-      const note = typeof allocation.note === "string" ? allocation.note : undefined;
-
-      if (
-        !employeeId ||
-        !assigneeLabel ||
-        !Number.isFinite(targetValue) ||
-        targetValue <= 0
-      ) {
-        return null;
-      }
-
-      const parsed: TargetDistributionAllocation = {
-        employeeId,
-        assigneeLabel,
-        targetValue,
-      };
-
-      if (note !== undefined) {
-        parsed.note = note;
-      }
-
-      return parsed;
-    })
-    .filter((item): item is TargetDistributionAllocation => item !== null);
-}
-
-function parseApprovalEvidence(
-  value: unknown,
-): TargetDistributionApprovalEvidence | null {
-  if (!value || typeof value !== "object") {
-    return null;
-  }
-
-  const evidence = value as Record<string, unknown>;
-  const approvalMode = evidence.approvalMode;
-  const originalTotalTargetValue = Number(evidence.originalTotalTargetValue);
-  const approvedTotalTargetValue = Number(evidence.approvedTotalTargetValue);
-  const originalAllocations = parseTargetDistributionAllocations(
-    evidence.originalAllocations,
-  );
-  const approvedAllocations = parseTargetDistributionAllocations(
-    evidence.approvedAllocations,
-  );
-
-  if (
-    approvalMode !== "direct" &&
-    approvalMode !== "adjusted"
-  ) {
-    return null;
-  }
-
-  if (
-    !Number.isFinite(originalTotalTargetValue) ||
-    !Number.isFinite(approvedTotalTargetValue)
-  ) {
-    return null;
-  }
-
-  return {
-    approvalMode,
-    originalTotalTargetValue,
-    approvedTotalTargetValue,
-    originalAllocations,
-    approvedAllocations,
-  };
-}
+export type { TargetRevisionInput } from "./target-distribution-contract";
 
 @Injectable()
 export class TargetDistributionRepository {
@@ -184,6 +53,72 @@ export class TargetDistributionRepository {
       : null;
   }
 
+  async getRevisionBasis(input: {
+    companyId: string;
+    storeId: string;
+    requestMonth: string;
+  }) {
+    const [closedResult, referencesResult] = await Promise.all([
+      this.databaseService.query<{ exists: boolean }>(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM rpt.snapshot_run
+            WHERE snapshot_type = 'monthly'
+              AND period_start = $1::date
+              AND period_end = ($1::date + INTERVAL '1 month' - INTERVAL '1 day')::date
+              AND run_status = 'completed'
+              AND (company_ids = '{}'::uuid[] OR $2::uuid = ANY(company_ids))
+          ) AS exists
+        `,
+        [input.requestMonth, input.companyId],
+      ),
+      this.databaseService.query<{
+        employee_id: string;
+        first_name: string;
+        last_name: string;
+        personnel_target_reference_id: string;
+        target_value: string;
+      }>(
+        `
+          SELECT
+            ptr.employee_id,
+            employee.first_name,
+            employee.last_name,
+            ptr.personnel_target_reference_id,
+            ptr.target_value
+          FROM ops.personnel_target_reference ptr
+          INNER JOIN ops.employee employee ON employee.employee_id = ptr.employee_id
+          WHERE ptr.company_id = $1::uuid
+            AND (
+              ptr.store_id = $2::uuid
+              OR EXISTS (
+                SELECT 1
+                FROM ops.employee_assignment_history current_primary
+                WHERE current_primary.employee_id = ptr.employee_id
+                  AND current_primary.store_id = $2::uuid
+                  AND current_primary.is_primary_assignment = TRUE
+                  AND current_primary.assignment_status = 'active'
+                  AND current_primary.start_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
+                  AND (current_primary.end_date IS NULL OR current_primary.end_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date)
+              )
+            )
+            AND ptr.period_start = $3::date
+            AND ptr.period_end = ($3::date + INTERVAL '1 month' - INTERVAL '1 day')::date
+            AND ptr.target_type = 'monthly_sales_target'
+            AND ptr.status = 'approved'
+          ORDER BY employee.first_name, employee.last_name, ptr.employee_id
+        `,
+        [input.companyId, input.storeId, input.requestMonth],
+      ),
+    ]);
+
+    return {
+      periodClosed: closedResult.rows[0]?.exists === true,
+      rows: referencesResult.rows,
+    };
+  }
+
   async createRequest(input: {
     companyId: string;
     regionId: string;
@@ -198,6 +133,7 @@ export class TargetDistributionRepository {
       targetValue: number;
       note?: string;
     }>;
+    revision?: TargetRevisionInput;
     submittedByUserId: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
@@ -213,6 +149,7 @@ export class TargetDistributionRepository {
             allocation_count,
             request_reason,
             allocation_json,
+            approval_evidence_json,
             submitted_by_user_id
           )
           VALUES (
@@ -225,7 +162,8 @@ export class TargetDistributionRepository {
             $7::integer,
             $8,
             $9::jsonb,
-            $10
+            $10::jsonb,
+            $11
           )
           RETURNING
             target_distribution_request_id,
@@ -256,6 +194,15 @@ export class TargetDistributionRepository {
           input.allocations.length,
           input.requestReason ?? null,
           JSON.stringify(input.allocations),
+          JSON.stringify({
+            targetRevision: {
+              mode: input.revision ? "revision" : "initial",
+              baseReferenceIds: input.revision?.baseReferenceIds ?? [],
+              removedEmployeeIds: input.revision?.removedEmployeeIds ?? [],
+              reasonPresent: Boolean(input.requestReason?.trim()),
+              predecessorSuccessorLinks: [],
+            },
+          }),
           input.submittedByUserId,
         ],
       );
@@ -549,6 +496,7 @@ export class TargetDistributionRepository {
               total_target_value AS original_total_target_value
             FROM ops.target_distribution_request
             WHERE target_distribution_request_id = $1::uuid
+              AND request_status = 'pending_region_approval'
             FOR UPDATE
           ),
           updated AS (
@@ -561,7 +509,7 @@ export class TargetDistributionRepository {
               total_target_value = COALESCE($4::numeric, tdr.total_target_value),
               allocation_count = COALESCE($5::int, tdr.allocation_count),
               allocation_json = COALESCE($6::jsonb, tdr.allocation_json),
-              approval_evidence_json = jsonb_build_object(
+              approval_evidence_json = COALESCE(tdr.approval_evidence_json, '{}'::jsonb) || jsonb_build_object(
                 'approvalMode',
                 CASE WHEN $6::jsonb IS NULL THEN 'direct' ELSE 'adjusted' END,
                 'originalTotalTargetValue',
@@ -576,6 +524,7 @@ export class TargetDistributionRepository {
               updated_at = NOW()
             FROM existing
             WHERE tdr.target_distribution_request_id = $1::uuid
+              AND tdr.request_status = 'pending_region_approval'
             RETURNING
               tdr.target_distribution_request_id,
               tdr.company_id,
@@ -611,14 +560,260 @@ export class TargetDistributionRepository {
       );
 
       const request = result.rows[0];
+      if (!request) {
+        throwTargetRevisionError("target_revision_active_conflict");
+      }
+      const authority = await client.query<{ exists: boolean }>(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM ops.user_account account
+            INNER JOIN ops.user_action_store_assignment assignment
+              ON assignment.user_id = account.user_id
+            WHERE account.user_id = $1::uuid
+              AND account.is_active = TRUE
+              AND assignment.store_id = $2::uuid
+              AND assignment.start_at <= NOW()
+              AND (assignment.end_at IS NULL OR assignment.end_at >= NOW())
+          ) AS exists
+        `,
+        [input.approverUserId, request.store_id],
+      );
+      if (authority.rows[0]?.exists === false) {
+        throw new ForbiddenException("Target distribution request is outside assigned action stores");
+      }
       const allocations = parseTargetDistributionAllocations(request.allocation_json);
       const originalAllocations = parseTargetDistributionAllocations(
         request.original_allocation_json,
       );
       const isAdjustedApproval = input.approvedAllocations !== undefined;
+      const revision = parseTargetRevisionEvidence(request.approval_evidence_json);
+      const allocationTotal = allocations.reduce(
+        (sum, allocation) => sum + allocation.targetValue,
+        0,
+      );
+      if (
+        !Array.isArray(request.allocation_json) ||
+        allocations.length !== request.allocation_count ||
+        Math.abs(allocationTotal - Number(request.total_target_value)) > 0.0001
+      ) {
+        throwTargetRevisionError("target_revision_incomplete");
+      }
+      const predecessorSuccessorLinks: Array<{
+        predecessorId: string;
+        successorId: string | null;
+      }> = [];
+
+      let predecessorsByEmployeeId = new Map<string, string>();
+      let removedPredecessors: Array<{ employeeId: string; targetReferenceId: string }> = [];
+      const sortedEmployeeIds = [...new Set([
+        ...allocations.map((allocation) => allocation.employeeId),
+        ...(revision?.removedEmployeeIds ?? []),
+      ])].sort();
+      const employeeLock = await client.query<{ employee_id: string }>(
+        `SELECT employee_id FROM ops.employee WHERE employee_id = ANY($1::uuid[]) ORDER BY employee_id FOR UPDATE`,
+        [sortedEmployeeIds],
+      );
+      const eligibleResult = await client.query<{ eligible_count: string }>(
+        `
+          SELECT COUNT(*)::text AS eligible_count
+          FROM (
+            SELECT eah.employee_id
+            FROM ops.employee_assignment_history eah
+            WHERE eah.employee_id = ANY($1::uuid[])
+              AND eah.store_id = $2::uuid
+              AND eah.is_primary_assignment = TRUE
+              AND eah.assignment_status = 'active'
+              AND eah.start_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
+              AND (eah.end_date IS NULL OR eah.end_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date)
+              AND NOT EXISTS (
+                SELECT 1
+                FROM ops.employee_assignment_history overlapping_primary
+                WHERE overlapping_primary.employee_id = eah.employee_id
+                  AND overlapping_primary.assignment_id <> eah.assignment_id
+                  AND overlapping_primary.is_primary_assignment = TRUE
+                  AND overlapping_primary.assignment_status = 'active'
+                  AND overlapping_primary.start_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
+                  AND (overlapping_primary.end_date IS NULL OR overlapping_primary.end_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date)
+              )
+            GROUP BY eah.employee_id
+            HAVING COUNT(*) = 1
+          ) eligible
+        `,
+        [allocations.map((allocation) => allocation.employeeId), request.store_id],
+      );
+      if (
+        eligibleResult.rows[0] &&
+        Number(eligibleResult.rows[0].eligible_count) !== allocations.length
+      ) {
+        throwTargetRevisionError("target_revision_active_conflict");
+      }
+      const closedPeriod = await client.query<{ exists: boolean }>(
+        `
+          SELECT EXISTS (
+            SELECT 1
+            FROM rpt.snapshot_run
+            WHERE snapshot_type = 'monthly'
+              AND period_start = $1::date
+              AND period_end = ($1::date + INTERVAL '1 month' - INTERVAL '1 day')::date
+              AND run_status = 'completed'
+              AND (company_ids = '{}'::uuid[] OR $2::uuid = ANY(company_ids))
+          ) AS exists
+        `,
+        [request.request_month, request.company_id],
+      );
+      if (closedPeriod.rows[0]?.exists) {
+        throwTargetRevisionError("target_revision_period_closed");
+      }
+      if (revision?.mode === "revision") {
+        const originalEmployeeIds = originalAllocations
+          .map((allocation) => allocation.employeeId.toLowerCase())
+          .sort();
+        const finalEmployeeIds = allocations
+          .map((allocation) => allocation.employeeId.toLowerCase())
+          .sort();
+        if (
+          originalEmployeeIds.length !== finalEmployeeIds.length ||
+          originalEmployeeIds.some((employeeId, index) => employeeId !== finalEmployeeIds[index])
+        ) {
+          throwTargetRevisionError("target_revision_incomplete");
+        }
+        if (employeeLock.rows.length !== sortedEmployeeIds.length) {
+          throwTargetRevisionError("target_revision_active_conflict");
+        }
+        const activeResult = await client.query<{
+          employee_id: string;
+          personnel_target_reference_id: string;
+          store_id: string;
+        }>(
+          `
+            SELECT ptr.employee_id, ptr.personnel_target_reference_id, ptr.store_id
+            FROM ops.personnel_target_reference ptr
+            WHERE ptr.company_id = $1::uuid
+              AND (
+                ptr.store_id = $2::uuid
+                OR EXISTS (
+                  SELECT 1
+                  FROM ops.employee_assignment_history current_primary
+                  WHERE current_primary.employee_id = ptr.employee_id
+                    AND current_primary.store_id = $2::uuid
+                    AND current_primary.is_primary_assignment = TRUE
+                    AND current_primary.assignment_status = 'active'
+                    AND current_primary.start_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
+                    AND (current_primary.end_date IS NULL OR current_primary.end_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date)
+                )
+              )
+              AND ptr.period_start = $3::date
+              AND ptr.period_end = ($3::date + INTERVAL '1 month' - INTERVAL '1 day')::date
+              AND ptr.target_type = 'monthly_sales_target'
+              AND ptr.status = 'approved'
+            ORDER BY ptr.employee_id, ptr.personnel_target_reference_id
+            FOR UPDATE
+          `,
+          [request.company_id, request.store_id, request.request_month],
+        );
+
+        const rotatedPredecessors = activeResult.rows
+          .filter((row) => row.store_id !== request.store_id)
+          .map((row) => ({
+            employeeId: row.employee_id,
+          }));
+        if (rotatedPredecessors.length > 0) {
+          const rotationResult = await client.query<{
+            employee_id: string;
+            predecessor_end_date: string | null;
+            successor_start_date: string;
+          }>(
+            `
+              SELECT
+                candidate.employee_id,
+                previous_primary.end_date::text AS predecessor_end_date,
+                current_primary.start_date::text AS successor_start_date
+              FROM jsonb_to_recordset($1::jsonb) AS candidate(
+                employee_id uuid
+              )
+              INNER JOIN ops.employee_assignment_history current_primary
+                ON current_primary.employee_id = candidate.employee_id
+               AND current_primary.store_id = $2::uuid
+               AND current_primary.is_primary_assignment = TRUE
+               AND current_primary.assignment_status = 'active'
+               AND current_primary.start_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date
+               AND (current_primary.end_date IS NULL OR current_primary.end_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date)
+              INNER JOIN LATERAL (
+                SELECT predecessor.end_date
+                FROM ops.employee_assignment_history predecessor
+                WHERE predecessor.employee_id = candidate.employee_id
+                  AND predecessor.is_primary_assignment = TRUE
+                  AND predecessor.start_date < current_primary.start_date
+                ORDER BY predecessor.start_date DESC, predecessor.end_date DESC NULLS FIRST
+                LIMIT 1
+              ) previous_primary ON TRUE
+            `,
+            [JSON.stringify(rotatedPredecessors), request.store_id],
+          );
+          if (
+            rotationResult.rows.length !== rotatedPredecessors.length ||
+            rotationResult.rows.some((row) => !isValidNextDayPrimaryRotation({
+              predecessorEndDate: row.predecessor_end_date,
+              successorStartDate: row.successor_start_date,
+            }))
+          ) {
+            throwTargetRevisionError("target_revision_active_conflict");
+          }
+        }
+
+        try {
+          const reconciliation = reconcileTargetRevision({
+            activeReferences: activeResult.rows.map((row) => ({
+              employeeId: row.employee_id,
+              targetReferenceId: row.personnel_target_reference_id,
+            })),
+            allocationEmployeeIds: allocations.map((allocation) => allocation.employeeId),
+            baseReferenceIds: revision.baseReferenceIds,
+            removedEmployeeIds: revision.removedEmployeeIds,
+          });
+          predecessorsByEmployeeId = reconciliation.predecessorsByEmployeeId;
+          removedPredecessors = reconciliation.removedPredecessors;
+        } catch (error) {
+          if (error instanceof TargetRevisionConflict) {
+            throwTargetRevisionError(error.code);
+          }
+          throw error;
+        }
+
+        for (const reference of [
+          ...removedPredecessors,
+          ...[...predecessorsByEmployeeId].map(([employeeId, targetReferenceId]) => ({
+            employeeId,
+            targetReferenceId,
+          })),
+        ]) {
+          const superseded = await client.query<{ personnel_target_reference_id: string }>(
+            `
+              UPDATE ops.personnel_target_reference
+              SET status = 'superseded'
+              WHERE personnel_target_reference_id = $1::uuid
+                AND status = 'approved'
+              RETURNING personnel_target_reference_id
+            `,
+            [reference.targetReferenceId],
+          );
+          if (superseded.rows.length !== 1) {
+            throwTargetRevisionError("target_revision_chain_conflict");
+          }
+        }
+        predecessorSuccessorLinks.push(
+          ...removedPredecessors.map((reference) => ({
+            predecessorId: reference.targetReferenceId,
+            successorId: null,
+          })),
+        );
+      }
 
       for (const allocation of allocations) {
-        await client.query(
+        let inserted: { rows: Array<{ personnel_target_reference_id: string }> };
+        try {
+          inserted = await client.query<{ personnel_target_reference_id: string }>(
           `
             INSERT INTO ops.personnel_target_reference (
               source_request_id,
@@ -632,7 +827,8 @@ export class TargetDistributionRepository {
               target_type,
               status,
               approved_by_user_id,
-              approved_at
+              approved_at,
+              supersedes_target_reference_id
             )
             VALUES (
               $1::uuid,
@@ -646,18 +842,10 @@ export class TargetDistributionRepository {
               'monthly_sales_target',
               'approved',
               $8,
-              $9::timestamptz
+              $9::timestamptz,
+              $10::uuid
             )
-            ON CONFLICT (employee_id, period_start, period_end, target_type)
-            WHERE status = 'approved'
-            DO UPDATE SET
-              source_request_id = EXCLUDED.source_request_id,
-              company_id = EXCLUDED.company_id,
-              region_id = EXCLUDED.region_id,
-              store_id = EXCLUDED.store_id,
-              target_value = EXCLUDED.target_value,
-              approved_by_user_id = EXCLUDED.approved_by_user_id,
-              approved_at = EXCLUDED.approved_at
+            RETURNING personnel_target_reference_id
           `,
           [
             request.target_distribution_request_id,
@@ -669,9 +857,43 @@ export class TargetDistributionRepository {
             allocation.targetValue,
             input.approverUserId,
             request.approved_at,
+            predecessorsByEmployeeId.get(allocation.employeeId.toLowerCase()) ?? null,
           ],
-        );
+          );
+        } catch (error) {
+          if (
+            error &&
+            typeof error === "object" &&
+            "code" in error &&
+            (error as { code?: unknown }).code === "23505"
+          ) {
+            throwTargetRevisionError("target_revision_active_conflict");
+          }
+          throw error;
+        }
+        const predecessorId = predecessorsByEmployeeId.get(allocation.employeeId.toLowerCase());
+        if (predecessorId) {
+          predecessorSuccessorLinks.push({
+            predecessorId,
+            successorId: inserted.rows[0]?.personnel_target_reference_id ?? null,
+          });
+        }
       }
+
+      await client.query(
+        `
+          UPDATE ops.target_distribution_request
+          SET approval_evidence_json = jsonb_set(
+            COALESCE(approval_evidence_json, '{}'::jsonb),
+            '{targetRevision,predecessorSuccessorLinks}',
+            $2::jsonb,
+            TRUE
+          )
+          WHERE target_distribution_request_id = $1::uuid
+            AND request_status = 'approved'
+        `,
+        [request.target_distribution_request_id, JSON.stringify(predecessorSuccessorLinks)],
+      );
 
       await client.query(
         `
@@ -719,6 +941,12 @@ export class TargetDistributionRepository {
                 ? Number(request.original_total_target_value)
                 : Number(request.total_target_value),
             finalTargetValue: Number(request.total_target_value),
+            targetRevision: {
+              mode: revision?.mode ?? "initial",
+              reasonClass: revision?.mode === "revision" ? "monthly_target_revision" : "initial_approval",
+              reasonPresent: Boolean(request.request_reason?.trim()),
+              predecessorSuccessorLinks,
+            },
           }),
         ],
       );

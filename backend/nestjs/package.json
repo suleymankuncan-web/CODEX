@@ -10,6 +10,7 @@
     "build": "nest build",
     "lint": "eslint \"src/**/*.ts\"",
     "openapi:generate": "nest build && node scripts/run-openapi-generator.mjs",
+    "verify:tref-postgres": "npm run build && node scripts/verify-target-reference-supersession-postgres.mjs",
     "test": "jest",
     "check:release": "npm run lint && npm test -- --runInBand && npm run build && npm audit --omit=dev",
     "auth:token": "ts-node scripts/generate-local-jwt.ts",

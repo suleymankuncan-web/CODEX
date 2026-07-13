@@ -114,6 +114,7 @@ const selectedOperations = [
   { path: '/api/admin/incentives/corrections', method: 'post' },
   { path: '/api/admin/incentives/region-packages/reviews', method: 'post' },
   { path: '/api/target-distributions/coverage', method: 'get' },
+  { path: '/api/target-distributions/revision-basis', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'get' },
   { path: '/api/target-distributions/requests', method: 'post' },
   { path: '/api/target-distributions/requests/{requestId}/approve', method: 'patch' },

@@ -114,7 +114,9 @@ a separate optional R5 decision and is not authorized here.
 
 ## 5. Approved Owner Decisions
 
-The owner approved all six selections on 2026-07-13.
+The owner approved all six selections on 2026-07-13. On the same date, before
+implementation, the owner approved U-07 through U-09 and the additive
+`revision-basis` read contract below to resolve fresh writer/API contradictions.
 
 ### U-01 — Period close: `completed_snapshot`
 
@@ -164,6 +166,31 @@ Existing target rows and `approved_by_user_id` remain unchanged. Month-end
 portfolio ownership is derived from effective-dated manager responsibility,
 not by rewriting reference history.
 
+### U-07 — Employee primary eligibility: `approval_business_date`
+
+Employee target ownership MUST be validated inside the approval transaction at
+the database business date in `Europe/Istanbul`. Only the effective active
+primary assignment for the request store qualifies. A secondary support
+assignment never qualifies. A rotation may qualify the new primary only when
+the predecessor end date is earlier than the successor start date; same-day
+predecessor-end/successor-start remains invalid.
+
+### U-08 — Revision set: `complete_base_plus_eligible_new`
+
+Every employee represented by the locked active base references MUST appear in
+the final allocations or explicit removals. Final allocations MAY also contain
+a newly eligible primary employee with no active predecessor. That employee is
+inserted as a new root reference only after fresh transactional eligibility and
+active-key checks. Removed employees MUST belong to the base set and MUST be
+disjoint from allocations. Silent omission fails closed.
+
+### U-09 — Typed conflicts: `allowlisted_existing_envelope_code`
+
+The standard error-envelope shape remains unchanged. Its existing `code` field
+MAY carry only the six TREF conflict codes defined in Section 9. The shared
+filter MUST reject arbitrary exception-provided codes and preserve existing
+generic codes for every other domain.
+
 ## 6. State And Truth Tables
 
 | Scenario | Required result |
@@ -189,7 +216,8 @@ not by rewriting reference history.
 - **FR-01:** The service MUST approve a request only from the expected
   `pending_region_approval` state.
 - **FR-02:** The service MUST validate total, complete allocations, distinct employees,
-  employee identity, store scope, and current action authority before writes.
+  employee identity, store scope, current action authority, and effective primary-store
+  eligibility at the approval transaction's Europe/Istanbul business date before writes.
 - **FR-03:** The lifecycle MUST preserve exactly one active reference per
   employee/month/target type.
 - **FR-04:** An allowed replacement MUST create a linked append-only successor and MUST NOT update
@@ -210,7 +238,9 @@ not by rewriting reference history.
 - **FR-12:** The implementation PR MUST NOT repair existing data or execute staging DML/DDL in the
   implementation PR.
 - **FR-13:** A revision request MUST persist its exact base reference IDs,
-  explicit removed employee IDs, and non-empty reason in request evidence.
+  explicit removed employee IDs, and non-empty reason in request evidence. The complete
+  base set MUST reconcile to retained allocations plus explicit removals, while a freshly
+  eligible new primary employee MAY appear only as an allocation with no predecessor.
 - **FR-14:** An adjusted approval MUST NOT add an unlisted removal; its final
   allocation plus explicit removals MUST reconcile the complete active set.
 - **FR-15:** The ordinary flow MUST reject a company/period with an exact
@@ -226,8 +256,11 @@ not by rewriting reference history.
   active references; no last-writer-wins behavior.
 - **NFR-03 — Compatibility:** no permission, API response shape, scoring
   formula, snapshot identity, or provider contract broadening.
-- **NFR-04 — Privacy:** logs/tests contain no person, store, credential, raw
-  allocation, or business value.
+- **NFR-04 — Privacy:** new TREF lineage/audit/log fields contain no person label,
+  store label, credential, target amount, raw allocation, or personnel attribute. Existing
+  approval evidence intentionally retains its legacy original/final totals and allocations;
+  implementation MUST preserve that audit contract without duplicating those values into
+  the new TREF lineage or audit metadata.
 - **NFR-05 — Bounded work:** one transaction, sorted employee locks, no more
   than one status transition and one insert per allocation/removal, and no
   unbounded retry loop.
@@ -267,10 +300,40 @@ interface CreateTargetDistributionRequestV2 {
 }
 ```
 
-When `revision` exists, `requestReason` MUST be non-empty and the union of
-allocation employee IDs plus `removedEmployeeIds` MUST equal the employee set
-represented by `baseReferenceIds`. The server resolves every base ID and never
-trusts client-supplied scope or identity labels.
+When `revision` exists, `requestReason` MUST be non-empty. Every employee
+represented by `baseReferenceIds` MUST appear in allocation employee IDs or
+`removedEmployeeIds`; allocations MAY additionally contain a freshly eligible
+primary employee with no active reference. Removed IDs MUST be base employees,
+MUST be disjoint from allocations, and the server resolves every ID without
+trusting client-supplied scope or identity labels.
+
+The implementation adds one action-scoped read without changing existing
+response shapes:
+
+```ts
+GET /api/target-distributions/revision-basis?storeId={uuid}&requestMonth={date}
+
+interface TargetRevisionBasisItemV1 {
+  employeeId: string;
+  targetReferenceId: string;
+  displayName: string;
+  targetValue: number;
+}
+
+interface TargetRevisionBasisV1 {
+  storeId: string;
+  requestMonth: string;
+  periodClosed: boolean;
+  items: TargetRevisionBasisItemV1[];
+}
+```
+
+The endpoint returns the complete active reference set for the exact
+company/store/month, including references whose employee is no longer in the
+current store roster and an active predecessor whose employee's single
+effective primary assignment has rotated into the requested store. This
+rotation lookup never treats support as primary. It requires the existing
+store action scope and returns no historical superseded rows.
 
 The existing approval endpoint response shape remains unchanged. Adjusted
 approval MAY change values but MUST NOT introduce a removal that is absent from
@@ -309,9 +372,10 @@ No table or column is added by this specification.
 | `supersedes_target_reference_id` | UUID self-FK | Exact predecessor for replacements; null for roots and explicit terminal removals create no row. |
 | snapshot reference ID | UUID FK | Never rewritten by ordinary revision. |
 
-Revision submission evidence MUST be persisted in the existing
-`target_distribution_request.approval_evidence_json` without raw names or
-business values:
+Revision submission evidence MUST be persisted as a `targetRevision` member in
+the existing `target_distribution_request.approval_evidence_json`. Existing
+legacy approval totals/allocations remain unchanged; the new member contains no
+names, labels, target amounts, raw allocations, or personnel attributes:
 
 ```ts
 interface TargetRevisionEvidenceV1 {
@@ -413,8 +477,9 @@ conflict.
   provider change.
 - **AC-14 (FR-10, NFR-04, NFR-05):** Given a revision with many allocations,
   when command evidence and query shape are inspected, then locks are sorted,
-  statements are bounded per allocation/removal, and logs/audit contain no
-  names, labels, target values, raw allocations, or personnel attributes.
+  statements are bounded per allocation/removal, legacy approval evidence is
+  preserved, and new TREF lineage/log/audit fields contain no names, labels,
+  target values, raw allocations, or personnel attributes.
 
 ## 13. Edge Cases
 
@@ -436,7 +501,9 @@ conflict.
 
 ## 14. Conditional Implementation Line
 
-No implementation is authorized by TREF-1. A future approved plan must:
+TREF-1 alone authorizes no implementation. The owner separately authorized the
+bounded implementation on 2026-07-13 through
+`docs/plans/target-reference-supersession-implementation-plan-v1.md`, which must:
 
 1. Confirm the no-migration application-enforced schema verdict against fresh
    repository truth; any contradiction stops and opens a separate R5 plan.

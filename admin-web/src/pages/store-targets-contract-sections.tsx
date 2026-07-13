@@ -9,6 +9,8 @@ import {
   type TargetCoverageSummary,
   type TargetDistributionAllocation,
   type TargetDistributionRequest,
+  type StoreTargetingPerson,
+  type TargetRevisionBasis,
 } from '../features/targets/api'
 import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDate, formatDateTime, formatNumber, getErrorMessage } from '../lib/format'
@@ -20,6 +22,11 @@ import {
   type StoreSurfaceTone,
 } from './store-surface-primitives'
 export { TargetApprovalQueue } from './store-targets-approval-queue'
+
+export type TargetRevisionSource = Pick<
+  TargetDistributionRequest,
+  'approvedAt' | 'requestId' | 'requestMonth' | 'storeId' | 'storeName' | 'targetLabel' | 'totalTargetValue' | 'updatedAt'
+>
 
 export type TargetCopy = {
   allocationCount: string
@@ -351,14 +358,17 @@ export function TargetApprovedRequestsPanel(input: {
 }
 
 export function TargetRevisionPanel(input: {
-  approvedRequests: TargetDistributionRequest[]
+  revisionSources: TargetRevisionSource[]
   copy: TargetCopy
   createError: unknown
   createPending: boolean
   createVisible: boolean
   locale: AppLocale
+  periodClosed: boolean
+  revisionBasisItems: TargetRevisionBasis['items']
+  storePersonnel: StoreTargetingPerson[]
   onSubmitRevision: (
-    request: TargetDistributionRequest,
+    request: TargetRevisionSource,
     allocations: TargetDistributionAllocation[],
     note: string,
   ) => void
@@ -367,7 +377,7 @@ export function TargetRevisionPanel(input: {
   const [revisionDrafts, setRevisionDrafts] = useState<Record<string, Record<string, number>>>({})
   const [revisionNotes, setRevisionNotes] = useState<Record<string, string>>({})
 
-  const openRevision = (request: TargetDistributionRequest) => {
+  const openRevision = (request: TargetRevisionSource) => {
     setOpenRequestId(request.requestId)
     setRevisionDrafts((current) => {
       if (current[request.requestId]) {
@@ -377,10 +387,12 @@ export function TargetRevisionPanel(input: {
       return {
         ...current,
         [request.requestId]: Object.fromEntries(
-          request.allocations.map((allocation) => [
-            allocation.employeeId,
-            Number(allocation.targetValue || 0),
-          ]),
+          [
+            ...input.revisionBasisItems.map((item) => [item.employeeId, Number(item.targetValue)]),
+            ...input.storePersonnel
+              .filter((person) => !input.revisionBasisItems.some((item) => item.employeeId === person.employeeId))
+              .map((person) => [person.employeeId, 0]),
+          ],
         ),
       }
     })
@@ -393,19 +405,33 @@ export function TargetRevisionPanel(input: {
           <h2 id="target-revision-title">{input.copy.revisionRequests}</h2>
           <p>{input.copy.revisionRequestsCopy}</p>
         </div>
-        <StoreStatusBadge tone="accent">{input.approvedRequests.length}</StoreStatusBadge>
+        <StoreStatusBadge tone="accent">{input.revisionSources.length}</StoreStatusBadge>
       </div>
-      {input.approvedRequests.length === 0 ? (
+      {input.revisionSources.length === 0 ? (
         <div className="targets-command-ledger-empty">
           <StoreEmptyState title={input.copy.noApprovedTitle} description={input.copy.noApprovedCopy} />
         </div>
       ) : (
         <div className="targets-command-revision-list">
-          {input.approvedRequests.map((request) => {
+          {input.revisionSources.map((request) => {
             const isOpen = openRequestId === request.requestId
             const draftValues = revisionDrafts[request.requestId] ?? {}
             const note = revisionNotes[request.requestId] ?? ''
-            const allocations = request.allocations.map((allocation) => ({
+            const baseAllocations: TargetDistributionAllocation[] = [
+              ...input.revisionBasisItems.map((item) => ({
+                employeeId: item.employeeId,
+                assigneeLabel: item.displayName,
+                targetValue: item.targetValue,
+              })),
+              ...input.storePersonnel
+                .filter((person) => !input.revisionBasisItems.some((item) => item.employeeId === person.employeeId))
+                .map((person) => ({
+                  employeeId: person.employeeId,
+                  assigneeLabel: person.displayName,
+                  targetValue: 0,
+                })),
+            ]
+            const allocations = baseAllocations.map((allocation) => ({
               ...allocation,
               targetValue:
                 draftValues[allocation.employeeId] ?? Number(allocation.targetValue || 0),
@@ -419,19 +445,20 @@ export function TargetRevisionPanel(input: {
               (allocation) =>
                 Number(allocation.targetValue || 0) !==
                 Number(
-                  request.allocations.find((item) => item.employeeId === allocation.employeeId)
+                  baseAllocations.find((item) => item.employeeId === allocation.employeeId)
                     ?.targetValue || 0,
                 ),
             )
-            const hasEveryTarget = allocations.every(
-              (allocation) => Number(allocation.targetValue || 0) > 0,
-            )
+            const hasValidTargets =
+              allocations.every((allocation) => Number(allocation.targetValue || 0) >= 0) &&
+              allocations.some((allocation) => Number(allocation.targetValue || 0) > 0)
             const canSubmit =
               isOpen &&
               hasChanged &&
-              hasEveryTarget &&
+              hasValidTargets &&
               difference === 0 &&
               Boolean(note.trim()) &&
+              !input.periodClosed &&
               !input.createPending
 
             return (
@@ -480,7 +507,7 @@ export function TargetRevisionPanel(input: {
                           'targets-command-target-row',
                           Number(allocation.targetValue || 0) !==
                             Number(
-                              request.allocations.find((item) => item.employeeId === allocation.employeeId)
+                              baseAllocations.find((item) => item.employeeId === allocation.employeeId)
                                 ?.targetValue || 0,
                             )
                             ? 'is-changed'

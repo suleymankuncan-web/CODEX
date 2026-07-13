@@ -11,6 +11,18 @@ import {
 import { Type } from "class-transformer";
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 
+class TargetDistributionRevisionDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsPostgresUuid({ each: true })
+  baseReferenceIds!: string[];
+
+  @IsArray()
+  @IsPostgresUuid({ each: true })
+  removedEmployeeIds!: string[];
+
+}
+
 class TargetDistributionAllocationDto {
   @IsPostgresUuid()
   employeeId!: string;
@@ -52,4 +64,9 @@ export class CreateTargetDistributionRequestDto {
   @ValidateNested({ each: true })
   @Type(() => TargetDistributionAllocationDto)
   allocations!: TargetDistributionAllocationDto[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TargetDistributionRevisionDto)
+  revision?: TargetDistributionRevisionDto;
 }

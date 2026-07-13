@@ -20,11 +20,21 @@ type HttpResponseLike = {
 };
 
 type HttpExceptionBody = {
+  code?: string;
   error?: string;
   message?: string | string[];
   retryAfterSeconds?: number | string;
   statusCode?: number;
 };
+
+const TARGET_REVISION_ERROR_CODES = new Set([
+  "target_revision_period_closed",
+  "target_revision_stale_base",
+  "target_revision_incomplete",
+  "target_revision_chain_conflict",
+  "target_revision_active_conflict",
+  "target_revision_import_replacement_forbidden",
+]);
 
 @Catch()
 export class StandardErrorFilter implements ExceptionFilter {
@@ -92,6 +102,14 @@ export class StandardErrorFilter implements ExceptionFilter {
   ): string {
     if (statusCode === HttpStatus.BAD_REQUEST && Array.isArray(exceptionBody?.message)) {
       return "VALIDATION_ERROR";
+    }
+
+    if (
+      (statusCode === HttpStatus.BAD_REQUEST || statusCode === HttpStatus.CONFLICT) &&
+      exceptionBody?.code &&
+      TARGET_REVISION_ERROR_CODES.has(exceptionBody.code)
+    ) {
+      return exceptionBody.code;
     }
 
     return defaultErrorCode(statusCode);

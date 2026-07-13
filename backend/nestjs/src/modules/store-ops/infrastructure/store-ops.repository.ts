@@ -109,6 +109,7 @@ export class StoreOpsRepository {
           WHERE eah.store_id = $1::uuid
             AND eah.assignment_status = 'active'
             AND eah.end_date IS NULL
+            AND eah.is_primary_assignment = TRUE
         )
         SELECT
           e.employee_id,

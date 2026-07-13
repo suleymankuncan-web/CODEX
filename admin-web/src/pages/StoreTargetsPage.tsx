@@ -37,6 +37,7 @@ import {
   getTargetDistributionRequests,
   getStoreTargetingPersonnel,
   getTargetCoverage,
+  getTargetRevisionBasis,
   type TargetDistributionAllocation,
   type TargetDistributionRequest,
 } from '../features/targets/api'
@@ -48,6 +49,7 @@ import {
   TargetCoveragePanel,
   TargetDistributionForm,
   TargetRevisionPanel,
+  type TargetRevisionSource,
 } from './store-targets-contract-sections'
 import {
   createAvailableTargetTabs,
@@ -245,6 +247,20 @@ export function StoreTargetsPage(input: {
     enabled: canCreateForStore,
     staleTime: 30_000,
   })
+  const revisionBasisQuery = useQuery({
+    queryKey: [
+      'target-revision-basis',
+      'store-targets',
+      effectiveSelectedStoreId,
+      activeRequestMonthStart,
+    ],
+    queryFn: () => getTargetRevisionBasis({
+      storeId: effectiveSelectedStoreId,
+      requestMonth: activeRequestMonthStart,
+    }),
+    enabled: canCreateForStore,
+    staleTime: 30_000,
+  })
   const createMutation = useMutation({
     mutationFn: createTargetDistributionRequest,
     onSuccess: (result) => {
@@ -340,6 +356,33 @@ export function StoreTargetsPage(input: {
     (request) => request.status === 'pending_region_approval',
   )
   const approvedRequests = scopedTargetRequests.filter((request) => request.status === 'approved')
+  const latestApprovedRequest = [...approvedRequests]
+    .sort((left, right) =>
+      String(right.approvedAt ?? right.updatedAt).localeCompare(
+        String(left.approvedAt ?? left.updatedAt),
+      ),
+    )
+    .at(0)
+  const revisionBasisItems = revisionBasisQuery.data?.items ?? []
+  const revisionBasisTotal = revisionBasisItems.reduce(
+    (sum, item) => sum + Number(item.targetValue || 0),
+    0,
+  )
+  const revisionSources: TargetRevisionSource[] =
+    effectiveSelectedStoreId && revisionBasisItems.length > 0
+      ? [{
+          requestId:
+            latestApprovedRequest?.requestId ??
+            `basis:${effectiveSelectedStoreId}:${activeRequestMonthStart}`,
+          storeId: effectiveSelectedStoreId,
+          storeName: latestApprovedRequest?.storeName ?? '',
+          requestMonth: activeRequestMonthStart,
+          targetLabel: latestApprovedRequest?.targetLabel ?? copy.targetLabelDefault,
+          totalTargetValue: revisionBasisTotal,
+          approvedAt: latestApprovedRequest?.approvedAt ?? null,
+          updatedAt: latestApprovedRequest?.updatedAt ?? activeRequestMonthStart,
+        }]
+      : []
   const storeOptions = createStoreOptions({
     assignedStoreIds,
     coverageRows,
@@ -376,7 +419,7 @@ export function StoreTargetsPage(input: {
   const userMode = resolveTargetUserMode(input.authSummary, canCreateForStore)
   const canApproveTargets = hasAnyRole(input.authSummary, ['REGION_MANAGER', 'SUPER_ADMIN'])
   const availableTabs = createAvailableTargetTabs({
-    approvedCount: approvedRequests.length,
+    approvedCount: Math.max(approvedRequests.length, revisionSources.length),
     canApproveTargets,
     canCreateForStore,
     copy,
@@ -415,7 +458,7 @@ export function StoreTargetsPage(input: {
   }
 
   const submitRevisionRequest = (
-    request: TargetDistributionRequest,
+    request: TargetRevisionSource,
     allocations: TargetDistributionAllocation[],
     note: string,
   ) => {
@@ -432,13 +475,28 @@ export function StoreTargetsPage(input: {
       return
     }
 
+    const basisItems = revisionBasisQuery.data?.items ?? []
+    if (basisItems.length === 0 || revisionBasisQuery.data?.periodClosed) {
+      return
+    }
+    const finalAllocations = allocations.filter(
+      (allocation) => Number(allocation.targetValue || 0) > 0,
+    )
+    const finalEmployeeIds = new Set(finalAllocations.map((allocation) => allocation.employeeId))
+
     createMutation.mutate({
       storeId: request.storeId,
       requestMonth: request.requestMonth,
       targetLabel: `${request.targetLabel} ${copy.revisionLabelSuffix}`,
       totalTargetValue: Number(request.totalTargetValue),
       requestReason: note.trim(),
-      allocations: allocations.map((allocation) => {
+      revision: {
+        baseReferenceIds: basisItems.map((item) => item.targetReferenceId),
+        removedEmployeeIds: basisItems
+          .filter((item) => !finalEmployeeIds.has(item.employeeId))
+          .map((item) => item.employeeId),
+      },
+      allocations: finalAllocations.map((allocation) => {
         const payload: TargetDistributionAllocation = {
           employeeId: allocation.employeeId,
           assigneeLabel: allocation.assigneeLabel,
@@ -743,12 +801,15 @@ export function StoreTargetsPage(input: {
 
       {selectedTab === 'revision' && canCreateForStore ? (
         <TargetRevisionPanel
-          approvedRequests={approvedRequests}
+          revisionSources={revisionSources}
           copy={copy}
           createError={createMutation.error}
           createPending={createMutation.isPending}
           createVisible={createMutation.isError}
           locale={locale}
+          periodClosed={revisionBasisQuery.data?.periodClosed ?? false}
+          revisionBasisItems={revisionBasisQuery.data?.items ?? []}
+          storePersonnel={personnelQuery.data?.items ?? []}
           onSubmitRevision={submitRevisionRequest}
         />
       ) : null}

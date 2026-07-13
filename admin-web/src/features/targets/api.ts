@@ -22,6 +22,7 @@ export type StoreTargetingPerson = StoreTargetingPersonnel['items'][number]
 export type TargetCoverage = ApiGetResponse<'/api/target-distributions/coverage'>
 export type TargetCoverageRow = TargetCoverage['items'][number]
 export type TargetCoverageSummary = TargetCoverage['summary']
+export type TargetRevisionBasis = ApiGetResponse<'/api/target-distributions/revision-basis'>
 
 export async function getStoreTargetingPersonnel(storeId: string) {
   const params = new URLSearchParams({ storeId })
@@ -36,6 +37,14 @@ export async function getTargetCoverage(input: { requestMonth: string; storeId?:
   }
 
   return fetchOpenApiJson('/api/target-distributions/coverage', { query: params })
+}
+
+export async function getTargetRevisionBasis(input: { requestMonth: string; storeId: string }) {
+  const params = new URLSearchParams({
+    requestMonth: input.requestMonth,
+    storeId: input.storeId,
+  })
+  return fetchOpenApiJson('/api/target-distributions/revision-basis', { query: params })
 }
 
 export async function getTargetDistributionRequests(input?: {
@@ -77,6 +86,10 @@ export async function createTargetDistributionRequest(input: {
   totalTargetValue: number
   requestReason?: string
   allocations: TargetDistributionAllocation[]
+  revision?: {
+    baseReferenceIds: string[]
+    removedEmployeeIds: string[]
+  }
 }) {
   return sendOpenApiJson('/api/target-distributions/requests', {
     method: 'POST',

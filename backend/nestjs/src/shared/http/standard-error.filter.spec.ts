@@ -1,6 +1,7 @@
 import {
   ArgumentsHost,
   BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   InternalServerErrorException,
@@ -35,6 +36,35 @@ function createHost(input: {
 }
 
 describe("StandardErrorFilter", () => {
+  it("exposes only allowlisted target revision domain codes", () => {
+    const { host, json } = createHost({ url: "/api/target-distributions/requests/1/approve" });
+    const filter = new StandardErrorFilter();
+
+    filter.catch(
+      new ConflictException({
+        code: "target_revision_stale_base",
+        message: "Target revision base is stale",
+      }),
+      host,
+    );
+
+    expect(json).toHaveBeenCalledWith(expect.objectContaining({
+      errorCode: "target_revision_stale_base",
+      statusCode: 409,
+    }));
+  });
+
+  it("does not expose arbitrary exception codes", () => {
+    const { host, json } = createHost({ url: "/api/target-distributions/requests/1/approve" });
+    const filter = new StandardErrorFilter();
+
+    filter.catch(
+      new ConflictException({ code: "leak_me", message: "Conflict" }),
+      host,
+    );
+
+    expect(json).toHaveBeenCalledWith(expect.objectContaining({ errorCode: "CONFLICT" }));
+  });
   it("keeps 500 responses generic and captures observability context", () => {
     const observabilityService = {
       captureException: jest.fn(),

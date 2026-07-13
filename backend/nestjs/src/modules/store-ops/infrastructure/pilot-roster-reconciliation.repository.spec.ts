@@ -4,6 +4,9 @@ function createHarness() {
   const queries: Array<{ sql: string; params: unknown[] }> = [];
   const query = jest.fn(async (sql: string, params: unknown[] = []) => {
     queries.push({ sql, params });
+    if (sql.includes("WITH active AS") && sql.includes("ops.personnel_target_reference")) {
+      return { rows: [{ outcome: "inserted" }], rowCount: 1 };
+    }
     if (sql.includes("target_distribution_request_id")) {
       return {
         rows: [{ target_distribution_request_id: "00000000-0000-4000-8000-000000000901" }],
@@ -21,6 +24,79 @@ function createHarness() {
 }
 
 describe("PilotRosterReconciliationRepository", () => {
+  it("fails closed when a pilot import would replace an active target", async () => {
+    const query = jest.fn(async (sql: string) => {
+      if (sql.includes("target_distribution_request_id")) {
+        return {
+          rows: [{ target_distribution_request_id: "00000000-0000-4000-8000-000000000901" }],
+          rowCount: 1,
+        };
+      }
+      if (sql.includes("WITH active AS")) {
+        return { rows: [{ outcome: "conflict" }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    const repository = new PilotRosterReconciliationRepository({
+      withTransaction: jest.fn(async (work) => work({ query })),
+    } as never);
+
+    await expect(repository.applyResolvedPlan({
+      actorUserId: "pilot-admin",
+      activeAssignments: [],
+      targetReferences: [{
+        companyId: "00000000-0000-4000-8000-000000000001",
+        regionId: "00000000-0000-4000-8000-000000000002",
+        storeId: "00000000-0000-4000-8000-000000000003",
+        employeeId: "00000000-0000-4000-8000-000000000004",
+        periodStart: "2026-06-01",
+        targetValue: 100000,
+      }],
+      turnoverEvents: [],
+      snapshotPeriodsToRefresh: [],
+    })).rejects.toMatchObject({
+      response: { code: "target_revision_import_replacement_forbidden" },
+    });
+  });
+
+  it("keeps an exact pilot target replay as a complete no-op", async () => {
+    const queries: string[] = [];
+    const query = jest.fn(async (sql: string) => {
+      queries.push(sql);
+      if (sql.includes("target_distribution_request_id")) {
+        return {
+          rows: [{ target_distribution_request_id: "00000000-0000-4000-8000-000000000901" }],
+          rowCount: 1,
+        };
+      }
+      if (sql.includes("WITH active AS")) {
+        return { rows: [{ outcome: "replayed" }], rowCount: 1 };
+      }
+      return { rows: [], rowCount: 1 };
+    });
+    const repository = new PilotRosterReconciliationRepository({
+      withTransaction: jest.fn(async (work) => work({ query })),
+    } as never);
+
+    const result = await repository.applyResolvedPlan({
+      actorUserId: "pilot-admin",
+      activeAssignments: [],
+      targetReferences: [{
+        companyId: "00000000-0000-4000-8000-000000000001",
+        regionId: "00000000-0000-4000-8000-000000000002",
+        storeId: "00000000-0000-4000-8000-000000000003",
+        employeeId: "00000000-0000-4000-8000-000000000004",
+        periodStart: "2026-06-01",
+        targetValue: 100000,
+      }],
+      turnoverEvents: [],
+      snapshotPeriodsToRefresh: [],
+    });
+
+    expect(result.targetReferencesTouched).toBe(0);
+    expect(queries.join("\n")).not.toContain("UPDATE ops.target_distribution_request request");
+  });
+
   it("applies resolved roster, target, and turnover rows in one transaction", async () => {
     const { repository, withTransaction } = createHarness();
 
@@ -121,7 +197,13 @@ describe("PilotRosterReconciliationRepository", () => {
 
     const sql = queries.map((item) => item.sql).join("\n");
     expect(sql).toContain("WHERE NOT EXISTS");
-    expect(sql).toContain("ON CONFLICT (employee_id, period_start, period_end, target_type)");
+    expect(sql).not.toContain("ON CONFLICT (employee_id, period_start, period_end, target_type)");
+    expect(sql).toContain("WHEN active.company_id = $2::uuid");
+    expect(sql).toContain("active.source_request_id = $1::uuid");
+    expect(sql).toContain("SELECT employee_id FROM ops.employee WHERE employee_id = $1::uuid FOR UPDATE");
+    expect(sql).toContain("SELECT store_id FROM ops.store WHERE store_id = $1::uuid FOR UPDATE");
+    expect(sql).toContain("THEN 'replayed'::text");
+    expect(sql).toContain("ELSE 'conflict'::text");
     expect(sql).toContain("UPDATE ops.target_distribution_request request");
     expect(sql).toContain("termination_reason_code = 'pilot_monthly_snapshot_absence'");
     expect(sql).toContain("target_label = 'pilot_imported_personnel_targets'");

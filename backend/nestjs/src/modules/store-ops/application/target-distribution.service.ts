@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/common";
 import { buildCommandResponse, buildListResponse } from "../../../shared/http/response-builders";
 import { TargetDistributionRepository } from "../infrastructure/target-distribution.repository";
+import type { TargetRevisionInput } from "../infrastructure/target-distribution.repository";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
 
 @Injectable()
@@ -31,12 +32,22 @@ export class TargetDistributionService {
       targetValue: number;
       note?: string;
     }>;
+    revision?: TargetRevisionInput;
   }) {
     if (!this.canActOnStore(input.actorActionScope, input.actorScope, input.storeId)) {
       throw new ForbiddenException("Requested store is outside assigned action stores");
     }
 
     this.assertDistinctEmployees(input.allocations);
+    this.assertAllocationTotal(input.allocations, input.totalTargetValue);
+
+    if (input.revision) {
+      this.assertRevisionContract({
+        allocationEmployeeIds: input.allocations.map((allocation) => allocation.employeeId),
+        requestReason: input.requestReason,
+        revision: input.revision,
+      });
+    }
 
     await this.assertAllocationsBelongToStore({
       storeId: input.storeId,
@@ -58,6 +69,7 @@ export class TargetDistributionService {
           totalTargetValue: input.totalTargetValue,
           requestReason: input.requestReason,
           allocations: input.allocations,
+          revision: input.revision,
           submittedByUserId: input.actorUserId,
         }),
       },
@@ -360,6 +372,82 @@ export class TargetDistributionService {
       throw new BadRequestException(
         "Target allocations cannot contain the same employee more than once",
       );
+    }
+  }
+
+  private assertAllocationTotal(
+    allocations: Array<{ targetValue: number }>,
+    totalTargetValue: number,
+  ) {
+    const allocationTotal = allocations.reduce(
+      (sum, allocation) => sum + Number(allocation.targetValue || 0),
+      0,
+    );
+    if (Math.abs(allocationTotal - totalTargetValue) > 0.0001) {
+      throw new BadRequestException(
+        "Target allocation total must match the requested target total",
+      );
+    }
+  }
+
+  async getRevisionBasis(input: {
+    actorScope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
+    actorActionScope?: { assignedStoreIds: string[] };
+    storeId: string;
+    requestMonth: string;
+  }) {
+    if (!this.canActOnStore(input.actorActionScope, input.actorScope, input.storeId)) {
+      throw new ForbiddenException("Requested store is outside assigned action stores");
+    }
+    const storeScope = await this.resolveStoreScope(input.storeId);
+    const basis = await this.targetDistributionRepository.getRevisionBasis({
+      companyId: storeScope.companyId,
+      storeId: input.storeId,
+      requestMonth: input.requestMonth,
+    });
+    return {
+      storeId: input.storeId,
+      requestMonth: input.requestMonth,
+      periodClosed: basis.periodClosed,
+      items: basis.rows.map((row) => ({
+        employeeId: row.employee_id,
+        targetReferenceId: row.personnel_target_reference_id,
+        displayName: `${row.first_name} ${row.last_name}`.trim(),
+        targetValue: Number(row.target_value),
+      })),
+    };
+  }
+
+  private assertRevisionContract(input: {
+    allocationEmployeeIds: string[];
+    requestReason?: string;
+    revision: TargetRevisionInput;
+  }) {
+    if (!input.requestReason?.trim()) {
+      throw new BadRequestException({
+        code: "target_revision_incomplete",
+        message: "Target revision reason is required",
+      });
+    }
+
+    const normalizedBaseIds = input.revision.baseReferenceIds.map((id) => id.toLowerCase());
+    const normalizedRemovedIds = input.revision.removedEmployeeIds.map((id) => id.toLowerCase());
+    if (
+      new Set(normalizedBaseIds).size !== normalizedBaseIds.length ||
+      new Set(normalizedRemovedIds).size !== normalizedRemovedIds.length
+    ) {
+      throw new BadRequestException({
+        code: "target_revision_incomplete",
+        message: "Target revision identifiers must be unique",
+      });
+    }
+
+    const allocationIds = new Set(input.allocationEmployeeIds.map((id) => id.toLowerCase()));
+    if (normalizedRemovedIds.some((id) => allocationIds.has(id))) {
+      throw new BadRequestException({
+        code: "target_revision_incomplete",
+        message: "Removed employees cannot remain in target allocations",
+      });
     }
   }
 

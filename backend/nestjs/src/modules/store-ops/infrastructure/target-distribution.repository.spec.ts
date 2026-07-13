@@ -14,6 +14,37 @@ function createRepository(rows: unknown[] = []) {
 }
 
 describe("TargetDistributionRepository", () => {
+  it("returns the complete active revision basis independently of the current roster", async () => {
+    const query = createRepositoryQueryMock().mockImplementation(async (sql) => {
+      if (sql.includes("FROM rpt.snapshot_run")) {
+        return { rows: [{ exists: false }] } as never;
+      }
+      return {
+        rows: [{
+          employee_id: "00000000-0000-4000-8000-000000000501",
+          first_name: "Ada",
+          last_name: "Kaya",
+          personnel_target_reference_id: "00000000-0000-4000-8000-000000000901",
+          target_value: "100000",
+        }],
+      } as never;
+    });
+    const repository = new TargetDistributionRepository({ query } as never);
+
+    const result = await repository.getRevisionBasis({
+      companyId: "00000000-0000-4000-8000-000000000001",
+      storeId: "00000000-0000-4000-8000-000000000201",
+      requestMonth: "2026-03-01",
+    });
+
+    expect(result.periodClosed).toBe(false);
+    expect(result.rows).toHaveLength(1);
+    const basisQuery = findExecutedQuery(query, "FROM ops.personnel_target_reference ptr");
+    expect(basisQuery?.sql).toContain("ptr.store_id = $2::uuid");
+    expect(basisQuery?.sql).toContain("current_primary.is_primary_assignment = TRUE");
+    expect(basisQuery?.sql).toContain("ptr.status = 'approved'");
+  });
+
   it("does not list all target requests when actor scope is empty", async () => {
     const { query, repository } = createRepository();
 
@@ -252,10 +283,10 @@ describe("TargetDistributionRepository", () => {
       allocations[0].targetValue,
       "region-manager-user",
       requestRow.approved_at,
+      null,
     ]);
-    expect(targetReferenceCalls[0]?.sql).toContain(
-      "ON CONFLICT (employee_id, period_start, period_end, target_type)",
-    );
+    expect(targetReferenceCalls[0]?.sql).not.toContain("ON CONFLICT");
+    expect(targetReferenceCalls[0]?.sql).toContain("supersedes_target_reference_id");
 
     const auditCall = findExecutedQuery(query, "INSERT INTO audit.event_log");
     expect(auditCall).not.toBeNull();
@@ -264,6 +295,203 @@ describe("TargetDistributionRepository", () => {
       actorUserId: "region-manager-user",
       promotedTargetReferenceCount: 2,
     });
+  });
+
+  it("supersedes an exact open-period base without overwriting predecessor business fields", async () => {
+    const employeeId = "00000000-0000-4000-8000-000000000501";
+    const predecessorId = "00000000-0000-4000-8000-000000000901";
+    const successorId = "00000000-0000-4000-8000-000000000902";
+    const requestRow = {
+      target_distribution_request_id: "00000000-0000-4000-8000-000000000701",
+      company_id: "00000000-0000-4000-8000-000000000001",
+      region_id: "00000000-0000-4000-8000-000000000010",
+      store_id: "00000000-0000-4000-8000-000000000201",
+      request_month: "2026-03-01",
+      target_label: "Aylik personel hedef dagitimi revize",
+      total_target_value: "175000",
+      allocation_count: 1,
+      request_status: "approved",
+      request_reason: "Ay ici hedef revizyonu",
+      allocation_json: [{ employeeId, assigneeLabel: "Ada Kaya", targetValue: 175000 }],
+      approval_evidence_json: {
+        targetRevision: {
+          mode: "revision",
+          baseReferenceIds: [predecessorId],
+          removedEmployeeIds: [],
+          reasonPresent: true,
+        },
+      },
+      submitted_by_user_id: "store-manager-user",
+      approved_by_user_id: "region-manager-user",
+      approved_at: "2026-03-02T08:00:00.000Z",
+      approval_note: "Uygun",
+      created_at: "2026-03-01T08:00:00.000Z",
+      updated_at: "2026-03-02T08:00:00.000Z",
+      original_allocation_json: [{ employeeId, assigneeLabel: "Ada Kaya", targetValue: 175000 }],
+      original_total_target_value: "175000",
+    };
+    const query = createRepositoryQueryMock().mockImplementation(async (sql) => {
+      if (sql.includes("WITH existing AS")) return { rows: [requestRow] };
+      if (sql.includes("FROM rpt.snapshot_run")) return { rows: [{ exists: false }] };
+      if (sql.includes("FROM ops.employee WHERE")) return { rows: [{ employee_id: employeeId }] };
+      if (sql.includes("FROM ops.personnel_target_reference") && sql.includes("FOR UPDATE")) {
+        return { rows: [{
+          employee_id: employeeId,
+          personnel_target_reference_id: predecessorId,
+          store_id: requestRow.store_id,
+        }] };
+      }
+      if (sql.includes("FROM ops.employee_assignment_history")) {
+        return { rows: [{ eligible_count: "1" }] };
+      }
+      if (sql.includes("UPDATE ops.personnel_target_reference")) {
+        return { rows: [{ personnel_target_reference_id: predecessorId }] };
+      }
+      if (sql.includes("INSERT INTO ops.personnel_target_reference")) {
+        return { rows: [{ personnel_target_reference_id: successorId }] };
+      }
+      return { rows: [] };
+    });
+    const repository = new TargetDistributionRepository({
+      withTransaction: jest.fn(async (callback) => callback({ query })),
+    } as never);
+
+    await repository.approveRequest({
+      requestId: requestRow.target_distribution_request_id,
+      approverUserId: "region-manager-user",
+    });
+
+    const approvalUpdate = findExecutedQuery(query, "WITH existing AS");
+    expect(approvalUpdate?.sql).toContain("request_status = 'pending_region_approval'");
+    const eligibilityQuery = findExecutedQuery(query, "overlapping_primary");
+    expect(eligibilityQuery?.sql).toContain("eah.is_primary_assignment = TRUE");
+    expect(eligibilityQuery?.sql).toContain("overlapping_primary.assignment_id <> eah.assignment_id");
+    const predecessorUpdate = findExecutedQuery(query, "UPDATE ops.personnel_target_reference");
+    expect(predecessorUpdate?.sql).toContain("AND status = 'approved'");
+    expect(predecessorUpdate?.sql).not.toContain("target_value =");
+    const successorInsert = findExecutedQuery(query, "INSERT INTO ops.personnel_target_reference");
+    expect(successorInsert?.sql).not.toContain("ON CONFLICT");
+    expect(successorInsert?.params[9]).toBe(predecessorId);
+  });
+
+  it("rejects a multi-hop rotation when the immediately preceding primary ends on the successor start day", async () => {
+    const employeeId = "00000000-0000-4000-8000-000000000501";
+    const predecessorId = "00000000-0000-4000-8000-000000000901";
+    const requestRow = {
+      target_distribution_request_id: "00000000-0000-4000-8000-000000000701",
+      company_id: "00000000-0000-4000-8000-000000000001",
+      region_id: "00000000-0000-4000-8000-000000000010",
+      store_id: "00000000-0000-4000-8000-000000000203",
+      request_month: "2026-03-01",
+      target_label: "Aylik hedef revizyonu",
+      total_target_value: "175000",
+      allocation_count: 1,
+      request_status: "approved",
+      request_reason: "C magazasindan B magazasina rotasyon",
+      allocation_json: [{ employeeId, assigneeLabel: "Ada Kaya", targetValue: 175000 }],
+      approval_evidence_json: {
+        targetRevision: {
+          mode: "revision",
+          baseReferenceIds: [predecessorId],
+          removedEmployeeIds: [],
+          reasonPresent: true,
+        },
+      },
+      submitted_by_user_id: "store-manager-user",
+      approved_by_user_id: "region-manager-user",
+      approved_at: "2026-03-12T08:00:00.000Z",
+      approval_note: "Uygun",
+      created_at: "2026-03-11T08:00:00.000Z",
+      updated_at: "2026-03-12T08:00:00.000Z",
+      original_allocation_json: [{ employeeId, assigneeLabel: "Ada Kaya", targetValue: 175000 }],
+      original_total_target_value: "175000",
+    };
+    const query = createRepositoryQueryMock().mockImplementation(async (sql) => {
+      if (sql.includes("WITH existing AS")) return { rows: [requestRow] };
+      if (sql.includes("FROM ops.employee WHERE")) return { rows: [{ employee_id: employeeId }] };
+      if (sql.includes("eligible_count")) return { rows: [{ eligible_count: "1" }] };
+      if (sql.includes("FROM rpt.snapshot_run")) return { rows: [{ exists: false }] };
+      if (sql.includes("FROM ops.personnel_target_reference") && sql.includes("FOR UPDATE")) {
+        return { rows: [{
+          employee_id: employeeId,
+          personnel_target_reference_id: predecessorId,
+          // The target still points at A while the assignment history is A -> C -> B.
+          store_id: "00000000-0000-4000-8000-000000000201",
+        }] };
+      }
+      if (sql.includes("INNER JOIN LATERAL")) {
+        return { rows: [{
+          employee_id: employeeId,
+          predecessor_end_date: "2026-03-10",
+          successor_start_date: "2026-03-10",
+        }] };
+      }
+      return { rows: [] };
+    });
+    const repository = new TargetDistributionRepository({
+      withTransaction: jest.fn(async (callback) => callback({ query })),
+    } as never);
+
+    await expect(repository.approveRequest({
+      requestId: requestRow.target_distribution_request_id,
+      approverUserId: "region-manager-user",
+    })).rejects.toMatchObject({
+      response: { code: "target_revision_active_conflict" },
+    });
+
+    const rotationQuery = findExecutedQuery(query, "INNER JOIN LATERAL");
+    expect(rotationQuery?.sql).not.toContain("candidate.predecessor_store_id");
+    expect(rotationQuery?.sql).toContain("ORDER BY predecessor.start_date DESC");
+    expect(findExecutedQuery(query, "UPDATE ops.personnel_target_reference")).toBeNull();
+  });
+
+  it("rejects an initial approval when an exact completed monthly snapshot closes the period", async () => {
+    const employeeId = "00000000-0000-4000-8000-000000000501";
+    const requestRow = {
+      target_distribution_request_id: "00000000-0000-4000-8000-000000000701",
+      company_id: "00000000-0000-4000-8000-000000000001",
+      region_id: "00000000-0000-4000-8000-000000000010",
+      store_id: "00000000-0000-4000-8000-000000000201",
+      request_month: "2026-03-01",
+      target_label: "Aylik hedef",
+      total_target_value: "100000",
+      allocation_count: 1,
+      request_status: "approved",
+      request_reason: null,
+      allocation_json: [{ employeeId, assigneeLabel: "Ada Kaya", targetValue: 100000 }],
+      approval_evidence_json: { targetRevision: {
+        mode: "initial", baseReferenceIds: [], removedEmployeeIds: [], reasonPresent: false,
+      } },
+      submitted_by_user_id: "store-manager-user",
+      approved_by_user_id: "region-manager-user",
+      approved_at: "2026-03-02T08:00:00.000Z",
+      approval_note: null,
+      created_at: "2026-03-01T08:00:00.000Z",
+      updated_at: "2026-03-02T08:00:00.000Z",
+      original_allocation_json: [{ employeeId, assigneeLabel: "Ada Kaya", targetValue: 100000 }],
+      original_total_target_value: "100000",
+    };
+    const query = createRepositoryQueryMock().mockImplementation(async (sql) => {
+      if (sql.includes("WITH existing AS")) return { rows: [requestRow] } as never;
+      if (sql.includes("user_action_store_assignment")) return { rows: [{ exists: true }] } as never;
+      if (sql.includes("FROM ops.employee WHERE")) return { rows: [{ employee_id: employeeId }] } as never;
+      if (sql.includes("FROM ops.employee_assignment_history eah")) {
+        return { rows: [{ eligible_count: "1" }] } as never;
+      }
+      if (sql.includes("FROM rpt.snapshot_run")) return { rows: [{ exists: true }] } as never;
+      return { rows: [] } as never;
+    });
+    const repository = new TargetDistributionRepository({
+      withTransaction: jest.fn(async (callback) => callback({ query })),
+    } as never);
+
+    await expect(repository.approveRequest({
+      requestId: requestRow.target_distribution_request_id,
+      approverUserId: "region-manager-user",
+    })).rejects.toMatchObject({
+      response: { code: "target_revision_period_closed" },
+    });
+    expect(findExecutedQuery(query, "INSERT INTO ops.personnel_target_reference")).toBeNull();
   });
 
   it("persists edited final allocations before promotion", async () => {
