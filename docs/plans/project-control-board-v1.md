@@ -51,8 +51,8 @@ The project is in controlled pilot execution mode.
    tests without another unmeasured concurrency experiment.
 3. Preserve the successful 5 July mutation observations and the #971-#975
    read/session evidence; do not rerun successful flows only for documentation.
-4. Classify the June `13 blocked + 3 no_source` incentive state by sanitized
-   reason/source aggregates before proposing any correction.
+4. Preserve PR #977's sanitized classification: all June `13 blocked + 3
+   no_source` rows are `owner_input_required`; no runtime correction is indicated.
 5. If a real pilot/demo finding arrives, record and classify it as
    `P0 stop`, `P1 pilot blocker`, `P2 pilot friction`, or `P3 backlog`.
 6. Fix only evidence-backed P0/P1 blockers before the demo; batch P2 only when
@@ -100,7 +100,7 @@ The project is in controlled pilot execution mode.
 | Controlled pilot | Continue | Persona, route, Store Action, upload, staging readiness, and free-tier ops posture evidence cover the current scoped pilot path. |
 | Broad production | No-Go | Persistent Redis, managed recovery/PITR/RPO/RTO, final incident/app-level tracking posture, and owner acceptance remain production requirements. |
 | Store Action | Continue in current controlled scope | Manager assigned-store command path is proven; wider sources/actions need separate decision. |
-| Auth and scope | Guarded / bounded train active | Application DB assignments remain source of truth; only the locked DG1 company-read/incentive changes are open and require full positive/negative evidence. |
+| Auth and scope | Guarded / account freshness closed | PR #978 makes protected cookie-session reads fail `401` for inactive, missing, or role-empty application accounts while DB assignments remain fresh. |
 | Launch browser session security | Guarded / staging proof passed | Local implementation and guards are closed in `docs/evidence/readiness/2026-06-12-security-launch-blocker-pr-train-closeout.md`; real Region Manager staging cookie-session proof is recorded in `docs/evidence/readiness/2026-06-12-browser-session-staging-evidence.md`. |
 | Imports | Continue current Excel/Power BI path | JSON provider integration remains parked. |
 | Refactor | Closed as broad workstream | Only concrete product/risk/refactor triggers reopen code movement. |
@@ -114,9 +114,9 @@ The project is in controlled pilot execution mode.
 If no newer user instruction overrides this board, the next best default action
 is:
 
-1. execute `docs/plans/project-findings-remediation-plan-v1.md` in its locked
-   OT-1 -> INC-1 -> AUTH-1 -> TREF-1 order,
-2. use controlled-pilot feedback as the primary product signal,
+1. use controlled-pilot feedback as the primary product signal,
+2. treat the completed OT-1 -> INC-1 -> AUTH-1 -> TREF-1 line as operating
+   evidence, not authority for conditional TREF implementation,
 3. keep every unrelated runtime, ORG/ASSIGN, DG1-C, broad-production, and broad
    refactor line parked behind its recorded gate,
 4. update registries only when a decision or procedure changes.

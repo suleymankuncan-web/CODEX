@@ -116,9 +116,9 @@ Optional follow-up evidence is:
 - fresh live cross-person rankings/profile denial remains optional and requires
   an approved negative subject; current Moi session plus row-scope contracts pass;
 
-Current incentive data includes projected, blocked, and no-source states. The
-next evidence action is a sanitized read-only reason classification, not a
-runtime correction.
+PR #977 reconciled all 16 June non-projected incentive rows read-only: 13 are
+`blocked`, three are `no_source`, every bucket is `owner_input_required`, and
+the decision is `no_runtime_change`; no correction or business value was written.
 
 Use `docs/evidence/pilot-readiness/2026-07-05-owner-attested-mutation-flows.md`
 and `docs/evidence/pilot-readiness/2026-07-10-controlled-pilot-b1-external-blockers.md`.
@@ -185,13 +185,12 @@ Now:
 - PR #962 merged REM-7 at `84fa69311575dcaa1aa01548853c76f0f083e4ce`. Its one-shot staging receipt is valid: verify-full, certificate-verified, `REPEATABLE READ READ ONLY`, rollback, empty stderr, and strict digest validation. TARGET-02 reconciles from V1 `54` to active `0` and is `eligible_zero`; ORG-02 is `3` hits/`3` authority units, ORG-04 is `7142` hits/`827` units, and ASSIGN-01 is `4` hits/`2` units, all `blocked`. No mutation or DDL occurred.
 - PR #964 merged REM-8 TARGET preparation at `b60776c033528438118322b8b09652f16909f78d`. Its exact-SHA REM-8A staging receipt is verify-full, repeatable-read/read-only, TARGET-clean, PostgreSQL 17, and free of long transactions or conflicting locks; the exact-SHA REM-8B restore rehearsed 5,001 synthetic rows with expected `23514`/`55P03`, 20/20 writers, validation, rollback, and cleanup. Staging has 61 live TARGET rows versus the 5,000-row conservative envelope, so the reviewed decision is `rem_8c_not_required`; no staging DDL occurred.
 - PR #965 merged the exact-SHA REM-8 evidence at `3ab884f6ed922f5339d6a8890d7d4d69590710b8`. PR #966 then merged the TARGET-only DB-C5 repository implementation at `d76d56f741b832b5d39eede8364f333e12a0e341`. Its exact-merged-SHA one-shot staging apply completed successfully: migration 060 applied exactly once, the duplicate-employee CHECK is validated, the immutable function/checksum are exact, active TARGET V2 hits remain zero, verify-full passed, and the dedicated postflight was read-only. The sanitized receipt is `docs/evidence/readiness/2026-07-12-staging-dbc5-target-constraint-v1.json`. Production was not accessed. Target-reference supersession remains a separate unimplemented application-history gap and is not claimed by DB-C5.
-- On 2026-07-12 the product owner granted standing authorization for the remaining in-scope staging plan and directed the agent not to request repetitive approvals through goal completion. Once each exact technical prerequisite is proven, this standing authorization covers the plan's read-only evidence, backup/restore, writer-pause, rollback-rehearsal, manifest-bound commit, and eligible staging-DDL execution gates. It does not supply missing row authority, permit inferred winners, waive manifests/digests/restore/rollback/concurrency checks, authorize production, or authorize paid services.
+- PR #978 makes browser-cookie sessions re-read application-account status on every protected request: inactive, missing, or role-empty accounts fail `401`, while role/action assignments remain DB-fresh and Clerk is not called per request. TREF-1 locks `completed_snapshot`, `whole_month_latest_approved`, and `explicit_rerun_only` semantics plus explicit removals, initial-only pilot import, and responsibility-only manager changes; it authorizes no implementation.
 
 Next:
-1. Execute `docs/plans/project-findings-remediation-plan-v1.md` in the locked OT-1 -> INC-1 -> AUTH-1 -> TREF-1 order.
-2. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open unplanned runtime work.
-3. Keep ORG-02, ORG-04, and ASSIGN-01 correction/constraint work blocked until exact historical authority evidence exists; never infer winners from current timestamps.
-4. Obtain DG1-C provider usage independently; unknown usage preserves compatibility and opens no breaking runtime PR.
+1. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open runtime work.
+2. Keep TREF implementation, ORG/ASSIGN correction, and DG1-C contraction parked behind their recorded authorization, historical-authority, and provider-usage gates.
+3. Keep broad production `No-Go`; never infer historical winners or treat an approved specification as implementation authority.
 Park:
 - Separate mobile implementation, new modules, broad production, broad redesign, and generic architecture/refactor work.
 - Provider/Nebim/JSON implementation without a real source contract and owner decision.
