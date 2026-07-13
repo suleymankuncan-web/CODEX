@@ -28,16 +28,45 @@ async function createJwt(subject = "provider-subject-1") {
     .sign(new TextEncoder().encode("jwt-test-secret"));
 }
 
-function createDatabaseService() {
+function createDatabaseService(
+  accountState: {
+    actionStoresActive?: boolean;
+    active: boolean;
+    exists: boolean;
+    roleCodes?: string[];
+    roleStoreId?: string | null;
+    rolesActive?: boolean;
+  } = {
+    active: true,
+    exists: true,
+    rolesActive: true,
+  },
+) {
   const query = jest.fn(async (sql: string, params?: unknown[]) => {
+    if (sql.includes("FROM ops.user_account") && sql.includes("WHERE user_id")) {
+      expect(params).toEqual([APP_USER_ID]);
+      if (!accountState.exists) {
+        return { rowCount: 0, rows: [] };
+      }
+
+      return {
+        rowCount: 1,
+        rows: [{ is_active: accountState.active }],
+      };
+    }
+
     if (sql.includes("FROM ops.user_account ua") && sql.includes("provider_subject")) {
+      if (!accountState.exists) {
+        return { rowCount: 0, rows: [] };
+      }
+
       return {
         rowCount: 1,
         rows: [
           {
             email: "pilot@example.com",
             employee_id: "employee-1",
-            is_active: true,
+            is_active: accountState.active,
             user_id: APP_USER_ID,
             username: "pilot",
           },
@@ -47,17 +76,28 @@ function createDatabaseService() {
 
     if (sql.includes("FROM ops.user_account ua") && sql.includes("user_role_assignment")) {
       expect(params).toEqual([APP_USER_ID]);
+      if (
+        !accountState.active ||
+        !accountState.exists ||
+        accountState.rolesActive === false
+      ) {
+        return { rowCount: 0, rows: [] };
+      }
+
       return {
-        rowCount: 1,
-        rows: [
-          {
+        rowCount: accountState.roleCodes?.length ?? 1,
+        rows: (accountState.roleCodes ?? ["REPORT_VIEWER"]).map(
+          (roleCode) => ({
             company_id: COMPANY_ID,
             region_id: REGION_ID,
-            role_code: "REPORT_VIEWER",
+            role_code: roleCode,
             scope_type: "store",
-            store_id: STORE_ID,
-          },
-        ],
+            store_id:
+              accountState.roleStoreId === undefined
+                ? STORE_ID
+                : accountState.roleStoreId,
+          }),
+        ),
       };
     }
 
@@ -66,6 +106,14 @@ function createDatabaseService() {
       sql.includes("user_action_store_assignment")
     ) {
       expect(params).toEqual([APP_USER_ID]);
+      if (
+        !accountState.active ||
+        !accountState.exists ||
+        accountState.actionStoresActive === false
+      ) {
+        return { rowCount: 0, rows: [] };
+      }
+
       return {
         rowCount: 1,
         rows: [{ store_id: STORE_ID }],
@@ -194,6 +242,161 @@ describe("browser session integration", () => {
         .set("cookie", cookieHeader)
         .set("authorization", `Bearer ${secondToken}`)
         .expect(200);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("rejects the next cookie-session read after the application account is deactivated", async () => {
+    const accountState = { active: true, exists: true };
+    const app = await createIntegrationApp({
+      databaseService: createDatabaseService(accountState),
+      standardErrorFilter: true,
+    });
+
+    try {
+      const token = await createJwt();
+      const createResponse = await request(app.getHttpServer())
+        .post("/api/auth/browser-session")
+        .set("authorization", `Bearer ${token}`)
+        .expect(201);
+      const appCookie = (
+        createResponse.headers["set-cookie"] as unknown as string[]
+      ).find((cookie) => cookie.startsWith("hr_axis_browser_session="));
+      const cookieHeader = appCookie?.split(";")[0] ?? "";
+
+      accountState.active = false;
+
+      await request(app.getHttpServer())
+        .get("/api/auth/session")
+        .set("cookie", cookieHeader)
+        .expect(401);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("rejects the next cookie-session read after the application account is removed", async () => {
+    const accountState = { active: true, exists: true };
+    const app = await createIntegrationApp({
+      databaseService: createDatabaseService(accountState),
+      standardErrorFilter: true,
+    });
+
+    try {
+      const token = await createJwt();
+      const createResponse = await request(app.getHttpServer())
+        .post("/api/auth/browser-session")
+        .set("authorization", `Bearer ${token}`)
+        .expect(201);
+      const appCookie = (
+        createResponse.headers["set-cookie"] as unknown as string[]
+      ).find((cookie) => cookie.startsWith("hr_axis_browser_session="));
+
+      accountState.exists = false;
+
+      await request(app.getHttpServer())
+        .get("/api/auth/session")
+        .set("cookie", appCookie?.split(";")[0] ?? "")
+        .expect(401);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("does not restore removed DB roles from a previously issued cookie", async () => {
+    const accountState = { active: true, exists: true, rolesActive: true };
+    const app = await createIntegrationApp({
+      databaseService: createDatabaseService(accountState),
+      standardErrorFilter: true,
+    });
+
+    try {
+      const token = await createJwt();
+      const createResponse = await request(app.getHttpServer())
+        .post("/api/auth/browser-session")
+        .set("authorization", `Bearer ${token}`)
+        .expect(201);
+      const appCookie = (
+        createResponse.headers["set-cookie"] as unknown as string[]
+      ).find((cookie) => cookie.startsWith("hr_axis_browser_session="));
+
+      accountState.rolesActive = false;
+
+      await request(app.getHttpServer())
+        .get("/api/auth/session")
+        .set("cookie", appCookie?.split(";")[0] ?? "")
+        .expect(401);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("keeps only the still-active DB role after a partial role removal", async () => {
+    const accountState = {
+      active: true,
+      exists: true,
+      roleCodes: ["REPORT_VIEWER", "STORE_MANAGER"],
+    };
+    const app = await createIntegrationApp({
+      databaseService: createDatabaseService(accountState),
+      standardErrorFilter: true,
+    });
+
+    try {
+      const token = await createJwt();
+      const createResponse = await request(app.getHttpServer())
+        .post("/api/auth/browser-session")
+        .set("authorization", `Bearer ${token}`)
+        .expect(201);
+      const appCookie = (
+        createResponse.headers["set-cookie"] as unknown as string[]
+      ).find((cookie) => cookie.startsWith("hr_axis_browser_session="));
+
+      accountState.roleCodes = ["STORE_MANAGER"];
+
+      const sessionResponse = await request(app.getHttpServer())
+        .get("/api/auth/session")
+        .set("cookie", appCookie?.split(";")[0] ?? "")
+        .expect(200);
+      expect(sessionResponse.body.user.roleCodes).toEqual(["STORE_MANAGER"]);
+    } finally {
+      await app.close();
+    }
+  });
+
+  it("does not restore a removed action store from a previously issued cookie", async () => {
+    const accountState = {
+      actionStoresActive: true,
+      active: true,
+      exists: true,
+      roleStoreId: null,
+    };
+    const app = await createIntegrationApp({
+      databaseService: createDatabaseService(accountState),
+      standardErrorFilter: true,
+    });
+
+    try {
+      const token = await createJwt();
+      const createResponse = await request(app.getHttpServer())
+        .post("/api/auth/browser-session")
+        .set("authorization", `Bearer ${token}`)
+        .expect(201);
+      const appCookie = (
+        createResponse.headers["set-cookie"] as unknown as string[]
+      ).find((cookie) => cookie.startsWith("hr_axis_browser_session="));
+
+      accountState.actionStoresActive = false;
+
+      const sessionResponse = await request(app.getHttpServer())
+        .get("/api/auth/session")
+        .set("cookie", appCookie?.split(";")[0] ?? "")
+        .expect(200);
+      expect(sessionResponse.body.user.actionScope).toMatchObject({
+        assignedStoreIds: [],
+      });
+      expect(sessionResponse.body.user.assignedStoreIds).toEqual([]);
     } finally {
       await app.close();
     }
