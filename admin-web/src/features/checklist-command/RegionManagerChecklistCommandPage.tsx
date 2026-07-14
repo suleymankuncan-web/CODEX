@@ -25,7 +25,7 @@ import { transientQueryRetryOptions } from '../../lib/query-retry'
 import { cn } from '../../lib/utils'
 import { StoreErrorState, StoreLoadingState, StoreSurfacePage } from '../../pages/store-surface-primitives'
 import { getChecklistCommandCanvas, type ChecklistCommandRow } from './api'
-import { ChecklistWeeklyVisitPlanner } from './ChecklistWeeklyVisitPlanner'
+import { ChecklistVisitPlanSurface } from './ChecklistVisitPlanSurface'
 import {
   createChecklistCommandPeriod,
   getIstanbulWeekStart,
@@ -41,6 +41,7 @@ const PAGE_SIZE = 30
 export function RegionManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
   onOpenWorkflow: (storeId: string) => void
+  onOpenResult: (checklistInstanceId: string) => void
 }) {
   const { locale, t } = useLocalization()
   const [period, setPeriod] = useState(() => getBusinessMonthInputValue())
@@ -296,15 +297,14 @@ export function RegionManagerChecklistCommandPage(input: {
           </div>
         </footer>
       </section></> : activeRegion ? (
-        <ChecklistWeeklyVisitPlanner
+        <ChecklistVisitPlanSurface
           authSummary={input.authSummary}
-          canMaintain={data.capabilities.canMaintainWeeklyVisitPlan}
           locale={locale}
           period={period}
           regionId={activeRegion.regionId}
           regionName={activeRegion.regionName}
           weekStart={weekStart}
-          onOpenWorkflow={input.onOpenWorkflow}
+          onOpenResult={input.onOpenResult}
           onWeekStartChange={setWeekStart}
         />
       ) : (

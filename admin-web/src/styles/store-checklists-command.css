@@ -5,6 +5,7 @@
 @import './store-checklists-flow.css';
 @import './store-checklists-flow-responsive.css';
 @import './store-checklists-weekly-plan.css';
+@import './store-checklists-plan.css';
 
 /* Live HR Axis Labs Command Canvas parity contract. Keep these values aligned
    with the approved React prototype; role/demo fixtures never belong here. */

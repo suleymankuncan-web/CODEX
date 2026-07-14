@@ -65,6 +65,20 @@ export function storeChecklistVisitPlanQueryKey(
   ] as const
 }
 
+export function storeChecklistVisitPlanPeriodQueryKey(
+  authSummary: AuthSessionSummary | null,
+  filters: Record<string, string | number>,
+) {
+  return ['checklist-visit-plan-period', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
+export function storeChecklistVisitPlanCandidatesQueryKey(
+  authSummary: AuthSessionSummary | null,
+  filters: Record<string, string | number>,
+) {
+  return ['checklist-visit-plan-candidates', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
 export function storeWorkflowInboxQueryKey(authSummary: AuthSessionSummary | null) {
   return ['workflow-inbox', getStoreQueryScopeSignature(authSummary)] as const
 }

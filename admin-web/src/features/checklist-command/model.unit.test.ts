@@ -2,8 +2,11 @@ import { describe, expect, it } from 'vitest'
 import {
   buildChecklistPlanningDays,
   buildChecklistCommandQuery,
+  buildChecklistVisitPlanCandidateQuery,
+  buildChecklistVisitPlanPeriodQuery,
   buildVisitPlanDraftFingerprint,
   createChecklistCommandPeriod,
+  getStableVisitPlanSubmission,
   getIstanbulWeekStart,
   getChecklistCommandSortLabel,
   getChecklistCommandStatusLabel,
@@ -49,6 +52,29 @@ describe('checklist command canvas model', () => {
     expect(buildVisitPlanDraftFingerprint(first)).not.toBe(
       buildVisitPlanDraftFingerprint([{ ...first[1]!, plannedDate: '2026-07-16' }, first[0]!]),
     )
+  })
+
+  it('builds bounded full-period and server-paged candidate queries', () => {
+    expect(buildChecklistVisitPlanPeriodQuery({
+      regionId: 'region-1', period: '2026-07', query: ' Novada ', risk: 'high',
+      planStatus: 'missed', sort: 'next_plan_asc', limit: 30, offset: 60,
+    }).toString()).toBe('regionId=region-1&period=2026-07&query=Novada&risk=high&planStatus=missed&sort=next_plan_asc&limit=30&offset=60')
+
+    expect(buildChecklistVisitPlanCandidateQuery({
+      regionId: 'region-1', query: ' Bursa ', limit: 20, offset: 40,
+    }).toString()).toBe('regionId=region-1&query=Bursa&limit=20&offset=40')
+  })
+
+  it('reuses one idempotency key for the same draft snapshot and rotates after a change', () => {
+    const keys = ['key-1', 'key-2']
+    const createKey = () => keys.shift()!
+    const first = getStableVisitPlanSubmission(null, 'draft-a', createKey)
+    const retry = getStableVisitPlanSubmission(first, 'draft-a', createKey)
+    const changed = getStableVisitPlanSubmission(retry, 'draft-b', createKey)
+
+    expect(retry).toBe(first)
+    expect(first.idempotencyKey).toBe('key-1')
+    expect(changed).toEqual({ fingerprint: 'draft-b', idempotencyKey: 'key-2' })
   })
 
   it('builds an Istanbul business period from explicit month and year', () => {

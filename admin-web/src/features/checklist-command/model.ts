@@ -50,6 +50,57 @@ export type VisitPlanDraftItem = {
   displayOrder: number
 }
 
+export type ChecklistVisitPlanRisk = 'all' | 'high' | 'medium' | 'low'
+export type ChecklistVisitPlanStatus = 'all' | 'unplanned' | 'waiting' | 'missed' | 'completed' | 'mixed'
+export type ChecklistVisitPlanSort = 'risk_desc' | 'store_asc' | 'store_desc' | 'last_visit_asc' | 'last_visit_desc' | 'next_plan_asc' | 'next_plan_desc'
+
+export type ChecklistVisitPlanPeriodQueryInput = {
+  regionId: string
+  period: string
+  query: string
+  risk: ChecklistVisitPlanRisk
+  planStatus: ChecklistVisitPlanStatus
+  sort: ChecklistVisitPlanSort
+  limit: number
+  offset: number
+}
+
+export function buildChecklistVisitPlanPeriodQuery(input: ChecklistVisitPlanPeriodQueryInput) {
+  const query = new URLSearchParams({ regionId: input.regionId, period: input.period })
+  if (input.query.trim()) query.set('query', input.query.trim())
+  if (input.risk !== 'all') query.set('risk', input.risk)
+  if (input.planStatus !== 'all') query.set('planStatus', input.planStatus)
+  query.set('sort', input.sort)
+  query.set('limit', String(input.limit))
+  query.set('offset', String(input.offset))
+  return query
+}
+
+export function buildChecklistVisitPlanCandidateQuery(input: {
+  regionId: string
+  query: string
+  limit: number
+  offset: number
+}) {
+  const query = new URLSearchParams({ regionId: input.regionId })
+  if (input.query.trim()) query.set('query', input.query.trim())
+  query.set('limit', String(input.limit))
+  query.set('offset', String(input.offset))
+  return query
+}
+
+export type StableVisitPlanSubmission = { fingerprint: string; idempotencyKey: string }
+
+export function getStableVisitPlanSubmission(
+  current: StableVisitPlanSubmission | null,
+  fingerprint: string,
+  createKey: () => string = () => crypto.randomUUID(),
+) {
+  return current?.fingerprint === fingerprint
+    ? current
+    : { fingerprint, idempotencyKey: createKey() }
+}
+
 const planningDayLabels = {
   tr: [
     ['Pazartesi', 'Pzt'],
