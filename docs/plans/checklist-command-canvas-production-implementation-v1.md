@@ -49,12 +49,14 @@ only the current page or selected status card.
 Weekly planning is a separate aggregate, not a repurposed
 `ops.checklist_instance` draft:
 
-- `ops.store_visit_plan_week`: company, region, Monday week start,
-  `Europe/Istanbul`, revision and creator timestamps; unique per region/week.
-- `ops.store_visit_plan_item`: store, date, `BM_STORE_VISIT`, active/cancelled
-  scheduling state and cancellation evidence.
-- `ops.checklist_instance.visit_plan_item_id`: nullable unique link to the real
-  visit execution.
+- `ops.region_weekly_visit_plan`: region, Monday week start,
+  `Europe/Istanbul` and `BM_STORE_VISIT`; unique per region/week/type.
+- `ops.region_weekly_visit_plan_revision`: append-only complete snapshots with
+  monotonic revision, actor, idempotency key, canonical request digest and one
+  current-revision pointer.
+- `ops.region_weekly_visit_plan_item`: revision, region, store, local date and
+  `BM_STORE_VISIT`; cross-region stores, Sunday/out-of-week dates and exact
+  same-store/day/type duplicates are rejected by the database.
 
 The plan belongs to a region, not a named manager. A manager rotation transfers
 the current plan while preserving creator/audit evidence. The same store may be
@@ -62,17 +64,20 @@ planned on different days in one week; an active exact store/type/day duplicate
 is rejected. A full-week save is atomic and uses an expected revision; stale
 writes return `409`.
 
-Displayed status is derived from the plan item, Istanbul calendar time and the
-linked checklist instance:
+Displayed status is derived from the current plan revision, Istanbul calendar
+time and real checklist execution. Plan rows never store operational outcome:
 
 - scheduled: today/future and no started checklist;
 - overdue: the local plan day ended without a completed checklist;
-- in progress: linked checklist is in progress;
-- completed: linked checklist is completed;
-- cancelled: the plan item is cancelled.
+- in progress: a matching BM checklist is in progress for the store and local
+  plan date;
+- completed: a real `BM_STORE_VISIT` checklist is completed for the store and
+  its `completed_at` falls on the local plan date.
 
-Reschedule is an audit event, not a destructive overwrite. No historical plan
-backfill is invented.
+Reschedule/removal creates a new complete revision; revision content and items
+cannot be updated or deleted. Only the prior current revision may transition
+from current to retired. No historical plan backfill is invented, and existing
+`checklist_instance.planned_at` rows are not repurposed.
 
 ### Living Store Record
 
@@ -91,8 +96,9 @@ unknown historical identity is never replaced with the current manager.
    filters/sort/pagination, real checklist session reuse and responsive parity.
 3. **R3 — Role views:** Report Viewer company hierarchy/read-only, Store
    Manager own-store view and VM/Super Admin compatibility.
-4. **R5 — Visit-plan schema:** additive tables, nullable checklist link,
-   constraints/indexes, schema contracts and fresh-database migration smoke.
+4. **R5 — Visit-plan schema:** additive region-owned plan/revision/item tables,
+   append-only guards, constraints/indexes, schema contracts and fresh-database
+   plus rollback-only negative migration smoke.
 5. **R4/R5 — Visit-plan API:** scoped GET/PUT, atomic revision save, audit,
    checklist linkage, conflict and cross-scope tests.
 6. **R2 — Weekly planner UI:** one planner dialog, local draft then one save,
@@ -115,7 +121,8 @@ suites never run concurrently.
 - Region Manager cannot plan outside `roleScopes.REGION_MANAGER.regionIds`.
 - Store Manager cannot read another store's command or history data.
 - Metrics and rows derive from the same filtered server-side source.
-- A plan is completed only by a linked real completed checklist.
+- A plan is completed only by a real completed BM checklist for the same store
+  and Istanbul local plan date.
 - Simultaneous full-week saves produce one success and one revision conflict.
 - Cancelling/rescheduling a plan never deletes checklist or audit history.
 - Existing completed checklists appear in store history without plan backfill.
