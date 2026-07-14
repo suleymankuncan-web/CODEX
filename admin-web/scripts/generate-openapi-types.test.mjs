@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { test } from 'node:test'
@@ -26,6 +26,11 @@ test('frontend OpenAPI generator selection matches the tracked API document', ()
 
   assert.equal(result.status, 0, output)
   assert.match(output, /Generated OpenAPI types are current\./)
+  const generated = readFileSync(join(appRoot, 'src/generated/openapi-types.ts'), 'utf8')
+  assert.match(generated, /"\/api\/checklists\/command-canvas\/visit-plans\/period"/)
+  assert.match(generated, /"\/api\/checklists\/command-canvas\/visit-plans\/candidates"/)
+  assert.match(generated, /ChecklistVisitPlanPeriodResponse/)
+  assert.match(generated, /ChecklistVisitPlanCandidateResponse/)
 })
 
 test('frontend OpenAPI generator fails when a selected operation is absent', () => {

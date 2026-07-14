@@ -91,4 +91,42 @@ describe("Checklist Command OpenAPI", () => {
     expect(item.properties).not.toHaveProperty("assigneeId");
     expect(item.properties).not.toHaveProperty("startedAt");
   });
+
+  it("publishes bounded Region Manager period planning and candidate search contracts", () => {
+    const document = JSON.parse(
+      readFileSync(resolve(process.cwd(), "../../docs/api/openapi.json"), "utf8"),
+    ) as OpenApiDocument;
+    const period = document.paths["/api/checklists/command-canvas/visit-plans/period"].get;
+    const candidates = document.paths["/api/checklists/command-canvas/visit-plans/candidates"].get;
+
+    expect(period.responses["200"].content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/ChecklistVisitPlanPeriodResponse",
+    });
+    expect(period.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "regionId", required: true }),
+      expect.objectContaining({ name: "period", required: true }),
+      expect.objectContaining({ name: "risk" }),
+      expect.objectContaining({ name: "reason" }),
+      expect.objectContaining({ name: "planStatus" }),
+      expect.objectContaining({ name: "sort" }),
+      expect.objectContaining({ name: "limit" }),
+      expect.objectContaining({ name: "offset" }),
+    ]));
+    const periodRow = document.components?.schemas?.ChecklistVisitPlanPeriodRow as any;
+    expect(periodRow.properties.planItems.items.$ref).toBe("#/components/schemas/ChecklistVisitPlanPeriodItem");
+    expect(periodRow.properties.reasonCodes.items.enum).toEqual(expect.arrayContaining([
+      "missing_current_month_visit", "low_checklist_score", "watch_checklist_result",
+      "active_draft", "pending_acknowledgement", "visit_completed", "strong_score", "insufficient_signal",
+    ]));
+
+    expect(candidates.responses["200"].content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/ChecklistVisitPlanCandidateResponse",
+    });
+    expect(candidates.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "regionId", required: true }),
+      expect.objectContaining({ name: "query" }),
+      expect.objectContaining({ name: "limit", schema: expect.objectContaining({ maximum: 50 }) }),
+      expect.objectContaining({ name: "offset" }),
+    ]));
+  });
 });

@@ -2,6 +2,12 @@ import {
   setJsonResponseSchema,
   type MutablePathItem,
 } from "./openapi-schema-helpers";
+import {
+  checklistVisitPlanPeriodSorts,
+  checklistVisitPlanPeriodStatuses,
+  checklistVisitPlanReasons,
+  checklistVisitPlanRisks,
+} from "../modules/store-ops/application/checklist-visit-plan.contract";
 
 type MutableOpenApiDocument = {
   components?: { schemas?: Record<string, unknown> };
@@ -292,6 +298,120 @@ const saveChecklistVisitPlanRequestSchema = {
   },
 };
 
+const checklistVisitPlanPeriodItemSchema = {
+  allOf: [
+    { $ref: "#/components/schemas/ChecklistVisitPlanItem" },
+    {
+      type: "object",
+      required: ["planId", "revision", "weekStart"],
+      properties: {
+        planId: { type: "string", format: "uuid" },
+        revision: { type: "integer", minimum: 1 },
+        weekStart: { type: "string", format: "date" },
+      },
+    },
+  ],
+};
+
+const checklistVisitPlanPeriodRowSchema = {
+  type: "object",
+  required: [
+    "storeId", "storeCode", "storeName", "regionId", "regionName", "bmScore", "vmScore",
+    "lastCompletedVisitAt", "elapsedDaysSinceLastVisit", "risk", "reasonCodes", "planStatus", "planItems",
+  ],
+  properties: {
+    storeId: { type: "string", format: "uuid" },
+    storeCode: { type: "string" },
+    storeName: { type: "string" },
+    regionId: { type: "string", format: "uuid" },
+    regionName: { type: "string" },
+    bmScore: { type: "number", nullable: true },
+    vmScore: { type: "number", nullable: true },
+    lastCompletedVisitAt: { type: "string", format: "date-time", nullable: true },
+    elapsedDaysSinceLastVisit: { type: "integer", minimum: 0, nullable: true },
+    risk: { type: "string", enum: checklistVisitPlanRisks.filter((value) => value !== "all") },
+    reasonCodes: {
+      type: "array",
+      items: { type: "string", enum: checklistVisitPlanReasons.filter((value) => value !== "all") },
+    },
+    planStatus: { type: "string", enum: checklistVisitPlanPeriodStatuses.filter((value) => value !== "all") },
+    planItems: { type: "array", items: { $ref: "#/components/schemas/ChecklistVisitPlanPeriodItem" } },
+  },
+};
+
+const pageSchema = {
+  type: "object",
+  required: ["total", "limit", "offset", "hasMore"],
+  properties: {
+    total: { type: "integer", minimum: 0 },
+    limit: { type: "integer", minimum: 1 },
+    offset: { type: "integer", minimum: 0 },
+    hasMore: { type: "boolean" },
+  },
+};
+
+const checklistVisitPlanPeriodResponseSchema = {
+  type: "object",
+  required: ["data"],
+  properties: {
+    data: {
+      type: "object",
+      required: ["period", "regionId", "regionName", "view", "capabilities", "metrics", "items", "page"],
+      properties: {
+        period: { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" },
+        regionId: { type: "string", format: "uuid" },
+        regionName: { type: "string" },
+        view: { type: "string", enum: ["region_manager"] },
+        capabilities: {
+          type: "object",
+          required: ["canMaintainWeeklyVisitPlan"],
+          properties: { canMaintainWeeklyVisitPlan: { type: "boolean", enum: [true] } },
+        },
+        metrics: {
+          type: "object",
+          required: ["totalStores", "high", "medium", "low", "planned", "unplanned", "waiting", "missed", "completed"],
+          properties: Object.fromEntries(
+            ["totalStores", "high", "medium", "low", "planned", "unplanned", "waiting", "missed", "completed"]
+              .map((name) => [name, { type: "integer", minimum: 0 }]),
+          ),
+        },
+        items: { type: "array", items: { $ref: "#/components/schemas/ChecklistVisitPlanPeriodRow" } },
+        page: pageSchema,
+      },
+    },
+  },
+};
+
+const checklistVisitPlanCandidateResponseSchema = {
+  type: "object",
+  required: ["data"],
+  properties: {
+    data: {
+      type: "object",
+      required: ["regionId", "view", "items", "page"],
+      properties: {
+        regionId: { type: "string", format: "uuid" },
+        view: { type: "string", enum: ["region_manager"] },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["storeId", "storeCode", "storeName", "regionId", "regionName"],
+            properties: {
+              storeId: { type: "string", format: "uuid" },
+              storeCode: { type: "string" },
+              storeName: { type: "string" },
+              regionId: { type: "string", format: "uuid" },
+              regionName: { type: "string" },
+            },
+          },
+        },
+        page: pageSchema,
+      },
+    },
+  },
+};
+
 export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
   document.components = document.components ?? {};
   document.components.schemas = {
@@ -305,6 +425,10 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     ChecklistVisitPlan: checklistVisitPlanSchema,
     ChecklistVisitPlanResponse: checklistVisitPlanResponseSchema,
     SaveChecklistVisitPlanRequest: saveChecklistVisitPlanRequestSchema,
+    ChecklistVisitPlanPeriodItem: checklistVisitPlanPeriodItemSchema,
+    ChecklistVisitPlanPeriodRow: checklistVisitPlanPeriodRowSchema,
+    ChecklistVisitPlanPeriodResponse: checklistVisitPlanPeriodResponseSchema,
+    ChecklistVisitPlanCandidateResponse: checklistVisitPlanCandidateResponseSchema,
   };
 
   const path = "/api/checklists/command-canvas";
@@ -379,6 +503,41 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
       content: { "application/json": { schema: { $ref: "#/components/schemas/SaveChecklistVisitPlanRequest" } } },
     };
   }
+
+  const periodPlanPath = "/api/checklists/command-canvas/visit-plans/period";
+  setJsonResponseSchema(
+    document.paths,
+    periodPlanPath,
+    "get",
+    "Region-scoped full-period visit planning facts and authoritative risk rows.",
+    "ChecklistVisitPlanPeriodResponse",
+  );
+  setQueryParameters(document.paths, periodPlanPath, "get", [
+    requiredQueryParameter("regionId", { type: "string", format: "uuid" }),
+    requiredQueryParameter("period", { type: "string", pattern: "^\\d{4}-(0[1-9]|1[0-2])$" }),
+    queryParameter("query", { type: "string", maxLength: 120 }),
+    queryParameter("risk", { type: "string", enum: checklistVisitPlanRisks }),
+    queryParameter("reason", { type: "string", enum: checklistVisitPlanReasons }),
+    queryParameter("planStatus", { type: "string", enum: checklistVisitPlanPeriodStatuses }),
+    queryParameter("sort", { type: "string", enum: checklistVisitPlanPeriodSorts }),
+    queryParameter("limit", { type: "integer", minimum: 1, maximum: 100 }),
+    queryParameter("offset", { type: "integer", minimum: 0 }),
+  ]);
+
+  const candidatesPath = "/api/checklists/command-canvas/visit-plans/candidates";
+  setJsonResponseSchema(
+    document.paths,
+    candidatesPath,
+    "get",
+    "Bounded active-store search for the assigned Region Manager planning scope.",
+    "ChecklistVisitPlanCandidateResponse",
+  );
+  setQueryParameters(document.paths, candidatesPath, "get", [
+    requiredQueryParameter("regionId", { type: "string", format: "uuid" }),
+    queryParameter("query", { type: "string", maxLength: 120 }),
+    queryParameter("limit", { type: "integer", minimum: 1, maximum: 50 }),
+    queryParameter("offset", { type: "integer", minimum: 0 }),
+  ]);
 }
 
 function queryParameter(name: string, schema: Record<string, unknown>) {

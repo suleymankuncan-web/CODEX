@@ -3,7 +3,12 @@ import { ChecklistVisitPlanService } from "./checklist-visit-plan.service";
 
 describe("ChecklistVisitPlanService", () => {
   const empty = { companyIds: [], regionIds: [], storeIds: [] };
-  const repository = { getWeeklyPlan: jest.fn(), saveWeeklyPlan: jest.fn() };
+  const repository = {
+    getWeeklyPlan: jest.fn(),
+    saveWeeklyPlan: jest.fn(),
+    listPeriod: jest.fn(),
+    listCandidates: jest.fn(),
+  };
   const service = new ChecklistVisitPlanService(repository as never);
 
   beforeEach(() => jest.clearAllMocks());
@@ -76,5 +81,43 @@ describe("ChecklistVisitPlanService", () => {
       items: [{ storeId: "55555555-5555-4555-8555-555555555555", plannedDate: "2026-07-14", displayOrder: 0 }],
     });
     expect(repository.saveWeeklyPlan).toHaveBeenCalledWith(expect.objectContaining({ requestSha256: expect.stringMatching(/^[0-9a-f]{64}$/) }));
+  });
+
+  it("uses only the Region Manager role scope for full-period reads even for dual-role users", async () => {
+    repository.listPeriod.mockResolvedValue({
+      metrics: { totalStores: 0, high: 0, medium: 0, low: 0, planned: 0, unplanned: 0, waiting: 0, missed: 0, completed: 0 },
+      items: [],
+      total: 0,
+    });
+    const regionId = "33333333-3333-4333-8333-333333333333";
+    await service.listPeriod({
+      actorRoleCodes: ["REPORT_VIEWER", "REGION_MANAGER"],
+      actorReadScope: empty,
+      roleScopes: {
+        REPORT_VIEWER: { companyIds: ["99999999-9999-4999-8999-999999999999"], regionIds: [], storeIds: [] },
+        REGION_MANAGER: { ...empty, regionIds: [regionId] },
+      },
+      regionId,
+      period: "2026-07",
+    });
+    expect(repository.listPeriod).toHaveBeenCalledWith(expect.objectContaining({ regionId }));
+  });
+
+  it("denies non-Region Managers and cross-region period/candidate reads", async () => {
+    const base = {
+      actorReadScope: empty,
+      regionId: "33333333-3333-4333-8333-333333333333",
+    };
+    await expect(service.listPeriod({
+      ...base,
+      actorRoleCodes: ["REPORT_VIEWER"],
+      roleScopes: { REPORT_VIEWER: { ...empty, companyIds: ["99999999-9999-4999-8999-999999999999"] } },
+      period: "2026-07",
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(service.listCandidates({
+      ...base,
+      actorRoleCodes: ["REGION_MANAGER"],
+      roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["22222222-2222-4222-8222-222222222222"] } },
+    })).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
