@@ -1,20 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   CalendarDays,
+  Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleAlert,
   Clock3,
+  Filter,
   Search,
+  SlidersHorizontal,
   Store,
+  X,
 } from 'lucide-react'
 import type { AuthSessionSummary } from '../auth/api'
 import { storeChecklistCommandQueryKey } from '../auth/store-query-scope'
 import { useLocalization } from '../localization/useLocalization'
-import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
-import { Popover, PopoverContent, PopoverHeader, PopoverTitle, PopoverTrigger } from '../../components/ui/popover'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
@@ -24,7 +28,6 @@ import { getChecklistCommandCanvas, type ChecklistCommandRow } from './api'
 import {
   createChecklistCommandPeriod,
   getChecklistCommandSortLabel,
-  getChecklistCommandStatusLabel,
   toggleChecklistCommandSort,
   type ChecklistCommandSort,
   type ChecklistCommandSortKey,
@@ -44,6 +47,9 @@ export function RegionManagerChecklistCommandPage(input: {
   const [searchDraft, setSearchDraft] = useState('')
   const [query, setQuery] = useState('')
   const [offset, setOffset] = useState(0)
+  const [columnPreset, setColumnPreset] = useState<'all' | 'scores' | 'visit'>('all')
+  const [openMenu, setOpenMenu] = useState<'status' | 'columns' | null>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -52,6 +58,22 @@ export function RegionManagerChecklistCommandPage(input: {
     }, 300)
     return () => window.clearTimeout(timer)
   }, [searchDraft])
+
+  useEffect(() => {
+    if (!openMenu) return
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!toolbarRef.current?.contains(event.target as Node)) setOpenMenu(null)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenMenu(null)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [openMenu])
 
   const filters = useMemo(
     () => ({ period, status, sort, query, limit: PAGE_SIZE, offset }),
@@ -140,22 +162,33 @@ export function RegionManagerChecklistCommandPage(input: {
     },
   ]
 
+  const statusOptions: Array<{ key: ChecklistCommandStatus; label: string; count: number }> = [
+    { key: 'all', label: t('storeChecklists.command.all'), count: data.metrics.totalStores },
+    { key: 'needs_visit', label: t('storeChecklists.command.needsVisit'), count: data.metrics.needsVisit },
+    { key: 'active', label: t('storeChecklists.command.active'), count: data.metrics.active },
+    { key: 'pending', label: t('storeChecklists.pendingAcknowledgements'), count: data.metrics.pending },
+    { key: 'completed', label: t('storeChecklists.command.completed'), count: data.metrics.completed },
+  ]
+  const statusLabel = statusOptions.find((option) => option.key === status)?.label ?? t('storeChecklists.command.all')
+  const columnLabel = columnPreset === 'all' ? (locale === 'tr' ? 'Tümü' : 'All') : columnPreset === 'scores' ? (locale === 'tr' ? 'Skorlar' : 'Scores') : (locale === 'tr' ? 'Ziyaret' : 'Visit')
+  const pageNumber = Math.floor(offset / PAGE_SIZE) + 1
+  const pageCount = Math.max(1, Math.ceil(data.page.total / PAGE_SIZE))
+
   return (
-    <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="tw:max-w-[1180px] tw:gap-3">
-      <header className="tw:flex tw:flex-col tw:gap-3 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
+    <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity" data-testid="checklist-command-parity">
+      <header className="checklist-command-title">
         <div>
           <p className="tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.14em] tw:text-muted-foreground">
-            {t('storeChecklists.command.eyebrow')} · {periodLabel}
+            {periodLabel} · {data.items[0]?.regionName ?? t('storeChecklists.command.eyebrow')}
           </p>
           <h1 className="tw:mt-1 tw:text-2xl tw:font-semibold tw:tracking-[-0.035em] tw:text-foreground tw:sm:text-3xl">
             {t('storeChecklists.command.title')}
           </h1>
-          <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{t('storeChecklists.command.scope')}</p>
         </div>
         <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setPeriod(value); setOffset(0) }} />
       </header>
 
-      <section aria-label={t('storeChecklists.summaryAria')} className="tw:relative tw:grid tw:grid-cols-2 tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/90 tw:shadow-[0_10px_35px_rgba(55,38,72,0.06)] tw:lg:grid-cols-4">
+      <section aria-label={t('storeChecklists.summaryAria')} className="checklist-command-metrics tw:relative tw:grid tw:grid-cols-2 tw:overflow-hidden tw:lg:grid-cols-4" data-testid="checklist-command-metrics">
         <span aria-hidden className="tw:absolute tw:inset-x-0 tw:top-0 tw:h-[3px] tw:bg-gradient-to-r tw:from-primary tw:via-blue-500 tw:to-cyan-500" />
         {metrics.map((metric) => {
           const Icon = metric.icon
@@ -165,15 +198,15 @@ export function RegionManagerChecklistCommandPage(input: {
               key={metric.key}
               aria-pressed={status === metric.key}
               className={cn(
-                'tw:grid tw:min-h-24 tw:grid-cols-[30px_minmax(0,1fr)] tw:items-center tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:text-left tw:transition-colors tw:hover:bg-muted/30 tw:[&:nth-child(even)]:border-l tw:sm:grid-cols-[34px_1fr_auto] tw:sm:gap-2.5 tw:sm:p-4 tw:lg:min-h-[106px] tw:lg:border-b-0 tw:lg:border-l tw:lg:first-of-type:border-l-0',
+                'checklist-command-metric tw:grid tw:min-h-24 tw:grid-cols-[30px_minmax(0,1fr)] tw:items-center tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:text-left tw:transition-colors tw:hover:bg-muted/30 tw:[&:nth-child(even)]:border-l tw:sm:grid-cols-[34px_1fr_auto] tw:sm:gap-2.5 tw:sm:p-4 tw:lg:min-h-[106px] tw:lg:border-b-0 tw:lg:border-l tw:lg:first-of-type:border-l-0',
                 status === metric.key && 'tw:bg-primary/[0.045]',
               )}
               onClick={() => selectStatus(metric.key)}
             >
-              <span className={cn('tw:grid tw:size-8 tw:place-items-center tw:rounded-lg', metricToneClasses[metric.tone])}>
+              <span className={cn('checklist-command-metric-icon tw:grid tw:size-8 tw:place-items-center tw:rounded-lg', `tone-${metric.tone}`, metricToneClasses[metric.tone])}>
                 <Icon className="tw:size-4" />
               </span>
-              <span className="tw:grid tw:min-w-0 tw:gap-1">
+              <span className="checklist-command-metric-copy tw:grid tw:min-w-0 tw:gap-1">
                 <span className="tw:text-[10px] tw:font-semibold tw:text-muted-foreground">{metric.label}</span>
                 <small className="tw:text-[9px] tw:text-muted-foreground/75">{metric.note}</small>
               </span>
@@ -183,8 +216,8 @@ export function RegionManagerChecklistCommandPage(input: {
         })}
       </section>
 
-      <section className="tw:overflow-hidden tw:rounded-2xl tw:border tw:border-border tw:bg-card/95 tw:shadow-[0_18px_50px_rgba(44,31,59,0.07)]">
-        <div className="tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:sm:flex-row tw:sm:items-center">
+      <section className="checklist-command-surface tw:overflow-hidden" data-testid="checklist-command-surface">
+        <div className="checklist-command-toolbar tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:sm:flex-row tw:sm:items-center" ref={toolbarRef}>
           <label className="tw:flex tw:min-h-9 tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-input tw:bg-muted/20 tw:px-3 tw:text-muted-foreground tw:sm:max-w-sm">
             <Search className="tw:size-4 tw:shrink-0" />
             <Input
@@ -195,18 +228,25 @@ export function RegionManagerChecklistCommandPage(input: {
               onChange={(event) => setSearchDraft(event.target.value)}
             />
           </label>
-          <Select value={status} onValueChange={(value) => selectStatus(value as ChecklistCommandStatus)}>
-            <SelectTrigger aria-label={t('storeChecklists.command.statusFilter')} className="tw:w-full tw:sm:w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('storeChecklists.command.all')}</SelectItem>
-              <SelectItem value="needs_visit">{t('storeChecklists.command.needsVisit')}</SelectItem>
-              <SelectItem value="active">{t('storeChecklists.command.active')}</SelectItem>
-              <SelectItem value="pending">{t('storeChecklists.pendingAcknowledgements')}</SelectItem>
-              <SelectItem value="completed">{t('storeChecklists.command.completed')}</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="checklist-command-menu">
+            <button type="button" aria-haspopup="menu" aria-expanded={openMenu === 'status'} onClick={() => setOpenMenu((current) => current === 'status' ? null : 'status')}>
+              <Filter size={15} /> {locale === 'tr' ? 'Durum' : 'Status'} <span>{statusLabel}</span><ChevronDown size={12} />
+            </button>
+            {openMenu === 'status' ? <div className="checklist-command-popover" role="menu" aria-label={locale === 'tr' ? 'Durum filtresi' : 'Status filter'}>
+              <header><small>{locale === 'tr' ? 'DURUM' : 'STATUS'}</small><strong>{locale === 'tr' ? 'Checklist akışı' : 'Checklist flow'}</strong></header>
+              {statusOptions.map((option) => <button type="button" role="menuitemradio" aria-checked={status === option.key} className={status === option.key ? 'is-selected' : ''} key={option.key} onClick={() => { selectStatus(option.key); setOpenMenu(null) }}><span><strong>{option.label}</strong><small>{option.count} {locale === 'tr' ? 'mağaza' : 'stores'}</small></span><b>{option.count}</b>{status === option.key ? <Check size={14} /> : null}</button>)}
+            </div> : null}
+          </div>
+          <i className="checklist-command-toolbar-spacer" />
+          <div className="checklist-command-menu checklist-command-menu-end">
+            <button type="button" aria-haspopup="menu" aria-expanded={openMenu === 'columns'} onClick={() => setOpenMenu((current) => current === 'columns' ? null : 'columns')}>
+              <SlidersHorizontal size={15} /> {locale === 'tr' ? 'Kolonlar' : 'Columns'} <span>{columnLabel}</span><ChevronDown size={12} />
+            </button>
+            {openMenu === 'columns' ? <div className="checklist-command-popover" role="menu" aria-label={locale === 'tr' ? 'Kolon görünümü' : 'Column view'}>
+              <header><small>{locale === 'tr' ? 'KOLONLAR' : 'COLUMNS'}</small><strong>{locale === 'tr' ? 'Görünüm yoğunluğu' : 'View density'}</strong></header>
+              {([['all', locale === 'tr' ? 'Tümü' : 'All', locale === 'tr' ? 'Skor, ziyaret süresi ve durum' : 'Scores, visit age and status'], ['scores', locale === 'tr' ? 'Skorlar' : 'Scores', locale === 'tr' ? 'BM, VM ve durum' : 'BM, VM and status'], ['visit', locale === 'tr' ? 'Ziyaret' : 'Visit', locale === 'tr' ? 'Tarih, geçen süre ve durum' : 'Date, elapsed and status']] as const).map(([key, label, note]) => <button type="button" role="menuitemradio" aria-checked={columnPreset === key} className={columnPreset === key ? 'is-selected' : ''} key={key} onClick={() => { setColumnPreset(key); setOpenMenu(null) }}><span><strong>{label}</strong><small>{note}</small></span>{columnPreset === key ? <Check size={14} /> : null}</button>)}
+            </div> : null}
+          </div>
         </div>
 
         {data.items.length === 0 ? (
@@ -222,6 +262,7 @@ export function RegionManagerChecklistCommandPage(input: {
               locale={locale}
               rows={data.items}
               sort={sort}
+              columnPreset={columnPreset}
               t={t}
               onOpenWorkflow={input.onOpenWorkflow}
               onSort={changeSort}
@@ -230,17 +271,14 @@ export function RegionManagerChecklistCommandPage(input: {
           </>
         )}
 
-        <footer className="tw:flex tw:flex-col tw:items-center tw:justify-between tw:gap-2 tw:border-t tw:border-border tw:bg-muted/20 tw:px-3 tw:py-2 tw:sm:flex-row">
-          <span className="tw:text-[10px] tw:font-medium tw:text-muted-foreground">
+        <footer className="checklist-command-pagination">
+          <span>
             {t('storeChecklists.command.page', { start: firstItem, end: lastItem, total: data.page.total })}
           </span>
-          <div className="tw:flex tw:gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={offset === 0 || commandQuery.isFetching} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
-              {t('storeChecklists.command.previous')}
-            </Button>
-            <Button type="button" size="sm" variant="outline" disabled={!data.page.hasMore || commandQuery.isFetching} onClick={() => setOffset(offset + PAGE_SIZE)}>
-              {t('storeChecklists.command.next')}
-            </Button>
+          <div>
+            <button type="button" aria-label={t('storeChecklists.command.previous')} disabled={offset === 0 || commandQuery.isFetching} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}><ChevronLeft size={14} /></button>
+            <small>{pageNumber} / {pageCount}</small>
+            <button type="button" aria-label={t('storeChecklists.command.next')} disabled={!data.page.hasMore || commandQuery.isFetching} onClick={() => setOffset(offset + PAGE_SIZE)}><ChevronRight size={14} /></button>
           </div>
         </footer>
       </section>
@@ -256,6 +294,7 @@ const metricToneClasses = {
 }
 
 function ChecklistCommandDesktopTable(input: {
+  columnPreset: 'all' | 'scores' | 'visit'
   locale: 'tr' | 'en'
   rows: ChecklistCommandRow[]
   sort: ChecklistCommandSort
@@ -269,28 +308,27 @@ function ChecklistCommandDesktopTable(input: {
     </button>
   )
   return (
-    <div className="tw:hidden tw:lg:block">
-      <div className="tw:grid tw:grid-cols-[minmax(220px,1.35fr)_82px_82px_128px_120px_118px_142px] tw:items-center tw:gap-3 tw:bg-muted/35 tw:px-4 tw:py-3 tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[0.08em] tw:text-muted-foreground">
+    <div className="checklist-command-desktop-list">
+      <div className={cn('checklist-command-table-head', `columns-${input.columnPreset}`)}>
         {heading(input.t('storeChecklists.command.store'), 'store')}
-        {heading('BM', 'bm')}
-        {heading('VM', 'vm')}
-        {heading(input.t('storeChecklists.command.visit'), 'last_visit')}
-        <span>{input.t('storeChecklists.command.elapsed')}</span>
+        {input.columnPreset !== 'visit' ? heading('BM', 'bm') : null}
+        {input.columnPreset !== 'visit' ? heading('VM', 'vm') : null}
+        {input.columnPreset !== 'scores' ? heading(input.t('storeChecklists.command.visit'), 'last_visit') : null}
+        {input.columnPreset !== 'scores' ? <span>{input.t('storeChecklists.command.elapsed')}</span> : null}
         {heading(input.t('storeChecklists.status'), 'status')}
-        {heading(input.t('storeChecklists.command.actions'), 'open_actions')}
+        <span />
       </div>
       {input.rows.map((row) => (
-        <div key={row.storeId} className="tw:relative tw:grid tw:min-h-16 tw:grid-cols-[minmax(220px,1.35fr)_82px_82px_128px_120px_118px_142px] tw:items-center tw:gap-3 tw:border-t tw:border-border tw:px-4 tw:py-2 tw:text-xs tw:hover:bg-muted/25">
-          {row.status === 'needs_visit' ? <span aria-hidden className="tw:absolute tw:inset-y-3 tw:left-0 tw:w-0.5 tw:bg-destructive" /> : null}
+        <div key={row.storeId} data-testid="checklist-command-row" className={cn('checklist-command-row', `columns-${input.columnPreset}`, row.status === 'needs_visit' && 'tone-late')}>
           <StoreIdentity row={row} />
-          <ChecklistScore value={row.bmScore} t={input.t} />
-          <ChecklistScore value={row.vmScore} t={input.t} />
-          <VisitDate value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} />
-          <ElapsedDays value={row.elapsedDaysSinceLastVisit} t={input.t} />
-          <StatusPill locale={input.locale} status={row.status} />
-          <Button type="button" variant="ghost" size="sm" className="tw:justify-start tw:px-2 tw:text-[10px] tw:font-semibold tw:text-primary" onClick={() => input.onOpenWorkflow(row.storeId)}>
-            {input.t('storeChecklists.command.openWorkflow')}
-          </Button>
+          {input.columnPreset !== 'visit' ? <ChecklistScore className="score-bm" value={row.bmScore} t={input.t} /> : null}
+          {input.columnPreset !== 'visit' ? <ChecklistScore className="score-vm" value={row.vmScore} t={input.t} /> : null}
+          {input.columnPreset !== 'scores' ? <VisitDate className="visit-date" value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} /> : null}
+          {input.columnPreset !== 'scores' ? <ElapsedDays className="elapsed-days" value={row.elapsedDaysSinceLastVisit} t={input.t} /> : null}
+          <StatusPill locale={input.locale} row={row} />
+          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId)}>
+            {getRowActionLabel(row, input.locale)} <ChevronRight size={14} />
+          </button>
         </div>
       ))}
     </div>
@@ -304,21 +342,20 @@ function ChecklistCommandMobileCards(input: {
   onOpenWorkflow: (storeId: string) => void
 }) {
   return (
-    <div className="tw:grid tw:divide-y tw:divide-border tw:lg:hidden">
+    <div className="checklist-command-mobile-list">
       {input.rows.map((row) => (
-        <article key={row.storeId} className="tw:grid tw:gap-3 tw:p-4">
-          <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
-            <StoreIdentity row={row} />
-            <StatusPill locale={input.locale} status={row.status} />
+        <article key={row.storeId} className={cn('checklist-command-mobile-card', row.status === 'needs_visit' && 'tone-late')}>
+          <StoreIdentity row={row} />
+          <div className="checklist-command-mobile-scores">
+            <ChecklistScore className="score-bm" value={row.bmScore} t={input.t} />
+            <ChecklistScore className="score-vm" value={row.vmScore} t={input.t} />
           </div>
-          <div className="tw:grid tw:grid-cols-2 tw:gap-2">
-            <div><small className="tw:mb-1 tw:block tw:text-[9px] tw:font-bold tw:text-muted-foreground">BM</small><ChecklistScore value={row.bmScore} t={input.t} /></div>
-            <div><small className="tw:mb-1 tw:block tw:text-[9px] tw:font-bold tw:text-muted-foreground">VM</small><ChecklistScore value={row.vmScore} t={input.t} /></div>
+          <div className="checklist-command-mobile-visit">
+            <VisitDate value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} />
+            <ElapsedDays value={row.elapsedDaysSinceLastVisit} t={input.t} />
           </div>
-          <div className="tw:flex tw:items-end tw:justify-between tw:gap-3">
-            <div className="tw:grid tw:gap-1"><VisitDate value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} /><ElapsedDays value={row.elapsedDaysSinceLastVisit} t={input.t} /></div>
-            <Button type="button" variant="outline" size="sm" className="tw:text-[10px]" onClick={() => input.onOpenWorkflow(row.storeId)}>{input.t('storeChecklists.command.openWorkflow')}</Button>
-          </div>
+          <StatusPill locale={input.locale} row={row} />
+          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId)}>{getRowActionLabel(row, input.locale)} <ChevronRight size={14} /></button>
         </article>
       ))}
     </div>
@@ -329,54 +366,70 @@ function StoreIdentity({ row }: { row: ChecklistCommandRow }) {
   return <span className="tw:grid tw:min-w-0 tw:gap-0.5"><strong className="tw:truncate tw:text-xs tw:text-foreground">{row.storeName}</strong><small className="tw:truncate tw:text-[9px] tw:text-muted-foreground">{row.storeCode} · {row.regionName}</small></span>
 }
 
-function ChecklistScore(input: { value: number | null; t: ReturnType<typeof useLocalization>['t'] }) {
-  if (input.value === null) return <span className="tw:inline-flex tw:w-fit tw:min-w-16 tw:justify-center tw:rounded-lg tw:border tw:border-destructive/20 tw:bg-destructive/10 tw:px-2 tw:py-1.5 tw:text-[9px] tw:font-bold tw:text-destructive">{input.t('storeChecklists.command.notDone')}</span>
-  return <span className="tw:inline-flex tw:w-fit tw:min-w-16 tw:items-baseline tw:justify-center tw:gap-1 tw:rounded-lg tw:border tw:border-primary/20 tw:bg-primary/[0.06] tw:px-2 tw:py-1.5 tw:text-primary"><strong className="tw:text-sm tw:tabular-nums">{Math.round(input.value)}</strong><small className="tw:text-[8px] tw:font-semibold">{input.t('storeChecklists.command.points')}</small></span>
+function ChecklistScore(input: { className?: string; value: number | null; t: ReturnType<typeof useLocalization>['t'] }) {
+  if (input.value === null) return <span className={cn('checklist-command-score is-missing', input.className)}>{input.t('storeChecklists.command.notDone')}</span>
+  return <span className={cn('checklist-command-score is-done', input.className)}><strong>{Math.round(input.value)}</strong><small>{input.t('storeChecklists.command.points')}</small></span>
 }
 
-function VisitDate(input: { value: string | null; locale: 'tr' | 'en'; t: ReturnType<typeof useLocalization>['t'] }) {
-  if (!input.value) return <span className="tw:text-[10px] tw:text-muted-foreground">{input.t('storeChecklists.command.neverVisited')}</span>
-  return <span className="tw:grid tw:gap-0.5"><strong className="tw:text-[10px] tw:text-foreground">{new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-US', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Europe/Istanbul' }).format(new Date(input.value))}</strong><small className="tw:text-[8px] tw:text-muted-foreground">{input.t('storeChecklists.command.lastCompleted')}</small></span>
+function VisitDate(input: { className?: string; value: string | null; locale: 'tr' | 'en'; t: ReturnType<typeof useLocalization>['t'] }) {
+  if (!input.value) return <span className={cn('checklist-command-date', input.className)}>{input.t('storeChecklists.command.neverVisited')}</span>
+  return <span className={cn('checklist-command-date', input.className)}><strong>{new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'short', timeZone: 'Europe/Istanbul' }).format(new Date(input.value))}</strong><small>{input.t('storeChecklists.command.lastCompleted')}</small></span>
 }
 
-function ElapsedDays(input: { value: number | null; t: ReturnType<typeof useLocalization>['t'] }) {
-  return <span className="tw:text-[10px] tw:font-medium tw:text-muted-foreground">{input.value === null ? '—' : input.t('storeChecklists.command.days', { count: input.value })}</span>
+function ElapsedDays(input: { className?: string; value: number | null; t: ReturnType<typeof useLocalization>['t'] }) {
+  return <span className={cn('checklist-command-elapsed', input.className)}><strong>{input.value === null ? '—' : input.t('storeChecklists.command.days', { count: input.value })}</strong><small>{input.t('storeChecklists.command.lastCompleted')}</small></span>
 }
 
-function StatusPill(input: { locale: 'tr' | 'en'; status: ChecklistCommandRow['status'] }) {
-  return <span className={cn('tw:inline-flex tw:w-fit tw:rounded-full tw:px-2 tw:py-1 tw:text-[9px] tw:font-semibold', statusToneClasses[input.status])}>{getChecklistCommandStatusLabel(input.status, input.locale)}</span>
+function StatusPill(input: { locale: 'tr' | 'en'; row: ChecklistCommandRow }) {
+  const presentation = getRowStatusPresentation(input.row, input.locale)
+  return <span className={cn('checklist-command-status', `tone-${presentation.tone}`)}>{presentation.label}</span>
 }
 
-const statusToneClasses: Record<ChecklistCommandRow['status'], string> = {
-  active: 'tw:bg-primary/10 tw:text-primary',
-  completed: 'tw:bg-emerald-500/10 tw:text-emerald-700',
-  needs_visit: 'tw:bg-destructive/10 tw:text-destructive',
-  pending: 'tw:bg-amber-500/10 tw:text-amber-700',
+function getRowStatusPresentation(row: ChecklistCommandRow, locale: 'tr' | 'en') {
+  if (row.status === 'active') return { label: locale === 'tr' ? 'Aktif taslak' : 'Active draft', tone: 'active' }
+  if (row.status === 'needs_visit') return { label: locale === 'tr' ? 'Bu ay eksik' : 'Missing this month', tone: 'late' }
+  if (row.status === 'pending') return { label: locale === 'tr' ? 'Kabul bekliyor' : 'Awaiting acknowledgement', tone: 'review' }
+  if (row.openActionCount > 0) return { label: locale === 'tr' ? 'Aksiyon Takipte' : 'Action in progress', tone: 'review' }
+  return { label: locale === 'tr' ? 'Aksiyon Yok' : 'No action', tone: 'done' }
+}
+
+function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en') {
+  if (row.status === 'active') return locale === 'tr' ? 'Devam et' : 'Continue'
+  if (row.status === 'needs_visit') return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
+  return locale === 'tr' ? 'Sonucu gör' : 'View result'
 }
 
 function ChecklistCommandPeriodPicker(input: { locale: 'tr' | 'en'; period: string; onChange: (value: string) => void }) {
   const [open, setOpen] = useState(false)
   const { year: periodYear, month: periodMonth } = parsePeriod(input.period)
-  const [year, setYear] = useState(periodYear)
-  const years = Array.from({ length: 7 }, (_, index) => periodYear - 3 + index)
+  const [draft, setDraft] = useState({ year: periodYear, month: periodMonth })
+  const rootRef = useRef<HTMLDivElement>(null)
   const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, index, 1))))
+  const currentPeriod = parsePeriod(getBusinessMonthInputValue())
+  const previousPeriod = currentPeriod.month === 1 ? { year: currentPeriod.year - 1, month: 12 } : { year: currentPeriod.year, month: currentPeriod.month - 1 }
+
+  useEffect(() => {
+    if (!open) return
+    const close = () => { setDraft({ year: periodYear, month: periodMonth }); setOpen(false) }
+    const handlePointerDown = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) close() }
+    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') close() }
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => { document.removeEventListener('pointerdown', handlePointerDown); document.removeEventListener('keydown', handleKeyDown) }
+  }, [open, periodMonth, periodYear])
+
+  const closeWithoutApply = () => { setDraft({ year: periodYear, month: periodMonth }); setOpen(false) }
   return (
-    <Popover open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (nextOpen) setYear(periodYear) }}>
-      <PopoverTrigger asChild><Button type="button" variant="outline" className="tw:self-start"><CalendarDays className="tw:size-4" />{formatPeriodLabel(input.period, input.locale)}</Button></PopoverTrigger>
-      <PopoverContent align="end" className="tw:w-72">
-        <PopoverHeader><PopoverTitle>{input.locale === 'tr' ? 'Dönem seç' : 'Select period'}</PopoverTitle></PopoverHeader>
-        <Select value={String(year)} onValueChange={(value) => setYear(Number(value))}>
-          <SelectTrigger aria-label={input.locale === 'tr' ? 'Yıl seç' : 'Select year'} className="tw:w-full"><SelectValue /></SelectTrigger>
-          <SelectContent>{years.map((option) => <SelectItem key={option} value={String(option)}>{option}</SelectItem>)}</SelectContent>
-        </Select>
-        <div className="tw:grid tw:grid-cols-3 tw:gap-2">
-          {monthNames.map((month, index) => {
-            const value = createChecklistCommandPeriod(year, index + 1)
-            return <Button key={value} type="button" size="sm" variant={periodMonth === index + 1 && periodYear === year ? 'default' : 'outline'} onClick={() => { input.onChange(value); setOpen(false) }}>{month}</Button>
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div ref={rootRef} className={cn('checklist-command-period', open && 'is-open')}>
+      <button type="button" className="checklist-command-period-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => { if (open) closeWithoutApply(); else { setDraft({ year: periodYear, month: periodMonth }); setOpen(true) } }}><CalendarDays size={15} /><span><small>{input.locale === 'tr' ? 'DÖNEM' : 'PERIOD'}</small><strong>{formatPeriodLabel(input.period, input.locale)}</strong></span><ChevronDown size={13} /></button>
+      {open ? <div className="checklist-command-period-popover" role="dialog" aria-label={input.locale === 'tr' ? 'Raporlama dönemi' : 'Reporting period'}>
+        <header><div><span className="checklist-command-period-icon"><CalendarDays size={16} /></span><span><small>{input.locale === 'tr' ? 'RAPORLAMA DÖNEMİ' : 'REPORTING PERIOD'}</small><strong>{input.locale === 'tr' ? 'Ay ve yıl seçin' : 'Select month and year'}</strong></span></div><button type="button" aria-label={input.locale === 'tr' ? 'Tarih filtresini kapat' : 'Close date filter'} onClick={closeWithoutApply}><X size={15} /></button></header>
+        <div className="checklist-command-period-presets"><button type="button" className={draft.year === currentPeriod.year && draft.month === currentPeriod.month ? 'is-active' : ''} onClick={() => setDraft(currentPeriod)}>{input.locale === 'tr' ? 'Bu ay' : 'This month'}</button><button type="button" className={draft.year === previousPeriod.year && draft.month === previousPeriod.month ? 'is-active' : ''} onClick={() => setDraft(previousPeriod)}>{input.locale === 'tr' ? 'Geçen ay' : 'Last month'}</button></div>
+        <div className="checklist-command-period-year"><button type="button" aria-label={input.locale === 'tr' ? 'Önceki yıl' : 'Previous year'} onClick={() => setDraft((current) => ({ ...current, year: current.year - 1 }))}><ChevronLeft size={15} /></button><span><small>{input.locale === 'tr' ? 'YIL' : 'YEAR'}</small><strong>{draft.year}</strong></span><button type="button" aria-label={input.locale === 'tr' ? 'Sonraki yıl' : 'Next year'} onClick={() => setDraft((current) => ({ ...current, year: current.year + 1 }))}><ChevronRight size={15} /></button></div>
+        <div className="checklist-command-period-months">{monthNames.map((label, index) => <button type="button" className={draft.month === index + 1 ? 'is-active' : ''} key={label} onClick={() => setDraft((current) => ({ ...current, month: index + 1 }))}><span>{label}</span>{draft.month === index + 1 ? <Check size={13} /> : null}</button>)}</div>
+        <footer><button type="button" onClick={() => setDraft(currentPeriod)}>{input.locale === 'tr' ? 'Sıfırla' : 'Reset'}</button><span>{formatPeriodLabel(createChecklistCommandPeriod(draft.year, draft.month), input.locale)}</span><button type="button" className="primary" onClick={() => { input.onChange(createChecklistCommandPeriod(draft.year, draft.month)); setOpen(false) }}><Check size={14} /> {input.locale === 'tr' ? 'Uygula' : 'Apply'}</button></footer>
+      </div> : null}
+    </div>
   )
 }
 
