@@ -212,6 +212,13 @@ export const AUDIT_EVENT_CATALOG = [
     "Sales target incentive correction or post-close adjustment was approved.",
     "feature_audit",
   ),
+  auditEvent(
+    "region_weekly_visit_plan.revised",
+    "ops.region_weekly_visit_plan",
+    "store_ops",
+    "Region weekly BM visit plan revision was saved.",
+    "feature_audit",
+  ),
 
   auditEvent("competition.created", "ops.competition", "competition", "Competition was created."),
   auditEvent("competition_stage.created", "ops.competition_stage", "competition", "Competition stage was created."),

@@ -59,4 +59,36 @@ describe("Checklist Command OpenAPI", () => {
     const response = document.components?.schemas?.ChecklistCommandRegionResponse;
     expect(response).toBeDefined();
   });
+
+  it("publishes the weekly plan read and optimistic full-snapshot write contracts", () => {
+    const document = JSON.parse(
+      readFileSync(resolve(process.cwd(), "../../docs/api/openapi.json"), "utf8"),
+    ) as OpenApiDocument;
+    const read = document.paths["/api/checklists/command-canvas/visit-plans"].get;
+    const write = document.paths["/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}"].put;
+
+    expect(read.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "regionId", in: "query", required: true }),
+      expect.objectContaining({ name: "weekStart", in: "query", required: true }),
+    ]));
+    expect(read.responses["200"].content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/ChecklistVisitPlanResponse",
+    });
+    expect(write.requestBody.content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/SaveChecklistVisitPlanRequest",
+    });
+    expect(write.responses["200"].content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/ChecklistVisitPlanResponse",
+    });
+    expect(write.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "regionId", in: "path", schema: { type: "string", format: "uuid" } }),
+      expect.objectContaining({ name: "weekStart", in: "path", schema: { type: "string", format: "date" } }),
+    ]));
+    const request = document.components?.schemas?.SaveChecklistVisitPlanRequest as any;
+    expect(request.properties.items).not.toHaveProperty("maxItems");
+    const item = document.components?.schemas?.ChecklistVisitPlanItem as any;
+    expect(item.properties.status.enum).toEqual(["waiting", "missed", "completed"]);
+    expect(item.properties).not.toHaveProperty("assigneeId");
+    expect(item.properties).not.toHaveProperty("startedAt");
+  });
 });

@@ -11,6 +11,7 @@
     "smoke:backend-readiness-load": "node scripts/backend-readiness-load-smoke.mjs",
     "smoke:migration:fresh-db": "node scripts/migration-fresh-db-smoke.mjs",
     "smoke:visit-plan-schema": "node scripts/region-weekly-visit-plan-schema-smoke.mjs",
+    "smoke:visit-plan-api": "node scripts/checklist-visit-plan-api-postgres-smoke.mjs",
     "smoke:database:invariants": "node scripts/database-invariant-preflight-smoke.mjs",
     "smoke:deployed-readiness": "node scripts/deployed-readiness-smoke.mjs",
     "smoke:alert-routing": "node scripts/alert-routing-smoke.mjs",
