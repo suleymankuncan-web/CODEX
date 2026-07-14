@@ -107,6 +107,8 @@ export function StoreShell(input: {
       }${
         checklistOnlyRoute ? ' store-shell-store-checklists' : ''
       }${
+        storeChecklistRoute ? ' store-shell-checklist-command' : ''
+      }${
         storeIncentivesRoute ? ' store-shell-store-incentives' : ''
       }${
         storeFeedRoute ? ' store-shell-store-feed' : ''

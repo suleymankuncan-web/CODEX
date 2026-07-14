@@ -26,6 +26,13 @@ export function StoreChecklistsPage(input: {
           next.set('storeId', storeId)
           navigate({ pathname: location.pathname, search: `?${next.toString()}` })
         }}
+        onOpenResult={(checklistInstanceId) => {
+          const next = new URLSearchParams(location.search)
+          next.set('view', 'workflow')
+          next.set('result', checklistInstanceId)
+          next.delete('storeId')
+          navigate({ pathname: location.pathname, search: `?${next.toString()}` })
+        }}
       />
     )
   }

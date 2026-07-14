@@ -602,6 +602,20 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/checklists/command-canvas/visit-plans/regions')) {
+      await route.fulfill({
+        json: {
+          data: {
+            view: 'region_manager',
+            capabilities: { canMaintainWeeklyVisitPlan: true },
+            items: [{ regionId, regionName: 'Pilot Region' }],
+            page: { total: 1, limit: 20, offset: 0, hasMore: false },
+          },
+        },
+      })
+      return
+    }
+
     if (pathname.endsWith('/api/checklists/command-canvas')) {
       await route.fulfill({ json: checklistCommandCanvasFixture })
       return

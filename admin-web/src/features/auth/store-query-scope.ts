@@ -52,6 +52,40 @@ export function storeChecklistCommandQueryKey(
   return ['checklist-command', getStoreQueryScopeSignature(authSummary), filters] as const
 }
 
+export function storeChecklistVisitPlanQueryKey(
+  authSummary: AuthSessionSummary | null,
+  regionId: string,
+  weekStart: string,
+) {
+  return [
+    'checklist-visit-plan',
+    getStoreQueryScopeSignature(authSummary),
+    regionId,
+    weekStart,
+  ] as const
+}
+
+export function storeChecklistVisitPlanPeriodQueryKey(
+  authSummary: AuthSessionSummary | null,
+  filters: Record<string, string | number>,
+) {
+  return ['checklist-visit-plan-period', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
+export function storeChecklistVisitPlanCandidatesQueryKey(
+  authSummary: AuthSessionSummary | null,
+  filters: Record<string, string | number>,
+) {
+  return ['checklist-visit-plan-candidates', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
+export function storeChecklistVisitPlanRegionsQueryKey(
+  authSummary: AuthSessionSummary | null,
+  filters: Record<string, string | number>,
+) {
+  return ['checklist-visit-plan-regions', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
 export function storeWorkflowInboxQueryKey(authSummary: AuthSessionSummary | null) {
   return ['workflow-inbox', getStoreQueryScopeSignature(authSummary)] as const
 }

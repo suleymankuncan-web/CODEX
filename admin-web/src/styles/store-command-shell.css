@@ -515,6 +515,53 @@
 .store-shell.store-command-app.store-shell-store-checklists {
   padding-left: 0;
 }
+
+/* The approved checklist Command Canvas uses a compact operational rail.
+   Keep this route-local so other Store surfaces retain their navigation shell. */
+.store-shell.store-command-app.store-shell-checklist-command:not(.store-shell-store-checklists) {
+  --store-command-sidebar: 64px;
+  padding-left: var(--store-command-sidebar);
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-sidebar {
+  width: var(--store-command-sidebar);
+  align-items: center;
+  gap: 16px;
+  padding: 18px 10px;
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-brand {
+  width: 44px;
+  min-height: 44px;
+  grid-template-columns: 1fr;
+  padding: 0;
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-brand-mark {
+  width: 44px;
+  height: 44px;
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-brand-text,
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-persona-chip,
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-nav-label,
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-sidebar-footer {
+  display: none;
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-nav {
+  align-items: center;
+  gap: 8px;
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-nav-link {
+  width: 44px;
+  min-height: 44px;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 0;
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-nav-icon {
+  width: 34px;
+  height: 34px;
+}
+.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-main {
+  width: min(1180px, calc(100vw - var(--store-command-sidebar) - 38px));
+}
 .store-command-home {
   color: var(--store-command-ink);
 }
@@ -629,5 +676,22 @@
     width: min(100%, 760px);
     margin: 0 auto;
     padding: 16px 12px calc(28px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 980px) {
+  .store-shell.store-command-app.store-shell-checklist-command,
+  .store-shell.store-command-app.store-shell-checklist-command:not(.store-shell-store-checklists) {
+    padding: 0;
+  }
+  .store-shell-checklist-command .store-command-sidebar {
+    display: none;
+  }
+  .store-shell-checklist-command .store-command-main,
+  .store-shell-checklist-command.store-shell-store-checklists .store-command-main,
+  .store-shell.store-command-app.store-shell-checklist-command:not(.store-shell-store-checklists) .store-command-main {
+    width: 100%;
+    max-width: none;
+    padding: 8px 14px calc(28px + env(safe-area-inset-bottom));
   }
 }
