@@ -8,6 +8,7 @@ import {
   buildChecklistCommandQuery,
   buildChecklistVisitPlanCandidateQuery,
   buildChecklistVisitPlanPeriodQuery,
+  buildChecklistVisitPlanRegionOptionsQuery,
   type ChecklistCommandQueryInput,
   type ChecklistVisitPlanPeriodQueryInput,
 } from './model'
@@ -22,6 +23,8 @@ export type ChecklistVisitPlanPeriod = ChecklistVisitPlanPeriodResponse['data']
 export type ChecklistVisitPlanPeriodRow = ChecklistVisitPlanPeriod['items'][number]
 export type ChecklistVisitPlanCandidateResponse = ApiGetResponse<'/api/checklists/command-canvas/visit-plans/candidates'>
 export type ChecklistVisitPlanCandidate = ChecklistVisitPlanCandidateResponse['data']['items'][number]
+export type ChecklistVisitPlanRegionOptionsResponse = ApiGetResponse<'/api/checklists/command-canvas/visit-plans/regions'>
+export type ChecklistVisitPlanRegionOption = ChecklistVisitPlanRegionOptionsResponse['data']['items'][number]
 export type SaveChecklistVisitPlanBody = ApiMutationBody<
   '/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}',
   'PUT'
@@ -52,6 +55,16 @@ export function getChecklistVisitPlanCandidates(input: {
 }) {
   return fetchOpenApiJson('/api/checklists/command-canvas/visit-plans/candidates', {
     query: buildChecklistVisitPlanCandidateQuery(input),
+  })
+}
+
+export function getChecklistVisitPlanRegionOptions(input: {
+  query: string
+  limit: number
+  offset: number
+}) {
+  return fetchOpenApiJson('/api/checklists/command-canvas/visit-plans/regions', {
+    query: buildChecklistVisitPlanRegionOptionsQuery(input),
   })
 }
 

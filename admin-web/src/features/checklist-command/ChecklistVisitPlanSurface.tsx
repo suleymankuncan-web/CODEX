@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import {
   CalendarDays,
@@ -39,6 +39,12 @@ export function ChecklistVisitPlanSurface(input: {
   onWeekStartChange: (weekStart: string) => void
 }) {
   const copy = getCopy(input.locale)
+  const [retainedPeriod, setRetainedPeriod] = useState<{
+    scopeSignature: string
+    regionId: string
+    period: string
+    response: Awaited<ReturnType<typeof getChecklistVisitPlanPeriod>>
+  } | null>(null)
   const [risk, setRisk] = useState<ChecklistVisitPlanRisk>('all')
   const [planStatus, setPlanStatus] = useState<ChecklistVisitPlanStatus>('all')
   const [sort, setSort] = useState<ChecklistVisitPlanSort>('risk_desc')
@@ -69,7 +75,11 @@ export function ChecklistVisitPlanSurface(input: {
       if (!toolbarRef.current?.contains(event.target as Node)) setOpenMenu(null)
     }
     const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpenMenu(null)
+      if (event.key === 'Escape') {
+        const trigger = toolbarRef.current?.querySelector<HTMLButtonElement>('[aria-expanded="true"]')
+        setOpenMenu(null)
+        window.requestAnimationFrame(() => trigger?.focus())
+      }
     }
     document.addEventListener('pointerdown', close)
     document.addEventListener('keydown', escape)
@@ -89,23 +99,46 @@ export function ChecklistVisitPlanSurface(input: {
     limit: PAGE_SIZE,
     offset,
   }), [input.period, input.regionId, offset, planStatus, query, risk, sort])
+  const scopeSignature = storeChecklistVisitPlanPeriodQueryKey(input.authSummary, filters)[1]
   const periodQuery = useQuery({
     queryKey: storeChecklistVisitPlanPeriodQueryKey(input.authSummary, filters),
     queryFn: () => getChecklistVisitPlanPeriod(filters),
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) => {
+      const previousFilters = previousQuery?.queryKey[2] as Record<string, unknown> | undefined
+      return previousFilters?.regionId === filters.regionId && previousFilters?.period === filters.period
+        ? previousData
+        : undefined
+    },
     ...transientQueryRetryOptions,
   })
+  const protectedPeriodFailure = periodQuery.error instanceof ApiError
+    && (periodQuery.error.status === 401 || periodQuery.error.status === 403)
+  const retainedPeriodResponse = retainedPeriod?.scopeSignature === scopeSignature
+    && retainedPeriod.regionId === input.regionId
+    && retainedPeriod.period === input.period
+    ? retainedPeriod.response
+    : undefined
+  const periodResponse = protectedPeriodFailure ? undefined : periodQuery.data ?? retainedPeriodResponse
+  const retainCurrentPeriod = () => {
+    if (!periodResponse) return
+    setRetainedPeriod({
+      scopeSignature,
+      regionId: input.regionId,
+      period: input.period,
+      response: periodResponse,
+    })
+  }
 
-  if (!periodQuery.data && periodQuery.isLoading) {
+  if (!periodResponse && periodQuery.isLoading) {
     return <section className="plan-surface-state" aria-live="polite"><Clock3 size={18} /><strong>{copy.loading}</strong></section>
   }
-  if (!periodQuery.data && periodQuery.isError) {
+  if (!periodResponse && periodQuery.isError) {
     const forbidden = periodQuery.error instanceof ApiError && periodQuery.error.status === 403
     return <section className="plan-surface-state" role="alert"><CircleAlert size={18} /><strong>{forbidden ? copy.forbidden : copy.loadFailed}</strong>{forbidden ? null : <button type="button" onClick={() => void periodQuery.refetch()}>{copy.retry}</button>}</section>
   }
-  if (!periodQuery.data) return null
+  if (!periodResponse) return null
 
-  const data = periodQuery.data.data
+  const data = periodResponse.data
   const pageNumber = Math.floor(data.page.offset / data.page.limit) + 1
   const pageCount = Math.max(1, Math.ceil(data.page.total / data.page.limit))
   const firstItem = data.page.total === 0 ? 0 : data.page.offset + 1
@@ -132,7 +165,7 @@ export function ChecklistVisitPlanSurface(input: {
       <section className="decision-rail decision-rail--plan" aria-label={copy.metrics}>
         {metricOptions.map((metric) => {
           const Icon = metric.icon
-          return <button type="button" aria-pressed={risk === metric.key} className={risk === metric.key ? 'is-active' : ''} key={metric.key} onClick={() => { setRisk((current) => current === metric.key ? 'all' : metric.key); setOffset(0) }}><span className={`decision-icon decision-icon--plan-${metric.key}`}><Icon size={15} /></span><span className="decision-copy"><b>{metric.label}</b><small>{metric.note}</small></span><strong>{metric.value}</strong></button>
+          return <button type="button" aria-pressed={risk === metric.key} className={risk === metric.key ? 'is-active' : ''} key={metric.key} onClick={() => { retainCurrentPeriod(); setRisk((current) => current === metric.key ? 'all' : metric.key); setOffset(0) }}><span className={`decision-icon decision-icon--plan-${metric.key}`}><Icon size={15} /></span><span className="decision-copy"><b>{metric.label}</b><small>{metric.note}</small></span><strong>{metric.value}</strong></button>
         })}
       </section>
 
@@ -153,38 +186,38 @@ export function ChecklistVisitPlanSurface(input: {
 
       <section className="canvas-surface canvas-plan-surface">
         <div className="command-row canvas-plan-command" ref={toolbarRef}>
-          <label><Search size={15} /><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder={copy.search} /><kbd>/</kbd></label>
+          <label><Search size={15} /><input value={searchDraft} onChange={(event) => { retainCurrentPeriod(); setSearchDraft(event.target.value) }} placeholder={copy.search} /><kbd>/</kbd></label>
           <div className="plan-command-context"><span>{copy.planScope}</span><strong>{copy.scopeCount(data.metrics.totalStores)}</strong></div>
           <i />
           <PlanMenu label={copy.priority} value={riskLabel(risk, copy)} open={openMenu === 'risk'} onToggle={() => setOpenMenu((current) => current === 'risk' ? null : 'risk')}>
-            {(['all', 'high', 'medium', 'low'] as const).map((value) => <button role="menuitemradio" aria-checked={risk === value} className={risk === value ? 'is-selected' : ''} key={value} onClick={() => { setRisk(value); setOffset(0); setOpenMenu(null) }}><span>{riskLabel(value, copy)}</span>{risk === value ? <Check size={13} /> : null}</button>)}
+            {(['all', 'high', 'medium', 'low'] as const).map((value) => <button role="menuitemradio" aria-checked={risk === value} className={risk === value ? 'is-selected' : ''} key={value} onClick={() => { retainCurrentPeriod(); setRisk(value); setOffset(0); setOpenMenu(null) }}><span>{riskLabel(value, copy)}</span>{risk === value ? <Check size={13} /> : null}</button>)}
           </PlanMenu>
           <PlanMenu label={copy.status} value={statusLabel(planStatus, copy)} open={openMenu === 'status'} onToggle={() => setOpenMenu((current) => current === 'status' ? null : 'status')}>
-            {(['all', 'unplanned', 'waiting', 'missed', 'completed', 'mixed'] as const).map((value) => <button role="menuitemradio" aria-checked={planStatus === value} className={planStatus === value ? 'is-selected' : ''} key={value} onClick={() => { setPlanStatus(value); setOffset(0); setOpenMenu(null) }}><span>{statusLabel(value, copy)}</span>{planStatus === value ? <Check size={13} /> : null}</button>)}
+            {(['all', 'unplanned', 'waiting', 'missed', 'completed', 'mixed'] as const).map((value) => <button role="menuitemradio" aria-checked={planStatus === value} className={planStatus === value ? 'is-selected' : ''} key={value} onClick={() => { retainCurrentPeriod(); setPlanStatus(value); setOffset(0); setOpenMenu(null) }}><span>{statusLabel(value, copy)}</span>{planStatus === value ? <Check size={13} /> : null}</button>)}
           </PlanMenu>
           <PlanMenu label={copy.sort} value={sortLabel(sort, copy)} open={openMenu === 'sort'} onToggle={() => setOpenMenu((current) => current === 'sort' ? null : 'sort')}>
-            {(['risk_desc', 'store_asc', 'store_desc', 'last_visit_desc', 'next_plan_asc'] as const).map((value) => <button role="menuitemradio" aria-checked={sort === value} className={sort === value ? 'is-selected' : ''} key={value} onClick={() => { setSort(value); setOffset(0); setOpenMenu(null) }}><span>{sortLabel(value, copy)}</span>{sort === value ? <Check size={13} /> : null}</button>)}
+            {(['risk_desc', 'store_asc', 'store_desc', 'last_visit_desc', 'next_plan_asc'] as const).map((value) => <button role="menuitemradio" aria-checked={sort === value} className={sort === value ? 'is-selected' : ''} key={value} onClick={() => { retainCurrentPeriod(); setSort(value); setOffset(0); setOpenMenu(null) }}><span>{sortLabel(value, copy)}</span>{sort === value ? <Check size={13} /> : null}</button>)}
           </PlanMenu>
         </div>
         {periodQuery.isFetching ? <div className="plan-inline-refresh" aria-live="polite">{copy.refreshing}</div> : null}
         {periodQuery.isError ? <button type="button" className="plan-inline-error" onClick={() => void periodQuery.refetch()}>{getUserFacingErrorMessage(periodQuery.error, copy.refreshFailed)}</button> : null}
         <div className="canvas-plan-head"><span>{copy.store}</span><span>{copy.priority}</span><span>{copy.planned}</span><span>{copy.status}</span><span>{copy.reason}</span><span /></div>
-        {data.items.length === 0 ? <div className="plan-empty"><CalendarDays size={20} /><strong>{copy.empty}</strong><button type="button" onClick={() => { setSearchDraft(''); setRisk('all'); setPlanStatus('all'); setOffset(0) }}>{copy.clear}</button></div> : <div className="canvas-plan-rows">{data.items.map((row) => {
-          const completed = row.planItems.find((item) => item.status === 'completed' && item.checklistInstanceId)
-          const partialCompleted = row.planStatus === 'completed' && !completed
+        {data.items.length === 0 ? <div className="plan-empty"><CalendarDays size={20} /><strong>{copy.empty}</strong><button type="button" onClick={() => { retainCurrentPeriod(); setSearchDraft(''); setRisk('all'); setPlanStatus('all'); setOffset(0) }}>{copy.clear}</button></div> : <div className="canvas-plan-rows">{data.items.map((row) => {
+          const completed = row.planItems.filter((item) => item.status === 'completed' && item.checklistInstanceId)
+          const partialCompleted = row.planStatus === 'completed' && completed.length === 0
           return <article className={`canvas-plan-row canvas-plan-row--${row.risk}`} key={row.storeId}>
             <span className="store-cell"><strong>{row.storeName}</strong><small>{row.storeCode} · {row.regionName}</small></span>
             <b className={`plan-risk plan-risk--${row.risk}`}>{riskLabel(row.risk, copy)}</b>
             <span className="plan-date"><strong>{formatPlanDates(row, input.locale)}</strong><small>{row.planItems.length > 1 ? copy.occurrences(row.planItems.length) : copy.plannedVisit}</small></span>
             <span className="plan-status"><b className={`status status--${statusTone(row.planStatus)}`}>{partialCompleted ? copy.partial : statusLabel(row.planStatus, copy)}</b></span>
             <span className="plan-reasons"><strong>{reasonLabel(row.reasonCodes[0], copy)}</strong>{row.reasonCodes[1] ? <small>{reasonLabel(row.reasonCodes[1], copy)}</small> : null}</span>
-            <button type="button" className="canvas-action" disabled={partialCompleted} onClick={() => completed && row.planStatus === 'completed' ? input.onOpenResult(completed.checklistInstanceId!) : setSelectedRow(row)}>{partialCompleted ? copy.evidenceMissing : completed && row.planStatus === 'completed' ? copy.result : row.planStatus === 'missed' ? copy.replan : row.planStatus === 'unplanned' ? copy.plan : copy.edit}<ChevronRight size={14} /></button>
+            <button type="button" className="canvas-action" disabled={partialCompleted} onClick={() => completed.length === 1 && row.planStatus === 'completed' ? input.onOpenResult(completed[0]!.checklistInstanceId!) : setSelectedRow(row)}>{partialCompleted ? copy.evidenceMissing : completed.length > 0 && row.planStatus === 'completed' ? (completed.length === 1 ? copy.result : copy.results) : row.planStatus === 'missed' ? copy.replan : row.planStatus === 'unplanned' ? copy.plan : copy.edit}<ChevronRight size={14} /></button>
           </article>
         })}</div>}
-        <footer className="checklist-command-pagination"><span>{copy.range(firstItem, lastItem, data.page.total)}</span><div><button type="button" aria-label={copy.previous} disabled={offset === 0 || periodQuery.isFetching} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}><ChevronLeft size={14} /></button><strong>{pageNumber} / {pageCount}</strong><button type="button" aria-label={copy.next} disabled={!data.page.hasMore || periodQuery.isFetching} onClick={() => setOffset(offset + PAGE_SIZE)}><ChevronRight size={14} /></button></div></footer>
+        <footer className="checklist-command-pagination"><span>{copy.range(firstItem, lastItem, data.page.total)}</span><div><button type="button" aria-label={copy.previous} disabled={offset === 0 || periodQuery.isFetching} onClick={() => { retainCurrentPeriod(); setOffset(Math.max(0, offset - PAGE_SIZE)) }}><ChevronLeft size={14} /></button><strong>{pageNumber} / {pageCount}</strong><button type="button" aria-label={copy.next} disabled={!data.page.hasMore || periodQuery.isFetching} onClick={() => { retainCurrentPeriod(); setOffset(offset + PAGE_SIZE) }}><ChevronRight size={14} /></button></div></footer>
       </section>
 
-      {selectedRow ? <PlanVisitDrawer locale={input.locale} row={selectedRow} onClose={() => setSelectedRow(null)} onOpenPlanning={() => openPlanning(selectedRow)} /> : null}
+      {selectedRow ? <PlanVisitDrawer locale={input.locale} row={selectedRow} onClose={() => setSelectedRow(null)} onOpenPlanning={() => openPlanning(selectedRow)} onOpenResult={input.onOpenResult} /> : null}
     </div>
   )
 }
@@ -193,22 +226,22 @@ function PlanMenu(input: { label: string; value: string; open: boolean; onToggle
   return <div className="toolbar-menu"><button type="button" aria-haspopup="menu" aria-expanded={input.open} onClick={input.onToggle}>{input.label} <span>{input.value}</span><ChevronDown size={12} /></button>{input.open ? <div className="toolbar-popover plan-toolbar-popover" role="menu">{input.children}</div> : null}</div>
 }
 
-function PlanVisitDrawer(input: { locale: 'tr' | 'en'; row: ChecklistVisitPlanPeriodRow; onClose: () => void; onOpenPlanning: () => void }) {
+function PlanVisitDrawer(input: { locale: 'tr' | 'en'; row: ChecklistVisitPlanPeriodRow; onClose: () => void; onOpenPlanning: () => void; onOpenResult: (checklistInstanceId: string) => void }) {
   const copy = getCopy(input.locale)
-  return <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) input.onClose() }}><DialogPrimitive.Portal><DialogPrimitive.Overlay className="plan-drawer-backdrop" /><DialogPrimitive.Content className="plan-drawer" aria-describedby="plan-drawer-copy"><header><div><span className="week-planner-icon"><CalendarDays size={16} /></span><span><small>{copy.visitPlan}</small><DialogPrimitive.Title>{input.row.storeName}</DialogPrimitive.Title><em>{input.row.storeCode} · {input.row.regionName}</em></span></div><DialogPrimitive.Close aria-label={copy.close}><X size={17} /></DialogPrimitive.Close></header><main><section className="plan-drawer-intro"><b className={`plan-risk plan-risk--${input.row.risk}`}>{riskLabel(input.row.risk, copy)}</b><h2>{input.row.planStatus === 'missed' ? copy.replanVisit : copy.editVisit}</h2><p id="plan-drawer-copy">{copy.drawerCopy}</p></section><section className="plan-drawer-reason"><small>{copy.reason}</small>{input.row.reasonCodes.map((reason) => <strong key={reason}>{reasonLabel(reason, copy)}</strong>)}</section><section className="plan-drawer-occurrences"><small>{copy.planned}</small>{input.row.planItems.length === 0 ? <strong>{copy.notPlanned}</strong> : input.row.planItems.map((item) => <span key={item.planItemId}><b>{formatIsoDate(item.plannedDate, input.locale)}</b><em>{statusLabel(item.status, copy)}</em></span>)}</section></main><footer><DialogPrimitive.Close>{copy.cancel}</DialogPrimitive.Close><button type="button" className="primary" onClick={input.onOpenPlanning}>{copy.openWeek}</button></footer></DialogPrimitive.Content></DialogPrimitive.Portal></DialogPrimitive.Root>
+  return <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) input.onClose() }}><DialogPrimitive.Portal><DialogPrimitive.Overlay className="plan-drawer-backdrop" /><DialogPrimitive.Content className="plan-drawer" aria-describedby="plan-drawer-copy"><header><div><span className="week-planner-icon"><CalendarDays size={16} /></span><span><small>{copy.visitPlan}</small><DialogPrimitive.Title>{input.row.storeName}</DialogPrimitive.Title><em>{input.row.storeCode} · {input.row.regionName}</em></span></div><DialogPrimitive.Close aria-label={copy.close}><X size={17} /></DialogPrimitive.Close></header><main><section className="plan-drawer-intro"><b className={`plan-risk plan-risk--${input.row.risk}`}>{riskLabel(input.row.risk, copy)}</b><h2>{input.row.planStatus === 'missed' ? copy.replanVisit : copy.editVisit}</h2><p id="plan-drawer-copy">{copy.drawerCopy}</p></section><section className="plan-drawer-reason"><small>{copy.reason}</small>{input.row.reasonCodes.map((reason) => <strong key={reason}>{reasonLabel(reason, copy)}</strong>)}</section><section className="plan-drawer-occurrences"><small>{copy.planned}</small>{input.row.planItems.length === 0 ? <strong>{copy.notPlanned}</strong> : input.row.planItems.map((item) => <span key={item.planItemId}><span><b>{formatIsoDate(item.plannedDate, input.locale)}</b><em>{statusLabel(item.status, copy)}</em></span>{item.status === 'completed' && item.checklistInstanceId ? <button type="button" onClick={() => input.onOpenResult(item.checklistInstanceId!)}>{copy.result}</button> : null}</span>)}</section></main><footer><DialogPrimitive.Close>{copy.cancel}</DialogPrimitive.Close><button type="button" className="primary" onClick={input.onOpenPlanning}>{copy.openWeek}</button></footer></DialogPrimitive.Content></DialogPrimitive.Portal></DialogPrimitive.Root>
 }
 
 type Copy = ReturnType<typeof getCopy>
 function getCopy(locale: 'tr' | 'en') {
   return locale === 'tr' ? {
-    cancel: 'Vazgeç', clear: 'Filtreleri temizle', close: 'Kapat', drawerCopy: 'Bu mağazanın planını haftalık snapshot içinde güvenli biçimde düzenleyin.', edit: 'Planı düzenle', editVisit: 'Ziyaret planını düzenle', empty: 'Bu filtrelerde plan kaydı bulunamadı.', evidenceMissing: 'Kanıt eksik', forbidden: 'Bu bölgenin ziyaret planına erişiminiz yok.', high: 'Yüksek risk', highNote: 'Bu ay ziyaret eksik', loadFailed: 'Ziyaret planı yüklenemedi.', loading: 'Ziyaret planı yükleniyor', low: 'Aksiyon Yok', lowNote: 'Aksiyon gerekmiyor', medium: 'Aksiyon Takipte', mediumNote: 'Sonuç izlenmeli', metrics: 'Ziyaret planı öncelik özeti', next: 'Sonraki sayfa', notPlanned: 'Henüz planlanmadı', occurrences: (count: number) => `${count} ayrı ziyaret`, openWeek: 'Haftalık planı aç', partial: 'Kanıt eksik', plan: 'Planla', planned: 'Planlanan', plannedVisit: 'Planlanan ziyaret', planScope: 'ZİYARET PLANI', previous: 'Önceki sayfa', priority: 'Öncelik', range: (first: number, last: number, total: number) => `${first}-${last} / ${total} mağaza`, reason: 'Neden', refreshFailed: 'Plan güncellenemedi · tekrar dene', refreshing: 'Plan güncelleniyor…', replan: 'Yeniden planla', replanVisit: 'Ziyareti yeniden planla', result: 'Sonucu gör', retry: 'Tekrar dene', scopeCount: (count: number) => `${count} mağaza plan kapsamında`, search: 'Mağaza veya plan ara', sort: 'Sırala', status: 'Durum', store: 'Mağaza', visitPlan: 'ZİYARET PLANI',
+    cancel: 'Vazgeç', clear: 'Filtreleri temizle', close: 'Kapat', drawerCopy: 'Bu mağazanın planını haftalık snapshot içinde güvenli biçimde düzenleyin.', edit: 'Planı düzenle', editVisit: 'Ziyaret planını düzenle', empty: 'Bu filtrelerde plan kaydı bulunamadı.', evidenceMissing: 'Kanıt eksik', forbidden: 'Bu bölgenin ziyaret planına erişiminiz yok.', high: 'Yüksek risk', highNote: 'Bu ay ziyaret eksik', loadFailed: 'Ziyaret planı yüklenemedi.', loading: 'Ziyaret planı yükleniyor', low: 'Aksiyon Yok', lowNote: 'Aksiyon gerekmiyor', medium: 'Aksiyon Takipte', mediumNote: 'Sonuç izlenmeli', metrics: 'Ziyaret planı öncelik özeti', next: 'Sonraki sayfa', notPlanned: 'Henüz planlanmadı', occurrences: (count: number) => `${count} ayrı ziyaret`, openWeek: 'Haftalık planı aç', partial: 'Kanıt eksik', plan: 'Planla', planned: 'Planlanan', plannedVisit: 'Planlanan ziyaret', planScope: 'ZİYARET PLANI', previous: 'Önceki sayfa', priority: 'Öncelik', range: (first: number, last: number, total: number) => `${first}-${last} / ${total} mağaza`, reason: 'Neden', refreshFailed: 'Plan güncellenemedi · tekrar dene', refreshing: 'Plan güncelleniyor…', replan: 'Yeniden planla', replanVisit: 'Ziyareti yeniden planla', result: 'Sonucu gör', results: 'Sonuçları gör', retry: 'Tekrar dene', scopeCount: (count: number) => `${count} mağaza plan kapsamında`, search: 'Mağaza veya plan ara', sort: 'Sırala', status: 'Durum', store: 'Mağaza', visitPlan: 'ZİYARET PLANI',
   } : {
-    cancel: 'Cancel', clear: 'Clear filters', close: 'Close', drawerCopy: 'Edit this store inside the weekly snapshot safely.', edit: 'Edit plan', editVisit: 'Edit visit plan', empty: 'No plan record matches these filters.', evidenceMissing: 'Evidence missing', forbidden: 'You cannot access this region plan.', high: 'High risk', highNote: 'Visit missing this month', loadFailed: 'Visit plan could not be loaded.', loading: 'Loading visit plan', low: 'No Action', lowNote: 'No action required', medium: 'Action in progress', mediumNote: 'Outcome should be monitored', metrics: 'Visit-plan priority summary', next: 'Next page', notPlanned: 'Not planned yet', occurrences: (count: number) => `${count} separate visits`, openWeek: 'Open weekly plan', partial: 'Evidence missing', plan: 'Plan', planned: 'Planned', plannedVisit: 'Planned visit', planScope: 'VISIT PLAN', previous: 'Previous page', priority: 'Priority', range: (first: number, last: number, total: number) => `${first}-${last} / ${total} stores`, reason: 'Reason', refreshFailed: 'Could not refresh plan · retry', refreshing: 'Refreshing plan…', replan: 'Replan', replanVisit: 'Replan visit', result: 'View result', retry: 'Try again', scopeCount: (count: number) => `${count} stores in plan scope`, search: 'Search store or plan', sort: 'Sort', status: 'Status', store: 'Store', visitPlan: 'VISIT PLAN',
+    cancel: 'Cancel', clear: 'Clear filters', close: 'Close', drawerCopy: 'Edit this store inside the weekly snapshot safely.', edit: 'Edit plan', editVisit: 'Edit visit plan', empty: 'No plan record matches these filters.', evidenceMissing: 'Evidence missing', forbidden: 'You cannot access this region plan.', high: 'High risk', highNote: 'Visit missing this month', loadFailed: 'Visit plan could not be loaded.', loading: 'Loading visit plan', low: 'No Action', lowNote: 'No action required', medium: 'Action in progress', mediumNote: 'Outcome should be monitored', metrics: 'Visit-plan priority summary', next: 'Next page', notPlanned: 'Not planned yet', occurrences: (count: number) => `${count} separate visits`, openWeek: 'Open weekly plan', partial: 'Evidence missing', plan: 'Plan', planned: 'Planned', plannedVisit: 'Planned visit', planScope: 'VISIT PLAN', previous: 'Previous page', priority: 'Priority', range: (first: number, last: number, total: number) => `${first}-${last} / ${total} stores`, reason: 'Reason', refreshFailed: 'Could not refresh plan · retry', refreshing: 'Refreshing plan…', replan: 'Replan', replanVisit: 'Replan visit', result: 'View result', results: 'View results', retry: 'Try again', scopeCount: (count: number) => `${count} stores in plan scope`, search: 'Search store or plan', sort: 'Sort', status: 'Status', store: 'Store', visitPlan: 'VISIT PLAN',
   }
 }
 
 function riskLabel(value: ChecklistVisitPlanRisk | Exclude<ChecklistVisitPlanRisk, 'all'>, copy: Copy) {
-  return value === 'high' ? copy.high : value === 'medium' ? copy.medium : value === 'low' ? copy.low : (copy === getCopy('tr') ? 'Tümü' : 'All')
+  return value === 'high' ? copy.high : value === 'medium' ? copy.medium : value === 'low' ? copy.low : (copy.visitPlan === 'ZİYARET PLANI' ? 'Tümü' : 'All')
 }
 function statusLabel(value: ChecklistVisitPlanStatus | 'waiting' | 'missed' | 'completed', copy: Copy) {
   const tr = copy.visitPlan === 'ZİYARET PLANI'

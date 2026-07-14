@@ -4,12 +4,15 @@ import {
   buildChecklistCommandQuery,
   buildChecklistVisitPlanCandidateQuery,
   buildChecklistVisitPlanPeriodQuery,
+  buildChecklistVisitPlanRegionOptionsQuery,
   buildVisitPlanDraftFingerprint,
   createChecklistCommandPeriod,
   getStableVisitPlanSubmission,
   getIstanbulWeekStart,
   getChecklistCommandSortLabel,
   getChecklistCommandStatusLabel,
+  reconcileVisitPlanDrafts,
+  resolveVisitPlanDraftConflicts,
   toggleChecklistCommandSort,
 } from './model'
 
@@ -55,6 +58,9 @@ describe('checklist command canvas model', () => {
   })
 
   it('builds bounded full-period and server-paged candidate queries', () => {
+    expect(buildChecklistVisitPlanRegionOptionsQuery({ query: ' Marmara ', limit: 20, offset: 40 }).toString())
+      .toBe('query=Marmara&limit=20&offset=40')
+
     expect(buildChecklistVisitPlanPeriodQuery({
       regionId: 'region-1', period: '2026-07', query: ' Novada ', risk: 'high',
       planStatus: 'missed', sort: 'next_plan_asc', limit: 30, offset: 60,
@@ -75,6 +81,49 @@ describe('checklist command canvas model', () => {
     expect(retry).toBe(first)
     expect(first.idempotencyKey).toBe('key-1')
     expect(changed).toEqual({ fingerprint: 'draft-b', idempotencyKey: 'key-2' })
+  })
+
+  it('reapplies local changes without deleting concurrent changes for another store', () => {
+    const baseline = [
+      { storeId: 'store-a', plannedDate: '2026-07-13', displayOrder: 0 },
+      { storeId: 'store-b', plannedDate: '2026-07-14', displayOrder: 1 },
+    ]
+    const local = [
+      { storeId: 'store-a', plannedDate: '2026-07-15', displayOrder: 0 },
+      baseline[1]!,
+    ]
+    const latest = [
+      ...baseline,
+      { storeId: 'store-c', plannedDate: '2026-07-16', displayOrder: 2 },
+    ]
+
+    expect(reconcileVisitPlanDrafts(baseline, local, latest)).toEqual({
+      items: [
+        { storeId: 'store-b', plannedDate: '2026-07-14', displayOrder: 0 },
+        { storeId: 'store-a', plannedDate: '2026-07-15', displayOrder: 1 },
+        { storeId: 'store-c', plannedDate: '2026-07-16', displayOrder: 2 },
+      ],
+      conflictingStoreIds: [],
+    })
+  })
+
+  it('requires an explicit choice when local and remote changes touch the same store', () => {
+    const baseline = [{ storeId: 'store-a', plannedDate: '2026-07-13', displayOrder: 0 }]
+    const local = [{ storeId: 'store-a', plannedDate: '2026-07-14', displayOrder: 0 }]
+    const latest = [{ storeId: 'store-a', plannedDate: '2026-07-15', displayOrder: 0 }]
+    const reconciliation = reconcileVisitPlanDrafts(baseline, local, latest)
+
+    expect(reconciliation.conflictingStoreIds).toEqual(['store-a'])
+    expect(resolveVisitPlanDraftConflicts(
+      reconciliation.items,
+      local,
+      reconciliation.conflictingStoreIds,
+    )).toEqual(local)
+    expect(resolveVisitPlanDraftConflicts(
+      reconciliation.items,
+      latest,
+      reconciliation.conflictingStoreIds,
+    )).toEqual(latest)
   })
 
   it('builds an Istanbul business period from explicit month and year', () => {

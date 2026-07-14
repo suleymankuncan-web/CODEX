@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Dialog as DialogPrimitive } from 'radix-ui'
+import { AlertDialog as AlertDialogPrimitive, Dialog as DialogPrimitive } from 'radix-ui'
 import {
   CalendarDays,
   Check,
@@ -33,6 +33,8 @@ import {
   buildChecklistPlanningDays,
   buildVisitPlanDraftFingerprint,
   getStableVisitPlanSubmission,
+  reconcileVisitPlanDrafts,
+  resolveVisitPlanDraftConflicts,
   shiftChecklistWeek,
   type StableVisitPlanSubmission,
   type VisitPlanDraftItem,
@@ -58,6 +60,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
   const [manualPlanningOpen, setManualPlanningOpen] = useState(false)
   const [conflict, setConflict] = useState(false)
   const submissionRef = useRef<StableVisitPlanSubmission | null>(null)
+  const planningTriggerRef = useRef<HTMLButtonElement>(null)
   const planningOpen = manualPlanningOpen || input.planningRequest !== undefined
   const copy = getCopy(input.locale)
   const planKey = storeChecklistVisitPlanQueryKey(input.authSummary, input.regionId, input.weekStart)
@@ -104,6 +107,12 @@ export function ChecklistWeeklyVisitPlanner(input: {
       actionToast.error(error, copy.saveFailed)
     },
   })
+  const closePlanning = () => {
+    saveMutation.reset()
+    setManualPlanningOpen(false)
+    input.onPlanningRequestHandled()
+    window.requestAnimationFrame(() => planningTriggerRef.current?.focus())
+  }
 
   if (planQuery.isLoading) {
     return <section className="week-planner week-planner-state"><Clock3 size={18} /><strong>{copy.loading}</strong></section>
@@ -114,7 +123,6 @@ export function ChecklistWeeklyVisitPlanner(input: {
 
   const plan = planQuery.data.data
   const days = buildChecklistPlanningDays(plan.weekStart, input.locale)
-  const metrics = countStatuses(plan)
   const firstDay = days[0]
   const lastDay = days.at(-1)
   const weekLabel = firstDay && lastDay
@@ -123,11 +131,6 @@ export function ChecklistWeeklyVisitPlanner(input: {
 
   return (
     <>
-      <section className="checklist-plan-metrics" aria-label={copy.summary}>
-        <PlanMetric icon={CircleAlert} label={copy.missed} tone="missed" value={metrics.missed} />
-        <PlanMetric icon={Clock3} label={copy.waiting} tone="waiting" value={metrics.waiting} />
-        <PlanMetric icon={CheckCircle2} label={copy.completed} tone="completed" value={metrics.completed} />
-      </section>
       <section className="week-planner" aria-labelledby="week-planner-title">
         <header className="week-planner-header">
           <div>
@@ -141,7 +144,7 @@ export function ChecklistWeeklyVisitPlanner(input: {
               <button type="button" aria-label={copy.nextWeek} onClick={() => input.onWeekStartChange(shiftChecklistWeek(input.weekStart, 1))}><ChevronRight size={14} /></button>
             </div>
             {plan.capabilities.canMaintainWeeklyVisitPlan ? (
-              <button type="button" className="week-planner-primary" onClick={() => setManualPlanningOpen(true)}><CalendarDays size={14} /> {copy.planWeek}</button>
+              <button ref={planningTriggerRef} type="button" className="week-planner-primary" onClick={() => setManualPlanningOpen(true)}><CalendarDays size={14} /> {copy.planWeek}</button>
             ) : null}
           </div>
         </header>
@@ -189,33 +192,25 @@ export function ChecklistWeeklyVisitPlanner(input: {
           saveError={saveMutation.isError ? getUserFacingErrorMessage(saveMutation.error, copy.saveFailed) : null}
           saving={saveMutation.isPending}
           regionId={input.regionId}
-          onClose={() => {
-            saveMutation.reset()
-            setManualPlanningOpen(false)
-            input.onPlanningRequestHandled()
-          }}
+          onClose={closePlanning}
           onResolveConflict={async () => {
             const result = await planQuery.refetch()
-            if (result.data) {
+            if (result.isSuccess && result.data) {
               submissionRef.current = null
               setConflict(false)
               saveMutation.reset()
+              return result.data.data
             }
+            return null
           }}
           onSave={async (items) => {
             await saveMutation.mutateAsync(items)
-            setManualPlanningOpen(false)
-            input.onPlanningRequestHandled()
+            closePlanning()
           }}
         />
       ) : null}
     </>
   )
-}
-
-function PlanMetric(input: { icon: typeof Clock3; label: string; tone: string; value: number }) {
-  const Icon = input.icon
-  return <article className={`checklist-plan-metric tone-${input.tone}`}><span><Icon size={15} /></span><small>{input.label}</small><strong>{input.value}</strong></article>
 }
 
 function WeeklyPlanDialog(input: {
@@ -230,7 +225,7 @@ function WeeklyPlanDialog(input: {
   saving: boolean
   regionId: string
   onClose: () => void
-  onResolveConflict: () => Promise<void>
+  onResolveConflict: () => Promise<ChecklistVisitPlan | null>
   onSave: (items: VisitPlanDraftItem[]) => Promise<void>
 }) {
   const initialDraft = useMemo(() => input.initialPlan.items.map((item) => ({
@@ -246,7 +241,14 @@ function WeeklyPlanDialog(input: {
   const [searchDraft, setSearchDraft] = useState(requestAlreadyPlanned ? '' : (input.initialRequest?.storeName ?? ''))
   const [query, setQuery] = useState('')
   const [candidateOffset, setCandidateOffset] = useState(0)
+  const [baselineDrafts, setBaselineDrafts] = useState(initialDraft)
   const [drafts, setDrafts] = useState(initialDraft)
+  const [pendingReconciliation, setPendingReconciliation] = useState<{
+    conflictingStoreIds: string[]
+    latest: VisitPlanDraftItem[]
+    local: VisitPlanDraftItem[]
+    reconciled: VisitPlanDraftItem[]
+  } | null>(null)
   const [candidateCache, setCandidateCache] = useState<Record<string, ChecklistVisitPlanCandidate>>(() =>
     Object.fromEntries(input.initialPlan.items.map((item) => [item.storeId, {
       storeId: item.storeId,
@@ -258,8 +260,9 @@ function WeeklyPlanDialog(input: {
   )
   const [recentlyAdded, setRecentlyAdded] = useState<string | null>(null)
   const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const discardReturnFocusRef = useRef<HTMLElement | null>(null)
   const selectedDay = input.days[dayIndex]
-  const dirty = buildVisitPlanDraftFingerprint(initialDraft) !== buildVisitPlanDraftFingerprint(drafts)
+  const dirty = buildVisitPlanDraftFingerprint(baselineDrafts) !== buildVisitPlanDraftFingerprint(drafts)
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setQuery(searchDraft.trim())
@@ -276,7 +279,11 @@ function WeeklyPlanDialog(input: {
   })
   const candidates = useMemo(() => candidatesQuery.data?.data.items ?? [], [candidatesQuery.data])
   const candidatePage = candidatesQuery.data?.data.page
-  const requestClose = () => dirty ? setConfirmDiscard(true) : input.onClose()
+  const openDiscardConfirmation = () => {
+    discardReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    setConfirmDiscard(true)
+  }
+  const requestClose = () => dirty ? openDiscardConfirmation() : input.onClose()
   const addStore = (storeId: string) => {
     if (!selectedDay || drafts.some((item) => item.storeId === storeId && item.plannedDate === selectedDay.isoDate)) return
     const candidate = candidates.find((item) => item.storeId === storeId)
@@ -288,12 +295,47 @@ function WeeklyPlanDialog(input: {
   }
   const updateDay = (index: number, plannedDate: string) => setDrafts((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, plannedDate } : item))
   const removeDraft = (index: number) => setDrafts((current) => current.filter((_item, itemIndex) => itemIndex !== index))
+  const resolveConflict = async () => {
+    const latestPlan = await input.onResolveConflict()
+    if (!latestPlan) return
+    const latest = latestPlan.items.map((item) => ({
+      storeId: item.storeId,
+      plannedDate: item.plannedDate,
+      displayOrder: item.displayOrder,
+    }))
+    const local = [...drafts]
+    const reconciliation = reconcileVisitPlanDrafts(baselineDrafts, local, latest)
+    setBaselineDrafts(latest)
+    if (reconciliation.conflictingStoreIds.length > 0) {
+      setPendingReconciliation({
+        conflictingStoreIds: reconciliation.conflictingStoreIds,
+        latest,
+        local,
+        reconciled: reconciliation.items,
+      })
+      return
+    }
+    setDrafts(reconciliation.items)
+  }
+  const chooseConflictVersion = (source: 'latest' | 'local') => {
+    if (!pendingReconciliation) return
+    setDrafts(resolveVisitPlanDraftConflicts(
+      pendingReconciliation.reconciled,
+      pendingReconciliation[source],
+      pendingReconciliation.conflictingStoreIds,
+    ))
+    setPendingReconciliation(null)
+  }
 
   return (
     <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) requestClose() }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="week-plan-dialog-backdrop" />
-        <DialogPrimitive.Content className="week-plan-dialog" aria-describedby={undefined} onEscapeKeyDown={(event) => { if (dirty) { event.preventDefault(); setConfirmDiscard(true) } }}>
+        <DialogPrimitive.Content
+          className="week-plan-dialog"
+          aria-describedby={undefined}
+          onEscapeKeyDown={(event) => { if (dirty && !confirmDiscard) { event.preventDefault(); openDiscardConfirmation() } }}
+        >
           <header><div><span className="week-planner-icon"><CalendarDays size={16} /></span><span><small>{input.copy.weeklyPlanning}</small><DialogPrimitive.Title>{input.copy.createPlan}</DialogPrimitive.Title></span></div><button type="button" aria-label={input.copy.close} onClick={requestClose}><X size={17} /></button></header>
           <div className="week-plan-dialog-days" aria-label={input.copy.visitDay}>{input.days.map((day, index) => <button type="button" className={dayIndex === index ? 'is-active' : ''} aria-label={`${day.dayLabel}, ${day.dateLabel}`} aria-pressed={dayIndex === index} key={day.isoDate} onClick={() => setDayIndex(index)}><strong>{day.shortLabel}</strong><small>{day.dateLabel}</small></button>)}</div>
           <main className="week-plan-workspace">
@@ -317,10 +359,30 @@ function WeeklyPlanDialog(input: {
               return <article className={recentlyAdded === `${draft.storeId}:${draft.plannedDate}` ? 'is-recent' : ''} key={`${draft.storeId}:${draft.plannedDate}:${index}`}><header><span><strong>{store.storeName}</strong><small>{store.storeCode}</small></span><button type="button" aria-label={input.copy.removeStore(store.storeName)} onClick={() => removeDraft(index)}><X size={13} /></button></header><label><span>{input.copy.day}</span><select value={draft.plannedDate} onChange={(event) => updateDay(index, event.target.value)}>{input.days.map((day) => <option key={day.isoDate} value={day.isoDate} disabled={drafts.some((candidate, candidateIndex) => candidateIndex !== index && candidate.storeId === draft.storeId && candidate.plannedDate === day.isoDate)}>{day.shortLabel} · {day.dateLabel}</option>)}</select></label></article>
             })}</div></aside>
           </main>
-          <footer className="week-plan-dialog-footer"><button type="button" onClick={requestClose}>{input.copy.cancel}</button><span><strong>{input.copy.visitTotal(drafts.length)}</strong><small>{dirty ? input.copy.unsaved : input.copy.current}</small></span><button type="button" className="week-plan-submit" disabled={!dirty || input.saving || input.conflict} onClick={() => void input.onSave(drafts)}><Check size={14} />{input.saving ? input.copy.saving : input.copy.save}</button>{input.saveError && !input.conflict ? <p role="alert">{input.saveError}</p> : null}</footer>
-          {input.conflict ? <div className="week-plan-conflict" role="alert"><CircleAlert size={16} /><span><strong>{input.copy.conflictTitle}</strong><small>{input.copy.conflictCopy}</small></span><button type="button" onClick={() => void input.onResolveConflict()}>{input.copy.compareReapply}</button></div> : null}
-          {confirmDiscard ? <div className="week-plan-discard" role="alertdialog" aria-modal="true"><section><span className="week-planner-icon"><CircleAlert size={16} /></span><h3>{input.copy.discardTitle}</h3><p>{input.copy.discardCopy}</p><div><button type="button" onClick={() => setConfirmDiscard(false)}>{input.copy.returnToPlan}</button><button type="button" className="danger" onClick={input.onClose}>{input.copy.discard}</button></div></section></div> : null}
+          <footer className="week-plan-dialog-footer"><button type="button" onClick={requestClose}>{input.copy.cancel}</button><span><strong>{input.copy.visitTotal(drafts.length)}</strong><small>{dirty ? input.copy.unsaved : input.copy.current}</small></span><button type="button" className="week-plan-submit" disabled={!dirty || input.saving || input.conflict || Boolean(pendingReconciliation)} onClick={() => void input.onSave(drafts)}><Check size={14} />{input.saving ? input.copy.saving : input.copy.save}</button>{input.saveError && !input.conflict ? <p role="alert">{input.saveError}</p> : null}</footer>
+          {input.conflict ? <div className="week-plan-conflict" role="alert"><CircleAlert size={16} /><span><strong>{input.copy.conflictTitle}</strong><small>{input.copy.conflictCopy}</small></span><button type="button" onClick={() => void resolveConflict()}>{input.copy.compareReapply}</button></div> : null}
+          {pendingReconciliation ? <div className="week-plan-conflict" role="alert"><CircleAlert size={16} /><span><strong>{input.copy.collisionTitle}</strong><small>{input.copy.collisionCopy(pendingReconciliation.conflictingStoreIds.length)}</small></span><div><button type="button" onClick={() => chooseConflictVersion('latest')}>{input.copy.useLatest}</button><button type="button" onClick={() => chooseConflictVersion('local')}>{input.copy.useLocal}</button></div></div> : null}
         </DialogPrimitive.Content>
+        <AlertDialogPrimitive.Root open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+          <AlertDialogPrimitive.Portal>
+            <AlertDialogPrimitive.Overlay className="week-plan-discard-backdrop" />
+            <AlertDialogPrimitive.Content
+              className="week-plan-discard"
+              onCloseAutoFocus={(event) => {
+                event.preventDefault()
+                window.requestAnimationFrame(() => discardReturnFocusRef.current?.focus())
+              }}
+            >
+              <span className="week-planner-icon"><CircleAlert size={16} /></span>
+              <AlertDialogPrimitive.Title>{input.copy.discardTitle}</AlertDialogPrimitive.Title>
+              <AlertDialogPrimitive.Description>{input.copy.discardCopy}</AlertDialogPrimitive.Description>
+              <div>
+                <AlertDialogPrimitive.Cancel>{input.copy.returnToPlan}</AlertDialogPrimitive.Cancel>
+                <AlertDialogPrimitive.Action className="danger" onClick={() => { discardReturnFocusRef.current = null; input.onClose() }}>{input.copy.discard}</AlertDialogPrimitive.Action>
+              </div>
+            </AlertDialogPrimitive.Content>
+          </AlertDialogPrimitive.Portal>
+        </AlertDialogPrimitive.Root>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   )
@@ -328,10 +390,6 @@ function WeeklyPlanDialog(input: {
 
 function PlannerState(input: { label: string; action?: string; onAction?: () => void }) {
   return <div className="week-plan-no-results"><Search size={18} /><strong>{input.label}</strong>{input.action ? <button type="button" onClick={input.onAction}>{input.action}</button> : null}</div>
-}
-
-function countStatuses(plan: ChecklistVisitPlan) {
-  return plan.items.reduce((counts, item) => ({ ...counts, [item.status]: counts[item.status] + 1 }), { waiting: 0, missed: 0, completed: 0 })
 }
 
 function getStatusPresentation(status: ChecklistVisitPlan['items'][number]['status'], copy: Copy) {
@@ -344,8 +402,8 @@ function normalizeDraft(items: VisitPlanDraftItem[]) { return [...items].sort((a
 
 function getCopy(locale: 'tr' | 'en') {
   return locale === 'tr' ? {
-    add: 'Takvime ekle', added: 'Bu güne eklendi', addDay: 'Takvime eklenecek gün', addStoreLabel: (name: string, day: string) => `${name} mağazasını ${day} gününe ekle`, cancel: 'Vazgeç', checklistMissed: 'Checklist yapılmadı', chooseDay: 'Gün seçin', chooseStore: 'Eklemek için mağazayı seçin', close: 'Kapat', compareReapply: 'Güncel planı al ve taslağı yeniden uygula', completed: 'Tamamlanan', completedVisit: 'Ziyaret Tamamlandı', conflictCopy: 'Plan siz düzenlerken değişti. Taslağınız korunuyor; güncel sürümü alın ve yeniden uygulayın.', conflictTitle: 'Planın daha yeni bir sürümü var', createPlan: 'Ziyaret planını oluşturun', current: 'Plan güncel', day: 'Gün', discard: 'Taslağı sil', discardCopy: 'Haftalık taslak henüz kaydedilmedi.', discardTitle: 'Değişiklikler kaybolsun mu?', loadFailed: 'Ziyaret planı yüklenemedi.', loading: 'Ziyaret planı yükleniyor', loadingStores: 'Mağazalar yükleniyor', missed: 'Checklist yapılmadı', next: 'Sonraki', nextWeek: 'Sonraki hafta', noDraft: 'Henüz ziyaret yok', noStores: 'Mağaza bulunamadı', noVisit: 'Planlanan ziyaret yok', notApplied: 'Kaydetmeden plana yansımaz', placeVisits: 'Saha ziyaretlerini günlere yerleştirin', planOwner: 'Plan kapsamı', planWeek: 'Haftayı Planla', previous: 'Önceki', previousWeek: 'Önceki hafta', refreshing: 'Mağazalar güncelleniyor…', refreshFailed: 'Yeni mağaza sayfası alınamadı · tekrar dene', removeStore: (name: string) => `${name} ziyaretini taslaktan kaldır`, retry: 'Tekrar dene', returnToPlan: 'Planlamaya dön', save: 'Ziyaret Planını Kaydet', saveFailed: 'Ziyaret planı kaydedilemedi.', saved: 'Ziyaret planı kaydedildi', saving: 'Kaydediliyor', searchStore: 'Mağaza ara', storeAddedLabel: (name: string, day: string) => `${name} mağazası ${day} planında`, storeLoadFailed: 'Mağazalar yüklenemedi', stores: 'Mağazalar', suitableStores: (count: number) => `${count} uygun mağaza`, summary: 'Haftalık ziyaret planı özeti', unsaved: 'Kaydedilmemiş değişiklik var', visitCount: (count: number) => `${count} ziyaret · Pazar plan dışı`, visitDay: 'Ziyaret günü', visitTotal: (count: number) => `${count} ziyaret`, waiting: 'Bekleyen', waitingVisit: 'Ziyaret Bekleniyor', weeklyDraft: 'Haftalık taslak', weeklyPlan: 'HAFTALIK PLAN', weeklyPlanning: 'HAFTALIK PLANLAMA',
+    add: 'Takvime ekle', added: 'Bu güne eklendi', addDay: 'Takvime eklenecek gün', addStoreLabel: (name: string, day: string) => `${name} mağazasını ${day} gününe ekle`, cancel: 'Vazgeç', checklistMissed: 'Checklist yapılmadı', chooseDay: 'Gün seçin', chooseStore: 'Eklemek için mağazayı seçin', close: 'Kapat', collisionCopy: (count: number) => `${count} mağaza hem siz hem başka bir kullanıcı tarafından değiştirildi. Kaydetmeden önce hangi sürümün korunacağını seçin.`, collisionTitle: 'Aynı mağazada çakışan değişiklik var', compareReapply: 'Güncel planı al ve taslağı yeniden uygula', completed: 'Tamamlanan', completedVisit: 'Ziyaret Tamamlandı', conflictCopy: 'Plan siz düzenlerken değişti. Taslağınız korunuyor; güncel sürümü alın ve yeniden uygulayın.', conflictTitle: 'Planın daha yeni bir sürümü var', createPlan: 'Ziyaret planını oluşturun', current: 'Plan güncel', day: 'Gün', discard: 'Taslağı sil', discardCopy: 'Haftalık taslak henüz kaydedilmedi.', discardTitle: 'Değişiklikler kaybolsun mu?', loadFailed: 'Ziyaret planı yüklenemedi.', loading: 'Ziyaret planı yükleniyor', loadingStores: 'Mağazalar yükleniyor', missed: 'Checklist yapılmadı', next: 'Sonraki', nextWeek: 'Sonraki hafta', noDraft: 'Henüz ziyaret yok', noStores: 'Mağaza bulunamadı', noVisit: 'Planlanan ziyaret yok', notApplied: 'Kaydetmeden plana yansımaz', placeVisits: 'Saha ziyaretlerini günlere yerleştirin', planOwner: 'Plan kapsamı', planWeek: 'Haftayı Planla', previous: 'Önceki', previousWeek: 'Önceki hafta', refreshing: 'Mağazalar güncelleniyor…', refreshFailed: 'Yeni mağaza sayfası alınamadı · tekrar dene', removeStore: (name: string) => `${name} ziyaretini taslaktan kaldır`, retry: 'Tekrar dene', returnToPlan: 'Planlamaya dön', save: 'Ziyaret Planını Kaydet', saveFailed: 'Ziyaret planı kaydedilemedi.', saved: 'Ziyaret planı kaydedildi', saving: 'Kaydediliyor', searchStore: 'Mağaza ara', storeAddedLabel: (name: string, day: string) => `${name} mağazası ${day} planında`, storeLoadFailed: 'Mağazalar yüklenemedi', stores: 'Mağazalar', suitableStores: (count: number) => `${count} uygun mağaza`, summary: 'Haftalık ziyaret planı özeti', unsaved: 'Kaydedilmemiş değişiklik var', useLatest: 'Güncel planı koru', useLocal: 'Benim taslağımı koru', visitCount: (count: number) => `${count} ziyaret · Pazar plan dışı`, visitDay: 'Ziyaret günü', visitTotal: (count: number) => `${count} ziyaret`, waiting: 'Bekleyen', waitingVisit: 'Ziyaret Bekleniyor', weeklyDraft: 'Haftalık taslak', weeklyPlan: 'HAFTALIK PLAN', weeklyPlanning: 'HAFTALIK PLANLAMA',
   } : {
-    add: 'Add to calendar', added: 'Added to this day', addDay: 'Day to add', addStoreLabel: (name: string, day: string) => `Add ${name} to ${day}`, cancel: 'Cancel', checklistMissed: 'Checklist not completed', chooseDay: 'Choose a day', chooseStore: 'Choose a store to add', close: 'Close', compareReapply: 'Load latest plan and reapply draft', completed: 'Completed', completedVisit: 'Visit Completed', conflictCopy: 'The plan changed while you were editing. Your draft is preserved; load the latest revision and reapply it.', conflictTitle: 'A newer plan revision exists', createPlan: 'Create the visit plan', current: 'Plan is current', day: 'Day', discard: 'Discard draft', discardCopy: 'The weekly draft has not been saved.', discardTitle: 'Discard changes?', loadFailed: 'Visit plan could not be loaded.', loading: 'Loading visit plan', loadingStores: 'Loading stores', missed: 'Checklist not completed', next: 'Next', nextWeek: 'Next week', noDraft: 'No visits yet', noStores: 'No stores found', noVisit: 'No planned visit', notApplied: 'Changes apply only after saving', placeVisits: 'Place field visits on days', planOwner: 'Plan scope', planWeek: 'Plan the Week', previous: 'Previous', previousWeek: 'Previous week', refreshing: 'Refreshing stores…', refreshFailed: 'Could not refresh stores · try again', removeStore: (name: string) => `Remove ${name} from draft`, retry: 'Try again', returnToPlan: 'Return to planning', save: 'Save Visit Plan', saveFailed: 'Visit plan could not be saved.', saved: 'Visit plan saved', saving: 'Saving', searchStore: 'Search stores', storeAddedLabel: (name: string, day: string) => `${name} is planned for ${day}`, storeLoadFailed: 'Stores could not be loaded', stores: 'Stores', suitableStores: (count: number) => `${count} eligible stores`, summary: 'Weekly visit plan summary', unsaved: 'There are unsaved changes', visitCount: (count: number) => `${count} visits · Sunday excluded`, visitDay: 'Visit day', visitTotal: (count: number) => `${count} visits`, waiting: 'Waiting', waitingVisit: 'Visit Waiting', weeklyDraft: 'Weekly draft', weeklyPlan: 'WEEKLY PLAN', weeklyPlanning: 'WEEKLY PLANNING',
+    add: 'Add to calendar', added: 'Added to this day', addDay: 'Day to add', addStoreLabel: (name: string, day: string) => `Add ${name} to ${day}`, cancel: 'Cancel', checklistMissed: 'Checklist not completed', chooseDay: 'Choose a day', chooseStore: 'Choose a store to add', close: 'Close', collisionCopy: (count: number) => `${count} store was changed by both you and another user. Choose which version to preserve before saving.`, collisionTitle: 'Conflicting changes for the same store', compareReapply: 'Load latest plan and reapply draft', completed: 'Completed', completedVisit: 'Visit Completed', conflictCopy: 'The plan changed while you were editing. Your draft is preserved; load the latest revision and reapply it.', conflictTitle: 'A newer plan revision exists', createPlan: 'Create the visit plan', current: 'Plan is current', day: 'Day', discard: 'Discard draft', discardCopy: 'The weekly draft has not been saved.', discardTitle: 'Discard changes?', loadFailed: 'Visit plan could not be loaded.', loading: 'Loading visit plan', loadingStores: 'Loading stores', missed: 'Checklist not completed', next: 'Next', nextWeek: 'Next week', noDraft: 'No visits yet', noStores: 'No stores found', noVisit: 'No planned visit', notApplied: 'Changes apply only after saving', placeVisits: 'Place field visits on days', planOwner: 'Plan scope', planWeek: 'Plan the Week', previous: 'Previous', previousWeek: 'Previous week', refreshing: 'Refreshing stores…', refreshFailed: 'Could not refresh stores · try again', removeStore: (name: string) => `Remove ${name} from draft`, retry: 'Try again', returnToPlan: 'Return to planning', save: 'Save Visit Plan', saveFailed: 'Visit plan could not be saved.', saved: 'Visit plan saved', saving: 'Saving', searchStore: 'Search stores', storeAddedLabel: (name: string, day: string) => `${name} is planned for ${day}`, storeLoadFailed: 'Stores could not be loaded', stores: 'Stores', suitableStores: (count: number) => `${count} eligible stores`, summary: 'Weekly visit plan summary', unsaved: 'There are unsaved changes', useLatest: 'Keep latest plan', useLocal: 'Keep my draft', visitCount: (count: number) => `${count} visits · Sunday excluded`, visitDay: 'Visit day', visitTotal: (count: number) => `${count} visits`, waiting: 'Waiting', waitingVisit: 'Visit Waiting', weeklyDraft: 'Weekly draft', weeklyPlan: 'WEEKLY PLAN', weeklyPlanning: 'WEEKLY PLANNING',
   }
 }

@@ -89,6 +89,18 @@ export function buildChecklistVisitPlanCandidateQuery(input: {
   return query
 }
 
+export function buildChecklistVisitPlanRegionOptionsQuery(input: {
+  query: string
+  limit: number
+  offset: number
+}) {
+  const query = new URLSearchParams()
+  if (input.query.trim()) query.set('query', input.query.trim())
+  query.set('limit', String(input.limit))
+  query.set('offset', String(input.offset))
+  return query
+}
+
 export type StableVisitPlanSubmission = { fingerprint: string; idempotencyKey: string }
 
 export function getStableVisitPlanSubmission(
@@ -167,6 +179,78 @@ export function buildVisitPlanDraftFingerprint(items: readonly VisitPlanDraftIte
     .map((item) => `${item.storeId}:${item.plannedDate}:${item.displayOrder}`)
     .sort()
     .join('|')
+}
+
+export type VisitPlanDraftReconciliation = {
+  items: VisitPlanDraftItem[]
+  conflictingStoreIds: string[]
+}
+
+/**
+ * Reapplies local store-level changes onto the latest server snapshot.
+ * A store is the smallest safe identity because the write contract does not
+ * expose stable plan-item ids in a draft. Concurrent changes to the same
+ * store therefore require an explicit owner choice instead of an implicit
+ * last-write-wins merge.
+ */
+export function reconcileVisitPlanDrafts(
+  baseline: readonly VisitPlanDraftItem[],
+  local: readonly VisitPlanDraftItem[],
+  latest: readonly VisitPlanDraftItem[],
+): VisitPlanDraftReconciliation {
+  const storeIds = new Set([
+    ...baseline.map((item) => item.storeId),
+    ...local.map((item) => item.storeId),
+    ...latest.map((item) => item.storeId),
+  ])
+  const items: VisitPlanDraftItem[] = []
+  const conflictingStoreIds: string[] = []
+
+  for (const storeId of [...storeIds].sort()) {
+    const baselineItems = draftItemsForStore(baseline, storeId)
+    const localItems = draftItemsForStore(local, storeId)
+    const latestItems = draftItemsForStore(latest, storeId)
+    const baselineFingerprint = storeDraftFingerprint(baselineItems)
+    const localFingerprint = storeDraftFingerprint(localItems)
+    const latestFingerprint = storeDraftFingerprint(latestItems)
+    const locallyChanged = localFingerprint !== baselineFingerprint
+    const remotelyChanged = latestFingerprint !== baselineFingerprint
+
+    if (locallyChanged && remotelyChanged && localFingerprint !== latestFingerprint) {
+      conflictingStoreIds.push(storeId)
+      items.push(...latestItems)
+      continue
+    }
+    items.push(...(locallyChanged ? localItems : latestItems))
+  }
+
+  return { items: normalizeReconciledDraft(items), conflictingStoreIds }
+}
+
+export function resolveVisitPlanDraftConflicts(
+  reconciled: readonly VisitPlanDraftItem[],
+  selected: readonly VisitPlanDraftItem[],
+  conflictingStoreIds: readonly string[],
+) {
+  const conflicts = new Set(conflictingStoreIds)
+  return normalizeReconciledDraft([
+    ...reconciled.filter((item) => !conflicts.has(item.storeId)),
+    ...selected.filter((item) => conflicts.has(item.storeId)),
+  ])
+}
+
+function draftItemsForStore(items: readonly VisitPlanDraftItem[], storeId: string) {
+  return items.filter((item) => item.storeId === storeId)
+}
+
+function storeDraftFingerprint(items: readonly VisitPlanDraftItem[]) {
+  return items.map((item) => item.plannedDate).sort().join('|')
+}
+
+function normalizeReconciledDraft(items: readonly VisitPlanDraftItem[]) {
+  return [...items]
+    .sort((left, right) => left.plannedDate.localeCompare(right.plannedDate) || left.displayOrder - right.displayOrder)
+    .map((item, displayOrder) => ({ ...item, displayOrder }))
 }
 
 function parseIsoDate(value: string) {
