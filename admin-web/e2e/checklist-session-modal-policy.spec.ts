@@ -17,7 +17,7 @@ type ChecklistRequestLog = {
 test('checklist session modal uses 1-5 score policy and low-score note guard', async ({ page }) => {
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   const dialog = page.getByRole('dialog')
@@ -49,7 +49,7 @@ test('checklist session modal uses 1-5 score policy and low-score note guard', a
 test('draft close keeps visit in progress and does not complete the checklist', async ({ page }) => {
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
   await expect(visitRow).toBeVisible()
@@ -73,7 +73,7 @@ test('checklist session modal keeps footer usable on mobile width', async ({ pag
   await page.setViewportSize({ width: 390, height: 844 })
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   const dialog = page.getByRole('dialog')

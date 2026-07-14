@@ -1645,6 +1645,45 @@ test('region manager home surfaces checklist field queue summary', async ({ page
     mobileTodayRequests += 1
     await route.fulfill({ json: mobileChecklistTodayFixture })
   })
+  await page.route('**/api/checklists/command-canvas**', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          period: '2026-05',
+          view: 'region_manager',
+          capabilities: {
+            weeklyVisitPlanningAvailable: false,
+            canMaintainWeeklyVisitPlan: false,
+          },
+          metrics: { totalStores: 2, needsVisit: 2, active: 0, pending: 0, completed: 0 },
+          items: [
+            {
+              storeId: demoStoreId,
+              storeCode: 'PILOT-001',
+              storeName: 'Pilot Store',
+              regionId: '00000000-0000-0000-0000-000000000010',
+              regionName: 'Pilot Region',
+              regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }],
+              bmScore: null,
+              vmScore: null,
+              bmCompletedAt: null,
+              vmCompletedAt: null,
+              lastCompletedVisitAt: null,
+              elapsedDaysSinceLastVisit: null,
+              activeChecklistCount: 0,
+              pendingAcknowledgementCount: 0,
+              openActionCount: 0,
+              blockedActionCount: 0,
+              status: 'needs_visit',
+              reasonCodes: ['missing_bm_visit', 'missing_vm_visit'],
+              lastOperationalAt: null,
+            },
+          ],
+          page: { total: 2, limit: 30, offset: 0, hasMore: false },
+        },
+      },
+    })
+  })
 
   await page.goto('/store/home')
 
@@ -1675,8 +1714,7 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   await page.locator('.sh-detail-action').click()
 
   await expect(page).toHaveURL(/\/store\/checklists$/)
-  await expect(page.getByRole('heading', { name: 'Checklist Akış Sayfası' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Atanmış mağaza checklist ziyaretleri' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
   await expect.poll(() => acknowledgementRequests, { timeout: 1000 }).toBe(prefetchedAcknowledgementRequests)
   await expect.poll(() => mobileTodayRequests, { timeout: 1000 }).toBe(prefetchedMobileTodayRequests)
 })

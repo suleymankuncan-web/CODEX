@@ -5,7 +5,7 @@ test('BM and VM checklist type filters keep assigned store population visible', 
   await installStoreContractSession(page, 'regionManager')
   await routeChecklistContractApi(page)
 
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await expect(page.locator('.store-checklists-visit-row')).toHaveCount(3)
 
