@@ -72,6 +72,7 @@ const selectedOperations = [
   { path: '/api/mobile/checklists/today', method: 'get' },
   { path: '/api/checklists/command-canvas', method: 'get' },
   { path: '/api/checklists/command-canvas/regions', method: 'get' },
+  { path: '/api/checklists/command-canvas/stores/{storeId}/operational-history', method: 'get' },
   { path: '/api/checklists/command-canvas/visit-plans', method: 'get' },
   { path: '/api/checklists/command-canvas/visit-plans/regions', method: 'get' },
   { path: '/api/checklists/command-canvas/visit-plans/period', method: 'get' },

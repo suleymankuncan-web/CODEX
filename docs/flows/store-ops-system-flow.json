@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-14T21:02:19.761Z",
+  "generatedAt": "2026-07-14T22:21:50.798Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 200,
-    "backendEndpointsWithoutFrontendCallCount": 37,
-    "controllerCount": 26,
+    "backendEndpointCount": 201,
+    "backendEndpointsWithoutFrontendCallCount": 38,
+    "controllerCount": 27,
     "frontendApiCallCount": 163,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 163,
-    "openApiEndpointCount": 200,
+    "openApiEndpointCount": 201,
     "routeApiEdgeCount": 235,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0,
@@ -4206,6 +4206,20 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/checklists/command-canvas/stores/{storeId}/operational-history",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/stores/{storeId}/operational-history",
+      "rawControllerPath": "checklists/command-canvas/stores",
+      "rawMethodPath": ":storeId/operational-history",
+      "controller": "checklist-operational-history",
+      "domain": "checklists",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/checklist-operational-history.controller.ts",
+        "line": 13
+      }
+    },
+    {
       "id": "endpoint:GET:/api/checklists/command-canvas/visit-plans",
       "method": "GET",
       "path": "/api/checklists/command-canvas/visit-plans",
@@ -6629,6 +6643,12 @@
       "id": "openapi:GET:/api/checklists/command-canvas/regions",
       "method": "GET",
       "path": "/api/checklists/command-canvas/regions",
+      "domain": "checklists"
+    },
+    {
+      "id": "openapi:GET:/api/checklists/command-canvas/stores/{storeId}/operational-history",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/stores/{storeId}/operational-history",
       "domain": "checklists"
     },
     {
@@ -9891,6 +9911,13 @@
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 0
+      },
+      {
+        "id": "controller:checklist-operational-history",
+        "controller": "checklist-operational-history",
+        "domain": "checklists",
+        "endpointCount": 1,
+        "frontendCallCount": 0
       }
     ]
   },
@@ -9903,6 +9930,7 @@
       "endpoint:DELETE:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session",
       "endpoint:GET:/api/checklists/command-canvas/regions",
+      "endpoint:GET:/api/checklists/command-canvas/stores/{storeId}/operational-history",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",
