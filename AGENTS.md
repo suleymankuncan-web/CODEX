@@ -60,6 +60,12 @@ merge, deploy, or make owner decisions.
 - Never run two full release suites concurrently.
 - Monitor PR checks with native GitHub/Vercel polling or an existing background
   shell watcher. Do not spawn a model agent only to wait or poll.
+- Use 55-60 second idle polling intervals. Return only state transitions or a
+  compact failure tail to the model; never stream complete successful logs.
+- Reuse already-read operating context within one active goal. Before a full
+  release, preflight required package binaries and dependency links; run the
+  targeted proof once and the selected full release once unless a concrete
+  failure invalidates that evidence.
 - When a check changes state, the Medium root classifies and handles an obvious
   failure; use `problem_solver_high` only when focused inspection cannot explain
   the failure or a High-risk boundary is involved.
