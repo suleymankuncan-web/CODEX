@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-14T10:39:02.038Z",
+  "generatedAt": "2026-07-14T11:14:13.266Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 194,
-    "backendEndpointsWithoutFrontendCallCount": 36,
+    "backendEndpointCount": 195,
+    "backendEndpointsWithoutFrontendCallCount": 37,
     "controllerCount": 25,
     "frontendApiCallCount": 158,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 158,
-    "openApiEndpointCount": 194,
+    "openApiEndpointCount": 195,
     "routeApiEdgeCount": 230,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0,
@@ -4113,7 +4113,21 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-command.controller.ts",
-        "line": 12
+        "line": 34
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/checklists/command-canvas/regions",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/regions",
+      "rawControllerPath": "checklists/command-canvas",
+      "rawMethodPath": "regions",
+      "controller": "checklist-command",
+      "domain": "checklists",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/checklist-command.controller.ts",
+        "line": 13
       }
     },
     {
@@ -6464,6 +6478,12 @@
       "id": "openapi:GET:/api/checklists/command-canvas",
       "method": "GET",
       "path": "/api/checklists/command-canvas",
+      "domain": "checklists"
+    },
+    {
+      "id": "openapi:GET:/api/checklists/command-canvas/regions",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/regions",
       "domain": "checklists"
     },
     {
@@ -9599,6 +9619,13 @@
         "frontendCallCount": 2
       },
       {
+        "id": "controller:checklist-command",
+        "controller": "checklist-command",
+        "domain": "checklists",
+        "endpointCount": 2,
+        "frontendCallCount": 1
+      },
+      {
         "id": "controller:health",
         "controller": "health",
         "domain": "health",
@@ -9610,13 +9637,6 @@
         "controller": "store-monthly-report-package",
         "domain": "reports",
         "endpointCount": 2,
-        "frontendCallCount": 1
-      },
-      {
-        "id": "controller:checklist-command",
-        "controller": "checklist-command",
-        "domain": "checklists",
-        "endpointCount": 1,
         "frontendCallCount": 1
       },
       {
@@ -9650,6 +9670,7 @@
       "endpoint:GET:/api/admin/migrations/status",
       "endpoint:DELETE:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session",
+      "endpoint:GET:/api/checklists/command-canvas/regions",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",

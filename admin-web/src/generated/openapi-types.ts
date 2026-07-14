@@ -480,6 +480,44 @@ export type components = {
     "CancelStoreActionPlanRequest": {
       "cancelReason": string
     }
+    "ChecklistCommandRegionMetrics": {
+      "totalStores": number
+      "missingVisitStores": number
+      "storesWithOpenActions": number
+      "openActionCount": number
+      "completedCoverageStores": number
+    }
+    "ChecklistCommandRegionResponse": {
+      "data": {
+        "period": string
+        "view": "report_viewer"
+        "capabilities": {
+          "weeklyVisitPlanningAvailable": false
+          "canMaintainWeeklyVisitPlan": false
+        }
+        "metrics": components['schemas']["ChecklistCommandRegionMetrics"]
+        "items": components['schemas']["ChecklistCommandRegionRow"][]
+        "page": {
+          "total": number
+          "limit": number
+          "offset": number
+          "hasMore": boolean
+        }
+      }
+    }
+    "ChecklistCommandRegionRow": {
+      "regionId": string
+      "regionName": string
+      "regionManagers": Array<{
+          "displayName": string
+        }>
+      "metrics": components['schemas']["ChecklistCommandRegionMetrics"] & ({
+        "blockedActionCount": number
+      })
+      "visitAverageScore": number | null
+      "scoreSampleCount": number
+      "lastOperationalAt": string | null
+    }
     "ChecklistCommandResponse": {
       "data": {
         "period": string
@@ -3529,6 +3567,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ChecklistCommandResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/regions": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistCommandRegionResponse"]
           }
         }
       }

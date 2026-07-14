@@ -22,6 +22,24 @@ export const checklistCommandSorts = [
 ] as const;
 export type ChecklistCommandSort = (typeof checklistCommandSorts)[number];
 
+export const checklistCommandSignals = [
+  "all",
+  "missing_visit",
+  "open_actions",
+  "completed_coverage",
+] as const;
+export type ChecklistCommandSignal = (typeof checklistCommandSignals)[number];
+
+export const checklistCommandRegionSorts = [
+  "manager_asc",
+  "manager_desc",
+  "stores_desc",
+  "missing_desc",
+  "open_actions_desc",
+  "score_desc",
+] as const;
+export type ChecklistCommandRegionSort = (typeof checklistCommandRegionSorts)[number];
+
 export type ChecklistCommandRowStatus = Exclude<ChecklistCommandStatus, "all">;
 
 export type ChecklistCommandRow = {
@@ -61,6 +79,41 @@ export type ChecklistCommandReadResult = {
     completed: number;
   };
   items: ChecklistCommandRow[];
+  page: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
+};
+
+export type ChecklistCommandRegionMetrics = {
+  totalStores: number;
+  missingVisitStores: number;
+  storesWithOpenActions: number;
+  openActionCount: number;
+  completedCoverageStores: number;
+};
+
+export type ChecklistCommandRegionRow = {
+  regionId: string;
+  regionName: string;
+  regionManagers: Array<{ displayName: string }>;
+  metrics: ChecklistCommandRegionMetrics & { blockedActionCount: number };
+  visitAverageScore: number | null;
+  scoreSampleCount: number;
+  lastOperationalAt: string | null;
+};
+
+export type ChecklistCommandRegionReadResult = {
+  period: string;
+  view: "report_viewer";
+  capabilities: {
+    weeklyVisitPlanningAvailable: false;
+    canMaintainWeeklyVisitPlan: false;
+  };
+  metrics: ChecklistCommandRegionMetrics;
+  items: ChecklistCommandRegionRow[];
   page: {
     total: number;
     limit: number;

@@ -27,6 +27,7 @@ describe("ListChecklistCommandQueryDto", () => {
       regionId: "00000000-0000-4000-8000-000000000010",
       query: "Marmara",
       status: "needs_visit",
+      signal: "missing_visit",
       sort: "last_visit_desc",
       limit: "30",
       offset: "0",
@@ -35,5 +36,11 @@ describe("ListChecklistCommandQueryDto", () => {
     await expect(validate(dto)).resolves.toHaveLength(0);
     expect(dto.limit).toBe(30);
     expect(dto.offset).toBe(0);
+  });
+
+  it("rejects unknown independent coverage signals", async () => {
+    const dto = plainToInstance(ListChecklistCommandQueryDto, { signal: "missing_magic" });
+    const errors = await validate(dto);
+    expect(errors.map((error) => error.property)).toEqual(["signal"]);
   });
 });

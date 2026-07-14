@@ -71,6 +71,7 @@ const selectedOperations = [
   },
   { path: '/api/mobile/checklists/today', method: 'get' },
   { path: '/api/checklists/command-canvas', method: 'get' },
+  { path: '/api/checklists/command-canvas/regions', method: 'get' },
   { path: '/api/pilot-feedback', method: 'post' },
   { path: '/api/admin/pilot-feedback', method: 'get' },
   { path: '/api/admin/pilot-feedback/{feedbackId}/classification', method: 'patch' },

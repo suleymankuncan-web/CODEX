@@ -12,7 +12,9 @@ import {
 import { IsPostgresUuid } from "../../../../shared/validation/postgres-uuid";
 import {
   checklistCommandSorts,
+  checklistCommandSignals,
   checklistCommandStatuses,
+  type ChecklistCommandSignal,
   type ChecklistCommandSort,
   type ChecklistCommandStatus,
 } from "../../application/checklist-command-read.contract";
@@ -34,6 +36,10 @@ export class ListChecklistCommandQueryDto {
   @IsOptional()
   @IsIn(checklistCommandStatuses)
   status?: ChecklistCommandStatus;
+
+  @IsOptional()
+  @IsIn(checklistCommandSignals)
+  signal?: ChecklistCommandSignal;
 
   @IsOptional()
   @IsIn(checklistCommandSorts)
