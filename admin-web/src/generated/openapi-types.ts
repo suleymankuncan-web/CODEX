@@ -566,6 +566,33 @@ export type components = {
       "reasonCodes": Array<"active_checklist" | "pending_acknowledgement" | "missing_bm_visit" | "missing_vm_visit" | "open_actions" | "completed_period">
       "lastOperationalAt": string | null
     }
+    "ChecklistVisitPlan": {
+      "planId": string | null
+      "regionId": string
+      "regionName": string
+      "weekStart": string
+      "revision": number
+      "revisedAt": string | null
+      "view": "report_viewer" | "region_manager" | "store_manager"
+      "capabilities": {
+        "canMaintainWeeklyVisitPlan": boolean
+      }
+      "items": components['schemas']["ChecklistVisitPlanItem"][]
+    }
+    "ChecklistVisitPlanItem": {
+      "planItemId": string
+      "storeId": string
+      "storeCode": string
+      "storeName": string
+      "plannedDate": string
+      "displayOrder": number
+      "status": "waiting" | "missed" | "completed"
+      "checklistInstanceId": string | null
+      "completedAt": string | null
+    }
+    "ChecklistVisitPlanResponse": {
+      "data": components['schemas']["ChecklistVisitPlan"]
+    }
     "ClassifyPilotFeedbackRequest": {
       "classification": "p0_stop" | "p1_pilot_blocker" | "p2_pilot_friction" | "p3_backlog"
       "note"?: string
@@ -2384,6 +2411,15 @@ export type components = {
       "decision": "approve" | "return"
       "reviewNote"?: string
     }
+    "SaveChecklistVisitPlanRequest": {
+      "expectedRevision": number
+      "idempotencyKey": string
+      "items": Array<{
+          "storeId": string
+          "plannedDate": string
+          "displayOrder": number
+        }>
+    }
     "SnapshotNeedsActionResponse": {
       "items": Array<{
           "snapshotRunId": string
@@ -3579,6 +3615,33 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ChecklistCommandRegionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/visit-plans": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistVisitPlanResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}": {
+    put: {
+      requestBody: {
+        content: {
+          'application/json': components['schemas']["SaveChecklistVisitPlanRequest"]
+        }
+      }
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistVisitPlanResponse"]
           }
         }
       }

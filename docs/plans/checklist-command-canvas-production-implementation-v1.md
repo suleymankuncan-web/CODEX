@@ -28,6 +28,13 @@ enablement remains a separate owner gate.
   cannot maintain weekly plans in v1.
 - Super Admin receives no implicit weekly-plan write capability.
 - The prototype role switcher and fixture records never enter production.
+- The production route is a replacement surface: no visible legacy checklist
+  layout, duplicate legacy controls or old styling remnants remain beside the
+  Command Canvas after cutover.
+- The approved prototype is an exact visual and interaction contract. Component
+  dimensions, spacing, typography, colors, controls, overlays and responsive
+  behavior are compared at the acceptance viewports; material visual drift is
+  not accepted as complete.
 - Loading, empty, error, forbidden and partial-data states reflect real API
   outcomes.
 - Mobile verification covers the weekly planner, long audit history and 30+
@@ -67,11 +74,11 @@ writes return `409`.
 Displayed status is derived from the current plan revision, Istanbul calendar
 time and real checklist execution. Plan rows never store operational outcome:
 
-- scheduled: today/future and no started checklist;
-- overdue: the local plan day ended without a completed checklist;
-- in progress: a matching BM checklist is in progress for the store and local
-  plan date;
-- completed: a real `BM_STORE_VISIT` checklist is completed for the store and
+- waiting (`Ziyaret Bekleniyor`): the plan date is today/future and no matching
+  completion exists; today remains waiting through the Istanbul local day;
+- missed (`Checklist yapılmadı`): the Istanbul local plan day ended without a
+  matching completed checklist;
+- completed (`Ziyaret Tamamlandı`): a real `BM_STORE_VISIT` checklist is completed for the store and
   its `completed_at` falls on the local plan date.
 
 Reschedule/removal creates a new complete revision; revision content and items
@@ -130,6 +137,9 @@ suites never run concurrently.
 - OpenAPI generation and generated frontend types stay in sync.
 - At 1440x900, 1024x768, 390x844 and 320px there is no page-level horizontal
   overflow; dialogs/drawers restore focus and own scrolling correctly.
+- At those viewports, screenshot comparison also confirms exact prototype
+  dimensions, spacing, typography, palette and control placement. The old
+  checklist layout and duplicate controls are absent from the production DOM.
 
 ## Rollback and stop rules
 

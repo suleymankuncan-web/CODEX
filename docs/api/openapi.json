@@ -5518,6 +5518,96 @@
           "ChecklistCommand"
         ]
       }
+    },
+    "/api/checklists/command-canvas/visit-plans": {
+      "get": {
+        "operationId": "ChecklistVisitPlanController_getWeeklyPlan",
+        "parameters": [
+          {
+            "name": "regionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "weekStart",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scoped weekly BM visit plan with status derived from real completed checklist execution.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChecklistVisitPlan"
+        ]
+      }
+    },
+    "/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}": {
+      "put": {
+        "operationId": "ChecklistVisitPlanController_saveWeeklyPlan",
+        "parameters": [
+          {
+            "name": "regionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "weekStart",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveChecklistVisitPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Replace one Region Manager weekly BM visit plan using optimistic concurrency and idempotency.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChecklistVisitPlan"
+        ]
+      }
     }
   },
   "info": {
@@ -21162,6 +21252,205 @@
                   "hasMore": {
                     "type": "boolean"
                   }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ChecklistVisitPlanItemDto": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string"
+          },
+          "plannedDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])-([0-2]\\d|3[01])$"
+          },
+          "displayOrder": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000
+          }
+        },
+        "required": [
+          "storeId",
+          "plannedDate",
+          "displayOrder"
+        ]
+      },
+      "ChecklistVisitPlanItem": {
+        "type": "object",
+        "required": [
+          "planItemId",
+          "storeId",
+          "storeCode",
+          "storeName",
+          "plannedDate",
+          "displayOrder",
+          "status",
+          "checklistInstanceId",
+          "completedAt"
+        ],
+        "properties": {
+          "planItemId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeCode": {
+            "type": "string"
+          },
+          "storeName": {
+            "type": "string"
+          },
+          "plannedDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "missed",
+              "completed"
+            ]
+          },
+          "checklistInstanceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "ChecklistVisitPlan": {
+        "type": "object",
+        "required": [
+          "planId",
+          "regionId",
+          "regionName",
+          "weekStart",
+          "revision",
+          "revisedAt",
+          "view",
+          "capabilities",
+          "items"
+        ],
+        "properties": {
+          "planId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "regionName": {
+            "type": "string"
+          },
+          "weekStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "revisedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "report_viewer",
+              "region_manager",
+              "store_manager"
+            ]
+          },
+          "capabilities": {
+            "type": "object",
+            "required": [
+              "canMaintainWeeklyVisitPlan"
+            ],
+            "properties": {
+              "canMaintainWeeklyVisitPlan": {
+                "type": "boolean"
+              }
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChecklistVisitPlanItem"
+            }
+          }
+        }
+      },
+      "ChecklistVisitPlanResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ChecklistVisitPlan"
+          }
+        }
+      },
+      "SaveChecklistVisitPlanRequest": {
+        "type": "object",
+        "required": [
+          "expectedRevision",
+          "idempotencyKey",
+          "items"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "storeId",
+                "plannedDate",
+                "displayOrder"
+              ],
+              "properties": {
+                "storeId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "plannedDate": {
+                  "type": "string",
+                  "format": "date"
+                },
+                "displayOrder": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 10000
                 }
               }
             }

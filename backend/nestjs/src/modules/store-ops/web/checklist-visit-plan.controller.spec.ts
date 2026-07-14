@@ -1,0 +1,17 @@
+import "reflect-metadata";
+import { REQUIRED_ROLES_KEY } from "../../auth/decorators/roles.decorator";
+import { REQUIRED_SCOPE_KEY } from "../../auth/decorators/scope.decorator";
+import { ChecklistVisitPlanController } from "./checklist-visit-plan.controller";
+
+describe("ChecklistVisitPlanController authorization metadata", () => {
+  it("allows scoped reads for RV/RM/SM but writes only for RM", () => {
+    const read = ChecklistVisitPlanController.prototype.getWeeklyPlan;
+    const write = ChecklistVisitPlanController.prototype.saveWeeklyPlan;
+    expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, read)).toBe("authenticated");
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, read)).toEqual([
+      "REPORT_VIEWER", "REGION_MANAGER", "STORE_MANAGER",
+    ]);
+    expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, write)).toBe("authenticated");
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, write)).toEqual(["REGION_MANAGER"]);
+  });
+});

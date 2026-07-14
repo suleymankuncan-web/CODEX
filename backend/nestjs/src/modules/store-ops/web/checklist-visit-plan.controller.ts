@@ -1,0 +1,55 @@
+import { Body, Controller, Get, Param, ParseUUIDPipe, Put, Query, Req } from "@nestjs/common";
+import type { AuthenticatedUser } from "../../auth/auth-context.service";
+import { RequireRoles } from "../../auth/decorators/roles.decorator";
+import { RequireScope } from "../../auth/decorators/scope.decorator";
+import { ChecklistVisitPlanService } from "../application/checklist-visit-plan.service";
+import { GetChecklistVisitPlanQueryDto } from "./dto/get-checklist-visit-plan.query";
+import { SaveChecklistVisitPlanDto } from "./dto/save-checklist-visit-plan.dto";
+
+@Controller("checklists/command-canvas/visit-plans")
+export class ChecklistVisitPlanController {
+  constructor(private readonly service: ChecklistVisitPlanService) {}
+
+  @Get()
+  @RequireScope("authenticated")
+  @RequireRoles("REPORT_VIEWER", "REGION_MANAGER", "STORE_MANAGER")
+  async getWeeklyPlan(
+    @Req() request: { user: AuthenticatedUser },
+    @Query() query: GetChecklistVisitPlanQueryDto,
+  ) {
+    return {
+      data: await this.service.getWeeklyPlan({
+        actorUserId: request.user.userId,
+        actorRoleCodes: request.user.roleCodes,
+        actorReadScope: request.user.readScope,
+        roleScopes: request.user.roleScopes,
+        regionId: query.regionId,
+        weekStart: query.weekStart,
+      }),
+    };
+  }
+
+  @Put(":regionId/:weekStart")
+  @RequireScope("authenticated")
+  @RequireRoles("REGION_MANAGER")
+  async saveWeeklyPlan(
+    @Req() request: { user: AuthenticatedUser },
+    @Param("regionId", new ParseUUIDPipe()) regionId: string,
+    @Param("weekStart") weekStart: string,
+    @Body() body: SaveChecklistVisitPlanDto,
+  ) {
+    return {
+      data: await this.service.saveWeeklyPlan({
+        actorUserId: request.user.userId,
+        actorRoleCodes: request.user.roleCodes,
+        actorReadScope: request.user.readScope,
+        roleScopes: request.user.roleScopes,
+        regionId,
+        weekStart,
+        expectedRevision: body.expectedRevision,
+        idempotencyKey: body.idempotencyKey,
+        items: body.items,
+      }),
+    };
+  }
+}
