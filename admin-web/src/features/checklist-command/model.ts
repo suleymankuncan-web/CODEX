@@ -17,6 +17,7 @@ export type ChecklistCommandSortKey = 'store' | 'bm' | 'vm' | 'last_visit' | 'op
 
 export type ChecklistCommandQueryInput = {
   period: string
+  regionId?: string
   status: ChecklistCommandStatus
   sort: ChecklistCommandSort
   query: string
@@ -27,12 +28,104 @@ export type ChecklistCommandQueryInput = {
 export function buildChecklistCommandQuery(input: ChecklistCommandQueryInput) {
   const query = new URLSearchParams()
   query.set('period', input.period)
+  if (input.regionId) query.set('regionId', input.regionId)
   if (input.status !== 'all') query.set('status', input.status)
   query.set('sort', input.sort)
   if (input.query.trim()) query.set('query', input.query.trim())
   query.set('limit', String(input.limit))
   query.set('offset', String(input.offset))
   return query
+}
+
+export type ChecklistPlanningDay = {
+  isoDate: string
+  dayLabel: string
+  shortLabel: string
+  dateLabel: string
+}
+
+export type VisitPlanDraftItem = {
+  storeId: string
+  plannedDate: string
+  displayOrder: number
+}
+
+const planningDayLabels = {
+  tr: [
+    ['Pazartesi', 'Pzt'],
+    ['Salı', 'Sal'],
+    ['Çarşamba', 'Çar'],
+    ['Perşembe', 'Per'],
+    ['Cuma', 'Cum'],
+    ['Cumartesi', 'Cmt'],
+  ],
+  en: [
+    ['Monday', 'Mon'],
+    ['Tuesday', 'Tue'],
+    ['Wednesday', 'Wed'],
+    ['Thursday', 'Thu'],
+    ['Friday', 'Fri'],
+    ['Saturday', 'Sat'],
+  ],
+} as const
+
+export function getIstanbulWeekStart(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Istanbul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(now)
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]))
+  const localDate = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)))
+  const mondayOffset = (localDate.getUTCDay() + 6) % 7
+  localDate.setUTCDate(localDate.getUTCDate() - mondayOffset)
+  return formatUtcDate(localDate)
+}
+
+export function shiftChecklistWeek(weekStart: string, offset: number) {
+  const date = parseIsoDate(weekStart)
+  date.setUTCDate(date.getUTCDate() + Math.trunc(offset) * 7)
+  return formatUtcDate(date)
+}
+
+export function buildChecklistPlanningDays(
+  weekStart: string,
+  locale: 'tr' | 'en',
+): ChecklistPlanningDay[] {
+  const start = parseIsoDate(weekStart)
+  const dateFormatter = new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'UTC',
+  })
+  return planningDayLabels[locale].map(([dayLabel, shortLabel], index) => {
+    const date = new Date(start)
+    date.setUTCDate(start.getUTCDate() + index)
+    return {
+      isoDate: formatUtcDate(date),
+      dayLabel,
+      shortLabel,
+      dateLabel: dateFormatter.format(date).replace('.', ''),
+    }
+  })
+}
+
+export function buildVisitPlanDraftFingerprint(items: readonly VisitPlanDraftItem[]) {
+  return items
+    .map((item) => `${item.storeId}:${item.plannedDate}:${item.displayOrder}`)
+    .sort()
+    .join('|')
+}
+
+function parseIsoDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!match) throw new Error('Invalid ISO date')
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])))
+}
+
+function formatUtcDate(date: Date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
 }
 
 export function createChecklistCommandPeriod(year: number, month: number) {

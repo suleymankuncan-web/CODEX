@@ -25,8 +25,10 @@ import { transientQueryRetryOptions } from '../../lib/query-retry'
 import { cn } from '../../lib/utils'
 import { StoreErrorState, StoreLoadingState, StoreSurfacePage } from '../../pages/store-surface-primitives'
 import { getChecklistCommandCanvas, type ChecklistCommandRow } from './api'
+import { ChecklistWeeklyVisitPlanner } from './ChecklistWeeklyVisitPlanner'
 import {
   createChecklistCommandPeriod,
+  getIstanbulWeekStart,
   getChecklistCommandSortLabel,
   toggleChecklistCommandSort,
   type ChecklistCommandSort,
@@ -48,6 +50,8 @@ export function RegionManagerChecklistCommandPage(input: {
   const [query, setQuery] = useState('')
   const [offset, setOffset] = useState(0)
   const [columnPreset, setColumnPreset] = useState<'all' | 'scores' | 'visit'>('all')
+  const [activeView, setActiveView] = useState<'visits' | 'plan'>('visits')
+  const [weekStart, setWeekStart] = useState(() => getIstanbulWeekStart())
   const [openMenu, setOpenMenu] = useState<'status' | 'columns' | null>(null)
   const toolbarRef = useRef<HTMLDivElement>(null)
 
@@ -173,6 +177,7 @@ export function RegionManagerChecklistCommandPage(input: {
   const columnLabel = columnPreset === 'all' ? (locale === 'tr' ? 'Tümü' : 'All') : columnPreset === 'scores' ? (locale === 'tr' ? 'Skorlar' : 'Scores') : (locale === 'tr' ? 'Ziyaret' : 'Visit')
   const pageNumber = Math.floor(offset / PAGE_SIZE) + 1
   const pageCount = Math.max(1, Math.ceil(data.page.total / PAGE_SIZE))
+  const activeRegion = data.items[0]
 
   return (
     <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity" data-testid="checklist-command-parity">
@@ -185,10 +190,19 @@ export function RegionManagerChecklistCommandPage(input: {
             {t('storeChecklists.command.title')}
           </h1>
         </div>
-        <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setPeriod(value); setOffset(0) }} />
+        <div className="checklist-command-title-actions">
+          {data.capabilities.weeklyVisitPlanningAvailable ? (
+            <div className="canvas-view-switch" data-view={activeView} aria-label={locale === 'tr' ? 'Checklist görünümü' : 'Checklist view'}>
+              <span className="canvas-view-glider" aria-hidden />
+              <button type="button" className={activeView === 'visits' ? 'is-active' : ''} aria-pressed={activeView === 'visits'} onClick={() => setActiveView('visits')}>{locale === 'tr' ? 'Ziyaretler' : 'Visits'}</button>
+              <button type="button" className={activeView === 'plan' ? 'is-active' : ''} aria-pressed={activeView === 'plan'} onClick={() => setActiveView('plan')}>{locale === 'tr' ? 'Ziyaret Planı' : 'Visit Plan'}{data.metrics.needsVisit > 0 ? <span className="canvas-view-count">{data.metrics.needsVisit}</span> : null}</button>
+            </div>
+          ) : null}
+          <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setPeriod(value); setOffset(0) }} />
+        </div>
       </header>
 
-      <section aria-label={t('storeChecklists.summaryAria')} className="checklist-command-metrics tw:relative tw:grid tw:grid-cols-2 tw:overflow-hidden tw:lg:grid-cols-4" data-testid="checklist-command-metrics">
+      {activeView === 'visits' ? <><section aria-label={t('storeChecklists.summaryAria')} className="checklist-command-metrics tw:relative tw:grid tw:grid-cols-2 tw:overflow-hidden tw:lg:grid-cols-4" data-testid="checklist-command-metrics">
         <span aria-hidden className="tw:absolute tw:inset-x-0 tw:top-0 tw:h-[3px] tw:bg-gradient-to-r tw:from-primary tw:via-blue-500 tw:to-cyan-500" />
         {metrics.map((metric) => {
           const Icon = metric.icon
@@ -281,7 +295,21 @@ export function RegionManagerChecklistCommandPage(input: {
             <button type="button" aria-label={t('storeChecklists.command.next')} disabled={!data.page.hasMore || commandQuery.isFetching} onClick={() => setOffset(offset + PAGE_SIZE)}><ChevronRight size={14} /></button>
           </div>
         </footer>
-      </section>
+      </section></> : activeRegion ? (
+        <ChecklistWeeklyVisitPlanner
+          authSummary={input.authSummary}
+          canMaintain={data.capabilities.canMaintainWeeklyVisitPlan}
+          locale={locale}
+          period={period}
+          regionId={activeRegion.regionId}
+          regionName={activeRegion.regionName}
+          weekStart={weekStart}
+          onOpenWorkflow={input.onOpenWorkflow}
+          onWeekStartChange={setWeekStart}
+        />
+      ) : (
+        <section className="week-planner week-planner-state"><strong>{locale === 'tr' ? 'Planlanabilir mağaza bulunamadı.' : 'No stores available for planning.'}</strong></section>
+      )}
     </StoreSurfacePage>
   )
 }
