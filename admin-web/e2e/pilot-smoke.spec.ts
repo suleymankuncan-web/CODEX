@@ -117,7 +117,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/checklists',
       urlPattern: /\/store\/checklists$/,
-      heading: page.locator('.store-checklists-command-page'),
+      heading: page.getByRole('heading', { name: 'Saha Kontrolleri' }),
     },
     {
       path: '/store/tasks',
@@ -599,6 +599,11 @@ async function routePilotSmokeApi(context: BrowserContext) {
 
     if (pathname.endsWith('/api/checklists/acknowledgements/list')) {
       await route.fulfill({ json: checklistAcknowledgementsFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/checklists/command-canvas')) {
+      await route.fulfill({ json: checklistCommandCanvasFixture })
       return
     }
 
@@ -1347,6 +1352,48 @@ const checklistAcknowledgementsFixture = {
     },
   ],
   meta: { count: 1, total: 1, limit: 50, offset: 0 },
+}
+
+const checklistCommandCanvasFixture = {
+  data: {
+    period: '2026-05',
+    view: 'region_manager',
+    capabilities: {
+      weeklyVisitPlanningAvailable: false,
+      canMaintainWeeklyVisitPlan: false,
+    },
+    metrics: {
+      totalStores: 1,
+      needsVisit: 1,
+      active: 0,
+      pending: 0,
+      completed: 0,
+    },
+    items: [
+      {
+        storeId,
+        storeCode: 'PILOT-001',
+        storeName: 'Pilot Store',
+        regionId,
+        regionName: 'Pilot Region',
+        regionManagers: [{ displayName: 'Pilot BÃ¶lge MÃ¼dÃ¼rÃ¼' }],
+        bmScore: null,
+        vmScore: null,
+        bmCompletedAt: null,
+        vmCompletedAt: null,
+        lastCompletedVisitAt: null,
+        elapsedDaysSinceLastVisit: null,
+        activeChecklistCount: 0,
+        pendingAcknowledgementCount: 0,
+        openActionCount: 0,
+        blockedActionCount: 0,
+        status: 'needs_visit',
+        reasonCodes: ['missing_bm_visit', 'missing_vm_visit'],
+        lastOperationalAt: null,
+      },
+    ],
+    page: { total: 1, limit: 30, offset: 0, hasMore: false },
+  },
 }
 
 const mobileChecklistTodayFixture = {

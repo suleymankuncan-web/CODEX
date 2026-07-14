@@ -2,7 +2,9 @@ import { useEffect, useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { resolveStorePersona } from '../app/store-route-registry'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { RegionManagerChecklistCommandPage } from '../features/checklist-command/RegionManagerChecklistCommandPage'
 import {
   canAcknowledgeChecklist,
   canReadChecklistResults,
@@ -106,13 +108,14 @@ function mergeSavedResponseIntoMobileToday(
   }
 }
 
-function useStoreChecklistsPageContent(input: {
+function StoreChecklistsLegacyPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const commandStoreId = new URLSearchParams(location.search).get('storeId')?.trim() ?? ''
   const [pageState, dispatchPageState] = useReducer(
     storeChecklistsReducer,
     location.search,
@@ -413,6 +416,7 @@ function useStoreChecklistsPageContent(input: {
   )
   const filteredCoverageRows = sortCoverageRows(
     coverageRows.filter((row) =>
+      (!commandStoreId || row.store.storeId === commandStoreId) &&
       doesCoverageRowMatchFilters(row, {
         month: selectedMonth,
         query: searchQuery,
@@ -431,6 +435,7 @@ function useStoreChecklistsPageContent(input: {
   const actionVisitRowsByStoreId = new Map(
     buildChecklistStoreVisitRows(
       actionCoverageRows.filter((row) =>
+        (!commandStoreId || row.store.storeId === commandStoreId) &&
         doesCoverageRowMatchFilters(row, {
           month: 'all',
           query: searchQuery,
@@ -443,6 +448,7 @@ function useStoreChecklistsPageContent(input: {
   const currentMonth = getVisitPlanCurrentMonthKey()
   const filteredPendingItems = sortChecklistItems(
     pendingItems.filter((item) =>
+      (!commandStoreId || item.storeId === commandStoreId) &&
       doesChecklistItemMatchFilters(item, {
         includeOutOfPeriodPending: true,
         month: selectedMonth,
@@ -456,6 +462,7 @@ function useStoreChecklistsPageContent(input: {
   )
   const filteredAcknowledgedItems = sortChecklistItems(
     acknowledgedItems.filter((item) =>
+      (!commandStoreId || item.storeId === commandStoreId) &&
       doesChecklistItemMatchFilters(item, {
         month: selectedMonth,
         query: searchQuery,
@@ -855,5 +862,28 @@ function useStoreChecklistsPageContent(input: {
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
-  return useStoreChecklistsPageContent(input)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const params = new URLSearchParams(location.search)
+  const showLegacyWorkflow =
+    params.get('view') === 'workflow' ||
+    params.has('tab') ||
+    params.has('result') ||
+    params.has('status')
+
+  if (resolveStorePersona(input.authSummary) === 'regionManager' && !showLegacyWorkflow) {
+    return (
+      <RegionManagerChecklistCommandPage
+        authSummary={input.authSummary}
+        onOpenWorkflow={(storeId) => {
+          const next = new URLSearchParams(location.search)
+          next.set('view', 'workflow')
+          next.set('storeId', storeId)
+          navigate({ pathname: location.pathname, search: `?${next.toString()}` })
+        }}
+      />
+    )
+  }
+
+  return <StoreChecklistsLegacyPage {...input} />
 }

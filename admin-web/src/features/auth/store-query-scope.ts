@@ -44,6 +44,13 @@ export function storeMobileChecklistsTodayQueryKey(authSummary: AuthSessionSumma
   return ['mobile-checklists-today', getStoreQueryScopeSignature(authSummary)] as const
 }
 
+export function storeChecklistCommandQueryKey(
+  authSummary: AuthSessionSummary | null,
+  filters: Record<string, string | number>,
+) {
+  return ['checklist-command', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
 export function storeWorkflowInboxQueryKey(authSummary: AuthSessionSummary | null) {
   return ['workflow-inbox', getStoreQueryScopeSignature(authSummary)] as const
 }

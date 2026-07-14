@@ -20,7 +20,7 @@ test('completed checklist source keeps past month visit rows visible without mon
     )
   })
   await routeChecklistMonthFilterApi(page)
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('combobox', { name: 'Month filter' }).click()
   await page.getByRole('option', { name: 'April 2026' }).click()
