@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-13T09:38:36.831Z",
+  "generatedAt": "2026-07-14T09:50:25.932Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 193,
-    "backendEndpointsWithoutFrontendCallCount": 36,
-    "controllerCount": 24,
+    "backendEndpointCount": 194,
+    "backendEndpointsWithoutFrontendCallCount": 37,
+    "controllerCount": 25,
     "frontendApiCallCount": 157,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 157,
-    "openApiEndpointCount": 193,
+    "openApiEndpointCount": 194,
     "routeApiEdgeCount": 229,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0,
@@ -4088,6 +4088,20 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/checklists/command-canvas",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas",
+      "rawControllerPath": "checklists/command-canvas",
+      "rawMethodPath": "",
+      "controller": "checklist-command",
+      "domain": "checklists",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/checklist-command.controller.ts",
+        "line": 12
+      }
+    },
+    {
       "id": "endpoint:POST:/api/checklists/instances",
       "method": "POST",
       "path": "/api/checklists/instances",
@@ -6429,6 +6443,12 @@
       "id": "openapi:POST:/api/checklists/acknowledgements/list",
       "method": "POST",
       "path": "/api/checklists/acknowledgements/list",
+      "domain": "checklists"
+    },
+    {
+      "id": "openapi:GET:/api/checklists/command-canvas",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas",
       "domain": "checklists"
     },
     {
@@ -9587,6 +9607,13 @@
         "domain": "admin",
         "endpointCount": 2,
         "frontendCallCount": 0
+      },
+      {
+        "id": "controller:checklist-command",
+        "controller": "checklist-command",
+        "domain": "checklists",
+        "endpointCount": 1,
+        "frontendCallCount": 0
       }
     ]
   },
@@ -9598,6 +9625,7 @@
       "endpoint:GET:/api/admin/migrations/status",
       "endpoint:DELETE:/api/auth/browser-session",
       "endpoint:POST:/api/auth/browser-session",
+      "endpoint:GET:/api/checklists/command-canvas",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",
