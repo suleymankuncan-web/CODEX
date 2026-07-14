@@ -16037,6 +16037,10 @@
                   "type": "string"
                 }
               },
+              "authorizationContextVersion": {
+                "type": "string",
+                "pattern": "^v1:[a-f0-9]{64}$"
+              },
               "scope": {
                 "type": "object",
                 "required": [

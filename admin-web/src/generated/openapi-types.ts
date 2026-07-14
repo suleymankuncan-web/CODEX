@@ -351,6 +351,7 @@ export type components = {
         "username": string | null
         "email": string | null
         "roleCodes": string[]
+        "authorizationContextVersion"?: string
         "scope": {
           "companyIds": string[]
           "regionIds": string[]

@@ -27,6 +27,7 @@ export function getStoreQueryScopeSignature(authSummary: AuthSessionSummary | nu
 
   return [
     `user:${user.userId}`,
+    `authorization:${user.authorizationContextVersion ?? 'legacy'}`,
     `roles:${roles}`,
     `readRegions:${readRegionIds}`,
     `readStores:${readStoreIds}`,

@@ -15,6 +15,7 @@ function session(input?: {
   legacyAssignedStoreIds?: string[]
   displayName?: string
   email?: string
+  authorizationContextVersion?: string
 }): AuthSessionSummary {
   return {
     authMode: 'bearer',
@@ -26,6 +27,7 @@ function session(input?: {
       username: 'sanitized.user',
       email: input?.email ?? 'sanitized@example.invalid',
       roleCodes: input?.roleCodes ?? ['STORE_MANAGER', 'REPORT_VIEWER'],
+      authorizationContextVersion: input?.authorizationContextVersion ?? 'v1:baseline',
       scope: {
         companyIds: ['company-a'],
         regionIds: ['region-b', 'region-a'],
@@ -97,6 +99,12 @@ describe('effective authorization fingerprint', () => {
     )
     expect(queryClient.getQueryData(['auth-bootstrap'])).toEqual({ provider: 'sanitized' })
     expect(queryClient.getMutationCache().getAll()).toHaveLength(0)
+  })
+
+  it('changes when role partitions change even if aggregate scopes stay identical', () => {
+    const baseline = buildEffectiveAuthorizationFingerprint(session({ authorizationContextVersion: `v1:${'a'.repeat(64)}` }))
+    const repartitioned = buildEffectiveAuthorizationFingerprint(session({ authorizationContextVersion: `v1:${'b'.repeat(64)}` }))
+    expect(repartitioned).not.toBe(baseline)
   })
 
   it('refreshes the shell once only for a renewed raw token under the same bearer identity key', () => {
