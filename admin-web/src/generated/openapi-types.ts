@@ -579,6 +579,25 @@ export type components = {
       }
       "items": components['schemas']["ChecklistVisitPlanItem"][]
     }
+    "ChecklistVisitPlanCandidateResponse": {
+      "data": {
+        "regionId": string
+        "view": "region_manager"
+        "items": Array<{
+            "storeId": string
+            "storeCode": string
+            "storeName": string
+            "regionId": string
+            "regionName": string
+          }>
+        "page": {
+          "total": number
+          "limit": number
+          "offset": number
+          "hasMore": boolean
+        }
+      }
+    }
     "ChecklistVisitPlanItem": {
       "planItemId": string
       "storeId": string
@@ -589,6 +608,55 @@ export type components = {
       "status": "waiting" | "missed" | "completed"
       "checklistInstanceId": string | null
       "completedAt": string | null
+    }
+    "ChecklistVisitPlanPeriodItem": components['schemas']["ChecklistVisitPlanItem"] & ({
+      "planId": string
+      "revision": number
+      "weekStart": string
+    })
+    "ChecklistVisitPlanPeriodResponse": {
+      "data": {
+        "period": string
+        "regionId": string
+        "regionName": string
+        "view": "region_manager"
+        "capabilities": {
+          "canMaintainWeeklyVisitPlan": true
+        }
+        "metrics": {
+          "totalStores": number
+          "high": number
+          "medium": number
+          "low": number
+          "planned": number
+          "unplanned": number
+          "waiting": number
+          "missed": number
+          "completed": number
+        }
+        "items": components['schemas']["ChecklistVisitPlanPeriodRow"][]
+        "page": {
+          "total": number
+          "limit": number
+          "offset": number
+          "hasMore": boolean
+        }
+      }
+    }
+    "ChecklistVisitPlanPeriodRow": {
+      "storeId": string
+      "storeCode": string
+      "storeName": string
+      "regionId": string
+      "regionName": string
+      "bmScore": number | null
+      "vmScore": number | null
+      "lastCompletedVisitAt": string | null
+      "elapsedDaysSinceLastVisit": number | null
+      "risk": "high" | "medium" | "low"
+      "reasonCodes": Array<"missing_current_month_visit" | "low_checklist_score" | "watch_checklist_result" | "active_draft" | "pending_acknowledgement" | "visit_completed" | "strong_score" | "insufficient_signal">
+      "planStatus": "unplanned" | "waiting" | "missed" | "completed" | "mixed"
+      "planItems": components['schemas']["ChecklistVisitPlanPeriodItem"][]
     }
     "ChecklistVisitPlanResponse": {
       "data": components['schemas']["ChecklistVisitPlan"]
@@ -3626,6 +3694,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ChecklistVisitPlanResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/visit-plans/period": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistVisitPlanPeriodResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/visit-plans/candidates": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistVisitPlanCandidateResponse"]
           }
         }
       }

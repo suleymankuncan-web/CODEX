@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-14T14:02:17.811Z",
+  "generatedAt": "2026-07-14T17:07:49.634Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 197,
-    "backendEndpointsWithoutFrontendCallCount": 39,
+    "backendEndpointCount": 199,
+    "backendEndpointsWithoutFrontendCallCount": 41,
     "controllerCount": 26,
     "frontendApiCallCount": 158,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 158,
-    "openApiEndpointCount": 197,
+    "openApiEndpointCount": 199,
     "routeApiEdgeCount": 230,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0,
@@ -4141,7 +4141,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 13
+        "line": 60
       }
     },
     {
@@ -4155,7 +4155,35 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
-        "line": 32
+        "line": 79
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/checklists/command-canvas/visit-plans/candidates",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/visit-plans/candidates",
+      "rawControllerPath": "checklists/command-canvas/visit-plans",
+      "rawMethodPath": "candidates",
+      "controller": "checklist-visit-plan",
+      "domain": "checklists",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
+        "line": 40
+      }
+    },
+    {
+      "id": "endpoint:GET:/api/checklists/command-canvas/visit-plans/period",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/visit-plans/period",
+      "rawControllerPath": "checklists/command-canvas/visit-plans",
+      "rawMethodPath": "period",
+      "controller": "checklist-visit-plan",
+      "domain": "checklists",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/checklist-visit-plan.controller.ts",
+        "line": 15
       }
     },
     {
@@ -6524,6 +6552,18 @@
       "id": "openapi:PUT:/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}",
       "method": "PUT",
       "path": "/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}",
+      "domain": "checklists"
+    },
+    {
+      "id": "openapi:GET:/api/checklists/command-canvas/visit-plans/candidates",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/visit-plans/candidates",
+      "domain": "checklists"
+    },
+    {
+      "id": "openapi:GET:/api/checklists/command-canvas/visit-plans/period",
+      "method": "GET",
+      "path": "/api/checklists/command-canvas/visit-plans/period",
       "domain": "checklists"
     },
     {
@@ -9697,7 +9737,7 @@
         "id": "controller:checklist-visit-plan",
         "controller": "checklist-visit-plan",
         "domain": "checklists",
-        "endpointCount": 2,
+        "endpointCount": 4,
         "frontendCallCount": 0
       },
       {
@@ -9720,6 +9760,8 @@
       "endpoint:GET:/api/checklists/command-canvas/regions",
       "endpoint:GET:/api/checklists/command-canvas/visit-plans",
       "endpoint:PUT:/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}",
+      "endpoint:GET:/api/checklists/command-canvas/visit-plans/candidates",
+      "endpoint:GET:/api/checklists/command-canvas/visit-plans/period",
       "endpoint:POST:/api/checklists/instances",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/complete",
       "endpoint:POST:/api/checklists/instances/{checklistInstanceId}/responses",

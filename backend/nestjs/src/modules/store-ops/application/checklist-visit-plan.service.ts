@@ -2,15 +2,24 @@ import { ConflictException, ForbiddenException, Injectable } from "@nestjs/commo
 import { createHash } from "node:crypto";
 import type { AuthReadScope } from "../../auth/auth-context.service";
 import { ChecklistVisitPlanRepository } from "../infrastructure/checklist-visit-plan.repository";
-import type { SaveChecklistVisitPlanItem } from "./checklist-visit-plan.contract";
+import type {
+  ChecklistVisitPlanCandidateResult,
+  ChecklistVisitPlanPeriodResult,
+  ChecklistVisitPlanPeriodSort,
+  ChecklistVisitPlanPeriodStatus,
+  ChecklistVisitPlanReason,
+  ChecklistVisitPlanRisk,
+  SaveChecklistVisitPlanItem,
+} from "./checklist-visit-plan.contract";
 import { resolveChecklistVisitPlanScope } from "./checklist-visit-plan-scope";
 
-type Actor = {
-  actorUserId: string;
+type ReadActor = {
   actorRoleCodes: string[];
   actorReadScope: AuthReadScope;
   roleScopes?: Record<string, AuthReadScope>;
 };
+
+type Actor = ReadActor & { actorUserId: string };
 
 type WeeklyPlanInput = Actor & { regionId: string; weekStart: string };
 type SaveWeeklyPlanInput = WeeklyPlanInput & {
@@ -18,10 +27,82 @@ type SaveWeeklyPlanInput = WeeklyPlanInput & {
   idempotencyKey: string;
   items: SaveChecklistVisitPlanItem[];
 };
+type ListPeriodInput = ReadActor & {
+  regionId: string;
+  period: string;
+  query?: string;
+  risk?: ChecklistVisitPlanRisk | "all";
+  reason?: ChecklistVisitPlanReason | "all";
+  planStatus?: ChecklistVisitPlanPeriodStatus | "all";
+  sort?: ChecklistVisitPlanPeriodSort;
+  limit?: number;
+  offset?: number;
+};
+type ListCandidatesInput = ReadActor & {
+  regionId: string;
+  query?: string;
+  limit?: number;
+  offset?: number;
+};
 
 @Injectable()
 export class ChecklistVisitPlanService {
   constructor(private readonly repository: ChecklistVisitPlanRepository) {}
+
+  async listPeriod(input: ListPeriodInput): Promise<ChecklistVisitPlanPeriodResult> {
+    assertRegionManagerRegion(input, input.regionId);
+    const limit = input.limit ?? 30;
+    const offset = input.offset ?? 0;
+    const result = await this.repository.listPeriod({
+      regionId: input.regionId,
+      period: input.period,
+      query: input.query?.trim() || null,
+      risk: input.risk ?? "all",
+      reason: input.reason ?? "all",
+      planStatus: input.planStatus ?? "all",
+      sort: input.sort ?? "risk_desc",
+      limit,
+      offset,
+    });
+    return {
+      period: input.period,
+      regionId: input.regionId,
+      regionName: result.regionName,
+      view: "region_manager",
+      capabilities: { canMaintainWeeklyVisitPlan: true },
+      metrics: result.metrics,
+      items: result.items,
+      page: {
+        total: result.total,
+        limit,
+        offset,
+        hasMore: offset + result.items.length < result.total,
+      },
+    };
+  }
+
+  async listCandidates(input: ListCandidatesInput): Promise<ChecklistVisitPlanCandidateResult> {
+    assertRegionManagerRegion(input, input.regionId);
+    const limit = input.limit ?? 20;
+    const offset = input.offset ?? 0;
+    const result = await this.repository.listCandidates({
+      regionId: input.regionId,
+      query: input.query?.trim() || null,
+      limit,
+      offset,
+    });
+    return {
+      regionId: input.regionId,
+      view: "region_manager",
+      items: result.items,
+      page: {
+        total: result.total,
+        limit,
+        offset,
+        hasMore: offset + result.items.length < result.total,
+      },
+    };
+  }
 
   async getWeeklyPlan(input: WeeklyPlanInput) {
     assertPlanWeek(input.weekStart);
@@ -91,6 +172,13 @@ export class ChecklistVisitPlanService {
     if (scope.view === "region_manager" && !scope.regionIds.includes(regionId)) {
       throw new ForbiddenException("Weekly visit plan is outside the assigned region scope");
     }
+  }
+}
+
+function assertRegionManagerRegion(input: ReadActor, regionId: string) {
+  const regionIds = [...new Set(input.roleScopes?.REGION_MANAGER?.regionIds ?? [])];
+  if (!input.actorRoleCodes.includes("REGION_MANAGER") || !regionIds.includes(regionId)) {
+    throw new ForbiddenException("Visit plan read is outside the assigned Region Manager scope");
   }
 }
 

@@ -5,10 +5,57 @@ import { RequireScope } from "../../auth/decorators/scope.decorator";
 import { ChecklistVisitPlanService } from "../application/checklist-visit-plan.service";
 import { GetChecklistVisitPlanQueryDto } from "./dto/get-checklist-visit-plan.query";
 import { SaveChecklistVisitPlanDto } from "./dto/save-checklist-visit-plan.dto";
+import { ListChecklistVisitPlanCandidatesQueryDto } from "./dto/list-checklist-visit-plan-candidates.query";
+import { ListChecklistVisitPlanPeriodQueryDto } from "./dto/list-checklist-visit-plan-period.query";
 
 @Controller("checklists/command-canvas/visit-plans")
 export class ChecklistVisitPlanController {
   constructor(private readonly service: ChecklistVisitPlanService) {}
+
+  @Get("period")
+  @RequireScope("authenticated")
+  @RequireRoles("REGION_MANAGER")
+  async listPeriod(
+    @Req() request: { user: AuthenticatedUser },
+    @Query() query: ListChecklistVisitPlanPeriodQueryDto,
+  ) {
+    return {
+      data: await this.service.listPeriod({
+        actorRoleCodes: request.user.roleCodes,
+        actorReadScope: request.user.readScope,
+        roleScopes: request.user.roleScopes,
+        regionId: query.regionId,
+        period: query.period,
+        query: query.query,
+        risk: query.risk,
+        reason: query.reason,
+        planStatus: query.planStatus,
+        sort: query.sort,
+        limit: query.limit,
+        offset: query.offset,
+      }),
+    };
+  }
+
+  @Get("candidates")
+  @RequireScope("authenticated")
+  @RequireRoles("REGION_MANAGER")
+  async listCandidates(
+    @Req() request: { user: AuthenticatedUser },
+    @Query() query: ListChecklistVisitPlanCandidatesQueryDto,
+  ) {
+    return {
+      data: await this.service.listCandidates({
+        actorRoleCodes: request.user.roleCodes,
+        actorReadScope: request.user.readScope,
+        roleScopes: request.user.roleScopes,
+        regionId: query.regionId,
+        query: query.query,
+        limit: query.limit,
+        offset: query.offset,
+      }),
+    };
+  }
 
   @Get()
   @RequireScope("authenticated")

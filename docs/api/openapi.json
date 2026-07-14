@@ -5608,6 +5608,199 @@
           "ChecklistVisitPlan"
         ]
       }
+    },
+    "/api/checklists/command-canvas/visit-plans/period": {
+      "get": {
+        "operationId": "ChecklistVisitPlanController_listPeriod",
+        "parameters": [
+          {
+            "name": "regionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "risk",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "high",
+                "medium",
+                "low"
+              ]
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "missing_current_month_visit",
+                "low_checklist_score",
+                "watch_checklist_result",
+                "active_draft",
+                "pending_acknowledgement",
+                "visit_completed",
+                "strong_score",
+                "insufficient_signal"
+              ]
+            }
+          },
+          {
+            "name": "planStatus",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "unplanned",
+                "waiting",
+                "missed",
+                "completed",
+                "mixed"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "risk_desc",
+                "store_asc",
+                "store_desc",
+                "last_visit_asc",
+                "last_visit_desc",
+                "next_plan_asc",
+                "next_plan_desc"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Region-scoped full-period visit planning facts and authoritative risk rows.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanPeriodResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChecklistVisitPlan"
+        ]
+      }
+    },
+    "/api/checklists/command-canvas/visit-plans/candidates": {
+      "get": {
+        "operationId": "ChecklistVisitPlanController_listCandidates",
+        "parameters": [
+          {
+            "name": "regionId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded active-store search for the assigned Region Manager planning scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanCandidateResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChecklistVisitPlan"
+        ]
+      }
     }
   },
   "info": {
@@ -21451,6 +21644,355 @@
                   "type": "integer",
                   "minimum": 0,
                   "maximum": 10000
+                }
+              }
+            }
+          }
+        }
+      },
+      "ChecklistVisitPlanPeriodItem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChecklistVisitPlanItem"
+          },
+          {
+            "type": "object",
+            "required": [
+              "planId",
+              "revision",
+              "weekStart"
+            ],
+            "properties": {
+              "planId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "revision": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "weekStart": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          }
+        ]
+      },
+      "ChecklistVisitPlanPeriodRow": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "storeCode",
+          "storeName",
+          "regionId",
+          "regionName",
+          "bmScore",
+          "vmScore",
+          "lastCompletedVisitAt",
+          "elapsedDaysSinceLastVisit",
+          "risk",
+          "reasonCodes",
+          "planStatus",
+          "planItems"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeCode": {
+            "type": "string"
+          },
+          "storeName": {
+            "type": "string"
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "regionName": {
+            "type": "string"
+          },
+          "bmScore": {
+            "type": "number",
+            "nullable": true
+          },
+          "vmScore": {
+            "type": "number",
+            "nullable": true
+          },
+          "lastCompletedVisitAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "elapsedDaysSinceLastVisit": {
+            "type": "integer",
+            "minimum": 0,
+            "nullable": true
+          },
+          "risk": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "reasonCodes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "missing_current_month_visit",
+                "low_checklist_score",
+                "watch_checklist_result",
+                "active_draft",
+                "pending_acknowledgement",
+                "visit_completed",
+                "strong_score",
+                "insufficient_signal"
+              ]
+            }
+          },
+          "planStatus": {
+            "type": "string",
+            "enum": [
+              "unplanned",
+              "waiting",
+              "missed",
+              "completed",
+              "mixed"
+            ]
+          },
+          "planItems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChecklistVisitPlanPeriodItem"
+            }
+          }
+        }
+      },
+      "ChecklistVisitPlanPeriodResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "period",
+              "regionId",
+              "regionName",
+              "view",
+              "capabilities",
+              "metrics",
+              "items",
+              "page"
+            ],
+            "properties": {
+              "period": {
+                "type": "string",
+                "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+              },
+              "regionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "regionName": {
+                "type": "string"
+              },
+              "view": {
+                "type": "string",
+                "enum": [
+                  "region_manager"
+                ]
+              },
+              "capabilities": {
+                "type": "object",
+                "required": [
+                  "canMaintainWeeklyVisitPlan"
+                ],
+                "properties": {
+                  "canMaintainWeeklyVisitPlan": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                }
+              },
+              "metrics": {
+                "type": "object",
+                "required": [
+                  "totalStores",
+                  "high",
+                  "medium",
+                  "low",
+                  "planned",
+                  "unplanned",
+                  "waiting",
+                  "missed",
+                  "completed"
+                ],
+                "properties": {
+                  "totalStores": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "high": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "medium": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "low": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "planned": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "unplanned": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "waiting": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "missed": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "completed": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanPeriodRow"
+                }
+              },
+              "page": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset",
+                  "hasMore"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hasMore": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ChecklistVisitPlanCandidateResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "regionId",
+              "view",
+              "items",
+              "page"
+            ],
+            "properties": {
+              "regionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "view": {
+                "type": "string",
+                "enum": [
+                  "region_manager"
+                ]
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "storeId",
+                    "storeCode",
+                    "storeName",
+                    "regionId",
+                    "regionName"
+                  ],
+                  "properties": {
+                    "storeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "storeCode": {
+                      "type": "string"
+                    },
+                    "storeName": {
+                      "type": "string"
+                    },
+                    "regionId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "regionName": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "page": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset",
+                  "hasMore"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hasMore": {
+                    "type": "boolean"
+                  }
                 }
               }
             }

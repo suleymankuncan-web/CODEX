@@ -21,4 +21,11 @@ test("visit plan API smoke is disposable and covers the locked concurrency/data 
   assert.match(runner, /AT TIME ZONE 'Europe\/Istanbul'/);
   assert.match(runner, /must wait through its Istanbul local plan day/);
   assert.match(runner, /statusDerivation: \["completed", "missed", "waiting"\]/);
+  assert.match(runner, /generate_series\(1, 200\)/);
+  assert.match(runner, /69\.99/);
+  assert.match(runner, /69\.50/);
+  assert.match(runner, /queryCount === 1/);
+  assert.match(runner, /page200Scope\.page\.total === 205/);
+  assert.match(runner, /JSON\.stringify\(page200Scope\)\.length < 262_144/);
+  assert.match(runner, /Math\.max\(page30Ms, page200Ms, candidateMs\) < 1_200/);
 });

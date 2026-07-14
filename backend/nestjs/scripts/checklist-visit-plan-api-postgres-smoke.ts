@@ -27,6 +27,9 @@ const otherRegionId = randomUUID();
 const storeOneId = randomUUID();
 const storeTwoId = randomUUID();
 const otherStoreId = randomUUID();
+const roundingWatchStoreId = randomUUID();
+const roundingStrongStoreId = randomUUID();
+const roundedResponseStoreId = randomUUID();
 const actorUserId = randomUUID();
 const bmTemplateId = randomUUID();
 const vmTemplateId = randomUUID();
@@ -127,6 +130,9 @@ try {
     waitingThroughCurrentDay = true;
   }
 
+  await seedPeriodReadFixtures();
+  const periodReadEvidence = await verifyPeriodReadBudgets();
+
   console.log(JSON.stringify({
     event: "checklist_visit_plan_api_postgres_smoke.completed",
     concurrentConflict: "verified",
@@ -135,6 +141,7 @@ try {
     rollbackPreservedCurrent: true,
     statusDerivation: ["completed", "missed", "waiting"],
     waitingThroughCurrentDay,
+    periodReadEvidence,
   }));
 } finally {
   await pool.end();
@@ -160,10 +167,16 @@ async function seedFixtures() {
     `INSERT INTO ops.store (store_id, company_id, region_id, store_code, store_name, store_type) VALUES
       ($1, $4, $5, $7, 'Store One', 'company'),
       ($2, $4, $5, $8, 'Store Two', 'company'),
-      ($3, $4, $6, $9, 'Other Store', 'company')`,
+      ($3, $4, $6, $9, 'Other Store', 'company'),
+      ($10, $4, $5, $11, 'Rounding Watch', 'company'),
+      ($12, $4, $5, $13, 'Rounding Strong', 'company'),
+      ($14, $4, $5, $15, 'Rounded Response', 'company')`,
     [
       storeOneId, storeTwoId, otherStoreId, companyId, regionId, otherRegionId,
       `VAPI1_${storeOneId.slice(0, 8)}`, `VAPI2_${storeTwoId.slice(0, 8)}`, `VAPI3_${otherStoreId.slice(0, 8)}`,
+      roundingWatchStoreId, `VAPIW_${roundingWatchStoreId.slice(0, 8)}`,
+      roundingStrongStoreId, `VAPIS_${roundingStrongStoreId.slice(0, 8)}`,
+      roundedResponseStoreId, `VAPIR_${roundedResponseStoreId.slice(0, 8)}`,
     ],
   );
   await pool.query(
@@ -179,6 +192,115 @@ async function seedFixtures() {
       ($2, $3, $5, 'VM_STORE_VISIT', 'VM Smoke', 'visit', 1, 'published', $6::date, $7)`,
     [bmTemplateId, vmTemplateId, companyId, `VAPI_BM_${bmTemplateId.slice(0, 8)}`, `VAPI_VM_${vmTemplateId.slice(0, 8)}`, previousMonday, actorUserId],
   );
+}
+
+async function seedPeriodReadFixtures() {
+  await pool.query(
+    `INSERT INTO ops.store (company_id, region_id, store_code, store_name, store_type)
+     SELECT $1::uuid, $2::uuid, 'VAPIB_' || value::text, 'Budget Store ' || value::text, 'company'
+     FROM generate_series(1, 200) value`,
+    [companyId, regionId],
+  );
+  const item = await pool.query<{ template_item_id: string }>(
+    `INSERT INTO ops.checklist_template_item (
+       checklist_template_id, section_name, item_no, item_text, response_type, max_score
+     ) VALUES ($1, 'Risk boundary', 1, 'Rounded response fixture', 'score', 100)
+     RETURNING template_item_id`,
+    [bmTemplateId],
+  );
+  const instances = await pool.query<{ checklist_instance_id: string; store_id: string }>(
+    `INSERT INTO ops.checklist_instance (
+       checklist_template_id, store_id, status, total_score, completed_at
+     ) VALUES
+       ($1, $2, 'completed', 69.99, $5::date + time '09:00'),
+       ($1, $2, 'completed', 70.00, $5::date + time '10:00'),
+       ($1, $3, 'completed', 84.99, $5::date + time '11:00'),
+       ($1, $3, 'completed', 85.00, $5::date + time '12:00'),
+       ($1, $4, 'completed', 90.00, $5::date + time '13:00')
+     RETURNING checklist_instance_id, store_id`,
+    [bmTemplateId, roundingWatchStoreId, roundingStrongStoreId, roundedResponseStoreId, today],
+  );
+  await pool.query(
+    `INSERT INTO ops.checklist_acknowledgement (
+       checklist_instance_id, store_id, acknowledged_by_user_id
+     )
+     SELECT checklist_instance_id, store_id, $1
+     FROM unnest($2::uuid[], $3::uuid[]) AS fixture(checklist_instance_id, store_id)`,
+    [
+      actorUserId,
+      instances.rows.slice(0, 4).map((row) => row.checklist_instance_id),
+      instances.rows.slice(0, 4).map((row) => row.store_id),
+    ],
+  );
+  const roundedResponseInstance = instances.rows.find((row) => row.store_id === roundedResponseStoreId);
+  assert(roundedResponseInstance, "rounded response fixture must exist");
+  await pool.query(
+    `INSERT INTO ops.checklist_response (
+       checklist_instance_id, template_item_id, score_value
+     ) VALUES ($1, $2, 69.50)`,
+    [roundedResponseInstance.checklist_instance_id, item.rows[0].template_item_id],
+  );
+}
+
+async function verifyPeriodReadBudgets() {
+  let queryCount = 0;
+  const countedDatabase = {
+    query: async <Row extends Record<string, unknown>>(text: string, values?: unknown[]) => {
+      queryCount += 1;
+      return pool.query<Row>(text, values);
+    },
+  } as unknown as DatabaseService;
+  const countedService = new ChecklistVisitPlanService(new ChecklistVisitPlanRepository(countedDatabase));
+  const currentPeriod = today.slice(0, 7);
+
+  const start30 = performance.now();
+  const page30 = await countedService.listPeriod({
+    ...actor, regionId, period: currentPeriod, limit: 30, offset: 0,
+  });
+  const page30Ms = performance.now() - start30;
+  assert(queryCount === 1, "30-row period read must use one SQL roundtrip");
+  assert(page30.metrics.totalStores === 205, "period metrics must cover all 205 active scoped stores");
+  assert(page30.items.length === 30, "30-row period page must remain bounded");
+
+  queryCount = 0;
+  const start200 = performance.now();
+  const page200Scope = await countedService.listPeriod({
+    ...actor, regionId, period: currentPeriod, limit: 100, offset: 0,
+  });
+  const page200Ms = performance.now() - start200;
+  assert(queryCount === 1, "200-store scoped period read must use one SQL roundtrip");
+  assert(page200Scope.page.total === 205, "200-store scoped period read must expose the full filtered total");
+  assert(page200Scope.items.length === 100, "200-store scoped period response must remain server-paged");
+  assert(JSON.stringify(page200Scope).length < 262_144, "period response must stay below 256 KiB");
+
+  const boundaryRows = await countedService.listPeriod({
+    ...actor, regionId, period: currentPeriod, query: "Round", limit: 10, offset: 0,
+  });
+  const byStore = new Map(boundaryRows.items.map((row) => [row.storeId, row]));
+  assert(byStore.get(roundingWatchStoreId)?.bmScore === 70, "69.995 monthly average must round to 70.00");
+  assert(byStore.get(roundingWatchStoreId)?.risk === "medium", "rounded 70.00 score must be watch risk");
+  assert(byStore.get(roundingStrongStoreId)?.bmScore === 85, "84.995 monthly average must round to 85.00");
+  assert(byStore.get(roundingStrongStoreId)?.risk === "low", "rounded 85.00 score must be strong/low risk");
+  assert(byStore.get(roundedResponseStoreId)?.risk === "medium", "rounded 69.5 response must not become low-score high risk");
+
+  queryCount = 0;
+  const candidateStart = performance.now();
+  const candidates = await countedService.listCandidates({
+    ...actor, regionId, query: "Budget Store", limit: 50, offset: 0,
+  });
+  const candidateMs = performance.now() - candidateStart;
+  assert(queryCount === 1, "candidate search must use one SQL roundtrip");
+  assert(candidates.page.total === 200 && candidates.items.length === 50, "candidate search must page 200 matches");
+  assert(JSON.stringify(candidates).length < 262_144, "candidate response must stay below 256 KiB");
+  assert(Math.max(page30Ms, page200Ms, candidateMs) < 1_200, "disposable read budgets must stay below 1200 ms");
+
+  return {
+    candidateMs: Math.round(candidateMs),
+    candidateTotal: candidates.page.total,
+    page30Ms: Math.round(page30Ms),
+    page200Ms: Math.round(page200Ms),
+    scopedStoreTotal: page200Scope.page.total,
+  };
 }
 
 async function seedChecklistEvidence() {
