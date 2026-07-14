@@ -1,24 +1,38 @@
 import { expect, test, type Page } from './test-fixtures'
 import { installStoreContractSession, storeIds } from './store-page-contract-fixtures'
 
-test('BM and VM checklist type filters keep assigned store population visible', async ({ page }) => {
+const workflowStoreId = '11111111-1111-4111-8111-111111111111'
+
+test('BM and VM checklist contracts stay available in the selected-store command overlay', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await routeChecklistContractApi(page)
 
-  await page.goto('/store/checklists?view=workflow')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${workflowStoreId}&workflowTab=visits`)
 
-  await expect(page.locator('.store-checklists-visit-row')).toHaveCount(3)
-
-  await page.getByRole('combobox', { name: 'Şablon tipi' }).click()
-  await page.getByRole('option', { name: 'BM checklist' }).click()
-  await expect(page.locator('.store-checklists-visit-row')).toHaveCount(3)
-
-  await page.getByRole('combobox', { name: 'Şablon tipi' }).click()
-  await page.getByRole('option', { name: 'VM checklist' }).click()
-  await expect(page.locator('.store-checklists-visit-row')).toHaveCount(3)
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
+  await expect(page.getByRole('article').filter({ hasText: 'BM Checklist' })).toBeVisible()
+  await expect(page.getByRole('article').filter({ hasText: 'VM Checklist' })).toBeVisible()
+  await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
 })
 
 async function routeChecklistContractApi(page: Page) {
+  await page.route('**/api/checklists/command-canvas**', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          period: '2026-07',
+          view: 'region_manager',
+          capabilities: {
+            weeklyVisitPlanningAvailable: false,
+            canMaintainWeeklyVisitPlan: false,
+          },
+          metrics: { totalStores: 3, needsVisit: 0, active: 0, pending: 0, completed: 3 },
+          items: [],
+          page: { total: 3, limit: 30, offset: 0, hasMore: false },
+        },
+      },
+    })
+  })
   await page.route('**/api/mobile/checklists/today', async (route) => {
     await route.fulfill({ json: createChecklistTodayFixture() })
   })
@@ -41,11 +55,11 @@ function createChecklistTodayFixture() {
           checklistTemplateId: 'template-contract-vm',
           completedCount: 1,
           monthStart: '2026-07-01',
-          storeId: storeIds[0],
+          storeId: workflowStoreId,
         },
       ],
       pendingAcknowledgements: [],
-      stores: storeIds.map((storeId, index) => ({
+      stores: [workflowStoreId, ...storeIds.slice(1)].map((storeId, index) => ({
         city: ['Balıkesir', 'Bursa', 'İstanbul'][index],
         storeId,
         storeName: ['Balıkesir 10 Burda AVM', 'Bursa Downtown AVM', 'İstanbul MOI AVM'][index],

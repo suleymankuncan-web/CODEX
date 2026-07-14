@@ -17,7 +17,7 @@ type ChecklistRequestLog = {
 test('checklist session modal uses 1-5 score policy and low-score note guard', async ({ page }) => {
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
-  await page.goto('/store/checklists?view=workflow')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   const dialog = page.getByRole('dialog')
@@ -49,11 +49,11 @@ test('checklist session modal uses 1-5 score policy and low-score note guard', a
 test('draft close keeps visit in progress and does not complete the checklist', async ({ page }) => {
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
-  await page.goto('/store/checklists?view=workflow')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
 
-  const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
-  await expect(visitRow).toBeVisible()
-  await page.getByRole('button', { name: 'Devam et' }).click()
+  const workflowDialog = page.getByRole('dialog', { name: 'Checklist akışı' })
+  await expect(workflowDialog.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
+  await workflowDialog.getByRole('button', { name: 'Devam et' }).click()
 
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('radio', { name: '4', exact: true }).click()
@@ -63,9 +63,9 @@ test('draft close keeps visit in progress and does not complete the checklist', 
   page.once('dialog', (confirm) => confirm.accept())
   await dialog.getByRole('button', { name: 'Taslak kaydet' }).click()
 
-  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: 'Checklist akışı' })).toBeVisible()
   await expect.poll(() => requests.completes).toEqual([])
-  await expect(visitRow.getByRole('button', { name: 'Devam et' })).toBeVisible()
+  await expect(workflowDialog.getByRole('button', { name: 'Devam et' })).toBeVisible()
   await expect(page.getByText('Başarıyla Tamamlandı')).toHaveCount(0)
 })
 
@@ -73,7 +73,7 @@ test('checklist session modal keeps footer usable on mobile width', async ({ pag
   await page.setViewportSize({ width: 390, height: 844 })
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
-  await page.goto('/store/checklists?view=workflow')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   const dialog = page.getByRole('dialog')
@@ -113,6 +113,7 @@ async function setupChecklistSessionPolicyPage(page: Page, requests: ChecklistRe
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: createAuthSessionFixture() })
   })
+  await routeChecklistCommandShell(page)
   await page.route('**/api/mobile/checklists/today**', async (route) => {
     await route.fulfill({ json: createMobileChecklistTodayFixture() })
   })
@@ -158,6 +159,22 @@ async function setupChecklistSessionPolicyPage(page: Page, requests: ChecklistRe
         },
       },
     })
+  })
+}
+
+async function routeChecklistCommandShell(page: Page) {
+  const regionId = '12121212-1212-4121-8121-121212121212'
+  await page.route('**/api/checklists/command-canvas**', async (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith('/visit-plans/regions')) {
+      await route.fulfill({ json: { data: { view: 'region_manager', capabilities: { canMaintainWeeklyVisitPlan: true }, items: [{ regionId, regionName: 'Marmara' }], page: { total: 1, limit: 20, offset: 0, hasMore: false } } } })
+      return
+    }
+    if (url.pathname === '/api/checklists/command-canvas') {
+      await route.fulfill({ json: { data: { period: '2026-05', view: 'region_manager', capabilities: { weeklyVisitPlanningAvailable: true, canMaintainWeeklyVisitPlan: true }, metrics: { totalStores: 1, needsVisit: 0, active: 1, pending: 0, completed: 0 }, items: [{ storeId, storeCode: 'MP-01', storeName: 'Marmara Park', regionId, regionName: 'Marmara', regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }], bmScore: null, vmScore: null, bmCompletedAt: null, vmCompletedAt: null, lastCompletedVisitAt: null, elapsedDaysSinceLastVisit: null, activeChecklistCount: 1, pendingAcknowledgementCount: 0, openActionCount: 0, blockedActionCount: 0, status: 'active', reasonCodes: ['active_checklist'], lastOperationalAt: fixtureNow.toISOString() }], page: { total: 1, limit: 30, offset: 0, hasMore: false } } } })
+      return
+    }
+    await route.fallback()
   })
 }
 

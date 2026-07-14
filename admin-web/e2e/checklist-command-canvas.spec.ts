@@ -80,10 +80,33 @@ test('region manager command canvas reads bounded real rows and applies server c
     fullPage: true,
   })
 
-  await page.getByRole('button', { name: /Checklist/ }).first().click()
+  const workflowButton = page.getByRole('button', { name: /Checklist/ }).first()
+  await workflowButton.click()
   await expect(page).toHaveURL(
-    /\/store\/checklists\?view=workflow&storeId=11111111-1111-4111-8111-111111111111/,
+    /\/store\/checklists\?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits/,
   )
+  await expect(page.locator('h1', { hasText: 'Saha Kontrolleri' })).toHaveCount(1)
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
+  await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
+  await expect(workflowButton).toBeFocused()
+  await expect(page).not.toHaveURL(/overlay=/)
+})
+
+test('region manager legacy workflow deep links normalize above Command Canvas without legacy DOM', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await routeChecklistCommand(page, [])
+
+  await page.goto('/store/checklists?view=workflow&storeId=11111111-1111-4111-8111-111111111111&tab=visits')
+
+  await expect(page).toHaveURL(
+    /\/store\/checklists\?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits/,
+  )
+  await expect(page.locator('h1', { hasText: 'Saha Kontrolleri' })).toHaveCount(1)
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
+  await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
 })
 
 test('region manager command canvas stays bounded as mobile cards with 30-row pages', async ({ page }) => {
@@ -754,6 +777,51 @@ async function routeChecklistCommand(
       },
     })
   })
+  await page.route('**/api/mobile/checklists/today', async (route) => {
+    await route.fulfill({ json: createChecklistTodayFixture() })
+  })
+  await page.route('**/api/checklists/acknowledgements/list**', async (route) => {
+    await route.fulfill({ json: { items: [], meta: { count: 0, limit: 50, offset: 0, total: 0 } } })
+  })
+  await page.route('**/api/workflow/inbox**', async (route) => {
+    await route.fulfill({ json: { items: [], meta: { count: 0, limit: 30, offset: 0, total: 0 } } })
+  })
+}
+
+function createChecklistTodayFixture() {
+  return {
+    data: {
+      activeInstances: [],
+      completedThisMonth: [],
+      monthlySummaries: [],
+      pendingAcknowledgements: [],
+      stores: [
+        {
+          city: 'İstanbul',
+          storeId: '11111111-1111-4111-8111-111111111111',
+          storeName: 'Marmara Park',
+        },
+      ],
+      templates: [
+        {
+          checklistTemplateId: 'template-command-bm',
+          items: [],
+          templateCode: 'BM_STORE_VISIT_2026',
+          templateName: 'BM Mağaza Ziyareti',
+          templateType: 'BM_STORE_VISIT',
+          versionNo: 1,
+        },
+        {
+          checklistTemplateId: 'template-command-vm',
+          items: [],
+          templateCode: 'VM_STORE_VISIT_2026',
+          templateName: 'VM Mağaza Ziyareti',
+          templateType: 'VM_STORE_VISIT',
+          versionNo: 1,
+        },
+      ],
+    },
+  }
 }
 
 function buildRegionOptionsResponse(items: Array<{ regionId: string; regionName: string }>) {

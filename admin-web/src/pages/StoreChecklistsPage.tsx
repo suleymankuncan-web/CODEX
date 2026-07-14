@@ -1,39 +1,73 @@
+import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { resolveStorePersona } from '../app/store-route-registry'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { RegionManagerChecklistCommandPage } from '../features/checklist-command/RegionManagerChecklistCommandPage'
 import { ChecklistWorkflowLegacySurface } from '../features/checklist-workflow/ChecklistWorkflowLegacySurface'
+import { ChecklistWorkflowCommandOverlay } from '../features/checklist-workflow/ChecklistWorkflowCommandOverlay'
+import {
+  buildChecklistWorkflowOverlaySearch,
+  resolveChecklistWorkflowRouteState,
+} from '../features/checklist-workflow/checklist-workflow-route-state'
 
 export function StoreChecklistsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const params = new URLSearchParams(location.search)
-  const showLegacyWorkflow =
-    params.get('view') === 'workflow' ||
-    params.has('tab') ||
-    params.has('result') ||
-    params.has('status')
+  const persona = resolveStorePersona(input.authSummary)
+  const workflowRoute = resolveChecklistWorkflowRouteState(location.search)
+  const overlayTriggerRef = useRef<HTMLElement | null>(null)
 
-  if (resolveStorePersona(input.authSummary) === 'regionManager' && !showLegacyWorkflow) {
+  useEffect(() => {
+    if (persona !== 'regionManager' || !workflowRoute.shouldReplace) return
+    navigate(
+      { pathname: location.pathname, search: workflowRoute.normalizedSearch },
+      { replace: true },
+    )
+  }, [location.pathname, navigate, persona, workflowRoute.normalizedSearch, workflowRoute.shouldReplace])
+
+  if (persona === 'regionManager') {
     return (
-      <RegionManagerChecklistCommandPage
-        authSummary={input.authSummary}
-        onOpenWorkflow={(storeId) => {
-          const next = new URLSearchParams(location.search)
-          next.set('view', 'workflow')
-          next.set('storeId', storeId)
-          navigate({ pathname: location.pathname, search: `?${next.toString()}` })
-        }}
-        onOpenResult={(checklistInstanceId) => {
-          const next = new URLSearchParams(location.search)
-          next.set('view', 'workflow')
-          next.set('result', checklistInstanceId)
-          next.delete('storeId')
-          navigate({ pathname: location.pathname, search: `?${next.toString()}` })
-        }}
-      />
+      <>
+        <RegionManagerChecklistCommandPage
+          authSummary={input.authSummary}
+          onOpenWorkflow={(storeId) => {
+            overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+            navigate({
+              pathname: location.pathname,
+              search: buildChecklistWorkflowOverlaySearch(location.search, {
+                kind: 'workflow',
+                storeId,
+                tab: 'visits',
+              }),
+            })
+          }}
+          onOpenResult={(checklistInstanceId) => {
+            overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+            navigate({
+              pathname: location.pathname,
+              search: buildChecklistWorkflowOverlaySearch(location.search, {
+                kind: 'result',
+                checklistInstanceId,
+              }),
+            })
+          }}
+        />
+        {workflowRoute.state ? (
+          <ChecklistWorkflowCommandOverlay
+            authSummary={input.authSummary}
+            routeState={workflowRoute.state}
+            returnFocusRef={overlayTriggerRef}
+            onClose={() => {
+              navigate({
+                pathname: location.pathname,
+                search: buildChecklistWorkflowOverlaySearch(location.search, null),
+              })
+            }}
+          />
+        ) : null}
+      </>
     )
   }
 

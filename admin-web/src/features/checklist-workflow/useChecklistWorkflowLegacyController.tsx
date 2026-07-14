@@ -99,6 +99,7 @@ export function useChecklistWorkflowLegacyController(input: {
   const location = useLocation()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const checklistCommandQueryKey = ['checklist-command'] as const
   const commandStoreId = new URLSearchParams(location.search).get('storeId')?.trim() ?? ''
   const [pageState, dispatchPageState] = useReducer(
     storeChecklistsReducer,
@@ -184,6 +185,7 @@ export function useChecklistWorkflowLegacyController(input: {
     onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: checklistAcknowledgementsQueryKey })
       void queryClient.invalidateQueries({ queryKey: workflowInboxQueryKey })
+      void queryClient.refetchQueries({ queryKey: checklistCommandQueryKey, type: 'active' })
       dispatchPageState({
         type: 'acknowledgeSucceeded',
         checklistInstanceId: variables.checklistInstanceId,
@@ -203,6 +205,7 @@ export function useChecklistWorkflowLegacyController(input: {
     mutationFn: startMobileChecklistInstance,
     onSuccess: (result, variables) => {
       void queryClient.invalidateQueries({ queryKey: mobileChecklistsTodayQueryKey })
+      void queryClient.refetchQueries({ queryKey: checklistCommandQueryKey, type: 'active' })
       const instance = result.data.checklistInstance
       const rowKey = getCoverageRowKey(variables.storeId, variables.checklistTemplateId)
       dispatchPageState({
@@ -302,6 +305,7 @@ export function useChecklistWorkflowLegacyController(input: {
       void queryClient.invalidateQueries({ queryKey: mobileChecklistsTodayQueryKey })
       void queryClient.invalidateQueries({ queryKey: checklistAcknowledgementsQueryKey })
       void queryClient.invalidateQueries({ queryKey: workflowInboxQueryKey })
+      void queryClient.refetchQueries({ queryKey: checklistCommandQueryKey, type: 'active' })
       dispatchPageState({
         type: 'completeVisitSucceeded',
         completedInstance: completedChecklistInstance,
