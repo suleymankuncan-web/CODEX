@@ -1116,7 +1116,7 @@ const authSessionResponseSchema = {
         roleCodes: {
           type: "array",
           items: { type: "string" },
-        },
+        }, authorizationContextVersion: { type: "string", pattern: "^v1:[a-f0-9]{64}$" },
         scope: authScopeIdListSchema,
         readScope: authScopeIdListSchema,
         actionScope: authActionScopeSchema,

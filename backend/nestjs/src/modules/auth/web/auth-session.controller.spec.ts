@@ -65,6 +65,9 @@ describe("AuthSessionController", () => {
           username: "store.manager",
           email: "store.manager@example.com",
           roleCodes: ["STORE_MANAGER"],
+          roleScopes: {
+            STORE_MANAGER: { companyIds: [], regionIds: [], storeIds: ["store-1"] },
+          },
           scope: { companyIds: [], regionIds: [], storeIds: ["store-1"] },
           readScope: { companyIds: [], regionIds: [], storeIds: ["store-1"] },
           actionScope: { assignedStoreIds: ["store-1"] },
@@ -76,6 +79,7 @@ describe("AuthSessionController", () => {
         displayName: "Mert Kaya",
         username: "store.manager",
         email: "store.manager@example.com",
+        authorizationContextVersion: expect.stringMatching(/^v1:[a-f0-9]{64}$/),
       },
     });
   });

@@ -8,6 +8,7 @@ import {
   Res,
   UnauthorizedException,
 } from "@nestjs/common";
+import { buildAuthorizationContextVersion } from "../authorization-context-version";
 import { AppConfigService } from "../../../shared/app-config.service";
 import { AuthContextService, AuthenticatedUser } from "../auth-context.service";
 import { BrowserSessionService } from "../browser-session.service";
@@ -152,6 +153,7 @@ export class AuthSessionController {
         username: user.username ?? null,
         email: user.email ?? null,
         roleCodes: user.roleCodes,
+        authorizationContextVersion: buildAuthorizationContextVersion(user.roleScopes),
         scope: {
           companyIds: user.scope.companyIds,
           regionIds: user.scope.regionIds,

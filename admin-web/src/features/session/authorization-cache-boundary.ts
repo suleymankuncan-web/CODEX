@@ -14,6 +14,7 @@ export function buildEffectiveAuthorizationFingerprint(
 
   const value = JSON.stringify({
     userId: user.userId.trim(),
+    authorizationContextVersion: user.authorizationContextVersion ?? 'legacy',
     roleCodes: sortedUnique(user.roleCodes ?? []),
     scope: {
       companyIds: sortedUnique(user.scope?.companyIds ?? []),
