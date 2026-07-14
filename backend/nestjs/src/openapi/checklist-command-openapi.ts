@@ -12,6 +12,7 @@ import {
   checklistVisitPlanRegionOptionResponseSchema,
   checklistVisitPlanRegionOptionSchema,
 } from "./checklist-visit-plan-region-option-openapi";
+import { applyChecklistOperationalHistoryOpenApi } from "./checklist-operational-history-openapi";
 
 type MutableOpenApiDocument = {
   components?: { schemas?: Record<string, unknown> };
@@ -436,6 +437,7 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     ChecklistVisitPlanRegionOption: checklistVisitPlanRegionOptionSchema,
     ChecklistVisitPlanRegionOptionResponse: checklistVisitPlanRegionOptionResponseSchema,
   };
+  applyChecklistOperationalHistoryOpenApi(document);
 
   const path = "/api/checklists/command-canvas";
   setJsonResponseSchema(

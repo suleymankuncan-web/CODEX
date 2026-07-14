@@ -40,6 +40,30 @@ describe("Checklist Command OpenAPI", () => {
     expect(rowProperties).not.toHaveProperty("resolutionNote");
   });
 
+  it("publishes the allowlisted cursor-paginated operational history contract", () => {
+    const document = JSON.parse(
+      readFileSync(resolve(process.cwd(), "../../docs/api/openapi.json"), "utf8"),
+    ) as OpenApiDocument;
+    const operation = document.paths["/api/checklists/command-canvas/stores/{storeId}/operational-history"].get;
+
+    expect(operation.responses?.["200"]?.content?.["application/json"]?.schema).toEqual({
+      $ref: "#/components/schemas/ChecklistOperationalHistoryResponse",
+    });
+    expect(operation.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "storeId", in: "path", schema: { type: "string", format: "uuid" } }),
+      expect.objectContaining({ name: "range", in: "query", schema: expect.objectContaining({ enum: ["3m", "6m", "12m", "all"] }) }),
+      expect.objectContaining({ name: "kinds", in: "query" }),
+      expect.objectContaining({ name: "cursor", in: "query" }),
+    ]));
+    const response = document.components?.schemas?.ChecklistOperationalHistoryResponse as any;
+    const event = document.components?.schemas?.ChecklistOperationalHistoryEvent as any;
+    expect(response.properties.data.properties.page.properties).toEqual(expect.objectContaining({ nextCursor: expect.anything(), hasMore: expect.anything() }));
+    expect(event.properties.actorSnapshot.properties.identityStatus.enum).toEqual(["captured", "historical_projection", "unknown"]);
+    expect(event.properties).not.toHaveProperty("sourceId");
+    expect(event.properties).not.toHaveProperty("metadata");
+    expect(JSON.stringify(event)).not.toMatch(/email|username|acknowledgementNote|resolutionNote|comment|auditor/i);
+  });
+
   it("publishes the Report Viewer-only bounded region aggregate response", () => {
     const document = JSON.parse(
       readFileSync(resolve(process.cwd(), "../../docs/api/openapi.json"), "utf8"),

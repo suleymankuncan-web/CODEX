@@ -566,6 +566,44 @@ export type components = {
       "reasonCodes": Array<"active_checklist" | "pending_acknowledgement" | "missing_bm_visit" | "missing_vm_visit" | "open_actions" | "completed_period">
       "lastOperationalAt": string | null
     }
+    "ChecklistOperationalHistoryEvent": {
+      "id": string
+      "kind": "checklist_completed" | "acknowledgement" | "task_assigned" | "task_resolved" | "visit_plan_revised"
+      "occurredAt": string
+      "title": string
+      "detail": string | null
+      "actorSnapshot": {
+        "displayName": string | null
+        "roleLabel": string | null
+        "assignmentLabel": string | null
+        "identityStatus": "captured" | "historical_projection" | "unknown"
+      }
+      "details": Array<{
+          "label": string
+          "value": string
+        }>
+    }
+    "ChecklistOperationalHistoryResponse": {
+      "data": {
+        "store": {
+          "id": string
+          "name": string
+          "city": string | null
+          "district": string | null
+        }
+        "summary": {
+          "eventCount": number
+          "completedVisitCount": number
+          "assignedTaskCount": number
+          "openTaskCount": number
+        }
+        "items": components['schemas']["ChecklistOperationalHistoryEvent"][]
+        "page": {
+          "nextCursor": string | null
+          "hasMore": boolean
+        }
+      }
+    }
     "ChecklistVisitPlan": {
       "planId": string | null
       "regionId": string
@@ -3702,6 +3740,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ChecklistCommandRegionResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/stores/{storeId}/operational-history": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistOperationalHistoryResponse"]
           }
         }
       }
