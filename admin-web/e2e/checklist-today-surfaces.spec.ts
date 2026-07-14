@@ -17,7 +17,7 @@ const checklistFixtureNow = new Date('2026-05-20T12:00:00.000Z')
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await expect(page.locator('.store-checklists-command-page .stacked-row')).toHaveCount(0)
   await expect(page.locator('.store-checklists-attention')).toHaveCount(0)
@@ -59,7 +59,7 @@ test('region manager checklist surface shows assigned store visit workflow', asy
 test('continued checklist closes after successful completion', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['REGION_MANAGER'], { requests })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   await answerChecklistScoreQuestion(page, '8', 'Continued checklist should close')
@@ -96,7 +96,7 @@ test('continued checklist with saved draft responses completes without another e
     monthlySummaries: [],
     requests,
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('button', { name: 'Devam et' }).click()
   await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
@@ -205,7 +205,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
     roleState,
     showStartedInstanceOnRefetch: true,
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
   const visitDateCell = visitRow.locator('.store-checklists-date-cell').first()
@@ -373,7 +373,7 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
 
 test('region manager can read BM and VM checklist results without acknowledging them', async ({ page }) => {
   await setupChecklistPage(page, ['REGION_MANAGER'])
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('tab', { name: /Sonuç kabul/ }).click()
   await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toBeVisible()
@@ -411,7 +411,7 @@ test('region manager visit flow reads VM score but starts BM checklist only', as
     ],
     requests,
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
   await expect(visitRow).toBeVisible()
@@ -441,7 +441,7 @@ test('region manager keeps BM checklist action available while reading the VM fi
     ],
     requests,
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('combobox', { name: 'Template type' }).click()
   await page.getByRole('option', { name: 'VM Checklist' }).click()
@@ -647,7 +647,7 @@ test('visit plan evaluates all-period filter against current month', async ({ pa
       },
     ],
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
   await page.getByRole('option', { name: 'Tüm aylar' }).click()
@@ -680,7 +680,7 @@ test('visit plan keeps missing stores visible for a selected past month', async 
     ],
     stores,
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
   await page.getByRole('option', { name: 'Nisan 2026' }).click()
@@ -714,7 +714,7 @@ test('visit plan uses acknowledgement scores for a selected historical month acr
     completedThisMonth: [],
     monthlySummaries: [],
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
   await page.getByRole('option', { name: 'Nisan 2026' }).click()
@@ -751,7 +751,7 @@ test('visit plan applies pending status after deriving acknowledgement reasons',
       },
     ],
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('combobox', { name: 'Durum' }).click()
   await page.getByRole('option', { name: 'Kabul bekliyor' }).click()
@@ -840,7 +840,7 @@ test('visit plan handles 200 stores without extra tab-switch network', async ({ 
     }
   })
   await setupChecklistPage(page, ['REGION_MANAGER'], fixtureOptions)
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
   await expect(page.getByRole('tab', { name: /Ziyaret planı/ })).toBeVisible()
   const requestCountBeforePlanTab = apiRequests.length
 
@@ -1069,7 +1069,7 @@ test('checklist completion waits for API success before showing completed notice
     completeFailureMessage: 'Checklist complete failed',
     requests,
   })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await page.getByRole('button', { name: 'Continue' }).click()
   await answerChecklistScoreQuestion(page, '8', 'Completion should wait')
@@ -1114,7 +1114,7 @@ test('store manager checklist result modal stays usable on mobile width', async 
 test('checklist visit surface stays usable on mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 844 })
   await setupChecklistPage(page, ['REGION_MANAGER'], { longCopy: true })
-  await page.goto('/store/checklists')
+  await page.goto('/store/checklists?view=workflow')
 
   await expect(page.getByRole('combobox', { name: 'Checklist bölümleri' })).toBeVisible()
   await expect(page.getByRole('tab', { name: /Ziyaretler/ })).toHaveCount(0)
