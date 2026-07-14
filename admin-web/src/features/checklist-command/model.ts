@@ -29,7 +29,7 @@ export function buildChecklistCommandQuery(input: ChecklistCommandQueryInput) {
   query.set('period', input.period)
   if (input.status !== 'all') query.set('status', input.status)
   query.set('sort', input.sort)
-  if (input.query.trim()) query.set('q', input.query.trim())
+  if (input.query.trim()) query.set('query', input.query.trim())
   query.set('limit', String(input.limit))
   query.set('offset', String(input.offset))
   return query

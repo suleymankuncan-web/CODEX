@@ -18,7 +18,7 @@ describe('checklist command canvas model', () => {
         limit: 30,
         offset: 0,
       }).toString(),
-    ).toBe('period=2026-07&sort=store_asc&q=Novada&limit=30&offset=0')
+    ).toBe('period=2026-07&sort=store_asc&query=Novada&limit=30&offset=0')
   })
 
   it('builds an Istanbul business period from explicit month and year', () => {
