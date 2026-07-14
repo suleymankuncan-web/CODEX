@@ -1,6 +1,86 @@
 import { ChecklistCommandReadService } from "./checklist-command-read.service";
 
 describe("ChecklistCommandReadService", () => {
+  it("returns bounded Report Viewer region aggregates from only the role company scope", async () => {
+    const repository = {
+      list: jest.fn(),
+      listRegions: jest.fn(async () => ({
+        period: "2026-07",
+        metrics: {
+          totalStores: 40,
+          missingVisitStores: 7,
+          storesWithOpenActions: 5,
+          openActionCount: 8,
+          completedCoverageStores: 33,
+        },
+        items: [{ regionId: "region-1" }],
+        total: 1,
+      })),
+    };
+    const service = new ChecklistCommandReadService(repository as never);
+
+    await expect(
+      service.listRegions({
+        actorRoleCodes: ["REPORT_VIEWER"],
+        actorReadScope: { companyIds: ["aggregate-company"], regionIds: [], storeIds: [] },
+        roleScopes: {
+          REPORT_VIEWER: { companyIds: ["viewer-company"], regionIds: [], storeIds: [] },
+        },
+        period: "2026-07",
+        signal: "missing_visit",
+        sort: "missing_desc",
+        limit: 20,
+        offset: 0,
+      }),
+    ).resolves.toEqual(expect.objectContaining({
+      view: "report_viewer",
+      page: { total: 1, limit: 20, offset: 0, hasMore: false },
+    }));
+    expect(repository.listRegions).toHaveBeenCalledWith(expect.objectContaining({
+      companyIds: ["viewer-company"],
+      signal: "missing_visit",
+    }));
+  });
+
+  it("rejects non Report Viewer roles from region aggregates", async () => {
+    const repository = { list: jest.fn(), listRegions: jest.fn() };
+    const service = new ChecklistCommandReadService(repository as never);
+
+    await expect(service.listRegions({
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorReadScope: { companyIds: [], regionIds: ["region-1"], storeIds: [] },
+      roleScopes: {
+        REGION_MANAGER: { companyIds: [], regionIds: ["region-1"], storeIds: [] },
+      },
+    })).rejects.toThrow("Report Viewer");
+    expect(repository.listRegions).not.toHaveBeenCalled();
+  });
+
+  it("fails closed without querying when Report Viewer company scope is empty", async () => {
+    const repository = { list: jest.fn(), listRegions: jest.fn() };
+    const service = new ChecklistCommandReadService(repository as never);
+
+    await expect(service.listRegions({
+      actorRoleCodes: ["REPORT_VIEWER"],
+      actorReadScope: { companyIds: ["aggregate-company-must-not-leak"], regionIds: [], storeIds: [] },
+      roleScopes: {
+        REPORT_VIEWER: { companyIds: [], regionIds: [], storeIds: [] },
+      },
+      period: "2026-07",
+    })).resolves.toEqual(expect.objectContaining({
+      metrics: {
+        totalStores: 0,
+        missingVisitStores: 0,
+        storesWithOpenActions: 0,
+        openActionCount: 0,
+        completedCoverageStores: 0,
+      },
+      items: [],
+      page: { total: 0, limit: 20, offset: 0, hasMore: false },
+    }));
+    expect(repository.listRegions).not.toHaveBeenCalled();
+  });
+
   it("returns a Region Manager page from only the Region Manager role scope", async () => {
     const repository = {
       list: jest.fn(async () => ({
