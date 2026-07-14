@@ -127,3 +127,15 @@ export type ChecklistVisitPlanCandidateResult = {
   items: ChecklistVisitPlanCandidate[];
   page: { total: number; limit: number; offset: number; hasMore: boolean };
 };
+
+export type ChecklistVisitPlanRegionOption = {
+  regionId: string;
+  regionName: string;
+};
+
+export type ChecklistVisitPlanRegionOptionResult = {
+  view: "region_manager";
+  capabilities: { canMaintainWeeklyVisitPlan: true };
+  items: ChecklistVisitPlanRegionOption[];
+  page: { total: number; limit: number; offset: number; hasMore: boolean };
+};

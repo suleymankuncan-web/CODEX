@@ -7,6 +7,7 @@ import type {
   ChecklistVisitPlanPeriodResult,
   ChecklistVisitPlanPeriodSort,
   ChecklistVisitPlanPeriodStatus,
+  ChecklistVisitPlanRegionOptionResult,
   ChecklistVisitPlanReason,
   ChecklistVisitPlanRisk,
   SaveChecklistVisitPlanItem,
@@ -44,6 +45,7 @@ type ListCandidatesInput = ReadActor & {
   limit?: number;
   offset?: number;
 };
+type ListRegionOptionsInput = ReadActor & { query?: string; limit?: number; offset?: number };
 
 @Injectable()
 export class ChecklistVisitPlanService {
@@ -101,6 +103,24 @@ export class ChecklistVisitPlanService {
         offset,
         hasMore: offset + result.items.length < result.total,
       },
+    };
+  }
+
+  async listRegionOptions(input: ListRegionOptionsInput): Promise<ChecklistVisitPlanRegionOptionResult> {
+    if (!input.actorRoleCodes.includes("REGION_MANAGER")) {
+      throw new ForbiddenException("Visit plan regions are available only to Region Managers");
+    }
+    const regionIds = [...new Set(input.roleScopes?.REGION_MANAGER?.regionIds ?? [])];
+    const limit = input.limit ?? 20;
+    const offset = input.offset ?? 0;
+    const result = regionIds.length > 0
+      ? await this.repository.listRegionOptions({ regionIds, query: input.query?.trim() || null, limit, offset })
+      : { items: [], total: 0 };
+    return {
+      view: "region_manager",
+      capabilities: { canMaintainWeeklyVisitPlan: true },
+      items: result.items,
+      page: { total: result.total, limit, offset, hasMore: offset + result.items.length < result.total },
     };
   }
 

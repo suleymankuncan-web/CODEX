@@ -7,10 +7,30 @@ import { GetChecklistVisitPlanQueryDto } from "./dto/get-checklist-visit-plan.qu
 import { SaveChecklistVisitPlanDto } from "./dto/save-checklist-visit-plan.dto";
 import { ListChecklistVisitPlanCandidatesQueryDto } from "./dto/list-checklist-visit-plan-candidates.query";
 import { ListChecklistVisitPlanPeriodQueryDto } from "./dto/list-checklist-visit-plan-period.query";
+import { ListChecklistVisitPlanRegionsQueryDto } from "./dto/list-checklist-visit-plan-regions.query";
 
 @Controller("checklists/command-canvas/visit-plans")
 export class ChecklistVisitPlanController {
   constructor(private readonly service: ChecklistVisitPlanService) {}
+
+  @Get("regions")
+  @RequireScope("authenticated")
+  @RequireRoles("REGION_MANAGER")
+  async listRegionOptions(
+    @Req() request: { user: AuthenticatedUser },
+    @Query() query: ListChecklistVisitPlanRegionsQueryDto,
+  ) {
+    return {
+      data: await this.service.listRegionOptions({
+        actorRoleCodes: request.user.roleCodes,
+        actorReadScope: request.user.readScope,
+        roleScopes: request.user.roleScopes,
+        query: query.query,
+        limit: query.limit,
+        offset: query.offset,
+      }),
+    };
+  }
 
   @Get("period")
   @RequireScope("authenticated")

@@ -98,6 +98,18 @@ describe("Checklist Command OpenAPI", () => {
     ) as OpenApiDocument;
     const period = document.paths["/api/checklists/command-canvas/visit-plans/period"].get;
     const candidates = document.paths["/api/checklists/command-canvas/visit-plans/candidates"].get;
+    const regions = document.paths["/api/checklists/command-canvas/visit-plans/regions"].get;
+
+    expect(regions.responses["200"].content["application/json"].schema).toEqual({
+      $ref: "#/components/schemas/ChecklistVisitPlanRegionOptionResponse",
+    });
+    expect(regions.parameters).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "query" }),
+      expect.objectContaining({ name: "limit", schema: expect.objectContaining({ maximum: 50 }) }),
+      expect.objectContaining({ name: "offset" }),
+    ]));
+    const regionItem = document.components?.schemas?.ChecklistVisitPlanRegionOption as any;
+    expect(Object.keys(regionItem.properties)).toEqual(["regionId", "regionName"]);
 
     expect(period.responses["200"].content["application/json"].schema).toEqual({
       $ref: "#/components/schemas/ChecklistVisitPlanPeriodResponse",

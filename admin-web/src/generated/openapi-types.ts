@@ -658,6 +658,25 @@ export type components = {
       "planStatus": "unplanned" | "waiting" | "missed" | "completed" | "mixed"
       "planItems": components['schemas']["ChecklistVisitPlanPeriodItem"][]
     }
+    "ChecklistVisitPlanRegionOption": {
+      "regionId": string
+      "regionName": string
+    }
+    "ChecklistVisitPlanRegionOptionResponse": {
+      "data": {
+        "view": "region_manager"
+        "capabilities": {
+          "canMaintainWeeklyVisitPlan": true
+        }
+        "items": components['schemas']["ChecklistVisitPlanRegionOption"][]
+        "page": {
+          "total": number
+          "limit": number
+          "offset": number
+          "hasMore": boolean
+        }
+      }
+    }
     "ChecklistVisitPlanResponse": {
       "data": components['schemas']["ChecklistVisitPlan"]
     }
@@ -3694,6 +3713,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["ChecklistVisitPlanResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas/visit-plans/regions": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistVisitPlanRegionOptionResponse"]
           }
         }
       }

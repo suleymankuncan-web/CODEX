@@ -175,4 +175,29 @@ describe("ChecklistVisitPlanRepository", () => {
     expect(sql).toContain("ESCAPE '\\'");
     expect(sql).toContain("ORDER BY store_code ASC, store_id ASC");
   });
+
+  it("lists only active named region options from the supplied role scope in one query", async () => {
+    const query = jest.fn().mockResolvedValue({ rows: [{ total_count: 200, items_json: [
+      { regionId: "22222222-2222-4222-8222-222222222222", regionName: "Ege" },
+      { regionId: "33333333-3333-4333-8333-333333333333", regionName: "Marmara" },
+    ] }] });
+    const repository = new ChecklistVisitPlanRepository({ query } as never);
+    await expect(repository.listRegionOptions({
+      regionIds: ["33333333-3333-4333-8333-333333333333", "22222222-2222-4222-8222-222222222222"],
+      query: "%_\\", limit: 2, offset: 2,
+    })).resolves.toEqual({ total: 200, items: [
+      { regionId: "22222222-2222-4222-8222-222222222222", regionName: "Ege" },
+      { regionId: "33333333-3333-4333-8333-333333333333", regionName: "Marmara" },
+    ] });
+    expect(query).toHaveBeenCalledTimes(1);
+    expect(query.mock.calls[0][1]).toEqual([
+      ["33333333-3333-4333-8333-333333333333", "22222222-2222-4222-8222-222222222222"],
+      "\\%\\_\\\\", 2, 2,
+    ]);
+    const sql = query.mock.calls[0][0] as string;
+    expect(sql).toContain("region.region_id = ANY($1::uuid[])");
+    expect(sql).toContain("region.status = 'active'");
+    expect(sql).toContain("ORDER BY region_name ASC, region_id ASC");
+    expect(sql).toContain("LIMIT $3 OFFSET $4");
+  });
 });

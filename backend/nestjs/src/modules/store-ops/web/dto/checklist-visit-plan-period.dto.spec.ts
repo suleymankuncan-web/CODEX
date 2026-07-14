@@ -3,8 +3,17 @@ import { plainToInstance } from "class-transformer";
 import { validateSync } from "class-validator";
 import { ListChecklistVisitPlanCandidatesQueryDto } from "./list-checklist-visit-plan-candidates.query";
 import { ListChecklistVisitPlanPeriodQueryDto } from "./list-checklist-visit-plan-period.query";
+import { ListChecklistVisitPlanRegionsQueryDto } from "./list-checklist-visit-plan-regions.query";
 
 describe("checklist visit plan period DTOs", () => {
+  it("caps region option pages and validates their bounded search", () => {
+    expect(validateSync(plainToInstance(ListChecklistVisitPlanRegionsQueryDto, {
+      query: "Marmara", limit: "50", offset: "200",
+    }))).toHaveLength(0);
+    expect(validateSync(plainToInstance(ListChecklistVisitPlanRegionsQueryDto, {
+      limit: "51", offset: "-1",
+    }))).toHaveLength(2);
+  });
   it("accepts bounded period filters and candidate paging", () => {
     expect(validateSync(plainToInstance(ListChecklistVisitPlanPeriodQueryDto, {
       regionId: "11111111-1111-4111-8111-111111111111",
