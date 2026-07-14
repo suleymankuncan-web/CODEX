@@ -75,6 +75,10 @@ test('database invariant preflight SQL is read only and covers every required ch
   const dedicatedChecks = new Set([
     'ops.employee_assignment_history',
     'ops.region',
+    // Migration 061 enforces store/region identity with a composite FK and a
+    // rollback-only PostgreSQL negative smoke; impossible rows never enter
+    // the read-only ORG-04 inventory.
+    'ops.region_weekly_visit_plan_item',
     'ops.store',
     'ops.user_role_assignment',
   ])
