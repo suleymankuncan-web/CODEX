@@ -7,9 +7,10 @@ import { ChecklistAcknowledgementRepository } from "./infrastructure/checklist-a
 import { ChecklistRepository } from "./infrastructure/checklist.repository";
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
 import { StoreOpsTargetsModule } from "./store-ops-targets.module";
+import { StoreOpsChecklistCommandModule } from "./store-ops-checklist-command.module";
 
 @Module({
-  imports: [StoreOpsTargetsModule],
+  imports: [StoreOpsTargetsModule, StoreOpsChecklistCommandModule],
   controllers: [
     ChecklistController,
     AdminChecklistTemplateController,

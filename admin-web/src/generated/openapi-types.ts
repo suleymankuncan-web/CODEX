@@ -480,6 +480,53 @@ export type components = {
     "CancelStoreActionPlanRequest": {
       "cancelReason": string
     }
+    "ChecklistCommandResponse": {
+      "data": {
+        "period": string
+        "view": "report_viewer" | "region_manager" | "store_manager" | "visual_merchandiser" | "super_admin"
+        "capabilities": {
+          "weeklyVisitPlanningAvailable": boolean
+          "canMaintainWeeklyVisitPlan": boolean
+        }
+        "metrics": {
+          "totalStores": number
+          "needsVisit": number
+          "active": number
+          "pending": number
+          "completed": number
+        }
+        "items": components['schemas']["ChecklistCommandRow"][]
+        "page": {
+          "total": number
+          "limit": number
+          "offset": number
+          "hasMore": boolean
+        }
+      }
+    }
+    "ChecklistCommandRow": {
+      "storeId": string
+      "storeCode": string
+      "storeName": string
+      "regionId": string
+      "regionName": string
+      "regionManagers": Array<{
+          "displayName": string
+        }>
+      "bmScore": number | null
+      "vmScore": number | null
+      "bmCompletedAt": string | null
+      "vmCompletedAt": string | null
+      "lastCompletedVisitAt": string | null
+      "elapsedDaysSinceLastVisit": number | null
+      "activeChecklistCount": number
+      "pendingAcknowledgementCount": number
+      "openActionCount": number
+      "blockedActionCount": number
+      "status": "needs_visit" | "active" | "pending" | "completed"
+      "reasonCodes": Array<"active_checklist" | "pending_acknowledgement" | "missing_bm_visit" | "missing_vm_visit" | "open_actions" | "completed_period">
+      "lastOperationalAt": string | null
+    }
     "ClassifyPilotFeedbackRequest": {
       "classification": "p0_stop" | "p1_pilot_blocker" | "p2_pilot_friction" | "p3_backlog"
       "note"?: string
@@ -3471,6 +3518,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["MobileChecklistTodayResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/checklists/command-canvas": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["ChecklistCommandResponse"]
           }
         }
       }
