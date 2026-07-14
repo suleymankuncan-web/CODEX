@@ -8,6 +8,10 @@ import {
   checklistVisitPlanReasons,
   checklistVisitPlanRisks,
 } from "../modules/store-ops/application/checklist-visit-plan.contract";
+import {
+  checklistVisitPlanRegionOptionResponseSchema,
+  checklistVisitPlanRegionOptionSchema,
+} from "./checklist-visit-plan-region-option-openapi";
 
 type MutableOpenApiDocument = {
   components?: { schemas?: Record<string, unknown> };
@@ -429,6 +433,8 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
     ChecklistVisitPlanPeriodRow: checklistVisitPlanPeriodRowSchema,
     ChecklistVisitPlanPeriodResponse: checklistVisitPlanPeriodResponseSchema,
     ChecklistVisitPlanCandidateResponse: checklistVisitPlanCandidateResponseSchema,
+    ChecklistVisitPlanRegionOption: checklistVisitPlanRegionOptionSchema,
+    ChecklistVisitPlanRegionOptionResponse: checklistVisitPlanRegionOptionResponseSchema,
   };
 
   const path = "/api/checklists/command-canvas";
@@ -477,6 +483,20 @@ export function applyChecklistCommandOpenApi(document: MutableOpenApiDocument) {
   setQueryParameters(document.paths, visitPlansPath, "get", [
     requiredQueryParameter("regionId", { type: "string", format: "uuid" }),
     requiredQueryParameter("weekStart", { type: "string", format: "date" }),
+  ]);
+
+  const visitPlanRegionsPath = "/api/checklists/command-canvas/visit-plans/regions";
+  setJsonResponseSchema(
+    document.paths,
+    visitPlanRegionsPath,
+    "get",
+    "Named active regions from the authenticated Region Manager role scope.",
+    "ChecklistVisitPlanRegionOptionResponse",
+  );
+  setQueryParameters(document.paths, visitPlanRegionsPath, "get", [
+    queryParameter("query", { type: "string", maxLength: 120 }),
+    queryParameter("limit", { type: "integer", minimum: 1, maximum: 50 }),
+    queryParameter("offset", { type: "integer", minimum: 0 }),
   ]);
 
   const saveVisitPlanPath = "/api/checklists/command-canvas/visit-plans/{regionId}/{weekStart}";

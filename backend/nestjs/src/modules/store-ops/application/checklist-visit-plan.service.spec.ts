@@ -8,6 +8,7 @@ describe("ChecklistVisitPlanService", () => {
     saveWeeklyPlan: jest.fn(),
     listPeriod: jest.fn(),
     listCandidates: jest.fn(),
+    listRegionOptions: jest.fn(),
   };
   const service = new ChecklistVisitPlanService(repository as never);
 
@@ -119,5 +120,53 @@ describe("ChecklistVisitPlanService", () => {
       actorRoleCodes: ["REGION_MANAGER"],
       roleScopes: { REGION_MANAGER: { ...empty, regionIds: ["22222222-2222-4222-8222-222222222222"] } },
     })).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it("lists only named Region Manager role-scope regions in one bounded read", async () => {
+    const regionIds = [
+      "33333333-3333-4333-8333-333333333333",
+      "22222222-2222-4222-8222-222222222222",
+    ];
+    repository.listRegionOptions.mockResolvedValue({ total: 200, items: [
+      { regionId: regionIds[1], regionName: "Ege" },
+      { regionId: regionIds[0], regionName: "Marmara" },
+    ] });
+
+    await expect(service.listRegionOptions({
+      actorRoleCodes: ["REPORT_VIEWER", "REGION_MANAGER"],
+      actorReadScope: empty,
+      roleScopes: {
+        REPORT_VIEWER: { ...empty, regionIds: ["99999999-9999-4999-8999-999999999999"] },
+        REGION_MANAGER: { ...empty, regionIds },
+      },
+      query: "  Bölge ", limit: 2, offset: 2,
+    })).resolves.toEqual({
+      view: "region_manager",
+      capabilities: { canMaintainWeeklyVisitPlan: true },
+      items: [
+        { regionId: regionIds[1], regionName: "Ege" },
+        { regionId: regionIds[0], regionName: "Marmara" },
+      ],
+      page: { total: 200, limit: 2, offset: 2, hasMore: true },
+    });
+    expect(repository.listRegionOptions).toHaveBeenCalledWith({ regionIds, query: "Bölge", limit: 2, offset: 2 });
+  });
+
+  it("rejects region options for a non-Region Manager and returns an honest empty scope", async () => {
+    await expect(service.listRegionOptions({
+      actorRoleCodes: ["REPORT_VIEWER"], actorReadScope: empty,
+      roleScopes: { REPORT_VIEWER: empty },
+    })).rejects.toBeInstanceOf(ForbiddenException);
+
+    await expect(service.listRegionOptions({
+      actorRoleCodes: ["REGION_MANAGER"], actorReadScope: empty,
+      roleScopes: { REGION_MANAGER: empty },
+    })).resolves.toEqual({
+      view: "region_manager",
+      capabilities: { canMaintainWeeklyVisitPlan: true },
+      items: [],
+      page: { total: 0, limit: 20, offset: 0, hasMore: false },
+    });
+    expect(repository.listRegionOptions).not.toHaveBeenCalled();
   });
 });

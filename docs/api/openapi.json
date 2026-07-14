@@ -5801,6 +5801,56 @@
           "ChecklistVisitPlan"
         ]
       }
+    },
+    "/api/checklists/command-canvas/visit-plans/regions": {
+      "get": {
+        "operationId": "ChecklistVisitPlanController_listRegionOptions",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 120
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Named active regions from the authenticated Region Manager role scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanRegionOptionResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "ChecklistVisitPlan"
+        ]
+      }
     }
   },
   "info": {
@@ -21985,6 +22035,94 @@
                   "limit": {
                     "type": "integer",
                     "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hasMore": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ChecklistVisitPlanRegionOption": {
+        "type": "object",
+        "required": [
+          "regionId",
+          "regionName"
+        ],
+        "properties": {
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "regionName": {
+            "type": "string"
+          }
+        }
+      },
+      "ChecklistVisitPlanRegionOptionResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "view",
+              "capabilities",
+              "items",
+              "page"
+            ],
+            "properties": {
+              "view": {
+                "type": "string",
+                "enum": [
+                  "region_manager"
+                ]
+              },
+              "capabilities": {
+                "type": "object",
+                "required": [
+                  "canMaintainWeeklyVisitPlan"
+                ],
+                "properties": {
+                  "canMaintainWeeklyVisitPlan": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                }
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ChecklistVisitPlanRegionOption"
+                }
+              },
+              "page": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset",
+                  "hasMore"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
                   },
                   "offset": {
                     "type": "integer",

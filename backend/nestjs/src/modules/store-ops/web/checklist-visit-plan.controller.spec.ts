@@ -16,11 +16,14 @@ describe("ChecklistVisitPlanController authorization metadata", () => {
   });
 
   it("keeps full-period planning and candidate search Region Manager-only", () => {
+    const regions = ChecklistVisitPlanController.prototype.listRegionOptions;
     const period = ChecklistVisitPlanController.prototype.listPeriod;
     const candidates = ChecklistVisitPlanController.prototype.listCandidates;
     expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, period)).toBe("authenticated");
     expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, period)).toEqual(["REGION_MANAGER"]);
     expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, candidates)).toBe("authenticated");
     expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, candidates)).toEqual(["REGION_MANAGER"]);
+    expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, regions)).toBe("authenticated");
+    expect(Reflect.getMetadata(REQUIRED_ROLES_KEY, regions)).toEqual(["REGION_MANAGER"]);
   });
 });

@@ -9,6 +9,7 @@ import type {
   ChecklistVisitPlanPeriodResult,
   ChecklistVisitPlanPeriodSort,
   ChecklistVisitPlanPeriodStatus,
+  ChecklistVisitPlanRegionOption,
   ChecklistVisitPlanReason,
   ChecklistVisitPlanRisk,
   ChecklistVisitPlanResult,
@@ -74,6 +75,8 @@ type CandidateRow = {
   items_json: ChecklistVisitPlanCandidate[];
 };
 
+type RegionOptionPageRow = { total_count: number; items_json: ChecklistVisitPlanRegionOption[] };
+
 const periodSortSql: Record<ChecklistVisitPlanPeriodSort, string> = {
   risk_desc: "risk_score DESC, last_completed_visit_at ASC NULLS FIRST, store_name ASC, store_id ASC",
   store_asc: "store_name ASC, store_id ASC",
@@ -87,6 +90,30 @@ const periodSortSql: Record<ChecklistVisitPlanPeriodSort, string> = {
 @Injectable()
 export class ChecklistVisitPlanRepository {
   constructor(private readonly databaseService: DatabaseService) {}
+
+  async listRegionOptions(input: { regionIds: string[]; query: string | null; limit: number; offset: number }) {
+    const result = await this.databaseService.query<RegionOptionPageRow>(
+      `WITH scoped AS (
+         SELECT region.region_id, region.region_name
+         FROM ops.region region
+         INNER JOIN ops.company company ON company.company_id = region.company_id
+         WHERE region.region_id = ANY($1::uuid[])
+           AND region.status = 'active'
+           AND company.status = 'active'
+           AND ($2::text IS NULL OR region.region_name ILIKE '%' || $2::text || '%' ESCAPE '\\')
+       ), paged AS (
+         SELECT * FROM scoped
+         ORDER BY region_name ASC, region_id ASC
+         LIMIT $3 OFFSET $4
+       )
+       SELECT (SELECT COUNT(*)::int FROM scoped) AS total_count,
+              COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                'regionId', region_id, 'regionName', region_name
+              ) ORDER BY region_name, region_id) FROM paged), '[]'::jsonb) AS items_json`,
+      [input.regionIds, input.query ? escapeLike(input.query) : null, input.limit, input.offset],
+    );
+    return { items: result.rows[0]?.items_json ?? [], total: Number(result.rows[0]?.total_count ?? 0) };
+  }
 
   async listPeriod(input: ListPeriodInput) {
     const result = await this.databaseService.query<PeriodRow>(periodPlanSql(periodSortSql[input.sort]), [
