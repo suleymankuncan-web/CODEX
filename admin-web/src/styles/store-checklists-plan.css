@@ -11,3 +11,4 @@
 @media(max-width:720px){.decision-rail--plan>button{min-height:53px;padding:12px 8px}.decision-rail--plan .decision-icon,.decision-rail--plan .decision-copy small{display:none}.decision-rail--plan .decision-copy b{font-size:9px}.decision-rail--plan>button>strong{grid-row:auto;grid-column:auto;font-size:20px;text-align:right}}
 .checklist-plan-view>.week-planner{margin-bottom:0}
 @media(max-width:720px){.decision-rail--plan>button{min-height:51px}}
+.status--planned{color:#315bc4;background:#eef3ff}

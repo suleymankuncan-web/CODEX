@@ -984,10 +984,10 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
           },
           metrics: {
             totalStores: stores.length,
-            needsVisit: 0,
+            needsVisit: options.handoffState && !options.handoffState.completed ? stores.length : 0,
             active: 0,
             pending: 0,
-            completed: stores.length,
+            completed: options.handoffState && !options.handoffState.completed ? 0 : stores.length,
           },
           items: stores.map((store) => ({
             storeId: store.storeId,
@@ -1006,8 +1006,8 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
             pendingAcknowledgementCount: pendingAcknowledgements,
             openActionCount: 0,
             blockedActionCount: 0,
-            status: 'completed',
-            reasonCodes: ['completed_period'],
+            status: options.handoffState && !options.handoffState.completed ? 'needs_visit' : 'completed',
+            reasonCodes: options.handoffState && !options.handoffState.completed ? ['missing_bm_visit'] : ['completed_period'],
             lastOperationalAt: null,
           })),
           page: { total: stores.length, limit: 30, offset: 0, hasMore: false },

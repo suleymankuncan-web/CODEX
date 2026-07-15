@@ -42,6 +42,82 @@
   color: var(--checklist-muted, #6c6478);
 }
 
+.checklist-workflow-command-drawer[data-slot='dialog-content'] {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  display: grid;
+  width: min(700px, calc(100vw - 180px));
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  --tw-translate-x: 0px !important;
+  --tw-translate-y: 0px !important;
+  transform: none !important;
+  translate: none !important;
+  border-width: 0 0 0 1px;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: -28px 0 80px rgba(28, 20, 38, 0.22);
+}
+
+.checklist-workflow-command-drawer-header {
+  position: relative;
+  z-index: 1;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.96);
+  padding: 18px 22px;
+  backdrop-filter: blur(14px);
+}
+
+.checklist-workflow-command-drawer-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checklist-workflow-command-drawer-role {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(112, 73, 232, 0.2);
+  border-radius: 7px;
+  color: #4c2aa5;
+  background: #f7f3ff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.checklist-workflow-command-drawer-identity p {
+  margin: 0 0 3px;
+  color: #736d7d;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.checklist-workflow-command-drawer-identity h2 {
+  overflow: hidden;
+  margin: 0;
+  color: #20192b;
+  font: 650 13px/1.25 'Manrope', sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checklist-workflow-command-drawer-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 22px;
+}
+
 .store-checklists-empty-block,
 .store-checklists-inline-notice {
   margin: 0 22px 18px;
@@ -52,6 +128,17 @@
 }
 
 @media (max-width: 720px) {
+  .checklist-workflow-command-drawer[data-slot='dialog-content'] {
+    width: 100vw;
+    border-left: 0;
+  }
+
+  .checklist-workflow-command-drawer-header,
+  .checklist-workflow-command-drawer-body {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
   .store-checklists-empty-block,
   .store-checklists-inline-notice {
     margin: 0 10px 12px;

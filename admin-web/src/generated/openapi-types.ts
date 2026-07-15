@@ -643,7 +643,7 @@ export type components = {
       "storeName": string
       "plannedDate": string
       "displayOrder": number
-      "status": "waiting" | "missed" | "completed"
+      "status": "planned" | "waiting" | "missed" | "completed"
       "checklistInstanceId": string | null
       "completedAt": string | null
     }
@@ -693,7 +693,7 @@ export type components = {
       "elapsedDaysSinceLastVisit": number | null
       "risk": "high" | "medium" | "low"
       "reasonCodes": Array<"missing_current_month_visit" | "low_checklist_score" | "watch_checklist_result" | "active_draft" | "pending_acknowledgement" | "visit_completed" | "strong_score" | "insufficient_signal">
-      "planStatus": "unplanned" | "waiting" | "missed" | "completed" | "mixed"
+      "planStatus": "unplanned" | "planned" | "waiting" | "missed" | "completed" | "mixed"
       "planItems": components['schemas']["ChecklistVisitPlanPeriodItem"][]
     }
     "ChecklistVisitPlanRegionOption": {

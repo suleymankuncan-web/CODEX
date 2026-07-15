@@ -10,6 +10,9 @@ const checklistCommandEvidenceDir = fileURLToPath(
 const checklistPlanEvidenceDir = fileURLToPath(
   new URL('../../docs/evidence/checklist-command-canvas-plan-parity-v1-2026-07-14/', import.meta.url),
 )
+const checklistCutoverEvidenceDir = fileURLToPath(
+  new URL('../../docs/evidence/checklist-command-cutover-v2/p7/', import.meta.url),
+)
 
 test('region manager command canvas reads bounded real rows and applies server controls', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -49,6 +52,9 @@ test('region manager command canvas reads bounded real rows and applies server c
   await expect(page.getByText('92').first()).toBeVisible()
   await expect(page.getByText('Yapılmadı').first()).toBeVisible()
   await expect(page.getByText('4 gün').first()).toBeVisible()
+  const visitDateCell = page.locator('.checklist-command-date').first()
+  await expect(visitDateCell).toBeVisible()
+  expect(await visitDateCell.evaluate((element) => getComputedStyle(element).fontSize)).toBe('8px')
 
   await page.getByRole('button', { name: /Bu ay eksik/ }).click()
   await expect.poll(() => requests.some((url) => url.searchParams.get('status') === 'needs_visit')).toBe(true)
@@ -88,11 +94,49 @@ test('region manager command canvas reads bounded real rows and applies server c
   await expect(page.locator('h1', { hasText: 'Saha Kontrolleri' })).toHaveCount(1)
   await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
+  const workflowGeometry = await page.getByRole('dialog', { name: /Checklist akışı/ }).evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return {
+      bottom: rect.bottom,
+      height: rect.height,
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      width: rect.width,
+      viewportHeight: document.documentElement.clientHeight,
+      viewportWidth: document.documentElement.clientWidth,
+    }
+  })
+  expect(workflowGeometry).toMatchObject({
+    bottom: workflowGeometry.viewportHeight,
+    height: workflowGeometry.viewportHeight,
+    right: workflowGeometry.viewportWidth,
+    top: 0,
+    width: 700,
+  })
+  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
+  await page.screenshot({
+    path: join(checklistCutoverEvidenceDir, 'workflow-drawer-desktop.png'),
+    fullPage: true,
+  })
   await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
   await expect(workflowButton).toBeFocused()
   await expect(page).not.toHaveURL(/overlay=/)
+
+  const resultButton = page.getByRole('button', { name: /Sonucu gör/ }).first()
+  await resultButton.click()
+  await expect(page).toHaveURL(
+    /overlay=workflow&storeId=22222222-2222-4222-8222-222222222222&workflowTab=history/,
+  )
+  const resultDrawer = page.getByRole('dialog', { name: /Checklist akışı/ })
+  await expect(resultDrawer.getByText('CHECKLIST SONUCU', { exact: true })).toBeVisible()
+  await expect(resultDrawer.getByText('Kabul edilmiş checklist sonucu yok.')).toBeVisible()
+  await page.screenshot({
+    path: join(checklistCutoverEvidenceDir, 'result-drawer-desktop.png'),
+    fullPage: true,
+  })
 })
 
 test('region manager legacy workflow deep links normalize above Command Canvas without legacy DOM', async ({ page }) => {
@@ -127,6 +171,20 @@ test('region manager command canvas stays bounded as mobile cards with 30-row pa
     path: join(checklistCommandEvidenceDir, 'region-manager-command-canvas-mobile-390.png'),
     fullPage: true,
   })
+
+  await page.getByRole('button', { name: /Checklist yap/ }).first().click()
+  const workflowDrawer = page.getByRole('dialog', { name: /Checklist akışı/ })
+  await expect(workflowDrawer).toBeVisible()
+  const drawerGeometry = await workflowDrawer.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    return { height: rect.height, left: rect.left, top: rect.top, width: rect.width }
+  })
+  expect(drawerGeometry).toEqual({ height: 844, left: 0, top: 0, width: 390 })
+  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
+  await page.screenshot({
+    path: join(checklistCutoverEvidenceDir, 'workflow-drawer-mobile-390.png'),
+    fullPage: true,
+  })
 })
 
 test('region manager plans a full Monday-Saturday week and saves one real API snapshot', async ({ page }) => {
@@ -141,8 +199,12 @@ test('region manager plans a full Monday-Saturday week and saves one real API sn
 
   await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
   await expect(page.getByText('Ziyaret Tamamlandı')).toBeVisible()
+  await expect(page.getByText('Ziyaret Planlandı').first()).toBeVisible()
   await expect(page.getByText('Ziyaret Bekleniyor').first()).toBeVisible()
   await expect(page.getByText('Checklist yapılmadı').first()).toBeVisible()
+  await expect(page.getByText('Pilot Temiz Mağaza')).toBeVisible()
+  await expect(page.getByText('Aksiyon Yok').first()).toBeVisible()
+  await expect(page.getByText('Plan yapılmadı').first()).toBeVisible()
   await expect(page.getByText('Pazar plan dışı')).toBeVisible()
 
   await page.getByRole('button', { name: 'Haftayı Planla' }).click()
@@ -150,6 +212,20 @@ test('region manager plans a full Monday-Saturday week and saves one real API sn
   await expect(dialog).toBeVisible()
   await expect(dialog.getByText('Plan kapsamı')).toBeVisible()
   await expect(dialog.getByText('Sorumlu')).toHaveCount(0)
+  const saveButton = dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' })
+  const plannerTokenStyles = await saveButton.evaluate((element) => ({
+    backgroundColor: getComputedStyle(element).backgroundColor,
+    color: getComputedStyle(element).color,
+  }))
+  expect(plannerTokenStyles).toEqual({
+    backgroundColor: 'rgb(112, 73, 232)',
+    color: 'rgb(255, 255, 255)',
+  })
+  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
+  await page.screenshot({
+    path: join(checklistCutoverEvidenceDir, 'weekly-plan-dialog-desktop.png'),
+    fullPage: true,
+  })
 
   await dialog.getByRole('button', { name: 'Pazartesi, 13 Tem' }).click()
   await dialog.getByRole('button', { name: /Marmara Park mağazasını/ }).click()
@@ -200,6 +276,11 @@ test('weekly planner pages 35 scoped stores and keeps the save action reachable 
   expect(geometry.width).toBeCloseTo(390, 0)
   expect(geometry.bottom).toBeCloseTo(844, 0)
   expect(geometry.pageOverflow).toBeLessThanOrEqual(1)
+  mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
+  await page.screenshot({
+    path: join(checklistCutoverEvidenceDir, 'weekly-plan-dialog-mobile-390.png'),
+    fullPage: true,
+  })
 })
 
 test('explicit region context survives a zero-row command filter', async ({ page }) => {
@@ -365,12 +446,12 @@ test('weekly planner preserves the draft across 409 reconciliation and saves aga
   const dialog = page.getByRole('dialog', { name: 'Ziyaret planını oluşturun' })
   await dialog.getByRole('button', { name: 'Pazartesi, 13 Tem' }).click()
   await dialog.getByRole('button', { name: /Marmara Park mağazasını/ }).click()
-  await expect(dialog.getByText('4 ziyaret', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('5 ziyaret', { exact: true })).toBeVisible()
   await dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' }).click()
 
   await expect(dialog.getByRole('alert')).toContainText('Planın daha yeni bir sürümü var')
   await dialog.getByRole('button', { name: 'Güncel planı al ve taslağı yeniden uygula' }).click()
-  await expect(dialog.getByText('5 ziyaret', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('6 ziyaret', { exact: true })).toBeVisible()
   await expect(dialog.getByRole('alert')).toHaveCount(0)
   await dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' }).click()
 
@@ -522,7 +603,7 @@ test('dirty weekly drafts require confirmation on Escape and restore focus after
   await page.keyboard.press('Escape')
   await expect(confirm).toHaveCount(0)
   await expect(dialog).toBeVisible()
-  await expect(dialog).toContainText('4 ziyaret')
+  await expect(dialog).toContainText('5 ziyaret')
   await expect.poll(() => dialog.evaluate((element) => element.contains(document.activeElement))).toBe(true)
 
   await page.keyboard.press('Escape')
@@ -889,6 +970,11 @@ function buildVisitPlanPeriodResponse(multipleCompletedOccurrences = false) {
       bmScore: 88, vmScore: 84, risk: 'medium', reasonCodes: ['watch_checklist_result'], planStatus: multipleCompletedOccurrences ? 'completed' : 'mixed',
       lastCompletedVisitAt: '2026-07-11T10:00:00.000Z', elapsedDaysSinceLastVisit: 3,
     },
+    {
+      storeId: '33333333-3333-4333-8333-333333333333', storeCode: 'ST-003', storeName: 'Pilot Temiz Mağaza',
+      bmScore: 94, vmScore: 91, risk: 'low', reasonCodes: ['strong_score'], planStatus: 'unplanned',
+      lastCompletedVisitAt: '2026-07-12T10:00:00.000Z', elapsedDaysSinceLastVisit: 2,
+    },
   ].map((row) => ({
     ...row,
     regionId: weekly.regionId,
@@ -899,9 +985,9 @@ function buildVisitPlanPeriodResponse(multipleCompletedOccurrences = false) {
     data: {
       period: '2026-07', regionId: weekly.regionId, regionName: weekly.regionName, view: 'region_manager',
       capabilities: { canMaintainWeeklyVisitPlan: true },
-      metrics: { totalStores: 2, high: 1, medium: 1, low: 0, planned: 2, unplanned: 0, waiting: 1, missed: 1, completed: 1 },
+      metrics: { totalStores: 3, high: 1, medium: 1, low: 1, planned: 2, unplanned: 1, waiting: 1, missed: 1, completed: 1 },
       items: rows,
-      page: { total: 2, limit: 30, offset: 0, hasMore: false },
+      page: { total: 3, limit: 30, offset: 0, hasMore: false },
     },
   }
 }
@@ -910,7 +996,8 @@ function defaultPlanItems() {
   return [
     { storeId: '22222222-2222-4222-8222-222222222222', plannedDate: '2026-07-14', displayOrder: 0, status: 'completed' as const },
     { storeId: '11111111-1111-4111-8111-111111111111', plannedDate: '2026-07-15', displayOrder: 1, status: 'waiting' as const },
-    { storeId: '22222222-2222-4222-8222-222222222222', plannedDate: '2026-07-16', displayOrder: 2, status: 'missed' as const },
+    { storeId: '22222222-2222-4222-8222-222222222222', plannedDate: '2026-07-16', displayOrder: 2, status: 'planned' as const },
+    { storeId: '22222222-2222-4222-8222-222222222222', plannedDate: '2026-07-13', displayOrder: 3, status: 'missed' as const },
   ]
 }
 
@@ -951,7 +1038,7 @@ function buildCommandResponse(items: ReturnType<typeof buildPlannerStores>, tota
 }
 
 function buildVisitPlanResponse(
-  items: Array<{ storeId: string; plannedDate: string; displayOrder: number; status?: 'waiting' | 'missed' | 'completed' }>,
+  items: Array<{ storeId: string; plannedDate: string; displayOrder: number; status?: 'planned' | 'waiting' | 'missed' | 'completed' }>,
   revision: number,
 ) {
   return {

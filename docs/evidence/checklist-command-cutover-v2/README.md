@@ -96,6 +96,17 @@ The four explicit prototype/production pairs, one-pixel landmark contract and
 `maxDiffPixelRatio <= 0.005` disposition are recorded in
 `../checklist-command-canvas-plan-parity-v1-2026-07-14/README.md`.
 
+The 2026-07-15 dialog parity repair is captured in:
+
+- `accepted-prototype/weekly-plan-dialog-desktop.png`
+- `p7/weekly-plan-dialog-desktop.png`
+- `p7/weekly-plan-dialog-mobile-390.png`
+
+The repair moved the Command Canvas semantic tokens onto the Radix portal
+content itself. Before that change, the portal sat outside the page token scope
+and rendered the active day, borders and disabled save action without the
+accepted plum/cyan treatment.
+
 ### Records and Living Store Record
 
 Accepted source copies:
@@ -123,6 +134,16 @@ Production behavior and layout are pinned by the 22-case checklist
 persona/overlay E2E suite. The overlay uses the canonical Command surface and
 does not mount a legacy page.
 
+The 2026-07-15 parity repair replaced the centered workflow popup with the
+accepted right-side, full-height Focus Dock geometry. It also routes
+`Checklist yap`/`Devam et` to the visit workflow and `Sonucu gör` to the
+store-scoped result history instead of showing the visit selector for both
+actions. Fresh comparisons:
+
+- `p7/workflow-drawer-desktop.png`
+- `p7/workflow-drawer-mobile-390.png`
+- `p7/result-drawer-desktop.png`
+
 ### Additional personas
 
 - Store Manager: `p6/store-manager-{1440x900,1024x768,390x844,320x844}.png`
@@ -144,6 +165,18 @@ does not mount a legacy page.
   application control, not a prototype helper.
 - Test-only deterministic route fixtures exist only in Playwright routing and
   do not ship as product data.
+- `Tamamlanmış ziyaret yok` now uses the accepted 8px visit-helper rhythm;
+  it no longer inherits the 16px browser/container default.
+- The Visit Plan period table now preserves the full active Region Manager
+  store scope, including low-risk stores with no plan. Risk remains an
+  independent priority signal instead of a row-admission rule.
+- Visit timing is explicit in the Istanbul business timezone: a future date is
+  `Ziyaret Planlandı`, today is `Ziyaret Bekleniyor`, a completed checklist is
+  `Ziyaret Tamamlandı`, and an elapsed date without a checklist remains the
+  truthful red `Checklist yapılmadı` state. Only a store with no item in the
+  selected period is `Plan yapılmadı`.
+- Period and weekly navigation now move together, preventing an independently
+  selected week from silently presenting its items as part of another month.
 
 No unexplained repository-side visual or interaction deviation is open.
 
@@ -176,6 +209,9 @@ No unexplained repository-side visual or interaction deviation is open.
 - Script contracts: 623/623.
 - Backend release suite: 228 suites / 1393 tests.
 - Checklist persona/overlay E2E: 22/22.
+- 2026-07-15 dialog, workflow, result and responsive regression set: 50/50.
+- 2026-07-15 Visit Plan scope/status regression: 25/25 E2E plus 16/16 backend
+  contract/repository tests and 10/10 frontend model tests.
 - Route-state unit suite: 9/9.
 - Ownership/UI guards: 12/12.
 - Focused backend scope/remediation/workflow: 17/17.

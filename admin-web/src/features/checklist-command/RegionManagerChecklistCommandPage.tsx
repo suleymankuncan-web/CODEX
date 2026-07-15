@@ -40,6 +40,7 @@ import { ChecklistOperationalHistoryDrawer } from './ChecklistOperationalHistory
 import { RegionManagerRecordsSurface } from './RegionManagerRecordsSurface'
 import { ChecklistPlanningRegionPicker } from './ChecklistPlanningRegionPicker'
 import {
+  getChecklistPeriodWeekStart,
   getIstanbulWeekStart,
   getChecklistCommandSortLabel,
   toggleChecklistCommandSort,
@@ -54,7 +55,7 @@ export function RegionManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
   activeView?: 'visits' | 'plan' | 'records'
   onActiveViewChange?: (view: 'visits' | 'plan' | 'records') => void
-  onOpenWorkflow: (storeId: string) => void
+  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history') => void
   onOpenResult: (checklistInstanceId: string) => void
 }) {
   const { locale, t } = useLocalization()
@@ -74,6 +75,21 @@ export function RegionManagerChecklistCommandPage(input: {
   const [selectedRecordStore, setSelectedRecordStore] = useState<ChecklistCommandRow | null>(null)
   const historyTriggerRef = useRef<HTMLElement | null>(null)
   const [weekStart, setWeekStart] = useState(() => getIstanbulWeekStart())
+  const changePeriod = (nextPeriod: string) => {
+    setRetainedCommand(null)
+    setPeriod(nextPeriod)
+    setWeekStart(getChecklistPeriodWeekStart(nextPeriod))
+    setOffset(0)
+  }
+  const changePlanningWeek = (nextWeekStart: string) => {
+    setWeekStart(nextWeekStart)
+    const nextPeriod = nextWeekStart.slice(0, 7)
+    if (nextPeriod !== period) {
+      setRetainedCommand(null)
+      setPeriod(nextPeriod)
+      setOffset(0)
+    }
+  }
   const [openMenu, setOpenMenu] = useState<'status' | 'columns' | null>(null)
   const [retainedCommand, setRetainedCommand] = useState<{
     scopeSignature: string
@@ -207,7 +223,7 @@ export function RegionManagerChecklistCommandPage(input: {
               selected={null}
               onSelect={(option) => { setRetainedCommand(null); setSelectedRegion({ option, scopeSignature }) }}
             />
-            <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setRetainedCommand(null); setPeriod(value) }} />
+            <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={changePeriod} />
           </div>
         </header>
         <section className="week-planner week-planner-state" aria-live="polite">
@@ -323,7 +339,7 @@ export function RegionManagerChecklistCommandPage(input: {
               }}
             />
           ) : null}
-          <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setRetainedCommand(null); setPeriod(value); setOffset(0) }} />
+          <ChecklistCommandPeriodPicker locale={locale} period={period} onChange={changePeriod} />
           {activeRegion ? (
             <div className="canvas-view-switch" data-view={activeView} aria-label={locale === 'tr' ? 'Checklist görünümü' : 'Checklist view'}>
               <span className="canvas-view-glider" aria-hidden />
@@ -463,7 +479,7 @@ export function RegionManagerChecklistCommandPage(input: {
           regionName={activeRegion.regionName}
           weekStart={weekStart}
           onOpenResult={input.onOpenResult}
-          onWeekStartChange={setWeekStart}
+          onWeekStartChange={changePlanningWeek}
         />
       ) : (
         <section className="week-planner week-planner-state"><strong>{locale === 'tr' ? 'Planlanabilir mağaza bulunamadı.' : 'No stores available for planning.'}</strong></section>
@@ -493,7 +509,7 @@ function ChecklistCommandDesktopTable(input: {
   rows: ChecklistCommandRow[]
   sort: ChecklistCommandSort
   t: ReturnType<typeof useLocalization>['t']
-  onOpenWorkflow: (storeId: string) => void
+  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history') => void
   onSort: (key: ChecklistCommandSortKey) => void
 }) {
   const heading = (label: string, key: ChecklistCommandSortKey) => (
@@ -520,7 +536,7 @@ function ChecklistCommandDesktopTable(input: {
           {input.columnPreset !== 'scores' ? <VisitDate className="visit-date" value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} /> : null}
           {input.columnPreset !== 'scores' ? <ElapsedDays className="elapsed-days" value={row.elapsedDaysSinceLastVisit} t={input.t} /> : null}
           <StatusPill locale={input.locale} row={row} />
-          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId)}>
+          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row))}>
             {getRowActionLabel(row, input.locale)} <ChevronRight size={14} />
           </button>
         </div>
@@ -533,7 +549,7 @@ function ChecklistCommandMobileCards(input: {
   locale: 'tr' | 'en'
   rows: ChecklistCommandRow[]
   t: ReturnType<typeof useLocalization>['t']
-  onOpenWorkflow: (storeId: string) => void
+  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history') => void
 }) {
   return (
     <div className="checklist-command-mobile-list">
@@ -549,7 +565,7 @@ function ChecklistCommandMobileCards(input: {
             <ElapsedDays value={row.elapsedDaysSinceLastVisit} t={input.t} />
           </div>
           <StatusPill locale={input.locale} row={row} />
-          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId)}>{getRowActionLabel(row, input.locale)} <ChevronRight size={14} /></button>
+          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row))}>{getRowActionLabel(row, input.locale)} <ChevronRight size={14} /></button>
         </article>
       ))}
     </div>
@@ -592,4 +608,10 @@ function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en') {
   if (row.status === 'active') return locale === 'tr' ? 'Devam et' : 'Continue'
   if (row.status === 'needs_visit') return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
   return locale === 'tr' ? 'Sonucu gör' : 'View result'
+}
+
+function getRowWorkflowTab(row: ChecklistCommandRow): 'visits' | 'inbox' | 'history' {
+  if (row.status === 'active' || row.status === 'needs_visit') return 'visits'
+  if (row.status === 'pending') return 'inbox'
+  return 'history'
 }

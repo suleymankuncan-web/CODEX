@@ -68,14 +68,14 @@ export function StoreChecklistsPage(input: {
             else params.set('canvasView', view)
             navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' })
           }}
-          onOpenWorkflow={(storeId) => {
+          onOpenWorkflow={(storeId, tab = 'visits') => {
             overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
             navigate({
               pathname: location.pathname,
               search: buildChecklistWorkflowOverlaySearch(location.search, {
                 kind: 'workflow',
                 storeId,
-                tab: 'visits',
+                tab,
               }),
             })
           }}
