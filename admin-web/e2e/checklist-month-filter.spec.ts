@@ -20,17 +20,19 @@ test('completed checklist source keeps past month visit rows visible without mon
     )
   })
   await routeChecklistMonthFilterApi(page)
-  await page.goto('/store/checklists?view=workflow')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
 
   await page.getByRole('combobox', { name: 'Month filter' }).click()
   await page.getByRole('option', { name: 'April 2026' }).click()
 
-  const visitRow = page.locator('.store-checklists-visit-row').filter({ hasText: 'Marmara Park' })
-  await expect(visitRow).toBeVisible()
-  await expect(visitRow.locator('.store-checklists-date-cell').first()).toContainText('Apr 12, 2026')
+  const workflowDialog = page.getByRole('dialog', { name: 'Checklist workflow' })
+  await expect(workflowDialog.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
+  await expect(workflowDialog.getByText('86 points')).toBeVisible()
+  await expect(workflowDialog.getByText('Apr 12, 2026')).toBeVisible()
 })
 
 async function routeChecklistMonthFilterApi(page: Page) {
+  await routeChecklistCommandShell(page)
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: createAuthSessionFixture() })
   })
@@ -42,6 +44,22 @@ async function routeChecklistMonthFilterApi(page: Page) {
   })
   await page.route('**/api/workflow/inbox', async (route) => {
     await route.fulfill({ json: { items: [], meta: { count: 0, limit: 30, offset: 0, total: 0 } } })
+  })
+}
+
+async function routeChecklistCommandShell(page: Page) {
+  const regionId = '12121212-1212-4121-8121-121212121212'
+  await page.route('**/api/checklists/command-canvas**', async (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname.endsWith('/visit-plans/regions')) {
+      await route.fulfill({ json: { data: { view: 'region_manager', capabilities: { canMaintainWeeklyVisitPlan: true }, items: [{ regionId, regionName: 'Marmara' }], page: { total: 1, limit: 20, offset: 0, hasMore: false } } } })
+      return
+    }
+    if (url.pathname === '/api/checklists/command-canvas') {
+      await route.fulfill({ json: { data: { period: '2026-05', view: 'region_manager', capabilities: { weeklyVisitPlanningAvailable: true, canMaintainWeeklyVisitPlan: true }, metrics: { totalStores: 1, needsVisit: 0, active: 0, pending: 1, completed: 1 }, items: [{ storeId, storeCode: 'MP-01', storeName: 'Marmara Park', regionId, regionName: 'Marmara', regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }], bmScore: 86, vmScore: null, bmCompletedAt: completedAt, vmCompletedAt: null, lastCompletedVisitAt: completedAt, elapsedDaysSinceLastVisit: 38, activeChecklistCount: 0, pendingAcknowledgementCount: 1, openActionCount: 0, blockedActionCount: 0, status: 'completed', reasonCodes: ['completed_period'], lastOperationalAt: completedAt }], page: { total: 1, limit: 30, offset: 0, hasMore: false } } } })
+      return
+    }
+    await route.fallback()
   })
 }
 

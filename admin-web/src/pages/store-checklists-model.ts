@@ -315,25 +315,49 @@ export function buildChecklistSearch(
   updates: { result?: string | null; status?: ChecklistStatusFilter | null; tab?: ChecklistTab },
 ) {
   const params = new URLSearchParams(search)
+  const usesCommandOverlay = params.has('overlay')
 
   if (updates.tab) {
-    params.set('tab', updates.tab)
+    params.set(usesCommandOverlay ? 'workflowTab' : 'tab', updates.tab)
+    if (usesCommandOverlay) params.delete('tab')
   }
 
   if (updates.result !== undefined) {
     if (updates.result === null || updates.result.trim().length === 0) {
-      params.delete('result')
+      params.delete(usesCommandOverlay ? 'checklistInstanceId' : 'result')
+      if (usesCommandOverlay) {
+        if (params.has('storeId')) params.set('overlay', 'workflow')
+        else params.delete('overlay')
+      }
     } else {
-      params.set('result', updates.result)
+      if (usesCommandOverlay) {
+        const returnStoreId = params.get('storeId')
+        const returnTab = params.get('workflowTab')
+        const returnStatus = params.get('workflowStatus')
+        params.delete('overlay')
+        params.delete('checklistInstanceId')
+        params.delete('storeId')
+        params.delete('workflowTab')
+        params.delete('workflowStatus')
+        params.set('overlay', 'result')
+        params.set('checklistInstanceId', updates.result)
+        if (returnStoreId) params.set('storeId', returnStoreId)
+        if (returnTab) params.set('workflowTab', returnTab)
+        if (returnStatus) params.set('workflowStatus', returnStatus)
+        params.delete('result')
+      } else {
+        params.set('result', updates.result)
+      }
     }
   }
 
   if (updates.status !== undefined) {
     if (updates.status === null || updates.status === 'all') {
-      params.delete('status')
+      params.delete(usesCommandOverlay ? 'workflowStatus' : 'status')
     } else {
-      params.set('status', updates.status)
+      params.set(usesCommandOverlay ? 'workflowStatus' : 'status', updates.status)
     }
+    if (usesCommandOverlay) params.delete('status')
   }
 
   const nextSearch = params.toString()
@@ -341,7 +365,8 @@ export function buildChecklistSearch(
 }
 
 function resolveChecklistTabFromSearch(search: string): ChecklistTab {
-  const tab = new URLSearchParams(search).get('tab')
+  const params = new URLSearchParams(search)
+  const tab = params.get('workflowTab') ?? params.get('tab')
   return tab === 'inbox' || tab === 'history' || tab === 'plan' || tab === 'visits'
     ? tab
     : 'visits'
@@ -351,7 +376,7 @@ function resolveChecklistStatusFromSearch(search: string): ChecklistStatusFilter
   const params = new URLSearchParams(search)
   if (params.get('tab') === 'incomplete') return 'missing_or_draft'
 
-  const status = params.get('status')
+  const status = params.get('workflowStatus') ?? params.get('status')
   return status === 'missing' ||
     status === 'draft' ||
     status === 'missing_or_draft' ||
@@ -363,7 +388,8 @@ function resolveChecklistStatusFromSearch(search: string): ChecklistStatusFilter
 }
 
 function resolveChecklistResultFromSearch(search: string) {
-  const result = new URLSearchParams(search).get('result')
+  const params = new URLSearchParams(search)
+  const result = params.get('checklistInstanceId') ?? params.get('result')
   return result && result.trim().length > 0 ? result : null
 }
 
