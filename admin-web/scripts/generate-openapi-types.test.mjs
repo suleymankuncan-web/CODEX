@@ -33,6 +33,8 @@ test('frontend OpenAPI generator selection matches the tracked API document', ()
   assert.match(generated, /ChecklistVisitPlanCandidateResponse/)
   assert.match(generated, /"\/api\/store\/incentives\/workspace"/)
   assert.match(generated, /SalesTargetIncentiveWorkspaceCorrectionActor/)
+  assert.match(generated, /"\/api\/store\/targets\/workspace"/)
+  assert.match(generated, /TargetWorkspaceMonthStatus/)
   assert.doesNotMatch(
     generated.match(/"SalesTargetIncentiveWorkspaceCorrectionActor": \{[\s\S]*?\n    \}/)?.[0] ?? '',
     /userId|username|email/i,

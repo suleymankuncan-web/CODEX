@@ -17,8 +17,10 @@ import { StoreActionPlanRepository } from "./infrastructure/store-action-plan.re
 import { StoreOpsRepository } from "./infrastructure/store-ops.repository";
 import { TargetDistributionRepository } from "./infrastructure/target-distribution.repository";
 import { RequestCenterReadRepository } from "./infrastructure/request-center-read.repository";
+import { StoreOpsTargetWorkspaceModule } from "./store-ops-target-workspace.module";
 
 @Module({
+  imports: [StoreOpsTargetWorkspaceModule],
   controllers: [
     TargetDistributionController,
     WorkflowInboxController,

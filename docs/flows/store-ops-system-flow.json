@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-07-15T17:41:00.771Z",
+  "generatedAt": "2026-07-15T19:07:50.313Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
   },
   "summary": {
-    "backendEndpointCount": 202,
-    "backendEndpointsWithoutFrontendCallCount": 37,
-    "controllerCount": 28,
+    "backendEndpointCount": 203,
+    "backendEndpointsWithoutFrontendCallCount": 38,
+    "controllerCount": 29,
     "frontendApiCallCount": 165,
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 165,
-    "openApiEndpointCount": 202,
+    "openApiEndpointCount": 203,
     "routeApiEdgeCount": 237,
     "routesWithoutApiCallCount": 1,
     "unmatchedFrontendApiCallCount": 0,
@@ -6098,6 +6098,20 @@
       }
     },
     {
+      "id": "endpoint:GET:/api/store/targets/workspace",
+      "method": "GET",
+      "path": "/api/store/targets/workspace",
+      "rawControllerPath": "store/targets/workspace",
+      "rawMethodPath": "",
+      "controller": "target-workspace",
+      "domain": "store",
+      "openApiCovered": true,
+      "source": {
+        "file": "backend/nestjs/src/modules/store-ops/web/target-workspace.controller.ts",
+        "line": 12
+      }
+    },
+    {
       "id": "endpoint:GET:/api/target-distributions/coverage",
       "method": "GET",
       "path": "/api/target-distributions/coverage",
@@ -7485,6 +7499,12 @@
       "id": "openapi:GET:/api/store/me/incentives",
       "method": "GET",
       "path": "/api/store/me/incentives",
+      "domain": "store"
+    },
+    {
+      "id": "openapi:GET:/api/store/targets/workspace",
+      "method": "GET",
+      "path": "/api/store/targets/workspace",
       "domain": "store"
     },
     {
@@ -9995,6 +10015,13 @@
         "domain": "store",
         "endpointCount": 1,
         "frontendCallCount": 0
+      },
+      {
+        "id": "controller:target-workspace",
+        "controller": "target-workspace",
+        "domain": "store",
+        "endpointCount": 1,
+        "frontendCallCount": 0
       }
     ]
   },
@@ -10036,7 +10063,8 @@
       "endpoint:GET:/api/snapshots/runs",
       "endpoint:POST:/api/snapshots/runs",
       "endpoint:GET:/api/snapshots/runs/summary",
-      "endpoint:GET:/api/store/incentives/workspace"
+      "endpoint:GET:/api/store/incentives/workspace",
+      "endpoint:GET:/api/store/targets/workspace"
     ],
     "routesWithoutApiCalls": [
       "route:store:/store/settings"

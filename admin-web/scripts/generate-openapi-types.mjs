@@ -115,6 +115,7 @@ const selectedOperations = [
   { path: '/api/store/me/incentives', method: 'get' },
   { path: '/api/store/incentives', method: 'get' },
   { path: '/api/store/incentives/workspace', method: 'get' },
+  { path: '/api/store/targets/workspace', method: 'get' },
   { path: '/api/store/incentives/store-reviews', method: 'post' },
   { path: '/api/store/incentives/corrections', method: 'post' },
   { path: '/api/store/incentives/corrections/void', method: 'post' },

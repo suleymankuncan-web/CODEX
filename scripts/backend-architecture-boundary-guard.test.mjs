@@ -247,6 +247,7 @@ const storeOpsModuleGraphLimits = new Map([
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-projection.module.ts', { controllers: 0, providers: 3, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workflow.module.ts', { imports: 2, controllers: 0, providers: 1, exports: 1 }],
   ['backend/nestjs/src/modules/store-ops/store-ops-incentive-workspace.module.ts', { imports: 1, controllers: 1, providers: 3, exports: 0 }],
+  ['backend/nestjs/src/modules/store-ops/store-ops-target-workspace.module.ts', { controllers: 1, providers: 2, exports: 0 }],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-reporting.module.ts',
     { controllers: 0, providers: 0, exports: 5 },
@@ -277,7 +278,7 @@ const storeOpsModuleGraphLimits = new Map([
   ],
   [
     'backend/nestjs/src/modules/store-ops/store-ops-targets.module.ts',
-    { controllers: 5, providers: 13, exports: 5 },
+    { imports: 1, controllers: 5, providers: 13, exports: 5 },
   ],
 ])
 
