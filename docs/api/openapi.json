@@ -5945,6 +5945,66 @@
           "SalesTargetIncentiveWorkspace"
         ]
       }
+    },
+    "/api/store/targets/workspace": {
+      "get": {
+        "operationId": "TargetWorkspaceController_getWorkspace",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          },
+          {
+            "name": "historyYear",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 2000,
+              "maximum": 2100
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role-scoped Targets command workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TargetWorkspaceResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TargetWorkspace"
+        ]
+      }
     }
   },
   "info": {
@@ -22963,6 +23023,538 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspace"
+          }
+        }
+      },
+      "TargetWorkspaceCapabilities": {
+        "type": "object",
+        "required": [
+          "canCreateRequest",
+          "canApproveRequest"
+        ],
+        "properties": {
+          "canCreateRequest": {
+            "type": "boolean"
+          },
+          "canApproveRequest": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TargetWorkspaceMonthStatus": {
+        "type": "object",
+        "required": [
+          "period",
+          "status",
+          "approvalStatus",
+          "isApproved"
+        ],
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "adjusted_approved",
+              "returned",
+              "unknown"
+            ]
+          },
+          "approvalStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "approved",
+              "adjusted_approved"
+            ]
+          },
+          "isApproved": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TargetWorkspacePersonnel": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "displayName",
+          "positionCode",
+          "positionLabel",
+          "targetValue",
+          "eligibilityStatus"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "positionCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "positionLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "targetValue": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "eligibilityStatus": {
+            "type": "string",
+            "enum": [
+              "targetable",
+              "historical_allocation"
+            ]
+          }
+        }
+      },
+      "TargetWorkspaceAllocation": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "displayName",
+          "targetValue",
+          "note"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "targetValue": {
+            "type": "string",
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "TargetWorkspaceRequest": {
+        "type": "object",
+        "required": [
+          "requestId",
+          "status",
+          "targetLabel",
+          "totalTargetValue",
+          "allocationCount",
+          "requestReason",
+          "approvalMode",
+          "approvedAt",
+          "approvalNote",
+          "createdAt",
+          "updatedAt",
+          "allocations"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_region_approval",
+              "approved",
+              "rejected",
+              "unknown"
+            ]
+          },
+          "targetLabel": {
+            "type": "string"
+          },
+          "totalTargetValue": {
+            "type": "string",
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "allocationCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "requestReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "approvalMode": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "direct",
+              "adjusted"
+            ]
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "approvalNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetWorkspaceAllocation"
+            }
+          }
+        }
+      },
+      "TargetWorkspaceStore": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "storeCode",
+          "storeName",
+          "city",
+          "storeStatus",
+          "status",
+          "capabilities",
+          "request",
+          "personnel",
+          "monthStatuses"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeCode": {
+            "type": "string"
+          },
+          "storeName": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "storeStatus": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved",
+              "adjusted_approved",
+              "returned",
+              "revision_conflict",
+              "stale_reference",
+              "missing",
+              "unknown"
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/TargetWorkspaceCapabilities"
+          },
+          "request": {
+            "$ref": "#/components/schemas/TargetWorkspaceRequest",
+            "nullable": true
+          },
+          "personnel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetWorkspacePersonnel"
+            }
+          },
+          "monthStatuses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetWorkspaceMonthStatus"
+            }
+          }
+        }
+      },
+      "TargetWorkspaceRegionManager": {
+        "type": "object",
+        "required": [
+          "displayName",
+          "identityStatus"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "identityStatus": {
+            "type": "string",
+            "enum": [
+              "resolved",
+              "unassigned",
+              "unavailable"
+            ]
+          }
+        }
+      },
+      "TargetWorkspaceRegion": {
+        "type": "object",
+        "required": [
+          "regionId",
+          "regionName",
+          "regionManager",
+          "stores"
+        ],
+        "properties": {
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "regionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "regionManager": {
+            "$ref": "#/components/schemas/TargetWorkspaceRegionManager"
+          },
+          "stores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetWorkspaceStore"
+            }
+          }
+        }
+      },
+      "TargetWorkspaceCompany": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "companyName",
+          "regions"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "companyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetWorkspaceRegion"
+            }
+          }
+        }
+      },
+      "TargetWorkspacePagination": {
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "hasMore"
+        ],
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TargetWorkspaceSummary": {
+        "type": "object",
+        "required": [
+          "totalStores",
+          "pendingStores",
+          "approvedStores",
+          "adjustedApprovedStores",
+          "returnedStores",
+          "missingStores",
+          "totalTargetValue"
+        ],
+        "properties": {
+          "totalStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "pendingStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "approvedStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "adjustedApprovedStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "returnedStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "missingStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "totalTargetValue": {
+            "type": "string",
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          }
+        }
+      },
+      "TargetWorkspace": {
+        "type": "object",
+        "required": [
+          "period",
+          "periodStart",
+          "periodEnd",
+          "periodTimezone",
+          "historyYear",
+          "view",
+          "capabilities",
+          "pagination",
+          "sections",
+          "warnings",
+          "summary",
+          "companies"
+        ],
+        "properties": {
+          "period": {
+            "type": "string",
+            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodTimezone": {
+            "type": "string",
+            "enum": [
+              "Europe/Istanbul"
+            ]
+          },
+          "historyYear": {
+            "type": "integer"
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "report_viewer",
+              "region_manager",
+              "store_manager"
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/TargetWorkspaceCapabilities"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/TargetWorkspacePagination"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/TargetWorkspaceSections"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "hierarchy_unavailable",
+                "summary_unavailable",
+                "personnel_unavailable",
+                "month_statuses_unavailable",
+                "approval_basis_conflict"
+              ]
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/TargetWorkspaceSummary",
+            "nullable": true
+          },
+          "companies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TargetWorkspaceCompany"
+            }
+          }
+        }
+      },
+      "TargetWorkspaceResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TargetWorkspace"
+          }
+        }
+      },
+      "TargetWorkspaceSection": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "unavailable"
+            ]
+          }
+        }
+      },
+      "TargetWorkspaceSections": {
+        "type": "object",
+        "required": [
+          "hierarchy",
+          "summary",
+          "personnel",
+          "monthStatuses"
+        ],
+        "properties": {
+          "hierarchy": {
+            "$ref": "#/components/schemas/TargetWorkspaceSection"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/TargetWorkspaceSection"
+          },
+          "personnel": {
+            "$ref": "#/components/schemas/TargetWorkspaceSection"
+          },
+          "monthStatuses": {
+            "$ref": "#/components/schemas/TargetWorkspaceSection"
           }
         }
       }

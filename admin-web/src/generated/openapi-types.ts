@@ -3069,6 +3069,112 @@ export type components = {
           "targetValue": number
         }>
     }
+    "TargetWorkspace": {
+      "period": string
+      "periodStart": string
+      "periodEnd": string
+      "periodTimezone": "Europe/Istanbul"
+      "historyYear": number
+      "view": "report_viewer" | "region_manager" | "store_manager"
+      "capabilities": components['schemas']["TargetWorkspaceCapabilities"]
+      "pagination": components['schemas']["TargetWorkspacePagination"]
+      "sections": components['schemas']["TargetWorkspaceSections"]
+      "warnings": Array<"hierarchy_unavailable" | "summary_unavailable" | "personnel_unavailable" | "month_statuses_unavailable" | "approval_basis_conflict">
+      "summary": components['schemas']["TargetWorkspaceSummary"] | null
+      "companies": components['schemas']["TargetWorkspaceCompany"][]
+    }
+    "TargetWorkspaceAllocation": {
+      "employeeId": string
+      "displayName": string
+      "targetValue": string
+      "note": string | null
+    }
+    "TargetWorkspaceCapabilities": {
+      "canCreateRequest": boolean
+      "canApproveRequest": boolean
+    }
+    "TargetWorkspaceCompany": {
+      "companyId": string
+      "companyName": string | null
+      "regions": components['schemas']["TargetWorkspaceRegion"][]
+    }
+    "TargetWorkspaceMonthStatus": {
+      "period": string
+      "status": "pending" | "approved" | "adjusted_approved" | "returned" | "unknown"
+      "approvalStatus": "approved" | "adjusted_approved" | null
+      "isApproved": boolean
+    }
+    "TargetWorkspacePagination": {
+      "total": number
+      "limit": number
+      "offset": number
+      "hasMore": boolean
+    }
+    "TargetWorkspacePersonnel": {
+      "employeeId": string
+      "displayName": string
+      "positionCode": string | null
+      "positionLabel": string | null
+      "targetValue": string | null
+      "eligibilityStatus": "targetable" | "historical_allocation"
+    }
+    "TargetWorkspaceRegion": {
+      "regionId": string
+      "regionName": string | null
+      "regionManager": components['schemas']["TargetWorkspaceRegionManager"]
+      "stores": components['schemas']["TargetWorkspaceStore"][]
+    }
+    "TargetWorkspaceRegionManager": {
+      "displayName": string | null
+      "identityStatus": "resolved" | "unassigned" | "unavailable"
+    }
+    "TargetWorkspaceRequest": {
+      "requestId": string
+      "status": "pending_region_approval" | "approved" | "rejected" | "unknown"
+      "targetLabel": string
+      "totalTargetValue": string
+      "allocationCount": number
+      "requestReason": string | null
+      "approvalMode": "direct" | "adjusted" | null
+      "approvedAt": string | null
+      "approvalNote": string | null
+      "createdAt": string
+      "updatedAt": string
+      "allocations": components['schemas']["TargetWorkspaceAllocation"][]
+    }
+    "TargetWorkspaceResponse": {
+      "data": components['schemas']["TargetWorkspace"]
+    }
+    "TargetWorkspaceSection": {
+      "status": "available" | "unavailable"
+    }
+    "TargetWorkspaceSections": {
+      "hierarchy": components['schemas']["TargetWorkspaceSection"]
+      "summary": components['schemas']["TargetWorkspaceSection"]
+      "personnel": components['schemas']["TargetWorkspaceSection"]
+      "monthStatuses": components['schemas']["TargetWorkspaceSection"]
+    }
+    "TargetWorkspaceStore": {
+      "storeId": string
+      "storeCode": string
+      "storeName": string
+      "city": string | null
+      "storeStatus": string
+      "status": "pending" | "approved" | "adjusted_approved" | "returned" | "revision_conflict" | "stale_reference" | "missing" | "unknown"
+      "capabilities": components['schemas']["TargetWorkspaceCapabilities"]
+      "request": components['schemas']["TargetWorkspaceRequest"] | null
+      "personnel": components['schemas']["TargetWorkspacePersonnel"][]
+      "monthStatuses": components['schemas']["TargetWorkspaceMonthStatus"][]
+    }
+    "TargetWorkspaceSummary": {
+      "totalStores": number
+      "pendingStores": number
+      "approvedStores": number
+      "adjustedApprovedStores": number
+      "returnedStores": number
+      "missingStores": number
+      "totalTargetValue": string
+    }
     "UpdateKpiImportStoreScopeDto": {
       "storeType": "company" | "franchise" | "operator"
       "regionId": string
@@ -4394,6 +4500,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["SalesTargetIncentiveWorkspaceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/targets/workspace": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["TargetWorkspaceResponse"]
           }
         }
       }
