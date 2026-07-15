@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import test from 'node:test'
 
 const standardPath = 'docs/process/ui-surface-standard-v1.md'
@@ -55,7 +55,6 @@ const allowedCurrentProductCopyMatches = new Map([
   ['admin-web/src/features/localization/messages/store-workforce.ts::no-store-action copy', 1],
   ['admin-web/src/pages/store-approvals-request-center-model.ts::row-explanation copy', 1],
   ['admin-web/src/pages/store-approvals-request-center-model.ts::page-size prose copy', 1],
-  ['admin-web/src/pages/store-checklists-visit-panel.tsx::row-explanation copy', 2],
 ])
 
 const allowedCurrentStrictSurfaceMatches = new Map([
@@ -69,9 +68,6 @@ const allowedCurrentStrictSurfaceMatches = new Map([
   ['admin-web/src/pages/StoreRankingsPage.tsx::legacy route-specific button class', 1],
   ['admin-web/src/pages/StoreTasksPage.tsx::raw hex Tailwind color', 22],
   ['admin-web/src/pages/StoreWorkforcePage.tsx::raw hex Tailwind color', 48],
-  ['admin-web/src/pages/store-checklists-acknowledgement-panels.tsx::legacy route-specific button class', 2],
-  ['admin-web/src/pages/store-checklists-visit-panel.tsx::legacy route-specific button class', 3],
-  ['admin-web/src/pages/store-checklists-visit-plan.tsx::legacy route-specific button class', 2],
   ['admin-web/src/pages/store-kpis-command-deck-header.tsx::raw hex Tailwind color', 14],
   ['admin-web/src/pages/store-kpis-command-deck.tsx::raw hex Tailwind color', 63],
   ['admin-web/src/pages/store-kpis-region-overview.tsx::raw hex Tailwind color', 52],
@@ -141,6 +137,7 @@ function trackedUiSourceFiles() {
   return git(['ls-files', 'admin-web/src'])
     .split(/\r?\n/)
     .filter(Boolean)
+    .filter((path) => existsSync(path))
     .filter((path) => /\.(ts|tsx)$/.test(path))
 }
 
@@ -148,6 +145,7 @@ function trackedStyleFiles() {
   return git(['ls-files', 'admin-web/src/styles'])
     .split(/\r?\n/)
     .filter(Boolean)
+    .filter((path) => existsSync(path))
     .filter((path) => /\.css$/.test(path))
 }
 

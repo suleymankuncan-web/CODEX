@@ -170,7 +170,7 @@ export function buildStoreHomeCommandModel(input: StoreHomeCommandBuilderInput):
       meta: input.visitPriorityValue,
       status: visitPriorityPending ? 'Bekliyor' : visitPriorityCount > 0 ? 'Planla' : 'Hazır',
       cta: input.visitPriorityActionLabel ?? 'Planı aç',
-      href: '/store/checklists?tab=plan',
+      href: '/store/checklists?canvasView=plan',
       routeLabel: 'Checklistler',
       tone: visitPriorityPending || visitPriorityCount > 0 ? 'amber' : 'mint',
       icon: input.icons.store,

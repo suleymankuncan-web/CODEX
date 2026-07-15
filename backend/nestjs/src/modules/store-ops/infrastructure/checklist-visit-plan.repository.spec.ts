@@ -18,6 +18,8 @@ describe("ChecklistVisitPlanRepository", () => {
     expect(sql).toContain("ci.status = 'completed'");
     expect(sql).toContain("AT TIME ZONE 'Europe/Istanbul'");
     expect(sql).toContain("WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'");
+    expect(sql).toContain("WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'");
+    expect(sql).toContain("WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'");
     expect(sql).toContain("THEN 'waiting'");
     expect(sql).toContain("ELSE 'missed'");
   });
@@ -110,6 +112,8 @@ describe("ChecklistVisitPlanRepository", () => {
     expect(sql).toContain("jsonb_agg");
     expect(sql).toContain("'totalStores', (SELECT COUNT(*)::int FROM reasoned)");
     expect(sql).toContain("(SELECT COUNT(*)::int FROM filtered) AS total_count");
+    expect(sql).toContain("FROM scoped_stores store");
+    expect(sql).toContain("LEFT JOIN plan_aggregate plan ON plan.store_id = store.store_id");
   });
 
   it("locks 69/70/84/85/null score boundaries to the production visit-risk policy", async () => {

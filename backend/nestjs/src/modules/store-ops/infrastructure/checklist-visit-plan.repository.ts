@@ -340,7 +340,8 @@ function readPlanSql() {
         'displayOrder', item.display_order,
         'status', CASE
           WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'
-          WHEN item.planned_date >= (NOW() AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
+          WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'
+          WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
           ELSE 'missed'
         END,
         'checklistInstanceId', completed.checklist_instance_id,
@@ -469,7 +470,8 @@ function periodPlanSql(orderBy: string) {
         item.display_order,
         CASE
           WHEN completed.checklist_instance_id IS NOT NULL THEN 'completed'
-          WHEN item.planned_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
+          WHEN item.planned_date > (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'planned'
+          WHEN item.planned_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Europe/Istanbul')::date THEN 'waiting'
           ELSE 'missed'
         END AS plan_item_status,
         completed.checklist_instance_id,

@@ -1,5 +1,5 @@
 export type ChecklistVisitPlanView = "report_viewer" | "region_manager" | "store_manager";
-export type ChecklistVisitPlanItemStatus = "waiting" | "missed" | "completed";
+export type ChecklistVisitPlanItemStatus = "planned" | "waiting" | "missed" | "completed";
 
 export const checklistVisitPlanRisks = ["all", "high", "medium", "low"] as const;
 export type ChecklistVisitPlanRisk = Exclude<(typeof checklistVisitPlanRisks)[number], "all">;
@@ -25,7 +25,7 @@ export const checklistVisitPlanReasons = [
 export type ChecklistVisitPlanReason = Exclude<(typeof checklistVisitPlanReasons)[number], "all">;
 
 export const checklistVisitPlanPeriodStatuses = [
-  "all", "unplanned", "waiting", "missed", "completed", "mixed",
+  "all", "unplanned", "planned", "waiting", "missed", "completed", "mixed",
 ] as const;
 export type ChecklistVisitPlanPeriodStatus = Exclude<(typeof checklistVisitPlanPeriodStatuses)[number], "all">;
 

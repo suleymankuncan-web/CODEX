@@ -187,13 +187,13 @@ export function ChecklistVisitPlanSurface(input: {
       <section className="canvas-surface canvas-plan-surface">
         <div className="command-row canvas-plan-command" ref={toolbarRef}>
           <label><Search size={15} /><input value={searchDraft} onChange={(event) => { retainCurrentPeriod(); setSearchDraft(event.target.value) }} placeholder={copy.search} /><kbd>/</kbd></label>
-          <div className="plan-command-context"><span>{copy.planScope}</span><strong>{copy.scopeCount(data.metrics.totalStores)}</strong></div>
+          <div className="plan-command-context"><span>{copy.planScope}</span><strong>{input.locale === 'tr' ? `${data.metrics.totalStores} tanımlı bölge mağazası` : `${data.metrics.totalStores} assigned region stores`}</strong></div>
           <i />
           <PlanMenu label={copy.priority} value={riskLabel(risk, copy)} open={openMenu === 'risk'} onToggle={() => setOpenMenu((current) => current === 'risk' ? null : 'risk')}>
             {(['all', 'high', 'medium', 'low'] as const).map((value) => <button role="menuitemradio" aria-checked={risk === value} className={risk === value ? 'is-selected' : ''} key={value} onClick={() => { retainCurrentPeriod(); setRisk(value); setOffset(0); setOpenMenu(null) }}><span>{riskLabel(value, copy)}</span>{risk === value ? <Check size={13} /> : null}</button>)}
           </PlanMenu>
           <PlanMenu label={copy.status} value={statusLabel(planStatus, copy)} open={openMenu === 'status'} onToggle={() => setOpenMenu((current) => current === 'status' ? null : 'status')}>
-            {(['all', 'unplanned', 'waiting', 'missed', 'completed', 'mixed'] as const).map((value) => <button role="menuitemradio" aria-checked={planStatus === value} className={planStatus === value ? 'is-selected' : ''} key={value} onClick={() => { retainCurrentPeriod(); setPlanStatus(value); setOffset(0); setOpenMenu(null) }}><span>{statusLabel(value, copy)}</span>{planStatus === value ? <Check size={13} /> : null}</button>)}
+            {(['all', 'unplanned', 'planned', 'waiting', 'missed', 'completed', 'mixed'] as const).map((value) => <button role="menuitemradio" aria-checked={planStatus === value} className={planStatus === value ? 'is-selected' : ''} key={value} onClick={() => { retainCurrentPeriod(); setPlanStatus(value); setOffset(0); setOpenMenu(null) }}><span>{statusLabel(value, copy)}</span>{planStatus === value ? <Check size={13} /> : null}</button>)}
           </PlanMenu>
           <PlanMenu label={copy.sort} value={sortLabel(sort, copy)} open={openMenu === 'sort'} onToggle={() => setOpenMenu((current) => current === 'sort' ? null : 'sort')}>
             {(['risk_desc', 'store_asc', 'store_desc', 'last_visit_desc', 'next_plan_asc'] as const).map((value) => <button role="menuitemradio" aria-checked={sort === value} className={sort === value ? 'is-selected' : ''} key={value} onClick={() => { retainCurrentPeriod(); setSort(value); setOffset(0); setOpenMenu(null) }}><span>{sortLabel(value, copy)}</span>{sort === value ? <Check size={13} /> : null}</button>)}
@@ -243,15 +243,15 @@ function getCopy(locale: 'tr' | 'en') {
 function riskLabel(value: ChecklistVisitPlanRisk | Exclude<ChecklistVisitPlanRisk, 'all'>, copy: Copy) {
   return value === 'high' ? copy.high : value === 'medium' ? copy.medium : value === 'low' ? copy.low : (copy.visitPlan === 'ZİYARET PLANI' ? 'Tümü' : 'All')
 }
-function statusLabel(value: ChecklistVisitPlanStatus | 'waiting' | 'missed' | 'completed', copy: Copy) {
+function statusLabel(value: ChecklistVisitPlanStatus | 'planned' | 'waiting' | 'missed' | 'completed', copy: Copy) {
   const tr = copy.visitPlan === 'ZİYARET PLANI'
-  return ({ all: tr ? 'Tümü' : 'All', unplanned: tr ? 'Planlanmadı' : 'Unplanned', waiting: tr ? 'Ziyaret Bekleniyor' : 'Visit Waiting', missed: tr ? 'Checklist yapılmadı' : 'Checklist not completed', completed: tr ? 'Ziyaret Tamamlandı' : 'Visit Completed', mixed: tr ? 'Karma plan' : 'Mixed plan' })[value]
+  return ({ all: tr ? 'Tümü' : 'All', unplanned: tr ? 'Plan yapılmadı' : 'Not planned', planned: tr ? 'Ziyaret Planlandı' : 'Visit Planned', waiting: tr ? 'Ziyaret Bekleniyor' : 'Visit Waiting', missed: tr ? 'Checklist yapılmadı' : 'Checklist not completed', completed: tr ? 'Ziyaret Tamamlandı' : 'Visit Completed', mixed: tr ? 'Karma plan' : 'Mixed plan' })[value]
 }
 function sortLabel(value: ChecklistVisitPlanSort, copy: Copy) {
   const tr = copy.visitPlan === 'ZİYARET PLANI'
   return ({ risk_desc: tr ? 'Risk önceliği' : 'Risk priority', store_asc: tr ? 'Mağaza A-Z' : 'Store A-Z', store_desc: tr ? 'Mağaza Z-A' : 'Store Z-A', last_visit_asc: tr ? 'En eski ziyaret' : 'Oldest visit', last_visit_desc: tr ? 'En yeni ziyaret' : 'Newest visit', next_plan_asc: tr ? 'En yakın plan' : 'Next plan', next_plan_desc: tr ? 'En uzak plan' : 'Latest plan' })[value]
 }
-function statusTone(value: ChecklistVisitPlanPeriodRow['planStatus']) { return value === 'completed' ? 'done' : value === 'missed' || value === 'unplanned' ? 'late' : 'review' }
+function statusTone(value: ChecklistVisitPlanPeriodRow['planStatus']) { return value === 'completed' ? 'done' : value === 'missed' ? 'late' : value === 'planned' ? 'planned' : 'review' }
 function reasonLabel(value: ChecklistVisitPlanPeriodRow['reasonCodes'][number] | undefined, copy: Copy) {
   const tr = copy.visitPlan === 'ZİYARET PLANI'
   if (!value) return tr ? 'Neden bilgisi yok' : 'No reason available'
@@ -263,7 +263,7 @@ function reasonLabel(value: ChecklistVisitPlanPeriodRow['reasonCodes'][number] |
   return labels[value]
 }
 function formatPlanDates(row: ChecklistVisitPlanPeriodRow, locale: 'tr' | 'en') {
-  if (row.planItems.length === 0) return locale === 'tr' ? 'Planlanmadı' : 'Unplanned'
+  if (row.planItems.length === 0) return locale === 'tr' ? 'Plan yapılmadı' : 'Not planned'
   const labels = row.planItems.slice(0, 2).map((item) => formatIsoDate(item.plannedDate, locale))
   return row.planItems.length > 2 ? `${labels.join(', ')} +${row.planItems.length - 2}` : labels.join(', ')
 }

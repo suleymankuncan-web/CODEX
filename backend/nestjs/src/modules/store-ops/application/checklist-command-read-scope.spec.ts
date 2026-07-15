@@ -105,4 +105,30 @@ describe("resolveChecklistCommandReadScope", () => {
       allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
     });
   });
+
+  it("keeps a mixed Super Admin and Store Manager session in the Super Admin view", () => {
+    expect(
+      resolveChecklistCommandReadScope({
+        actorRoleCodes: ["SUPER_ADMIN", "STORE_MANAGER"],
+        actorReadScope: {
+          companyIds: ["admin-company"],
+          regionIds: ["admin-region"],
+          storeIds: ["admin-store"],
+        },
+        roleScopes: {
+          STORE_MANAGER: {
+            companyIds: [],
+            regionIds: [],
+            storeIds: ["manager-store-must-not-win"],
+          },
+        },
+      }),
+    ).toEqual({
+      view: "super_admin",
+      companyIds: ["admin-company"],
+      regionIds: ["admin-region"],
+      storeIds: ["admin-store"],
+      allowedTemplateTypes: ["BM_STORE_VISIT", "VM_STORE_VISIT"],
+    });
+  });
 });

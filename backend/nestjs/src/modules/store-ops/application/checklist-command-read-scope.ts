@@ -45,6 +45,16 @@ export function resolveChecklistCommandReadScope(
     };
   }
 
+  if (input.actorRoleCodes.includes("SUPER_ADMIN")) {
+    return {
+      view: "super_admin",
+      companyIds: unique(input.actorReadScope.companyIds),
+      regionIds: unique(input.actorReadScope.regionIds),
+      storeIds: unique(input.actorReadScope.storeIds),
+      allowedTemplateTypes: [...BOTH_VISIT_TYPES],
+    };
+  }
+
   if (input.actorRoleCodes.includes("STORE_MANAGER")) {
     const roleScope = input.roleScopes?.STORE_MANAGER;
     return {
@@ -64,16 +74,6 @@ export function resolveChecklistCommandReadScope(
       regionIds: unique(roleScope?.regionIds ?? []),
       storeIds: unique(roleScope?.storeIds ?? []),
       allowedTemplateTypes: ["VM_STORE_VISIT"],
-    };
-  }
-
-  if (input.actorRoleCodes.includes("SUPER_ADMIN")) {
-    return {
-      view: "super_admin",
-      companyIds: unique(input.actorReadScope.companyIds),
-      regionIds: unique(input.actorReadScope.regionIds),
-      storeIds: unique(input.actorReadScope.storeIds),
-      allowedTemplateTypes: [...BOTH_VISIT_TYPES],
     };
   }
 

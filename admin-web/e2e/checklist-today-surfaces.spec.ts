@@ -1,18 +1,14 @@
+import { mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { setStoredLocale } from './locale-test-utils'
 import { expectChecklistResultModalNoScoreContract, expectChecklistResultModalVisualContract } from './checklist-result-modal-assertions'
-import { buildChecklistCoverageRows } from '../src/pages/store-checklists-coverage-model'
-import { buildChecklistStoreVisitRows } from '../src/pages/store-checklists-logic'
-import {
-  buildVisitPlanRows,
-  getVisitPlanCurrentMonthKey,
-  resolveVisitPlanEvaluationMonth,
-} from '../src/pages/store-visit-plan-model'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
 const vmTemplateId = '99999999-9999-4999-8999-999999999999'
 const checklistFixtureNow = new Date('2026-05-20T12:00:00.000Z')
+const closeoutEvidenceDir = join(process.cwd(), '..', 'docs', 'evidence', 'checklist-command-cutover-v2', 'p7')
 
 test('region manager checklist surface shows assigned store visit workflow', async ({ page }) => {
   const requests = createChecklistRequestLog()
@@ -451,145 +447,7 @@ test('region manager keeps BM checklist action available while reading the VM fi
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 })
 
-test.skip('visit plan prioritizes region manager stores and does not start checklist', async ({ page }) => {
-  const requests = createChecklistRequestLog()
-  const stores = [
-    { storeId: 'aaaaaaaa-0000-4000-8000-000000000001', storeName: 'Ankara Risk' },
-    { storeId: 'aaaaaaaa-0000-4000-8000-000000000002', storeName: 'Bursa Takip' },
-    { storeId: 'aaaaaaaa-0000-4000-8000-000000000003', storeName: 'Izmir Temiz' },
-    { storeId: 'aaaaaaaa-0000-4000-8000-000000000004', storeName: 'Konya Sinyal' },
-  ]
-
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    acknowledgementItems: [],
-    activeInstances: [
-      {
-        checklistInstanceId: 'bbbbbbbb-0000-4000-8000-000000000002',
-        checklistTemplateId: templateId,
-        storeId: stores[1].storeId,
-        status: 'in_progress',
-        startedAt: '2026-05-20T08:00:00.000Z',
-        updatedAt: '2026-05-20T08:10:00.000Z',
-      },
-    ],
-    completedThisMonth: [
-      {
-        acknowledgedAt: null,
-        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000001',
-        checklistTemplateId: vmTemplateId,
-        completedAt: '2026-05-08T09:00:00.000Z',
-        storeId: stores[0].storeId,
-        totalScore: 92,
-      },
-      {
-        acknowledgedAt: null,
-        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000002',
-        checklistTemplateId: templateId,
-        completedAt: '2026-05-10T09:00:00.000Z',
-        storeId: stores[1].storeId,
-        totalScore: 78,
-      },
-      {
-        acknowledgedAt: null,
-        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000003',
-        checklistTemplateId: templateId,
-        completedAt: '2026-05-18T09:00:00.000Z',
-        storeId: stores[2].storeId,
-        totalScore: 90,
-      },
-      {
-        acknowledgedAt: null,
-        checklistInstanceId: 'dddddddd-0000-4000-8000-000000000003',
-        checklistTemplateId: vmTemplateId,
-        completedAt: '2026-05-18T10:00:00.000Z',
-        storeId: stores[2].storeId,
-        totalScore: 92,
-      },
-      {
-        acknowledgedAt: null,
-        checklistInstanceId: 'cccccccc-0000-4000-8000-000000000004',
-        checklistTemplateId: templateId,
-        completedAt: '2026-05-12T09:00:00.000Z',
-        storeId: stores[3].storeId,
-        totalScore: 0,
-      },
-    ],
-    includeVmTemplate: true,
-    monthlySummaries: [
-      {
-        averageScore: 92,
-        checklistTemplateId: vmTemplateId,
-        completedCount: 1,
-        monthStart: '2026-05-01',
-        storeId: stores[0].storeId,
-      },
-      {
-        averageScore: 78,
-        checklistTemplateId: templateId,
-        completedCount: 1,
-        monthStart: '2026-05-01',
-        storeId: stores[1].storeId,
-      },
-      {
-        averageScore: 90,
-        checklistTemplateId: templateId,
-        completedCount: 1,
-        monthStart: '2026-05-01',
-        storeId: stores[2].storeId,
-      },
-      {
-        averageScore: 92,
-        checklistTemplateId: vmTemplateId,
-        completedCount: 1,
-        monthStart: '2026-05-01',
-        storeId: stores[2].storeId,
-      },
-      {
-        averageScore: null,
-        checklistTemplateId: templateId,
-        completedCount: 1,
-        monthStart: '2026-05-01',
-        storeId: stores[3].storeId,
-      },
-    ],
-    requests,
-    stores,
-  })
-  await page.goto('/store/checklists?tab=plan')
-
-  await expect(page.getByRole('tab', { name: /Ziyaret planı/ })).toHaveAttribute('aria-selected', 'true')
-  const rows = page.locator('.store-checklists-plan-row')
-  await expect(rows).toHaveCount(4)
-  await expect(rows.nth(0)).toContainText('Ankara Risk')
-  await expect(rows.nth(0)).toContainText('Yüksek')
-  await expect(rows.nth(0)).toContainText('Bu ay ziyaret yok')
-  await expect(rows.nth(0)).toContainText('VM')
-  await expect(rows.nth(0)).toContainText('92')
-
-  const mediumRow = rows.filter({ hasText: 'Bursa Takip' })
-  await expect(mediumRow).toContainText('Takip')
-  await expect(mediumRow).toContainText('Aktif taslak var')
-  await expect(mediumRow).toContainText('Takipte checklist sonucu')
-
-  const nullScoreRow = rows.filter({ hasText: 'Konya Sinyal' })
-  await expect(nullScoreRow).toContainText('Sinyal yetersiz')
-  await expect(nullScoreRow).not.toContainText('Plan temiz')
-
-  const lowRow = rows.filter({ hasText: 'Izmir Temiz' })
-  await expect(lowRow).toContainText('Plan temiz')
-  await expect(lowRow).toContainText('Skor güçlü')
-  await expect(lowRow).toContainText('BM')
-  await expect(lowRow).toContainText('90')
-  await expect(lowRow).toContainText('VM')
-  await expect(lowRow).toContainText('92')
-
-  await rows.nth(0).getByRole('button', { name: 'Ziyaretlere git' }).click()
-  await expect(page).toHaveURL(/tab=visits/)
-  await expect(page.getByRole('tab', { name: /Ziyaretler/ })).toHaveAttribute('aria-selected', 'true')
-  await expect.poll(() => requests.starts).toEqual([])
-})
-
-test('visit plan keeps visual merchandiser scope to VM signals', async ({ page }) => {
+test('visual merchandiser keeps assigned VM execution without weekly plan scope', async ({ page }) => {
   await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
     acknowledgementItems: [],
     activeInstances: [],
@@ -601,11 +459,9 @@ test('visit plan keeps visual merchandiser scope to VM signals', async ({ page }
   })
   await page.goto('/store/checklists?tab=plan')
 
-  await expect(page.getByRole('tab', { name: /Ziyaret planı/ })).toBeVisible()
-  const planRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
-  await expect(planRow).toContainText('Bu ay ziyaret yok')
-  await expect(planRow).toContainText('Yüksek')
-  await expect(planRow.getByText('BM', { exact: true })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'VM Kontrol Merkezi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Ziyaret Planı/ })).toHaveCount(0)
+  await expect(page.getByText('BM', { exact: true })).toHaveCount(0)
   await expect(page.getByText('BM + VM')).toHaveCount(0)
 })
 
@@ -616,247 +472,6 @@ test('visit plan is not exposed to store manager and plan URL falls back', async
   await expect(page.getByRole('tab', { name: /Ziyaret planı/ })).toHaveCount(0)
   await expect(page.locator('#store-checklist-panel-plan')).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'Mağaza Kontrol Merkezi' })).toBeVisible()
-})
-
-test.skip('visit plan evaluates all-period filter against current month', async ({ page }) => {
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    acknowledgementItems: [],
-    activeInstances: [],
-    completedThisMonth: [
-      {
-        acknowledgedAt: null,
-        checklistInstanceId: 'eeeeeeee-0000-4000-8000-000000000001',
-        checklistTemplateId: templateId,
-        completedAt: '2026-04-15T09:00:00.000Z',
-        storeId,
-        totalScore: 92,
-      },
-    ],
-    monthlySummaries: [
-      {
-        averageScore: 92,
-        checklistTemplateId: templateId,
-        completedCount: 1,
-        monthStart: '2026-04-01',
-        storeId,
-      },
-    ],
-  })
-  await page.goto('/store/checklists?view=workflow')
-
-  await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
-  await page.getByRole('option', { name: 'Tüm aylar' }).click()
-  await page.getByRole('tab', { name: /Ziyaret planı/ }).click()
-
-  const planRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
-  await expect(planRow).toContainText('Yüksek')
-  await expect(planRow).toContainText('Bu ay ziyaret yok')
-  await expect(planRow).not.toContainText('Plan temiz')
-})
-
-test.skip('visit plan keeps missing stores visible for a selected past month', async ({ page }) => {
-  const stores = [
-    { storeId: 'aaaaaaaa-0000-4000-8000-000000000011', storeName: 'Nisan Eksik' },
-    { storeId: 'aaaaaaaa-0000-4000-8000-000000000012', storeName: 'Nisan Tamam' },
-  ]
-
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    acknowledgementItems: [],
-    activeInstances: [],
-    completedThisMonth: [],
-    monthlySummaries: [
-      {
-        averageScore: 91,
-        checklistTemplateId: templateId,
-        completedCount: 1,
-        monthStart: '2026-04-01',
-        storeId: stores[1].storeId,
-      },
-    ],
-    stores,
-  })
-  await page.goto('/store/checklists?view=workflow')
-
-  await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
-  await page.getByRole('option', { name: 'Nisan 2026' }).click()
-  await page.getByRole('tab', { name: /Ziyaret plan/ }).click()
-
-  const missingRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Nisan Eksik' })
-  await expect(missingRow).toBeVisible()
-  await expect(missingRow).toHaveClass(/store-checklists-plan-row-high/)
-  await expect(missingRow).toContainText('Bu ay ziyaret yok')
-})
-
-test.skip('visit plan uses acknowledgement scores for a selected historical month across template versions', async ({ page }) => {
-  const historicalItem = createChecklistAcknowledgementsFixture(['REGION_MANAGER'], {
-    acknowledgementCompletedAt: '2026-04-12T09:00:00.000Z',
-    handoffState: { acknowledged: true, completed: true },
-  }).items[0]
-  const oldTemplateId = 'bbbbbbbb-0000-4000-8000-000000000071'
-
-  if (!historicalItem) throw new Error('historical checklist fixture is required')
-
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    acknowledgementItems: [
-      {
-        ...historicalItem,
-        checklistTemplateId: oldTemplateId,
-        complianceRate: 0.62,
-        totalScore: 62,
-      },
-    ],
-    activeInstances: [],
-    completedThisMonth: [],
-    monthlySummaries: [],
-  })
-  await page.goto('/store/checklists?view=workflow')
-
-  await page.getByRole('combobox', { name: 'Ay filtresi' }).click()
-  await page.getByRole('option', { name: 'Nisan 2026' }).click()
-  await page.getByRole('tab', { name: /Ziyaret plan/ }).click()
-
-  const lowScoreRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
-  await expect(lowScoreRow).toBeVisible()
-  await expect(lowScoreRow).toHaveClass(/store-checklists-plan-row-high/)
-  await expect(lowScoreRow).toContainText('62')
-  await expect(lowScoreRow).not.toContainText('Bu ay ziyaret yok')
-  await expect(lowScoreRow.locator('.store-checklists-plan-reason-high').filter({ hasText: 'checklist' })).toBeVisible()
-})
-
-test.skip('visit plan applies pending status after deriving acknowledgement reasons', async ({ page }) => {
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    activeInstances: [],
-    completedThisMonth: [
-      {
-        acknowledgedAt: null,
-        checklistInstanceId: 'eeeeeeee-0000-4000-8000-000000000021',
-        checklistTemplateId: templateId,
-        completedAt: '2026-05-14T09:00:00.000Z',
-        storeId,
-        totalScore: 86,
-      },
-    ],
-    monthlySummaries: [
-      {
-        averageScore: 86,
-        checklistTemplateId: templateId,
-        completedCount: 1,
-        monthStart: '2026-05-01',
-        storeId,
-      },
-    ],
-  })
-  await page.goto('/store/checklists?view=workflow')
-
-  await page.getByRole('combobox', { name: 'Durum' }).click()
-  await page.getByRole('option', { name: 'Kabul bekliyor' }).click()
-  await page.getByRole('tab', { name: /Ziyaret plan/ }).click()
-
-  const pendingRow = page.locator('.store-checklists-plan-row').filter({ hasText: 'Marmara Park' })
-  await expect(pendingRow).toBeVisible()
-  await expect(pendingRow.locator('.store-checklists-plan-reason').filter({ hasText: 'Kabul' })).toBeVisible()
-})
-
-test.skip('visit plan shows explicit empty states', async ({ page }) => {
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    acknowledgementItems: [],
-    activeInstances: [],
-    monthlySummaries: [],
-    stores: [],
-  })
-  await page.goto('/store/checklists?tab=plan')
-  await expect(page.getByText('Atanmış mağaza yok')).toBeVisible()
-
-  await page.unroute('**/api/mobile/checklists/today')
-  await page.unroute('**/api/auth/session')
-  await page.unroute('**/api/checklists/acknowledgements/list')
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    acknowledgementItems: [],
-    activeInstances: [],
-    monthlySummaries: [],
-    omitTemplates: true,
-  })
-  await page.goto('/store/checklists?tab=plan')
-  await expect(page.getByText('Yayınlanmış ziyaret şablonu yok')).toBeVisible()
-})
-
-test.skip('visit plan handles 200 stores without extra tab-switch network', async ({ page }) => {
-  const stores = Array.from({ length: 200 }, (_, index) => ({
-    storeId: `ffffffff-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
-    storeName: `Plan Magaza ${String(index + 1).padStart(3, '0')}`,
-  }))
-  const monthlySummaries = stores.map((storeFixture) => ({
-    averageScore: 90,
-    checklistTemplateId: templateId,
-    completedCount: 1,
-    monthStart: '2026-05-01',
-    storeId: storeFixture.storeId,
-  }))
-  const fixtureOptions: ChecklistFixtureOptions = {
-    acknowledgementItems: [],
-    activeInstances: [],
-    monthlySummaries,
-    stores,
-  }
-  const fixture = createMobileChecklistTodayFixture(fixtureOptions).data
-  const currentMonth = getVisitPlanCurrentMonthKey(checklistFixtureNow)
-  const evaluationMonth = resolveVisitPlanEvaluationMonth('all', currentMonth)
-  const coverageRows = buildChecklistCoverageRows({
-    acknowledgementItems: [],
-    localActiveInstances: {},
-    localCompletedInstances: {},
-    localCompletedRows: {},
-    mobileToday: fixture,
-    month: evaluationMonth,
-  })
-  const startedAt = performance.now()
-  const planRows = buildVisitPlanRows({
-    acknowledgementItems: [],
-    authSummary: createAuthSessionFixture(['REGION_MANAGER'], fixtureOptions),
-    currentMonth,
-    evaluationMonth,
-    requiresCombinedVisitTemplates: true,
-    rows: buildChecklistStoreVisitRows(coverageRows),
-    selectedMonth: 'all',
-  })
-  const duration = performance.now() - startedAt
-  expect(planRows).toHaveLength(200)
-  expect(duration).toBeLessThan(50)
-
-  const apiRequests: string[] = []
-  page.on('request', (request) => {
-    const url = request.url()
-    if (
-      url.includes('/api/mobile/checklists/today') ||
-      url.includes('/api/checklists/acknowledgements/list') ||
-      url.includes('/api/mobile/checklists/instances')
-    ) {
-      apiRequests.push(`${request.method()} ${url}`)
-    }
-  })
-  await setupChecklistPage(page, ['REGION_MANAGER'], fixtureOptions)
-  await page.goto('/store/checklists?view=workflow')
-  await expect(page.getByRole('tab', { name: /Ziyaret planı/ })).toBeVisible()
-  const requestCountBeforePlanTab = apiRequests.length
-
-  await page.getByRole('tab', { name: /Ziyaret planı/ }).click()
-  await expect(page.locator('.store-checklists-plan-row')).toHaveCount(200)
-  await expect.poll(() => apiRequests.length).toBe(requestCountBeforePlanTab)
-})
-
-test.skip('visit plan stays usable on mobile width', async ({ page }) => {
-  await page.setViewportSize({ width: 360, height: 844 })
-  await setupChecklistPage(page, ['REGION_MANAGER'], {
-    acknowledgementItems: [],
-    activeInstances: [],
-    longCopy: true,
-    monthlySummaries: [],
-  })
-  await page.goto('/store/checklists?tab=plan')
-
-  await expect(page.getByRole('combobox', { name: 'Checklist bölümleri' })).toBeVisible()
-  await expect(page.locator('.store-checklists-plan-row')).toBeVisible()
-  await expectNoHorizontalOverflow(page)
 })
 
 test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
@@ -870,15 +485,18 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
     requests,
   })
   await page.goto('/store/checklists')
+  await captureCloseoutRoleEvidence(page, 'visual-merchandiser', 'VM Kontrol Merkezi')
 
-  await expect(page.getByText('VM görünümü').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'VM Kontrol Merkezi' })).toBeVisible()
+  await expect(page.getByText('Atanmış mağaza', { exact: true })).toBeVisible()
   await expect(page.getByText('BM görünümü')).toHaveCount(0)
   await expect(page.getByText('BM + VM')).toHaveCount(0)
-  await expect(page.getByText('BM Checklist')).toHaveCount(0)
-  await expect(page.getByText('BM Checklist yapılmadı')).toHaveCount(0)
-  await expect(page.getByLabel(/VM Checklist ziyaret yok/)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Checklist yap' })).toBeVisible()
-  await page.getByRole('button', { name: 'Checklist yap' }).click()
+  await expect(page.getByText('BM', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'VM checklistini aç' }).click()
+  const workflowDialog = page.getByRole('dialog', { name: /Checklist akışı/ })
+  await expect(workflowDialog.getByText('BM Checklist')).toHaveCount(0)
+  await expect(workflowDialog.getByText('VM Checklist')).toBeVisible()
+  await workflowDialog.getByRole('article').filter({ hasText: 'VM Checklist' }).getByRole('button', { name: 'Checklist başlat' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
@@ -903,9 +521,9 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.locator('a[href="/store/competitions"]')).toHaveCount(0)
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'İptal' }).click()
-  await page.getByRole('tab', { name: /Sonuç kabul/ }).click()
-  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
-  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })).toBeVisible()
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
+  await expect(page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
+  await expect(page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
 test('visual merchandiser without a published VM template still sees assigned store scope', async ({ page }) => {
@@ -916,16 +534,12 @@ test('visual merchandiser without a published VM template still sees assigned st
   })
   await page.goto('/store/checklists')
 
-  await expect(page.locator('.store-checklists-command-metrics')).toContainText('Atanmış mağaza')
-  await expect(page.locator('.store-checklists-command-metrics .store-checklists-metric').first()).toContainText('1')
-  await expect(page.getByText('VM şablonu yayında değil')).toBeVisible()
-  const templateTypeSelect = page.getByRole('combobox', { name: 'Şablon tipi' })
-  await expect(templateTypeSelect).toContainText('VM')
-  await templateTypeSelect.click()
-  await expect(page.getByRole('option', { name: 'VM', exact: true })).toHaveCount(1)
-  await expect(page.getByRole('option', { name: 'BM + VM', exact: true })).toHaveCount(0)
-  await page.keyboard.press('Escape')
-  await expect(page.getByText('BM + VM')).toHaveCount(0)
+  await expect(page.locator('.checklist-command-metrics')).toContainText('Atanmış mağaza')
+  await expect(page.locator('.checklist-command-metric').first()).toContainText('1')
+  await page.getByRole('button', { name: 'VM checklistini aç' }).click()
+  const workflowDialog = page.getByRole('dialog', { name: /Checklist akışı/ })
+  await expect(workflowDialog.getByRole('heading', { name: 'VM şablonu yayında değil' })).toBeVisible()
+  await expect(workflowDialog.getByText('BM Checklist')).toHaveCount(0)
 })
 
 test('visual merchandiser completed checklist lands in store manager acknowledgement inbox', async ({ page }) => {
@@ -950,10 +564,9 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
     templateName: 'VM Visit',
     templateType: 'VM_STORE_VISIT',
   })
-  await page.goto('/store/checklists')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
 
-  await expect(page.getByLabel(/VM Checklist no visits/)).toBeVisible()
-  await page.getByRole('button', { name: 'Start checklist' }).click()
+  await page.getByRole('dialog', { name: /Checklist workflow/ }).getByRole('article').filter({ hasText: 'VM Checklist' }).getByRole('button', { name: 'Start checklist' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
 
@@ -993,31 +606,14 @@ test('store checklist surface switches to English copy and persists locale', asy
   await page.goto('/store/checklists')
 
   await setStoredLocale(page, 'en')
+  await captureCloseoutRoleEvidence(page, 'super-admin', 'Checklist Administration Center')
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(
-    page.getByRole('heading', { name: 'Checklist Flow' }),
-  ).toBeVisible()
+  await expect(page.getByText('Checklist Administration Center', { exact: true }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Notifications' })).toHaveCount(0)
-  await expect(page.getByRole('tab', { name: /Visits/ })).toBeVisible()
-  await page.getByRole('tab', { name: /Visit plan/ }).click()
-  await expect(page.getByRole('button', { name: 'Open visits' })).toBeVisible()
-  await expect(page.locator('#store-checklist-panel-plan')).not.toContainText('Ziyaret ak')
-  await page.getByRole('tab', { name: /Visits/ }).click()
-  await expect(page.getByRole('heading', { name: 'Assigned store checklist visits' })).toBeVisible()
-  await expect(page.getByText('In progress', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Assigned stores', { exact: true })).toBeVisible()
-  await expect(page.getByText('Average score', { exact: true })).toBeVisible()
-  await expect(
-    page.locator('.store-checklists-table-head').getByRole('button', { name: 'BM Checklist' }),
-  ).toBeVisible()
-  await expect(page.locator('.store-checklists-visit-table .store-checklists-table-head').getByText('Status', { exact: true })).toHaveCount(0)
-  await expect(page.locator('.store-checklists-visit-row').getByText('Draft', { exact: true })).toHaveCount(0)
-  const checklistUrl = page.url()
-  await page.getByRole('tab', { name: /Result acknowledgement/ }).click()
-  await expect(page).toHaveURL(checklistUrl)
-  await page.getByRole('tab', { name: /Visits/ }).click()
-  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Open checklists' }).click()
+  const workflowDialog = page.getByRole('dialog', { name: /Checklist workflow/ })
+  await workflowDialog.getByRole('article').filter({ hasText: 'BM Checklist' }).getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Mark item' })).toHaveCount(0)
   await expect(page.getByText('Add photo (optional)')).toHaveCount(0)
@@ -1027,15 +623,8 @@ test('store checklist surface switches to English copy and persists locale', asy
   await expect(page.getByRole('button', { name: 'Complete', exact: true })).toBeVisible()
   page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Cancel' }).click()
-  await page.getByRole('tab', { name: /Result acknowledgement/ }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
-  ).toBeVisible()
-  await page
-    .locator('.store-checklists-history-row')
-    .filter({ hasText: 'BM Result' })
-    .getByRole('button', { name: 'View details' })
-    .click()
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
+  await page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' }).getByRole('button', { name: 'View details' }).click()
   await expect(page.getByText('Checklist result', { exact: true })).toBeVisible()
   await expect(page.getByText('Acknowledgement note')).toBeVisible()
   await expect(page.getByRole('button', { name: 'I acknowledge' })).toBeVisible()
@@ -1050,9 +639,16 @@ test('store checklist surface switches to English copy and persists locale', asy
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(
-    page.getByRole('heading', { name: 'Checklist Flow' }),
-  ).toBeVisible()
+  await expect(page.getByText('Checklist Administration Center', { exact: true }).first()).toBeVisible()
+})
+
+test('mixed Super Admin and Store Manager roles keep the Super Admin command view', async ({ page }) => {
+  await setupChecklistPage(page, ['SUPER_ADMIN', 'STORE_MANAGER'])
+  await page.goto('/store/checklists')
+
+  await expect(page.getByRole('region', { name: 'Super Admin checklist görünümü' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Checklist Yönetim Merkezi' })).toBeVisible()
+  await expect(page.getByText('Sunucu yanıtı Super Admin kapsamıyla eşleşmedi.')).toHaveCount(0)
 })
 
 test('checklist completion waits for API success before showing completed notice', async ({ page }) => {
@@ -1368,7 +964,9 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
     const currentRoles = options.roleState?.current ?? roleCodes
     const view = currentRoles.includes('REGION_MANAGER')
       ? 'region_manager'
-      : currentRoles.includes('STORE_MANAGER')
+      : currentRoles.includes('SUPER_ADMIN')
+        ? 'super_admin'
+        : currentRoles.includes('STORE_MANAGER')
         ? 'store_manager'
         : currentRoles.includes('VISUAL_MERCHANDISER')
           ? 'visual_merchandiser'
@@ -1386,10 +984,10 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
           },
           metrics: {
             totalStores: stores.length,
-            needsVisit: 0,
+            needsVisit: options.handoffState && !options.handoffState.completed ? stores.length : 0,
             active: 0,
             pending: 0,
-            completed: stores.length,
+            completed: options.handoffState && !options.handoffState.completed ? 0 : stores.length,
           },
           items: stores.map((store) => ({
             storeId: store.storeId,
@@ -1408,8 +1006,8 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
             pendingAcknowledgementCount: pendingAcknowledgements,
             openActionCount: 0,
             blockedActionCount: 0,
-            status: 'completed',
-            reasonCodes: ['completed_period'],
+            status: options.handoffState && !options.handoffState.completed ? 'needs_visit' : 'completed',
+            reasonCodes: options.handoffState && !options.handoffState.completed ? ['missing_bm_visit'] : ['completed_period'],
             lastOperationalAt: null,
           })),
           page: { total: stores.length, limit: 30, offset: 0, hasMore: false },
@@ -1834,5 +1432,24 @@ function createChecklistAcknowledgementsFixture(
       limit: 50,
       offset: 0,
     },
+  }
+}
+
+async function captureCloseoutRoleEvidence(page: Page, role: string, heading: string) {
+  mkdirSync(closeoutEvidenceDir, { recursive: true })
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 768 },
+    { width: 390, height: 844 },
+    { width: 320, height: 844 },
+  ] as const) {
+    await page.setViewportSize(viewport)
+    await page.goto('/store/checklists')
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    await page.screenshot({
+      path: join(closeoutEvidenceDir, `${role}-${viewport.width}x${viewport.height}.png`),
+      fullPage: true,
+    })
   }
 }

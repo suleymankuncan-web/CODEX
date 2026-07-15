@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog'
 import type { AuthSessionSummary } from '../auth/api'
-import { canAcknowledgeChecklist } from '../auth/authorization'
+import { canAcknowledgeChecklist, hasAnyRole } from '../auth/authorization'
 import type { ChecklistAcknowledgementItem } from '../checklists/api'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import {
@@ -18,11 +18,12 @@ import {
   canMutateChecklistTemplateType,
   getCoverageScore,
   getCoverageRowKeyFromRow,
+  isVisualMerchandiserOnly,
 } from '../../pages/store-checklists-logic'
 import { StoreChecklistsModals } from '../../pages/store-checklists-modals'
 import type { ChecklistCoverageRow } from '../../pages/store-checklists-model'
 import type { ChecklistWorkflowOverlayState } from './checklist-workflow-route-state'
-import { useChecklistWorkflowLegacyController } from './useChecklistWorkflowLegacyController'
+import { useChecklistWorkflowController } from './useChecklistWorkflowController'
 
 export function ChecklistWorkflowCommandOverlay(input: {
   authSummary: AuthSessionSummary | null
@@ -30,7 +31,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
   returnFocusRef: RefObject<HTMLElement | null>
   onClose: () => void
 }) {
-  const controller = useChecklistWorkflowLegacyController({ authSummary: input.authSummary })
+  const controller = useChecklistWorkflowController({ authSummary: input.authSummary })
   const {
     acknowledgeMutation,
     ackNotes,
@@ -68,6 +69,9 @@ export function ChecklistWorkflowCommandOverlay(input: {
     : undefined
   const nestedModalOpen = Boolean(selectedSession || selectedResult)
   const resultMissing = input.routeState.kind === 'result' && !isLoading && !selectedResult
+  const resultSurface = input.routeState.kind === 'result' || (
+    input.routeState.kind === 'workflow' && (input.routeState.tab === 'inbox' || input.routeState.tab === 'history')
+  )
   const workflowResultItems = input.routeState.kind === 'workflow'
     ? (input.routeState.tab === 'inbox'
         ? filteredPendingItems
@@ -82,7 +86,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
       {!nestedModalOpen ? (
         <Dialog open onOpenChange={(open) => { if (!open) input.onClose() }}>
           <DialogContent
-            className="tw:max-h-[min(760px,calc(100dvh-1rem))] tw:max-w-[min(720px,calc(100vw-1rem))] tw:min-w-0 tw:overflow-y-auto tw:p-0 tw:sm:max-w-[min(720px,calc(100vw-2rem))]"
+            className="checklist-workflow-command-drawer tw:min-w-0 tw:p-0"
             closeLabel={locale === 'tr' ? 'Checklist panelini kapat' : 'Close checklist panel'}
             onCloseAutoFocus={(event) => {
               if (!input.returnFocusRef.current) return
@@ -91,14 +95,21 @@ export function ChecklistWorkflowCommandOverlay(input: {
             }}
             showCloseButton={false}
           >
-            <DialogHeader className="tw:sticky tw:top-0 tw:z-10 tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-3 tw:border-b tw:border-border tw:bg-background/95 tw:px-5 tw:py-4 tw:text-left tw:backdrop-blur">
-              <div className="tw:min-w-0">
-                <DialogTitle className="tw:text-lg tw:font-semibold tw:tracking-[-0.02em]">
+            <DialogHeader className="checklist-workflow-command-drawer-header tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)_auto] tw:gap-3 tw:text-left">
+              <div className="checklist-workflow-command-drawer-identity tw:min-w-0">
+                <span className="checklist-workflow-command-drawer-role" aria-hidden="true">
+                  {isVisualMerchandiserOnly(input.authSummary) ? 'VM' : 'BM'}
+                </span>
+                <div className="tw:min-w-0">
+                  <p>{resultSurface ? (locale === 'tr' ? 'CHECKLIST SONUCU' : 'CHECKLIST RESULT') : (locale === 'tr' ? 'MAĞAZA ZİYARETİ' : 'STORE VISIT')}</p>
+                  <h2>{input.routeState.kind === 'result' ? (selectedResult?.storeName ?? (locale === 'tr' ? 'Checklist sonucu' : 'Checklist result')) : (workflowStore?.store.storeName ?? (locale === 'tr' ? 'Checklist akışı' : 'Checklist workflow'))}</h2>
+                </div>
+                <DialogTitle className="tw:sr-only">
                   {input.routeState.kind === 'result'
                     ? (locale === 'tr' ? 'Checklist sonucu' : 'Checklist result')
                     : (locale === 'tr' ? 'Checklist akışı' : 'Checklist workflow')}
                 </DialogTitle>
-                <DialogDescription className="tw:mt-1 tw:text-xs">
+                <DialogDescription className="tw:sr-only">
                   {locale === 'tr'
                     ? 'Mağaza checklistini bu ekrandan tamamlayın.'
                     : 'Complete the store checklist from this screen.'}
@@ -109,7 +120,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
               </Button>
             </DialogHeader>
 
-            <div className="tw:min-w-0 tw:p-5">
+            <div className="checklist-workflow-command-drawer-body tw:min-w-0">
               {input.routeState.kind === 'workflow' && input.routeState.tab === 'visits' && !isLoading && !isError ? (
                 <div className="tw:mb-4 tw:flex tw:justify-end">
                   <Select value={selectedMonth} onValueChange={(value) => dispatchPageState({ type: 'setSelectedMonth', value })}>
@@ -153,32 +164,27 @@ export function ChecklistWorkflowCommandOverlay(input: {
                 />
               ) : workflowStore ? (
                 <section className="tw:min-w-0" aria-label={locale === 'tr' ? 'Mağaza checklistleri' : 'Store checklists'}>
-                  <div className="tw:flex tw:items-center tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-muted/25 tw:p-4">
-                    <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:bg-primary/10 tw:text-primary"><Store className="tw:size-5" /></span>
-                    <div className="tw:min-w-0">
-                      <p className="tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.12em] tw:text-muted-foreground">{locale === 'tr' ? 'Seçili mağaza' : 'Selected store'}</p>
-                      <h3 className="tw:truncate tw:text-base tw:font-semibold tw:text-foreground">{workflowStore.store.storeName}</h3>
-                    </div>
-                  </div>
-                  <div className="tw:mt-4 tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)] tw:gap-3 tw:sm:grid-cols-2">
-                    <ChecklistTypeCard
-                      assigned={assignedStoreIds.includes(workflowStore.store.storeId)}
-                      authSummary={input.authSummary}
-                      label="BM Checklist"
-                      locale={locale}
-                      row={workflowStore.bm}
-                      startPending={startVisitMutation.isPending}
-                      onOpen={(row) => {
-                        const rowKey = getCoverageRowKeyFromRow(row)
-                        if (row.active) {
-                          dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
-                        } else {
-                          hydrateActiveResponseDrafts(undefined)
-                          dispatchPageState({ type: 'resetSessionDrafts' })
-                          startVisitMutation.mutate({ storeId: workflowStore.store.storeId, checklistTemplateId: row.template.checklistTemplateId })
-                        }
-                      }}
-                    />
+                  <div className="tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)] tw:gap-3 tw:sm:grid-cols-2">
+                    {!isVisualMerchandiserOnly(input.authSummary) ? (
+                      <ChecklistTypeCard
+                        assigned={assignedStoreIds.includes(workflowStore.store.storeId)}
+                        authSummary={input.authSummary}
+                        label="BM Checklist"
+                        locale={locale}
+                        row={workflowStore.bm}
+                        startPending={startVisitMutation.isPending}
+                        onOpen={(row) => {
+                          const rowKey = getCoverageRowKeyFromRow(row)
+                          if (row.active) {
+                            dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
+                          } else {
+                            hydrateActiveResponseDrafts(undefined)
+                            dispatchPageState({ type: 'resetSessionDrafts' })
+                            startVisitMutation.mutate({ storeId: workflowStore.store.storeId, checklistTemplateId: row.template.checklistTemplateId })
+                          }
+                        }}
+                      />
+                    ) : null}
                     <ChecklistTypeCard
                       assigned={assignedStoreIds.includes(workflowStore.store.storeId)}
                       authSummary={input.authSummary}
@@ -204,6 +210,14 @@ export function ChecklistWorkflowCommandOverlay(input: {
                     </p>
                   ) : null}
                 </section>
+              ) : input.routeState.kind === 'workflow' && input.routeState.tab === 'visits' && workflowStoreId && assignedStoreIds.includes(workflowStoreId) ? (
+                <OverlayState
+                  icon={ClipboardCheck}
+                  title={hasAnyRole(input.authSummary, ['VISUAL_MERCHANDISER'])
+                    ? (locale === 'tr' ? 'VM şablonu yayında değil' : 'No published VM template')
+                    : (locale === 'tr' ? 'Checklist şablonu yayında değil' : 'No published checklist template')}
+                  copy={locale === 'tr' ? 'Mağaza atamanız korunuyor; yayınlanmış şablon olmadan checklist başlatılamaz.' : 'Your store assignment remains visible; a checklist cannot start without a published template.'}
+                />
               ) : input.routeState.kind === 'workflow' ? (
                 <OverlayState
                   icon={Store}

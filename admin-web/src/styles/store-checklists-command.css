@@ -2,8 +2,7 @@
 @import './store-checklists-result-modal-prototype.css';
 @import './store-checklists-session.css';
 @import './store-checklists-session-responsive.css';
-@import './store-checklists-flow.css';
-@import './store-checklists-flow-responsive.css';
+@import './store-checklists-workflow-primitives.css';
 @import './store-checklists-weekly-plan.css';
 @import './store-checklists-plan.css';
 
@@ -399,6 +398,7 @@
 
 .checklist-command-date,
 .checklist-command-elapsed { display: grid; min-width: 0; gap: 3px; }
+.checklist-command-date { color: var(--cc-muted); font-size: 8px; line-height: 1.35; }
 .checklist-command-date strong,
 .checklist-command-elapsed strong { color: var(--cc-ink); font-size: 10px; font-variant-numeric: tabular-nums; }
 .checklist-command-date small,

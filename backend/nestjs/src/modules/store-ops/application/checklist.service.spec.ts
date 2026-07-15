@@ -212,7 +212,7 @@ describe("ChecklistService", () => {
       storeId: "store-1",
       sourceType: "checklist_remediation",
       sourceId: "checklist:instance-1:item:item-1",
-      sourceDeepLink: "/store/checklists?result=instance-1",
+      sourceDeepLink: "/store/checklists?overlay=result&checklistInstanceId=instance-1",
       title: "Kasa checklist bulgusu",
       summary:
         "BM Store Visit - Kasa duzeni standartlara uygun mu? - Not: Kasa alani duzensiz",

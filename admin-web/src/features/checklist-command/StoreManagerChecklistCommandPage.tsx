@@ -24,8 +24,30 @@ export function StoreManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
   onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
 }) {
+  return <ChecklistOperatorCommandPage {...input} view="store_manager" />
+}
+
+export function VisualMerchandiserChecklistCommandPage(input: {
+  authSummary: AuthSessionSummary | null
+  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
+}) {
+  return <ChecklistOperatorCommandPage {...input} view="visual_merchandiser" />
+}
+
+export function SuperAdminChecklistCommandPage(input: {
+  authSummary: AuthSessionSummary | null
+  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
+}) {
+  return <ChecklistOperatorCommandPage {...input} view="super_admin" />
+}
+
+function ChecklistOperatorCommandPage(input: {
+  authSummary: AuthSessionSummary | null
+  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
+  view: 'store_manager' | 'visual_merchandiser' | 'super_admin'
+}) {
   const { locale } = useLocalization()
-  const copy = locale === 'tr' ? trCopy : enCopy
+  const copy = getOperatorCopy(locale === 'tr' ? trCopy : enCopy, input.view, locale)
   const [period, setPeriod] = useState(() => getBusinessMonthInputValue())
   const [status, setStatus] = useState<ChecklistCommandStatus>('all')
   const [sort, setSort] = useState<ChecklistCommandSort>('store_asc')
@@ -80,7 +102,7 @@ export function StoreManagerChecklistCommandPage(input: {
     return <StoreSurfacePage ariaLabel={copy.aria}><StoreErrorState title={forbidden ? copy.forbidden : copy.error} description={forbidden ? copy.forbiddenCopy : getUserFacingErrorMessage(commandQuery.error, copy.errorCopy)} {...(forbidden ? {} : { action: { label: copy.retry, onClick: () => void commandQuery.refetch(), variant: 'outline' as const } })} /></StoreSurfacePage>
   }
 
-  if (response.data.view !== 'store_manager') {
+  if (response.data.view !== input.view) {
     return <StoreSurfacePage ariaLabel={copy.aria}><StoreErrorState title={copy.forbidden} description={copy.scopeMismatch} /></StoreSurfacePage>
   }
 
@@ -97,7 +119,7 @@ export function StoreManagerChecklistCommandPage(input: {
   ] as const
 
   return <>
-    <StoreSurfacePage ariaLabel={copy.aria} className="checklist-command-parity" data-testid="store-manager-checklist-command">
+    <StoreSurfacePage ariaLabel={copy.aria} className="checklist-command-parity" data-testid={`${input.view}-checklist-command`}>
       <header className="checklist-command-title">
         <div><p>{copy.eyebrow}</p><h1>{copy.title}</h1><p>{copy.scope}</p></div>
         <div className="checklist-command-title-actions"><ChecklistCommandPeriodPicker locale={locale} period={period} onChange={(value) => { setRetained(null); setPeriod(value); setOffset(0) }} /></div>
@@ -118,23 +140,29 @@ export function StoreManagerChecklistCommandPage(input: {
         {data.items.length === 0 ? <div className="tw:grid tw:min-h-56 tw:place-items-center tw:p-8 tw:text-center"><div><Store className="tw:mx-auto tw:size-5 tw:text-muted-foreground" /><strong className="tw:mt-2 tw:block tw:text-sm">{copy.empty}</strong><p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{copy.emptyCopy}</p></div></div> : <div className="tw:grid tw:gap-3 tw:p-3 tw:md:grid-cols-2">
           {data.items.map((row) => <article key={row.storeId} className="tw:grid tw:min-w-0 tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:bg-card tw:p-4 tw:shadow-sm">
             <header className="tw:flex tw:min-w-0 tw:items-start tw:justify-between tw:gap-3"><span className="tw:min-w-0"><small className="tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[.1em] tw:text-muted-foreground">{row.storeCode} · {row.regionName}</small><strong className="tw:mt-1 tw:block tw:truncate tw:text-base">{row.storeName}</strong></span><span className={cn('tw:rounded-full tw:px-2.5 tw:py-1 tw:text-[9px] tw:font-semibold', row.status === 'completed' ? 'tw:bg-emerald-500/10 tw:text-emerald-700' : row.status === 'active' ? 'tw:bg-blue-500/10 tw:text-blue-700' : 'tw:bg-amber-500/10 tw:text-amber-700')}>{statusLabel(row.status, copy)}</span></header>
-            <div className="tw:grid tw:grid-cols-2 tw:gap-2"><Score label="BM" value={row.bmScore} /><Score label="VM" value={row.vmScore} /><Signal label={copy.pendingAcknowledgements} value={row.pendingAcknowledgementCount} /><Signal label={copy.openTasks} value={row.openActionCount} /></div>
+            <div className="tw:grid tw:grid-cols-2 tw:gap-2">{input.view !== 'visual_merchandiser' ? <Score label="BM" value={row.bmScore} /> : null}<Score label="VM" value={row.vmScore} /><Signal label={copy.pendingAcknowledgements} value={row.pendingAcknowledgementCount} /><Signal label={copy.openTasks} value={row.openActionCount} /></div>
             <p className="tw:text-[10px] tw:text-muted-foreground">{row.lastCompletedVisitAt ? `${formatDate(row.lastCompletedVisitAt, locale)} · ${row.elapsedDaysSinceLastVisit ?? 0} ${copy.days}` : copy.noVisit}</p>
-            <div className="tw:flex tw:flex-wrap tw:gap-2"><Button size="sm" onClick={(event) => input.onOpenWorkflow(row.storeId, 'visits', event.currentTarget)}><ClipboardCheck />{copy.openControls}</Button><Button size="sm" variant="outline" onClick={(event) => input.onOpenWorkflow(row.storeId, row.pendingAcknowledgementCount > 0 ? 'inbox' : 'history', event.currentTarget)}>{row.pendingAcknowledgementCount > 0 ? copy.openApprovals : copy.openResults}</Button><Button size="sm" variant="outline" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStoreState({ store: row, scopeSignature }) }}>{copy.openRecord}</Button>{row.openActionCount > 0 ? <Button asChild size="sm" variant="ghost"><Link to="/store/tasks">{copy.openTasksLink}</Link></Button> : null}</div>
+            <div className="tw:flex tw:flex-wrap tw:gap-2"><Button size="sm" onClick={(event) => input.onOpenWorkflow(row.storeId, 'visits', event.currentTarget)}><ClipboardCheck />{copy.openControls}</Button><Button size="sm" variant="outline" onClick={(event) => input.onOpenWorkflow(row.storeId, row.pendingAcknowledgementCount > 0 ? 'inbox' : 'history', event.currentTarget)}>{row.pendingAcknowledgementCount > 0 ? copy.openApprovals : copy.openResults}</Button>{input.view === 'store_manager' ? <Button size="sm" variant="outline" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStoreState({ store: row, scopeSignature }) }}>{copy.openRecord}</Button> : null}{input.view === 'store_manager' && row.openActionCount > 0 ? <Button asChild size="sm" variant="ghost"><Link to="/store/tasks">{copy.openTasksLink}</Link></Button> : null}</div>
           </article>)}
         </div>}
 
         <footer className="checklist-command-pagination"><span>{firstItem}–{lastItem} / {data.page.total}</span><div><button type="button" aria-label={copy.previous} disabled={offset === 0 || commandQuery.isFetching} onClick={() => { retainCurrent(); setOffset(Math.max(0, offset - PAGE_SIZE)) }}><ChevronLeft size={14} /></button><small>{pageNumber} / {pageCount}</small><button type="button" aria-label={copy.next} disabled={!data.page.hasMore || commandQuery.isFetching} onClick={() => { retainCurrent(); setOffset(offset + PAGE_SIZE) }}><ChevronRight size={14} /></button></div></footer>
       </section>
     </StoreSurfacePage>
-    <ChecklistOperationalHistoryDrawer authSummary={input.authSummary} open={Boolean(selectedStore)} storeId={selectedStore?.storeId ?? null} storeName={selectedStore?.storeName ?? null} returnFocusRef={historyTriggerRef} onClose={() => setSelectedStoreState(null)} />
+    {input.view === 'store_manager' ? <ChecklistOperationalHistoryDrawer authSummary={input.authSummary} open={Boolean(selectedStore)} storeId={selectedStore?.storeId ?? null} storeName={selectedStore?.storeName ?? null} returnFocusRef={historyTriggerRef} onClose={() => setSelectedStoreState(null)} /> : null}
   </>
 }
 
 function Score({ label, value }: { label: string; value: number | null }) { return <span className="tw:rounded-xl tw:bg-primary/[.045] tw:p-3"><small className="tw:block tw:text-[9px] tw:text-muted-foreground">{label}</small><strong className="tw:mt-1 tw:block tw:text-lg tw:tabular-nums">{value === null ? '—' : Math.round(value)}</strong></span> }
 function Signal({ label, value }: { label: string; value: number }) { return <span className="tw:rounded-xl tw:bg-muted/35 tw:p-3"><small className="tw:block tw:text-[9px] tw:text-muted-foreground">{label}</small><strong className="tw:mt-1 tw:block tw:text-lg tw:tabular-nums">{value}</strong></span> }
 function formatDate(value: string, locale: 'tr' | 'en') { return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-GB', { dateStyle: 'medium', timeZone: 'Europe/Istanbul' }).format(new Date(value)) }
-function statusLabel(status: ChecklistCommandRow['status'], copy: typeof trCopy | typeof enCopy) { return status === 'completed' ? copy.statusCompleted : status === 'active' ? copy.statusActive : status === 'pending' ? copy.statusPending : copy.statusNeedsVisit }
+function statusLabel(status: ChecklistCommandRow['status'], copy: { statusCompleted: string; statusActive: string; statusPending: string; statusNeedsVisit: string }) { return status === 'completed' ? copy.statusCompleted : status === 'active' ? copy.statusActive : status === 'pending' ? copy.statusPending : copy.statusNeedsVisit }
+
+function getOperatorCopy(base: typeof trCopy | typeof enCopy, view: 'store_manager' | 'visual_merchandiser' | 'super_admin', locale: 'tr' | 'en') {
+  if (view === 'visual_merchandiser') return { ...base, aria: locale === 'tr' ? 'VM checklist görünümü' : 'Visual Merchandiser checklist view', eyebrow: locale === 'tr' ? 'Atanmış mağazalar · VM kontrolü' : 'Assigned stores · VM control', title: locale === 'tr' ? 'VM Kontrol Merkezi' : 'VM Control Center', scope: locale === 'tr' ? 'Yalnız atanmış mağazalardaki VM checklistleri ve sonuçları' : 'VM checklists and results for assigned stores only', scopeMismatch: locale === 'tr' ? 'Sunucu yanıtı VM kapsamıyla eşleşmedi.' : 'The server response did not match the Visual Merchandiser scope.', total: locale === 'tr' ? 'Atanmış mağaza' : 'Assigned stores', search: locale === 'tr' ? 'Atanmış mağaza ara' : 'Search assigned stores', openControls: locale === 'tr' ? 'VM checklistini aç' : 'Open VM checklist' }
+  if (view === 'super_admin') return { ...base, aria: locale === 'tr' ? 'Super Admin checklist görünümü' : 'Super Admin checklist view', eyebrow: locale === 'tr' ? 'Yönetim kapsamı · Checklist kontrolü' : 'Administrative scope · Checklist control', title: locale === 'tr' ? 'Checklist Yönetim Merkezi' : 'Checklist Administration Center', scope: locale === 'tr' ? 'Yetkili yönetim kapsamındaki mağaza checklistleri ve sonuçları' : 'Store checklists and results in the authorized administrative scope', scopeMismatch: locale === 'tr' ? 'Sunucu yanıtı Super Admin kapsamıyla eşleşmedi.' : 'The server response did not match the Super Admin scope.', total: locale === 'tr' ? 'Kapsamdaki mağaza' : 'Stores in scope', search: locale === 'tr' ? 'Kapsamdaki mağaza ara' : 'Search stores in scope' }
+  return base
+}
 
 const trCopy = { aria: 'Mağaza müdürü checklist görünümü', eyebrow: 'Yetkili mağazalar · Güncel kontrol', title: 'Mağaza Kontrol Merkezi', scope: 'Yalnız sorumlu olduğunuz mağazaların checklist, onay ve görev durumu', loading: 'Mağaza kontrolleri yükleniyor', loadingCopy: 'Yetkili mağaza kapsamı hazırlanıyor.', error: 'Mağaza kontrolleri açılamadı', errorCopy: 'Checklist verileri okunamadı.', forbidden: 'Mağaza kapsamına erişilemiyor', forbiddenCopy: 'Bu hesap için yetkili mağaza kapsamı bulunamadı.', scopeMismatch: 'Sunucu yanıtı mağaza müdürü kapsamıyla eşleşmedi.', retry: 'Tekrar dene', metrics: 'Mağaza kontrol özeti', total: 'Yetkili mağaza', needsVisit: 'Kontrol gerekli', active: 'Aktif checklist', completed: 'Tamamlanan', search: 'Yetkili mağaza ara', refreshing: 'Güncelleniyor…', partial: 'Yeni veri alınamadı · Tekrar dene', sort: 'Mağazaları sırala', store: 'Mağaza', lastVisit: 'Son ziyaret', status: 'Durum', empty: 'Bu kapsamda mağaza yok', emptyCopy: 'Atama veya seçili filtre mağaza üretmedi.', pendingAcknowledgements: 'Bekleyen onay', openTasks: 'Açık görev', days: 'gün önce', noVisit: 'Tamamlanmış ziyaret yok', openControls: 'Checklistleri aç', openApprovals: 'Bekleyen onaylar', openResults: 'Sonuç geçmişi', openRecord: 'Mağaza kaydı', openTasksLink: 'Görevleri aç', previous: 'Önceki sayfa', next: 'Sonraki sayfa', statusCompleted: 'Tamamlandı', statusActive: 'Devam ediyor', statusPending: 'Kabul bekliyor', statusNeedsVisit: 'Kontrol gerekli' } as const
 const enCopy = { aria: 'Store manager checklist view', eyebrow: 'Authorized stores · Current control', title: 'Store Control Center', scope: 'Checklist, acknowledgement and task state for only your managed stores', loading: 'Loading store controls', loadingCopy: 'Preparing authorized store scope.', error: 'Store controls unavailable', errorCopy: 'Checklist data could not be read.', forbidden: 'Store scope unavailable', forbiddenCopy: 'No authorized store scope is assigned to this account.', scopeMismatch: 'The server response did not match the Store Manager scope.', retry: 'Retry', metrics: 'Store control summary', total: 'Authorized stores', needsVisit: 'Control required', active: 'Active checklist', completed: 'Completed', search: 'Search authorized stores', refreshing: 'Refreshing…', partial: 'New data unavailable · Retry', sort: 'Sort stores', store: 'Store', lastVisit: 'Last visit', status: 'Status', empty: 'No stores in this scope', emptyCopy: 'The assignment or selected filter returned no stores.', pendingAcknowledgements: 'Pending acknowledgements', openTasks: 'Open tasks', days: 'days ago', noVisit: 'No completed visit', openControls: 'Open checklists', openApprovals: 'Pending acknowledgements', openResults: 'Result history', openRecord: 'Store record', openTasksLink: 'Open tasks', previous: 'Previous page', next: 'Next page', statusCompleted: 'Completed', statusActive: 'In progress', statusPending: 'Awaiting acknowledgement', statusNeedsVisit: 'Control required' } as const

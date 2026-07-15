@@ -111,7 +111,7 @@ describe("Checklist Command OpenAPI", () => {
     const request = document.components?.schemas?.SaveChecklistVisitPlanRequest as any;
     expect(request.properties.items).not.toHaveProperty("maxItems");
     const item = document.components?.schemas?.ChecklistVisitPlanItem as any;
-    expect(item.properties.status.enum).toEqual(["waiting", "missed", "completed"]);
+    expect(item.properties.status.enum).toEqual(["planned", "waiting", "missed", "completed"]);
     expect(item.properties).not.toHaveProperty("assigneeId");
     expect(item.properties).not.toHaveProperty("startedAt");
   });
@@ -150,6 +150,9 @@ describe("Checklist Command OpenAPI", () => {
     ]));
     const periodRow = document.components?.schemas?.ChecklistVisitPlanPeriodRow as any;
     expect(periodRow.properties.planItems.items.$ref).toBe("#/components/schemas/ChecklistVisitPlanPeriodItem");
+    expect(periodRow.properties.planStatus.enum).toEqual([
+      "unplanned", "planned", "waiting", "missed", "completed", "mixed",
+    ]);
     expect(periodRow.properties.reasonCodes.items.enum).toEqual(expect.arrayContaining([
       "missing_current_month_visit", "low_checklist_score", "watch_checklist_result",
       "active_draft", "pending_acknowledgement", "visit_completed", "strong_score", "insufficient_signal",

@@ -112,7 +112,7 @@ export type VisitPlanDraftItem = {
 }
 
 export type ChecklistVisitPlanRisk = 'all' | 'high' | 'medium' | 'low'
-export type ChecklistVisitPlanStatus = 'all' | 'unplanned' | 'waiting' | 'missed' | 'completed' | 'mixed'
+export type ChecklistVisitPlanStatus = 'all' | 'unplanned' | 'planned' | 'waiting' | 'missed' | 'completed' | 'mixed'
 export type ChecklistVisitPlanSort = 'risk_desc' | 'store_asc' | 'store_desc' | 'last_visit_asc' | 'last_visit_desc' | 'next_plan_asc' | 'next_plan_desc'
 
 export type ChecklistVisitPlanPeriodQueryInput = {
@@ -205,6 +205,14 @@ export function getIstanbulWeekStart(now = new Date()) {
   const mondayOffset = (localDate.getUTCDay() + 6) % 7
   localDate.setUTCDate(localDate.getUTCDate() - mondayOffset)
   return formatUtcDate(localDate)
+}
+
+export function getChecklistPeriodWeekStart(period: string) {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(period)) throw new Error('Invalid checklist period')
+  const firstDay = parseIsoDate(`${period}-01`)
+  const daysUntilMonday = (8 - firstDay.getUTCDay()) % 7
+  firstDay.setUTCDate(firstDay.getUTCDate() + daysUntilMonday)
+  return formatUtcDate(firstDay)
 }
 
 export function shiftChecklistWeek(weekStart: string, offset: number) {

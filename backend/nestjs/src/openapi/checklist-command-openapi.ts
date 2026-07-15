@@ -250,7 +250,7 @@ const checklistVisitPlanItemSchema = {
     storeName: { type: "string" },
     plannedDate: { type: "string", format: "date" },
     displayOrder: { type: "integer", minimum: 0 },
-    status: { type: "string", enum: ["waiting", "missed", "completed"] },
+    status: { type: "string", enum: ["planned", "waiting", "missed", "completed"] },
     checklistInstanceId: { type: "string", format: "uuid", nullable: true },
     completedAt: { type: "string", format: "date-time", nullable: true },
   },

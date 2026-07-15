@@ -21,7 +21,7 @@ describe("checklist visit plan period DTOs", () => {
       query: "Merkez",
       risk: "medium",
       reason: "watch_checklist_result",
-      planStatus: "mixed",
+      planStatus: "planned",
       sort: "next_plan_asc",
       limit: 100,
       offset: 0,

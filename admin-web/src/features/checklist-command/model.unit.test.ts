@@ -8,6 +8,7 @@ import {
   buildVisitPlanDraftFingerprint,
   createChecklistCommandPeriod,
   getStableVisitPlanSubmission,
+  getChecklistPeriodWeekStart,
   getIstanbulWeekStart,
   getChecklistCommandSortLabel,
   getChecklistCommandStatusLabel,
@@ -32,6 +33,7 @@ describe('checklist command canvas model', () => {
 
   it('resolves the Istanbul business week to Monday and exposes Monday through Saturday', () => {
     expect(getIstanbulWeekStart(new Date('2026-07-14T21:30:00.000Z'))).toBe('2026-07-13')
+    expect(getChecklistPeriodWeekStart('2026-08')).toBe('2026-08-03')
 
     expect(buildChecklistPlanningDays('2026-07-13', 'tr')).toEqual([
       { isoDate: '2026-07-13', dayLabel: 'Pazartesi', shortLabel: 'Pzt', dateLabel: '13 Tem' },
@@ -63,8 +65,8 @@ describe('checklist command canvas model', () => {
 
     expect(buildChecklistVisitPlanPeriodQuery({
       regionId: 'region-1', period: '2026-07', query: ' Novada ', risk: 'high',
-      planStatus: 'missed', sort: 'next_plan_asc', limit: 30, offset: 60,
-    }).toString()).toBe('regionId=region-1&period=2026-07&query=Novada&risk=high&planStatus=missed&sort=next_plan_asc&limit=30&offset=60')
+      planStatus: 'planned', sort: 'next_plan_asc', limit: 30, offset: 60,
+    }).toString()).toBe('regionId=region-1&period=2026-07&query=Novada&risk=high&planStatus=planned&sort=next_plan_asc&limit=30&offset=60')
 
     expect(buildChecklistVisitPlanCandidateQuery({
       regionId: 'region-1', query: ' Bursa ', limit: 20, offset: 40,
