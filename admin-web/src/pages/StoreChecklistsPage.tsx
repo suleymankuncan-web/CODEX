@@ -68,7 +68,7 @@ export function StoreChecklistsPage(input: {
             else params.set('canvasView', view)
             navigate({ pathname: location.pathname, search: params.toString() ? `?${params.toString()}` : '' })
           }}
-          onOpenWorkflow={(storeId, tab = 'visits') => {
+          onOpenWorkflow={(storeId, tab = 'visits', directChecklist) => {
             overlayTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
             navigate({
               pathname: location.pathname,
@@ -76,6 +76,7 @@ export function StoreChecklistsPage(input: {
                 kind: 'workflow',
                 storeId,
                 tab,
+                ...(directChecklist ? { directChecklist } : {}),
               }),
             })
           }}
@@ -120,7 +121,7 @@ export function StoreChecklistsPage(input: {
       <>
         <OperatorPage
           authSummary={input.authSummary}
-          onOpenWorkflow={(storeId, tab, trigger) => {
+          onOpenWorkflow={(storeId, tab, trigger, directChecklist) => {
             overlayTriggerRef.current = trigger
             navigate({
               pathname: location.pathname,
@@ -128,6 +129,7 @@ export function StoreChecklistsPage(input: {
                 kind: 'workflow',
                 storeId,
                 tab,
+                ...(directChecklist ? { directChecklist } : {}),
               }),
             })
           }}

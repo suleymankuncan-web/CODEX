@@ -34,13 +34,16 @@ const personaDisplayName: Record<StoreContractPersona, string> = {
   reportViewer: 'Report Viewer',
 }
 
-export function createStoreContractSession(persona: StoreContractPersona) {
+export function createStoreContractSession(
+  persona: StoreContractPersona,
+  options?: { actionStoreIds?: string[] },
+) {
   const roleCode = roleByPersona[persona]
   const isRegionManager = persona === 'regionManager'
   const isStoreScoped = persona !== 'regionManager' && persona !== 'reportViewer'
-  const assignedStoreIds = persona === 'storeManager' ? [storeIds[0]] : []
+  const assignedStoreIds = options?.actionStoreIds ?? (persona === 'storeManager' ? [storeIds[0]] : [])
   const readStoreIds = isRegionManager ? [...storeIds] : isStoreScoped ? [storeIds[0]] : []
-  const actionStoreIds = persona === 'storeManager' ? [storeIds[0]] : []
+  const actionStoreIds = assignedStoreIds
 
   return {
     authMode: 'mock',
@@ -77,8 +80,12 @@ export function createStoreContractSession(persona: StoreContractPersona) {
   }
 }
 
-export async function installStoreContractSession(page: Page, persona: StoreContractPersona) {
-  const session = createStoreContractSession(persona)
+export async function installStoreContractSession(
+  page: Page,
+  persona: StoreContractPersona,
+  options?: { actionStoreIds?: string[] },
+) {
+  const session = createStoreContractSession(persona, options)
   const user = session.user
 
   await page.addInitScript((input) => {

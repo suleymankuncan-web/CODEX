@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { AlertDialog as AlertDialogPrimitive } from 'radix-ui'
 import {
   CheckCircle2,
   CircleAlert,
@@ -52,6 +53,7 @@ export function StoreChecklistsModals(input: {
   scores: Record<string, number>
   selectedResult: ChecklistAcknowledgementItem | null
   selectedSession: ChecklistSession | null
+  sessionDirty: boolean
   t: TranslateFunction
   visitState: {
     completeError: unknown | null
@@ -83,6 +85,7 @@ export function StoreChecklistsModals(input: {
           onScoreChange={input.onScoreChange}
           onCommentChange={input.onCommentChange}
           scores={input.scores}
+          sessionDirty={input.sessionDirty}
           session={input.selectedSession}
           t={input.t}
         />
@@ -117,9 +120,12 @@ function ChecklistVisitModal(input: {
   onComplete: (checklistInstanceId: string) => void
   onScoreChange: (templateItemId: string, score: number | null) => void
   scores: Record<string, number>
+  sessionDirty: boolean
   session: ChecklistSession
   t: TranslateFunction
 }) {
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const [confirmClose, setConfirmClose] = useState(false)
   const sections = useMemo(
     () => groupChecklistTemplateItems(input.session.template.items),
     [input.session.template.items],
@@ -185,25 +191,28 @@ function ChecklistVisitModal(input: {
             : input.t('storeChecklists.draftSaved')
 
   return (
-    <Dialog open onOpenChange={(open) => {
-      if (!open) input.onClose()
-    }}>
-      <DialogContent
+    <AlertDialogPrimitive.Root open={confirmClose} onOpenChange={setConfirmClose}>
+      <Dialog open onOpenChange={(open) => {
+        if (!open) closeButtonRef.current?.click()
+      }}>
+        <DialogContent
         className="store-checklist-session-dialog tw:max-w-[min(760px,calc(100vw-1rem))] tw:sm:max-w-[min(760px,calc(100vw-1rem))]"
         closeLabel={input.t('storeChecklists.closeSession')}
         showCloseButton={false}
       >
         <div className="store-checklist-session-shell">
           <DialogHeader className="store-checklist-session-topbar">
-            <Button
-              aria-label={input.t('storeChecklists.closeSession')}
-              size="icon-sm"
-              type="button"
-              variant="ghost"
-              onClick={input.onClose}
-            >
-              <XIcon data-icon="inline-start" />
-            </Button>
+            <AlertDialogPrimitive.Trigger asChild>
+              <Button
+                ref={closeButtonRef}
+                aria-label={input.t('storeChecklists.closeSession')}
+                size="icon-sm"
+                type="button"
+                variant="ghost"
+              >
+                <XIcon data-icon="inline-start" />
+              </Button>
+            </AlertDialogPrimitive.Trigger>
             <div className="store-checklist-session-title-block">
               <DialogTitle className="store-checklist-session-title">
                 {input.t('storeChecklists.sessionTitle')}
@@ -323,11 +332,11 @@ function ChecklistVisitModal(input: {
               </span>
             </div>
             <div className="store-checklist-session-footer-actions">
-              <Button type="button" variant="outline" onClick={input.onClose}>
+              <Button type="button" variant="outline" onClick={() => closeButtonRef.current?.click()}>
                 <Save data-icon="inline-start" />
                 {input.t('storeChecklists.draftSave')}
               </Button>
-              <Button type="button" variant="outline" onClick={input.onClose}>
+              <Button type="button" variant="outline" onClick={() => closeButtonRef.current?.click()}>
                 {input.t('storeChecklists.cancelSession')}
               </Button>
               <Button
@@ -348,8 +357,28 @@ function ChecklistVisitModal(input: {
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      <AlertDialogPrimitive.Portal>
+        <AlertDialogPrimitive.Overlay className="tw:fixed tw:inset-0 tw:z-[60] tw:bg-foreground/20 tw:backdrop-blur-xs" />
+        <AlertDialogPrimitive.Content className="tw:fixed tw:top-1/2 tw:left-1/2 tw:z-[61] tw:grid tw:w-[min(360px,calc(100vw-2rem))] tw:-translate-x-1/2 tw:-translate-y-1/2 tw:gap-3 tw:rounded-xl tw:border tw:border-border tw:bg-popover tw:p-5 tw:text-popover-foreground tw:shadow-xl tw:outline-none">
+          <AlertDialogPrimitive.Title className="tw:text-base tw:font-semibold">
+            {getStaticCopy(input.locale, input.sessionDirty ? 'Değişiklikler kaybolsun mu?' : 'Checklist kapatılsın mı?', input.sessionDirty ? 'Discard changes?' : 'Close checklist?')}
+          </AlertDialogPrimitive.Title>
+          <AlertDialogPrimitive.Description className="tw:text-sm tw:text-muted-foreground">
+            {input.sessionDirty ? input.t('storeChecklists.sessionCloseConfirm') : input.t('storeChecklists.cancelSessionConfirm')}
+          </AlertDialogPrimitive.Description>
+          <div className="tw:mt-2 tw:flex tw:justify-end tw:gap-2">
+            <AlertDialogPrimitive.Cancel asChild>
+              <Button type="button" variant="outline">{getStaticCopy(input.locale, "Checklist'e dön", 'Return to checklist')}</Button>
+            </AlertDialogPrimitive.Cancel>
+            <AlertDialogPrimitive.Action asChild>
+              <Button type="button" variant="destructive" onClick={input.onClose}>{getStaticCopy(input.locale, 'Checklisti kapat', 'Close checklist')}</Button>
+            </AlertDialogPrimitive.Action>
+          </div>
+        </AlertDialogPrimitive.Content>
+      </AlertDialogPrimitive.Portal>
+    </AlertDialogPrimitive.Root>
   )
 }
 

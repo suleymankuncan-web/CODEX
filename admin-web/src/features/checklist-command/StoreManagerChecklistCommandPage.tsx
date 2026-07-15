@@ -22,28 +22,28 @@ const PAGE_SIZE = 30
 
 export function StoreManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
-  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
+  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement, directChecklist?: 'vm') => void
 }) {
   return <ChecklistOperatorCommandPage {...input} view="store_manager" />
 }
 
 export function VisualMerchandiserChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
-  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
+  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement, directChecklist?: 'vm') => void
 }) {
   return <ChecklistOperatorCommandPage {...input} view="visual_merchandiser" />
 }
 
 export function SuperAdminChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
-  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
+  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement, directChecklist?: 'vm') => void
 }) {
   return <ChecklistOperatorCommandPage {...input} view="super_admin" />
 }
 
 function ChecklistOperatorCommandPage(input: {
   authSummary: AuthSessionSummary | null
-  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement) => void
+  onOpenWorkflow: (storeId: string, tab: 'visits' | 'inbox' | 'history', trigger: HTMLElement, directChecklist?: 'vm') => void
   view: 'store_manager' | 'visual_merchandiser' | 'super_admin'
 }) {
   const { locale } = useLocalization()
@@ -131,7 +131,7 @@ function ChecklistOperatorCommandPage(input: {
 
       <section className="checklist-command-surface tw:overflow-hidden">
         <div className="tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border tw:p-3 tw:sm:flex-row tw:sm:items-center">
-          <label className="tw:flex tw:min-h-9 tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-input tw:bg-muted/20 tw:px-3 tw:text-muted-foreground tw:sm:max-w-sm"><Search className="tw:size-4" /><Input aria-label={copy.search} className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-xs tw:shadow-none tw:focus-visible:ring-0" value={searchDraft} placeholder={copy.search} onChange={(event) => { retainCurrent(); setSearchDraft(event.target.value) }} /></label>
+          <label className="checklist-operator-search tw:flex tw:min-h-9 tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-input tw:bg-muted/20 tw:px-3 tw:text-muted-foreground tw:sm:max-w-sm"><Search className="tw:size-4" /><Input aria-label={copy.search} className="tw:h-auto tw:border-0 tw:bg-transparent tw:p-0 tw:text-xs tw:shadow-none tw:focus-visible:ring-0" value={searchDraft} placeholder={copy.search} onChange={(event) => { retainCurrent(); setSearchDraft(event.target.value) }} /></label>
           {commandQuery.isFetching ? <small className="checklist-command-inline-refresh" aria-live="polite">{copy.refreshing}</small> : null}
           {commandQuery.isError && response ? <button type="button" className="checklist-command-inline-error" onClick={() => void commandQuery.refetch()}>{copy.partial}</button> : null}
           <div className="tw:flex tw:flex-wrap tw:gap-1.5 tw:sm:ml-auto" aria-label={copy.sort}><Button size="sm" variant="ghost" onClick={() => selectSort('store')}>{getChecklistCommandSortLabel(copy.store, 'store', sort)}</Button><Button size="sm" variant="ghost" onClick={() => selectSort('last_visit')}>{getChecklistCommandSortLabel(copy.lastVisit, 'last_visit', sort)}</Button><Button size="sm" variant="ghost" onClick={() => selectSort('status')}>{getChecklistCommandSortLabel(copy.status, 'status', sort)}</Button></div>
@@ -142,7 +142,7 @@ function ChecklistOperatorCommandPage(input: {
             <header className="tw:flex tw:min-w-0 tw:items-start tw:justify-between tw:gap-3"><span className="tw:min-w-0"><small className="tw:text-[9px] tw:font-bold tw:uppercase tw:tracking-[.1em] tw:text-muted-foreground">{row.storeCode} · {row.regionName}</small><strong className="tw:mt-1 tw:block tw:truncate tw:text-base">{row.storeName}</strong></span><span className={cn('tw:rounded-full tw:px-2.5 tw:py-1 tw:text-[9px] tw:font-semibold', row.status === 'completed' ? 'tw:bg-emerald-500/10 tw:text-emerald-700' : row.status === 'active' ? 'tw:bg-blue-500/10 tw:text-blue-700' : 'tw:bg-amber-500/10 tw:text-amber-700')}>{statusLabel(row.status, copy)}</span></header>
             <div className="tw:grid tw:grid-cols-2 tw:gap-2">{input.view !== 'visual_merchandiser' ? <Score label="BM" value={row.bmScore} /> : null}<Score label="VM" value={row.vmScore} /><Signal label={copy.pendingAcknowledgements} value={row.pendingAcknowledgementCount} /><Signal label={copy.openTasks} value={row.openActionCount} /></div>
             <p className="tw:text-[10px] tw:text-muted-foreground">{row.lastCompletedVisitAt ? `${formatDate(row.lastCompletedVisitAt, locale)} · ${row.elapsedDaysSinceLastVisit ?? 0} ${copy.days}` : copy.noVisit}</p>
-            <div className="tw:flex tw:flex-wrap tw:gap-2"><Button size="sm" onClick={(event) => input.onOpenWorkflow(row.storeId, 'visits', event.currentTarget)}><ClipboardCheck />{copy.openControls}</Button><Button size="sm" variant="outline" onClick={(event) => input.onOpenWorkflow(row.storeId, row.pendingAcknowledgementCount > 0 ? 'inbox' : 'history', event.currentTarget)}>{row.pendingAcknowledgementCount > 0 ? copy.openApprovals : copy.openResults}</Button>{input.view === 'store_manager' ? <Button size="sm" variant="outline" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStoreState({ store: row, scopeSignature }) }}>{copy.openRecord}</Button> : null}{input.view === 'store_manager' && row.openActionCount > 0 ? <Button asChild size="sm" variant="ghost"><Link to="/store/tasks">{copy.openTasksLink}</Link></Button> : null}</div>
+            <div className="tw:flex tw:flex-wrap tw:gap-2"><Button size="sm" onClick={(event) => input.onOpenWorkflow(row.storeId, 'visits', event.currentTarget, input.view === 'visual_merchandiser' ? 'vm' : undefined)}><ClipboardCheck />{copy.openControls}</Button><Button size="sm" variant="outline" onClick={(event) => input.onOpenWorkflow(row.storeId, row.pendingAcknowledgementCount > 0 ? 'inbox' : 'history', event.currentTarget)}>{row.pendingAcknowledgementCount > 0 ? copy.openApprovals : copy.openResults}</Button>{input.view === 'store_manager' ? <Button size="sm" variant="outline" onClick={(event) => { historyTriggerRef.current = event.currentTarget; setSelectedStoreState({ store: row, scopeSignature }) }}>{copy.openRecord}</Button> : null}{input.view === 'store_manager' && row.openActionCount > 0 ? <Button asChild size="sm" variant="ghost"><Link to="/store/tasks">{copy.openTasksLink}</Link></Button> : null}</div>
           </article>)}
         </div>}
 

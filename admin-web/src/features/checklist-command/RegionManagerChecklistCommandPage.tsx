@@ -14,6 +14,7 @@ import {
   Store,
 } from 'lucide-react'
 import type { AuthSessionSummary } from '../auth/api'
+import { getActionStoreIds } from '../auth/authorization'
 import {
   getStoreQueryScopeSignature,
   storeChecklistCommandQueryKey,
@@ -55,7 +56,7 @@ export function RegionManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
   activeView?: 'visits' | 'plan' | 'records'
   onActiveViewChange?: (view: 'visits' | 'plan' | 'records') => void
-  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history') => void
+  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
   onOpenResult: (checklistInstanceId: string) => void
 }) {
   const { locale, t } = useLocalization()
@@ -67,6 +68,7 @@ export function RegionManagerChecklistCommandPage(input: {
   const [offset, setOffset] = useState(0)
   const [columnPreset, setColumnPreset] = useState<'all' | 'scores' | 'visit'>('all')
   const [localActiveView, setLocalActiveView] = useState<'visits' | 'plan' | 'records'>('visits')
+  const actionStoreIds = useMemo(() => new Set(getActionStoreIds(input.authSummary)), [input.authSummary])
   const activeView = input.activeView ?? localActiveView
   const setActiveView = (view: 'visits' | 'plan' | 'records') => {
     setLocalActiveView(view)
@@ -431,6 +433,7 @@ export function RegionManagerChecklistCommandPage(input: {
         ) : (
           <>
             <ChecklistCommandDesktopTable
+              actionStoreIds={actionStoreIds}
               locale={locale}
               rows={data.items}
               sort={sort}
@@ -439,7 +442,7 @@ export function RegionManagerChecklistCommandPage(input: {
               onOpenWorkflow={input.onOpenWorkflow}
               onSort={changeSort}
             />
-            <ChecklistCommandMobileCards locale={locale} rows={data.items} t={t} onOpenWorkflow={input.onOpenWorkflow} />
+            <ChecklistCommandMobileCards actionStoreIds={actionStoreIds} locale={locale} rows={data.items} t={t} onOpenWorkflow={input.onOpenWorkflow} />
           </>
         )}
 
@@ -504,12 +507,13 @@ const metricToneClasses = {
 }
 
 function ChecklistCommandDesktopTable(input: {
+  actionStoreIds: ReadonlySet<string>
   columnPreset: 'all' | 'scores' | 'visit'
   locale: 'tr' | 'en'
   rows: ChecklistCommandRow[]
   sort: ChecklistCommandSort
   t: ReturnType<typeof useLocalization>['t']
-  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history') => void
+  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
   onSort: (key: ChecklistCommandSortKey) => void
 }) {
   const heading = (label: string, key: ChecklistCommandSortKey) => (
@@ -536,7 +540,7 @@ function ChecklistCommandDesktopTable(input: {
           {input.columnPreset !== 'scores' ? <VisitDate className="visit-date" value={row.lastCompletedVisitAt} locale={input.locale} t={input.t} /> : null}
           {input.columnPreset !== 'scores' ? <ElapsedDays className="elapsed-days" value={row.elapsedDaysSinceLastVisit} t={input.t} /> : null}
           <StatusPill locale={input.locale} row={row} />
-          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row))}>
+          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row), getDirectChecklist(row, input.actionStoreIds.has(row.storeId)))}>
             {getRowActionLabel(row, input.locale)} <ChevronRight size={14} />
           </button>
         </div>
@@ -546,10 +550,11 @@ function ChecklistCommandDesktopTable(input: {
 }
 
 function ChecklistCommandMobileCards(input: {
+  actionStoreIds: ReadonlySet<string>
   locale: 'tr' | 'en'
   rows: ChecklistCommandRow[]
   t: ReturnType<typeof useLocalization>['t']
-  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history') => void
+  onOpenWorkflow: (storeId: string, tab?: 'visits' | 'inbox' | 'history', directChecklist?: 'bm') => void
 }) {
   return (
     <div className="checklist-command-mobile-list">
@@ -565,7 +570,7 @@ function ChecklistCommandMobileCards(input: {
             <ElapsedDays value={row.elapsedDaysSinceLastVisit} t={input.t} />
           </div>
           <StatusPill locale={input.locale} row={row} />
-          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row))}>{getRowActionLabel(row, input.locale)} <ChevronRight size={14} /></button>
+          <button type="button" className="checklist-command-action" onClick={() => input.onOpenWorkflow(row.storeId, getRowWorkflowTab(row), getDirectChecklist(row, input.actionStoreIds.has(row.storeId)))}>{getRowActionLabel(row, input.locale)} <ChevronRight size={14} /></button>
         </article>
       ))}
     </div>
@@ -605,13 +610,18 @@ function getRowStatusPresentation(row: ChecklistCommandRow, locale: 'tr' | 'en')
 }
 
 function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en') {
-  if (row.status === 'active') return locale === 'tr' ? 'Devam et' : 'Continue'
+  if (row.bmCompletedAt !== null) return locale === 'tr' ? 'Sonucu gör' : 'View result'
+  if (row.status === 'active' && row.bmCompletedAt === null) return locale === 'tr' ? 'Checklisti aç' : 'Open checklist'
   if (row.status === 'needs_visit') return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
   return locale === 'tr' ? 'Sonucu gör' : 'View result'
 }
 
 function getRowWorkflowTab(row: ChecklistCommandRow): 'visits' | 'inbox' | 'history' {
-  if (row.status === 'active' || row.status === 'needs_visit') return 'visits'
+  if ((row.status === 'active' || row.status === 'needs_visit') && row.bmCompletedAt === null) return 'visits'
   if (row.status === 'pending') return 'inbox'
   return 'history'
+}
+
+function getDirectChecklist(row: ChecklistCommandRow, authorized: boolean): 'bm' | undefined {
+  return authorized && (row.status === 'active' || row.status === 'needs_visit') && row.bmCompletedAt === null ? 'bm' : undefined
 }

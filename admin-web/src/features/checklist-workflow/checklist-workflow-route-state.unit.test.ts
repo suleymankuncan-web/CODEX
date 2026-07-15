@@ -14,6 +14,40 @@ describe('checklist workflow command-overlay route state', () => {
     })).toBe('?period=2026-07&overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits')
   })
 
+  it('keeps a direct BM checklist intent in the canonical workflow link', () => {
+    expect(buildChecklistWorkflowOverlaySearch('?period=2026-07', {
+      kind: 'workflow',
+      storeId: '11111111-1111-4111-8111-111111111111',
+      tab: 'visits',
+      directChecklist: 'bm',
+    })).toBe('?period=2026-07&overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits&workflowChecklist=bm')
+
+    expect(resolveChecklistWorkflowRouteState(
+      '?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits&workflowChecklist=bm',
+    ).state).toEqual({
+      kind: 'workflow',
+      storeId: '11111111-1111-4111-8111-111111111111',
+      tab: 'visits',
+      directChecklist: 'bm',
+    })
+  })
+
+  it.each(['plan', 'inbox', 'history'] as const)(
+    'drops a crafted direct checklist intent outside the visits tab (%s)',
+    (tab) => {
+      const search = `?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=${tab}&workflowChecklist=bm`
+      expect(resolveChecklistWorkflowRouteState(search)).toEqual({
+        state: {
+          kind: 'workflow',
+          storeId: '11111111-1111-4111-8111-111111111111',
+          tab,
+        },
+        normalizedSearch: `?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=${tab}`,
+        shouldReplace: true,
+      })
+    },
+  )
+
   it('normalizes a persisted legacy workflow link while preserving unrelated command state', () => {
     expect(resolveChecklistWorkflowRouteState(
       '?period=2026-07&view=workflow&storeId=11111111-1111-4111-8111-111111111111&tab=plan&status=missing',

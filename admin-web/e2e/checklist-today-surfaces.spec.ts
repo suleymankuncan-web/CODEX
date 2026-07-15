@@ -34,8 +34,8 @@ test('region manager checklist surface shows assigned store visit workflow', asy
       },
     },
   )
-  page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('dialog').getByRole('button', { name: 'Kapat', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Checklisti kapat' }).click()
   await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
   await page.getByRole('dialog', { name: /Checklist akışı/ }).getByRole('button', { name: 'Devam et' }).click()
   await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
@@ -205,11 +205,9 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   await expect(visitDateCell).toContainText('No completed visit')
   await expect(visitElapsedCell).toContainText('—')
   await visitRow.getByRole('button').click()
-  const workflowDialog = page.getByRole('dialog', { name: /Checklist workflow/ })
-  const bmWorkflowCard = workflowDialog.getByRole('article').filter({ hasText: 'BM Checklist' })
-  await expect(workflowDialog).toBeVisible()
-  await bmWorkflowCard.getByRole('button', { name: 'Start checklist' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  const checklistSession = page.getByRole('dialog', { name: 'Checklist Session' })
+  await expect(checklistSession).toBeVisible()
+  await expect(page.getByRole('dialog', { name: /Checklist workflow/ })).toHaveCount(0)
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
   await expect(page.locator('.store-checklist-modal-start')).toHaveCount(0)
@@ -225,14 +223,13 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
       },
     },
   )
-  page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('button', { name: 'Cancel' }).click()
-  await expect(workflowDialog).toBeVisible()
-  await expect(bmWorkflowCard.getByRole('button', { name: 'Continue' })).toBeVisible()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Close checklist' }).click()
+  await expect(checklistSession).toHaveCount(0)
   await expect(visitDateCell).toContainText('No completed visit')
   await expect(visitElapsedCell).toContainText('—')
   await expect(visitDateCell).not.toContainText('May 20, 2026')
-  await bmWorkflowCard.getByRole('button', { name: 'Continue' }).click()
+  await visitRow.getByRole('button').click()
   await expect(page.getByRole('dialog').getByRole('radio', { name: '8', exact: true })).toBeChecked()
   await expect(page.getByRole('dialog').getByRole('textbox', { name: /Note/ })).toHaveValue('Handoff-ready visit')
 
@@ -243,6 +240,7 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
   ])
   await expect.poll(() => handoffState.completed).toBe(true)
   await expect.poll(() => commandCanvasRequests).toBeGreaterThan(1)
+  const workflowDialog = page.getByRole('dialog', { name: /Checklist workflow/ })
   await expect(workflowDialog).toBeVisible()
   await page.getByRole('button', { name: 'Close checklist panel' }).click()
   await expect(visitDateCell).toContainText('May 20')
@@ -475,6 +473,7 @@ test('visit plan is not exposed to store manager and plan URL falls back', async
 })
 
 test('visual merchandiser sees checklist-only VM coverage and no broad store links', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['VISUAL_MERCHANDISER'], {
     templateType: 'VM_STORE_VISIT',
@@ -491,13 +490,13 @@ test('visual merchandiser sees checklist-only VM coverage and no broad store lin
   await expect(page.getByText('Atanmış mağaza', { exact: true })).toBeVisible()
   await expect(page.getByText('BM görünümü')).toHaveCount(0)
   await expect(page.getByText('BM + VM')).toHaveCount(0)
+  await expect(page.locator('.checklist-operator-search input')).toBeVisible()
+  expect(await page.locator('.checklist-operator-search input').evaluate((element) => getComputedStyle(element).fontSize)).toBe('16px')
   await expect(page.getByText('BM', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'VM checklistini aç' }).click()
-  const workflowDialog = page.getByRole('dialog', { name: /Checklist akışı/ })
-  await expect(workflowDialog.getByText('BM Checklist')).toHaveCount(0)
-  await expect(workflowDialog.getByText('VM Checklist')).toBeVisible()
-  await workflowDialog.getByRole('article').filter({ hasText: 'VM Checklist' }).getByRole('button', { name: 'Checklist başlat' }).click()
-  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page).toHaveURL(/workflowChecklist=vm/)
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toBeVisible()
   await expect(page.getByText('Vitrin standartlara uygun')).toBeVisible()
   await expect.poll(() => requests.starts).toEqual([{ checklistTemplateId: templateId, storeId }])
   await expect(page.locator('.store-checklist-modal-start')).toHaveCount(0)
@@ -729,8 +728,8 @@ test('checklist visit surface stays usable on mobile width', async ({ page }) =>
   await noteBox.click()
   await noteBox.fill('Mobil not akisi kilitlenmeden yazildi')
   await expect(noteBox).toHaveValue('Mobil not akisi kilitlenmeden yazildi')
-  page.once('dialog', (dialog) => dialog.accept())
   await page.getByRole('dialog').getByRole('button', { name: 'Kapat', exact: true }).click()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Checklisti kapat' }).click()
   await expect(workflowDialog).toBeVisible()
   await page.getByRole('button', { name: 'Checklist panelini kapat' }).click()
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -1032,7 +1031,9 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
                   status: 'in_progress',
                   startedAt: '2026-05-20T10:00:00.000Z',
                   updatedAt: '2026-05-20T10:00:00.000Z',
-                  responses: [],
+                  responses: (options.requests?.saves ?? [])
+                    .filter((entry) => entry.checklistInstanceId === '33333333-3333-4333-8333-333333333333')
+                    .map((entry) => entry.body),
                 },
               ],
             }

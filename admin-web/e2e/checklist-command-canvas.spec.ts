@@ -2,7 +2,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from './test-fixtures'
-import { installStoreContractSession } from './store-page-contract-fixtures'
+import { installStoreContractSession as installBaseStoreContractSession } from './store-page-contract-fixtures'
 
 const checklistCommandEvidenceDir = fileURLToPath(
   new URL('../../docs/evidence/checklist-command-canvas-visits-parity-v1-2026-07-14/', import.meta.url),
@@ -14,6 +14,16 @@ const checklistCutoverEvidenceDir = fileURLToPath(
   new URL('../../docs/evidence/checklist-command-cutover-v2/p7/', import.meta.url),
 )
 
+const checklistActionStoreIds = [
+  '11111111-1111-4111-8111-111111111111',
+  '22222222-2222-4222-8222-222222222222',
+  '33333333-3333-4333-8333-333333333333',
+]
+
+function installStoreContractSession(page: Page, persona: 'regionManager') {
+  return installBaseStoreContractSession(page, persona, { actionStoreIds: checklistActionStoreIds })
+}
+
 test('region manager command canvas reads bounded real rows and applies server controls', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await installStoreContractSession(page, 'regionManager')
@@ -22,6 +32,10 @@ test('region manager command canvas reads bounded real rows and applies server c
 
   await page.goto('/store/checklists')
 
+  const desktopNavigation = page.locator('.store-command-nav')
+  await expect(desktopNavigation).toBeVisible()
+  await expect(desktopNavigation.getByRole('link', { name: 'Ana Sayfa', exact: true })).toBeVisible()
+  await expect(desktopNavigation.locator('.store-command-nav-label', { hasText: 'Ana Sayfa' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
   const parityGeometry = await page.locator('.checklist-command-parity').evaluate((root) => {
     const surface = root.querySelector<HTMLElement>('[data-testid="checklist-command-surface"]')
@@ -89,12 +103,14 @@ test('region manager command canvas reads bounded real rows and applies server c
   const workflowButton = page.getByRole('button', { name: /Checklist/ }).first()
   await workflowButton.click()
   await expect(page).toHaveURL(
-    /\/store\/checklists\?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits/,
+    /\/store\/checklists\?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits&workflowChecklist=bm/,
   )
   await expect(page.locator('h1', { hasText: 'Saha Kontrolleri' })).toHaveCount(1)
-  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
-  const workflowGeometry = await page.getByRole('dialog', { name: /Checklist akışı/ }).evaluate((element) => {
+  const checklistSession = page.getByRole('dialog', { name: 'Checklist Oturumu' })
+  await expect(checklistSession).toBeVisible()
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
+  await expect(checklistSession.getByRole('heading', { name: 'Marmara Park' })).toBeVisible()
+  const workflowGeometry = await checklistSession.evaluate((element) => {
     const rect = element.getBoundingClientRect()
     return {
       bottom: rect.bottom,
@@ -107,13 +123,10 @@ test('region manager command canvas reads bounded real rows and applies server c
       viewportWidth: document.documentElement.clientWidth,
     }
   })
-  expect(workflowGeometry).toMatchObject({
-    bottom: workflowGeometry.viewportHeight,
-    height: workflowGeometry.viewportHeight,
-    right: workflowGeometry.viewportWidth,
-    top: 0,
-    width: 700,
-  })
+  expect(workflowGeometry.width).toBeLessThanOrEqual(760)
+  expect(workflowGeometry.height).toBeLessThanOrEqual(workflowGeometry.viewportHeight)
+  expect(workflowGeometry.left).toBeGreaterThanOrEqual(0)
+  expect(workflowGeometry.right).toBeLessThanOrEqual(workflowGeometry.viewportWidth)
   mkdirSync(checklistCutoverEvidenceDir, { recursive: true })
   await page.screenshot({
     path: join(checklistCutoverEvidenceDir, 'workflow-drawer-desktop.png'),
@@ -121,7 +134,16 @@ test('region manager command canvas reads bounded real rows and applies server c
   })
   await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
+  const closeConfirmation = page.getByRole('alertdialog', { name: 'Checklist kapatılsın mı?' })
+  await expect(closeConfirmation).toBeVisible()
+  await closeConfirmation.getByRole('button', { name: "Checklist'e dön" }).click()
+  await expect(closeConfirmation).toHaveCount(0)
+  await expect(checklistSession).toBeVisible()
+  await expect.poll(() => checklistSession.evaluate((element) => element.contains(document.activeElement))).toBe(true)
+  await checklistSession.getByRole('button', { name: 'Kapat' }).click()
+  await expect(closeConfirmation).toBeVisible()
+  await closeConfirmation.getByRole('button', { name: 'Checklisti kapat' }).click()
+  await expect(checklistSession).toHaveCount(0)
   await expect(workflowButton).toBeFocused()
   await expect(page).not.toHaveURL(/overlay=/)
 
@@ -153,6 +175,60 @@ test('region manager legacy workflow deep links normalize above Command Canvas w
   await expect(page.locator('.store-checklists-command-page')).toHaveCount(0)
 })
 
+test('crafted direct checklist intent outside visits is normalized without starting a checklist', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await routeChecklistCommand(page, [])
+  let startRequests = 0
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/api/mobile/checklists/instances')) {
+      startRequests += 1
+    }
+  })
+
+  await page.goto('/store/checklists?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=history&workflowChecklist=bm')
+
+  await expect(page).toHaveURL(/workflowTab=history$/)
+  await expect(page).not.toHaveURL(/workflowChecklist=/)
+  await expect(page.getByRole('dialog', { name: /Checklist/ })).toBeVisible()
+  await expect.poll(() => startRequests).toBe(0)
+})
+
+test('read-visible but action-unassigned region store cannot auto-start a direct checklist', async ({ page }) => {
+  await installBaseStoreContractSession(page, 'regionManager')
+  await routeChecklistCommand(page, [])
+  let startRequests = 0
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/api/mobile/checklists/instances')) {
+      startRequests += 1
+    }
+  })
+
+  await page.goto('/store/checklists?overlay=workflow&storeId=11111111-1111-4111-8111-111111111111&workflowTab=visits&workflowChecklist=bm')
+
+  await expect(page.getByRole('dialog', { name: /Checklist/ })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Checklist Oturumu' })).toHaveCount(0)
+  await expect.poll(() => startRequests).toBe(0)
+})
+
+test('BM-complete and VM-missing region row opens BM history instead of starting another BM checklist', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await routeChecklistCommand(page, [], [], undefined, 0, { bmCompletedVmMissing: true })
+  let startRequests = 0
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/api/mobile/checklists/instances')) {
+      startRequests += 1
+    }
+  })
+
+  await page.goto('/store/checklists')
+  const row = page.getByTestId('checklist-command-row').filter({ hasText: 'Marmara Park' })
+  await row.getByRole('button', { name: /Sonucu gör/ }).click()
+
+  await expect(page).toHaveURL(/workflowTab=history/)
+  await expect(page).not.toHaveURL(/workflowChecklist=/)
+  await expect.poll(() => startRequests).toBe(0)
+})
+
 test('region manager command canvas stays bounded as mobile cards with 30-row pages', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await installStoreContractSession(page, 'regionManager')
@@ -160,9 +236,17 @@ test('region manager command canvas stays bounded as mobile cards with 30-row pa
 
   await page.goto('/store/checklists')
 
+  const mobileNavigation = page.locator('.store-command-nav')
+  await expect(mobileNavigation).toBeVisible()
+  const mobileHomeLink = mobileNavigation.getByRole('link', { name: 'Ana Sayfa', exact: true })
+  await expect(mobileHomeLink).toBeVisible()
+  await mobileHomeLink.click()
+  await expect(page).toHaveURL(/\/store\/home$/)
+  await page.goto('/store/checklists')
   await expect(page.getByRole('heading', { name: 'Saha Kontrolleri' })).toBeVisible()
   await expect(page.getByRole('article')).toHaveCount(2)
   await expect(page.getByText('1-2 / 2 mağaza')).toBeVisible()
+  expect(await page.getByPlaceholder('Mağaza veya durum ara').evaluate((element) => getComputedStyle(element).fontSize)).toBe('16px')
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
   expect(overflow).toBeLessThanOrEqual(1)
 
@@ -173,9 +257,10 @@ test('region manager command canvas stays bounded as mobile cards with 30-row pa
   })
 
   await page.getByRole('button', { name: /Checklist yap/ }).first().click()
-  const workflowDrawer = page.getByRole('dialog', { name: /Checklist akışı/ })
-  await expect(workflowDrawer).toBeVisible()
-  const drawerGeometry = await workflowDrawer.evaluate((element) => {
+  const checklistSession = page.getByRole('dialog', { name: 'Checklist Oturumu' })
+  await expect(checklistSession).toBeVisible()
+  await expect(page.getByRole('dialog', { name: /Checklist akışı/ })).toHaveCount(0)
+  const drawerGeometry = await checklistSession.evaluate((element) => {
     const rect = element.getBoundingClientRect()
     return { height: rect.height, left: rect.left, top: rect.top, width: rect.width }
   })
@@ -608,6 +693,12 @@ test('dirty weekly drafts require confirmation on Escape and restore focus after
 
   await page.keyboard.press('Escape')
   await expect(confirm).toBeVisible()
+  await confirm.getByRole('button', { name: 'Planlamaya dön' }).click()
+  await expect(confirm).toHaveCount(0)
+  await expect(dialog).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(confirm).toBeVisible()
   await confirm.getByRole('button', { name: 'Taslağı sil' }).click()
   await expect(dialog).toHaveCount(0)
   await expect(planWeek).toBeFocused()
@@ -615,9 +706,9 @@ test('dirty weekly drafts require confirmation on Escape and restore focus after
 
 for (const viewport of [
   { width: 1440, height: 900, contentWidth: 1065, titleY: 42, titleHeight: 66, metricsY: 138, metricHeight: 66, weekY: 218, weekHeight: 232, surfaceY: 464 },
-  { width: 1024, height: 768, contentWidth: 878, titleY: 18, titleHeight: 66, metricsY: 114, metricHeight: 66, weekY: 194, weekHeight: 392, surfaceY: 600 },
-  { width: 390, height: 844, contentWidth: 362, titleY: 24, titleHeight: 88.5, metricsY: 142.5, metricHeight: 53, weekY: 209.5, weekHeight: 657, surfaceY: 880.5 },
-  { width: 320, height: 844, contentWidth: 292, titleY: 24, titleHeight: 88.5, metricsY: 142.5, metricHeight: 53, weekY: 209.5, weekHeight: 657, surfaceY: 880.5 },
+  { width: 1024, height: 768, contentWidth: 672, titleY: 18, titleHeight: 66, metricsY: 114, metricHeight: 66, weekY: 194, weekHeight: 392, surfaceY: 600 },
+  { width: 390, height: 844, contentWidth: 362, titleY: 156, titleHeight: 89.5, metricsY: 275.5, metricHeight: 53, weekY: 342.5, weekHeight: 657, surfaceY: 1013.5 },
+  { width: 320, height: 844, contentWidth: 292, titleY: 156, titleHeight: 89.5, metricsY: 275.5, metricHeight: 53, weekY: 342.5, weekHeight: 657, surfaceY: 1013.5 },
 ] as const) {
   test(`plan view preserves the accepted prototype frame at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
@@ -710,6 +801,7 @@ async function routeChecklistCommand(
   regionOptions = [{ regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', regionName: 'Marmara' }],
   commandDelayMs = 0,
   behavior: {
+    bmCompletedVmMissing?: boolean
     candidateStatus?: number
     candidateTotal?: number
     commandFilterStatus?: number
@@ -825,10 +917,10 @@ async function routeChecklistCommand(
               regionId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
               regionName: 'Marmara',
               regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }],
-              bmScore: 92,
-              vmScore: null,
-              bmCompletedAt: '2026-07-10T09:00:00.000Z',
-              vmCompletedAt: behavior.completedNullScore ? '2026-07-10T10:00:00.000Z' : null,
+              bmScore: behavior.bmCompletedVmMissing ? 92 : null,
+              vmScore: behavior.bmCompletedVmMissing ? null : behavior.completedNullScore ? null : 92,
+              bmCompletedAt: behavior.bmCompletedVmMissing ? '2026-07-10T09:00:00.000Z' : null,
+              vmCompletedAt: behavior.bmCompletedVmMissing ? null : behavior.completedNullScore ? '2026-07-10T10:00:00.000Z' : '2026-07-10T09:00:00.000Z',
               lastCompletedVisitAt: '2026-07-10T09:00:00.000Z',
               elapsedDaysSinceLastVisit: 4,
               activeChecklistCount: 0,
@@ -836,7 +928,7 @@ async function routeChecklistCommand(
               openActionCount: 0,
               blockedActionCount: 0,
               status: 'needs_visit',
-              reasonCodes: ['missing_vm_visit'],
+              reasonCodes: [behavior.bmCompletedVmMissing ? 'missing_vm_visit' : 'missing_bm_visit'],
               lastOperationalAt: '2026-07-10T09:00:00.000Z',
             },
             {
@@ -868,6 +960,21 @@ async function routeChecklistCommand(
   })
   await page.route('**/api/mobile/checklists/today', async (route) => {
     await route.fulfill({ json: createChecklistTodayFixture() })
+  })
+  await page.route('**/api/mobile/checklists/instances', async (route) => {
+    await route.fulfill({
+      status: 201,
+      json: {
+        command: { status: 'created', message: 'Checklist başlatıldı' },
+        data: {
+          checklistInstance: {
+            checklist_instance_id: '33333333-3333-4333-8333-333333333333',
+            status: 'in_progress',
+            created_at: '2026-07-15T09:00:00.000Z',
+          },
+        },
+      },
+    })
   })
   await page.route('**/api/checklists/acknowledgements/list**', async (route) => {
     await route.fulfill({ json: { items: [], meta: { count: 0, limit: 50, offset: 0, total: 0 } } })
