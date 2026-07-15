@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '../../components/ui/dialog'
 import type { AuthSessionSummary } from '../auth/api'
-import { canAcknowledgeChecklist } from '../auth/authorization'
+import { canAcknowledgeChecklist, hasAnyRole } from '../auth/authorization'
 import type { ChecklistAcknowledgementItem } from '../checklists/api'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import {
@@ -18,11 +18,12 @@ import {
   canMutateChecklistTemplateType,
   getCoverageScore,
   getCoverageRowKeyFromRow,
+  isVisualMerchandiserOnly,
 } from '../../pages/store-checklists-logic'
 import { StoreChecklistsModals } from '../../pages/store-checklists-modals'
 import type { ChecklistCoverageRow } from '../../pages/store-checklists-model'
 import type { ChecklistWorkflowOverlayState } from './checklist-workflow-route-state'
-import { useChecklistWorkflowLegacyController } from './useChecklistWorkflowLegacyController'
+import { useChecklistWorkflowController } from './useChecklistWorkflowController'
 
 export function ChecklistWorkflowCommandOverlay(input: {
   authSummary: AuthSessionSummary | null
@@ -30,7 +31,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
   returnFocusRef: RefObject<HTMLElement | null>
   onClose: () => void
 }) {
-  const controller = useChecklistWorkflowLegacyController({ authSummary: input.authSummary })
+  const controller = useChecklistWorkflowController({ authSummary: input.authSummary })
   const {
     acknowledgeMutation,
     ackNotes,
@@ -161,24 +162,26 @@ export function ChecklistWorkflowCommandOverlay(input: {
                     </div>
                   </div>
                   <div className="tw:mt-4 tw:grid tw:min-w-0 tw:grid-cols-[minmax(0,1fr)] tw:gap-3 tw:sm:grid-cols-2">
-                    <ChecklistTypeCard
-                      assigned={assignedStoreIds.includes(workflowStore.store.storeId)}
-                      authSummary={input.authSummary}
-                      label="BM Checklist"
-                      locale={locale}
-                      row={workflowStore.bm}
-                      startPending={startVisitMutation.isPending}
-                      onOpen={(row) => {
-                        const rowKey = getCoverageRowKeyFromRow(row)
-                        if (row.active) {
-                          dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
-                        } else {
-                          hydrateActiveResponseDrafts(undefined)
-                          dispatchPageState({ type: 'resetSessionDrafts' })
-                          startVisitMutation.mutate({ storeId: workflowStore.store.storeId, checklistTemplateId: row.template.checklistTemplateId })
-                        }
-                      }}
-                    />
+                    {!isVisualMerchandiserOnly(input.authSummary) ? (
+                      <ChecklistTypeCard
+                        assigned={assignedStoreIds.includes(workflowStore.store.storeId)}
+                        authSummary={input.authSummary}
+                        label="BM Checklist"
+                        locale={locale}
+                        row={workflowStore.bm}
+                        startPending={startVisitMutation.isPending}
+                        onOpen={(row) => {
+                          const rowKey = getCoverageRowKeyFromRow(row)
+                          if (row.active) {
+                            dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
+                          } else {
+                            hydrateActiveResponseDrafts(undefined)
+                            dispatchPageState({ type: 'resetSessionDrafts' })
+                            startVisitMutation.mutate({ storeId: workflowStore.store.storeId, checklistTemplateId: row.template.checklistTemplateId })
+                          }
+                        }}
+                      />
+                    ) : null}
                     <ChecklistTypeCard
                       assigned={assignedStoreIds.includes(workflowStore.store.storeId)}
                       authSummary={input.authSummary}
@@ -204,6 +207,14 @@ export function ChecklistWorkflowCommandOverlay(input: {
                     </p>
                   ) : null}
                 </section>
+              ) : input.routeState.kind === 'workflow' && input.routeState.tab === 'visits' && workflowStoreId && assignedStoreIds.includes(workflowStoreId) ? (
+                <OverlayState
+                  icon={ClipboardCheck}
+                  title={hasAnyRole(input.authSummary, ['VISUAL_MERCHANDISER'])
+                    ? (locale === 'tr' ? 'VM şablonu yayında değil' : 'No published VM template')
+                    : (locale === 'tr' ? 'Checklist şablonu yayında değil' : 'No published checklist template')}
+                  copy={locale === 'tr' ? 'Mağaza atamanız korunuyor; yayınlanmış şablon olmadan checklist başlatılamaz.' : 'Your store assignment remains visible; a checklist cannot start without a published template.'}
+                />
               ) : input.routeState.kind === 'workflow' ? (
                 <OverlayState
                   icon={Store}

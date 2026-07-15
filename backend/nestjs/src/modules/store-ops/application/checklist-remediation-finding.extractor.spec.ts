@@ -65,7 +65,7 @@ describe("extractChecklistRemediationFindings", () => {
         sourceType: "checklist_remediation",
         sourceId:
           "checklist:11111111-1111-1111-1111-111111111111:item:44444444-4444-4444-4444-444444444444",
-        sourceDeepLink: "/store/checklists?result=11111111-1111-1111-1111-111111111111",
+        sourceDeepLink: "/store/checklists?overlay=result&checklistInstanceId=11111111-1111-1111-1111-111111111111",
         priority: "high",
         templateName: "BM Store Visit",
         templateType: "BM_STORE_VISIT",

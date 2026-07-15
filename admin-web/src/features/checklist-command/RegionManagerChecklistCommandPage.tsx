@@ -52,6 +52,8 @@ const PAGE_SIZE = 30
 
 export function RegionManagerChecklistCommandPage(input: {
   authSummary: AuthSessionSummary | null
+  activeView?: 'visits' | 'plan' | 'records'
+  onActiveViewChange?: (view: 'visits' | 'plan' | 'records') => void
   onOpenWorkflow: (storeId: string) => void
   onOpenResult: (checklistInstanceId: string) => void
 }) {
@@ -63,7 +65,12 @@ export function RegionManagerChecklistCommandPage(input: {
   const [query, setQuery] = useState('')
   const [offset, setOffset] = useState(0)
   const [columnPreset, setColumnPreset] = useState<'all' | 'scores' | 'visit'>('all')
-  const [activeView, setActiveView] = useState<'visits' | 'plan' | 'records'>('visits')
+  const [localActiveView, setLocalActiveView] = useState<'visits' | 'plan' | 'records'>('visits')
+  const activeView = input.activeView ?? localActiveView
+  const setActiveView = (view: 'visits' | 'plan' | 'records') => {
+    setLocalActiveView(view)
+    input.onActiveViewChange?.(view)
+  }
   const [selectedRecordStore, setSelectedRecordStore] = useState<ChecklistCommandRow | null>(null)
   const historyTriggerRef = useRef<HTMLElement | null>(null)
   const [weekStart, setWeekStart] = useState(() => getIstanbulWeekStart())

@@ -335,7 +335,7 @@ describe("WorkflowInboxService", () => {
       expect.objectContaining({
         sourceType: "checklist_receipt",
         sourceId: "checklist-instance-1",
-        deepLink: "/store/checklists?tab=inbox&result=checklist-instance-1",
+        deepLink: "/store/checklists?overlay=result&checklistInstanceId=checklist-instance-1&storeId=store-1&workflowTab=inbox",
       }),
     ]);
   });

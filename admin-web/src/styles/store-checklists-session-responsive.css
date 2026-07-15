@@ -1,41 +1,4 @@
-@media (max-width: 1180px) {
-  .store-checklists-flow-layout,
-  .store-checklists-toolbar,
-  .store-checklist-modal-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .store-checklist-modal-live {
-    position: static;
-  }
-}
-
 @media (max-width: 900px) {
-  .store-checklists-command-metrics,
-  .store-checklist-modal-summary,
-  .store-checklist-result-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .store-checklists-tabs {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .store-checklists-table-head,
-  .store-checklists-visit-table .store-checklists-table-head,
-  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-table-head {
-    display: none;
-  }
-
-  .store-checklists-visit-table .store-checklists-visit-row,
-  .store-checklists-visit-table.store-checklists-visit-table-single-score .store-checklists-visit-row,
-  .store-checklists-visit-row,
-  .store-checklists-plan-row,
-  .store-checklists-history-row,
-  .store-checklist-modal-item,
-  .store-checklist-result-item,
-  .store-checklist-modal-inputs,
-  .store-checklist-modal-answer-cluster,
   .store-checklist-result-section-head {
     grid-template-columns: 1fr;
   }
@@ -46,148 +9,33 @@
     padding: 0.7rem;
   }
 
-  .store-checklist-modal-head {
-    grid-template-columns: 1fr;
-    padding: 0.85rem;
-  }
-
   .store-checklist-modal-summary {
     padding: 0.7rem 0.2rem 0;
-  }
-
-  .store-checklist-modal-layout {
-    gap: 0.65rem;
-    padding: 0.7rem 0.2rem 0.85rem;
-  }
-
-  .store-checklist-modal-item {
-    align-items: stretch;
-    padding: 0.72rem;
-  }
-
-  .store-checklists-action-button,
-  .store-checklists-ghost-button {
-    width: 100%;
   }
 }
 
 @media (max-width: 640px) {
-  .store-checklists-flow-header,
-  .store-checklists-command-card,
-  .store-checklists-toolbar,
   .store-checklist-modal {
     border-radius: 1.1rem;
-  }
-
-  .store-checklists-command-page {
-    gap: 0.72rem;
-    max-width: 100%;
-    overflow-x: clip;
-  }
-
-  .store-checklists-command-card,
-  .store-checklists-toolbar,
-  .store-checklists-table,
-  .store-checklists-visit-row,
-  .store-checklists-plan-row,
-  .store-checklists-history-row,
-  .store-checklist-modal,
-  .store-checklist-modal-section,
-  .store-checklist-result-section {
     min-width: 0;
     max-width: 100%;
   }
 
-  .store-checklists-flow-topline {
-    display: grid;
-    gap: 0.8rem;
-  }
-
-  .store-checklists-period-pill {
-    width: fit-content;
-  }
-
-  .store-checklists-flow-topline h1 {
-    font-size: 1.55rem;
-    line-height: 1.12;
-  }
-
-  .store-checklists-hero-copy p {
-    font-size: 0.84rem;
-  }
-
-  .store-checklists-toolbar {
+  .store-checklist-modal-summary {
     grid-template-columns: 1fr;
-    padding: 0.45rem;
-  }
-
-  .store-checklists-command-metrics,
-  .store-checklist-modal-summary,
-  .store-checklist-result-summary {
-    grid-template-columns: 1fr;
-  }
-
-  .store-checklists-tabs {
-    display: none;
-  }
-
-  .store-checklists-mobile-tab-picker {
-    display: block;
-  }
-
-  .store-checklists-pagination {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .store-checklist-modal-head,
-  .store-checklist-modal-footer,
-  .store-checklists-section-head,
-  .store-checklist-modal-section-head {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .store-checklists-tab {
-    padding: 0.68rem 0.72rem;
-  }
-
-  .store-checklists-metric {
-    min-height: 4.35rem;
-  }
-
-  .store-checklists-badge,
-  .store-checklists-action-button,
-  .store-checklists-ghost-button {
-    white-space: normal;
-  }
-
-  .store-checklists-badge {
-    line-height: 1.2;
-    overflow-wrap: anywhere;
-  }
-
-  .store-checklist-modal-live {
-    gap: 0.52rem;
-    padding: 0.72rem;
-  }
-
-  .store-checklist-modal-live > strong {
-    font-size: 2.15rem;
-  }
-
-  .store-checklist-modal-item-copy {
-    grid-template-columns: 1.75rem minmax(0, 1fr);
-  }
-
-  .store-checklist-modal-item-copy > span {
-    width: 1.75rem;
-    height: 1.75rem;
   }
 
   .store-checklist-modal-footer {
+    align-items: stretch;
+    flex-direction: column;
     display: grid;
     gap: 0.55rem;
+  }
+
+  .store-checklists-badge {
+    white-space: normal;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
   }
 }
 

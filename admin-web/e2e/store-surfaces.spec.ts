@@ -4,11 +4,12 @@ import { readComputedStyle } from './style-test-utils'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
 import { pressTabFromDocumentStart } from './keyboard-test-utils'
 
-const demoStoreId = '00000000-0000-0000-0000-000000000100'
+const demoStoreId = '00000000-0000-4000-8000-000000000100'
+const checklistCommandInstanceId = '44444444-4444-4444-8444-444444444444'
 const demoRegionId = '00000000-0000-0000-0000-000000000010'
 const demoEmployeeId = '00000000-0000-0000-0000-000000000202'
 const demoPositionId = '44444444-4444-4444-8444-444444444444'
-const regionSecondStoreId = '00000000-0000-0000-0000-000000000101'
+const regionSecondStoreId = '00000000-0000-4000-8000-000000000101'
 const outsideStoreId = '00000000-0000-0000-0000-000000000999'
 
 async function selectComboboxOption(page: Page, trigger: Locator, optionName: string | RegExp) {
@@ -1506,7 +1507,7 @@ test('store shell exposes Turkish-first chrome and hides technical auth roles', 
   await expect(page.getByText('Ön izleme', { exact: true })).toHaveCount(0)
   await expect(page.getByLabel('Prototip rol seçimi')).toHaveCount(0)
   await expect(page.getByTestId('store-home-visit-priority-card')).toHaveCount(0)
-  await expect(page.locator('a[href="/store/checklists?tab=plan"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/checklists?canvasView=plan"]')).toHaveCount(0)
   await expect(page.locator('body')).not.toContainText('STORE_PERSONNEL')
   await expect(page.locator('body')).not.toContainText('STORE_MANAGER')
   await expect(page.getByText('offline_access')).toHaveCount(0)
@@ -1625,9 +1626,9 @@ test('region manager home surfaces checklist field queue summary', async ({ page
           ...authSessionFixture.user,
           roleCodes: ['REGION_MANAGER'],
           actionScope: {
-            assignedStoreIds: [demoStoreId, '00000000-0000-0000-0000-000000000101'],
+            assignedStoreIds: [demoStoreId, regionSecondStoreId],
           },
-          assignedStoreIds: [demoStoreId, '00000000-0000-0000-0000-000000000101'],
+          assignedStoreIds: [demoStoreId, regionSecondStoreId],
         },
         scopeSummary: {
           ...authSessionFixture.scopeSummary,
@@ -1702,7 +1703,7 @@ test('region manager home surfaces checklist field queue summary', async ({ page
   const visitPriorityDetail = page.locator('.sh-detail-panel')
   await expect(visitPriorityDetail).toContainText('2 yüksek riskli mağaza')
   await expect(visitPriorityDetail).toContainText('ziyaret planında görünüyor')
-  await expect(page.locator('.sh-detail-action')).toHaveAttribute('href', '/store/checklists?tab=plan')
+  await expect(page.locator('.sh-detail-action')).toHaveAttribute('href', '/store/checklists?canvasView=plan')
   await expect(page.getByRole('heading', { name: 'Hızlı geçiş' })).toBeVisible()
   await expect(page.locator('a[href="/store/kpis"]').first()).toBeVisible()
   await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
@@ -1772,7 +1773,7 @@ test('report viewer store home does not advertise the visit plan link', async ({
 
   await expect(page.locator('.store-command-nav').locator('a[href="/store/checklists"]')).toBeVisible()
   await expect(page.getByTestId('store-home-visit-priority-card')).toHaveCount(0)
-  await expect(page.locator('a[href="/store/checklists?tab=plan"]')).toHaveCount(0)
+  await expect(page.locator('a[href="/store/checklists?canvasView=plan"]')).toHaveCount(0)
 })
 
 test('region manager home translates visit priority reasons in English', async ({ page }) => {
@@ -2072,6 +2073,7 @@ test('store personnel cannot open targets by direct route', async ({ page }) => 
 
 test('visual merchandiser lands on checklist-only shell from store root', async ({ page }) => {
   await page.unroute('**/api/auth/session')
+  await page.unroute('**/api/checklists/command-canvas**')
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
       json: {
@@ -2087,19 +2089,53 @@ test('visual merchandiser lands on checklist-only shell from store root', async 
       },
     })
   })
+  await page.route('**/api/checklists/command-canvas**', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          period: '2026-07',
+          view: 'visual_merchandiser',
+          capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
+          metrics: { totalStores: 1, needsVisit: 1, active: 0, pending: 0, completed: 0 },
+          items: [{
+            storeId: demoStoreId,
+            storeCode: 'DEMO-1',
+            storeName: 'IstinyePark Demo Store',
+            regionId: demoRegionId,
+            regionName: 'Marmara',
+            regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }],
+            bmScore: null,
+            vmScore: null,
+            bmCompletedAt: null,
+            vmCompletedAt: null,
+            lastCompletedVisitAt: null,
+            elapsedDaysSinceLastVisit: null,
+            activeChecklistCount: 0,
+            pendingAcknowledgementCount: 0,
+            openActionCount: 0,
+            blockedActionCount: 0,
+            status: 'needs_visit',
+            reasonCodes: ['missing_vm_visit'],
+            lastOperationalAt: null,
+          }],
+          page: { total: 1, limit: 30, offset: 0, hasMore: false },
+        },
+      },
+    })
+  })
 
   await page.goto('/store')
 
   await expect(page).toHaveURL(/\/store\/checklists$/)
-  await expect(page.locator('.store-checklists-command-page')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'VM checklist görünümü' })).toBeVisible()
   const storeNav = page.locator('.store-command-nav')
   await expect(storeNav).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/home"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/kpis"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/rankings"]')).toHaveCount(0)
   await expect(storeNav.locator('a[href="/store/approvals"]')).toHaveCount(0)
-  await expect(page.getByText('VM görünümü').first()).toBeVisible()
-  await expect(page.getByLabel(/VM Checklist ziyaret yok/)).toHaveCount(2)
+  await expect(page.getByRole('heading', { name: 'VM Kontrol Merkezi' })).toBeVisible()
+  await expect(page.getByText('IstinyePark Demo Store')).toBeVisible()
   await expect(page.getByText('BM Checklist')).toHaveCount(0)
   await expect(page.getByText('BM skor')).toHaveCount(0)
   await expect(page.getByText('BM görünümü')).toHaveCount(0)
@@ -3818,7 +3854,7 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
           {
             itemType: 'acknowledgement',
             sourceType: 'checklist_receipt',
-            sourceId: 'checklist-instance-bm-1',
+            sourceId: checklistCommandInstanceId,
             title: 'BM Result',
             summary: 'IstinyePark Demo Store completed checklist result',
             storeId: demoStoreId,
@@ -3831,7 +3867,7 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
             actorRole: 'STORE_MANAGER',
             primaryActionLabel: 'I acknowledge',
             secondaryActionLabel: 'Open checklist result',
-            deepLink: '/store/checklists?tab=inbox&result=checklist-instance-bm-1',
+            deepLink: `/store/checklists?overlay=result&checklistInstanceId=${checklistCommandInstanceId}&storeId=${demoStoreId}&workflowTab=inbox`,
           },
         ],
         meta: {
@@ -3845,7 +3881,16 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   })
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
     acknowledgementRequests += 1
-    await route.fulfill({ json: checklistAcknowledgementsFixture })
+    await route.fulfill({
+      json: {
+        ...checklistAcknowledgementsFixture,
+        items: checklistAcknowledgementsFixture.items.map((item) =>
+          item.checklistInstanceId === 'checklist-instance-bm-1'
+            ? { ...item, checklistInstanceId: checklistCommandInstanceId }
+            : item,
+        ),
+      },
+    })
   })
 
   await page.goto('/store/tasks')
@@ -3853,23 +3898,20 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   await page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' }).click()
   await page.getByRole('dialog', { name: 'Görev detayı' }).getByRole('link', { name: 'Kaynağı aç' }).click()
 
-  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox&result=checklist-instance-bm-1$/)
-  await expect(page.locator('#store-checklist-tab-inbox')).toHaveAttribute('aria-selected', 'true')
+  await expect(page).toHaveURL(new RegExp(`/store/checklists\\?overlay=result&checklistInstanceId=${checklistCommandInstanceId}&storeId=${demoStoreId}&workflowTab=inbox$`))
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('Checklist result')
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 
   await page.getByRole('dialog').getByRole('button', { name: 'Close', exact: true }).click()
 
-  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox$/)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(
-    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
-  ).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/store/checklists\\?overlay=workflow&storeId=${demoStoreId}&workflowTab=inbox$`))
+  await expect(page.getByRole('dialog', { name: 'Checklist workflow' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Result acknowledgement' })).toBeVisible()
 
   await page.getByRole('button', { name: 'View details' }).click()
 
-  await expect(page).toHaveURL(/\/store\/checklists\?tab=inbox&result=checklist-instance-bm-1$/)
+  await expect(page).toHaveURL(new RegExp(`/store/checklists\\?overlay=result&checklistInstanceId=${checklistCommandInstanceId}&storeId=${demoStoreId}&workflowTab=inbox$`))
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
 })
 
@@ -4062,9 +4104,8 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
   await page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' }).click()
   await page.getByRole('dialog', { name: 'Görev detayı' }).getByRole('link', { name: 'Kaynağı aç' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'I acknowledge' }).click()
-  await expect(page).toHaveURL(/workflowTab=history/)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Store Control Center' })).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/store/checklists\\?overlay=workflow&storeId=${demoStoreId}&workflowTab=history$`))
+  await expect(page.getByRole('dialog', { name: 'Checklist workflow' })).toBeVisible()
 
   await page.goto('/store/tasks')
 
@@ -5287,7 +5328,7 @@ const mobileChecklistTodayFixture = {
   data: {
     stores: [
       { storeId: demoStoreId, storeName: 'IstinyePark Demo Store' },
-      { storeId: '00000000-0000-0000-0000-000000000101', storeName: 'Marmara Park Demo Store' },
+      { storeId: regionSecondStoreId, storeName: 'Marmara Park Demo Store' },
     ],
     templates: [
       {
@@ -6449,50 +6490,6 @@ const pendingTargetDistributionRequestsFixture = {
   },
 }
 
-const approvedTargetDistributionRequestsFixture = {
-  items: [
-    {
-      requestId: '00000000-0000-4000-8000-000000000778',
-      companyId: '00000000-0000-0000-0000-000000000001',
-      regionId: '00000000-0000-0000-0000-000000000010',
-      storeId: demoStoreId,
-      storeName: 'IstinyePark Demo Store',
-      requestMonth: '2026-05-01',
-      targetLabel: 'Mayis hedef dagitimi',
-      totalTargetValue: 145000,
-      allocationCount: 2,
-      status: 'approved',
-      requestReason: 'Magaza hedef dagitimi',
-      allocations: [
-        {
-          employeeId: demoEmployeeId,
-          assigneeLabel: 'Store Personnel',
-          targetValue: 45000,
-          note: null,
-        },
-        {
-          employeeId: '00000000-0000-0000-0000-000000000203',
-          assigneeLabel: 'Store Personnel Covered',
-          targetValue: 100000,
-          note: null,
-        },
-      ],
-      submittedByUserId: 'store-manager-1',
-      approvedByUserId: 'region-user-1',
-      approvedAt: '2026-05-20T08:00:00.000Z',
-      approvalNote: 'Bolge onayi',
-      createdAt: '2026-05-10T08:00:00.000Z',
-      updatedAt: '2026-05-20T08:00:00.000Z',
-    },
-  ],
-  meta: {
-    count: 1,
-    total: 1,
-    limit: 30,
-    offset: 0,
-  },
-}
-
 const targetCoverageFixture = {
   items: [
     {
@@ -6551,54 +6548,6 @@ const targetCoverageFixture = {
     staleEmployees: 0,
     uncoveredEmployees: 2,
     coverageRate: 1 / 3,
-  },
-}
-
-const approvedTargetCoverageFixture = {
-  items: [
-    {
-      storeId: demoStoreId,
-      storeName: 'IstinyePark Demo Store',
-      employeeId: demoEmployeeId,
-      displayName: 'Store Personnel',
-      externalEmployeeRef: 'FM8001',
-      targetReferenceId: '00000000-0000-4000-8000-000000000601',
-      targetValue: 45000,
-      pendingRequestId: null,
-      pendingTargetValue: null,
-      staleTargetReferenceId: null,
-      targetStatus: 'approved',
-    },
-    {
-      storeId: demoStoreId,
-      storeName: 'IstinyePark Demo Store',
-      employeeId: '00000000-0000-0000-0000-000000000203',
-      displayName: 'Store Personnel Covered',
-      externalEmployeeRef: 'FM8002',
-      targetReferenceId: '00000000-0000-4000-8000-000000000602',
-      targetValue: 100000,
-      pendingRequestId: null,
-      pendingTargetValue: null,
-      staleTargetReferenceId: null,
-      targetStatus: 'approved',
-    },
-  ],
-  meta: {
-    count: 2,
-    total: 2,
-    limit: 50,
-    offset: 0,
-  },
-  summary: {
-    requestMonth: '2026-05-01',
-    totalEmployees: 2,
-    coveredEmployees: 2,
-    missingEmployees: 0,
-    pendingEmployees: 0,
-    conflictEmployees: 0,
-    staleEmployees: 0,
-    uncoveredEmployees: 0,
-    coverageRate: 1,
   },
 }
 

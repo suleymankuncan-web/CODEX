@@ -2,11 +2,7 @@ import { useEffect, useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate } from 'react-router-dom'
 import type { AuthSessionSummary } from '../auth/api'
-import {
-  canReadChecklistResults,
-  getAssignedStoreIds,
-  hasAnyRole,
-} from '../auth/authorization'
+import { canReadChecklistResults, getAssignedStoreIds, hasAnyRole } from '../auth/authorization'
 import {
   storeChecklistAcknowledgementsQueryKey,
   storeMobileChecklistsTodayQueryKey,
@@ -28,8 +24,8 @@ import { useLocalization } from '../localization/useLocalization'
 import { actionToast } from '../../lib/action-toast'
 import { getUserFacingErrorMessage } from '../../lib/format'
 import { transientQueryRetryOptions } from '../../lib/query-retry'
+import { buildChecklistWorkflowOverlaySearch } from './checklist-workflow-route-state'
 import {
-  buildChecklistSearch,
   createInitialStoreChecklistsState,
   storeChecklistsReducer,
   type ChecklistCompletedInstance,
@@ -92,7 +88,7 @@ function mergeSavedResponseIntoMobileToday(
   }
 }
 
-export function useChecklistWorkflowLegacyController(input: {
+export function useChecklistWorkflowController(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale, t } = useLocalization()
@@ -109,19 +105,21 @@ export function useChecklistWorkflowLegacyController(input: {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    if (params.get('tab') !== 'incomplete') return
+    if (params.get('tab') !== 'incomplete' || !commandStoreId) return
 
     navigate(
       {
         pathname: location.pathname,
-        search: buildChecklistSearch(location.search, {
+        search: buildChecklistWorkflowOverlaySearch(location.search, {
+          kind: 'workflow',
           status: 'missing_or_draft',
+          storeId: commandStoreId,
           tab: 'visits',
         }),
       },
       { replace: true },
     )
-  }, [location.pathname, location.search, navigate])
+  }, [commandStoreId, location.pathname, location.search, navigate])
   const {
     ackNotes,
     scores,
@@ -193,7 +191,13 @@ export function useChecklistWorkflowLegacyController(input: {
       navigate(
         {
           pathname: location.pathname,
-          search: buildChecklistSearch(location.search, { result: null, tab: 'history' }),
+          search: commandStoreId
+            ? buildChecklistWorkflowOverlaySearch(location.search, {
+                kind: 'workflow',
+                storeId: commandStoreId,
+                tab: 'history',
+              })
+            : buildChecklistWorkflowOverlaySearch(location.search, null),
         },
         { replace: true },
       )
@@ -572,10 +576,15 @@ export function useChecklistWorkflowLegacyController(input: {
 
   const openVisitWorkflowFromPlan = () => {
     dispatchPageState({ type: 'selectTab', tab: 'visits' })
+    if (!commandStoreId) return
     navigate(
       {
         pathname: location.pathname,
-        search: buildChecklistSearch(location.search, { tab: 'visits' }),
+        search: buildChecklistWorkflowOverlaySearch(location.search, {
+          kind: 'workflow',
+          storeId: commandStoreId,
+          tab: 'visits',
+        }),
       },
       { replace: true },
     )
@@ -587,9 +596,11 @@ export function useChecklistWorkflowLegacyController(input: {
     navigate(
       {
         pathname: location.pathname,
-        search: buildChecklistSearch(location.search, {
-          result: item.checklistInstanceId,
-          tab,
+        search: buildChecklistWorkflowOverlaySearch(location.search, {
+          kind: 'result',
+          checklistInstanceId: item.checklistInstanceId,
+          returnStoreId: item.storeId,
+          returnTab: tab,
         }),
       },
       { replace: true },
@@ -601,7 +612,13 @@ export function useChecklistWorkflowLegacyController(input: {
     navigate(
       {
         pathname: location.pathname,
-        search: buildChecklistSearch(location.search, { result: null }),
+        search: commandStoreId
+          ? buildChecklistWorkflowOverlaySearch(location.search, {
+              kind: 'workflow',
+              storeId: commandStoreId,
+              tab: selectedTab,
+            })
+          : buildChecklistWorkflowOverlaySearch(location.search, null),
       },
       { replace: true },
     )

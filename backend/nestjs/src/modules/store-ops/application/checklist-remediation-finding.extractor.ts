@@ -117,7 +117,7 @@ function buildChecklistRemediationSourceId(input: {
 }
 
 function buildChecklistRemediationSourceDeepLink(checklistInstanceId: string) {
-  return `/store/checklists?result=${encodeURIComponent(checklistInstanceId)}`;
+  return `/store/checklists?overlay=result&checklistInstanceId=${encodeURIComponent(checklistInstanceId)}`;
 }
 
 function buildChecklistRemediationTitle(response: ChecklistRemediationResponseSource) {

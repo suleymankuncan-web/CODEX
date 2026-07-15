@@ -2,8 +2,7 @@
 @import './store-checklists-result-modal-prototype.css';
 @import './store-checklists-session.css';
 @import './store-checklists-session-responsive.css';
-@import './store-checklists-flow.css';
-@import './store-checklists-flow-responsive.css';
+@import './store-checklists-workflow-primitives.css';
 @import './store-checklists-weekly-plan.css';
 @import './store-checklists-plan.css';
 
