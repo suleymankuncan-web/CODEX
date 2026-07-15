@@ -3931,6 +3931,7 @@ test('store tasks keeps target approvals out of the command center', async ({ pa
 })
 
 test('store checklist acknowledgement refreshes the store task queue', async ({ page }) => {
+  const checklistInstanceId = '44444444-4444-4444-8444-444444444444'
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
   })
@@ -3961,7 +3962,7 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
               {
                 itemType: 'acknowledgement',
                 sourceType: 'checklist_receipt',
-                sourceId: 'checklist-instance-bm-1',
+                sourceId: checklistInstanceId,
                 title: 'BM Result',
                 summary: 'IstinyePark Demo Store completed checklist result',
                 storeId: demoStoreId,
@@ -3974,7 +3975,7 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
                 actorRole: 'STORE_MANAGER',
                 primaryActionLabel: 'I acknowledge',
                 secondaryActionLabel: 'Open checklist result',
-                deepLink: '/store/checklists?tab=inbox&result=checklist-instance-bm-1',
+                deepLink: `/store/checklists?overlay=result&checklistInstanceId=${checklistInstanceId}&storeId=${demoStoreId}&workflowTab=inbox`,
               },
             ],
         meta: {
@@ -3994,6 +3995,7 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
           item.checklistInstanceId === 'checklist-instance-bm-1'
             ? {
                 ...item,
+                checklistInstanceId,
                 acknowledgement: acknowledged
                   ? {
                       checklistAcknowledgementId: 'checklist-ack-bm-1',
@@ -4025,6 +4027,33 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
       },
     })
   })
+  await page.route('**/api/checklists/command-canvas?**', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          period: '2026-07',
+          view: 'store_manager',
+          capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
+          metrics: { totalStores: 1, needsVisit: 0, active: 0, pending: 1, completed: 0 },
+          items: [{
+            storeId: demoStoreId,
+            storeCode: 'DEMO-1',
+            storeName: 'IstinyePark Demo Store',
+            regionId: 'region-1',
+            regionName: 'Marmara',
+            bmScore: 86,
+            vmScore: null,
+            lastCompletedVisitAt: '2026-05-12T09:00:00.000Z',
+            elapsedDaysSinceLastVisit: 64,
+            status: 'pending',
+            pendingAcknowledgementCount: acknowledged ? 0 : 1,
+            openActionCount: 0,
+          }],
+          page: { total: 1, limit: 30, offset: 0, hasMore: false },
+        },
+      },
+    })
+  })
 
   await page.goto('/store/tasks')
   await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' })).toBeVisible()
@@ -4033,8 +4062,9 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
   await page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' }).click()
   await page.getByRole('dialog', { name: 'Görev detayı' }).getByRole('link', { name: 'Kaynağı aç' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'I acknowledge' }).click()
-  await expect(page).toHaveURL(/\/store\/checklists\?tab=history$/)
+  await expect(page).toHaveURL(/workflowTab=history/)
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Store Control Center' })).toBeVisible()
 
   await page.goto('/store/tasks')
 

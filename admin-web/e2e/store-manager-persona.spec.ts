@@ -4,6 +4,8 @@ const companyId = '00000000-0000-0000-0000-000000000001'
 const storeId = '00000000-0000-0000-0000-000000000100'
 const regionId = '00000000-0000-0000-0000-000000000010'
 const employeeId = '00000000-0000-0000-0000-000000000202'
+const checklistInstanceId = '11111111-1111-4111-8111-111111111111'
+const checklistTemplateId = '22222222-2222-4222-8222-222222222222'
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -104,8 +106,7 @@ test('store manager can acknowledge completed checklist work and refresh the tas
   await expect(page.getByRole('dialog').getByRole('heading', { name: 'BM Result' })).toBeVisible()
   await page.getByRole('dialog').getByRole('button', { name: 'Kabul ettim' }).click()
 
-  await expect(page).toHaveURL(/\/store\/checklists\?tab=history$/)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect.poll(() => acknowledged).toBe(true)
   await page.goto('/store/tasks')
 
   await expect.poll(() => workflowRequests).toBeGreaterThanOrEqual(2)
@@ -167,6 +168,9 @@ async function routeStoreManagerApi(page: Page) {
   })
   await page.route('**/api/mobile/checklists/today', async (route) => {
     await route.fulfill({ json: mobileChecklistTodayFixture })
+  })
+  await page.route('**/api/checklists/command-canvas**', async (route) => {
+    await route.fulfill({ json: { data: { period: '2026-07', view: 'store_manager', capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false }, metrics: { totalStores: 1, needsVisit: 0, active: 0, pending: 1, completed: 1 }, items: [{ storeId, storeCode: 'IST-DEMO', storeName: 'IstinyePark Demo Store', regionId, regionName: 'Marmara', regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }], bmScore: 82, vmScore: null, bmCompletedAt: '2026-05-12T09:00:00.000Z', vmCompletedAt: null, lastCompletedVisitAt: '2026-05-12T09:00:00.000Z', elapsedDaysSinceLastVisit: 64, activeChecklistCount: 0, pendingAcknowledgementCount: 1, openActionCount: 0, blockedActionCount: 0, status: 'pending', reasonCodes: ['pending_acknowledgement'], lastOperationalAt: '2026-05-12T09:00:00.000Z' }], page: { total: 1, limit: 30, offset: 0, hasMore: false } } } })
   })
   await page.route('**/api/target-distributions/requests**', async (route) => {
     if (route.request().method() === 'GET') {
@@ -293,7 +297,7 @@ const workflowKpiItem = {
 const workflowChecklistItem = {
   itemType: 'acknowledgement',
   sourceType: 'checklist_receipt',
-  sourceId: 'checklist-instance-bm-1',
+  sourceId: checklistInstanceId,
   title: 'BM Result',
   summary: 'IstinyePark Demo Store tamamlanan checklist sonucu',
   storeId,
@@ -306,12 +310,12 @@ const workflowChecklistItem = {
   actorRole: 'STORE_MANAGER',
   primaryActionLabel: 'Kabul ettim',
   secondaryActionLabel: 'Checklist sonucunu aç',
-  deepLink: '/store/checklists?tab=inbox&result=checklist-instance-bm-1',
+  deepLink: `/store/checklists?overlay=result&checklistInstanceId=${checklistInstanceId}&storeId=${storeId}&workflowTab=inbox`,
 }
 
 const checklistAcknowledgementItem = {
-  checklistInstanceId: 'checklist-instance-bm-1',
-  checklistTemplateId: 'checklist-template-bm-1',
+  checklistInstanceId,
+  checklistTemplateId,
   templateName: 'BM Result',
   templateType: 'BM_STORE_VISIT',
   category: 'BM',

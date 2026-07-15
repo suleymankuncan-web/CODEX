@@ -111,9 +111,9 @@ test('continued checklist with saved draft responses completes without another e
 test('store manager checklist surface keeps acknowledgement language', async ({ page }) => {
   const requests = createChecklistRequestLog()
   await setupChecklistPage(page, ['STORE_MANAGER'], { requests })
-  await page.goto('/store/checklists')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
 
-  await page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' }).getByRole('button', { name: 'Detayı gör' }).click()
+  await page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' }).getByRole('button', { name: 'Detayı gör' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
   await expectChecklistResultModalVisualContract(dialog)
@@ -137,12 +137,10 @@ test('store manager checklist inbox keeps overdue acknowledgements visible by de
   await setupChecklistPage(page, ['STORE_MANAGER'], {
     acknowledgementCompletedAt: getPreviousMonthIsoDate(),
   })
-  await page.goto('/store/checklists')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
 
-  await expect(
-    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
-  ).toBeVisible()
-  await expect(page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })).toBeVisible()
+  await expect(page.getByLabel('Result acknowledgement')).toBeVisible()
+  await expect(page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' })).toBeVisible()
 })
 
 test('store checklist area lets managers retry after acknowledgement load fails', async ({ page }) => {
@@ -165,20 +163,18 @@ test('store checklist area lets managers retry after acknowledgement load fails'
     await route.fulfill({ json: createChecklistAcknowledgementsFixture(['STORE_MANAGER']) })
   })
 
-  await page.goto('/store/checklists')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
 
-  await expect(page.getByRole('heading', { name: 'Checklist alanı açılamadı' })).toBeVisible()
+  await expect(page.getByText('Checklist akışı yüklenemedi')).toBeVisible()
   const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
   await expect(retryButton).toBeVisible()
 
   allowAcknowledgements = true
   await retryButton.click()
 
-  await expect(
-    page.getByRole('heading', { name: 'Mağaza kabulü bekleyen tamamlanmış checklistler' }),
-  ).toBeVisible()
+  await expect(page.getByLabel('Sonuç kabulü')).toBeVisible()
   await expect.poll(() => acknowledgementAttempts).toBeGreaterThan(1)
-  await expect(page.getByRole('heading', { name: 'Checklist alanı açılamadı' })).toHaveCount(0)
+  await expect(page.getByText('Checklist akışı yüklenemedi')).toHaveCount(0)
 })
 
 test('completed checklist handoff moves from field visit to store acknowledgement history', async ({ page }) => {
@@ -263,12 +259,9 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
 
   roleState.current = ['STORE_MANAGER']
   await setMockSessionRoles(page, roleState.current)
-  await page.goto('/store/checklists')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
 
-  await expect(
-    page.getByRole('heading', { name: 'Completed checklist receipts waiting on store acknowledgement' }),
-  ).toBeVisible()
-  const resultRow = page.locator('.store-checklists-history-row').filter({ hasText: 'BM Result' })
+  const resultRow = page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' })
   await expect(resultRow).toBeVisible()
   await resultRow.getByRole('button', { name: 'View details' }).click()
   await expect(page.getByText('Checklist result', { exact: true })).toBeVisible()
@@ -283,15 +276,11 @@ test('completed checklist handoff moves from field visit to store acknowledgemen
       body: { acknowledgementNote: 'Store saw the completed visit' },
     },
   ])
-  await expect(page.getByRole('tab', { name: /History/ })).toHaveAttribute('aria-selected', 'true')
+  await expect(page).toHaveURL(/workflowTab=history/)
+  const acknowledgedRow = page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'BM Result' })
+  await expect(acknowledgedRow).toBeVisible()
+  await acknowledgedRow.getByRole('button', { name: 'View details' }).click()
   await expect(page.getByText('Store saw the completed visit')).toBeVisible()
-  await expect(
-    page.locator('.store-checklists-history-row').filter({
-      hasText: /(?=.*BM Result)(?=.*Acknowledged)/,
-    }),
-  ).toBeVisible()
-  await page.getByRole('tab', { name: /Result acknowledgement/ }).click()
-  await expect(page.getByText('No pending checklist receipts')).toBeVisible()
 })
 
 test('completed checklist refreshes the store task queue cache', async ({ page }) => {
@@ -354,8 +343,13 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'VM Result' })).toHaveCount(0)
   expect(workflowInboxRequests).toBe(1)
 
-  await page.goto('/store/checklists')
-  await page.getByRole('button', { name: 'Start checklist' }).click()
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
+  await page
+    .getByRole('dialog', { name: /Checklist workflow/ })
+    .getByRole('article')
+    .filter({ hasText: 'VM Checklist' })
+    .getByRole('button', { name: 'Start checklist' })
+    .click()
   await answerChecklistScoreQuestion(page, '8', 'Task-refresh visit')
   await expect.poll(() => requests.saves).toContainEqual(
     {
@@ -621,7 +615,7 @@ test('visit plan is not exposed to store manager and plan URL falls back', async
 
   await expect(page.getByRole('tab', { name: /Ziyaret planı/ })).toHaveCount(0)
   await expect(page.locator('#store-checklist-panel-plan')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'Mağaza kabulü bekleyen tamamlanmış checklistler' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza Kontrol Merkezi' })).toBeVisible()
 })
 
 test.skip('visit plan evaluates all-period filter against current month', async ({ page }) => {
@@ -973,11 +967,11 @@ test('visual merchandiser completed checklist lands in store manager acknowledge
 
   roleState.current = ['STORE_MANAGER']
   await setMockSessionRoles(page, roleState.current)
-  await page.goto('/store/checklists')
+  await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=inbox`)
 
-  const resultRow = page.locator('.store-checklists-history-row').filter({ hasText: 'VM Result' })
+  const resultRow = page.getByTestId('checklist-workflow-result-row').filter({ hasText: 'VM Result' })
   await expect(resultRow).toBeVisible()
-  await expect(resultRow.getByText(/Result summary|low-score/)).toBeVisible()
+  await expect(resultRow.getByText('92 points')).toBeVisible()
   await resultRow.getByRole('button', { name: 'View details' }).click()
   const resultDialog = page.getByRole('dialog')
   await expect(resultDialog).toBeVisible()
@@ -1371,11 +1365,21 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
     const url = new URL(route.request().url())
     const stores = options.stores ?? [{ storeId, storeName: 'Marmara Park' }]
     const completedAt = options.handoffState?.completed ? '2026-05-20T10:00:00.000Z' : null
+    const currentRoles = options.roleState?.current ?? roleCodes
+    const view = currentRoles.includes('REGION_MANAGER')
+      ? 'region_manager'
+      : currentRoles.includes('STORE_MANAGER')
+        ? 'store_manager'
+        : currentRoles.includes('VISUAL_MERCHANDISER')
+          ? 'visual_merchandiser'
+          : 'super_admin'
+    const pendingAcknowledgements = createChecklistAcknowledgementsFixture(currentRoles, options).items
+      .filter((item) => item.acknowledgement === null).length
     await route.fulfill({
       json: {
         data: {
           period: url.searchParams.get('period') ?? '2026-05',
-          view: 'region_manager',
+          view,
           capabilities: {
             weeklyVisitPlanningAvailable: false,
             canMaintainWeeklyVisitPlan: false,
@@ -1401,7 +1405,7 @@ async function routeChecklistApi(page: Page, roleCodes: string[], options: Check
             lastCompletedVisitAt: completedAt,
             elapsedDaysSinceLastVisit: completedAt ? 1 : null,
             activeChecklistCount: 0,
-            pendingAcknowledgementCount: 0,
+            pendingAcknowledgementCount: pendingAcknowledgements,
             openActionCount: 0,
             blockedActionCount: 0,
             status: 'completed',

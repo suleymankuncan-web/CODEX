@@ -5,6 +5,7 @@ import type { AuthSessionSummary } from '../features/auth/api'
 import { hasAnyRole } from '../features/auth/authorization'
 import { ReportViewerChecklistCommandPage } from '../features/checklist-command/ReportViewerChecklistCommandPage'
 import { RegionManagerChecklistCommandPage } from '../features/checklist-command/RegionManagerChecklistCommandPage'
+import { StoreManagerChecklistCommandPage } from '../features/checklist-command/StoreManagerChecklistCommandPage'
 import { ChecklistWorkflowLegacySurface } from '../features/checklist-workflow/ChecklistWorkflowLegacySurface'
 import { ChecklistWorkflowCommandOverlay } from '../features/checklist-workflow/ChecklistWorkflowCommandOverlay'
 import {
@@ -23,7 +24,7 @@ export function StoreChecklistsPage(input: {
   const isReportViewer = hasAnyRole(input.authSummary, ['REPORT_VIEWER'])
 
   useEffect(() => {
-    if (isReportViewer || persona !== 'regionManager' || !workflowRoute.shouldReplace) return
+    if (isReportViewer || !['regionManager', 'storeManager'].includes(persona) || !workflowRoute.shouldReplace) return
     navigate(
       { pathname: location.pathname, search: workflowRoute.normalizedSearch },
       { replace: true },
@@ -57,6 +58,40 @@ export function StoreChecklistsPage(input: {
               search: buildChecklistWorkflowOverlaySearch(location.search, {
                 kind: 'result',
                 checklistInstanceId,
+              }),
+            })
+          }}
+        />
+        {workflowRoute.state ? (
+          <ChecklistWorkflowCommandOverlay
+            authSummary={input.authSummary}
+            routeState={workflowRoute.state}
+            returnFocusRef={overlayTriggerRef}
+            onClose={() => {
+              navigate({
+                pathname: location.pathname,
+                search: buildChecklistWorkflowOverlaySearch(location.search, null),
+              })
+            }}
+          />
+        ) : null}
+      </>
+    )
+  }
+
+  if (persona === 'storeManager') {
+    return (
+      <>
+        <StoreManagerChecklistCommandPage
+          authSummary={input.authSummary}
+          onOpenWorkflow={(storeId, tab, trigger) => {
+            overlayTriggerRef.current = trigger
+            navigate({
+              pathname: location.pathname,
+              search: buildChecklistWorkflowOverlaySearch(location.search, {
+                kind: 'workflow',
+                storeId,
+                tab,
               }),
             })
           }}
