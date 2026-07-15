@@ -134,6 +134,11 @@ before every new push, run this pass without triggering GitHub Codex review:
 ## Frontend Store UI Rules
 
 - Store redesign work uses `shadcn/ui`, Tailwind v4, and lucide icons.
+- Every new HR Axis Store/Admin prototype must apply
+  `.agents/skills/hr-axis-prototype-standard/SKILL.md`. The approved Command
+  Canvas contract is the default typography, color, density, interaction,
+  responsive, and role-hierarchy grammar; it does not replace workflow or data
+  truth.
 - Store/Admin UI prototype, redesign, refactor, or workflow-surface work must
   also read `docs/process/product-experience-principles.md`. That document is
   the product-quality standard for clean but premium, operationally honest

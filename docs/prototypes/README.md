@@ -46,10 +46,6 @@ implemented and verified.
 - `docs/prototypes/store-checklists-region-manager-v1.html` is the draft
   Region Manager `/store/checklists` page prototype for the store-first
   checklist operation view. It is not locked until explicitly approved.
-- `docs/prototypes/store-checklists-region-manager-command-v2.html` is the
-  draft Region Manager `/store/checklists` command-deck prototype that uses the
-  `/store/kpis` Store Manager rhythm while preserving the checklist operation
-  flow. It is not locked until explicitly approved.
 - `docs/prototypes/store-incentives-region-manager-v1.html` is the draft Region
   Manager incentives page prototype. It is not locked until explicitly approved.
 - `docs/prototypes/store-incentives-region-manager-command-v2.html` is the

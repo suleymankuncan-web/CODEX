@@ -11,6 +11,9 @@ policy remains in `discipline.md`; decision and stop rules remain in
   provider, data-integrity, or medium/high-risk work.
 - Read the relevant `discipline.md` sections before implementation,
   verification, PR, merge, UI/refactor, or workspace-hygiene work.
+- For every HR Axis Store/Admin prototype, load
+  `.agents/skills/hr-axis-prototype-standard/SKILL.md` together with
+  `hr-axis-ui-refactor`; apply the taste-skill quality pass before approval.
 - Fresh repository and runtime evidence outrank stale descriptions.
 
 ## Adaptive reasoning routing

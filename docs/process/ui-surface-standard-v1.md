@@ -227,8 +227,10 @@ gradients, repeated summary cards, and filler explanation blocks.
 
 ## Canonical Surface Reference
 
-The Region Manager incentives command-center prototype is the current canonical
-reference for Store/Admin operational surface rhythm.
+The Command Canvas contract in
+`.agents/skills/hr-axis-prototype-standard/SKILL.md` is the canonical cross-role
+reference for HR Axis Store/Admin prototype rhythm. The Region Manager
+incentives command-center remains the workflow reference for incentives only.
 
 Use it as the default benchmark for:
 
@@ -243,9 +245,10 @@ Use it as the default benchmark for:
 - product copy that can be promoted into production unchanged,
 - mobile card rhythm without horizontal scroll.
 
-This reference does not change every page into an incentives page. It defines
-the expected quality bar and surface discipline for future Store/Admin
-prototypes and refactors.
+This reference does not change every page into a checklist or command-center
+page. It defines the expected typography, color, density, interaction,
+responsive, and role-hierarchy quality bar for future Store/Admin prototypes
+and refactors while the target workflow remains authoritative.
 
 Prototype copy and production copy must not diverge silently. If production
 requires different labels, statuses, helper text, or confirmation copy because

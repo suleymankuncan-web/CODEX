@@ -22,11 +22,13 @@ After reading, they should be able to:
 
 ## Decision
 
-The Region Manager incentives command-center prototype is now the canonical
-Store/Admin operational surface reference.
+The Command Canvas contract in
+`.agents/skills/hr-axis-prototype-standard/SKILL.md` is the canonical cross-role
+Store/Admin prototype standard. The Region Manager incentives command-center is
+the canonical incentives workflow reference, not the global visual authority.
 
-This does not mean every page becomes an incentives page. It means future
-Store/Admin prototypes should use the same surface discipline:
+This does not mean every page becomes a checklist or command-center page. It
+means future Store/Admin prototypes should use the same surface discipline:
 
 - compact, premium, operational layout,
 - calm typography with controlled font weights,
@@ -36,6 +38,11 @@ Store/Admin prototypes should use the same surface discipline:
 - product copy instead of implementation copy,
 - desktop and mobile parity,
 - production-bound component mapping from the start.
+
+The skill's references own the exact typography, prototype palette, density,
+interaction, responsive, verification, and Report Viewer / Region Manager /
+Store Manager hierarchy contracts. Production maps those values to shared
+semantic tokens instead of copying raw lab colors into route code.
 
 ## Surface Shape
 
@@ -193,8 +200,9 @@ Use this process whenever a Store/Admin prototype is requested.
 
 1. Read the target route, current component, model/API shape, and role behavior.
 2. Choose the page recipe from the UI surface recipes.
-3. Use the canonical Store/Admin surface reference for density, typography,
-   metrics, icons, toolbar, drawer, status, and mobile rhythm.
+3. Load `.agents/skills/hr-axis-prototype-standard/SKILL.md` and use its
+   Command Canvas contract for density, typography, color, metrics, icons,
+   toolbar, drawer, status, role hierarchy, and mobile rhythm.
 4. Write a component map before building the prototype.
 5. Keep prototype copy production-ready.
 6. Mark any missing backend/model field as contract-discovery, not as fake UI.

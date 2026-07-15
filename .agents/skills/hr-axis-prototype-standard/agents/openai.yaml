@@ -1,0 +1,4 @@
+interface:
+  display_name: "HR Axis Prototype Standard"
+  short_description: "Canonical Command Canvas UI standard"
+  default_prompt: "Use $hr-axis-prototype-standard to create an HR Axis prototype with the canonical Command Canvas visual and interaction language."

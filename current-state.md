@@ -127,15 +127,15 @@ test-data input.
 
 ## Operating Boundaries
 
-- Preserve business logic, API shape, auth/permission semantics, DB schema,
-  scoring/ranking/checklist weights, queue/import behavior, and user workflow
-  unless the user explicitly scopes a change.
+- Preserve business logic, API shape, auth/permission semantics, DB schema, scoring/ranking/checklist weights,
+  queue/import behavior, and user workflow unless the user explicitly scopes a change.
 - Read scope and action scope remain separate; assigned-store action scope
   continues to apply even when an endpoint role requirement is satisfied.
 - Store personnel is self-scoped; Store Managers are own/managed-store scoped;
   Region Managers are assigned-region/store scoped.
-- Do not invent metrics, rankings, coaching, checklist, target, payout, trend,
-  or product copy to make a surface look complete.
+- Do not invent metrics, rankings, coaching, checklist, target, payout, trend, or product copy to make a surface look complete.
+- New Store/Admin prototypes use `.agents/skills/hr-axis-prototype-standard/SKILL.md`; Command Canvas supplies
+  cross-role visual/interaction grammar, while real workflow, role, and data contracts remain authoritative.
 - Local checks do not close provider, token, restore, queue, alert, or broad
   production evidence. Never record raw credentials or private user data.
 

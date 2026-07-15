@@ -59,6 +59,12 @@ in `docs/process/ui-surface-standard-v1.md`. Reusable implementation recipes
 live in `docs/process/ui-surface-recipes-v1.md`. Use both whenever a surface is
 created, refactored, or moved from prototype to product.
 
+Every new HR Axis Store/Admin prototype also applies
+`.agents/skills/hr-axis-prototype-standard/SKILL.md`. Its Command Canvas
+references define the canonical typography, prototype color rhythm, density,
+interaction, responsive behavior, verification, and cross-role hierarchy. They
+do not override the target workflow or real data contract.
+
 Taste-skill output is not a product decision by itself. Adapt it to operational
 product UI: no marketing hero defaults, decorative-only premium elements, fake
 business copy, or workflow-changing ideas.

@@ -9,6 +9,10 @@ const disciplinePath = 'discipline.md'
 const productExperiencePath = 'docs/process/product-experience-principles.md'
 const docsReadmePath = 'docs/README.md'
 const shadcnTokenPath = 'admin-web/src/styles/shadcn-tailwind.css'
+const prototypeSkillPath = '.agents/skills/hr-axis-prototype-standard/SKILL.md'
+const storeAdminStandardPath = 'docs/process/store-admin-surface-standardization-v1.md'
+const contributingPath = 'CONTRIBUTING.md'
+const agentsPath = 'AGENTS.md'
 
 const forbiddenLegacyTokenNames = [
   '--bg',
@@ -270,6 +274,45 @@ test('UI surface standard is discoverable from operating docs', () => {
     '## Prototype To Product Checklist',
   ]) {
     requireText(recipes, expected)
+  }
+})
+
+test('Command Canvas prototype standard is discoverable and complete', () => {
+  const skill = readText(prototypeSkillPath)
+  const linkedDocs = [
+    readText(agentsPath),
+    readText(contributingPath),
+    readText(disciplinePath),
+    readText(productExperiencePath),
+    readText(standardPath),
+    readText(storeAdminStandardPath),
+    readText(docsReadmePath),
+  ]
+
+  for (const text of linkedDocs) {
+    requireText(text, prototypeSkillPath)
+  }
+
+  for (const expected of [
+    'name: hr-axis-prototype-standard',
+    'references/visual-contract.md',
+    'references/interaction-responsive-contract.md',
+    'references/role-hierarchy-contract.md',
+    'references/verification-contract.md',
+    'Report Viewer',
+    'Region Manager',
+    'Store Manager',
+  ]) {
+    requireText(skill, expected)
+  }
+
+  for (const reference of [
+    '.agents/skills/hr-axis-prototype-standard/references/visual-contract.md',
+    '.agents/skills/hr-axis-prototype-standard/references/interaction-responsive-contract.md',
+    '.agents/skills/hr-axis-prototype-standard/references/role-hierarchy-contract.md',
+    '.agents/skills/hr-axis-prototype-standard/references/verification-contract.md',
+  ]) {
+    assert.ok(readText(reference).length > 400, `${reference} is unexpectedly small`)
   }
 })
 

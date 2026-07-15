@@ -716,11 +716,13 @@ sinirlari, semantic token kullanimi, product copy hijyeni ve sayfa anatomisini
 kalici UI sozlesmesi olarak tanimlar.
 
 Store/Admin operasyonel yuzeylerinde
-`docs/process/store-admin-surface-standardization-v1.md` de uygulanir. Guncel
-kanonik yuzey referansi Region Manager prim command-center prototipidir; bu
-referans her sayfayi prim sayfasina cevirmek icin degil, kompakt premium
-yogunluk, sakin tipografi, metrik karti ikon ritmi, shadcn toolbar, drawer,
-dialog, status copy ve mobile davranis kalite citasini sabitlemek icindir.
+`docs/process/store-admin-surface-standardization-v1.md` de uygulanir. Yeni
+HR Axis prototiplerinde `.agents/skills/hr-axis-prototype-standard/SKILL.md`
+zorunludur. Guncel kanonik cross-role yuzey referansi Command Canvas'tir; bu
+referans her sayfayi checklist sayfasina cevirmek icin degil, kompakt premium
+yogunluk, sakin tipografi, renk ritmi, metrik ikonlari, command toolbar,
+drawer/dialog, role hierarchy ve mobile davranis kalite citasini sabitlemek
+icindir. Region Manager prim command-center yalniz prim workflow referansidir.
 
 UI/prototype/redesign/refactor islerinde `design-taste-frontend` / taste-skill
 zorunlu kalite pass'idir. Bu skill tek basina urun karari veya design system
