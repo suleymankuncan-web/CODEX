@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from 'react'
+import { useCallback, useEffect, useRef, type ReactNode, type RefObject } from 'react'
 import { CheckCircle2, ChevronRight, ClipboardCheck, RefreshCw, Store, X } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
@@ -56,6 +56,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
     selectedResult,
     selectedMonth,
     selectedSession,
+    sessionDirty,
     startVisitMutation,
     t,
     visitStoreRows,
@@ -80,6 +81,31 @@ export function ChecklistWorkflowCommandOverlay(input: {
           : [])
         .filter((item) => item.storeId === workflowStoreId)
     : []
+  const directOpenAttemptRef = useRef<string | null>(null)
+
+  const openChecklistRow = useCallback((row: ChecklistCoverageRow, storeId: string) => {
+    const rowKey = getCoverageRowKeyFromRow(row)
+    if (row.active) {
+      dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
+      return
+    }
+    hydrateActiveResponseDrafts(undefined)
+    dispatchPageState({ type: 'resetSessionDrafts' })
+    startVisitMutation.mutate({ storeId, checklistTemplateId: row.template.checklistTemplateId })
+  }, [dispatchPageState, hydrateActiveResponseDrafts, startVisitMutation])
+
+  useEffect(() => {
+    if (input.routeState.kind !== 'workflow' || input.routeState.tab !== 'visits' || !input.routeState.directChecklist || isLoading || isError || !workflowStore) return
+    const row = input.routeState.directChecklist === 'vm' ? workflowStore.vm : workflowStore.bm
+    if (!row) return
+    const canMutate = canMutateChecklistTemplateType(input.authSummary, row.template.templateType)
+    const assigned = assignedStoreIds.includes(workflowStore.store.storeId)
+    if (!canMutate || !assigned) return
+    const attemptKey = `${workflowStore.store.storeId}:${input.routeState.directChecklist}`
+    if (directOpenAttemptRef.current === attemptKey) return
+    directOpenAttemptRef.current = attemptKey
+    openChecklistRow(row, workflowStore.store.storeId)
+  }, [assignedStoreIds, input.authSummary, input.routeState, isError, isLoading, openChecklistRow, workflowStore])
 
   return (
     <>
@@ -174,14 +200,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
                         row={workflowStore.bm}
                         startPending={startVisitMutation.isPending}
                         onOpen={(row) => {
-                          const rowKey = getCoverageRowKeyFromRow(row)
-                          if (row.active) {
-                            dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
-                          } else {
-                            hydrateActiveResponseDrafts(undefined)
-                            dispatchPageState({ type: 'resetSessionDrafts' })
-                            startVisitMutation.mutate({ storeId: workflowStore.store.storeId, checklistTemplateId: row.template.checklistTemplateId })
-                          }
+                          openChecklistRow(row, workflowStore.store.storeId)
                         }}
                       />
                     ) : null}
@@ -193,14 +212,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
                       row={workflowStore.vm}
                       startPending={startVisitMutation.isPending}
                       onOpen={(row) => {
-                        const rowKey = getCoverageRowKeyFromRow(row)
-                        if (row.active) {
-                          dispatchPageState({ type: 'openSession', rowKey, ...hydrateActiveResponseDrafts(row.active) })
-                        } else {
-                          hydrateActiveResponseDrafts(undefined)
-                          dispatchPageState({ type: 'resetSessionDrafts' })
-                          startVisitMutation.mutate({ storeId: workflowStore.store.storeId, checklistTemplateId: row.template.checklistTemplateId })
-                        }
+                        openChecklistRow(row, workflowStore.store.storeId)
                       }}
                     />
                   </div>
@@ -241,6 +253,7 @@ export function ChecklistWorkflowCommandOverlay(input: {
         scores={scores}
         selectedResult={selectedResult}
         selectedSession={selectedSession}
+        sessionDirty={sessionDirty}
         t={t}
         visitState={{
           completeError: completeVisitMutation.isError ? completeVisitMutation.error : null,
@@ -256,7 +269,10 @@ export function ChecklistWorkflowCommandOverlay(input: {
           })
         }}
         onCloseResult={closeChecklistResult}
-        onCloseSession={closeSession}
+        onCloseSession={() => {
+          closeSession()
+          if (input.routeState.kind === 'workflow' && input.routeState.directChecklist) input.onClose()
+        }}
         onCommentChange={(templateItemId, comment) => {
           dispatchPageState({ type: 'setCommentDraft', templateItemId, comment })
           const score = scores[templateItemId]

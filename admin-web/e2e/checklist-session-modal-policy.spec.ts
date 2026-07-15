@@ -46,7 +46,7 @@ test('checklist session modal uses 1-5 score policy and low-score note guard', a
   await expect.poll(() => requests.completes).toEqual([{ checklistInstanceId }])
 })
 
-test('draft close keeps visit in progress and does not complete the checklist', async ({ page }) => {
+test('draft close returns to the workflow while keeping the visit in progress', async ({ page }) => {
   const requests = createRequestLog()
   await setupChecklistSessionPolicyPage(page, requests)
   await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
@@ -60,11 +60,15 @@ test('draft close keeps visit in progress and does not complete the checklist', 
   await expect(dialog.getByText('Bu puanda mağazaya görev oluşacaktır.')).toHaveCount(0)
   await expect.poll(() => requests.saves.length).toBeGreaterThanOrEqual(1)
 
-  page.once('dialog', (confirm) => confirm.accept())
   await dialog.getByRole('button', { name: 'Taslak kaydet' }).click()
+
+  const closeConfirmation = page.getByRole('alertdialog', { name: 'Checklist kapatılsın mı?' })
+  await expect(closeConfirmation).toBeVisible()
+  await closeConfirmation.getByRole('button', { name: 'Checklisti kapat' }).click()
 
   await expect(page.getByRole('dialog', { name: 'Checklist akışı' })).toBeVisible()
   await expect.poll(() => requests.completes).toEqual([])
+  await expect.poll(() => requests.saves.length).toBeGreaterThanOrEqual(1)
   await expect(workflowDialog.getByRole('button', { name: 'Devam et' })).toBeVisible()
   await expect(page.getByText('Başarıyla Tamamlandı')).toHaveCount(0)
 })

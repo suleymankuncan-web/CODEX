@@ -6,6 +6,7 @@ export type ChecklistWorkflowStatus =
   | 'completed'
   | 'pending'
   | 'acknowledged'
+export type ChecklistWorkflowDirectChecklist = 'bm' | 'vm'
 
 export type ChecklistWorkflowOverlayState =
   | {
@@ -13,6 +14,7 @@ export type ChecklistWorkflowOverlayState =
       storeId: string
       tab: ChecklistWorkflowTab
       status?: ChecklistWorkflowStatus
+      directChecklist?: ChecklistWorkflowDirectChecklist
     }
   | {
       kind: 'result'
@@ -48,6 +50,7 @@ const ownedRouteKeys = [
   'storeId',
   'workflowTab',
   'workflowStatus',
+  'workflowChecklist',
 ] as const
 
 export function buildChecklistWorkflowOverlaySearch(
@@ -62,6 +65,7 @@ export function buildChecklistWorkflowOverlaySearch(
     params.set('storeId', state.storeId)
     params.set('workflowTab', state.tab)
     if (state.status) params.set('workflowStatus', state.status)
+    if (state.tab === 'visits' && state.directChecklist) params.set('workflowChecklist', state.directChecklist)
   } else if (state?.kind === 'result') {
     params.set('overlay', 'result')
     params.set('checklistInstanceId', state.checklistInstanceId)
@@ -108,11 +112,15 @@ export function resolveChecklistWorkflowRouteState(
       params.get('workflowStatus') ??
         (params.get('tab') === 'incomplete' ? 'missing_or_draft' : params.get('status')),
     )
+    const directChecklist = tab === 'visits'
+      ? resolveDirectChecklist(params.get('workflowChecklist'))
+      : undefined
     state = {
       kind: 'workflow',
       storeId,
       tab,
       ...(status ? { status } : {}),
+      ...(directChecklist ? { directChecklist } : {}),
     }
   }
 
@@ -138,6 +146,10 @@ function resolveStatus(value: string | null): ChecklistWorkflowStatus | undefine
   return value && workflowStatuses.has(value as ChecklistWorkflowStatus)
     ? (value as ChecklistWorkflowStatus)
     : undefined
+}
+
+function resolveDirectChecklist(value: string | null): ChecklistWorkflowDirectChecklist | undefined {
+  return value === 'bm' || value === 'vm' ? value : undefined
 }
 
 function isPostgresUuid(value: string) {

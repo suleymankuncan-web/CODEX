@@ -472,6 +472,9 @@
   .checklist-command-surface { border-radius: 12px; }
   .checklist-command-toolbar { flex-wrap: wrap; }
   .checklist-command-toolbar > label { order: -1; width: 100%; min-width: 0; }
+  .checklist-command-toolbar > label input,
+  .checklist-operator-search input,
+  .checklist-region-popover > label input { font-size: 16px; }
   .checklist-command-menu { flex: 1 1 calc(50% - 4px); }
   .checklist-command-menu-end { flex-basis: 100%; margin-left: 0; }
   .checklist-command-menu > button { width: 100%; justify-content: center; }

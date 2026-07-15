@@ -236,7 +236,10 @@ function WeeklyPlanDialog(input: {
   const requestedDayIndex = input.initialRequest?.plannedDate
     ? Math.max(0, input.days.findIndex((day) => day.isoDate === input.initialRequest?.plannedDate))
     : 0
-  const requestAlreadyPlanned = Boolean(input.initialRequest && initialDraft.some((item) => item.storeId === input.initialRequest?.storeId))
+  const requestAlreadyPlanned = Boolean(input.initialRequest && initialDraft.some((item) =>
+    item.storeId === input.initialRequest?.storeId
+    && item.plannedDate === input.initialRequest?.plannedDate,
+  ))
   const [dayIndex, setDayIndex] = useState(requestedDayIndex)
   const [searchDraft, setSearchDraft] = useState(requestAlreadyPlanned ? '' : (input.initialRequest?.storeName ?? ''))
   const [query, setQuery] = useState('')
@@ -330,7 +333,7 @@ function WeeklyPlanDialog(input: {
   }
 
   return (
-    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open) requestClose() }}>
+    <DialogPrimitive.Root open onOpenChange={(open) => { if (!open && !confirmDiscard) requestClose() }}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="week-plan-dialog-backdrop" />
         <DialogPrimitive.Content
@@ -379,7 +382,7 @@ function WeeklyPlanDialog(input: {
               <AlertDialogPrimitive.Title>{input.copy.discardTitle}</AlertDialogPrimitive.Title>
               <AlertDialogPrimitive.Description>{input.copy.discardCopy}</AlertDialogPrimitive.Description>
               <div>
-                <AlertDialogPrimitive.Cancel>{input.copy.returnToPlan}</AlertDialogPrimitive.Cancel>
+                <AlertDialogPrimitive.Cancel type="button" onClick={() => setConfirmDiscard(false)}>{input.copy.returnToPlan}</AlertDialogPrimitive.Cancel>
                 <AlertDialogPrimitive.Action className="danger" onClick={() => { discardReturnFocusRef.current = null; input.onClose() }}>{input.copy.discard}</AlertDialogPrimitive.Action>
               </div>
             </AlertDialogPrimitive.Content>

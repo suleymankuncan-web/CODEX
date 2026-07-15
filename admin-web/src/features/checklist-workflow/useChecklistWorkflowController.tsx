@@ -625,13 +625,6 @@ export function useChecklistWorkflowController(input: {
   }
 
   const closeSession = () => {
-    const confirmMessage = sessionDirty
-      ? t('storeChecklists.sessionCloseConfirm')
-      : t('storeChecklists.cancelSessionConfirm')
-    if (!window.confirm(confirmMessage)) {
-      return
-    }
-
     dispatchPageState({ type: 'closeSession' })
   }
 
@@ -679,6 +672,7 @@ export function useChecklistWorkflowController(input: {
     selectedMonth,
     selectedResult,
     selectedSession,
+    sessionDirty,
     selectedTab,
     selectChecklistTab,
     showBmVisitScore,
