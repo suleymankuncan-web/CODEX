@@ -6,11 +6,12 @@ Production route: `/store/checklists`
 
 Accepted source: `D:\hr-axis-external-lab\prototypes\store-checklists-three-concepts-v1`
 
-P7 implementation SHA before this evidence-only amendment:
-`e0f463760d0f1915ff199169385a47972f96294a`
+P7 implementation SHA before this owner-override evidence amendment:
+`77c00844da33ce09bf2224aeef2a489dbf4bf4cb`
 
-Overall status: `Prototype parity: BLOCKED - physical-device evidence and
-post-merge smoke remain open`
+Overall status: `Prototype parity: OWNER-ACCEPTED - automated parity is GO;
+physical-device evidence is an explicitly accepted residual risk and
+post-merge smoke remains open`
 
 Automated parity status: `GO`
 
@@ -33,7 +34,7 @@ real iOS Safari or Android Chrome evidence.
 | P1B Command workflow overlays | #994 | `edf068a2` | merged |
 | P5 Records and Report Viewer | #995 | `aa6d4529` | merged |
 | P6 Store Manager surface | #996 | `8a9b74b9` | merged |
-| P7 global cutover and deletion | #997 | implementation `e0f46376` | open draft |
+| P7 global cutover and deletion | #997 | implementation `77c00844` | open draft |
 
 ## Production component map
 
@@ -204,8 +205,8 @@ No unexplained repository-side visual or interaction deviation is open.
 
 ## Automated closeout receipts
 
-- Exact implementation SHA local canonical release: PASS, 855 seconds.
-- PR #997 root release: PASS, 13 minutes 51 seconds.
+- Exact implementation SHA canonical release: PASS, 417/417 in 10 minutes 7
+  seconds on `77c00844`.
 - Script contracts: 623/623.
 - Backend release suite: 228 suites / 1393 tests.
 - Checklist persona/overlay E2E: 22/22.
@@ -221,10 +222,10 @@ No unexplained repository-side visual or interaction deviation is open.
   implementation SHA.
 - GitHub Codex review: disabled and not requested.
 
-## Physical-device gate
+## Physical-device residual risk
 
-The following rows must be completed from the PR preview. Device emulation is
-not accepted as proof.
+The following checks were not completed from the PR preview. Device emulation
+is not represented as physical proof.
 
 | Device/browser | Planner and mobile keyboard | 35+ store list | Long history and nested detail | Focus Dock | Result |
 | --- | --- | --- | --- | --- | --- |
@@ -234,13 +235,25 @@ not accepted as proof.
 Record only device/browser family, result and sanitized observation. Do not
 record credentials, store names, personnel data or raw identifiers.
 
+On 2026-07-15 the product owner explicitly removed these physical-device rows
+as a merge gate and directed P7 to merge after the already-green automated
+parity, canonical release and mergeability gates. The first physical attempt
+also exposed a Preview-only API-base/CORS/cross-site-cookie configuration gap;
+that Preview environment issue is not presented as product-code parity proof.
+The owner accepted the remaining real-device risk for observation during
+ordinary controlled-pilot use. This override does not claim that iOS Safari or
+Android Chrome testing passed and does not weaken production cookie-session,
+authorization, privacy or data-integrity controls.
+
 ## Remaining closeout
 
-1. Record both physical-device rows as pass or fix the observed defect.
-2. Mark PR #997 ready only after that evidence is committed and checks are
+1. Keep the physical-device rows recorded honestly as not performed under the
+   explicit owner override; treat real controlled-pilot feedback as the
+   residual mobile signal.
+2. Mark PR #997 ready only after this override is committed and checks are
    green on the final head.
 3. Squash-merge and verify the merged `origin/main` SHA.
 4. Run the controlled post-merge deployed smoke without manual production data
    mutation.
-5. Update `current-state.md` and change the overall verdict to
-   `Prototype parity: PASS` only when every item above is complete.
+5. Update `current-state.md` with the merged SHA and final deployed-smoke
+   disposition. Do not rewrite the unperformed physical rows as PASS.
