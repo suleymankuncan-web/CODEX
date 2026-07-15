@@ -157,6 +157,7 @@ test('weekly planner pages 35 scoped stores and keeps the save action reachable 
   await expect(dialog.locator('.week-plan-result-row')).toHaveCount(20)
   await expect(dialog.getByText('1 / 2')).toBeVisible()
   await dialog.getByRole('button', { name: 'Sonraki' }).click()
+  await expect(dialog.getByText('2 / 2')).toBeVisible()
   await expect(dialog.locator('.week-plan-result-row')).toHaveCount(15)
   await expect(dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' })).toBeVisible()
   const geometry = await dialog.evaluate((element) => ({

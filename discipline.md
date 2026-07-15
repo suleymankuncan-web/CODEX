@@ -302,9 +302,34 @@ kullanir:
   merge-ready iddiasi yapilmaz.
 
 Aktif calisma varken Closer status'u guvenli kilometre taslarinda ve merge
-kararindan hemen once yeniler. Bosta bekleme durumunda asagidaki 30 saniyelik
+kararindan hemen once yeniler. Bosta bekleme durumunda 55-60 saniyelik
 kanonik loop kullanilir. Her iki modelde de merge karari ancak ayni taze
 snapshot'ta tum required durumlar temizken verilir.
+
+### Token-Verimli Otonom Yurutme
+
+Owner'in 2026-07-15 tarihli kilitli karariyla, ayni aktif hedef icinde kanit
+kalitesini dusurmeden model token kullanimi asgari tutulur. Bu karar ancak owner
+acikca degistirirse gevsetilir:
+
+- Bosta check/release polling araligi 55-60 saniyedir. Daha sik model turu
+  yalniz state transition, fail-fast sinyali veya kullanici mesaji varsa acilir.
+- Polling native GitHub/Vercel komutu veya background shell watcher ile yapilir;
+  yalniz beklemek icin model agent acilmaz.
+- Basarili uzun loglar modele tasinmaz. Yalniz sonuc ozeti, degisen durum ve
+  failure halinde hatayi aciklayan sinirli tail/ilgili satirlar alinir.
+- Ayni hedefte tamamen okunmus operating docs, plan ve skill dosyalari drift
+  sinyali yoksa tekrar okunmaz. Fresh Git/runtime gercegi yine her slice'ta
+  dogrulanir.
+- High/XHigh yalniz `AGENTS.md` routing kosulu gercekten olustugunda kullanilir;
+  rutin implementation, polling ve acik mekanik hata icin specialist acilmaz.
+- Canonical full release oncesi gerekli package binary'leri, dependency
+  link/junction'lari ve komut erisimi ucuz bir preflight ile dogrulanir.
+- Targeted kanit normalde bir kez, selector'in sectigi full release normalde bir
+  kez calistirilir. Yeniden kosu ancak somut hata onceki kaniti gecersiz kildiysa
+  yapilir; nedeni handoff'ta yazilir.
+- Check beklerken yalniz gercekten bagimsiz is ilerletilir. Gereksiz durum
+  anlatimi, yinelenen plan ozeti ve buyuk tool output'u uretilmez.
 
 ### PR Oncesi Adversarial Review
 
@@ -569,7 +594,7 @@ degerlendirilir:
 - status check rollup,
 - mergeability / branch state.
 
-Bosta bekleniyorsa bu durumlar 30 saniyelik kanonik loop ile tekrar cekilir.
+Bosta bekleniyorsa bu durumlar 55-60 saniyelik kanonik loop ile tekrar cekilir.
 Sonraki bagimsiz PR uzerinde calisiliyorsa `PR Check Beklerken Paralel Ilerleme`
 kurali uygulanir; status guvenli kilometre taslarinda ve merge kararindan hemen
 once yenilenir. Tum required checks yesil, PR mergeable ve final lokal diff
