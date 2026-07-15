@@ -25,6 +25,67 @@ export type ChecklistCommandQueryInput = {
   offset: number
 }
 
+export const checklistCommandSignals = [
+  'all',
+  'missing_visit',
+  'open_actions',
+  'completed_coverage',
+] as const
+export type ChecklistCommandSignal = (typeof checklistCommandSignals)[number]
+
+export const checklistCommandRegionSorts = [
+  'manager_asc',
+  'manager_desc',
+  'stores_desc',
+  'missing_desc',
+  'open_actions_desc',
+  'score_desc',
+] as const
+export type ChecklistCommandRegionSort = (typeof checklistCommandRegionSorts)[number]
+
+export type ChecklistCommandRegionsQueryInput = {
+  period: string
+  signal: ChecklistCommandSignal
+  sort: ChecklistCommandRegionSort
+  limit: number
+  offset: number
+}
+
+export function buildChecklistCommandRegionsQuery(input: ChecklistCommandRegionsQueryInput) {
+  const query = new URLSearchParams({ period: input.period })
+  if (input.signal !== 'all') query.set('signal', input.signal)
+  query.set('sort', input.sort)
+  query.set('limit', String(input.limit))
+  query.set('offset', String(input.offset))
+  return query
+}
+
+export const checklistOperationalHistoryRanges = ['3m', '6m', '12m', 'all'] as const
+export type ChecklistOperationalHistoryRange = (typeof checklistOperationalHistoryRanges)[number]
+
+export const checklistOperationalHistoryKinds = [
+  'checklist_completed',
+  'acknowledgement',
+  'task_assigned',
+  'task_resolved',
+  'visit_plan_revised',
+] as const
+export type ChecklistOperationalHistoryKind = (typeof checklistOperationalHistoryKinds)[number]
+
+export type ChecklistOperationalHistoryQueryInput = {
+  range: ChecklistOperationalHistoryRange
+  kinds: readonly ChecklistOperationalHistoryKind[]
+  cursor?: string
+}
+
+export function buildChecklistOperationalHistoryQuery(input: ChecklistOperationalHistoryQueryInput) {
+  const query = new URLSearchParams({ range: input.range })
+  const kinds = [...new Set(input.kinds)].sort()
+  if (kinds.length > 0) query.set('kinds', kinds.join(','))
+  if (input.cursor?.trim()) query.set('cursor', input.cursor.trim())
+  return query
+}
+
 export function buildChecklistCommandQuery(input: ChecklistCommandQueryInput) {
   const query = new URLSearchParams()
   query.set('period', input.period)

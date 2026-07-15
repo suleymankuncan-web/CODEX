@@ -6,16 +6,24 @@ import {
 } from '../../lib/openapi-client'
 import {
   buildChecklistCommandQuery,
+  buildChecklistCommandRegionsQuery,
+  buildChecklistOperationalHistoryQuery,
   buildChecklistVisitPlanCandidateQuery,
   buildChecklistVisitPlanPeriodQuery,
   buildChecklistVisitPlanRegionOptionsQuery,
   type ChecklistCommandQueryInput,
+  type ChecklistCommandRegionsQueryInput,
+  type ChecklistOperationalHistoryQueryInput,
   type ChecklistVisitPlanPeriodQueryInput,
 } from './model'
 
 export type ChecklistCommandResponse = ApiGetResponse<'/api/checklists/command-canvas'>
 export type ChecklistCommandData = ChecklistCommandResponse['data']
 export type ChecklistCommandRow = ChecklistCommandData['items'][number]
+export type ChecklistCommandRegionsResponse = ApiGetResponse<'/api/checklists/command-canvas/regions'>
+export type ChecklistCommandRegion = ChecklistCommandRegionsResponse['data']['items'][number]
+export type ChecklistOperationalHistoryResponse = ApiGetResponse<'/api/checklists/command-canvas/stores/{storeId}/operational-history'>
+export type ChecklistOperationalHistory = ChecklistOperationalHistoryResponse['data']
 export type ChecklistVisitPlanResponse = ApiGetResponse<'/api/checklists/command-canvas/visit-plans'>
 export type ChecklistVisitPlan = ChecklistVisitPlanResponse['data']
 export type ChecklistVisitPlanPeriodResponse = ApiGetResponse<'/api/checklists/command-canvas/visit-plans/period'>
@@ -33,6 +41,22 @@ export type SaveChecklistVisitPlanBody = ApiMutationBody<
 export function getChecklistCommandCanvas(input: ChecklistCommandQueryInput) {
   return fetchOpenApiJson('/api/checklists/command-canvas', {
     query: buildChecklistCommandQuery(input),
+  })
+}
+
+export function getChecklistCommandRegions(input: ChecklistCommandRegionsQueryInput) {
+  return fetchOpenApiJson('/api/checklists/command-canvas/regions', {
+    query: buildChecklistCommandRegionsQuery(input),
+  })
+}
+
+export function getChecklistOperationalHistory(input: {
+  storeId: string
+  query: ChecklistOperationalHistoryQueryInput
+}) {
+  return fetchOpenApiJson('/api/checklists/command-canvas/stores/{storeId}/operational-history', {
+    params: { storeId: input.storeId },
+    query: buildChecklistOperationalHistoryQuery(input.query),
   })
 }
 

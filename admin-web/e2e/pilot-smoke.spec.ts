@@ -117,7 +117,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/checklists',
       urlPattern: /\/store\/checklists$/,
-      heading: page.getByRole('heading', { name: 'Saha Kontrolleri' }),
+      heading: page.getByRole('heading', { name: 'Şirket Saha Görünümü' }),
     },
     {
       path: '/store/tasks',
@@ -609,6 +609,30 @@ async function routePilotSmokeApi(context: BrowserContext) {
             view: 'region_manager',
             capabilities: { canMaintainWeeklyVisitPlan: true },
             items: [{ regionId, regionName: 'Pilot Region' }],
+            page: { total: 1, limit: 20, offset: 0, hasMore: false },
+          },
+        },
+      })
+      return
+    }
+
+    if (pathname.endsWith('/api/checklists/command-canvas/regions')) {
+      await route.fulfill({
+        json: {
+          data: {
+            period: '2026-07',
+            view: 'report_viewer',
+            capabilities: { weeklyVisitPlanningAvailable: false, canMaintainWeeklyVisitPlan: false },
+            metrics: { totalStores: 1, missingVisitStores: 0, storesWithOpenActions: 0, openActionCount: 0, completedCoverageStores: 1 },
+            items: [{
+              regionId,
+              regionName: 'Pilot Region',
+              regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }],
+              metrics: { totalStores: 1, missingVisitStores: 0, storesWithOpenActions: 0, openActionCount: 0, completedCoverageStores: 1, blockedActionCount: 0 },
+              visitAverageScore: 90,
+              scoreSampleCount: 1,
+              lastOperationalAt: '2026-07-14T10:00:00.000Z',
+            }],
             page: { total: 1, limit: 20, offset: 0, hasMore: false },
           },
         },
