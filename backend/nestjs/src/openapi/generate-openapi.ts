@@ -21,7 +21,7 @@ import {
   masterDataQualityIssueSummarySchema,
 } from "./openapi-master-data-schemas";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
-import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi";
+import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 import { applyWorkforceOpenApi } from "./workforce-openapi";
 import * as requestCenterOpenApi from "./request-center-openapi";
@@ -4516,7 +4516,7 @@ async function generateOpenApi(): Promise<void> {
     MobileChecklistTodayResponse: mobileChecklistTodayResponseSchema,
   };
 
-  applyStoreActionPlanOpenApi(document); applyChecklistCommandOpenApi(document);
+  applyStoreActionPlanOpenApi(document); applyChecklistCommandOpenApi(document); applySalesTargetIncentiveWorkspaceOpenApi(document);
   applyPilotFeedbackOpenApi(document);
   applyBrowserSessionOpenApi(document);
   setJsonResponseSchema(

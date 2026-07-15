@@ -5914,6 +5914,37 @@
           "ChecklistOperationalHistory"
         ]
       }
+    },
+    "/api/store/incentives/workspace": {
+      "get": {
+        "operationId": "SalesTargetIncentiveWorkspaceController_getWorkspace",
+        "parameters": [
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role-scoped Incentives command workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "SalesTargetIncentiveWorkspace"
+        ]
+      }
     }
   },
   "info": {
@@ -22381,6 +22412,557 @@
                 }
               }
             }
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceCapabilities": {
+        "type": "object",
+        "required": [
+          "canMarkStoreReview",
+          "canCreateCorrection",
+          "canVoidCorrection",
+          "canSubmitPackage"
+        ],
+        "properties": {
+          "canMarkStoreReview": {
+            "type": "boolean"
+          },
+          "canCreateCorrection": {
+            "type": "boolean"
+          },
+          "canVoidCorrection": {
+            "type": "boolean"
+          },
+          "canSubmitPackage": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceCorrectionActor": {
+        "type": "object",
+        "required": [
+          "displayName",
+          "roleCode",
+          "identityStatus"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "roleCode": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "REGION_MANAGER",
+              "HR_ADMIN",
+              "SUPER_ADMIN"
+            ]
+          },
+          "identityStatus": {
+            "type": "string",
+            "enum": [
+              "resolved",
+              "unavailable"
+            ]
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceCorrection": {
+        "type": "object",
+        "required": [
+          "correctionId",
+          "status",
+          "beforeAmount",
+          "adjustmentAmount",
+          "finalAmount",
+          "reasonNote",
+          "createdAt",
+          "submittedAt",
+          "reviewedAt",
+          "reviewNote",
+          "actor"
+        ],
+        "properties": {
+          "correctionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "admin_approved",
+              "admin_returned",
+              "voided"
+            ]
+          },
+          "beforeAmount": {
+            "type": "string"
+          },
+          "adjustmentAmount": {
+            "type": "string"
+          },
+          "finalAmount": {
+            "type": "string"
+          },
+          "reasonNote": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "reviewNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "actor": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCorrectionActor"
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceRateBracket": {
+        "type": "object",
+        "required": [
+          "minAchievementPct",
+          "maxAchievementPct",
+          "rate",
+          "displayLabel"
+        ],
+        "properties": {
+          "minAchievementPct": {
+            "type": "string",
+            "nullable": true
+          },
+          "maxAchievementPct": {
+            "type": "string",
+            "nullable": true
+          },
+          "rate": {
+            "type": "string"
+          },
+          "displayLabel": {
+            "type": "string"
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceRateTable": {
+        "type": "object",
+        "required": [
+          "audience",
+          "version",
+          "brackets"
+        ],
+        "properties": {
+          "audience": {
+            "type": "string",
+            "enum": [
+              "manager",
+              "personnel"
+            ]
+          },
+          "version": {
+            "type": "string"
+          },
+          "brackets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRateBracket"
+            }
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceRateMetadata": {
+        "type": "object",
+        "required": [
+          "status",
+          "ruleVersionCode",
+          "effectiveFrom",
+          "periodTimezone",
+          "bracketBoundaryPolicy",
+          "tables"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "resolved",
+              "unresolved"
+            ]
+          },
+          "ruleVersionCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "periodTimezone": {
+            "type": "string"
+          },
+          "bracketBoundaryPolicy": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "lower_inclusive_upper_exclusive"
+            ]
+          },
+          "tables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRateTable"
+            }
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceRow": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "displayName",
+          "participantType",
+          "positionCode",
+          "target",
+          "actual",
+          "achievementPct",
+          "rate",
+          "calculatedAmount",
+          "finalAmount",
+          "signedDifferenceAmount",
+          "status",
+          "correction",
+          "correctionRecords"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "participantType": {
+            "type": "string",
+            "enum": [
+              "store_manager",
+              "personnel"
+            ]
+          },
+          "positionCode": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "actual": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "achievementPct": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "rate": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "calculatedAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d{2})?$"
+          },
+          "finalAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d{2})?$"
+          },
+          "signedDifferenceAmount": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d{2})?$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "projected",
+              "blocked",
+              "no_source",
+              "corrected",
+              "adjusted"
+            ]
+          },
+          "correction": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCorrection",
+            "nullable": true
+          },
+          "correctionRecords": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCorrection"
+            }
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceStore": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "storeCode",
+          "storeName",
+          "city",
+          "storeTarget",
+          "storeActualNetSales",
+          "storeAchievementPct",
+          "capabilities",
+          "review",
+          "rows"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "storeName": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string",
+            "nullable": true
+          },
+          "storeTarget": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "storeActualNetSales": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "storeAchievementPct": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^-?\\d+(?:\\.\\d+)?$"
+          },
+          "capabilities": {
+            "type": "object",
+            "required": [
+              "canMarkStoreReview",
+              "canCreateCorrection",
+              "canVoidCorrection"
+            ],
+            "properties": {
+              "canMarkStoreReview": {
+                "type": "boolean"
+              },
+              "canCreateCorrection": {
+                "type": "boolean"
+              },
+              "canVoidCorrection": {
+                "type": "boolean"
+              }
+            }
+          },
+          "review": {
+            "type": "object",
+            "required": [
+              "status",
+              "reviewedAt",
+              "periodCloseStatus"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending_review",
+                  "reviewed"
+                ]
+              },
+              "reviewedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "periodCloseStatus": {
+                "type": "string",
+                "enum": [
+                  "projection_only",
+                  "closed"
+                ]
+              }
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRow"
+            }
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceRegion": {
+        "type": "object",
+        "required": [
+          "regionId",
+          "regionName",
+          "regionManager",
+          "capabilities",
+          "package",
+          "stores"
+        ],
+        "properties": {
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "regionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "regionManager": {
+            "type": "object",
+            "required": [
+              "displayName"
+            ],
+            "properties": {
+              "displayName": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "capabilities": {
+            "type": "object",
+            "required": [
+              "canSubmitPackage"
+            ],
+            "properties": {
+              "canSubmitPackage": {
+                "type": "boolean"
+              }
+            }
+          },
+          "package": {
+            "type": "object",
+            "required": [
+              "status",
+              "submittedAt",
+              "reviewedAt",
+              "reviewNote"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "not_submitted",
+                  "submitted",
+                  "admin_approved",
+                  "admin_returned"
+                ]
+              },
+              "submittedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "reviewedAt": {
+                "type": "string",
+                "format": "date-time",
+                "nullable": true
+              },
+              "reviewNote": {
+                "type": "string",
+                "nullable": true
+              }
+            }
+          },
+          "stores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceStore"
+            }
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspace": {
+        "type": "object",
+        "required": [
+          "period",
+          "periodStart",
+          "periodEnd",
+          "periodTimezone",
+          "view",
+          "capabilities",
+          "rateMetadata",
+          "regions"
+        ],
+        "properties": {
+          "period": {
+            "type": "string"
+          },
+          "periodStart": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodEnd": {
+            "type": "string",
+            "format": "date"
+          },
+          "periodTimezone": {
+            "type": "string"
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "report_viewer",
+              "region_manager"
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCapabilities"
+          },
+          "rateMetadata": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRateMetadata"
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRegion"
+            }
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspace"
           }
         }
       }

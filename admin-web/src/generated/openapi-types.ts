@@ -2536,6 +2536,115 @@ export type components = {
       "decision": "approve" | "return"
       "reviewNote"?: string
     }
+    "SalesTargetIncentiveWorkspace": {
+      "period": string
+      "periodStart": string
+      "periodEnd": string
+      "periodTimezone": string
+      "view": "report_viewer" | "region_manager"
+      "capabilities": components['schemas']["SalesTargetIncentiveWorkspaceCapabilities"]
+      "rateMetadata": components['schemas']["SalesTargetIncentiveWorkspaceRateMetadata"]
+      "regions": components['schemas']["SalesTargetIncentiveWorkspaceRegion"][]
+    }
+    "SalesTargetIncentiveWorkspaceCapabilities": {
+      "canMarkStoreReview": boolean
+      "canCreateCorrection": boolean
+      "canVoidCorrection": boolean
+      "canSubmitPackage": boolean
+    }
+    "SalesTargetIncentiveWorkspaceCorrection": {
+      "correctionId": string
+      "status": "draft" | "submitted" | "admin_approved" | "admin_returned" | "voided"
+      "beforeAmount": string
+      "adjustmentAmount": string
+      "finalAmount": string
+      "reasonNote": string
+      "createdAt": string
+      "submittedAt": string | null
+      "reviewedAt": string | null
+      "reviewNote": string | null
+      "actor": components['schemas']["SalesTargetIncentiveWorkspaceCorrectionActor"]
+    }
+    "SalesTargetIncentiveWorkspaceCorrectionActor": {
+      "displayName": string | null
+      "roleCode": "REGION_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | null
+      "identityStatus": "resolved" | "unavailable"
+    }
+    "SalesTargetIncentiveWorkspaceRateBracket": {
+      "minAchievementPct": string | null
+      "maxAchievementPct": string | null
+      "rate": string
+      "displayLabel": string
+    }
+    "SalesTargetIncentiveWorkspaceRateMetadata": {
+      "status": "resolved" | "unresolved"
+      "ruleVersionCode": string | null
+      "effectiveFrom": string | null
+      "periodTimezone": string
+      "bracketBoundaryPolicy": "lower_inclusive_upper_exclusive" | null
+      "tables": components['schemas']["SalesTargetIncentiveWorkspaceRateTable"][]
+    }
+    "SalesTargetIncentiveWorkspaceRateTable": {
+      "audience": "manager" | "personnel"
+      "version": string
+      "brackets": components['schemas']["SalesTargetIncentiveWorkspaceRateBracket"][]
+    }
+    "SalesTargetIncentiveWorkspaceRegion": {
+      "regionId": string
+      "regionName": string | null
+      "regionManager": {
+        "displayName": string | null
+      }
+      "capabilities": {
+        "canSubmitPackage": boolean
+      }
+      "package": {
+        "status": "not_submitted" | "submitted" | "admin_approved" | "admin_returned"
+        "submittedAt": string | null
+        "reviewedAt": string | null
+        "reviewNote": string | null
+      }
+      "stores": components['schemas']["SalesTargetIncentiveWorkspaceStore"][]
+    }
+    "SalesTargetIncentiveWorkspaceResponse": {
+      "data": components['schemas']["SalesTargetIncentiveWorkspace"]
+    }
+    "SalesTargetIncentiveWorkspaceRow": {
+      "employeeId": string
+      "displayName": string
+      "participantType": "store_manager" | "personnel"
+      "positionCode": string
+      "target": string | null
+      "actual": string | null
+      "achievementPct": string | null
+      "rate": string | null
+      "calculatedAmount": string | null
+      "finalAmount": string | null
+      "signedDifferenceAmount": string | null
+      "status": "projected" | "blocked" | "no_source" | "corrected" | "adjusted"
+      "correction": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"] | null
+      "correctionRecords": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"][]
+    }
+    "SalesTargetIncentiveWorkspaceStore": {
+      "storeId": string
+      "storeCode": string | null
+      "storeName": string
+      "city": string | null
+      "storeTarget": string | null
+      "storeActualNetSales": string | null
+      "storeAchievementPct": string | null
+      "capabilities": {
+        "canMarkStoreReview": boolean
+        "canCreateCorrection": boolean
+        "canVoidCorrection": boolean
+      }
+      "review": {
+        "status": "pending_review" | "reviewed"
+        "reviewedAt": string | null
+        "periodCloseStatus": "projection_only" | "closed"
+      }
+      "rows": components['schemas']["SalesTargetIncentiveWorkspaceRow"][]
+    }
     "SaveChecklistVisitPlanRequest": {
       "expectedRevision": number
       "idempotencyKey": string
@@ -4274,6 +4383,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': Record<string, unknown>
+          }
+        }
+      }
+    }
+  }
+  "/api/store/incentives/workspace": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["SalesTargetIncentiveWorkspaceResponse"]
           }
         }
       }
