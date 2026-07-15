@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-15",
+  "algorithm": "sha256",
+  "purpose": "Immutable source and approved-capture identity for the Incentives and Targets production parity train.",
+  "prototypes": [
+    {
+      "id": "incentives-command-canvas-v1",
+      "authoritativeRoot": "D:\\hr-axis-external-lab\\prototypes\\incentives-command-canvas-v1",
+      "sources": [
+        { "path": "src/App.tsx", "sha256": "9f82ebfe7297e6862ca88fee8e9f5da0e43af97885398e122b4dc4321fd0893f" },
+        { "path": "src/main.tsx", "sha256": "26210b6a01ea35ab17cc467c59d16c11176e15725301c0bcc5a767b6ce03c2e4" },
+        { "path": "src/styles.css", "sha256": "603f7ee2cd46ba300cecdd6785b8af011b5306f113ea2c3e29d07e25269e71b5" }
+      ],
+      "captures": [
+        { "path": "verified-desktop.png", "viewport": "1440x900", "sha256": "9e3c332b3bbde78696846c802d0e44de9ce772a52a2ac5aa9256bdf5105e5a50" },
+        { "path": "verified-mobile.png", "viewport": "390x844", "sha256": "604d58c85175c7d5516028bd532f7cf5791618d1756b4d4a857f39d3bd8806dd" },
+        { "path": "verified-mobile-drawer.png", "viewport": "390x844", "sha256": "fffd6a94f18dfde3ddde5d8ae400a9bef350187897207318ecab70f50a02647a" },
+        { "path": "verified-store-shell-desktop.png", "viewport": "1440x1074", "sha256": "b4d6a216fc5d196157f148ab048bef56c45c5a577e4308063c06c9bc02c0f40f" },
+        { "path": "verified-store-shell-mobile.png", "viewport": "390x2683", "sha256": "edae3c1a25b0bfe41e381e7ecafb3ef364eae642fd8eabbe6f38a5898dd5a47d" },
+        { "path": "verified-viewer-desktop.png", "viewport": "1440x900", "sha256": "09c4edc3b80441e891dabc0b2036b0ea3afed8a0b7a8cc66fa3791c98a40dc67" },
+        { "path": "verified-viewer-mobile.png", "viewport": "390x844", "sha256": "656907effb83aee8461d4c284f337710319809263122d887519f338ea3b06f74" },
+        { "path": "verified-viewer-drawer-desktop.png", "viewport": "1440x900", "sha256": "e20a721eec5a48c9e446d68ed6d31b282f747c8cec04ce969a99a99c0ed746fb" },
+        { "path": "verified-viewer-drawer-mobile.png", "viewport": "390x844", "sha256": "f662c2ce68223de2e3f99980b1817088bfe6e2ab7a538442104ee51beddbcdbe" }
+      ]
+    },
+    {
+      "id": "store-targets-command-canvas-v1",
+      "authoritativeRoot": "D:\\hr-axis-external-lab\\prototypes\\store-targets-command-canvas-v1",
+      "sources": [
+        { "path": "src/App.tsx", "sha256": "024cdd239b933b01a6143de4c68523d92fdf47a77af82f439881da7c38700c5d" },
+        { "path": "src/main.tsx", "sha256": "9c497c04f6496407895965da64e56723a9e16324f6869601430089bf443290c0" },
+        { "path": "src/styles.css", "sha256": "c86d43b648046d1f8addb56f8176204e41229681d48af966856d2860af3ab497" }
+      ],
+      "captures": [
+        { "path": "verified-desktop.png", "viewport": "1440x900", "sha256": "e41fa63e46dfd3e594e8e60e9d201d6ebca77435a1307fd754059456335e315e" },
+        { "path": "verified-mobile.png", "viewport": "390x844", "sha256": "2c95ce895f2ea1eadf223edb2bfadbdd3ee6bc519970124342ca1761d79b5828" },
+        { "path": "verified-polish-desktop.png", "viewport": "1440x1000", "sha256": "f7b29026eb8a7434ae5ed63107b8a762150cb7dcc345d6659f4105c9766df27f" },
+        { "path": "verified-region-drawer.png", "viewport": "1440x900", "sha256": "4f0e1852a571ecdec4481c1ed7fffb9e5dd42f11ce0eec7fbd18272e0a67dd27" },
+        { "path": "verified-store-manager.png", "viewport": "1440x900", "sha256": "4a287f0f513c84496b77ddb29b5ba15dc44f4069bf5b6d01401f03071bb0aa85" },
+        { "path": "verified-store-shell-desktop.png", "viewport": "1440x1000", "sha256": "56fb29033b10ad9d4e816d6af5c6831917746644573214cc2dcd75a4e0c8b90f" },
+        { "path": "verified-store-shell-mobile.png", "viewport": "390x1987", "sha256": "abd369da10ff6716a911fd634f66866abf9114efbad46242dbf043188264dce5" },
+        { "path": "verified-target-month-picker.png", "viewport": "1440x900", "sha256": "024bcbfe81a89f52ab7a6ccd73b5231236c6dea59fe09f64b22926c3736f6a50" }
+      ]
+    }
+  ]
+}
