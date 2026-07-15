@@ -264,12 +264,14 @@ function WeeklyPlanDialog(input: {
   const selectedDay = input.days[dayIndex]
   const dirty = buildVisitPlanDraftFingerprint(baselineDrafts) !== buildVisitPlanDraftFingerprint(drafts)
   useEffect(() => {
+    const normalizedSearch = searchDraft.trim()
+    if (normalizedSearch === query) return
     const timer = window.setTimeout(() => {
-      setQuery(searchDraft.trim())
+      setQuery(normalizedSearch)
       setCandidateOffset(0)
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [searchDraft])
+  }, [query, searchDraft])
   const candidateFilters = useMemo(() => ({ regionId: input.regionId, query, limit: 20, offset: candidateOffset }), [candidateOffset, input.regionId, query])
   const candidatesQuery = useQuery({
     queryKey: storeChecklistVisitPlanCandidatesQueryKey(input.authSummary, candidateFilters),
