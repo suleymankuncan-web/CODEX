@@ -22976,6 +22976,7 @@
           "periodTimezone",
           "view",
           "capabilities",
+          "sections",
           "rateMetadata",
           "regions"
         ],
@@ -23003,6 +23004,9 @@
           },
           "capabilities": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceCapabilities"
+          },
+          "sections": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSections"
           },
           "rateMetadata": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceRateMetadata"
@@ -23555,6 +23559,44 @@
           },
           "monthStatuses": {
             "$ref": "#/components/schemas/TargetWorkspaceSection"
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceSectionStatus": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "unavailable"
+            ]
+          }
+        }
+      },
+      "SalesTargetIncentiveWorkspaceSections": {
+        "type": "object",
+        "required": [
+          "core",
+          "storeMetadata",
+          "rateMetadata",
+          "correctionActors"
+        ],
+        "properties": {
+          "core": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
+          },
+          "storeMetadata": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
+          },
+          "rateMetadata": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
+          },
+          "correctionActors": {
+            "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
           }
         }
       }

@@ -30,5 +30,9 @@ describe("Sales Target Incentive Workspace OpenAPI", () => {
     expect(row.properties.calculatedAmount.pattern).toBe("^-?\\d+(?:\\.\\d{2})?$");
     expect(document.components.schemas.SalesTargetIncentiveWorkspaceStore.required).toContain("capabilities");
     expect(document.components.schemas.SalesTargetIncentiveWorkspaceRegion.required).toContain("capabilities");
+    expect(document.components.schemas.SalesTargetIncentiveWorkspace.required).toContain("sections");
+    expect(document.components.schemas.SalesTargetIncentiveWorkspaceSections.required).toEqual([
+      "core", "storeMetadata", "rateMetadata", "correctionActors",
+    ]);
   });
 });

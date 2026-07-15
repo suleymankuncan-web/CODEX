@@ -625,6 +625,7 @@
   }
 
   .store-command-main,
+  .store-shell-store-incentives .store-command-main,
   .store-shell-store-me .store-command-main,
   .store-shell-store-checklists .store-command-main {
     width: min(100%, 760px);

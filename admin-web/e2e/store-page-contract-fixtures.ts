@@ -36,7 +36,7 @@ const personaDisplayName: Record<StoreContractPersona, string> = {
 
 export function createStoreContractSession(
   persona: StoreContractPersona,
-  options?: { actionStoreIds?: string[] },
+  options?: { actionStoreIds?: string[]; roleCodes?: string[] },
 ) {
   const roleCode = roleByPersona[persona]
   const isRegionManager = persona === 'regionManager'
@@ -54,7 +54,7 @@ export function createStoreContractSession(
       email: `${persona}@example.test`,
       username: `${persona}-contract-user`,
       displayName: personaDisplayName[persona],
-      roleCodes: [roleCode],
+      roleCodes: options?.roleCodes ?? [roleCode],
       scope: {
         companyIds: [companyId],
         regionIds: isRegionManager ? [regionId] : [],
@@ -83,7 +83,7 @@ export function createStoreContractSession(
 export async function installStoreContractSession(
   page: Page,
   persona: StoreContractPersona,
-  options?: { actionStoreIds?: string[] },
+  options?: { actionStoreIds?: string[]; roleCodes?: string[] },
 ) {
   const session = createStoreContractSession(persona, options)
   const user = session.user

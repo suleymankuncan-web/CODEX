@@ -2543,6 +2543,7 @@ export type components = {
       "periodTimezone": string
       "view": "report_viewer" | "region_manager"
       "capabilities": components['schemas']["SalesTargetIncentiveWorkspaceCapabilities"]
+      "sections": components['schemas']["SalesTargetIncentiveWorkspaceSections"]
       "rateMetadata": components['schemas']["SalesTargetIncentiveWorkspaceRateMetadata"]
       "regions": components['schemas']["SalesTargetIncentiveWorkspaceRegion"][]
     }
@@ -2624,6 +2625,15 @@ export type components = {
       "status": "projected" | "blocked" | "no_source" | "corrected" | "adjusted"
       "correction": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"] | null
       "correctionRecords": components['schemas']["SalesTargetIncentiveWorkspaceCorrection"][]
+    }
+    "SalesTargetIncentiveWorkspaceSectionStatus": {
+      "status": "complete" | "unavailable"
+    }
+    "SalesTargetIncentiveWorkspaceSections": {
+      "core": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
+      "storeMetadata": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
+      "rateMetadata": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
+      "correctionActors": components['schemas']["SalesTargetIncentiveWorkspaceSectionStatus"]
     }
     "SalesTargetIncentiveWorkspaceStore": {
       "storeId": string

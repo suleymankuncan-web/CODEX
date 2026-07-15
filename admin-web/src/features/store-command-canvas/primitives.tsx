@@ -136,6 +136,7 @@ export function CommandCanvasSortableHeading(input: {
   direction: CommandCanvasSortDirection
   onClick: () => void
   className?: string
+  semantic?: boolean
 }) {
   const Icon = input.direction === 'ascending'
     ? ArrowUp
@@ -145,11 +146,11 @@ export function CommandCanvasSortableHeading(input: {
 
   return (
     <span
-      aria-sort={input.direction}
+      aria-sort={input.semantic === false ? undefined : input.direction}
       className={cn('command-canvas-sort-heading', input.className)}
-      role="columnheader"
+      role={input.semantic === false ? undefined : 'columnheader'}
     >
-      <button onClick={input.onClick} type="button">
+      <button aria-label={input.semantic === false ? `${input.label}: ${input.direction}` : undefined} onClick={input.onClick} type="button">
         <span>{input.label}</span>
         <Icon aria-hidden="true" size={11} strokeWidth={1.8} />
       </button>

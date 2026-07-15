@@ -18,10 +18,10 @@ test('store incentives sidebar visibility is not gated by incentive query data',
   assert.doesNotMatch(sidebarSource, /hasStoreIncentiveRows/u)
 })
 
-test('store incentives route visibility is limited to region managers', () => {
+test('store incentives route visibility is limited to report viewers and region managers', () => {
   assert.match(navigationSource, /function canOpenStoreIncentives/u)
   assert.match(navigationSource, /canOpenCompanyStoreIncentives\(authSummary\)/u)
-  assert.match(navigationSource, /const storeIncentiveRoles = \['REGION_MANAGER'\]/u)
+  assert.match(navigationSource, /const storeIncentiveRoles = \['REPORT_VIEWER', 'REGION_MANAGER'\]/u)
   assert.match(navigationSource, /hasAnyRole\(authSummary, storeIncentiveRoles\)/u)
   assert.doesNotMatch(navigationSource, /const storeIncentiveRoles = \[[^\]]*'STORE_MANAGER'/u)
 })

@@ -25,17 +25,12 @@ import { SESSION_EXPIRED_EVENT, type SessionExpiredDetail } from './lib/api'
 import { StoreFeedPrototypeShell } from './prototypes/store-feed-prototype-shell'
 import { StoreChecklistSessionModalV1Prototype } from './prototypes/store-checklist-session-modal-v1'
 import { StoreHomeCommandV1Prototype } from './prototypes/store-home-command-v1'
-import { StoreIncentivesPrototypeShell } from './prototypes/store-incentives-prototype-shell'
 import { StoreMeReferenceV1Prototype } from './prototypes/store-me-reference-v1'
 import { AdminMasterDataCommandV1Prototype } from './prototypes/admin/master-data-command-v1'
 
 function App() {
   const location = useLocation()
   const pathname = location.pathname
-  const isStoreIncentivesPrototype =
-    import.meta.env.DEV &&
-    pathname === '/store/incentives' &&
-    new URLSearchParams(location.search).get('prototype') === 'command-v2'
   const isStoreHomePrototype =
     import.meta.env.DEV &&
     pathname === '/store/home' &&
@@ -57,7 +52,6 @@ function App() {
     pathname === '/admin/master-data' &&
     new URLSearchParams(location.search).get('prototype') === 'master-data-command-v1'
   const isPrototypeRoute =
-    isStoreIncentivesPrototype ||
     isStoreHomePrototype ||
     isStoreFeedPrototype ||
     isStoreChecklistSessionPrototype ||
@@ -237,10 +231,6 @@ function App() {
       cancelled = true
     }
   }, [authSummary, firstAllowedPath, isPrototypeRoute, pathname, queryClient, shellState.mode])
-
-  if (isStoreIncentivesPrototype) {
-    return <StoreIncentivesPrototypeShell />
-  }
 
   if (isStoreHomePrototype) {
     return <StoreHomeCommandV1Prototype />

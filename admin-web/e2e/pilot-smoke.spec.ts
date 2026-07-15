@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Locator, type Page } from './test-fixtures'
+import { createIncentiveWorkspace } from './store-incentives-command-fixtures'
 
 const storeId = '00000000-0000-0000-0000-000000000100'
 const employeeId = '00000000-0000-0000-0000-000000000200'
@@ -147,7 +148,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/incentives',
       urlPattern: /\/store\/incentives$/,
-      heading: page.getByRole('heading', { name: /primleri$/i }),
+      heading: page.getByRole('heading', { name: 'Şirket Prim Görünümü' }),
     },
     {
       path: '/store/approvals',
@@ -708,6 +709,11 @@ async function routePilotSmokeApi(context: BrowserContext) {
 
     if (pathname.endsWith('/api/admin/incentives')) {
       await route.fulfill({ json: adminIncentivesFixture })
+      return
+    }
+
+    if (pathname.endsWith('/api/store/incentives/workspace')) {
+      await route.fulfill({ json: createIncentiveWorkspace('report_viewer') })
       return
     }
 

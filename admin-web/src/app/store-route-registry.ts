@@ -113,7 +113,7 @@ const storeCompetitionRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REPORT_VIEWE
 const storeTasksRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storeKpiRoles = ['STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
 const storePersonnelPerformanceRoles = ['STORE_PERSONNEL', 'STORE_MANAGER', 'REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER']
-const storeIncentiveRoles = ['REGION_MANAGER']
+const storeIncentiveRoles = ['REPORT_VIEWER', 'REGION_MANAGER']
 
 function roleSet(authSummary: AuthSessionSummary | null) {
   return new Set(authSummary?.user.roleCodes ?? [])

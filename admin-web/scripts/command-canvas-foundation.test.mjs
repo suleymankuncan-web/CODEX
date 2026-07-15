@@ -35,7 +35,7 @@ test('Command Canvas exposes semantic selection, sorting and live-update hooks',
   const source = await readFile(sourcePath, 'utf8')
 
   assert.match(source, /aria-pressed=\{input\.active\}/)
-  assert.match(source, /aria-sort=\{input\.direction\}/)
+  assert.match(source, /aria-sort=\{input\.semantic === false \? undefined : input\.direction\}/)
   assert.match(source, /aria-live="polite"/)
   assert.match(source, /data-command-canvas-page/)
   assert.match(source, /data-command-canvas-list/)
