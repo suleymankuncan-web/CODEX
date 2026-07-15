@@ -4,6 +4,7 @@ import {
   installGenericStoreApiFallbacks,
   installStoreContractSession,
 } from './store-page-contract-fixtures'
+import { createIncentiveWorkspace, routeIncentiveWorkspace } from './store-incentives-command-fixtures'
 
 const allowlistedRoutes = [
   '/store/home',
@@ -15,6 +16,7 @@ const allowlistedRoutes = [
   '/store/feed',
   '/store/competitions',
   '/store/approvals',
+  '/store/incentives',
   '/store/targets',
   '/store/workforce',
   '/store/reports',
@@ -35,6 +37,7 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
   test.setTimeout(reportViewerPortfolioTimeoutMs)
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
+  await routeIncentiveWorkspace(page, createIncentiveWorkspace('report_viewer'))
 
   const nav = page.locator('.store-command-nav')
   await gotoReportViewerRoute(page, '/store/home')
@@ -47,6 +50,7 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
     '/store/feed',
     '/store/competitions',
     '/store/approvals',
+    '/store/incentives',
     '/store/targets',
     '/store/workforce',
     '/store/reports',
@@ -55,7 +59,7 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
     await expect(nav.locator(`a[href="${href}"]`), `${href} should be visible for Report Viewer`).toBeVisible()
   }
   await expect(nav.locator('a[href="/store/me"]')).toHaveCount(0)
-  await expect(nav.locator('a[href="/store/incentives"]')).toHaveCount(0)
+  await expect(nav.locator('a[href="/store/incentives"]')).toBeVisible()
 
   for (const routePath of allowlistedRoutes) {
     await gotoReportViewerRoute(page, routePath)
@@ -67,6 +71,7 @@ test('Report Viewer forbidden routes make no protected request and no action req
   test.setTimeout(reportViewerPortfolioTimeoutMs)
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
+  await routeIncentiveWorkspace(page, createIncentiveWorkspace('report_viewer'))
 
   const protectedRequests: string[] = []
   page.on('request', (request) => {
@@ -102,7 +107,7 @@ test('Report Viewer forbidden routes make no protected request and no action req
   await gotoReportViewerRoute(page, '/store/me')
   await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toBeVisible()
   await gotoReportViewerRoute(page, '/store/incentives')
-  await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Şirket Prim Görünümü' })).toBeVisible()
 
   expect(protectedRequests.length).toBe(beforeForbiddenRoutes)
   expect(protectedRequests).toEqual([])

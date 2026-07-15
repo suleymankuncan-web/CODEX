@@ -2,6 +2,17 @@ import type { SalesTargetIncentiveWorkspaceCapabilities } from "./sales-target-i
 
 export type SalesTargetIncentiveWorkspaceView = "report_viewer" | "region_manager";
 
+export type SalesTargetIncentiveWorkspaceSectionStatus = {
+  status: "complete" | "unavailable";
+};
+
+export type SalesTargetIncentiveWorkspaceSections = {
+  core: SalesTargetIncentiveWorkspaceSectionStatus;
+  storeMetadata: SalesTargetIncentiveWorkspaceSectionStatus;
+  rateMetadata: SalesTargetIncentiveWorkspaceSectionStatus;
+  correctionActors: SalesTargetIncentiveWorkspaceSectionStatus;
+};
+
 export type SalesTargetIncentiveWorkspaceRateBracket = {
   minAchievementPct: string | null;
   maxAchievementPct: string | null;
@@ -103,6 +114,7 @@ export type SalesTargetIncentiveWorkspaceResult = {
   periodTimezone: string;
   view: SalesTargetIncentiveWorkspaceView;
   capabilities: SalesTargetIncentiveWorkspaceCapabilities;
+  sections: SalesTargetIncentiveWorkspaceSections;
   rateMetadata: SalesTargetIncentiveWorkspaceRateMetadata;
   regions: SalesTargetIncentiveWorkspaceRegion[];
 };

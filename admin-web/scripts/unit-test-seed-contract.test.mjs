@@ -25,7 +25,7 @@ test('unit-test seed runs only the dedicated pure-logic files before script cont
 
   for (const path of [
     'src/pages/store-my-performance-model.unit.test.ts',
-    'src/pages/store-incentives-region-manager-model.unit.test.ts',
+    'src/features/incentives/command-workspace/model.unit.test.ts',
   ]) {
     assert.ok(existsSync(join(appRoot, path)), `Missing unit-test seed: ${path}`)
   }

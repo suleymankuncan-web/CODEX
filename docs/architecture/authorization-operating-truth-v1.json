@@ -1113,7 +1113,8 @@
       "matrixOwnership": "direct",
       "previewOwnership": "direct",
       "runtimeRoles": [
-        "REGION_MANAGER"
+        "REGION_MANAGER",
+        "REPORT_VIEWER"
       ],
       "previewRoles": [
         "AUDITOR",
@@ -1443,7 +1444,6 @@
         "AUDITOR",
         "HR_ADMIN",
         "INTEGRATION_ADMIN",
-        "REPORT_VIEWER",
         "SNAPSHOT_OPERATOR",
         "STORE_MANAGER",
         "STORE_PERSONNEL",

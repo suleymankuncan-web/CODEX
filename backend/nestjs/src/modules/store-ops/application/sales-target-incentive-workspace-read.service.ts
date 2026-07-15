@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import {
   MANAGER_RATE_TABLE_VERSION,
@@ -28,6 +28,8 @@ import { resolveSalesTargetIncentiveWorkspaceScope } from "./sales-target-incent
 
 @Injectable()
 export class SalesTargetIncentiveWorkspaceReadService {
+  private readonly logger = new Logger(SalesTargetIncentiveWorkspaceReadService.name);
+
   constructor(
     private readonly readModelService: SalesTargetIncentiveReadModelService,
     private readonly correctionRepository: SalesTargetIncentiveCorrectionRepository,
@@ -67,8 +69,8 @@ export class SalesTargetIncentiveWorkspaceReadService {
         scope.capabilities,
       );
     }
-    const [metadata, closedSnapshots, workflow, adjustmentSummaries] = await Promise.all([
-      this.repository.listStoreMetadata({ storeIds, periodEnd: projection.periodEnd }),
+    const [metadataResult, closedSnapshots, workflow, adjustmentSummaries] = await Promise.all([
+      optionalSection(this.repository.listStoreMetadata({ storeIds, periodEnd: projection.periodEnd }), [], "store_metadata", this.logger),
       this.repository.listClosedRateSnapshots({ periodKey: projection.periodKey, storeIds }),
       this.repository.listWorkflowAudit({ periodKey: projection.periodKey, storeIds }),
       this.correctionRepository.listApprovedAdjustmentSummaries({
@@ -77,13 +79,15 @@ export class SalesTargetIncentiveWorkspaceReadService {
         includeFinalRows: true,
       }),
     ]);
-    const exactRateRows = closedSnapshots.length === 0
-      ? await this.repository.listExactRateTables({
+    const exactRateRowsResult = closedSnapshots.length === 0
+      ? await optionalSection(this.repository.listExactRateTables({
           ruleVersionCode: SALES_TARGET_INCENTIVE_RULE_VERSION,
           rateTableVersions: [MANAGER_RATE_TABLE_VERSION, PERSONNEL_RATE_TABLE_VERSION],
           periodEnd: projection.periodEnd,
-        })
-      : [];
+        }), [], "rate_metadata", this.logger)
+      : completeSection([]);
+    const metadata = metadataResult.value;
+    const exactRateRows = exactRateRowsResult.value;
     const rateMetadata = resolveSalesTargetIncentiveRateMetadata({
       periodTimezone: projection.timezone,
       scopedStoreCount: projection.stores.length,
@@ -95,13 +99,14 @@ export class SalesTargetIncentiveWorkspaceReadService {
         personnel: PERSONNEL_RATE_TABLE_VERSION,
       },
     });
-    const actorRows = await this.repository.listCorrectionActors({
+    const actorRowsResult = await optionalSection(this.repository.listCorrectionActors({
       events: workflow.corrections.map((correction) => ({
         correctionId: correction.sales_target_incentive_region_correction_id,
         actorUserId: correction.created_by_user_id,
         occurredAt: correction.created_at,
       })),
-    });
+    }), [], "correction_actors", this.logger);
+    const actorRows = actorRowsResult.value;
     const actorByCorrectionId = new Map(actorRows.map((row) => [row.correction_id, row]));
     const metadataByStoreId = new Map(metadata.map((row) => [row.store_id, row]));
     const closedSnapshotByStoreId = new Map(
@@ -116,22 +121,23 @@ export class SalesTargetIncentiveWorkspaceReadService {
         ? input.actor.actionScope.assignedStoreIds.filter((storeId) => visibleStoreIds.has(storeId))
         : [],
     );
-    const capabilities = workspaceCapabilities(actionableStoreIds.size > 0);
+    const capabilities = workspaceCapabilities(false);
 
     for (const store of projection.stores) {
       const storeMetadata = metadataByStoreId.get(store.storeId);
+      const packageState = toPackage(
+        workflow.packages.find((item) => item.region_id === store.regionId) ?? null,
+      );
       const region = regions.get(store.regionId) ?? {
         regionId: store.regionId,
         regionName: storeMetadata?.region_name ?? null,
         regionManager: { displayName: storeMetadata?.region_manager_name ?? null },
         capabilities: { canSubmitPackage: false },
-        package: toPackage(
-          workflow.packages.find((item) => item.region_id === store.regionId) ?? null,
-        ),
+        package: packageState,
         stores: [],
       };
       const canAct = actionableStoreIds.has(store.storeId);
-      region.stores.push(toWorkspaceStore({
+      const workspaceStore = toWorkspaceStore({
         store,
         canAct,
         storeCode: storeMetadata?.store_code ?? null,
@@ -140,8 +146,15 @@ export class SalesTargetIncentiveWorkspaceReadService {
         corrections: correctionRowsByStore.get(store.storeId) ?? [],
         adjustmentSummaries: adjustmentsByStore.get(store.storeId) ?? [],
         actorByCorrectionId,
-      }));
-      if (canAct) region.capabilities.canSubmitPackage = true;
+        packageStatus: packageState.status,
+      });
+      region.stores.push(workspaceStore);
+      const packageEditable = packageState.status !== "submitted" && packageState.status !== "admin_approved";
+      if (canAct && packageEditable) region.capabilities.canSubmitPackage = true;
+      capabilities.canMarkStoreReview ||= workspaceStore.capabilities.canMarkStoreReview;
+      capabilities.canCreateCorrection ||= workspaceStore.capabilities.canCreateCorrection;
+      capabilities.canVoidCorrection ||= workspaceStore.capabilities.canVoidCorrection;
+      capabilities.canSubmitPackage ||= region.capabilities.canSubmitPackage;
       regions.set(store.regionId, region);
     }
 
@@ -152,6 +165,12 @@ export class SalesTargetIncentiveWorkspaceReadService {
       periodTimezone: projection.timezone,
       view: scope.view,
       capabilities,
+      sections: {
+        core: { status: "complete" },
+        storeMetadata: { status: metadataResult.status },
+        rateMetadata: { status: exactRateRowsResult.status },
+        correctionActors: { status: actorRowsResult.status },
+      },
       rateMetadata,
       regions: [...regions.values()]
         .map((region) => ({
@@ -172,6 +191,7 @@ function toWorkspaceStore(input: {
   corrections: SalesTargetIncentiveRegionCorrectionRow[];
   adjustmentSummaries: SalesTargetIncentiveAdjustmentSummaryRow[];
   actorByCorrectionId: Map<string, { display_name: string | null; role_code: "REGION_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | null }>;
+  packageStatus: "not_submitted" | "submitted" | "admin_approved" | "admin_returned";
 }) {
   const review = input.finalSnapshotId
     ? input.reviews.find((row) => row.store_id === input.store.storeId && row.final_snapshot_id === input.finalSnapshotId)
@@ -193,6 +213,12 @@ function toWorkspaceStore(input: {
     }
   }
   const primary = input.store.manager?.calculation ?? input.store.personnel[0]?.calculation;
+  const periodClosed = input.finalSnapshotId !== null;
+  const packageEditable = input.packageStatus !== "submitted" && input.packageStatus !== "admin_approved";
+  const canEdit = input.canAct && periodClosed && packageEditable;
+  const hasVoidableCorrection = rows.some(
+    (row) => row.correction?.status === "draft" || row.correction?.status === "admin_returned",
+  );
   return {
     storeId: input.store.storeId,
     storeCode: input.storeCode,
@@ -202,9 +228,9 @@ function toWorkspaceStore(input: {
     storeActualNetSales: input.store.storeNetSalesAmount,
     storeAchievementPct: primary?.storeAchievementPct ?? primary?.achievementPct ?? null,
     capabilities: {
-      canMarkStoreReview: input.canAct,
-      canCreateCorrection: input.canAct,
-      canVoidCorrection: input.canAct,
+      canMarkStoreReview: canEdit,
+      canCreateCorrection: canEdit,
+      canVoidCorrection: canEdit && hasVoidableCorrection,
     },
     review: {
       status: review?.review_status ?? "pending_review",
@@ -231,7 +257,7 @@ function toWorkspaceRow(input: {
   actorByCorrectionId: Map<string, { display_name: string | null; role_code: "REGION_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | null }>;
 }): SalesTargetIncentiveWorkspaceRow {
   const records = toCorrectionRecords(input.correctionRows, input.actorByCorrectionId);
-  const currentCorrection = records.find((record) => record.status !== "voided") ?? records[0] ?? null;
+  const currentCorrection = records.find((record) => record.status !== "voided") ?? null;
   const calculatedAmount = input.adjustmentSummary?.payable_amount ?? input.participant.calculation.payableAmount;
   const persistedFinal = input.adjustmentSummary?.final_amount ?? null;
   const adminAdjustment = input.adjustmentSummary?.adjustment_amount ?? "0";
@@ -268,7 +294,7 @@ function toFinalOnlyWorkspaceRow(
     corrections.filter((row) => row.employee_id === summary.employee_id && row.participant_type === summary.participant_type),
     actorByCorrectionId,
   );
-  const currentCorrection = records.find((record) => record.status !== "voided") ?? records[0] ?? null;
+  const currentCorrection = records.find((record) => record.status !== "voided") ?? null;
   const calculatedAmount = summary.payable_amount ?? null;
   const finalAmount = summary.final_amount === null ? currentCorrection?.finalAmount ?? calculatedAmount : addMoney(summary.final_amount, summary.adjustment_amount);
   const difference = calculatedAmount !== null && finalAmount !== null ? subtractMoney(finalAmount, calculatedAmount) : null;
@@ -378,6 +404,7 @@ function emptyWorkspace(
     periodTimezone: SALES_TARGET_INCENTIVE_TIMEZONE,
     view,
     capabilities,
+    sections: completeWorkspaceSections(),
     rateMetadata: {
       status: "unresolved",
       ruleVersionCode: null,
@@ -388,6 +415,28 @@ function emptyWorkspace(
     },
     regions: [],
   };
+}
+
+function completeWorkspaceSections() {
+  return {
+    core: { status: "complete" as const },
+    storeMetadata: { status: "complete" as const },
+    rateMetadata: { status: "complete" as const },
+    correctionActors: { status: "complete" as const },
+  };
+}
+
+function completeSection<T>(value: T) {
+  return { status: "complete" as const, value };
+}
+
+async function optionalSection<T>(promise: Promise<T>, fallback: T, section: string, logger: Pick<Logger, "warn">) {
+  try {
+    return completeSection(await promise);
+  } catch {
+    logger.warn(JSON.stringify({ event: "sales_target_incentive.workspace_optional_section.unavailable", section }));
+    return { status: "unavailable" as const, value: fallback };
+  }
 }
 
 function monthlyBounds(period: string) {

@@ -13,6 +13,19 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
   document.components = document.components ?? {};
   document.components.schemas = {
     ...(document.components.schemas ?? {}),
+    SalesTargetIncentiveWorkspaceSectionStatus: objectSchema(
+      ["status"],
+      { status: { type: "string", enum: ["complete", "unavailable"] } },
+    ),
+    SalesTargetIncentiveWorkspaceSections: objectSchema(
+      ["core", "storeMetadata", "rateMetadata", "correctionActors"],
+      {
+        core: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
+        storeMetadata: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
+        rateMetadata: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
+        correctionActors: ref("SalesTargetIncentiveWorkspaceSectionStatus"),
+      },
+    ),
     SalesTargetIncentiveWorkspaceCapabilities: objectSchema(
       ["canMarkStoreReview", "canCreateCorrection", "canVoidCorrection", "canSubmitPackage"],
       {
@@ -112,11 +125,13 @@ export function applySalesTargetIncentiveWorkspaceOpenApi(document: MutableOpenA
       },
     ),
     SalesTargetIncentiveWorkspace: objectSchema(
-      ["period", "periodStart", "periodEnd", "periodTimezone", "view", "capabilities", "rateMetadata", "regions"],
+      ["period", "periodStart", "periodEnd", "periodTimezone", "view", "capabilities", "sections", "rateMetadata", "regions"],
       {
         period: { type: "string" }, periodStart: { type: "string", format: "date" }, periodEnd: { type: "string", format: "date" },
         periodTimezone: { type: "string" }, view: { type: "string", enum: ["report_viewer", "region_manager"] },
-        capabilities: ref("SalesTargetIncentiveWorkspaceCapabilities"), rateMetadata: ref("SalesTargetIncentiveWorkspaceRateMetadata"),
+        capabilities: ref("SalesTargetIncentiveWorkspaceCapabilities"),
+        sections: ref("SalesTargetIncentiveWorkspaceSections"),
+        rateMetadata: ref("SalesTargetIncentiveWorkspaceRateMetadata"),
         regions: arrayRef("SalesTargetIncentiveWorkspaceRegion"),
       },
     ),

@@ -1,5 +1,6 @@
 import { ForbiddenException } from "@nestjs/common";
 import { SalesTargetIncentiveWorkspaceReadService } from "./sales-target-incentive-workspace-read.service";
+import type { SalesTargetIncentiveRegionCorrectionRow } from "../infrastructure/sales-target-incentive-approval.repository";
 
 // Traceability: INC-FR-001..004/009, NFR-005..007, AC-INC-005..008, EC-001/002/012/013/014/017/022.
 
@@ -34,6 +35,96 @@ const actor = (roles: string[], roleScopes: Record<string, any>, assignedStoreId
 });
 
 describe("SalesTargetIncentiveWorkspaceReadService", () => {
+  it("keeps the core workspace visible when optional store metadata is unavailable", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-a", "region-a")],
+    });
+    repository.listStoreMetadata.mockRejectedValue(new Error("metadata unavailable"));
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+    const warn = jest.fn();
+    (service as unknown as { logger: { warn: jest.Mock } }).logger.warn = warn;
+
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], {
+        REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] },
+      }) as never,
+      periodKey: "2026-05",
+    });
+
+    expect(result.regions[0]?.stores[0]?.storeName).toBe("store-a");
+    expect(result.sections.storeMetadata).toEqual({ status: "unavailable" });
+    expect(result.sections.core).toEqual({ status: "complete" });
+    expect(warn).toHaveBeenCalledWith(JSON.stringify({
+      event: "sales_target_incentive.workspace_optional_section.unavailable",
+      section: "store_metadata",
+    }));
+    expect(warn.mock.calls.flat().join(" ")).not.toContain("metadata unavailable");
+  });
+
+  it("keeps corrections visible with unavailable actor metadata when actor lookup fails", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-a", "region-a")],
+    });
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [{
+        sales_target_incentive_region_correction_id: "correction-a", region_package_id: null,
+        company_id: "company-a", region_id: "region-a", store_id: "store-a",
+        employee_id: "employee-a", participant_type: "personnel", final_row_id: "final-a",
+        period_key: "2026-05", before_amount: "10.00", final_amount: "12.00",
+        adjustment_amount: "2.00", reason_note: "Dogrulanmis duzeltme notu.",
+        correction_status: "submitted", created_by_user_id: "private-user",
+        submitted_by_user_id: null, submitted_at: null, reviewed_by_user_id: null,
+        reviewed_at: null, review_note: null, approved_adjustment_id: null,
+        created_at: "2026-06-01T10:00:00.000Z", updated_at: "2026-06-01T10:00:00.000Z",
+      }],
+    });
+    repository.listCorrectionActors.mockRejectedValue(new Error("actor directory unavailable"));
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([{
+      store_id: "store-a", employee_id: "employee-a", participant_type: "personnel",
+      employee_display_name: "Derya Uslu", position_code: "SALES_ASSOCIATE",
+      target_amount: "100.00", actual_sales_amount: "110.00", achievement_pct: "110.0000",
+      applied_rate: "0.0150", payable_amount: "1.65", final_amount: "12.00",
+      adjustment_amount: "0.00", calculation_status: "projected",
+    }]);
+
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], {
+        REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] },
+      }) as never,
+      periodKey: "2026-05",
+    });
+
+    expect(result.regions[0]?.stores[0]?.rows[0]?.correction?.correctionId).toBe("correction-a");
+    expect(result.regions[0]?.stores[0]?.rows[0]?.correction?.actor.identityStatus).toBe("unavailable");
+    expect(result.sections.correctionActors).toEqual({ status: "unavailable" });
+    expect(JSON.stringify(result)).not.toContain("private-user");
+  });
+
+  it("marks only rate metadata unavailable when the optional exact-rate lookup fails", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-a", "region-a")],
+    });
+    repository.listExactRateTables.mockRejectedValue(new Error("rate metadata unavailable"));
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+
+    const result = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], {
+        REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] },
+      }) as never,
+      periodKey: "2026-05",
+    });
+
+    expect(result.regions).toHaveLength(1);
+    expect(result.rateMetadata.status).toBe("unresolved");
+    expect(result.sections.rateMetadata).toEqual({ status: "unavailable" });
+  });
+
   it("returns a typed empty Report Viewer workspace without touching repositories when company scope is absent", async () => {
     const { service, readModel, repository } = harness();
 
@@ -101,6 +192,10 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       storeMetadata("store-actionable", "region-a"),
       storeMetadata("store-read-only", "region-a"),
     ]);
+    repository.listClosedRateSnapshots.mockResolvedValue([
+      closedSnapshot("store-actionable"),
+      closedSnapshot("store-read-only"),
+    ]);
     corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
 
     const result = await service.getWorkspace({
@@ -113,12 +208,12 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(result.capabilities).toEqual({
       canMarkStoreReview: true,
       canCreateCorrection: true,
-      canVoidCorrection: true,
+      canVoidCorrection: false,
       canSubmitPackage: true,
     });
     expect(result.regions[0].capabilities).toEqual({ canSubmitPackage: true });
     expect(result.regions[0].stores.map((store) => [store.storeId, store.capabilities])).toEqual([
-      ["store-actionable", { canMarkStoreReview: true, canCreateCorrection: true, canVoidCorrection: true }],
+      ["store-actionable", { canMarkStoreReview: true, canCreateCorrection: true, canVoidCorrection: false }],
       ["store-read-only", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
     ]);
 
@@ -131,6 +226,48 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     expect(Object.values(unrelated.capabilities).every((value) => value === false)).toBe(true);
     expect(unrelated.regions[0].capabilities).toEqual({ canSubmitPackage: false });
     expect(unrelated.regions[0].stores.every((store) => Object.values(store.capabilities).every((value) => value === false))).toBe(true);
+  });
+
+  it("keeps projection-only and submitted-package stores read-only", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      periodKey: "2026-05", periodStart: "2026-05-01", periodEnd: "2026-05-31", timezone: "Europe/Istanbul",
+      stores: [projectionStore("store-open", "region-a"), projectionStore("store-locked", "region-b")],
+    });
+    repository.listStoreMetadata.mockResolvedValue([
+      storeMetadata("store-open", "region-a"),
+      storeMetadata("store-locked", "region-b"),
+    ]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-locked")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], corrections: [], packages: [{
+        region_id: "region-b", package_status: "submitted", submitted_at: "2026-06-01T10:00:00.000Z",
+        reviewed_at: null, review_note: null,
+      }],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+
+    const result = await service.getWorkspace({
+      actor: actor(["REGION_MANAGER"], {
+        REGION_MANAGER: { companyIds: [], regionIds: ["region-a", "region-b"], storeIds: ["store-open", "store-locked"] },
+      }, ["store-open", "store-locked"]) as never,
+      periodKey: "2026-05",
+    });
+
+    expect(result.regions.flatMap((region) => region.stores).map((store) => [store.storeId, store.capabilities])).toEqual([
+      ["store-open", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
+      ["store-locked", { canMarkStoreReview: false, canCreateCorrection: false, canVoidCorrection: false }],
+    ]);
+    expect(result.regions.map((region) => [region.regionId, region.capabilities.canSubmitPackage])).toEqual([
+      ["region-a", true],
+      ["region-b", false],
+    ]);
+    expect(result.capabilities).toEqual({
+      canMarkStoreReview: false,
+      canCreateCorrection: false,
+      canVoidCorrection: false,
+      canSubmitPackage: true,
+    });
   });
 
   it("assembles region, store, row and sanitized correction audit without actor ids", async () => {
@@ -267,6 +404,28 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       identityStatus: "unavailable",
     });
     expect(JSON.stringify(unresolvedActorResult)).not.toContain("secret-user-id");
+
+    const approvedWorkflow = await repository.listWorkflowAudit.mock.results[0]!.value;
+    repository.listWorkflowAudit.mockResolvedValueOnce({
+      ...approvedWorkflow,
+      corrections: approvedWorkflow.corrections.map((correction: SalesTargetIncentiveRegionCorrectionRow) => ({
+        ...correction,
+        correction_status: "voided" as const,
+      })),
+    });
+    const voidedOnlyResult = await service.getWorkspace({
+      actor: actor(["REPORT_VIEWER"], {
+        REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] },
+      }) as never,
+      periodKey: "2026-05",
+    });
+    const voidedOnlyRow = voidedOnlyResult.regions[0].stores[0].rows[0];
+    expect(voidedOnlyRow.correction).toBeNull();
+    expect(voidedOnlyRow.finalAmount).toBe("9.07");
+    expect(voidedOnlyRow.signedDifferenceAmount).toBe("0.00");
+    expect(voidedOnlyRow.correctionRecords).toEqual([
+      expect.objectContaining({ correctionId: "correction-a", status: "voided" }),
+    ]);
   });
 });
 
@@ -283,5 +442,16 @@ function storeMetadata(storeId: string, regionId: string) {
   return {
     company_id: "company-a", region_id: regionId, region_name: "Region A",
     region_manager_name: "Region Manager", store_id: storeId, store_code: storeId,
+  };
+}
+
+function closedSnapshot(storeId: string) {
+  return {
+    store_id: storeId,
+    final_snapshot_id: `final-${storeId}`,
+    rule_version_code: "sales-target-incentive-v1.0.0",
+    period_timezone: "Europe/Istanbul",
+    rate_table_versions: [],
+    rate_brackets_json: [],
   };
 }

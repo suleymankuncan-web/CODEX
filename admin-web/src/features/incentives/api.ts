@@ -1,4 +1,15 @@
-import { fetchOpenApiJson, sendOpenApiJson } from '../../lib/openapi-client'
+import { fetchOpenApiJson, sendOpenApiJson, type ApiGetResponse } from '../../lib/openapi-client'
+
+export type SalesTargetIncentiveWorkspaceResponse = ApiGetResponse<'/api/store/incentives/workspace'>
+
+export type SalesTargetIncentiveWorkspaceQueryIdentity = {
+  actorUserId?: string | null
+  roleCodes?: readonly string[]
+  readCompanyIds?: readonly string[]
+  readRegionIds?: readonly string[]
+  readStoreIds?: readonly string[]
+  assignedStoreIds?: readonly string[]
+}
 
 export type SalesTargetIncentiveRoleScope = 'own' | 'store' | 'region' | 'admin'
 
@@ -249,6 +260,20 @@ export const storeSalesTargetIncentivesQueryKey = (
     [...(identity?.assignedStoreTypes ?? [])].sort().join(',') || 'no-assigned-store-type-scope',
   ] as const
 
+export const storeSalesTargetIncentiveWorkspaceQueryKey = (
+  period?: string,
+  identity?: SalesTargetIncentiveWorkspaceQueryIdentity,
+) => [
+  'store-sales-target-incentive-workspace',
+  period ?? 'current',
+  identity?.actorUserId ?? 'anonymous',
+  [...(identity?.roleCodes ?? [])].sort().join(',') || 'no-role',
+  [...(identity?.readCompanyIds ?? [])].sort().join(',') || 'no-company-scope',
+  [...(identity?.readRegionIds ?? [])].sort().join(',') || 'no-region-scope',
+  [...(identity?.readStoreIds ?? [])].sort().join(',') || 'no-store-scope',
+  [...(identity?.assignedStoreIds ?? [])].sort().join(',') || 'no-action-store-scope',
+] as const
+
 export const adminSalesTargetIncentivesQueryKey = (
   period?: string,
   identity?: SalesTargetIncentiveQueryIdentity,
@@ -274,6 +299,14 @@ export async function getStoreSalesTargetIncentives(input?: { period?: string })
     '/api/store/incentives',
     query ? { query } : undefined,
   ) as Promise<SalesTargetIncentiveResponse>
+}
+
+export async function getStoreSalesTargetIncentiveWorkspace(input?: { period?: string }) {
+  const query = buildPeriodQuery(input?.period)
+  return fetchOpenApiJson(
+    '/api/store/incentives/workspace',
+    query ? { query } : undefined,
+  )
 }
 
 export async function getAdminSalesTargetIncentives(input?: { period?: string }) {

@@ -24,10 +24,10 @@ import {
   getVisibleFeedQueryKey,
 } from '../features/feed/api'
 import {
-  getStoreSalesTargetIncentives,
-  storeSalesTargetIncentivesQueryKey,
+  getStoreSalesTargetIncentiveWorkspace,
+  storeSalesTargetIncentiveWorkspaceQueryKey,
 } from '../features/incentives/api'
-import { getSalesTargetIncentiveQueryIdentity } from '../features/incentives/query-identity'
+import { getSalesTargetIncentiveWorkspaceQueryIdentity } from '../features/incentives/query-identity'
 import {
   getImportOverview,
   getImportPayloadTemplate,
@@ -199,12 +199,12 @@ function getStoreRoutePrefetchTasks(
 }
 
 function getStoreIncentivesPrefetchTasks(authSummary: AuthSessionSummary | null): PrefetchTask[] {
-  const incentivesQueryIdentity = getSalesTargetIncentiveQueryIdentity(authSummary)
+  const incentivesQueryIdentity = getSalesTargetIncentiveWorkspaceQueryIdentity(authSummary)
 
   return [
     {
-      queryKey: storeSalesTargetIncentivesQueryKey(undefined, incentivesQueryIdentity),
-      queryFn: () => getStoreSalesTargetIncentives(),
+      queryKey: storeSalesTargetIncentiveWorkspaceQueryKey(undefined, incentivesQueryIdentity),
+      queryFn: () => getStoreSalesTargetIncentiveWorkspace(),
       enabled: canOpenStoreIncentives(authSummary),
     },
   ]
