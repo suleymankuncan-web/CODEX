@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { resolveStorePersona } from '../app/store-route-registry'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { hasAnyRole } from '../features/auth/authorization'
+import { ReportViewerChecklistCommandPage } from '../features/checklist-command/ReportViewerChecklistCommandPage'
 import { RegionManagerChecklistCommandPage } from '../features/checklist-command/RegionManagerChecklistCommandPage'
 import { ChecklistWorkflowLegacySurface } from '../features/checklist-workflow/ChecklistWorkflowLegacySurface'
 import { ChecklistWorkflowCommandOverlay } from '../features/checklist-workflow/ChecklistWorkflowCommandOverlay'
@@ -18,14 +20,19 @@ export function StoreChecklistsPage(input: {
   const persona = resolveStorePersona(input.authSummary)
   const workflowRoute = resolveChecklistWorkflowRouteState(location.search)
   const overlayTriggerRef = useRef<HTMLElement | null>(null)
+  const isReportViewer = hasAnyRole(input.authSummary, ['REPORT_VIEWER'])
 
   useEffect(() => {
-    if (persona !== 'regionManager' || !workflowRoute.shouldReplace) return
+    if (isReportViewer || persona !== 'regionManager' || !workflowRoute.shouldReplace) return
     navigate(
       { pathname: location.pathname, search: workflowRoute.normalizedSearch },
       { replace: true },
     )
-  }, [location.pathname, navigate, persona, workflowRoute.normalizedSearch, workflowRoute.shouldReplace])
+  }, [isReportViewer, location.pathname, navigate, persona, workflowRoute.normalizedSearch, workflowRoute.shouldReplace])
+
+  if (isReportViewer) {
+    return <ReportViewerChecklistCommandPage authSummary={input.authSummary} />
+  }
 
   if (persona === 'regionManager') {
     return (

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  CalendarDays,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -13,7 +12,6 @@ import {
   Search,
   SlidersHorizontal,
   Store,
-  X,
 } from 'lucide-react'
 import type { AuthSessionSummary } from '../auth/api'
 import {
@@ -36,9 +34,12 @@ import {
   type ChecklistVisitPlanRegionOption,
 } from './api'
 import { ChecklistVisitPlanSurface } from './ChecklistVisitPlanSurface'
+import { ChecklistCommandPeriodPicker } from './ChecklistCommandPeriodPicker'
+import { formatChecklistCommandPeriodLabel } from './checklist-command-period'
+import { ChecklistOperationalHistoryDrawer } from './ChecklistOperationalHistoryDrawer'
+import { RegionManagerRecordsSurface } from './RegionManagerRecordsSurface'
 import { ChecklistPlanningRegionPicker } from './ChecklistPlanningRegionPicker'
 import {
-  createChecklistCommandPeriod,
   getIstanbulWeekStart,
   getChecklistCommandSortLabel,
   toggleChecklistCommandSort,
@@ -62,7 +63,9 @@ export function RegionManagerChecklistCommandPage(input: {
   const [query, setQuery] = useState('')
   const [offset, setOffset] = useState(0)
   const [columnPreset, setColumnPreset] = useState<'all' | 'scores' | 'visit'>('all')
-  const [activeView, setActiveView] = useState<'visits' | 'plan'>('visits')
+  const [activeView, setActiveView] = useState<'visits' | 'plan' | 'records'>('visits')
+  const [selectedRecordStore, setSelectedRecordStore] = useState<ChecklistCommandRow | null>(null)
+  const historyTriggerRef = useRef<HTMLElement | null>(null)
   const [weekStart, setWeekStart] = useState(() => getIstanbulWeekStart())
   const [openMenu, setOpenMenu] = useState<'status' | 'columns' | null>(null)
   const [retainedCommand, setRetainedCommand] = useState<{
@@ -185,7 +188,7 @@ export function RegionManagerChecklistCommandPage(input: {
   }
 
   if (!activeRegion && (regionOptionsQuery.data?.data.page.total ?? 0) > 1) {
-    const selectionPeriodLabel = formatPeriodLabel(period, locale)
+    const selectionPeriodLabel = formatChecklistCommandPeriodLabel(period, locale)
     return (
       <StoreSurfacePage ariaLabel={t('storeChecklists.command.title')} className="checklist-command-parity" data-testid="checklist-command-parity">
         <header className="checklist-command-title">
@@ -235,7 +238,7 @@ export function RegionManagerChecklistCommandPage(input: {
   )
   const firstItem = data.page.total === 0 ? 0 : data.page.offset + 1
   const lastItem = Math.min(data.page.total, data.page.offset + data.items.length)
-  const periodLabel = formatPeriodLabel(period, locale)
+  const periodLabel = formatChecklistCommandPeriodLabel(period, locale)
   const metrics: Array<{
     key: ChecklistCommandStatus
     label: string
@@ -319,6 +322,7 @@ export function RegionManagerChecklistCommandPage(input: {
               <span className="canvas-view-glider" aria-hidden />
               <button type="button" className={activeView === 'visits' ? 'is-active' : ''} aria-pressed={activeView === 'visits'} onClick={() => setActiveView('visits')}>{locale === 'tr' ? 'Ziyaretler' : 'Visits'}</button>
               <button type="button" className={activeView === 'plan' ? 'is-active' : ''} aria-pressed={activeView === 'plan'} onClick={() => setActiveView('plan')}>{locale === 'tr' ? 'Ziyaret Planı' : 'Visit Plan'}{data.metrics.needsVisit > 0 ? <span className="canvas-view-count">{data.metrics.needsVisit}</span> : null}</button>
+              <button type="button" className={activeView === 'records' ? 'is-active' : ''} aria-pressed={activeView === 'records'} onClick={() => setActiveView('records')}>{locale === 'tr' ? 'Mağaza Kayıtları' : 'Store Records'}</button>
             </div>
           ) : null}
         </div>
@@ -426,7 +430,24 @@ export function RegionManagerChecklistCommandPage(input: {
             <button type="button" aria-label={t('storeChecklists.command.next')} disabled={!data.page.hasMore || commandQuery.isFetching} onClick={() => { retainCurrentCommand(); setOffset(offset + PAGE_SIZE) }}><ChevronRight size={14} /></button>
           </div>
         </footer>
-      </section></> : activeRegion ? (
+      </section></> : activeView === 'records' ? (
+        <RegionManagerRecordsSurface
+          data={data}
+          isError={commandQuery.isError}
+          isFetching={commandQuery.isFetching}
+          locale={locale}
+          offset={offset}
+          query={searchDraft}
+          sort={sort}
+          status={status}
+          onOpenHistory={(store, trigger) => { historyTriggerRef.current = trigger; setSelectedRecordStore(store) }}
+          onOffset={(nextOffset) => { retainCurrentCommand(); setOffset(nextOffset) }}
+          onQuery={(value) => { retainCurrentCommand(); setSearchDraft(value) }}
+          onRetry={() => void commandQuery.refetch()}
+          onSort={changeSort}
+          onStatus={selectStatus}
+        />
+      ) : activeRegion ? (
         <ChecklistVisitPlanSurface
           authSummary={input.authSummary}
           locale={locale}
@@ -440,6 +461,14 @@ export function RegionManagerChecklistCommandPage(input: {
       ) : (
         <section className="week-planner week-planner-state"><strong>{locale === 'tr' ? 'Planlanabilir mağaza bulunamadı.' : 'No stores available for planning.'}</strong></section>
       )}
+      <ChecklistOperationalHistoryDrawer
+        authSummary={input.authSummary}
+        open={Boolean(selectedRecordStore)}
+        storeId={selectedRecordStore?.storeId ?? null}
+        storeName={selectedRecordStore?.storeName ?? null}
+        returnFocusRef={historyTriggerRef}
+        onClose={() => setSelectedRecordStore(null)}
+      />
     </StoreSurfacePage>
   )
 }
@@ -556,58 +585,4 @@ function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en') {
   if (row.status === 'active') return locale === 'tr' ? 'Devam et' : 'Continue'
   if (row.status === 'needs_visit') return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
   return locale === 'tr' ? 'Sonucu gör' : 'View result'
-}
-
-function ChecklistCommandPeriodPicker(input: { locale: 'tr' | 'en'; period: string; onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const { year: periodYear, month: periodMonth } = parsePeriod(input.period)
-  const [draft, setDraft] = useState({ year: periodYear, month: periodMonth })
-  const rootRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const monthNames = Array.from({ length: 12 }, (_, index) => new Intl.DateTimeFormat(input.locale === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(2026, index, 1))))
-  const currentPeriod = parsePeriod(getBusinessMonthInputValue())
-  const previousPeriod = currentPeriod.month === 1 ? { year: currentPeriod.year - 1, month: 12 } : { year: currentPeriod.year, month: currentPeriod.month - 1 }
-
-  useEffect(() => {
-    if (!open) return
-    const close = (restoreFocus: boolean) => {
-      setDraft({ year: periodYear, month: periodMonth })
-      setOpen(false)
-      if (restoreFocus) window.requestAnimationFrame(() => triggerRef.current?.focus())
-    }
-    const handlePointerDown = (event: PointerEvent) => { if (!rootRef.current?.contains(event.target as Node)) close(false) }
-    const handleKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') close(true) }
-    document.addEventListener('pointerdown', handlePointerDown)
-    document.addEventListener('keydown', handleKeyDown)
-    return () => { document.removeEventListener('pointerdown', handlePointerDown); document.removeEventListener('keydown', handleKeyDown) }
-  }, [open, periodMonth, periodYear])
-
-  const closeWithoutApply = (restoreFocus = true) => {
-    setDraft({ year: periodYear, month: periodMonth })
-    setOpen(false)
-    if (restoreFocus) window.requestAnimationFrame(() => triggerRef.current?.focus())
-  }
-  return (
-    <div ref={rootRef} className={cn('checklist-command-period', open && 'is-open')}>
-      <button ref={triggerRef} type="button" className="checklist-command-period-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => { if (open) closeWithoutApply(false); else { setDraft({ year: periodYear, month: periodMonth }); setOpen(true) } }}><CalendarDays size={15} /><span><small>{input.locale === 'tr' ? 'DÖNEM' : 'PERIOD'}</small><strong>{formatPeriodLabel(input.period, input.locale)}</strong></span><ChevronDown size={13} /></button>
-      {open ? <div className="checklist-command-period-popover" role="dialog" aria-label={input.locale === 'tr' ? 'Raporlama dönemi' : 'Reporting period'}>
-        <header><div><span className="checklist-command-period-icon"><CalendarDays size={16} /></span><span><small>{input.locale === 'tr' ? 'RAPORLAMA DÖNEMİ' : 'REPORTING PERIOD'}</small><strong>{input.locale === 'tr' ? 'Ay ve yıl seçin' : 'Select month and year'}</strong></span></div><button type="button" aria-label={input.locale === 'tr' ? 'Tarih filtresini kapat' : 'Close date filter'} onClick={() => closeWithoutApply()}><X size={15} /></button></header>
-        <div className="checklist-command-period-presets"><button type="button" className={draft.year === currentPeriod.year && draft.month === currentPeriod.month ? 'is-active' : ''} onClick={() => setDraft(currentPeriod)}>{input.locale === 'tr' ? 'Bu ay' : 'This month'}</button><button type="button" className={draft.year === previousPeriod.year && draft.month === previousPeriod.month ? 'is-active' : ''} onClick={() => setDraft(previousPeriod)}>{input.locale === 'tr' ? 'Geçen ay' : 'Last month'}</button></div>
-        <div className="checklist-command-period-year"><button type="button" aria-label={input.locale === 'tr' ? 'Önceki yıl' : 'Previous year'} onClick={() => setDraft((current) => ({ ...current, year: current.year - 1 }))}><ChevronLeft size={15} /></button><span><small>{input.locale === 'tr' ? 'YIL' : 'YEAR'}</small><strong>{draft.year}</strong></span><button type="button" aria-label={input.locale === 'tr' ? 'Sonraki yıl' : 'Next year'} onClick={() => setDraft((current) => ({ ...current, year: current.year + 1 }))}><ChevronRight size={15} /></button></div>
-        <div className="checklist-command-period-months">{monthNames.map((label, index) => <button type="button" className={draft.month === index + 1 ? 'is-active' : ''} key={label} onClick={() => setDraft((current) => ({ ...current, month: index + 1 }))}><span>{label}</span>{draft.month === index + 1 ? <Check size={13} /> : null}</button>)}</div>
-        <footer><button type="button" onClick={() => setDraft(currentPeriod)}>{input.locale === 'tr' ? 'Sıfırla' : 'Reset'}</button><span>{formatPeriodLabel(createChecklistCommandPeriod(draft.year, draft.month), input.locale)}</span><button type="button" className="primary" onClick={() => { input.onChange(createChecklistCommandPeriod(draft.year, draft.month)); setOpen(false) }}><Check size={14} /> {input.locale === 'tr' ? 'Uygula' : 'Apply'}</button></footer>
-      </div> : null}
-    </div>
-  )
-}
-
-function formatPeriodLabel(period: string, locale: 'tr' | 'en') {
-  const { year, month } = parsePeriod(period)
-  return new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(Date.UTC(year, month - 1, 1)))
-}
-
-function parsePeriod(period: string) {
-  const match = /^(\d{4})-(\d{2})$/.exec(period)
-  if (!match) return { year: 2026, month: 1 }
-  return { year: Number(match[1]!), month: Number(match[2]!) }
 }

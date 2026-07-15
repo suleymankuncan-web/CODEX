@@ -3,6 +3,7 @@ import {
   getActionStoreIds,
   getAssignedStoreIds,
   getAssignedStoreTypes,
+  getReadCompanyIds,
   getReadRegionIds,
   getReadStoreIds,
 } from './authorization'
@@ -19,6 +20,7 @@ export function getStoreQueryScopeSignature(authSummary: AuthSessionSummary | nu
   }
 
   const roles = sortedUnique(user.roleCodes).join(',')
+  const readCompanyIds = sortedUnique(getReadCompanyIds(authSummary)).join(',')
   const readRegionIds = sortedUnique(getReadRegionIds(authSummary)).join(',')
   const readStoreIds = sortedUnique(getReadStoreIds(authSummary)).join(',')
   const assignedStoreIds = sortedUnique(getAssignedStoreIds(authSummary)).join(',')
@@ -29,12 +31,24 @@ export function getStoreQueryScopeSignature(authSummary: AuthSessionSummary | nu
     `user:${user.userId}`,
     `authorization:${user.authorizationContextVersion ?? 'legacy'}`,
     `roles:${roles}`,
+    `readCompanies:${readCompanyIds}`,
     `readRegions:${readRegionIds}`,
     `readStores:${readStoreIds}`,
     `assignedStores:${assignedStoreIds}`,
     `actionStores:${actionStoreIds}`,
     `storeTypes:${assignedStoreTypes}`,
   ].join('|')
+}
+
+export function retainScopedPlaceholder<T>(
+  previousData: T | undefined,
+  previousQueryKey: readonly unknown[] | undefined,
+  currentScopeSignature: string,
+  matchesCurrentFilters = true,
+) {
+  return previousQueryKey?.[1] === currentScopeSignature && matchesCurrentFilters
+    ? previousData
+    : undefined
 }
 
 export function storeChecklistAcknowledgementsQueryKey(authSummary: AuthSessionSummary | null) {
@@ -50,6 +64,28 @@ export function storeChecklistCommandQueryKey(
   filters: Record<string, string | number>,
 ) {
   return ['checklist-command', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
+export function storeChecklistCommandRegionsQueryKey(
+  authSummary: AuthSessionSummary | null,
+  filters: Record<string, string | number>,
+) {
+  return ['checklist-command-regions', getStoreQueryScopeSignature(authSummary), filters] as const
+}
+
+export function storeChecklistOperationalHistoryQueryKey(
+  authSummary: AuthSessionSummary | null,
+  storeId: string,
+  range: string,
+  kinds: readonly string[],
+) {
+  return [
+    'checklist-operational-history',
+    getStoreQueryScopeSignature(authSummary),
+    storeId,
+    range,
+    [...new Set(kinds)].sort().join(','),
+  ] as const
 }
 
 export function storeChecklistVisitPlanQueryKey(
