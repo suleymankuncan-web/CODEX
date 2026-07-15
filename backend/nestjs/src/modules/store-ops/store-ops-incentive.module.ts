@@ -6,6 +6,7 @@ import { StoreOpsIncentiveAdminPackageWorkflowModule } from "./store-ops-incenti
 import { StoreOpsIncentiveApprovalModule } from "./store-ops-incentive-approval.module";
 import { StoreOpsIncentiveProjectionModule } from "./store-ops-incentive-projection.module";
 import { StoreOpsIncentiveWorkflowModule } from "./store-ops-incentive-workflow.module";
+import { StoreOpsIncentiveWorkspaceModule } from "./store-ops-incentive-workspace.module";
 import { AdminSalesTargetIncentiveController } from "./web/admin-sales-target-incentive.controller";
 import { StoreSalesTargetIncentiveController } from "./web/store-sales-target-incentive.controller";
 
@@ -15,6 +16,7 @@ import { StoreSalesTargetIncentiveController } from "./web/store-sales-target-in
     StoreOpsIncentiveApprovalModule,
     StoreOpsIncentiveProjectionModule,
     StoreOpsIncentiveWorkflowModule,
+    StoreOpsIncentiveWorkspaceModule,
   ],
   controllers: [
     StoreSalesTargetIncentiveController,

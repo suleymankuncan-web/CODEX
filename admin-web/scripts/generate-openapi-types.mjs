@@ -114,6 +114,7 @@ const selectedOperations = [
   { path: '/api/reports/workforce', method: 'get' },
   { path: '/api/store/me/incentives', method: 'get' },
   { path: '/api/store/incentives', method: 'get' },
+  { path: '/api/store/incentives/workspace', method: 'get' },
   { path: '/api/store/incentives/store-reviews', method: 'post' },
   { path: '/api/store/incentives/corrections', method: 'post' },
   { path: '/api/store/incentives/corrections/void', method: 'post' },
