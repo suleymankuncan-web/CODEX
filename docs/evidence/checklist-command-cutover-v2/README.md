@@ -9,9 +9,9 @@ Accepted source: `D:\hr-axis-external-lab\prototypes\store-checklists-three-conc
 P7 implementation SHA before this owner-override evidence amendment:
 `77c00844da33ce09bf2224aeef2a489dbf4bf4cb`
 
-Overall status: `Prototype parity: OWNER-ACCEPTED - automated parity is GO;
-physical-device evidence is an explicitly accepted residual risk and
-post-merge smoke remains open`
+Overall status: `Prototype parity: OWNER-ACCEPTED AND CLOSED - automated
+parity is GO; physical-device evidence is an explicitly accepted residual
+risk; merge and post-merge verification are complete`
 
 Automated parity status: `GO`
 
@@ -34,7 +34,7 @@ real iOS Safari or Android Chrome evidence.
 | P1B Command workflow overlays | #994 | `edf068a2` | merged |
 | P5 Records and Report Viewer | #995 | `aa6d4529` | merged |
 | P6 Store Manager surface | #996 | `8a9b74b9` | merged |
-| P7 global cutover and deletion | #997 | implementation `77c00844` | open draft |
+| P7 global cutover and deletion | #997 | `40d2617e` | merged |
 
 ## Production component map
 
@@ -207,6 +207,8 @@ No unexplained repository-side visual or interaction deviation is open.
 
 - Exact implementation SHA canonical release: PASS, 417/417 in 10 minutes 7
   seconds on `77c00844`.
+- Final owner-override amendment SHA root release: PASS in 12 minutes 47
+  seconds on `90fdaf06`.
 - Script contracts: 623/623.
 - Backend release suite: 228 suites / 1393 tests.
 - Checklist persona/overlay E2E: 22/22.
@@ -221,6 +223,26 @@ No unexplained repository-side visual or interaction deviation is open.
 - Required GitHub aggregate, Vercel deployment and mergeability: green on the
   implementation SHA.
 - GitHub Codex review: disabled and not requested.
+
+## Merge and deployed closeout
+
+- PR #997 was squash-merged on 2026-07-15 as
+  `40d2617eb021bf18bd08d85bdc197d100bf2c8e8`.
+- The merge commit is the exact `origin/main` head verified in a clean main
+  worktree.
+- Post-Merge Verification run `29409363238`: PASS.
+- Merge-SHA Release Rehearsal run `29409363055`: PASS, including the bounded
+  backend/Docker rehearsal selected for the merged backend scope.
+- Vercel deployment for the merge SHA: PASS.
+- Controlled staging deployed-readiness smoke at
+  `2026-07-15T10:51:35.883Z`: 13 passed, 0 failed, 1 skipped. Frontend root,
+  SPA fallback, deployed assets, security headers, backend live/dependency
+  health, rate-limit/correlation headers, verified database TLS and durable
+  Redis/BullMQ all passed.
+- The skipped readiness item was protected `/api/auth/session` because no
+  bearer token was supplied. It is not reported as passed. The owner directed
+  real-device/auth observation to continue through ordinary controlled-pilot
+  use rather than remain a P7 merge gate.
 
 ## Physical-device residual risk
 
@@ -245,15 +267,10 @@ ordinary controlled-pilot use. This override does not claim that iOS Safari or
 Android Chrome testing passed and does not weaken production cookie-session,
 authorization, privacy or data-integrity controls.
 
-## Remaining closeout
+## Closeout disposition
 
-1. Keep the physical-device rows recorded honestly as not performed under the
-   explicit owner override; treat real controlled-pilot feedback as the
-   residual mobile signal.
-2. Mark PR #997 ready only after this override is committed and checks are
-   green on the final head.
-3. Squash-merge and verify the merged `origin/main` SHA.
-4. Run the controlled post-merge deployed smoke without manual production data
-   mutation.
-5. Update `current-state.md` with the merged SHA and final deployed-smoke
-   disposition. Do not rewrite the unperformed physical rows as PASS.
+P1-P7, final checks, squash merge, merged-SHA verification and the controlled
+post-merge deployed smoke are complete. No checklist-cutover implementation PR
+remains. The only residual item is the explicitly owner-accepted physical
+mobile/auth observation during normal controlled-pilot use; the pending rows
+above remain honest and must not be rewritten as PASS without real evidence.
