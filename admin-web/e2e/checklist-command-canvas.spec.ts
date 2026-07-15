@@ -170,7 +170,8 @@ test('region manager plans a full Monday-Saturday week and saves one real API sn
 test('weekly planner pages 35 scoped stores and keeps the save action reachable on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await installStoreContractSession(page, 'regionManager')
-  await routeChecklistCommand(page, [])
+  const requests: URL[] = []
+  await routeChecklistCommand(page, requests)
 
   await page.goto('/store/checklists')
   await page.getByRole('button', { name: /Ziyaret Planı/ }).click()
@@ -179,7 +180,14 @@ test('weekly planner pages 35 scoped stores and keeps the save action reachable 
   const dialog = page.getByRole('dialog', { name: 'Ziyaret planını oluşturun' })
   await expect(dialog.locator('.week-plan-result-row')).toHaveCount(20)
   await expect(dialog.getByText('1 / 2')).toBeVisible()
-  await dialog.getByRole('button', { name: 'Sonraki' }).click()
+  await Promise.all([
+    page.waitForRequest((request) => {
+      const url = new URL(request.url())
+      return url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20'
+    }),
+    dialog.getByRole('button', { name: 'Sonraki' }).click(),
+  ])
+  await expect.poll(() => requests.some((url) => url.pathname.endsWith('/visit-plans/candidates') && url.searchParams.get('offset') === '20')).toBe(true)
   await expect(dialog.getByText('2 / 2')).toBeVisible()
   await expect(dialog.locator('.week-plan-result-row')).toHaveCount(15)
   await expect(dialog.getByRole('button', { name: 'Ziyaret Planını Kaydet' })).toBeVisible()
