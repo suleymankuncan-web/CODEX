@@ -5,6 +5,7 @@ import { getStoreTargetWorkspace, storeTargetWorkspaceQueryKey } from '../api'
 import { mergeTargetWorkspacePages } from './model'
 import { RegionManagerTargetCommand } from './region-manager-view'
 import { ReportViewerTargetCommand } from './report-viewer-view'
+import { StoreManagerTargetCommand } from './store-manager-view'
 import { TargetCommandFailure, TargetCommandLoading } from './workspace-states'
 
 function currentPeriod() {
@@ -48,7 +49,18 @@ export function TargetCommandWorkspaceOwner(input: { authSummary: AuthSessionSum
     hasMore: Boolean(query.hasNextPage), isLoadingMore: query.isFetchingNextPage,
     onLoadMore: () => void query.fetchNextPage(), onRetry: () => void query.refetch(),
   }
-  return workspace.view === 'report_viewer'
-    ? <ReportViewerTargetCommand {...shared} />
-    : <RegionManagerTargetCommand {...shared} queryKey={queryIdentity} />
+  if (workspace.view === 'report_viewer') return <ReportViewerTargetCommand {...shared} />
+  if (workspace.view === 'store_manager') {
+    return (
+      <StoreManagerTargetCommand
+        workspace={workspace}
+        period={period}
+        onPeriodChange={setPeriod}
+        isUpdating={shared.isUpdating}
+        backgroundError={backgroundError}
+        onRetry={shared.onRetry}
+      />
+    )
+  }
+  return <RegionManagerTargetCommand {...shared} queryKey={queryIdentity} />
 }

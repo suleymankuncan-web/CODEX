@@ -107,6 +107,29 @@ export function CommandCanvasMetricFilter(input: {
   )
 }
 
+export function CommandCanvasMetric(input: {
+  label: string
+  value: string
+  note?: string
+  icon: ReactNode
+  tone?: CommandCanvasTone
+}) {
+  return (
+    <div
+      className="command-canvas-metric"
+      data-active="false"
+      data-tone={input.tone ?? 'neutral'}
+    >
+      <span aria-hidden="true" className="command-canvas-metric-icon">{input.icon}</span>
+      <span className="command-canvas-metric-copy">
+        <b>{input.label}</b>
+        {input.note ? <small>{input.note}</small> : null}
+      </span>
+      <strong>{input.value}</strong>
+    </div>
+  )
+}
+
 export function CommandCanvasFilterBar(input: {
   search: ReactNode
   controls?: ReactNode
