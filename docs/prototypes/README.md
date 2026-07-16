@@ -16,6 +16,11 @@ implemented and verified.
 
 ## Current Active References
 
+- `docs/evidence/store-operational-surfaces-command-canvas/prototype-digest-manifest-v1.json`
+  locks the owner-approved React Command Canvas reference for `/store/kpis`,
+  `/store/approvals`, `/store/workforce`, and `/store/tasks`. The manifest binds
+  source, interaction verification, and approved desktop/mobile captures; Labs
+  chrome and fixtures remain explicitly excluded from production.
 - `docs/prototypes/plum-glacier-token-set-v1.md` is the active Plum Glacier
   token vocabulary for login and future page-level UI pilot work.
 - `docs/prototypes/login-pilot-v3.html` is the current login visual reference
@@ -107,6 +112,7 @@ Important production boundary:
 
 | Prototype | Surface | SHA-256 |
 | --- | --- | --- |
+| `store-operations-command-canvas-v1` (external React Labs source; digest manifest under `docs/evidence`) | `/store/kpis`, `/store/approvals`, `/store/workforce`, `/store/tasks` | `238CAC411F3EC1E9CEDBA2FC062B527AF6C1FBF034FDAECEAB52EE3E28370373` |
 | `docs/prototypes/store-workforce-prototype-v1.html` | `/store/workforce` | `93390D1705B9DFEC74E3ACF084320FC91B1F31580E45C6FE8A26B479EDCD031F` |
 | `docs/prototypes/store-approvals-request-center-v1.html` | `/store/approvals` request center | `F122E2A80F1E9AFFDCCF2942F6E3F609942409527047B5452B50874E8AE2CABD` |
 | `docs/prototypes/store-home-store-manager-standard-v1.html` | `/store/home` Store Manager dashboard | `B36442A7244FCF4FE85954E4F08C88E2A3684055DD03D854F3C54DA629022E37` |
