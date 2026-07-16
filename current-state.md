@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-15
+Last verified: 2026-07-16
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A
 cold reader should recover the current decision, external blockers, and next
@@ -188,6 +188,19 @@ Now:
 - PR #978 makes browser-cookie sessions re-read application-account status on every protected request: inactive, missing, or role-empty accounts fail `401`, while role/action assignments remain DB-fresh and Clerk is not called per request. TREF-1 locks `completed_snapshot`, `whole_month_latest_approved`, and `explicit_rerun_only` semantics plus explicit removals, initial-only pilot import, and responsibility-only manager changes. The separately authorized TREF implementation now uses append-only successors, exact bases/removals, current primary-store authority, rotation-aware revision basis, completed-snapshot closure, typed conflicts, and initial/exact-replay-only pilot import. It adds no migration and accesses no staging or production data.
 - The owner-approved Command Canvas P1-P7 cutover is complete through squash-merged PR #997 (`40d2617e`). The final route uses the real role-scoped Command surfaces, weekly/full-period planning, Living Store Record, canonical workflow overlays and migrated deep links; legacy checklist DOM, dormant chunk owners and orphan flow CSS/tests are removed. Final-head checks, Post-Merge Verification, backend/Docker rehearsal, Vercel deployment and the controlled public staging readiness smoke are green. On 15 July 2026 the product owner explicitly waived physical iOS Safari/Android Chrome evidence as a merge gate and accepted that residual mobile/auth risk for ordinary controlled-pilot observation. Those checks were not performed and are not reported as PASS; see `docs/evidence/checklist-command-cutover-v2/README.md`.
 - The 15 July checklist interaction regression closeout keeps the Store shell navigable on desktop and mobile, routes Region Manager and Visual Merchandiser execution actions directly into their authorized checklist session, replaces blocking browser close prompts with accessible in-product confirmation, and preserves repeated same-store planning on different dates while rejecting same-day duplicates. Report Viewer remains read-only and server authorization remains authoritative.
+- The owner-approved Store Incentives and Store Targets Command Canvas cutover is
+  complete through merged PRs #1000 (`29708806`), #1001 (`a3641112`), #1002
+  (`d3058420`), #1003 (`0e72caf2`), #1004 (`35aeb870`), and #1005
+  (`5f8ce5ad`). Closeout PR #1006 is verified at source head `a37adef7` and
+  carries the final parity, legacy-removal, and controlled-pilot evidence; its
+  squash merge SHA must be read from fresh `origin/main` after merge rather
+  than predicted in this pre-merge handoff. Incentives and Targets prototype
+  parity pass on desktop and mobile, demo-only data and legacy owners are
+  removed, and protected staging reads pass for Region Manager, Report Viewer,
+  and Store Manager with zero browser mutation requests. Report Viewer remains
+  company-scoped/read-only, Store Manager remains own-store scoped, and broad
+  production remains `No-Go`; see
+  `docs/evidence/store-command-canvas-parity/2026-07-16-controlled-pilot-read-gate.md`.
 Next:
 1. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open runtime work.
 2. Keep ORG/ASSIGN correction and DG1-C contraction parked behind their recorded historical-authority and provider-usage gates. TREF has no hidden follow-up writer; real use remains subject to its runtime authorization, snapshot, and exact-base checks.
