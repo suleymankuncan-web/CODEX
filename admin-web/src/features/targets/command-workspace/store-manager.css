@@ -1,0 +1,342 @@
+.target-store-manager-page {
+  gap: 18px;
+}
+.target-store-distribution {
+  overflow: hidden;
+  border: 1px solid var(--store-command-line);
+  border-radius: 22px;
+  background: var(--store-command-surface);
+  box-shadow: var(--store-command-shadow);
+}
+.target-store-distribution > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid var(--store-command-line);
+  padding: 18px 20px;
+}
+.target-store-distribution h2 {
+  margin: 7px 0 0;
+  color: var(--store-command-ink);
+  font-size: 19px;
+}
+.target-store-distribution header p {
+  margin: 3px 0 0;
+  color: var(--store-command-muted);
+  font-size: 11px;
+}
+.target-store-state {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--store-command-plum-soft);
+  color: var(--store-command-plum-deep);
+  padding: 0 9px;
+  font-size: 9px;
+  font-weight: 820;
+}
+.target-store-state.is-approved,
+.target-store-state.is-adjusted_approved {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--store-command-success-ink);
+}
+.target-store-state.is-pending {
+  background: var(--store-command-warning-soft);
+  color: var(--store-command-warning-ink);
+}
+.target-store-state.is-returned,
+.target-store-state.is-revision_conflict,
+.target-store-state.is-stale_reference {
+  background: rgba(225, 29, 72, 0.08);
+  color: var(--store-command-danger);
+}
+.target-store-state.is-unknown {
+  background: rgba(100, 116, 139, 0.1);
+  color: var(--store-command-muted);
+}
+.target-store-update {
+  border: 1px solid var(--store-command-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--store-command-muted);
+  padding: 8px 12px;
+  font-size: 10px;
+}
+.target-entry-period {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+.target-entry-period > span {
+  color: var(--store-command-muted);
+  font-size: 9px;
+  font-weight: 760;
+}
+.target-entry-period button {
+  min-height: 40px;
+}
+.target-entry-period-popover {
+  width: min(360px, calc(100vw - 20px));
+  border-radius: 17px;
+  padding: 12px;
+}
+.target-entry-year {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.target-entry-months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.target-entry-months button {
+  display: grid;
+  min-height: 56px;
+  gap: 3px;
+  border: 1px solid var(--store-command-line);
+  border-radius: 10px;
+  background: white;
+  color: var(--store-command-ink);
+  padding: 7px;
+  text-align: left;
+}
+.target-entry-months button[aria-pressed="true"] {
+  border-color: var(--store-command-plum);
+  box-shadow: 0 0 0 2px var(--store-command-plum-soft);
+}
+.target-entry-months button.is-approved {
+  background: rgba(16, 185, 129, 0.06);
+}
+.target-entry-months button.is-pending {
+  background: var(--store-command-warning-soft);
+}
+.target-entry-months button.is-returned {
+  background: rgba(225, 29, 72, 0.06);
+}
+.target-entry-months span {
+  font-size: 11px;
+  font-weight: 760;
+}
+.target-entry-months small {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--store-command-muted);
+  font-size: 8px;
+}
+.target-entry-months svg {
+  width: 10px;
+  color: var(--store-command-success-ink);
+}
+.target-store-balance-grid {
+  display: grid;
+  grid-template-columns: 1.25fr repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 16px 20px;
+}
+.target-store-balance-grid > * {
+  display: grid;
+  align-content: center;
+  min-height: 92px;
+  gap: 5px;
+  border: 1px solid var(--store-command-line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 13px;
+}
+.target-store-balance-grid small,
+.target-store-balance-grid span {
+  color: var(--store-command-muted);
+  font-size: 9px;
+}
+.target-store-balance-grid strong {
+  font-size: 17px;
+}
+.target-store-balance-grid [data-tone="good"] {
+  border-color: rgba(16, 185, 129, 0.23);
+  background: rgba(16, 185, 129, 0.07);
+}
+.target-store-balance-grid [data-tone="warning"] {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: var(--store-command-warning-soft);
+}
+.target-store-balance-grid [data-tone="danger"] {
+  border-color: rgba(225, 29, 72, 0.2);
+  background: rgba(225, 29, 72, 0.06);
+}
+.target-store-money-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  border: 1px solid var(--store-command-line-strong);
+  border-radius: 10px;
+  background: white;
+  padding-right: 8px;
+}
+.target-store-money-input [data-slot="input"] {
+  min-width: 0;
+  border: 0;
+  box-shadow: none;
+  font-size: 16px;
+  text-align: right;
+}
+.target-store-money-input b {
+  color: var(--store-command-muted);
+  font-size: 10px;
+}
+.target-store-allocations {
+  border-block: 1px solid var(--store-command-line);
+}
+.target-store-allocation-head,
+.target-store-allocation-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(170px, 0.7fr) minmax(
+      110px,
+      0.45fr
+    );
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+}
+.target-store-allocation-head {
+  min-height: 36px;
+  background: rgba(248, 246, 250, 0.76);
+  color: var(--store-command-muted);
+  font-size: 9px;
+  font-weight: 780;
+}
+.target-store-allocation-row {
+  min-height: 66px;
+  border-top: 1px solid var(--store-command-line);
+}
+.target-store-allocation-row strong,
+.target-store-allocation-row small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.target-store-allocation-row strong {
+  font-size: 12px;
+}
+.target-store-allocation-row small {
+  margin-top: 2px;
+  color: var(--store-command-muted);
+  font-size: 9px;
+}
+.target-store-allocation-row > span:last-child {
+  text-align: right;
+}
+.target-store-allocation-empty {
+  display: grid;
+  min-height: 112px;
+  place-content: center;
+  color: var(--store-command-muted);
+  padding: 20px;
+  text-align: center;
+}
+.target-store-note {
+  display: grid;
+  gap: 7px;
+  margin: 16px 20px;
+}
+.target-store-origin-note {
+  display: grid;
+  gap: 5px;
+  margin: 16px 20px 0;
+  border: 1px solid var(--store-command-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 10px 12px;
+}
+.target-store-origin-note small {
+  color: var(--store-command-muted);
+  font-size: 9px;
+  font-weight: 760;
+}
+.target-store-origin-note p {
+  margin: 0;
+  color: var(--store-command-ink);
+  font-size: 11px;
+}
+.target-store-note textarea {
+  min-height: 76px;
+  font-size: 16px;
+}
+.target-store-note > small {
+  color: var(--store-command-muted);
+  font-size: 9px;
+}
+.target-store-distribution > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--store-command-line);
+  background: rgba(248, 246, 250, 0.5);
+  padding: 14px 20px;
+}
+.target-store-distribution footer strong,
+.target-store-distribution footer span {
+  display: block;
+}
+.target-store-distribution footer strong {
+  font-size: 12px;
+}
+.target-store-distribution footer span {
+  margin-top: 3px;
+  color: var(--store-command-muted);
+  font-size: 9px;
+}
+.target-store-message {
+  display: grid;
+  min-height: 260px;
+  place-content: center;
+  color: var(--store-command-muted);
+  padding: 24px;
+}
+@media (max-width: 640px) {
+  .target-store-distribution {
+    border-radius: 16px;
+  }
+  .target-store-distribution > header {
+    flex-direction: column;
+  }
+  .target-entry-period {
+    width: 100%;
+    justify-items: stretch;
+  }
+  .target-store-balance-grid {
+    grid-template-columns: 1fr;
+    padding: 12px;
+  }
+  .target-store-allocation-head {
+    display: none;
+  }
+  .target-store-allocation-row {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 13px;
+  }
+  .target-store-allocation-row > span:last-child {
+    text-align: left;
+  }
+  .target-store-note {
+    margin: 14px 12px;
+  }
+  .target-store-origin-note {
+    margin: 14px 12px 0;
+  }
+  .target-store-distribution > footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .target-store-distribution > footer button {
+    width: 100%;
+    min-height: 44px;
+  }
+  .target-entry-months {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

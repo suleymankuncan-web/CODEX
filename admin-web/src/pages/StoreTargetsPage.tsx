@@ -133,7 +133,7 @@ function getLatestTargetRequestMonth(requests: TargetDistributionRequest[]) {
 export function StoreTargetsPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
-  if (hasAnyRole(input.authSummary, ['REPORT_VIEWER', 'REGION_MANAGER'])) {
+  if (hasAnyRole(input.authSummary, ['REPORT_VIEWER', 'REGION_MANAGER', 'STORE_MANAGER'])) {
     return <TargetCommandWorkspaceOwner authSummary={input.authSummary} />
   }
 

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './test-fixtures'
+import { routeStoreManagerTargetCommand } from './store-targets-store-manager-command-fixtures'
 
 const companyId = '00000000-0000-0000-0000-000000000001'
 const storeId = '00000000-0000-0000-0000-000000000100'
@@ -115,9 +116,10 @@ test('store manager can acknowledge completed checklist work and refresh the tas
 })
 
 test('store manager critical pages keep correct workflow boundaries', async ({ page }) => {
+  await routeStoreManagerTargetCommand(page)
   await page.goto('/store/targets?tab=distribution')
-  await expect(page.getByTestId('store-targets-contract-surface')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Hedefler' })).toBeVisible()
+  await expect(page.locator('[data-command-canvas-page].target-store-manager-page')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
   await expect(page).toHaveURL(/tab=distribution/)
   await expect(page).not.toHaveURL(/tab=approval/)
 
