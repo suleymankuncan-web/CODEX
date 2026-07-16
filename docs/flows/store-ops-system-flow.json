@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-16T00:31:50.155Z",
+  "generatedAt": "2026-07-16T08:47:31.770Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -12,8 +12,8 @@
     "frontendRouteCount": 54,
     "matchedFrontendApiCallCount": 167,
     "openApiEndpointCount": 203,
-    "routeApiEdgeCount": 233,
-    "routesWithoutApiCallCount": 2,
+    "routeApiEdgeCount": 226,
+    "routesWithoutApiCallCount": 3,
     "unmatchedFrontendApiCallCount": 0,
     "unresolvedFrontendApiCallCount": 0
   },
@@ -8714,41 +8714,6 @@
         "apiCallId": "api:128"
       },
       {
-        "id": "edge:route:store:/store/targets:api:145",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:145"
-      },
-      {
-        "id": "edge:route:store:/store/targets:api:146",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:146"
-      },
-      {
-        "id": "edge:route:store:/store/targets:api:147",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:147"
-      },
-      {
-        "id": "edge:route:store:/store/targets:api:148",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:148"
-      },
-      {
-        "id": "edge:route:store:/store/targets:api:149",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:149"
-      },
-      {
-        "id": "edge:route:store:/store/targets:api:150",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:150"
-      },
-      {
-        "id": "edge:route:store:/store/targets:api:151",
-        "routeId": "route:store:/store/targets",
-        "apiCallId": "api:151"
-      },
-      {
         "id": "edge:route:store:/store/tasks:api:138",
         "routeId": "route:store:/store/tasks",
         "apiCallId": "api:138"
@@ -10087,7 +10052,8 @@
     ],
     "routesWithoutApiCalls": [
       "route:store:/store/incentives",
-      "route:store:/store/settings"
+      "route:store:/store/settings",
+      "route:store:/store/targets"
     ],
     "unmatchedApiCalls": [],
     "unresolvedFrontendApiCalls": []

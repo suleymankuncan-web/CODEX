@@ -1,4 +1,5 @@
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
 import { expect, test, type Page } from './test-fixtures'
 import { expectCommandCanvasFrame } from './fixtures/command-canvas-parity-harness'
 import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
@@ -6,6 +7,13 @@ import { routeTargetWorkspace } from './store-targets-command-fixtures'
 import { routeStoreManagerTargetCommand } from './store-targets-store-manager-command-fixtures'
 
 const capture = process.env.CAPTURE_COMMAND_CANVAS_EVIDENCE === '1'
+
+type Rect = { x: number; y: number; width: number; height: number }
+type TargetGeometry = Record<string, Rect | number | null>
+const geometryManifest = JSON.parse(readFileSync(fileURLToPath(new URL(
+  '../../docs/evidence/store-command-canvas-parity/targets/prototype-geometry-v1.json',
+  import.meta.url,
+)), 'utf8')) as { tolerancePx: number; scenarios: Record<string, TargetGeometry> }
 
 for (const scenario of [
   {
@@ -80,6 +88,10 @@ for (const scenario of [
     await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
     if (scenario.view === 'report_viewer') await page.getByRole('button', { name: /Deniz Akar/ }).click()
     await expectCommandCanvasFrame(page)
+    await page.evaluate(async () => { await document.fonts.ready })
+    const geometry = await measureTargetGeometry(page)
+    expectGeometryToMatch(geometry, geometryManifest.scenarios[scenario.file], geometryManifest.tolerancePx)
+    if (capture) console.log(JSON.stringify({ scenario: scenario.file, geometry }))
     await expect(page.locator('[data-command-canvas-page]')).toHaveCount(1)
     await expect(page.locator('.target-command-row')).toHaveCount(3)
     await expect(page.locator('.role-switcher')).toHaveCount(0)
@@ -183,6 +195,10 @@ for (const scenario of [
     await page.goto('/store/targets')
     await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
     await expectCommandCanvasFrame(page)
+    await page.evaluate(async () => { await document.fonts.ready })
+    const geometry = await measureTargetGeometry(page)
+    expectGeometryToMatch(geometry, geometryManifest.scenarios[scenario.file], geometryManifest.tolerancePx)
+    if (capture) console.log(JSON.stringify({ scenario: scenario.file, geometry }))
     await expect(page.locator('.target-store-distribution')).toHaveCount(1)
     await expect(page.locator('.command-canvas-metric')).toHaveCount(4)
     await expect(page.getByLabel('Toplam mağaza hedefi')).toHaveCSS('font-size', '16px')
@@ -240,4 +256,56 @@ async function prepare(
 
 function evidencePath(file: string) {
   return fileURLToPath(new URL(`../../docs/evidence/store-command-canvas-parity/targets/${file}`, import.meta.url))
+}
+
+async function measureTargetGeometry(page: Page): Promise<TargetGeometry> {
+  return page.evaluate(() => {
+    const root = document.querySelector<HTMLElement>('[data-command-canvas-page]')
+    if (!root) throw new Error('Command Canvas root is missing.')
+    const rootRect = root.getBoundingClientRect()
+    const rect = (selector: string) => {
+      const element = document.querySelector<HTMLElement>(selector)
+      if (!element) return null
+      const value = element.getBoundingClientRect()
+      return {
+        x: Math.round((value.x - rootRect.x) * 100) / 100,
+        y: Math.round((value.y - rootRect.y) * 100) / 100,
+        width: Math.round(value.width * 100) / 100,
+        height: Math.round(value.height * 100) / 100,
+      }
+    }
+    return {
+      pageWidth: Math.round(rootRect.width * 100) / 100,
+      header: rect('.command-canvas-page-header'),
+      headerAction: rect('.command-canvas-page-header > .command-canvas-action-cluster'),
+      metrics: rect('[data-command-metric-rail]'),
+      filter: rect('[data-command-canvas-filter-bar]'),
+      workspace: rect('.target-command-workbench'),
+      viewerIntro: rect('.target-command-viewer-intro'),
+      firstRegion: rect('.target-command-region-head'),
+      firstStore: rect('.target-command-row'),
+      distribution: rect('.target-store-distribution'),
+      distributionTop: rect('.target-store-distribution')?.y ?? null,
+      distributionWidth: rect('.target-store-distribution')?.width ?? null,
+    }
+  })
+}
+
+function expectGeometryToMatch(actual: TargetGeometry, expected: TargetGeometry | undefined, tolerancePx: number) {
+  expect(expected, 'Prototype geometry scenario is missing from the committed manifest.').toBeDefined()
+  for (const [key, expectedValue] of Object.entries(expected ?? {})) {
+    const actualValue = actual[key]
+    if (typeof expectedValue === 'number') {
+      expect(actualValue, `${key} must be numeric.`).toEqual(expect.any(Number))
+      expect(Math.abs((actualValue as number) - expectedValue), `${key} exceeds the ${tolerancePx}px parity tolerance.`).toBeLessThanOrEqual(tolerancePx)
+      continue
+    }
+    expect(actualValue, `${key} is missing from production geometry.`).not.toBeNull()
+    for (const coordinate of ['x', 'y', 'width', 'height'] as const) {
+      expect(
+        Math.abs((actualValue as Rect)[coordinate] - expectedValue[coordinate]),
+        `${key}.${coordinate} exceeds the ${tolerancePx}px parity tolerance.`,
+      ).toBeLessThanOrEqual(tolerancePx)
+    }
+  }
 }

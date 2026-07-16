@@ -45,7 +45,7 @@ export function TargetWorkspaceScaffold(input: {
         titleId="store-targets-command-title" eyebrow={copy.eyebrow}
         title={viewer ? copy.viewerTitle : copy.regionTitle}
         description={viewer ? copy.viewerDescription : copy.regionDescription}
-        actions={<CommandCanvasMonthYearPicker ariaLabel={copy.selectPeriod} locale={locale} onValueChange={input.onPeriodChange} value={input.period} />}
+        actions={<div className="target-command-period"><span>{copy.viewedPeriod}</span><CommandCanvasMonthYearPicker ariaLabel={copy.selectPeriod} locale={locale} onValueChange={input.onPeriodChange} value={input.period} /></div>}
       />
       <CommandCanvasMetricRail ariaLabel={copy.totalTarget}>
         <CommandCanvasMetricFilter active={false} icon={<CircleDollarSign size={16} />} label={copy.totalTarget} note={copy.selectedPeriod} onClick={() => setStatus('all')} tone="plum" value={formatTargetMoney(input.workspace.summary?.totalTargetValue, locale)} />

@@ -47,6 +47,7 @@ automated evidence suite without replacing the base-page captures.
 - Desktop, tablet, and mobile verification reports no page-level horizontal
   overflow and no axe violations within the Command Canvas page.
 - `prototype-geometry-v1.json` is the versioned approved-reference manifest.
+- Deterministic result: `Prototype parity: PASS` for Incentives.
   `store-incentives-parity-evidence.spec.ts` waits for production fonts and
   asserts every recorded base-page landmark within one CSS pixel at all eight
   role/viewport combinations.

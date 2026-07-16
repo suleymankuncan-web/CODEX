@@ -17,18 +17,19 @@ export function TargetWorkspaceHierarchy(input: {
   const { locale } = useLocalization()
   const copy = getTargetCommandCopy(locale)
   const viewer = input.workspace.view === 'report_viewer'
-  const [openRegions, setOpenRegions] = useState<string[]>(() => input.workspace.companies.flatMap((company) => company.regions.slice(0, 1).map((region) => region.regionId)))
+  const regions = input.workspace.companies.flatMap((company) => company.regions)
+  const [openRegions, setOpenRegions] = useState<string[]>(() => regions.slice(0, 1).map((region) => region.regionId))
   const list = (stores: TargetCommandStore[], ariaLabel: string) => (
     <CommandCanvasDataList ariaLabel={ariaLabel} className="target-command-list" header={<TargetListHeader copy={copy} sort={input.sort} onSort={input.onSort} />}>
       {sortTargetStores(stores, input.sort).map((store) => <TargetStoreRow key={store.storeId} store={store} locale={locale} onOpen={input.onOpen} />)}
     </CommandCanvasDataList>
   )
   if (!viewer) return <>{input.workspace.companies.flatMap((company) => company.regions.map((region) => <div key={region.regionId}>{list(region.stores, `${region.regionName ?? copy.regionFallback} · ${copy.totalStores}`)}</div>))}</>
-  return <div className="target-command-viewer-groups">{input.workspace.companies.flatMap((company) => company.regions.map((region) => {
+  return <><div className="target-command-viewer-intro"><div><h2>{copy.regions}</h2><p>{copy.viewerHierarchyHint}</p></div><span>{regions.length} {copy.regionManagerCount}</span></div><div className="target-command-viewer-groups">{regions.map((region) => {
     const open = openRegions.includes(region.regionId)
     const manager = region.regionManager.displayName ?? copy.managerFallback
     return <section className="target-command-region" key={region.regionId}><button className="target-command-region-head" aria-expanded={open} onClick={() => setOpenRegions((current) => open ? current.filter((id) => id !== region.regionId) : [...current, region.regionId])}><span className="target-command-avatar">{manager.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span><span><strong>{manager}</strong><small>{region.regionName ?? copy.regionFallback}</small></span><span><strong>{region.stores.length}</strong><small>{copy.stores}</small></span><span><strong>{region.stores.filter((store) => store.status === 'pending').length}</strong><small>{copy.decisionWaiting}</small></span><ChevronDown size={17} /></button>{open ? list(region.stores, `${manager} · ${copy.totalStores}`) : null}</section>
-  }))}</div>
+  })}</div></>
 }
 
 function TargetListHeader(input: { copy: ReturnType<typeof getTargetCommandCopy>; sort: TargetCommandSortState; onSort: (key: TargetCommandSortState['key']) => void }) {
