@@ -78,6 +78,7 @@ import {
 } from './store-surface-primitives'
 import { StoreTargetsRegionCommand } from './store-targets-region-command'
 import { StoreTargetsPeriodPicker } from './store-targets-period-picker'
+import { TargetCommandWorkspaceOwner } from '../features/targets/command-workspace/workspace-owner'
 
 function getQueryMonthInput(value: string | null) {
   if (!value) {
@@ -130,6 +131,16 @@ function getLatestTargetRequestMonth(requests: TargetDistributionRequest[]) {
 }
 
 export function StoreTargetsPage(input: {
+  authSummary: AuthSessionSummary | null
+}) {
+  if (hasAnyRole(input.authSummary, ['REPORT_VIEWER', 'REGION_MANAGER'])) {
+    return <TargetCommandWorkspaceOwner authSummary={input.authSummary} />
+  }
+
+  return <StoreTargetsLegacyPage authSummary={input.authSummary} />
+}
+
+function StoreTargetsLegacyPage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { locale } = useLocalization()

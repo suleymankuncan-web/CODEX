@@ -1,5 +1,6 @@
 import { expect, test } from './test-fixtures'
 import type { Page } from '@playwright/test'
+import { createTargetWorkspace } from './store-targets-command-fixtures'
 
 const demoStoreId = '00000000-0000-0000-0000-000000000100'
 const nonPrimaryStoreId = '00000000-0000-0000-0000-000000000101'
@@ -9,7 +10,6 @@ const periodMonthCopy: Record<string, { full: string; short: string }> = {
   '2026-05': { full: 'May', short: 'May' },
   '2026-06': { full: 'Haziran', short: 'Haz' },
 }
-
 async function selectTargetPeriod(page: Page, period: string) {
   const monthCopy = periodMonthCopy[period]
   await page.getByRole('button', { name: 'Dönem' }).first().click()
@@ -60,6 +60,10 @@ test.beforeEach(async ({ page }) => {
   })
   await page.route('**/api/target-distributions/revision-basis**', async (route) => {
     await route.fulfill({ json: targetRevisionBasisFixture })
+  })
+  await page.route('**/api/store/targets/workspace**', async (route) => {
+    const offset = Number(new URL(route.request().url()).searchParams.get('offset') ?? '0')
+    await route.fulfill({ json: createTargetWorkspace('region_manager', { offset }) })
   })
 })
 
@@ -166,52 +170,13 @@ test('store targets page renders only role-fit target flows', async ({ page }) =
 
   await page.goto('/store/targets')
 
-  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.locator('.targets-prototype')).toBeVisible()
-  await expect(page.locator('.targets-ledger')).toBeVisible()
+  await expect(page.locator('[data-command-canvas-page]')).toBeVisible()
+  await expect(page.locator('.target-command-list')).toBeVisible()
   await expect(page.getByRole('button', { name: /Onay bekleyen/ })).toBeVisible()
   await expect(page.getByRole('radio', { name: /Dağıtım talebi/ })).toHaveCount(0)
   await expect(page.getByRole('radio', { name: /Revize Talebi/ })).toHaveCount(0)
 })
 
-test('store targets page keeps command surface after target request approval', async ({ page }) => {
-  await page.unroute('**/api/auth/session')
-  await page.unroute('**/api/target-distributions/requests**')
-  await page.unroute('**/api/target-distributions/coverage**')
-  await page.unroute('**/api/target-distributions/store-personnel**')
-  await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({
-      json: {
-        ...authSessionFixture,
-        user: {
-          ...authSessionFixture.user,
-          roleCodes: ['REGION_MANAGER'],
-          actionScope: {
-            assignedStoreIds: [demoStoreId],
-          },
-          assignedStoreIds: [demoStoreId],
-        },
-      },
-    })
-  })
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({ json: approvedTargetDistributionRequestsFixture })
-  })
-  await page.route('**/api/target-distributions/coverage**', async (route) => {
-    await route.fulfill({ json: approvedTargetCoverageFixture })
-  })
-  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
-    await route.fulfill({ json: storeTargetingPersonnelFixture })
-  })
-
-  await page.goto('/store/targets')
-
-  await expect(page.locator('.targets-prototype')).toBeVisible()
-  await expect(page.locator('.targets-ledger')).toBeVisible()
-  await expect(page.getByRole('button', { name: /IstinyePark Demo Store/ })).toBeVisible()
-  await expect(page.locator('.targets-status.success', { hasText: 'Onaylandı' })).toBeVisible()
-  await expect(page.locator('[data-testid="store-targets-contract-surface"] [data-store-section-card]')).toHaveCount(0)
-})
 
 test('store targets page opens latest visible target request month when no month is provided', async ({ page }) => {
   const requestUrls: URL[] = []
@@ -236,55 +201,6 @@ test('store targets page opens latest visible target request month when no month
   await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-06-01')
 })
 
-test('store targets page keeps region managers on latest approved or pending target month', async ({ page }) => {
-  const coverageUrls: URL[] = []
-
-  await page.unroute('**/api/auth/session')
-  await page.unroute('**/api/target-distributions/requests**')
-  await page.unroute('**/api/target-distributions/coverage**')
-  await page.unroute('**/api/target-distributions/store-personnel**')
-  await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({
-      json: {
-        ...authSessionFixture,
-        user: {
-          ...authSessionFixture.user,
-          roleCodes: ['REGION_MANAGER'],
-          actionScope: {
-            assignedStoreIds: [demoStoreId, nonPrimaryStoreId],
-          },
-          assignedStoreIds: [demoStoreId, nonPrimaryStoreId],
-        },
-        scopeSummary: {
-          ...authSessionFixture.scopeSummary,
-          storeCount: 2,
-          assignedStoreCount: 2,
-        },
-      },
-    })
-  })
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({ json: approvedWithRejectedNewerTargetRequestsFixture })
-  })
-  await page.route('**/api/target-distributions/coverage**', async (route) => {
-    coverageUrls.push(new URL(route.request().url()))
-    await route.fulfill({ json: targetCoverageFixture })
-  })
-  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
-    await route.fulfill({ json: storeTargetingPersonnelFixture })
-  })
-
-  await page.goto('/store/targets')
-
-  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expectTargetPeriod(page, '2026-05')
-  await expect.poll(() => coverageUrls.at(-1)?.searchParams.get('requestMonth')).toBe('2026-05-01')
-  await expect(page.locator('.targets-prototype')).toBeVisible()
-  await expect(page.locator('.targets-ledger')).toBeVisible()
-  await expect(page.getByText('Mayis hedef dagitimi')).toBeVisible()
-  await expect(page.getByText('1 onaylandı')).toBeVisible()
-  await expect(page.locator('.targets-metric').filter({ hasText: 'Hedefsiz mağaza' })).toContainText('1')
-})
 
 test('store targets page honors query store id for multi-store managers', async ({ page }) => {
   const requestUrls: URL[] = []
@@ -361,190 +277,7 @@ test('store targets page honors query store id for multi-store managers', async 
   expect(coverageUrls.at(-1)?.searchParams.get('storeId')).toBe(nonPrimaryStoreId)
 })
 
-test('store targets page lets region managers approve pending target requests in scope', async ({ page }) => {
-  let capturedPayload: unknown = null
-  let approvedAfterPatch = false
 
-  await page.unroute('**/api/auth/session')
-  await page.unroute('**/api/target-distributions/requests**')
-  await page.unroute('**/api/target-distributions/coverage**')
-  await page.unroute('**/api/target-distributions/store-personnel**')
-  await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({
-      json: {
-        ...authSessionFixture,
-        user: {
-          ...authSessionFixture.user,
-          roleCodes: ['REGION_MANAGER'],
-          actionScope: {
-            assignedStoreIds: [demoStoreId],
-          },
-          assignedStoreIds: [demoStoreId],
-        },
-      },
-    })
-  })
-  await page.route('**/api/target-distributions/coverage**', async (route) => {
-    await route.fulfill({ json: targetCoverageFixture })
-  })
-  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
-    await route.fulfill({ json: storeTargetingPersonnelFixture })
-  })
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'GET') {
-      await route.fulfill({
-        json: approvedAfterPatch
-          ? approvedTargetDistributionRequestsFixture
-          : pendingTargetDistributionRequestsFixture,
-      })
-      return
-    }
-
-    capturedPayload = request.postDataJSON()
-    expect(request.url()).toContain(`/requests/${pendingTargetRequestId}/approve`)
-    expect(capturedPayload).toEqual({
-      approvalNote: 'Bolge onayi',
-    })
-
-    await route.fulfill({
-      json: {
-        command: {
-          status: 'approved',
-          message: 'Target distribution request approved',
-        },
-        data: {
-          request: {
-            ...pendingTargetDistributionRequestsFixture.items[0],
-            status: 'approved',
-            approvedByUserId: 'region-user-1',
-            approvedAt: '2026-05-11T08:00:00.000Z',
-            approvalNote: 'Bolge onayi',
-          },
-        },
-      },
-    })
-    approvedAfterPatch = true
-  })
-
-  await page.goto('/store/targets')
-
-  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await selectTargetPeriod(page, '2026-05')
-  await expect(page.locator('.targets-ledger')).toBeVisible()
-  await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
-  await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
-  await expect(page.locator('.targets-detail-head')).toContainText('Mayis hedef dagitimi')
-  await page.getByLabel('Karar notu').fill('Bolge onayi')
-  await page.getByRole('button', { name: /^Onayla$/ }).click()
-
-  await expect(page.getByText('Target distribution request approved')).toBeVisible()
-  await expect(page.locator('.targets-prototype')).toBeVisible()
-  await expect(page.locator('.targets-ledger')).toContainText('Mayis hedef dagitimi')
-  expect(capturedPayload).not.toBeNull()
-})
-
-test('store targets page lets region managers approve with edited target allocations', async ({ page }) => {
-  let capturedPayload: unknown = null
-  let approvedAfterPatch = false
-
-  await page.unroute('**/api/auth/session')
-  await page.unroute('**/api/target-distributions/requests**')
-  await page.unroute('**/api/target-distributions/coverage**')
-  await page.unroute('**/api/target-distributions/store-personnel**')
-  await page.route('**/api/auth/session', async (route) => {
-    await route.fulfill({
-      json: {
-        ...authSessionFixture,
-        user: {
-          ...authSessionFixture.user,
-          roleCodes: ['REGION_MANAGER'],
-          actionScope: {
-            assignedStoreIds: [demoStoreId],
-          },
-          assignedStoreIds: [demoStoreId],
-        },
-      },
-    })
-  })
-  await page.route('**/api/target-distributions/coverage**', async (route) => {
-    await route.fulfill({ json: targetCoverageFixture })
-  })
-  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
-    await route.fulfill({ json: storeTargetingPersonnelFixture })
-  })
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    const request = route.request()
-
-    if (request.method() === 'GET') {
-      await route.fulfill({
-        json: approvedAfterPatch
-          ? approvedTargetDistributionRequestsFixture
-          : pendingTargetDistributionRequestsWithTwoAllocationsFixture,
-      })
-      return
-    }
-
-    capturedPayload = request.postDataJSON()
-    expect(request.url()).toContain(`/requests/${pendingTargetRequestId}/approve`)
-    expect(capturedPayload).toEqual({
-      approvalNote: 'Bolge hedefi dengeledi',
-      approvedTotalTargetValue: 145000,
-      approvedAllocations: [
-        {
-          employeeId: demoEmployeeId,
-          assigneeLabel: 'Store Personnel',
-          targetValue: 40000,
-        },
-        {
-          employeeId: '00000000-0000-0000-0000-000000000203',
-          assigneeLabel: 'Store Personnel Covered',
-          targetValue: 105000,
-        },
-      ],
-    })
-
-    await route.fulfill({
-      json: {
-        command: {
-          status: 'approved',
-          message: 'Target distribution request approved',
-        },
-        data: {
-          request: {
-            ...pendingTargetDistributionRequestsWithTwoAllocationsFixture.items[0],
-            status: 'approved',
-            approvedByUserId: 'region-user-1',
-            approvedAt: '2026-05-11T08:00:00.000Z',
-            approvalNote: 'Bolge hedefi dengeledi',
-          },
-        },
-      },
-    })
-    approvedAfterPatch = true
-  })
-
-  await page.goto('/store/targets')
-
-  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await selectTargetPeriod(page, '2026-05')
-  await expect(page.locator('.targets-ledger')).toBeVisible()
-  await page.getByRole('button', { name: /IstinyePark Demo Store/ }).click()
-  await expect(page.getByRole('button', { name: /^Onayla$/ })).toBeVisible()
-
-  await page.getByLabel('Store Personnel Hedef').fill('40000')
-  await expect(page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true })).toBeDisabled()
-  await expect(page.getByText(/eksik dağıtıldı/)).toBeVisible()
-
-  await page.getByLabel('Store Personnel Covered Hedef').fill('105000')
-  await expect(page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true })).toBeDisabled()
-  await page.getByLabel('Karar notu').fill('Bolge hedefi dengeledi')
-  await page.getByRole('button', { name: 'Düzenleyerek onayla', exact: true }).click()
-
-  await expect(page.getByText('Target distribution request approved')).toBeVisible()
-  expect(capturedPayload).not.toBeNull()
-})
 
 test('store targets page submits revision requests from approved target snapshots', async ({ page }) => {
   let capturedPayload: unknown = null

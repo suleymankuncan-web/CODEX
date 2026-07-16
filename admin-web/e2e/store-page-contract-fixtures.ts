@@ -211,7 +211,7 @@ function createOrgStores() {
       status: 'active',
       store_code: `CONTRACT-${index + 1}`,
       store_id: storeId,
-      store_name: ['BalÄ±kesir 10 Burda AVM', 'Bursa Downtown AVM', 'Ä°stanbul MOI AVM'][index],
+      store_name: ['Balıkesir 10 Burda AVM', 'Bursa Downtown AVM', 'İstanbul MOI AVM'][index],
     })),
     meta: { total: storeIds.length },
   }
