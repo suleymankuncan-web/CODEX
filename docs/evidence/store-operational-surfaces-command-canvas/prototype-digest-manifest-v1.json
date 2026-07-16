@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-16",
+  "repositoryBaseSha": "b35593ff51749286ebe40440cba08ff06f510e28",
+  "algorithm": "sha256",
+  "status": "owner_approved_locked_reference",
+  "purpose": "Immutable source and approved-capture identity for the KPI Ozetleri, Talep Merkezi, Norm Kadro and Gorevler Command Canvas production cutover.",
+  "prototype": {
+    "id": "store-operations-command-canvas-v1",
+    "authoritativeRoot": "D:\\hr-axis-external-lab\\prototypes\\store-operations-command-canvas-v1",
+    "localUrlAtCapture": "http://127.0.0.1:5204",
+    "selectionDigest": {
+      "sha256": "82c36fb05309cb1a2799e79f32978c5639339062e89235830dd4a4d6caf218f1",
+      "entryCount": 31,
+      "canonicalization": "Sort sources and captures by slash-normalized relative path, then SHA-256 the UTF-8 concatenation of path, TAB, lowercase sha256 and LF for every entry."
+    },
+    "surfaces": [
+      { "route": "/store/kpis", "prototypePage": "kpis", "label": "KPI Ozetleri" },
+      { "route": "/store/approvals", "prototypePage": "approvals", "label": "Talep Merkezi" },
+      { "route": "/store/workforce", "prototypePage": "workforce", "label": "Norm Kadro" },
+      { "route": "/store/tasks", "prototypePage": "tasks", "label": "Gorevler" }
+    ],
+    "contractMatrices": {
+      "roles": [
+        { "role": "REPORT_VIEWER", "scope": "company_to_region_manager_to_store", "mutations": "none" },
+        { "role": "REGION_MANAGER", "scope": "assigned_region_and_stores", "mutations": "existing_authorized_only" },
+        { "role": "STORE_MANAGER", "scope": "assigned_store", "mutations": "existing_authorized_only" }
+      ],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "local_filter_empty",
+        "partial",
+        "background_error",
+        "full_error_retry",
+        "unauthorized"
+      ],
+      "viewports": [
+        "1440x900",
+        "1024x768",
+        "390x844",
+        "320x844"
+      ]
+    },
+    "sources": [
+      { "path": "src/App.tsx", "sha256": "238cac411f3ec1e9cedba2fc062b527af6c1fbf034fdaeceab52ee3e28370373", "bytes": 123849 },
+      { "path": "src/main.tsx", "sha256": "9c497c04f6496407895965da64e56723a9e16324f6869601430089bf443290c0", "bytes": 225 },
+      { "path": "src/styles.css", "sha256": "06ee563897f5516fa44f8bedcf3c7f9ce4d1c7ecf84583c4df43aef0c4394ee7", "bytes": 42023 },
+      { "path": "index.html", "sha256": "64938af5260cd2a2a3a5df320f2d05187a4afa9c1a7baf90610ef1f57ae74751", "bytes": 371 },
+      { "path": "package.json", "sha256": "0270cff85740e56bad2532371972f68ed681c6767d805a0a6f8bd1e07e456b37", "bytes": 553 },
+      { "path": "package-lock.json", "sha256": "3d9b6130a30904217f5fff57af3c8637cbe745b40adda913dab1575630dcd571", "bytes": 47568 },
+      { "path": "tsconfig.json", "sha256": "83efc1798334967d5a907f26b8cba31fa213f16b5ac0ed5c02fd38e7cf0ceb66", "bytes": 527 },
+      { "path": "vite.config.ts", "sha256": "2e22169dcf47cfa4b5ed63f65ff54d622a6f8d6927e2950e216ada60ae1d1566", "bytes": 130 },
+      { "path": "README.md", "sha256": "21889f217860928d70d99d08170387dc10d4072af586bfe3b1375b6a0b2d82e1", "bytes": 3964 },
+      { "path": "DESIGN-RISK-REGISTER.md", "sha256": "7a6872ec6948e9bb3c1c9bf020e2cfa1cebd457f5880bd1bd68cb8d94af274fa", "bytes": 14380 },
+      { "path": "verify-refinement.mjs", "sha256": "685014c495f4913485a0aa5547a1a078a080e2dae968258fc268be2979a384d5", "bytes": 12551 },
+      { "path": "verify-rail.mjs", "sha256": "fadfb7500970735edfec4b01c1df7eb7d2275de80d1614a5cefc23445bc6687e", "bytes": 1302 },
+      { "path": "verify.mjs", "sha256": "92c13698c593ccaf675f8e0a6caf81233237c77886d33b4789a8d9a6c85f5e75", "bytes": 6391 }
+    ],
+    "captures": [
+      { "path": "screenshots/decision-rail/kpis-1440.png", "viewport": "1440x900", "sha256": "1bfd67270f0fb54dc780a00c2a9f8d5552f051fc1c84e2f65ca5ba0e9d2c2da4" },
+      { "path": "screenshots/decision-rail/kpis-1024.png", "viewport": "1024x768", "sha256": "a70ff7e5f86f8a6ee0663711a3715f7b89e95a6ab8c8c6a7e42a42e969eba305" },
+      { "path": "screenshots/decision-rail/kpis-390.png", "viewport": "390x844", "sha256": "203a52c866ade28e79a61fa0e9d0b7843ef68c8adb8a60b2a2ddcb674a4ed276" },
+      { "path": "screenshots/decision-rail/kpis-320.png", "viewport": "320x844", "sha256": "9c040031ddf67e910b24cd426ab5cc054da561b7268e303d015b96c9ad0cce2d" },
+      { "path": "screenshots/decision-rail/kpi-viewer-company-1440.png", "viewport": "1440x900", "sha256": "037dc4b286dcaf7a55e7ac415e5c8bd1681304870df8c80717d1402a2f2d4946" },
+      { "path": "screenshots/decision-rail/kpi-viewer-person-390.png", "viewport": "390x844", "sha256": "ff3649a3e7861526f5db3a4f40fb3463187cf7564f2f47b3872d06eb1defcba3" },
+      { "path": "screenshots/decision-rail/kpi-contract-1440.png", "viewport": "1440x900", "sha256": "6330fadcd64296dfaa95028813175225ee00ab76393c07ea52210223432fc6b7" },
+      { "path": "screenshots/decision-rail/kpi-store-person-390.png", "viewport": "390x844", "sha256": "b78290b567537d14ea5335808a4116379dbba64fdc3a08b7b9b3923adb15bd1e" },
+      { "path": "screenshots/decision-rail/approvals-1440.png", "viewport": "1440x900", "sha256": "754d4656fc03a8c2c74c56ead1cb2b2fc31c19c67f21d632981ddea67e2eed36" },
+      { "path": "screenshots/decision-rail/approvals-390.png", "viewport": "390x844", "sha256": "5a08f9ad658c2376b15c4c2304d07e537a28e255a48e97b81e3a7f197700c876" },
+      { "path": "screenshots/decision-rail/approval-drawer-1440.png", "viewport": "1440x900", "sha256": "9a3f8891b2ef5e5e52abb62d3e98ad32805a85ac9d74e9998369a580a7305789" },
+      { "path": "screenshots/decision-rail/approval-drawer-390.png", "viewport": "390x844", "sha256": "004cd01c5caf5bcb0128c40cb28d8ef7c1e89c569ae70be157209e14aa7bf437" },
+      { "path": "screenshots/decision-rail/workforce-employment-1440.png", "viewport": "1440x900", "sha256": "562825f8b64874ee71d99e6210d960c07af9daee4daa1f9ed4e526e46a78d223" },
+      { "path": "screenshots/decision-rail/workforce-employment-390.png", "viewport": "390x844", "sha256": "4c3728565797ae3a0288983b565165e5b70b7e9ca7ef395d77a212a20f175608" },
+      { "path": "screenshots/decision-rail/tasks-1440.png", "viewport": "1440x900", "sha256": "e5006af3d325075ed7fa99f0a5b77afda7800435d29fe182b1fe4973427e643d" },
+      { "path": "screenshots/decision-rail/tasks-390.png", "viewport": "390x844", "sha256": "6291be57baa3deaea2e833ae5ae92ea31db4173d393092d6c147ddfa12db67ac" },
+      { "path": "screenshots/decision-rail/task-drawer-1440.png", "viewport": "1440x900", "sha256": "9004ce5ef9311d6bb0ef22c5a12e3d67943042fab5b18f34b3c196e90a8e9a63" },
+      { "path": "screenshots/decision-rail/task-drawer-390.png", "viewport": "390x844", "sha256": "dc50681fb2eab7fddf805716957c6b22e5708fd5a55da6966eb2b5e586662660" }
+    ]
+  },
+  "lockRules": [
+    "The prototype is authoritative for visible layout, density, typography, status tones, copy, decision rails, sorting, drill paths, drawers, dialogs and responsive behavior.",
+    "The repository remains authoritative for identity, role scope, permissions, API and database truth, KPI calculations, persistence and workflow invariants.",
+    "Production removes the Labs bar, role and state selectors, fixtures, duplicated shell and duplicated navigation.",
+    "Every visible production value must be live-data-backed or render an honest loading, empty, partial, unavailable, error or access state.",
+    "A source or capture hash change creates a new prototype version; it must not silently alter this locked reference."
+  ]
+}
