@@ -125,6 +125,7 @@ describe("RequestCenterReadRepository", () => {
     expect(eventSql).toContain("COUNT(*) OVER");
     expect(eventSql).toContain("event_type = ANY");
     expect(eventSql).not.toContain("metadata_json");
+    expect([countSql, pageSql, eventSql].join("\n")).not.toContain("target_distribution_request.rejected");
     expect(result.items[0]).toEqual(expect.objectContaining({
       events: [expect.objectContaining({ event_type: "target_distribution_request.created" })],
     }));

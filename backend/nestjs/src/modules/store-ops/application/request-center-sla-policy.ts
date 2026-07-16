@@ -20,6 +20,7 @@ export function resolveAuthoritativeWaitingSince(input: {
 }) {
   if (input.status === "approved") return null;
   if (input.requestType === "target" && input.status === "pending_region_approval") return input.createdAt;
+  if (input.requestType === "target" && input.status === "rejected") return input.reviewedAt;
 
   const prefix = input.requestType === "sellerCode"
     ? "seller_code_request"
@@ -75,7 +76,7 @@ function resolveActivePolicy(requestType: RequestCenterPolicyType, status: strin
   if (requestType !== "target" && status === "pending_hr_approval") {
     return { nextOwner: "hr" as const, calendarDays: REQUEST_CENTER_SLA_POLICY.workforcePendingHrDays };
   }
-  if (status === "rejected") {
+  if (requestType !== "target" && status === "rejected") {
     return { nextOwner: "store" as const, calendarDays: REQUEST_CENTER_SLA_POLICY.workforceReturnedStoreDays };
   }
   return null;

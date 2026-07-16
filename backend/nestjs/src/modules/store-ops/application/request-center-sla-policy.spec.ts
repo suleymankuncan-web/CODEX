@@ -34,4 +34,18 @@ describe("request center owner-approved SLA policy", () => {
     expect(resolveRequestCenterTiming({ requestType: "sellerCode", status: "approved", waitingSince: "2026-07-10T09:00:00.000Z", now })).toEqual({ waitingSince: null, nextOwner: null, dueAt: null, isOverdue: false });
     expect(resolveRequestCenterTiming({ requestType: "sellerCode", status: "pending_hr_approval", waitingSince: null, now })).toEqual({ waitingSince: null, nextOwner: "hr", dueAt: null, isOverdue: null });
   });
+
+  it("does not apply the workforce returned SLA to rejected target requests", () => {
+    expect(resolveRequestCenterTiming({
+      requestType: "target",
+      status: "rejected",
+      waitingSince: "2026-07-13T12:00:00.000Z",
+      now,
+    })).toEqual({
+      waitingSince: "2026-07-13T12:00:00.000Z",
+      nextOwner: null,
+      dueAt: null,
+      isOverdue: null,
+    });
+  });
 });

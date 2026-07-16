@@ -9,6 +9,7 @@ import {
   renderSystemFlowHtml,
   resolveTransitiveApiCallIds,
 } from './generate-system-flow.mjs'
+import { buildApiFunctionDependencyIndex } from './system-flow-api-call-graph.mjs'
 
 const normalizedRootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -197,6 +198,32 @@ test('transitive API wrapper resolution deduplicates converging calls and stops 
       dependencies,
     ),
     ['api:rows', 'api:summary'],
+  )
+})
+
+test('same-file private helpers preserve transitive API ownership without sibling fanout', () => {
+  const definitions = new Map([
+    ['feature/api.ts#loadWorkspace', { body: "return loadBucket('open')", file: 'feature/api.ts', text: '' }],
+    ['feature/api.ts#loadBucket', { body: 'return getRequestCenterPage()', file: 'feature/api.ts', text: '' }],
+    ['feature/api.ts#getRequestCenterPage', { body: 'return fetchOpenApiJson()', file: 'feature/api.ts', text: '' }],
+    ['feature/api.ts#unusedSibling', { body: 'return fetchOtherPage()', file: 'feature/api.ts', text: '' }],
+  ])
+  const dependencies = buildApiFunctionDependencyIndex({
+    exportedFunctionIndex: definitions,
+    parseNamedImportStatements: () => [],
+    parseNamedImports: () => [],
+    resolveModulePath: () => null,
+    rootDir: normalizedRootDir,
+    toRepoPath: () => '',
+  })
+  const apiFunctionIndex = new Map([
+    ['feature/api.ts#getRequestCenterPage', ['api:request-center']],
+    ['feature/api.ts#unusedSibling', ['api:unused']],
+  ])
+
+  assert.deepEqual(
+    resolveTransitiveApiCallIds('feature/api.ts#loadWorkspace', apiFunctionIndex, dependencies),
+    ['api:request-center'],
   )
 })
 

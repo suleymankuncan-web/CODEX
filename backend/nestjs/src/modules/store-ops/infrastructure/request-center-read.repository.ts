@@ -246,14 +246,14 @@ export class RequestCenterReadRepository {
                 ),
                 created_at
               )
-              WHEN request_status = 'rejected' THEN COALESCE(
+              WHEN request_type = 'target' AND request_status = 'rejected' THEN reviewed_at
+              WHEN request_type <> 'target' AND request_status = 'rejected' THEN COALESCE(
                 (
                   SELECT MAX(event.occurred_at)
                   FROM audit.event_log AS event
                   WHERE event.entity_name = scoped_rows.entity_name
                     AND event.entity_id = scoped_rows.request_id::uuid
                     AND event.event_type IN (
-                      'target_distribution_request.rejected',
                       'seller_code_request.rejected',
                       'employee_offboarding_request.rejected'
                     )
@@ -274,7 +274,7 @@ export class RequestCenterReadRepository {
               AND CURRENT_TIMESTAMP >= waiting_since + INTERVAL '${REQUEST_CENTER_SLA_POLICY.targetPendingRegionDays} days')
             OR (request_type <> 'target' AND request_status = 'pending_hr_approval'
               AND CURRENT_TIMESTAMP >= waiting_since + INTERVAL '${REQUEST_CENTER_SLA_POLICY.workforcePendingHrDays} days')
-            OR (request_status = 'rejected'
+            OR (request_type <> 'target' AND request_status = 'rejected'
               AND CURRENT_TIMESTAMP >= waiting_since + INTERVAL '${REQUEST_CENTER_SLA_POLICY.workforceReturnedStoreDays} days')
           )::text AS overdue_count,
           (SELECT COALESCE(

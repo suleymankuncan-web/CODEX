@@ -113,15 +113,28 @@ async function routeMasterDataControlApi(page: Page) {
 
 async function routeStoreApprovalsMinimalApi(page: Page) {
   await page.route('**/api/workflow/request-center**', async (route) => {
+    const requestUrl = new URL(route.request().url())
+    const isOpenBucket = requestUrl.searchParams.get('bucket') === 'open'
     await route.fulfill({
       json: {
-        items: pendingTargetRequests.items.map((item) => ({
+        items: isOpenBucket ? pendingTargetRequests.items.map((item) => ({
           requestId: item.requestId,
           requestType: 'target',
           storeId: item.storeId,
           storeName: item.storeName,
+          regionId,
+          regionName: 'Pilot Region',
+          regionManagerNames: ['Pilot Manager'],
           status: item.status,
+          createdAt: item.updatedAt,
+          reviewedAt: null,
           updatedAt: item.updatedAt,
+          waitingSince: item.updatedAt,
+          nextOwner: 'region',
+          dueAt: '2026-07-03T09:00:00.000Z',
+          isOverdue: false,
+          events: [],
+          eventTotal: 0,
           targetLabel: item.targetLabel,
           requestMonth: item.requestMonth,
           allocationCount: item.allocationCount,
@@ -129,9 +142,9 @@ async function routeStoreApprovalsMinimalApi(page: Page) {
           personDisplayName: null,
           nationalIdLast4: null,
           externalEmployeeRef: null,
-        })),
-        meta: { count: 1, total: 1, limit: 15, offset: 0 },
-        summary: { open: 1, done: 0, returned: 0, periods: ['2026-07'] },
+        })) : [],
+        meta: { count: isOpenBucket ? 1 : 0, total: isOpenBucket ? 1 : 0, limit: 200, offset: 0 },
+        summary: { open: 1, done: 0, returned: 0, overdue: 0, periods: ['2026-07'] },
       },
     })
   })
