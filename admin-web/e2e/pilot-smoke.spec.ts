@@ -1,5 +1,6 @@
 import { expect, test, type BrowserContext, type Locator, type Page } from './test-fixtures'
 import { createIncentiveWorkspace } from './store-incentives-command-fixtures'
+import { createTargetWorkspace } from './store-targets-command-fixtures'
 
 const storeId = '00000000-0000-0000-0000-000000000100'
 const employeeId = '00000000-0000-0000-0000-000000000200'
@@ -158,7 +159,7 @@ test('core store routes open without unavailable states', async ({ page }) => {
     {
       path: '/store/targets',
       urlPattern: /\/store\/targets$/,
-      heading: page.locator('.targets-prototype'),
+      heading: page.locator('[data-command-canvas-page]'),
     },
     {
       path: '/store/workforce',
@@ -565,6 +566,12 @@ async function routePilotSmokeApi(context: BrowserContext) {
           items: [],
         },
       })
+      return
+    }
+
+    if (pathname.endsWith('/api/store/targets/workspace')) {
+      const offset = Number(new URL(request.url()).searchParams.get('offset') ?? '0')
+      await route.fulfill({ json: createTargetWorkspace('region_manager', { offset }) })
       return
     }
 
@@ -1420,7 +1427,7 @@ const checklistCommandCanvasFixture = {
         storeName: 'Pilot Store',
         regionId,
         regionName: 'Pilot Region',
-        regionManagers: [{ displayName: 'Pilot BÃ¶lge MÃ¼dÃ¼rÃ¼' }],
+        regionManagers: [{ displayName: 'Pilot Bölge Müdürü' }],
         bmScore: null,
         vmScore: null,
         bmCompletedAt: null,
