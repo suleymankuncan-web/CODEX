@@ -23,6 +23,37 @@ export type TargetCoverage = ApiGetResponse<'/api/target-distributions/coverage'
 export type TargetCoverageRow = TargetCoverage['items'][number]
 export type TargetCoverageSummary = TargetCoverage['summary']
 export type TargetRevisionBasis = ApiGetResponse<'/api/target-distributions/revision-basis'>
+export type TargetWorkspaceResponse = ApiGetResponse<'/api/store/targets/workspace'>
+export type TargetWorkspace = TargetWorkspaceResponse['data']
+
+export const storeTargetWorkspaceQueryKey = (input: {
+  period: string
+  historyYear: number
+  actorUserId?: string
+  roleCodes?: readonly string[]
+}) => [
+  'store-target-workspace',
+  input.period,
+  input.historyYear,
+  input.actorUserId ?? 'anonymous',
+  [...(input.roleCodes ?? [])].sort().join(',') || 'no-role',
+] as const
+
+export async function getStoreTargetWorkspace(input: {
+  period: string
+  historyYear: number
+  limit?: number
+  offset?: number
+}) {
+  const query = new URLSearchParams({
+    period: input.period,
+    historyYear: String(input.historyYear),
+    limit: String(input.limit ?? 50),
+    offset: String(input.offset ?? 0),
+  })
+
+  return fetchOpenApiJson('/api/store/targets/workspace', { query })
+}
 
 export async function getStoreTargetingPersonnel(storeId: string) {
   const params = new URLSearchParams({ storeId })

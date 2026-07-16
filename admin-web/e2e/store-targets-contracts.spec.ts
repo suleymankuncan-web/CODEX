@@ -1,188 +1,151 @@
-import { expect, test, type Page } from './test-fixtures'
-import {
-  installGenericStoreApiFallbacks,
-  installStoreContractSession,
-  storeIds,
-} from './store-page-contract-fixtures'
+import { expect, test } from './test-fixtures'
+import { installGenericStoreApiFallbacks, installStoreContractSession } from './store-page-contract-fixtures'
+import { routeTargetWorkspace, targetStoreA } from './store-targets-command-fixtures'
 
-test('targets period picker opens from the full trigger surface', async ({ page }) => {
+test('AC-TGT-001/002: Region Manager sees every assigned store and approves a balanced allocation', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await installGenericStoreApiFallbacks(page)
-  await routeTargetsContractApi(page)
+  const api = await routeTargetWorkspace(page, 'region_manager')
+  await page.goto('/store/targets')
 
-  await page.goto('/store/targets?requestMonth=2026-05')
+  await expect(page.getByRole('heading', { name: 'Hedef Kontrol Masası' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Toplam hedef/ })).toContainText('₺')
+  await expect(page.getByRole('button', { name: /Onaylanan/ })).toContainText('1')
+  await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
+  await expect(page.getByText('Mall of İstanbul').first()).toBeVisible()
+  await expect(page.getByText('Edirne Novada').first()).toBeVisible()
+  await expect(page.getByText('İstinyePark').first()).toBeVisible()
+  await expect(page.getByText('Hedef bekleniyor', { exact: true }).last()).toBeVisible()
+  await expect(page.getByText('Aksiyon', { exact: true })).toHaveCount(0)
 
-  const trigger = page.locator('button.targets-month-button')
-  await expect(trigger).toBeVisible()
-  const box = await trigger.boundingBox()
-  expect(box).not.toBeNull()
-  if (!box) return
-
-  for (const x of [box.x + 6, box.x + box.width / 2, box.x + box.width - 6]) {
-    await page.mouse.click(x, box.y + box.height / 2)
-    await expect(page.getByText('Dönem seç')).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(page.getByText('Dönem seç')).toHaveCount(0)
-  }
+  await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByRole('dialog').getByRole('button', { name: /Derya Uslu/ }).click()
+  await page.getByLabel('Derya Uslu hedefi').fill('4000000')
+  await page.getByRole('dialog').locator('.target-command-inline-editor').getByRole('button', { name: 'Kapat' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: /Can Erdem/ }).click()
+  await page.getByLabel('Can Erdem hedefi').fill('4200000')
+  await page.getByRole('dialog').locator('.target-command-inline-editor').getByRole('button', { name: 'Kapat' }).click()
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Onayla' })).toBeDisabled()
+  await page.getByLabel('Bölge karar notu').fill('Dağılım kontrol edildi.')
+  await page.getByRole('button', { name: 'Onayla' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  expect(api.mutations).toEqual(['PATCH'])
+  expect(api.approvedPayload).toEqual({
+    approvalNote: 'Dağılım kontrol edildi.',
+    approvedTotalTargetValue: 8200000,
+    approvedAllocations: [
+      { employeeId: 'employee-1', assigneeLabel: 'Derya Uslu', targetValue: 4000000 },
+      { employeeId: 'employee-2', assigneeLabel: 'Can Erdem', targetValue: 4200000 },
+    ],
+  })
 })
 
-test('targets metrics agree with mocked visible request and coverage data', async ({ page }) => {
+test('AC-TGT-002: unchanged approval remains direct and sends no adjusted payload', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await installGenericStoreApiFallbacks(page)
-  await routeTargetsContractApi(page)
-
-  await page.goto('/store/targets?requestMonth=2026-05')
-
-  await expect(page.getByTestId('store-targets-region-personnel-metric')).toContainText('%67')
-  await expect(page.getByTestId('store-targets-region-personnel-metric')).toContainText('2 / 3')
-  await expect(page.getByTestId('store-targets-region-store-metric')).toContainText('2')
-  await expect(page.getByTestId('store-targets-region-store-metric')).toContainText('Bölge portföyü')
-  await expect(page.getByTestId('store-targets-region-decision-metric')).toContainText('1')
-  await expect(page.getByTestId('store-targets-region-no-request-metric')).toContainText('0')
-  await expect(page.getByText('Balıkesir 10 Burda AVM').first()).toBeVisible()
+  const api = await routeTargetWorkspace(page, 'region_manager')
+  await page.goto('/store/targets')
+  await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Onayla' }).click()
+  expect(api.approvedPayload).toEqual({})
 })
 
-async function routeTargetsContractApi(page: Page) {
-  await page.route('**/api/target-distributions/coverage**', async (route) => {
-    await route.fulfill({ json: createTargetCoverageFixture() })
-  })
-  await page.route('**/api/target-distributions/requests**', async (route) => {
-    await route.fulfill({ json: createTargetRequestsFixture() })
-  })
-  await page.route('**/api/target-distributions/store-personnel**', async (route) => {
-    await route.fulfill({ json: createStorePersonnelFixture() })
-  })
-}
+test('AC-TGT-002: unchanged direct approval defers legacy balance validation to the backend', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  const api = await routeTargetWorkspace(page, 'region_manager', { directUnbalanced: true })
+  await page.goto('/store/targets')
+  await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
+  const approve = page.getByRole('dialog').getByRole('button', { name: 'Onayla' })
+  await expect(approve).toBeEnabled()
+  await approve.click()
+  expect(api.approvedPayload).toEqual({})
+})
 
-function createTargetCoverageFixture() {
-  return {
-    items: [
-      coverageRow({
-        displayName: 'Emine Çavuş',
-        employeeId: 'employee-contract-emine',
-        storeId: storeIds[0],
-        storeName: 'Balıkesir 10 Burda AVM',
-        targetStatus: 'approved',
-        targetValue: 916666.67,
-      }),
-      coverageRow({
-        displayName: 'Gürkan Çakar',
-        employeeId: 'employee-contract-gurkan',
-        storeId: storeIds[0],
-        storeName: 'Balıkesir 10 Burda AVM',
-        targetStatus: 'approved',
-        targetValue: 916666.67,
-      }),
-      coverageRow({
-        displayName: 'Ayşe Yılmaz',
-        employeeId: 'employee-contract-ayse',
-        storeId: storeIds[1],
-        storeName: 'Bursa Downtown AVM',
-        targetStatus: 'pending',
-        pendingTargetValue: 800000,
-      }),
-    ],
-    meta: { count: 3, limit: 50, offset: 0, total: 3 },
-    summary: {
-      conflictEmployees: 0,
-      coverageRate: 2 / 3,
-      coveredEmployees: 2,
-      missingEmployees: 1,
-      pendingEmployees: 1,
-      requestMonth: '2026-05-01',
-      staleEmployees: 0,
-      totalEmployees: 3,
-      uncoveredEmployees: 1,
-    },
-  }
-}
+test('AC-002/003: filters and sorts locally without blanking or extra workspace reads', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  const api = await routeTargetWorkspace(page, 'region_manager')
+  await page.goto('/store/targets')
+  await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
+  const reads = api.reads
+  await page.getByRole('button', { name: /Hedef bekleniyor/ }).first().click()
+  await expect(page.getByText('Edirne Novada').first()).toBeVisible()
+  await expect(page.getByText('Mall of İstanbul')).toHaveCount(0)
+  await page.getByRole('button', { name: /^Mağaza:/ }).click()
+  expect(api.reads).toBe(reads)
+})
 
-function coverageRow(input: {
-  displayName: string
-  employeeId: string
-  pendingTargetValue?: number
-  storeId: string
-  storeName: string
-  targetStatus: string
-  targetValue?: number
-}) {
-  return {
-    displayName: input.displayName,
-    employeeId: input.employeeId,
-    externalEmployeeRef: null,
-    pendingTargetValue: input.pendingTargetValue ?? null,
-    storeId: input.storeId,
-    storeName: input.storeName,
-    targetStatus: input.targetStatus,
-    targetValue: input.targetValue ?? null,
-  }
-}
+test('AC-TGT-003/009: Report Viewer gets company hierarchy and emits no mutation', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await installGenericStoreApiFallbacks(page)
+  const api = await routeTargetWorkspace(page, 'report_viewer')
+  await page.goto('/store/targets')
+  await expect(page.getByRole('heading', { name: 'Şirket hedef görünümü' })).toBeVisible()
+  await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
+  await expect(page.getByText('Süleyman Öztürk').first()).toBeVisible()
+  await expect(page.getByText('Deniz Akar').first()).toBeVisible()
+  await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.locator('input, textarea, select')).toHaveCount(0)
+  await expect(drawer.getByRole('button', { name: 'Onayla' })).toHaveCount(0)
+  await page.keyboard.press('Escape')
+  await expect(drawer).toHaveCount(0)
+  expect(api.mutations).toEqual([])
+})
 
-function createTargetRequestsFixture() {
-  return {
-    items: [
-      targetRequest({
-        requestId: 'target-request-approved',
-        status: 'approved',
-        storeId: storeIds[0],
-        storeName: 'Balıkesir 10 Burda AVM',
-      }),
-      targetRequest({
-        requestId: 'target-request-pending',
-        status: 'pending_region_approval',
-        storeId: storeIds[1],
-        storeName: 'Bursa Downtown AVM',
-      }),
-    ],
-    meta: { count: 2, limit: 200, offset: 0, total: 2 },
-  }
-}
+test('AC-005: 320px Region Manager list and longest drawer stay reachable without page overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 })
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeTargetWorkspace(page, 'region_manager')
+  await page.goto('/store/targets')
+  await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
+  expect(await page.getByRole('dialog').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('button', { name: /Mall of İstanbul/ })).toBeFocused()
+})
 
-function targetRequest(input: {
-  requestId: string
-  status: 'approved' | 'pending_region_approval'
-  storeId: string
-  storeName: string
-}) {
-  return {
-    allocations: [
-      {
-        assigneeLabel: 'Emine Çavuş',
-        employeeId: 'employee-contract-emine',
-        note: null,
-        targetValue: 916666.67,
-      },
-      {
-        assigneeLabel: 'Gürkan Çakar',
-        employeeId: 'employee-contract-gurkan',
-        note: null,
-        targetValue: 916666.67,
-      },
-    ],
-    approvedAt: input.status === 'approved' ? '2026-05-03T10:00:00.000Z' : null,
-    createdAt: '2026-05-02T10:00:00.000Z',
-    requestId: input.requestId,
-    requestMonth: '2026-05-01',
-    requestReason: 'Aylık hedef dağıtımı',
-    requestedByName: 'Mert Alcan',
-    status: input.status,
-    storeId: input.storeId,
-    storeName: input.storeName,
-    targetLabel: 'Mayıs personel hedefi',
-    totalTargetValue: 1833333.34,
-  }
-}
+test('AC-006: partial personnel failure preserves valid store rows', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeTargetWorkspace(page, 'region_manager', { partial: true })
+  await page.goto('/store/targets')
+  await expect(page.getByText('Bazı hedef bilgileri eksik')).toBeVisible()
+  await expect(page.getByText('Mall of İstanbul').first()).toBeVisible()
+})
 
-function createStorePersonnelFixture() {
-  return {
-    items: [
-      {
-        displayName: 'Emine Çavuş',
-        employeeId: 'employee-contract-emine',
-        positionCode: 'SALES_ASSOCIATE',
-        positionName: 'Satış danışmanı',
-      },
-    ],
-    meta: { count: 1, limit: 50, offset: 0, total: 1 },
-  }
-}
+test('EC-015: later-page partial failure remains visible after pagination', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeTargetWorkspace(page, 'region_manager', { partialPage2: true })
+  await page.goto('/store/targets')
+  await page.getByRole('button', { name: 'Daha fazla mağaza göster' }).click()
+  await expect(page.getByText('Bazı hedef bilgileri eksik')).toBeVisible()
+  await expect(page.getByText('İstinyePark').first()).toBeVisible()
+})
+
+test('EC-005/006: missing target drawer never fabricates a balanced zero package', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeTargetWorkspace(page, 'region_manager')
+  await page.goto('/store/targets')
+  await page.getByRole('button', { name: /Edirne Novada/ }).click()
+  const drawer = page.getByRole('dialog')
+  await expect(drawer.getByText('Hedef bekleniyor', { exact: true }).first()).toBeVisible()
+  await expect(drawer.getByText('₺0', { exact: true })).toHaveCount(0)
+  await expect(drawer.getByRole('button', { name: 'Onayla' })).toHaveCount(0)
+})
+
+test('scope capability is authoritative even when a pending row is visible', async ({ page }) => {
+  await installStoreContractSession(page, 'reportViewer')
+  await installGenericStoreApiFallbacks(page)
+  await routeTargetWorkspace(page, 'report_viewer')
+  await page.goto('/store/targets')
+  await page.getByRole('button', { name: /Mall of İstanbul/ }).click()
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Onayla' })).toHaveCount(0)
+  await expect(page.getByText(targetStoreA)).toHaveCount(0)
+})
