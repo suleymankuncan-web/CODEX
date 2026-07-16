@@ -3,6 +3,7 @@ import { setStoredLocale } from './locale-test-utils'
 import { readComputedStyle } from './style-test-utils'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
 import { pressTabFromDocumentStart } from './keyboard-test-utils'
+import { routeStoreManagerTargetCommand } from './store-targets-store-manager-command-fixtures'
 
 const demoStoreId = '00000000-0000-4000-8000-000000000100'
 const checklistCommandInstanceId = '44444444-4444-4444-8444-444444444444'
@@ -2318,6 +2319,7 @@ test('store sidebar transitions across visible manager pages without requiring m
 })
 
 test('store settings utility pages show honest preferences and stay mobile-safe', async ({ page }) => {
+  await routeStoreManagerTargetCommand(page)
   await page.goto('/store/settings')
 
   await expect(page.getByRole('heading', { name: 'Profil ve dil tercihleri' })).toBeVisible()
@@ -2337,9 +2339,9 @@ test('store settings utility pages show honest preferences and stay mobile-safe'
 
   await page.goto('/store/targets')
 
-  await expect(page.locator('[data-testid="store-targets-contract-surface"]')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Hedefler' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Personel hedef dağıtımı' })).toBeVisible()
+  await expect(page.locator('[data-command-canvas-page].target-store-manager-page')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Mağaza Hedef Dağılımı' })).toBeVisible()
+  await expect(page.getByText('Personel hedef dağılımı')).toBeVisible()
   await expect(page.getByRole('link', { name: /Hedef ak/i })).toHaveCount(0)
   await expect(page.getByText('/admin/targets')).toHaveCount(0)
 
