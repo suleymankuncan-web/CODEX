@@ -29,6 +29,11 @@ const password = envValue('AUTH_SMOKE_PASSWORD', '')
 const otp = envValue('AUTH_SMOKE_OTP', '')
 const expectedRole = envValue('AUTH_SMOKE_EXPECTED_ROLE', 'REGION_MANAGER')
 const expectedLandingPath = normalizePath(envValue('AUTH_SMOKE_EXPECTED_LANDING', '/admin/competitions'))
+const productReadOnly = envFlag('AUTH_SMOKE_PRODUCT_READ_ONLY', false)
+const readOnlyPaths = envValue('AUTH_SMOKE_READ_PATHS', '')
+  .split(',')
+  .map((value) => normalizePath(value))
+  .filter((value) => value !== '/')
 const cookieName = envValue('AUTH_SMOKE_COOKIE_NAME', 'hr_axis_browser_session')
 const expectedCookieDomain = envValue(
   'AUTH_SMOKE_EXPECTED_COOKIE_DOMAIN',
@@ -85,6 +90,12 @@ function envValue(name, fallback) {
   return typeof value === 'string' && value.trim() ? value.trim() : fallback
 }
 
+function envFlag(name, fallback) {
+  const value = process.env[name]
+  if (typeof value !== 'string' || !value.trim()) return fallback
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase())
+}
+
 function hasExplicitEnv(name) {
   return typeof process.env[name] === 'string' && process.env[name].trim().length > 0
 }
@@ -126,6 +137,9 @@ function assertConfig() {
   assert(expectedRole, 'AUTH_SMOKE_EXPECTED_ROLE is required')
   assert(expectedLandingPath, 'AUTH_SMOKE_EXPECTED_LANDING is required')
   assert(cookieName, 'AUTH_SMOKE_COOKIE_NAME is required')
+  for (const path of readOnlyPaths) {
+    assert(path.startsWith('/store/'), `AUTH_SMOKE_READ_PATHS contains an unsupported path: ${path}`)
+  }
 
   if (!stagingMode) {
     return
@@ -350,6 +364,104 @@ async function signIn(page) {
   await page.waitForLoadState('networkidle', { timeout: 10_000 }).catch(() => undefined)
 
   return createResponse.status()
+}
+
+async function proveReadOnlyRoutes(page) {
+  const proofs = []
+  await page.setViewportSize({ width: 390, height: 844 })
+
+  for (const path of readOnlyPaths) {
+    const mutationRequests = []
+    const workspaceResponses = []
+    const responseReaders = []
+    const onRequest = (request) => {
+      const url = request.url()
+      if (
+        isStoreCommandApiUrl(url) &&
+        !['GET', 'HEAD', 'OPTIONS'].includes(request.method().toUpperCase())
+      ) {
+        mutationRequests.push(`${request.method().toUpperCase()} ${new URL(url).pathname}`)
+      }
+    }
+    const onResponse = (response) => {
+      if (!isReadWorkspaceUrl(response.url())) return
+      responseReaders.push(
+        response
+          .json()
+          .catch(() => null)
+          .then((body) => {
+            workspaceResponses.push({
+              status: response.status(),
+              period: typeof body?.data?.period === 'string' ? body.data.period : null,
+            })
+          }),
+      )
+    }
+
+    page.on('request', onRequest)
+    page.on('response', onResponse)
+    const navigation = await page.goto(`${baseUrl}${path}`, { waitUntil: 'domcontentloaded' })
+    await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined)
+    await Promise.all(responseReaders)
+    const visible = await page.evaluate(() => ({
+      heading: document.querySelector('main h1')?.textContent?.replace(/\s+/g, ' ').trim() ?? null,
+      horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      routeErrorVisible: Boolean(document.querySelector('[data-route-error], .store-route-error')),
+    }))
+    page.off('request', onRequest)
+    page.off('response', onResponse)
+
+    assert(navigation?.ok(), `${path} navigation returned ${navigation?.status() ?? 'no response'}`)
+    assert(visible.heading, `${path} did not render a visible route heading`)
+    assert(isExpectedReadOnlyHeading(path, visible.heading), `${path} rendered an unexpected heading: ${visible.heading}`)
+    assert(!visible.horizontalOverflow, `${path} overflowed the 390 px viewport`)
+    assert(!visible.routeErrorVisible, `${path} rendered a route error`)
+    assert(workspaceResponses.some((response) => response.status >= 200 && response.status < 300 && response.period), `${path} workspace read did not return a successful period projection`)
+    assert(mutationRequests.length === 0, `${path} emitted mutation requests: ${mutationRequests.join(', ')}`)
+    proofs.push({
+      path,
+      navigationStatus: navigation.status(),
+      heading: visible.heading,
+      workspaceResponses,
+      mutationRequestCount: mutationRequests.length,
+      viewport: { width: 390, height: 844, horizontalOverflow: visible.horizontalOverflow },
+    })
+  }
+
+  return proofs
+}
+
+function isReadWorkspaceUrl(value) {
+  try {
+    return /\/store\/(?:incentives|targets)\/workspace\/?$/.test(new URL(value).pathname)
+  } catch {
+    return false
+  }
+}
+
+function isStoreCommandApiUrl(value) {
+  try {
+    return /\/store\/(?:incentives|targets)(?:\/|$)/.test(new URL(value).pathname)
+  } catch {
+    return false
+  }
+}
+
+function isExpectedReadOnlyHeading(path, heading) {
+  const expected = {
+    REGION_MANAGER: {
+      '/store/incentives': ['Prim Kontrol Merkezi', 'Incentive Control Center'],
+      '/store/targets': ['Hedef Kontrol Masası', 'Target Control Desk'],
+    },
+    REPORT_VIEWER: {
+      '/store/incentives': ['Şirket Prim Görünümü', 'Company Incentive View'],
+      '/store/targets': ['Şirket hedef görünümü', 'Company target view'],
+    },
+    STORE_MANAGER: {
+      '/store/targets': ['Mağaza Hedef Dağılımı', 'Store Target Distribution'],
+    },
+  }
+  return expected[expectedRole]?.[path]?.includes(heading) ?? false
 }
 
 async function describePageState(page) {
@@ -664,11 +776,17 @@ async function main() {
     const sessionProof = sanitizeSession(await expectJson(sessionResponse, 'GET /auth/session'))
     assertSessionProof(sessionProof)
 
-    const csrfResponse = await sessionApi.post(apiPath('target-distributions/requests'), { data: {} })
-    assert(
-      csrfResponse.status() === 403,
-      `unsafe cookie-authenticated request without X-CSRF-Token returned ${csrfResponse.status()}`,
-    )
+    const csrfResponse = productReadOnly
+      ? null
+      : await sessionApi.post(apiPath('target-distributions/requests'), { data: {} })
+    if (csrfResponse) {
+      assert(
+        csrfResponse.status() === 403,
+        `unsafe cookie-authenticated request without X-CSRF-Token returned ${csrfResponse.status()}`,
+      )
+    }
+
+    const readOnlyRouteProof = await proveReadOnlyRoutes(page)
 
     const logoutProof = await assertLogout(page, context)
 
@@ -689,8 +807,10 @@ async function main() {
       session: sessionProof,
       storage: summarizeStorageProof(storageProof),
       csrf: {
-        unsafeMissingHeaderStatus: csrfResponse.status(),
+        mode: productReadOnly ? 'skipped_read_only' : 'negative_write_probe',
+        unsafeMissingHeaderStatus: csrfResponse?.status() ?? null,
       },
+      readOnlyRoutes: readOnlyRouteProof,
       logout: {
         appCookiePresentAfterLogout: logoutProof.appCookiePresentAfterLogout,
       },

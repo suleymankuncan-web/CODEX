@@ -197,12 +197,15 @@ export function StoreManagerTargetCommand(input: {
         title={copy.title}
         description={copy.description}
         actions={
-          <CommandCanvasMonthYearPicker
-            ariaLabel={copy.viewedPeriod}
-            locale={locale}
-            onValueChange={input.onPeriodChange}
-            value={input.period}
-          />
+          <div className="target-command-period">
+            <span>{copy.viewedPeriod}</span>
+            <CommandCanvasMonthYearPicker
+              ariaLabel={copy.viewedPeriod}
+              locale={locale}
+              onValueChange={input.onPeriodChange}
+              value={input.period}
+            />
+          </div>
         }
       />
       <CommandCanvasMetricRail ariaLabel={copy.summary}>

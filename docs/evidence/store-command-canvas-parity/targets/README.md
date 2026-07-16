@@ -16,5 +16,11 @@ geometry is mechanically locked to the prototype contract: 460 px desktop
 width and a two-by-two metric grid; the title and metric copy are asserted in
 the route contracts. The Store Manager evidence also locks the inline
 distribution workspace and its month/year picker at all four reference
-viewports. Real-persona controlled-pilot evidence remains part of the final PR
-7 closeout.
+viewports. `prototype-geometry-v1.json` additionally locks the approved page,
+header, period action, metric rail, filter, first-row and Report Viewer
+hierarchy geometry with a one-pixel tolerance. Store Manager distribution
+height is intentionally data-derived from the authorized personnel count;
+its top edge and width are locked without adding fixture rows to production.
+
+Deterministic result: `Prototype parity: PASS` for Targets. Real-persona
+controlled-pilot evidence remains a separate final PR 7 gate.

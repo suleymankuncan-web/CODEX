@@ -79,6 +79,10 @@ test('package exposes explicit staging auth smoke scripts', () => {
   )
   assert.match(cookieSessionSmokeSource, /storeScopedExpectedRoles/u)
   assert.match(cookieSessionSmokeSource, /storeScopedExpectedRoles\.has\(expectedRole\)/u)
+  assert.match(cookieSessionSmokeSource, /AUTH_SMOKE_PRODUCT_READ_ONLY/u)
+  assert.match(cookieSessionSmokeSource, /AUTH_SMOKE_READ_PATHS/u)
+  assert.match(cookieSessionSmokeSource, /skipped_read_only/u)
+  assert.match(cookieSessionSmokeSource, /isStoreCommandApiUrl\(url\)/u)
 
   const storeManagerSmokeSource = readFileSync(
     join(appRoot, 'scripts/auth-store-manager-cookie-session-smoke.mjs'),

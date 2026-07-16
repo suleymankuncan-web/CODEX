@@ -7,29 +7,33 @@ const targetsPageSource = await readFile(
   'utf8',
 )
 const targetsModelSource = await readFile(
-  new URL('../src/pages/store-targets-page-model.ts', import.meta.url),
+  new URL('../src/features/targets/command-workspace/model.ts', import.meta.url),
   'utf8',
 )
-const targetSectionsSource = await readFile(
-  new URL('../src/pages/store-targets-contract-sections.tsx', import.meta.url),
+const targetScaffoldSource = await readFile(
+  new URL('../src/features/targets/command-workspace/workspace-scaffold.tsx', import.meta.url),
+  'utf8',
+)
+const storeManagerSource = await readFile(
+  new URL('../src/features/targets/command-workspace/store-manager-view.tsx', import.meta.url),
   'utf8',
 )
 
-test('store target metrics read active target references instead of approved workflow requests', () => {
-  assert.match(targetsModelSource, /export function createStoreTargetReferenceSummary/u)
-  assert.match(targetsPageSource, /createStoreTargetReferenceSummary\(\{/u)
-  assert.match(targetsPageSource, /storeTargetReferenceSummary\.coverageRate/u)
-  assert.match(targetsPageSource, /storeTargetReferenceSummary\.coveredStores/u)
-  assert.match(targetsPageSource, /storeTargetReferenceSummary\.pendingStores/u)
-  assert.match(targetsPageSource, /storeTargetReferenceSummary\.missingStores/u)
-  assert.doesNotMatch(targetsPageSource, /const storeRequestSummary = createStoreRequestSummary/u)
+test('store target metrics read workspace summary truth instead of approved workflow requests', () => {
+  assert.match(targetsModelSource, /export function buildTargetMetrics\(workspace:/u)
+  assert.match(targetsModelSource, /summary\.approvedStores \+ summary\.adjustedApprovedStores/u)
+  assert.match(targetsModelSource, /summary\?\.pendingStores/u)
+  assert.match(targetsModelSource, /summary\?\.missingStores/u)
+  assert.match(targetScaffoldSource, /buildTargetMetrics\(input\.workspace\)/u)
+  assert.match(targetScaffoldSource, /input\.workspace\.summary\?\.totalTargetValue/u)
+  assert.doesNotMatch(targetScaffoldSource, /getTargetDistributionRequests/u)
 })
 
-test('approved target workflow list stays separate from target references', () => {
-  assert.match(targetsPageSource, /<TargetCoveragePanel/u)
-  assert.match(targetsPageSource, /<TargetApprovedRequestsPanel/u)
-  assert.match(targetSectionsSource, /title=\{input\.copy\.coverageTitle\}/u)
-  assert.match(targetSectionsSource, /title=\{input\.copy\.approvedRequests\}/u)
-  assert.match(targetsModelSource, /coverageTitle: 'Hedef referansları'/u)
-  assert.match(targetsModelSource, /approvedRequests: 'Onaylananlar'/u)
+test('the route has one workspace owner while Store Manager metrics use the same persisted summary', () => {
+  assert.match(targetsPageSource, /return <TargetCommandWorkspaceOwner/u)
+  assert.doesNotMatch(targetsPageSource, /StoreTargetsLegacyPage/u)
+  assert.match(storeManagerSource, /const summary = input\.workspace\.summary/u)
+  assert.match(storeManagerSource, /summary\?\.approvedStores/u)
+  assert.match(storeManagerSource, /summary\?\.adjustedApprovedStores/u)
+  assert.match(storeManagerSource, /summary\?\.missingStores/u)
 })
