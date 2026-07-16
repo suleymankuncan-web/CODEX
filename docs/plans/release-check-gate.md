@@ -14,12 +14,24 @@ Run from the workspace root:
 npm.cmd run check:release
 ```
 
-The root gate runs:
+The fresh root gate runs the versioned stage manifest:
 
-1. Root script contract tests
-2. Migration change warning helper
-3. Backend `npm run check:release`
-4. Frontend `npm run check:release`
+1. Root script contracts and migration warning preflight
+2. Backend release proof, frontend static proof, and volatile dependency audits
+   as soon as their dependencies allow
+3. Full frontend E2E after frontend static proof
+
+After a concrete late-stage failure, an unchanged exact-input workspace may
+resume:
+
+```powershell
+npm.cmd run check:release -- --resume
+```
+
+Resume binds HEAD, manifest/commands, Node/platform, package locks, tracked and
+non-ignored untracked content, and upstream receipt digests. It reuses only
+atomic successful receipts. Dependency audits are volatile and always rerun;
+unknown or mismatched evidence falls back to fresh execution.
 
 Backend currently owns:
 
@@ -39,20 +51,22 @@ Frontend currently owns:
 ## CI Contract
 
 The GitHub Actions workflow `.github/workflows/release-check.yml` is the one
-full-release implementation. It is reusable from another workflow and remains
-manually dispatchable. It installs backend and frontend dependencies, ensures
-system Chrome, and delegates to the same root command:
-
-```powershell
-npm run check:release
-```
+full-release workflow. It is reusable and manually dispatchable. Root
+contracts, backend release, frontend release, and volatile dependency audit
+are native jobs;
+frontend static proof precedes its full E2E proof in the same job so the build
+and Playwright suite each run once. A fail-closed internal aggregate rejects
+every missing, skipped, cancelled, timed-out, or failed proof job. Native
+`Re-run failed jobs` therefore preserves successful sibling jobs after a late
+failure without transferring PASS receipts or `node_modules` artifacts.
 
 CI uses Node.js 24 to match the current local runtime family used by the project scripts.
 
 For pull requests, `.github/workflows/required-release-gate.yml` selects the
 scope. Release-impacting changes call the full release workflow once before
-merge. Docs/process-only changes use root script and contract tests without a
-full release.
+merge. The former frontend-targeted child remains manually reusable but is not
+repeated beside the full release. Docs/process-only changes use root script and
+contract tests without a full release.
 
 For relevant pushes to `main` or `master`,
 `.github/workflows/post-merge-verification.yml` avoids repeating the same full

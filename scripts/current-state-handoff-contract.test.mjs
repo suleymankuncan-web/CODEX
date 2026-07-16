@@ -56,7 +56,8 @@ test('active handoff records the owner-approved operating truth', () => {
     'GitHub Codex review is disabled by explicit owner direction as of 2026-07-10',
     'Do not trigger `@codex review`, request it through another integration, or',
     'GitHub Codex review becomes active again only after a newer explicit owner',
-    'canonical 30-second GitHub status loop',
+    'canonical 55-60 second GitHub status loop',
+    'check:release -- --resume',
     'docs/plans/workspace-hygiene-inventory-2026-07-09.md',
   ]) {
     requireText(currentState, expected)

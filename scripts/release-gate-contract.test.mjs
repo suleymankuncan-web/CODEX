@@ -20,28 +20,25 @@ test('root package exposes the official release gate', () => {
   assert.equal(packageJson.private, true)
   assert.equal(
     packageJson.scripts['check:release'],
-    'npm run test:scripts && node scripts/check-release.mjs',
+    'node scripts/check-release.mjs',
   )
   assert.equal(packageJson.scripts['test:scripts'], 'node --test scripts/*.test.mjs')
 })
 
-test('official release gate runs backend before frontend', () => {
+test('official release gate delegates to the exact-input stage runner', () => {
   const script = readText('scripts/check-release.mjs')
+  const manifest = readJson('scripts/release-stage-manifest.json')
 
-  const migrationWarningIndex = script.indexOf('migration-change-warning.mjs')
-  const backendIndex = script.indexOf("backend/nestjs")
-  const frontendIndex = script.indexOf("admin-web")
-
-  assert.notEqual(migrationWarningIndex, -1)
-  assert.notEqual(backendIndex, -1)
-  assert.notEqual(frontendIndex, -1)
-  assert.match(script, /runMigrationChangeWarning\(\)\s*\n\s*for \(const check of checks\)/)
-  assert.ok(backendIndex < frontendIndex)
-  assert.match(script, /args:\s*\['run', 'check:release'\]/)
+  assert.match(script, /runCanonicalRelease/)
+  assert.match(script, /--resume/)
+  assert.deepEqual(
+    manifest.stages.map((stage) => stage.id),
+    ['root-contracts', 'backend-release', 'frontend-static', 'dependency-audit', 'frontend-e2e'],
+  )
 })
 
 test('official release gate uses cmd.exe wrapping for npm on Windows', () => {
-  const script = readText('scripts/check-release.mjs')
+  const script = readText('scripts/release-stage-runner.mjs')
 
   assert.match(script, /cmd\.exe/)
   assert.match(script, /\/d/)
@@ -53,11 +50,11 @@ test('package release scripts include production audit gates', () => {
   const backendPackage = readJson('backend/nestjs/package.json')
   const frontendPackage = readJson('admin-web/package.json')
 
-  assert.match(backendPackage.scripts['check:release'], /npm audit --omit=dev/)
-  assert.match(frontendPackage.scripts['check:release'], /npm audit --omit=dev/)
+  assert.equal(backendPackage.scripts['check:release:audit'], 'npm audit --omit=dev')
+  assert.equal(frontendPackage.scripts['check:release:audit'], 'npm audit --omit=dev')
 })
 
-test('github release workflow is reusable and delegates to the root release gate on Node 24', () => {
+test('github release workflow is reusable and runs the canonical proof DAG on Node 24', () => {
   const workflow = readText('.github/workflows/release-check.yml')
 
   assert.match(workflow, /workflow_call:\s*\n/)
@@ -65,16 +62,18 @@ test('github release workflow is reusable and delegates to the root release gate
   assert.doesNotMatch(workflow, /^\s*pull_request:/m)
   assert.doesNotMatch(workflow, /^\s*push:/m)
   assert.match(workflow, /node-version:\s*24/)
-  assert.match(workflow, /cache-dependency-path:\s*\|\s*\n\s*backend\/nestjs\/package-lock\.json\s*\n\s*admin-web\/package-lock\.json/)
+  assert.match(workflow, /cache-dependency-path:\s*backend\/nestjs\/package-lock\.json/)
+  assert.match(workflow, /cache-dependency-path:\s*admin-web\/package-lock\.json/)
   assert.match(workflow, /working-directory:\s*backend\/nestjs\s*\n\s*run:\s*npm ci/)
   assert.match(workflow, /working-directory:\s*admin-web\s*\n\s*run:\s*npm ci/)
   assert.match(workflow, /name:\s*Ensure system Chrome\s*\n\s*timeout-minutes:\s*5/)
   assert.match(workflow, /command -v google-chrome/)
   assert.match(workflow, /google-chrome --version/)
   assert.match(workflow, /pull-requests:\s*read/)
-  assert.match(workflow, /GITHUB_TOKEN:\s*\$\{\{\s*github\.token\s*\}\}/)
   assert.match(workflow, /PLAYWRIGHT_USE_SYSTEM_CHROME:\s*"1"/)
-  assert.match(workflow, /run:\s*npm run check:release/)
+  assert.match(workflow, /run:\s*npm run check:release:static/)
+  assert.match(workflow, /run:\s*npm run check:release:e2e/)
+  assert.match(workflow, /run:\s*node scripts\/release-workflow-final\.mjs/)
 })
 
 test('fresh migration db smoke is a manual release preflight, not a docker-dependent root gate step', () => {

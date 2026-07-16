@@ -58,6 +58,19 @@ merge, deploy, or make owner decisions.
   only when their scopes are genuinely independent.
 - Never assign two agents to edit the same files or workflow.
 - Never run two full release suites concurrently.
+- Use `npm.cmd run check:release` for a fresh canonical local proof. After a
+  concrete late-stage failure, use `npm.cmd run check:release -- --resume` only
+  when the runner accepts the exact HEAD/manifest/command/runtime/lock/workspace
+  identity; volatile audits still rerun and any uncertainty falls back fresh.
+- In GitHub Actions, use native `Re-run failed jobs` after a late failure so
+  successful root/backend/frontend/audit sibling proof jobs are preserved.
+  Never reduce tests, coverage,
+  audits, builds, API checks, Playwright selection, or the two-worker isolation
+  policy to improve wall time.
+- The stable `required-release-gate` remains fail-closed. Missing, skipped,
+  cancelled, timed-out, failed, stale, or identity-mismatched proof cannot be
+  reused. Total runner-minutes above 110% of the recorded baseline require an
+  owner decision before further orchestration expansion.
 - Monitor PR checks with native GitHub/Vercel polling or an existing background
   shell watcher. Do not spawn a model agent only to wait or poll.
 - Use 55-60 second idle polling intervals. Return only state transitions or a

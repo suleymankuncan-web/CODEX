@@ -12,7 +12,9 @@
     "openapi:generate": "nest build && node scripts/run-openapi-generator.mjs",
     "verify:tref-postgres": "npm run build && node scripts/verify-target-reference-supersession-postgres.mjs",
     "test": "jest",
-    "check:release": "npm run lint && npm test -- --runInBand && npm run build && npm audit --omit=dev",
+    "check:release": "npm run check:release:proof && npm run check:release:audit",
+    "check:release:proof": "npm run lint && npm test -- --runInBand && npm run build",
+    "check:release:audit": "npm audit --omit=dev",
     "auth:token": "ts-node scripts/generate-local-jwt.ts",
     "test:live": "ts-node test/live/live-e2e.ts",
     "perf:baseline": "ts-node scripts/performance-baseline.ts",
@@ -31,7 +33,7 @@
     "rehearse:rem8:target:constraint": "ts-node scripts/rem8-target-constraint-disposable-rehearsal.ts",
     "observe:rem8:target:constraint": "ts-node scripts/rem8-target-constraint-observation.ts",
     "apply:staging:dbc5:target": "ts-node scripts/dbc5-target-constraint-apply.ts",
-    "rehearse:release": "npm run check:release && ts-node scripts/release-rehearsal.ts"
+    "rehearse:release": "ts-node scripts/release-rehearsal.ts"
   },
   "jest": {
     "moduleFileExtensions": [

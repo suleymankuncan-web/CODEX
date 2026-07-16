@@ -73,7 +73,7 @@ PR #949 completed DG2-A and PR #950 completed DG2-B. The approved DG2-C read-onl
 staging receipt records 70 invariant check hits and an overall DB-CONSTRAINTS
 No-Go without repair or mutation. PR #952 merged REM-1A; PR #953 merged one owner-confirmed REM-1B run with stable 70 family hits, 72 source records, nine buckets, and unresolved distinct-person count. All REM-2 owner decisions are locked, including restore and concurrency safety; implementation, row evidence, staging mutation, and constraints remain separately gated. DG1-C retirement remains usage-gated.
 - PR #917 (A1) made `required-release-gate` the truthful required main-branch aggregate and verified the ruleset readback.
-- PR #918 (A2) made root release the one canonical full frontend-release owner; the frontend child is targeted and reusable, not a duplicate full suite.
+- PR #918 (A2) made root release the one canonical full frontend-release owner; the reusable frontend-targeted workflow remains manual and is not a duplicate required child.
 - PR #919 (A3) kept all 371 Playwright tests, uses two CI-only workers with
   serial files, and preserves failure-only Playwright artifacts.
 - The release path keeps one full PR release as the canonical proof. Relevant
@@ -96,10 +96,12 @@ section intentionally retains only the current operating consequences.
 ### A3 Release Measurement
 
 PR #919's A3 observation is closed from ten successful root-release jobs. The
-nearest-rank p95 is `13.23` minutes, above the 12-minute target but better than
-the 14m 01s pre-change baseline. Keep all 371 tests and two CI workers; open no
-new concurrency experiment without a measured isolation plan. Source:
-`docs/evidence/performance/2026-07-10-e2e-worker-concurrency-a3.md`.
+nearest-rank p95 is `13.23` minutes. The canonical release DAG now preserves
+the complete suite while separating native CI proof jobs and offering exact-
+input local `--resume`; volatile audits rerun and every uncertain identity
+falls back fresh. Keep all 371 tests and two CI workers; runner-minutes above
+110% of baseline require an owner decision. Source: `docs/evidence/performance/
+2026-07-10-e2e-worker-concurrency-a3.md`.
 
 ### B1 Controlled Pilot Evidence
 
@@ -152,7 +154,7 @@ test-data input.
   instruction. The other verification requirements remain mandatory.
 - PR check wait is active: monitor it while independent next-PR work proceeds
   in a separate worktree; predecessor failures take priority. Never run two full
-  release suites concurrently. Use the canonical 30-second GitHub status loop while idle; refresh complete status immediately before merge.
+  release suites concurrently. Use the canonical 55-60 second GitHub status loop while idle; refresh complete status immediately before merge. A concrete late-stage retry may use exact-input `check:release -- --resume`; coverage remains unchanged.
 - Main protection requires the `required-release-gate` aggregate. Its child
   selection is fail-closed and requires the branch to be current with main.
   Post-merge exact-tree reuse does not weaken this gate: a missing or mismatched

@@ -44,7 +44,6 @@ test('docs/process-only scope uses local diff and root script contracts without 
 
   assert.equal(scope.mode, 'docs')
   assert.equal(scope.runRootRelease, false)
-  assert.equal(scope.runFrontendTargeted, false)
   assert.equal(scope.observeRehearsal, false)
   assert.equal(scope.affectedVerification.fullReleaseRequired, false)
 })
@@ -63,14 +62,13 @@ test('only explicitly named docs guard scripts bypass the full release', () => {
   assert.equal(unknownScript.runRootRelease, true)
 })
 
-test('frontend scope runs the root gate and reusable targeted frontend child', () => {
+test('frontend scope runs the canonical root release workflow once', () => {
   const scope = selectRequiredReleaseGateScope([
     'admin-web/src/features/store-checklist/checklist-page.tsx',
   ])
 
   assert.equal(scope.mode, 'release')
   assert.equal(scope.runRootRelease, true)
-  assert.equal(scope.runFrontendTargeted, true)
   assert.equal(scope.observeRehearsal, false)
   assert.ok(scope.affectedVerification.commands.includes('npm.cmd --prefix admin-web run lint'))
   assert.ok(scope.affectedVerification.commands.includes('npm.cmd --prefix admin-web run build'))
@@ -81,7 +79,6 @@ test('API-contract docs cannot be mistaken for docs/process-only scope', () => {
 
   assert.equal(scope.mode, 'release')
   assert.equal(scope.runRootRelease, true)
-  assert.equal(scope.runFrontendTargeted, true)
   assert.ok(scope.affectedVerification.commands.includes('npm.cmd run check:release'))
 })
 
@@ -104,7 +101,6 @@ test('unknown paths fail safe into the official root release gate', () => {
 
   assert.equal(scope.mode, 'release')
   assert.equal(scope.runRootRelease, true)
-  assert.equal(scope.runFrontendTargeted, false)
   assert.equal(scope.observeRehearsal, false)
 })
 
@@ -117,7 +113,6 @@ test('empty and rename-aware change lists cannot hide a release-impacting path',
   )
   const renameScope = selectRequiredReleaseGateScope(renamedFiles)
   assert.equal(renameScope.mode, 'release')
-  assert.equal(renameScope.runFrontendTargeted, true)
 })
 
 test('observer evaluates the latest same-head GitHub Actions check run fail closed', () => {
@@ -160,9 +155,7 @@ test('aggregate accepts only applicable children and fails on a selected child f
     scopeResult: 'success',
     docsResult: 'success',
     rootReleaseResult: 'skipped',
-    frontendTargetedResult: 'skipped',
     rehearsalObserverResult: 'skipped',
-    runFrontendTargeted: false,
     observeRehearsal: false,
   })
   assert.equal(docsFinal.ok, true)
@@ -172,13 +165,11 @@ test('aggregate accepts only applicable children and fails on a selected child f
     scopeResult: 'success',
     docsResult: 'skipped',
     rootReleaseResult: 'success',
-    frontendTargetedResult: 'failure',
-    rehearsalObserverResult: 'success',
-    runFrontendTargeted: true,
+    rehearsalObserverResult: 'failure',
     observeRehearsal: true,
   })
   assert.equal(releaseFinal.ok, false)
-  assert.deepEqual(releaseFinal.failures, ['frontend-targeted=failure'])
+  assert.deepEqual(releaseFinal.failures, ['release-rehearsal-observer=failure'])
 })
 
 test('aggregate rejects cancelled, timed out, skipped, and missing selected children', () => {
@@ -188,30 +179,12 @@ test('aggregate rejects cancelled, timed out, skipped, and missing selected chil
       scopeResult: 'success',
       docsResult: 'skipped',
       rootReleaseResult,
-      frontendTargetedResult: 'skipped',
       rehearsalObserverResult: 'skipped',
-      runFrontendTargeted: false,
       observeRehearsal: false,
     })
 
     assert.equal(result.ok, false)
     assert.match(result.failures.join(', '), /root-release=/)
-  }
-
-  for (const frontendTargetedResult of ['failure', 'cancelled', 'timed_out', 'skipped', '']) {
-    const result = evaluateRequiredReleaseGateFinal({
-      mode: 'release',
-      scopeResult: 'success',
-      docsResult: 'skipped',
-      rootReleaseResult: 'success',
-      frontendTargetedResult,
-      rehearsalObserverResult: 'skipped',
-      runFrontendTargeted: true,
-      observeRehearsal: false,
-    })
-
-    assert.equal(result.ok, false)
-    assert.match(result.failures.join(', '), /frontend-targeted=/)
   }
 })
 
@@ -228,8 +201,7 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.match(workflow, /uses:\s*\.\/\.github\/workflows\/release-check\.yml/)
   assert.match(workflow, /git diff --check "\$BASE_SHA" "\$HEAD_SHA"/)
   assert.match(workflow, /run:\s*npm run test:scripts/)
-  assert.match(workflow, /uses:\s*\.\/\.github\/workflows\/frontend-release-check\.yml/)
-  assert.doesNotMatch(workflow, /frontend-release-observer/)
+  assert.doesNotMatch(workflow, /frontend-targeted:/)
   assert.match(workflow, /REQUIRED_RELEASE_GATE_CHECK_NAME:\s*release-rehearsal/)
   assert.match(workflow, /if:\s*\$\{\{ always\(\) \}\}/)
   assert.match(workflow, /name:\s*required-release-gate/)
@@ -253,6 +225,10 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.doesNotMatch(releaseWorkflow, /^\s*push:/m)
   assert.match(releaseWorkflow, /workflow_call:\s*\n/)
   assert.match(releaseWorkflow, /workflow_dispatch:\s*\n/)
+  assert.match(releaseWorkflow, /^  root-contracts:/m)
+  assert.match(releaseWorkflow, /^  backend-release:/m)
+  assert.match(releaseWorkflow, /^  frontend-release:/m)
+  assert.match(releaseWorkflow, /^  release-check:/m)
   assert.match(postMergeWorkflow, /name:\s*Post-Merge Verification/)
   assert.match(postMergeWorkflow, /^\s*push:\s*$/m)
   assert.match(postMergeWorkflow, /!scripts\/current-state-handoff-contract\.test\.mjs/)

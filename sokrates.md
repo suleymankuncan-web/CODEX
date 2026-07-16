@@ -468,6 +468,11 @@ Use these mini playbooks when the work touches a sensitive domain.
 - Do not bypass, delete, or weaken gates to make a PR green.
 - Separate flaky/noisy gate diagnosis from product code changes where possible.
 - Record known skipped gates and why they are safe to skip.
+- A concrete late-stage failure MAY use exact-input `check:release -- --resume`;
+  stale/missing/mismatched proof and volatile audits MUST rerun. GitHub native
+  failed-job rerun may preserve successful sibling jobs, but coverage, test
+  selection, build, audit, E2E isolation, and the fail-closed aggregate remain
+  unchanged.
 - Stop if a check failure is not understood.
 
 ### External Evidence And Live Providers
@@ -828,7 +833,7 @@ it locally.
 - After PR open: wait for required GitHub checks, Vercel checks when relevant,
   and mergeability. GitHub Codex review is owner-disabled: do not trigger
   `@codex review`, request it elsewhere, or wait for bot reactions/comments.
-- Use the single canonical 30-second polling loop from `discipline.md` for
+- Use the single canonical 55-60 second polling loop from `discipline.md` for
   checks, deployment status, status rollup, and mergeability.
 - Merge only when required checks are green, the PR is mergeable, and a fresh
   final local adversarial diff review is clean.

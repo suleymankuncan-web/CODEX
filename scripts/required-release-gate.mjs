@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { selectAffectedVerification } from './affected-verification-selector.mjs'
 
 export const GITHUB_ACTIONS_APP_ID = 15368
-export const REQUIRED_RELEASE_GATE_POLL_INTERVAL_MS = 30_000
+export const REQUIRED_RELEASE_GATE_POLL_INTERVAL_MS = 60_000
 
 const rootProcessFiles = new Set([
   'CONTRIBUTING.md',
@@ -43,13 +43,6 @@ function isDocsProcessPath(file) {
     rootProcessFiles.has(file) ||
     docsProcessContractFiles.has(file) ||
     (!file.includes('/') && file.endsWith('.md'))
-  )
-}
-
-function isFrontendTargetedPath(file) {
-  return (
-    hasPrefix(file, ['admin-web/', 'docs/api/']) ||
-    file === '.github/workflows/frontend-release-check.yml'
   )
 }
 
@@ -97,7 +90,6 @@ export function selectRequiredReleaseGateScope(files) {
       files: normalizedFiles,
       affectedVerification,
       runRootRelease: false,
-      runFrontendTargeted: false,
       observeRehearsal: false,
     }
   }
@@ -109,7 +101,6 @@ export function selectRequiredReleaseGateScope(files) {
       files: normalizedFiles,
       affectedVerification,
       runRootRelease: false,
-      runFrontendTargeted: false,
       observeRehearsal: false,
     }
   }
@@ -120,7 +111,6 @@ export function selectRequiredReleaseGateScope(files) {
     files: normalizedFiles,
     affectedVerification,
     runRootRelease: true,
-    runFrontendTargeted: normalizedFiles.some(isFrontendTargetedPath),
     observeRehearsal: normalizedFiles.some(isRehearsalPath),
   }
 }
@@ -178,9 +168,7 @@ export function evaluateRequiredReleaseGateFinal({
   scopeResult,
   docsResult,
   rootReleaseResult,
-  frontendTargetedResult,
   rehearsalObserverResult,
-  runFrontendTargeted,
   observeRehearsal,
 }) {
   const failures = []
@@ -196,9 +184,6 @@ export function evaluateRequiredReleaseGateFinal({
   } else if (mode === 'release') {
     if (rootReleaseResult !== 'success') {
       failures.push(`root-release=${rootReleaseResult || 'missing'}`)
-    }
-    if (runFrontendTargeted && frontendTargetedResult !== 'success') {
-      failures.push(`frontend-targeted=${frontendTargetedResult || 'missing'}`)
     }
     if (observeRehearsal && rehearsalObserverResult !== 'success') {
       failures.push(`release-rehearsal-observer=${rehearsalObserverResult || 'missing'}`)
@@ -216,7 +201,6 @@ export function evaluateRequiredReleaseGateFinal({
 function writeScopeOutput(scope) {
   console.log(`mode=${scope.mode}`)
   console.log(`run_root_release=${scope.runRootRelease}`)
-  console.log(`run_frontend_targeted=${scope.runFrontendTargeted}`)
   console.log(`observe_rehearsal=${scope.observeRehearsal}`)
   console.error(`[required-release-gate] ${scope.reason}`)
   console.error(`[required-release-gate] files: ${scope.files.join(', ')}`)
@@ -297,9 +281,7 @@ function evaluateFinalFromEnvironment() {
     scopeResult: process.env.REQUIRED_RELEASE_GATE_SCOPE_RESULT,
     docsResult: process.env.REQUIRED_RELEASE_GATE_DOCS_RESULT,
     rootReleaseResult: process.env.REQUIRED_RELEASE_GATE_ROOT_RELEASE_RESULT,
-    frontendTargetedResult: process.env.REQUIRED_RELEASE_GATE_FRONTEND_TARGETED_RESULT,
     rehearsalObserverResult: process.env.REQUIRED_RELEASE_GATE_REHEARSAL_OBSERVER_RESULT,
-    runFrontendTargeted: process.env.REQUIRED_RELEASE_GATE_RUN_FRONTEND_TARGETED === 'true',
     observeRehearsal: process.env.REQUIRED_RELEASE_GATE_OBSERVE_REHEARSAL === 'true',
   })
 

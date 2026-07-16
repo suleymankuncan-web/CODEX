@@ -177,6 +177,24 @@ gate when the blast radius requires it.
   `npm.cmd --prefix backend/nestjs run check:release`.
 - Cross-domain or release-impacting changes: root `npm.cmd run check:release`.
 
+The root command is fresh by default. If a concrete late-stage failure was
+fixed without changing HEAD, manifest, commands, runtime, lockfiles, or any
+tracked/non-ignored workspace input, use:
+
+```powershell
+npm.cmd run check:release -- --resume
+```
+
+The runner reuses only exact, atomic successful stage receipts. Dependency
+audits are volatile and rerun. Any identity uncertainty runs fresh. In GitHub
+Actions, use native `Re-run failed jobs` after a late failure; successful
+root/backend/frontend/audit sibling jobs stay valid while
+`required-release-gate` remains fail-closed.
+Never shorten release time by reducing coverage, test selection, audits,
+builds, API checks, Playwright tests, or the two-worker isolation policy.
+Do not run two local canonical gates concurrently. Idle PR polling remains
+55-60 seconds and does not require a model agent.
+
 ## Migration Change Decision
 
 The root release gate prints a migration-change warning when the changed files
