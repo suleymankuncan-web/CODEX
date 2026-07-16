@@ -63,7 +63,14 @@ describe("RankingService scope summary", () => {
         active_personnel_count: "150",
         store_count: "30",
       })),
-      getActiveEmployeeAssignmentScopes: jest.fn(async () => []),
+      getActiveEmployeeAssignmentScopes: jest.fn(async (employeeIds: string[]) =>
+        employeeIds.map((employeeId, index) => ({
+          employee_id: employeeId,
+          company_id: "company-1",
+          region_id: "region-1",
+          store_id: assignedStoreIds[index % assignedStoreIds.length],
+        })),
+      ),
       getEmployeeTurkeyBenchmarkValues: jest.fn(async () => []),
     };
     const rankingRepository = {

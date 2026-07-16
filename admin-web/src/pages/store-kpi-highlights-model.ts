@@ -6,7 +6,6 @@ import { useLocalization } from '../features/localization/useLocalization'
 import {
   getKpiConfig,
   getKpiReport,
-  getRankings,
   getReportingSnapshotRuns,
   getStoreScoreBreakdown,
   getStoreKpiHighlights,
@@ -26,6 +25,8 @@ import {
 import { resolveLiveChecklistImpact } from './store-kpi-checklist-impact'
 import { useRegionOverviewPeriodModel } from './store-kpis-region-period-model'
 import { useReportViewerStoreSelection } from './store-kpi-company-selection'
+import { sortKpiStoreRows } from './store-kpis-command-contract'
+import { useStoreKpisOverviewQueries } from './store-kpis-overview-queries'
 import {
   getQueryValue,
   hasGlobalStoreDetailDefault,
@@ -71,15 +72,7 @@ export type DisplayKpiRow = {
   scoreStatus: 'scored' | 'pending_normalization' | 'missing_reference' | 'missing'
 }
 
-export type StoreKpisRegionSortKey =
-  | 'score'
-  | 'TARGET_ACHIEVEMENT'
-  | 'UPT'
-  | 'ATV'
-  | 'CR'
-  | 'gsm_approval'
-  | 'BM_CHECKLIST'
-  | 'VM_CHECKLIST'
+export type StoreKpisRegionSortKey = 'score' | 'TARGET_ACHIEVEMENT' | 'UPT' | 'ATV' | 'CR' | 'gsm_approval' | 'BM_CHECKLIST' | 'VM_CHECKLIST'
 
 export type StoreKpisRegionSortDirection = 'asc' | 'desc'
 
@@ -106,6 +99,8 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   })
   const { companyStoreQuery, effectiveStoreId, isReportViewer, selectedStoreId, storeOptions, storeSelectionReady } = storeSelection
   const routePeriodStart = getQueryValue(searchParams, 'periodStart')
+  const isReportViewerOverview = isReportViewer && selectedStoreId.length === 0
+  const isReportViewerStoreDetail = isReportViewer && selectedStoreId.length > 0
   const hasRegionManagerRole = input.authSummary?.user.roleCodes.includes('REGION_MANAGER') ?? false
   const regionManagerUserId = input.authSummary?.user.userId ?? ''
   const hasDetailDefault = hasStoreDetailDefault(input.authSummary)
@@ -118,10 +113,6 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   const [viewModeState, setViewModeState] = useState<'live' | 'closed'>('live')
   const [selectedSnapshotRunId, setSelectedSnapshotRunId] = useState('')
   const [livePeriodStart, setLivePeriodStart] = useState('')
-  const [regionOverviewSort, setRegionOverviewSortState] = useState<{
-    sortKey: StoreKpisRegionSortKey
-    sortDirection: StoreKpisRegionSortDirection
-  }>({ sortKey: 'score', sortDirection: 'desc' })
   const closedSnapshotModeAllowed =
     hasDetailDefault && (!hasRegionManagerRole || hasGlobalDetailDefault) && !isRegionManagerOverview
   const viewMode = closedSnapshotModeAllowed ? viewModeState : 'live'
@@ -139,18 +130,40 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     }
     setSearchParams(nextParams, { replace: true })
   }
-  const setRegionOverviewSort = (sortKey: StoreKpisRegionSortKey) => {
-    setRegionOverviewSortState((current) => ({
-      sortKey,
-      sortDirection:
-        current.sortKey === sortKey && current.sortDirection === 'desc' ? 'asc' : 'desc',
-    }))
-  }
   const regionPeriodModel = useRegionOverviewPeriodModel({
     isRegionManagerOverview,
     regionManagerUserId,
     reportingAllowed,
     routePeriodStart,
+    searchParams,
+    setSearchParams,
+  })
+  const {
+    activeRegionOverviewPeriodStart,
+    activeReportViewerPeriodStart,
+    effectiveRegionOverviewQuery,
+    regionOverviewPage,
+    regionOverviewPageSize,
+    regionOverviewSort,
+    reportViewerOverviewQuery,
+    reportViewerPage,
+    reportViewerPageSize,
+    reportViewerRiskOnly,
+    reportViewerRiskPage,
+    setRegionOverviewPage,
+    setRegionOverviewPeriodStart,
+    setRegionOverviewSort,
+    setReportViewerPage,
+    setReportViewerPeriodStart,
+    setReportViewerRiskOnly,
+    setReportViewerRiskPage,
+  } = useStoreKpisOverviewQueries({
+    activeRoutePeriodStart: routePeriodStart,
+    isRegionManagerOverview,
+    isReportViewerOverview,
+    regionManagerUserId,
+    regionPeriodModel,
+    reportingAllowed,
     searchParams,
     setSearchParams,
   })
@@ -178,39 +191,6 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
       Boolean(effectiveStoreId),
     ...transientQueryRetryOptions,
   })
-
-  const activeRegionOverviewPeriodStart = regionPeriodModel.activePeriodStart
-
-  const regionOverviewQuery = useQuery({
-    queryKey: [
-      'store-kpis-region-overview',
-      'monthly',
-      activeRegionOverviewPeriodStart,
-      regionOverviewSort.sortKey,
-      regionOverviewSort.sortDirection,
-      regionManagerUserId,
-      0,
-    ],
-    queryFn: () =>
-      getRankings({
-        periodType: 'monthly',
-        ...(activeRegionOverviewPeriodStart ? { periodStart: activeRegionOverviewPeriodStart } : {}),
-        ...(regionManagerUserId ? { regionManagerUserId } : {}),
-        sortKey: regionOverviewSort.sortKey,
-        sortDirection: regionOverviewSort.sortDirection,
-        limit: 100,
-        offset: 0,
-      }),
-    enabled:
-      reportingAllowed &&
-      isRegionManagerOverview &&
-      Boolean(regionManagerUserId) &&
-      Boolean(activeRegionOverviewPeriodStart),
-    ...transientQueryRetryOptions,
-  })
-  const effectiveRegionOverviewQuery = activeRegionOverviewPeriodStart
-    ? regionOverviewQuery
-    : regionPeriodModel.seedQuery
 
   const dailySnapshotQuery = useQuery({
     queryKey: ['store-kpis-snapshot-runs', 'daily-list'],
@@ -386,7 +366,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
         matchingRow?.scoreContribution !== undefined
           ? matchingRow.scoreContribution / 100
           : achievementRate === null
-            ? 0
+            ? null
             : (achievementRate * metric.weightPercent) / 100
 
       return {
@@ -401,7 +381,7 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
       return total + (item.matchingRow?.scoreStatus === 'scored' ? item.metric.weightPercent : 0)
     }, 0)
     const scoreValue = contributions.reduce(
-      (total, item) => total + item.weightedContribution,
+      (total, item) => total + (item.weightedContribution ?? 0),
       0,
     )
 
@@ -491,7 +471,8 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
   const configForbidden = configQuery.error instanceof ApiError && configQuery.error.status === 403
   const isLoading =
     (configQuery.isLoading && !configForbidden) ||
-    (isReportViewer && companyStoreQuery.isLoading) ||
+    (isReportViewerStoreDetail && companyStoreQuery.isLoading) ||
+    (isReportViewerOverview && reportViewerOverviewQuery.isLoading) ||
     (isRegionManagerOverview
       ? effectiveRegionOverviewQuery.isLoading
       : viewMode === 'live'
@@ -507,7 +488,14 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     liveSummary?.period
       ? `${formatDate(liveSummary.period.periodStart, locale)} - ${formatDate(liveSummary.period.periodEnd, locale)} (${t('storeKpis.latestMonthlyPeriod')})`
       : t('storeKpis.latestMonthlyPeriod')
-  const regionOverviewRows = effectiveRegionOverviewQuery.data?.storeLeaderboard.items ?? []
+  const regionOverviewRows = useMemo(
+    () => sortKpiStoreRows(
+      effectiveRegionOverviewQuery.data?.storeLeaderboard.items ?? [],
+      regionOverviewSort.sortKey,
+      regionOverviewSort.sortDirection,
+    ),
+    [effectiveRegionOverviewQuery.data?.storeLeaderboard.items, regionOverviewSort],
+  )
   const regionOverviewSource = effectiveRegionOverviewQuery.data?.source ?? null
   const regionOverviewPeriodStart =
     activeRegionOverviewPeriodStart ?? regionOverviewSource?.periodStart ?? routePeriodStart
@@ -517,6 +505,12 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
       params.set('periodStart', regionOverviewPeriodStart)
     }
 
+    return `/store/kpis?${params.toString()}`
+  }
+  const getCompanyStoreDetailPath = (storeId: string) => {
+    const params = new URLSearchParams({ storeId })
+    const periodStart = activeReportViewerPeriodStart || reportViewerOverviewQuery.data?.source.periodStart
+    if (periodStart) params.set('periodStart', periodStart)
     return `/store/kpis?${params.toString()}`
   }
 
@@ -536,9 +530,12 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     companyStoreQuery,
     dailySnapshotQuery,
     effectiveStoreId,
+    getCompanyStoreDetailPath,
     getRegionStoreDetailPath,
     isLoading,
     isReportViewer,
+    isReportViewerOverview,
+    isReportViewerStoreDetail,
     isRegionManagerOverview,
     isRegionManagerStoreDetail,
     kpiOwnershipMatrix,
@@ -553,7 +550,15 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     personnelKpiScoreProfile,
     primaryStoreId,
     reportingAllowed,
+    reportViewerActivePeriodStart: activeReportViewerPeriodStart,
+    reportViewerOverviewQuery,
+    reportViewerPage,
+    reportViewerPageSize,
+    reportViewerRiskOnly,
+    reportViewerRiskPage,
     regionOverviewActivePeriodStart: activeRegionOverviewPeriodStart,
+    regionOverviewPage,
+    regionOverviewPageSize,
     regionOverviewQuery: effectiveRegionOverviewQuery,
     regionOverviewRows,
     regionOverviewSeedQuery: regionPeriodModel.seedQuery,
@@ -564,8 +569,13 @@ export function useStoreKpiHighlightsPageModel(input: { authSummary: AuthSession
     selectedStoreId,
     setSelectedStoreId: storeSelection.setSelectedStoreId,
     setLivePeriodStart: setLivePeriodFilter,
-    setRegionOverviewPeriodStart: regionPeriodModel.setPeriodStart,
+    setRegionOverviewPage,
+    setRegionOverviewPeriodStart,
     setRegionOverviewSort,
+    setReportViewerPage,
+    setReportViewerPeriodStart,
+    setReportViewerRiskOnly,
+    setReportViewerRiskPage,
     setSelectedSnapshotRunId,
     setViewMode,
     storeGrade,

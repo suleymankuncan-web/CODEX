@@ -17,6 +17,8 @@ export type RankingPeriodRow = {
 
 export type RankingFilters = {
   assignedStoreIds?: string[];
+  enforceAssignedReadScope?: boolean;
+  regionManagerUnassigned?: boolean;
   regionManagerUserId?: string;
   regionId?: string;
   regionIds?: string[];
@@ -242,6 +244,8 @@ export function applyStoreFilters(
       return false;
     }
 
+    if (filters.regionManagerUnassigned && row.regionManagerUserId !== null) return false;
+
     if (filters.regionId && row.regionId !== filters.regionId) {
       return false;
     }
@@ -273,6 +277,8 @@ export function applyPersonnelFilters(
       return false;
     }
 
+    if (filters.regionManagerUnassigned && row.regionManagerUserId !== null) return false;
+
     if (filters.regionId && row.regionId !== filters.regionId) {
       return false;
     }
@@ -303,7 +309,7 @@ function isOutsideScopedStoreRead(
     ...(filters.assignedStoreIds ?? []),
   ]);
   const scopedRegionIds = filters.regionIds ?? [];
-  const shouldUseReadScope = Boolean(filters.regionManagerUserId);
+  const shouldUseReadScope = filters.enforceAssignedReadScope === true;
 
   if (shouldUseReadScope && scopedStoreIds.length > 0) {
     return row.storeId === null || !scopedStoreIds.includes(row.storeId);
@@ -435,6 +441,13 @@ export function getEmptyRankingResponse(input: {
       storeCount: 0,
       activePersonnelCount: 0,
     },
+    regionManagerLeaderboard: {
+      items: [],
+      meta: { total: 0, limit: 50, offset: 0 },
+      riskItems: [],
+      riskMeta: { total: 0, limit: 50, offset: 0 },
+      riskStoreCount: 0,
+    },
     storeLeaderboard: {
       items: [],
       currentStore: null,
@@ -448,6 +461,7 @@ export function getEmptyRankingResponse(input: {
       items: [],
       currentEmployee: null,
       managedStorePersonnel: [],
+      managedStorePersonnelMeta: { total: 0, limit: 50, offset: 0 },
       meta: {
         total: 0,
         limit: input.access.globalLimit,

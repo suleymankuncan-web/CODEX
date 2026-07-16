@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   BadgeCheck,
+  BarChart3,
   CalendarDays,
   ClipboardCheck,
   ClipboardX,
@@ -14,7 +15,6 @@ import {
 } from 'lucide-react'
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { Button } from '../components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
 import {
   getRankings,
   getStoreKpiHighlights,
@@ -33,18 +33,14 @@ import type { DisplayKpiRow, StoreKpiHighlightsPageModel } from './store-kpi-hig
 import { StoreKpisCommandDeckHeader, type StoreKpiCommandTab } from './store-kpis-command-deck-header'
 import { StoreKpisPeriodPicker } from './store-kpis-period-picker'
 import { StoreEmptyState, StoreErrorState, StoreLoadingState, StoreStatusBadge, StoreSurfacePage } from './store-surface-primitives'
+import {
+  buildKpiMonthlyHistory,
+  classifyKpiReference,
+  classifyPersonnelPerformance,
+} from './store-kpis-command-contract'
 
 type MetricTone = 'good' | 'warn' | 'danger' | 'neutral'
-
-const metricColors: Record<string, string> = {
-  TARGET_ACHIEVEMENT: '#18bfd0',
-  UPT: '#6d4df7',
-  ATV: '#f59e0b',
-  CR: '#f43f72',
-  gsm_approval: '#2563eb',
-  BM_CHECKLIST: '#3878ff',
-  VM_CHECKLIST: '#13a779',
-}
+type KpiDecisionFocus = 'all' | 'TARGET_ACHIEVEMENT' | 'UPT' | 'CHECKLIST'
 
 const metricIcons: Record<string, typeof Target> = {
   TARGET_ACHIEVEMENT: Target,
@@ -60,41 +56,60 @@ const storeMetricOrder = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'gsm_approva
 
 export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageModel }) {
   const [activeTab, setActiveTab] = useState<StoreKpiCommandTab>('store')
-  const [activeDot, setActiveDot] = useState<string | null>(null)
+  const [decisionFocus, setDecisionFocus] = useState<KpiDecisionFocus>('all')
+  const [personnelPageState, setPersonnelPageState] = useState({ page: 0, scopeKey: '' })
+  const personnelPageSize = 50
   const storeId = model.effectiveStoreId ?? ''
   const periodStart = model.liveSummary?.period?.periodStart ?? model.livePeriodStart
+  const personnelScopeKey = `${storeId}|${periodStart || 'latest-monthly'}`
+  const personnelPage = personnelPageState.scopeKey === personnelScopeKey ? personnelPageState.page : 0
+  const setPersonnelPage = (page: number) => setPersonnelPageState({ page, scopeKey: personnelScopeKey })
   const personnelRankingQuery = useQuery({
-    queryKey: ['store-kpis-personnel-ranking', storeId || 'no-store', periodStart || 'latest-monthly'],
+    queryKey: ['store-kpis-personnel-ranking', storeId || 'no-store', periodStart || 'latest-monthly', personnelPage, personnelPageSize],
     queryFn: () =>
       getRankings({
         periodType: 'monthly',
         ...(periodStart ? { periodStart } : {}),
         ...(storeId ? { storeId } : {}),
-        limit: 100,
-        offset: 0,
+        limit: personnelPageSize,
+        offset: personnelPage * personnelPageSize,
+        managedPersonnelLimit: personnelPageSize,
+        managedPersonnelOffset: personnelPage * personnelPageSize,
       }),
     enabled: model.reportingAllowed && model.viewMode === 'live' && Boolean(storeId),
     ...transientQueryRetryOptions,
+    placeholderData: (previous) => previous,
   })
   const personnelLeaderboard = personnelRankingQuery.data?.personnelLeaderboard
   const storeFilteredPersonnelRows = personnelLeaderboard?.items ?? []
   const managedPersonnelRows = personnelLeaderboard?.managedStorePersonnel ?? []
+  const useServerPersonnelPage =
+    model.storeKpiSurfaceMode === 'regionStoreDetail' || model.isReportViewerStoreDetail
   const personnelRows =
     model.viewMode === 'live'
-      ? model.storeKpiSurfaceMode === 'regionStoreDetail'
+      ? useServerPersonnelPage
         ? storeFilteredPersonnelRows
         : managedPersonnelRows
       : []
-  const scoreValue = Math.round(model.weightedScore.scoreValue * 1000) / 10
+  const personnelTotal = useServerPersonnelPage
+    ? personnelLeaderboard?.meta.total ?? 0
+    : personnelLeaderboard?.managedStorePersonnelMeta?.total ?? managedPersonnelRows.length
   const storeRows = useMemo(
-    () => storeMetricOrder.map((code) => findMetricRow(model.rows, code)).filter(Boolean) as DisplayKpiRow[],
+    () => storeMetricOrder.map((code) => findMetricRow(model.rows, code) ?? emptyRow(code)),
     [model.rows],
   )
+  const visibleStoreRows = useMemo(() => {
+    if (decisionFocus === 'all') return storeRows
+    if (decisionFocus === 'CHECKLIST') return storeRows.filter((row) => normalizeKpiCode(row.kpiCode).includes('checklist'))
+    return storeRows.filter((row) => normalizeKpiCode(row.kpiCode) === normalizeKpiCode(decisionFocus))
+  }, [decisionFocus, storeRows])
   const missingChecklistCodes = storeMetricOrder.filter((code) => {
     if (!code.includes('CHECKLIST')) return false
     const row = findMetricRow(model.rows, code)
     return !row || row.scoreStatus !== 'scored'
   })
+  const failedRetainedQueries = [model.configQuery, model.liveKpiQuery, model.dailySnapshotQuery, model.closedKpiQuery]
+    .filter((query) => query.isError && Boolean(query.data))
 
   return (
     <StoreSurfacePage ariaLabel={model.t('storeKpis.title')}>
@@ -106,25 +121,30 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
         setActiveTab={setActiveTab}
         storeKpiCount={storeRows.length}
       />
+      {failedRetainedQueries.length > 0 ? (
+        <InlineBackgroundError
+          model={model}
+          onRetry={() => void Promise.all(failedRetainedQueries.map((query) => query.refetch()))}
+        />
+      ) : null}
+      <KpiPartialState model={model} />
 
       {activeTab === 'store' ? (
-        <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[390px_minmax(0,1fr)]">
-          <ScoreOrbit
-            model={model}
-            scoreValue={scoreValue}
-            activeDot={activeDot}
-            setActiveDot={setActiveDot}
-          />
-          <StoreKpiTiles model={model} />
-          <KpiContributionTable model={model} rows={storeRows} className="tw:xl:col-span-2" />
-          <MonthlyTrend model={model} className="tw:xl:col-span-2" />
+        <div className="tw:grid tw:gap-4">
+          <StoreKpiDecisionRail focus={decisionFocus} model={model} onFocus={setDecisionFocus} />
+          <KpiContributionTable model={model} rows={visibleStoreRows} />
+          <MonthlyTrend model={model} />
         </div>
       ) : (
         <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,1fr)_320px]">
           <PersonnelKpiRows
             model={model}
+            onPageChange={setPersonnelPage}
+            page={personnelPage}
+            pageSize={personnelPageSize}
             queryState={personnelRankingQuery}
             rows={personnelRows}
+            total={personnelTotal}
           />
           <ScoreSourceCard model={model} missingChecklistCodes={missingChecklistCodes} />
         </div>
@@ -136,42 +156,17 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
 function CommandDeckControls({ model }: { model: StoreKpiHighlightsPageModel }) {
   return (
     <>
-      {model.isReportViewer ? <StoreKpiStoreSelector model={model} /> : null}
       <PeriodControls model={model} />
       <Button
         type="button"
         variant="default"
-        className="tw:h-10 tw:rounded-xl tw:bg-[#6d4df7] tw:px-4 tw:text-sm tw:font-medium"
+        className="tw:h-10 tw:rounded-xl tw:bg-[var(--store-command-plum)] tw:px-4 tw:text-sm tw:font-medium"
         onClick={() => (model.viewMode === 'live' ? model.liveKpiQuery.refetch() : model.closedKpiQuery.refetch())}
       >
         <RefreshCw className="tw:mr-2 tw:size-4" />
         {model.t('storeKpis.refreshData')}
       </Button>
     </>
-  )
-}
-
-function StoreKpiStoreSelector({ model }: { model: StoreKpiHighlightsPageModel }) {
-  return (
-    <div className="tw:flex tw:items-center tw:gap-2">
-      <span className="tw:text-xs tw:font-semibold tw:text-muted-foreground">{model.t('storeKpis.storeSelectorLabel')}</span>
-      <Select value={model.selectedStoreId} onValueChange={model.setSelectedStoreId}>
-        <SelectTrigger
-          aria-label={model.t('storeKpis.storeSelectorLabel')}
-          className="tw:h-10 tw:min-w-52 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-foreground"
-          data-testid="store-kpi-company-store-selector"
-        >
-          <SelectValue placeholder={model.t('storeKpis.storeSelectorPlaceholder')} />
-        </SelectTrigger>
-        <SelectContent>
-          {model.storeOptions.map((store) => (
-            <SelectItem key={store.storeId} value={store.storeId}>
-              {store.storeName}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
   )
 }
 
@@ -191,7 +186,7 @@ function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
             <button
               key={mode}
               type="button"
-              className={`tw:h-8 tw:rounded-lg tw:px-3 tw:text-xs tw:font-medium ${model.viewMode === mode ? 'tw:bg-[#6d4df7] tw:text-white' : 'tw:text-[#56627e]'}`}
+              className={`tw:h-8 tw:rounded-lg tw:px-3 tw:text-xs tw:font-medium ${model.viewMode === mode ? 'tw:bg-[var(--store-command-plum)] tw:text-white' : 'tw:text-[var(--store-command-muted)]'}`}
               onClick={() => model.setViewMode(mode)}
             >
               {mode === 'live' ? model.t('storeKpis.livePeriod') : model.t('storeKpis.closedDay')}
@@ -206,7 +201,7 @@ function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
           locale={model.locale}
           onPeriodStartChange={model.setLivePeriodStart}
           periodStart={activeLivePeriodStart}
-          triggerClassName="tw:h-10 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[#071332]"
+          triggerClassName="tw:h-10 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[var(--store-command-ink)]"
         />
       ) : (
         <StoreKpisPeriodPicker
@@ -221,115 +216,68 @@ function PeriodControls({ model }: { model: StoreKpiHighlightsPageModel }) {
             if (matchingRun) model.setSelectedSnapshotRunId(matchingRun.snapshotRunId)
           }}
           periodStart={snapshotPeriodStart}
-          triggerClassName="tw:h-10 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[#071332]"
+          triggerClassName="tw:h-10 tw:rounded-xl tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium tw:text-[var(--store-command-ink)]"
         />
       )}
     </div>
   )
 }
 
-function ScoreOrbit(input: {
+function StoreKpiDecisionRail(input: {
+  focus: KpiDecisionFocus
   model: StoreKpiHighlightsPageModel
-  scoreValue: number
-  activeDot: string | null
-  setActiveDot: (value: string | null) => void
+  onFocus: (focus: KpiDecisionFocus) => void
 }) {
-  const gradient = buildScoreGradient(input.model)
-  const activeContribution = input.activeDot
-    ? findContribution(input.model, input.activeDot)
+  const target = findMetricRow(input.model.rows, 'TARGET_ACHIEVEMENT')
+  const upt = findMetricRow(input.model.rows, 'UPT')
+  const checklistRows = ['BM_CHECKLIST', 'VM_CHECKLIST']
+    .map((code) => findMetricRow(input.model.rows, code))
+    .filter((row): row is DisplayKpiRow => Boolean(row && row.scoreStatus === 'scored'))
+  const checklistValues = checklistRows.map((row) => toFiniteNumber(row.actualValue))
+  const checklistAverage = checklistValues.length === 2 && checklistValues.every((value) => value !== null)
+    ? checklistValues.reduce((sum, value) => sum + (value ?? 0), 0) / 2
     : null
+  const score = input.model.liveSummary?.score.matchedMetrics
+    ? toFiniteNumber(input.model.liveSummary.score.value)
+    : input.model.weightedScore.coveredWeight > 0
+      ? input.model.weightedScore.scoreValue * 100
+      : null
 
   return (
-    <section className="tw:rounded-3xl tw:border tw:border-white/80 tw:bg-white/[0.82] tw:p-5 tw:shadow-[0_20px_60px_rgba(83,95,130,0.14)]">
-      <div className="tw:mx-auto tw:grid tw:size-72 tw:place-items-center tw:rounded-full tw:p-4 tw:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.9),0_24px_60px_rgba(91,72,230,0.16)]" style={{ background: gradient }}>
-        <div className="tw:grid tw:size-48 tw:place-items-center tw:rounded-full tw:bg-white tw:text-center tw:shadow-inner">
-          <div>
-            <strong className="tw:block tw:text-5xl tw:font-semibold tw:text-[#071332]">
-              {formatNumber(input.model.locale, input.scoreValue, 1)}
-            </strong>
-            <span className="tw:text-sm tw:font-medium tw:text-[#7a839f]">{input.model.t('storeKpis.storeScore')}</span>
-          </div>
-        </div>
-      </div>
-      <div className="tw:mt-4 tw:flex tw:justify-center tw:gap-2" aria-label={input.model.t('storeKpis.commandScoreLegend')}>
-        {input.model.weightedScore.contributions.map((item) => {
-          const code = item.metric.code
-          const contribution = item.weightedContribution * 100
-          const label = `${formatKpiMetricLabel(input.model.t, code, item.metric.label)} - ${Number.isFinite(contribution) ? formatNumber(input.model.locale, contribution, 1) : input.model.t('storeKpis.noContribution')}`
-          return (
-            <button
-              key={code}
-              type="button"
-              className="tw:size-7 tw:rounded-full tw:border tw:border-white tw:shadow-sm tw:ring-offset-2 focus-visible:tw:outline-none focus-visible:tw:ring-2 focus-visible:tw:ring-[#6d4df7]"
-              style={{ backgroundColor: getMetricColor(code) }}
-              title={label}
-              aria-label={label}
-              onMouseEnter={() => input.setActiveDot(code)}
-              onFocus={() => input.setActiveDot(code)}
-              onClick={() => input.setActiveDot(input.activeDot === code ? null : code)}
-            />
-          )
-        })}
-      </div>
-      <div className="tw:mt-3 tw:min-h-8 tw:text-center tw:text-sm tw:font-medium tw:text-[#56627e]">
-        {activeContribution
-          ? `${formatKpiMetricLabel(input.model.t, activeContribution.metric.code, activeContribution.metric.label)}: ${formatNumber(input.model.locale, activeContribution.weightedContribution * 100, 1)}`
-          : input.model.t('storeKpis.commandScoreLegendHint')}
-      </div>
+    <section className="tw:grid tw:overflow-hidden tw:rounded-[1.45rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/[0.9] tw:shadow-[0_14px_38px_var(--store-command-line)] tw:sm:grid-cols-2 tw:xl:grid-cols-4" aria-label={input.model.t('storeKpis.commandDecisionRail')}>
+      <DecisionRailButton active={input.focus === 'all'} icon={BarChart3} label={input.model.t('storeKpis.storeScore')} onClick={() => input.onFocus('all')} value={score === null ? input.model.t('storeKpis.noData') : formatNumber(input.model.locale, score, 1)} />
+      <DecisionRailButton active={input.focus === 'TARGET_ACHIEVEMENT'} icon={Target} label={input.model.t('storeKpis.metric.targetAchievement')} onClick={() => input.onFocus('TARGET_ACHIEVEMENT')} value={target ? formatAchievementValue(input.model.locale, input.model.t, target) : input.model.t('storeKpis.noData')} />
+      <DecisionRailButton active={input.focus === 'UPT'} icon={PackagePlus} label={input.model.t('storeKpis.metric.upt')} onClick={() => input.onFocus('UPT')} value={formatMetricValue(input.model.locale, input.model.t, upt?.actualValue ?? null, 'UPT')} />
+      <DecisionRailButton active={input.focus === 'CHECKLIST'} icon={ClipboardCheck} label={input.model.t('storeKpis.commandChecklistAverage')} onClick={() => input.onFocus('CHECKLIST')} value={checklistAverage === null ? input.model.t('storeKpis.noData') : `%${formatNumber(input.model.locale, checklistAverage, 1)}`} />
     </section>
   )
 }
 
-function StoreKpiTiles({ model }: { model: StoreKpiHighlightsPageModel }) {
+function KpiPartialState({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const partial = model.viewMode === 'live' ? model.liveSummary?.partial : undefined
+  if (!partial?.isPartial) return null
   return (
-    <section className="tw:grid tw:gap-3 tw:sm:grid-cols-2 tw:xl:grid-cols-3">
-      {storeMetricOrder.map((code) => (
-        <MetricTile key={code} model={model} code={code} row={findMetricRow(model.rows, code)} />
-      ))}
-    </section>
-  )
-}
-
-function MetricTile({ model, code, row }: { model: StoreKpiHighlightsPageModel; code: string; row: DisplayKpiRow | undefined }) {
-  const Icon = metricIcons[code] ?? Target
-  const checklistMissing = code.includes('CHECKLIST') && (!row || row.scoreStatus !== 'scored')
-  const tone = checklistMissing ? 'danger' : getMetricTone(row)
-  const title = formatKpiMetricLabel(model.t, code, row?.kpiName ?? code)
-  const value = checklistMissing ? model.t('storeKpis.commandNotDone') : formatMetricValue(model.locale, model.t, row?.actualValue ?? null, code)
-
-  return (
-    <article className="tw:rounded-3xl tw:border tw:border-white/80 tw:bg-white/[0.86] tw:p-4 tw:shadow-[0_18px_48px_rgba(83,95,130,0.12)]">
-      <div className="tw:flex tw:items-start tw:justify-between tw:gap-3">
-        <div className={`tw:grid tw:size-11 tw:place-items-center tw:rounded-2xl ${iconToneClass(tone)}`}>
-          <Icon className="tw:size-5" />
-        </div>
-        <StatusPill tone={tone} label={checklistMissing ? model.t('storeKpis.commandPassive') : formatStatus(row, model)} />
-      </div>
-      <p className="tw:mt-4 tw:text-xs tw:font-semibold tw:text-[#65708d]">{title}</p>
-      <strong className="tw:mt-1 tw:block tw:text-2xl tw:font-semibold tw:text-[#071332]">{value}</strong>
-      {code === 'TARGET_ACHIEVEMENT' ? <TargetProgress model={model} row={row} /> : (
-        <p className="tw:mt-2 tw:text-sm tw:font-normal tw:text-[#65708d]">
-          {checklistMissing ? model.t('storeKpis.commandChecklistPassiveCopy') : formatReference(model, row)}
-        </p>
-      )}
-    </article>
-  )
-}
-
-function TargetProgress({ model, row }: { model: StoreKpiHighlightsPageModel; row: DisplayKpiRow | undefined }) {
-  const ratio = parseRatio(row?.achievementRate)
-  const pct = Math.max(0, Math.min(100, ratio * 100))
-  return (
-    <div className="tw:mt-3">
-      <div className="tw:h-2 tw:overflow-hidden tw:rounded-full tw:bg-[#e6eaf3]">
-        <div className="tw:h-full tw:rounded-full tw:bg-[linear-gradient(90deg,#6d4df7,#18bfd0)]" style={{ width: `${pct}%` }} />
-      </div>
-      <p className="tw:mt-2 tw:text-sm tw:font-normal tw:text-[#65708d]">
-        {ratio > 0
-          ? model.t('storeKpis.commandTargetProgress', { value: formatNumber(model.locale, ratio * 100, 0) })
-          : formatReference(model, row)}
-      </p>
+    <div role="status" aria-label={model.t('storeKpis.partialTitle')} className="tw:rounded-2xl tw:border tw:border-amber-300/60 tw:bg-amber-50 tw:p-4 tw:text-sm tw:text-amber-950">
+      <strong className="tw:block tw:font-semibold">{model.t('storeKpis.partialTitle')}</strong>
+      {partial.missingMetricLabels.length > 0 ? <p>{model.t('storeKpis.partialMissing', { items: partial.missingMetricLabels.join(', ') })}</p> : null}
+      {partial.pendingNormalizationLabels.length > 0 ? <p>{model.t('storeKpis.partialPending', { items: partial.pendingNormalizationLabels.join(', ') })}</p> : null}
     </div>
+  )
+}
+
+function DecisionRailButton(input: {
+  active: boolean
+  icon: typeof Target
+  label: string
+  onClick: () => void
+  value: string
+}) {
+  const Icon = input.icon
+  return (
+    <button type="button" aria-pressed={input.active} className={`tw:flex tw:min-h-[82px] tw:items-center tw:gap-3 tw:border-b tw:border-[var(--store-command-line)] tw:p-4 tw:text-left tw:transition tw:sm:border-r tw:xl:border-b-0 tw:last:border-r-0 ${input.active ? 'tw:bg-[linear-gradient(135deg,var(--store-command-plum-soft),var(--store-command-cyan-soft))]' : 'tw:bg-white/80 tw:hover:bg-[var(--store-command-surface-soft)]'}`} onClick={input.onClick}>
+      <span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum-deep)]"><Icon className="tw:size-5" /></span>
+      <span className="tw:min-w-0 tw:flex-1"><span className="tw:block tw:text-xs tw:text-[var(--store-command-muted)]">{input.label}</span><strong className="tw:mt-1 tw:block tw:text-2xl tw:font-semibold tw:text-[var(--store-command-ink)]">{input.value}</strong></span>
+    </button>
   )
 }
 
@@ -338,12 +286,12 @@ function KpiContributionTable({ model, rows, className = '' }: { model: StoreKpi
     <section className={`tw:overflow-hidden tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:shadow-sm ${className}`}>
       <div className="tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border/70 tw:p-4 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
         <div>
-          <h2 className="tw:text-lg tw:font-semibold tw:text-[#071332]">{model.t('storeKpis.commandContributionTitle')}</h2>
-          <p className="tw:text-sm tw:font-normal tw:text-[#65708d]">{model.t('storeKpis.commandContributionCopy')}</p>
-          <div className="tw:mt-2 tw:flex tw:flex-wrap tw:gap-3 tw:text-xs tw:font-medium tw:text-[#65708d]">
-            <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[#15a675]" />{model.t('storeKpis.commandToneGood')}</span>
-            <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[#f59e0b]" />{model.t('storeKpis.commandToneWarn')}</span>
-            <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[#f43f72]" />{model.t('storeKpis.commandToneProblem')}</span>
+          <h2 className="tw:text-lg tw:font-semibold tw:text-[var(--store-command-ink)]">{model.t('storeKpis.commandContributionTitle')}</h2>
+          <p className="tw:text-sm tw:font-normal tw:text-[var(--store-command-muted)]">{model.t('storeKpis.commandContributionCopy')}</p>
+          <div className="tw:mt-2 tw:flex tw:flex-wrap tw:gap-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-muted)]">
+            <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[var(--store-command-mint)]" />{model.t('storeKpis.commandReferenceGood')}</span>
+            <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[var(--store-command-warning)]" />{model.t('storeKpis.commandReferenceWatch')}</span>
+            <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[var(--store-command-danger)]" />{model.t('storeKpis.commandReferenceAction')}</span>
           </div>
         </div>
         <StoreStatusBadge tone="calm">{model.t('storeKpis.commandStoreTab')}</StoreStatusBadge>
@@ -351,7 +299,7 @@ function KpiContributionTable({ model, rows, className = '' }: { model: StoreKpi
       {rows.length > 0 ? (
         <div className="tw:overflow-x-auto">
           <table className="tw:min-w-[860px] tw:w-full tw:border-collapse tw:text-left">
-            <thead className="tw:bg-[#f7f8fc] tw:text-xs tw:font-semibold tw:uppercase tw:text-[#63708f]">
+            <thead className="tw:bg-[var(--store-command-surface-soft)] tw:text-xs tw:font-semibold tw:uppercase tw:text-[var(--store-command-muted)]">
               <tr>
                 {['KPI', model.t('storeKpis.actual'), model.t('storeKpis.reference.default'), model.t('storeKpis.commandRatio'), model.t('storeKpis.weightedContribution'), model.t('storeKpis.kpiContribution'), model.t('storeKpis.status')].map((label) => (
                   <th key={label} className="tw:px-4 tw:py-3">{label}</th>
@@ -359,10 +307,7 @@ function KpiContributionTable({ model, rows, className = '' }: { model: StoreKpi
               </tr>
             </thead>
             <tbody>
-              {storeMetricOrder.map((code) => {
-                const row = findMetricRow(rows, code)
-                return <ContributionRow key={code} model={model} code={code} row={row} />
-              })}
+              {rows.map((row) => <ContributionRow key={row.kpiCode} model={model} code={row.kpiCode} row={row} />)}
             </tbody>
           </table>
         </div>
@@ -386,18 +331,18 @@ function ContributionRow({ model, code, row }: { model: StoreKpiHighlightsPageMo
     <tr className="tw:border-t tw:border-border/70">
       <td className="tw:px-4 tw:py-3">
         <div className="tw:flex tw:items-center tw:gap-3">
-          <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-xl tw:bg-[#efe9ff] tw:text-[#6d4df7]"><Icon className="tw:size-4" /></span>
+          <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-xl tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]"><Icon className="tw:size-4" /></span>
           <div>
-            <strong className="tw:block tw:text-sm tw:font-semibold tw:text-[#071332]">{displayLabel}</strong>
-            {secondaryLabel ? <span className="tw:text-xs tw:text-[#65708d]">{secondaryLabel}</span> : null}
+            <strong className="tw:block tw:text-sm tw:font-semibold tw:text-[var(--store-command-ink)]">{displayLabel}</strong>
+            {secondaryLabel ? <span className="tw:text-xs tw:text-[var(--store-command-muted)]">{secondaryLabel}</span> : null}
           </div>
         </div>
       </td>
       <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-medium">{checklistMissing ? model.t('storeKpis.commandNotDone') : formatMetricValue(model.locale, model.t, row?.actualValue ?? null, code)}</td>
-      <td className="tw:px-4 tw:py-3 tw:text-sm tw:text-[#65708d]">{formatReference(model, row)}</td>
-      <td className="tw:px-4 tw:py-3"><span className={ratioClass(getMetricTone(row), checklistMissing)}>{checklistMissing ? model.t('storeKpis.commandNotDone') : formatAchievementValue(model.locale, model.t, row ?? emptyRow(code))}</span></td>
+      <td className="tw:px-4 tw:py-3 tw:text-sm tw:text-[var(--store-command-muted)]">{formatReference(model, row)}</td>
+      <td className="tw:px-4 tw:py-3"><span className={ratioClass(getMetricTone(row), checklistMissing)}>{formatReferenceRatio(model, row, code, checklistMissing)}</span></td>
       <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-medium">{contribution ? `${contribution.metric.weightPercent}%` : model.t('storeKpis.noData')}</td>
-      <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{contribution ? formatNumber(model.locale, contribution.weightedContribution * 100, 1) : model.t('storeKpis.noContribution')}</td>
+      <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{contribution?.weightedContribution !== null && contribution?.weightedContribution !== undefined ? formatNumber(model.locale, contribution.weightedContribution * 100, 1) : model.t('storeKpis.noContribution')}</td>
       <td className="tw:px-4 tw:py-3"><StatusPill tone={checklistMissing ? 'danger' : getMetricTone(row)} label={checklistMissing ? model.t('storeKpis.commandPassive') : formatStatus(row, model)} /></td>
     </tr>
   )
@@ -406,9 +351,11 @@ function ContributionRow({ model, code, row }: { model: StoreKpiHighlightsPageMo
 function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPageModel; className?: string }) {
   const currentMonth = model.liveSummary?.period?.periodStart?.slice(0, 7)
   const trendYear = (model.livePeriodStart || model.liveSummary?.period?.periodStart || new Date().toISOString()).slice(0, 4)
-  const months = (model.liveSummary?.availablePeriods ?? [])
+  const months = [...new Map((model.liveSummary?.availablePeriods ?? [])
     .filter((period) => period.periodType === 'monthly' && period.periodStart.slice(0, 4) === trendYear)
+    .map((period) => [period.periodStart.slice(0, 7), period] as const)).values()]
     .sort((left, right) => left.periodStart.localeCompare(right.periodStart))
+    .slice(0, 12)
   const trendQueries = useQueries({
     queries: months.map((period) => ({
       queryKey: [
@@ -426,14 +373,14 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
       ...transientQueryRetryOptions,
     })),
   })
-  const trendItems = months.map((period, index) => {
+  const loadedTrendItems = months.map((period, index) => {
     const queryState = trendQueries[index]
     const summary =
       queryState?.data ??
       (model.liveSummary?.period?.periodStart === period.periodStart
         ? model.liveSummary
         : undefined)
-    const scoreValue = calculateStoreScoreFromHighlights(model, summary)
+    const scoreValue = calculateStoreScoreFromHighlights(summary)
 
     return {
       isCurrent: period.periodStart.slice(0, 7) === currentMonth,
@@ -444,7 +391,24 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
       scoreValue,
     }
   })
+  const history = buildKpiMonthlyHistory({
+    year: Number(trendYear),
+    rows: loadedTrendItems.map((item) => ({ periodStart: item.periodStart, score: item.scoreValue === null ? null : item.scoreValue * 100 })),
+  })
+  const loadedByPeriod = new Map(loadedTrendItems.map((item) => [item.periodStart.slice(0, 7), item]))
+  const trendItems = history.map((item) => {
+    const loaded = loadedByPeriod.get(item.periodStart.slice(0, 7))
+    return {
+      isCurrent: item.periodStart.slice(0, 7) === currentMonth,
+      isError: loaded?.isError ?? false,
+      isLoading: loaded?.isLoading ?? false,
+      label: formatShortMonth(item.periodStart, model.locale),
+      periodStart: item.periodStart,
+      scoreValue: item.score === null ? null : item.score / 100,
+    }
+  })
   const validTrendItems = trendItems.filter((item) => !item.isLoading && !item.isError && item.scoreValue !== null)
+  const hasTrendError = trendItems.some((item) => item.isError)
   const scoreValues = validTrendItems.map((item) => (item.scoreValue ?? 0) * 100)
   const minScore = Math.min(...scoreValues)
   const maxScore = Math.max(...scoreValues)
@@ -458,45 +422,57 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
           ? 50
           : 82 - ((((item.scoreValue ?? 0) * 100) - minScore) / (maxScore - minScore)) * 58,
   }))
-  const linePath = chartPoints
-    .filter((item): item is typeof item & { y: number } => item.y !== null)
-    .map((item) => `${item.x},${item.y}`)
-    .join(' ')
+  const lineSegments = chartPoints.reduce<Array<Array<(typeof chartPoints)[number] & { y: number }>>>((segments, item) => {
+    if (item.y === null) {
+      if (segments.at(-1)?.length) segments.push([])
+      return segments
+    }
+    if (segments.length === 0) segments.push([])
+    segments.at(-1)?.push(item as (typeof chartPoints)[number] & { y: number })
+    return segments
+  }, []).filter((segment) => segment.length > 0)
 
   return (
-    <section className={`tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:p-4 tw:shadow-sm ${className}`}>
+    <section aria-label={model.t('storeKpis.commandTrendTitle')} className={`tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:p-4 tw:shadow-sm ${className}`}>
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
         <div>
-          <h2 className="tw:text-lg tw:font-semibold tw:text-[#071332]">{model.t('storeKpis.commandTrendTitle')}</h2>
-          <p className="tw:text-sm tw:font-normal tw:text-[#65708d]">{model.t('storeKpis.commandTrendCopy')}</p>
+          <h2 className="tw:text-lg tw:font-semibold tw:text-[var(--store-command-ink)]">{model.t('storeKpis.commandTrendTitle')}</h2>
+          <p className="tw:text-sm tw:font-normal tw:text-[var(--store-command-muted)]">{model.t('storeKpis.commandTrendCopy')}</p>
         </div>
         <details className="tw:relative">
           <summary className="tw:flex tw:h-9 tw:cursor-pointer tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:text-sm tw:font-medium"><CalendarDays className="tw:size-4" />{currentMonth?.slice(0, 4) ?? new Date().getFullYear()}</summary>
         </details>
       </div>
-      <div className="tw:mt-5 tw:overflow-x-auto tw:rounded-2xl tw:bg-[#f7f8fc] tw:p-4">
+      {hasTrendError ? (
+        <div role="alert" className="tw:mt-4 tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:rounded-2xl tw:border tw:border-destructive/25 tw:bg-destructive/5 tw:p-3 tw:text-sm">
+          <strong>{model.t('storeKpis.commandTrendErrorTitle')}</strong>
+          <button type="button" className="tw:min-h-11 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:font-semibold" onClick={() => void Promise.all(trendQueries.filter((query) => query.isError).map((query) => query.refetch()))}>{model.t('storeKpis.retry')}</button>
+        </div>
+      ) : null}
+      <div className="tw:mt-5 tw:overflow-x-auto tw:rounded-2xl tw:bg-[var(--store-command-surface-soft)] tw:p-4">
         {trendItems.length > 0 ? (
           <div className="tw:relative tw:min-h-40 tw:min-w-[520px] tw:pt-3">
             <div className="tw:relative tw:h-[112px]">
               <svg className="tw:absolute tw:inset-0 tw:h-full tw:w-full tw:overflow-visible" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                 <defs>
                   <linearGradient id="store-kpi-monthly-trend-line" x1="0" x2="1" y1="0" y2="0">
-                    <stop offset="0%" stopColor="#20bfd3" />
-                    <stop offset="55%" stopColor="#6d4df7" />
-                    <stop offset="100%" stopColor="#f59e0b" />
+                    <stop offset="0%" stopColor="var(--store-command-cyan)" />
+                    <stop offset="55%" stopColor="var(--store-command-plum)" />
+                    <stop offset="100%" stopColor="var(--store-command-warning)" />
                   </linearGradient>
                 </defs>
-                {linePath ? (
+                {lineSegments.map((segment) => (
                   <polyline
+                    key={segment.map((item) => item.periodStart).join('|')}
                     fill="none"
-                    points={linePath}
+                    points={segment.map((item) => `${item.x},${item.y}`).join(' ')}
                     stroke="url(#store-kpi-monthly-trend-line)"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="3.2"
                     vectorEffect="non-scaling-stroke"
                   />
-                ) : null}
+                ))}
               </svg>
               {chartPoints.map((item) => (
                 <div
@@ -506,12 +482,12 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
                 >
                   <div
                     className={[
-                      'tw:size-4 tw:rounded-full tw:border-2 tw:border-[#f7f8fc] tw:shadow-[0_8px_18px_rgba(104,71,255,0.18)]',
+                      'tw:size-4 tw:rounded-full tw:border-2 tw:border-[var(--store-command-surface-soft)] tw:shadow-[0_8px_18px_var(--store-command-focus)]',
                       item.y === null
                         ? 'tw:bg-white tw:ring-1 tw:ring-border'
                         : item.isCurrent
-                          ? 'tw:bg-[#6d4df7]'
-                          : 'tw:bg-[#20bfd3]',
+                          ? 'tw:bg-[var(--store-command-plum)]'
+                          : 'tw:bg-[var(--store-command-cyan)]',
                     ].join(' ')}
                   />
                 </div>
@@ -520,12 +496,14 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
             <div className="tw:grid" style={{ gridTemplateColumns: `repeat(${trendItems.length}, minmax(64px, 1fr))` }}>
               {chartPoints.map((item) => (
                 <div key={item.periodStart} className="tw:flex tw:min-w-16 tw:flex-col tw:items-center tw:gap-2">
-                  <span className="tw:text-xs tw:font-medium tw:text-[#65708d]">{item.label}</span>
-                  <strong className="tw:text-xs tw:font-semibold tw:text-[#071332]">
+                  <span className="tw:text-xs tw:font-medium tw:text-[var(--store-command-muted)]">{item.label}</span>
+                  <strong className="tw:text-xs tw:font-semibold tw:text-[var(--store-command-ink)]">
                     {item.isLoading
                       ? '...'
-                      : item.scoreValue === null || item.isError
-                        ? model.t('storeKpis.noData')
+                      : item.isError
+                        ? model.t('storeKpis.commandTrendErrorItem')
+                        : item.scoreValue === null
+                          ? model.t('storeKpis.noData')
                         : formatNumber(model.locale, item.scoreValue * 100, 1)}
                   </strong>
                 </div>
@@ -539,46 +517,48 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
 }
 
 function calculateStoreScoreFromHighlights(
-  model: StoreKpiHighlightsPageModel,
   summary: StoreKpiHighlightsSummary | undefined,
 ) {
-  if (!summary) return null
-
-  return (model.storeKpiScoreProfile?.metrics ?? []).reduce((total, metric) => {
-    const row = summary.metrics.find((item) => item.code.toUpperCase() === metric.code.toUpperCase())
-    if (!row) return total
-    if (row.scoreContribution !== null && row.scoreContribution !== undefined) {
-      return total + Number(row.scoreContribution) / 100
-    }
-
-    const achievementRate = toFiniteNumber(row.achievementRate)
-    return total + (achievementRate === null ? 0 : (Math.max(0, Math.min(achievementRate, 1.2)) * metric.weightPercent) / 100)
-  }, 0)
+  if (!summary || summary.score.matchedMetrics <= 0) return null
+  const score = toFiniteNumber(summary.score.value)
+  return score === null ? null : score / 100
 }
 
 function PersonnelKpiRows(input: {
   model: StoreKpiHighlightsPageModel
+  onPageChange: (page: number) => void
+  page: number
+  pageSize: number
   queryState: UseQueryResult<Awaited<ReturnType<typeof getRankings>>, unknown>
   rows: PersonnelRankingRow[]
+  total: number
 }) {
-  if (input.queryState.isLoading) return <StoreLoadingState title={input.model.t('storeKpis.loadingTitle')} description={input.model.t('storeKpis.loadingCopy')} />
-  if (input.queryState.isError) return <StoreErrorState title={input.model.t('storeKpis.rowsErrorTitle')} description={input.model.t('storeKpis.personnelKpiUnavailableCopy')} />
+  if (input.queryState.isLoading && !input.queryState.data) return <StoreLoadingState title={input.model.t('storeKpis.loadingTitle')} description={input.model.t('storeKpis.loadingCopy')} />
+  if (input.queryState.isError && !input.queryState.data) return <StoreErrorState title={input.model.t('storeKpis.rowsErrorTitle')} description={input.model.t('storeKpis.personnelKpiUnavailableCopy')} action={{ label: input.model.t('storeKpis.retry'), onClick: () => void input.queryState.refetch() }} />
 
   return (
     <section className="tw:overflow-hidden tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:shadow-sm">
+      {input.queryState.isError ? <InlineBackgroundError model={input.model} onRetry={() => void input.queryState.refetch()} /> : null}
       <div className="tw:flex tw:items-center tw:justify-between tw:border-b tw:border-border/70 tw:p-4">
-        <div><h2 className="tw:text-lg tw:font-semibold tw:text-[#071332]">{input.model.t('storeKpis.commandPeopleTab')}</h2><p className="tw:text-sm tw:font-normal tw:text-[#65708d]">{input.model.t('storeKpis.commandPeopleCopy')}</p></div>
+        <div><h2 className="tw:text-lg tw:font-semibold tw:text-[var(--store-command-ink)]">{input.model.t('storeKpis.commandPeopleTab')}</h2><p className="tw:text-sm tw:font-normal tw:text-[var(--store-command-muted)]">{input.model.t('storeKpis.commandPeopleCopy')}</p></div>
         <StoreStatusBadge tone="calm">{input.model.t('storeKpis.commandPeopleCount', { count: input.rows.length })}</StoreStatusBadge>
       </div>
       {input.rows.length > 0 ? (
-        <div className="tw:overflow-x-auto">
+        <><div className="tw:overflow-x-auto">
           <table className="tw:min-w-[780px] tw:w-full tw:border-collapse tw:text-left">
-            <thead className="tw:bg-[#f7f8fc] tw:text-xs tw:font-semibold tw:uppercase tw:text-[#63708f]">
+            <thead className="tw:bg-[var(--store-command-surface-soft)] tw:text-xs tw:font-semibold tw:uppercase tw:text-[var(--store-command-muted)]">
               <tr>{['Personel', 'Skor', 'Katkı', 'UPT', 'ATV', 'HG%', 'Durum', 'Aksiyon'].map((label) => <th key={label} className="tw:px-4 tw:py-3">{label}</th>)}</tr>
             </thead>
             <tbody>{input.rows.map((row) => <PersonnelRow key={row.employeeId} model={input.model} row={row} />)}</tbody>
           </table>
         </div>
+        {input.page > 0 || (input.page + 1) * input.pageSize < input.total ? (
+          <nav aria-label={input.model.t('storeKpis.personnelPaginationLabel')} className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:border-t tw:border-border/70 tw:p-4">
+            <button type="button" disabled={input.page === 0} className="tw:min-h-11 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-4 tw:text-sm tw:font-semibold tw:disabled:opacity-40" onClick={() => input.onPageChange(Math.max(0, input.page - 1))}>{input.model.t('storeKpis.companyPrevious')}</button>
+            <span className="tw:text-xs tw:text-[var(--store-command-muted)]">{input.model.t('storeKpis.companyPageSummary', { current: input.page + 1, total: Math.max(1, Math.ceil(input.total / input.pageSize)) })}</span>
+            <button type="button" disabled={(input.page + 1) * input.pageSize >= input.total} className="tw:min-h-11 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-4 tw:text-sm tw:font-semibold tw:disabled:opacity-40" onClick={() => input.onPageChange(input.page + 1)}>{input.model.t('storeKpis.companyNext')}</button>
+          </nav>
+        ) : null}</>
       ) : (
         <div className="tw:p-4"><StoreEmptyState title={input.model.t('storeKpis.personnelKpiEmptyTitle')} description={input.model.t('storeKpis.personnelKpiEmptyCopy')} /></div>
       )}
@@ -590,20 +570,22 @@ function PersonnelRow({ model, row }: { model: StoreKpiHighlightsPageModel; row:
   const getMetric = (code: string) => row.metrics?.find((metric) => metric.code === code)
   const target = getMetric('TARGET_ACHIEVEMENT')
   const contribution = calculatePersonnelPrimaryContribution(model, target)
-  const statusTone: MetricTone = row.scoreValue >= 85 ? 'good' : row.scoreValue >= 75 ? 'warn' : 'danger'
+  const personnelStatus = classifyPersonnelPerformance(toFiniteNumber(row.scoreValue))
+  const statusTone: MetricTone = personnelStatus === 'strong' ? 'good' : personnelStatus === 'watch' ? 'warn' : personnelStatus === 'behind' ? 'danger' : 'neutral'
   const employeeId = row.employeeId ?? ''
-  const profilePath = `/store/personnel/${encodeURIComponent(employeeId)}?mode=live&periodType=monthly${model.liveSummary?.period?.periodStart ? `&periodStart=${encodeURIComponent(model.liveSummary.period.periodStart)}` : ''}`
+  const activePeriodStart = model.livePeriodStart || model.liveSummary?.period?.periodStart || model.routePeriodStart
+  const profilePath = `/store/personnel/${encodeURIComponent(employeeId)}?mode=live&periodType=monthly${activePeriodStart ? `&periodStart=${encodeURIComponent(activePeriodStart)}` : ''}`
 
   return (
     <tr className="tw:border-t tw:border-border/70">
-      <td className="tw:px-4 tw:py-3"><strong className="tw:block tw:text-sm tw:font-semibold tw:text-[#071332]">{row.displayName}</strong></td>
+      <td className="tw:px-4 tw:py-3"><strong className="tw:block tw:text-sm tw:font-semibold tw:text-[var(--store-command-ink)]">{row.displayName}</strong></td>
       <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{formatNumber(model.locale, row.scoreValue, 1)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm tw:font-semibold">{contribution === null ? model.t('storeKpis.noData') : formatNumber(model.locale, contribution, 1)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatRankingMetric(model.locale, getMetric('UPT')?.actualValue)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatCurrency(model.locale, getMetric('ATV')?.actualValue)}</td>
       <td className="tw:px-4 tw:py-3 tw:text-sm">{formatPersonnelTargetAchievement(model, target)}</td>
-      <td className="tw:px-4 tw:py-3"><StatusPill tone={statusTone} label={statusTone === 'good' ? model.t('storeKpis.commandStrong') : statusTone === 'warn' ? model.t('storeKpis.commandWatch') : model.t('storeKpis.commandBehind')} /></td>
-      <td className="tw:px-4 tw:py-3">{row.canOpenProfile && employeeId ? <Link className="tw:inline-flex tw:h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-[#b8a7ff] tw:px-3 tw:text-sm tw:font-semibold tw:text-[#6d4df7]" to={profilePath}>{model.t('storeKpis.commandProfile')}<ArrowRight className="tw:size-4" /></Link> : <span className="tw:text-sm tw:text-[#65708d]">{model.t('storeKpis.noData')}</span>}</td>
+      <td className="tw:px-4 tw:py-3"><StatusPill tone={statusTone} label={personnelStatus === 'strong' ? model.t('storeKpis.commandStrong') : personnelStatus === 'watch' ? model.t('storeKpis.commandWatch') : personnelStatus === 'behind' ? model.t('storeKpis.commandBehind') : model.t('storeKpis.noData')} /></td>
+      <td className="tw:px-4 tw:py-3">{row.canOpenProfile && employeeId ? <Link className="tw:inline-flex tw:h-8 tw:items-center tw:gap-2 tw:rounded-full tw:border tw:border-[var(--store-command-focus)] tw:px-3 tw:text-sm tw:font-semibold tw:text-[var(--store-command-plum)]" to={profilePath}>{model.t('storeKpis.commandProfile')}<ArrowRight className="tw:size-4" /></Link> : <span className="tw:text-sm tw:text-[var(--store-command-muted)]">{model.t('storeKpis.noData')}</span>}</td>
     </tr>
   )
 }
@@ -633,25 +615,29 @@ function calculatePersonnelPrimaryContribution(
 }
 
 function ScoreSourceCard({ model, missingChecklistCodes }: { model: StoreKpiHighlightsPageModel; missingChecklistCodes: string[] }) {
-  const kpiContribution = model.weightedScore.contributions
+  const kpiContributionItems = model.weightedScore.contributions
     .filter((item) => !isChecklistMetric(item.metric.code) && !isGsmMetric(item.metric.code))
-    .reduce((sum, item) => sum + item.weightedContribution * 100, 0)
+    .map((item) => item.weightedContribution)
+    .filter((value): value is number => value !== null)
+  const kpiContribution = kpiContributionItems.length > 0
+    ? kpiContributionItems.reduce((sum, value) => sum + value * 100, 0)
+    : null
   const gsmContribution = findContribution(model, 'GSM_ONAY')?.weightedContribution ?? null
   const bmContribution = findContribution(model, 'BM_CHECKLIST')?.weightedContribution ?? null
   const vmContribution = findContribution(model, 'VM_CHECKLIST')?.weightedContribution ?? null
 
   return (
     <aside className="tw:rounded-3xl tw:border tw:border-border/80 tw:bg-white/[0.88] tw:p-4 tw:shadow-sm">
-      <h2 className="tw:text-lg tw:font-semibold tw:text-[#071332]">{model.t('storeKpis.commandScoreSourceTitle')}</h2>
-      <p className="tw:mt-1 tw:text-sm tw:font-normal tw:text-[#65708d]">{model.t('storeKpis.commandScoreSourceCopy')}</p>
+      <h2 className="tw:text-lg tw:font-semibold tw:text-[var(--store-command-ink)]">{model.t('storeKpis.commandScoreSourceTitle')}</h2>
+      <p className="tw:mt-1 tw:text-sm tw:font-normal tw:text-[var(--store-command-muted)]">{model.t('storeKpis.commandScoreSourceCopy')}</p>
       <div className="tw:mt-5 tw:space-y-3">
-        <SourceLine label={model.t('storeKpis.commandPersonnelImpact')} value={formatNumber(model.locale, kpiContribution, 1)} tone="good" />
+        <SourceLine label={model.t('storeKpis.commandPersonnelImpact')} value={kpiContribution === null ? model.t('storeKpis.noData') : formatNumber(model.locale, kpiContribution, 1)} tone={kpiContribution === null ? 'warn' : 'good'} />
         <SourceLine label={model.t('storeKpis.metric.gsmOnay')} value={gsmContribution === null ? model.t('storeKpis.commandPassive') : formatNumber(model.locale, gsmContribution * 100, 1)} tone={gsmContribution === null ? 'warn' : 'good'} />
         <SourceLine label="BM Checklist" value={bmContribution === null ? model.t('storeKpis.commandPassive') : formatNumber(model.locale, bmContribution * 100, 1)} tone={bmContribution === null ? 'warn' : 'good'} />
         <SourceLine label="VM Checklist" value={vmContribution === null ? model.t('storeKpis.commandPassive') : formatNumber(model.locale, vmContribution * 100, 1)} tone={vmContribution === null ? 'warn' : 'good'} />
       </div>
       {missingChecklistCodes.length > 0 ? (
-        <div className="tw:mt-5 tw:rounded-2xl tw:bg-[#fff7ed] tw:p-3 tw:text-sm tw:font-normal tw:text-[#9a4b00]">
+        <div className="tw:mt-5 tw:rounded-2xl tw:bg-[var(--store-command-warning-soft)] tw:p-3 tw:text-sm tw:font-normal tw:text-[var(--store-command-warning-ink)]">
           {model.t('storeKpis.commandPassiveRedistribution', {
             value: missingChecklistCodes.map((code) => formatKpiMetricLabel(model.t, code, code)).join(', '),
           })}
@@ -662,7 +648,7 @@ function ScoreSourceCard({ model, missingChecklistCodes }: { model: StoreKpiHigh
 }
 
 function SourceLine({ label, value, tone }: { label: string; value: string; tone: MetricTone }) {
-  return <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:p-3"><span className="tw:text-sm tw:font-medium tw:text-[#56627e]">{label}</span><StatusPill tone={tone} label={value} /></div>
+  return <div className="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:rounded-2xl tw:border tw:border-border tw:p-3"><span className="tw:text-sm tw:font-medium tw:text-[var(--store-command-muted)]">{label}</span><StatusPill tone={tone} label={value} /></div>
 }
 
 function StatusPill({ tone, label }: { tone: MetricTone; label: string }) {
@@ -704,37 +690,36 @@ function isGsmMetric(code: string) {
   return normalizeKpiCode(code) === 'gsm_approval'
 }
 
-function getMetricColor(code: string) {
-  return metricColors[code] ?? metricColors[normalizeKpiCode(code)] ?? '#94a3b8'
-}
-
 function emptyRow(code: string): DisplayKpiRow {
   return { storeId: '', kpiCode: code, kpiName: code, periodStart: '', periodEnd: '', targetValue: null, actualValue: null, achievementRate: null, benchmarkValue: null, benchmarkSource: undefined, actualRatio: null, scoredRatio: null, capRatio: null, isCapped: false, scoreContribution: null, missingReason: null, statusBand: null, scoreStatus: 'missing' }
 }
 
-function buildScoreGradient(model: StoreKpiHighlightsPageModel) {
-  let cursor = 0
-  const segments = model.weightedScore.contributions.map((item) => {
-    const start = cursor
-    cursor += Math.max(0, item.metric.weightPercent)
-    return `${getMetricColor(item.metric.code)} ${start}% ${cursor}%`
-  })
-  return `conic-gradient(${segments.join(', ')})`
+function getMetricTone(row?: DisplayKpiRow): MetricTone {
+  const classification = getKpiReferenceClassification(row)
+  if (classification.kind === 'good') return 'good'
+  if (classification.kind === 'watch') return 'warn'
+  if (classification.kind === 'action') return 'danger'
+  return 'neutral'
 }
 
-function getMetricTone(row?: DisplayKpiRow): MetricTone {
-  if (!row || row.scoreStatus !== 'scored') return 'neutral'
-  if (row.statusBand === 'exceeded' || row.statusBand === 'on_track') return 'good'
-  if (row.statusBand === 'at_risk') return 'warn'
-  return 'danger'
+function InlineBackgroundError(input: { model: StoreKpiHighlightsPageModel; onRetry: () => void }) {
+  return <div role="alert" className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:border-b tw:border-destructive/20 tw:bg-destructive/5 tw:p-3 tw:text-sm"><span>{input.model.t('storeKpis.backgroundError')}</span><button type="button" className="tw:min-h-11 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:font-semibold" onClick={input.onRetry}>{input.model.t('storeKpis.retry')}</button></div>
 }
 
 function formatStatus(row: DisplayKpiRow | undefined, model: StoreKpiHighlightsPageModel) {
-  const tone = getMetricTone(row)
-  if (tone === 'good') return model.t('storeKpis.commandStrong')
-  if (tone === 'warn') return model.t('storeKpis.commandWatch')
-  if (tone === 'danger') return model.t('storeKpis.commandBehind')
-  return model.t('storeKpis.noData')
+  const classification = getKpiReferenceClassification(row)
+  if (classification.label === 'good') return model.t('storeKpis.commandReferenceGood')
+  if (classification.label === 'watch') return model.t('storeKpis.commandReferenceWatch')
+  if (classification.label === 'action') return model.t('storeKpis.commandReferenceAction')
+  return model.t('storeKpis.commandReferenceUnavailable')
+}
+
+function getKpiReferenceClassification(row?: DisplayKpiRow) {
+  if (!row) return classifyKpiReference({ actual: null, reference: null })
+  return classifyKpiReference({
+    actual: toFiniteNumber(row.actualValue),
+    reference: toFiniteNumber(row.targetValue) ?? toFiniteNumber(row.benchmarkValue),
+  })
 }
 
 function formatReference(model: StoreKpiHighlightsPageModel, row?: DisplayKpiRow) {
@@ -747,24 +732,19 @@ function formatReference(model: StoreKpiHighlightsPageModel, row?: DisplayKpiRow
   return formatMetricValue(model.locale, model.t, reference.value === null ? null : String(reference.value), row.kpiCode)
 }
 
-function parseRatio(input?: string | null) {
-  const value = Number(input)
-  return Number.isFinite(value) ? value : 0
-}
-
 function formatNumber(locale: string, input: number, maximumFractionDigits = 0) {
   return new Intl.NumberFormat(locale, { maximumFractionDigits }).format(input)
 }
 
 function formatCurrency(locale: string, input: unknown) {
-  const value = Number(input)
-  if (!Number.isFinite(value)) return '-'
+  const value = toFiniteNumber(input)
+  if (value === null) return '-'
   return new Intl.NumberFormat(locale, { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value)
 }
 
 function formatRankingMetric(locale: string, input: unknown) {
-  const value = Number(input)
-  return Number.isFinite(value) ? formatNumber(locale, value, 1) : '-'
+  const value = toFiniteNumber(input)
+  return value === null ? '-' : formatNumber(locale, value, 1)
 }
 
 function formatPersonnelTargetAchievement(
@@ -785,26 +765,31 @@ function formatPersonnelTargetAchievement(
 }
 
 function toFiniteNumber(input: unknown) {
+  if (input === null || input === undefined || input === '') return null
   const value = Number(input)
   return Number.isFinite(value) ? value : null
 }
 
-function formatShortMonth(input: string, locale: string) {
-  return new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(input))
+function formatReferenceRatio(
+  model: StoreKpiHighlightsPageModel,
+  row: DisplayKpiRow | undefined,
+  code: string,
+  checklistMissing: boolean,
+) {
+  if (checklistMissing) return model.t('storeKpis.commandNotDone')
+  if (getKpiReferenceClassification(row).ratio === null) return model.t('storeKpis.noData')
+  return formatAchievementValue(model.locale, model.t, row ?? emptyRow(code))
 }
 
-function iconToneClass(tone: MetricTone) {
-  if (tone === 'good') return 'tw:bg-[#dcfce7] tw:text-[#13a779]'
-  if (tone === 'warn') return 'tw:bg-[#fff7ed] tw:text-[#c96b00]'
-  if (tone === 'danger') return 'tw:bg-[#ffe4ed] tw:text-[#e83f68]'
-  return 'tw:bg-[#efe9ff] tw:text-[#6d4df7]'
+function formatShortMonth(input: string, locale: string) {
+  return new Intl.DateTimeFormat(locale, { month: 'long' }).format(new Date(`${input.slice(0, 10)}T00:00:00Z`))
 }
 
 function statusToneClass(tone: MetricTone) {
-  if (tone === 'good') return 'tw:bg-[#dcfce7] tw:text-[#047857]'
-  if (tone === 'warn') return 'tw:bg-[#fff3df] tw:text-[#b45309]'
-  if (tone === 'danger') return 'tw:bg-[#ffe4ed] tw:text-[#be123c]'
-  return 'tw:bg-[#eef2ff] tw:text-[#4f46e5]'
+  if (tone === 'good') return 'tw:bg-[var(--store-command-mint-soft)] tw:text-[var(--store-command-success-ink)]'
+  if (tone === 'warn') return 'tw:bg-[var(--store-command-warning-soft)] tw:text-[var(--store-command-warning-ink)]'
+  if (tone === 'danger') return 'tw:bg-[var(--store-command-danger-soft)] tw:text-[var(--store-command-danger)]'
+  return 'tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]'
 }
 
 function ratioClass(tone: MetricTone, danger = false) {

@@ -2173,6 +2173,33 @@ export type components = {
         "storeCount": number
         "activePersonnelCount": number
       }
+      "regionManagerLeaderboard": {
+        "items": Array<{
+            "userId": string | null
+            "displayName": string | null
+            "storeCount": number
+            "riskStoreCount": number
+            "averageScore": number | null
+          }>
+        "meta": {
+          "total": number
+          "limit": number
+          "offset": number
+        }
+        "riskItems": Array<{
+            "userId": string | null
+            "displayName": string | null
+            "storeCount": number
+            "riskStoreCount": number
+            "averageScore": number | null
+          }>
+        "riskMeta": {
+          "total": number
+          "limit": number
+          "offset": number
+        }
+        "riskStoreCount": number
+      }
       "storeLeaderboard": {
         "items": Array<{
             "subject": "store"
@@ -2301,6 +2328,11 @@ export type components = {
                 "contributionValue"?: number | null
               }>
           }>
+        "managedStorePersonnelMeta": {
+          "total": number
+          "limit": number
+          "offset": number
+        }
         "meta": {
           "total": number
           "limit": number

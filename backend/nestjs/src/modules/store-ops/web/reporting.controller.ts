@@ -382,6 +382,9 @@ export class ReportingController {
       sortDirection: query.sortDirection,
       limit: query.limit,
       offset: query.offset,
+      regionManagerLimit: query.regionManagerLimit, regionManagerOffset: query.regionManagerOffset,
+      regionManagerRiskOffset: query.regionManagerRiskOffset, regionManagerUnassigned: query.regionManagerUnassigned,
+      managedPersonnelLimit: query.managedPersonnelLimit, managedPersonnelOffset: query.managedPersonnelOffset,
     });
   }
 

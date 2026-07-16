@@ -21,7 +21,7 @@ import {
   masterDataQualityIssueSummarySchema,
 } from "./openapi-master-data-schemas";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
-import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi"; import { applyTargetWorkspaceOpenApi } from "./target-workspace-openapi";
+import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi"; import { applyTargetWorkspaceOpenApi } from "./target-workspace-openapi"; import { applyRankingOpenApi } from "./ranking-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 import { applyWorkforceOpenApi } from "./workforce-openapi";
 import * as requestCenterOpenApi from "./request-center-openapi";
@@ -3324,7 +3324,7 @@ const reportingRankingMetaSchema = {
 
 const reportingRankingsResponseSchema = {
   type: "object",
-  required: ["source", "access", "filters", "reference", "scopeSummary", "storeLeaderboard", "personnelLeaderboard", "availablePeriods"],
+  required: ["source", "access", "filters", "reference", "scopeSummary", "regionManagerLeaderboard", "storeLeaderboard", "personnelLeaderboard", "availablePeriods"],
   properties: {
     source: {
       type: "object",
@@ -3375,7 +3375,7 @@ const reportingRankingsResponseSchema = {
         personnel: reportingRankingReferenceGroupSchema,
       },
     },
-    scopeSummary: { type: "object", required: ["storeCount", "activePersonnelCount"], properties: { storeCount: { type: "integer", minimum: 0 }, activePersonnelCount: { type: "integer", minimum: 0 } } },
+    scopeSummary: { type: "object", required: ["storeCount", "activePersonnelCount"], properties: { storeCount: { type: "integer", minimum: 0 }, activePersonnelCount: { type: "integer", minimum: 0 } } }, regionManagerLeaderboard: { type: "object", required: ["items", "meta", "riskItems", "riskMeta", "riskStoreCount"], properties: { items: { type: "array", items: { type: "object", required: ["userId", "displayName", "storeCount", "riskStoreCount", "averageScore"], properties: { userId: { type: "string", nullable: true }, displayName: { type: "string", nullable: true }, storeCount: { type: "integer", minimum: 0 }, riskStoreCount: { type: "integer", minimum: 0 }, averageScore: { type: "number", nullable: true } } } }, meta: reportingRankingMetaSchema, riskItems: { type: "array", items: { type: "object", required: ["userId", "displayName", "storeCount", "riskStoreCount", "averageScore"], properties: { userId: { type: "string", nullable: true }, displayName: { type: "string", nullable: true }, storeCount: { type: "integer", minimum: 0 }, riskStoreCount: { type: "integer", minimum: 0 }, averageScore: { type: "number", nullable: true } } } }, riskMeta: reportingRankingMetaSchema, riskStoreCount: { type: "integer", minimum: 0 } } },
     storeLeaderboard: {
       type: "object",
       required: ["items", "currentStore", "meta"],
@@ -3393,7 +3393,7 @@ const reportingRankingsResponseSchema = {
     },
     personnelLeaderboard: {
       type: "object",
-      required: ["items", "currentEmployee", "managedStorePersonnel", "meta"],
+      required: ["items", "currentEmployee", "managedStorePersonnel", "managedStorePersonnelMeta", "meta"],
       properties: {
         items: {
           type: "array",
@@ -3407,7 +3407,7 @@ const reportingRankingsResponseSchema = {
           type: "array",
           items: reportingPersonnelRankingRowSchema,
         },
-        meta: reportingRankingMetaSchema,
+        managedStorePersonnelMeta: reportingRankingMetaSchema, meta: reportingRankingMetaSchema,
       },
     },
     availablePeriods: {
@@ -4752,7 +4752,7 @@ async function generateOpenApi(): Promise<void> {
     "get",
     "Live daily or monthly store and personnel rankings visible to the current actor.",
     "ReportingRankingsResponse",
-  );
+  ); applyRankingOpenApi(document.paths);
 
   setJsonResponseSchema(
     document.paths,

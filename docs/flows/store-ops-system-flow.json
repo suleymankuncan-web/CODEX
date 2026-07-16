@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-16T08:47:31.770Z",
+  "generatedAt": "2026-07-16T17:53:05.361Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -2972,7 +2972,7 @@
       "exportedFunction": "getRankings",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 238
+        "line": 260
       }
     },
     {
@@ -2987,7 +2987,7 @@
       "exportedFunction": "getChecklistReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 260
+        "line": 282
       }
     },
     {
@@ -3002,7 +3002,7 @@
       "exportedFunction": "getTurnoverReport",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 264
+        "line": 286
       }
     },
     {
@@ -3017,7 +3017,7 @@
       "exportedFunction": "getStoreMonthlyReportPackage",
       "source": {
         "file": "admin-web/src/features/reports/api.ts",
-        "line": 274
+        "line": 296
       }
     },
     {
@@ -5509,7 +5509,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 421
+        "line": 424
       }
     },
     {
@@ -5607,7 +5607,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 388
+        "line": 391
       }
     },
     {
@@ -5747,7 +5747,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/reporting.controller.ts",
-        "line": 445
+        "line": 448
       }
     },
     {

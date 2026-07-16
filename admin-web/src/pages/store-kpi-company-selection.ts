@@ -32,7 +32,7 @@ export function resolveCompanyStoreSelection(input: {
     }
   }
 
-  const selectedStoreId = selectedOption?.storeId ?? options[0]?.storeId ?? ''
+  const selectedStoreId = selectedOption?.storeId ?? ''
   return {
     effectiveStoreId: selectedStoreId || undefined,
     options,
@@ -48,19 +48,16 @@ export function useReportViewerStoreSelection(input: {
   setSearchParams: (nextParams: URLSearchParams, options?: { replace?: boolean }) => void
 }) {
   const roleCodes = input.authSummary?.user.roleCodes ?? []
-  const isReportViewer =
-    roleCodes.includes('REPORT_VIEWER') &&
-    !roleCodes.includes('STORE_MANAGER') &&
-    !roleCodes.includes('REGION_MANAGER') &&
-    !roleCodes.includes('SUPER_ADMIN')
+  // EC-001: Report Viewer is the read-only presentation for mixed-role accounts.
+  const isReportViewer = roleCodes.includes('REPORT_VIEWER')
   const readCompanyIds = input.authSummary?.user.readScope.companyIds ?? input.authSummary?.user.scope.companyIds ?? []
+  const rawSelectedStoreId = input.searchParams.get('storeId')?.trim() ?? ''
   const companyStoreQuery = useQuery({
     queryKey: ['store-kpi-company-stores', readCompanyIds.join('|')],
     queryFn: getOrgStores,
-    enabled: input.reportingAllowed && isReportViewer,
+    enabled: input.reportingAllowed && isReportViewer && Boolean(rawSelectedStoreId),
     ...transientQueryRetryOptions,
   })
-  const rawSelectedStoreId = input.searchParams.get('storeId')?.trim() ?? ''
   const selection = resolveCompanyStoreSelection({
     isReportViewer,
     primaryStoreId: input.primaryStoreId,
@@ -81,6 +78,6 @@ export function useReportViewerStoreSelection(input: {
     selectedStoreId: selection.selectedStoreId,
     setSelectedStoreId,
     storeOptions: selection.options,
-    storeSelectionReady: !isReportViewer || companyStoreQuery.isSuccess,
+    storeSelectionReady: !isReportViewer || !rawSelectedStoreId || companyStoreQuery.isSuccess,
   }
 }
