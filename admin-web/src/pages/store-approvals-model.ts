@@ -80,7 +80,7 @@ export type RequestFormErrors = {
   resubmitVisible?: boolean
 }
 export type StoreRequestFeedbackTone = 'error' | 'success'
-export type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
+export type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'reportViewer' | 'readOnly'
 export type StoreApprovalsLedgerPanel =
   | 'targetRequest'
   | 'targetApproval'
@@ -476,7 +476,11 @@ export function getStoreSellerPositionOptions(positions: readonly PositionOption
 export function resolveStoreApprovalsPersona(
   authSummary: AuthSessionSummary | null,
 ): StoreApprovalsPersona {
-  if (hasAnyRole(authSummary, ['REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])) {
+  if (hasAnyRole(authSummary, ['REPORT_VIEWER'])) {
+    return 'reportViewer'
+  }
+
+  if (hasAnyRole(authSummary, ['REGION_MANAGER', 'SUPER_ADMIN'])) {
     return 'regionManager'
   }
 

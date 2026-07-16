@@ -4,9 +4,9 @@ import {
   canListTargetDistributionRequests,
   hasAnyRole,
 } from '../auth/authorization'
-import { getRequestCenterPage } from './request-center-api'
+import { getRequestCenterWorkspace } from './request-center-api'
 
-type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'readOnly'
+type StoreApprovalsPersona = 'storeManager' | 'regionManager' | 'reportViewer' | 'readOnly'
 
 export type StoreApprovalsPrefetchTask = {
   queryKey: QueryKey
@@ -31,21 +31,19 @@ export function getStoreApprovalsPrefetchTasks(
 
   return [
     {
-      queryKey: ['request-center', scopeKey, 'open', 'all', 'all', 'all', '', 15, 0],
-      queryFn: () => getRequestCenterPage({
-        bucket: 'open',
-        type: 'all',
-        status: 'all',
-        limit: 15,
-        offset: 0,
-      }),
+      queryKey: ['request-center-workspace', scopeKey],
+      queryFn: getRequestCenterWorkspace,
       enabled: canListRequests && persona !== 'readOnly',
     },
   ]
 }
 
 function resolveStoreApprovalsPersona(authSummary: AuthSessionSummary | null): StoreApprovalsPersona {
-  if (hasAnyRole(authSummary, ['REGION_MANAGER', 'SUPER_ADMIN', 'REPORT_VIEWER'])) {
+  if (hasAnyRole(authSummary, ['REPORT_VIEWER'])) {
+    return 'reportViewer'
+  }
+
+  if (hasAnyRole(authSummary, ['REGION_MANAGER', 'SUPER_ADMIN'])) {
     return 'regionManager'
   }
 

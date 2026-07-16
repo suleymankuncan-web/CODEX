@@ -2539,8 +2539,23 @@ export type components = {
           "requestType": "target" | "sellerCode" | "offboarding"
           "storeId": string
           "storeName": string | null
+          "regionId": string
+          "regionName": string | null
+          "regionManagerNames": string[]
           "status": string
+          "createdAt": string
           "updatedAt": string
+          "waitingSince": string | null
+          "nextOwner": "store" | "region" | "hr" | "system" | null
+          "dueAt": string | null
+          "isOverdue": boolean | null
+          "events": Array<{
+              "eventId": string
+              "type": "created" | "approved" | "returned" | "resubmitted"
+              "occurredAt": string
+              "actorDisplayName": string | null
+            }>
+          "eventTotal": number
           "targetLabel": string | null
           "requestMonth": string | null
           "allocationCount": number | null
@@ -2559,6 +2574,7 @@ export type components = {
         "open": number
         "done": number
         "returned": number
+        "overdue": number
         "periods": string[]
       }
     }

@@ -27,7 +27,7 @@ describe("ListRequestCenterQueryDto", () => {
     ["status", "closed"],
     ["period", "2026-7"],
     ["q", "x"],
-    ["limit", "51"],
+    ["limit", "201"],
     ["offset", "-1"],
   ])("rejects invalid %s input", async (field, value) => {
     const dto = plainToInstance(ListRequestCenterQueryDto, {

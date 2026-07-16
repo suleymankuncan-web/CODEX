@@ -21359,8 +21359,18 @@
                 "requestType",
                 "storeId",
                 "storeName",
+                "regionId",
+                "regionName",
+                "regionManagerNames",
                 "status",
+                "createdAt",
                 "updatedAt",
+                "waitingSince",
+                "nextOwner",
+                "dueAt",
+                "isOverdue",
+                "events",
+                "eventTotal",
                 "targetLabel",
                 "requestMonth",
                 "allocationCount",
@@ -21388,11 +21398,92 @@
                   "type": "string",
                   "nullable": true
                 },
+                "regionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "regionName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "regionManagerNames": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "status": {
                   "type": "string"
                 },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
                 "updatedAt": {
                   "type": "string"
+                },
+                "waitingSince": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "nextOwner": {
+                  "type": "string",
+                  "enum": [
+                    "store",
+                    "region",
+                    "hr",
+                    "system"
+                  ],
+                  "nullable": true
+                },
+                "dueAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "isOverdue": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "events": {
+                  "type": "array",
+                  "maxItems": 20,
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "eventId",
+                      "type",
+                      "occurredAt",
+                      "actorDisplayName"
+                    ],
+                    "properties": {
+                      "eventId": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "created",
+                          "approved",
+                          "returned",
+                          "resubmitted"
+                        ]
+                      },
+                      "occurredAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "actorDisplayName": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    }
+                  }
+                },
+                "eventTotal": {
+                  "type": "integer",
+                  "minimum": 0
                 },
                 "targetLabel": {
                   "type": "string",
@@ -21463,6 +21554,7 @@
               "open",
               "done",
               "returned",
+              "overdue",
               "periods"
             ],
             "properties": {
@@ -21475,6 +21567,10 @@
                 "minimum": 0
               },
               "returned": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "overdue": {
                 "type": "integer",
                 "minimum": 0
               },
