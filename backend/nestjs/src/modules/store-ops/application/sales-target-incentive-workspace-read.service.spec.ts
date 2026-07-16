@@ -270,6 +270,261 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
     });
   });
 
+  it("keeps an active Region Manager correction after a closed row is refetched", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({ finalAmount: "12.00" })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([
+      adjustmentSummary({ finalAmount: "9.07", adjustmentAmount: "0.00" }),
+    ]);
+
+    const result = await service.getWorkspace(regionManagerWorkspaceInput());
+    const row = result.regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/002/004/005, AC-INC-001, EC-014/015.
+    expect(row?.finalAmount).toBe("12.00");
+    expect(row?.signedDifferenceAmount).toBe("2.93");
+    expect(row?.correction).toEqual(expect.objectContaining({
+      finalAmount: "12.00",
+      reasonNote: "Donem ici magaza destegi dogrulandi.",
+      status: "draft",
+    }));
+  });
+
+  it("uses the newest active correction amount and note when correction history contains a replacement", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({
+        correctionId: "correction-replaced",
+        finalAmount: "13.00",
+        reasonNote: "Yeni duzeltme.",
+        createdAt: "2026-06-01T09:00:00.000Z",
+        updatedAt: "2026-06-01T10:00:00.000Z",
+      })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([
+      adjustmentSummary({ finalAmount: "9.07", adjustmentAmount: "0.00" }),
+    ]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/002, AC-INC-001, EC-014.
+    expect(row?.finalAmount).toBe("13.00");
+    expect(row?.correction).toEqual(expect.objectContaining({
+      correctionId: "correction-replaced",
+      finalAmount: "13.00",
+      reasonNote: "Yeni duzeltme.",
+    }));
+  });
+
+  it.each(["submitted", "admin_returned"] as const)(
+    "keeps a %s Region Manager correction as the open readback truth",
+    async (status) => {
+      const { service, readModel, corrections, repository } = harness();
+      readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+      repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+      repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+      repository.listWorkflowAudit.mockResolvedValue({
+        reviews: [], packages: [], corrections: [correctionRow({ status, finalAmount: "12.00" })],
+      });
+      corrections.listApprovedAdjustmentSummaries.mockResolvedValue([
+        adjustmentSummary({ finalAmount: "9.07", adjustmentAmount: "0.00" }),
+      ]);
+
+      const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+        .regions[0]?.stores[0]?.rows[0];
+
+      // Traceability: INC-FR-001/002, AC-INC-001, EC-014.
+      expect(row?.finalAmount).toBe("12.00");
+      expect(row?.correction?.status).toBe(status);
+    },
+  );
+
+  it("keeps an approved admin adjustment authoritative over an active Region Manager correction", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({ finalAmount: "12.00" })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([
+      adjustmentSummary({ finalAmount: "9.07", adjustmentAmount: "1.00" }),
+    ]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/005, AC-INC-003, EC-014.
+    expect(row?.finalAmount).toBe("10.07");
+    expect(row?.signedDifferenceAmount).toBe("1.00");
+  });
+
+  it("lets a new draft supersede an older approved admin adjustment", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({
+        finalAmount: "12.00",
+        updatedAt: "2026-06-01T11:00:00.000Z",
+      })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([adjustmentSummary({
+      finalAmount: "9.07",
+      adjustmentAmount: "1.00",
+      approvedAdjustmentCount: 1,
+      latestApprovedAdjustmentAt: "2026-06-01T10:00:00.000Z",
+    })]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/002/005, AC-INC-001/003, EC-014.
+    expect(row?.finalAmount).toBe("12.00");
+  });
+
+  it("lets a newer approved admin adjustment supersede an open correction", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({
+        finalAmount: "12.00",
+        updatedAt: "2026-06-01T10:00:00.000Z",
+      })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([adjustmentSummary({
+      finalAmount: "9.07",
+      adjustmentAmount: "1.00",
+      approvedAdjustmentCount: 1,
+      latestApprovedAdjustmentAt: "2026-06-01T11:00:00.000Z",
+    })]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/005, AC-INC-003, EC-014.
+    expect(row?.finalAmount).toBe("10.07");
+  });
+
+  it("keeps a newer net-zero approved adjustment sequence authoritative", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({
+        finalAmount: "12.00",
+        updatedAt: "2026-06-01T10:00:00.000Z",
+      })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([adjustmentSummary({
+      finalAmount: "9.07",
+      adjustmentAmount: "0.00",
+      approvedAdjustmentCount: 2,
+      latestApprovedAdjustmentAt: "2026-06-01T11:00:00.000Z",
+    })]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/005, AC-INC-003, EC-014.
+    expect(row?.finalAmount).toBe("9.07");
+  });
+
+  it("does not let a voided correction replace the persisted closed final", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue(projectionWithPersonnel());
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({ status: "voided", finalAmount: "12.00" })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([
+      adjustmentSummary({ finalAmount: "9.07", adjustmentAmount: "0.00" }),
+    ]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/005, AC-INC-002, EC-014.
+    expect(row?.finalAmount).toBe("9.07");
+    expect(row?.correction).toBeNull();
+  });
+
+  it("applies active correction precedence to final-only workspace rows", async () => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      ...projectionWithPersonnel(),
+      stores: [projectionStore("store-a", "region-a")],
+    });
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({
+      reviews: [], packages: [], corrections: [correctionRow({ finalAmount: "12.00" })],
+    });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([
+      adjustmentSummary({ finalAmount: "9.07", adjustmentAmount: "0.00" }),
+    ]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/002, AC-INC-001, EC-014.
+    expect(row?.finalAmount).toBe("12.00");
+    expect(row?.correction?.finalAmount).toBe("12.00");
+  });
+
+  it.each([
+    {
+      label: "voided history",
+      correction: correctionRow({ status: "voided", finalAmount: "12.00" }),
+      summary: adjustmentSummary({ finalAmount: "9.07", adjustmentAmount: "0.00" }),
+      expectedFinal: "9.07",
+      expectedCorrection: null,
+    },
+    {
+      label: "newer approved admin adjustment",
+      correction: correctionRow({ finalAmount: "12.00", updatedAt: "2026-06-01T10:00:00.000Z" }),
+      summary: adjustmentSummary({
+        finalAmount: "9.07",
+        adjustmentAmount: "1.00",
+        approvedAdjustmentCount: 1,
+        latestApprovedAdjustmentAt: "2026-06-01T11:00:00.000Z",
+      }),
+      expectedFinal: "10.07",
+      expectedCorrection: "correction-a",
+    },
+  ])("keeps final-only rows correct for $label", async ({ correction, summary, expectedFinal, expectedCorrection }) => {
+    const { service, readModel, corrections, repository } = harness();
+    readModel.buildCurrentProjection.mockResolvedValue({
+      ...projectionWithPersonnel(),
+      stores: [projectionStore("store-a", "region-a")],
+    });
+    repository.listStoreMetadata.mockResolvedValue([storeMetadata("store-a", "region-a")]);
+    repository.listClosedRateSnapshots.mockResolvedValue([closedSnapshot("store-a")]);
+    repository.listWorkflowAudit.mockResolvedValue({ reviews: [], packages: [], corrections: [correction] });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([summary]);
+
+    const row = (await service.getWorkspace(regionManagerWorkspaceInput()))
+      .regions[0]?.stores[0]?.rows[0];
+
+    // Traceability: INC-FR-001/002/005, AC-INC-001..003, EC-014.
+    expect(row?.finalAmount).toBe(expectedFinal);
+    expect(row?.correction?.correctionId ?? null).toBe(expectedCorrection);
+  });
+
   it("assembles region, store, row and sanitized correction audit without actor ids", async () => {
     const { service, readModel, corrections, repository } = harness();
     readModel.buildCurrentProjection.mockResolvedValue({
@@ -362,7 +617,12 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
       display_name: "Suleyman Ozturk",
       role_code: "REGION_MANAGER",
     }]);
-    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([]);
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValue([adjustmentSummary({
+      finalAmount: "9.07",
+      adjustmentAmount: "2.93",
+      approvedAdjustmentCount: 1,
+      latestApprovedAdjustmentAt: "2026-06-02T12:00:00.000Z",
+    })]);
 
     const result = await service.getWorkspace({
       actor: actor(["REPORT_VIEWER"], {
@@ -413,6 +673,10 @@ describe("SalesTargetIncentiveWorkspaceReadService", () => {
         correction_status: "voided" as const,
       })),
     });
+    corrections.listApprovedAdjustmentSummaries.mockResolvedValueOnce([adjustmentSummary({
+      finalAmount: "9.07",
+      adjustmentAmount: "0.00",
+    })]);
     const voidedOnlyResult = await service.getWorkspace({
       actor: actor(["REPORT_VIEWER"], {
         REPORT_VIEWER: { companyIds: ["company-a"], regionIds: [], storeIds: [] },
@@ -453,5 +717,124 @@ function closedSnapshot(storeId: string) {
     period_timezone: "Europe/Istanbul",
     rate_table_versions: [],
     rate_brackets_json: [],
+  };
+}
+
+function projectionWithPersonnel() {
+  return {
+    periodKey: "2026-05",
+    periodStart: "2026-05-01",
+    periodEnd: "2026-05-31",
+    timezone: "Europe/Istanbul",
+    stores: [{
+      ...projectionStore("store-a", "region-a"),
+      personnel: [{
+        participantType: "personnel",
+        employeeId: "employee-a",
+        userId: null,
+        assignmentId: "assignment-a",
+        assignmentStartedOn: "2026-01-01",
+        assignmentEndedOn: null,
+        positionId: "position-a",
+        displayName: "Derya Uslu",
+        positionCode: "SALES_ASSOCIATE",
+        normalizedFromPositionCode: null,
+        targetReferenceId: "target-a",
+        targetAmount: "500.00",
+        actualAmount: "550.00",
+        calculation: {
+          status: "projected",
+          blockedReason: null,
+          excludedReason: null,
+          ruleVersionCode: "sales-target-incentive-v1.0.0",
+          rateTableVersion: "personnel-sales-target-v1.0.0",
+          positionCode: "SALES_ASSOCIATE",
+          normalizedFromPositionCode: null,
+          storeAchievementPct: "110.0000",
+          storeGatePassed: true,
+          achievementPct: "110.0000",
+          personalRateBeforeGate: "0.0165",
+          rate: "0.0165",
+          rawEarnedAmount: "9.075000",
+          payableAmount: "9.07",
+        },
+        source: {
+          storeTargetRequestId: "request-a",
+          storeNetSalesSourceBatchId: "batch-a",
+          storeNetSalesImportBatchId: "import-a",
+          personnelSalesSourceBatchId: "personnel-batch-a",
+          personnelSalesImportBatchId: "personnel-import-a",
+        },
+      }],
+    }],
+  };
+}
+
+function correctionRow(input: {
+  correctionId?: string;
+  finalAmount: string;
+  reasonNote?: string;
+  status?: SalesTargetIncentiveRegionCorrectionRow["correction_status"];
+  createdAt?: string;
+  updatedAt?: string;
+}): SalesTargetIncentiveRegionCorrectionRow {
+  return {
+    sales_target_incentive_region_correction_id: input.correctionId ?? "correction-a",
+    region_package_id: null,
+    company_id: "company-a",
+    region_id: "region-a",
+    store_id: "store-a",
+    employee_id: "employee-a",
+    participant_type: "personnel",
+    final_row_id: "final-store-a",
+    period_key: "2026-05",
+    before_amount: "9.07",
+    final_amount: input.finalAmount,
+    adjustment_amount: "2.93",
+    reason_note: input.reasonNote ?? "Donem ici magaza destegi dogrulandi.",
+    correction_status: input.status ?? "draft",
+    created_by_user_id: "actor-a",
+    submitted_by_user_id: null,
+    submitted_at: null,
+    reviewed_by_user_id: null,
+    reviewed_at: null,
+    review_note: null,
+    approved_adjustment_id: null,
+    created_at: input.createdAt ?? "2026-06-01T10:00:00.000Z",
+    updated_at: input.updatedAt ?? input.createdAt ?? "2026-06-01T10:00:00.000Z",
+  };
+}
+
+function adjustmentSummary(input: {
+  finalAmount: string;
+  adjustmentAmount: string;
+  approvedAdjustmentCount?: number;
+  latestApprovedAdjustmentAt?: string;
+}) {
+  return {
+    store_id: "store-a",
+    employee_id: "employee-a",
+    participant_type: "personnel" as const,
+    employee_display_name: "Derya Uslu",
+    position_code: "SALES_ASSOCIATE",
+    target_amount: "500.00",
+    actual_sales_amount: "550.00",
+    achievement_pct: "110.0000",
+    applied_rate: "0.0165",
+    payable_amount: "9.07",
+    final_amount: input.finalAmount,
+    adjustment_amount: input.adjustmentAmount,
+    approved_adjustment_count: input.approvedAdjustmentCount ?? 0,
+    latest_approved_adjustment_at: input.latestApprovedAdjustmentAt ?? null,
+    calculation_status: "projected",
+  };
+}
+
+function regionManagerWorkspaceInput() {
+  return {
+    actor: actor(["REGION_MANAGER"], {
+      REGION_MANAGER: { companyIds: [], regionIds: ["region-a"], storeIds: ["store-a"] },
+    }, ["store-a"]) as never,
+    periodKey: "2026-05",
   };
 }

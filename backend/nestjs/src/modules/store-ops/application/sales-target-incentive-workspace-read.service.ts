@@ -257,13 +257,23 @@ function toWorkspaceRow(input: {
   actorByCorrectionId: Map<string, { display_name: string | null; role_code: "REGION_MANAGER" | "HR_ADMIN" | "SUPER_ADMIN" | null }>;
 }): SalesTargetIncentiveWorkspaceRow {
   const records = toCorrectionRecords(input.correctionRows, input.actorByCorrectionId);
+  const currentCorrectionRow = currentOpenCorrectionRow(input.correctionRows);
   const currentCorrection = records.find((record) => record.status !== "voided") ?? null;
+  const openCorrection = currentCorrectionRow
+    ? records.find((record) => record.correctionId === currentCorrectionRow.sales_target_incentive_region_correction_id) ?? null
+    : null;
   const calculatedAmount = input.adjustmentSummary?.payable_amount ?? input.participant.calculation.payableAmount;
   const persistedFinal = input.adjustmentSummary?.final_amount ?? null;
   const adminAdjustment = input.adjustmentSummary?.adjustment_amount ?? "0";
-  const finalAmount = persistedFinal !== null
-    ? addMoney(persistedFinal, adminAdjustment)
-    : currentCorrection?.finalAmount ?? calculatedAmount;
+  const finalAmount = resolveWorkspaceFinalAmount({
+    calculatedAmount,
+    persistedFinal,
+    adminAdjustment,
+    approvedAdjustmentCount: input.adjustmentSummary?.approved_adjustment_count ?? 0,
+    latestApprovedAdjustmentAt: input.adjustmentSummary?.latest_approved_adjustment_at ?? null,
+    openCorrection,
+    openCorrectionUpdatedAt: currentCorrectionRow?.updated_at ?? null,
+  });
   const difference = calculatedAmount !== null && finalAmount !== null
     ? subtractMoney(finalAmount, calculatedAmount)
     : null;
@@ -294,9 +304,22 @@ function toFinalOnlyWorkspaceRow(
     corrections.filter((row) => row.employee_id === summary.employee_id && row.participant_type === summary.participant_type),
     actorByCorrectionId,
   );
+  const matchingCorrectionRows = corrections.filter((row) => row.employee_id === summary.employee_id && row.participant_type === summary.participant_type);
+  const currentCorrectionRow = currentOpenCorrectionRow(matchingCorrectionRows);
   const currentCorrection = records.find((record) => record.status !== "voided") ?? null;
+  const openCorrection = currentCorrectionRow
+    ? records.find((record) => record.correctionId === currentCorrectionRow.sales_target_incentive_region_correction_id) ?? null
+    : null;
   const calculatedAmount = summary.payable_amount ?? null;
-  const finalAmount = summary.final_amount === null ? currentCorrection?.finalAmount ?? calculatedAmount : addMoney(summary.final_amount, summary.adjustment_amount);
+  const finalAmount = resolveWorkspaceFinalAmount({
+    calculatedAmount,
+    persistedFinal: summary.final_amount,
+    adminAdjustment: summary.adjustment_amount,
+    approvedAdjustmentCount: summary.approved_adjustment_count ?? 0,
+    latestApprovedAdjustmentAt: summary.latest_approved_adjustment_at ?? null,
+    openCorrection,
+    openCorrectionUpdatedAt: currentCorrectionRow?.updated_at ?? null,
+  });
   const difference = calculatedAmount !== null && finalAmount !== null ? subtractMoney(finalAmount, calculatedAmount) : null;
   return {
     employeeId: summary.employee_id,
@@ -361,6 +384,42 @@ function resolveRowStatus(status: string, difference: string | null, adjustment:
   if (!isZeroMoney(adjustment)) return "adjusted" as const;
   if (difference !== null && !isZeroMoney(difference)) return "corrected" as const;
   return status === "blocked" || status === "no_source" ? status : "projected" as const;
+}
+
+function resolveWorkspaceFinalAmount(input: {
+  calculatedAmount: string | null;
+  persistedFinal: string | null;
+  adminAdjustment: string;
+  approvedAdjustmentCount: number;
+  latestApprovedAdjustmentAt: string | null;
+  openCorrection: SalesTargetIncentiveWorkspaceCorrection | null;
+  openCorrectionUpdatedAt: string | null;
+}) {
+  const effectiveClosedFinal = input.persistedFinal === null
+    ? null
+    : addMoney(input.persistedFinal, input.adminAdjustment);
+  const hasApprovedAdjustment = input.approvedAdjustmentCount > 0 || !isZeroMoney(input.adminAdjustment);
+  const approvedAdjustmentSupersedesOpenCorrection = hasApprovedAdjustment && (
+    !input.latestApprovedAdjustmentAt
+    || !input.openCorrectionUpdatedAt
+    || input.latestApprovedAdjustmentAt >= input.openCorrectionUpdatedAt
+  );
+
+  if (input.openCorrection && !approvedAdjustmentSupersedesOpenCorrection) {
+    return input.openCorrection.finalAmount;
+  }
+  if (effectiveClosedFinal !== null) {
+    return effectiveClosedFinal;
+  }
+  return input.openCorrection?.finalAmount ?? input.calculatedAmount;
+}
+
+function currentOpenCorrectionRow(rows: SalesTargetIncentiveRegionCorrectionRow[]) {
+  return [...rows]
+    .filter((row) => row.correction_status === "draft" || row.correction_status === "submitted" || row.correction_status === "admin_returned")
+    .sort((left, right) => right.updated_at.localeCompare(left.updated_at)
+      || right.created_at.localeCompare(left.created_at)
+      || right.sales_target_incentive_region_correction_id.localeCompare(left.sales_target_incentive_region_correction_id))[0] ?? null;
 }
 
 function groupBy<T>(rows: T[], key: (row: T) => string) {

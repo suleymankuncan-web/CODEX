@@ -62,6 +62,45 @@ test('rate shortcut uses persisted rate metadata and correction payload stays ex
   })
 })
 
+test('successful correction refetch keeps the saved final amount from authoritative workspace truth', async ({ page }) => {
+  const requests: Array<{ path: string; body: unknown }> = []
+  const initial = createIncentiveWorkspace('region_manager')
+  const refreshed = createIncentiveWorkspace('region_manager')
+  const refreshedRow = refreshed.data.regions[0]!.stores[0]!.rows.find(
+    (row) => row.displayName === 'Derya Uslu',
+  )!
+  refreshedRow.finalAmount = '25000.00'
+  refreshedRow.signedDifferenceAmount = '1098.40'
+  refreshedRow.status = 'corrected'
+  let workspaceReads = 0
+
+  await installStoreContractSession(page, 'regionManager', {
+    actionStoreIds: [incentiveStoreA, incentiveStoreB],
+  })
+  await installGenericStoreApiFallbacks(page)
+  await page.route('**/api/store/incentives/workspace**', async (route) => {
+    workspaceReads += 1
+    await route.fulfill({ json: workspaceReads === 1 ? initial : refreshed })
+  })
+  await routeIncentiveCommands(page, requests)
+  await page.goto('/store/incentives')
+
+  await page.getByRole('button', { name: 'Derya Uslu: Düzelt' }).click()
+  const drawer = page.getByRole('dialog')
+  await drawer.getByLabel('Final prim tutarı').fill('25000,00')
+  await drawer.getByLabel('Düzeltme notu').fill('Dönem desteği doğrulandı')
+  await drawer.getByRole('button', { name: 'Kaydet', exact: true }).click()
+
+  await expect.poll(() => requests.map((item) => item.path)).toContain('/api/store/incentives/corrections')
+  await expect.poll(() => workspaceReads).toBeGreaterThanOrEqual(2)
+  const row = page.locator('.incentive-person-row').filter({ hasText: 'Derya Uslu' })
+  const finalAmount = row.locator('[data-label="Düzeltme sonrası"] strong')
+
+  // Traceability: INC-FR-002/004, AC-INC-001, EC-015.
+  await expect(finalAmount).toHaveText('₺25.000,00')
+  await expect(finalAmount).not.toHaveText('₺23.901,60')
+})
+
 test('failed correction restores the authoritative row instead of preserving optimistic money', async ({ page }) => {
   const requests: Array<{ path: string; body: unknown }> = []
   await prepare(page, 'region_manager', { requests, commandFailurePaths: ['/api/store/incentives/corrections'] })

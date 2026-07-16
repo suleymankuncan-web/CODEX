@@ -51,6 +51,8 @@ export type SalesTargetIncentiveAdjustmentSummaryRow = {
   calculation_status?: string | null;
   correction_amount: string;
   adjustment_amount: string;
+  approved_adjustment_count?: number;
+  latest_approved_adjustment_at?: string | null;
   final_amount: string | null;
 };
 
@@ -325,6 +327,14 @@ export class SalesTargetIncentiveCorrectionRepository {
               WHERE adjustment.adjustment_scope = 'final_snapshot'
                 AND adjustment.adjustment_type = 'manual_adjustment'
             ), 0)::text AS adjustment_amount,
+            (COUNT(*) FILTER (
+              WHERE adjustment.adjustment_scope = 'final_snapshot'
+                AND adjustment.adjustment_type = 'manual_adjustment'
+            ))::int AS approved_adjustment_count,
+            (MAX(adjustment.approved_at) FILTER (
+              WHERE adjustment.adjustment_scope = 'final_snapshot'
+                AND adjustment.adjustment_type = 'manual_adjustment'
+            ))::text AS latest_approved_adjustment_at,
             MAX(final_row.final_amount)::text AS final_amount
           FROM ops.sales_target_incentive_adjustment adjustment
           LEFT JOIN ops.sales_target_incentive_projection_row projection_row
@@ -377,6 +387,8 @@ export class SalesTargetIncentiveCorrectionRepository {
             final_row.calculation_status::text AS calculation_status,
             COALESCE(adjustment_summary.correction_amount, final_row.correction_amount::text) AS correction_amount,
             COALESCE(adjustment_summary.adjustment_amount, '0') AS adjustment_amount,
+            COALESCE(adjustment_summary.approved_adjustment_count, 0)::int AS approved_adjustment_count,
+            adjustment_summary.latest_approved_adjustment_at,
             final_row.final_amount::text AS final_amount
           FROM rpt.sales_target_incentive_final_row final_row
           INNER JOIN latest_final_snapshot snapshot
