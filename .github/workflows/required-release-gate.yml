@@ -98,7 +98,7 @@ jobs:
         env:
           REQUIRED_RELEASE_GATE_CHECK_NAME: release-rehearsal
           REQUIRED_RELEASE_GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          REQUIRED_RELEASE_GATE_MAX_ATTEMPTS: "50"
+          REQUIRED_RELEASE_GATE_MAX_ATTEMPTS: "24"
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/required-release-gate.mjs --observe
 

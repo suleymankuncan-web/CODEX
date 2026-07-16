@@ -7,6 +7,7 @@ import {
   GITHUB_ACTIONS_APP_ID,
   evaluateObservedCheckRun,
   evaluateRequiredReleaseGateFinal,
+  isRetriableCheckRunsError,
   parseNameStatusFiles,
   selectRequiredReleaseGateScope,
 } from './required-release-gate.mjs'
@@ -188,6 +189,17 @@ test('aggregate rejects cancelled, timed out, skipped, and missing selected chil
   }
 })
 
+test('observer retries only transient provider failures and keeps contract failures fail fast', () => {
+  for (const status of [429, 500, 503, 599]) {
+    assert.equal(isRetriableCheckRunsError(Object.assign(new Error('transient'), { status })), true)
+  }
+
+  assert.equal(isRetriableCheckRunsError(new TypeError('network unavailable')), true)
+  assert.equal(isRetriableCheckRunsError(Object.assign(new Error('unauthorized'), { status: 401 })), false)
+  assert.equal(isRetriableCheckRunsError(Object.assign(new Error('not found'), { status: 404 })), false)
+  assert.equal(isRetriableCheckRunsError(new Error('invalid response contract')), false)
+})
+
 test('required workflow is unfiltered, uses the reusable root gate, and finalizes fail closed', () => {
   const workflow = readText('.github/workflows/required-release-gate.yml')
   const rehearsalWorkflow = readText('.github/workflows/release-rehearsal.yml')
@@ -203,6 +215,7 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.match(workflow, /run:\s*npm run test:scripts/)
   assert.doesNotMatch(workflow, /frontend-targeted:/)
   assert.match(workflow, /REQUIRED_RELEASE_GATE_CHECK_NAME:\s*release-rehearsal/)
+  assert.match(workflow, /REQUIRED_RELEASE_GATE_MAX_ATTEMPTS:\s*"24"/)
   assert.match(workflow, /if:\s*\$\{\{ always\(\) \}\}/)
   assert.match(workflow, /name:\s*required-release-gate/)
   assert.match(frontendWorkflow, /name:\s*Frontend Targeted Check/)

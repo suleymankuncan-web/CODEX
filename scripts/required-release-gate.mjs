@@ -223,6 +223,15 @@ function delay(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds))
 }
 
+export function isRetriableCheckRunsError(error) {
+  if (error instanceof TypeError) {
+    return true
+  }
+
+  const status = Number(error?.status)
+  return status === 429 || (status >= 500 && status <= 599)
+}
+
 async function fetchCheckRuns({ repository, headSha, checkName, token }) {
   const apiUrl = process.env.GITHUB_API_URL ?? 'https://api.github.com'
   const url = new URL(`${apiUrl}/repos/${repository}/commits/${headSha}/check-runs`)
@@ -240,7 +249,9 @@ async function fetchCheckRuns({ repository, headSha, checkName, token }) {
   })
 
   if (!response.ok) {
-    throw new Error(`check-runs API returned HTTP ${response.status} for ${checkName}`)
+    const error = new Error(`check-runs API returned HTTP ${response.status} for ${checkName}`)
+    error.status = response.status
+    throw error
   }
 
   const body = await response.json()
@@ -255,7 +266,24 @@ async function observeCheckRun() {
   const maxAttempts = positiveInteger(process.env.REQUIRED_RELEASE_GATE_MAX_ATTEMPTS, 90)
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const checkRuns = await fetchCheckRuns({ repository, headSha, checkName, token })
+    let checkRuns
+    try {
+      checkRuns = await fetchCheckRuns({ repository, headSha, checkName, token })
+    } catch (error) {
+      if (!isRetriableCheckRunsError(error)) {
+        throw error
+      }
+
+      console.warn(
+        `[required-release-gate] transient check-runs lookup failure: ${error.message} (poll ${attempt}/${maxAttempts})`,
+      )
+      if (attempt < maxAttempts) {
+        await delay(REQUIRED_RELEASE_GATE_POLL_INTERVAL_MS)
+        continue
+      }
+      break
+    }
+
     const evaluation = evaluateObservedCheckRun(checkName, checkRuns)
     console.log(`[required-release-gate] ${evaluation.reason} (poll ${attempt}/${maxAttempts})`)
 
