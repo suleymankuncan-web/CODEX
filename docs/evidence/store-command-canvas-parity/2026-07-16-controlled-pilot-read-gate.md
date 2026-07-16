@@ -2,46 +2,60 @@
 
 Date: 2026-07-16
 Environment: protected staging
-Decision: `BLOCKED_EXTERNAL_RUNTIME_NOT_CURRENT`
+Decision: `PASS_CONTROLLED_PILOT_READ_ONLY`
 
-## Sanitized proof
+## Runtime transition
 
-The repository smoke authenticated the configured Region Manager persona with
-the protected browser-cookie session and proved:
+The staging API health endpoint returned `200`. Unauthenticated probes for the
+two protected workspace contracts returned `403`, proving that the deployed
+runtime owns the routes and requires authentication rather than returning the
+former `404` route absence.
 
-- authentication status `200` and exactly one company scope;
-- `REGION_MANAGER` was the resolved application role;
-- 30 assigned stores were present in the session projection;
-- the app cookie was HttpOnly, Secure and host-only;
-- no bearer or provider token was stored by the application;
-- no mutation request was emitted while opening either Store route;
-- neither route overflowed the 390 px viewport;
-- logout cleared the application cookie.
+| Read contract | Unauthenticated route-presence probe |
+|---|---:|
+| `/api/store/incentives/workspace` | `403` |
+| `/api/store/targets/workspace` | `403` |
 
-`AUTH_SMOKE_PRODUCT_READ_ONLY=1` was used. The negative CSRF POST probe was
-explicitly skipped, so this run performed no product mutation.
+## Sanitized persona proof
 
-## Failing runtime gate
+The versioned browser-cookie smoke ran with
+`AUTH_SMOKE_PRODUCT_READ_ONLY=1`. It skipped the negative CSRF POST probe and
+observed every Incentives and Targets request, so the proof performed no
+product mutation.
 
-The exact workspace reads required by the approved plan are not present on the
-current staging API runtime:
+| Persona | Company scopes | Assigned stores | Read routes | Period | Mutation requests | 390 px overflow |
+|---|---:|---:|---|---|---:|---:|
+| Region Manager | 1 | 30 | Incentives and Targets | `2026-07` | 0 | no |
+| Report Viewer | 1 | 0 | Incentives and Targets | `2026-07` | 0 | no |
+| Store Manager | 1 | 1 | Targets only | `2026-07` | 0 | no |
 
-| Read contract | Unauthenticated route-presence probe | Authenticated smoke |
-|---|---:|---:|
-| `/api/store/incentives/workspace` | `404` | `404` |
-| `/api/store/targets/workspace` | `404` | `404` |
+The rendered role-specific headings were:
 
-The Region Manager route therefore cannot supply a successful period
-projection or the accepted Command Canvas heading from real staging data.
-This receipt is not a parity PASS and must not be used as one.
+- Region Manager: `Prim Kontrol Merkezi` and `Hedef Kontrol Masası`;
+- Report Viewer: `Şirket Prim Görünümü` and `Şirket hedef görünümü`;
+- Store Manager: `Mağaza Hedef Dağılımı`.
 
-## Required external transition
+Every workspace response used by the page returned `200` with a real period
+projection. Store Manager Incentives was not opened or exposed by this proof.
+Report Viewer remained company-scoped and read-only throughout both routes.
 
-Deploy a staging API artifact containing the already-merged Incentives and
-Targets workspace read contracts, without changing data or configuration.
-Then rerun the same read-only smoke for Region Manager, Report Viewer and Store
-Manager Targets. Provider deployment is outside this plan's authorization;
-PR 7 must remain unmerged until the controlled-pilot gate passes.
+## Session and transport proof
 
-Credentials, subject identifiers, cookie values, business payloads and raw
-workspace records are intentionally excluded.
+All three personas proved:
+
+- authentication status `200` with the expected application role;
+- browser-session creation `201` and logout clear `200`;
+- an HttpOnly, Secure, SameSite=Lax, host-only application cookie;
+- no application-stored bearer token or provider ID token;
+- no token-shaped storage keys;
+- logout removed the application cookie.
+
+Credentials, one-time codes, subject identifiers, cookie values, raw UUIDs,
+business payloads and workspace records are intentionally excluded.
+
+## Decision boundary
+
+This receipt proves the required protected-staging, read-only controlled-pilot
+gate for the Store Command Canvas Incentives and Targets cutover. It does not
+authorize broad production, provider changes, staging mutation, DDL, DML or a
+production deployment.
