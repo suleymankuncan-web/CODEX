@@ -440,5 +440,8 @@ describe("SalesTargetIncentiveCorrectionRepository", () => {
     expect(sql).toContain("UNION ALL");
     expect(sql).toContain("FROM rpt.sales_target_incentive_final_row final_row");
     expect(sql).toContain("NOT EXISTS");
+    expect(sql).toContain("approved_adjustment_count");
+    expect(sql).toContain("latest_approved_adjustment_at");
+    expect(sql).toContain("MAX(adjustment.approved_at)");
   });
 });
