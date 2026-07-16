@@ -1,6 +1,4 @@
-import type { TargetDistributionRequest } from '../features/targets/api'
 import type { RequestCenterItem } from '../features/store-approvals/request-center-api'
-import type { OffboardingRequest, SellerCodeRequest } from '../features/workforce/api'
 import { normalizeDisplayLabel } from '../lib/display-labels'
 import { formatDateTime } from '../lib/format'
 import type { AppLocale } from '../lib/i18n'
@@ -9,7 +7,16 @@ import type { StoreSurfaceTone } from './store-surface-primitives'
 
 export type RequestCenterTab = 'open' | 'done'
 export type RequestCenterType = 'all' | 'target' | 'sellerCode' | 'offboarding'
-export type RequestCenterStatus = 'all' | 'pending' | 'returned' | 'approved'
+export type RequestCenterStatus = 'all' | 'pending' | 'returned' | 'approved' | 'overdue'
+export type RequestCenterSort = 'updatedDesc' | 'waitingDesc' | 'storeAsc' | 'typeAsc'
+
+export type RequestCenterEvent = {
+  id: string
+  label: string
+  occurredAt: string
+  occurredLabel: string
+  actorLabel: string
+}
 
 export type RequestCenterRow = {
   id: string
@@ -18,12 +25,22 @@ export type RequestCenterRow = {
   subtitle: string
   scopeTitle: string
   scopeSubtitle: string
+  regionId: string
+  regionName: string
+  regionManagerNames: string[]
   status: string
   statusLabel: string
   statusTone: StoreSurfaceTone
-  sourceLabel: string
+  createdLabel: string
   updatedAt: string
   updatedLabel: string
+  waitingSince: string | null
+  waitingLabel: string
+  nextOwnerLabel: string
+  dueLabel: string
+  isOverdue: boolean
+  events: RequestCenterEvent[]
+  eventTotal: number
   bucket: RequestCenterTab
   rowTone: 'neutral' | 'urgent' | 'returned'
   actionLabel: string
@@ -35,447 +52,167 @@ export const PAGE_SIZE = 15
 
 export const requestCenterCopy = {
   tr: {
-    aria: 'Talep Merkezi',
-    title: 'Talep Merkezi',
-    description:
-      'Hedef girişi bu sayfadan çıkar; burada açılmış talepler, durumlar ve doğru işlem yolu okunur.',
-    loadingTitle: 'Talep merkezi yükleniyor',
-    loadingCopy: 'Açılmış hedef ve personel talepleri alınıyor.',
-    errorTitle: 'Talep merkezi açılamadı',
-    searchPlaceholder: 'Talep, mağaza veya kişi ara',
-    allTypes: 'Tüm tipler',
-    allStatuses: 'Tüm durumlar',
-    periodAll: 'Tüm dönemler',
-    resetFilters: 'Sıfırla',
-    openTab: 'Açık / Bekleyen',
-    doneTab: 'Tamamlanan',
-    regionTableTitle: 'Bölge talepleri',
-    storeTableTitle: 'Mağaza taleplerim',
-    tableDescription:
-      'Her satır gerçek bir talep kaydını temsil eder; liste sayfa başına en fazla 15 kayıt gösterir.',
-    countOpen: '{count} açık kayıt',
-    countDone: '{count} tamamlanan',
-    pager: '{from}-{to} / {total} kayıt gösteriliyor',
-    emptyTitle: 'Seçili görünümde talep yok',
-    emptyCopy: 'Filtreleri değiştirerek açık veya tamamlanan talepleri kontrol edebilirsin.',
-    pendingMetric: 'Karar bekleyen',
-    pendingMetricNote: 'Açık hedef ve personel talepleri.',
-    returnedMetric: 'Düzeltme dönen',
-    returnedMetricNote: 'Mağaza aksiyonu bekleyen kayıtlar.',
-    completedMetric: 'Tamamlanan',
-    completedMetricNote: 'Bu alanda kapanmış talepler.',
-    requestColumn: 'Talep',
-    scopeColumnRegion: 'Mağaza',
-    scopeColumnStore: 'Talep alanı',
-    statusColumn: 'Durum',
-    sourceColumn: 'Kaynak',
-    updatedColumn: 'Güncellendi',
-    actionColumn: 'Aksiyon',
-    targetType: 'Hedef',
-    sellerCodeType: 'Satıcı kodu',
-    offboardingType: 'Personel çıkış',
-    targetSource: 'Hedef akışı',
-    workforceSource: 'Personel talebi',
-    targetAction: 'Hedefe git',
-    workforceAction: 'Düzelt',
-    workforceReadAction: 'Durumu oku',
-    detailAction: 'Detay',
-    pendingRegionStatus: 'Bölge onayı bekliyor',
-    pendingHrStatus: 'HR onayı bekliyor',
-    rejectedStatus: 'İade edildi',
-    approvedStatus: 'Onaylandı',
-    adjustedApprovedStatus: 'Düzenlenerek onaylandı',
-    unknownStatus: 'Durum okunuyor',
-    targetSubtitle: 'Toplam hedef ve personel dağılımı',
-    sellerSubtitle: 'Yeni personel kod kaydı',
-    offboardingSubtitle: 'Personel çıkış kaydı',
-    targetScopeSubtitle: '{count} kişi hedefli',
-    sellerScopeSubtitle: 'TC son 4 {last4}',
-    offboardingScopeSubtitle: '{ref}',
-    noReference: 'referans yok',
-    unknownStore: 'Mağaza adı yok',
-    regionSubtitle: 'Bölge müdürü satırı',
-    storeSubtitle: 'Mağaza hedef talebi',
+    aria: 'Talep Merkezi', title: 'Talep Merkezi',
+    description: 'Hedef, personel sicil ve işten ayrılma taleplerini tek bir operasyon görünümünde izle.',
+    loadingTitle: 'Talep merkezi yükleniyor', loadingCopy: 'Yetkili talep kayıtları hazırlanıyor.',
+    errorTitle: 'Talep merkezi açılamadı', searchPlaceholder: 'Talep, mağaza veya kişi ara',
+    allTypes: 'Tüm tipler', allStatuses: 'Tüm durumlar', periodAll: 'Tüm dönemler',
+    allSorts: 'Son güncellenen', waitingSort: 'En uzun bekleyen', storeSort: 'Mağaza A-Z', typeSort: 'Talep tipi',
+    resetFilters: 'Sıfırla', openTab: 'Aktif talepler', doneTab: 'Tamamlanan',
+    regionTableTitle: 'Bölge talepleri', viewerTableTitle: 'Şirket talepleri', storeTableTitle: 'Mağaza taleplerim',
+    tableDescription: 'Satıra dokunarak güvenli işlem geçmişini ve yetkili devam yolunu aç.',
+    countOpen: '{count} aktif kayıt', countDone: '{count} tamamlanan', pager: '{from}-{to} / {total} kayıt',
+    emptyTitle: 'Bu görünümde talep yok', emptyCopy: 'Filtreleri değiştirerek diğer kayıtları kontrol edebilirsin.',
+    openMetric: 'Açık talepler', openMetricNote: 'Karar veya mağaza aksiyonu bekliyor.',
+    completedMetric: 'Tamamlanan', completedMetricNote: 'Onaylanarak kapanan talepler.',
+    returnedMetric: 'İade edilen', returnedMetricNote: 'Mağaza düzeltmesi bekliyor.',
+    overdueMetric: 'Geciken', overdueMetricNote: 'Onaylı hizmet süresini aşan kayıtlar.',
+    requestColumn: 'Talep', scopeColumnRegion: 'Mağaza', scopeColumnStore: 'Talep alanı',
+    statusColumn: 'Durum', waitingColumn: 'Bekleme', ownerColumn: 'Sıradaki işlem', updatedColumn: 'Güncelleme',
+    targetType: 'Hedef', sellerCodeType: 'Personel sicil', offboardingType: 'İşten ayrılma',
+    targetAction: 'Hedefe git', workforceAction: 'Düzelt', workforceReadAction: 'Kaynağa git', detailAction: 'Kaynağı gör',
+    pendingRegionStatus: 'Bölge onayı bekliyor', pendingHrStatus: 'İK onayı bekliyor', rejectedStatus: 'İade edildi',
+    approvedStatus: 'Onaylandı', adjustedApprovedStatus: 'Düzenlenerek onaylandı', unknownStatus: 'Durum okunuyor',
+    targetSubtitle: 'Toplam hedef ve personel dağılımı', sellerSubtitle: 'Yeni personel sicil kaydı',
+    offboardingSubtitle: 'Personel işten ayrılma kaydı', targetScopeSubtitle: '{count} kişi hedefli',
+    sellerScopeSubtitle: 'TC son 4 {last4}', offboardingScopeSubtitle: '{ref}', noReference: 'referans yok',
+    unknownStore: 'Mağaza adı yok', regionSubtitle: 'Bölge talebi', storeSubtitle: 'Mağaza talebi',
+    ownerStore: 'Mağaza', ownerRegion: 'Bölge müdürü', ownerHr: 'İK', ownerSystem: 'Sistem', ownerClosed: 'İşlem tamamlandı',
+    noWaiting: 'Bekleme yok', overdueSuffix: 'gecikti', duePrefix: 'Son tarih',
+    managerUnknown: 'Bölge yöneticisi tanımsız',
+    groupCount: '{count} talep',
+    drawerDescription: 'Talebin güvenli işlem izi ve mevcut sorumlusu', createdLabel: 'Oluşturuldu',
+    factsType: 'Talep tipi', factsStore: 'Mağaza', factsWaiting: 'Bekleme', factsOwner: 'Sıradaki işlem',
+    factsUpdated: 'Son güncelleme', factsDue: 'Hizmet süresi', timelineTitle: 'İşlem geçmişi',
+    timelineRecent: 'Son 20 işlem gösteriliyor ({count} toplam)',
+    eventCreated: 'Talep oluşturuldu', eventApproved: 'Talep onaylandı', eventReturned: 'Talep iade edildi',
+    eventResubmitted: 'Talep yeniden gönderildi', actorUnknown: 'Sistem kaydı', close: 'Kapat',
   },
   en: {
-    aria: 'Request Center',
-    title: 'Request Center',
-    description:
-      'Target entry no longer lives here; this page reads opened requests, status, and the right action path.',
-    loadingTitle: 'Loading request center',
-    loadingCopy: 'Opened target and personnel requests are being loaded.',
-    errorTitle: 'Request center could not be opened',
-    searchPlaceholder: 'Search request, store, or person',
-    allTypes: 'All types',
-    allStatuses: 'All statuses',
-    periodAll: 'All periods',
-    resetFilters: 'Reset',
-    openTab: 'Open / Pending',
-    doneTab: 'Completed',
-    regionTableTitle: 'Region requests',
-    storeTableTitle: 'My store requests',
-    tableDescription:
-      'Each row represents a real request record; the list shows at most 15 rows per page.',
-    countOpen: '{count} open records',
-    countDone: '{count} completed',
-    pager: 'Showing {from}-{to} / {total} records',
-    emptyTitle: 'No requests in this view',
-    emptyCopy: 'Change filters to check open or completed requests.',
-    pendingMetric: 'Awaiting decision',
-    pendingMetricNote: 'Open target and personnel requests.',
-    returnedMetric: 'Returned corrections',
-    returnedMetricNote: 'Records waiting for store action.',
-    completedMetric: 'Completed',
-    completedMetricNote: 'Closed requests in this view.',
-    requestColumn: 'Request',
-    scopeColumnRegion: 'Store',
-    scopeColumnStore: 'Request area',
-    statusColumn: 'Status',
-    sourceColumn: 'Source',
-    updatedColumn: 'Updated',
-    actionColumn: 'Action',
-    targetType: 'Target',
-    sellerCodeType: 'Seller code',
-    offboardingType: 'Employee exit',
-    targetSource: 'Target flow',
-    workforceSource: 'Personnel request',
-    targetAction: 'Go to targets',
-    workforceAction: 'Correct',
-    workforceReadAction: 'Read status',
-    detailAction: 'Detail',
-    pendingRegionStatus: 'Waiting for region approval',
-    pendingHrStatus: 'Waiting for HR approval',
-    rejectedStatus: 'Returned',
-    approvedStatus: 'Approved',
-    adjustedApprovedStatus: 'Approved with edits',
-    unknownStatus: 'Reading status',
-    targetSubtitle: 'Total target and personnel distribution',
-    sellerSubtitle: 'New personnel code record',
-    offboardingSubtitle: 'Employee exit record',
-    targetScopeSubtitle: '{count} people targeted',
-    sellerScopeSubtitle: 'National ID last 4 {last4}',
-    offboardingScopeSubtitle: '{ref}',
-    noReference: 'no reference',
-    unknownStore: 'Store name unavailable',
-    regionSubtitle: 'Region request row',
-    storeSubtitle: 'Store target request',
+    aria: 'Request Center', title: 'Request Center', description: 'Track target, personnel record and offboarding requests in one operational view.',
+    loadingTitle: 'Loading request center', loadingCopy: 'Preparing authorized request records.', errorTitle: 'Request center could not be opened',
+    searchPlaceholder: 'Search request, store, or person', allTypes: 'All types', allStatuses: 'All statuses', periodAll: 'All periods',
+    allSorts: 'Recently updated', waitingSort: 'Longest waiting', storeSort: 'Store A-Z', typeSort: 'Request type', resetFilters: 'Reset',
+    openTab: 'Active requests', doneTab: 'Completed', regionTableTitle: 'Region requests', viewerTableTitle: 'Company requests', storeTableTitle: 'My store requests',
+    tableDescription: 'Open a row to inspect its safe history and authoritative continuation path.', countOpen: '{count} active records', countDone: '{count} completed',
+    pager: '{from}-{to} / {total} records', emptyTitle: 'No requests in this view', emptyCopy: 'Change filters to inspect other records.',
+    openMetric: 'Open requests', openMetricNote: 'Waiting for a decision or store action.', completedMetric: 'Completed', completedMetricNote: 'Approved and closed requests.',
+    returnedMetric: 'Returned', returnedMetricNote: 'Waiting for store correction.', overdueMetric: 'Overdue', overdueMetricNote: 'Past the approved service window.',
+    requestColumn: 'Request', scopeColumnRegion: 'Store', scopeColumnStore: 'Request area', statusColumn: 'Status', waitingColumn: 'Waiting',
+    ownerColumn: 'Next action', updatedColumn: 'Updated', targetType: 'Target', sellerCodeType: 'Personnel record', offboardingType: 'Offboarding',
+    targetAction: 'Go to targets', workforceAction: 'Correct', workforceReadAction: 'Open source', detailAction: 'View source',
+    pendingRegionStatus: 'Waiting for region approval', pendingHrStatus: 'Waiting for HR approval', rejectedStatus: 'Returned', approvedStatus: 'Approved',
+    adjustedApprovedStatus: 'Approved with edits', unknownStatus: 'Reading status', targetSubtitle: 'Total target and personnel distribution',
+    sellerSubtitle: 'New personnel record', offboardingSubtitle: 'Employee offboarding record', targetScopeSubtitle: '{count} people targeted',
+    sellerScopeSubtitle: 'National ID last 4 {last4}', offboardingScopeSubtitle: '{ref}', noReference: 'no reference', unknownStore: 'Store unavailable',
+    regionSubtitle: 'Region request', storeSubtitle: 'Store request', ownerStore: 'Store', ownerRegion: 'Region manager', ownerHr: 'HR', ownerSystem: 'System',
+    ownerClosed: 'Completed', noWaiting: 'No waiting', overdueSuffix: 'overdue', duePrefix: 'Due', drawerDescription: 'Safe request history and current owner',
+    managerUnknown: 'Region manager unavailable',
+    groupCount: '{count} requests',
+    createdLabel: 'Created', factsType: 'Request type', factsStore: 'Store', factsWaiting: 'Waiting', factsOwner: 'Next action', factsUpdated: 'Last update',
+    factsDue: 'Service window', timelineTitle: 'Request history', eventCreated: 'Request created', eventApproved: 'Request approved',
+    timelineRecent: 'Showing the latest 20 events ({count} total)',
+    eventReturned: 'Request returned', eventResubmitted: 'Request resubmitted', actorUnknown: 'System record', close: 'Close',
   },
 } as const
 
 export type RequestCenterCopy = (typeof requestCenterCopy)[AppLocale]
 
-export function buildRequestCenterRows(input: {
-  copy: RequestCenterCopy
-  locale: AppLocale
-  persona: StoreApprovalsPersona
-  items: RequestCenterItem[]
-}) {
+export function buildRequestCenterRows(input: { copy: RequestCenterCopy; locale: AppLocale; persona: StoreApprovalsPersona; items: RequestCenterItem[] }) {
   return input.items.map((item): RequestCenterRow => {
     const isApproved = item.status === 'approved'
     const isReturned = item.status === 'rejected'
-    const status =
-      item.requestType === 'target' && isApproved && item.approvalMode === 'adjusted'
-        ? { label: input.copy.adjustedApprovedStatus, tone: 'calm' as StoreSurfaceTone }
-        : resolveStatus(item.status, input.copy)
-
-    if (item.requestType === 'target') {
-      return {
-        id: `target:${item.requestId}`,
-        type: 'target',
-        title: item.targetLabel || input.copy.targetType,
-        subtitle: input.copy.targetSubtitle,
-        scopeTitle: normalizeDisplayLabel(item.storeName, input.copy.unknownStore),
-        scopeSubtitle:
-          input.persona === 'regionManager'
-            ? input.copy.regionSubtitle
-            : formatCopy(input.copy.targetScopeSubtitle, {
-              count: String(item.allocationCount ?? 0),
-            }),
-        status: item.status,
-        statusLabel: status.label,
-        statusTone: status.tone,
-        sourceLabel: input.copy.targetSource,
-        updatedAt: item.updatedAt,
-        updatedLabel: formatDateTime(item.updatedAt, input.locale),
-        bucket: isApproved ? 'done' : 'open',
-        rowTone: item.status === 'pending_region_approval' ? 'urgent' : 'neutral',
-        actionLabel: isApproved ? input.copy.detailAction : input.copy.targetAction,
-        actionTo: createTargetHandoffUrl({
-          requestMonth: item.requestMonth ?? '',
-          storeId: item.storeId,
-          status: item.status,
-        }, input.persona),
-        actionPrimary: item.status === 'pending_region_approval',
-      }
-    }
-
-    const isSellerCode = item.requestType === 'sellerCode'
+    const status = item.requestType === 'target' && isApproved && item.approvalMode === 'adjusted'
+      ? { label: input.copy.adjustedApprovedStatus, tone: 'calm' as StoreSurfaceTone }
+      : resolveStatus(item.status, input.copy)
+    const type = item.requestType
+    const isTarget = type === 'target'
+    const isSeller = type === 'sellerCode'
+    const title = isTarget ? (item.targetLabel || input.copy.targetType) : (item.personDisplayName || (isSeller ? input.copy.sellerCodeType : input.copy.offboardingType))
+    const subtitle = isTarget ? input.copy.targetSubtitle : isSeller ? input.copy.sellerSubtitle : input.copy.offboardingSubtitle
+    const domainScopeSubtitle = isTarget
+      ? (input.persona === 'storeManager' ? formatCopy(input.copy.targetScopeSubtitle, { count: String(item.allocationCount ?? 0) }) : input.copy.regionSubtitle)
+      : isSeller
+        ? formatCopy(input.copy.sellerScopeSubtitle, { last4: item.nationalIdLast4 ?? input.copy.noReference })
+        : formatCopy(input.copy.offboardingScopeSubtitle, { ref: item.externalEmployeeRef ?? input.copy.noReference })
+    const scopeSubtitle = input.persona === 'reportViewer'
+      ? [item.regionManagerNames.length > 0 ? item.regionManagerNames.join(', ') : input.copy.managerUnknown, item.regionName].filter(Boolean).join(' · ')
+      : domainScopeSubtitle
+    const nextOwnerLabel = resolveOwner(item.nextOwner, input.copy)
+    const events = [...(item.events ?? [])]
+      .sort((a, b) => new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime())
+      .map((event) => ({ id: event.eventId, label: resolveEvent(event.type, input.copy), occurredAt: event.occurredAt, occurredLabel: formatDateTime(event.occurredAt, input.locale), actorLabel: event.actorDisplayName || input.copy.actorUnknown }))
     return {
-      id: `${item.requestType}:${item.requestId}`,
-      type: item.requestType,
-      title:
-        item.personDisplayName ||
-        (isSellerCode ? input.copy.sellerCodeType : input.copy.offboardingType),
-      subtitle: isSellerCode ? input.copy.sellerSubtitle : input.copy.offboardingSubtitle,
-      scopeTitle: normalizeDisplayLabel(item.storeName, input.copy.unknownStore),
-      scopeSubtitle: isSellerCode
-        ? formatCopy(input.copy.sellerScopeSubtitle, {
-          last4: item.nationalIdLast4 ?? input.copy.noReference,
-        })
-        : formatCopy(input.copy.offboardingScopeSubtitle, {
-          ref: item.externalEmployeeRef ?? input.copy.noReference,
-        }),
-      status: item.status,
-      statusLabel: status.label,
-      statusTone: status.tone,
-      sourceLabel: input.copy.workforceSource,
-      updatedAt: item.updatedAt,
-      updatedLabel: formatDateTime(item.updatedAt, input.locale),
-      bucket: isApproved ? 'done' : 'open',
-      rowTone: isReturned ? 'returned' : 'neutral',
-      actionLabel: isReturned ? input.copy.workforceAction : input.copy.workforceReadAction,
-      actionTo: createWorkforceHandoffUrl({
-        ...(isReturned ? { requestId: item.requestId } : {}),
-        storeId: item.storeId,
-        type: item.requestType,
-      }),
-      actionPrimary: isReturned,
+      id: `${type}:${item.requestId}`, type, title, subtitle,
+      scopeTitle: normalizeDisplayLabel(item.storeName, input.copy.unknownStore), scopeSubtitle,
+      regionId: item.regionId, regionName: item.regionName || input.copy.noReference,
+      regionManagerNames: item.regionManagerNames,
+      status: item.status, statusLabel: status.label, statusTone: status.tone,
+      createdLabel: formatDateTime(item.createdAt, input.locale), updatedAt: item.updatedAt, updatedLabel: formatDateTime(item.updatedAt, input.locale),
+      waitingSince: item.waitingSince, waitingLabel: formatWaiting(item.waitingSince, item.isOverdue === true, input.locale, input.copy),
+      nextOwnerLabel, dueLabel: item.dueAt ? `${input.copy.duePrefix}: ${formatDateTime(item.dueAt, input.locale)}` : input.copy.noWaiting,
+      isOverdue: item.isOverdue === true, events, eventTotal: item.eventTotal, bucket: isApproved ? 'done' : 'open',
+      rowTone: item.isOverdue ? 'urgent' : isReturned ? 'returned' : 'neutral',
+      actionLabel: isTarget ? (isApproved ? input.copy.detailAction : input.copy.targetAction) : (isReturned ? input.copy.workforceAction : input.copy.workforceReadAction),
+      actionTo: isTarget ? createTargetUrl(item, input.persona) : createWorkforceUrl(item, isReturned),
+      actionPrimary: item.status === 'pending_region_approval' || isReturned,
     }
   })
 }
 
-export function buildRequestRows(input: {
-  copy: RequestCenterCopy
-  locale: AppLocale
-  offboardingRequests: OffboardingRequest[]
-  persona: StoreApprovalsPersona
-  scopeStoreIds: string[]
-  sellerCodeRequests: SellerCodeRequest[]
-  targetRequests: TargetDistributionRequest[]
-}) {
-  const scopeStoreSet = new Set(input.scopeStoreIds)
-  const scopedTargetRequests = input.targetRequests.filter((request) =>
-    scopeStoreSet.size === 0 || scopeStoreSet.has(request.storeId),
-  )
-  const scopedSellerRequests = input.sellerCodeRequests.filter((request) =>
-    scopeStoreSet.size === 0 || scopeStoreSet.has(request.storeId),
-  )
-  const scopedOffboardingRequests = input.offboardingRequests.filter((request) =>
-    scopeStoreSet.size === 0 || scopeStoreSet.has(request.storeId),
-  )
-  const targetRows = scopedTargetRequests.map((request) =>
-    mapTargetRequestToRow({
-      copy: input.copy,
-      locale: input.locale,
-      persona: input.persona,
-      request,
-    }),
-  )
-  const sellerRows = scopedSellerRequests.map((request) =>
-    mapSellerCodeRequestToRow({
-      copy: input.copy,
-      locale: input.locale,
-      request,
-    }),
-  )
-  const offboardingRows = scopedOffboardingRequests.map((request) =>
-    mapOffboardingRequestToRow({
-      copy: input.copy,
-      locale: input.locale,
-      request,
-    }),
-  )
-
-  return [...targetRows, ...sellerRows, ...offboardingRows].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  )
-}
-
-export function matchesStatusFilter(status: string, filter: RequestCenterStatus) {
-  if (filter === 'all') return true
-  if (filter === 'approved') return status === 'approved'
-  if (filter === 'returned') return status === 'rejected'
-  return status !== 'approved' && status !== 'rejected'
+export function filterAndSortRequestCenterRows(input: { rows: RequestCenterRow[]; tab: RequestCenterTab; query: string; type: RequestCenterType; status: RequestCenterStatus; period: string; sort: RequestCenterSort }) {
+  const query = input.query.trim().toLocaleLowerCase('tr-TR')
+  return input.rows
+    .filter((row) => row.bucket === input.tab)
+    .filter((row) => input.type === 'all' || row.type === input.type)
+    .filter((row) => input.status === 'all' || (input.status === 'approved' ? row.status === 'approved' : input.status === 'returned' ? row.status === 'rejected' : input.status === 'overdue' ? row.isOverdue : row.status !== 'approved' && row.status !== 'rejected'))
+    .filter((row) => input.period === 'all' || row.updatedAt.startsWith(input.period))
+    .filter((row) => !query || `${row.title} ${row.subtitle} ${row.scopeTitle}`.toLocaleLowerCase('tr-TR').includes(query))
+    .sort((a, b) => input.sort === 'storeAsc' ? a.scopeTitle.localeCompare(b.scopeTitle, 'tr') : input.sort === 'typeAsc' ? a.type.localeCompare(b.type) : input.sort === 'waitingDesc' ? (Date.parse(a.waitingSince ?? '') || Infinity) - (Date.parse(b.waitingSince ?? '') || Infinity) : Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
 }
 
 export function createPeriodOptions(periods: string[], locale: AppLocale) {
-  return Array.from(new Set(periods))
-    .filter(Boolean)
-    .sort((a, b) => b.localeCompare(a))
-    .map((period) => ({
-      value: period,
-      label: new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', {
-        month: 'long',
-        year: 'numeric',
-      }).format(new Date(`${period}-01`)),
-    }))
+  return Array.from(new Set(periods)).filter(Boolean).sort((a, b) => b.localeCompare(a)).map((period) => ({ value: period, label: new Intl.DateTimeFormat(locale === 'tr' ? 'tr-TR' : 'en-US', { month: 'long', year: 'numeric' }).format(new Date(`${period}-01`)) }))
 }
 
 export function formatCopy(template: string, values: Record<string, string>) {
-  return Object.entries(values).reduce(
-    (result, [key, value]) => result.replaceAll(`{${key}}`, value),
-    template,
-  )
+  return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), template)
 }
 
-function mapTargetRequestToRow(input: {
-  copy: RequestCenterCopy
-  locale: AppLocale
-  persona: StoreApprovalsPersona
-  request: TargetDistributionRequest
-}): RequestCenterRow {
-  const isApproved = input.request.status === 'approved'
-  const status =
-    isApproved && input.request.approvalMode === 'adjusted'
-      ? { label: input.copy.adjustedApprovedStatus, tone: 'calm' as StoreSurfaceTone }
-      : resolveStatus(input.request.status, input.copy)
-
-  return {
-    id: `target:${input.request.requestId}`,
-    type: 'target',
-    title: input.request.targetLabel || input.copy.targetType,
-    subtitle: input.copy.targetSubtitle,
-    scopeTitle: normalizeDisplayLabel(input.request.storeName, input.copy.unknownStore),
-    scopeSubtitle:
-      input.persona === 'regionManager'
-        ? input.copy.regionSubtitle
-        : formatCopy(input.copy.targetScopeSubtitle, {
-          count: String(input.request.allocationCount),
-        }),
-    status: input.request.status,
-    statusLabel: status.label,
-    statusTone: status.tone,
-    sourceLabel: input.copy.targetSource,
-    updatedAt: input.request.updatedAt,
-    updatedLabel: formatDateTime(input.request.updatedAt, input.locale),
-    bucket: isApproved ? 'done' : 'open',
-    rowTone: input.request.status === 'pending_region_approval' ? 'urgent' : 'neutral',
-    actionLabel: isApproved ? input.copy.detailAction : input.copy.targetAction,
-    actionTo: createTargetHandoffUrl(input.request, input.persona),
-    actionPrimary: input.request.status === 'pending_region_approval',
-  }
+function formatWaiting(value: string | null, overdue: boolean, locale: AppLocale, copy: RequestCenterCopy) {
+  if (!value) return copy.noWaiting
+  const days = Math.max(0, Math.floor((Date.now() - Date.parse(value)) / 86_400_000))
+  const label = new Intl.NumberFormat(locale === 'tr' ? 'tr-TR' : 'en-US').format(days)
+  const unit = locale === 'tr' ? 'gün' : 'days'
+  return overdue ? `${label} ${unit} · ${copy.overdueSuffix}` : `${label} ${unit}`
 }
 
-function mapSellerCodeRequestToRow(input: {
-  copy: RequestCenterCopy
-  locale: AppLocale
-  request: SellerCodeRequest
-}): RequestCenterRow {
-  const isApproved = input.request.status === 'approved'
-  const isReturned = input.request.status === 'rejected'
-  const status = resolveStatus(input.request.status, input.copy)
-
-  return {
-    id: `sellerCode:${input.request.requestId}`,
-    type: 'sellerCode',
-    title: `${input.request.firstName} ${input.request.lastName}`.trim() || input.copy.sellerCodeType,
-    subtitle: input.copy.sellerSubtitle,
-    scopeTitle: normalizeDisplayLabel(input.request.storeName, input.copy.unknownStore),
-    scopeSubtitle: formatCopy(input.copy.sellerScopeSubtitle, {
-      last4: input.request.nationalIdLast4,
-    }),
-    status: input.request.status,
-    statusLabel: status.label,
-    statusTone: status.tone,
-    sourceLabel: input.copy.workforceSource,
-    updatedAt: input.request.updatedAt,
-    updatedLabel: formatDateTime(input.request.updatedAt, input.locale),
-    bucket: isApproved ? 'done' : 'open',
-    rowTone: isReturned ? 'returned' : 'neutral',
-    actionLabel: isReturned ? input.copy.workforceAction : input.copy.workforceReadAction,
-    actionTo: createWorkforceHandoffUrl({
-      ...(isReturned ? { requestId: input.request.requestId } : {}),
-      storeId: input.request.storeId,
-      type: 'sellerCode',
-    }),
-    actionPrimary: isReturned,
-  }
+function resolveOwner(owner: RequestCenterItem['nextOwner'], copy: RequestCenterCopy) {
+  return owner === 'store' ? copy.ownerStore : owner === 'region' ? copy.ownerRegion : owner === 'hr' ? copy.ownerHr : owner === 'system' ? copy.ownerSystem : copy.ownerClosed
 }
 
-function mapOffboardingRequestToRow(input: {
-  copy: RequestCenterCopy
-  locale: AppLocale
-  request: OffboardingRequest
-}): RequestCenterRow {
-  const isApproved = input.request.status === 'approved'
-  const isReturned = input.request.status === 'rejected'
-  const status = resolveStatus(input.request.status, input.copy)
-
-  return {
-    id: `offboarding:${input.request.requestId}`,
-    type: 'offboarding',
-    title: input.request.displayName || input.copy.offboardingType,
-    subtitle: input.copy.offboardingSubtitle,
-    scopeTitle: normalizeDisplayLabel(input.request.storeName, input.copy.unknownStore),
-    scopeSubtitle: formatCopy(input.copy.offboardingScopeSubtitle, {
-      ref: input.request.externalEmployeeRef ?? input.copy.noReference,
-    }),
-    status: input.request.status,
-    statusLabel: status.label,
-    statusTone: status.tone,
-    sourceLabel: input.copy.workforceSource,
-    updatedAt: input.request.updatedAt,
-    updatedLabel: formatDateTime(input.request.updatedAt, input.locale),
-    bucket: isApproved ? 'done' : 'open',
-    rowTone: isReturned ? 'returned' : 'neutral',
-    actionLabel: isReturned ? input.copy.workforceAction : input.copy.workforceReadAction,
-    actionTo: createWorkforceHandoffUrl({
-      ...(isReturned ? { requestId: input.request.requestId } : {}),
-      storeId: input.request.storeId,
-      type: 'offboarding',
-    }),
-    actionPrimary: isReturned,
-  }
+function resolveEvent(type: RequestCenterItem['events'][number]['type'], copy: RequestCenterCopy) {
+  return type === 'created' ? copy.eventCreated : type === 'approved' ? copy.eventApproved : type === 'returned' ? copy.eventReturned : copy.eventResubmitted
 }
 
 function resolveStatus(status: string, copy: RequestCenterCopy) {
-  switch (status) {
-    case 'approved':
-      return { label: copy.approvedStatus, tone: 'calm' as StoreSurfaceTone }
-    case 'pending_region_approval':
-      return { label: copy.pendingRegionStatus, tone: 'warning' as StoreSurfaceTone }
-    case 'pending_hr_approval':
-      return { label: copy.pendingHrStatus, tone: 'accent' as StoreSurfaceTone }
-    case 'rejected':
-      return { label: copy.rejectedStatus, tone: 'danger' as StoreSurfaceTone }
-    default:
-      return { label: copy.unknownStatus, tone: 'neutral' as StoreSurfaceTone }
-  }
+  if (status === 'approved') return { label: copy.approvedStatus, tone: 'calm' as StoreSurfaceTone }
+  if (status === 'pending_region_approval') return { label: copy.pendingRegionStatus, tone: 'warning' as StoreSurfaceTone }
+  if (status === 'pending_hr_approval') return { label: copy.pendingHrStatus, tone: 'accent' as StoreSurfaceTone }
+  if (status === 'rejected') return { label: copy.rejectedStatus, tone: 'danger' as StoreSurfaceTone }
+  return { label: copy.unknownStatus, tone: 'neutral' as StoreSurfaceTone }
 }
 
-function createTargetHandoffUrl(
-  request: Pick<TargetDistributionRequest, 'requestMonth' | 'storeId' | 'status'>,
-  persona: StoreApprovalsPersona,
-) {
-  const params = new URLSearchParams({ storeId: request.storeId })
-  if (request.requestMonth) {
-    params.set('requestMonth', request.requestMonth.slice(0, 7))
-  }
-
-  if (request.status === 'approved') {
-    params.set('status', 'approved')
-    params.set('tab', 'approved')
-  } else {
-    params.set('status', 'pending')
-    params.set('tab', persona === 'storeManager' ? 'distribution' : 'approval')
-  }
-
+function createTargetUrl(item: RequestCenterItem, persona: StoreApprovalsPersona) {
+  const params = new URLSearchParams({ storeId: item.storeId })
+  if (item.requestMonth) params.set('requestMonth', item.requestMonth.slice(0, 7))
+  params.set('tab', item.status === 'approved' ? 'approved' : persona === 'storeManager' ? 'distribution' : 'approval')
+  params.set('status', item.status === 'approved' ? 'approved' : 'pending')
   return `/store/targets?${params.toString()}`
 }
 
-function createWorkforceHandoffUrl(input: {
-  requestId?: string
-  storeId: string
-  type: 'sellerCode' | 'offboarding'
-}) {
-  const params = new URLSearchParams({
-    storeId: input.storeId,
-  })
-
-  if (input.requestId) {
-    params.set('requestType', input.type)
-    params.set('requestId', input.requestId)
-  }
-
+function createWorkforceUrl(item: RequestCenterItem, returned: boolean) {
+  const params = new URLSearchParams({ storeId: item.storeId })
+  if (returned) { params.set('requestType', item.requestType); params.set('requestId', item.requestId) }
   return `/store/workforce?${params.toString()}`
 }

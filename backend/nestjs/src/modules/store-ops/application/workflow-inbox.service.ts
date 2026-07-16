@@ -13,6 +13,10 @@ import { TargetDistributionRepository } from "../infrastructure/target-distribut
 import { SnapshotReportingReadRepository } from "../infrastructure/snapshot-reporting-read.repository";
 import { StoreActionPlanRepository } from "../infrastructure/store-action-plan.repository";
 import { RequestCenterReadRepository } from "../infrastructure/request-center-read.repository";
+import {
+  resolveAuthoritativeWaitingSince,
+  resolveRequestCenterTiming,
+} from "./request-center-sla-policy";
 
 const activeStoreActionPlanStatuses = ["open", "in_progress", "blocked"] as const;
 const regionChecklistRemediationStatuses = [
@@ -255,21 +259,46 @@ export class WorkflowInboxService {
 
     return {
       ...buildListResponse(
-      page.items.map((item) => ({
-        requestId: item.request_id,
-        requestType: item.request_type,
-        storeId: item.store_id,
-        storeName: item.store_name,
-        status: item.request_status,
-        updatedAt: item.updated_at,
-        targetLabel: item.target_label,
-        requestMonth: item.request_month,
-        allocationCount: item.allocation_count,
-        approvalMode: item.approval_mode,
-        personDisplayName: item.person_display_name,
-        nationalIdLast4: item.national_id_last4,
-        externalEmployeeRef: item.external_employee_ref,
-      })),
+      page.items.map((item) => {
+        const events = sanitizeRequestCenterEvents(item.events);
+        const waitingSince = resolveAuthoritativeWaitingSince({
+          requestType: item.request_type,
+          status: item.request_status,
+          createdAt: item.created_at,
+          reviewedAt: item.reviewed_at,
+          events: item.events.map((event) => ({
+            eventType: event.event_type,
+            occurredAt: event.occurred_at,
+          })),
+        });
+        const timing = resolveRequestCenterTiming({
+          requestType: item.request_type,
+          status: item.request_status,
+          waitingSince,
+        });
+        return {
+          requestId: item.request_id,
+          requestType: item.request_type,
+          storeId: item.store_id,
+          storeName: item.store_name,
+          regionId: item.region_id,
+          regionName: item.region_name,
+          regionManagerNames: item.region_manager_names,
+          status: item.request_status,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+          ...timing,
+          events,
+          eventTotal: item.event_total,
+          targetLabel: item.target_label,
+          requestMonth: item.request_month,
+          allocationCount: item.allocation_count,
+          approvalMode: item.approval_mode,
+          personDisplayName: item.person_display_name,
+          nationalIdLast4: item.national_id_last4,
+          externalEmployeeRef: item.external_employee_ref,
+        };
+      }),
       {
         total: page.total,
         limit: page.limit,
@@ -380,4 +409,25 @@ export class WorkflowInboxService {
     const message = error instanceof Error ? error.message : String(error);
     return String(redactSensitiveLogValue(message));
   }
+}
+
+function sanitizeRequestCenterEvents(events: Array<{
+  event_id: string;
+  event_type: string;
+  occurred_at: string;
+  actor_display_name: string | null;
+}>) {
+  return events.map((event) => ({
+    eventId: event.event_id,
+    type: requestCenterEventType(event.event_type),
+    occurredAt: event.occurred_at,
+    actorDisplayName: event.actor_display_name,
+  }));
+}
+
+function requestCenterEventType(eventType: string) {
+  if (eventType.endsWith(".created")) return "created" as const;
+  if (eventType.endsWith(".approved")) return "approved" as const;
+  if (eventType.endsWith(".rejected")) return "returned" as const;
+  return "resubmitted" as const;
 }

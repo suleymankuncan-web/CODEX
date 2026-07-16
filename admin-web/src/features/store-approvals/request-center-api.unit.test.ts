@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildRequestCenterQuery } from './request-center-api'
+import { buildRequestCenterQuery, getRequestCenterWorkspaceOffsets } from './request-center-api'
 
 describe('request center API query', () => {
   it('serializes one exact bounded server page', () => {
@@ -30,5 +30,11 @@ describe('request center API query', () => {
         offset: 0,
       }).toString(),
     ).toBe('bucket=open&type=all&status=all&limit=15&offset=0')
+  })
+
+  it('plans every bounded server page without a silent workspace cap', () => {
+    expect(getRequestCenterWorkspaceOffsets(0)).toEqual([])
+    expect(getRequestCenterWorkspaceOffsets(201)).toEqual([0, 200])
+    expect(getRequestCenterWorkspaceOffsets(10_001).at(-1)).toBe(10_000)
   })
 })

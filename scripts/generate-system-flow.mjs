@@ -883,7 +883,7 @@ function parseFrontendApiUsage(rootDir) {
       continue
     }
 
-    const functionRanges = extractExportedFunctionRanges(text)
+    const functionRanges = extractNamedFunctionRanges(text)
 
     for (const range of functionRanges) {
       exportedFunctionIndex.set(`${repoFile}#${range.name}`, {
@@ -896,7 +896,7 @@ function parseFrontendApiUsage(rootDir) {
     const extractedCalls = parseFrontendApiCallTargets(text)
 
     for (const unresolved of extractedCalls.unresolved) {
-      const exportedFunction = functionRanges.find(
+      const containingFunction = functionRanges.find(
         (range) => unresolved.index >= range.start && unresolved.index <= range.end,
       )
       unresolvedApiCalls.push({
@@ -905,7 +905,7 @@ function parseFrontendApiUsage(rootDir) {
         functionName: unresolved.functionName,
         method: unresolved.method,
         reason: 'non_literal_path',
-        exportedFunction: exportedFunction?.name ?? null,
+        exportedFunction: containingFunction?.isExported ? containingFunction.name : null,
         source: {
           file: repoFile,
           line: lineNumberAt(text, unresolved.index),
@@ -914,7 +914,7 @@ function parseFrontendApiUsage(rootDir) {
     }
 
     for (const call of extractedCalls.calls) {
-      const exportedFunction = functionRanges.find((range) => call.index >= range.start && call.index <= range.end)
+      const containingFunction = functionRanges.find((range) => call.index >= range.start && call.index <= range.end)
       const apiCall = {
         id: `api:${apiCalls.length + 1}`,
         client: call.client,
@@ -924,7 +924,7 @@ function parseFrontendApiUsage(rootDir) {
         path: normalizeClientApiPath(call.rawPath),
         backendEndpointId: null,
         openApiCovered: false,
-        exportedFunction: exportedFunction?.name ?? null,
+        exportedFunction: containingFunction?.isExported ? containingFunction.name : null,
         source: {
           file: repoFile,
           line: lineNumberAt(text, call.index),
@@ -932,8 +932,8 @@ function parseFrontendApiUsage(rootDir) {
       }
       apiCalls.push(apiCall)
 
-      if (apiCall.exportedFunction) {
-        const key = `${repoFile}#${apiCall.exportedFunction}`
+      if (containingFunction) {
+        const key = `${repoFile}#${containingFunction.name}`
         const list = apiFunctionIndex.get(key) ?? []
         list.push(apiCall.id)
         apiFunctionIndex.set(key, list)
@@ -959,9 +959,9 @@ function parseFrontendApiUsage(rootDir) {
   }
 }
 
-function extractExportedFunctionRanges(text) {
+function extractNamedFunctionRanges(text) {
   const ranges = []
-  const functionRegex = /export\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(/g
+  const functionRegex = /(?:export\s+)?(?:async\s+)?function\s+([A-Za-z0-9_]+)\s*\(/g
 
   for (const match of text.matchAll(functionRegex)) {
     const start = match.index ?? 0
@@ -972,7 +972,7 @@ function extractExportedFunctionRanges(text) {
       start,
       end: bodyRange.end,
       bodyStart: bodyRange.start,
-      bodyEnd: bodyRange.end,
+      bodyEnd: bodyRange.end, isExported: match[0].trimStart().startsWith('export '),
     })
   }
 

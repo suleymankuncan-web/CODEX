@@ -34,7 +34,7 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
-test('admin and Store target queues request only bounded visible slices', async ({ page }) => {
+test('admin target queues stay bounded and Store approvals load one complete paged workspace', async ({ page }) => {
   const targetCalls: URL[] = []
   await page.route('**/api/target-distributions/requests**', async (route) => {
     const requestUrl = new URL(route.request().url())
@@ -86,8 +86,19 @@ test('admin and Store target queues request only bounded visible slices', async 
     requestType: 'target',
     storeId,
     storeName: `Store ${index + 1}`,
+    regionId: '00000000-0000-4000-8000-000000000010',
+    regionName: 'Pilot Region',
+    regionManagerNames: ['Pilot Manager'],
     status: 'pending_region_approval',
+    createdAt: `2026-07-${String(20 - index).padStart(2, '0')}T09:00:00.000Z`,
+    reviewedAt: null,
     updatedAt: `2026-07-${String(20 - index).padStart(2, '0')}T09:00:00.000Z`,
+    waitingSince: `2026-07-${String(20 - index).padStart(2, '0')}T09:00:00.000Z`,
+    nextOwner: 'region',
+    dueAt: `2026-07-${String(22 - index).padStart(2, '0')}T09:00:00.000Z`,
+    isOverdue: false,
+    events: [],
+    eventTotal: 0,
     targetLabel: `Target ${index + 1}`,
     requestMonth: '2026-07-01',
     allocationCount: 2,
@@ -101,24 +112,25 @@ test('admin and Store target queues request only bounded visible slices', async 
     ledgerCalls.push(requestUrl)
     const limit = Number(requestUrl.searchParams.get('limit'))
     const offset = Number(requestUrl.searchParams.get('offset'))
+    const isOpenBucket = requestUrl.searchParams.get('bucket') === 'open'
+    const sourceItems = isOpenBucket ? ledgerItems : []
     await route.fulfill({
       json: {
-        items: ledgerItems.slice(offset, offset + limit),
-        meta: { count: Math.min(limit, ledgerItems.length - offset), total: 20, limit, offset },
-        summary: { open: 20, done: 0, returned: 0, periods: ['2026-07'] },
+        items: sourceItems.slice(offset, offset + limit),
+        meta: { count: Math.max(0, Math.min(limit, sourceItems.length - offset)), total: sourceItems.length, limit, offset },
+        summary: { open: 20, done: 0, returned: 0, overdue: 0, periods: ['2026-07'] },
       },
     })
   })
 
   await page.goto('/store/approvals')
   await expect(page.getByTestId('store-approvals-ledger')).toBeVisible()
-  expect(ledgerCalls).toHaveLength(1)
-  expect(ledgerCalls[0].searchParams.get('limit')).toBe('15')
-  expect(ledgerCalls[0].searchParams.get('offset')).toBe('0')
+  expect(ledgerCalls).toHaveLength(2)
+  expect(ledgerCalls.map((url) => url.searchParams.get('bucket')).sort()).toEqual(['done', 'open'])
+  expect(ledgerCalls.every((url) => url.searchParams.get('limit') === '200')).toBe(true)
+  expect(ledgerCalls.every((url) => url.searchParams.get('offset') === '0')).toBe(true)
 
   await page.getByRole('button', { name: 'Sayfa 2' }).click()
   await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(5)
   expect(ledgerCalls).toHaveLength(2)
-  expect(ledgerCalls[1].searchParams.get('limit')).toBe('15')
-  expect(ledgerCalls[1].searchParams.get('offset')).toBe('15')
 })

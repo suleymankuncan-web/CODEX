@@ -5,6 +5,16 @@ export function buildApiFunctionDependencyIndex(input) {
 
   for (const [functionKey, definition] of input.exportedFunctionIndex.entries()) {
     const calledFunctions = new Set()
+    const separatorIndex = functionKey.lastIndexOf('#')
+    const sourcePrefix = functionKey.slice(0, separatorIndex + 1)
+
+    for (const candidateKey of input.exportedFunctionIndex.keys()) {
+      if (candidateKey === functionKey || !candidateKey.startsWith(sourcePrefix)) continue
+      const candidateName = candidateKey.slice(sourcePrefix.length)
+      if (isImportedFunctionUsed(definition.body, candidateName)) {
+        calledFunctions.add(candidateKey)
+      }
+    }
 
     for (const statement of input.parseNamedImportStatements(definition.text)) {
       if (statement.isTypeOnly || !statement.specifier.startsWith('.')) continue

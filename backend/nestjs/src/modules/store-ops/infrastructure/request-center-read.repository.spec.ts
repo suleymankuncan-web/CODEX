@@ -5,7 +5,12 @@ const requestRow = {
   request_type: "target" as const,
   store_id: "22222222-2222-4222-8222-222222222222",
   store_name: "Store A",
+  region_id: "33333333-3333-4333-8333-333333333333",
+  region_name: "Marmara",
+  region_manager_names: ["Region Manager", "Second Manager"],
   request_status: "pending_region_approval",
+  created_at: "2026-07-08T09:00:00.000Z",
+  reviewed_at: null,
   updated_at: "2026-07-10T09:00:00.000Z",
   target_label: "July target",
   request_month: "2026-07-01",
@@ -27,10 +32,21 @@ describe("RequestCenterReadRepository", () => {
             open_count: "10001",
             done_count: "22",
             returned_count: "1",
+            overdue_count: "3",
             available_periods: ["2026-07", "2026-06"],
           }],
         })
-        .mockResolvedValueOnce({ rows: [requestRow] }),
+        .mockResolvedValueOnce({ rows: [requestRow] })
+        .mockResolvedValueOnce({
+          rows: [{
+            request_id: requestRow.request_id,
+            event_id: "event-1",
+            event_type: "target_distribution_request.created",
+            occurred_at: "2026-07-08T09:00:00.000Z",
+            actor_display_name: "Store Manager",
+            event_total: "21",
+          }],
+        }),
     };
     const repository = new RequestCenterReadRepository(databaseService as never);
 
@@ -48,23 +64,36 @@ describe("RequestCenterReadRepository", () => {
     });
 
     expect(result).toEqual({
-      items: [requestRow],
+      items: [{
+        ...requestRow,
+        event_total: 21,
+        events: [{
+          request_id: requestRow.request_id,
+          event_id: "event-1",
+          event_type: "target_distribution_request.created",
+          occurred_at: "2026-07-08T09:00:00.000Z",
+          actor_display_name: "Store Manager",
+          event_total: "21",
+        }],
+      }],
       total: 10000,
       summary: {
         open: 10001,
         done: 22,
         returned: 1,
+        overdue: 3,
         periods: ["2026-07", "2026-06"],
       },
       limit: 15,
       offset: 30,
     });
-    expect(databaseService.query).toHaveBeenCalledTimes(2);
+    expect(databaseService.query).toHaveBeenCalledTimes(3);
 
     const countCall = databaseService.query.mock.calls[0];
     const pageCall = databaseService.query.mock.calls[1];
     const countSql = String(countCall[0]);
     const pageSql = String(pageCall[0]);
+    const eventSql = String(databaseService.query.mock.calls[2][0]);
 
     expect(countSql).toContain("ops.target_distribution_request");
     expect(countSql).toContain("ops.seller_code_request");
@@ -76,12 +105,30 @@ describe("RequestCenterReadRepository", () => {
     expect(countSql).toContain("AT TIME ZONE 'Europe/Istanbul'");
     expect(countSql).toContain("ARRAY_AGG");
     expect(countSql).toContain("scoped_rows");
+    expect(countSql).toContain("timing_rows");
+    expect(countSql).toContain("INTERVAL '2 days'");
+    expect(countSql).toContain("INTERVAL '3 days'");
+    expect(countSql).not.toContain("updated_at + INTERVAL");
     expect(countSql).toContain("search_text ILIKE");
     expect(pageSql).toContain(
-      "ORDER BY updated_at DESC, request_type ASC, request_id DESC",
+      "ORDER BY rr.updated_at DESC, rr.request_type ASC, rr.request_id DESC",
     );
     expect(pageSql).toContain("LIMIT");
     expect(pageSql).toContain("OFFSET");
+    expect(pageSql).toContain("created_at");
+    expect(pageSql).toContain("reviewed_at");
+    expect(pageSql).toContain("role.role_code = 'REGION_MANAGER'");
+    expect(pageSql).toContain("region_manager_names");
+    expect(pageSql).toContain("ARRAY_AGG");
+    expect(eventSql).toContain("audit.event_log");
+    expect(eventSql).toContain("ROW_NUMBER() OVER");
+    expect(eventSql).toContain("COUNT(*) OVER");
+    expect(eventSql).toContain("event_type = ANY");
+    expect(eventSql).not.toContain("metadata_json");
+    expect([countSql, pageSql, eventSql].join("\n")).not.toContain("target_distribution_request.rejected");
+    expect(result.items[0]).toEqual(expect.objectContaining({
+      events: [expect.objectContaining({ event_type: "target_distribution_request.created" })],
+    }));
     expect(pageCall[1]).toEqual(expect.arrayContaining([15, 30]));
   });
 

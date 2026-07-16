@@ -43,3 +43,53 @@ export function getRequestCenterPage(input: RequestCenterListInput) {
     query: buildRequestCenterQuery(input),
   })
 }
+
+const WORKSPACE_PAGE_SIZE = 200
+
+export type RequestCenterWorkspace = {
+  items: RequestCenterItem[]
+  summary: RequestCenterPage['summary']
+}
+
+async function getCompleteBucket(bucket: 'open' | 'done') {
+  const first = await getRequestCenterPage({
+    bucket,
+    type: 'all',
+    status: 'all',
+    limit: WORKSPACE_PAGE_SIZE,
+    offset: 0,
+  })
+  const offsets = getRequestCenterWorkspaceOffsets(first.meta.total)
+  const rest: RequestCenterPage[] = []
+  for (const offset of offsets.slice(1)) {
+    rest.push(await getRequestCenterPage({
+        bucket,
+        type: 'all',
+        status: 'all',
+        limit: WORKSPACE_PAGE_SIZE,
+        offset,
+      }))
+  }
+  return {
+    items: [first, ...rest].flatMap((page) => page.items),
+    summary: first.summary,
+  }
+}
+
+export function getRequestCenterWorkspaceOffsets(total: number) {
+  return Array.from(
+    { length: Math.ceil(Math.max(0, total) / WORKSPACE_PAGE_SIZE) },
+    (_, index) => index * WORKSPACE_PAGE_SIZE,
+  )
+}
+
+export async function getRequestCenterWorkspace(): Promise<RequestCenterWorkspace> {
+  const [open, done] = await Promise.all([
+    getCompleteBucket('open'),
+    getCompleteBucket('done'),
+  ])
+  return {
+    items: [...open.items, ...done.items],
+    summary: open.summary,
+  }
+}

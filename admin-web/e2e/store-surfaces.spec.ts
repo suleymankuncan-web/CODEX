@@ -53,7 +53,19 @@ async function routeRequestCenter(page: Page, items: Array<Record<string, unknow
 
     await route.fulfill({
       json: {
-        items: selectedItems.slice(offset, offset + limit),
+        items: selectedItems.slice(offset, offset + limit).map((item, index) => ({
+          createdAt: item.updatedAt,
+          regionId: demoRegionId,
+          regionName: 'Marmara',
+          regionManagerNames: ['Mert Yalçın'],
+          waitingSince: item.status === 'approved' ? null : item.updatedAt,
+          nextOwner: item.status === 'pending_region_approval' ? 'region' : item.status === 'pending_hr_approval' ? 'hr' : item.status === 'rejected' ? 'store' : null,
+          dueAt: null,
+          isOverdue: false,
+          events: [{ eventId: `fixture-event-${offset + index}`, type: 'created', occurredAt: item.updatedAt, actorDisplayName: null }],
+          eventTotal: 1,
+          ...item,
+        })),
         meta: {
           count: Math.min(limit, Math.max(0, selectedItems.length - offset)),
           total: selectedItems.length,
@@ -64,6 +76,8 @@ async function routeRequestCenter(page: Page, items: Array<Record<string, unknow
           open: scopedItems.filter((item) => item.status !== 'approved').length,
           done: scopedItems.filter((item) => item.status === 'approved').length,
           returned: scopedItems.filter((item) => item.status === 'rejected').length,
+          overdue: scopedItems.filter((item) => item.isOverdue === true).length,
+          periods: Array.from(new Set(scopedItems.map((item) => String(item.updatedAt).slice(0, 7)))),
         },
       },
     })
@@ -4315,7 +4329,7 @@ test('store approvals page renders request center without creation forms', async
   await page.goto('/store/approvals')
 
   await expect(page.getByRole('heading', { name: 'Talep Merkezi' })).toBeVisible()
-  await expect(page.getByRole('radio', { name: 'Açık / Bekleyen' })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Aktif talepler' })).toBeVisible()
   await expect(page.getByRole('radio', { name: 'Tamamlanan' })).toBeVisible()
   await expect(page.getByLabel('Hedef dağıtım talebi formu')).toHaveCount(0)
   await expect(page.getByLabel('Satıcı kodu talebi formu')).toHaveCount(0)
@@ -4323,7 +4337,45 @@ test('store approvals page renders request center without creation forms', async
   await expect(page.locator('.store-approvals-ledger-grid')).toHaveCount(0)
   await expect(page.locator('.store-approvals-ledger-table')).toHaveCount(0)
   await expect(page.locator('.store-approvals-action-workbench')).toHaveCount(0)
-  await expect(page.locator('a[href="/store/targets"]').first()).toBeVisible()
+})
+
+test('store approvals mobile canvas keeps local controls and drawer keyboard-safe', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 })
+  const writes: string[] = []
+  page.on('request', (request) => {
+    if (request.url().includes('/api/workflow/request-center') && request.method() !== 'GET') {
+      writes.push(request.method())
+    }
+  })
+  await routeRequestCenter(page, [{
+    requestId: 'mobile-request-1', requestType: 'target', storeId: demoStoreId,
+    storeName: 'Mobil Mağaza', status: 'pending_region_approval',
+    createdAt: '2026-07-10T09:00:00.000Z', updatedAt: '2026-07-12T09:00:00.000Z',
+    waitingSince: '2026-07-10T09:00:00.000Z', nextOwner: 'region',
+    dueAt: '2026-07-12T09:00:00.000Z', isOverdue: true,
+    events: [
+      { eventId: 'mobile-event-2', type: 'returned', occurredAt: '2026-07-11T09:00:00.000Z', actorDisplayName: 'Mert Yalçın' },
+      { eventId: 'mobile-event-1', type: 'created', occurredAt: '2026-07-10T09:00:00.000Z', actorDisplayName: null },
+    ],
+    eventTotal: 21,
+    targetLabel: 'Temmuz hedefi', requestMonth: '2026-07-01', allocationCount: 4,
+    approvalMode: null, personDisplayName: null, nationalIdLast4: null, externalEmployeeRef: null,
+  }])
+
+  await page.goto('/store/approvals')
+  await expect(page.getByRole('button', { name: /Geciken/ })).toBeVisible()
+  await page.getByRole('button', { name: /Geciken/ }).click()
+  const row = page.locator('[data-testid="store-approvals-request-row"]:visible').first()
+  await expect(row).toBeVisible()
+  await row.click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText('Talep oluşturuldu')).toBeVisible()
+  await expect(page.getByText('Son 20 işlem gösteriliyor (21 toplam)')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(row).toBeFocused()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(writes).toEqual([])
 })
 
 test('store approvals page keeps region manager request center free of workforce queues', async ({ page }) => {
@@ -4371,6 +4423,36 @@ test('store approvals page keeps region manager request center free of workforce
   await expect(page.getByLabel('Personel çıkış talebi formu')).toHaveCount(0)
   await expect(page.getByLabel('İade edilen personel talepleri')).toHaveCount(0)
   expect(workforceCalls).toEqual([])
+})
+
+test('store approvals report viewer reads company-scoped manager and store hierarchy', async ({ page }) => {
+  await page.unroute('**/api/auth/session')
+  await page.route('**/api/auth/session', async (route) => route.fulfill({ json: {
+    ...authSessionFixture,
+    user: { ...authSessionFixture.user, roleCodes: ['REPORT_VIEWER'], actionScope: { assignedStoreIds: [] }, assignedStoreIds: [] },
+  } }))
+  await routeRequestCenter(page, [{
+    requestId: 'viewer-request-1', requestType: 'target', storeId: demoStoreId,
+    storeName: 'Viewer Store', regionId: demoRegionId, regionName: 'Marmara', regionManagerNames: ['Mert Yalçın', 'Ayşe Demir'],
+    status: 'pending_region_approval', createdAt: '2026-07-10T09:00:00.000Z', updatedAt: '2026-07-10T09:00:00.000Z',
+    waitingSince: '2026-07-10T09:00:00.000Z', nextOwner: 'region', dueAt: '2026-07-12T09:00:00.000Z', isOverdue: false,
+    events: [], eventTotal: 0, targetLabel: 'Viewer target', requestMonth: '2026-07-01', allocationCount: 2,
+    approvalMode: null, personDisplayName: null, nationalIdLast4: null, externalEmployeeRef: null,
+  }, {
+    requestId: 'viewer-request-2', requestType: 'offboarding', storeId: regionSecondStoreId,
+    storeName: 'Second Region Store', regionId: '00000000-0000-0000-0000-000000000020', regionName: 'Ege', regionManagerNames: ['Can Kaya'],
+    status: 'pending_hr_approval', createdAt: '2026-07-11T09:00:00.000Z', updatedAt: '2026-07-11T09:00:00.000Z',
+    waitingSince: '2026-07-11T09:00:00.000Z', nextOwner: 'hr', dueAt: '2026-07-14T09:00:00.000Z', isOverdue: false,
+    events: [], eventTotal: 0, targetLabel: null, requestMonth: null, allocationCount: null,
+    approvalMode: null, personDisplayName: 'Safe Person', nationalIdLast4: null, externalEmployeeRef: 'EMP-2',
+  }])
+
+  await page.goto('/store/approvals')
+  await expect(page.getByRole('heading', { name: 'Şirket talepleri' })).toBeVisible()
+  await expect(page.getByRole('row').filter({ hasText: 'Mert Yalçın, Ayşe Demir' }).first()).toBeVisible()
+  await expect(page.getByRole('row').filter({ hasText: 'Can Kaya' }).first()).toBeVisible()
+  await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(2)
+  await expect(page.getByLabel('Hedef dağıtım talebi formu')).toHaveCount(0)
 })
 
 test('store approvals page presents bounded ledger load failures as an alert', async ({ page }) => {
@@ -4461,7 +4543,8 @@ test('store approvals page hands returned workforce corrections to workforce wit
   const sellerRow = page
     .locator('[data-testid="store-approvals-request-row"]:visible')
     .filter({ hasText: 'Ayse Yilmaz' })
-  await sellerRow.getByRole('link', { name: 'Düzelt' }).click()
+  await sellerRow.click()
+  await page.getByRole('link', { name: 'Düzelt' }).click()
   await expect(page).toHaveURL(
     new RegExp(
       `/store/workforce\\?storeId=${demoStoreId}&requestType=sellerCode&requestId=${rejectedSellerCodeRequestFixture.requestId}`,
@@ -4475,7 +4558,8 @@ test('store approvals page hands returned workforce corrections to workforce wit
   const offboardingRow = page
     .locator('[data-testid="store-approvals-request-row"]:visible')
     .filter({ hasText: 'Store Personnel' })
-  await offboardingRow.getByRole('link', { name: 'Düzelt' }).click()
+  await offboardingRow.click()
+  await page.getByRole('link', { name: 'Düzelt' }).click()
   await expect(page).toHaveURL(
     new RegExp(
       `/store/workforce\\?storeId=${demoStoreId}&requestType=offboarding&requestId=${rejectedOffboardingRequestFixture.requestId}`,
@@ -4525,7 +4609,8 @@ test('store approvals page keeps pending workforce read actions generic', async 
   const sellerRow = page
     .locator('[data-testid="store-approvals-request-row"]:visible')
     .filter({ hasText: 'Ayse Yilmaz' })
-  await expect(sellerRow.getByRole('link', { name: 'Durumu oku' })).toHaveAttribute(
+  await sellerRow.click()
+  await expect(page.getByRole('link', { name: 'Kaynağa git' })).toHaveAttribute(
     'href',
     `/store/workforce?storeId=${demoStoreId}`,
   )
@@ -4533,7 +4618,9 @@ test('store approvals page keeps pending workforce read actions generic', async 
   const offboardingRow = page
     .locator('[data-testid="store-approvals-request-row"]:visible')
     .filter({ hasText: 'Store Personnel' })
-  await expect(offboardingRow.getByRole('link', { name: 'Durumu oku' })).toHaveAttribute(
+  await page.getByRole('button', { name: 'Kapat' }).click()
+  await offboardingRow.click()
+  await expect(page.getByRole('link', { name: 'Kaynağa git' })).toHaveAttribute(
     'href',
     `/store/workforce?storeId=${demoStoreId}`,
   )
@@ -4586,14 +4673,15 @@ test('store approvals page paginates request center rows after fifteen records',
   await page.goto('/store/approvals')
 
   const visibleRows = page.locator('[data-testid="store-approvals-request-row"]:visible')
-  const targetAction = visibleRows.getByRole('link', { name: 'Hedefe git' }).first()
+  await visibleRows.first().click()
+  const targetAction = page.getByRole('link', { name: 'Hedefe git' })
   await expect(targetAction).toBeVisible()
   await expect(targetAction).toHaveAttribute('href', /requestMonth=2026-05/)
   await expect(targetAction).toHaveAttribute('href', new RegExp(`storeId=${demoStoreId}`))
   await expect(targetAction).toHaveAttribute('href', /status=pending/)
   await expect(targetAction).toHaveAttribute('href', /tab=approval/)
-  await expect(targetAction).toHaveCSS('color', 'rgb(76, 42, 165)')
   await expect(visibleRows).toHaveCount(15)
+  await page.getByRole('button', { name: 'Kapat' }).click()
   await page.getByRole('button', { name: 'Sayfa 2' }).click()
   await expect(visibleRows).toHaveCount(3)
   await page.getByRole('radio', { name: 'Tamamlanan' }).click()
@@ -4631,10 +4719,8 @@ test('store approvals page sends store manager target handoff to distribution st
 
   await page.goto('/store/approvals')
 
-  const targetAction = page
-    .locator('[data-testid="store-approvals-request-row"]:visible')
-    .getByRole('link', { name: 'Hedefe git' })
-    .first()
+  await page.locator('[data-testid="store-approvals-request-row"]:visible').first().click()
+  const targetAction = page.getByRole('link', { name: 'Hedefe git' })
   await expect(targetAction).toBeVisible()
   await expect(targetAction).toHaveAttribute('href', /requestMonth=2026-05/)
   await expect(targetAction).toHaveAttribute('href', new RegExp(`storeId=${demoStoreId}`))
@@ -4650,10 +4736,10 @@ test('store approvals page switches to English request center copy and persists 
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: /Request Center/i })).toBeVisible()
-  await expect(page.getByText('Returned corrections')).toBeVisible()
+  await expect(page.getByText('Returned', { exact: true })).toBeVisible()
   await expect(page.getByLabel('Seller code request form')).toHaveCount(0)
   await expect(page.getByLabel('Offboarding request form')).toHaveCount(0)
-  await expect(page.getByRole('radio', { name: 'Open / Pending' })).toBeVisible()
+  await expect(page.getByRole('radio', { name: 'Active requests' })).toBeVisible()
   await expect(page.locator('a[href="/store/targets"]').first()).toBeVisible()
   await expect(page.getByText('Mağaza onayları')).toHaveCount(0)
   await expect(page.getByText('Satıcı kodu talebi')).toHaveCount(0)
