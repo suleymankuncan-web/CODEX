@@ -70,7 +70,7 @@ jobs:
         if: steps.scope.outputs.run_rehearsal == 'true'
         run: docker compose version
 
-      - name: Run backend release check and Docker rehearsal
+      - name: Run Docker release rehearsal
         if: steps.scope.outputs.run_rehearsal == 'true'
         working-directory: backend/nestjs
         env:

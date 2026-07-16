@@ -9,9 +9,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  release-check:
+  root-contracts:
+    name: root-contracts
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: read
@@ -24,14 +25,83 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
+
+      - name: Run migration decision preflight
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/migration-change-warning.mjs
+
+      - name: Run root script and contract tests
+        run: npm run test:scripts
+
+  backend-release:
+    name: backend-release
+    needs: root-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
           cache: npm
-          cache-dependency-path: |
-            backend/nestjs/package-lock.json
-            admin-web/package-lock.json
+          cache-dependency-path: backend/nestjs/package-lock.json
 
       - name: Install backend dependencies
         working-directory: backend/nestjs
         run: npm ci
+
+      - name: Run backend release proof
+        working-directory: backend/nestjs
+        run: npm run check:release:proof
+
+  dependency-audit:
+    name: dependency-audit
+    needs: root-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Audit backend production dependencies
+        run: npm --prefix backend/nestjs run check:release:audit
+
+      - name: Audit frontend production dependencies
+        run: npm --prefix admin-web run check:release:audit
+
+  frontend-release:
+    name: frontend-release
+    needs: root-contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin-web/package-lock.json
 
       - name: Install frontend dependencies
         working-directory: admin-web
@@ -46,11 +116,17 @@ jobs:
           fi
           google-chrome --version
 
-      - name: Run official release gate
+      - name: Run frontend static proof
+        working-directory: admin-web
         env:
-          GITHUB_TOKEN: ${{ github.token }}
           PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
-        run: npm run check:release
+        run: npm run check:release:static
+
+      - name: Run full frontend E2E proof exactly once
+        working-directory: admin-web
+        env:
+          PLAYWRIGHT_USE_SYSTEM_CHROME: "1"
+        run: npm run check:release:e2e
 
       - name: Upload Playwright failure artifacts
         if: ${{ failure() }}
@@ -60,3 +136,31 @@ jobs:
           path: admin-web/test-results
           if-no-files-found: ignore
           retention-days: 14
+
+  release-check:
+    name: release-check
+    needs:
+      - root-contracts
+      - backend-release
+      - frontend-release
+      - dependency-audit
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Fail closed unless every canonical proof job succeeded
+        env:
+          RELEASE_ROOT_CONTRACTS_RESULT: ${{ needs.root-contracts.result }}
+          RELEASE_BACKEND_RESULT: ${{ needs.backend-release.result }}
+          RELEASE_FRONTEND_RESULT: ${{ needs.frontend-release.result }}
+          RELEASE_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
+        run: node scripts/release-workflow-final.mjs

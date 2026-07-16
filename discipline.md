@@ -2,7 +2,7 @@
 
 Status: active
 Shelf: operating
-Last verified: 2026-07-12
+Last verified: 2026-07-16
 
 Bu dosya HR Axis / Store Ops projesinde Codex ile kullanilan pratik calisma
 disiplinidir. `sokrates.md` karar kalitesinin kanonik kaynagidir; bu dosya ise
@@ -330,6 +330,53 @@ acikca degistirirse gevsetilir:
   yapilir; nedeni handoff'ta yazilir.
 - Check beklerken yalniz gercekten bagimsiz is ilerletilir. Gereksiz durum
   anlatimi, yinelenen plan ozeti ve buyuk tool output'u uretilmez.
+
+### Canonical Release Sure Ve Tekrar-Kosum Disiplini
+
+Owner'in 2026-07-16 tarihli kilitli karariyla canonical release suresi test
+kapsami azaltmadan dusurulur. `docs/plans/canonical-release-gate-wall-time-
+optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
+
+- Root `npm.cmd run check:release` tek kanonik yerel giristir. Fresh kosu
+  varsayilandir; onceki kosuda gec E2E gibi somut bir asama hatasi duzeltildiyse
+  ayni HEAD, manifest, komut, Node/platform, lockfile ve tracked/non-ignored
+  workspace kimliginde `npm.cmd run check:release -- --resume` kullanilir.
+- Resume bir gate atlama mekanizmasi degildir. Yalniz atomic ve digest-bound
+  basarili receipt tekrar kullanilir. Eksik, bozuk, stale, farkli input'lu veya
+  unknown receipt fresh kosuya doner; dependency audit volatile'dir ve her
+  resume'da yeniden kosar.
+- Backend release, frontend static ve audit kaniti bagimliliklari izin verdigi
+  anda paralel kosabilir. Frontend E2E frontend static PASS olmadan baslamaz;
+  frontend build ve tam Playwright suite fresh kosuda birer kez kosar.
+- GitHub Actions'ta root, backend, frontend ve volatile audit proof aileleri
+  native ayri job'lardir. Gec bir hata sonrasi
+  `Re-run failed jobs` kullanilir; yesil sibling job'lar sebepsiz yeniden
+  kosturulmaz. Required aggregate selected child eksik, skipped, cancelled,
+  timed-out veya failed ise fail-closed kalir.
+- Harici release-rehearsal observer tek kanit otoritesi olarak exact
+  `release-rehearsal.yml` workflow run'ini kullanir. Event, PR numarasi, base
+  SHA, head SHA ve en yeni run/attempt birebir uyusmadan PASS kabul edilmez;
+  eski bir basari yeni pending veya failure'i maskeleyemez. Yalniz ag hatasi,
+  HTTP 429 ve 5xx 55-60 saniyelik butce icinde yeniden denenir; diger provider
+  contract hatalari ve tukenen butce fail-closed kalir.
+- Release rehearsal Docker/live fixture ve smoke kanitini korur, fakat ayni
+  required gate'in zaten calistirdigi backend lint/Jest/build/audit paketini
+  ikinci kez kosturmaz. Post-merge exact-tree reuse kesin degilse full release
+  fallback devam eder.
+- Test, spec, lint, build, API check, audit, Playwright test secimi veya coverage
+  hiz ugruna azaltilmaz; retry/skip ile hata gizlenmez ve yeni worker/shard
+  deneyi acilmaz.
+- Basarili PASS receipt'leri Actions cache/artifact olarak tasinmaz,
+  `node_modules` cache'lenmez. Yalniz npm download cache'i kullanilabilir.
+- Required gate p95 hedefi 13 dakika, DAG hedefi 12 dakika 30 saniyedir.
+  Toplam runner-minute eski on-kosu baseline'inin 110%'unu asarsa veya wall-time
+  kazanci coverage/izolasyon riski yaratirsa otomatik optimizasyon durur ve yeni
+  owner karari gerekir.
+- Tek makinede ikinci canonical full gate ayni anda acilmaz. Yerel lock,
+  child-process cleanup ve receipt yazimi Windows dahil fail-closed test edilir.
+- PR/Vercel bosta polling 55-60 saniyedir; check izlemek icin model agent
+  acilmaz. Basarili uzun log yerine state transition ve sinirli failure tail
+  raporlanir.
 
 ### PR Oncesi Adversarial Review
 

@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "receiptSchemaVersion": 1,
+  "stages": [
+    {
+      "id": "root-contracts",
+      "cwd": ".",
+      "commands": [
+        ["node", "scripts/migration-change-warning.mjs"],
+        ["npm", "run", "test:scripts"]
+      ],
+      "dependsOn": [],
+      "volatile": false
+    },
+    {
+      "id": "backend-release",
+      "cwd": "backend/nestjs",
+      "commands": [["npm", "run", "check:release:proof"]],
+      "dependsOn": ["root-contracts"],
+      "volatile": false
+    },
+    {
+      "id": "frontend-static",
+      "cwd": "admin-web",
+      "commands": [["npm", "run", "check:release:static"]],
+      "dependsOn": ["root-contracts"],
+      "volatile": false
+    },
+    {
+      "id": "dependency-audit",
+      "cwd": ".",
+      "commands": [
+        ["npm", "--prefix", "backend/nestjs", "run", "check:release:audit"],
+        ["npm", "--prefix", "admin-web", "run", "check:release:audit"]
+      ],
+      "dependsOn": ["root-contracts"],
+      "volatile": true
+    },
+    {
+      "id": "frontend-e2e",
+      "cwd": "admin-web",
+      "commands": [["npm", "run", "check:release:e2e"]],
+      "dependsOn": ["frontend-static"],
+      "volatile": false
+    }
+  ]
+}
