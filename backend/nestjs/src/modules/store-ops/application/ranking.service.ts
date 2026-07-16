@@ -41,10 +41,18 @@ import {
   UnrankedPersonnelRankingRow,
   UnrankedStoreRankingRow,
 } from "./ranking-list.helpers";
+import { resolveRankingScopePolicy } from "./ranking-scope-policy";
+import { filterPersonnelByActiveAssignmentScope } from "./ranking-personnel-scope";
 import {
   resolvePersonnelRankingEligibility,
   type PersonnelRankingEligibilityResult,
 } from "./personnel-ranking-eligibility.contract";
+import { buildRegionManagerSummary } from "./ranking-region-manager-summary";
+import { buildBoundedManagedPersonnelPage } from "./ranking-managed-personnel-page";
+import {
+  buildScopedRankingFilterOptions,
+  selectScopedRankingFilterRows,
+} from "./ranking-filter-options";
 
 type RawStoreRankingKpiRow = {
   store_id: string;
@@ -59,7 +67,6 @@ type RawStoreRankingKpiRow = {
   achievement_rate?: string | null;
   target_value: string | null;
 };
-
 type RawPersonnelRankingKpiRow = {
   employee_id: string;
   first_name: string | null;
@@ -78,15 +85,12 @@ type RawPersonnelRankingKpiRow = {
   actual_value: string | null;
   target_value: string | null;
 };
-
 type UnrankedPersonnelRankingCandidate = UnrankedPersonnelRankingRow & {
   rankingEligibility: PersonnelRankingEligibilityResult;
 };
-
-type ActivePersonnelAssignmentScope = Awaited<
-  ReturnType<ReportingRepository["getActiveEmployeeAssignmentScope"]>
->;
-
+type ActivePersonnelAssignmentScope = Awaited<ReturnType<
+  ReportingRepository["getActiveEmployeeAssignmentScope"]
+>>;
 export type GetRankingsInput = RankingFilters & {
   userId: string;
   employeeId?: string;
@@ -101,6 +105,12 @@ export type GetRankingsInput = RankingFilters & {
   sortDirection?: RankingSortDirection;
   limit?: number;
   offset?: number;
+  regionManagerLimit?: number;
+  regionManagerOffset?: number;
+  regionManagerRiskOffset?: number;
+  regionManagerUnassigned?: boolean;
+  managedPersonnelLimit?: number;
+  managedPersonnelOffset?: number;
 };
 
 @Injectable()
@@ -120,6 +130,21 @@ export class RankingService {
       requestedLimit: input.limit,
       requestedOffset: input.offset,
     });
+    const scopePolicy = resolveRankingScopePolicy(input);
+
+    if (scopePolicy.failClosed) {
+      return getEmptyRankingResponse({
+        access,
+        availablePeriods: [],
+        periodType: input.periodType ?? "monthly",
+        periodStart: input.periodStart ?? null,
+        periodEnd: input.periodStart
+          ? input.periodType === "daily"
+            ? input.periodStart
+            : resolveMonthEnd(input.periodStart)
+          : null,
+      });
+    }
     const { storeProfile, personnelProfile } = await this.getKpiProfiles();
     const storeMetricCodes = this.getProfileMetricCodes(storeProfile);
     const personnelMetricCodes = this.getProfileMetricCodes(personnelProfile);
@@ -168,7 +193,6 @@ export class RankingService {
       rawPersonnelRows,
       storeBenchmarkRows,
       personnelBenchmarkRows,
-      filters,
     ] = await Promise.all([
       this.rankingReportingReadRepository.listRankingStoreKpiRows({
         metricCodes: storeMetricCodes,
@@ -201,12 +225,6 @@ export class RankingService {
         periodStart: latestPeriod.period_start,
         periodEnd: latestPeriod.period_end,
       }),
-      this.rankingReportingReadRepository.listRankingFilterOptions({
-        companyIds: input.companyIds,
-        periodType: latestPeriod.period_type,
-        periodStart: latestPeriod.period_start,
-        periodEnd: latestPeriod.period_end,
-      }),
     ]);
     const rawStoreRows = [...rawStoreKpiRows, ...rawStoreChecklistRows];
 
@@ -229,25 +247,68 @@ export class RankingService {
         .filter((row) => row.rankingEligibility.isEligible)
         .map(({ rankingEligibility: _rankingEligibility, ...row }) => row),
     );
+    const canReadCompanyHierarchy = input.roleCodes.some((role) =>
+      role === "REPORT_VIEWER" || role === "SUPER_ADMIN",
+    );
+    const activePersonnelAssignments =
+      await this.reportingRepository.getActiveEmployeeAssignmentScopes(
+        uniqueIds(personnelRows.map((row) => row.employeeId)),
+      );
+    const assignmentByEmployeeId = new Map(
+      activePersonnelAssignments.map((assignment) => [assignment.employee_id, assignment]),
+    );
+    const companyFilters = canReadCompanyHierarchy ? input : {
+      ...input,
+      regionManagerUnassigned: false,
+    };
+    companyFilters.enforceAssignedReadScope = scopePolicy.enforceAssignedReadScope;
+    const authorizedStoreRows = selectScopedRankingFilterRows({
+      rows: storeRows,
+      isPrivileged: access.isPrivileged,
+      assignedStoreIds: input.assignedStoreIds,
+      enforceAssignedReadScope: scopePolicy.enforceAssignedReadScope,
+      regionIds: input.regionIds,
+      storeIds: input.storeIds,
+    });
+    const filteredStoreRows = access.isPrivileged
+      ? applyStoreFilters(storeRows, companyFilters)
+      : storeRows;
+    const activeScopedPersonnelRows = access.isPrivileged
+      ? filterPersonnelByActiveAssignmentScope(personnelRows, {
+          roleCodes: input.roleCodes,
+          companyIds: input.companyIds,
+          regionIds: input.regionIds,
+          storeIds: input.storeIds,
+          assignedStoreIds: input.assignedStoreIds,
+          requestedRegionId: input.regionId,
+          requestedStoreId: input.storeId,
+          assignmentByEmployeeId,
+        })
+      : personnelRows;
+    const personnelDisplayFilters = {
+      ...companyFilters,
+      enforceAssignedReadScope: false,
+      regionId: undefined,
+      regionIds: [],
+      storeId: undefined,
+      storeIds: [],
+      assignedStoreIds: [],
+    };
+    const filteredPersonnelRows = access.isPrivileged
+      ? applyPersonnelFilters(activeScopedPersonnelRows, personnelDisplayFilters)
+      : personnelRows;
     const reference = {
       store: this.buildReferenceGroup({
-        rows: storeRows,
+        rows: access.isPrivileged ? filteredStoreRows : storeRows,
         profile: storeProfile,
         benchmarkLookup: storeBenchmarkLookup,
       }),
       personnel: this.buildReferenceGroup({
-        rows: personnelRows,
+        rows: access.isPrivileged ? filteredPersonnelRows : personnelRows,
         profile: personnelProfile,
         benchmarkLookup: personnelBenchmarkLookup,
       }),
     };
-
-    const filteredStoreRows = access.isPrivileged
-      ? applyStoreFilters(storeRows, input)
-      : storeRows;
-    const filteredPersonnelRows = access.isPrivileged
-      ? applyPersonnelFilters(personnelRows, input)
-      : personnelRows;
     const effectiveSortKey = access.canSeeGlobalDetails ? input.sortKey ?? "score" : "score";
     const effectiveSortDirection = access.canSeeGlobalDetails
       ? input.sortDirection ?? "desc"
@@ -274,18 +335,34 @@ export class RankingService {
       currentStoreId !== null
         ? storeRows.find((row) => row.storeId === currentStoreId) ?? null
         : null;
+    const filters = buildScopedRankingFilterOptions(
+      access.isPrivileged
+        ? authorizedStoreRows
+        : currentStore
+          ? [currentStore]
+          : authorizedStoreRows,
+    );
     const managedStoreIds = uniqueIds([...input.assignedStoreIds, ...input.storeIds]);
     const managedStorePersonnelRows =
       access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
         ? personnelRows.filter(
-            (row) => row.storeId !== null && managedStoreIds.includes(row.storeId),
+            (row) => {
+              const activeStoreId = assignmentByEmployeeId.get(row.employeeId)?.store_id ?? null;
+              return activeStoreId !== null && managedStoreIds.includes(activeStoreId);
+            },
           )
         : [];
+    const managedPersonnelLimit = Math.min(Math.max(input.managedPersonnelLimit ?? 50, 1), 100);
+    const managedPersonnelOffset = Math.max(input.managedPersonnelOffset ?? 0, 0);
+    const managedPersonnelPage = buildBoundedManagedPersonnelPage(
+      managedStorePersonnelRows,
+      { limit: managedPersonnelLimit, offset: managedPersonnelOffset },
+    );
     const personnelProfileAccess = await this.resolvePersonnelProfileAccess({
       rows: [
         ...selectedPersonnelRows,
         ...(currentEmployee ? [currentEmployee] : []),
-        ...managedStorePersonnelRows,
+        ...managedPersonnelPage.items,
       ],
       currentEmployeeId: employeeId,
       roleCodes: input.roleCodes,
@@ -293,6 +370,7 @@ export class RankingService {
       regionIds: input.regionIds,
       storeIds: input.storeIds,
       assignedStoreIds: input.assignedStoreIds,
+      assignmentByEmployeeId,
     });
     const withProfileAccess = (
       row: PersonnelRankingRow & { metrics?: RankingMetricValue[] },
@@ -309,8 +387,24 @@ export class RankingService {
     );
     const managedStorePersonnel =
       access.canSeeManagedStorePersonnelDetails && managedStoreIds.length > 0
-        ? managedStorePersonnelRows.map((row) => maskPersonnelRow(withProfileAccess(row), "detail"))
+        ? managedPersonnelPage.items.map((row) => maskPersonnelRow(withProfileAccess(row), "detail"))
         : [];
+    const regionManagerLimit = Math.min(Math.max(input.regionManagerLimit ?? 50, 1), 100);
+    const regionManagerOffset = Math.max(input.regionManagerOffset ?? 0, 0);
+    const regionManagerRiskOffset = Math.max(input.regionManagerRiskOffset ?? 0, 0);
+    const regionManagerLeaderboard = canReadCompanyHierarchy
+        ? buildRegionManagerSummary(filteredStoreRows, {
+          limit: regionManagerLimit,
+          offset: regionManagerOffset,
+          riskOffset: regionManagerRiskOffset,
+        })
+      : {
+          items: [],
+          meta: { total: 0, limit: regionManagerLimit, offset: regionManagerOffset },
+          riskItems: [],
+          riskMeta: { total: 0, limit: regionManagerLimit, offset: regionManagerRiskOffset },
+          riskStoreCount: 0,
+        };
 
     return {
       source: {
@@ -327,6 +421,7 @@ export class RankingService {
       filters,
       reference,
       scopeSummary,
+      regionManagerLeaderboard,
       storeLeaderboard: {
         items: storeItems,
         currentStore: currentStore
@@ -347,6 +442,7 @@ export class RankingService {
             )
           : null,
         managedStorePersonnel,
+        managedStorePersonnelMeta: managedPersonnelPage.meta,
         meta: {
           total: access.isPrivileged ? filteredPersonnelRows.length : personnelRows.length,
           limit: access.globalLimit,
@@ -381,6 +477,7 @@ export class RankingService {
     regionIds: string[];
     storeIds: string[];
     assignedStoreIds: string[];
+    assignmentByEmployeeId: Map<string, ActivePersonnelAssignmentScope>;
   }) {
     const employeeIds = uniqueIds(input.rows.map((row) => row.employeeId));
     const result = new Map<string, boolean>();
@@ -395,12 +492,6 @@ export class RankingService {
 
       return true;
     });
-    const assignments =
-      await this.reportingRepository.getActiveEmployeeAssignmentScopes(scopedEmployeeIds);
-    const assignmentByEmployeeId = new Map(
-      assignments.map((assignment) => [assignment.employee_id, assignment]),
-    );
-
     for (const employeeId of scopedEmployeeIds) {
       result.set(
         employeeId,
@@ -409,7 +500,7 @@ export class RankingService {
           companyIds: input.companyIds,
           regionIds: input.regionIds,
           storeIds: managerStoreIds,
-          assignment: assignmentByEmployeeId.get(employeeId) ?? null,
+          assignment: input.assignmentByEmployeeId.get(employeeId) ?? null,
         }),
       );
     }
@@ -448,10 +539,9 @@ export class RankingService {
     }
 
     if (input.roleCodes.includes("REGION_MANAGER")) {
-      return (
-        input.assignment.region_id !== null &&
-        input.regionIds.includes(input.assignment.region_id)
-      );
+      return input.storeIds.length > 0
+        ? input.assignment.store_id !== null && input.storeIds.includes(input.assignment.store_id)
+        : input.assignment.region_id !== null && input.regionIds.includes(input.assignment.region_id);
     }
 
     return false;

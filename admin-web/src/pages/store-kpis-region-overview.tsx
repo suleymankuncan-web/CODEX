@@ -30,6 +30,11 @@ const regionStoreActionClass =
 
 export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
   const summary = buildRegionSummary(model)
+  const regionMeta = model.regionOverviewQuery.data?.storeLeaderboard.meta
+  const regionTotal = regionMeta?.total ?? 0
+  const regionHasPrevious = model.regionOverviewPage > 0
+  const regionHasNext =
+    (model.regionOverviewPage + 1) * model.regionOverviewPageSize < regionTotal
 
   return (
     <StoreSurfacePage
@@ -38,12 +43,12 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
     >
       <div className="tw:mx-auto tw:grid tw:max-w-[1420px] tw:gap-4">
         <header className="tw:grid tw:items-start tw:gap-4 tw:lg:grid-cols-[minmax(0,1fr)_auto]">
-          <section className="tw:flex tw:min-h-10 tw:flex-wrap tw:items-center tw:gap-2.5 tw:rounded-[0.95rem] tw:border tw:border-[#dce4f1] tw:bg-white/85 tw:p-2.5 tw:shadow-[0_12px_32px_rgba(40,55,93,0.10)]">
+          <section className="tw:flex tw:min-h-10 tw:flex-wrap tw:items-center tw:gap-2.5 tw:rounded-[0.95rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/85 tw:p-2.5 tw:shadow-[0_12px_32px_var(--store-command-line)]">
             <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2">
               <span className="tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
                 <Gauge className="tw:size-4" />
               </span>
-              <h1 className="tw:m-0 tw:text-base tw:font-semibold tw:leading-none tw:text-[#071332]">
+              <h1 className="tw:m-0 tw:text-base tw:font-semibold tw:leading-none tw:text-[var(--store-command-ink)]">
                 {model.t('storeKpis.regionCommandTitle')}
               </h1>
             </div>
@@ -59,6 +64,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             <RegionToolbarChip icon={ShieldCheck} label={model.t('storeKpis.regionCommandScope')} />
           </div>
         </header>
+        {(model.regionOverviewQuery.isError || model.regionOverviewQuery.failureCount > 0) && model.regionOverviewQuery.data ? <RegionBackgroundError model={model} /> : null}
 
         <section className="tw:grid tw:max-w-[1040px] tw:grid-cols-2 tw:gap-3 tw:md:grid-cols-3">
           <RegionSummaryCard
@@ -77,28 +83,28 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             value={formatInteger(model.locale, summary.storeCount)}
             subline={summary.personnelCountLabel}
           />
-          <article className="tw:min-h-[118px] tw:rounded-[1.45rem] tw:border tw:border-[#dce4f1] tw:bg-white/[0.84] tw:p-4 tw:shadow-[0_12px_34px_rgba(40,55,93,0.10)]">
+          <article className="tw:min-h-[118px] tw:rounded-[1.45rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/[0.84] tw:p-4 tw:shadow-[0_12px_34px_var(--store-command-line)]">
             <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-              <span className="tw:grid tw:size-10 tw:place-items-center tw:rounded-[0.9rem] tw:bg-[#fff0dc] tw:text-[#f08a00]">
+              <span className="tw:grid tw:size-10 tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-warning-soft)] tw:text-[var(--store-command-warning)]">
                 <Activity className="tw:size-5" />
               </span>
-              <span className="tw:rounded-full tw:bg-[#fff0dc] tw:px-2.5 tw:py-1 tw:text-[11px] tw:font-semibold tw:text-[#a35b00]">
+              <span className="tw:rounded-full tw:bg-[var(--store-command-warning-soft)] tw:px-2.5 tw:py-1 tw:text-[11px] tw:font-semibold tw:text-[var(--store-command-warning-ink)]">
                 {model.t('storeKpis.regionAverageBadge')}
               </span>
             </div>
-            <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-[#7a839f]">
+            <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-muted)]">
               {model.t('storeKpis.regionKpiAverageTitle')}
             </p>
             <div className="tw:mt-3 tw:grid tw:grid-cols-2 tw:gap-1.5 tw:md:grid-cols-5">
               {regionMetricCodes.map((code) => (
                 <div
                   key={code}
-                  className="tw:rounded-[0.9rem] tw:border tw:border-[#e0e5f2]/80 tw:bg-white/70 tw:p-2 tw:text-center"
+                  className="tw:rounded-[0.9rem] tw:border tw:border-[var(--store-command-line)]/80 tw:bg-white/70 tw:p-2 tw:text-center"
                 >
-                  <span className="tw:block tw:text-[10px] tw:font-medium tw:text-[#8a94ad]">
+                  <span className="tw:block tw:text-[10px] tw:font-medium tw:text-[var(--store-command-quiet)]">
                     {getRegionMetricLabel(code)}
                   </span>
-                  <strong className="tw:mt-1 tw:block tw:text-[13px] tw:font-semibold tw:tracking-[-0.02em] tw:text-[#071332]">
+                  <strong className="tw:mt-1 tw:block tw:text-[13px] tw:font-semibold tw:tracking-[-0.02em] tw:text-[var(--store-command-ink)]">
                     {summary.metricAverages[code]}
                   </strong>
                 </div>
@@ -107,17 +113,17 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
           </article>
         </section>
 
-        <section className="tw:max-w-[1040px] tw:overflow-hidden tw:rounded-[1.55rem] tw:border tw:border-[#dce4f1] tw:bg-white/[0.84] tw:shadow-[0_12px_34px_rgba(40,55,93,0.10)]">
-          <div className="tw:flex tw:min-h-[68px] tw:items-center tw:justify-between tw:gap-3 tw:border-b tw:border-[#dce4f1] tw:p-4">
+        <section className="tw:max-w-[1040px] tw:overflow-hidden tw:rounded-[1.55rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/[0.84] tw:shadow-[0_12px_34px_var(--store-command-line)]">
+          <div className="tw:flex tw:min-h-[68px] tw:items-center tw:justify-between tw:gap-3 tw:border-b tw:border-[var(--store-command-line)] tw:p-4">
             <div>
-              <h2 className="tw:m-0 tw:text-lg tw:font-semibold tw:tracking-[-0.02em] tw:text-[#071332]">
+              <h2 className="tw:m-0 tw:text-lg tw:font-semibold tw:tracking-[-0.02em] tw:text-[var(--store-command-ink)]">
                 {model.t('storeKpis.regionStoresTitle')}
               </h2>
-              <p className="tw:mt-1 tw:text-xs tw:font-normal tw:text-[#65708d]">
+              <p className="tw:mt-1 tw:text-xs tw:font-normal tw:text-[var(--store-command-muted)]">
                 {model.t('storeKpis.regionStoresCopy')}
               </p>
             </div>
-            <span className="tw:rounded-full tw:bg-[#dcfbff] tw:px-3 tw:py-1.5 tw:text-xs tw:font-semibold tw:text-[#087f91]">
+            <span className="tw:rounded-full tw:bg-[var(--store-command-cyan-soft)] tw:px-3 tw:py-1.5 tw:text-xs tw:font-semibold tw:text-[var(--store-command-accent-ink)]">
               {model.t('storeKpis.regionOverviewStoreCount', {
                 count: summary.visibleStoreCount,
               })}
@@ -128,7 +134,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             <div className="tw:hidden tw:overflow-x-auto tw:md:block">
               <div className="tw:min-w-[980px]">
                 <div
-                  className={`${rowGridClass} tw:border-b tw:border-[#dce4f1] tw:px-3.5 tw:py-3 tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.035em] tw:text-[#667194]`}
+                  className={`${rowGridClass} tw:border-b tw:border-[var(--store-command-line)] tw:px-3.5 tw:py-3 tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.035em] tw:text-[var(--store-command-muted)]`}
                 >
                   <span>{model.t('storeKpis.regionStoreColumn')}</span>
                   <RegionSortButton label={model.t('storeKpis.regionScoreColumn')} model={model} sortKey="score" centered />
@@ -148,6 +154,20 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
                 </div>
               </div>
             </div>
+            <div className="tw:flex tw:gap-2 tw:overflow-x-auto tw:px-4 tw:py-3 tw:md:hidden" aria-label={model.t('storeKpis.regionMobileSortLabel')}>
+              {([
+                ['score', model.t('storeKpis.regionScoreColumn')],
+                ['TARGET_ACHIEVEMENT', 'HG%'],
+                ['UPT', 'UPT'],
+                ['ATV', 'ATV'],
+                ['CR', 'CR'],
+                ['gsm_approval', 'GSM'],
+                ['BM_CHECKLIST', 'BM'],
+                ['VM_CHECKLIST', 'VM'],
+              ] as const).map(([sortKey, label]) => (
+                <RegionSortButton key={sortKey} label={label} model={model} sortKey={sortKey} touch />
+              ))}
+            </div>
             <div className="tw:grid tw:px-4 tw:pb-4 tw:md:hidden">
               {model.regionOverviewRows.map((row) => (
                 <RegionStoreMobileCard key={row.storeId} model={model} row={row} />
@@ -164,14 +184,48 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
             </div>
           )}
         </section>
+        {regionHasPrevious || regionHasNext ? (
+          <nav
+            aria-label={model.t('storeKpis.regionPaginationLabel')}
+            className="tw:flex tw:max-w-[1040px] tw:items-center tw:justify-between tw:gap-3"
+          >
+            <button
+              type="button"
+              disabled={!regionHasPrevious}
+              className="tw:min-h-11 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-4 tw:text-sm tw:font-semibold tw:disabled:opacity-40"
+              onClick={() => model.setRegionOverviewPage(Math.max(0, model.regionOverviewPage - 1))}
+            >
+              {model.t('storeKpis.companyPrevious')}
+            </button>
+            <span className="tw:text-xs tw:text-[var(--store-command-muted)]">
+              {model.t('storeKpis.companyPageSummary', {
+                current: model.regionOverviewPage + 1,
+                total: Math.max(1, Math.ceil(regionTotal / model.regionOverviewPageSize)),
+              })}
+            </span>
+            <button
+              type="button"
+              data-testid="store-kpis-region-next-page"
+              disabled={!regionHasNext}
+              className="tw:min-h-11 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-4 tw:text-sm tw:font-semibold tw:disabled:opacity-40"
+              onClick={() => model.setRegionOverviewPage(model.regionOverviewPage + 1)}
+            >
+              {model.t('storeKpis.companyNext')}
+            </button>
+          </nav>
+        ) : null}
       </div>
     </StoreSurfacePage>
   )
 }
 
+function RegionBackgroundError({ model }: { model: StoreKpiHighlightsPageModel }) {
+  return <div role="alert" className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-destructive/20 tw:bg-destructive/5 tw:p-3 tw:text-sm"><span>{model.t('storeKpis.backgroundError')}</span><button type="button" className="tw:min-h-11 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:font-semibold" onClick={() => void model.regionOverviewQuery.refetch()}>{model.t('storeKpis.retry')}</button></div>
+}
+
 function RegionMeta({ label }: { label: string }) {
   return (
-    <span className="tw:inline-flex tw:min-h-6 tw:items-center tw:rounded-full tw:bg-white/80 tw:px-2.5 tw:text-[11px] tw:font-medium tw:text-[#59627f]">
+    <span className="tw:inline-flex tw:min-h-6 tw:items-center tw:rounded-full tw:bg-white/80 tw:px-2.5 tw:text-[11px] tw:font-medium tw:text-[var(--store-command-muted)]">
       {label}
     </span>
   )
@@ -194,7 +248,7 @@ function RegionPeriodSelect({ model }: { model: StoreKpiHighlightsPageModel }) {
       locale={model.locale}
       onPeriodStartChange={model.setRegionOverviewPeriodStart}
       periodStart={activePeriodStart}
-      triggerClassName="tw:min-h-10 tw:rounded-[0.95rem] tw:border-[#dce4f1] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[#071332]"
+      triggerClassName="tw:min-h-10 tw:rounded-[0.95rem] tw:border-[var(--store-command-line)] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-ink)]"
     />
   )
 }
@@ -206,7 +260,7 @@ function RegionToolbarChip(input: {
   const Icon = input.icon
 
   return (
-    <span className="tw:inline-flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-[0.95rem] tw:border tw:border-[#dce4f1] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[#071332]">
+    <span className="tw:inline-flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-[0.95rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-ink)]">
       <Icon className="tw:size-4" />
       {input.label}
     </span>
@@ -224,24 +278,24 @@ function RegionSummaryCard(input: {
   const Icon = input.icon
   const toneClass =
     input.iconTone === 'cyan'
-      ? 'tw:bg-[#dcfbff] tw:text-[#0697aa]'
-      : 'tw:bg-[#efe8ff] tw:text-[#6d4cff]'
+      ? 'tw:bg-[var(--store-command-cyan-soft)] tw:text-[var(--store-command-cyan)]'
+      : 'tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]'
 
   return (
-    <article className="tw:min-h-[118px] tw:rounded-[1.45rem] tw:border tw:border-[#dce4f1] tw:bg-white/[0.84] tw:p-4 tw:shadow-[0_12px_34px_rgba(40,55,93,0.10)]">
+    <article className="tw:min-h-[118px] tw:rounded-[1.45rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/[0.84] tw:p-4 tw:shadow-[0_12px_34px_var(--store-command-line)]">
       <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
         <span className={`tw:grid tw:size-10 tw:place-items-center tw:rounded-[0.9rem] ${toneClass}`}>
           <Icon className="tw:size-5" />
         </span>
-        <span className="tw:rounded-full tw:bg-[#ddf8ed] tw:px-2.5 tw:py-1 tw:text-[11px] tw:font-semibold tw:text-[#087751]">
+        <span className="tw:rounded-full tw:bg-[var(--store-command-mint-soft)] tw:px-2.5 tw:py-1 tw:text-[11px] tw:font-semibold tw:text-[var(--store-command-success-ink)]">
           {input.badge}
         </span>
       </div>
-      <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-[#7a839f]">{input.label}</p>
-      <div className="tw:mt-1 tw:text-[31px] tw:font-semibold tw:leading-none tw:tracking-[-0.04em] tw:text-[#071332]">
+      <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-muted)]">{input.label}</p>
+      <div className="tw:mt-1 tw:text-[31px] tw:font-semibold tw:leading-none tw:tracking-[-0.04em] tw:text-[var(--store-command-ink)]">
         {input.value}
       </div>
-      <p className="tw:mt-2 tw:text-xs tw:font-normal tw:text-[#65708d]">{input.subline}</p>
+      <p className="tw:mt-2 tw:text-xs tw:font-normal tw:text-[var(--store-command-muted)]">{input.subline}</p>
     </article>
   )
 }
@@ -251,6 +305,7 @@ function RegionSortButton(input: {
   label: string
   model: StoreKpiHighlightsPageModel
   sortKey: StoreKpisRegionSortKey
+  touch?: boolean
 }) {
   const active = input.model.regionOverviewSort.sortKey === input.sortKey
   const direction = input.model.regionOverviewSort.sortDirection
@@ -259,10 +314,10 @@ function RegionSortButton(input: {
     <button
       type="button"
       aria-label={input.model.t('storeKpis.regionSortLabel', { column: input.label })}
-      className={`tw:inline-flex tw:items-center ${
+      className={`tw:inline-flex tw:items-center ${input.touch ? 'tw:min-h-11 tw:shrink-0 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-3' : 'tw:border-0 tw:bg-transparent tw:p-0'} ${
         input.centered ? 'tw:justify-center tw:text-center' : 'tw:justify-start'
-      } tw:border-0 tw:bg-transparent tw:p-0 tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.035em] ${
-        active ? 'tw:text-[#6d4cff]' : 'tw:text-inherit'
+      } tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.035em] ${
+        active ? 'tw:text-[var(--store-command-plum)]' : 'tw:text-inherit'
       }`}
       onClick={() => input.model.setRegionOverviewSort(input.sortKey)}
     >
@@ -283,16 +338,16 @@ function RegionStoreRow({ model, row }: { model: StoreKpiHighlightsPageModel; ro
   const storeName = row.storeName ?? model.t('storeKpis.noStoreScope')
 
   return (
-    <article className={`${rowGridClass} tw:min-h-[62px] tw:border-b tw:border-[#dce4f1] tw:bg-transparent tw:py-2 last:tw:border-b-0`}>
+    <article className={`${rowGridClass} tw:min-h-[62px] tw:border-b tw:border-[var(--store-command-line)] tw:bg-transparent tw:py-2 last:tw:border-b-0`}>
       <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2.5">
-        <span className="tw:grid tw:size-9 tw:flex-none tw:place-items-center tw:rounded-[0.9rem] tw:bg-[#efe8ff] tw:text-[#6d4cff]">
+        <span className="tw:grid tw:size-9 tw:flex-none tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]">
           <StoreIcon className="tw:size-5" />
         </span>
-        <strong className="tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-[#071332]">
+        <strong className="tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-[var(--store-command-ink)]">
           {storeName}
         </strong>
       </div>
-      <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[46px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-2 tw:text-[13px] tw:font-semibold tw:text-[#071332] tw:shadow-[inset_0_0_0_1px_#dce4f1]">
+      <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[46px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-2 tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)] tw:shadow-[inset_0_0_0_1px_var(--store-command-line)]">
         {formatNumber(model.locale, row.scoreValue, noData, 1)}
       </span>
       {regionMetricCodes.map((code) => (
@@ -323,19 +378,19 @@ function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageMo
   const storeName = row.storeName ?? model.t('storeKpis.noStoreScope')
 
   return (
-    <article className="tw:grid tw:grid-cols-[42px_minmax(0,1fr)_minmax(112px,auto)] tw:items-center tw:gap-2.5 tw:border-b tw:border-[#dce4f1] tw:py-3 last:tw:border-b-0">
-      <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-[0.9rem] tw:bg-[#efe8ff] tw:text-[#6d4cff]">
+    <article className="tw:grid tw:grid-cols-[42px_minmax(0,1fr)_minmax(112px,auto)] tw:items-center tw:gap-2.5 tw:border-b tw:border-[var(--store-command-line)] tw:py-3 last:tw:border-b-0">
+      <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]">
         <StoreIcon className="tw:size-5" />
       </span>
-      <strong className="tw:min-w-0 tw:text-sm tw:font-semibold tw:leading-tight tw:text-[#071332]">
+      <strong className="tw:min-w-0 tw:text-sm tw:font-semibold tw:leading-tight tw:text-[var(--store-command-ink)]">
         {storeName}
       </strong>
-      <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[112px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-3 tw:text-[13px] tw:font-semibold tw:text-[#071332] tw:shadow-[inset_0_0_0_1px_#dce4f1]">
+      <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[112px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-3 tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)] tw:shadow-[inset_0_0_0_1px_var(--store-command-line)]">
         {formatNumber(model.locale, row.scoreValue, noData, 1)}
       </span>
       <div className="tw:col-start-2 tw:col-end-4 tw:grid tw:grid-cols-2 tw:gap-x-3 tw:gap-y-2 tw:pt-1 tw:text-center">
         {regionMetricCodes.map((code) => (
-          <strong key={code} className="tw:text-[13px] tw:font-semibold tw:text-[#071332]">
+          <strong key={code} className="tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
             {formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}
           </strong>
         ))}
@@ -364,7 +419,7 @@ function MetricMini(input: {
 }) {
   return (
     <div className="tw:text-center">
-      <strong className="tw:block tw:text-[13px] tw:font-semibold tw:text-[#071332]">
+      <strong className="tw:block tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
         {formatRegionMetric(input.locale, input.noData, input.metric, input.code)}
       </strong>
     </div>
@@ -380,14 +435,14 @@ function ChecklistChip(input: {
 
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return (
-      <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[#ffe6ee] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#c52d54]">
+      <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[var(--store-command-danger-soft)] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[var(--store-command-danger)]">
         {input.label} {input.model.t('storeKpis.regionChecklistPassive')}
       </span>
     )
   }
 
   return (
-    <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[#ddf8ed] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[#087751]">
+    <span className="tw:inline-flex tw:min-h-7 tw:items-center tw:justify-self-center tw:rounded-full tw:bg-[var(--store-command-mint-soft)] tw:px-2.5 tw:text-xs tw:font-semibold tw:text-[var(--store-command-success-ink)]">
       {input.label} <b className="tw:ml-1 tw:font-semibold">{formatNumber(input.model.locale, value, input.model.t('common.noData'), 0)}</b>
     </span>
   )

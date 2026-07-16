@@ -1967,6 +1967,26 @@ const rankingsFixture = {
     regions: [{ id: regionId, label: 'Pilot Region' }],
     stores: [{ id: storeId, label: 'Pilot Store' }],
   },
+  scopeSummary: { activePersonnelCount: 1, storeCount: 1 },
+  reference: {
+    personnel: { averageScore: 87, metrics: [] },
+    store: { averageScore: 90, metrics: [] },
+  },
+  regionManagerLeaderboard: {
+    items: [
+      {
+        userId: 'region-manager-user',
+        displayName: 'Pilot Region Manager',
+        storeCount: 1,
+        riskStoreCount: 0,
+        averageScore: 90,
+      },
+    ],
+    meta: { total: 1, limit: 20, offset: 0 },
+    riskItems: [],
+    riskMeta: { total: 0, limit: 20, offset: 0 },
+    riskStoreCount: 0,
+  },
   storeLeaderboard: {
     items: [rankingStoreRow],
     currentStore: rankingStoreRow,

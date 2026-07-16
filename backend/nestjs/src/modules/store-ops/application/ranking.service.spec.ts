@@ -393,13 +393,13 @@ describe("RankingService", () => {
     );
   });
 
-  it("lets privileged roles page through full Turkey rankings with detail metrics", async () => {
+  it("lets Super Admin page through full Turkey rankings with detail metrics", async () => {
     const repository = createRepositoryMock();
     const service = createService(repository, createKpiConfigRepositoryMock());
 
     const result = await service.getRankings({
-      userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      userId: "admin-1",
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -510,12 +510,7 @@ describe("RankingService", () => {
 
     expect(
       result.personnelLeaderboard.items.find((row) => row.employeeId === "employee-001"),
-    ).toEqual(
-      expect.objectContaining({
-        regionId: "region-1",
-        canOpenProfile: false,
-      }),
-    );
+    ).toBeUndefined();
     expect(
       result.personnelLeaderboard.items.find((row) => row.employeeId === "employee-002"),
     ).toEqual(
@@ -578,7 +573,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -652,7 +647,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -739,7 +734,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -790,7 +785,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -890,7 +885,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -968,7 +963,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -1029,7 +1024,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -1088,7 +1083,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],
@@ -1132,7 +1127,7 @@ describe("RankingService", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],

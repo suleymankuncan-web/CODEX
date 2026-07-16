@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Store, Users } from 'lucide-react'
 import type { StoreKpiHighlightsPageModel } from './store-kpi-highlights-model'
 
@@ -13,63 +14,65 @@ export function StoreKpisCommandDeckHeader(input: {
   storeKpiCount: number
 }) {
   const { activeTab, controls, model, personnelCount, setActiveTab, storeKpiCount } = input
+  const overviewPath = buildOverviewPath(model)
+  const scopeLabel = model.isReportViewer
+    ? model.t('storeKpis.commandViewerScope')
+    : model.isRegionManagerStoreDetail
+      ? model.t('storeKpis.commandRegionScope')
+      : model.t('storeKpis.commandOwnStoreScope')
+  const eyebrow = model.isReportViewer
+    ? model.t('storeKpis.commandViewerEyebrow')
+    : model.isRegionManagerStoreDetail
+      ? model.t('storeKpis.commandRegionEyebrow')
+      : model.t('storeKpis.commandManagerEyebrow')
 
   return (
-    <div className="tw:space-y-4">
-      <section className="tw:overflow-hidden tw:rounded-[2rem] tw:border tw:border-white/75 tw:bg-white/90 tw:shadow-[0_24px_70px_rgba(70,85,120,0.14)]">
-        <div className="tw:flex tw:flex-col tw:gap-4 tw:p-5 tw:sm:p-7 tw:lg:flex-row tw:lg:items-start tw:lg:justify-between">
-          <div>
-            <p className="tw:text-xs tw:font-semibold tw:uppercase tw:tracking-[0.24em] tw:text-[#65708d]">
-              {model.t('storeKpis.commandManagerEyebrow')}
-            </p>
-            <h1 className="tw:mt-2 tw:text-2xl tw:font-semibold tw:leading-tight tw:text-[#071332] tw:sm:text-3xl">
-              {model.t('storeKpis.commandWorkspaceTitle', { store: model.activeStoreName })}
-            </h1>
-            <p className="tw:mt-3 tw:max-w-3xl tw:text-sm tw:font-normal tw:leading-6 tw:text-[#56627e]">
-              {model.t('storeKpis.commandWorkspaceCopy')}
-            </p>
+    <div className="tw:grid tw:gap-4">
+      <header className="tw:grid tw:gap-4 tw:lg:grid-cols-[minmax(0,1fr)_auto] tw:lg:items-end">
+        <div>
+          <div className="tw:flex tw:flex-wrap tw:gap-2">
+            <span className="tw:rounded-full tw:bg-[var(--store-command-plum-soft)] tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-[var(--store-command-plum-deep)]">{scopeLabel}</span>
+            <span className="tw:rounded-full tw:bg-[var(--store-command-cyan-soft)] tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-[var(--store-command-accent-ink)]">{model.t('storeKpis.commandStoreKpiCount', { count: storeKpiCount })}</span>
+            <span className="tw:rounded-full tw:bg-[var(--store-command-warning-soft)] tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-[var(--store-command-warning-ink)]">{model.t('storeKpis.commandPersonnelBadge', { count: personnelCount })}</span>
           </div>
-          <div className="tw:grid tw:gap-3 tw:lg:justify-items-end">
-            <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:lg:justify-end">
-              {controls}
-            </div>
-            <div className="tw:flex tw:flex-wrap tw:gap-2 tw:lg:justify-end">
-              <span className="tw:rounded-full tw:bg-[#dcfaff] tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#00879b]">
-                {model.t('storeKpis.commandOwnStoreScope')}
-              </span>
-              <span className="tw:rounded-full tw:bg-[#dcfce7] tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#047857]">
-                {model.t('storeKpis.commandStoreKpiCount', { count: storeKpiCount })}
-              </span>
-              <span className="tw:rounded-full tw:bg-[#fff3df] tw:px-3 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#b45309]">
-                {model.t('storeKpis.commandPersonnelBadge', { count: personnelCount })}
-              </span>
-            </div>
-          </div>
+          <p className="tw:mt-3 tw:text-xs tw:font-semibold tw:uppercase tw:tracking-[0.18em] tw:text-[var(--store-command-muted)]">{eyebrow}</p>
+          <h1 className="tw:mt-1 tw:text-3xl tw:font-semibold tw:tracking-[-0.04em] tw:text-[var(--store-command-ink)]">
+            {model.t('storeKpis.commandWorkspaceTitle', { store: model.activeStoreName })}
+          </h1>
+          <p className="tw:mt-1 tw:text-sm tw:text-[var(--store-command-muted)]">{model.t('storeKpis.commandWorkspaceCopy')}</p>
         </div>
+        <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:lg:justify-end">{controls}</div>
+      </header>
 
-        <div className="tw:grid tw:grid-cols-2 tw:border-t tw:border-border/70">
-          <button
-            type="button"
-            className={tabClass(activeTab === 'store')}
-            onClick={() => setActiveTab('store')}
-          >
-            <Store className="tw:size-5" />
-            {model.t('storeKpis.commandStoreTab')}
-          </button>
-          <button
-            type="button"
-            className={tabClass(activeTab === 'people')}
-            onClick={() => setActiveTab('people')}
-          >
-            <Users className="tw:size-5" />
-            {model.t('storeKpis.commandPeopleTab')}
-          </button>
-        </div>
-      </section>
+      <nav aria-label={model.t('storeKpis.commandTrailLabel')} className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white/80 tw:px-4 tw:text-xs tw:text-[var(--store-command-muted)]">
+        {overviewPath ? <Link className="tw:font-medium tw:text-[var(--store-command-plum-deep)]" to={overviewPath}>{model.t('storeKpis.commandTrailOverview')}</Link> : <span>{scopeLabel}</span>}
+        <span>/</span>
+        <strong className="tw:text-[var(--store-command-ink)]">{model.activeStoreName}</strong>
+        <span>/</span>
+        <span>{activeTab === 'store' ? model.t('storeKpis.commandStoreTab') : model.t('storeKpis.commandPeopleTab')}</span>
+      </nav>
+
+      <div role="tablist" aria-label={model.t('storeKpis.commandTabsLabel')} className="tw:inline-grid tw:w-full tw:max-w-[360px] tw:grid-cols-2 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:p-1">
+        <button type="button" role="tab" aria-selected={activeTab === 'store'} className={tabClass(activeTab === 'store')} onClick={() => setActiveTab('store')}>
+          <Store className="tw:size-4" />{model.t('storeKpis.commandStoreTab')}
+        </button>
+        <button type="button" role="tab" aria-selected={activeTab === 'people'} className={tabClass(activeTab === 'people')} onClick={() => setActiveTab('people')}>
+          <Users className="tw:size-4" />{model.t('storeKpis.commandPeopleTab')} <span>{personnelCount}</span>
+        </button>
+      </div>
     </div>
   )
 }
 
+function buildOverviewPath(model: StoreKpiHighlightsPageModel) {
+  if (!model.isReportViewer && !model.isRegionManagerStoreDetail) return null
+  const params = new URLSearchParams()
+  const periodStart = model.livePeriodStart || model.liveSummary?.period?.periodStart
+  if (periodStart) params.set('periodStart', periodStart)
+  const query = params.toString()
+  return `/store/kpis${query ? `?${query}` : ''}`
+}
+
 function tabClass(active: boolean) {
-  return `tw:flex tw:h-16 tw:items-center tw:justify-center tw:gap-2 tw:border-b-2 tw:text-sm tw:font-semibold ${active ? 'tw:border-[#6d4df7] tw:bg-[linear-gradient(90deg,rgba(109,77,247,0.12),rgba(24,191,208,0.10))] tw:text-[#6d4df7]' : 'tw:border-transparent tw:bg-[#f7f8fc] tw:text-[#63708f]'}`
+  return `tw:flex tw:min-h-10 tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:px-3 tw:text-sm tw:font-semibold tw:transition ${active ? 'tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum-deep)]' : 'tw:text-[var(--store-command-muted)] tw:hover:bg-[var(--store-command-surface-soft)]'}`
 }

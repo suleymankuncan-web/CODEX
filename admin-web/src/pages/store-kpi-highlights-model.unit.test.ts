@@ -21,24 +21,24 @@ const stores = [
 ]
 
 describe('resolveCompanyStoreSelection', () => {
-  it('uses a validated company store when Report Viewer has no URL selection', () => {
+  it('KPI-FR-001 keeps Report Viewer at company hierarchy without a URL store selection', () => {
     expect(resolveCompanyStoreSelection({
       isReportViewer: true,
       selectedStoreId: '',
       stores,
     })).toMatchObject({
-      effectiveStoreId: 'store-1',
-      selectedStoreId: 'store-1',
+      effectiveStoreId: undefined,
+      selectedStoreId: '',
       options: [{ storeId: 'store-1' }, { storeId: 'store-2' }],
     })
   })
 
-  it('falls back to the company portfolio when a URL store is outside the returned list', () => {
+  it('EC-002 fails closed when a Report Viewer URL store is outside the returned company list', () => {
     expect(resolveCompanyStoreSelection({
       isReportViewer: true,
       selectedStoreId: 'store-from-another-company',
       stores,
-    }).effectiveStoreId).toBe('store-1')
+    })).toMatchObject({ effectiveStoreId: undefined, selectedStoreId: '' })
   })
 
   it('keeps existing assigned-store behavior for non-Report Viewer roles', () => {

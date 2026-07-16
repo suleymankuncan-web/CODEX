@@ -97,6 +97,33 @@ export type RankingResponse = {
     storeCount: number;
     activePersonnelCount: number;
   };
+  regionManagerLeaderboard: {
+    items: Array<{
+      userId: string | null;
+      displayName: string | null;
+      storeCount: number;
+      riskStoreCount: number;
+      averageScore: number | null;
+    }>;
+    meta: {
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    riskItems: Array<{
+      userId: string | null;
+      displayName: string | null;
+      storeCount: number;
+      riskStoreCount: number;
+      averageScore: number | null;
+    }>;
+    riskMeta: {
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    riskStoreCount: number;
+  };
   storeLeaderboard: {
     items: StoreRankingRow[];
     currentStore: StoreRankingRow | null;
@@ -110,6 +137,11 @@ export type RankingResponse = {
     items: PersonnelRankingRow[];
     currentEmployee: PersonnelRankingRow | null;
     managedStorePersonnel: PersonnelRankingRow[];
+    managedStorePersonnelMeta: {
+      total: number;
+      limit: number;
+      offset: number;
+    };
     meta: {
       total: number;
       limit: number;

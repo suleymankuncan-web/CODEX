@@ -65,7 +65,7 @@ describe("RankingService display labels", () => {
 
     const result = await service.getRankings({
       userId: "regional-1",
-      roleCodes: ["REGION_MANAGER"],
+      roleCodes: ["SUPER_ADMIN"],
       companyIds: [],
       regionIds: [],
       storeIds: [],

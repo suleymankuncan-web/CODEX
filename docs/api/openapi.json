@@ -2106,7 +2106,184 @@
     "/api/reports/rankings": {
       "get": {
         "operationId": "ReportingController_getRankings",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "periodType",
+            "in": "query",
+            "required": false,
+            "description": "Ranking period type.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "daily",
+                "monthly"
+              ]
+            }
+          },
+          {
+            "name": "periodStart",
+            "in": "query",
+            "required": false,
+            "description": "ISO date identifying the requested period.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "regionManagerUserId",
+            "in": "query",
+            "required": false,
+            "description": "Optional Region Manager drill filter.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "regionId",
+            "in": "query",
+            "required": false,
+            "description": "Optional region filter.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "storeId",
+            "in": "query",
+            "required": false,
+            "description": "Optional store filter.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Optional store or personnel search text.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortKey",
+            "in": "query",
+            "required": false,
+            "description": "Ranking sort key.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "score",
+                "UPT",
+                "ATV",
+                "CR",
+                "TARGET_ACHIEVEMENT",
+                "BM_CHECKLIST",
+                "VM_CHECKLIST",
+                "gsm_approval"
+              ]
+            }
+          },
+          {
+            "name": "sortDirection",
+            "in": "query",
+            "required": false,
+            "description": "Ranking sort direction.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Bounded ranking page size.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Ranking page offset.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "regionManagerLimit",
+            "in": "query",
+            "required": false,
+            "description": "Bounded Region Manager page size.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "regionManagerOffset",
+            "in": "query",
+            "required": false,
+            "description": "Region Manager page offset.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "regionManagerRiskOffset",
+            "in": "query",
+            "required": false,
+            "description": "Risk Region Manager page offset.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "regionManagerUnassigned",
+            "in": "query",
+            "required": false,
+            "description": "Restrict the company drill to stores without a Region Manager.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "managedPersonnelLimit",
+            "in": "query",
+            "required": false,
+            "description": "Bounded managed-store personnel page size.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "managedPersonnelOffset",
+            "in": "query",
+            "required": false,
+            "description": "Managed-store personnel page offset.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Live daily or monthly store and personnel rankings visible to the current actor.",
@@ -13069,6 +13246,7 @@
           "filters",
           "reference",
           "scopeSummary",
+          "regionManagerLeaderboard",
           "storeLeaderboard",
           "personnelLeaderboard",
           "availablePeriods"
@@ -13286,6 +13464,136 @@
                 "minimum": 0
               },
               "activePersonnelCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "regionManagerLeaderboard": {
+            "type": "object",
+            "required": [
+              "items",
+              "meta",
+              "riskItems",
+              "riskMeta",
+              "riskStoreCount"
+            ],
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "userId",
+                    "displayName",
+                    "storeCount",
+                    "riskStoreCount",
+                    "averageScore"
+                  ],
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "storeCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "riskStoreCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "averageScore": {
+                      "type": "number",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "meta": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "riskItems": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "userId",
+                    "displayName",
+                    "storeCount",
+                    "riskStoreCount",
+                    "averageScore"
+                  ],
+                  "properties": {
+                    "userId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "displayName": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "storeCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "riskStoreCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "averageScore": {
+                      "type": "number",
+                      "nullable": true
+                    }
+                  }
+                }
+              },
+              "riskMeta": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "riskStoreCount": {
                 "type": "integer",
                 "minimum": 0
               }
@@ -13533,6 +13841,7 @@
               "items",
               "currentEmployee",
               "managedStorePersonnel",
+              "managedStorePersonnelMeta",
               "meta"
             ],
             "properties": {
@@ -13909,6 +14218,28 @@
                         }
                       }
                     }
+                  }
+                }
+              },
+              "managedStorePersonnelMeta": {
+                "type": "object",
+                "required": [
+                  "total",
+                  "limit",
+                  "offset"
+                ],
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "offset": {
+                    "type": "integer",
+                    "minimum": 0
                   }
                 }
               },

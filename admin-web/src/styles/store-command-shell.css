@@ -14,11 +14,14 @@
   --store-command-plum-deep: #4c2aa5;
   --store-command-plum-soft: rgba(124, 58, 237, 0.12);
   --store-command-blue: #3765ea;
+  --store-command-blue-soft: rgba(55, 101, 234, 0.12);
   --store-command-cyan: #13a7b3;
   --store-command-cyan-soft: rgba(19, 167, 179, 0.12);
   --store-command-mint: #10b981;
+  --store-command-mint-soft: rgba(16, 185, 129, 0.12);
   --store-command-warning: #f59e0b;
   --store-command-danger: #e11d48;
+  --store-command-danger-soft: rgba(225, 29, 72, 0.1);
   --store-command-focus: rgba(124, 58, 237, 0.22);
   --store-command-shadow: 0 24px 80px rgba(32, 24, 48, 0.12);
   --store-command-soft-shadow: 0 18px 48px rgba(32, 24, 48, 0.08);

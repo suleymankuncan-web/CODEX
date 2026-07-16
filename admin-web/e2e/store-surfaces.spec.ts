@@ -1133,22 +1133,22 @@ test('store KPI highlights page explains metric source semantics', async ({ page
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
   await expect(page.getByText('Store KPI', { exact: true })).toHaveCount(0)
   await expect(page.getByRole('button', { name: /KPI/ }).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Personel KPI' })).toBeVisible()
-  await expect(page.getByText('104,6').first()).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Personel KPI/ })).toBeVisible()
+  await expect(page.getByText('91,5').first()).toBeVisible()
   await expect(page.getByText(/KPI config/)).toBeVisible()
   await expect(page.getByText('Takip gerekli')).toBeVisible()
   await expect(page.getByText('GSM Onayı').first()).toBeVisible()
-  await expect(page.getByText(/Problem/)).toBeVisible()
+  await expect(page.getByText(/Aksiyon Al/)).toBeVisible()
   await expect(page.getByText(/Hedef/).first()).toBeVisible()
   await expect(page.getByText('BM checklist').first()).toBeVisible()
   await expect(page.getByText('VM checklist').first()).toBeVisible()
   await expect(page.getByText(/Yap/).first()).toBeVisible()
   await expect(page.getByText(/skor trendi/i)).toBeVisible()
-  await expect(page.getByText('Nis', { exact: true })).toBeVisible()
-  await expect(page.getByText('May', { exact: true })).toBeVisible()
-  await expect(page.getByText('83')).toBeVisible()
+  await expect(page.getByText('Nisan', { exact: true })).toBeVisible()
+  await expect(page.getByText('Mayıs', { exact: true })).toBeVisible()
+  await expect(page.getByText('91,5').last()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Personel KPI' }).click()
+  await page.getByRole('tab', { name: /Personel KPI/ }).click()
 
   await expect(page.getByRole('heading', { name: 'Personel KPI' })).toBeVisible()
   await expect(page.getByRole('columnheader', { name: 'Katkı' })).toBeVisible()
@@ -1286,10 +1286,8 @@ test('store KPI live checklist impact uses completed BM and VM visits from highl
   await page.goto('/store/kpis')
 
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
-  await expect(page.getByRole('button', { name: /BM checklist - 4/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /VM checklist - 5/ })).toBeVisible()
-  await expect(page.getByText('BM checklist').first()).toBeVisible()
-  await expect(page.getByText('VM checklist').first()).toBeVisible()
+  await expect(page.getByRole('row', { name: /BM checklist/ })).toContainText('4')
+  await expect(page.getByRole('row', { name: /VM checklist/ })).toContainText('5')
   await expect(page.getByText('Passive')).toHaveCount(0)
 })
 
@@ -1437,17 +1435,16 @@ test('region manager store KPI overview waits for selected store before loading 
   await page.getByRole('button', { name: 'Nis', exact: true }).click()
   await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('periodStart')).toBe('2026-04-01')
 
+  const readsBeforeLocalSort = rankingRequests.length
   await page.getByRole('button', { name: 'UPT sütununa göre sırala' }).click()
-  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('UPT')
-  expect(rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('desc')
+  expect(rankingRequests).toHaveLength(readsBeforeLocalSort)
 
   await page.getByRole('button', { name: 'UPT sütununa göre sırala' }).click()
-  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortDirection')).toBe('asc')
-  expect(rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('UPT')
+  expect(rankingRequests).toHaveLength(readsBeforeLocalSort)
   expect(highlightRequests).toHaveLength(0)
 
   await page.getByRole('button', { name: 'GSM Onayı sütununa göre sırala' }).click()
-  await expect.poll(() => rankingRequests.at(-1)?.searchParams.get('sortKey')).toBe('gsm_approval')
+  expect(rankingRequests).toHaveLength(readsBeforeLocalSort)
 
   await page.getByRole('link', { name: 'Region Store 9 KPI sayfasına git' }).click()
 
@@ -1465,14 +1462,15 @@ test('store KPI highlights switches to English copy and persists locale', async 
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Store KPI' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Personnel KPI' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Store KPI' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /Personnel KPI/ })).toBeVisible()
   await expect(page.getByText('Store score', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Store KPI contribution breakdown' })).toBeVisible()
   await expect(page.getByText('Store KPIs are read together with KPI config weight and reference.')).toBeVisible()
-  await expect(page.getByText('Good / above target')).toBeVisible()
-  await expect(page.getByText('Problem / not done')).toBeVisible()
-  await page.getByRole('button', { name: 'Personnel KPI' }).click()
+  await expect(page.getByText('Good / Above Reference')).toBeVisible()
+  await expect(page.getByText('Follow-up / Below Reference')).toBeVisible()
+  await expect(page.getByText('Take Action / Materially Below Reference')).toBeVisible()
+  await page.getByRole('tab', { name: /Personnel KPI/ }).click()
   await expect(page.getByRole('heading', { name: 'Score source' })).toBeVisible()
   await expect(page.getByText('Personnel KPI impact')).toBeVisible()
   await expect(page.getByText("Mağaza KPI'ları")).toHaveCount(0)
@@ -1484,7 +1482,7 @@ test('store KPI highlights switches to English copy and persists locale', async 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('button', { name: 'Store KPI' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Store KPI' })).toBeVisible()
 })
 
 test('store shell exposes Turkish-first chrome and hides technical auth roles', async ({ page }) => {

@@ -204,6 +204,12 @@ export async function getRankings(input?: {
   sortDirection?: 'asc' | 'desc'
   limit?: number
   offset?: number
+  regionManagerLimit?: number
+  regionManagerOffset?: number
+  regionManagerRiskOffset?: number
+  regionManagerUnassigned?: boolean
+  managedPersonnelLimit?: number
+  managedPersonnelOffset?: number
 }) {
   const params = new URLSearchParams()
   params.set('periodType', input?.periodType ?? 'monthly')
@@ -233,6 +239,22 @@ export async function getRankings(input?: {
   }
   if (input?.offset) {
     params.set('offset', String(input.offset))
+  }
+  if (input?.regionManagerLimit) {
+    params.set('regionManagerLimit', String(input.regionManagerLimit))
+  }
+  if (input?.regionManagerOffset) {
+    params.set('regionManagerOffset', String(input.regionManagerOffset))
+  }
+  if (input?.regionManagerRiskOffset) {
+    params.set('regionManagerRiskOffset', String(input.regionManagerRiskOffset))
+  }
+  if (input?.regionManagerUnassigned) params.set('regionManagerUnassigned', 'true')
+  if (input?.managedPersonnelLimit) {
+    params.set('managedPersonnelLimit', String(input.managedPersonnelLimit))
+  }
+  if (input?.managedPersonnelOffset) {
+    params.set('managedPersonnelOffset', String(input.managedPersonnelOffset))
   }
 
   return fetchOpenApiJson('/api/reports/rankings', { query: params })
