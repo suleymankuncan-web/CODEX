@@ -3,8 +3,8 @@ import { fileURLToPath } from 'node:url'
 
 import { selectAffectedVerification } from './affected-verification-selector.mjs'
 
-export const GITHUB_ACTIONS_APP_ID = 15368
 export const REQUIRED_RELEASE_GATE_POLL_INTERVAL_MS = 60_000
+export const RELEASE_REHEARSAL_WORKFLOW_PATH = '.github/workflows/release-rehearsal.yml'
 
 const rootProcessFiles = new Set([
   'CONTRIBUTING.md',
@@ -115,51 +115,66 @@ export function selectRequiredReleaseGateScope(files) {
   }
 }
 
-function latestCheckRun(checkRuns) {
-  return [...checkRuns].sort((left, right) => {
-    const leftTime = Date.parse(left.started_at ?? left.created_at ?? left.completed_at ?? '') || 0
-    const rightTime = Date.parse(right.started_at ?? right.created_at ?? right.completed_at ?? '') || 0
-
-    if (leftTime !== rightTime) {
-      return rightTime - leftTime
-    }
-
-    return Number(right.id ?? 0) - Number(left.id ?? 0)
-  })[0]
+function positiveRunIdentity(run) {
+  return [run.run_number, run.run_attempt, run.id].every(
+    (value) => Number.isSafeInteger(Number(value)) && Number(value) > 0,
+  )
 }
 
-export function evaluateObservedCheckRun(checkName, checkRuns) {
-  const matchingRuns = checkRuns.filter(
-    (checkRun) =>
-      checkRun.name === checkName &&
-      Number(checkRun.app?.id) === GITHUB_ACTIONS_APP_ID,
+export function evaluateObservedWorkflowRun({ workflowRuns, prNumber, baseSha, headSha }) {
+  if (!Array.isArray(workflowRuns)) {
+    return { state: 'failure', reason: 'release rehearsal workflow-runs response is malformed' }
+  }
+
+  const matchingRuns = workflowRuns.filter(
+    (run) =>
+      run.path === RELEASE_REHEARSAL_WORKFLOW_PATH &&
+      run.event === 'pull_request' &&
+      run.head_sha === headSha &&
+      Array.isArray(run.pull_requests) &&
+      run.pull_requests.some(
+        (pullRequest) =>
+          Number(pullRequest.number) === prNumber &&
+          pullRequest.head?.sha === headSha &&
+          pullRequest.base?.sha === baseSha,
+      ),
   )
-  const checkRun = latestCheckRun(matchingRuns)
 
-  if (!checkRun) {
+  if (matchingRuns.length === 0) {
     return {
       state: 'pending',
-      reason: `${checkName} has not started for the latest PR head SHA`,
+      reason: 'release rehearsal has not started for the exact PR/base/head identity',
     }
   }
 
-  if (checkRun.status !== 'completed') {
+  if (matchingRuns.some((run) => !positiveRunIdentity(run))) {
+    return { state: 'failure', reason: 'release rehearsal run identity is malformed' }
+  }
+
+  const latestRun = [...matchingRuns].sort(
+    (left, right) =>
+      Number(right.run_number) - Number(left.run_number) ||
+      Number(right.run_attempt) - Number(left.run_attempt) ||
+      Number(right.id) - Number(left.id),
+  )[0]
+
+  if (['queued', 'in_progress', 'requested', 'waiting', 'pending'].includes(latestRun.status)) {
     return {
       state: 'pending',
-      reason: `${checkName} is ${checkRun.status}`,
+      reason: `release rehearsal is ${latestRun.status}`,
     }
   }
 
-  if (checkRun.conclusion === 'success') {
+  if (latestRun.status === 'completed' && latestRun.conclusion === 'success') {
     return {
       state: 'success',
-      reason: `${checkName} completed successfully`,
+      reason: 'release rehearsal completed successfully',
     }
   }
 
   return {
     state: 'failure',
-    reason: `${checkName} completed with ${checkRun.conclusion ?? 'no conclusion'}`,
+    reason: `release rehearsal completed with ${latestRun.conclusion ?? latestRun.status ?? 'unknown state'}`,
   }
 }
 
@@ -232,13 +247,12 @@ export function isRetriableCheckRunsError(error) {
   return status === 429 || (status >= 500 && status <= 599)
 }
 
-async function fetchCheckRuns({ repository, headSha, checkName, token }) {
+async function fetchWorkflowRuns({ repository, headSha, token }) {
   const apiUrl = process.env.GITHUB_API_URL ?? 'https://api.github.com'
-  const url = new URL(`${apiUrl}/repos/${repository}/commits/${headSha}/check-runs`)
-  url.searchParams.set('check_name', checkName)
-  url.searchParams.set('filter', 'all')
+  const url = new URL(`${apiUrl}/repos/${repository}/actions/workflows/${encodeURIComponent(RELEASE_REHEARSAL_WORKFLOW_PATH)}/runs`)
+  url.searchParams.set('event', 'pull_request')
+  url.searchParams.set('head_sha', headSha)
   url.searchParams.set('per_page', '100')
-  url.searchParams.set('app_id', String(GITHUB_ACTIONS_APP_ID))
 
   const response = await fetch(url, {
     headers: {
@@ -249,33 +263,40 @@ async function fetchCheckRuns({ repository, headSha, checkName, token }) {
   })
 
   if (!response.ok) {
-    const error = new Error(`check-runs API returned HTTP ${response.status} for ${checkName}`)
+    const error = new Error(`workflow-runs API returned HTTP ${response.status} for release rehearsal`)
     error.status = response.status
     throw error
   }
 
   const body = await response.json()
-  return body.check_runs ?? []
+  if (!Array.isArray(body?.workflow_runs)) {
+    throw new Error('workflow-runs API returned a malformed release rehearsal response')
+  }
+  return body.workflow_runs
 }
 
 async function observeCheckRun() {
   const repository = requiredEnvironment('GITHUB_REPOSITORY')
   const headSha = requiredEnvironment('REQUIRED_RELEASE_GATE_HEAD_SHA')
-  const checkName = requiredEnvironment('REQUIRED_RELEASE_GATE_CHECK_NAME')
+  const baseSha = requiredEnvironment('REQUIRED_RELEASE_GATE_BASE_SHA')
+  const prNumber = positiveInteger(requiredEnvironment('REQUIRED_RELEASE_GATE_PR_NUMBER'), 0)
+  if (prNumber === 0) {
+    throw new Error('REQUIRED_RELEASE_GATE_PR_NUMBER must be a positive integer')
+  }
   const token = requiredEnvironment('GITHUB_TOKEN')
   const maxAttempts = positiveInteger(process.env.REQUIRED_RELEASE_GATE_MAX_ATTEMPTS, 90)
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    let checkRuns
+    let workflowRuns
     try {
-      checkRuns = await fetchCheckRuns({ repository, headSha, checkName, token })
+      workflowRuns = await fetchWorkflowRuns({ repository, headSha, token })
     } catch (error) {
       if (!isRetriableCheckRunsError(error)) {
         throw error
       }
 
       console.warn(
-        `[required-release-gate] transient check-runs lookup failure: ${error.message} (poll ${attempt}/${maxAttempts})`,
+        `[required-release-gate] transient workflow-runs lookup failure: ${error.message} (poll ${attempt}/${maxAttempts})`,
       )
       if (attempt < maxAttempts) {
         await delay(REQUIRED_RELEASE_GATE_POLL_INTERVAL_MS)
@@ -284,7 +305,7 @@ async function observeCheckRun() {
       break
     }
 
-    const evaluation = evaluateObservedCheckRun(checkName, checkRuns)
+    const evaluation = evaluateObservedWorkflowRun({ workflowRuns, prNumber, baseSha, headSha })
     console.log(`[required-release-gate] ${evaluation.reason} (poll ${attempt}/${maxAttempts})`)
 
     if (evaluation.state === 'success') {
@@ -299,7 +320,7 @@ async function observeCheckRun() {
   }
 
   throw new Error(
-    `${checkName} never reached success for the latest PR head SHA; missing, cancelled, and timed out children fail closed`,
+    'release rehearsal never reached success for the exact PR/base/head identity; missing, cancelled, and timed out children fail closed',
   )
 }
 

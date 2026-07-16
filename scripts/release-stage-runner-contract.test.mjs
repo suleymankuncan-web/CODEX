@@ -391,6 +391,8 @@ test('operating truth permanently defines release resume and native failed-job r
   assert.match(discipline, /Re-run failed jobs/)
   assert.match(discipline, /volatile/i)
   assert.match(discipline, /110%/)
+  assert.match(discipline, /release-rehearsal\.yml/)
+  assert.match(discipline, /HTTP 429 ve 5xx/)
   assert.match(discipline, /model agent/i)
   assert.match(discipline, /iki root\/full release suite eszamanli calistirilmaz/i)
   assert.match(agents, /Re-run failed jobs/)

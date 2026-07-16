@@ -8,7 +8,7 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  checks: read
+  actions: read
   contents: read
   pull-requests: read
 
@@ -96,7 +96,8 @@ jobs:
 
       - name: Wait for the release rehearsal child on the latest head SHA
         env:
-          REQUIRED_RELEASE_GATE_CHECK_NAME: release-rehearsal
+          REQUIRED_RELEASE_GATE_PR_NUMBER: ${{ github.event.pull_request.number }}
+          REQUIRED_RELEASE_GATE_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           REQUIRED_RELEASE_GATE_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           REQUIRED_RELEASE_GATE_MAX_ATTEMPTS: "24"
           GITHUB_TOKEN: ${{ github.token }}

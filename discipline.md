@@ -353,6 +353,12 @@ optimization-v1.md` ayrintili contract'tir; bu bolum kalici isletim kuralidir:
   `Re-run failed jobs` kullanilir; yesil sibling job'lar sebepsiz yeniden
   kosturulmaz. Required aggregate selected child eksik, skipped, cancelled,
   timed-out veya failed ise fail-closed kalir.
+- Harici release-rehearsal observer tek kanit otoritesi olarak exact
+  `release-rehearsal.yml` workflow run'ini kullanir. Event, PR numarasi, base
+  SHA, head SHA ve en yeni run/attempt birebir uyusmadan PASS kabul edilmez;
+  eski bir basari yeni pending veya failure'i maskeleyemez. Yalniz ag hatasi,
+  HTTP 429 ve 5xx 55-60 saniyelik butce icinde yeniden denenir; diger provider
+  contract hatalari ve tukenen butce fail-closed kalir.
 - Release rehearsal Docker/live fixture ve smoke kanitini korur, fakat ayni
   required gate'in zaten calistirdigi backend lint/Jest/build/audit paketini
   ikinci kez kosturmaz. Post-merge exact-tree reuse kesin degilse full release

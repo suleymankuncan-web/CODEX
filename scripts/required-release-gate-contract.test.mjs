@@ -4,8 +4,8 @@ import { join } from 'node:path'
 import { test } from 'node:test'
 
 import {
-  GITHUB_ACTIONS_APP_ID,
-  evaluateObservedCheckRun,
+  RELEASE_REHEARSAL_WORKFLOW_PATH,
+  evaluateObservedWorkflowRun,
   evaluateRequiredReleaseGateFinal,
   isRetriableCheckRunsError,
   parseNameStatusFiles,
@@ -18,15 +18,29 @@ function readText(path) {
   return readFileSync(join(workspaceRoot, path), 'utf8')
 }
 
-function successfulRun(name) {
-  return {
-    id: 1,
-    name,
+const observedIdentity = {
+  prNumber: 1011,
+  baseSha: 'base-sha',
+  headSha: 'head-sha',
+}
+
+function workflowRun(overrides = {}) {
+  const run = {
+    id: 100,
+    run_number: 10,
+    run_attempt: 1,
+    path: RELEASE_REHEARSAL_WORKFLOW_PATH,
+    event: 'pull_request',
+    head_sha: observedIdentity.headSha,
     status: 'completed',
     conclusion: 'success',
-    started_at: '2026-07-10T12:00:00Z',
-    app: { id: GITHUB_ACTIONS_APP_ID },
+    pull_requests: [{
+      number: observedIdentity.prNumber,
+      head: { sha: observedIdentity.headSha },
+      base: { sha: observedIdentity.baseSha },
+    }],
   }
+  return { ...run, ...overrides }
 }
 
 test('docs/process-only scope uses local diff and root script contracts without a release child', () => {
@@ -116,36 +130,42 @@ test('empty and rename-aware change lists cannot hide a release-impacting path',
   assert.equal(renameScope.mode, 'release')
 })
 
-test('observer evaluates the latest same-head GitHub Actions check run fail closed', () => {
-  const staleSuccess = successfulRun('release-rehearsal')
-  staleSuccess.id = 1
-  staleSuccess.started_at = '2026-07-10T11:00:00Z'
+test('observer accepts only an exact workflow, event, PR, base, and head identity', () => {
+  assert.equal(evaluateObservedWorkflowRun({ workflowRuns: [workflowRun()], ...observedIdentity }).state, 'success')
 
-  const latestCancelled = {
-    ...successfulRun('release-rehearsal'),
-    id: 2,
-    conclusion: 'cancelled',
-    started_at: '2026-07-10T12:00:00Z',
+  const mismatches = [
+    workflowRun({ path: '.github/workflows/other.yml' }),
+    workflowRun({ event: 'workflow_dispatch' }),
+    workflowRun({ head_sha: 'other-head' }),
+    workflowRun({ pull_requests: [{ number: 1012, head: { sha: 'head-sha' }, base: { sha: 'base-sha' } }] }),
+    workflowRun({ pull_requests: [{ number: 1011, head: { sha: 'other-head' }, base: { sha: 'base-sha' } }] }),
+    workflowRun({ pull_requests: [{ number: 1011, head: { sha: 'head-sha' }, base: { sha: 'other-base' } }] }),
+  ]
+  for (const run of mismatches) {
+    assert.equal(evaluateObservedWorkflowRun({ workflowRuns: [run], ...observedIdentity }).state, 'pending')
+  }
+})
+
+test('observer uses only the latest eligible run attempt and never reuses stale success', () => {
+  const oldSuccess = workflowRun({ id: 100, run_number: 10, run_attempt: 1 })
+  for (const status of ['queued', 'in_progress', 'requested', 'waiting', 'pending']) {
+    const latest = workflowRun({ id: 101, run_number: 11, status, conclusion: null })
+    assert.equal(evaluateObservedWorkflowRun({ workflowRuns: [oldSuccess, latest], ...observedIdentity }).state, 'pending')
+  }
+  for (const conclusion of ['failure', 'cancelled', 'timed_out', 'skipped']) {
+    const latest = workflowRun({ id: 102, run_number: 11, conclusion })
+    assert.equal(evaluateObservedWorkflowRun({ workflowRuns: [oldSuccess, latest], ...observedIdentity }).state, 'failure')
   }
 
-  assert.deepEqual(
-    evaluateObservedCheckRun('release-rehearsal', [staleSuccess, latestCancelled]),
-    {
-      state: 'failure',
-      reason: 'release-rehearsal completed with cancelled',
-    },
-  )
-  assert.equal(evaluateObservedCheckRun('release-rehearsal', []).state, 'pending')
+  const newerAttempt = workflowRun({ id: 103, run_number: 10, run_attempt: 2 })
+  assert.equal(evaluateObservedWorkflowRun({ workflowRuns: [oldSuccess, newerAttempt], ...observedIdentity }).state, 'success')
+})
+
+test('observer fails malformed workflow-run evidence closed', () => {
+  assert.equal(evaluateObservedWorkflowRun({ workflowRuns: [], ...observedIdentity }).state, 'pending')
+  assert.equal(evaluateObservedWorkflowRun({ workflowRuns: null, ...observedIdentity }).state, 'failure')
   assert.equal(
-    evaluateObservedCheckRun('release-rehearsal', [
-      { ...successfulRun('release-rehearsal'), conclusion: 'timed_out' },
-    ]).state,
-    'failure',
-  )
-  assert.equal(
-    evaluateObservedCheckRun('release-rehearsal', [
-      { ...successfulRun('release-rehearsal'), conclusion: 'skipped' },
-    ]).state,
+    evaluateObservedWorkflowRun({ workflowRuns: [workflowRun({ run_attempt: null })], ...observedIdentity }).state,
     'failure',
   )
 })
@@ -214,8 +234,13 @@ test('required workflow is unfiltered, uses the reusable root gate, and finalize
   assert.match(workflow, /git diff --check "\$BASE_SHA" "\$HEAD_SHA"/)
   assert.match(workflow, /run:\s*npm run test:scripts/)
   assert.doesNotMatch(workflow, /frontend-targeted:/)
-  assert.match(workflow, /REQUIRED_RELEASE_GATE_CHECK_NAME:\s*release-rehearsal/)
+  assert.match(workflow, /actions:\s*read/)
+  assert.doesNotMatch(workflow, /checks:\s*read/)
+  assert.match(workflow, /REQUIRED_RELEASE_GATE_PR_NUMBER:\s*\$\{\{ github\.event\.pull_request\.number \}\}/)
+  assert.match(workflow, /REQUIRED_RELEASE_GATE_BASE_SHA:\s*\$\{\{ github\.event\.pull_request\.base\.sha \}\}/)
+  assert.match(workflow, /REQUIRED_RELEASE_GATE_HEAD_SHA:\s*\$\{\{ github\.event\.pull_request\.head\.sha \}\}/)
   assert.match(workflow, /REQUIRED_RELEASE_GATE_MAX_ATTEMPTS:\s*"24"/)
+  assert.doesNotMatch(readText('scripts/required-release-gate.mjs'), /check-runs|GITHUB_ACTIONS_APP_ID/)
   assert.match(workflow, /if:\s*\$\{\{ always\(\) \}\}/)
   assert.match(workflow, /name:\s*required-release-gate/)
   assert.match(frontendWorkflow, /name:\s*Frontend Targeted Check/)
