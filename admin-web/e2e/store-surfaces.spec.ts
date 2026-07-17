@@ -1898,11 +1898,11 @@ test('store personnel command surface stays personal and read-only', async ({ pa
 
 test('store personnel cannot open tasks by direct route', async ({ page }) => {
   let workflowInboxRequests = 0
-  let storeActionPlanRequests = 0
+  let taskWorkspaceRequests = 0
 
   await page.unroute('**/api/auth/session')
   await page.unroute('**/api/workflow/inbox**')
-  await page.unroute('**/api/store-actions/plans**')
+  await page.unroute('**/api/store/tasks/workspace**')
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({
       json: {
@@ -1922,18 +1922,9 @@ test('store personnel cannot open tasks by direct route', async ({ page }) => {
     workflowInboxRequests += 1
     await route.fulfill({ json: workflowInboxFixture })
   })
-  await page.route('**/api/store-actions/plans**', async (route) => {
-    storeActionPlanRequests += 1
-    await route.fulfill({
-      json: {
-        items: [],
-        meta: {
-          total: 0,
-          limit: 20,
-          offset: 0,
-        },
-      },
-    })
+  await page.route('**/api/store/tasks/workspace**', async (route) => {
+    taskWorkspaceRequests += 1
+    await route.fulfill({ json: { data: createTaskWorkspaceFixture() } })
   })
 
   await page.goto('/store/tasks')
@@ -1941,7 +1932,7 @@ test('store personnel cannot open tasks by direct route', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /rota kullan/i })).toBeVisible()
   await expect(page.getByText('/store/me')).toBeVisible()
   expect(workflowInboxRequests).toBe(0)
-  expect(storeActionPlanRequests).toBe(0)
+  expect(taskWorkspaceRequests).toBe(0)
 })
 
 test('store personnel cannot open checklists by direct route', async ({ page }) => {
@@ -3751,12 +3742,10 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
   await page.goto('/store/tasks')
 
   await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
-  await expect(page.getByText('Mağaza aksiyonları, checklist takipleri ve projeksiyon işleri.')).toBeVisible()
+  await expect(page.getByText('Aksiyonları başlatın, takip edin ve sonucu kaydedin.')).toBeVisible()
   await expect(page.getByText('Detay ozeti')).toHaveCount(0)
-  await expect(page.getByRole('heading', { name: 'İş kuyruğu' })).toBeVisible()
-  await expect(page.getByText('Açık iş').first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Projeksiyon', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Checklist', exact: true })).toBeVisible()
+  await expect(page.getByText('Toplam sonuç')).toBeVisible()
+  await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Hedef' })).toHaveCount(0)
   await expect(page.getByText('Store Action İş Akışı')).toHaveCount(0)
   await expect(page.getByText('Mağaza aksiyon listesi')).toHaveCount(0)
@@ -3766,36 +3755,36 @@ test('store tasks page renders readable Turkish queue labels', async ({ page }) 
 })
 
 test('store tasks lets managers retry after the queue load fails', async ({ page }) => {
-  let inboxAttempts = 0
-  let allowInbox = false
+  let workspaceAttempts = 0
+  let allowWorkspace = false
 
-  await page.unroute('**/api/workflow/inbox')
-  await page.route('**/api/workflow/inbox', async (route) => {
-    inboxAttempts += 1
+  await page.unroute('**/api/store/tasks/workspace**')
+  await page.route('**/api/store/tasks/workspace**', async (route) => {
+    workspaceAttempts += 1
 
-    if (!allowInbox) {
+    if (!allowWorkspace) {
       await route.fulfill({
         status: 503,
-        json: { message: 'Temporary workflow inbox outage' },
+        json: { message: 'Temporary task workspace outage' },
       })
       return
     }
 
-    await route.fulfill({ json: workflowInboxFixture })
+    await route.fulfill({ json: { data: createTaskWorkspaceFixture() } })
   })
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByRole('heading', { name: 'Görevler açılamadı' })).toBeVisible()
+  await expect(page.getByText('Görevler açılamadı', { exact: true })).toBeVisible()
   const retryButton = page.getByRole('button', { name: 'Tekrar dene' })
   await expect(retryButton).toBeVisible()
 
-  allowInbox = true
+  allowWorkspace = true
   await retryButton.click()
 
   await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
-  await expect.poll(() => inboxAttempts).toBeGreaterThan(1)
-  await expect(page.getByRole('heading', { name: 'Görevler açılamadı' })).toHaveCount(0)
+  await expect.poll(() => workspaceAttempts).toBeGreaterThan(1)
+  await expect(page.getByText('Görevler açılamadı', { exact: true })).toHaveCount(0)
 })
 
 test('store tasks command-center copy stays stable when locale changes', async ({ page }) => {
@@ -3805,8 +3794,8 @@ test('store tasks command-center copy stays stable when locale changes', async (
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'İş kuyruğu' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Projeksiyon', exact: true })).toBeVisible()
+  await expect(page.getByText('Toplam sonuç')).toBeVisible()
+  await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
   await expect(page.getByText('Store Action workflow')).toHaveCount(0)
   await expect(page.getByText('Store action list')).toHaveCount(0)
   await expect(page.getByText('Aksiyon gerektiren işler')).toHaveCount(0)
@@ -3888,10 +3877,10 @@ test('store tasks checklist acknowledgement opens the exact checklist receipt', 
   })
 
   await page.goto('/store/tasks')
-  await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
   await page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' }).click()
   await page.getByRole('dialog', { name: 'Görev detayı' }).getByRole('link', { name: 'Kaynağı aç' }).click()
 
+  await expect.poll(() => acknowledgementRequests).toBeGreaterThanOrEqual(1)
   await expect(page).toHaveURL(new RegExp(`/store/checklists\\?overlay=result&checklistInstanceId=${checklistCommandInstanceId}&storeId=${demoStoreId}&workflowTab=inbox$`))
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('Checklist result')
@@ -4093,7 +4082,8 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
 
   await page.goto('/store/tasks')
   await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' })).toBeVisible()
-  expect(workflowInboxRequests).toBe(1)
+  expect(workflowInboxRequests).toBeGreaterThanOrEqual(1)
+  const workflowRequestsBeforeAcknowledgement = workflowInboxRequests
 
   await page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' }).click()
   await page.getByRole('dialog', { name: 'Görev detayı' }).getByRole('link', { name: 'Kaynağı aç' }).click()
@@ -4103,7 +4093,7 @@ test('store checklist acknowledgement refreshes the store task queue', async ({ 
 
   await page.goto('/store/tasks')
 
-  await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
+  await expect.poll(() => workflowInboxRequests).toBeGreaterThan(workflowRequestsBeforeAcknowledgement)
   await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'BM Result' })).toHaveCount(0)
 })
 
@@ -4871,12 +4861,55 @@ function createStoreManagerWorkforceWorkspace() {
   }
 }
 
+function createTaskWorkspaceFixture() {
+  return {
+    view: 'store_manager',
+    capabilities: {
+      canStart: true,
+      canUpdate: true,
+      canComplete: true,
+      canCancel: true,
+    },
+    items: [],
+    summary: {
+      retained: 0,
+      actionable: 0,
+      completed: 0,
+      cancelled: 0,
+      checklist: 0,
+    },
+    page: {
+      total: 0,
+      limit: 20,
+      offset: 0,
+      count: 0,
+      hasMore: false,
+    },
+  }
+}
+
 async function routeStoreSurfaceApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
   })
   await page.route('**/api/store/workforce/workspace**', async (route) => {
     await route.fulfill({ json: { data: createStoreManagerWorkforceWorkspace() } })
+  })
+  await page.route('**/api/store/tasks/workspace**', async (route) => {
+    await route.fulfill({ json: { data: createTaskWorkspaceFixture() } })
+  })
+  await page.route('**/api/store/tasks/*/events**', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          items: [],
+          total: 0,
+          limit: 20,
+          offset: 0,
+          hasMore: false,
+        },
+      },
+    })
   })
 
   await page.route('**/api/feed?**', async (route) => {

@@ -82,6 +82,8 @@ export class StoreActionPlanController {
   ) {
     return this.storeActionPlanService.createPlan({
       actorUserId: request.user.userId,
+      actorDisplayName: request.user.displayName ?? "Operasyon kullanıcısı",
+      actorRoleLabel: actorRoleLabel(request.user.roleCodes),
       actorScope: request.user.scope,
       actorActionScope: request.user.actionScope,
       ...body,
@@ -98,6 +100,8 @@ export class StoreActionPlanController {
   ) {
     return this.storeActionPlanService.updateStatus({
       actorUserId: request.user.userId,
+      actorDisplayName: request.user.displayName ?? "Operasyon kullanıcısı",
+      actorRoleLabel: actorRoleLabel(request.user.roleCodes),
       actorActionScope: request.user.actionScope,
       actionPlanId,
       status: body.status,
@@ -115,6 +119,8 @@ export class StoreActionPlanController {
   ) {
     return this.storeActionPlanService.closePlan({
       actorUserId: request.user.userId,
+      actorDisplayName: request.user.displayName ?? "Operasyon kullanıcısı",
+      actorRoleLabel: actorRoleLabel(request.user.roleCodes),
       actorActionScope: request.user.actionScope,
       actionPlanId,
       resolutionNote: body.resolutionNote,
@@ -131,9 +137,20 @@ export class StoreActionPlanController {
   ) {
     return this.storeActionPlanService.cancelPlan({
       actorUserId: request.user.userId,
+      actorDisplayName: request.user.displayName ?? "Operasyon kullanıcısı",
+      actorRoleLabel: actorRoleLabel(request.user.roleCodes),
       actorActionScope: request.user.actionScope,
       actionPlanId,
       cancelReason: body.cancelReason,
     });
   }
+}
+
+function actorRoleLabel(roleCodes: readonly string[]) {
+  const labels = roleCodes.flatMap((roleCode) => {
+    if (roleCode === "STORE_MANAGER") return ["Mağaza Müdürü"];
+    if (roleCode === "SUPER_ADMIN") return ["Sistem Yöneticisi"];
+    return [];
+  });
+  return labels.length > 0 ? labels.join(", ") : "Operasyon kullanıcısı";
 }

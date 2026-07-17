@@ -283,7 +283,7 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
     completed: false,
     acknowledged: false,
   }
-  let workflowInboxRequests = 0
+  let taskWorkspaceRequests = 0
 
   await page.addInitScript(() => {
     window.localStorage.setItem('store-ops-app-locale', 'en')
@@ -296,37 +296,62 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
     templateName: 'VM Visit',
     templateType: 'VM_STORE_VISIT',
   })
-  await page.route('**/api/workflow/inbox', async (route) => {
-    workflowInboxRequests += 1
+  await page.route('**/api/store/tasks/workspace**', async (route) => {
+    taskWorkspaceRequests += 1
+    const items = handoffState.completed
+      ? [
+          {
+            actionPlanId: '77777777-7777-4777-8777-777777777777',
+            storeId,
+            storeName: 'Marmara Park',
+            title: 'VM Result',
+            summary: 'Marmara Park completed checklist result',
+            priority: 'medium',
+            status: 'closed',
+            dueOn: '2026-05-21',
+            createdAt: '2026-05-20T10:30:00.000Z',
+            updatedAt: '2026-05-20T10:30:00.000Z',
+            completedAt: '2026-05-20T10:30:00.000Z',
+            resultNote: 'VM checklist completed.',
+            source: {
+              type: 'checklist_remediation',
+              id: '44444444-4444-4444-8444-444444444444',
+              deepLink: '/store/checklists',
+            },
+            events: {
+              items: [],
+              total: 0,
+              limit: 20,
+              hasMore: false,
+            },
+          },
+        ]
+      : []
     await route.fulfill({
       json: {
-        items: handoffState.completed
-          ? [
-              {
-                itemType: 'acknowledgement',
-                sourceType: 'checklist_receipt',
-                sourceId: '44444444-4444-4444-8444-444444444444',
-                title: 'VM Result',
-                summary: 'Marmara Park completed checklist result',
-                storeId,
-                storeName: 'Marmara Park',
-                workflowStatus: 'completed',
-                inboxStatus: 'needs_attention',
-                urgency: 'medium',
-                createdAt: '2026-05-20T10:30:00.000Z',
-                needsAttentionAt: '2026-05-20T10:30:00.000Z',
-                actorRole: 'STORE_MANAGER',
-                primaryActionLabel: 'I acknowledge',
-                secondaryActionLabel: 'Open checklist result',
-                deepLink: '/store/checklists?tab=inbox&result=44444444-4444-4444-8444-444444444444',
-              },
-            ]
-          : [],
-        meta: {
-          count: handoffState.completed ? 1 : 0,
-          total: handoffState.completed ? 1 : 0,
-          limit: 30,
-          offset: 0,
+        data: {
+          view: 'store_manager',
+          capabilities: {
+            canStart: true,
+            canUpdate: true,
+            canComplete: true,
+            canCancel: true,
+          },
+          items,
+          summary: {
+            retained: items.length,
+            actionable: 0,
+            completed: items.length,
+            cancelled: 0,
+            checklist: items.length,
+          },
+          page: {
+            total: items.length,
+            limit: 20,
+            offset: 0,
+            count: items.length,
+            hasMore: false,
+          },
         },
       },
     })
@@ -334,8 +359,8 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
 
   await page.goto('/store/tasks')
   await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
-  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'VM Result' })).toHaveCount(0)
-  expect(workflowInboxRequests).toBe(1)
+  await expect(page.getByTestId('store-action-plan-row').filter({ hasText: 'VM Result' })).toHaveCount(0)
+  expect(taskWorkspaceRequests).toBe(1)
 
   await page.goto(`/store/checklists?overlay=workflow&storeId=${storeId}&workflowTab=visits`)
   await page
@@ -362,8 +387,8 @@ test('completed checklist refreshes the store task queue cache', async ({ page }
   await page.goto('/store/tasks')
   await expect(page.getByTestId('store-action-plans-panel')).toBeVisible()
 
-  await expect.poll(() => workflowInboxRequests).toBeGreaterThanOrEqual(2)
-  await expect(page.getByTestId('store-task-queue-row').filter({ hasText: 'VM Result' })).toBeVisible()
+  await expect.poll(() => taskWorkspaceRequests).toBeGreaterThanOrEqual(2)
+  await expect(page.getByTestId('store-action-plan-row').filter({ hasText: 'VM Result' })).toBeVisible()
 })
 
 test('region manager can read BM and VM checklist results without acknowledging them', async ({ page }) => {

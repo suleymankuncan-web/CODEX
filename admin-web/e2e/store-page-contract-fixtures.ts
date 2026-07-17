@@ -171,6 +171,19 @@ function resolveStoreContractApiFallback(method: string, url: URL): JsonBody | n
   if (path === '/org/stores') return createOrgStores()
   if (path === '/feed' || path === '/feed/posts') return createFeedPosts(url)
   if (path === '/store-actions/plans') return emptyList(url)
+  if (path === '/store/tasks/workspace') {
+    const limit = Number(url.searchParams.get('limit') ?? '20')
+    const offset = Number(url.searchParams.get('offset') ?? '0')
+    return {
+      data: {
+        view: 'region_manager',
+        capabilities: { canStart: false, canUpdate: false, canComplete: false, canCancel: false },
+        items: [],
+        summary: { retained: 0, actionable: 0, completed: 0, cancelled: 0, checklist: 0 },
+        page: { total: 0, limit, offset, count: 0, hasMore: false },
+      },
+    }
+  }
   if (path === '/competitions') return emptyList(url)
   if (path === '/mobile/checklists/today') return createChecklistTodayFixture()
   if (path === '/checklists/acknowledgements/list') return emptyList(url)

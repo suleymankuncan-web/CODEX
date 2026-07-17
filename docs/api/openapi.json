@@ -6331,6 +6331,115 @@
           "WorkforceWorkspace"
         ]
       }
+    },
+    "/api/store/tasks/workspace": {
+      "get": {
+        "operationId": "TaskCommandWorkspaceController_getWorkspace",
+        "parameters": [
+          {
+            "name": "periodStart",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "periodEnd",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role-scoped bounded task command workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCommandWorkspaceResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TaskCommandWorkspace"
+        ]
+      }
+    },
+    "/api/store/tasks/{actionPlanId}/events": {
+      "get": {
+        "operationId": "TaskCommandWorkspaceController_getEvents",
+        "parameters": [
+          {
+            "name": "actionPlanId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scoped bounded task audit trail.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCommandAuditPageResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "TaskCommandWorkspace"
+        ]
+      }
     }
   },
   "info": {
@@ -24509,6 +24618,352 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/WorkforceWorkspace"
+          }
+        }
+      },
+      "TaskCommandCapabilities": {
+        "type": "object",
+        "required": [
+          "canStart",
+          "canUpdate",
+          "canComplete",
+          "canCancel"
+        ],
+        "properties": {
+          "canStart": {
+            "type": "boolean"
+          },
+          "canUpdate": {
+            "type": "boolean"
+          },
+          "canComplete": {
+            "type": "boolean"
+          },
+          "canCancel": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TaskCommandAuditEvent": {
+        "type": "object",
+        "required": [
+          "eventId",
+          "eventType",
+          "occurredAt",
+          "actorDisplayName",
+          "actorRoleLabel",
+          "note"
+        ],
+        "properties": {
+          "eventId": {
+            "type": "string"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "actorDisplayName": {
+            "type": "string"
+          },
+          "actorRoleLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "TaskCommandAuditPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskCommandAuditEvent"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "TaskCommandAuditPreview": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "hasMore"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskCommandAuditEvent"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TaskCommandSource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "deepLink"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "kpi_exception",
+              "checklist_remediation"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "deepLink": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^/store/(checklists|kpis)(\\?.*)?$"
+          }
+        }
+      },
+      "TaskCommandWorkspaceItem": {
+        "type": "object",
+        "required": [
+          "actionPlanId",
+          "storeId",
+          "storeName",
+          "title",
+          "summary",
+          "priority",
+          "status",
+          "dueOn",
+          "createdAt",
+          "updatedAt",
+          "completedAt",
+          "resultNote",
+          "source",
+          "events"
+        ],
+        "properties": {
+          "actionPlanId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "priority": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "in_progress",
+              "blocked",
+              "closed",
+              "cancelled"
+            ]
+          },
+          "dueOn": {
+            "type": "string",
+            "format": "date"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "resultNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "source": {
+            "$ref": "#/components/schemas/TaskCommandSource"
+          },
+          "events": {
+            "$ref": "#/components/schemas/TaskCommandAuditPreview"
+          }
+        }
+      },
+      "TaskCommandSummary": {
+        "type": "object",
+        "required": [
+          "retained",
+          "actionable",
+          "completed",
+          "cancelled",
+          "checklist"
+        ],
+        "properties": {
+          "retained": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "actionable": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "completed": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cancelled": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "checklist": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "TaskCommandPage": {
+        "type": "object",
+        "required": [
+          "total",
+          "limit",
+          "offset",
+          "count",
+          "hasMore"
+        ],
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TaskCommandWorkspace": {
+        "type": "object",
+        "required": [
+          "view",
+          "capabilities",
+          "items",
+          "summary",
+          "page"
+        ],
+        "properties": {
+          "view": {
+            "type": "string",
+            "enum": [
+              "report_viewer",
+              "region_manager",
+              "store_manager"
+            ]
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/TaskCommandCapabilities"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskCommandWorkspaceItem"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/TaskCommandSummary"
+          },
+          "page": {
+            "$ref": "#/components/schemas/TaskCommandPage"
+          }
+        }
+      },
+      "TaskCommandWorkspaceResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TaskCommandWorkspace"
+          }
+        }
+      },
+      "TaskCommandAuditPageResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TaskCommandAuditPage"
           }
         }
       }

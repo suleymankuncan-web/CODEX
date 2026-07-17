@@ -3233,6 +3233,80 @@ export type components = {
       "missingStores": number
       "totalTargetValue": string
     }
+    "TaskCommandAuditEvent": {
+      "eventId": string
+      "eventType": string
+      "occurredAt": string
+      "actorDisplayName": string
+      "actorRoleLabel": string | null
+      "note": string | null
+    }
+    "TaskCommandAuditPage": {
+      "items": components['schemas']["TaskCommandAuditEvent"][]
+      "total": number
+      "limit": number
+      "offset": number
+    }
+    "TaskCommandAuditPageResponse": {
+      "data": components['schemas']["TaskCommandAuditPage"]
+    }
+    "TaskCommandAuditPreview": {
+      "items": components['schemas']["TaskCommandAuditEvent"][]
+      "total": number
+      "limit": number
+      "hasMore": boolean
+    }
+    "TaskCommandCapabilities": {
+      "canStart": boolean
+      "canUpdate": boolean
+      "canComplete": boolean
+      "canCancel": boolean
+    }
+    "TaskCommandPage": {
+      "total": number
+      "limit": number
+      "offset": number
+      "count": number
+      "hasMore": boolean
+    }
+    "TaskCommandSource": {
+      "type": "kpi_exception" | "checklist_remediation"
+      "id": string
+      "deepLink": string | null
+    }
+    "TaskCommandSummary": {
+      "retained": number
+      "actionable": number
+      "completed": number
+      "cancelled": number
+      "checklist": number
+    }
+    "TaskCommandWorkspace": {
+      "view": "report_viewer" | "region_manager" | "store_manager"
+      "capabilities": components['schemas']["TaskCommandCapabilities"]
+      "items": components['schemas']["TaskCommandWorkspaceItem"][]
+      "summary": components['schemas']["TaskCommandSummary"]
+      "page": components['schemas']["TaskCommandPage"]
+    }
+    "TaskCommandWorkspaceItem": {
+      "actionPlanId": string
+      "storeId": string
+      "storeName": string | null
+      "title": string
+      "summary": string | null
+      "priority": "high" | "medium" | "low"
+      "status": "open" | "in_progress" | "blocked" | "closed" | "cancelled"
+      "dueOn": string
+      "createdAt": string
+      "updatedAt": string
+      "completedAt": string | null
+      "resultNote": string | null
+      "source": components['schemas']["TaskCommandSource"]
+      "events": components['schemas']["TaskCommandAuditPreview"]
+    }
+    "TaskCommandWorkspaceResponse": {
+      "data": components['schemas']["TaskCommandWorkspace"]
+    }
     "UpdateKpiImportStoreScopeDto": {
       "storeType": "company" | "franchise" | "operator"
       "regionId": string
@@ -4653,6 +4727,28 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["WorkforceWorkspaceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/tasks/workspace": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["TaskCommandWorkspaceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/tasks/{actionPlanId}/events": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["TaskCommandAuditPageResponse"]
           }
         }
       }

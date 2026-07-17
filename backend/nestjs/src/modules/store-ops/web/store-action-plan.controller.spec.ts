@@ -149,6 +149,8 @@ describe("StoreActionPlanController", () => {
 
     expect(storeActionPlanService.createPlan).toHaveBeenCalledWith({
       actorUserId: "00000000-0000-4000-8000-000000000901",
+      actorDisplayName: "Operasyon kullanıcısı",
+      actorRoleLabel: "Mağaza Müdürü",
       actorScope: {
         companyIds: ["00000000-0000-4000-8000-000000000001"],
         regionIds: ["00000000-0000-4000-8000-000000000010"],
@@ -181,6 +183,8 @@ describe("StoreActionPlanController", () => {
 
     expect(storeActionPlanService.updateStatus).toHaveBeenCalledWith({
       actorUserId: "00000000-0000-4000-8000-000000000901",
+      actorDisplayName: "Operasyon kullanıcısı",
+      actorRoleLabel: "Mağaza Müdürü",
       actorActionScope: { assignedStoreIds: [assignedStoreId] },
       actionPlanId: "00000000-0000-4000-8000-000000000701",
       status: "blocked",
@@ -188,12 +192,16 @@ describe("StoreActionPlanController", () => {
     });
     expect(storeActionPlanService.closePlan).toHaveBeenCalledWith({
       actorUserId: "00000000-0000-4000-8000-000000000901",
+      actorDisplayName: "Operasyon kullanıcısı",
+      actorRoleLabel: "Mağaza Müdürü",
       actorActionScope: { assignedStoreIds: [assignedStoreId] },
       actionPlanId: "00000000-0000-4000-8000-000000000701",
       resolutionNote: "Called the team and corrected the display plan",
     });
     expect(storeActionPlanService.cancelPlan).toHaveBeenCalledWith({
       actorUserId: "00000000-0000-4000-8000-000000000901",
+      actorDisplayName: "Operasyon kullanıcısı",
+      actorRoleLabel: "Mağaza Müdürü",
       actorActionScope: { assignedStoreIds: [assignedStoreId] },
       actionPlanId: "00000000-0000-4000-8000-000000000701",
       cancelReason: "Duplicate field coaching item",

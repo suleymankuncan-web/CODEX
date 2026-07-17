@@ -21,7 +21,7 @@ import {
   masterDataQualityIssueSummarySchema,
 } from "./openapi-master-data-schemas";
 import { applyPilotFeedbackOpenApi } from "./pilot-feedback-openapi";
-import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi"; import { applyTargetWorkspaceOpenApi } from "./target-workspace-openapi"; import { applyWorkforceWorkspaceOpenApi } from "./workforce-workspace-openapi"; import { applyRankingOpenApi } from "./ranking-openapi";
+import { applyBrowserSessionOpenApi } from "./browser-session-openapi"; import { applyChecklistCommandOpenApi } from "./checklist-command-openapi"; import { applySalesTargetIncentiveWorkspaceOpenApi } from "./sales-target-incentive-workspace-openapi"; import { applyTargetWorkspaceOpenApi } from "./target-workspace-openapi"; import { applyWorkforceWorkspaceOpenApi } from "./workforce-workspace-openapi"; import { applyTaskCommandWorkspaceOpenApi } from "./task-command-workspace-openapi"; import { applyRankingOpenApi } from "./ranking-openapi";
 import { applyStoreActionPlanOpenApi } from "./store-action-plan-openapi";
 import { applyWorkforceOpenApi } from "./workforce-openapi";
 import * as requestCenterOpenApi from "./request-center-openapi";
@@ -5074,7 +5074,7 @@ async function generateOpenApi(): Promise<void> {
   );
 
   const outputPath = resolve(process.cwd(), "../../docs/api/openapi.json");
-  preserveOpenApiBaselineFromFile(document, outputPath);
+  preserveOpenApiBaselineFromFile(document, outputPath); applyTaskCommandWorkspaceOpenApi(document);
   mkdirSync(dirname(outputPath), { recursive: true });
   writeFileSync(outputPath, `${JSON.stringify(document, null, 2)}\n`);
 

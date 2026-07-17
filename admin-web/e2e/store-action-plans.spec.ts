@@ -27,25 +27,24 @@ test('store tasks renders the command center and keeps target approvals out', as
   await page.goto('/store/tasks')
 
   await expect(page.getByRole('heading', { name: 'Görevler' })).toBeVisible()
-  await expect(page.getByText('Mağaza aksiyonları, checklist takipleri ve projeksiyon işleri.')).toBeVisible()
-  await expect(page.getByText('İş kuyruğu')).toBeVisible()
+  await expect(page.getByText('Aksiyonları başlatın, takip edin ve sonucu kaydedin.')).toBeVisible()
+  await expect(page.getByText('Toplam sonuç')).toBeVisible()
   const queuePanel = page.getByTestId('store-action-plans-panel')
   await expect(queuePanel.getByText('Görev', { exact: true })).toBeVisible()
   await expect(queuePanel.getByText('Kaynak', { exact: true })).toBeVisible()
   await expect(queuePanel.getByText('Tarih', { exact: true })).toBeVisible()
-  await expect(queuePanel.getByText('Geçen süre', { exact: true })).toBeVisible()
+  await expect(queuePanel.getByText('Mağaza', { exact: true })).toBeVisible()
   await expect(queuePanel.getByText('Öncelik', { exact: true })).toBeVisible()
   await expect(queuePanel.getByText('Durum', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Hedef' })).toHaveCount(0)
+  await expect(queuePanel.getByRole('button', { name: 'Hedef', exact: true })).toHaveCount(0)
   await expect(page.getByText('Hedef dağıtımı onayı')).toHaveCount(0)
   await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toBeVisible()
   await expect(getActionPlanRow(page, 'Mayıs reyon düzeni')).toBeVisible()
   await expect(getActionPlanRow(page, 'Mayıs çözüm kaydı')).toHaveCount(0)
-  await expect(page.getByText('Devreden').first()).toBeVisible()
   expect(api.listStatuses).toEqual(expect.arrayContaining(['open', 'in_progress', 'blocked', 'closed', 'cancelled']))
 })
 
-test('store tasks shows same-day open plans as today instead of one elapsed day', async ({ page }) => {
+test('store tasks keeps same-day open plans visibly open', async ({ page }) => {
   const sameDayPlan = {
     ...storeActionPlansFixture[0],
     actionPlanId: '00000000-0000-0000-0000-00000000a105',
@@ -57,7 +56,7 @@ test('store tasks shows same-day open plans as today instead of one elapsed day'
 
   await page.goto('/store/tasks')
 
-  await expect(getActionPlanRow(page, 'Bugün açılan takip')).toContainText('Bugün açık')
+  await expect(getActionPlanRow(page, 'Bugün açılan takip')).toContainText('Açık')
 })
 
 test('store tasks renders persisted plan names without UUID fallbacks', async ({ page }) => {
@@ -88,9 +87,9 @@ test('store tasks keeps raw action plan permission errors out of the UI', async 
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByTestId('store-action-plans-panel').getByText(/Aksiyon planlar/).first()).toBeVisible()
+  await expect(page.getByText('Görevler açılamadı')).toBeVisible()
   await expect(page.getByText('Missing required role')).toHaveCount(0)
-  await expect(getWorkflowRow(page, 'UPT projeksiyon riski')).toBeVisible()
+  await expect(getWorkflowRow(page, 'UPT projeksiyon riski')).toHaveCount(0)
 })
 
 test('store manager can move and close a persisted action plan from the drawer', async ({ page }) => {
@@ -107,9 +106,13 @@ test('store manager can move and close a persisted action plan from the drawer',
 
   await drawer.getByRole('button', { name: 'İşleme al' }).click()
   expect(api.statusPayloads.at(-1)).toMatchObject({ status: 'in_progress' })
+  await expect(drawer).toBeHidden()
+  await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toContainText('İşlemde')
 
-  await drawer.getByPlaceholder('Kısa not yaz').fill('Vitrin düzeni tamamlandı.')
-  await drawer.getByRole('button', { name: 'Çözüm bildir' }).click()
+  await getActionPlanRow(page, 'Vitrin düzeni takip maddesi').click()
+  const refreshedDrawer = page.getByRole('dialog', { name: 'Görev detayı' })
+  await refreshedDrawer.getByPlaceholder('Kısa not yaz').fill('Vitrin düzeni tamamlandı.')
+  await refreshedDrawer.getByRole('button', { name: 'Çözüm bildir' }).click()
   expect(api.closePayloads.at(-1)).toMatchObject({
     resolutionNote: 'Vitrin düzeni tamamlandı.',
   })
@@ -129,6 +132,8 @@ test('store manager can block a persisted action plan with a note', async ({ pag
     status: 'blocked',
     note: 'Eksik ürün bekleniyor.',
   })
+  await expect(drawer).toBeHidden()
+  await expect(getActionPlanRow(page, 'Mayıs reyon düzeni')).toContainText('Bloke')
 })
 
 test('region manager reads only completed results without command buttons', async ({ page }) => {
@@ -148,8 +153,8 @@ test('region manager reads only completed results without command buttons', asyn
 
   await page.goto('/store/tasks')
 
-  await expect(page.getByText('Mağaza müdürünün bitirdiği süreçler ve sonuç geçmişi.')).toBeVisible()
-  await expect(page.getByTestId('store-action-plans-panel').getByText('Sonuç geçmişi')).toBeVisible()
+  await expect(page.getByText('Tamamlanan mağaza aksiyonlarını ve denetlenebilir sonuç geçmişini inceleyin.')).toBeVisible()
+  await expect(page.getByText('Çözüm bildirildi').first()).toBeVisible()
   await expect(page.getByRole('button', { name: 'Açık takipler' })).toHaveCount(0)
   await expect(getActionPlanRow(page, 'Haziran çözüm kaydı')).toBeVisible()
   await expect(getActionPlanRow(page, 'Vitrin düzeni takip maddesi')).toHaveCount(0)
@@ -314,6 +319,85 @@ async function routeStoreTasksApi(
       json: {
         ...workflowInboxFixture,
         items: input.workflowItems ?? workflowInboxFixture.items,
+      },
+    })
+  })
+
+  await page.route('**/api/store/tasks/**', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    if (url.pathname.endsWith('/events')) {
+      await route.fulfill({
+        json: {
+          data: {
+            items: [{
+              eventId: 'event-1',
+              eventType: 'store_action_plan.created',
+              occurredAt: '2026-06-14T08:00:00.000Z',
+              actorDisplayName: 'Pilot Kullanıcı',
+              actorRoleLabel: 'Mağaza Müdürü',
+              note: null,
+            }],
+            total: 1,
+            limit: 20,
+            offset: 0,
+          },
+        },
+      })
+      return
+    }
+    if (state.failActionPlanList) {
+      await route.fulfill({ status: 403, json: { message: 'Missing required role' } })
+      return
+    }
+    const resultOnly = roleCodes.includes('REGION_MANAGER') || roleCodes.includes('REPORT_VIEWER')
+    const scopedPlans = state.plans.filter((plan) =>
+      assignedStoreIds.includes(plan.storeId)
+      && (!resultOnly || plan.status === 'closed' || plan.status === 'cancelled')
+      && (plan.dueOn.startsWith('2026-06') || plan.closedAt?.startsWith('2026-06')),
+    )
+    const items = scopedPlans.map((plan) => ({
+      actionPlanId: plan.actionPlanId,
+      storeId: plan.storeId,
+      storeName: plan.storeName,
+      title: plan.title,
+      summary: plan.summary,
+      priority: plan.priority,
+      status: plan.status,
+      dueOn: plan.dueOn,
+      createdAt: plan.createdAt,
+      updatedAt: plan.updatedAt,
+      completedAt: plan.closedAt ?? plan.cancelledAt,
+      resultNote: plan.resolutionNote ?? plan.cancelReason,
+      source: {
+        type: plan.sourceType,
+        id: plan.sourceId,
+        deepLink: plan.sourceDeepLink ?? (plan.sourceType === 'checklist_remediation' ? '/store/checklists' : '/store/kpis'),
+      },
+      events: { items: [], total: 0, limit: 0, hasMore: false },
+    }))
+    const statuses = resultOnly ? ['closed', 'cancelled'] : ['open', 'in_progress', 'blocked', 'closed', 'cancelled']
+    state.listStatuses.push(...statuses)
+    await route.fulfill({
+      json: {
+        data: {
+          view: resultOnly ? 'region_manager' : 'store_manager',
+          capabilities: {
+            canStart: !resultOnly,
+            canUpdate: !resultOnly,
+            canComplete: !resultOnly,
+            canCancel: !resultOnly,
+          },
+          items,
+          summary: {
+            retained: items.length,
+            actionable: items.filter((item) => ['open', 'in_progress', 'blocked'].includes(item.status)).length,
+            completed: items.filter((item) => item.status === 'closed').length,
+            cancelled: items.filter((item) => item.status === 'cancelled').length,
+            checklist: items.filter((item) => item.source.type === 'checklist_remediation').length,
+          },
+          page: { total: items.length, limit: 20, offset: 0, count: items.length, hasMore: false },
+        },
       },
     })
   })
