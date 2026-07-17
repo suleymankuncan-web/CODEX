@@ -585,6 +585,17 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/store/workforce/workspace')) {
+      await route.fulfill({ json: { data: {
+        view: 'region_manager',
+        summary: { totalStores: 1, activePersonnel: 1, shortageStores: 0, openPositions: 0, averageTenureDays: 365 },
+        stores: { items: [{ companyId, companyName: 'HR Axis', regionId, regionName: 'Pilot Region', regionManagerName: 'Pilot Bölge Müdürü', storeId, storeCode: 'PILOT-1', storeName: 'Pilot Store', storeStatus: 'active', norm: 1, active: 1, averageTenureDays: 365, gap: 0, shortageDays: null, personnel: [], personnelTotal: 0, personnelLimit: 50, personnelOffset: 0, personnelHasMore: false }], total: 1, limit: 50, offset: 0, hasMore: false },
+        history: null,
+        capabilities: { canCreateSellerCodeRequest: false, canCreateOffboardingRequest: false },
+      } } })
+      return
+    }
+
     if (pathname.endsWith('/api/workforce/headcount-gap')) {
       await route.fulfill({ json: headcountGapFixture })
       return

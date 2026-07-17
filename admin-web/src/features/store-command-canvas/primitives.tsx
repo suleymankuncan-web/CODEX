@@ -17,12 +17,14 @@ export function CommandCanvasPage(input: {
   children: ReactNode
   ariaLabelledBy: string
   className?: string
+  testId?: string
 }) {
   return (
     <section
       aria-labelledby={input.ariaLabelledBy}
       className={cn('command-canvas-page', input.className)}
       data-command-canvas-page
+      data-testid={input.testId}
     >
       {input.children}
     </section>
@@ -187,12 +189,14 @@ export function CommandCanvasDataList(input: {
   header?: ReactNode
   footer?: ReactNode
   className?: string
+  testId?: string
 }) {
   return (
     <section
       aria-label={input.ariaLabel}
       className={cn('command-canvas-data-list', input.className)}
       data-command-canvas-list
+      data-testid={input.testId}
     >
       {input.header ? <div className="command-canvas-list-header">{input.header}</div> : null}
       <div className="command-canvas-list-body">{input.children}</div>

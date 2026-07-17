@@ -1,5 +1,4 @@
 import { expect, test, type Page } from './test-fixtures'
-import { readFile } from 'node:fs/promises'
 import {
   installGenericStoreApiFallbacks,
   installStoreContractSession,
@@ -7,123 +6,147 @@ import {
   storeIds,
 } from './store-page-contract-fixtures'
 
-test('workforce region table uses full surface without selected-store side panel', async ({ page }) => {
+test('region workforce uses one bounded workspace request and local decision filters', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await installGenericStoreApiFallbacks(page)
-  await routeWorkforceContractApi(page)
+  let workspaceRequests = 0
+  await routeWorkforceWorkspace(page, () => { workspaceRequests += 1 })
 
   await page.goto('/store/workforce')
-
   await expect(page.getByRole('heading', { name: 'Norm Kadro' })).toBeVisible()
-  await expect(page.getByText('Seçili mağaza')).toHaveCount(0)
-  await expect(page.getByTestId('store-workforce-region-rows')).toBeVisible()
-  await expect(page.getByTestId('store-workforce-region-row')).toHaveCount(3)
+  await expect(page.getByRole('button', { name: /Balıkesir 10 Burda AVM/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Bursa Downtown AVM/ })).toBeVisible()
+  expect(workspaceRequests).toBe(1)
 
-  const turnoverMetric = page.locator('.swc-metric-card').filter({ hasText: 'Yıl geneli turnover' })
-  await expect(turnoverMetric).toContainText('Veri yok')
-  await expect(turnoverMetric).not.toContainText('%')
-
-  const turnoverCells = page.locator('.swc-turnover-cell')
-  await expect(turnoverCells).toHaveCount(3)
-  await expect(turnoverCells).toHaveText(['Veri yok', 'Veri yok', 'Veri yok'])
-  expect(
-    await turnoverCells.locator('em').evaluateAll((elements) =>
-      elements.map((element) => element.getAttribute('style')),
-    ),
-  ).toEqual(['width: 0%;', 'width: 0%;', 'width: 0%;'])
-
-  const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Excel dışa aktar' }).click()
-  const download = await downloadPromise
-  const downloadPath = await download.path()
-  expect(downloadPath).not.toBeNull()
-  const csv = await readFile(downloadPath!, 'utf8')
-  expect(csv).not.toContain('%')
-  expect(csv.match(/Veri yok/g)).toHaveLength(3)
+  await page.getByRole('button', { name: /Eksik mağaza/ }).click()
+  await expect(page.getByRole('button', { name: /Balıkesir 10 Burda AVM/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Bursa Downtown AVM/ })).toHaveCount(0)
+  expect(workspaceRequests).toBe(2)
 })
 
-test('workforce detail dialog keeps active tab visible and footer close action usable', async ({ page }) => {
+test('region workforce renders a non-fixed 36-store scope in one bounded page', async ({ page }) => {
   await installStoreContractSession(page, 'regionManager')
   await installGenericStoreApiFallbacks(page)
-  await routeWorkforceContractApi(page)
+  let workspaceRequests = 0
+  await page.route('**/api/store/workforce/workspace**', async (route) => {
+    workspaceRequests += 1
+    const stores = Array.from({ length: 36 }, (_, index) => createStore(`scope-${index + 1}`, `Kapsam Mağaza ${String(index + 1).padStart(2, '0')}`, index))
+    await route.fulfill({ json: { data: createWorkspace(stores) } })
+  })
 
   await page.goto('/store/workforce')
-  await page.getByTestId('store-workforce-region-row').first().getByRole('button', { name: /Detay/i }).click()
-
-  const dialog = page.getByTestId('store-workforce-region-detail-dialog')
-  await expect(dialog).toBeVisible()
-  const turnoverFact = dialog.locator('.swc-fact').filter({ hasText: 'Yıl turnover' })
-  await expect(turnoverFact).toContainText('Veri yok')
-  await expect(turnoverFact).not.toContainText('%')
-  await expect(dialog.locator('.swc-tab-trigger.active', { hasText: 'Personel' })).toBeVisible()
-  await dialog.getByRole('button', { name: 'Pozisyon' }).click()
-  await expect(dialog.locator('.swc-tab-trigger.active', { hasText: 'Pozisyon' })).toBeVisible()
-  await expect(dialog.getByRole('button', { name: 'Kapat' }).last()).toBeVisible()
+  await expect(page.getByTestId('store-workforce-region-row')).toHaveCount(36)
+  await expect(page.getByText('Kapsam Mağaza 36')).toBeVisible()
+  expect(workspaceRequests).toBe(1)
 })
 
-async function routeWorkforceContractApi(page: Page) {
-  await page.route('**/api/org/stores', async (route) => {
-    await route.fulfill({
-      json: {
-        items: storeIds.map((storeId, index) => ({
-          company_id: 'company-contract-1',
-          region_id: regionId,
-          status: 'active',
-          store_code: `STORE-${index + 1}`,
-          store_id: storeId,
-          store_name: ['Balıkesir 10 Burda AVM', 'Bursa Downtown AVM', 'İstanbul MOI AVM'][index],
-        })),
-        meta: { total: storeIds.length },
-      },
-    })
-  })
-  await page.route('**/api/workforce/store-employees**', async (route) => {
+test('global shortage rail reaches a matching store beyond the first 50-store page', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  let workspaceRequests = 0
+  await page.route('**/api/store/workforce/workspace**', async (route) => {
+    workspaceRequests += 1
     const url = new URL(route.request().url())
-    const storeId = url.searchParams.get('storeId') ?? storeIds[0]
-    await route.fulfill({ json: createStoreEmployeesFixture(storeId) })
+    const allStores = Array.from({ length: 51 }, (_, index) => createStore(
+      `scope-${index + 1}`,
+      index === 50 ? 'Sayfa Dışı Eksik Mağaza' : `Dengeli Mağaza ${String(index + 1).padStart(2, '0')}`,
+      index + 1,
+    ))
+    allStores.forEach((store) => { store.norm = 3; store.gap = 0; store.shortageDays = null })
+    allStores[50].norm = 5
+    allStores[50].gap = 2
+    const filtered = url.searchParams.get('status') === 'shortage' ? [allStores[50]] : allStores
+    const offset = Number(url.searchParams.get('offset') ?? '0')
+    const limit = Number(url.searchParams.get('limit') ?? '50')
+    const workspace = createWorkspace(filtered.slice(offset, offset + limit))
+    workspace.stores.total = filtered.length
+    workspace.stores.offset = offset
+    workspace.stores.limit = limit
+    workspace.stores.hasMore = offset + limit < filtered.length
+    workspace.summary.totalStores = 51
+    workspace.summary.shortageStores = 1
+    await route.fulfill({ json: { data: workspace } })
   })
-  await page.route('**/api/workforce/headcount-gap**', async (route) => {
+
+  await page.goto('/store/workforce')
+  await expect(page.getByText('Sayfa Dışı Eksik Mağaza')).toHaveCount(0)
+  await page.getByRole('button', { name: /Eksik mağaza/ }).click()
+  await expect(page.getByRole('button', { name: /Sayfa Dışı Eksik Mağaza/ })).toBeVisible()
+  expect(workspaceRequests).toBe(2)
+})
+
+test('store detail exposes employment facts and entry-exit-only history', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await installGenericStoreApiFallbacks(page)
+  await routeWorkforceWorkspace(page)
+
+  await page.goto('/store/workforce')
+  await page.getByRole('button', { name: /Balıkesir 10 Burda AVM/ }).click()
+  await expect(page.getByText('Balıkesir 10 Burda AVM kadro dosyası')).toBeVisible()
+  await expect(page.getByText('Satış Danışmanı').first()).toBeVisible()
+  const detail = page.getByTestId('store-workforce-region-detail-dialog')
+  await expect(detail.getByText(/KPI|Güçlü|Takipte|Geride/)).toHaveCount(0)
+  await page.getByRole('button', { name: 'Mağaza personel geçmişi' }).click()
+  await expect(page.getByText(/İşe giriş/).first()).toBeVisible()
+  await expect(page.getByText(/İşten çıkış/).first()).toBeVisible()
+  await expect(page.getByText(/Toplam çalışma/).first()).toBeVisible()
+  await expect(page.getByText(/puan|destek|rol değiş/i)).toHaveCount(0)
+  await page.getByRole('button', { name: /Sonraki/ }).click()
+  await expect(page.getByText('Geçmiş Personel 21')).toBeVisible()
+})
+
+async function routeWorkforceWorkspace(page: Page, onRequest: () => void = () => undefined) {
+  await page.route('**/api/store/workforce/workspace**', async (route) => {
+    onRequest()
     const url = new URL(route.request().url())
-    const storeId = url.searchParams.get('storeId') ?? storeIds[0]
-    await route.fulfill({ json: createHeadcountGapFixture(storeId) })
+    const historyStoreId = url.searchParams.get('historyStoreId')
+    const historyOffset = Number(url.searchParams.get('historyOffset') ?? '0')
+    await route.fulfill({ json: { data: workspaceFixture(historyStoreId, historyOffset) } })
   })
 }
 
-function createStoreEmployeesFixture(storeId: string) {
-  const namesByStore: Record<string, string[]> = {
-    [storeIds[0]]: ['Mert Alcan', 'Emine Çavuş', 'Gürkan Çakar'],
-    [storeIds[1]]: ['Ayşe Yılmaz', 'Cem Aksoy', 'Deniz Kaya'],
-    [storeIds[2]]: ['Süleyman Öztürk', 'Kenan Eryiğit', 'Sinem Tekkur'],
-  }
-  const names = namesByStore[storeId] ?? namesByStore[storeIds[0]]
-
+function createStore(storeId: string, storeName: string, index: number) {
   return {
-    items: names.map((name, index) => ({
-      assignmentStartDate: `2026-0${index + 1}-10`,
-      displayName: name,
-      employeeId: `${storeId}-employee-${index + 1}`,
-      externalEmployeeRef: `DNMSL${100 + index}`,
-      positionCode: index === 0 ? 'STORE_MANAGER' : 'SALES_ASSOCIATE',
-      positionName: index === 0 ? 'Mağaza Müdürü' : 'Satış Danışmanı',
-      storeId,
-    })),
-    meta: { count: names.length, limit: 50, offset: 0, total: names.length },
+    companyId: '00000000-0000-4000-8000-000000000001', companyName: 'HR Axis',
+    regionId, regionName: 'Marmara', regionManagerName: 'Mert Yalçın',
+    storeId, storeCode: `STORE-${index + 1}`,
+    storeName,
+    storeStatus: 'active', norm: index === 0 ? 4 : 3, active: 3,
+    averageTenureDays: 365 + index,
+    gap: index === 0 ? 1 : 0, shortageDays: index === 0 ? 7 : null,
+    personnelTotal: 1, personnelLimit: 50, personnelOffset: 0, personnelHasMore: false,
+    personnel: [{ employeeId: `${storeId}-employee`, displayName: 'Ayşe Çetin',
+      positionId: '55555555-5555-4555-8555-555555555555', positionCode: 'SALES',
+      positionName: 'Satış Danışmanı', assignmentStartDate: '2025-01-04', employmentStatus: 'active' }],
   }
 }
 
-function createHeadcountGapFixture(storeId: string) {
-  const planned = storeId === storeIds[0] ? 4 : 3
-  const active = 3
-  const gap = active - planned
+function createWorkspace(stores: ReturnType<typeof createStore>[]) {
   return {
-    active_fte: String(active),
-    active_headcount: String(active),
-    fte_gap: String(gap),
-    headcount_gap: String(gap),
-    planned_fte: String(planned),
-    planned_headcount: String(planned),
-    shortage_days: storeId === storeIds[0] ? 7 : null,
-    shortage_started_on: storeId === storeIds[0] ? '2026-06-29' : null,
-    store_id: storeId,
+    view: 'region_manager',
+    summary: { totalStores: stores.length, activePersonnel: stores.length * 3, shortageStores: 1, openPositions: 1, averageTenureDays: 365 },
+    stores: { items: stores, total: stores.length, limit: 50, offset: 0, hasMore: false },
+    history: null,
+    capabilities: { canCreateSellerCodeRequest: false, canCreateOffboardingRequest: false },
+  }
+}
+
+function workspaceFixture(historyStoreId: string | null, historyOffset = 0) {
+  const stores = storeIds.map((storeId, index) => createStore(
+    storeId,
+    ['Balıkesir 10 Burda AVM', 'Bursa Downtown AVM', 'İstanbul MOI AVM'][index],
+    index,
+  ))
+  const historyItems = Array.from({ length: 21 }, (_, index) => ({
+    employeeId: `history-employee-${index + 1}`, displayName: `Geçmiş Personel ${index + 1}`, entryDate: '2023-05-08',
+    exitDate: '2026-05-31', totalWorkingDays: 1119,
+  }))
+  const historyPage = historyItems.slice(historyOffset, historyOffset + 20)
+  return {
+    view: 'region_manager',
+    summary: { totalStores: 3, activePersonnel: 9, shortageStores: 1, openPositions: 1, averageTenureDays: 365 },
+    stores: { items: stores, total: 3, limit: 50, offset: 0, hasMore: false },
+    history: historyStoreId ? { storeId: historyStoreId, items: historyPage, total: 21, limit: 20, offset: historyOffset, hasMore: historyOffset + historyPage.length < 21 } : null,
+    capabilities: { canCreateSellerCodeRequest: false, canCreateOffboardingRequest: false },
   }
 }

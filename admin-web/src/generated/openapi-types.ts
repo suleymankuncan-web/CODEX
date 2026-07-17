@@ -3403,6 +3403,79 @@ export type components = {
         "offset": number
       }
     }
+    "WorkforceWorkspace": {
+      "view": "report_viewer" | "region_manager" | "store_manager"
+      "summary": components['schemas']["WorkforceWorkspaceSummary"]
+      "stores": components['schemas']["WorkforceWorkspaceStorePage"]
+      "history": components['schemas']["WorkforceWorkspaceHistory"] | null
+      "capabilities": components['schemas']["WorkforceWorkspaceCapabilities"]
+    }
+    "WorkforceWorkspaceCapabilities": {
+      "canCreateSellerCodeRequest": boolean
+      "canCreateOffboardingRequest": boolean
+    }
+    "WorkforceWorkspaceHistory": {
+      "storeId": string
+      "items": components['schemas']["WorkforceWorkspaceHistoryRow"][]
+      "total": number
+      "limit": number
+      "offset": number
+      "hasMore": boolean
+    }
+    "WorkforceWorkspaceHistoryRow": {
+      "employeeId": string
+      "displayName": string
+      "entryDate": string
+      "exitDate": string | null
+      "totalWorkingDays": number | null
+    }
+    "WorkforceWorkspacePerson": {
+      "employeeId": string
+      "displayName": string
+      "positionId": string
+      "positionCode": string
+      "positionName": string
+      "assignmentStartDate": string | null
+      "employmentStatus": string
+    }
+    "WorkforceWorkspaceResponse": {
+      "data": components['schemas']["WorkforceWorkspace"]
+    }
+    "WorkforceWorkspaceStore": {
+      "companyId": string
+      "companyName": string | null
+      "regionId": string
+      "regionName": string | null
+      "regionManagerName": string | null
+      "storeId": string
+      "storeCode": string
+      "storeName": string
+      "storeStatus": string
+      "norm": number | null
+      "active": number
+      "averageTenureDays": number | null
+      "gap": number | null
+      "shortageDays": number | null
+      "personnel": components['schemas']["WorkforceWorkspacePerson"][]
+      "personnelTotal": number
+      "personnelLimit": number
+      "personnelOffset": number
+      "personnelHasMore": boolean
+    }
+    "WorkforceWorkspaceStorePage": {
+      "items": components['schemas']["WorkforceWorkspaceStore"][]
+      "total": number
+      "limit": number
+      "offset": number
+      "hasMore": boolean
+    }
+    "WorkforceWorkspaceSummary": {
+      "totalStores": number
+      "activePersonnel": number
+      "shortageStores": number
+      "openPositions": number
+      "averageTenureDays": number | null
+    }
   }
 }
 
@@ -4569,6 +4642,17 @@ export type paths = {
         "200": {
           content: {
             'application/json': components['schemas']["TargetWorkspaceResponse"]
+          }
+        }
+      }
+    }
+  }
+  "/api/store/workforce/workspace": {
+    get: {
+      responses: {
+        "200": {
+          content: {
+            'application/json': components['schemas']["WorkforceWorkspaceResponse"]
           }
         }
       }

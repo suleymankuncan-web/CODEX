@@ -6182,6 +6182,155 @@
           "TargetWorkspace"
         ]
       }
+    },
+    "/api/store/workforce/workspace": {
+      "get": {
+        "operationId": "WorkforceWorkspaceController_getWorkspace",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "shortage",
+                "balanced",
+                "surplus",
+                "unconfigured"
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "store",
+                "active",
+                "norm",
+                "status",
+                "shortage",
+                "tenure"
+              ]
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ascending",
+                "descending"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "historyLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "historyOffset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "historyStoreId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "personnelStoreId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "personnelLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "personnelOffset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Role-scoped bounded Workforce command workspace.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkforceWorkspaceResponse"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "WorkforceWorkspace"
+        ]
+      }
     }
   },
   "info": {
@@ -24024,6 +24173,342 @@
           },
           "correctionActors": {
             "$ref": "#/components/schemas/SalesTargetIncentiveWorkspaceSectionStatus"
+          }
+        }
+      },
+      "WorkforceWorkspaceCapabilities": {
+        "type": "object",
+        "required": [
+          "canCreateSellerCodeRequest",
+          "canCreateOffboardingRequest"
+        ],
+        "properties": {
+          "canCreateSellerCodeRequest": {
+            "type": "boolean"
+          },
+          "canCreateOffboardingRequest": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WorkforceWorkspacePerson": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "displayName",
+          "positionId",
+          "positionCode",
+          "positionName",
+          "assignmentStartDate",
+          "employmentStatus"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionCode": {
+            "type": "string"
+          },
+          "positionName": {
+            "type": "string"
+          },
+          "assignmentStartDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "employmentStatus": {
+            "type": "string"
+          }
+        }
+      },
+      "WorkforceWorkspaceStore": {
+        "type": "object",
+        "required": [
+          "companyId",
+          "companyName",
+          "regionId",
+          "regionName",
+          "regionManagerName",
+          "storeId",
+          "storeCode",
+          "storeName",
+          "storeStatus",
+          "norm",
+          "active",
+          "averageTenureDays",
+          "gap",
+          "shortageDays",
+          "personnel",
+          "personnelTotal",
+          "personnelLimit",
+          "personnelOffset",
+          "personnelHasMore"
+        ],
+        "properties": {
+          "companyId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "companyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "regionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "regionName": {
+            "type": "string",
+            "nullable": true
+          },
+          "regionManagerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "storeCode": {
+            "type": "string"
+          },
+          "storeName": {
+            "type": "string"
+          },
+          "storeStatus": {
+            "type": "string"
+          },
+          "norm": {
+            "type": "number",
+            "nullable": true
+          },
+          "active": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "averageTenureDays": {
+            "type": "number",
+            "nullable": true
+          },
+          "gap": {
+            "type": "number",
+            "nullable": true
+          },
+          "shortageDays": {
+            "type": "integer",
+            "nullable": true
+          },
+          "personnel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkforceWorkspacePerson"
+            }
+          },
+          "personnelTotal": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "personnelLimit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "personnelOffset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "personnelHasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WorkforceWorkspaceHistoryRow": {
+        "type": "object",
+        "required": [
+          "employeeId",
+          "displayName",
+          "entryDate",
+          "exitDate",
+          "totalWorkingDays"
+        ],
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "entryDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "exitDate": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          },
+          "totalWorkingDays": {
+            "type": "integer",
+            "nullable": true
+          }
+        }
+      },
+      "WorkforceWorkspaceStorePage": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "hasMore"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkforceWorkspaceStore"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WorkforceWorkspaceHistory": {
+        "type": "object",
+        "required": [
+          "storeId",
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "hasMore"
+        ],
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkforceWorkspaceHistoryRow"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "hasMore": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WorkforceWorkspaceSummary": {
+        "type": "object",
+        "required": [
+          "totalStores",
+          "activePersonnel",
+          "shortageStores",
+          "openPositions",
+          "averageTenureDays"
+        ],
+        "properties": {
+          "totalStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "activePersonnel": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "shortageStores": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "openPositions": {
+            "type": "number",
+            "minimum": 0
+          },
+          "averageTenureDays": {
+            "type": "number",
+            "nullable": true
+          }
+        }
+      },
+      "WorkforceWorkspace": {
+        "type": "object",
+        "required": [
+          "view",
+          "summary",
+          "stores",
+          "history",
+          "capabilities"
+        ],
+        "properties": {
+          "view": {
+            "type": "string",
+            "enum": [
+              "report_viewer",
+              "region_manager",
+              "store_manager"
+            ]
+          },
+          "summary": {
+            "$ref": "#/components/schemas/WorkforceWorkspaceSummary"
+          },
+          "stores": {
+            "$ref": "#/components/schemas/WorkforceWorkspaceStorePage"
+          },
+          "history": {
+            "$ref": "#/components/schemas/WorkforceWorkspaceHistory",
+            "nullable": true
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/WorkforceWorkspaceCapabilities"
+          }
+        }
+      },
+      "WorkforceWorkspaceResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/WorkforceWorkspace"
           }
         }
       }
