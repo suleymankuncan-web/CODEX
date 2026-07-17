@@ -145,6 +145,8 @@ The geometry assertions now run in:
 Local proof completed:
 
 - KPI visual contract: `4/4` passed;
+- complete KPI contract, including mobile sorting and bounded paging: `24/24`
+  passed;
 - Talep Merkezi parity: `5/5` passed;
 - Norm Kadro and Görevler parity: `20/20` passed;
 - frontend lint: passed;

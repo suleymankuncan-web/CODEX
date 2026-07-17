@@ -8,7 +8,9 @@ data in production.
 `admin-web/e2e/store-kpis-contracts.spec.ts` proves the visual frame,
 company-to-region-to-store drill, local decision rails, sorting, monthly
 period continuity, Profile Git navigation, partial/error truth, accessibility,
-mobile input sizing and overflow safety.
+mobile input sizing and overflow safety. Mobile cards retain visible HG, UPT,
+ATV, CR and GSM labels plus a horizontally reachable sort rail; bounded
+multi-page results explicitly label page-local search/risk behavior.
 
 It also measures all four decision-rail cells before and after every metric
 selection and rejects any width or height delta at a fixed viewport.

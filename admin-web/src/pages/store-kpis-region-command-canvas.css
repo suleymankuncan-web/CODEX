@@ -97,6 +97,10 @@
   display: none;
 }
 
+.kpi-command-mobile-sort {
+  display: none;
+}
+
 .kpi-command-mobile-row {
   display: grid;
   grid-template-columns: 42px minmax(0, 1fr) minmax(88px, auto);
@@ -130,6 +134,14 @@
   .kpi-command-list .command-canvas-list-header,
   .kpi-command-desktop-rows {
     display: none;
+  }
+
+  .kpi-command-mobile-sort {
+    display: flex;
+    gap: 7px;
+    overflow-x: auto;
+    padding: 2px 1px 5px;
+    scrollbar-width: thin;
   }
 
   .kpi-command-mobile-rows {

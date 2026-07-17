@@ -50,6 +50,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
   const riskCount = model.regionOverviewRows.filter(
     (row) => typeof row.scoreValue === 'number' && row.scoreValue < 75,
   ).length
+  const isPageScoped = regionTotal > model.regionOverviewRows.length
   const visibleRows = useMemo(
     () =>
       model.regionOverviewRows.filter((row) => {
@@ -107,9 +108,9 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
           onClick={() => { setRail('target'); setRiskOnly(false); model.setRegionOverviewSort('TARGET_ACHIEVEMENT') }}
         />
         <CommandCanvasMetricFilter
-          label="Yakın takip"
+          label={isPageScoped ? 'Bu sayfada takip' : 'Yakın takip'}
           value={String(riskCount)}
-          note="Mağaza skoru <75"
+          note={isPageScoped ? 'Yüklü mağazalarda skor <75' : 'Mağaza skoru <75'}
           icon={<AlertCircle size={16} />}
           tone="rose"
           active={rail === 'risk'}
@@ -120,12 +121,23 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
       <CommandCanvasFilterBar
         updatingLabel="KPI görünümü güncelleniyor"
         isUpdating={model.regionOverviewQuery.isFetching}
-        search={<label className="kpi-command-search"><Search aria-hidden="true" size={15} /><Input aria-label="Mağaza ara" placeholder="Mağaza ara" value={query} onChange={(event) => setQuery(event.target.value)} /></label>}
+        search={<label className="kpi-command-search"><Search aria-hidden="true" size={15} /><Input aria-label={isPageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} placeholder={isPageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} value={query} onChange={(event) => setQuery(event.target.value)} /></label>}
         controls={<>
           <Button variant="outline" onClick={() => model.setRegionOverviewSort('score')}>Skor</Button>
           <Button variant={riskOnly ? 'secondary' : 'outline'} onClick={() => { setRiskOnly((value) => !value); setRail(riskOnly ? 'stores' : 'risk') }}>Risk durumu</Button>
         </>}
       />
+
+      <div className="kpi-command-mobile-sort" aria-label="KPI sıralama seçenekleri">
+        <RegionSortButton label={model.t('storeKpis.regionScoreColumn')} model={model} sortKey="score" touch />
+        <RegionSortButton label="HG%" model={model} sortKey="TARGET_ACHIEVEMENT" touch />
+        <RegionSortButton label="UPT" model={model} sortKey="UPT" touch />
+        <RegionSortButton label="ATV" model={model} sortKey="ATV" touch />
+        <RegionSortButton label="CR" model={model} sortKey="CR" touch />
+        <RegionSortButton label="GSM Onayı" model={model} sortKey="gsm_approval" touch />
+        <RegionSortButton label="BM" model={model} sortKey="BM_CHECKLIST" touch />
+        <RegionSortButton label="VM" model={model} sortKey="VM_CHECKLIST" touch />
+      </div>
 
       <div className="kpi-command-list-title">
         <h2>{model.t('storeKpis.regionStoresTitle')}</h2>
@@ -147,7 +159,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
         </div>}
         footer={regionHasPrevious || regionHasNext ? <KpiPager model={model} regionHasPrevious={regionHasPrevious} regionHasNext={regionHasNext} regionTotal={regionTotal} /> : undefined}
       >
-        {visibleRows.length === 0 ? <StoreEmptyState title="Sonuç bulunamadı" description="Filtreleri değiştirerek tekrar deneyin." titleAsHeading /> : <>
+        {visibleRows.length === 0 ? <StoreEmptyState title="Sonuç bulunamadı" description={isPageScoped ? 'Bu sayfadaki filtreleri değiştirin veya diğer mağaza sayfasına geçin.' : 'Filtreleri değiştirerek tekrar deneyin.'} titleAsHeading /> : <>
           <div className="kpi-command-desktop-rows">
             {visibleRows.map((row) => <RegionStoreRow key={row.storeId} model={model} row={row} />)}
           </div>
@@ -288,13 +300,19 @@ function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageMo
         {storeName}
       </strong>
       <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[112px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-3 tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)] tw:shadow-[inset_0_0_0_1px_var(--store-command-line)]">
+        <span className="tw:mr-1 tw:text-[10px] tw:font-medium tw:text-muted-foreground">Skor</span>
         {formatNumber(model.locale, row.scoreValue, noData, 1)}
       </span>
       <div className="tw:col-start-2 tw:col-end-4 tw:grid tw:grid-cols-2 tw:gap-x-3 tw:gap-y-2 tw:pt-1 tw:text-center">
         {regionMetricCodes.map((code) => (
-          <strong key={code} className="tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
-            {formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}
-          </strong>
+          <span key={code} className="tw:grid tw:min-w-0 tw:gap-0.5 tw:rounded-lg tw:bg-white/70 tw:px-2 tw:py-1.5">
+            <small className="tw:text-[9px] tw:font-semibold tw:text-muted-foreground">
+              {getMobileMetricLabel(code)}
+            </small>
+            <strong className="tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
+              {formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}
+            </strong>
+          </span>
         ))}
       </div>
       <div className="tw:col-span-2 tw:col-start-1 tw:flex tw:gap-1.5 tw:pt-1">
@@ -303,6 +321,12 @@ function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageMo
       </div>
     </Link>
   )
+}
+
+function getMobileMetricLabel(code: (typeof regionMetricCodes)[number]) {
+  if (code === 'TARGET_ACHIEVEMENT') return 'HG%'
+  if (code === 'gsm_approval') return 'GSM'
+  return code
 }
 
 function MetricMini(input: {
