@@ -5,6 +5,7 @@ import { StoreOpsCompetitionModule } from "./store-ops-competition.module";
 import { StoreOpsIncentiveModule } from "./store-ops-incentive.module";
 import { StoreOpsReportingModule } from "./store-ops-reporting.module";
 import { StoreOpsTargetsModule } from "./store-ops-targets.module";
+import { StoreOpsTaskCommandReadModule } from "./store-ops-task-command-read.module";
 
 const storeOpsInternalModules = [
   StoreOpsReportingModule,
@@ -12,6 +13,7 @@ const storeOpsInternalModules = [
   StoreOpsTargetsModule,
   StoreOpsCompetitionModule,
   StoreOpsIncentiveModule,
+  StoreOpsTaskCommandReadModule,
 ];
 
 @Module({
