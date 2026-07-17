@@ -41,11 +41,11 @@ const getIntlLocale = (locale) => locale === 'en' ? 'en-US' : 'tr-TR'
 })
 const checklistScorePolicy = await importTranspiled('../src/pages/store-checklists-score-policy.ts')
 const workforceViewSource = await readFile(
-  new URL('../src/pages/store-workforce-region-view.tsx', import.meta.url),
+  new URL('../src/pages/StoreWorkforcePage.tsx', import.meta.url),
   'utf8',
 )
 const workforceModelSource = await readFile(
-  new URL('../src/pages/store-workforce-region-view-model.ts', import.meta.url),
+  new URL('../src/features/workforce/workforce-command-model.ts', import.meta.url),
   'utf8',
 )
 const workforceApiSource = await readFile(
@@ -197,16 +197,15 @@ test('checklist low score note requirement only blocks low score selections', ()
   )
 })
 
-test('workforce region view has honest current-snapshot year copy and no store id label fallback', () => {
-  assert.match(workforceModelSource, /yearAria:\s*'Güncel görünüm'/u)
-  assert.match(workforceViewSource, /storeLabel:\s*'Mağaza adı yok'/u)
+test('workforce command view preserves missing norm values instead of inventing a zero', () => {
+  assert.match(workforceModelSource, /store\.norm === null \|\| store\.gap === null/u)
+  assert.match(workforceViewSource, /store\.norm === null \? `Tanımsız/u)
   assert.doesNotMatch(workforceViewSource, /storeLabel:\s*storeId/u)
-  assert.match(workforceViewSource, /norm-kadro-guncel\.csv/u)
 })
 
-test('Norm Kadro keeps demo-only turnover percentages disconnected from live data', () => {
+test('Norm Kadro has no demo-only turnover field or fallback percentage', () => {
   assert.doesNotMatch(workforceApiSource, /turnover_rate|turnoverRate/u)
-  assert.match(workforceViewSource, /turnover:\s*null/u)
-  assert.match(workforceViewSource, /label=\{copy\.turnoverMetric\}[\s\S]*?value="Veri yok"/u)
+  assert.doesNotMatch(workforceViewSource, /turnover:\s*null/u)
+  assert.doesNotMatch(workforceViewSource, /turnoverMetric/u)
   assert.doesNotMatch(workforceViewSource, /averageTurnover|turnoverValues/u)
 })

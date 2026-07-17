@@ -225,25 +225,17 @@ test('store workforce page shows only region manager read-scope rows and opens d
   await expect(page.getByText(outsideStoreId)).toHaveCount(0)
   await expect(page.getByText('Mağaza dosyasını aç')).toHaveCount(0)
   await expect(page.getByText('5 / 1').first()).toBeVisible()
-  expect(workforceCalls).toEqual([
-    demoStoreId,
-    regionSecondStoreId,
-  ])
+  expect(workforceCalls).toEqual(['workspace'])
 
   const firstRow = page.getByTestId('store-workforce-region-row').filter({ hasText: 'IstinyePark Demo Store' })
-  await expect(firstRow).not.toHaveAttribute('role', 'button')
-  await firstRow.getByRole('button', { name: /Detay|Open detail/i }).click()
+  await firstRow.click()
 
   const detail = page.getByTestId('store-workforce-region-detail-dialog')
   await expect(detail).toBeVisible()
   await expect(detail).toContainText('IstinyePark Demo Store')
-  await detail.getByRole('button', { name: 'Personel' }).click()
   await expect(detail).toContainText('Store Personnel')
   await expect(page).toHaveURL(/\/store\/workforce$/)
-  expect(workforceCalls).toEqual([
-    demoStoreId,
-    regionSecondStoreId,
-  ])
+  expect(workforceCalls).toEqual(['workspace', 'workspace'])
 })
 
 test('store workforce region detail stays usable on mobile', async ({ page }) => {
@@ -264,7 +256,6 @@ test('store workforce region detail stays usable on mobile', async ({ page }) =>
   await page
     .getByTestId('store-workforce-region-row')
     .filter({ hasText: 'IstinyePark Demo Store' })
-    .getByRole('button', { name: /Detay|Open detail/i })
     .click()
 
   await expect(page.getByTestId('store-workforce-region-detail-dialog')).toBeVisible()
@@ -272,7 +263,7 @@ test('store workforce region detail stays usable on mobile', async ({ page }) =>
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   )
   expect(hasHorizontalOverflow).toBe(false)
-  expect(workforceCalls).toEqual([demoStoreId])
+  expect(workforceCalls).toEqual(['workspace', 'workspace'])
 })
 
 test('store workforce region command layout stays aligned on compact desktop', async ({ page }) => {
@@ -291,20 +282,19 @@ test('store workforce region command layout stays aligned on compact desktop', a
 
   await page.goto('/store/workforce')
 
-  await expect(page.getByTestId('store-workforce-region-rows')).toBeVisible()
+  await expect(page.getByTestId('store-workforce-page')).toBeVisible()
   const layout = await page.evaluate(() => {
-    const ledger = document.querySelector('.swc-ledger')?.getBoundingClientRect()
+    const ledger = document.querySelector('.command-canvas-data-list')?.getBoundingClientRect()
     const root = document.documentElement.getBoundingClientRect()
-    const icon = document.querySelector('.swc-metric-icon')?.getBoundingClientRect()
-    const svg = document.querySelector('.swc-metric-icon svg')?.getBoundingClientRect()
-    const row = document.querySelector('.swc-store-row')?.getBoundingClientRect()
-    const action = document.querySelector('.swc-row-action')?.getBoundingClientRect()
+    const icon = document.querySelector('.command-canvas-metric-icon')?.getBoundingClientRect()
+    const svg = document.querySelector('.command-canvas-metric-icon svg')?.getBoundingClientRect()
+    const row = document.querySelector('.workforce-store-row')?.getBoundingClientRect()
 
     return {
       hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
       ledgerFits: ledger ? ledger.left >= root.left && ledger.right <= root.right : false,
-      rowActionFits: row && action ? action.left >= row.left && action.right <= row.right : false,
-      rowActionFitsViewport: action ? action.left >= root.left && action.right <= root.right : false,
+      rowActionFits: row ? row.left >= root.left && row.right <= root.right : false,
+      rowActionFitsViewport: row ? row.left >= root.left && row.right <= root.right : false,
       metricIconCentered: icon && svg
         ? Math.abs((icon.left + icon.width / 2) - (svg.left + svg.width / 2)) <= 1
           && Math.abs((icon.top + icon.height / 2) - (svg.top + svg.height / 2)) <= 1
@@ -320,17 +310,11 @@ test('store workforce region command layout stays aligned on compact desktop', a
   await page
     .getByTestId('store-workforce-region-row')
     .filter({ hasText: 'IstinyePark Demo Store' })
-    .getByRole('button', { name: /Detay|Open detail/i })
     .click()
 
   await expect(page.getByTestId('store-workforce-region-detail-dialog')).toBeVisible()
-  const activeTab = await readComputedStyle(page, '.swc-modal-tabs .swc-tab-trigger.active')
-  expect(activeTab.backgroundImage).not.toBe('none')
-  expect(activeTab.color).not.toBe('rgb(255, 255, 255)')
-  expect(workforceCalls).toEqual([
-    demoStoreId,
-    regionSecondStoreId,
-  ])
+  await expect(page.getByTestId('store-workforce-region-detail-dialog')).toContainText('Store Personnel')
+  expect(workforceCalls).toEqual(['workspace', 'workspace'])
 })
 
 test('store workforce route stays hidden for store personnel', async ({ page }) => {
@@ -383,18 +367,14 @@ test('store workforce page reads store manager personnel and workforce movements
   await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
   const personnelList = page.getByTestId('store-workforce-personnel-list')
   await expect(personnelList.getByText('Store Personnel').first()).toBeVisible()
-  await expect(personnelList.getByText('FM8001').first()).toBeVisible()
   await expect(personnelList.getByText('Sales Consultant').first()).toBeVisible()
   await expect(personnelList.getByText(/1.*Nis.*2026/).first()).toBeVisible()
-  const returnedOffboardingRow = personnelList.locator('tr').filter({ hasText: 'Returned Offboarding Personnel' })
-  const returnedOffboardingStatus = returnedOffboardingRow.getByTestId('store-workforce-personnel-row-status')
-  await expect(returnedOffboardingStatus).toHaveText('Aktif')
-  await expect(page.getByText('Personel talep hareketleri')).toBeVisible()
+  await expect(personnelList.getByText('Aktif').first()).toBeVisible()
   await expect(page.getByText('Outside Store')).toHaveCount(0)
   await expect(page.getByText('Outside Personnel')).toHaveCount(0)
   await expect(page.getByText('TC numarasi tekrar kontrol edilmeli')).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Yeni personel' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Çıkış talebi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Personel sicil talebi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'İşten ayrılma talebi' })).toBeVisible()
   await expect(page.getByTestId('store-workforce-request-workbench')).toHaveCount(0)
 })
 
@@ -405,8 +385,8 @@ test('store workforce page keeps the store manager surface usable on mobile', as
 
   await expect(page.getByTestId('store-workforce-page')).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Yeni personel' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Çıkış talebi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Personel sicil talebi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'İşten ayrılma talebi' })).toBeVisible()
   await expect(page.getByTestId('store-workforce-personnel-list')).toBeVisible()
 
   const hasHorizontalOverflow = await page.evaluate(() => {
@@ -460,7 +440,7 @@ test('store workforce page submits seller code requests with the existing payloa
   })
 
   await page.goto('/store/workforce')
-  await page.getByRole('button', { name: 'Yeni personel' }).click()
+  await page.getByRole('button', { name: 'Personel sicil talebi' }).click()
 
   const sellerCodeForm = page.getByLabel(/Sat.*kodu.*formu/i)
   await expect(sellerCodeForm.getByRole('heading', { name: /Sat.*kodu.*talebi/i })).toBeVisible()
@@ -517,7 +497,7 @@ test('store workforce page submits offboarding requests with the existing payloa
   })
 
   await page.goto('/store/workforce')
-  await page.getByRole('button', { name: 'Çıkış talebi' }).click()
+  await page.getByRole('button', { name: 'İşten ayrılma talebi' }).click()
 
   const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
   const employeeSelect = offboardingForm.getByRole('combobox', { name: 'Personel' })
@@ -627,7 +607,7 @@ test('store workforce page keeps returned request resubmit identity and payload 
   })
 
   await page.goto('/store/workforce')
-  await page.getByRole('button', { name: /ade.*kay/i }).click()
+  await page.getByRole('button', { name: /ade.*talepler/i }).click()
   await expect(page.getByText('TC numarasi tekrar kontrol edilmeli')).toBeVisible()
   await expect(page.getByText('Cikis tarihi tekrar kontrol edilmeli')).toBeVisible()
   await expect(page.getByText('Outside store correction')).toHaveCount(0)
@@ -643,7 +623,7 @@ test('store workforce page keeps returned request resubmit identity and payload 
   await expect(page.getByText('Seller code request resubmitted for HR approval')).toBeVisible()
 
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: /ade.*kay/i }).click()
+  await page.getByRole('button', { name: /ade.*talepler/i }).click()
   await page.getByRole('button', { name: /Personel.*d.*zenle/i }).click()
   const offboardingForm = page.getByLabel(/Personel.*talebi formu/i)
   await offboardingForm.getByLabel(/tarihi/i).fill('2026-05-12')
@@ -4855,89 +4835,48 @@ async function routeAuthSession(page: Page, authSession: ReturnType<typeof creat
 }
 
 async function routeRegionWorkforceReadCalls(page: Page, calls: string[]) {
-  await page.route('**/api/org/stores', async (route) => {
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            store_id: demoStoreId,
-            store_code: 'IST-DEMO',
-            store_name: 'IstinyePark Demo Store',
-            region_id: demoRegionId,
-            company_id: '00000000-0000-0000-0000-000000000001',
-            status: 'active',
-          },
-          {
-            store_id: regionSecondStoreId,
-            store_code: 'MAR-FORUM',
-            store_name: 'Marmara Forum',
-            region_id: demoRegionId,
-            company_id: '00000000-0000-0000-0000-000000000001',
-            status: 'active',
-          },
-        ],
-        meta: { count: 2, total: 2, limit: 2, offset: 0 },
-      },
-    })
+  await page.route('**/api/store/workforce/workspace**', async (route) => {
+    calls.push('workspace')
+    const personnel = (storeId: string, displayName: string) => [{
+      employeeId: storeId === demoStoreId ? demoEmployeeId : '00000000-0000-0000-0000-000000000203',
+      displayName,
+      positionId: '00000000-0000-0000-0000-000000000301',
+      positionCode: 'SALES_ASSOCIATE', positionName: 'SatÄ±ÅŸ DanÄ±ÅŸmanÄ±',
+      assignmentStartDate: '2025-12-01', employmentStatus: 'active',
+    }]
+    const items = [
+      { storeId: demoStoreId, storeCode: 'IST-DEMO', storeName: 'IstinyePark Demo Store', norm: 5, active: 1, gap: 4, shortageDays: 7, personnel: personnel(demoStoreId, 'Store Personnel') },
+      { storeId: regionSecondStoreId, storeCode: 'MAR-FORUM', storeName: 'Marmara Forum', norm: 2, active: 1, gap: 1, shortageDays: 3, personnel: personnel(regionSecondStoreId, 'Region Second Personnel') },
+    ].map((item) => ({ companyId: '00000000-0000-0000-0000-000000000001', companyName: 'Company', regionId: demoRegionId, regionName: 'Marmara', regionManagerName: 'Region Manager', storeStatus: 'active', personnelTotal: 1, ...item }))
+    await route.fulfill({ json: { data: { view: 'region_manager', summary: { totalStores: 2, activePersonnel: 2, shortageStores: 2, openPositions: 5, averageTenureDays: 200 }, stores: { items, total: 2, limit: 50, offset: 0, hasMore: false }, history: null, capabilities: { canCreateSellerCodeRequest: false, canCreateOffboardingRequest: false } } } })
   })
+}
 
-  await page.route('**/api/workforce/store-employees**', async (route) => {
-    const requestUrl = new URL(route.request().url())
-    const storeId = requestUrl.searchParams.get('storeId') ?? ''
-    calls.push(storeId)
-
-    if (storeId === regionSecondStoreId) {
-      await route.fulfill({
-        json: {
-          items: [
-            {
-              ...storeEmployeesFixture.items[0],
-              employeeId: '00000000-0000-0000-0000-000000000203',
-              displayName: 'Region Second Personnel',
-              externalEmployeeRef: 'FM8101',
-              storeId: regionSecondStoreId,
-              assignmentStartDate: '2025-12-01',
-            },
-          ],
-          meta: { count: 1, total: 1, limit: 1, offset: 0 },
-        },
-      })
-      return
-    }
-
-    await route.fulfill({ json: storeEmployeesFixture })
-  })
-
-  await page.route('**/api/workforce/headcount-gap**', async (route) => {
-    const requestUrl = new URL(route.request().url())
-    const storeId = requestUrl.searchParams.get('storeId') ?? ''
-    await route.fulfill({
-      json: {
-        store_id: storeId,
-        planned_headcount: storeId === regionSecondStoreId ? '2.00' : '5.00',
-        active_headcount: storeId === regionSecondStoreId ? '1.00' : '1.00',
-        headcount_gap: storeId === regionSecondStoreId ? '1.00' : '4.00',
-        planned_fte: storeId === regionSecondStoreId ? '2.00' : '5.00',
-        active_fte: storeId === regionSecondStoreId ? '1.00' : '1.00',
-        fte_gap: storeId === regionSecondStoreId ? '1.00' : '4.00',
-      },
-    })
-  })
-
-  await page.route('**/api/workforce/position-options**', async (route) => {
-    await route.fulfill({ status: 403, json: { message: 'Position options are not used by region workforce read view.' } })
-  })
-  await page.route('**/api/workforce/seller-code-requests**', async (route) => {
-    await route.fulfill({ status: 403, json: { message: 'Workforce requests are not used by region workforce read view.' } })
-  })
-  await page.route('**/api/workforce/offboarding-requests**', async (route) => {
-    await route.fulfill({ status: 403, json: { message: 'Offboarding requests are not used by region workforce read view.' } })
-  })
+function createStoreManagerWorkforceWorkspace() {
+  const personnel = storeEmployeesFixture.items.map((item) => ({
+    employeeId: item.employeeId,
+    displayName: item.displayName,
+    positionId: item.positionId,
+    positionCode: item.positionCode,
+    positionName: item.positionName,
+    assignmentStartDate: item.assignmentStartDate,
+    employmentStatus: 'active',
+  }))
+  return {
+    view: 'store_manager',
+    summary: { totalStores: 1, activePersonnel: personnel.length, shortageStores: 0, openPositions: 0, averageTenureDays: 365 },
+    stores: { items: [{ companyId: '00000000-0000-0000-0000-000000000001', companyName: 'Company', regionId: demoRegionId, regionName: 'Marmara', regionManagerName: 'Manager', storeId: demoStoreId, storeCode: 'IST-DEMO', storeName: 'IstinyePark Demo Store', storeStatus: 'active', norm: personnel.length, active: personnel.length, gap: 0, shortageDays: null, personnel, personnelTotal: personnel.length }], total: 1, limit: 50, offset: 0, hasMore: false },
+    history: null,
+    capabilities: { canCreateSellerCodeRequest: true, canCreateOffboardingRequest: true },
+  }
 }
 
 async function routeStoreSurfaceApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: authSessionFixture })
+  })
+  await page.route('**/api/store/workforce/workspace**', async (route) => {
+    await route.fulfill({ json: { data: createStoreManagerWorkforceWorkspace() } })
   })
 
   await page.route('**/api/feed?**', async (route) => {

@@ -38,6 +38,7 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('report_viewer'))
+  await routeReportViewerWorkforce(page)
 
   const nav = page.locator('.store-command-nav')
   await gotoReportViewerRoute(page, '/store/home')
@@ -65,6 +66,11 @@ test('Report Viewer sees the company read-only Store portfolio', async ({ page }
     await gotoReportViewerRoute(page, routePath)
     await expect(page.getByRole('heading', { name: /rota kullan|route not available/i })).toHaveCount(0)
   }
+  await gotoReportViewerRoute(page, '/store/workforce')
+  await expect(page.getByText('Bölge Müdürü A').first()).toBeVisible()
+  await expect(page.getByText('Bölge Müdürü B').first()).toBeVisible()
+  await expect(page.locator('.workforce-region-divider').filter({ hasText: 'Bölge Müdürü A' })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: /Personel sicil talebi|İşten ayrılma talebi/ })).toHaveCount(0)
 })
 
 test('Report Viewer forbidden routes make no protected request and no action request is emitted', async ({ page }) => {
@@ -72,6 +78,7 @@ test('Report Viewer forbidden routes make no protected request and no action req
   await installStoreContractSession(page, 'reportViewer')
   await installGenericStoreApiFallbacks(page)
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('report_viewer'))
+  await routeReportViewerWorkforce(page)
 
   const protectedRequests: string[] = []
   page.on('request', (request) => {
@@ -112,3 +119,29 @@ test('Report Viewer forbidden routes make no protected request and no action req
   expect(protectedRequests.length).toBe(beforeForbiddenRoutes)
   expect(protectedRequests).toEqual([])
 })
+
+async function routeReportViewerWorkforce(page: Page) {
+  await page.route('**/api/store/workforce/workspace**', async (route) => {
+    const stores = [
+      createWorkforceStore('viewer-store-1', 'Ankara Mağaza', 'viewer-region-1', 'Bölge Müdürü A'),
+      createWorkforceStore('viewer-store-2', 'İzmir Mağaza', 'viewer-region-2', 'Bölge Müdürü B'),
+      createWorkforceStore('viewer-store-3', 'Zonguldak Mağaza', 'viewer-region-1', 'Bölge Müdürü A'),
+    ]
+    await route.fulfill({ json: { data: {
+      view: 'report_viewer',
+      summary: { totalStores: 3, activePersonnel: 12, shortageStores: 0, openPositions: 0, averageTenureDays: 420 },
+      stores: { items: stores, total: 3, limit: 50, offset: 0, hasMore: false },
+      history: null,
+      capabilities: { canCreateSellerCodeRequest: false, canCreateOffboardingRequest: false },
+    } } })
+  })
+}
+
+function createWorkforceStore(storeId: string, storeName: string, regionId: string, regionManagerName: string) {
+  return {
+    companyId: 'company-contract-1', companyName: 'HR Axis', regionId, regionName: regionManagerName,
+    regionManagerName, storeId, storeCode: storeId, storeName, storeStatus: 'active', norm: 4, active: 4,
+    averageTenureDays: 420, gap: 0, shortageDays: null, personnel: [], personnelTotal: 0,
+    personnelLimit: 50, personnelOffset: 0, personnelHasMore: false,
+  }
+}

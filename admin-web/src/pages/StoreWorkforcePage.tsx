@@ -1,892 +1,341 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { useQuery } from '@tanstack/react-query'
 import {
   BriefcaseBusiness,
-  ClipboardList,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
-  LogOut,
-  RotateCcw,
+  History,
   Search,
+  Store,
+  UserMinus,
   UserPlus,
   UsersRound,
 } from 'lucide-react'
 import type { AuthSessionSummary } from '../features/auth/api'
-import { getActionStoreIds } from '../features/auth/authorization'
-import { useLocalization } from '../features/localization/useLocalization'
+import { getStoreQueryScopeSignature, retainScopedPlaceholder } from '../features/auth/store-query-scope'
 import {
-  createOffboardingRequest,
-  createSellerCodeRequest,
-  getOffboardingRequests,
-  getPositionOptions,
-  getSellerCodeRequests,
-  getStoreEmployees,
-  getStoreHeadcountGap,
-  resubmitOffboardingRequest,
-  resubmitSellerCodeRequest,
-  type OffboardingRequest,
-  type SellerCodeRequest,
+  CommandCanvasDataList,
+  CommandCanvasFilterBar,
+  CommandCanvasMetricFilter,
+  CommandCanvasMetricRail,
+  CommandCanvasOperationalDrawerContent,
+  CommandCanvasPage,
+  CommandCanvasPageHeader,
+  CommandCanvasSortableHeading,
+} from '../features/store-command-canvas/primitives'
+import {
+  getWorkforceCommandWorkspace,
+  type WorkforceCommandStore,
 } from '../features/workforce/api'
-import { formatDateTime, formatNumber, getUserFacingErrorMessage } from '../lib/format'
-import { StoreRequestFeedback } from './store-approvals-atoms'
-import { StoreWorkforceFilterSelect } from './store-workforce-filter-select'
-import { OffboardingRequestForm } from './store-approvals-offboarding-form'
-import { ReturnedRequestsPanel } from './store-approvals-returned-panel'
-import { SellerCodeRequestForm } from './store-approvals-seller-code-form'
-import { createStoreApprovalsPageState, storeApprovalsPageReducer } from './store-approvals-model'
-import { formatNormActualLabel, getMonthRange, hasPlannedHeadcount } from './store-workforce-headcount'
 import {
-  buildWorkforceRequestSummaries,
-  deriveWorkforceSummary,
-  isClosedWorkforceStatus,
-} from './store-workforce-model'
+  filterAndSortPersonnel,
+  filterAndSortStores,
+  type SortDirection,
+  type WorkforcePersonSort,
+  type WorkforceRail,
+  type WorkforceStoreSort,
+  workforceWorkspaceQueryKey,
+  workforceStoreStatus,
+} from '../features/workforce/workforce-command-model'
 import {
-  PersonnelMobileCard,
-  PersonnelTableRow,
-  StoreWorkforceMetricCard,
-  StoreWorkforcePanel,
-  StoreWorkforceTh,
-  StoreWorkforceTenureGrid,
-  WorkforceBarRow,
-} from './store-workforce-store-manager-presentation'
-import {
-  getPersonnelRowStatus,
-  getRequestStatusClass,
-  getWorkforceRequestStatusLabel,
-  isPendingOffboardingApprovalStatus,
-} from './store-workforce-store-manager-view-model'
-import {
-  StoreEmptyState,
-  StoreErrorState,
-  StoreSectionCard,
-  StoreSurfaceHeader,
-  StoreSurfacePage,
-} from './store-surface-primitives'
-import { RegionWorkforceView } from './store-workforce-region-view'
+  WorkforceRequestDialogs,
+  type WorkforceRequestDialog,
+} from '../features/workforce/workforce-request-dialogs'
+import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { Sheet, SheetDescription, SheetHeader, SheetTitle } from '../components/ui/sheet'
+import { getUserFacingErrorMessage } from '../lib/format'
+import './store-workforce-command-canvas.css'
 
-type WorkforceMode = 'region' | 'store'
-type WorkforceDialog = 'sellerCodeRequest' | 'offboardingRequest' | 'returnedRequests'
-function resolveWorkforceMode(authSummary: AuthSessionSummary | null): WorkforceMode {
-  const roles = authSummary?.user.roleCodes ?? []
-  return roles.includes('REGION_MANAGER') || roles.includes('REPORT_VIEWER') ? 'region' : 'store'
-}
+const STORE_PAGE_SIZE = 50
+const PERSON_PAGE_SIZE = 8
+const HISTORY_PAGE_SIZE = 20
 
 export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | null }) {
-  const mode = resolveWorkforceMode(input.authSummary)
-
-  if (mode === 'region') {
-    return <RegionWorkforceView authSummary={input.authSummary} />
-  }
-
-  return <StoreManagerWorkforce authSummary={input.authSummary} />
-}
-
-function StoreManagerWorkforce(input: { authSummary: AuthSessionSummary | null }) {
-  const queryClient = useQueryClient()
-  const { locale, t } = useLocalization()
+  const scopeSignature = getStoreQueryScopeSignature(input.authSummary)
+  const previousScopeSignature = useRef(scopeSignature)
   const [searchParams] = useSearchParams()
-  const storeIds = getActionStoreIds(input.authSummary)
-  const requestedStoreId = searchParams.get('storeId')?.trim() ?? ''
-  const storeId = storeIds.includes(requestedStoreId) ? requestedStoreId : (storeIds[0] ?? '')
-  const now = useMemo(() => new Date(), [])
-  const currentMonthRange = useMemo(() => getMonthRange(now), [now])
-  const loadedHandoffRef = useRef<string | null>(null)
-  const [activeDialog, setActiveDialog] = useState<WorkforceDialog | null>(null)
-  const [personnelSearch, setPersonnelSearch] = useState('')
-  const [positionFilter, setPositionFilter] = useState('all')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [state, dispatch] = useReducer(
-    storeApprovalsPageReducer,
-    {
-      defaultTargetLabel: t('storeApprovals.targetLabelDefault'),
-      initialPanel: 'sellerCodeRequest',
-    },
-    createStoreApprovalsPageState,
-  )
-
-  const scopeKey = [
-    'store-workforce',
-    (input.authSummary?.user.roleCodes ?? []).join('|'),
-    storeIds.join('|'),
-    storeId,
-  ].join(':')
-  const enabled = Boolean(storeId)
-  const storeEmployeesQuery = useQuery({
-    queryKey: ['workforce-store-employees', 'store-workforce', scopeKey],
-    queryFn: () => getStoreEmployees(storeId),
-    enabled,
-  })
-  const headcountGapQuery = useQuery({
-    queryKey: [
-      'workforce-headcount-gap',
-      'store-workforce',
-      scopeKey,
-      currentMonthRange.periodStart,
-      currentMonthRange.periodEnd,
-    ],
-    queryFn: () => getStoreHeadcountGap({
-      storeId,
-      periodStart: currentMonthRange.periodStart,
-      periodEnd: currentMonthRange.periodEnd,
-    }),
-    enabled,
-  })
-  const positionOptionsQuery = useQuery({
-    queryKey: ['workforce-position-options', 'store-workforce', scopeKey],
-    queryFn: () => getPositionOptions(storeId),
-    enabled,
-  })
-  const sellerCodeRequestsQuery = useQuery({
-    queryKey: ['seller-code-requests', 'store-workforce', scopeKey],
-    queryFn: () => getSellerCodeRequests({ storeId, limit: 50, offset: 0 }),
-    enabled,
-  })
-  const offboardingRequestsQuery = useQuery({
-    queryKey: ['offboarding-requests', 'store-workforce', scopeKey],
-    queryFn: () => getOffboardingRequests({ storeId, limit: 50, offset: 0 }),
-    enabled,
-  })
-
-  const employees = useMemo(() => storeEmployeesQuery.data?.items ?? [], [storeEmployeesQuery.data?.items])
-  const sellerCodeRequests = useMemo(
-    () => sellerCodeRequestsQuery.data?.items.filter((item) => item.storeId === storeId) ?? [],
-    [sellerCodeRequestsQuery.data?.items, storeId],
-  )
-  const offboardingRequests = useMemo(
-    () => offboardingRequestsQuery.data?.items.filter((item) => item.storeId === storeId) ?? [],
-    [offboardingRequestsQuery.data?.items, storeId],
-  )
-  const returnedSellerCodeRequests = sellerCodeRequests.filter((item) => item.status === 'rejected')
-  const returnedOffboardingRequests = offboardingRequests.filter((item) => item.status === 'rejected')
-  const returnedRequestCount =
-    returnedSellerCodeRequests.length + returnedOffboardingRequests.length
-  const requests = buildWorkforceRequestSummaries({
-    offboardingRequests,
-    sellerCodeRequests,
-  })
-  const openMovementCount = requests.filter((item) => !isClosedWorkforceStatus(item.status)).length
-  const workforceSummary = deriveWorkforceSummary(employees, now, locale)
-  const normActualLabel = useMemo(
-    () => formatNormActualLabel({
-      actualFallback: employees.length,
-      headcountGap: headcountGapQuery.data ?? null,
-      locale,
-      notConfiguredLabel: t('storeWorkforce.valueNotConfigured'),
-    }),
-    [employees.length, headcountGapQuery.data, locale, t],
-  )
-  const normActualValue = headcountGapQuery.isLoading ? t('storeWorkforce.sourceWaitingShort') : headcountGapQuery.isError ? t('storeWorkforce.valueNotConfigured') : normActualLabel
-  const normActualNote = !headcountGapQuery.isError && hasPlannedHeadcount(headcountGapQuery.data ?? null) ? t('storeWorkforce.realDataBadge') : t('storeWorkforce.normActualHonestNote')
-  const positionOptions = useMemo(
-    () => Array.from(new Set(employees.map((item) => item.positionName).filter(Boolean))).sort(),
-    [employees],
-  )
-  const openOffboardingEmployeeIds = useMemo(
-    () =>
-      new Set(
-        offboardingRequests
-          .filter((item) => isPendingOffboardingApprovalStatus(item.status) && item.employeeId)
-          .map((item) => item.employeeId as string),
-      ),
-    [offboardingRequests],
-  )
-  const visibleEmployees = useMemo(() => {
-    const normalizedSearch = personnelSearch.trim().toLocaleLowerCase('tr-TR')
-
-    return employees.filter((employee) => {
-      const haystack = [
-        employee.displayName,
-        employee.externalEmployeeRef ?? '',
-        employee.positionName,
-      ].join(' ').toLocaleLowerCase('tr-TR')
-      const matchesSearch = normalizedSearch === '' || haystack.includes(normalizedSearch)
-      const matchesPosition = positionFilter === 'all' || employee.positionName === positionFilter
-      const status = getPersonnelRowStatus(employee, openOffboardingEmployeeIds)
-      const matchesStatus = statusFilter === 'all' || status.kind === statusFilter
-
-      return matchesSearch && matchesPosition && matchesStatus
-    })
-  }, [employees, openOffboardingEmployeeIds, personnelSearch, positionFilter, statusFilter])
-  const sellerCodeMutation = useMutation({
-    mutationFn: createSellerCodeRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
-    },
-  })
-  const resubmitSellerCodeMutation = useMutation({
-    mutationFn: resubmitSellerCodeRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['seller-code-requests'] })
-      dispatch({ type: 'resetSellerRequestSuccess', message: result.command.message })
-    },
-  })
-  const offboardingMutation = useMutation({
-    mutationFn: createOffboardingRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
-      void queryClient.invalidateQueries({ queryKey: ['workforce-store-employees'] })
-      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
-    },
-  })
-  const resubmitOffboardingMutation = useMutation({
-    mutationFn: resubmitOffboardingRequest,
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: ['offboarding-requests'] })
-      void queryClient.invalidateQueries({ queryKey: ['workforce-store-employees'] })
-      dispatch({ type: 'resetOffboardingRequestSuccess', message: result.command.message })
-    },
-  })
-  const canSubmitSellerCodeRequest =
-    Boolean(storeId) &&
-    Boolean(state.sellerFirstName.trim()) &&
-    Boolean(state.sellerLastName.trim()) &&
-    /^[0-9]{11}$/.test(state.sellerNationalId.trim()) &&
-    Boolean(state.sellerPhoneNumber.trim()) &&
-    Boolean(state.sellerHireDate) &&
-    Boolean(state.sellerPositionId.trim())
-  const canSubmitOffboardingRequest =
-    Boolean(storeId) &&
-    Boolean(state.offboardingEmployeeId.trim()) &&
-    Boolean(state.offboardingTerminationDate) &&
-    Boolean(state.offboardingRequestReason.trim())
-  const sellerRequestPending = sellerCodeMutation.isPending || resubmitSellerCodeMutation.isPending
-  const offboardingRequestPending = offboardingMutation.isPending || resubmitOffboardingMutation.isPending
-
-  const submitSellerCodeRequest = () => {
-    const trimmedSellerRequestReason = state.sellerRequestReason.trim()
-    const payload = {
-      firstName: state.sellerFirstName.trim(),
-      lastName: state.sellerLastName.trim(),
-      nationalId: state.sellerNationalId.trim(),
-      phoneNumber: state.sellerPhoneNumber.trim(),
-      hireDate: state.sellerHireDate,
-      requestedPositionId: state.sellerPositionId.trim(),
-      employmentType: state.sellerEmploymentType,
-      ...(trimmedSellerRequestReason ? { requestReason: trimmedSellerRequestReason } : {}),
-    }
-
-    if (state.editingSellerRequestId) {
-      resubmitSellerCodeMutation.mutate({
-        requestId: state.editingSellerRequestId,
-        ...payload,
-      })
-      return
-    }
-
-    sellerCodeMutation.mutate({
-      storeId,
-      requestType: 'create_code',
-      ...payload,
-    })
-  }
-  const submitOffboardingRequest = () => {
-    const requestReason = state.offboardingRequestReason.trim()
-    const payload = {
-      employeeId: state.offboardingEmployeeId,
-      terminationDate: state.offboardingTerminationDate,
-      terminationReason: requestReason.slice(0, 80),
-      requestReason,
-    }
-
-    if (state.editingOffboardingRequestId) {
-      resubmitOffboardingMutation.mutate({
-        requestId: state.editingOffboardingRequestId,
-        ...payload,
-      })
-      return
-    }
-
-    offboardingMutation.mutate({
-      storeId,
-      ...payload,
-    })
-  }
-  const startEditingSellerRequest = (item: SellerCodeRequest) => {
-    dispatch({
-      type: 'loadSellerRequestEdit',
-      item,
-      notice: item.reviewNote
-        ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
-        : t('storeApprovals.returnedSellerLoaded'),
-    })
-    setActiveDialog('sellerCodeRequest')
-  }
-  const startEditingOffboardingRequest = (item: OffboardingRequest) => {
-    dispatch({
-      type: 'loadOffboardingRequestEdit',
-      item,
-      notice: item.reviewNote
-        ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
-        : t('storeApprovals.returnedOffboardingLoaded'),
-    })
-    setActiveDialog('offboardingRequest')
-  }
-  const openSellerCodeDialog = () => {
-    dispatch({ type: 'cancelSellerRequestEdit' })
-    setActiveDialog('sellerCodeRequest')
-  }
-  const openOffboardingDialog = () => {
-    dispatch({ type: 'cancelOffboardingRequestEdit' })
-    setActiveDialog('offboardingRequest')
-  }
-  const openReturnedRequestsDialog = () => setActiveDialog('returnedRequests')
-  const closeWorkforceDialog = (open: boolean) => {
-    if (!open) {
-      setActiveDialog(null)
-    }
-  }
-  const handoffRequestType = searchParams.get('requestType')
-  const handoffRequestId = searchParams.get('requestId')
+  const [offset, setOffset] = useState(0)
+  const [query, setQuery] = useState('')
+  const deferredQuery = useDeferredValue(query)
+  const [status, setStatus] = useState<'all' | 'shortage' | 'balanced' | 'surplus' | 'unconfigured'>('all')
+  const [rail, setRail] = useState<WorkforceRail>('all')
+  const [storeSort, setStoreSort] = useState<WorkforceStoreSort>('store')
+  const [storeDirection, setStoreDirection] = useState<SortDirection>('ascending')
+  const [personSort, setPersonSort] = useState<WorkforcePersonSort>('person')
+  const [personDirection, setPersonDirection] = useState<SortDirection>('ascending')
+  const [position, setPosition] = useState('all')
+  const [personPage, setPersonPage] = useState(0)
+  const [personnelOffset, setPersonnelOffset] = useState(0)
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null)
+  const [historyStoreId, setHistoryStoreId] = useState<string | null>(null)
+  const [historyOffset, setHistoryOffset] = useState(0)
+  const requestType = searchParams.get('requestType')
+  const requestId = searchParams.get('requestId')
+  const [requestDialog, setRequestDialog] = useState<WorkforceRequestDialog>(() => requestId && requestType === 'sellerCode' ? 'seller' : requestId && requestType === 'offboarding' ? 'offboarding' : null)
 
   useEffect(() => {
-    if (!handoffRequestType || !handoffRequestId) {
-      return
-    }
+    if (previousScopeSignature.current === scopeSignature) return
+    previousScopeSignature.current = scopeSignature
+    setOffset(0)
+    setPersonnelOffset(0)
+    setPersonPage(0)
+    setSelectedStoreId(null)
+    setHistoryStoreId(null)
+    setHistoryOffset(0)
+    setRequestDialog(null)
+  }, [scopeSignature])
 
-    const handoffKey = `${handoffRequestType}:${handoffRequestId}`
+  const workspaceQuery = useQuery({
+    queryKey: workforceWorkspaceQueryKey({
+      scopeSignature,
+      offset,
+      personnelOffset,
+      query: deferredQuery,
+      status,
+      sort: storeSort,
+      direction: storeDirection,
+      rail,
+    }),
+    queryFn: () => getWorkforceCommandWorkspace({
+      limit: STORE_PAGE_SIZE,
+      offset,
+      personnelLimit: 50,
+      personnelOffset,
+      q: deferredQuery,
+      status: rail === 'gap' ? 'shortage' : status,
+      sort: storeSort,
+      direction: storeDirection,
+    }),
+    placeholderData: (previousData, previousQuery) => retainScopedPlaceholder(previousData, previousQuery?.queryKey, scopeSignature),
+  })
+  const workspace = workspaceQuery.data
+  const directStore = workspace?.view === 'store_manager' ? workspace.stores.items[0] ?? null : null
+  const selectedStoreSummary = workspace?.stores.items.find((item) => item.storeId === selectedStoreId) ?? null
+  const detailQuery = useQuery({
+    queryKey: ['store-workforce-command-detail', scopeSignature, selectedStoreId, offset, personnelOffset, deferredQuery, status, storeSort, storeDirection, rail],
+    queryFn: () => getWorkforceCommandWorkspace({
+      limit: STORE_PAGE_SIZE,
+      offset,
+      personnelStoreId: selectedStoreId!,
+      personnelLimit: 50,
+      personnelOffset,
+      q: deferredQuery,
+      status: rail === 'gap' ? 'shortage' : status,
+      sort: storeSort,
+      direction: storeDirection,
+    }),
+    enabled: Boolean(selectedStoreId),
+    placeholderData: (previousData, previousQuery) => retainScopedPlaceholder(previousData, previousQuery?.queryKey, scopeSignature),
+  })
+  const selectedStore = detailQuery.data?.stores.items.find((item) => item.storeId === selectedStoreId) ?? selectedStoreSummary
+  const personnelStore = directStore ?? selectedStore
+  const now = useMemo(() => new Date(), [])
 
-    if (loadedHandoffRef.current === handoffKey) {
-      return
-    }
+  const visibleStores = useMemo(() => filterAndSortStores({
+    stores: workspace?.stores.items ?? [], query, status, rail, sort: storeSort, direction: storeDirection,
+  }), [workspace?.stores.items, query, status, rail, storeSort, storeDirection])
+  const visiblePersonnel = useMemo(() => filterAndSortPersonnel({
+    personnel: personnelStore?.personnel ?? [], query, position, sort: personSort,
+    direction: personDirection, now,
+  }), [personnelStore?.personnel, query, position, personSort, personDirection, now])
+  const positions = useMemo(() => [...new Set((personnelStore?.personnel ?? []).map((item) => item.positionName))].sort(), [personnelStore?.personnel])
+  const personPageCount = Math.max(1, Math.ceil(visiblePersonnel.length / PERSON_PAGE_SIZE))
+  const safePersonPage = Math.min(personPage, personPageCount - 1)
+  const pagedPersonnel = visiblePersonnel.slice(safePersonPage * PERSON_PAGE_SIZE, (safePersonPage + 1) * PERSON_PAGE_SIZE)
+  const selectedHistoryStore = directStore?.storeId === historyStoreId ? directStore : selectedStore?.storeId === historyStoreId ? selectedStore : null
+  const historyQuery = useQuery({
+    queryKey: ['store-workforce-command-history', scopeSignature, historyStoreId, historyOffset],
+    queryFn: () => getWorkforceCommandWorkspace({ historyStoreId: historyStoreId!, historyLimit: HISTORY_PAGE_SIZE, historyOffset, limit: 1, offset: 0 }),
+    enabled: Boolean(historyStoreId),
+  })
 
-    if (handoffRequestType === 'sellerCode') {
-      const item = returnedSellerCodeRequests.find(
-        (request) => request.requestId === handoffRequestId,
-      )
-
-      if (item) {
-        loadedHandoffRef.current = handoffKey
-        queueMicrotask(() => {
-          dispatch({
-            type: 'loadSellerRequestEdit',
-            item,
-            notice: item.reviewNote
-              ? t('storeApprovals.returnedSellerLoadedWithNote', { note: item.reviewNote })
-              : t('storeApprovals.returnedSellerLoaded'),
-          })
-          setActiveDialog('sellerCodeRequest')
-        })
-        return
-      }
-    }
-
-    if (handoffRequestType === 'offboarding') {
-      const item = returnedOffboardingRequests.find(
-        (request) => request.requestId === handoffRequestId,
-      )
-
-      if (item) {
-        loadedHandoffRef.current = handoffKey
-        queueMicrotask(() => {
-          dispatch({
-            type: 'loadOffboardingRequestEdit',
-            item,
-            notice: item.reviewNote
-              ? t('storeApprovals.returnedOffboardingLoadedWithNote', { note: item.reviewNote })
-              : t('storeApprovals.returnedOffboardingLoaded'),
-          })
-          setActiveDialog('offboardingRequest')
-        })
-        return
-      }
-    }
-
-    if (sellerCodeRequestsQuery.isFetched && offboardingRequestsQuery.isFetched) {
-      loadedHandoffRef.current = handoffKey
-      queueMicrotask(() => setActiveDialog('returnedRequests'))
-    }
-  }, [
-    handoffRequestId,
-    handoffRequestType,
-    offboardingRequestsQuery.isFetched,
-    returnedOffboardingRequests,
-    returnedSellerCodeRequests,
-    sellerCodeRequestsQuery.isFetched,
-    t,
-  ])
-
-  if (!storeId) {
-    return (
-      <StoreSurfacePage ariaLabel={t('storeWorkforce.title')} className="tw:mx-auto tw:w-full tw:max-w-7xl"
-        testId="store-workforce-page">
-        <StoreSurfaceHeader
-          eyebrow={t('storeWorkforce.eyebrow')}
-          title={t('storeWorkforce.title')}
-          description={t('storeWorkforce.missingActionStoreCopy')}
-        />
-        <StoreEmptyState
-          title={t('storeWorkforce.missingActionStoreTitle')}
-          titleAsHeading
-          description={t('storeWorkforce.missingActionStoreCopy')}
-        />
-      </StoreSurfacePage>
-    )
+  if (workspaceQuery.isLoading && !workspace) return <WorkforceState title="Norm Kadro hazırlanıyor" description="Yetkili mağaza ve personel kapsamı yükleniyor." />
+  if (workspaceQuery.isError && !workspace) {
+    return <WorkforceState title="Norm Kadro açılamadı" description={getUserFacingErrorMessage(workspaceQuery.error, 'Veriler alınamadı.')} onRetry={() => void workspaceQuery.refetch()} />
   }
+  if (!workspace) return null
 
-  if (storeEmployeesQuery.isLoading && !storeEmployeesQuery.data) {
-    return (
-      <StoreSurfacePage ariaLabel={t('storeWorkforce.title')} className="tw:mx-auto tw:w-full tw:max-w-7xl"
-        testId="store-workforce-page">
-        <StoreSurfaceHeader
-          eyebrow={t('storeWorkforce.eyebrow')}
-          title={t('storeWorkforce.title')}
-          description={t('storeWorkforce.storeManagerDescription')}
-        />
-        <StoreSectionCard title={t('storeWorkforce.personnelLoadingTitle')}>
-          <StoreRequestFeedback tone="success">
-            {t('storeWorkforce.personnelLoadingCopy')}
-          </StoreRequestFeedback>
-        </StoreSectionCard>
-      </StoreSurfacePage>
-    )
+  const isStoreManager = workspace.view === 'store_manager'
+  const canManageRequests = workspace.capabilities.canCreateSellerCodeRequest
+    || workspace.capabilities.canCreateOffboardingRequest
+  const totalLabel = isStoreManager ? 'Mağaza' : 'Toplam mağaza'
+  const averageTenure = formatTenure(workspace.summary.averageTenureDays)
+  const openRequestDialog = (dialog: Exclude<WorkforceRequestDialog, null>) => setRequestDialog(dialog)
+  const requestStoreId = directStore?.storeId ?? ''
+
+  const chooseStoreSort = (next: WorkforceStoreSort) => {
+    if (storeSort === next) setStoreDirection((value) => value === 'ascending' ? 'descending' : 'ascending')
+    else { setStoreSort(next); setStoreDirection('ascending') }
+    setOffset(0)
+  }
+  const choosePersonSort = (next: WorkforcePersonSort) => {
+    if (personSort === next) setPersonDirection((value) => value === 'ascending' ? 'descending' : 'ascending')
+    else { setPersonSort(next); setPersonDirection('ascending') }
+    setPersonPage(0)
+  }
+  const loadNextPersonnelBatch = () => {
+    setPersonnelOffset((value) => value + 50)
+    setPersonPage(0)
+  }
+  const loadPreviousPersonnelBatch = () => {
+    setPersonnelOffset((value) => Math.max(0, value - 50))
+    setPersonPage(0)
   }
 
   return (
-    <StoreSurfacePage
-      ariaLabel={t('storeWorkforce.title')}
-      ariaLabelledBy="store-workforce-title"
-      className="tw:mx-auto tw:w-full tw:max-w-7xl"
-      testId="store-workforce-page"
-    >
-      <div className="tw:flex tw:flex-col tw:gap-3 tw:md:flex-row tw:md:items-center tw:md:justify-between">
-        <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3">
-          <span className="tw:grid tw:size-11 tw:shrink-0 tw:place-items-center tw:rounded-2xl tw:bg-[#efe9ff] tw:text-[#6847ff]">
-            <UsersRound className="tw:size-5" />
-          </span>
-          <div className="tw:min-w-0">
-            <h1
-              id="store-workforce-title"
-              className="tw:text-[30px] tw:font-semibold tw:leading-none tw:tracking-normal tw:text-[#071333] tw:md:text-[34px]"
-            >
-              {t('storeWorkforce.title')}
-            </h1>
-            <p className="tw:mt-2 tw:max-w-3xl tw:text-sm tw:leading-5 tw:text-[#647194]">
-              {t('storeWorkforce.storeManagerDescription')}
-            </p>
-          </div>
+    <CommandCanvasPage ariaLabelledBy="workforce-command-title" className="workforce-command-page" testId="store-workforce-page">
+      <CommandCanvasPageHeader
+        title="Norm Kadro"
+        titleId="workforce-command-title"
+        eyebrow={workspace.view === 'report_viewer' ? 'Şirket görünümü · Salt okunur' : isStoreManager ? 'Mağaza görünümü' : 'Bölge görünümü'}
+        description={isStoreManager ? 'Personel durumunuzu ve açık hareketleri yönetin.' : 'Mağaza kadro dengesini ve eksik sürelerini izleyin.'}
+        actions={isStoreManager && canManageRequests ? (
+          <>
+            <Button variant="ghost" onClick={() => openRequestDialog('returned')}>İade edilen talepler</Button>
+            {workspace.capabilities.canCreateOffboardingRequest ? <Button variant="outline" onClick={() => openRequestDialog('offboarding')}><UserMinus /> İşten ayrılma talebi</Button> : null}
+            {workspace.capabilities.canCreateSellerCodeRequest ? <Button onClick={() => openRequestDialog('seller')}><UserPlus /> Personel sicil talebi</Button> : null}
+          </>
+        ) : undefined}
+      />
+
+      <CommandCanvasMetricRail ariaLabel="Norm Kadro özeti">
+        <CommandCanvasMetricFilter label={totalLabel} value={String(workspace.summary.totalStores)} note="Aktif görünüm" icon={<Store size={16} />} active={rail === 'all'} onClick={() => { setRail('all'); setStatus('all'); setPosition('all'); setQuery(''); setOffset(0); setPersonPage(0) }} />
+        <CommandCanvasMetricFilter label="Aktif personel" value={String(workspace.summary.activePersonnel)} note="Toplam çalışan" icon={<UsersRound size={16} />} tone="cyan" active={rail === 'active'} onClick={() => { setRail('active'); if (isStoreManager) { setPersonSort('person'); setPersonDirection('ascending'); setPersonPage(0) } else { setStoreSort('active'); setStoreDirection('descending'); setOffset(0) } }} />
+        <CommandCanvasMetricFilter label={isStoreManager ? 'Eksik kadro' : 'Eksik mağaza'} value={String(isStoreManager ? workspace.summary.openPositions : workspace.summary.shortageStores)} note={`${workspace.summary.openPositions} açık pozisyon`} icon={<UserMinus size={16} />} tone="rose" active={rail === 'gap'} onClick={() => { setRail(rail === 'gap' ? 'all' : 'gap'); setOffset(0) }} />
+        <CommandCanvasMetricFilter label="Ortalama kıdem" value={averageTenure} note="Aktif personel" icon={<Clock3 size={16} />} tone="amber" active={rail === 'tenure'} onClick={() => { setRail('tenure'); if (isStoreManager) { setPersonSort('tenure'); setPersonDirection('descending'); setPersonPage(0) } else { setStoreSort('tenure'); setStoreDirection('descending'); setOffset(0) } }} />
+      </CommandCanvasMetricRail>
+
+      {isStoreManager && rail === 'gap' ? <div className="workforce-gap-notice"><strong>{workspace.summary.openPositions} açık pozisyon</strong><span>{workspace.summary.openPositions > 0 ? 'Norm ile aktif personel arasındaki güncel fark.' : 'Mağaza kadrosu güncel normla dengede.'}</span></div> : null}
+
+      <CommandCanvasFilterBar
+        updatingLabel="Norm Kadro güncelleniyor"
+        isUpdating={workspaceQuery.isFetching}
+        search={<label className="workforce-search"><Search aria-hidden="true" size={15} /><Input aria-label={isStoreManager ? 'Personel veya pozisyon ara' : 'Mağaza veya müdür ara'} placeholder={isStoreManager ? 'Personel veya pozisyon ara' : 'Mağaza veya müdür ara'} value={query} onChange={(event) => { setQuery(event.target.value); setOffset(0); setPersonPage(0) }} /></label>}
+        controls={isStoreManager ? (
+          <>
+            <Select value={position} onValueChange={(value) => { setPosition(value); setPersonPage(0) }}>
+              <SelectTrigger aria-label="Pozisyon"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm pozisyonlar</SelectItem>
+                {positions.map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={personSort} onValueChange={(value) => choosePersonSort(value as WorkforcePersonSort)}>
+              <SelectTrigger aria-label="Personel sıralaması"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="person">Ad</SelectItem>
+                <SelectItem value="position">Pozisyon</SelectItem>
+                <SelectItem value="start">İşe giriş</SelectItem>
+                <SelectItem value="tenure">Çalışma süresi</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        ) : (
+          <>
+            <Select value={status} onValueChange={(value) => { setStatus(value as typeof status); setOffset(0) }}>
+              <SelectTrigger aria-label="Kadro durumu"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tüm durumlar</SelectItem>
+                <SelectItem value="shortage">Eksik</SelectItem>
+                <SelectItem value="balanced">Tam</SelectItem>
+                <SelectItem value="surplus">Fazla</SelectItem>
+                <SelectItem value="unconfigured">Tanımsız</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={storeSort} onValueChange={(value) => chooseStoreSort(value as WorkforceStoreSort)}>
+              <SelectTrigger aria-label="Mağaza sıralaması"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="store">Mağaza</SelectItem>
+                <SelectItem value="active">Aktif</SelectItem>
+                <SelectItem value="norm">Norm</SelectItem>
+                <SelectItem value="status">Durum</SelectItem>
+                <SelectItem value="shortage">Eksik süre</SelectItem>
+                <SelectItem value="tenure">Ortalama kıdem</SelectItem>
+              </SelectContent>
+            </Select>
+          </>
+        )}
+        actions={<Button variant="outline" onClick={() => { if (isStoreManager) setPersonDirection((value) => value === 'ascending' ? 'descending' : 'ascending'); else { setStoreDirection((value) => value === 'ascending' ? 'descending' : 'ascending'); setOffset(0) } }}>Yön: {(isStoreManager ? personDirection : storeDirection) === 'ascending' ? 'Artan' : 'Azalan'}</Button>}
+      />
+
+      {workspace.stores.items.length === 0 ? (
+        <WorkforceInlineEmpty title="Kapsamda mağaza yok" description="Bu rol için görüntülenebilir aktif mağaza bulunamadı." />
+      ) : isStoreManager && directStore ? (
+        <div data-testid="store-workforce-personnel-list">
+          <PersonnelList store={directStore} rows={pagedPersonnel} sort={personSort} direction={personDirection} onSort={choosePersonSort} onHistory={() => { setHistoryOffset(0); setHistoryStoreId(directStore.storeId) }} page={safePersonPage} pageCount={personPageCount} total={directStore.personnelTotal} onPage={setPersonPage} onNextBatch={loadNextPersonnelBatch} onPreviousBatch={loadPreviousPersonnelBatch} />
         </div>
-      </div>
+      ) : (
+        <StoreList stores={visibleStores} view={workspace.view} sort={storeSort} direction={storeDirection} onSort={chooseStoreSort} onSelect={(store) => { setSelectedStoreId(store.storeId); setPersonPage(0); setPersonnelOffset(0); setQuery('') }} pagination={workspace.stores} onOffset={setOffset} />
+      )}
 
-      <div
-        className="tw:grid tw:gap-3 tw:md:grid-cols-2 tw:xl:grid-cols-4"
-        aria-label={t('storeWorkforce.summaryAria')}
-      >
-        <StoreWorkforceMetricCard
-          icon={<UsersRound className="tw:size-5" />}
-          iconClassName="tw:bg-[#dffaff] tw:text-[#00aabd]"
-          title={t('storeWorkforce.personnelScope')}
-          value={formatNumber(employees.length, locale)}
-          note={t('storeWorkforce.personnelScopeNote')}
-        />
-        <StoreWorkforceMetricCard
-          icon={<Clock3 className="tw:size-5" />}
-          iconClassName="tw:bg-[#efe9ff] tw:text-[#6847ff]"
-          title={t('storeWorkforce.averageTenure')}
-          value={workforceSummary.averageTenureLabel}
-          note={workforceSummary.missingTenureCount > 0
-            ? t('storeWorkforce.averageTenureMissing', {
-              count: workforceSummary.missingTenureCount,
-            })
-            : t('storeWorkforce.averageTenureNote')}
-        />
-        <StoreWorkforceMetricCard
-          icon={<BriefcaseBusiness className="tw:size-5" />}
-          iconClassName="tw:bg-[#fff1d9] tw:text-[#f59e0b]"
-          title={t('storeWorkforce.normActual')}
-          value={normActualValue}
-          note={normActualNote}
-        />
-        <StoreWorkforceMetricCard
-          icon={<ClipboardList className="tw:size-5" />}
-          iconClassName="tw:bg-[#ffe4ec] tw:text-[#f43f6d]"
-          title={t('storeWorkforce.openMovements')}
-          value={formatNumber(openMovementCount, locale)}
-          note={t('storeWorkforce.openMovementsNote')}
-        />
-      </div>
-
-      <div className="tw:grid tw:gap-4 tw:xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="tw:min-w-0">
-          <div className="tw:mb-3 tw:grid tw:gap-2.5 tw:rounded-[1.25rem] tw:border tw:border-[#dfe6f3] tw:bg-white/80 tw:p-2.5 tw:shadow-[0_18px_48px_rgba(58,75,118,0.10)] tw:backdrop-blur tw:md:grid-cols-[minmax(220px,1fr)_190px_180px]">
-            <label className="tw:flex tw:min-h-11 tw:items-center tw:gap-2 tw:rounded-2xl tw:border tw:border-[#dfe6f3] tw:bg-white/90 tw:px-3">
-              <Search className="tw:size-4 tw:text-[#647194]" />
-              <input
-                className="tw:min-w-0 tw:flex-1 tw:border-0 tw:bg-transparent tw:text-sm tw:font-medium tw:text-[#071333] tw:outline-none tw:placeholder:text-[#7c88a6]"
-                value={personnelSearch}
-                aria-label={t('storeWorkforce.personnelSearchAria')}
-                placeholder={t('storeWorkforce.personnelSearchPlaceholder')}
-                onChange={(event) => setPersonnelSearch(event.target.value)}
-              />
-            </label>
-            <StoreWorkforceFilterSelect
-              icon={<BriefcaseBusiness className="tw:size-4 tw:text-[#647194]" />}
-              value={positionFilter}
-              ariaLabel={t('storeWorkforce.positionFilterAria')}
-              options={[
-                { value: 'all', label: t('storeWorkforce.allPositions') },
-                ...positionOptions.map((position) => ({ value: position, label: position })),
-              ]}
-              onChange={setPositionFilter}
-            />
-            <StoreWorkforceFilterSelect
-              icon={<ClipboardList className="tw:size-4 tw:text-[#647194]" />}
-              value={statusFilter}
-              ariaLabel={t('storeWorkforce.statusFilterAria')}
-              options={[
-                { value: 'all', label: t('storeWorkforce.allStatuses') },
-                { value: 'active', label: t('storeWorkforce.statusActive') },
-                { value: 'codeWaiting', label: t('storeWorkforce.statusCodeWaiting') },
-                { value: 'offboarding', label: t('storeWorkforce.statusOffboarding') },
-              ]}
-              onChange={setStatusFilter}
-            />
-          </div>
-
-          <section
-            className="tw:overflow-hidden tw:rounded-[1.375rem] tw:border tw:border-[#dfe6f3] tw:bg-white/85 tw:shadow-[0_24px_70px_rgba(58,75,118,0.14)] tw:backdrop-blur"
-            data-testid="store-workforce-personnel-list"
-          >
-            <div className="tw:flex tw:flex-col tw:gap-3 tw:border-b tw:border-[#dfe6f3] tw:px-4 tw:py-4 tw:md:flex-row tw:md:items-start tw:md:justify-between">
-              <div>
-                <h2 className="tw:text-[19px] tw:font-semibold tw:tracking-normal tw:text-[#071333]">
-                  {t('storeWorkforce.personnelListTitle')}
-                </h2>
-                <p className="tw:mt-1 tw:text-sm tw:leading-5 tw:text-[#647194]">
-                  {t('storeWorkforce.personnelListDescription')}
-                </p>
-              </div>
-              <div className="tw:flex tw:flex-wrap tw:gap-2">
-                <button
-                  className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:bg-gradient-to-br tw:from-[#6847ff] tw:to-[#355cff] tw:px-3 tw:text-sm tw:font-semibold tw:text-white tw:shadow-[0_12px_24px_rgba(104,71,255,0.22)]"
-                  type="button"
-                  onClick={openSellerCodeDialog}
-                >
-                  <UserPlus className="tw:size-4" />
-                  Yeni personel
-                </button>
-                <button
-                  className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:border tw:border-[#cfc5ff] tw:bg-white tw:px-3 tw:text-sm tw:font-semibold tw:text-[#5534e6]"
-                  type="button"
-                  onClick={openOffboardingDialog}
-                >
-                  <LogOut className="tw:size-4" />
-                  Çıkış talebi
-                </button>
-                {returnedRequestCount > 0 ? (
-                  <button
-                    className="tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-2 tw:rounded-[13px] tw:border tw:border-[#ead7a8] tw:bg-[#fff8e8] tw:px-3 tw:text-sm tw:font-semibold tw:text-[#9a5a00]"
-                    type="button"
-                    onClick={openReturnedRequestsDialog}
-                  >
-                    <RotateCcw className="tw:size-4" />
-                    İade kayıtları
-                  </button>
-                ) : null}
-              </div>
+      <Sheet open={Boolean(selectedStore)} onOpenChange={(open) => { if (!open) setSelectedStoreId(null) }}>
+        <CommandCanvasOperationalDrawerContent data-testid="store-workforce-region-detail-dialog">
+          {selectedStore ? (
+            <div className="workforce-drawer">
+              <SheetHeader><SheetTitle>{selectedStore.storeName} kadro dosyası</SheetTitle><SheetDescription>Aktif personel ve norm dengesi.</SheetDescription></SheetHeader>
+              <div className="workforce-drawer-facts"><Fact label="Norm / Fiili" value={selectedStore.norm === null ? `Tanımsız / ${selectedStore.active}` : `${selectedStore.norm} / ${selectedStore.active}`} /><Fact label="Kadro farkı" value={formatGap(selectedStore.gap)} /><Fact label="Eksik süre" value={formatShortage(selectedStore)} /></div>
+              {detailQuery.isError ? <WorkforceInlineEmpty title="Mağaza dosyası alınamadı" description="Personel ayrıntıları yüklenemedi." action={() => void detailQuery.refetch()} /> : detailQuery.isFetching && selectedStore.personnel.length === 0 ? <WorkforceInlineEmpty title="Mağaza dosyası hazırlanıyor" description="Aktif personel bilgileri yükleniyor." /> : <PersonnelList compact store={selectedStore} rows={pagedPersonnel} sort={personSort} direction={personDirection} onSort={choosePersonSort} onHistory={() => { setHistoryOffset(0); setHistoryStoreId(selectedStore.storeId) }} page={safePersonPage} pageCount={personPageCount} total={selectedStore.personnelTotal} onPage={setPersonPage} onNextBatch={loadNextPersonnelBatch} onPreviousBatch={loadPreviousPersonnelBatch} />}
             </div>
+          ) : null}
+        </CommandCanvasOperationalDrawerContent>
+      </Sheet>
 
-            {storeEmployeesQuery.isError ? (
-              <div className="tw:p-4">
-                <StoreErrorState
-                  title={t('storeWorkforce.personnelErrorTitle')}
-                  description={getUserFacingErrorMessage(
-                    storeEmployeesQuery.error,
-                    'Personel listesi alınamadı. Mağazayı kontrol edip tekrar deneyin.',
-                  )}
-                />
-              </div>
-            ) : employees.length === 0 ? (
-              <div className="tw:p-4">
-                <StoreEmptyState
-                  title={t('storeWorkforce.personnelEmptyTitle')}
-                  titleAsHeading
-                  description={t('storeWorkforce.personnelEmptyCopy')}
-                />
-              </div>
-            ) : (
-              <>
-                <div className="tw:hidden tw:md:block">
-                  <table className="tw:w-full tw:table-fixed tw:border-collapse">
-                    <colgroup>
-                      <col className="tw:w-[26%]" />
-                      <col className="tw:w-[17%]" />
-                      <col className="tw:w-[13%]" />
-                      <col className="tw:w-[12%]" />
-                      <col className="tw:w-[16%]" />
-                      <col className="tw:w-[16%]" />
-                    </colgroup>
-                    <thead>
-                      <tr className="tw:bg-[#f4f7fc]/90">
-                        <StoreWorkforceTh>Personel</StoreWorkforceTh>
-                        <StoreWorkforceTh>Pozisyon</StoreWorkforceTh>
-                        <StoreWorkforceTh>Giriş tarihi</StoreWorkforceTh>
-                        <StoreWorkforceTh>Kıdem</StoreWorkforceTh>
-                        <StoreWorkforceTh>Kod durumu</StoreWorkforceTh>
-                        <StoreWorkforceTh>Durum</StoreWorkforceTh>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {visibleEmployees.map((employee) => (
-                        <PersonnelTableRow
-                          key={employee.employeeId}
-                          employee={employee}
-                          locale={locale}
-                          now={now}
-                          openOffboardingEmployeeIds={openOffboardingEmployeeIds}
-                          t={t}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="tw:grid tw:gap-2.5 tw:p-3 tw:md:hidden">
-                  {visibleEmployees.map((employee) => (
-                    <PersonnelMobileCard
-                      key={employee.employeeId}
-                      employee={employee}
-                      locale={locale}
-                      now={now}
-                      openOffboardingEmployeeIds={openOffboardingEmployeeIds}
-                      t={t}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </section>
-        </div>
-
-        <div className="tw:flex tw:min-w-0 tw:flex-col tw:gap-4">
-          <StoreWorkforcePanel
-            title={t('storeWorkforce.positionDistributionTitle')}
-            description={t('storeWorkforce.positionDistributionDescription')}
-            badge={t('storeWorkforce.personnelListBadge', { count: employees.length })}
-            badgeClassName="tw:rounded-full tw:bg-[#dffaff] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#00889b]"
-          >
-            {workforceSummary.positionRows.length === 0 ? (
-              <StoreEmptyState
-                title={t('storeWorkforce.positionDistributionEmptyTitle')}
-                titleAsHeading
-                description={t('storeWorkforce.positionDistributionEmptyCopy')}
-              />
-            ) : (
-              <div className="tw:grid tw:gap-3">
-                {workforceSummary.positionRows.map((row, index) => (
-                  <WorkforceBarRow
-                    key={row.label}
-                    label={row.label}
-                    value={row.count}
-                    max={Math.max(1, employees.length)}
-                    index={index}
-                    locale={locale}
-                  />
-                ))}
-              </div>
-            )}
-          </StoreWorkforcePanel>
-
-          <StoreWorkforcePanel
-            title={t('storeWorkforce.tenureBucketsTitle')}
-            description={t('storeWorkforce.tenureBucketsDescription')}
-            badge={workforceSummary.averageTenureLabel}
-            badgeClassName="tw:rounded-full tw:bg-[#efe9ff] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#5534e6]"
-          >
-            <StoreWorkforceTenureGrid
-              items={workforceSummary.tenureBuckets.map((bucket) => ({
-                label: bucket.label,
-                value: formatNumber(bucket.count, locale),
-              }))}
-            />
-          </StoreWorkforcePanel>
-
-          <StoreWorkforcePanel
-            title={t('storeWorkforce.requestCenterTitle')}
-            description={t('storeWorkforce.requestCenterDescription')}
-            badge={t('storeWorkforce.requestCenterBadge', { count: openMovementCount })}
-            badgeClassName={openMovementCount > 0
-              ? 'tw:rounded-full tw:bg-[#fff1d9] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#a35a00]'
-              : 'tw:rounded-full tw:bg-[#f4f7fc] tw:px-2.5 tw:py-1 tw:text-xs tw:font-semibold tw:text-[#465272]'}
-          >
-            {sellerCodeRequestsQuery.isError || offboardingRequestsQuery.isError ? (
-              <div className="tw:flex tw:flex-col tw:gap-2">
-                {sellerCodeRequestsQuery.isError ? (
-                  <StoreRequestFeedback tone="error">
-                    {getUserFacingErrorMessage(
-                      sellerCodeRequestsQuery.error,
-                      'Personel kodu talepleri alınamadı. Tekrar deneyin.',
-                    )}
-                  </StoreRequestFeedback>
-                ) : null}
-                {offboardingRequestsQuery.isError ? (
-                  <StoreRequestFeedback tone="error">
-                    {getUserFacingErrorMessage(
-                      offboardingRequestsQuery.error,
-                      'Ayrılış talepleri alınamadı. Tekrar deneyin.',
-                    )}
-                  </StoreRequestFeedback>
-                ) : null}
-              </div>
-            ) : requests.length === 0 ? (
-              <StoreEmptyState
-                title={t('storeWorkforce.requestsEmptyTitle')}
-                titleAsHeading
-                description={t('storeWorkforce.requestsEmptyCopy')}
-              />
-            ) : (
-              <div className="tw:grid tw:gap-2">
-                {requests.slice(0, 6).map((request) => (
-                  <article
-                    key={request.key}
-                    className="tw:rounded-2xl tw:border tw:border-[#e4eaf5] tw:bg-white/70 tw:p-2.5"
-                  >
-                    <div className="tw:flex tw:items-start tw:justify-between tw:gap-2">
-                      <div className="tw:min-w-0">
-                        <strong className="tw:block tw:truncate tw:text-sm tw:font-semibold tw:text-[#071333]">
-                          {request.title}
-                        </strong>
-                        <span className="tw:mt-0.5 tw:block tw:truncate tw:text-xs tw:text-[#647194]">
-                          {request.subtitle}
-                        </span>
-                      </div>
-                      <span className={getRequestStatusClass(request.status)}>
-                        <span className="tw:size-1.5 tw:rounded-full tw:bg-current" />
-                        {getWorkforceRequestStatusLabel(request.status)}
-                      </span>
-                    </div>
-                    <span className="tw:mt-2 tw:block tw:text-xs tw:font-medium tw:text-[#647194]">
-                      {formatDateTime(request.updatedAt, locale)}
-                    </span>
-                  </article>
-                ))}
-              </div>
-            )}
-          </StoreWorkforcePanel>
-
-        </div>
-      </div>
-
-      <Dialog open={activeDialog !== null} onOpenChange={closeWorkforceDialog}>
-        <DialogContent
-          className="tw:max-h-[min(88vh,760px)] tw:overflow-y-auto tw:rounded-[1.35rem] tw:border-[#dfe6f3] tw:bg-white/95 tw:p-0 tw:shadow-[0_32px_90px_rgba(58,75,118,0.22)] tw:sm:max-w-3xl"
-          closeLabel={t('storeWorkforce.closeDetail')}
-        >
-          <DialogHeader className="tw:border-b tw:border-[#dfe6f3] tw:px-5 tw:py-4 tw:pr-12">
-            <DialogTitle className="tw:text-[20px] tw:font-semibold tw:tracking-normal tw:text-[#071333]">
-              {activeDialog === 'sellerCodeRequest'
-                ? t('storeApprovals.sellerCodeTitle')
-                : activeDialog === 'offboardingRequest'
-                  ? t('storeApprovals.offboardingTitle')
-                  : t('storeApprovals.returnedTitle')}
-            </DialogTitle>
-            <DialogDescription className="tw:text-sm tw:leading-5 tw:text-[#647194]">
-              {t('storeWorkforce.requestActionDescription')}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="tw:p-4">
-            {activeDialog === 'sellerCodeRequest' ? (
-              <SellerCodeRequestForm
-                access={{
-                  createAllowed: enabled,
-                  submitAllowed: canSubmitSellerCodeRequest,
-                }}
-                editingRequestId={state.editingSellerRequestId}
-                errors={{
-                  create: sellerCodeMutation.error,
-                  createVisible: sellerCodeMutation.isError,
-                  resubmit: resubmitSellerCodeMutation.error,
-                  resubmitVisible: resubmitSellerCodeMutation.isError,
-                }}
-                onCancelEdit={() => dispatch({ type: 'cancelSellerRequestEdit' })}
-                onEmploymentTypeChange={(value) =>
-                  dispatch({ type: 'setSellerEmploymentType', value })
-                }
-                onFirstNameChange={(value) => dispatch({ type: 'setSellerFirstName', value })}
-                onHireDateChange={(value) => dispatch({ type: 'setSellerHireDate', value })}
-                onLastNameChange={(value) => dispatch({ type: 'setSellerLastName', value })}
-                onNationalIdChange={(value) => dispatch({ type: 'setSellerNationalId', value })}
-                onPhoneNumberChange={(value) => dispatch({ type: 'setSellerPhoneNumber', value })}
-                onPositionIdChange={(value) => dispatch({ type: 'setSellerPositionId', value })}
-                onRequestReasonChange={(value) =>
-                  dispatch({ type: 'setSellerRequestReason', value })
-                }
-                onSubmit={submitSellerCodeRequest}
-                positionOptionsQuery={positionOptionsQuery}
-                sellerEmploymentType={state.sellerEmploymentType}
-                sellerFirstName={state.sellerFirstName}
-                sellerHireDate={state.sellerHireDate}
-                sellerLastName={state.sellerLastName}
-                sellerNationalId={state.sellerNationalId}
-                sellerPhoneNumber={state.sellerPhoneNumber}
-                sellerPositionId={state.sellerPositionId}
-                sellerRequestReason={state.sellerRequestReason}
-                submission={{
-                  notice: state.sellerRequestNotice,
-                  pending: sellerRequestPending,
-                }}
-                storeId={storeId}
-                t={t}
-              />
-            ) : null}
-            {activeDialog === 'offboardingRequest' ? (
-              <OffboardingRequestForm
-                access={{
-                  createAllowed: enabled,
-                  submitAllowed: canSubmitOffboardingRequest,
-                }}
-                editingRequestId={state.editingOffboardingRequestId}
-                errors={{
-                  create: offboardingMutation.error,
-                  createVisible: offboardingMutation.isError,
-                  resubmit: resubmitOffboardingMutation.error,
-                  resubmitVisible: resubmitOffboardingMutation.isError,
-                }}
-                offboardingEmployeeId={state.offboardingEmployeeId}
-                offboardingRequestReason={state.offboardingRequestReason}
-                offboardingTerminationDate={state.offboardingTerminationDate}
-                onCancelEdit={() => dispatch({ type: 'cancelOffboardingRequestEdit' })}
-                onEmployeeIdChange={(value) =>
-                  dispatch({ type: 'setOffboardingEmployeeId', value })
-                }
-                onRequestReasonChange={(value) =>
-                  dispatch({ type: 'setOffboardingRequestReason', value })
-                }
-                onSubmit={submitOffboardingRequest}
-                onTerminationDateChange={(value) =>
-                  dispatch({ type: 'setOffboardingTerminationDate', value })
-                }
-                submission={{
-                  notice: state.offboardingNotice,
-                  pending: offboardingRequestPending,
-                }}
-                storeEmployeesQuery={storeEmployeesQuery}
-                t={t}
-              />
-            ) : null}
-            {activeDialog === 'returnedRequests' ? (
-              <ReturnedRequestsPanel
-                locale={locale}
-                returnedOffboardingRequests={returnedOffboardingRequests}
-                returnedSellerCodeRequests={returnedSellerCodeRequests}
-                sellerCodeRequestsError={sellerCodeRequestsQuery.error}
-                hasSellerCodeRequestsError={sellerCodeRequestsQuery.isError}
-                offboardingRequestsError={offboardingRequestsQuery.error}
-                hasOffboardingRequestsError={offboardingRequestsQuery.isError}
-                onEditOffboardingRequest={startEditingOffboardingRequest}
-                onEditSellerCodeRequest={startEditingSellerRequest}
-                t={t}
-              />
-            ) : null}
+      <Sheet open={Boolean(historyStoreId)} onOpenChange={(open) => { if (!open) setHistoryStoreId(null) }}>
+        <CommandCanvasOperationalDrawerContent>
+          <div className="workforce-drawer">
+            <SheetHeader><SheetTitle>{selectedHistoryStore?.storeName ?? 'Mağaza'} · Personel geçmişi</SheetTitle><SheetDescription>Yalnız işe giriş, işten çıkış ve toplam çalışma süresi.</SheetDescription></SheetHeader>
+            <HistoryList query={historyQuery} onOffset={setHistoryOffset} />
           </div>
-        </DialogContent>
-      </Dialog>
-    </StoreSurfacePage>
+        </CommandCanvasOperationalDrawerContent>
+      </Sheet>
+
+      {isStoreManager && canManageRequests ? <WorkforceRequestDialogs dialog={requestDialog} onDialogChange={setRequestDialog} storeId={requestStoreId} handoffRequestId={requestId} handoffRequestType={requestType} /> : null}
+    </CommandCanvasPage>
   )
 }
+
+function StoreList(input: { stores: WorkforceCommandStore[]; view: 'report_viewer' | 'region_manager' | 'store_manager'; sort: WorkforceStoreSort; direction: SortDirection; onSort: (sort: WorkforceStoreSort) => void; onSelect: (store: WorkforceCommandStore) => void; pagination: { total: number; limit: number; offset: number; hasMore: boolean }; onOffset: (offset: number) => void }) {
+  const stores = input.view === 'report_viewer'
+    ? [...input.stores].sort((left, right) => left.regionId.localeCompare(right.regionId))
+    : input.stores
+  return (
+    <CommandCanvasDataList ariaLabel="Mağaza kadro dengesi" header={<div className="workforce-store-grid workforce-list-head"><CommandCanvasSortableHeading semantic={false} label="Mağaza" direction={input.sort === 'store' ? input.direction : 'none'} onClick={() => input.onSort('store')} /><CommandCanvasSortableHeading semantic={false} label="Aktif" direction={input.sort === 'active' ? input.direction : 'none'} onClick={() => input.onSort('active')} /><CommandCanvasSortableHeading semantic={false} label="Norm / Fiili" direction={input.sort === 'norm' ? input.direction : 'none'} onClick={() => input.onSort('norm')} /><CommandCanvasSortableHeading semantic={false} label="Durum" direction={input.sort === 'status' ? input.direction : 'none'} onClick={() => input.onSort('status')} /><CommandCanvasSortableHeading semantic={false} label="Eksik süre" direction={input.sort === 'shortage' ? input.direction : 'none'} onClick={() => input.onSort('shortage')} /><CommandCanvasSortableHeading semantic={false} label="Ortalama kıdem" direction={input.sort === 'tenure' ? input.direction : 'none'} onClick={() => input.onSort('tenure')} /></div>} footer={<Pager offset={input.pagination.offset} limit={input.pagination.limit} total={input.pagination.total} hasMore={input.pagination.hasMore} onOffset={input.onOffset} />}>
+      {stores.length === 0 ? <WorkforceInlineEmpty title="Sonuç bulunamadı" description="Filtreleri değiştirerek tekrar deneyin." /> : stores.map((store, index) => {
+        const showRegion = input.view === 'report_viewer' && (index === 0 || stores[index - 1]?.regionId !== store.regionId)
+        return <div key={store.storeId}>{showRegion ? <div className="workforce-region-divider"><strong>{store.regionManagerName ?? 'Bölge müdürü tanımlı değil'}</strong><span>{store.regionName ?? 'Bölge bilgisi yok'}</span></div> : null}<button className="workforce-store-grid workforce-store-row" data-testid="store-workforce-region-row" onClick={() => input.onSelect(store)} type="button"><span><strong>{store.storeName}</strong><small>{input.view === 'report_viewer' ? (store.regionManagerName ?? 'Bölge müdürü yok') : (store.regionName ?? store.storeCode)}</small></span><b>{store.active}</b><span>{store.norm === null ? `Tanımsız / ${store.active}` : `${store.norm} / ${store.active}`}</span><Status value={workforceStoreStatus(store)} /><span>{formatShortage(store)}</span><span>{formatTenure(store.averageTenureDays)}</span></button></div>
+      })}
+    </CommandCanvasDataList>
+  )
+}
+
+function PersonnelList(input: { store: WorkforceCommandStore; rows: WorkforceCommandStore['personnel']; sort: WorkforcePersonSort; direction: SortDirection; onSort: (sort: WorkforcePersonSort) => void; onHistory: () => void; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void; compact?: boolean }) {
+  return <CommandCanvasDataList className={input.compact ? 'workforce-personnel-list compact' : 'workforce-personnel-list'} ariaLabel={`${input.store.storeName} personel listesi`} header={<div className="workforce-list-title"><strong>{input.store.storeName} personel listesi</strong><span>{input.total} personel</span><Button variant="outline" onClick={input.onHistory}><History /> Mağaza personel geçmişi</Button></div>} footer={input.pageCount > 1 || input.store.personnelHasMore ? <PersonnelPager {...input} /> : undefined}>
+    <div className="workforce-person-grid workforce-list-head"><CommandCanvasSortableHeading semantic={false} label="Personel" direction={input.sort === 'person' ? input.direction : 'none'} onClick={() => input.onSort('person')} /><CommandCanvasSortableHeading semantic={false} label="Pozisyon" direction={input.sort === 'position' ? input.direction : 'none'} onClick={() => input.onSort('position')} /><CommandCanvasSortableHeading semantic={false} label="İşe giriş" direction={input.sort === 'start' ? input.direction : 'none'} onClick={() => input.onSort('start')} /><CommandCanvasSortableHeading semantic={false} label="Çalışma süresi" direction={input.sort === 'tenure' ? input.direction : 'none'} onClick={() => input.onSort('tenure')} /><CommandCanvasSortableHeading semantic={false} label="Durum" direction={input.sort === 'status' ? input.direction : 'none'} onClick={() => input.onSort('status')} /></div>
+    {input.rows.length === 0 ? <WorkforceInlineEmpty title="Personel bulunamadı" description="Bu filtrede aktif personel yok." /> : input.rows.map((person) => <div className="workforce-person-grid workforce-person-row" key={person.employeeId}><strong>{person.displayName}</strong><span>{person.positionName}</span><span>{formatDate(person.assignmentStartDate)}</span><span>{formatTenureFromDate(person.assignmentStartDate)}</span><span className="workforce-active-pill">Aktif</span></div>)}
+  </CommandCanvasDataList>
+}
+
+function HistoryList(input: { query: ReturnType<typeof useQuery<Awaited<ReturnType<typeof getWorkforceCommandWorkspace>>>>; onOffset: (offset: number) => void }) {
+  if (input.query.isLoading) return <WorkforceInlineEmpty title="Geçmiş hazırlanıyor" description="Personel dönemleri yükleniyor." />
+  if (input.query.isError) return <WorkforceInlineEmpty title="Geçmiş alınamadı" description="Tekrar deneyin." action={() => void input.query.refetch()} />
+  const rows = input.query.data?.history?.items ?? []
+  if (rows.length === 0) return <WorkforceInlineEmpty title="Geçmiş bulunamadı" description="Bu mağaza için giriş veya çıkış dönemi yok." />
+  const history = input.query.data?.history
+  return <><div className="workforce-history-list">{rows.map((row, index) => <article key={`${row.employeeId}-${row.entryDate}-${index}`}><div><strong>{row.displayName}</strong><span>{row.exitDate ? 'İşten çıkış kaydı' : 'Aktif çalışma dönemi'}</span></div><dl><div><dt>İşe giriş</dt><dd>{formatDate(row.entryDate)}</dd></div><div><dt>İşten çıkış</dt><dd>{formatDate(row.exitDate)}</dd></div><div><dt>Toplam çalışma</dt><dd>{formatTenure(row.totalWorkingDays)}</dd></div></dl></article>)}</div>{history ? <div className="command-canvas-list-footer"><Pager offset={history.offset} limit={history.limit} total={history.total} hasMore={history.hasMore} onOffset={input.onOffset} /></div> : null}</>
+}
+
+function Pager(input: { offset: number; limit: number; total: number; hasMore: boolean; onOffset: (offset: number) => void }) { return <><span className="workforce-pager-count">{input.total === 0 ? 0 : input.offset + 1}-{Math.min(input.offset + input.limit, input.total)} / {input.total}</span><Button size="sm" variant="outline" disabled={input.offset === 0} onClick={() => input.onOffset(Math.max(0, input.offset - input.limit))}><ChevronLeft /> Önceki</Button><Button size="sm" variant="outline" disabled={!input.hasMore} onClick={() => input.onOffset(input.offset + input.limit)}>Sonraki <ChevronRight /></Button></> }
+function PersonnelPager(input: { store: WorkforceCommandStore; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void }) { const atBatchEnd = input.page + 1 >= input.pageCount; const atStart = input.page === 0; return <><span className="workforce-pager-count">{input.store.personnelOffset + input.page * PERSON_PAGE_SIZE + 1}-{Math.min(input.store.personnelOffset + (input.page + 1) * PERSON_PAGE_SIZE, input.total)} / {input.total}</span><Button size="sm" variant="outline" disabled={atStart && input.store.personnelOffset === 0} onClick={() => atStart ? input.onPreviousBatch() : input.onPage(input.page - 1)}><ChevronLeft /> Önceki</Button><Button size="sm" variant="outline" disabled={atBatchEnd && !input.store.personnelHasMore} onClick={() => atBatchEnd ? input.onNextBatch() : input.onPage(input.page + 1)}>Sonraki <ChevronRight /></Button></> }
+function WorkforceState(input: { title: string; description: string; onRetry?: () => void }) { return <CommandCanvasPage ariaLabelledBy="workforce-state-title"><CommandCanvasPageHeader title="Norm Kadro" titleId="workforce-state-title" description="Personel ve kadro görünümü" /><WorkforceInlineEmpty title={input.title} description={input.description} {...(input.onRetry ? { action: input.onRetry } : {})} /></CommandCanvasPage> }
+function WorkforceInlineEmpty(input: { title: string; description: string; action?: () => void }) { return <div className="workforce-empty"><BriefcaseBusiness aria-hidden="true" /><strong>{input.title}</strong><p>{input.description}</p>{input.action ? <Button variant="outline" onClick={input.action}>Tekrar dene</Button> : null}</div> }
+function Status(input: { value: ReturnType<typeof workforceStoreStatus> }) { const copy = { shortage: 'Eksik', balanced: 'Tam', surplus: 'Fazla', unconfigured: 'Tanımsız' }[input.value]; return <span className="workforce-status" data-status={input.value}>{copy}</span> }
+function Fact(input: { label: string; value: string }) { return <div><span>{input.label}</span><strong>{input.value}</strong></div> }
+function formatGap(value: number | null) { if (value === null) return 'Tanımsız'; if (value > 0) return `${value} açık`; if (value < 0) return `${Math.abs(value)} fazla`; return 'Dengede' }
+function formatShortage(store: WorkforceCommandStore) { if ((store.gap ?? 0) <= 0) return 'Yok'; return store.shortageDays === null ? 'Bilgi yok' : `${store.shortageDays} gündür` }
+function formatDate(value: string | null) { if (!value) return 'Bilgi yok'; return new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${value}T00:00:00`)) }
+function formatTenureFromDate(value: string | null) { if (!value) return 'Bilgi yok'; return formatTenure(Math.max(0, Math.floor((Date.now() - new Date(`${value}T00:00:00`).getTime()) / 86_400_000))) }
+function formatTenure(days: number | null) { if (days === null) return 'Bilgi yok'; const years = Math.floor(days / 365); const months = Math.floor((days % 365) / 30); if (years > 0 && months > 0) return `${years} yıl ${months} ay`; if (years > 0) return `${years} yıl`; if (months > 0) return `${months} ay`; return `${days} gün` }

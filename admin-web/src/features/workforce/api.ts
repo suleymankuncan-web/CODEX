@@ -65,6 +65,72 @@ export type OrgStoresResponse = {
   }
 }
 
+export type WorkforceCommandWorkspace = {
+  view: 'report_viewer' | 'region_manager' | 'store_manager'
+  summary: {
+    totalStores: number
+    activePersonnel: number
+    shortageStores: number
+    openPositions: number
+    averageTenureDays: number | null
+  }
+  stores: {
+    items: WorkforceCommandStore[]
+    total: number
+    limit: number
+    offset: number
+    hasMore: boolean
+  }
+  history: {
+    storeId: string
+    items: Array<{
+      employeeId: string
+      displayName: string
+      entryDate: string
+      exitDate: string | null
+      totalWorkingDays: number | null
+    }>
+    total: number
+    limit: number
+    offset: number
+    hasMore: boolean
+  } | null
+  capabilities: {
+    canCreateSellerCodeRequest: boolean
+    canCreateOffboardingRequest: boolean
+  }
+}
+
+export type WorkforceCommandStore = {
+  companyId: string
+  companyName: string | null
+  regionId: string
+  regionName: string | null
+  regionManagerName: string | null
+  storeId: string
+  storeCode: string
+  storeName: string
+  storeStatus: string
+  norm: number | null
+  active: number
+  averageTenureDays: number | null
+  gap: number | null
+  shortageDays: number | null
+  personnel: Array<{
+    employeeId: string
+    displayName: string
+    positionId: string
+    positionCode: string
+    positionName: string
+    assignmentStartDate: string | null
+    employmentStatus: string
+  }>
+  personnelTotal: number
+  personnelLimit: number
+  personnelOffset: number
+  personnelHasMore: boolean
+}
+
 export type OffboardingAccessClosure = {
   userAccessClosed: boolean
   closedUserId: string | null
@@ -201,6 +267,37 @@ export async function getStoreHeadcountGap(input: {
 
 export async function getOrgStores() {
   return fetchJson<OrgStoresResponse>('/org/stores')
+}
+
+export async function getWorkforceCommandWorkspace(input?: {
+  limit?: number
+  offset?: number
+  historyStoreId?: string
+  historyLimit?: number
+  historyOffset?: number
+  personnelStoreId?: string
+  personnelLimit?: number
+  personnelOffset?: number
+  q?: string
+  status?: 'all' | 'shortage' | 'balanced' | 'surplus' | 'unconfigured'
+  sort?: 'store' | 'active' | 'norm' | 'status' | 'shortage' | 'tenure'
+  direction?: 'ascending' | 'descending'
+}) {
+  const params = new URLSearchParams()
+  appendOptionalQueryParam(params, 'limit', input?.limit)
+  appendOptionalQueryParam(params, 'offset', input?.offset)
+  appendOptionalQueryParam(params, 'historyStoreId', input?.historyStoreId)
+  appendOptionalQueryParam(params, 'historyLimit', input?.historyLimit)
+  appendOptionalQueryParam(params, 'historyOffset', input?.historyOffset)
+  appendOptionalQueryParam(params, 'personnelStoreId', input?.personnelStoreId)
+  appendOptionalQueryParam(params, 'personnelLimit', input?.personnelLimit)
+  appendOptionalQueryParam(params, 'personnelOffset', input?.personnelOffset)
+  appendOptionalQueryParam(params, 'q', input?.q)
+  appendOptionalQueryParam(params, 'status', input?.status)
+  appendOptionalQueryParam(params, 'sort', input?.sort)
+  appendOptionalQueryParam(params, 'direction', input?.direction)
+  const response = await fetchOpenApiJson('/api/store/workforce/workspace', { query: params })
+  return response.data
 }
 
 export async function getOffboardingRequests(input?: WorkforceRequestListInput) {
