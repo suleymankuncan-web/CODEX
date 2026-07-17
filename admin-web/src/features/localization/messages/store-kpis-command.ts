@@ -68,7 +68,7 @@ export const storeKpisCommandTr = {
   'storeKpis.commandPersonnelImpact': 'Personel KPI etkisi',
   'storeKpis.commandPassiveRedistribution':
     '{value} yapılmadığında pay mevcut mağaza KPI ağırlıklarında kalır.',
-  'storeKpis.regionCommandTitle': 'Bölge Performansı',
+  'storeKpis.regionCommandTitle': 'KPI Özetleri',
   'storeKpis.regionCommandKpiView': 'KPI görünümü',
   'storeKpis.regionCommandManagerScope': 'Bölge müdürü',
   'storeKpis.regionCommandScope': 'BM görünümü',
@@ -200,7 +200,7 @@ export const storeKpisCommandEn: Record<keyof typeof storeKpisCommandTr, string>
   'storeKpis.commandPersonnelImpact': 'Personnel KPI impact',
   'storeKpis.commandPassiveRedistribution':
     'When {value} is not done, its share stays inside active store KPI weights.',
-  'storeKpis.regionCommandTitle': 'Region Performance',
+  'storeKpis.regionCommandTitle': 'KPI Overview',
   'storeKpis.regionCommandKpiView': 'KPI view',
   'storeKpis.regionCommandManagerScope': 'Region manager',
   'storeKpis.regionCommandScope': 'RM view',

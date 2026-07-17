@@ -10,4 +10,8 @@ company-to-region-to-store drill, local decision rails, sorting, monthly
 period continuity, Profile Git navigation, partial/error truth, accessibility,
 mobile input sizing and overflow safety.
 
-Result: `Prototype parity: PASS` for KPI Özetleri.
+It also measures all four decision-rail cells before and after every metric
+selection and rejects any width or height delta at a fixed viewport.
+
+Result: `Prototype parity: PASS_LOCAL` for KPI Özetleri; final staging
+recertification is pending.

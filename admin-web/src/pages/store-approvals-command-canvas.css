@@ -1,0 +1,256 @@
+.approvals-command-page {
+  max-width: 1360px;
+  margin-inline: auto;
+}
+
+.approvals-command-search {
+  display: flex;
+  min-width: 220px;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted-foreground);
+}
+
+.approvals-command-search input {
+  min-height: 35px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.approvals-command-page .command-canvas-filter-controls {
+  flex-wrap: nowrap;
+}
+
+.approvals-command-page .command-canvas-filter-controls > button,
+.approvals-command-page .command-canvas-filter-controls [data-slot='select-trigger'] {
+  min-height: 35px;
+  border-radius: 8px;
+  background: white;
+  font-size: 10px;
+}
+
+.approvals-command-reset {
+  min-height: 35px;
+  gap: 6px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.approvals-command-list-title {
+  display: flex;
+  min-height: 57px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: -14px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: var(--card);
+}
+
+.approvals-command-list-title > div:first-child {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.approvals-command-list-title h2 {
+  margin: 0;
+  font: 700 14px 'Manrope', sans-serif;
+}
+
+.approvals-command-list-title span {
+  color: var(--muted-foreground);
+  font-size: 9px;
+}
+
+.approvals-command-tabs {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--muted) 70%, white);
+}
+
+.approvals-command-tabs button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--muted-foreground);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.approvals-command-tabs button[aria-checked='true'] {
+  color: var(--foreground);
+  background: white;
+  box-shadow: 0 3px 10px rgba(43, 30, 56, .08);
+}
+
+.approvals-command-list {
+  border-radius: 0 0 14px 14px;
+}
+
+.approvals-command-list table {
+  table-layout: fixed;
+}
+
+.approvals-command-list thead tr {
+  height: 34px;
+  background: var(--muted);
+}
+
+.approvals-command-list th {
+  height: 34px;
+  padding: 0 14px;
+  color: var(--muted-foreground);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.approvals-command-list th button {
+  min-height: 30px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.approvals-command-list th:nth-child(1) { width: 24%; }
+.approvals-command-list th:nth-child(2) { width: 18%; }
+.approvals-command-list th:nth-child(3) { width: 17%; }
+.approvals-command-list th:nth-child(4) { width: 12%; }
+.approvals-command-list th:nth-child(5) { width: 16%; }
+.approvals-command-list th:nth-child(6) { width: 13%; }
+
+.approvals-command-list [data-testid='store-approvals-request-row'] {
+  min-height: 61px;
+}
+
+.approvals-command-list [data-testid='store-approvals-request-row'] td {
+  padding: 8px 14px;
+}
+
+.approvals-command-manager-row td {
+  padding: 7px 14px;
+  background: color-mix(in srgb, var(--primary) 5%, white);
+}
+
+.approvals-command-manager-row span {
+  margin-left: 8px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.approvals-command-mobile {
+  display: none;
+}
+
+.approvals-command-mobile section {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+}
+
+.approvals-command-mobile h3 {
+  margin: 0;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--primary) 5%, white);
+  font-size: 12px;
+}
+
+.approvals-command-mobile h3 span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted-foreground);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.approvals-command-pager {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 45%, white);
+}
+
+.approvals-command-pager > span {
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+
+.approvals-command-pager > div {
+  display: flex;
+  gap: 6px;
+}
+
+.approvals-command-pager button {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+}
+
+@media (max-width: 1100px) {
+  .approvals-command-page .command-canvas-filter-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .approvals-command-page {
+    padding-inline: 10px;
+  }
+
+  .approvals-command-search {
+    min-width: 0;
+  }
+
+  .approvals-command-search input {
+    font-size: 16px;
+  }
+
+  .approvals-command-page .command-canvas-filter-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .approvals-command-list-title {
+    align-items: stretch;
+    flex-direction: column;
+    margin-bottom: -14px;
+  }
+
+  .approvals-command-list-title > div:first-child {
+    justify-content: space-between;
+  }
+
+  .approvals-command-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .approvals-command-desktop {
+    display: none;
+  }
+
+  .approvals-command-mobile {
+    display: block;
+  }
+}

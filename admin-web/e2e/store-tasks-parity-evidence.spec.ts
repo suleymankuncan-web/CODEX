@@ -22,6 +22,7 @@ for (const viewport of [
 
     await expect(page.getByRole('heading', { name: 'Görevler', exact: true })).toBeVisible()
     await expect(page.locator('.command-canvas-metric')).toHaveCount(4)
+    await expectStableMetricGeometry(page)
     await expect(page.getByTestId('store-action-plan-row')).toHaveCount(4)
     await expect(page.locator('.tasks-command-list-head .command-canvas-sort-heading button')).toHaveCount(6)
     await expectCommandCanvasFrame(page)
@@ -36,6 +37,28 @@ for (const viewport of [
       })
     }
   })
+}
+
+async function expectStableMetricGeometry(page: Page) {
+  const metrics = page.locator('.command-canvas-metric')
+  const initial = await metrics.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    }),
+  )
+
+  for (let index = 0; index < await metrics.count(); index += 1) {
+    await metrics.nth(index).click()
+    const current = await metrics.evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect()
+        return { width: rect.width, height: rect.height }
+      }),
+    )
+    expect(current).toEqual(initial)
+  }
+  await metrics.first().click()
 }
 
 for (const scenario of [

@@ -1,30 +1,13 @@
-import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { AlertTriangle, ArrowRight, CheckCircle2, Clock3, FileWarning, Target, Undo2, UserMinus, UserPlus } from 'lucide-react'
+import { ArrowRight, Target, UserMinus, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
-import { formatCopy, type RequestCenterCopy, type RequestCenterRow, type RequestCenterStatus } from './store-approvals-request-center-model'
-import { StoreStatusBadge, type StoreSurfaceTone } from './store-surface-primitives'
-
-export function RequestCenterHeader(input: { copy: RequestCenterCopy }) {
-  return <header className="tw:flex tw:items-center tw:gap-3">
-    <span className="tw:grid tw:size-11 tw:shrink-0 tw:place-items-center tw:rounded-2xl tw:bg-[linear-gradient(135deg,#6d47ff,#20bfd3)] tw:text-white tw:shadow-[0_18px_34px_rgba(109,71,255,0.22)]"><FileWarning className="tw:size-5" /></span>
-    <div className="tw:min-w-0"><h1 id="store-approvals-request-center-title" className="tw:text-[clamp(26px,3vw,38px)] tw:font-semibold tw:leading-none tw:text-foreground">{input.copy.title}</h1><p className="tw:mt-2 tw:max-w-3xl tw:text-sm tw:leading-6 tw:text-muted-foreground">{input.copy.description}</p></div>
-  </header>
-}
-
-export function RequestCenterMetrics(input: { copy: RequestCenterCopy; doneCount: number; openCount: number; returnedCount: number; overdueCount: number; active: RequestCenterStatus | 'open' | 'done'; onSelect: (value: RequestCenterStatus | 'open' | 'done') => void }) {
-  return <section aria-label="Talep merkezi özetleri" className="tw:grid tw:grid-cols-2 tw:gap-3 tw:lg:grid-cols-4">
-    <RequestCenterMetric active={input.active === 'open'} onClick={() => input.onSelect('open')} icon={<Clock3 className="tw:size-5" />} label={input.copy.openMetric} note={input.copy.openMetricNote} value={input.openCount} tone="warning" />
-    <RequestCenterMetric active={input.active === 'done'} onClick={() => input.onSelect('done')} icon={<CheckCircle2 className="tw:size-5" />} label={input.copy.completedMetric} note={input.copy.completedMetricNote} value={input.doneCount} tone="calm" />
-    <RequestCenterMetric active={input.active === 'returned'} onClick={() => input.onSelect('returned')} icon={<Undo2 className="tw:size-5" />} label={input.copy.returnedMetric} note={input.copy.returnedMetricNote} value={input.returnedCount} tone="danger" />
-    <RequestCenterMetric active={input.active === 'overdue'} onClick={() => input.onSelect('overdue')} icon={<AlertTriangle className="tw:size-5" />} label={input.copy.overdueMetric} note={input.copy.overdueMetricNote} value={input.overdueCount} tone="accent" />
-  </section>
-}
+import { CommandCanvasOperationalDrawerContent } from '../features/store-command-canvas/primitives'
+import { formatCopy, type RequestCenterCopy, type RequestCenterRow } from './store-approvals-request-center-model'
+import { StoreStatusBadge } from './store-surface-primitives'
 
 export function RequestCenterSelect(input: { ariaLabel: string; items: Array<{ label: string; value: string }>; onChange: (value: string) => void; value: string }) {
   return <Select value={input.value} onValueChange={input.onChange}><SelectTrigger aria-label={input.ariaLabel} className="tw:min-h-11 tw:rounded-xl tw:border-border tw:bg-white/75 tw:text-base tw:font-medium tw:md:text-sm"><SelectValue /></SelectTrigger><SelectContent><SelectGroup>{input.items.map((item) => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectGroup></SelectContent></Select>
@@ -51,17 +34,12 @@ export function RequestCenterMobileCard(input: { row: RequestCenterRow; onOpen: 
 
 export function RequestCenterDrawer(input: { copy: RequestCenterCopy; row: RequestCenterRow | null; onOpenChange: (open: boolean) => void }) {
   const row = input.row
-  return <Sheet open={Boolean(row)} onOpenChange={input.onOpenChange}><SheetContent className="tw:max-w-xl tw:overflow-y-auto tw:p-5" closeLabel={input.copy.close}>
+  return <Sheet open={Boolean(row)} onOpenChange={input.onOpenChange}><CommandCanvasOperationalDrawerContent className="tw:p-5" closeLabel={input.copy.close}>
     {row ? <><SheetHeader className="tw:border-b tw:border-border/70 tw:pb-4"><div className="tw:pr-8"><RequestStatus row={row} /></div><SheetTitle className="tw:text-xl tw:font-semibold">{row.title}</SheetTitle><SheetDescription>{input.copy.drawerDescription}</SheetDescription></SheetHeader>
       <div className="tw:grid tw:grid-cols-2 tw:gap-3"><Fact label={input.copy.factsType} value={row.subtitle} /><Fact label={input.copy.factsStore} value={row.scopeTitle} /><Fact label={input.copy.factsWaiting} value={row.waitingLabel} /><Fact label={input.copy.factsOwner} value={row.nextOwnerLabel} /><Fact label={input.copy.factsUpdated} value={row.updatedLabel} /><Fact label={input.copy.factsDue} value={row.dueLabel} /></div>
       <section aria-labelledby="request-timeline-title" className="tw:grid tw:gap-3"><div><h3 id="request-timeline-title" className="tw:text-sm tw:font-semibold">{input.copy.timelineTitle}</h3>{row.eventTotal > row.events.length ? <p className="tw:mt-1 tw:text-xs tw:text-muted-foreground">{formatCopy(input.copy.timelineRecent, { count: String(row.eventTotal) })}</p> : null}</div><ol className="tw:grid tw:gap-0">{row.events.map((event, index) => <li key={event.id} className="tw:grid tw:grid-cols-[18px_minmax(0,1fr)] tw:gap-3"><span className="tw:flex tw:flex-col tw:items-center"><span className="tw:mt-1 tw:size-2.5 tw:rounded-full tw:bg-primary" />{index < row.events.length - 1 ? <span className="tw:min-h-12 tw:w-px tw:flex-1 tw:bg-border" /> : null}</span><div className="tw:pb-4"><strong className="tw:block tw:text-sm">{event.label}</strong><span className="tw:block tw:text-xs tw:leading-5 tw:text-muted-foreground">{event.occurredLabel} · {event.actorLabel}</span></div></li>)}</ol></section>
       <SheetFooter><Button asChild className="tw:min-h-11 tw:rounded-xl"><Link to={row.actionTo}>{row.actionLabel}<ArrowRight className="tw:size-4" /></Link></Button></SheetFooter></> : null}
-  </SheetContent></Sheet>
-}
-
-function RequestCenterMetric(input: { active: boolean; icon: ReactNode; label: string; note: string; value: number; tone: StoreSurfaceTone; onClick: () => void }) {
-  const tones: Record<StoreSurfaceTone, string> = { accent: 'tw:bg-primary/10 tw:text-primary', amber: 'tw:bg-amber-50 tw:text-amber-600', calm: 'tw:bg-emerald-50 tw:text-emerald-700', cyan: 'tw:bg-cyan-50 tw:text-cyan-700', danger: 'tw:bg-rose-50 tw:text-rose-600', mint: 'tw:bg-emerald-50 tw:text-emerald-700', neutral: 'tw:bg-muted tw:text-muted-foreground', plum: 'tw:bg-primary/10 tw:text-primary', warning: 'tw:bg-amber-50 tw:text-amber-600' }
-  return <Card className={cn('tw:relative tw:min-h-[118px] tw:overflow-hidden tw:rounded-2xl tw:border-border/80 tw:bg-card/85 tw:shadow-[0_20px_60px_rgba(61,79,122,0.12)]', input.active && 'tw:ring-2 tw:ring-primary')}><button type="button" onClick={input.onClick} aria-pressed={input.active} className="tw:grid tw:h-full tw:min-h-[118px] tw:w-full tw:grid-cols-[44px_minmax(0,1fr)] tw:items-center tw:gap-3 tw:p-4 tw:text-left"><span className={cn('tw:grid tw:size-11 tw:place-items-center tw:rounded-xl', tones[input.tone])}>{input.icon}</span><span className="tw:min-w-0"><span className="tw:text-xs tw:font-medium tw:text-muted-foreground">{input.label}</span><strong className="tw:my-1 tw:block tw:text-3xl tw:font-semibold tw:leading-none">{input.value}</strong><span className="tw:text-xs tw:leading-5 tw:text-muted-foreground">{input.note}</span></span></button></Card>
+  </CommandCanvasOperationalDrawerContent></Sheet>
 }
 
 function RequestRecord({ row }: { row: RequestCenterRow }) { const Icon = row.type === 'target' ? Target : row.type === 'sellerCode' ? UserPlus : UserMinus; return <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-3"><span className="tw:grid tw:size-10 tw:shrink-0 tw:place-items-center tw:rounded-xl tw:bg-primary/10 tw:text-primary"><Icon className="tw:size-5" /></span><span className="tw:min-w-0"><strong className="tw:block tw:truncate tw:text-sm tw:font-semibold">{row.title}</strong><span className="tw:block tw:truncate tw:text-xs tw:leading-5 tw:text-muted-foreground">{row.subtitle}</span></span></div> }

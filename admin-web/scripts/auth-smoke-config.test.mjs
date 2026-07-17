@@ -84,6 +84,7 @@ test('package exposes explicit staging auth smoke scripts', () => {
   assert.match(cookieSessionSmokeSource, /skipped_read_only/u)
   assert.match(cookieSessionSmokeSource, /isStoreCommandApiUrl\(url\)/u)
   assert.match(cookieSessionSmokeSource, /\/store\/kpis/u)
+  assert.match(cookieSessionSmokeSource, /KPI Özetleri/u)
   assert.match(cookieSessionSmokeSource, /\/store\/approvals/u)
   assert.match(cookieSessionSmokeSource, /\/store\/workforce/u)
   assert.match(cookieSessionSmokeSource, /\/store\/tasks/u)

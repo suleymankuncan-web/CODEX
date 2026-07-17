@@ -1,6 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import { expect, test, type Page } from './test-fixtures'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
+import { expectCommandCanvasFrame } from './fixtures/command-canvas-parity-harness'
 import {
   installGenericStoreApiFallbacks,
   installStoreContractSession,
@@ -23,7 +24,10 @@ for (const viewport of [
     await page.goto('/store/approvals')
 
     await expect(page.getByRole('heading', { name: 'Talep Merkezi', exact: true })).toBeVisible()
+    await expect(page.locator('.command-canvas-metric')).toHaveCount(4)
+    await expectStableMetricGeometry(page)
     await expect(page.locator('[data-testid="store-approvals-request-row"]:visible')).toHaveCount(2)
+    await expectCommandCanvasFrame(page)
     await expectNoLegacyOwner(page)
     await expectNoHorizontalOverflow(page)
     if (viewport.width === 1440) await expectNoCriticalAxeViolations(page)
@@ -36,6 +40,28 @@ for (const viewport of [
       })
     }
   })
+}
+
+async function expectStableMetricGeometry(page: Page) {
+  const metrics = page.locator('.command-canvas-metric')
+  const initial = await metrics.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    }),
+  )
+
+  for (let index = 0; index < 4; index += 1) {
+    await metrics.nth(index).click()
+    const current = await metrics.evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect()
+        return { width: rect.width, height: rect.height }
+      }),
+    )
+    expect(current).toEqual(initial)
+  }
+  await metrics.first().click()
 }
 
 test('Approvals Report Viewer remains company-scoped and read-only', async ({ page }) => {

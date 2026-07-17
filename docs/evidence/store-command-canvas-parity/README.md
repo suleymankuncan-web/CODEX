@@ -15,8 +15,10 @@ application.
   `docs/evidence/store-operational-surfaces-command-canvas/`.
 - Deterministic Playwright fixtures remain test-only and exercise the real
   production routes at 1440x900, 1024x768, 390x844 and 320x844.
-- The operational closeout records a separate `Prototype parity: PASS` result
-  for each of the four routes.
+- The operational closeout records a separate local parity result for each
+  route. Final `Prototype parity: PASS` requires the repaired PR head's CI and
+  protected staging recertification; see
+  `store-operational-surfaces-command-canvas/parity-gap-audit-2026-07-17.md`.
 
 The manifest paths are evidence locations on the authorized development host;
 they are not runtime dependencies and are never read by the production bundle.

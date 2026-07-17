@@ -7,6 +7,8 @@ Deterministic production evidence covers the accepted 1440x900, 1024x768,
 shell, request rows, responsive behavior, accessibility, zero legacy owners
 and zero Report Viewer mutation requests. Existing request-center contracts
 prove server-owned waiting/owner/due facts, bounded sanitized events and local
-filters/sorts.
+filters/sorts. The parity test also rejects decision-rail width or height
+changes after any metric selection.
 
-Result: `Prototype parity: PASS` for Talep Merkezi.
+Result: `Prototype parity: PASS_LOCAL` for Talep Merkezi; final staging
+recertification is pending.

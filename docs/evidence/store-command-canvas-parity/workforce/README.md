@@ -1,6 +1,6 @@
 # Norm Kadro Command Canvas parity evidence
 
-Status: prototype parity PASS
+Status: prototype parity `PASS_LOCAL`; final staging recertification pending
 
 This directory records deterministic production `/store/workforce` parity
 evidence for the approved Norm Kadro Command Canvas cutover.
@@ -65,7 +65,8 @@ and the mobile capture to SHA-256
 - Region Manager and Report Viewer hierarchy/read-only behavior;
 - entry/exit-only history on desktop and mobile;
 - no role switcher, Labs chrome, old Workforce owner or duplicate page owner;
-- no horizontal page or drawer overflow.
+- no horizontal page or drawer overflow;
+- identical decision-rail rectangles before and after selecting every metric.
 
 The generated desktop, compact, 390px and 320px production captures were
 visually compared with both locked prototype captures. The production surface

@@ -1396,11 +1396,11 @@ test('region manager store KPI overview waits for selected store before loading 
   await page.goto('/store/kpis')
 
   await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Bölge Performansı' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'KPI Özetleri' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
-  await expect(page.getByText('Bölge KPI değerleri')).toBeVisible()
-  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /BM Checklist/ })).toBeVisible()
-  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /VM Checklist/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Toplam mağaza' })).toBeVisible()
+  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /BM:/ })).toBeVisible()
+  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /VM:/ })).toBeVisible()
   await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /GSM Onayı/ })).toBeVisible()
   await expect(
     page.getByTestId('store-kpis-region-overview').getByText('Region Store 9').first(),

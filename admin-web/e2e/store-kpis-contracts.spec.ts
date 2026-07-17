@@ -483,7 +483,8 @@ for (const viewport of [
 
     await page.goto('/store/kpis?periodStart=2026-07-01')
     await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
+    await expect(page.locator('.kpi-command-list-title h2')).toHaveText('Bölge mağazaları')
+    await expectStableKpiMetricGeometry(page)
 
     const overflow = await page.evaluate(() => ({
       body: document.body.scrollWidth - document.body.clientWidth,
@@ -517,6 +518,29 @@ for (const viewport of [
       contentType: 'image/png',
     })
   })
+}
+
+async function expectStableKpiMetricGeometry(page: Page) {
+  const metrics = page.locator('.command-canvas-metric')
+  await expect(metrics).toHaveCount(4)
+  const initial = await metrics.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    }),
+  )
+
+  for (let index = 0; index < 4; index += 1) {
+    await metrics.nth(index).click()
+    const current = await metrics.evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect()
+        return { width: rect.width, height: rect.height }
+      }),
+    )
+    expect(current).toEqual(initial)
+  }
+  await metrics.first().click()
 }
 
 async function routeKpiContractApi(

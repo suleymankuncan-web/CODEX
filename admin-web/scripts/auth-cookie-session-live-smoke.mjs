@@ -470,7 +470,7 @@ function isStoreCommandApiUrl(value) {
 
 function isExpectedReadOnlyHeading(path, heading) {
   const common = {
-    '/store/kpis': ["Mağaza KPI'ları", 'Store KPIs'],
+    '/store/kpis': ['KPI Özetleri', 'KPI Overview'],
     '/store/approvals': ['Talep Merkezi', 'Request Center'],
     '/store/workforce': ['Norm Kadro', 'Workforce'],
     '/store/tasks': ['Görevler', 'Tasks'],

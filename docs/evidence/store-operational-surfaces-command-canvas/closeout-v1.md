@@ -1,15 +1,19 @@
 # Store Operational Surfaces Command Canvas Closeout V1
 
 Date: 2026-07-17
-Status: `PENDING_PR6_MERGE_AND_FINAL_VERIFICATION`
+Status: `PENDING_REPAIRED_HEAD_CI_AND_STAGING_RECERTIFICATION`
 
-This record will be finalized only after PR 6 is merged and PR 7 verification
-has run on the merged operational tree.
+PR 6 is merged. The first PR 7 visual assumption was invalidated by the
+owner-observed KPI, Talep Merkezi and Görevler geometry differences recorded
+in `parity-gap-audit-2026-07-17.md`. The repaired local head now passes the
+locked prototype and stable-geometry contracts. This record becomes final only
+after the repaired head is green in CI, deployed, and protected staging is
+recertified.
 
-- Prototype parity: PASS — KPI Özetleri
-- Prototype parity: PASS — Talep Merkezi
-- Prototype parity: PASS — Norm Kadro
-- Prototype parity: PASS — Görevler
+- Prototype parity: PASS_LOCAL — KPI Özetleri
+- Prototype parity: PASS_LOCAL — Talep Merkezi
+- Prototype parity: PASS_LOCAL — Norm Kadro
+- Prototype parity: PASS_LOCAL — Görevler
 
 Report Viewer remains company-scoped and read-only. Region Manager remains
 assigned-region/store scoped. Store Manager remains own-store/action-store
