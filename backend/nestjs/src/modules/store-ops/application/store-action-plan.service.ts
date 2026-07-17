@@ -21,6 +21,8 @@ import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
 
 type StoreActionPlanActorInput = {
   actorUserId: string;
+  actorDisplayName?: string;
+  actorRoleLabel?: string;
 } & StoreActionPlanActionScopeInput;
 
 type StoreActionPlanActionScopeInput = {
@@ -163,6 +165,8 @@ export class StoreActionPlanService {
         summary: input.summary,
         priority: input.priority,
         dueOn,
+        ...(input.actorDisplayName ? { actorDisplayName: input.actorDisplayName } : {}),
+        ...(input.actorRoleLabel ? { actorRoleLabel: input.actorRoleLabel } : {}),
       });
 
       return buildCommandResponse({
@@ -199,6 +203,8 @@ export class StoreActionPlanService {
         expectedStatus: existingPlan.status,
         status: nextStatus,
         note: normalizeOptionalText(input.note),
+        ...(input.actorDisplayName ? { actorDisplayName: input.actorDisplayName } : {}),
+        ...(input.actorRoleLabel ? { actorRoleLabel: input.actorRoleLabel } : {}),
       }),
     );
 
@@ -227,6 +233,8 @@ export class StoreActionPlanService {
         actorUserId: input.actorUserId,
         expectedStatus: existingPlan.status,
         resolutionNote,
+        ...(input.actorDisplayName ? { actorDisplayName: input.actorDisplayName } : {}),
+        ...(input.actorRoleLabel ? { actorRoleLabel: input.actorRoleLabel } : {}),
       }),
     );
 
@@ -255,6 +263,8 @@ export class StoreActionPlanService {
         actorUserId: input.actorUserId,
         expectedStatus: existingPlan.status,
         cancelReason,
+        ...(input.actorDisplayName ? { actorDisplayName: input.actorDisplayName } : {}),
+        ...(input.actorRoleLabel ? { actorRoleLabel: input.actorRoleLabel } : {}),
       }),
     );
 

@@ -62,7 +62,7 @@ const allowedCurrentStrictSurfaceMatches = new Map([
   ['admin-web/src/features/pilot-feedback/PilotFeedbackControl.tsx::legacy route-specific button class', 2],
   ['admin-web/src/features/store-tasks/StoreActionPlanCommandPanel.tsx::raw hex Tailwind color', 2],
   ['admin-web/src/features/store-tasks/StoreActionPlanDetailDialog.tsx::raw hex Tailwind color', 46],
-  ['admin-web/src/features/store-tasks/store-tasks-workbench.tsx::raw hex Tailwind color', 75],
+  ['admin-web/src/pages/StoreTasksPage.tsx::raw hex Tailwind color', 75],
   ['admin-web/src/pages/AdminFeedPage.tsx::legacy route-specific button class', 6],
   ['admin-web/src/pages/SessionReadinessPage.tsx::legacy route-specific button class', 3],
   ['admin-web/src/pages/StoreRankingsPage.tsx::legacy route-specific button class', 1],

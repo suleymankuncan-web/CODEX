@@ -66,8 +66,8 @@ export class TaskCommandWorkspaceReadRepository {
     const periodEndParam = params.length;
     filters.push(`(
       p.due_on BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
-      OR p.closed_at::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
-      OR p.cancelled_at::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
+      OR (p.closed_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
+      OR (p.cancelled_at AT TIME ZONE 'Europe/Istanbul')::date BETWEEN $${periodStartParam}::date AND $${periodEndParam}::date
       OR (p.status IN ('open', 'in_progress', 'blocked') AND p.due_on < $${periodStartParam}::date)
     )`);
     const whereSql = filters.join(" AND ");
@@ -122,17 +122,34 @@ export class TaskCommandWorkspaceReadRepository {
     companyIds: readonly string[];
     regionIds: readonly string[];
     storeIds: readonly string[];
+    statuses: readonly StoreActionPlanStatus[];
     limit: number;
     offset: number;
   }) {
     const params: unknown[] = [input.actionPlanId];
     const scopeFilters = this.scopeFilters(params, input, "p");
-    const planResult = await this.databaseService.query<{ action_plan_id: string }>(
+    params.push([...input.statuses]);
+    const statusesParam = params.length;
+    const planResult = await this.databaseService.query<{ action_plan_id: string; event_total: number }>(
       `
-        SELECT p.store_action_plan_id AS action_plan_id
+        SELECT
+          p.store_action_plan_id AS action_plan_id,
+          (
+            SELECT COUNT(*)::int
+            FROM audit.event_log event
+            WHERE event.entity_name = 'ops.store_action_plan'
+              AND event.entity_id = p.store_action_plan_id
+              AND event.event_type IN (
+                'store_action_plan.created',
+                'store_action_plan.status_updated',
+                'store_action_plan.closed',
+                'store_action_plan.cancelled'
+              )
+          ) AS event_total
         FROM ops.store_action_plan p
         WHERE p.store_action_plan_id = $1::uuid
           AND ${scopeFilters.join(" AND ")}
+          AND p.status = ANY($${statusesParam}::text[])
       `,
       params,
     );
@@ -140,7 +157,7 @@ export class TaskCommandWorkspaceReadRepository {
     const events = await this.queryEvents([input.actionPlanId], input.limit, input.offset);
     return {
       items: events.map((row) => this.mapEvent(row)),
-      total: Number(events[0]?.event_total ?? 0),
+      total: Number(planResult.rows[0].event_total),
       limit: input.limit,
       offset: input.offset,
     };
@@ -201,6 +218,12 @@ export class TaskCommandWorkspaceReadRepository {
           ) historical_role ON TRUE
           WHERE event.entity_name = 'ops.store_action_plan'
             AND event.entity_id = ANY($1::uuid[])
+            AND event.event_type IN (
+              'store_action_plan.created',
+              'store_action_plan.status_updated',
+              'store_action_plan.closed',
+              'store_action_plan.cancelled'
+            )
         )
         SELECT
           event_log_id,
@@ -288,8 +311,11 @@ export class TaskCommandWorkspaceReadRepository {
 }
 
 function safeSourceDeepLink(sourceType: StoreActionPlanSourceType, candidate: string | null) {
-  const fallback = sourceType === "checklist_remediation" ? "/store/checklists" : "/store/kpis";
-  if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//")) return fallback;
-  if (!candidate.startsWith("/store/checklists") && !candidate.startsWith("/store/kpis")) return fallback;
-  return candidate;
+  if (!candidate || !candidate.startsWith("/") || candidate.startsWith("//")) return null;
+  const expectedRoute = sourceType === "checklist_remediation" ? "/store/checklists" : "/store/kpis";
+  return isApprovedSource(candidate, expectedRoute) ? candidate : null;
+}
+
+function isApprovedSource(candidate: string, route: string) {
+  return candidate === route || candidate.startsWith(`${route}?`);
 }

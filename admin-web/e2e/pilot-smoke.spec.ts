@@ -685,6 +685,38 @@ async function routePilotSmokeApi(context: BrowserContext) {
       return
     }
 
+    if (pathname.endsWith('/api/store/tasks/workspace')) {
+      await route.fulfill({
+        json: {
+          data: {
+            view: 'report_viewer',
+            capabilities: {
+              canStart: false,
+              canUpdate: false,
+              canComplete: false,
+              canCancel: false,
+            },
+            items: [],
+            summary: {
+              retained: 0,
+              actionable: 0,
+              completed: 0,
+              cancelled: 0,
+              checklist: 0,
+            },
+            page: {
+              total: 0,
+              limit: 20,
+              offset: 0,
+              count: 0,
+              hasMore: false,
+            },
+          },
+        },
+      })
+      return
+    }
+
     if (pathname.endsWith('/api/store-actions/plans')) {
       await route.fulfill({ json: storeActionPlansFixture })
       return

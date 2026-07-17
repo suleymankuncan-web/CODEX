@@ -42,7 +42,8 @@ export function resolveTaskCommandWorkspaceScope(input: {
   roleScopes?: Record<string, ReadScope>;
 }): TaskCommandWorkspaceScope | null {
   if (input.actorRoleCodes.includes("REPORT_VIEWER")) {
-    const scope = input.roleScopes?.REPORT_VIEWER ?? input.actorReadScope;
+    const scope = roleScope(input, "REPORT_VIEWER");
+    if (!scope) return null;
     const companyIds = unique(scope.companyIds);
     return companyIds.length > 0
       ? {
@@ -56,13 +57,14 @@ export function resolveTaskCommandWorkspaceScope(input: {
   }
 
   if (input.actorRoleCodes.includes("REGION_MANAGER")) {
-    const scope = input.roleScopes?.REGION_MANAGER ?? input.actorReadScope;
+    const scope = roleScope(input, "REGION_MANAGER");
+    if (!scope) return null;
     const regionIds = unique(scope.regionIds);
     const storeIds = unique(scope.storeIds);
     if (regionIds.length === 0 && storeIds.length === 0) return null;
     return {
       view: "region_manager",
-      companyIds: unique(scope.companyIds),
+      companyIds: [],
       regionIds,
       storeIds,
       capabilities: { ...readOnlyCapabilities },
@@ -90,4 +92,19 @@ export function resolveTaskCommandWorkspaceScope(input: {
 
 function unique(values: readonly string[]) {
   return [...new Set(values.filter(Boolean))];
+}
+
+function roleScope(
+  input: {
+    actorRoleCodes: readonly string[];
+    actorReadScope: ReadScope;
+    roleScopes?: Record<string, ReadScope>;
+  },
+  roleCode: string,
+) {
+  const scoped = input.roleScopes?.[roleCode];
+  if (scoped) return scoped;
+  return input.actorRoleCodes.length === 1 && input.actorRoleCodes[0] === roleCode
+    ? input.actorReadScope
+    : null;
 }

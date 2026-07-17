@@ -30,7 +30,7 @@ export type TaskCommandWorkspaceItem = {
   source: {
     type: StoreActionPlanSourceType;
     id: string;
-    deepLink: string;
+    deepLink: string | null;
   };
   events: {
     items: TaskCommandAuditEvent[];

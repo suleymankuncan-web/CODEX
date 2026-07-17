@@ -13,11 +13,10 @@ const storeOpsInternalModules = [
   StoreOpsTargetsModule,
   StoreOpsCompetitionModule,
   StoreOpsIncentiveModule,
-  StoreOpsTaskCommandReadModule,
 ];
 
 @Module({
-  imports: [AuthModule, ...storeOpsInternalModules],
+  imports: [AuthModule, ...storeOpsInternalModules, StoreOpsTaskCommandReadModule],
   exports: storeOpsInternalModules,
 })
 export class StoreOpsModule {}

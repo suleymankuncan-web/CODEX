@@ -77,6 +77,9 @@ describe("TaskCommandWorkspaceReadService", () => {
     const service = new TaskCommandWorkspaceReadService(repository as never);
     await expect(service.getEvents({ actor: actor(["REPORT_VIEWER"]), actionPlanId }))
       .resolves.toEqual({ items: [], total: 0, limit: 20, offset: 0 });
+    expect(repository.readEvents).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      statuses: ["closed", "cancelled"],
+    }));
     await expect(service.getEvents({ actor: actor(["REPORT_VIEWER"]), actionPlanId }))
       .rejects.toBeInstanceOf(NotFoundException);
   });

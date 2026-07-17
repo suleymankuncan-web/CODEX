@@ -37,7 +37,7 @@ describe("resolveTaskCommandWorkspaceScope", () => {
       }),
     ).toEqual({
       view: "region_manager",
-      companyIds: [companyId],
+      companyIds: [],
       regionIds: [regionId],
       storeIds: [storeId],
       capabilities: { canStart: false, canUpdate: false, canComplete: false, canCancel: false },
@@ -66,6 +66,24 @@ describe("resolveTaskCommandWorkspaceScope", () => {
         actorRoleCodes: ["REPORT_VIEWER"],
         actorReadScope: { companyIds: [], regionIds: [], storeIds: [] },
         actorActionScope: { assignedStoreIds: [] },
+      }),
+    ).toBeNull();
+  });
+
+  it("does not borrow union read scope for a mixed role when role scope is missing", () => {
+    expect(
+      resolveTaskCommandWorkspaceScope({
+        actorRoleCodes: ["STORE_MANAGER", "REPORT_VIEWER"],
+        actorReadScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [storeId] },
+        actorActionScope: { assignedStoreIds: [storeId] },
+      }),
+    ).toBeNull();
+
+    expect(
+      resolveTaskCommandWorkspaceScope({
+        actorRoleCodes: ["STORE_MANAGER", "REGION_MANAGER"],
+        actorReadScope: { companyIds: [companyId], regionIds: [regionId], storeIds: [storeId] },
+        actorActionScope: { assignedStoreIds: [storeId] },
       }),
     ).toBeNull();
   });

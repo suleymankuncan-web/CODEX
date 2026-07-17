@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query, Req } from "@nestjs/common";
+import { Controller, Get, Param, ParseUUIDPipe, Query, Req } from "@nestjs/common";
+import { ApiParam } from "@nestjs/swagger";
 import type { AuthenticatedUser } from "../../auth/auth-context.service";
 import { RequireRoles } from "../../auth/decorators/roles.decorator";
 import { RequireScope } from "../../auth/decorators/scope.decorator";
@@ -31,11 +32,12 @@ export class TaskCommandWorkspaceController {
   }
 
   @Get(":actionPlanId/events")
+  @ApiParam({ name: "actionPlanId", schema: { type: "string", format: "uuid" } })
   @RequireScope("authenticated")
   @RequireRoles("REPORT_VIEWER", "REGION_MANAGER", "STORE_MANAGER", "SUPER_ADMIN")
   async getEvents(
     @Req() request: { user: AuthenticatedUser },
-    @Param("actionPlanId") actionPlanId: string,
+    @Param("actionPlanId", new ParseUUIDPipe({ version: "4" })) actionPlanId: string,
     @Query() query: GetTaskCommandEventsQueryDto,
   ) {
     return {

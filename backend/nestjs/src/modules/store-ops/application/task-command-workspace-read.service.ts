@@ -50,6 +50,7 @@ export class TaskCommandWorkspaceReadService {
     const result = await this.repository.readEvents({
       actionPlanId: input.actionPlanId,
       companyIds: scope.companyIds, regionIds: scope.regionIds, storeIds: scope.storeIds,
+      statuses: scope.view === "store_manager" ? allStatuses : resultStatuses,
       limit, offset,
     });
     if (!result) throw new NotFoundException("Task result was not found");

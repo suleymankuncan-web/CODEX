@@ -338,6 +338,8 @@ export class StoreActionPlanRepository {
     summary?: string;
     priority: StoreActionPlanPriority;
     dueOn: string;
+    actorDisplayName?: string;
+    actorRoleLabel?: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<StoreActionPlanRow>(
@@ -404,6 +406,7 @@ export class StoreActionPlanRepository {
           sourceId: input.sourceId,
           priority: input.priority,
           dueOn: input.dueOn,
+          ...actorSnapshot(input),
         },
       });
 
@@ -417,6 +420,8 @@ export class StoreActionPlanRepository {
     expectedStatus: StoreActionPlanStatus;
     status: Exclude<StoreActionPlanStatus, "closed" | "cancelled">;
     note?: string;
+    actorDisplayName?: string;
+    actorRoleLabel?: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<StoreActionPlanRow>(
@@ -440,6 +445,7 @@ export class StoreActionPlanRepository {
         metadata: {
           status: input.status,
           note: input.note ?? null,
+          ...actorSnapshot(input),
         },
       });
 
@@ -452,6 +458,8 @@ export class StoreActionPlanRepository {
     actorUserId: string;
     expectedStatus: StoreActionPlanStatus;
     resolutionNote: string;
+    actorDisplayName?: string;
+    actorRoleLabel?: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<StoreActionPlanRow>(
@@ -478,6 +486,7 @@ export class StoreActionPlanRepository {
         metadata: {
           status: "closed",
           resolutionNote: input.resolutionNote,
+          ...actorSnapshot(input),
         },
       });
 
@@ -490,6 +499,8 @@ export class StoreActionPlanRepository {
     actorUserId: string;
     expectedStatus: StoreActionPlanStatus;
     cancelReason: string;
+    actorDisplayName?: string;
+    actorRoleLabel?: string;
   }) {
     return this.databaseService.withTransaction(async (client) => {
       const result = await client.query<StoreActionPlanRow>(
@@ -516,6 +527,7 @@ export class StoreActionPlanRepository {
         metadata: {
           status: "cancelled",
           cancelReason: input.cancelReason,
+          ...actorSnapshot(input),
         },
       });
 
@@ -638,4 +650,11 @@ export class StoreActionPlanRepository {
       updatedAt: row.updated_at,
     };
   }
+}
+
+function actorSnapshot(input: { actorDisplayName?: string; actorRoleLabel?: string }) {
+  return {
+    ...(input.actorDisplayName ? { actorDisplayName: input.actorDisplayName } : {}),
+    ...(input.actorRoleLabel ? { actorRoleLabel: input.actorRoleLabel } : {}),
+  };
 }

@@ -174,6 +174,15 @@ async function routeStoreManagerApi(page: Page) {
   await page.route('**/api/store-actions/plans**', async (route) => {
     await route.fulfill({ json: { items: [], meta: { count: 0, total: 0, limit: 20, offset: 0 } } })
   })
+  await page.route('**/api/store/tasks/workspace**', async (route) => {
+    await route.fulfill({ json: { data: {
+      view: 'store_manager',
+      capabilities: { canStart: true, canUpdate: true, canComplete: true, canCancel: true },
+      items: [],
+      summary: { retained: 0, actionable: 0, completed: 0, cancelled: 0, checklist: 0 },
+      page: { total: 0, limit: 20, offset: 0, count: 0, hasMore: false },
+    } } })
+  })
   await page.route('**/api/checklists/acknowledgements/list', async (route) => {
     await route.fulfill({ json: { items: [checklistAcknowledgementItem], meta: { count: 1, total: 1, limit: 50, offset: 0 } } })
   })
