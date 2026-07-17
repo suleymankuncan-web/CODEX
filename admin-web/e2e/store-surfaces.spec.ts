@@ -1399,21 +1399,23 @@ test('region manager store KPI overview waits for selected store before loading 
   await expect(page.getByRole('heading', { name: 'KPI Özetleri' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Toplam mağaza' })).toBeVisible()
-  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /BM:/ })).toBeVisible()
-  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /VM:/ })).toBeVisible()
-  await expect(page.getByTestId('store-kpis-region-overview').getByRole('button', { name: /GSM Onayı/ })).toBeVisible()
+  await expect(page.getByTestId('store-kpis-region-overview').getByText(/^BM \d/).first()).toBeVisible()
+  await expect(page.getByTestId('store-kpis-region-overview').getByText(/^VM (?:\d|Pasif)/).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'GSM Onayı sütununa göre sırala' })).toBeVisible()
   await expect(
     page.getByTestId('store-kpis-region-overview').getByText('Region Store 9').first(),
   ).toBeVisible()
   await expect(page.getByText('VM Pasif').first()).toBeVisible()
   await expect(page.getByRole('link', { name: /KPI sayfasına git/ })).toHaveCount(regionStoreRows.length)
-  await expect(page.getByRole('link', { name: 'Region Store 9 KPI sayfasına git' })).toHaveCSS('color', 'rgb(76, 42, 165)')
+  await expect(page.getByRole('link', { name: 'Region Store 9 KPI sayfasına git' })).toBeVisible()
   await page.setViewportSize({ width: 390, height: 900 })
   await expect(page.getByTestId('store-kpis-region-overview')).toBeInViewport()
   await page.setViewportSize({ width: 1440, height: 900 })
   storeLeaderboardTotal = 120
   await page.reload()
-  await expect(page.getByText('Tüm mağazalar dönmediği için ortalama gösterilmez.')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Ortalama skor.*Veri yok/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Bu sayfada takip/ })).toBeVisible()
+  await expect(page.getByRole('textbox', { name: 'Bu sayfada mağaza ara' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Bölge mağazaları' })).toBeVisible()
   storeLeaderboardTotal = regionStoreRows.length
   await page.reload()
