@@ -1,6 +1,6 @@
 # Tasks Command Canvas parity evidence
 
-Status: **PASS**
+Status: **PASS_LOCAL**; final staging recertification pending
 
 ## Locked prototype references
 
@@ -26,7 +26,8 @@ The deterministic evidence suite is
 `admin-web/e2e/store-tasks-parity-evidence.spec.ts`. It checks the shared
 Command Canvas frame, four-card decision rail, sortable result headings,
 mobile overflow, operational drawer, sanitized audit trail and role-specific
-read-only boundaries.
+read-only boundaries. It records all four rail rectangles before and after
+every selection and rejects any width or height change at the same viewport.
 
 ## Deliberate production boundaries
 

@@ -384,7 +384,7 @@ async function proveReadOnlyRoutes(page) {
       }
     }
     const onResponse = (response) => {
-      if (!isReadWorkspaceUrl(response.url())) return
+      if (!isReadWorkspaceUrl(response.url(), path)) return
       responseReaders.push(
         response
           .json()
@@ -393,6 +393,7 @@ async function proveReadOnlyRoutes(page) {
             workspaceResponses.push({
               status: response.status(),
               period: typeof body?.data?.period === 'string' ? body.data.period : null,
+              contract: readContractLabel(response.url()),
             })
           }),
       )
@@ -416,7 +417,16 @@ async function proveReadOnlyRoutes(page) {
     assert(isExpectedReadOnlyHeading(path, visible.heading), `${path} rendered an unexpected heading: ${visible.heading}`)
     assert(!visible.horizontalOverflow, `${path} overflowed the 390 px viewport`)
     assert(!visible.routeErrorVisible, `${path} rendered a route error`)
-    assert(workspaceResponses.some((response) => response.status >= 200 && response.status < 300 && response.period), `${path} workspace read did not return a successful period projection`)
+    const successfulReads = workspaceResponses.filter(
+      (response) => response.status >= 200 && response.status < 300,
+    )
+    assert(successfulReads.length > 0, `${path} read contract did not return a successful response`)
+    if (path === '/store/incentives' || path === '/store/targets') {
+      assert(
+        successfulReads.some((response) => response.period),
+        `${path} workspace read did not return a successful period projection`,
+      )
+    }
     assert(mutationRequests.length === 0, `${path} emitted mutation requests: ${mutationRequests.join(', ')}`)
     proofs.push({
       path,
@@ -431,9 +441,18 @@ async function proveReadOnlyRoutes(page) {
   return proofs
 }
 
-function isReadWorkspaceUrl(value) {
+function isReadWorkspaceUrl(value, routePath) {
   try {
-    return /\/store\/(?:incentives|targets)\/workspace\/?$/.test(new URL(value).pathname)
+    const pathname = new URL(value).pathname
+    const patterns = {
+      '/store/incentives': /\/api\/store\/incentives\/workspace\/?$/,
+      '/store/targets': /\/api\/store\/targets\/workspace\/?$/,
+      '/store/kpis': /\/api\/reports\/(?:kpi-config|rankings|store-kpi-highlights)\/?$/,
+      '/store/approvals': /\/api\/workflow\/request-center\/?$/,
+      '/store/workforce': /\/api\/store\/workforce\/workspace\/?$/,
+      '/store/tasks': /\/api\/store\/tasks\/workspace\/?$/,
+    }
+    return patterns[routePath]?.test(pathname) ?? false
   } catch {
     return false
   }
@@ -441,13 +460,23 @@ function isReadWorkspaceUrl(value) {
 
 function isStoreCommandApiUrl(value) {
   try {
-    return /\/store\/(?:incentives|targets)(?:\/|$)/.test(new URL(value).pathname)
+    return /\/api\/(?:store\/(?:incentives|targets|workforce|tasks)(?:\/|$)|workflow\/request-center\/?$|reports\/(?:kpi-config|rankings|store-kpi-highlights)\/?$)/.test(
+      new URL(value).pathname,
+    )
   } catch {
     return false
   }
 }
 
 function isExpectedReadOnlyHeading(path, heading) {
+  const common = {
+    '/store/kpis': ['KPI Özetleri', 'KPI Overview'],
+    '/store/approvals': ['Talep Merkezi', 'Request Center'],
+    '/store/workforce': ['Norm Kadro', 'Workforce'],
+    '/store/tasks': ['Görevler', 'Tasks'],
+  }
+  if (common[path]) return common[path].includes(heading)
+
   const expected = {
     REGION_MANAGER: {
       '/store/incentives': ['Prim Kontrol Merkezi', 'Incentive Control Center'],
@@ -462,6 +491,23 @@ function isExpectedReadOnlyHeading(path, heading) {
     },
   }
   return expected[expectedRole]?.[path]?.includes(heading) ?? false
+}
+
+function readContractLabel(value) {
+  try {
+    const pathname = new URL(value).pathname
+    if (pathname.endsWith('/store/incentives/workspace')) return 'incentives_workspace'
+    if (pathname.endsWith('/store/targets/workspace')) return 'targets_workspace'
+    if (pathname.endsWith('/reports/kpi-config')) return 'kpi_config'
+    if (pathname.endsWith('/reports/rankings')) return 'kpi_rankings'
+    if (pathname.endsWith('/reports/store-kpi-highlights')) return 'kpi_highlights'
+    if (pathname.endsWith('/workflow/request-center')) return 'request_center'
+    if (pathname.endsWith('/store/workforce/workspace')) return 'workforce_workspace'
+    if (pathname.endsWith('/store/tasks/workspace')) return 'tasks_workspace'
+  } catch {
+    return 'unknown'
+  }
+  return 'unknown'
 }
 
 async function describePageState(page) {

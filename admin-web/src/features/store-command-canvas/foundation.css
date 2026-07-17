@@ -2,6 +2,8 @@
   display: grid;
   width: 100%;
   min-width: 0;
+  align-content: start;
+  grid-auto-rows: max-content;
   gap: 14px;
   color: var(--foreground);
   font-family: 'DM Sans', sans-serif;
@@ -58,6 +60,7 @@
 .command-canvas-metric {
   position: relative;
   display: grid;
+  box-sizing: border-box;
   min-width: 0;
   min-height: 78px;
   grid-template-columns: auto minmax(0, 1fr);
@@ -138,9 +141,9 @@
 
 .command-canvas-partial-notice [data-slot='alert-description'] { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 
-@media (min-width: 1181px) {
+@media (min-width: 1025px) {
   .command-canvas-metric-rail { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .command-canvas-metric { min-height: 84px; grid-template-columns: auto minmax(0, 1fr) auto; padding: 14px 16px; border-bottom: 0; }
+  .command-canvas-metric { height: 84px; min-height: 84px; grid-template-columns: auto minmax(0, 1fr) auto; padding: 14px 16px; border-bottom: 0; }
   .command-canvas-metric:not(:last-child) { border-right: 1px solid var(--border); }
   .command-canvas-metric:last-child { border-right: 0; }
   .command-canvas-metric-copy small { display: block; }

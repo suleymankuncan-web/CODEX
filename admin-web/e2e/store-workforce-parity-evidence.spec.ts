@@ -24,6 +24,7 @@ for (const viewport of [
 
     await expect(page.getByRole('heading', { name: 'Norm Kadro', exact: true })).toBeVisible()
     await expect(page.locator('.command-canvas-metric')).toHaveCount(4)
+    await expectStableMetricGeometry(page)
     await expect(page.getByTestId('store-workforce-personnel-list')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Personel sicil talebi' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'İşten ayrılma talebi' })).toBeVisible()
@@ -39,6 +40,28 @@ for (const viewport of [
       })
     }
   })
+}
+
+async function expectStableMetricGeometry(page: Page) {
+  const metrics = page.locator('.command-canvas-metric')
+  const initial = await metrics.evaluateAll((elements) =>
+    elements.map((element) => {
+      const rect = element.getBoundingClientRect()
+      return { width: rect.width, height: rect.height }
+    }),
+  )
+
+  for (let index = 0; index < 4; index += 1) {
+    await metrics.nth(index).click()
+    const current = await metrics.evaluateAll((elements) =>
+      elements.map((element) => {
+        const rect = element.getBoundingClientRect()
+        return { width: rect.width, height: rect.height }
+      }),
+    )
+    expect(current).toEqual(initial)
+  }
+  await metrics.first().click()
 }
 
 for (const scenario of [

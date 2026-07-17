@@ -1,15 +1,24 @@
+import { useDeferredValue, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  Activity,
-  ArrowRight,
+  AlertCircle,
+  BarChart3,
   ChevronDown,
   ChevronUp,
-  Gauge,
-  Map,
-  ShieldCheck,
+  Search,
+  Target,
   Store as StoreIcon,
-  type LucideIcon,
 } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import {
+  CommandCanvasDataList,
+  CommandCanvasFilterBar,
+  CommandCanvasMetricFilter,
+  CommandCanvasMetricRail,
+  CommandCanvasPage,
+  CommandCanvasPageHeader,
+} from '../features/store-command-canvas/primitives'
 import type { RankingMetricValue, StoreRankingRow } from '../features/reports/api'
 import type {
   StoreKpiHighlightsPageModel,
@@ -20,215 +29,151 @@ import {
   getMetricComparableValue,
 } from './store-rankings-page-model'
 import { StoreKpisPeriodPicker } from './store-kpis-period-picker'
-import { StoreEmptyState, StoreSurfacePage } from './store-surface-primitives'
+import { StoreEmptyState } from './store-surface-primitives'
+import './store-kpis-region-command-canvas.css'
 
 const regionMetricCodes = ['TARGET_ACHIEVEMENT', 'UPT', 'ATV', 'CR', 'gsm_approval'] as const
 const rowGridClass =
-  'tw:grid tw:grid-cols-[minmax(240px,0.9fr)_52px_repeat(5,minmax(70px,0.24fr))_minmax(92px,0.28fr)_minmax(92px,0.28fr)_minmax(62px,auto)] tw:items-center tw:gap-2.5'
-const regionStoreActionClass =
-  'store-command-soft-action tw:inline-flex tw:h-9 tw:items-center tw:justify-center tw:gap-1.5 tw:rounded-xl tw:border tw:px-3 tw:text-sm tw:font-semibold tw:transition'
+  'kpi-command-store-grid tw:grid tw:items-center'
 
 export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const [query, setQuery] = useState('')
+  const [riskOnly, setRiskOnly] = useState(false)
+  const [rail, setRail] = useState<'stores' | 'score' | 'target' | 'risk'>('stores')
+  const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase(model.locale))
   const summary = buildRegionSummary(model)
   const regionMeta = model.regionOverviewQuery.data?.storeLeaderboard.meta
   const regionTotal = regionMeta?.total ?? 0
   const regionHasPrevious = model.regionOverviewPage > 0
   const regionHasNext =
     (model.regionOverviewPage + 1) * model.regionOverviewPageSize < regionTotal
+  const riskCount = model.regionOverviewRows.filter(
+    (row) => typeof row.scoreValue === 'number' && row.scoreValue < 75,
+  ).length
+  const isPageScoped = regionTotal > model.regionOverviewRows.length
+  const visibleRows = useMemo(
+    () =>
+      model.regionOverviewRows.filter((row) => {
+        const matchesQuery =
+          !deferredQuery ||
+          (row.storeName ?? '').toLocaleLowerCase(model.locale).includes(deferredQuery)
+        const matchesRisk =
+          !riskOnly || (typeof row.scoreValue === 'number' && row.scoreValue < 75)
+        return matchesQuery && matchesRisk
+      }),
+    [deferredQuery, model.locale, model.regionOverviewRows, riskOnly],
+  )
 
   return (
-    <StoreSurfacePage
-      ariaLabel={model.t('storeKpis.regionCommandTitle')}
+    <CommandCanvasPage
+      ariaLabelledBy="store-kpis-region-title"
+      className="kpi-command-page"
       testId="store-kpis-region-overview"
     >
-      <div className="tw:mx-auto tw:grid tw:max-w-[1420px] tw:gap-4">
-        <header className="tw:grid tw:items-start tw:gap-4 tw:lg:grid-cols-[minmax(0,1fr)_auto]">
-          <section className="tw:flex tw:min-h-10 tw:flex-wrap tw:items-center tw:gap-2.5 tw:rounded-[0.95rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/85 tw:p-2.5 tw:shadow-[0_12px_32px_var(--store-command-line)]">
-            <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2">
-              <span className="tw:grid tw:size-8 tw:shrink-0 tw:place-items-center tw:rounded-lg tw:bg-primary/10 tw:text-primary">
-                <Gauge className="tw:size-4" />
-              </span>
-              <h1 className="tw:m-0 tw:text-base tw:font-semibold tw:leading-none tw:text-[var(--store-command-ink)]">
-                {model.t('storeKpis.regionCommandTitle')}
-              </h1>
-            </div>
-            <div className="tw:flex tw:flex-wrap tw:gap-2">
-              <RegionMeta label={model.t('storeKpis.regionCommandKpiView')} />
-              <RegionMeta label={model.t('storeKpis.regionOverviewStoreCount', { count: summary.storeCount })} />
-              <RegionMeta label={summary.periodLabel} />
-            </div>
-          </section>
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:lg:justify-end">
-            <RegionPeriodSelect model={model} />
-            <RegionToolbarChip icon={Map} label={model.t('storeKpis.regionCommandManagerScope')} />
-            <RegionToolbarChip icon={ShieldCheck} label={model.t('storeKpis.regionCommandScope')} />
-          </div>
-        </header>
-        {(model.regionOverviewQuery.isError || model.regionOverviewQuery.failureCount > 0) && model.regionOverviewQuery.data ? <RegionBackgroundError model={model} /> : null}
+      <CommandCanvasPageHeader
+        title="KPI Özetleri"
+        titleId="store-kpis-region-title"
+        eyebrow={`Bölge görünümü · ${summary.periodLabel}`}
+        description="Mağaza seçerek KPI çalışma alanına ilerleyin."
+        actions={<RegionPeriodSelect model={model} />}
+      />
+      {(model.regionOverviewQuery.isError || model.regionOverviewQuery.failureCount > 0) &&
+      model.regionOverviewQuery.data ? <RegionBackgroundError model={model} /> : null}
 
-        <section className="tw:grid tw:max-w-[1040px] tw:grid-cols-2 tw:gap-3 tw:md:grid-cols-3">
-          <RegionSummaryCard
-            badge={summary.scoreBadge}
-            icon={Gauge}
-            iconTone="plum"
-            label={model.t('storeKpis.regionAverageScore')}
-            value={summary.averageScoreLabel}
-            subline={summary.averageScoreCopy}
-          />
-          <RegionSummaryCard
-            badge={model.t('storeKpis.regionScopeBadge')}
-            icon={StoreIcon}
-            iconTone="cyan"
-            label={model.t('storeKpis.regionScopeTitle')}
-            value={formatInteger(model.locale, summary.storeCount)}
-            subline={summary.personnelCountLabel}
-          />
-          <article className="tw:min-h-[118px] tw:rounded-[1.45rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/[0.84] tw:p-4 tw:shadow-[0_12px_34px_var(--store-command-line)]">
-            <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-              <span className="tw:grid tw:size-10 tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-warning-soft)] tw:text-[var(--store-command-warning)]">
-                <Activity className="tw:size-5" />
-              </span>
-              <span className="tw:rounded-full tw:bg-[var(--store-command-warning-soft)] tw:px-2.5 tw:py-1 tw:text-[11px] tw:font-semibold tw:text-[var(--store-command-warning-ink)]">
-                {model.t('storeKpis.regionAverageBadge')}
-              </span>
-            </div>
-            <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-muted)]">
-              {model.t('storeKpis.regionKpiAverageTitle')}
-            </p>
-            <div className="tw:mt-3 tw:grid tw:grid-cols-2 tw:gap-1.5 tw:md:grid-cols-5">
-              {regionMetricCodes.map((code) => (
-                <div
-                  key={code}
-                  className="tw:rounded-[0.9rem] tw:border tw:border-[var(--store-command-line)]/80 tw:bg-white/70 tw:p-2 tw:text-center"
-                >
-                  <span className="tw:block tw:text-[10px] tw:font-medium tw:text-[var(--store-command-quiet)]">
-                    {getRegionMetricLabel(code)}
-                  </span>
-                  <strong className="tw:mt-1 tw:block tw:text-[13px] tw:font-semibold tw:tracking-[-0.02em] tw:text-[var(--store-command-ink)]">
-                    {summary.metricAverages[code]}
-                  </strong>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
+      <CommandCanvasMetricRail ariaLabel="Bölge KPI özeti">
+        <CommandCanvasMetricFilter
+          label="Toplam mağaza"
+          value={formatInteger(model.locale, summary.storeCount)}
+          note="Yetkili mağazalar"
+          icon={<StoreIcon size={16} />}
+          active={rail === 'stores'}
+          onClick={() => { setRail('stores'); setRiskOnly(false); setQuery('') }}
+        />
+        <CommandCanvasMetricFilter
+          label="Ortalama skor"
+          value={summary.averageScoreLabel}
+          note="Aylık sonuç"
+          icon={<BarChart3 size={16} />}
+          tone="cyan"
+          active={rail === 'score'}
+          onClick={() => { setRail('score'); setRiskOnly(false); model.setRegionOverviewSort('score') }}
+        />
+        <CommandCanvasMetricFilter
+          label="Hedef gerçekleşme"
+          value={summary.metricAverages.TARGET_ACHIEVEMENT}
+          note="Bölge ortalaması"
+          icon={<Target size={16} />}
+          tone="mint"
+          active={rail === 'target'}
+          onClick={() => { setRail('target'); setRiskOnly(false); model.setRegionOverviewSort('TARGET_ACHIEVEMENT') }}
+        />
+        <CommandCanvasMetricFilter
+          label={isPageScoped ? 'Bu sayfada takip' : 'Yakın takip'}
+          value={String(riskCount)}
+          note={isPageScoped ? 'Yüklü mağazalarda skor <75' : 'Mağaza skoru <75'}
+          icon={<AlertCircle size={16} />}
+          tone="rose"
+          active={rail === 'risk'}
+          onClick={() => { const next = rail !== 'risk'; setRail(next ? 'risk' : 'stores'); setRiskOnly(next) }}
+        />
+      </CommandCanvasMetricRail>
 
-        <section className="tw:max-w-[1040px] tw:overflow-hidden tw:rounded-[1.55rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/[0.84] tw:shadow-[0_12px_34px_var(--store-command-line)]">
-          <div className="tw:flex tw:min-h-[68px] tw:items-center tw:justify-between tw:gap-3 tw:border-b tw:border-[var(--store-command-line)] tw:p-4">
-            <div>
-              <h2 className="tw:m-0 tw:text-lg tw:font-semibold tw:tracking-[-0.02em] tw:text-[var(--store-command-ink)]">
-                {model.t('storeKpis.regionStoresTitle')}
-              </h2>
-              <p className="tw:mt-1 tw:text-xs tw:font-normal tw:text-[var(--store-command-muted)]">
-                {model.t('storeKpis.regionStoresCopy')}
-              </p>
-            </div>
-            <span className="tw:rounded-full tw:bg-[var(--store-command-cyan-soft)] tw:px-3 tw:py-1.5 tw:text-xs tw:font-semibold tw:text-[var(--store-command-accent-ink)]">
-              {model.t('storeKpis.regionOverviewStoreCount', {
-                count: summary.visibleStoreCount,
-              })}
-            </span>
-          </div>
-          {model.regionOverviewRows.length > 0 ? (
-            <>
-            <div className="tw:hidden tw:overflow-x-auto tw:md:block">
-              <div className="tw:min-w-[980px]">
-                <div
-                  className={`${rowGridClass} tw:border-b tw:border-[var(--store-command-line)] tw:px-3.5 tw:py-3 tw:text-[10px] tw:font-bold tw:uppercase tw:tracking-[0.035em] tw:text-[var(--store-command-muted)]`}
-                >
-                  <span>{model.t('storeKpis.regionStoreColumn')}</span>
-                  <RegionSortButton label={model.t('storeKpis.regionScoreColumn')} model={model} sortKey="score" centered />
-                  <RegionSortButton label="HG%" model={model} sortKey="TARGET_ACHIEVEMENT" centered />
-                  <RegionSortButton label="UPT" model={model} sortKey="UPT" centered />
-                  <RegionSortButton label="ATV" model={model} sortKey="ATV" centered />
-                  <RegionSortButton label="CR" model={model} sortKey="CR" centered />
-                  <RegionSortButton label="GSM Onayı" model={model} sortKey="gsm_approval" centered />
-                  <RegionSortButton label="BM Checklist" model={model} sortKey="BM_CHECKLIST" centered />
-                  <RegionSortButton label="VM Checklist" model={model} sortKey="VM_CHECKLIST" centered />
-                  <span className="tw:text-center">{model.t('storeKpis.regionActionColumn')}</span>
-                </div>
-                <div className="tw:grid tw:px-3.5 tw:pb-3">
-                  {model.regionOverviewRows.map((row) => (
-                    <RegionStoreRow key={row.storeId} model={model} row={row} />
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="tw:flex tw:gap-2 tw:overflow-x-auto tw:px-4 tw:py-3 tw:md:hidden" aria-label={model.t('storeKpis.regionMobileSortLabel')}>
-              {([
-                ['score', model.t('storeKpis.regionScoreColumn')],
-                ['TARGET_ACHIEVEMENT', 'HG%'],
-                ['UPT', 'UPT'],
-                ['ATV', 'ATV'],
-                ['CR', 'CR'],
-                ['gsm_approval', 'GSM'],
-                ['BM_CHECKLIST', 'BM'],
-                ['VM_CHECKLIST', 'VM'],
-              ] as const).map(([sortKey, label]) => (
-                <RegionSortButton key={sortKey} label={label} model={model} sortKey={sortKey} touch />
-              ))}
-            </div>
-            <div className="tw:grid tw:px-4 tw:pb-4 tw:md:hidden">
-              {model.regionOverviewRows.map((row) => (
-                <RegionStoreMobileCard key={row.storeId} model={model} row={row} />
-              ))}
-            </div>
-            </>
-          ) : (
-            <div className="tw:p-5">
-              <StoreEmptyState
-                title={model.t('storeKpis.regionOverviewEmptyTitle')}
-                description={model.t('storeKpis.regionOverviewEmptyCopy')}
-                titleAsHeading
-              />
-            </div>
-          )}
-        </section>
-        {regionHasPrevious || regionHasNext ? (
-          <nav
-            aria-label={model.t('storeKpis.regionPaginationLabel')}
-            className="tw:flex tw:max-w-[1040px] tw:items-center tw:justify-between tw:gap-3"
-          >
-            <button
-              type="button"
-              disabled={!regionHasPrevious}
-              className="tw:min-h-11 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-4 tw:text-sm tw:font-semibold tw:disabled:opacity-40"
-              onClick={() => model.setRegionOverviewPage(Math.max(0, model.regionOverviewPage - 1))}
-            >
-              {model.t('storeKpis.companyPrevious')}
-            </button>
-            <span className="tw:text-xs tw:text-[var(--store-command-muted)]">
-              {model.t('storeKpis.companyPageSummary', {
-                current: model.regionOverviewPage + 1,
-                total: Math.max(1, Math.ceil(regionTotal / model.regionOverviewPageSize)),
-              })}
-            </span>
-            <button
-              type="button"
-              data-testid="store-kpis-region-next-page"
-              disabled={!regionHasNext}
-              className="tw:min-h-11 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:px-4 tw:text-sm tw:font-semibold tw:disabled:opacity-40"
-              onClick={() => model.setRegionOverviewPage(model.regionOverviewPage + 1)}
-            >
-              {model.t('storeKpis.companyNext')}
-            </button>
-          </nav>
-        ) : null}
+      <CommandCanvasFilterBar
+        updatingLabel="KPI görünümü güncelleniyor"
+        isUpdating={model.regionOverviewQuery.isFetching}
+        search={<label className="kpi-command-search"><Search aria-hidden="true" size={15} /><Input aria-label={isPageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} placeholder={isPageScoped ? 'Bu sayfada mağaza ara' : 'Mağaza ara'} value={query} onChange={(event) => setQuery(event.target.value)} /></label>}
+        controls={<>
+          <Button variant="outline" onClick={() => model.setRegionOverviewSort('score')}>Skor</Button>
+          <Button variant={riskOnly ? 'secondary' : 'outline'} onClick={() => { setRiskOnly((value) => !value); setRail(riskOnly ? 'stores' : 'risk') }}>Risk durumu</Button>
+        </>}
+      />
+
+      <div className="kpi-command-mobile-sort" aria-label="KPI sıralama seçenekleri">
+        <RegionSortButton label={model.t('storeKpis.regionScoreColumn')} model={model} sortKey="score" touch />
+        <RegionSortButton label="HG%" model={model} sortKey="TARGET_ACHIEVEMENT" touch />
+        <RegionSortButton label="UPT" model={model} sortKey="UPT" touch />
+        <RegionSortButton label="ATV" model={model} sortKey="ATV" touch />
+        <RegionSortButton label="CR" model={model} sortKey="CR" touch />
+        <RegionSortButton label="GSM Onayı" model={model} sortKey="gsm_approval" touch />
+        <RegionSortButton label="BM" model={model} sortKey="BM_CHECKLIST" touch />
+        <RegionSortButton label="VM" model={model} sortKey="VM_CHECKLIST" touch />
       </div>
-    </StoreSurfacePage>
+
+      <div className="kpi-command-list-title">
+        <h2>{model.t('storeKpis.regionStoresTitle')}</h2>
+        <span>{visibleRows.length} mağaza</span>
+      </div>
+      <CommandCanvasDataList
+        ariaLabel={model.t('storeKpis.regionStoresTitle')}
+        className="kpi-command-list"
+        header={<div className={`${rowGridClass} kpi-command-list-head`}>
+          <span>{model.t('storeKpis.regionStoreColumn')}</span>
+          <RegionSortButton label={model.t('storeKpis.regionScoreColumn')} model={model} sortKey="score" centered />
+          <RegionSortButton label="HG%" model={model} sortKey="TARGET_ACHIEVEMENT" centered />
+          <RegionSortButton label="UPT" model={model} sortKey="UPT" centered />
+          <RegionSortButton label="ATV" model={model} sortKey="ATV" centered />
+          <RegionSortButton label="CR" model={model} sortKey="CR" centered />
+          <RegionSortButton label="GSM Onayı" model={model} sortKey="gsm_approval" centered />
+          <RegionSortButton label="BM" model={model} sortKey="BM_CHECKLIST" centered />
+          <RegionSortButton label="VM" model={model} sortKey="VM_CHECKLIST" centered />
+        </div>}
+        footer={regionHasPrevious || regionHasNext ? <KpiPager model={model} regionHasPrevious={regionHasPrevious} regionHasNext={regionHasNext} regionTotal={regionTotal} /> : undefined}
+      >
+        {visibleRows.length === 0 ? <StoreEmptyState title="Sonuç bulunamadı" description={isPageScoped ? 'Bu sayfadaki filtreleri değiştirin veya diğer mağaza sayfasına geçin.' : 'Filtreleri değiştirerek tekrar deneyin.'} titleAsHeading /> : <>
+          <div className="kpi-command-desktop-rows">
+            {visibleRows.map((row) => <RegionStoreRow key={row.storeId} model={model} row={row} />)}
+          </div>
+          <div className="kpi-command-mobile-rows">
+            {visibleRows.map((row) => <RegionStoreMobileCard key={row.storeId} model={model} row={row} />)}
+          </div>
+        </>}
+      </CommandCanvasDataList>
+    </CommandCanvasPage>
   )
 }
 
 function RegionBackgroundError({ model }: { model: StoreKpiHighlightsPageModel }) {
   return <div role="alert" className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 tw:rounded-xl tw:border tw:border-destructive/20 tw:bg-destructive/5 tw:p-3 tw:text-sm"><span>{model.t('storeKpis.backgroundError')}</span><button type="button" className="tw:min-h-11 tw:rounded-xl tw:border tw:border-border tw:bg-white tw:px-3 tw:font-semibold" onClick={() => void model.regionOverviewQuery.refetch()}>{model.t('storeKpis.retry')}</button></div>
-}
-
-function RegionMeta({ label }: { label: string }) {
-  return (
-    <span className="tw:inline-flex tw:min-h-6 tw:items-center tw:rounded-full tw:bg-white/80 tw:px-2.5 tw:text-[11px] tw:font-medium tw:text-[var(--store-command-muted)]">
-      {label}
-    </span>
-  )
 }
 
 function RegionPeriodSelect({ model }: { model: StoreKpiHighlightsPageModel }) {
@@ -248,56 +193,25 @@ function RegionPeriodSelect({ model }: { model: StoreKpiHighlightsPageModel }) {
       locale={model.locale}
       onPeriodStartChange={model.setRegionOverviewPeriodStart}
       periodStart={activePeriodStart}
-      triggerClassName="tw:min-h-10 tw:rounded-[0.95rem] tw:border-[var(--store-command-line)] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-ink)]"
+      triggerClassName="command-canvas-period-trigger"
     />
   )
 }
 
-function RegionToolbarChip(input: {
-  icon: LucideIcon
-  label: string
+function KpiPager(input: {
+  model: StoreKpiHighlightsPageModel
+  regionHasPrevious: boolean
+  regionHasNext: boolean
+  regionTotal: number
 }) {
-  const Icon = input.icon
-
-  return (
-    <span className="tw:inline-flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-[0.95rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/85 tw:px-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-ink)]">
-      <Icon className="tw:size-4" />
-      {input.label}
+  return <>
+    <span className="kpi-command-pager-count">
+      {input.regionTotal === 0 ? 0 : input.model.regionOverviewPage * input.model.regionOverviewPageSize + 1}-
+      {Math.min((input.model.regionOverviewPage + 1) * input.model.regionOverviewPageSize, input.regionTotal)} / {input.regionTotal}
     </span>
-  )
-}
-
-function RegionSummaryCard(input: {
-  badge: string
-  icon: LucideIcon
-  iconTone: 'plum' | 'cyan'
-  label: string
-  subline: string
-  value: string
-}) {
-  const Icon = input.icon
-  const toneClass =
-    input.iconTone === 'cyan'
-      ? 'tw:bg-[var(--store-command-cyan-soft)] tw:text-[var(--store-command-cyan)]'
-      : 'tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]'
-
-  return (
-    <article className="tw:min-h-[118px] tw:rounded-[1.45rem] tw:border tw:border-[var(--store-command-line)] tw:bg-white/[0.84] tw:p-4 tw:shadow-[0_12px_34px_var(--store-command-line)]">
-      <div className="tw:flex tw:items-center tw:justify-between tw:gap-3">
-        <span className={`tw:grid tw:size-10 tw:place-items-center tw:rounded-[0.9rem] ${toneClass}`}>
-          <Icon className="tw:size-5" />
-        </span>
-        <span className="tw:rounded-full tw:bg-[var(--store-command-mint-soft)] tw:px-2.5 tw:py-1 tw:text-[11px] tw:font-semibold tw:text-[var(--store-command-success-ink)]">
-          {input.badge}
-        </span>
-      </div>
-      <p className="tw:mt-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-muted)]">{input.label}</p>
-      <div className="tw:mt-1 tw:text-[31px] tw:font-semibold tw:leading-none tw:tracking-[-0.04em] tw:text-[var(--store-command-ink)]">
-        {input.value}
-      </div>
-      <p className="tw:mt-2 tw:text-xs tw:font-normal tw:text-[var(--store-command-muted)]">{input.subline}</p>
-    </article>
-  )
+    <Button variant="outline" size="sm" disabled={!input.regionHasPrevious} onClick={() => input.model.setRegionOverviewPage(Math.max(0, input.model.regionOverviewPage - 1))}>{input.model.t('storeKpis.companyPrevious')}</Button>
+    <Button variant="outline" size="sm" data-testid="store-kpis-region-next-page" disabled={!input.regionHasNext} onClick={() => input.model.setRegionOverviewPage(input.model.regionOverviewPage + 1)}>{input.model.t('storeKpis.companyNext')}</Button>
+  </>
 }
 
 function RegionSortButton(input: {
@@ -338,7 +252,11 @@ function RegionStoreRow({ model, row }: { model: StoreKpiHighlightsPageModel; ro
   const storeName = row.storeName ?? model.t('storeKpis.noStoreScope')
 
   return (
-    <article className={`${rowGridClass} tw:min-h-[62px] tw:border-b tw:border-[var(--store-command-line)] tw:bg-transparent tw:py-2 last:tw:border-b-0`}>
+    <Link
+      aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
+      className={`${rowGridClass} kpi-command-store-row`}
+      to={model.getRegionStoreDetailPath(row.storeId)}
+    >
       <div className="tw:flex tw:min-w-0 tw:items-center tw:gap-2.5">
         <span className="tw:grid tw:size-9 tw:flex-none tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]">
           <StoreIcon className="tw:size-5" />
@@ -361,15 +279,7 @@ function RegionStoreRow({ model, row }: { model: StoreKpiHighlightsPageModel; ro
       ))}
       <ChecklistChip label="BM" metric={getMetricByCode(row.metrics, 'BM_CHECKLIST')} model={model} />
       <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
-      <Link
-        aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
-        className={regionStoreActionClass}
-        to={model.getRegionStoreDetailPath(row.storeId)}
-      >
-        {model.t('storeKpis.regionOpenAction')}
-        <ArrowRight className="tw:size-4" />
-      </Link>
-    </article>
+    </Link>
   )
 }
 
@@ -378,7 +288,11 @@ function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageMo
   const storeName = row.storeName ?? model.t('storeKpis.noStoreScope')
 
   return (
-    <article className="tw:grid tw:grid-cols-[42px_minmax(0,1fr)_minmax(112px,auto)] tw:items-center tw:gap-2.5 tw:border-b tw:border-[var(--store-command-line)] tw:py-3 last:tw:border-b-0">
+    <Link
+      aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
+      className="kpi-command-mobile-row"
+      to={model.getRegionStoreDetailPath(row.storeId)}
+    >
       <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]">
         <StoreIcon className="tw:size-5" />
       </span>
@@ -386,29 +300,33 @@ function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageMo
         {storeName}
       </strong>
       <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[112px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-3 tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)] tw:shadow-[inset_0_0_0_1px_var(--store-command-line)]">
+        <span className="tw:mr-1 tw:text-[10px] tw:font-medium tw:text-muted-foreground">Skor</span>
         {formatNumber(model.locale, row.scoreValue, noData, 1)}
       </span>
       <div className="tw:col-start-2 tw:col-end-4 tw:grid tw:grid-cols-2 tw:gap-x-3 tw:gap-y-2 tw:pt-1 tw:text-center">
         {regionMetricCodes.map((code) => (
-          <strong key={code} className="tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
-            {formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}
-          </strong>
+          <span key={code} className="tw:grid tw:min-w-0 tw:gap-0.5 tw:rounded-lg tw:bg-white/70 tw:px-2 tw:py-1.5">
+            <small className="tw:text-[9px] tw:font-semibold tw:text-muted-foreground">
+              {getMobileMetricLabel(code)}
+            </small>
+            <strong className="tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
+              {formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}
+            </strong>
+          </span>
         ))}
       </div>
       <div className="tw:col-span-2 tw:col-start-1 tw:flex tw:gap-1.5 tw:pt-1">
         <ChecklistChip label="BM" metric={getMetricByCode(row.metrics, 'BM_CHECKLIST')} model={model} />
         <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
       </div>
-      <Link
-        aria-label={model.t('storeKpis.regionOpenStoreLabel', { store: storeName })}
-        className={`tw:col-start-3 ${regionStoreActionClass}`}
-        to={model.getRegionStoreDetailPath(row.storeId)}
-      >
-        {model.t('storeKpis.regionOpenAction')}
-        <ArrowRight className="tw:size-4" />
-      </Link>
-    </article>
+    </Link>
   )
+}
+
+function getMobileMetricLabel(code: (typeof regionMetricCodes)[number]) {
+  if (code === 'TARGET_ACHIEVEMENT') return 'HG%'
+  if (code === 'gsm_approval') return 'GSM'
+  return code
 }
 
 function MetricMini(input: {
@@ -496,12 +414,6 @@ function buildRegionSummary(model: StoreKpiHighlightsPageModel) {
     storeCount: scopeStoreCount,
     visibleStoreCount: rows.length,
   }
-}
-
-function getRegionMetricLabel(code: (typeof regionMetricCodes)[number]) {
-  if (code === 'TARGET_ACHIEVEMENT') return 'HG%'
-  if (code === 'gsm_approval') return 'GSM Onayı'
-  return code
 }
 
 function formatRegionMetric(

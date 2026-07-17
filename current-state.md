@@ -4,7 +4,7 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-16
+Last verified: 2026-07-17
 
 This is the canonical short handoff for the HR Axis / Store Ops workspace. A
 cold reader should recover the current decision, external blockers, and next
@@ -192,10 +192,12 @@ Now:
 - The 15 July checklist interaction regression closeout keeps the Store shell navigable on desktop and mobile, routes Region Manager and Visual Merchandiser execution actions directly into their authorized checklist session, replaces blocking browser close prompts with accessible in-product confirmation, and preserves repeated same-store planning on different dates while rejecting same-day duplicates. Report Viewer remains read-only and server authorization remains authoritative.
 - The Store Incentives and Store Targets Command Canvas cutover is complete through merged PRs #1000 (`29708806`), #1001 (`a3641112`), #1002 (`d3058420`), #1003 (`0e72caf2`), #1004 (`35aeb870`), and #1005 (`5f8ce5ad`). Closeout PR #1006 is verified at source head `a37adef7`; read its squash SHA from fresh `origin/main` after merge rather than predicting it here.
 - Incentives and Targets desktop/mobile prototype parity, legacy removal, and protected staging reads pass for Region Manager, Report Viewer, and Store Manager with zero browser mutation requests. Report Viewer remains company-scoped/read-only, Store Manager remains own-store scoped, and broad production remains `No-Go`; see `docs/evidence/store-command-canvas-parity/2026-07-16-controlled-pilot-read-gate.md`.
+- The seven-PR operational-surfaces cutover is merged through PR #1013. Closeout PR #1014 remains open while its repaired head is recertified. Owner-observed KPI, Talep Merkezi and Görevler geometry differences invalidated the first visual PASS assumption. The local repair now gives KPI Özetleri, Talep Merkezi, Norm Kadro and Görevler one shared compact four-cell decision rail, fixed desktop geometry, content-sized page rows, and before/after rectangle assertions at 1440x900, 1024x768, 390x844 and 320x844. Local parity, role and accessibility suites pass; final CI, deployment and protected staging read evidence remain required before merge. See `docs/evidence/store-operational-surfaces-command-canvas/parity-gap-audit-2026-07-17.md`.
 Next:
-1. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open runtime work.
-2. Keep ORG/ASSIGN correction and DG1-C contraction parked behind their recorded historical-authority and provider-usage gates. TREF has no hidden follow-up writer; real use remains subject to its runtime authorization, snapshot, and exact-base checks.
-3. Keep broad production `No-Go`; never infer historical winners or treat an approved specification as implementation authority.
+1. Re-green PR #1014 on the repaired head, deploy that exact head, repeat the protected four-route staging read with zero mutations, then merge only if mergeability and all required checks are clean.
+2. Treat real controlled-pilot feedback as the primary product signal; only evidence-backed P0/P1 findings open runtime work.
+3. Keep ORG/ASSIGN correction and DG1-C contraction parked behind their recorded historical-authority and provider-usage gates. TREF has no hidden follow-up writer; real use remains subject to its runtime authorization, snapshot, and exact-base checks.
+4. Keep broad production `No-Go`; never infer historical winners or treat an approved specification as implementation authority.
 Park:
 - Separate mobile implementation, new modules, broad production, broad redesign, and generic architecture/refactor work.
 - Provider/Nebim/JSON implementation without a real source contract and owner decision.

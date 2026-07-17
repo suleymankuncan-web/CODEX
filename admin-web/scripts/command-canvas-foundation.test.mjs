@@ -45,7 +45,10 @@ test('Command Canvas retains the approved responsive geometry and bounded overla
   const styles = await readFile(stylePath, 'utf8')
 
   assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/)
-  assert.match(styles, /@media \(min-width: 1181px\)/)
+  assert.match(styles, /@media \(min-width: 1025px\)/)
+  assert.match(styles, /height: 84px; min-height: 84px/)
+  assert.match(styles, /align-content: start/)
+  assert.match(styles, /grid-auto-rows: max-content/)
   assert.match(styles, /max-height: calc\(100dvh - 28px\)/)
   assert.match(styles, /overflow-y: auto/)
   assert.match(styles, /min-width: 16px/)
