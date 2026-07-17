@@ -144,6 +144,15 @@ async function routeStoreManagerApi(page: Page) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: storeManagerSession })
   })
+  await page.route('**/api/store/workforce/workspace**', async (route) => {
+    await route.fulfill({ json: { data: {
+      view: 'store_manager',
+      summary: { totalStores: 1, activePersonnel: 1, shortageStores: 0, openPositions: 0, averageTenureDays: 365 },
+      stores: { items: [{ companyId, companyName: 'Company', regionId, regionName: 'Marmara', regionManagerName: 'Manager', storeId, storeCode: 'IST-DEMO', storeName: 'IstinyePark Demo Store', storeStatus: 'active', norm: 1, active: 1, gap: 0, shortageDays: null, personnel: [{ employeeId, displayName: 'Store Personnel', positionId: '00000000-0000-4000-8000-000000000301', positionCode: 'SALES', positionName: 'SatÄ±ÅŸ DanÄ±ÅŸmanÄ±', assignmentStartDate: '2025-01-01', employmentStatus: 'active' }], personnelTotal: 1 }], total: 1, limit: 50, offset: 0, hasMore: false },
+      history: null,
+      capabilities: { canCreateSellerCodeRequest: true, canCreateOffboardingRequest: true },
+    } } })
+  })
   await page.route('**/api/feed**', async (route) => {
     await route.fulfill({ json: feedFixture })
   })

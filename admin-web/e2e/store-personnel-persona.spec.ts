@@ -83,6 +83,7 @@ test('store personnel direct management routes stop before protected data loads'
     ['target-personnel', '**/api/target-distributions/store-personnel**'],
     ['workforce-employees', '**/api/workforce/store-employees**'],
     ['workforce-gap', '**/api/workforce/headcount-gap**'],
+    ['workforce-workspace', '**/api/store/workforce/workspace**'],
     ['store-kpis', '**/api/reports/store-kpi-highlights**'],
     ['store-incentives', '**/api/store/incentives**'],
   ] as const
