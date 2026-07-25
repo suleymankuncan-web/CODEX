@@ -100,7 +100,7 @@ export function StoreChecklistsPage(input: {
               navigate({
                 pathname: location.pathname,
                 search: buildChecklistWorkflowOverlaySearch(location.search, null),
-              })
+              }, { replace: true })
             }}
           />
         ) : null}
@@ -143,7 +143,7 @@ export function StoreChecklistsPage(input: {
               navigate({
                 pathname: location.pathname,
                 search: buildChecklistWorkflowOverlaySearch(location.search, null),
-              })
+              }, { replace: true })
             }}
           />
         ) : null}

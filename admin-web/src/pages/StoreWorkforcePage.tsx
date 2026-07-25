@@ -201,6 +201,12 @@ export function StoreWorkforcePage(input: { authSummary: AuthSessionSummary | nu
           </>
         ) : undefined}
       />
+      {workspaceQuery.isError && workspace ? (
+        <div className="workforce-partial-error" role="alert">
+          <span>Son alınan kadro verileri gösteriliyor; güncel veriler alınamadı.</span>
+          <Button variant="outline" onClick={() => void workspaceQuery.refetch()}>Tekrar dene</Button>
+        </div>
+      ) : null}
 
       <CommandCanvasMetricRail ariaLabel="Norm Kadro özeti">
         <CommandCanvasMetricFilter label={totalLabel} value={String(workspace.summary.totalStores)} note="Aktif görünüm" icon={<Store size={16} />} active={rail === 'all'} onClick={() => { setRail('all'); setStatus('all'); setPosition('all'); setQuery(''); setOffset(0); setPersonPage(0) }} />
@@ -315,7 +321,7 @@ function StoreList(input: { stores: WorkforceCommandStore[]; view: 'report_viewe
 function PersonnelList(input: { store: WorkforceCommandStore; rows: WorkforceCommandStore['personnel']; sort: WorkforcePersonSort; direction: SortDirection; onSort: (sort: WorkforcePersonSort) => void; onHistory: () => void; page: number; pageCount: number; total: number; onPage: (page: number) => void; onNextBatch: () => void; onPreviousBatch: () => void; compact?: boolean }) {
   return <CommandCanvasDataList className={input.compact ? 'workforce-personnel-list compact' : 'workforce-personnel-list'} ariaLabel={`${input.store.storeName} personel listesi`} header={<div className="workforce-list-title"><strong>{input.store.storeName} personel listesi</strong><span>{input.total} personel</span><Button variant="outline" onClick={input.onHistory}><History /> Mağaza personel geçmişi</Button></div>} footer={input.pageCount > 1 || input.store.personnelHasMore ? <PersonnelPager {...input} /> : undefined}>
     <div className="workforce-person-grid workforce-list-head"><CommandCanvasSortableHeading semantic={false} label="Personel" direction={input.sort === 'person' ? input.direction : 'none'} onClick={() => input.onSort('person')} /><CommandCanvasSortableHeading semantic={false} label="Pozisyon" direction={input.sort === 'position' ? input.direction : 'none'} onClick={() => input.onSort('position')} /><CommandCanvasSortableHeading semantic={false} label="İşe giriş" direction={input.sort === 'start' ? input.direction : 'none'} onClick={() => input.onSort('start')} /><CommandCanvasSortableHeading semantic={false} label="Çalışma süresi" direction={input.sort === 'tenure' ? input.direction : 'none'} onClick={() => input.onSort('tenure')} /><CommandCanvasSortableHeading semantic={false} label="Durum" direction={input.sort === 'status' ? input.direction : 'none'} onClick={() => input.onSort('status')} /></div>
-    {input.rows.length === 0 ? <WorkforceInlineEmpty title="Personel bulunamadı" description="Bu filtrede aktif personel yok." /> : input.rows.map((person) => <div className="workforce-person-grid workforce-person-row" key={person.employeeId}><strong>{person.displayName}</strong><span>{person.positionName}</span><span>{formatDate(person.assignmentStartDate)}</span><span>{formatTenureFromDate(person.assignmentStartDate)}</span><span className="workforce-active-pill">Aktif</span></div>)}
+    {input.rows.length === 0 ? <WorkforceInlineEmpty title="Personel bulunamadı" description="Bu filtrede aktif personel yok." /> : input.rows.map((person) => <div className="workforce-person-grid workforce-person-row" key={person.employeeId}><strong data-label="Personel">{person.displayName}</strong><span data-label="Pozisyon">{person.positionName}</span><span data-label="İşe giriş">{formatDate(person.assignmentStartDate)}</span><span data-label="Çalışma süresi">{formatTenureFromDate(person.assignmentStartDate)}</span><span className="workforce-active-pill">Aktif</span></div>)}
   </CommandCanvasDataList>
 }
 

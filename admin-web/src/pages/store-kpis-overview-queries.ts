@@ -48,11 +48,16 @@ export function useStoreKpisOverviewQueries(input: {
     setRegionOverviewPage(0)
     input.regionPeriodModel.setPeriodStart(value)
   }
-  const setRegionOverviewSort = (sortKey: StoreKpisRegionSortKey) => {
+  const setRegionOverviewSort = (
+    sortKey: StoreKpisRegionSortKey,
+    sortDirection?: StoreKpisRegionSortDirection,
+  ) => {
     setRegionOverviewPage(0)
     setRegionOverviewSortState((current) => ({
       sortKey,
-      sortDirection: current.sortKey === sortKey && current.sortDirection === 'desc' ? 'asc' : 'desc',
+      sortDirection:
+        sortDirection ??
+        (current.sortKey === sortKey && current.sortDirection === 'desc' ? 'asc' : 'desc'),
     }))
   }
 

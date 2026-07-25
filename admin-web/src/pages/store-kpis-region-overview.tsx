@@ -12,6 +12,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   CommandCanvasDataList,
   CommandCanvasFilterBar,
   CommandCanvasMetricFilter,
@@ -128,16 +135,7 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
         </>}
       />
 
-      <div className="kpi-command-mobile-sort" aria-label="KPI sıralama seçenekleri">
-        <RegionSortButton label={model.t('storeKpis.regionScoreColumn')} model={model} sortKey="score" touch />
-        <RegionSortButton label="HG%" model={model} sortKey="TARGET_ACHIEVEMENT" touch />
-        <RegionSortButton label="UPT" model={model} sortKey="UPT" touch />
-        <RegionSortButton label="ATV" model={model} sortKey="ATV" touch />
-        <RegionSortButton label="CR" model={model} sortKey="CR" touch />
-        <RegionSortButton label="GSM Onayı" model={model} sortKey="gsm_approval" touch />
-        <RegionSortButton label="BM" model={model} sortKey="BM_CHECKLIST" touch />
-        <RegionSortButton label="VM" model={model} sortKey="VM_CHECKLIST" touch />
-      </div>
+      <RegionMobileSort model={model} />
 
       <div className="kpi-command-list-title">
         <h2>{model.t('storeKpis.regionStoresTitle')}</h2>
@@ -169,6 +167,50 @@ export function StoreKpisRegionOverview({ model }: { model: StoreKpiHighlightsPa
         </>}
       </CommandCanvasDataList>
     </CommandCanvasPage>
+  )
+}
+
+const mobileSortOptions: Array<{ key: StoreKpisRegionSortKey; label: string }> = [
+  { key: 'score', label: 'Skor' },
+  { key: 'TARGET_ACHIEVEMENT', label: 'HG%' },
+  { key: 'UPT', label: 'UPT' },
+  { key: 'ATV', label: 'ATV' },
+  { key: 'CR', label: 'CR' },
+  { key: 'gsm_approval', label: 'GSM Onayı' },
+  { key: 'BM_CHECKLIST', label: 'BM' },
+  { key: 'VM_CHECKLIST', label: 'VM' },
+]
+
+function RegionMobileSort({ model }: { model: StoreKpiHighlightsPageModel }) {
+  const value = `${model.regionOverviewSort.sortKey}:${model.regionOverviewSort.sortDirection}`
+
+  return (
+    <div className="kpi-command-mobile-sort">
+      <Select
+        value={value}
+        onValueChange={(next) => {
+          const [sortKey, sortDirection] = next.split(':') as [
+            StoreKpisRegionSortKey,
+            'asc' | 'desc',
+          ]
+          model.setRegionOverviewSort(sortKey, sortDirection)
+        }}
+      >
+        <SelectTrigger aria-label="KPI sıralama seçenekleri">
+          <SelectValue placeholder="Sıralama" />
+        </SelectTrigger>
+        <SelectContent>
+          {mobileSortOptions.flatMap((option) => [
+            <SelectItem key={`${option.key}:desc`} value={`${option.key}:desc`}>
+              {option.label} · Azalan
+            </SelectItem>,
+            <SelectItem key={`${option.key}:asc`} value={`${option.key}:asc`}>
+              {option.label} · Artan
+            </SelectItem>,
+          ])}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 
@@ -293,29 +335,23 @@ function RegionStoreMobileCard({ model, row }: { model: StoreKpiHighlightsPageMo
       className="kpi-command-mobile-row"
       to={model.getRegionStoreDetailPath(row.storeId)}
     >
-      <span className="tw:grid tw:size-9 tw:place-items-center tw:rounded-[0.9rem] tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum)]">
+      <span className="kpi-command-mobile-store-icon">
         <StoreIcon className="tw:size-5" />
       </span>
-      <strong className="tw:min-w-0 tw:text-sm tw:font-semibold tw:leading-tight tw:text-[var(--store-command-ink)]">
-        {storeName}
-      </strong>
-      <span className="tw:inline-flex tw:min-h-[30px] tw:min-w-[112px] tw:items-center tw:justify-center tw:rounded-full tw:bg-white tw:px-3 tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)] tw:shadow-[inset_0_0_0_1px_var(--store-command-line)]">
-        <span className="tw:mr-1 tw:text-[10px] tw:font-medium tw:text-muted-foreground">Skor</span>
-        {formatNumber(model.locale, row.scoreValue, noData, 1)}
+      <strong className="kpi-command-mobile-store-name">{storeName}</strong>
+      <span className="kpi-command-mobile-score">
+        <small>Skor</small>
+        <strong>{formatNumber(model.locale, row.scoreValue, noData, 1)}</strong>
       </span>
-      <div className="tw:col-start-2 tw:col-end-4 tw:grid tw:grid-cols-2 tw:gap-x-3 tw:gap-y-2 tw:pt-1 tw:text-center">
+      <div className="kpi-command-mobile-facts">
         {regionMetricCodes.map((code) => (
-          <span key={code} className="tw:grid tw:min-w-0 tw:gap-0.5 tw:rounded-lg tw:bg-white/70 tw:px-2 tw:py-1.5">
-            <small className="tw:text-[9px] tw:font-semibold tw:text-muted-foreground">
-              {getMobileMetricLabel(code)}
-            </small>
-            <strong className="tw:text-[13px] tw:font-semibold tw:text-[var(--store-command-ink)]">
-              {formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}
-            </strong>
+          <span key={code}>
+            <small>{getMobileMetricLabel(code)}</small>
+            <strong>{formatRegionMetric(model.locale, noData, getMetricByCode(row.metrics, code), code)}</strong>
           </span>
         ))}
       </div>
-      <div className="tw:col-span-2 tw:col-start-1 tw:flex tw:gap-1.5 tw:pt-1">
+      <div className="kpi-command-mobile-checklists">
         <ChecklistChip label="BM" metric={getMetricByCode(row.metrics, 'BM_CHECKLIST')} model={model} />
         <ChecklistChip label="VM" metric={getMetricByCode(row.metrics, 'VM_CHECKLIST')} model={model} />
       </div>
