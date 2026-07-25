@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import { AdminShell } from './app/admin-shell'
 import { adminNavDefinitions, isNavAllowed } from './app/admin-navigation'
 import { AuthFlowShell } from './app/auth-flow-shell'

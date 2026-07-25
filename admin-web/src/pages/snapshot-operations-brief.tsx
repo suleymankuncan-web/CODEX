@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowRight, CheckCircle2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Button } from '../components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { DailyClosureStatus, SnapshotOverview } from '../features/snapshots/api'

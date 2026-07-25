@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Clock3, Download, GitBranch, RefreshCcw, Sparkles } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router'
 import { Button } from '../components/ui/button'
 import { Progress } from '../components/ui/progress'
 import {

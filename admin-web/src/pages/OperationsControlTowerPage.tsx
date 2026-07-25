@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, DatabaseZap, Inbox, Layers3, ShieldCheck, Trophy, Users } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import {
   AdminMetricStrip,
   AdminStatePanel,

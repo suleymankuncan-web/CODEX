@@ -1,5 +1,5 @@
 import { Suspense, useState, type ReactNode } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { useLocalization } from '../features/localization/useLocalization'
 import { PilotFeedbackControl } from '../features/pilot-feedback/PilotFeedbackControl'

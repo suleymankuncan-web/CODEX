@@ -1,6 +1,6 @@
 import { ArrowRight, CalendarDays, Clock3, RefreshCcw, Store } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import type { StoreHomeCommandFilter, StoreHomeCommandModel } from './store-home-command-model'
 
 const filters: Array<{ id: StoreHomeCommandFilter; label: string }> = [

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { DatabaseZap, Layers3, ShieldCheck, Users } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import {
   AdminKeyValue as KeyValue,
   AdminKeyValueGrid,

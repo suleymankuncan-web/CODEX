@@ -1,4 +1,4 @@
-import { useLocation, useParams, useSearchParams } from 'react-router-dom'
+import { useLocation, useParams, useSearchParams } from 'react-router'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { StoreMyPerformancePage } from './StoreMyPerformancePage'
 

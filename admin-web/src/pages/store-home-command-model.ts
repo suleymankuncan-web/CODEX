@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import type { To } from 'react-router-dom'
+import type { To } from 'react-router'
 import type { StorePersona } from '../app/store-navigation'
 
 export type StoreHomeCommandTone = 'plum' | 'cyan' | 'mint' | 'amber' | 'rose'

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ArrowRight, CheckCircle2, Info, Loader2 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { cn } from '../lib/utils'

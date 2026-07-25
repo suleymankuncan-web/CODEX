@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { useLocation, useSearchParams } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router'
 import { preloadRouteModule } from '../app/route-preloaders'
 import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLoginUrl, hasProviderLoginConfig } from '../features/auth/auth-flow'

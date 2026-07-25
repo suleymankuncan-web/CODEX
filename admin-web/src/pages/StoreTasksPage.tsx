@@ -11,7 +11,7 @@ import {
   Search,
   ShieldAlert,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import type { AuthSessionSummary } from '../features/auth/api'
 import {
   getStoreQueryScopeSignature,

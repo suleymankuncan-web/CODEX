@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import { resolveStorePersona } from '../app/store-route-registry'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { hasAnyRole } from '../features/auth/authorization'

@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, ArrowRight, BriefcaseBusiness, Building2, Users } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router'
 import { AdminReportingToolbar } from '../components/admin-reporting-tools'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'

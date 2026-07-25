@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { KeyRound, MapPin, ShieldCheck, UserCog, Users } from 'lucide-react'
 import {
   AdminOperationalBadge as AdminSurfaceBadge,

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import { EmptyState, ScreenState, StatusPill } from '../components/dashboard-primitives'
 import { getAuthBootstrap } from '../features/auth/api'
 import {

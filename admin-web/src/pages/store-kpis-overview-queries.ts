@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { SetURLSearchParams } from 'react-router-dom'
+import type { SetURLSearchParams } from 'react-router'
 import { getRankings, type RankingSummary } from '../features/reports/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import type { useRegionOverviewPeriodModel } from './store-kpis-region-period-model'

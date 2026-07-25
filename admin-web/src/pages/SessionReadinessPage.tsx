@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { ArrowLeft, KeyRound, ShieldEllipsis, TestTubeDiagonal } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Button } from '../components/ui/button'
 import {
   EmptyState,
