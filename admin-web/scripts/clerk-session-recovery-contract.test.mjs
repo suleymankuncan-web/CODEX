@@ -10,6 +10,10 @@ const bridgeSource = readFileSync(
   join(appRoot, 'src', 'features', 'auth', 'clerk-session.tsx'),
   'utf8',
 )
+const signInFormSource = readFileSync(
+  join(appRoot, 'src', 'features', 'auth', 'clerk-sign-in-form.tsx'),
+  'utf8',
+)
 
 function normalize(value) {
   return value.replace(/\s+/g, ' ')
@@ -29,4 +33,16 @@ test('Clerk bridge forces provider session sync when app session was expired loc
     /token === lastTokenRef\.current && appSessionReady/,
     'same Clerk token must still resync when the local app session is no longer ready',
   )
+})
+
+test('Clerk login uses the HR Axis form without weakening the provider session bridge', () => {
+  assert.doesNotMatch(bridgeSource, /\bSignIn\b/)
+  assert.match(signInFormSource, /useSignIn\(\)/)
+  assert.match(signInFormSource, /name="identifier"/)
+  assert.match(signInFormSource, /name="password"/)
+  assert.match(signInFormSource, /name="code"/)
+  assert.match(signInFormSource, /signIn\.mfa\.sendEmailCode\(\)/)
+  assert.match(signInFormSource, /signIn\.mfa\.verifyEmailCode/)
+  assert.match(signInFormSource, /signIn\.finalize/)
+  assert.doesNotMatch(signInFormSource, /signUp|localStorage|sessionStorage/)
 })

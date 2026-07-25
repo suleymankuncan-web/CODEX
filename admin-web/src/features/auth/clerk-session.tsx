@@ -1,6 +1,5 @@
 import {
   ClerkProvider,
-  SignIn,
   UserButton,
   useAuth,
 } from '@clerk/react'
@@ -13,7 +12,7 @@ import { useLocalization } from '../localization/useLocalization'
 import { useSession } from '../session/session-context-value'
 import { isSessionReady } from '../session/session-storage'
 import { isClerkAuthEnabled, resolveClerkPublishableKey } from './clerk-config'
-import { sanitizeAuthReturnPath } from './return-path'
+import { ClerkSignInForm } from './clerk-sign-in-form'
 
 const CLERK_TOKEN_REFRESH_MS = 45_000
 
@@ -51,10 +50,9 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
   )
 }
 
-export function ClerkLoginActions(input: { returnTo: string }) {
+export function ClerkLoginActions() {
   const { t } = useLocalization()
   const { isLoaded: authLoaded, isSignedIn } = useAuth()
-  const safeReturnTo = sanitizeAuthReturnPath(input.returnTo) ?? '/'
 
   if (!authLoaded) {
     return (
@@ -78,48 +76,7 @@ export function ClerkLoginActions(input: { returnTo: string }) {
 
   return (
     <div className="auth-login-clerk">
-      <SignIn
-        routing="hash"
-        forceRedirectUrl={safeReturnTo}
-        fallbackRedirectUrl={safeReturnTo}
-        withSignUp={false}
-        fallback={(
-          <button className="auth-login-primary" type="button" disabled>
-            {t('authFlow.loadingClerk')}
-          </button>
-        )}
-        appearance={{
-          variables: {
-            borderRadius: '0.5rem',
-            colorBackground: '#ffffff',
-            colorPrimary: '#7c3aed',
-            colorText: '#171421',
-            colorTextSecondary: '#6c6478',
-            fontSize: '14px',
-          },
-          elements: {
-            card: 'auth-login-clerk-card',
-            cardBox: 'auth-login-clerk-card',
-            dividerRow: 'auth-login-clerk-hidden',
-            footer: 'auth-login-clerk-hidden',
-            form: 'auth-login-clerk-form',
-            formButtonPrimary: 'auth-login-primary auth-login-clerk-submit',
-            formFieldInputGroup: 'auth-login-clerk-input-group',
-            formFieldInput: 'auth-login-clerk-input',
-            formFieldLabel: 'auth-login-clerk-label',
-            formFieldLabelRow: 'auth-login-clerk-label-row',
-            formFieldRow: 'auth-login-clerk-field-row',
-            header: 'auth-login-clerk-hidden',
-            headerSubtitle: 'auth-login-clerk-hidden',
-            headerTitle: 'auth-login-clerk-hidden',
-            main: 'auth-login-clerk-main',
-            rootBox: 'auth-login-clerk-root',
-            socialButtons: 'auth-login-clerk-hidden',
-            socialButtonsBlockButton: 'auth-login-clerk-hidden',
-            socialButtonsRoot: 'auth-login-clerk-hidden',
-          },
-        }}
-      />
+      <ClerkSignInForm />
       <noscript>
         <button className="auth-login-primary" type="button" disabled>
           {t('authFlow.signInWithClerk')}

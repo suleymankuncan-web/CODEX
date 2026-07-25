@@ -77,7 +77,7 @@ export function AuthLoginPage() {
 
           <div className="auth-login-actions">
             {clerkReady ? (
-              <ClerkLoginActions returnTo={returnTo} />
+              <ClerkLoginActions />
             ) : providerLogin.url ? (
               <a className="auth-login-primary" href={providerLogin.url}>
                 {t('authFlow.loginTitle')}
