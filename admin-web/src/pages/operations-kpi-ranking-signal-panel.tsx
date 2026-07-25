@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Button } from '../components/ui/button'
 import type { TranslateFunction } from '../features/localization/dictionary'
 import type { KpiConfigResponse, RankingSummary } from '../features/reports/api'

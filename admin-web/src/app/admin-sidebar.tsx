@@ -1,7 +1,7 @@
 import { KeyRound, LogIn, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useRef } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import { Button } from '../components/ui/button'
 import type { AuthSessionSummary } from '../features/auth/api'

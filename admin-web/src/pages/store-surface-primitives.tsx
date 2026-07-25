@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react'
-import { Link, type LinkProps } from 'react-router-dom'
+import { Link, type LinkProps } from 'react-router'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'

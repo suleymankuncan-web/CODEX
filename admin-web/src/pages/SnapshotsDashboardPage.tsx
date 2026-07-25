@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useReducer, type Dispatch } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Activity, ArrowRight, Clock3, RefreshCcw, Rocket } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { AdminReportingToolbar } from '../components/admin-reporting-tools'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'

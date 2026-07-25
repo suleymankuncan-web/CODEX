@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft } from 'lucide-react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router'
 import {
   AdminOperationalEmpty as AdminSurfaceEmpty,
   AdminOperationalHeader as AdminSurfaceHeader,

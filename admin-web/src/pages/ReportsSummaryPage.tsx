@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { ArrowRight, BriefcaseBusiness, ClipboardCheck, Database, FileSpreadsheet, Layers3, TrendingDown, Trophy } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import {

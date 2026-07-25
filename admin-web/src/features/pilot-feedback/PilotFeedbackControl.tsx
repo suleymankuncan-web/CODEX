@@ -2,7 +2,7 @@ import { useId, useState, type FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { MessageSquarePlus, Send, X } from 'lucide-react'
 import { createPortal } from 'react-dom'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import { getErrorMessage } from '../../lib/format'
 import { useLocalization } from '../localization/useLocalization'
 import {

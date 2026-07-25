@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Store, Users } from 'lucide-react'
 import type { StoreKpiHighlightsPageModel } from './store-kpi-highlights-model'
 

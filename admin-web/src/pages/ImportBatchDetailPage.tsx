@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, CircleDashed, Network, RefreshCw } from 'lucide-react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { downloadCsv } from '../lib/download-csv'

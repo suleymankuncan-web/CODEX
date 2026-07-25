@@ -14,7 +14,7 @@ import {
   Store,
   UploadCloud,
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { downloadCsv } from '../lib/download-csv'

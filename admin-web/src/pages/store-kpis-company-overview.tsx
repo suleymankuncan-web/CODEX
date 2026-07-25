@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { ArrowRight, BarChart3, ChevronDown, CircleAlert, Store, Users } from 'lucide-react'
 import { getRankings, type RankingSummary } from '../features/reports/api'
 import { transientQueryRetryOptions } from '../lib/query-retry'

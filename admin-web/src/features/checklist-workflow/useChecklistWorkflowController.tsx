@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router'
 import type { AuthSessionSummary } from '../auth/api'
 import { canReadChecklistResults, getAssignedStoreIds, hasAnyRole } from '../auth/authorization'
 import {

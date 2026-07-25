@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
 import { AuthCallbackPage, AuthLoginPage, AuthLogoutPage } from './route-loaders'
 import { RouteLoadingState } from './route-states'

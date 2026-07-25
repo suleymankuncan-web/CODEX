@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Layers3 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router'
 import { AdminReportingToolbar } from '../components/admin-reporting-tools'
 import { Button } from '../components/ui/button'
 import {
