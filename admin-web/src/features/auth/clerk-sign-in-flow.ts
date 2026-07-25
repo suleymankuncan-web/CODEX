@@ -16,6 +16,26 @@ export type ClerkSignInView =
 export type ClerkSignInErrorKind = 'credentials' | 'verification' | 'generic'
 export type ClerkFinalizeState = 'idle' | 'finalizing' | 'failed'
 export type ClerkCompletionView = ClerkSignInView | 'finalizing' | 'finalize-failed'
+export type ClerkAppSessionShellMode = 'setup-required' | 'verifying' | 'rejected' | 'ready'
+
+export function resolveClerkAppSessionHandoffView(
+  shellMode: ClerkAppSessionShellMode,
+): 'verifying' | 'recover' {
+  return shellMode === 'verifying' || shellMode === 'ready' ? 'verifying' : 'recover'
+}
+
+export async function restartClerkSignIn(input: {
+  clearAppSession: () => Promise<void>
+  signOutProvider: () => Promise<unknown>
+}): Promise<'complete' | 'failed'> {
+  try {
+    await input.clearAppSession()
+    await input.signOutProvider()
+    return 'complete'
+  } catch {
+    return 'failed'
+  }
+}
 
 type ClerkFinalizeOperation = (input: {
   navigate: (input: {

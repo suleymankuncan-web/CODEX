@@ -24,7 +24,7 @@ export function AuthFlowShell(input: { shellState: ShellState; firstAllowedPath:
               input.shellState.mode === 'ready' ? (
                 <Navigate to={readyPath} replace />
               ) : (
-                <AuthLoginPage />
+                <AuthLoginPage shellMode={input.shellState.mode} />
               )
             }
           />

@@ -14,6 +14,8 @@ const signInFormSource = readFileSync(
   join(appRoot, 'src', 'features', 'auth', 'clerk-sign-in-form.tsx'),
   'utf8',
 )
+const authFlowShellSource = readFileSync(join(appRoot, 'src', 'app', 'auth-flow-shell.tsx'), 'utf8')
+const authLoginPageSource = readFileSync(join(appRoot, 'src', 'pages', 'AuthLoginPage.tsx'), 'utf8')
 
 function normalize(value) {
   return value.replace(/\s+/g, ' ')
@@ -45,4 +47,16 @@ test('Clerk login uses the HR Axis form without weakening the provider session b
   assert.match(signInFormSource, /signIn\.mfa\.verifyEmailCode/)
   assert.match(signInFormSource, /signIn\.finalize/)
   assert.doesNotMatch(signInFormSource, /signUp|localStorage|sessionStorage/)
+})
+
+test('provider-to-app session handoff stays product-branded and remains recoverable', () => {
+  assert.doesNotMatch(bridgeSource, /UserButton/)
+  assert.doesNotMatch(bridgeSource, /authFlow\.clerkSignedIn/)
+  assert.match(bridgeSource, /authFlow\.loginSubmitting/)
+  assert.match(bridgeSource, /authFlow\.clerkSyncingUser/)
+  assert.match(authFlowShellSource, /<AuthLoginPage shellMode=\{input\.shellState\.mode\} \/>/)
+  assert.match(authLoginPageSource, /<ClerkLoginActions shellMode=\{input\.shellMode\} \/>/)
+  assert.match(bridgeSource, /resolveClerkAppSessionHandoffView\(input\.shellMode\) === 'recover'/)
+  assert.match(bridgeSource, /authFlow\.sessionVerificationFailed/)
+  assert.match(bridgeSource, /authFlow\.restartSignIn/)
 })

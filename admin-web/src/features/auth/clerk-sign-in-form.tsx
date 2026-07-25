@@ -1,6 +1,7 @@
 import { useSignIn } from '@clerk/react'
 import { useState, type FormEvent } from 'react'
 import { useLocalization } from '../localization/useLocalization'
+import { useSession } from '../session/session-context-value'
 import {
   finalizeClerkSignIn,
   readClerkErrorCode,
@@ -15,6 +16,7 @@ type FormError = ClerkSignInErrorKind | 'required' | 'unsupported' | null
 
 export function ClerkSignInForm() {
   const { t } = useLocalization()
+  const { setProviderSessionHydrating } = useSession()
   const { signIn, fetchStatus } = useSignIn()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
@@ -32,6 +34,7 @@ export function ClerkSignInForm() {
 
   const finalize = async () => {
     setFinalizeState('finalizing')
+    setProviderSessionHydrating(true)
     const outcome = await finalizeClerkSignIn(({ navigate }) => signIn.finalize({
       navigate: ({ session }) => navigate({
         session: {
@@ -41,6 +44,7 @@ export function ClerkSignInForm() {
       }),
     }))
     if (outcome === 'failed') {
+      setProviderSessionHydrating(false)
       setFinalizeState('failed')
     }
   }
