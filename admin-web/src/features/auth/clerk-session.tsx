@@ -1,10 +1,9 @@
 import {
   ClerkProvider,
-  UserButton,
   useAuth,
 } from '@clerk/react'
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
-import { ScreenState, StatusPill } from '../../components/dashboard-primitives'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { ScreenState } from '../../components/dashboard-primitives'
 import { registerBearerTokenRefreshHandler } from '../../lib/api'
 import { readStoredAppLocale } from '../../lib/i18n'
 import { translate } from '../localization/dictionary'
@@ -13,8 +12,15 @@ import { useSession } from '../session/session-context-value'
 import { isSessionReady } from '../session/session-storage'
 import { isClerkAuthEnabled, resolveClerkPublishableKey } from './clerk-config'
 import { ClerkSignInForm } from './clerk-sign-in-form'
+import {
+  restartClerkSignIn,
+  resolveClerkAppSessionHandoffView,
+  type ClerkAppSessionShellMode,
+} from './clerk-sign-in-flow'
 
 const CLERK_TOKEN_REFRESH_MS = 45_000
+
+export type ClerkLoginShellMode = ClerkAppSessionShellMode
 
 export function ClerkSessionProvider(input: { children: ReactNode }) {
   if (!isClerkAuthEnabled()) {
@@ -50,9 +56,25 @@ export function ClerkSessionProvider(input: { children: ReactNode }) {
   )
 }
 
-export function ClerkLoginActions() {
+export function ClerkLoginActions(input: { shellMode: ClerkLoginShellMode }) {
   const { t } = useLocalization()
-  const { isLoaded: authLoaded, isSignedIn } = useAuth()
+  const { isLoaded: authLoaded, isSignedIn, signOut } = useAuth()
+  const { clearProviderSession } = useSession()
+  const [restartFailed, setRestartFailed] = useState(false)
+  const [restarting, setRestarting] = useState(false)
+
+  const restartSignIn = async () => {
+    setRestartFailed(false)
+    setRestarting(true)
+    const outcome = await restartClerkSignIn({
+      clearAppSession: clearProviderSession,
+      signOutProvider: () => signOut({ redirectUrl: '/auth/login' }),
+    })
+    if (outcome === 'failed') {
+      setRestartFailed(true)
+      setRestarting(false)
+    }
+  }
 
   if (!authLoaded) {
     return (
@@ -63,13 +85,24 @@ export function ClerkLoginActions() {
   }
 
   if (isSignedIn) {
-    return (
-      <div className="auth-login-session-card">
-        <div>
-          <StatusPill tone="calm">{t('authFlow.clerkSignedIn')}</StatusPill>
-          <p>{t('authFlow.clerkSyncingUser')}</p>
+    if (resolveClerkAppSessionHandoffView(input.shellMode) === 'recover') {
+      return (
+        <div className="auth-login-form-state" role="alert">
+          <p>{t('authFlow.sessionVerificationFailed')}</p>
+          <button className="auth-login-primary" type="button" onClick={() => void restartSignIn()} disabled={restarting}>
+            {restarting ? t('authFlow.loginPreparing') : t('authFlow.restartSignIn')}
+          </button>
+          {restartFailed ? <p className="auth-login-error">{t('authFlow.logoutFailedCopy')}</p> : null}
         </div>
-        <UserButton />
+      )
+    }
+
+    return (
+      <div className="auth-login-form-state" role="status" aria-live="polite">
+        <button className="auth-login-primary" type="button" disabled>
+          {t('authFlow.loginSubmitting')}
+        </button>
+        <p>{t('authFlow.clerkSyncingUser')}</p>
       </div>
     )
   }

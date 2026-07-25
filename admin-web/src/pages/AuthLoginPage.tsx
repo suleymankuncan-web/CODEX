@@ -5,11 +5,11 @@ import { preloadRouteModule } from '../app/route-preloaders'
 import { getAuthBootstrap } from '../features/auth/api'
 import { buildProviderLoginUrl, hasProviderLoginConfig } from '../features/auth/auth-flow'
 import { isClerkSessionProviderAvailable } from '../features/auth/clerk-config'
-import { ClerkLoginActions } from '../features/auth/clerk-session'
+import { ClerkLoginActions, type ClerkLoginShellMode } from '../features/auth/clerk-session'
 import { sanitizeAuthReturnPath } from '../features/auth/return-path'
 import { useLocalization } from '../features/localization/useLocalization'
 
-export function AuthLoginPage() {
+export function AuthLoginPage(input: { shellMode: ClerkLoginShellMode }) {
   const { t } = useLocalization()
   const location = useLocation()
   const [searchParams] = useSearchParams()
@@ -77,7 +77,7 @@ export function AuthLoginPage() {
 
           <div className="auth-login-actions">
             {clerkReady ? (
-              <ClerkLoginActions />
+              <ClerkLoginActions shellMode={input.shellMode} />
             ) : providerLogin.url ? (
               <a className="auth-login-primary" href={providerLogin.url}>
                 {t('authFlow.loginTitle')}

@@ -2,12 +2,47 @@ import { describe, expect, it } from 'vitest'
 import {
   finalizeClerkSignIn,
   readClerkErrorCode,
+  restartClerkSignIn,
+  resolveClerkAppSessionHandoffView,
   resolveClerkCompletionView,
   resolveClerkSignInView,
   resolveClerkSignInError,
 } from './clerk-sign-in-flow'
 
 describe('Clerk custom sign-in flow', () => {
+  it('keeps the provider handoff passive only while app-session verification is active', () => {
+    expect(resolveClerkAppSessionHandoffView('verifying')).toBe('verifying')
+    expect(resolveClerkAppSessionHandoffView('setup-required')).toBe('recover')
+    expect(resolveClerkAppSessionHandoffView('rejected')).toBe('recover')
+  })
+
+  it('clears the app session before provider sign-out', async () => {
+    const calls: string[] = []
+    const outcome = await restartClerkSignIn({
+      clearAppSession: async () => { calls.push('clear-app-session') },
+      signOutProvider: async () => { calls.push('sign-out-provider') },
+    })
+
+    expect(outcome).toBe('complete')
+    expect(calls).toEqual(['clear-app-session', 'sign-out-provider'])
+  })
+
+  it('fails closed when app cleanup or provider sign-out fails', async () => {
+    let providerSignOutCalls = 0
+    const cleanupFailure = await restartClerkSignIn({
+      clearAppSession: async () => { throw new Error('cleanup failed') },
+      signOutProvider: async () => { providerSignOutCalls += 1 },
+    })
+    const providerFailure = await restartClerkSignIn({
+      clearAppSession: async () => undefined,
+      signOutProvider: async () => { throw new Error('provider sign-out failed') },
+    })
+
+    expect(cleanupFailure).toBe('failed')
+    expect(providerSignOutCalls).toBe(0)
+    expect(providerFailure).toBe('failed')
+  })
+
   it('starts with identifier collection', () => {
     expect(resolveClerkSignInView({
       status: 'needs_identifier',
