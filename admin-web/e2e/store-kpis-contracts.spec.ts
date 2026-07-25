@@ -136,9 +136,10 @@ test('SH-FR-006/007 mobile Region Manager sort is local and uses the desktop sor
   await page.goto('/store/kpis?periodStart=2026-07-01')
   await expect(page.getByTestId('store-kpis-region-overview')).toBeVisible()
   const initialReads = rankingReads
-  const mobileSort = page.getByRole('button', { name: 'UPT sütununa göre sırala' })
+  const mobileSort = page.getByRole('combobox', { name: 'KPI sıralama seçenekleri' })
   await mobileSort.click()
-  await expect(mobileSort).toHaveAttribute('aria-label', 'UPT sütununa göre sırala')
+  await page.getByRole('option', { name: 'UPT · Artan' }).click()
+  await expect(mobileSort).toContainText('UPT · Artan')
   expect(rankingReads).toBe(initialReads)
 })
 

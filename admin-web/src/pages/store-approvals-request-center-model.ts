@@ -8,7 +8,15 @@ import type { StoreSurfaceTone } from './store-surface-primitives'
 export type RequestCenterTab = 'open' | 'done'
 export type RequestCenterType = 'all' | 'target' | 'sellerCode' | 'offboarding'
 export type RequestCenterStatus = 'all' | 'pending' | 'returned' | 'approved' | 'overdue'
-export type RequestCenterSort = 'updatedDesc' | 'waitingDesc' | 'storeAsc' | 'typeAsc'
+export type RequestCenterSort =
+  | 'updatedDesc'
+  | 'updatedAsc'
+  | 'waitingDesc'
+  | 'waitingAsc'
+  | 'storeAsc'
+  | 'storeDesc'
+  | 'typeAsc'
+  | 'typeDesc'
 
 export type RequestCenterEvent = {
   id: string
@@ -168,7 +176,21 @@ export function filterAndSortRequestCenterRows(input: { rows: RequestCenterRow[]
     .filter((row) => input.status === 'all' || (input.status === 'approved' ? row.status === 'approved' : input.status === 'returned' ? row.status === 'rejected' : input.status === 'overdue' ? row.isOverdue : row.status !== 'approved' && row.status !== 'rejected'))
     .filter((row) => input.period === 'all' || row.updatedAt.startsWith(input.period))
     .filter((row) => !query || `${row.title} ${row.subtitle} ${row.scopeTitle}`.toLocaleLowerCase('tr-TR').includes(query))
-    .sort((a, b) => input.sort === 'storeAsc' ? a.scopeTitle.localeCompare(b.scopeTitle, 'tr') : input.sort === 'typeAsc' ? a.type.localeCompare(b.type) : input.sort === 'waitingDesc' ? (Date.parse(a.waitingSince ?? '') || Infinity) - (Date.parse(b.waitingSince ?? '') || Infinity) : Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+    .sort((a, b) => {
+      const direction = input.sort.endsWith('Desc') ? -1 : 1
+      if (input.sort.startsWith('store')) {
+        return direction * a.scopeTitle.localeCompare(b.scopeTitle, 'tr')
+      }
+      if (input.sort.startsWith('type')) {
+        return direction * a.type.localeCompare(b.type)
+      }
+      if (input.sort.startsWith('waiting')) {
+        const left = Date.parse(a.waitingSince ?? '') || Number.NEGATIVE_INFINITY
+        const right = Date.parse(b.waitingSince ?? '') || Number.NEGATIVE_INFINITY
+        return input.sort === 'waitingDesc' ? left - right : right - left
+      }
+      return direction * (Date.parse(a.updatedAt) - Date.parse(b.updatedAt))
+    })
 }
 
 export function createPeriodOptions(periods: string[], locale: AppLocale) {

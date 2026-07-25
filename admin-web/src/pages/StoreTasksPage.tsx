@@ -95,7 +95,7 @@ function StoreTasksWorkspace(input: {
       retainScopedPlaceholder(previousData, previousQuery?.queryKey, scopeSignature),
   })
   const workspace = workspaceQuery.data
-  const canMutate = Boolean(workspace?.capabilities.canUpdate)
+  const canMutate = workspace?.view === 'store_manager' && Boolean(workspace.capabilities.canUpdate)
   const inboxQuery = useQuery({
     queryKey: storeWorkflowInboxQueryKey(input.authSummary),
     queryFn: getWorkflowInbox,
@@ -145,7 +145,7 @@ function StoreTasksWorkspace(input: {
     setDirection(nextDirection as Direction)
   }
 
-  if (workspaceQuery.isError) {
+  if (workspaceQuery.isError && !workspace) {
     return <TaskState title="Görevler açılamadı" description="Bu rol için görev alanı şu anda açılamıyor. Tekrar deneyin." onRetry={() => void workspaceQuery.refetch()} />
   }
 
@@ -164,15 +164,27 @@ function StoreTasksWorkspace(input: {
           </Button>
         </>}
       />
+      {workspaceQuery.isError && workspace ? (
+        <div className="tasks-command-partial-error" role="alert">
+          <span>Son alınan görevler gösteriliyor; güncel veriler alınamadı.</span>
+          <Button variant="outline" onClick={() => void workspaceQuery.refetch()}>Tekrar dene</Button>
+        </div>
+      ) : null}
+      {canMutate && inboxQuery.isError ? (
+        <div className="tasks-command-partial-error" role="alert">
+          <span>Yeni görev adayları alınamadı; kayıtlı görevler gösterilmeye devam ediyor.</span>
+          <Button variant="outline" onClick={() => void inboxQuery.refetch()}>Tekrar dene</Button>
+        </div>
+      ) : null}
       <CommandCanvasMetricRail ariaLabel="Görev sonuç özeti">
-        <CommandCanvasMetricFilter label="Toplam sonuç" value={String(workspace?.summary.retained ?? 0)} note="Bu sayfadaki kayıt" icon={<ListTodo />} tone="plum" active={rail === 'all'} onClick={() => setRail('all')} />
+        <CommandCanvasMetricFilter label="Toplam sonuç" value={String(workspace?.summary.retained ?? 0)} note={canMutate ? `${workspace?.summary.actionable ?? 0} aksiyon alınacak` : 'Bu sayfadaki kayıt'} icon={<ListTodo />} tone="plum" active={rail === 'all'} onClick={() => setRail('all')} />
         <CommandCanvasMetricFilter label="Çözüm bildirildi" value={String(workspace?.summary.completed ?? 0)} note="Bu sayfadaki tamamlanan" icon={<CheckCircle2 />} tone="mint" active={rail === 'completed'} onClick={() => setRail('completed')} />
         <CommandCanvasMetricFilter label="İptal edildi" value={String(workspace?.summary.cancelled ?? 0)} note="Bu sayfadaki iptal" icon={<Ban />} tone="rose" active={rail === 'cancelled'} onClick={() => setRail('cancelled')} />
         <CommandCanvasMetricFilter label="Checklist kaynağı" value={String(workspace?.summary.checklist ?? 0)} note="Bu sayfadaki denetim" icon={<ClipboardCheck />} tone="cyan" active={rail === 'checklist'} onClick={() => setRail('checklist')} />
       </CommandCanvasMetricRail>
       <CommandCanvasFilterBar
         search={<label className="tasks-command-search"><Search aria-hidden="true" /><Input aria-label="Görev veya mağaza ara" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Görev veya mağaza ara" /></label>}
-        controls={<><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Duruma göre filtrele"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tüm durumlar</SelectItem>{canMutate ? <><SelectItem value="open">Açık</SelectItem><SelectItem value="in_progress">İşlemde</SelectItem><SelectItem value="blocked">Bloke</SelectItem></> : null}<SelectItem value="closed">Çözüm bildirildi</SelectItem><SelectItem value="cancelled">İptal edildi</SelectItem></SelectContent></Select><Select value={`${sort}:${direction}`} onValueChange={selectMobileSort}><SelectTrigger className="tasks-command-mobile-sort" aria-label="Görevleri sırala"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="date:descending">En güncel</SelectItem><SelectItem value="task:ascending">Görev adına göre</SelectItem><SelectItem value="store:ascending">Mağazaya göre</SelectItem><SelectItem value="source:ascending">Kaynağa göre</SelectItem><SelectItem value="priority:ascending">Önceliğe göre</SelectItem><SelectItem value="status:ascending">Duruma göre</SelectItem></SelectContent></Select></>}
+        controls={<><Select value={status} onValueChange={setStatus}><SelectTrigger aria-label="Duruma göre filtrele"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Tüm durumlar</SelectItem>{canMutate ? <><SelectItem value="open">Açık</SelectItem><SelectItem value="in_progress">İşlemde</SelectItem><SelectItem value="blocked">Bloke</SelectItem></> : null}<SelectItem value="closed">Çözüm bildirildi</SelectItem><SelectItem value="cancelled">İptal edildi</SelectItem></SelectContent></Select><Select value={`${sort}:${direction}`} onValueChange={selectMobileSort}><SelectTrigger className="tasks-command-mobile-sort" aria-label="Görevleri sırala"><SelectValue /></SelectTrigger><SelectContent>{(['date', 'task', 'store', 'source', 'priority', 'status'] as SortKey[]).flatMap((key) => [<SelectItem key={`${key}:descending`} value={`${key}:descending`}>{sortLabel(key)} · Azalan</SelectItem>, <SelectItem key={`${key}:ascending`} value={`${key}:ascending`}>{sortLabel(key)} · Artan</SelectItem>])}</SelectContent></Select></>}
         context={<span>{workspace?.page.total ?? 0} kayıt</span>}
         isUpdating={workspaceQuery.isFetching}
         updatingLabel="Görevler güncelleniyor"
@@ -307,7 +319,7 @@ function TaskDrawer(input: {
             {!input.canMutate && plan ? <section><h3>Mağaza müdürü notu</h3><p>{plan.resultNote ?? 'Not eklenmemiş.'}</p></section> : null}
             <section><h3>Kaynak ve sonuç</h3><p>{values.summary}</p>{plan?.resultNote ? <p className="tasks-command-result">{plan.resultNote}</p> : null}{sourceLink ? <Button asChild variant="outline"><Link to={sourceLink}>Kaynağı aç</Link></Button> : <p className="tasks-command-source-unavailable">Kaynak artık kullanılamıyor.</p>}</section>
             {input.canMutate && (active || candidate) ? <section className="tasks-command-actions"><h3>Görev işlemi</h3>{candidate ? <Input aria-label="Termin tarihi" type="date" value={dueOn} onChange={(event) => setDueOn(event.target.value)} /> : <Textarea value={note} onChange={(event) => setNote(event.target.value)} maxLength={500} placeholder="Kısa not yaz" />}<div>{candidate ? <Button disabled={!dueOn || mutation.isPending} onClick={() => mutation.mutate('create')}>Aksiyon planı oluştur</Button> : <><Button disabled={mutation.isPending || plan?.status === 'in_progress'} onClick={() => mutation.mutate('start')}><PlayCircle data-icon="inline-start" />İşleme al</Button><Button variant="outline" disabled={mutation.isPending || plan?.status === 'blocked'} onClick={() => mutation.mutate('block')}><ShieldAlert data-icon="inline-start" />Bloke et</Button><Button disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('complete')}><CheckCircle2 data-icon="inline-start" />Çözüm bildir</Button><Button variant="ghost" disabled={mutation.isPending || !note.trim()} onClick={() => mutation.mutate('cancel')}><Ban data-icon="inline-start" />İptal et</Button></>}</div></section> : null}
-            {plan ? <section><h3>Denetim geçmişi</h3>{eventsQuery.isLoading ? <p>Geçmiş yükleniyor…</p> : null}<div className="tasks-command-timeline">{auditEvents.map((event) => <article key={event.eventId}><span /><div><b>{eventLabel(event.eventType)}</b><p>{event.actorDisplayName}{event.actorRoleLabel ? ` · ${event.actorRoleLabel}` : ''}</p>{event.note ? <em>{event.note}</em> : null}<time>{formatDateTime(event.occurredAt)}</time></div></article>)}</div>{eventsQuery.hasNextPage ? <Button variant="outline" disabled={eventsQuery.isFetchingNextPage} onClick={() => void eventsQuery.fetchNextPage()}>{eventsQuery.isFetchingNextPage ? 'Yükleniyor…' : 'Daha fazla göster'}</Button> : null}</section> : null}
+            {plan ? <section><h3>Denetim geçmişi</h3>{eventsQuery.isLoading ? <p>Geçmiş yükleniyor…</p> : null}{eventsQuery.isError ? <div className="tasks-command-history-state" role="alert"><p>Görev geçmişi alınamadı.</p><Button variant="outline" onClick={() => void eventsQuery.refetch()}>Tekrar dene</Button></div> : null}{!eventsQuery.isLoading && !eventsQuery.isError && auditEvents.length === 0 ? <p>Bu görev için henüz geçmiş kaydı yok.</p> : null}<div className="tasks-command-timeline">{auditEvents.map((event) => <article key={event.eventId}><span /><div><b>{eventLabel(event.eventType)}</b><p>{event.actorDisplayName}{event.actorRoleLabel ? ` · ${event.actorRoleLabel}` : ''}</p>{event.note ? <em>{event.note}</em> : null}<time>{formatDateTime(event.occurredAt)}</time></div></article>)}</div>{eventsQuery.hasNextPage ? <Button variant="outline" disabled={eventsQuery.isFetchingNextPage} onClick={() => void eventsQuery.fetchNextPage()}>{eventsQuery.isFetchingNextPage ? 'Yükleniyor…' : 'Daha fazla göster'}</Button> : null}</section> : null}
           </div>
         </> : null}
       </CommandCanvasOperationalDrawerContent>
@@ -336,6 +348,15 @@ function filterAndSort(rows: TaskRow[], input: { search: string; status: string;
               : a.status.localeCompare(b.status)
     return input.direction === 'ascending' ? value : -value
   })
+}
+
+function sortLabel(value: SortKey) {
+  return value === 'date' ? 'Tarih'
+    : value === 'task' ? 'Görev'
+      : value === 'store' ? 'Mağaza'
+        : value === 'source' ? 'Kaynak'
+          : value === 'priority' ? 'Öncelik'
+            : 'Durum'
 }
 
 function rowValues(row: TaskRow) {

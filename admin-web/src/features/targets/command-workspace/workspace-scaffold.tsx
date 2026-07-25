@@ -38,6 +38,11 @@ export function TargetWorkspaceScaffold(input: {
   const partial = input.backgroundError !== null || Object.values(input.workspace.sections).some((section) => section.status === 'unavailable')
   const toggle = (next: TargetCommandStatusFilter) => setStatus((current) => current === next ? 'all' : next)
   const onSort = (key: TargetCommandSortState['key']) => setSort((current) => ({ key, direction: current.key === key && current.direction === 'ascending' ? 'descending' : 'ascending' }))
+  const compactSort = `${sort.key}:${sort.direction}`
+  const onCompactSort = (value: string) => {
+    const [key, direction] = value.split(':') as [TargetCommandSortState['key'], TargetCommandSortState['direction']]
+    setSort({ key, direction })
+  }
 
   return (
     <CommandCanvasPage ariaLabelledBy="store-targets-command-title" className={`target-command-page ${viewer ? 'is-report-viewer' : 'is-region-manager'}`}>
@@ -57,7 +62,16 @@ export function TargetWorkspaceScaffold(input: {
       <div className="target-command-workbench">
         <CommandCanvasFilterBar
           search={<div className="target-command-search"><Search size={16} /><Input aria-label={copy.search} placeholder={copy.search} value={search} onChange={(event) => setSearch(event.target.value)} /></div>}
-          controls={<Select value={status} onValueChange={(value) => setStatus(value as TargetCommandStatusFilter)}><SelectTrigger aria-label={copy.status}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{copy.allStatuses}</SelectItem><SelectItem value="pending">{copy.pending}</SelectItem><SelectItem value="approved">{copy.approved}</SelectItem><SelectItem value="adjusted_approved">{copy.approved}</SelectItem><SelectItem value="returned">{copy.returned}</SelectItem><SelectItem value="missing">{copy.missing}</SelectItem></SelectContent></Select>}
+          controls={<>
+            <Select value={status} onValueChange={(value) => setStatus(value as TargetCommandStatusFilter)}><SelectTrigger aria-label={copy.status}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{copy.allStatuses}</SelectItem><SelectItem value="pending">{copy.pending}</SelectItem><SelectItem value="approved_all">{copy.approved}</SelectItem><SelectItem value="approved">{locale === 'tr' ? 'Doğrudan onaylanan' : 'Approved without adjustment'}</SelectItem><SelectItem value="adjusted_approved">{locale === 'tr' ? 'Düzeltilerek onaylanan' : 'Approved with adjustment'}</SelectItem><SelectItem value="returned">{copy.returned}</SelectItem><SelectItem value="missing">{copy.missing}</SelectItem></SelectContent></Select>
+            <Select value={compactSort} onValueChange={onCompactSort}><SelectTrigger className="target-command-compact-sort" aria-label={locale === 'tr' ? 'Hedefleri sırala' : 'Sort targets'}><SelectValue /></SelectTrigger><SelectContent>
+              <SelectItem value="store:ascending">{locale === 'tr' ? 'Mağaza A-Z' : 'Store A-Z'}</SelectItem><SelectItem value="store:descending">{locale === 'tr' ? 'Mağaza Z-A' : 'Store Z-A'}</SelectItem>
+              <SelectItem value="target:descending">{locale === 'tr' ? 'Hedef yüksek' : 'Highest target'}</SelectItem><SelectItem value="target:ascending">{locale === 'tr' ? 'Hedef düşük' : 'Lowest target'}</SelectItem>
+              <SelectItem value="distributed:descending">{locale === 'tr' ? 'Dağıtılan yüksek' : 'Highest distributed'}</SelectItem><SelectItem value="distributed:ascending">{locale === 'tr' ? 'Dağıtılan düşük' : 'Lowest distributed'}</SelectItem>
+              <SelectItem value="personnel:descending">{locale === 'tr' ? 'Personel çok' : 'Most personnel'}</SelectItem><SelectItem value="personnel:ascending">{locale === 'tr' ? 'Personel az' : 'Least personnel'}</SelectItem>
+              <SelectItem value="status:ascending">{locale === 'tr' ? 'Durum A-Z' : 'Status A-Z'}</SelectItem><SelectItem value="status:descending">{locale === 'tr' ? 'Durum Z-A' : 'Status Z-A'}</SelectItem>
+            </SelectContent></Select>
+          </>}
           actions={<Button variant="ghost" size="sm" onClick={() => { setSearch(''); setStatus('all') }}><RotateCcw />{copy.clear}</Button>}
           isUpdating={input.isUpdating} updatingLabel={copy.updating}
         />

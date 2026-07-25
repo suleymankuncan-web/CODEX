@@ -69,7 +69,14 @@ function RequestCenterSurface(input: { canRead: boolean; copy: RequestCenterCopy
       titleId="store-approvals-request-center-title"
       eyebrow={input.persona === 'reportViewer' ? 'Şirket görünümü · Salt okunur' : input.persona === 'storeManager' ? 'Mağaza görünümü' : 'Bölge görünümü'}
       description="Hedef, personel kodu ve ayrılış taleplerini tek akışta izleyin."
+      actions={<RequestCenterSelect ariaLabel={input.copy.periodAll} value={periodFilter} onChange={(value) => { setPeriodFilter(value); setPage(1) }} items={[{ value: 'all', label: input.copy.periodAll }, ...periodOptions]} />}
     />
+    {workspaceQuery.isError && workspaceQuery.data ? (
+      <div className="approvals-command-partial-error" role="alert">
+        <span>Son alınan kayıtlar gösteriliyor; güncel veriler alınamadı.</span>
+        <Button type="button" variant="outline" onClick={() => void workspaceQuery.refetch()}>Tekrar dene</Button>
+      </div>
+    ) : null}
     <CommandCanvasMetricRail ariaLabel="Talep merkezi özetleri">
       <CommandCanvasMetricFilter label={input.copy.openMetric} note="İşlem bekliyor" value={String(counts.open)} icon={<Clock3 size={16} />} tone="amber" active={metricActive === 'open'} onClick={() => chooseMetric('open')} />
       <CommandCanvasMetricFilter label={input.copy.completedMetric} note="Bu dönem" value={String(counts.done)} icon={<CheckCircle2 size={16} />} tone="mint" active={metricActive === 'done'} onClick={() => chooseMetric('done')} />
@@ -83,8 +90,16 @@ function RequestCenterSurface(input: { canRead: boolean; copy: RequestCenterCopy
       controls={<>
         <RequestCenterSelect ariaLabel={input.copy.allTypes} value={typeFilter} onChange={(value) => { setTypeFilter(value as RequestCenterType); setPage(1) }} items={[{ value: 'all', label: input.copy.allTypes }, { value: 'target', label: input.copy.targetType }, { value: 'sellerCode', label: input.copy.sellerCodeType }, { value: 'offboarding', label: input.copy.offboardingType }]} />
         <RequestCenterSelect ariaLabel={input.copy.allStatuses} value={statusFilter} onChange={(value) => { setStatusFilter(value as RequestCenterStatus); setPage(1) }} items={[{ value: 'all', label: input.copy.allStatuses }, { value: 'pending', label: input.copy.pendingHrStatus }, { value: 'returned', label: input.copy.rejectedStatus }, { value: 'overdue', label: input.copy.overdueMetric }, { value: 'approved', label: input.copy.approvedStatus }]} />
-        <RequestCenterSelect ariaLabel={input.copy.periodAll} value={periodFilter} onChange={(value) => { setPeriodFilter(value); setPage(1) }} items={[{ value: 'all', label: input.copy.periodAll }, ...periodOptions]} />
-        <RequestCenterSelect ariaLabel={input.copy.allSorts} value={sort} onChange={(value) => setSort(value as RequestCenterSort)} items={[{ value: 'updatedDesc', label: input.copy.allSorts }, { value: 'waitingDesc', label: input.copy.waitingSort }, { value: 'storeAsc', label: input.copy.storeSort }, { value: 'typeAsc', label: input.copy.typeSort }]} />
+        <RequestCenterSelect ariaLabel={input.copy.allSorts} value={sort} onChange={(value) => setSort(value as RequestCenterSort)} items={[
+          { value: 'updatedDesc', label: `${input.copy.updatedColumn} · Yeni-eski` },
+          { value: 'updatedAsc', label: `${input.copy.updatedColumn} · Eski-yeni` },
+          { value: 'waitingDesc', label: `${input.copy.waitingColumn} · Uzun-kısa` },
+          { value: 'waitingAsc', label: `${input.copy.waitingColumn} · Kısa-uzun` },
+          { value: 'storeAsc', label: `${input.copy.storeSort} · A-Z` },
+          { value: 'storeDesc', label: `${input.copy.storeSort} · Z-A` },
+          { value: 'typeAsc', label: `${input.copy.typeSort} · A-Z` },
+          { value: 'typeDesc', label: `${input.copy.typeSort} · Z-A` },
+        ]} />
         <Button type="button" variant="outline" onClick={resetFilters} className="approvals-command-reset"><RefreshCcw size={14} />{input.copy.resetFilters}</Button>
       </>}
     />
@@ -96,14 +111,23 @@ function RequestCenterSurface(input: { canRead: boolean; copy: RequestCenterCopy
       </div>
     </div>
     <CommandCanvasDataList ariaLabel={input.locale === 'tr' ? 'Talep akışı' : 'Request flow'} className="approvals-command-list">
-      {visibleRows.length === 0 ? <div className="tw:p-4"><StoreEmptyState title={input.copy.emptyTitle} description={input.copy.emptyCopy} /></div> : <><div className="approvals-command-desktop"><Table><TableHeader><TableRow><SortableHead label={input.copy.requestColumn} onClick={() => setSort('typeAsc')} /><SortableHead label={input.persona === 'storeManager' ? input.copy.scopeColumnStore : input.copy.scopeColumnRegion} onClick={() => setSort('storeAsc')} /><TableHead>{input.copy.statusColumn}</TableHead><SortableHead label={input.copy.waitingColumn} onClick={() => setSort('waitingDesc')} /><TableHead>{input.copy.ownerColumn}</TableHead><SortableHead label={input.copy.updatedColumn} onClick={() => setSort('updatedDesc')} /></TableRow></TableHeader>{pageGroups.map((group) => <TableBody key={group.key}>{input.persona === 'reportViewer' ? <TableRow className="approvals-command-manager-row"><TableCell colSpan={6}><strong>{group.managerLabel}</strong><span>{group.regionName} · {formatCopy(input.copy.groupCount, { count: String(group.rows.length) })}</span></TableCell></TableRow> : null}{group.rows.map((row) => <RequestCenterTableRow key={row.id} row={row} onOpen={openRow} />)}</TableBody>)}</Table></div><div className="approvals-command-mobile">{pageGroups.map((group) => <section key={group.key}>{input.persona === 'reportViewer' ? <h3>{group.managerLabel}<span>{group.regionName} · {formatCopy(input.copy.groupCount, { count: String(group.rows.length) })}</span></h3> : null}{group.rows.map((row) => <RequestCenterMobileCard key={row.id} row={row} onOpen={openRow} />)}</section>)}</div></>}
+      {visibleRows.length === 0 ? <div className="tw:p-4"><StoreEmptyState title={allRows.length === 0 ? 'Henüz talep kaydı yok' : input.copy.emptyTitle} description={allRows.length === 0 ? 'Yetkili kapsamınızda bir talep oluştuğunda burada görünecek.' : input.copy.emptyCopy} {...(allRows.length > 0 ? { action: { label: input.copy.resetFilters, onClick: resetFilters, variant: 'outline' as const } } : {})} /></div> : <><div className="approvals-command-desktop"><Table><TableHeader><TableRow><SortableHead label={input.copy.requestColumn} sort={sort} sortKey="type" onSort={setSort} /><SortableHead label={input.persona === 'storeManager' ? input.copy.scopeColumnStore : input.copy.scopeColumnRegion} sort={sort} sortKey="store" onSort={setSort} /><TableHead>{input.copy.statusColumn}</TableHead><SortableHead label={input.copy.waitingColumn} sort={sort} sortKey="waiting" onSort={setSort} /><TableHead>{input.copy.ownerColumn}</TableHead><SortableHead label={input.copy.updatedColumn} sort={sort} sortKey="updated" onSort={setSort} /></TableRow></TableHeader>{pageGroups.map((group) => <TableBody key={group.key}>{input.persona === 'reportViewer' ? <TableRow className="approvals-command-manager-row"><TableCell colSpan={6}><strong>{group.managerLabel}</strong><span>{group.regionName} · {formatCopy(input.copy.groupCount, { count: String(group.rows.length) })}</span></TableCell></TableRow> : null}{group.rows.map((row) => <RequestCenterTableRow key={row.id} row={row} onOpen={openRow} />)}</TableBody>)}</Table></div><div className="approvals-command-mobile">{pageGroups.map((group) => <section key={group.key}>{input.persona === 'reportViewer' ? <h3>{group.managerLabel}<span>{group.regionName} · {formatCopy(input.copy.groupCount, { count: String(group.rows.length) })}</span></h3> : null}{group.rows.map((row) => <RequestCenterMobileCard key={row.id} row={row} onOpen={openRow} />)}</section>)}</div></>}
       <div className="approvals-command-pager"><span>{formatCopy(input.copy.pager, { from: String(from), to: String(to), total: String(visibleRows.length) })}</span><div>{Array.from({ length: totalPages }, (_, index) => index + 1).slice(Math.max(0, safePage - 2), safePage + 1).map((pageNumber) => <Button key={pageNumber} type="button" size="icon" variant={pageNumber === safePage ? 'secondary' : 'outline'} onClick={() => setPage(pageNumber)} aria-label={`Sayfa ${pageNumber}`}>{pageNumber}</Button>)}</div></div>
     </CommandCanvasDataList>
     <RequestCenterDrawer copy={input.copy} row={selectedRow} onOpenChange={(open) => { if (!open) closeDrawer() }} />
   </CommandCanvasPage>
 }
 
-function SortableHead({ label, onClick }: { label: string; onClick: () => void }) { return <TableHead className="tw:px-4"><button type="button" onClick={onClick} className="tw:min-h-11 tw:text-[11px] tw:font-medium tw:uppercase tw:tracking-[0.02em]">{label}</button></TableHead> }
+function SortableHead(input: {
+  label: string
+  onSort: (sort: RequestCenterSort) => void
+  sort: RequestCenterSort
+  sortKey: 'type' | 'store' | 'waiting' | 'updated'
+}) {
+  const active = input.sort.startsWith(input.sortKey)
+  const direction = active && input.sort.endsWith('Desc') ? 'descending' : active ? 'ascending' : 'none'
+  return <TableHead aria-sort={direction} className="tw:px-4"><button type="button" onClick={() => input.onSort(`${input.sortKey}${active && direction === 'descending' ? 'Asc' : 'Desc'}` as RequestCenterSort)} className="tw:min-h-11 tw:text-[11px] tw:font-medium tw:uppercase tw:tracking-[0.02em]">{input.label}{active ? direction === 'descending' ? ' ↓' : ' ↑' : ''}</button></TableHead>
+}
 
 function groupRequestRows(rows: RequestCenterRow[], managerUnknown: string) {
   const groups = new Map<string, { key: string; regionName: string; managerLabel: string; rows: RequestCenterRow[] }>()

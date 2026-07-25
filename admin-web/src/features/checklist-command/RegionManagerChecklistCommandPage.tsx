@@ -22,6 +22,7 @@ import {
 } from '../auth/store-query-scope'
 import { useLocalization } from '../localization/useLocalization'
 import { Input } from '../../components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { ApiError } from '../../lib/api'
 import { getBusinessMonthInputValue } from '../../lib/business-date'
 import { getUserFacingErrorMessage } from '../../lib/format'
@@ -193,6 +194,12 @@ export function RegionManagerChecklistCommandPage(input: {
   function changeSort(key: ChecklistCommandSortKey) {
     retainCurrentCommand()
     setSort((current) => toggleChecklistCommandSort(current, key))
+    setOffset(0)
+  }
+
+  function selectCompactSort(nextSort: ChecklistCommandSort) {
+    retainCurrentCommand()
+    setSort(nextSort)
     setOffset(0)
   }
 
@@ -420,6 +427,24 @@ export function RegionManagerChecklistCommandPage(input: {
               {([['all', locale === 'tr' ? 'Tümü' : 'All', locale === 'tr' ? 'Skor, ziyaret süresi ve durum' : 'Scores, visit age and status'], ['scores', locale === 'tr' ? 'Skorlar' : 'Scores', locale === 'tr' ? 'BM, VM ve durum' : 'BM, VM and status'], ['visit', locale === 'tr' ? 'Ziyaret' : 'Visit', locale === 'tr' ? 'Tarih, geçen süre ve durum' : 'Date, elapsed and status']] as const).map(([key, label, note]) => <button type="button" role="menuitemradio" aria-checked={columnPreset === key} className={columnPreset === key ? 'is-selected' : ''} key={key} onClick={() => { setColumnPreset(key); setOpenMenu(null) }}><span><strong>{label}</strong><small>{note}</small></span>{columnPreset === key ? <Check size={14} /> : null}</button>)}
             </div> : null}
           </div>
+          <div className="checklist-command-compact-sort">
+            <Select value={sort} onValueChange={(value) => selectCompactSort(value as ChecklistCommandSort)}>
+              <SelectTrigger aria-label={locale === 'tr' ? 'Mağazaları sırala' : 'Sort stores'}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="store_asc">{locale === 'tr' ? 'Mağaza A-Z' : 'Store A-Z'}</SelectItem>
+                <SelectItem value="store_desc">{locale === 'tr' ? 'Mağaza Z-A' : 'Store Z-A'}</SelectItem>
+                <SelectItem value="bm_score_desc">{locale === 'tr' ? 'BM puanı yüksek' : 'Highest BM score'}</SelectItem>
+                <SelectItem value="vm_score_desc">{locale === 'tr' ? 'VM puanı yüksek' : 'Highest VM score'}</SelectItem>
+                <SelectItem value="last_visit_desc">{locale === 'tr' ? 'Son ziyaret yeni' : 'Newest visit'}</SelectItem>
+                <SelectItem value="last_visit_asc">{locale === 'tr' ? 'Son ziyaret eski' : 'Oldest visit'}</SelectItem>
+                <SelectItem value="open_actions_desc">{locale === 'tr' ? 'Açık aksiyon çok' : 'Most open actions'}</SelectItem>
+                <SelectItem value="status_asc">{locale === 'tr' ? 'Durum A-Z' : 'Status A-Z'}</SelectItem>
+                <SelectItem value="status_desc">{locale === 'tr' ? 'Durum Z-A' : 'Status Z-A'}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         {hasPartialScoreData ? <div className="checklist-command-partial-notice" role="status"><CircleAlert size={13} /><span>{t('storeChecklists.command.partialScoreNotice')}</span></div> : null}
 
@@ -611,7 +636,7 @@ function getRowStatusPresentation(row: ChecklistCommandRow, locale: 'tr' | 'en')
 
 function getRowActionLabel(row: ChecklistCommandRow, locale: 'tr' | 'en') {
   if (row.bmCompletedAt !== null) return locale === 'tr' ? 'Sonucu gör' : 'View result'
-  if (row.status === 'active' && row.bmCompletedAt === null) return locale === 'tr' ? 'Checklisti aç' : 'Open checklist'
+  if (row.status === 'active' && row.bmCompletedAt === null) return locale === 'tr' ? 'Devam et' : 'Continue'
   if (row.status === 'needs_visit') return locale === 'tr' ? 'Checklist yap' : 'Run checklist'
   return locale === 'tr' ? 'Sonucu gör' : 'View result'
 }

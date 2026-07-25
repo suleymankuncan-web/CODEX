@@ -17,7 +17,7 @@ export function RegionManagerTargetCommand(input: {
   const opener = useRef<HTMLButtonElement | null>(null)
   const mutation = useMutation({
     mutationFn: (value: TargetApprovalInput) => approveTargetDistributionRequest(value),
-    onSuccess: async () => { await queryClient.invalidateQueries({ queryKey: input.queryKey }); setSelected(null); requestAnimationFrame(() => opener.current?.focus()) },
+    onSuccess: async () => { setSelected(null); requestAnimationFrame(() => opener.current?.focus()); await queryClient.invalidateQueries({ queryKey: input.queryKey }) },
     onError: () => setError('Hedef kararı kaydedilemedi. Lütfen dağılımı ve yetki kapsamını kontrol edin.'),
   })
   const writesReady = !input.isUpdating && input.period === input.workspace.period

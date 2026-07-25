@@ -225,6 +225,8 @@
   box-shadow: 0 0 0 3px rgba(112,73,232,.06);
 }
 
+.checklist-command-compact-sort { display: none; }
+
 .checklist-command-popover {
   position: absolute;
   z-index: 50;
@@ -446,6 +448,8 @@
   .checklist-command-mobile-scores .score-vm::before { content: 'VM'; }
   .checklist-command-mobile-card > .checklist-command-status { grid-column: 1; }
   .checklist-command-mobile-card > .checklist-command-action { grid-column: 2; justify-self: end; }
+  .checklist-command-compact-sort { display: block; flex: 1 1 180px; }
+  .checklist-command-compact-sort [data-slot='select-trigger'] { width: 100%; min-height: 36px; }
 }
 
 @media (max-width: 720px) {
@@ -477,6 +481,9 @@
   .checklist-region-popover > label input { font-size: 16px; }
   .checklist-command-menu { flex: 1 1 calc(50% - 4px); }
   .checklist-command-menu-end { flex-basis: 100%; margin-left: 0; }
+  .checklist-command-menu-end { display: none; }
+  .checklist-command-compact-sort { flex-basis: 100%; }
+  .checklist-command-compact-sort [data-slot='select-trigger'] { min-height: 44px; font-size: 16px; }
   .checklist-command-menu > button { width: 100%; justify-content: center; }
   .checklist-command-popover,
   .checklist-command-menu-end .checklist-command-popover { position: fixed; z-index: 80; top: auto; right: 14px; bottom: 70px; left: 14px; width: auto; max-height: calc(100dvh - 100px); overflow-y: auto; }

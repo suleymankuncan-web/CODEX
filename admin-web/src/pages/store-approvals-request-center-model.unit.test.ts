@@ -42,4 +42,14 @@ describe('request center command canvas model', () => {
   it('builds period filters from the complete workspace dataset', () => {
     expect(createPeriodOptions(['2026-06', '2026-07', '2026-06'], 'en')).toEqual([{ value: '2026-07', label: 'July 2026' }, { value: '2026-06', label: 'June 2026' }])
   })
+
+  it('supports both directions for the mobile and desktop waiting sort contract', () => {
+    const rows = buildRequestCenterRows({ copy: requestCenterCopy.en, locale: 'en', persona: 'regionManager', items: [
+      { ...baseItem, requestType: 'target', targetLabel: 'Older', waitingSince: '2026-07-01T09:00:00.000Z' },
+      { ...baseItem, requestId: 'request-2', requestType: 'target', targetLabel: 'Newer', waitingSince: '2026-07-14T09:00:00.000Z' },
+    ] })
+    const input = { rows, tab: 'open' as const, query: '', type: 'all' as const, status: 'all' as const, period: 'all' }
+    expect(filterAndSortRequestCenterRows({ ...input, sort: 'waitingDesc' }).map((row) => row.title)).toEqual(['Older', 'Newer'])
+    expect(filterAndSortRequestCenterRows({ ...input, sort: 'waitingAsc' }).map((row) => row.title)).toEqual(['Newer', 'Older'])
+  })
 })

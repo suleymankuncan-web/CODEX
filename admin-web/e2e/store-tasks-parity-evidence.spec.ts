@@ -162,7 +162,7 @@ test('Tasks mobile controls preserve readable inputs, touch rows, and sorting ac
   expect(await search.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16)
   expect((await page.getByTestId('store-action-plan-row').first().boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
   await page.getByLabel('Görevleri sırala').click()
-  await page.getByRole('option', { name: 'Kaynağa göre' }).click()
+  await page.getByRole('option', { name: 'Kaynak · Artan' }).click()
   await expect(page.getByTestId('store-action-plan-row').first()).toContainText('Checklist')
 })
 
