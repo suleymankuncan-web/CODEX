@@ -176,14 +176,14 @@ test('Report Viewer preserves nested reads and retries plan, store-page, and his
   await page.getByRole('button', { name: 'Tekrar dene' }).first().click()
   await expect(page.getByText('Ziyaret Tamamlandı')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Sonraki' }).first().click()
+  await page.getByRole('button', { name: 'Sonraki', exact: true }).first().click()
   await expect(page.getByRole('button', { name: 'Mağaza kaydını aç' })).toHaveCount(30)
   await expect(page.getByText('Yeni mağaza sayfası alınamadı; mevcut satırlar korunuyor.')).toBeVisible()
   nextStorePageFails = false
   await page.getByRole('button', { name: 'Tekrar dene' }).click()
   await expect(page.getByText('Bu bölgede mağaza yok')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Önceki' }).first().click()
+  await page.getByRole('button', { name: 'Önceki', exact: true }).first().click()
   await page.getByRole('button', { name: 'Mağaza kaydını aç' }).first().click()
   await page.getByRole('button', { name: '20 kayıt daha yükle' }).click()
   await expect(page.getByText('Yeni kayıtlar yüklenemedi; mevcut kayıtlar korunuyor.')).toBeVisible()

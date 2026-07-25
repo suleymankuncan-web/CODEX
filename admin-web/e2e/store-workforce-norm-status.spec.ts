@@ -1,4 +1,5 @@
 import { expect, test, type Page } from './test-fixtures'
+import { installStoreContractSession } from './store-page-contract-fixtures'
 
 const regionId = '12121212-1212-4121-8121-121212121212'
 const companyId = '00000000-0000-0000-0000-000000000001'
@@ -10,6 +11,8 @@ const stores = [
 ]
 
 test('region workforce keeps missing norm distinct from zero and reports truthful status', async ({ page }) => {
+  await installStoreContractSession(page, 'regionManager')
+  await page.unroute('**/api/auth/session')
   await page.route('**/api/auth/session', async (route) => route.fulfill({ json: createAuthSession() }))
   await page.route('**/api/store/workforce/workspace**', async (route) => route.fulfill({ json: { data: createWorkspace() } }))
   await page.goto('/store/workforce')
