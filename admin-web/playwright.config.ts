@@ -29,7 +29,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run preview -- --host 127.0.0.1 --port ${previewPort}`,
+    command: `node scripts/playwright-preview.mjs ${previewPort}`,
     url: previewUrl,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
