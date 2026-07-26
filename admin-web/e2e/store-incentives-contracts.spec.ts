@@ -41,6 +41,7 @@ test('rate shortcut uses persisted rate metadata and correction payload stays ex
   const requests: Array<{ path: string; body: unknown }> = []
   await prepare(page, 'region_manager', { requests })
   await page.goto('/store/incentives')
+  await expandStore(page)
 
   await page.getByRole('button', { name: 'Derya Uslu: Düzelt' }).click()
   const drawer = page.getByRole('dialog')
@@ -84,6 +85,7 @@ test('successful correction refetch keeps the saved final amount from authoritat
   })
   await routeIncentiveCommands(page, requests)
   await page.goto('/store/incentives')
+  await expandStore(page)
 
   await page.getByRole('button', { name: 'Derya Uslu: Düzelt' }).click()
   const drawer = page.getByRole('dialog')
@@ -105,6 +107,7 @@ test('failed correction restores the authoritative row instead of preserving opt
   const requests: Array<{ path: string; body: unknown }> = []
   await prepare(page, 'region_manager', { requests, commandFailurePaths: ['/api/store/incentives/corrections'] })
   await page.goto('/store/incentives')
+  await expandStore(page)
 
   await page.getByRole('button', { name: 'Derya Uslu: Düzelt' }).click()
   const drawer = page.getByRole('dialog')
@@ -127,6 +130,7 @@ test('failed correction void leaves the persisted correction truth unchanged', a
     commandFailurePaths: ['/api/store/incentives/corrections/void'],
   })
   await page.goto('/store/incentives')
+  await expandStore(page)
 
   await page.getByRole('button', { name: 'Süleyman Öztürk: Düzelt' }).click()
   const drawer = page.getByRole('dialog')
@@ -188,6 +192,7 @@ test('report viewer hierarchy and audit drawer are structurally read only and em
 
   await page.goto('/store/incentives')
   await expect(page.getByRole('heading', { name: 'Şirket Prim Görünümü' })).toBeVisible()
+  await expandStore(page)
   await expect(page.getByText('Süleyman Öztürk').first()).toBeVisible()
   await page.getByRole('button', { name: 'Süleyman Öztürk: Düzeltmeyi görüntüle' }).click()
   const drawer = page.getByRole('dialog')
@@ -249,4 +254,9 @@ async function prepare(
   await installGenericStoreApiFallbacks(page)
   await routeIncentiveWorkspace(page, createIncentiveWorkspace(view, options))
   await routeIncentiveCommands(page, options.requests ?? [], options.delayMs, new Set(options.commandFailurePaths ?? []))
+}
+
+async function expandStore(page: Page, storeName = 'Mall of İstanbul') {
+  const trigger = page.locator('.incentive-store-main').filter({ hasText: storeName }).first()
+  if (await trigger.getAttribute('aria-expanded') === 'false') await trigger.click()
 }

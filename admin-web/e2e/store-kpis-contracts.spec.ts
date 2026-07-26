@@ -177,7 +177,7 @@ for (const scenario of [
     })
 
     await page.goto(scenario.url)
-    await page.getByRole('tab', { name: /Personel KPI/ }).click()
+    await page.getByRole('button', { name: /Personel KPI/ }).click()
     const profileLink = page.getByRole('link', { name: /Profile Git/ })
     await expect(profileLink).toBeVisible()
     await expect(profileLink).toHaveAttribute('href', /periodStart=2026-07-01/)
@@ -194,7 +194,7 @@ test('SH-FR-014 personnel null metrics stay unavailable instead of becoming zero
   })
 
   await page.goto('/store/kpis?periodStart=2026-07-01')
-  await page.getByRole('tab', { name: /Personel KPI/ }).click()
+  await page.getByRole('button', { name: /Personel KPI/ }).click()
   const row = page.getByRole('row', { name: /Süleyman Öztürk/ })
   await expect(row).toBeVisible()
   await expect(row).toContainText('-')
@@ -246,7 +246,7 @@ test('SH-FR-008 Store Manager can reach personnel beyond the first bounded page'
   })
 
   await page.goto('/store/kpis?periodStart=2026-07-01')
-  await page.getByRole('tab', { name: /Personel KPI/ }).click()
+  await page.getByRole('button', { name: /Personel KPI/ }).click()
   await page.getByRole('navigation', { name: 'Personel sayfaları' }).getByRole('button', { name: 'Sonraki' }).click()
   await expect.poll(() => managedOffsets).toContain('50')
 })
@@ -269,9 +269,9 @@ test('SH-FR-009/014 authoritative partial KPI state stays distinct from ordinary
 
   await page.goto('/store/kpis?periodStart=2026-07-01')
   await expect.poll(() => partialReads).toContain(true)
-  const partialState = page.getByRole('status', { name: 'Mağaza skoru henüz tam değil' })
-  await expect(partialState).toContainText('GSM Onayı')
-  await expect(partialState).toContainText('Fiş başı ürün')
+  await expect(page.getByRole('status', { name: 'Mağaza skoru henüz tam değil' })).toHaveCount(0)
+  await expect(page.getByRole('row', { name: /GSM Onayı/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /Fiş başı ürün/ })).toBeVisible()
 })
 
 test('KPI-FR-005 trend transport error is retryable and never rendered as a no-data month', async ({ page }) => {
@@ -298,26 +298,14 @@ test('KPI-FR-005 trend transport error is retryable and never rendered as a no-d
   await expect.poll(() => failedReads).toBeGreaterThan(readsBeforeRetry)
 })
 
-test('SH-FR-009 core background refresh failure retains the complete KPI workspace', async ({ page }) => {
+test('SH-FR-009 KPI workspace omits the removed manual refresh control', async ({ page }) => {
   await installStoreContractSession(page, 'storeManager')
   await installGenericStoreApiFallbacks(page)
   await routeKpiContractApi(page)
-  let highlightReads = 0
-  await page.route('**/api/reports/store-kpi-highlights**', async (route) => {
-    highlightReads += 1
-    if (highlightReads > 1) {
-      await route.fulfill({ status: 503, json: { message: 'temporary refresh failure' } })
-      return
-    }
-    await route.fulfill({ json: createStoreKpiHighlightsFixture() })
-  })
-
   await page.goto('/store/kpis?periodStart=2026-07-01')
   const contributionTitle = page.getByRole('heading', { name: 'Mağaza KPI katkı kırılımı' })
   await expect(contributionTitle).toBeVisible()
-  await page.getByRole('button', { name: 'Veriyi yenile' }).click()
-  await expect(page.getByRole('alert').filter({ hasText: 'Önceki görünüm korunuyor' })).toBeVisible()
-  await expect(contributionTitle).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Veriyi yenile' })).toHaveCount(0)
 })
 
 test('SH-FR-005/006 Report Viewer risk rail filters the complete company hierarchy locally', async ({ page }) => {

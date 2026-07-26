@@ -221,7 +221,7 @@ function StoreKpiDecisionRail(input: {
   const score = input.model.liveSummary?.score.matchedMetrics
     ? toHundredPointLiveStoreScore(toFiniteNumber(input.model.liveSummary.score.value))
     : input.model.weightedScore.coveredWeight > 0
-      ? input.model.weightedScore.scoreValue * 100
+      ? toHundredPointLiveStoreScore(input.model.weightedScore.scoreValue)
       : null
 
   return (

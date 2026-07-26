@@ -13,6 +13,8 @@ describe('KPI Command Canvas contract', () => {
     expect(toHundredPointLiveStoreScore(0.98)).toBe(98)
     expect(toHundredPointLiveStoreScore(1)).toBe(100)
     expect(toHundredPointLiveStoreScore(1.2)).toBe(120)
+    expect(toHundredPointLiveStoreScore(91.5)).toBe(91.5)
+    expect(toHundredPointLiveStoreScore(98)).toBe(98)
     expect(toHundredPointLiveStoreScore(null)).toBeNull()
     expect(toHundredPointLiveStoreScore(Number.NaN)).toBeNull()
   })

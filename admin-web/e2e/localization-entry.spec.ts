@@ -9,7 +9,7 @@ test('keeps language control in store settings and out of work surfaces', async 
   await expect(page.locator('.language-toggle-button')).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Dil seçimi' })).toHaveCount(0)
 
-  await page.goto('/store/settings')
+  await page.goto('/store/settings?section=preferences')
 
   await expect(page.locator('.language-toggle-button')).toHaveCount(0)
   await expect(page.getByRole('group', { name: 'Dil seçimi' })).toBeVisible()

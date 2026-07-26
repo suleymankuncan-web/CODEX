@@ -11,6 +11,8 @@ const configSource = readFileSync(join(appRoot, 'playwright.config.ts'), 'utf8')
 
 test('Playwright preview build is isolated from developer staging env', () => {
   assert.match(configSource, /node scripts\/playwright-preview\.mjs \$\{previewPort\}/)
+  assert.match(configSource, /const releaseWorkerCount = 2/)
+  assert.match(configSource, /workers:\s*releaseWorkerCount/)
   assert.match(previewSource, /VITE_API_BASE_URL:\s*'\/api'/)
   assert.match(previewSource, /VITE_SENTRY_ENABLED:\s*'false'/)
   assert.match(previewSource, /VITE_SENTRY_DSN:\s*''/)

@@ -707,8 +707,8 @@ test('dirty weekly drafts require confirmation on Escape and restore focus after
 for (const viewport of [
   { width: 1440, height: 900, contentWidth: 1065, titleY: 42, titleHeight: 66, metricsY: 138, metricHeight: 66, weekY: 218, weekHeight: 232, surfaceY: 464 },
   { width: 1024, height: 768, contentWidth: 672, titleY: 18, titleHeight: 66, metricsY: 114, metricHeight: 66, weekY: 194, weekHeight: 392, surfaceY: 600 },
-  { width: 390, height: 844, contentWidth: 362, titleY: 156, titleHeight: 89.5, metricsY: 275.5, metricHeight: 53, weekY: 342.5, weekHeight: 657, surfaceY: 1013.5 },
-  { width: 320, height: 844, contentWidth: 292, titleY: 156, titleHeight: 89.5, metricsY: 275.5, metricHeight: 53, weekY: 342.5, weekHeight: 657, surfaceY: 1013.5 },
+  { width: 390, height: 844, contentWidth: 362, titleY: 202.59, titleHeight: 89.5, metricsY: 322.09, metricHeight: 53, weekY: 389.09, weekHeight: 657, surfaceY: 1060.08 },
+  { width: 320, height: 844, contentWidth: 292, titleY: 202.59, titleHeight: 89.5, metricsY: 322.09, metricHeight: 53, weekY: 389.09, weekHeight: 657, surfaceY: 1060.08 },
 ] as const) {
   test(`plan view preserves the accepted prototype frame at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport)
