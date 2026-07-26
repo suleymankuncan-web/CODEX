@@ -10,11 +10,9 @@ import {
   MousePointerClick,
   PackagePlus,
   Receipt,
-  RefreshCw,
   Target,
 } from 'lucide-react'
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query'
-import { Button } from '../components/ui/button'
 import {
   getRankings,
   getStoreKpiHighlights,
@@ -37,6 +35,7 @@ import {
   buildKpiMonthlyHistory,
   classifyKpiReference,
   classifyPersonnelPerformance,
+  toHundredPointLiveStoreScore,
 } from './store-kpis-command-contract'
 
 type MetricTone = 'good' | 'warn' | 'danger' | 'neutral'
@@ -115,7 +114,7 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
     <StoreSurfacePage ariaLabel={model.t('storeKpis.title')}>
       <StoreKpisCommandDeckHeader
         activeTab={activeTab}
-        controls={<CommandDeckControls model={model} />}
+        controls={<PeriodControls model={model} />}
         model={model}
         personnelCount={personnelRows.length}
         setActiveTab={setActiveTab}
@@ -127,7 +126,6 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
           onRetry={() => void Promise.all(failedRetainedQueries.map((query) => query.refetch()))}
         />
       ) : null}
-      <KpiPartialState model={model} />
 
       {activeTab === 'store' ? (
         <div className="tw:grid tw:gap-4">
@@ -150,23 +148,6 @@ export function StoreKpisCommandDeck({ model }: { model: StoreKpiHighlightsPageM
         </div>
       )}
     </StoreSurfacePage>
-  )
-}
-
-function CommandDeckControls({ model }: { model: StoreKpiHighlightsPageModel }) {
-  return (
-    <>
-      <PeriodControls model={model} />
-      <Button
-        type="button"
-        variant="default"
-        className="tw:h-10 tw:rounded-xl tw:bg-[var(--store-command-plum)] tw:px-4 tw:text-sm tw:font-medium"
-        onClick={() => (model.viewMode === 'live' ? model.liveKpiQuery.refetch() : model.closedKpiQuery.refetch())}
-      >
-        <RefreshCw className="tw:mr-2 tw:size-4" />
-        {model.t('storeKpis.refreshData')}
-      </Button>
-    </>
   )
 }
 
@@ -238,9 +219,9 @@ function StoreKpiDecisionRail(input: {
     ? checklistValues.reduce((sum, value) => sum + (value ?? 0), 0) / 2
     : null
   const score = input.model.liveSummary?.score.matchedMetrics
-    ? toFiniteNumber(input.model.liveSummary.score.value)
+    ? toHundredPointLiveStoreScore(toFiniteNumber(input.model.liveSummary.score.value))
     : input.model.weightedScore.coveredWeight > 0
-      ? input.model.weightedScore.scoreValue * 100
+      ? toHundredPointLiveStoreScore(input.model.weightedScore.scoreValue)
       : null
 
   return (
@@ -250,18 +231,6 @@ function StoreKpiDecisionRail(input: {
       <DecisionRailButton active={input.focus === 'UPT'} icon={PackagePlus} label={input.model.t('storeKpis.metric.upt')} onClick={() => input.onFocus('UPT')} value={formatMetricValue(input.model.locale, input.model.t, upt?.actualValue ?? null, 'UPT')} />
       <DecisionRailButton active={input.focus === 'CHECKLIST'} icon={ClipboardCheck} label={input.model.t('storeKpis.commandChecklistAverage')} onClick={() => input.onFocus('CHECKLIST')} value={checklistAverage === null ? input.model.t('storeKpis.noData') : `%${formatNumber(input.model.locale, checklistAverage, 1)}`} />
     </section>
-  )
-}
-
-function KpiPartialState({ model }: { model: StoreKpiHighlightsPageModel }) {
-  const partial = model.viewMode === 'live' ? model.liveSummary?.partial : undefined
-  if (!partial?.isPartial) return null
-  return (
-    <div role="status" aria-label={model.t('storeKpis.partialTitle')} className="tw:rounded-2xl tw:border tw:border-amber-300/60 tw:bg-amber-50 tw:p-4 tw:text-sm tw:text-amber-950">
-      <strong className="tw:block tw:font-semibold">{model.t('storeKpis.partialTitle')}</strong>
-      {partial.missingMetricLabels.length > 0 ? <p>{model.t('storeKpis.partialMissing', { items: partial.missingMetricLabels.join(', ') })}</p> : null}
-      {partial.pendingNormalizationLabels.length > 0 ? <p>{model.t('storeKpis.partialPending', { items: partial.pendingNormalizationLabels.join(', ') })}</p> : null}
-    </div>
   )
 }
 
@@ -287,7 +256,6 @@ function KpiContributionTable({ model, rows, className = '' }: { model: StoreKpi
       <div className="tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border/70 tw:p-4 tw:sm:flex-row tw:sm:items-center tw:sm:justify-between">
         <div>
           <h2 className="tw:text-lg tw:font-semibold tw:text-[var(--store-command-ink)]">{model.t('storeKpis.commandContributionTitle')}</h2>
-          <p className="tw:text-sm tw:font-normal tw:text-[var(--store-command-muted)]">{model.t('storeKpis.commandContributionCopy')}</p>
           <div className="tw:mt-2 tw:flex tw:flex-wrap tw:gap-3 tw:text-xs tw:font-medium tw:text-[var(--store-command-muted)]">
             <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[var(--store-command-mint)]" />{model.t('storeKpis.commandReferenceGood')}</span>
             <span className="tw:inline-flex tw:items-center tw:gap-1"><span className="tw:size-2 tw:rounded-full tw:bg-[var(--store-command-warning)]" />{model.t('storeKpis.commandReferenceWatch')}</span>
@@ -393,7 +361,7 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
   })
   const history = buildKpiMonthlyHistory({
     year: Number(trendYear),
-    rows: loadedTrendItems.map((item) => ({ periodStart: item.periodStart, score: item.scoreValue === null ? null : item.scoreValue * 100 })),
+    rows: loadedTrendItems.map((item) => ({ periodStart: item.periodStart, score: item.scoreValue })),
   })
   const loadedByPeriod = new Map(loadedTrendItems.map((item) => [item.periodStart.slice(0, 7), item]))
   const trendItems = history.map((item) => {
@@ -404,12 +372,12 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
       isLoading: loaded?.isLoading ?? false,
       label: formatShortMonth(item.periodStart, model.locale),
       periodStart: item.periodStart,
-      scoreValue: item.score === null ? null : item.score / 100,
+      scoreValue: item.score,
     }
   })
   const validTrendItems = trendItems.filter((item) => !item.isLoading && !item.isError && item.scoreValue !== null)
   const hasTrendError = trendItems.some((item) => item.isError)
-  const scoreValues = validTrendItems.map((item) => (item.scoreValue ?? 0) * 100)
+  const scoreValues = validTrendItems.map((item) => item.scoreValue ?? 0)
   const minScore = Math.min(...scoreValues)
   const maxScore = Math.max(...scoreValues)
   const chartPoints = trendItems.map((item, index) => ({
@@ -420,7 +388,7 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
         ? null
         : maxScore === minScore
           ? 50
-          : 82 - ((((item.scoreValue ?? 0) * 100) - minScore) / (maxScore - minScore)) * 58,
+          : 82 - (((item.scoreValue ?? 0) - minScore) / (maxScore - minScore)) * 58,
   }))
   const lineSegments = chartPoints.reduce<Array<Array<(typeof chartPoints)[number] & { y: number }>>>((segments, item) => {
     if (item.y === null) {
@@ -504,7 +472,7 @@ function MonthlyTrend({ model, className = '' }: { model: StoreKpiHighlightsPage
                         ? model.t('storeKpis.commandTrendErrorItem')
                         : item.scoreValue === null
                           ? model.t('storeKpis.noData')
-                        : formatNumber(model.locale, item.scoreValue * 100, 1)}
+                        : formatNumber(model.locale, item.scoreValue, 1)}
                   </strong>
                 </div>
               ))}
@@ -521,7 +489,7 @@ function calculateStoreScoreFromHighlights(
 ) {
   if (!summary || summary.score.matchedMetrics <= 0) return null
   const score = toFiniteNumber(summary.score.value)
-  return score === null ? null : score / 100
+  return toHundredPointLiveStoreScore(score)
 }
 
 function PersonnelKpiRows(input: {

@@ -168,7 +168,7 @@
   border-radius: 8px;
   padding: 0 10px;
   font-size: 13px;
-  font-weight: 720;
+  font-weight: 500;
 }
 .store-command-nav-link:hover,
 .store-command-nav-link:focus-visible {
@@ -399,7 +399,7 @@
   background: linear-gradient(135deg, var(--store-command-plum-soft), var(--store-command-cyan-soft));
   box-shadow: none;
   color: var(--store-command-plum-deep);
-  font-weight: 800;
+  font-weight: 600;
 }
 .store-command-nav-link-active:hover,
 .store-command-nav-link-active:focus-visible,

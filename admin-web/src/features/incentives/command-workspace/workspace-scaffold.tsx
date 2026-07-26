@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { ClipboardCheck, Clock3, PenLine, RotateCcw, Search, Store, UsersRound, WalletCards } from 'lucide-react'
+import { ClipboardCheck, Clock3, ListFilter, PenLine, RotateCcw, Search, Store, UsersRound, WalletCards } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -130,7 +130,8 @@ export function IncentiveWorkspaceScaffold(input: {
           )}
           controls={(
             <Select value={status} onValueChange={(value) => setStatus(value as IncentiveStatusFilter)}>
-              <SelectTrigger aria-label={input.t('storeIncentives.command.status')}>
+              <SelectTrigger aria-label={input.t('storeIncentives.command.status')} className="incentive-command-filter-trigger">
+                <ListFilter aria-hidden="true" size={14} />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -145,6 +146,7 @@ export function IncentiveWorkspaceScaffold(input: {
           actions={(
             <Button
               aria-label={input.t('storeIncentives.command.clear')}
+              className="incentive-command-clear"
               onClick={() => { setSearch(''); setStatus('all') }}
               size="sm"
               variant="ghost"

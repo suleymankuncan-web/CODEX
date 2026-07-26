@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   captureFrontendException,
   initializeFrontendSentry,
@@ -6,6 +6,10 @@ import {
 } from './sentry'
 
 describe('frontend Sentry delivery contract', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('removes request, user, breadcrumb, extra, and local stack data', () => {
     const sanitized = sanitizeSentryEvent({
       request: {
@@ -44,6 +48,9 @@ describe('frontend Sentry delivery contract', () => {
   })
 
   it('stays disabled without the explicit Vite enable flag', () => {
+    vi.stubEnv('VITE_SENTRY_ENABLED', 'false')
+    vi.stubEnv('VITE_SENTRY_DSN', '')
+
     expect(initializeFrontendSentry()).toBe(false)
     expect(
       captureFrontendException(new Error('ignored'), {

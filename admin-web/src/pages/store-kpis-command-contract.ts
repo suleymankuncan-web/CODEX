@@ -6,6 +6,15 @@ export type KpiReferenceClassification = {
   ratio: number | null
 }
 
+// Historical highlights can express the weighted score either as a ratio
+// (0.98 = 98 points) or directly on the 100-point scale (91.5 = 91.5 points).
+// Normalize both transport shapes at the presentation boundary.
+export function toHundredPointLiveStoreScore(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null
+  const normalized = Math.abs(value) <= 2 ? value * 100 : value
+  return Number(normalized.toFixed(4))
+}
+
 // KPI-FR-003 / AC-KPI-003: this classifier is deliberately separate from
 // store risk and personnel performance classifications.
 export function classifyKpiReference(input: {

@@ -62,6 +62,7 @@ for (const scenario of [
     await page.setViewportSize({ width: scenario.width, height: scenario.height })
     await prepare(page, scenario.persona, scenario.view, scenario.state === 'submit-dialog' ? { allReviewed: true, multipleRegions: true } : undefined)
     await page.goto('/store/incentives')
+    if (scenario.state !== 'submit-dialog') await expandStore(page)
     if (scenario.state === 'correction-drawer') await page.getByRole('button', { name: 'Derya Uslu: Düzelt' }).click()
     if (scenario.state === 'submit-dialog') await page.getByRole('button', { name: 'Onaya gönder', exact: true }).first().click()
     if (scenario.state === 'audit-drawer') await page.getByRole('button', { name: 'Süleyman Öztürk: Düzeltmeyi görüntüle' }).click()
@@ -124,6 +125,11 @@ async function prepare(
   if (persona === 'regionManager') await routeIncentiveCommands(page, [])
 }
 
+async function expandStore(page: Page, storeName = 'Mall of İstanbul') {
+  const trigger = page.locator('.incentive-store-main').filter({ hasText: storeName }).first()
+  if (await trigger.getAttribute('aria-expanded') === 'false') await trigger.click()
+}
+
 async function expectOverlayFitsViewport(page: Page, overlay: Locator) {
   const box = await overlay.boundingBox()
   expect(box).not.toBeNull()
@@ -180,6 +186,10 @@ function expectGeometryToMatch(actual: Geometry, expected: Geometry | undefined,
   expect(expected, 'Prototype geometry scenario is missing from the committed manifest.').toBeDefined()
   for (const [key, expectedValue] of Object.entries(expected ?? {})) {
     const actualValue = actual[key]
+    if (expectedValue === null) {
+      expect(actualValue, `${key} must stay absent while stores are collapsed by default.`).toBeNull()
+      continue
+    }
     if (typeof expectedValue === 'number') {
       expect(actualValue, `${key} must be numeric.`).toEqual(expect.any(Number))
       expect(Math.abs((actualValue as number) - expectedValue), `${key} exceeds the ${tolerancePx}px parity tolerance.`).toBeLessThanOrEqual(tolerancePx)

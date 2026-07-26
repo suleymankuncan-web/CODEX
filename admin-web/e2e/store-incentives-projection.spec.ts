@@ -13,6 +13,7 @@ test('partial optional sections retain the valid incentive hierarchy', async ({ 
   await prepareRegionManager(page)
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('region_manager', { partial: true }))
   await page.goto('/store/incentives')
+  await expandStore(page)
 
   await expect(page.getByText('Bazı bilgiler gösterilemiyor')).toBeVisible()
   await expect(page.getByText('Mall of İstanbul').first()).toBeVisible()
@@ -63,6 +64,7 @@ test('period refetch retains the previous complete workspace without a blank pag
   })
   await page.goto('/store/incentives')
   await expect(page.getByText('Mall of İstanbul').first()).toBeVisible()
+  await expandStore(page)
   await page.getByRole('button', { name: 'Dönem seç' }).click()
   await page.getByRole('button', { name: 'May' }).click()
   await expect(page.getByText('Mall of İstanbul').first()).toBeVisible({ timeout: 300 })
@@ -78,6 +80,7 @@ test('unresolved persisted rates disable shortcuts while direct authorized corre
   fixture.data.rateMetadata = { status: 'unresolved', ruleVersionCode: null, effectiveFrom: null, periodTimezone: 'Europe/Istanbul', bracketBoundaryPolicy: 'lower_inclusive_upper_exclusive', tables: [] }
   await routeIncentiveWorkspace(page, fixture)
   await page.goto('/store/incentives')
+  await expandStore(page)
 
   await page.getByRole('button', { name: 'Derya Uslu: Düzelt' }).click()
   const drawer = page.getByRole('dialog')
@@ -103,6 +106,7 @@ test('correction drawer closes on Escape and restores focus to its opener', asyn
   await prepareRegionManager(page)
   await routeIncentiveWorkspace(page, createIncentiveWorkspace('region_manager'))
   await page.goto('/store/incentives')
+  await expandStore(page)
   const opener = page.getByRole('button', { name: 'Derya Uslu: Düzelt' })
   await opener.click()
   await expect(page.getByRole('dialog')).toBeVisible()
@@ -156,4 +160,9 @@ async function prepareRegionManager(page: Page) {
   await installStoreContractSession(page, 'regionManager', { actionStoreIds: [incentiveStoreA, incentiveStoreB] })
   await installGenericStoreApiFallbacks(page)
   await routeIncentiveCommands(page, [])
+}
+
+async function expandStore(page: Page, storeName = 'Mall of İstanbul') {
+  const trigger = page.locator('.incentive-store-main').filter({ hasText: storeName }).first()
+  if (await trigger.getAttribute('aria-expanded') === 'false') await trigger.click()
 }

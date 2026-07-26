@@ -46,7 +46,19 @@ test('Clerk login uses the HR Axis form without weakening the provider session b
   assert.match(signInFormSource, /signIn\.mfa\.sendEmailCode\(\)/)
   assert.match(signInFormSource, /signIn\.mfa\.verifyEmailCode/)
   assert.match(signInFormSource, /signIn\.finalize/)
-  assert.doesNotMatch(signInFormSource, /signUp|localStorage|sessionStorage/)
+  assert.doesNotMatch(signInFormSource, /signUp|sessionStorage/)
+  assert.deepEqual(
+    signInFormSource
+      .split('\n')
+      .filter((line) => line.includes('localStorage'))
+      .map((line) => line.trim()),
+    [
+      "return window.localStorage.getItem(rememberedIdentifierKey)?.trim() ?? ''",
+      'if (rememberIdentifier) window.localStorage.setItem(rememberedIdentifierKey, identifier)',
+      'else window.localStorage.removeItem(rememberedIdentifierKey)',
+    ],
+    'browser storage is limited to the explicit remembered-identifier preference; credentials and sessions stay provider-owned',
+  )
 })
 
 test('provider-to-app session handoff stays product-branded and remains recoverable', () => {

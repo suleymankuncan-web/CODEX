@@ -603,7 +603,7 @@ function ChecklistCommandMobileCards(input: {
 }
 
 function StoreIdentity({ row }: { row: ChecklistCommandRow }) {
-  return <span className="tw:grid tw:min-w-0 tw:gap-0.5"><strong className="tw:truncate tw:text-xs tw:text-foreground">{row.storeName}</strong><small className="tw:truncate tw:text-[9px] tw:text-muted-foreground">{row.storeCode} · {row.regionName}</small></span>
+  return <span className="tw:grid tw:min-w-0"><strong className="tw:truncate tw:text-xs tw:text-foreground">{row.storeName}</strong></span>
 }
 
 function ChecklistScore(input: { className?: string; completedAt: string | null; value: number | null; t: ReturnType<typeof useLocalization>['t'] }) {

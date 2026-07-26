@@ -1,33 +1,19 @@
-import { ArrowRight, CalendarDays, Clock3, RefreshCcw, Store } from 'lucide-react'
+import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, Layers3 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import type { StoreHomeCommandFilter, StoreHomeCommandModel } from './store-home-command-model'
 
-const filters: Array<{ id: StoreHomeCommandFilter; label: string }> = [
-  { id: 'all', label: 'Tümü' },
-  { id: 'critical', label: 'Kritik' },
-  { id: 'approval', label: 'Onay' },
-  { id: 'announcement', label: 'Duyuru' },
-]
-
-export function StoreHomeCommandView(input: { model: StoreHomeCommandModel; onRefresh?: () => void }) {
-  const [selectedId, setSelectedId] = useState(input.model.priorities[0]?.id ?? '')
+export function StoreHomeCommandView(input: { model: StoreHomeCommandModel }) {
   const [activeFilter, setActiveFilter] = useState<StoreHomeCommandFilter>('all')
-  const visiblePriorities = useMemo(
-    () =>
-      activeFilter === 'all'
-        ? input.model.priorities
-        : input.model.priorities.filter((priority) => priority.filter === activeFilter),
-    [activeFilter, input.model.priorities],
-  )
-  const selectedPriority = useMemo(
-    () =>
-      visiblePriorities.find((priority) => priority.id === selectedId) ??
-      visiblePriorities[0] ??
-      input.model.priorities[0] ??
-      null,
-    [input.model.priorities, selectedId, visiblePriorities],
-  )
+  const visiblePriorities = useMemo(() => {
+    if (activeFilter === 'all') return input.model.priorities
+    if (activeFilter === 'attention') return input.model.priorities.filter((item) => item.needsAttention)
+    return input.model.priorities.filter((item) => item.category === activeFilter)
+  }, [activeFilter, input.model.priorities])
+
+  const resetFilter = () => setActiveFilter('all')
 
   return (
     <section
@@ -36,207 +22,123 @@ export function StoreHomeCommandView(input: { model: StoreHomeCommandModel; onRe
       data-testid="store-home-command"
     >
       <div className="store-home-command-content" data-testid="store-home-dashboard">
-        <header className="sh-command-bar">
-          <div className="sh-kicker-row" aria-label="Sayfa bağlamı">
-            <span className="sh-pill sh-pill-primary">
-              <Store size={15} />
-              Ana Sayfa
-            </span>
-            <span className="sh-pill">
-              <CalendarDays size={15} />
+        <header className="sh-dashboard-header">
+          <div className="sh-dashboard-heading">
+            <span className="sh-dashboard-eyebrow">Ana Sayfa</span>
+            <h1 id="store-home-ops-title">Operasyon Paneli</h1>
+            <p>{input.model.identityLabel} için bugünün çalışma özeti.</p>
+          </div>
+          <div className="sh-dashboard-context" aria-label="Sayfa bağlamı">
+            <Badge variant="secondary">{input.model.personaLabel}</Badge>
+            <span>
+              <CalendarDays size={15} aria-hidden="true" />
               {input.model.periodLabel}
             </span>
-            <span className="sh-pill">{input.model.personaLabel}</span>
-          </div>
-          <div className="sh-command-actions">
-            <button className="sh-button sh-button-soft" type="button" onClick={input.onRefresh}>
-              <RefreshCcw size={16} />
-              Yenile
-            </button>
-            {selectedPriority ? (
-              <Link className="sh-button sh-button-primary" to={selectedPriority.href}>
-                Önceliğe git
-                <ArrowRight size={16} />
-              </Link>
-            ) : null}
           </div>
         </header>
 
-        <section className="sh-hero">
-          <div>
-            <h1 id="store-home-ops-title">Günlük Operasyon</h1>
-          </div>
-          <div className="sh-today-card" aria-label="Günün özeti">
-            <Clock3 size={18} />
-            <span>{input.model.todayTitle}</span>
-            <strong>{input.model.todayNote}</strong>
-          </div>
-        </section>
-
-        <section className="sh-metrics" aria-label="Günlük özet">
-          {input.model.metrics.map((metric) => (
-            <article className={`sh-metric sh-tone-${metric.tone}`} key={metric.id}>
-              <span className="sh-icon" aria-hidden="true">
-                {metric.icon}
-              </span>
-              <div>
-                <span>{metric.label}</span>
-                <strong>{metric.value}</strong>
-                <small>{metric.note}</small>
-              </div>
-            </article>
-          ))}
-        </section>
-
-        <section className="sh-main-grid">
-          <div className="sh-panel sh-priority-panel">
-            <div className="sh-section-head">
-              <div>
-                <h2>Öncelik akışı</h2>
-                <p>Modül gezmeden önce dikkat isteyen işler.</p>
-              </div>
-              <span className="sh-count">{input.model.priorities.length} iş</span>
-            </div>
-
-            <div className="sh-filter-row" aria-label="Hızlı filtreler">
-              {filters.map((filter) => (
-                <button
-                  className={activeFilter === filter.id ? 'is-active' : undefined}
-                  key={filter.id}
-                  onClick={() => {
-                    setActiveFilter(filter.id)
-                    const firstPriority = filter.id === 'all'
-                      ? input.model.priorities[0]
-                      : input.model.priorities.find((priority) => priority.filter === filter.id)
-                    if (firstPriority) setSelectedId(firstPriority.id)
-                  }}
-                  type="button"
-                >
-                  {filter.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="sh-priority-list">
-              {visiblePriorities.length ? (
-                visiblePriorities.map((priority) => {
-                  const isSelected = priority.id === selectedPriority?.id
-
-                  return (
-                    <button
-                      className={`sh-priority-row sh-tone-${priority.tone}${isSelected ? ' is-selected' : ''}`}
-                      data-testid={priority.testId}
-                      key={priority.id}
-                      onClick={() => setSelectedId(priority.id)}
-                      type="button"
-                    >
-                      <span className="sh-source-icon" aria-hidden="true">
-                        {priority.icon}
-                      </span>
-                      <span className="sh-priority-copy">
-                        <small>{priority.source}</small>
-                        <strong>{priority.title}</strong>
-                        <em>{priority.meta}</em>
-                      </span>
-                      <span className="sh-status">{priority.status}</span>
-                    </button>
-                  )
-                })
-              ) : (
-                <div className="sh-empty-state">Bu filtrede bekleyen iş yok.</div>
-              )}
-            </div>
-          </div>
-
-          <aside className="sh-panel sh-detail-panel" aria-label="Seçili öncelik">
-            {selectedPriority ? (
+        <section className="sh-metrics" aria-label="Operasyon özeti">
+          {input.model.metrics.map((metric) => {
+            const selected = metric.filter !== undefined && activeFilter === metric.filter
+            const content = (
               <>
-                <div className={`sh-detail-hero sh-tone-${selectedPriority.tone}`}>
-                  <span className="sh-icon" aria-hidden="true">
-                    {selectedPriority.icon}
-                  </span>
-                  <div>
-                    <span>{selectedPriority.source}</span>
-                    <h2>{selectedPriority.title}</h2>
-                  </div>
-                </div>
-                <p>{selectedPriority.detail}</p>
-                <div className="sh-evidence-grid">
-                  <div>
-                    <span>Durum</span>
-                    <strong>{selectedPriority.status}</strong>
-                  </div>
-                  <div>
-                    <span>Zaman</span>
-                    <strong>{selectedPriority.meta}</strong>
-                  </div>
-                  <div>
-                    <span>Bağlı sayfa</span>
-                    <strong>{selectedPriority.routeLabel}</strong>
-                  </div>
-                </div>
-                <Link className="sh-button sh-button-primary sh-detail-action" to={selectedPriority.href}>
-                  {selectedPriority.cta}
-                  <ArrowRight size={16} />
-                </Link>
+                <span className="sh-metric-icon" aria-hidden="true">{metric.icon}</span>
+                <span className="sh-metric-copy">
+                  <span>{metric.label}</span>
+                  <strong>{metric.value}</strong>
+                  <small>{metric.note}</small>
+                </span>
               </>
+            )
+
+            return metric.filter ? (
+              <button
+                aria-pressed={selected}
+                className={`sh-metric sh-tone-${metric.tone}${selected ? ' is-selected' : ''}`}
+                key={metric.id}
+                onClick={() => setActiveFilter(selected ? 'all' : metric.filter!)}
+                type="button"
+              >
+                {content}
+              </button>
             ) : (
-              <p>Bugün bekleyen iş yok.</p>
-            )}
+              <article className={`sh-metric sh-tone-${metric.tone}`} key={metric.id}>{content}</article>
+            )
+          })}
+        </section>
+
+        <div className="sh-dashboard-grid">
+          <section className="sh-dashboard-panel sh-agenda-panel" aria-labelledby="store-home-agenda-title">
+            <div className="sh-section-head">
+              <div>
+                <h2 id="store-home-agenda-title">Bugünün gündemi</h2>
+                <p>Kontrol veya karar bekleyen işler.</p>
+              </div>
+              <Badge variant="outline">{visiblePriorities.length} kayıt</Badge>
+            </div>
+
+            {input.model.hasPartialData ? (
+              <div className="sh-partial-state" role="status">
+                Bazı özetler şu anda görüntülenemiyor. Kullanılabilir bilgiler gösteriliyor.
+              </div>
+            ) : null}
+
+            <div className="sh-agenda-list">
+              {visiblePriorities.length ? visiblePriorities.map((priority) => (
+                <article className={`sh-agenda-row sh-tone-${priority.tone}`} data-testid={priority.testId} key={priority.id}>
+                  <span className="sh-source-icon" aria-hidden="true">{priority.icon}</span>
+                  <div className="sh-agenda-copy">
+                    <div>
+                      <span>{priority.source}</span>
+                      <Badge variant="outline">{priority.status}</Badge>
+                    </div>
+                    <h3>{priority.title}</h3>
+                    <p>{priority.detail}</p>
+                  </div>
+                  <div className="sh-agenda-action">
+                    <strong>{priority.meta}</strong>
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={priority.href}>
+                        {priority.cta}
+                        <ArrowRight data-icon="inline-end" aria-hidden="true" />
+                      </Link>
+                    </Button>
+                  </div>
+                </article>
+              )) : (
+                <div className="sh-dashboard-empty">
+                  <CheckCircle2 size={21} aria-hidden="true" />
+                  <div>
+                    <strong>{activeFilter === 'all' ? 'Bugün bekleyen iş yok' : 'Bu başlıkta bekleyen iş yok'}</strong>
+                    <span>Yeni bir işlem oluştuğunda burada görünecek.</span>
+                  </div>
+                  {activeFilter !== 'all' ? (
+                    <Button size="sm" variant="ghost" onClick={resetFilter}>Tümünü göster</Button>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <aside className="sh-dashboard-panel sh-workspace-panel" aria-labelledby="store-home-workspaces-title">
+            <div className="sh-section-head">
+              <div>
+                <h2 id="store-home-workspaces-title">Çalışma alanları</h2>
+                <p>Sık kullandığınız sayfalara geçin.</p>
+              </div>
+              <Layers3 size={18} aria-hidden="true" />
+            </div>
+            <nav className="sh-workspace-links" aria-label="Çalışma alanları">
+              {input.model.quickLinks.map((link) => (
+                <Link key={link.id} to={link.href}>
+                  <span aria-hidden="true">{link.icon}</span>
+                  <strong>{link.label}</strong>
+                  <ChevronRight size={16} aria-hidden="true" />
+                </Link>
+              ))}
+            </nav>
           </aside>
-        </section>
-
-        <section className="sh-bottom-grid">
-          <div className="sh-panel sh-announcement-panel">
-            <div className="sh-section-head">
-              <div>
-                <h2>Duyurular</h2>
-                <p>Sabit ve son gönderiler.</p>
-              </div>
-              <span className="sh-count">{input.model.announcements.length} görünür</span>
-            </div>
-            <div className="sh-announcement-list">
-              {input.model.announcements.length ? (
-                input.model.announcements.map((announcement) => (
-                  <article className="sh-announcement" key={announcement.id}>
-                    <span>{announcement.label}</span>
-                    <p>{announcement.copy}</p>
-                    <small>{announcement.time}</small>
-                  </article>
-                ))
-              ) : (
-                <div className="sh-empty-state">Duyuru sayfası bu rol için görünmüyor.</div>
-              )}
-            </div>
-          </div>
-
-          <div className="sh-panel sh-links-panel">
-            <div className="sh-section-head">
-              <div>
-                <h2>Hızlı geçiş</h2>
-                <p>Detay işi kendi sayfasında tamamlanır.</p>
-              </div>
-            </div>
-            <div className="sh-link-list">
-              {input.model.quickLinks.length ? (
-                input.model.quickLinks.map((link) => (
-                  <Link className={`sh-link-card sh-tone-${link.tone}`} key={link.id} to={link.href}>
-                    <span className="sh-icon" aria-hidden="true">
-                      {link.icon}
-                    </span>
-                    <span>
-                      <strong>{link.label}</strong>
-                      <small>{link.value}</small>
-                    </span>
-                    <ArrowRight size={15} />
-                  </Link>
-                ))
-              ) : (
-                <div className="sh-empty-state">Bu rol için hızlı geçiş yok.</div>
-              )}
-            </div>
-          </div>
-        </section>
+        </div>
       </div>
     </section>
   )

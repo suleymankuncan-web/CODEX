@@ -1,0 +1,375 @@
+.store-settings-page {
+  --settings-plum: #6d28d9;
+  --settings-plum-soft: rgba(124, 58, 237, 0.09);
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.store-settings-header {
+  border: 1px solid var(--store-command-line);
+  border-radius: 22px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(247, 244, 255, 0.94));
+  box-shadow: var(--store-command-soft-shadow);
+  padding: 24px;
+}
+
+.store-settings-eyebrow {
+  color: var(--settings-plum);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.store-settings-header h1 {
+  margin: 5px 0 0;
+  color: var(--store-command-ink);
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 740;
+  letter-spacing: -0.035em;
+}
+
+.store-settings-header p,
+.store-settings-panel-heading p,
+.store-settings-profile-portrait p,
+.store-settings-preference-row p,
+.store-settings-security-grid p {
+  color: var(--store-command-muted);
+  line-height: 1.6;
+}
+
+.store-settings-header p {
+  max-width: 620px;
+  margin: 7px 0 0;
+  font-size: 13px;
+}
+
+.store-settings-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  border: 1px solid var(--store-command-line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 5px;
+}
+
+.store-settings-tabs button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--store-command-muted);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background 170ms ease, color 170ms ease;
+}
+
+.store-settings-tabs button:hover,
+.store-settings-tabs button:focus-visible {
+  color: var(--settings-plum);
+  outline: none;
+}
+
+.store-settings-tabs button.is-active {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.13), rgba(34, 211, 238, 0.1));
+  color: var(--settings-plum);
+  box-shadow: inset 0 0 0 1px rgba(124, 58, 237, 0.14);
+}
+
+.store-settings-panel {
+  min-height: 456px;
+  border: 1px solid var(--store-command-line);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: var(--store-command-soft-shadow);
+  padding: 22px;
+}
+
+.store-settings-panel-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 18px;
+}
+
+.store-settings-section-icon,
+.store-settings-action-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--settings-plum-soft);
+  color: var(--settings-plum);
+}
+
+.store-settings-section-icon svg,
+.store-settings-action-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.store-settings-panel h2,
+.store-settings-panel h3,
+.store-settings-panel p {
+  margin: 0;
+}
+
+.store-settings-panel h2 {
+  color: var(--store-command-ink);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.store-settings-panel h3 {
+  color: var(--store-command-ink);
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.store-settings-panel-heading p,
+.store-settings-profile-portrait p,
+.store-settings-preference-row p,
+.store-settings-security-grid p {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.store-settings-profile-workspace {
+  display: grid;
+  grid-template-columns: minmax(230px, 0.65fr) minmax(0, 1.35fr);
+  min-height: 290px;
+  overflow: hidden;
+  border-top: 1px solid var(--store-command-line);
+}
+
+.store-settings-preference-row,
+.store-settings-security-grid article {
+  border: 1px solid var(--store-command-line);
+  border-radius: 17px;
+  background: var(--store-command-surface-soft);
+}
+
+.store-settings-profile-portrait {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  border-right: 1px solid var(--store-command-line);
+  padding: 26px 28px 24px 8px;
+}
+
+.store-settings-profile-portrait .store-account-avatar {
+  width: 78px;
+  height: 78px;
+  border-radius: 24px;
+  font-size: 21px;
+}
+
+.store-settings-profile-portrait > div {
+  min-width: 0;
+  margin-top: 18px;
+}
+
+.store-settings-profile-portrait strong,
+.store-settings-profile-portrait span {
+  display: block;
+}
+
+.store-settings-profile-portrait strong {
+  overflow: hidden;
+  color: var(--store-command-ink);
+  font-size: 16px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-settings-profile-portrait span {
+  margin-top: 4px;
+  color: var(--settings-plum);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.store-settings-profile-portrait p {
+  max-width: 260px;
+  margin: 16px 0 18px;
+  color: var(--store-command-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.store-settings-profile-details {
+  align-self: stretch;
+  margin: 0;
+  padding: 10px 0 10px 28px;
+}
+
+.store-settings-profile-details div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(130px, 0.45fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  min-height: 64px;
+  border-bottom: 1px solid var(--store-command-line);
+  padding: 10px 4px;
+}
+
+.store-settings-profile-details div:last-child {
+  border-bottom: 0;
+}
+
+.store-settings-profile-details dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--store-command-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.store-settings-profile-details dd {
+  overflow: hidden;
+  margin: 7px 0 0;
+  color: var(--store-command-ink);
+  font-size: 13px;
+  font-weight: 720;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.store-settings-preference-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px;
+}
+
+.store-settings-preference-row small {
+  display: block;
+  margin-top: 8px;
+  color: var(--settings-plum);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.store-settings-language-toggle {
+  flex: 0 0 auto;
+  border: 1px solid var(--store-command-line);
+  border-radius: 13px;
+  background: white;
+  padding: 4px;
+}
+
+.store-settings-language-toggle button {
+  min-width: 112px;
+  border: 0;
+  border-radius: 9px;
+  font-size: 12px;
+}
+
+.store-settings-language-toggle button[data-state='on'] {
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.13), rgba(34, 211, 238, 0.1));
+  color: var(--settings-plum);
+  box-shadow: none;
+}
+
+.store-settings-security-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.store-settings-security-grid article {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 11px;
+  padding: 16px;
+}
+
+.store-settings-security-grid article > a,
+.store-settings-security-grid article > button {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.store-settings-action-icon.is-danger {
+  background: rgba(244, 63, 94, 0.09);
+  color: #be123c;
+}
+
+@media (max-width: 720px) {
+  .store-settings-header {
+    padding: 18px;
+  }
+
+  .store-settings-tabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    scrollbar-width: none;
+  }
+
+  .store-settings-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .store-settings-tabs button {
+    gap: 5px;
+    padding-inline: 5px;
+  }
+
+  .store-settings-panel {
+    min-height: 0;
+    padding: 16px;
+  }
+
+  .store-settings-profile-workspace,
+  .store-settings-security-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .store-settings-profile-portrait {
+    align-items: center;
+    border-right: 0;
+    border-bottom: 1px solid var(--store-command-line);
+    padding: 24px 8px;
+    text-align: center;
+  }
+
+  .store-settings-profile-details {
+    padding: 8px 0;
+  }
+
+  .store-settings-preference-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .store-settings-language-toggle {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .store-settings-language-toggle button {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 410px) {
+  .store-settings-profile-details div {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    padding-block: 14px;
+  }
+}

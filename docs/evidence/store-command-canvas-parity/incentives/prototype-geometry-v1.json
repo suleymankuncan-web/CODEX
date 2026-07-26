@@ -11,8 +11,8 @@
       "filter": { "x": 0, "y": 213.39, "width": 1076, "height": 58 },
       "tabs": { "x": 1, "y": 271.39, "width": 1074, "height": 46 },
       "firstStore": { "x": 1, "y": 352.39, "width": 1074, "height": 66 },
-      "firstPeopleTable": { "x": 51, "y": 418.39, "width": 1011, "height": 195 },
-      "firstPerson": { "x": 52, "y": 450.39, "width": 1009, "height": 54 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     },
     "region-manager-compact.png": {
       "pageWidth": 672,
@@ -21,8 +21,8 @@
       "filter": { "x": 0, "y": 297.39, "width": 672, "height": 58 },
       "tabs": { "x": 1, "y": 355.39, "width": 670, "height": 46 },
       "firstStore": { "x": 1, "y": 436.39, "width": 670, "height": 66 },
-      "firstPeopleTable": { "x": 51, "y": 502.39, "width": 607, "height": 195 },
-      "firstPerson": { "x": 52, "y": 534.39, "width": 605, "height": 54 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     },
     "region-manager-mobile.png": {
       "pageWidth": 366,
@@ -31,8 +31,8 @@
       "filter": { "x": 0, "y": 392.88, "width": 366, "height": 104 },
       "tabs": { "x": 1, "y": 496.88, "width": 364, "height": 47 },
       "firstStore": { "x": 1, "y": 543.88, "width": 364, "height": 198 },
-      "firstPeopleTable": { "x": 9, "y": 741.88, "width": 348, "height": 631 },
-      "firstPerson": { "x": 9, "y": 749.88, "width": 348, "height": 211 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     },
     "region-manager-narrow.png": {
       "pageWidth": 296,
@@ -41,8 +41,8 @@
       "filter": { "x": 0, "y": 408.81, "width": 296, "height": 104 },
       "tabs": { "x": 1, "y": 512.81, "width": 294, "height": 47 },
       "firstStore": { "x": 1, "y": 559.81, "width": 294, "height": 198 },
-      "firstPeopleTable": { "x": 9, "y": 757.81, "width": 278, "height": 631 },
-      "firstPerson": { "x": 9, "y": 765.81, "width": 278, "height": 211 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     },
     "report-viewer-desktop.png": {
       "pageWidth": 1076,
@@ -52,8 +52,8 @@
       "section": { "x": 0, "y": 254.39, "width": 1076, "height": 71 },
       "firstRegion": { "x": 1, "y": 360.39, "width": 1074, "height": 72 },
       "firstStore": { "x": 14, "y": 468.39, "width": 1048, "height": 66 },
-      "firstPeopleTable": { "x": 64, "y": 534.39, "width": 985, "height": 195 },
-      "firstPerson": { "x": 65, "y": 566.39, "width": 983, "height": 54 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     },
     "report-viewer-compact.png": {
       "pageWidth": 672,
@@ -63,8 +63,8 @@
       "section": { "x": 0, "y": 355.39, "width": 672, "height": 71 },
       "firstRegion": { "x": 1, "y": 461.39, "width": 670, "height": 72 },
       "firstStore": { "x": 14, "y": 569.39, "width": 644, "height": 66 },
-      "firstPeopleTable": { "x": 64, "y": 635.39, "width": 581, "height": 195 },
-      "firstPerson": { "x": 65, "y": 667.39, "width": 579, "height": 54 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     },
     "report-viewer-mobile.png": {
       "pageWidth": 366,
@@ -74,8 +74,8 @@
       "section": { "x": 0, "y": 436.88, "width": 366, "height": 71 },
       "firstRegion": { "x": 1, "y": 507.88, "width": 364, "height": 163 },
       "firstStore": { "x": 8, "y": 671.88, "width": 350, "height": 198 },
-      "firstPeopleTable": { "x": 16, "y": 869.88, "width": 334, "height": 636 },
-      "firstPerson": { "x": 16, "y": 877.88, "width": 334, "height": 216 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     },
     "report-viewer-narrow.png": {
       "pageWidth": 296,
@@ -85,8 +85,8 @@
       "section": { "x": 0, "y": 436.88, "width": 296, "height": 84 },
       "firstRegion": { "x": 1, "y": 520.88, "width": 294, "height": 163 },
       "firstStore": { "x": 8, "y": 684.88, "width": 280, "height": 198 },
-      "firstPeopleTable": { "x": 16, "y": 882.88, "width": 264, "height": 636 },
-      "firstPerson": { "x": 16, "y": 890.88, "width": 264, "height": 216 }
+      "firstPeopleTable": null,
+      "firstPerson": null
     }
   }
 }
