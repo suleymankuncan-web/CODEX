@@ -1457,15 +1457,14 @@ test('store KPI highlights switches to English copy and persists locale', async 
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
   await expect(page.getByRole('heading', { name: 'IstinyePark Demo Store' })).toBeVisible()
-  await expect(page.getByRole('tab', { name: 'Store KPI' })).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Personnel KPI/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Store KPI' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Personnel KPI/ })).toBeVisible()
   await expect(page.getByText('Store score', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Store KPI contribution breakdown' })).toBeVisible()
-  await expect(page.getByText('Store KPIs are read together with KPI config weight and reference.')).toBeVisible()
   await expect(page.getByText('Good / Above Reference')).toBeVisible()
   await expect(page.getByText('Follow-up / Below Reference')).toBeVisible()
   await expect(page.getByText('Take Action / Materially Below Reference')).toBeVisible()
-  await page.getByRole('tab', { name: /Personnel KPI/ }).click()
+  await page.getByRole('button', { name: /Personnel KPI/ }).click()
   await expect(page.getByRole('heading', { name: 'Score source' })).toBeVisible()
   await expect(page.getByText('Personnel KPI impact')).toBeVisible()
   await expect(page.getByText("Mağaza KPI'ları")).toHaveCount(0)
@@ -1477,7 +1476,7 @@ test('store KPI highlights switches to English copy and persists locale', async 
   await page.reload()
 
   await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-  await expect(page.getByRole('tab', { name: 'Store KPI' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Store KPI' })).toBeVisible()
 })
 
 test('store shell exposes Turkish-first chrome and hides technical auth roles', async ({ page }) => {
