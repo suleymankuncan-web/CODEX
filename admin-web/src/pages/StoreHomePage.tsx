@@ -11,7 +11,7 @@ import {
   UsersRound,
   WalletCards,
 } from 'lucide-react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import type { AuthSessionSummary } from '../features/auth/api'
 import { canReadChecklistResults, hasAnyRole } from '../features/auth/authorization'
 import {
@@ -37,7 +37,6 @@ import { resolveUserDisplayLabel } from '../lib/display-labels'
 import { transientQueryRetryOptions } from '../lib/query-retry'
 import {
   buildStoreHomeCommandModel,
-  countNumeric,
   formatStoreHomePeriod,
 } from './store-home-command-model'
 import { StoreHomeCommandView } from './store-home-command-view'
@@ -50,7 +49,7 @@ type ChecklistHomeSummary = {
   metricValue: string
   note: string
   title: string
-  tone: 'attention' | 'ready'
+  tone: 'attention' | 'ready' | 'unavailable'
 }
 
 function formatStoreScope(authSummary: AuthSessionSummary | null) {
@@ -68,7 +67,6 @@ export function StoreHomePage(input: {
   authSummary: AuthSessionSummary | null
 }) {
   const { t } = useLocalization()
-  const queryClient = useQueryClient()
   const persona = resolveStorePersona(input.authSummary)
   const canManageChecklistVisits = hasAnyRole(input.authSummary, [
     'REGION_MANAGER',
@@ -105,19 +103,21 @@ export function StoreHomePage(input: {
   const navigation = getRoleAwareStoreNavigation(input.authSummary)
   const availablePaths = new Set(navigation.map((item) => item.path))
   const pendingValue = t('storeHome.valuePending')
-  const readyValue = t('storeHome.command.ready')
   const storeScopeValue = formatStoreScope(input.authSummary)
   const workflowItems = workflowInboxQuery.data?.items ?? []
   const pendingWorkflowItems = workflowItems.filter((item) => item.inboxStatus === 'needs_attention')
   const pendingRequestsValue =
-    canUseWorkflowInbox && !workflowInboxQuery.isError
+    canUseWorkflowInbox
       ? workflowInboxQuery.isLoading
         ? pendingValue
-        : String(pendingWorkflowItems.length)
+        : workflowInboxQuery.isError
+          ? '—'
+          : String(pendingWorkflowItems.length)
       : null
   const checklistSummary = buildChecklistHomeSummary({
     acknowledgementItems: checklistAcknowledgementsQuery.data?.items ?? [],
     isLoading: checklistAcknowledgementsQuery.isLoading || mobileChecklistQuery.isLoading,
+    isUnavailable: checklistAcknowledgementsQuery.isError || mobileChecklistQuery.isError,
     mobileToday: mobileChecklistQuery.data?.data ?? null,
     pendingValue,
     persona,
@@ -136,15 +136,6 @@ export function StoreHomePage(input: {
         t,
       })
     : null
-  const checklistCount = countNumeric(checklistSummary?.metricValue)
-  const requestCount =
-    canUseWorkflowInbox && !workflowInboxQuery.isLoading && !workflowInboxQuery.isError
-      ? pendingWorkflowItems.length
-      : null
-  const pendingWorkValue =
-    checklistSummary && checklistSummary.metricValue !== pendingValue && requestCount !== null
-      ? String(checklistCount + requestCount)
-      : pendingValue
   const personaLabel = t(getStorePersonaLabelKey(persona))
   const identityLabel = resolveUserDisplayLabel(input.authSummary?.user, personaLabel)
   const periodLabel = formatStoreHomePeriod()
@@ -155,19 +146,20 @@ export function StoreHomePage(input: {
     checklistMetricValue: checklistSummary?.metricValue ?? null,
     checklistTitle: checklistSummary?.title ?? null,
     checklistTone: checklistSummary?.tone ?? null,
+    checklistUnavailable: checklistAcknowledgementsQuery.isError || mobileChecklistQuery.isError,
     identityLabel,
     pendingRequestsValue,
     pendingValue,
-    pendingWorkValue,
     periodLabel,
     persona,
     personaLabel,
-    readyValue,
     storeScopeValue,
     visitPriorityActionLabel: visitPrioritySummary?.actionLabel ?? null,
     visitPriorityCopy: visitPrioritySummary?.copy ?? null,
     visitPriorityTitle: visitPrioritySummary?.title ?? null,
     visitPriorityValue: visitPrioritySummary?.value ?? null,
+    visitUnavailable: mobileChecklistQuery.isError || checklistAcknowledgementsQuery.isError,
+    workflowUnavailable: workflowInboxQuery.isError,
     icons: {
       alert: <AlertTriangle size={20} />,
       bell: <Bell size={20} />,
@@ -182,18 +174,13 @@ export function StoreHomePage(input: {
       wallet: <WalletCards size={20} />,
     },
   })
-  const refreshHome = () => {
-    void queryClient.invalidateQueries({ queryKey: checklistAcknowledgementsQueryKey })
-    void queryClient.invalidateQueries({ queryKey: mobileChecklistsTodayQueryKey })
-    void queryClient.invalidateQueries({ queryKey: workflowInboxQueryKey })
-  }
-
-  return <StoreHomeCommandView model={commandModel} onRefresh={refreshHome} />
+  return <StoreHomeCommandView model={commandModel} />
 }
 
 function buildChecklistHomeSummary(input: {
   acknowledgementItems: ChecklistAcknowledgementItem[]
   isLoading: boolean
+  isUnavailable: boolean
   mobileToday: MobileChecklistToday | null
   pendingValue: string
   persona: StorePersona
@@ -212,6 +199,18 @@ function buildChecklistHomeSummary(input: {
   const activeDraftCount = visibleMobileToday?.activeInstances.length ?? 0
   const completedVisitCount = visibleMobileToday?.completedThisMonth.length ?? acknowledgedCount
   const pendingVisitCount = visibleMobileToday ? activeDraftCount : pendingAcknowledgements
+
+  if (input.isUnavailable) {
+    return {
+      actionLabel: input.t('storeHome.checklistCard.action'),
+      copy: 'Checklist özeti şu anda görüntülenemiyor.',
+      metricNote: 'Bilgi alınamadı',
+      metricValue: '—',
+      note: 'Daha sonra tekrar deneyin.',
+      title: 'Checklist özeti açılamadı',
+      tone: 'unavailable',
+    }
+  }
 
   if (input.persona === 'storeManager') {
     const value = input.isLoading ? input.pendingValue : String(pendingAcknowledgements)

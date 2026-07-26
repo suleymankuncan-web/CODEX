@@ -10,7 +10,6 @@ import {
   Megaphone,
   ReceiptText,
   Settings,
-  Store,
   Target,
   TrendingUp,
   Trophy,
@@ -20,6 +19,8 @@ import {
 import { NavLink } from 'react-router'
 import lufianLogoUrl from '../assets/lufian-logo.png'
 import type { AuthSessionSummary } from '../features/auth/api'
+import { StoreAccountMenu } from '../features/account/store-account-controls'
+import '../features/account/store-account.css'
 import { useLocalization } from '../features/localization/useLocalization'
 import { resolveUserDisplayLabel } from '../lib/display-labels'
 import {
@@ -60,18 +61,6 @@ export function StoreSidebar(input: {
   const personaLabel = t(getStorePersonaLabelKey(persona))
   const navItems = getRoleAwareStoreNavigation(input.authSummary)
   const identityLabel = getIdentityLabel(input.authSummary, personaLabel)
-  const assignedStoreCount = input.authSummary?.scopeSummary.assignedStoreCount ?? 0
-  const scopedStoreCount =
-    input.authSummary?.scopeSummary.storeCount ??
-    input.authSummary?.user.readScope.storeIds.length ??
-    input.authSummary?.user.scope.storeIds.length ??
-    0
-  const identityMeta =
-    persona === 'admin'
-      ? t('storeHome.sidebar.adminScope')
-      : assignedStoreCount > 0
-      ? t('storeHome.sidebar.assignedStores', { count: assignedStoreCount })
-      : t('storeHome.sidebar.scopedStores', { count: scopedStoreCount })
   const warmStoreRoute = (path: string) => {
     preloadRoute({
       authSummary: input.authSummary,
@@ -90,11 +79,15 @@ export function StoreSidebar(input: {
           <strong>LUFIAN</strong>
           <small>{t('storeHome.sidebar.brandArea')}</small>
         </div>
-      </div>
-
-      <div className="store-command-persona-chip" aria-hidden="true">
-        <span className="store-command-persona-dot" />
-        <span>{personaLabel}</span>
+        <StoreAccountMenu
+          authSummary={input.authSummary}
+          compact
+          identity={{
+            displayName: identityLabel,
+            detail: personaLabel,
+            email: input.authSummary?.user.email ?? null,
+          }}
+        />
       </div>
 
       <nav className="store-command-nav" aria-label={t('storeHome.sidebar.navAria')}>
@@ -125,15 +118,14 @@ export function StoreSidebar(input: {
       </nav>
 
       <div className="store-command-sidebar-footer">
-        <div className="store-command-identity" aria-label={t('storeHome.sidebar.contextAria')}>
-          <span className="store-command-avatar" aria-hidden="true">
-            <Store size={18} />
-          </span>
-          <span className="store-command-identity-text">
-            <strong>{identityLabel}</strong>
-            <small>{personaLabel} / {identityMeta}</small>
-          </span>
-        </div>
+        <StoreAccountMenu
+          authSummary={input.authSummary}
+          identity={{
+            displayName: identityLabel,
+            detail: personaLabel,
+            email: input.authSummary?.user.email ?? null,
+          }}
+        />
       </div>
     </aside>
   )

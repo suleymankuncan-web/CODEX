@@ -6,6 +6,14 @@ export type KpiReferenceClassification = {
   ratio: number | null
 }
 
+// The live highlights API expresses the weighted store score as a ratio
+// (0.98 = 98 points). Product surfaces consistently display the same value on
+// the established 100-point score scale.
+export function toHundredPointLiveStoreScore(value: number | null | undefined) {
+  if (value === null || value === undefined || !Number.isFinite(value)) return null
+  return Number((value * 100).toFixed(4))
+}
+
 // KPI-FR-003 / AC-KPI-003: this classifier is deliberately separate from
 // store risk and personnel performance classifications.
 export function classifyKpiReference(input: {

@@ -5,9 +5,18 @@ import {
   classifyPersonnelPerformance,
   groupKpiStoresByRegionManager,
   sortKpiStoreRows,
+  toHundredPointLiveStoreScore,
 } from './store-kpis-command-contract'
 
 describe('KPI Command Canvas contract', () => {
+  it('renders the live store score contract on a 100-point scale', () => {
+    expect(toHundredPointLiveStoreScore(0.98)).toBe(98)
+    expect(toHundredPointLiveStoreScore(1)).toBe(100)
+    expect(toHundredPointLiveStoreScore(1.2)).toBe(120)
+    expect(toHundredPointLiveStoreScore(null)).toBeNull()
+    expect(toHundredPointLiveStoreScore(Number.NaN)).toBeNull()
+  })
+
   it('KPI-FR-003 / AC-KPI-003 keeps reference thresholds distinct from personnel status', () => {
     expect(classifyKpiReference({ actual: 100, reference: 100 })).toEqual({
       kind: 'good',

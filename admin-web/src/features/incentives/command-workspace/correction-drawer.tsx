@@ -123,14 +123,14 @@ export function IncentiveCorrectionDrawer(input: {
 
         <SheetFooter className="incentive-drawer-footer">
           {row.correction && store.capabilities.canVoidCorrection && (row.correction.status === 'draft' || row.correction.status === 'admin_returned') ? (
-            <Button disabled={input.pending} onClick={() => input.onVoid({ store, row, correctionId: row.correction!.correctionId })} type="button" variant="ghost">
+            <Button className="incentive-drawer-action incentive-drawer-action--revert" disabled={input.pending} onClick={() => input.onVoid({ store, row, correctionId: row.correction!.correctionId })} type="button" variant="ghost">
               <RotateCcw aria-hidden="true" data-icon="inline-start" />
               {input.t('storeIncentives.command.revert')}
             </Button>
           ) : <span />}
           <div>
-            <Button disabled={input.pending} onClick={input.onClose} type="button" variant="outline">{input.t('storeIncentives.command.cancel')}</Button>
-            <Button disabled={!canSave || input.pending || !normalizedAmount} onClick={() => { if (normalizedAmount) input.onSave({ store, row, finalAmount: normalizedAmount, reasonNote: note.trim() }) }} type="button">
+            <Button className="incentive-drawer-action incentive-drawer-action--cancel" disabled={input.pending} onClick={input.onClose} type="button" variant="outline">{input.t('storeIncentives.command.cancel')}</Button>
+            <Button className="incentive-drawer-action incentive-drawer-action--save" disabled={!canSave || input.pending || !normalizedAmount} onClick={() => { if (normalizedAmount) input.onSave({ store, row, finalAmount: normalizedAmount, reasonNote: note.trim() }) }} type="button">
               <Check aria-hidden="true" data-icon="inline-start" />
               {input.t('storeIncentives.command.save')}
             </Button>

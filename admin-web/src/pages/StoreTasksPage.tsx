@@ -7,7 +7,6 @@ import {
   ListTodo,
   LoaderCircle,
   PlayCircle,
-  RefreshCw,
   Search,
   ShieldAlert,
 } from 'lucide-react'
@@ -156,13 +155,7 @@ function StoreTasksWorkspace(input: {
         titleId="tasks-command-title"
         eyebrow={workspace?.view === 'report_viewer' ? 'RAPOR GÖRÜNÜMÜ' : workspace?.view === 'region_manager' ? 'BÖLGE GÖRÜNÜMÜ' : 'MAĞAZA ÇALIŞMA ALANI'}
         description={workspace?.view === 'store_manager' ? 'Aksiyonları başlatın, takip edin ve sonucu kaydedin.' : 'Tamamlanan mağaza aksiyonlarını ve denetlenebilir sonuç geçmişini inceleyin.'}
-        actions={<>
-          <CommandCanvasMonthYearPicker ariaLabel="Görev dönemini seç" locale={locale} value={period} maxValue={currentMonth()} onValueChange={(value) => { setPeriod(value.slice(0, 7)); setOffset(0); setSelection(null) }} />
-          <Button variant="outline" onClick={() => void workspaceQuery.refetch()}>
-            {workspaceQuery.isFetching ? <LoaderCircle className="tw:animate-spin" data-icon="inline-start" /> : <RefreshCw data-icon="inline-start" />}
-            Yenile
-          </Button>
-        </>}
+        actions={<CommandCanvasMonthYearPicker ariaLabel="Görev dönemini seç" locale={locale} value={period} maxValue={currentMonth()} onValueChange={(value) => { setPeriod(value.slice(0, 7)); setOffset(0); setSelection(null) }} />}
       />
       {workspaceQuery.isError && workspace ? (
         <div className="tasks-command-partial-error" role="alert">

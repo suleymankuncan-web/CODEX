@@ -48,7 +48,7 @@ export function TargetCommandDrawer(input: {
 
   return <Sheet open={input.store !== null} onOpenChange={(open) => { if (!open && !input.pending) input.onClose() }}>
     <CommandCanvasOperationalDrawerContent className="target-command-drawer">
-      <SheetHeader className="target-command-drawer-header"><span className="target-command-drawer-icon"><Target size={19} /></span><div><SheetTitle>{input.store?.storeName ?? copy.detail}</SheetTitle><SheetDescription>{meta?.label} · {input.store?.storeCode}</SheetDescription></div></SheetHeader>
+      <SheetHeader className="target-command-drawer-header"><span className="target-command-drawer-icon"><Target size={19} /></span><div><SheetTitle>{input.store?.storeName ?? copy.detail}</SheetTitle><SheetDescription>{meta?.label}</SheetDescription></div></SheetHeader>
       {input.store ? <div className="target-command-drawer-body">
         {!request ? <div className="target-command-drawer-empty"><strong>{copy.missing}</strong><p>{copy.missingNote}</p></div> : <>
         <section className="target-command-drawer-metrics"><DrawerStat label={copy.target} value={formatTargetMoney(request?.totalTargetValue, locale)} /><DrawerStat label={copy.distributed} value={formatTargetMoney(distributed, locale)} /><DrawerStat label={copy.balance} value={formatTargetMoney(balance, locale)} tone={balance === 0 ? 'good' : 'warning'} /><DrawerStat label={copy.personnel} value={String(request?.allocationCount ?? input.store.personnel.length)} /></section>

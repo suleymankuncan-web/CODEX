@@ -116,7 +116,7 @@ function StoreAccordion(input: {
   onReviewStore?: (store: IncentiveStore) => void
   pendingStoreIds?: ReadonlySet<string>
 }) {
-  const [openStoreIds, setOpenStoreIds] = useState<string[]>(() => input.stores.slice(0, 1).map((store) => store.storeId))
+  const [openStoreIds, setOpenStoreIds] = useState<string[]>([])
   const toggleStore = (storeId: string) => setOpenStoreIds((current) => (
     current.includes(storeId) ? current.filter((value) => value !== storeId) : [...current, storeId]
   ))

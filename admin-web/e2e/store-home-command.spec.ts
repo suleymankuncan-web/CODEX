@@ -106,6 +106,33 @@ async function routeAuth(page: Page, roleCode: RoleCode) {
   await page.route('**/api/auth/session', async (route) => {
     await route.fulfill({ json: session })
   })
+
+  await page.route('**/api/checklists/acknowledgements/list', async (route) => {
+    await route.fulfill({
+      json: { items: [], meta: { count: 0, limit: 50, offset: 0, total: 0 } },
+    })
+  })
+
+  await page.route('**/api/mobile/checklists/today', async (route) => {
+    await route.fulfill({
+      json: {
+        data: {
+          stores: [],
+          templates: [],
+          activeInstances: [],
+          completedThisMonth: [],
+          pendingAcknowledgements: [],
+          monthlySummaries: [],
+        },
+      },
+    })
+  })
+
+  await page.route('**/api/workflow/inbox', async (route) => {
+    await route.fulfill({
+      json: { items: [], meta: { count: 0, limit: 30, offset: 0, total: 0 } },
+    })
+  })
 }
 
 test('store home production route renders the approved command surface for region manager', async ({ page }) => {
@@ -114,12 +141,12 @@ test('store home production route renders the approved command surface for regio
   await page.goto('/store/home')
 
   await expect(page.getByTestId('store-home-command')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Günlük Operasyon', exact: true })).toBeVisible()
-  await expect(page.locator('.store-home-ops .sh-command-bar')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Operasyon Paneli', exact: true })).toBeVisible()
+  await expect(page.locator('.store-home-ops .sh-dashboard-header')).toBeVisible()
   await expect(page.locator('.store-home-ops .sh-metric')).toHaveCount(4)
-  await expect(page.getByRole('heading', { name: 'Öncelik akışı', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Duyurular', exact: true })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Hızlı geçiş', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Bugünün gündemi', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Çalışma alanları', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Duyurular', exact: true })).toHaveCount(0)
   await expect(page.getByTestId('store-home-dashboard').getByText('Bölge müdürü', { exact: true })).toBeVisible()
 })
 
@@ -143,4 +170,22 @@ test('store home keeps personnel away from manager-only command items', async ({
   await expect(page.getByTestId('store-home-dashboard').getByText('Mağaza personeli', { exact: true })).toBeVisible()
   await expect(page.getByText('Hedef kararı')).toHaveCount(0)
   await expect(page.getByText('Prim paketi')).toHaveCount(0)
+})
+
+test('store home keeps decision filters and responsive widths operational', async ({ page }) => {
+  await routeAuth(page, 'REGION_MANAGER')
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/store/home')
+
+  const checklistMetric = page.getByRole('button', { name: /Checklist/ })
+  await checklistMetric.click()
+  await expect(checklistMetric).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.sh-agenda-row')).toHaveCount(1)
+
+  for (const width of [320, 390, 1024, 1440]) {
+    await page.setViewportSize({ width, height: width < 500 ? 844 : 900 })
+    await expect.poll(() => page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    )).toBe(true)
+  }
 })

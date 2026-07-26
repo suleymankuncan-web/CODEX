@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
-import { Store, Users } from 'lucide-react'
 import type { StoreKpiHighlightsPageModel } from './store-kpi-highlights-model'
 
 export type StoreKpiCommandTab = 'store' | 'people'
@@ -39,7 +38,6 @@ export function StoreKpisCommandDeckHeader(input: {
           <h1 className="tw:mt-1 tw:text-3xl tw:font-semibold tw:tracking-[-0.04em] tw:text-[var(--store-command-ink)]">
             {model.t('storeKpis.commandWorkspaceTitle', { store: model.activeStoreName })}
           </h1>
-          <p className="tw:mt-1 tw:text-sm tw:text-[var(--store-command-muted)]">{model.t('storeKpis.commandWorkspaceCopy')}</p>
         </div>
         <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:lg:justify-end">{controls}</div>
       </header>
@@ -52,12 +50,27 @@ export function StoreKpisCommandDeckHeader(input: {
         <span>{activeTab === 'store' ? model.t('storeKpis.commandStoreTab') : model.t('storeKpis.commandPeopleTab')}</span>
       </nav>
 
-      <div role="tablist" aria-label={model.t('storeKpis.commandTabsLabel')} className="tw:inline-grid tw:w-full tw:max-w-[360px] tw:grid-cols-2 tw:rounded-xl tw:border tw:border-[var(--store-command-line)] tw:bg-white tw:p-1">
-        <button type="button" role="tab" aria-selected={activeTab === 'store'} className={tabClass(activeTab === 'store')} onClick={() => setActiveTab('store')}>
-          <Store className="tw:size-4" />{model.t('storeKpis.commandStoreTab')}
+      <div
+        className="canvas-view-switch kpi-view-switch"
+        data-view={activeTab}
+        aria-label={model.t('storeKpis.commandTabsLabel')}
+      >
+        <span className="canvas-view-glider" aria-hidden="true" />
+        <button
+          type="button"
+          className={activeTab === 'store' ? 'is-active' : ''}
+          aria-pressed={activeTab === 'store'}
+          onClick={() => setActiveTab('store')}
+        >
+          {model.t('storeKpis.commandStoreTab')}
         </button>
-        <button type="button" role="tab" aria-selected={activeTab === 'people'} className={tabClass(activeTab === 'people')} onClick={() => setActiveTab('people')}>
-          <Users className="tw:size-4" />{model.t('storeKpis.commandPeopleTab')} <span>{personnelCount}</span>
+        <button
+          type="button"
+          className={activeTab === 'people' ? 'is-active' : ''}
+          aria-pressed={activeTab === 'people'}
+          onClick={() => setActiveTab('people')}
+        >
+          {model.t('storeKpis.commandPeopleTab')}
         </button>
       </div>
     </div>
@@ -71,8 +84,4 @@ function buildOverviewPath(model: StoreKpiHighlightsPageModel) {
   if (periodStart) params.set('periodStart', periodStart)
   const query = params.toString()
   return `/store/kpis${query ? `?${query}` : ''}`
-}
-
-function tabClass(active: boolean) {
-  return `tw:flex tw:min-h-10 tw:items-center tw:justify-center tw:gap-2 tw:rounded-lg tw:px-3 tw:text-sm tw:font-semibold tw:transition ${active ? 'tw:bg-[var(--store-command-plum-soft)] tw:text-[var(--store-command-plum-deep)]' : 'tw:text-[var(--store-command-muted)] tw:hover:bg-[var(--store-command-surface-soft)]'}`
 }

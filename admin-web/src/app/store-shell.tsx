@@ -196,7 +196,7 @@ function getStoreRouteElement(routeId: StoreRouteId, authSummary: AuthSessionSum
     case 'incentives':
       return <StoreIncentivesPage authSummary={authSummary} />
     case 'settings':
-      return <StoreSettingsPage />
+      return <StoreSettingsPage authSummary={authSummary} />
     case 'targets':
       return <StoreTargetsPage authSummary={authSummary} />
     case 'workforce':
