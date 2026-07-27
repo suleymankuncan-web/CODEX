@@ -10,6 +10,7 @@
     "capacity:read": "node scripts/capacity-read-baseline.mjs",
     "smoke:backend-readiness-load": "node scripts/backend-readiness-load-smoke.mjs",
     "smoke:migration:fresh-db": "node scripts/migration-fresh-db-smoke.mjs",
+    "smoke:photo-evidence-schema": "node scripts/checklist-photo-evidence-schema-smoke.mjs",
     "smoke:visit-plan-schema": "node scripts/region-weekly-visit-plan-schema-smoke.mjs",
     "smoke:visit-plan-api": "node scripts/checklist-visit-plan-api-postgres-smoke.mjs",
     "smoke:operational-history-api": "node scripts/checklist-operational-history-api-postgres-smoke.mjs",

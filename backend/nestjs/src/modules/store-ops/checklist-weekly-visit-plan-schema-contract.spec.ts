@@ -69,7 +69,12 @@ describe("region weekly visit plan schema contract", () => {
     for (const sql of contracts) {
       expect(sql).toContain("idx_region_weekly_visit_plan_item_store_date");
       expect(sql).toContain("idx_checklist_instance_completed_visit_lookup");
-      expect(sql).not.toMatch(/\b(display_status|outcome_status|waiting|missed)\b/i);
+      const visitPlanTables = [
+        tableDefinition(sql, "ops.region_weekly_visit_plan"),
+        tableDefinition(sql, "ops.region_weekly_visit_plan_revision"),
+        tableDefinition(sql, "ops.region_weekly_visit_plan_item"),
+      ].join("\n");
+      expect(visitPlanTables).not.toMatch(/\b(display_status|outcome_status|waiting|missed)\b/i);
     }
   });
 

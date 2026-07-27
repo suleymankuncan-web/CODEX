@@ -79,6 +79,20 @@ test('database invariant preflight SQL is read only and covers every required ch
     // rollback-only PostgreSQL negative smoke; impossible rows never enter
     // the read-only ORG-04 inventory.
     'ops.region_weekly_visit_plan_item',
+    // Migration 062 binds these new scoped records through composite tenant
+    // foreign keys. Its local rollback-only smoke proves cross-tenant rows are
+    // rejected without mutating the immutable V1 diagnostic query.
+    'ops.media_asset',
+    'ops.checklist_response_media',
+    'ops.store_action_solution_attempt',
+    'ops.store_action_plan_evidence',
+    'ops.store_action_solution_review',
+    'ops.visual_campaign_assignment',
+    'ops.visual_campaign_assignment_outcome',
+    'ops.visual_campaign_submission',
+    'ops.visual_campaign_submission_media',
+    'ops.visual_comparison_run',
+    'audit.photo_evidence_event',
     'ops.store',
     'ops.user_role_assignment',
   ])
