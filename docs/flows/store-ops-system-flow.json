@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-27T09:14:46.808Z",
+  "generatedAt": "2026-07-27T18:52:48.867Z",
   "generator": {
     "name": "store-ops-system-flow",
     "version": 1
@@ -5685,7 +5685,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 337
+        "line": 331
       }
     },
     {
@@ -5727,7 +5727,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 250
+        "line": 247
       }
     },
     {
@@ -5741,7 +5741,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 308
+        "line": 303
       }
     },
     {
@@ -5755,7 +5755,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 275
+        "line": 271
       }
     },
     {
@@ -5769,7 +5769,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 170
+        "line": 169
       }
     },
     {
@@ -5783,7 +5783,7 @@
       "openApiCovered": true,
       "source": {
         "file": "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
-        "line": 218
+        "line": 216
       }
     },
     {
