@@ -78,6 +78,17 @@ describe("photo media storage contract", () => {
     });
   });
 
+  it("accepts canonical PostgreSQL UUIDs used by deterministic staging identities", () => {
+    expect(
+      buildPhotoMediaObjectKeys({
+        companyId: "c0000000-0000-0000-0000-000000000001",
+        mediaAssetId: "22222222-2222-4222-8222-222222222222",
+      }).raw,
+    ).toBe(
+      "transient/companies/c0000000-0000-0000-0000-000000000001/media/22222222-2222-4222-8222-222222222222/raw",
+    );
+  });
+
   it("fails closed before an upload crosses any owner-approved hard limit", () => {
     expect(() =>
       assertPhotoMediaUploadQuota({
