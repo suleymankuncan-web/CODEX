@@ -4,10 +4,9 @@ Status: active
 Shelf: operating
 Use when: resuming work, checking current posture, or choosing the next safe action
 Do not use when: reconstructing PR history, selecting a branch, or replacing live verification
-Last verified: 2026-07-17
+Last verified: 2026-07-27
 
-This is the canonical short handoff for the HR Axis / Store Ops workspace. A
-cold reader should recover the current decision, external blockers, and next
+This is the canonical short handoff for the HR Axis / Store Ops workspace. A cold reader should recover the current decision, external blockers, and next
 safe action in under five minutes.
 
 Historical detail is separate:
@@ -178,6 +177,7 @@ The no-delete inventory is
 ## Now, Next, Park, Stop
 
 Now:
+- The owner-approved photo-evidence train is active. PR #1020 locked the product/provider gates and PR #1021 merged the provider-neutral schema foundation. PR-3 is the synthetic-only private-media storage slice: two distinct private R2 Standard EU buckets, separate bucket-scoped credentials, verified recovery before `ready`, 8 GiB / 750k Class A / 7.5m Class B application ceilings, 30-day `locked/` safety window, daily schedulable reconciliation/restore/cleanup, RPO 0 and manual RTO <=24h. Runtime remains disabled by default and no real photo, provider credential, paid activation or broad production authority exists. See `docs/plans/checklist-photo-media-storage-provider-decision-v1.md`.
 - DG1-C runtime removal is `blocked_external`; PR #945 merged the static classification, but the owner-approved provider usage window is missing. No runtime branch is active; create one fresh from `main` only after the window clears. Do not remove either incentive GET contract; preserve Region Manager commands and the Super Admin bypass; see `docs/evidence/sales-target-incentive-v1-dg1-c-consumer-classification-2026-07-11.md`.
 - Merged REM-1B evidence explains the stable 70 hits without mutation. All REM-2 owner decisions are locked: domain lifecycles, fresh encrypted backup/verified restore, affected-writer pause, one correction runner, row locks, and old-value predicates. Row-level winners/classifications and history-preserving writers remain unresolved. `D-STAGING-MUTATION` remains unavailable for the blocked ORG/ASSIGN families. `D-CONSTRAINT-WINDOW` is locked only for eligible TARGET DB-C5 as `bounded_5s_add_30s_validate_no_pause_fail_closed`; this does not make the other families eligible or change the overall broad DB-CONSTRAINTS No-Go.
 - PR #955 merged the repository-only REM-2B V2 implementation at `b9112aa34b9ef75615caa74588169a571017726c`: ordinary targets use JSON parity, pilot imports use approved-reference parity, KPI uses the month-final effective manager portfolio, Norm Kadro and assignment region use lifecycle-aware history, support remains secondary, and inclusive primary ranges require a later successor start. V1 SQL/spec/evidence remain immutable.

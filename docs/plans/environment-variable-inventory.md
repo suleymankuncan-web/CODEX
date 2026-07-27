@@ -43,6 +43,27 @@ Do not copy values into evidence. Record only variable names, status, and owner.
 | `REDIS_URL` | Platform owner | Render backend env | Secret | Required when `QUEUE_BACKEND=bullmq` or `RATE_LIMIT_BACKEND=redis`. | Local Redis URL. |
 | `UPLOAD_PARSE_MAX_CONCURRENCY` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `1` |
 | `UPLOAD_PARSE_TIMEOUT_MS` | Backend owner | Render backend env | Internal | Must be explicit before broad production upload/import windows. | `15000` |
+| `PHOTO_MEDIA_STORAGE_ENABLED` | Project owner | Render API env | Internal | Keep `false` until the synthetic-only R2 provider gate is verified. | `false` |
+| `PHOTO_MEDIA_SYNTHETIC_ONLY` | Project owner | Render API env | Internal | PR-3 requires exact `true`; real photographs remain blocked. | `true` |
+| `PHOTO_MEDIA_PRIMARY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Private EU-jurisdiction primary bucket name; never record its value in evidence. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_BUCKET` | Platform owner | Render API secret env | Secret identifier | Distinct private EU-jurisdiction recovery bucket name. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_ENDPOINT` | Platform owner | Render API env | Internal | Exact account-scoped R2 EU endpoint; no public delivery endpoint. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_ENDPOINT` | Platform owner | Render API env | Internal | Exact account-scoped R2 EU endpoint for recovery. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID` | Platform owner | Render API secret env | Secret | Primary-bucket-scoped credential ID. | Empty. |
+| `PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY` | Platform owner | Render API secret env | Secret | Primary-bucket-scoped credential secret. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID` | Platform owner | Render API secret env | Secret | Separate recovery-bucket-scoped credential ID. | Empty. |
+| `PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY` | Platform owner | Render API secret env | Secret | Separate recovery-bucket-scoped credential secret. | Empty. |
+| `PHOTO_MEDIA_AGGREGATE_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Must not exceed the owner-approved 8 GiB synthetic staging ceiling. | `8589934592` |
+| `PHOTO_MEDIA_MONTHLY_CLASS_A_HARD_LIMIT` | Backend owner | Render API env | Internal | Must not exceed `750000`. | `750000` |
+| `PHOTO_MEDIA_MONTHLY_CLASS_B_HARD_LIMIT` | Backend owner | Render API env | Internal | Must not exceed `7500000`. | `7500000` |
+| `PHOTO_MEDIA_SIGNED_READ_TTL_SECONDS` | Security owner | Render API env | Internal | Short-lived signed delivery; maximum enforced by application contract. | `120` |
+| `PHOTO_MEDIA_LOCK_SAFETY_DAYS` | Project owner | Render API env | Internal | Exact owner-approved canonical `locked/` safety window. | `30` |
+| `PHOTO_MEDIA_PER_USER_DAILY_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Fail-closed per-user daily upload byte ceiling. | `104857600` |
+| `PHOTO_MEDIA_PER_STORE_DAILY_BYTES_HARD_LIMIT` | Backend owner | Render API env | Internal | Fail-closed per-store daily upload byte ceiling. | `262144000` |
+| `PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT` | Backend owner | Render API env | Internal | Lease-based concurrent decode/scan ceiling; maximum 4 in synthetic staging. | `2` |
+| `PHOTO_MEDIA_CLAMAV_HOST` | Platform owner | Render API env | Internal | Required private scanner endpoint when photo media is enabled. | Empty. |
+| `PHOTO_MEDIA_CLAMAV_PORT` | Platform owner | Render API env | Internal | Required ClamAV TCP port. | `3310` |
+| `PHOTO_MEDIA_CLAMAV_TIMEOUT_MS` | Backend owner | Render API env | Internal | Fail-closed scanner timeout. | `10000` |
 | `READINESS_PROFILE` | Release operator | Render backend env | Internal | Keep `controlled-pilot` until broad production is approved. | `controlled-pilot` |
 | `JWT_ISSUER` | Auth owner | Render backend env | Public | Must exactly match the Clerk issuer. | Local mock issuer. |
 | `JWT_AUDIENCE` | Auth owner | Render backend env | Public | Must match the backend API audience accepted by Clerk tokens. | `store-ops-api` |

@@ -283,6 +283,111 @@ export class AppConfigService {
     );
   }
 
+  get photoMediaStorageEnabled(): boolean {
+    return this.readBoolean("PHOTO_MEDIA_STORAGE_ENABLED", false);
+  }
+
+  get photoMediaStorageSyntheticOnly(): boolean {
+    const value = this.readBoolean("PHOTO_MEDIA_SYNTHETIC_ONLY", true);
+    if (this.photoMediaStorageEnabled && !value) {
+      throw new Error("PR-3 photo media storage must remain synthetic-only");
+    }
+    return value;
+  }
+
+  get photoMediaStorageConfiguration() {
+    const enabled = this.photoMediaStorageEnabled;
+    const required = (key: string) => {
+      const value = this.readOptionalString(key);
+      if (enabled && !value) {
+        throw new Error(`${key} must be configured when photo media storage is enabled`);
+      }
+      return value ?? "";
+    };
+
+    const configuration = {
+      enabled,
+      syntheticOnly: this.photoMediaStorageSyntheticOnly,
+      provider: "r2" as const,
+      jurisdiction: "eu" as const,
+      primaryBucket: required("PHOTO_MEDIA_PRIMARY_BUCKET"),
+      recoveryBucket: required("PHOTO_MEDIA_RECOVERY_BUCKET"),
+      primaryEndpoint: required("PHOTO_MEDIA_PRIMARY_ENDPOINT"),
+      recoveryEndpoint: required("PHOTO_MEDIA_RECOVERY_ENDPOINT"),
+      publicDeliveryEnabled: false,
+      aggregateBytesHardLimit: this.readPositiveInteger(
+        "PHOTO_MEDIA_AGGREGATE_BYTES_HARD_LIMIT",
+        String(8 * 1024 * 1024 * 1024),
+      ),
+      monthlyClassAHardLimit: this.readPositiveInteger(
+        "PHOTO_MEDIA_MONTHLY_CLASS_A_HARD_LIMIT",
+        "750000",
+      ),
+      monthlyClassBHardLimit: this.readPositiveInteger(
+        "PHOTO_MEDIA_MONTHLY_CLASS_B_HARD_LIMIT",
+        "7500000",
+      ),
+      signedReadTtlSeconds: this.readPositiveInteger(
+        "PHOTO_MEDIA_SIGNED_READ_TTL_SECONDS",
+        "120",
+      ),
+      lockSafetyDays: this.readPositiveInteger(
+        "PHOTO_MEDIA_LOCK_SAFETY_DAYS",
+        "30",
+      ),
+      perUserDailyBytesHardLimit: this.readPositiveInteger(
+        "PHOTO_MEDIA_PER_USER_DAILY_BYTES_HARD_LIMIT",
+        String(100 * 1024 * 1024),
+      ),
+      perStoreDailyBytesHardLimit: this.readPositiveInteger(
+        "PHOTO_MEDIA_PER_STORE_DAILY_BYTES_HARD_LIMIT",
+        String(250 * 1024 * 1024),
+      ),
+      concurrentProcessingHardLimit: this.readPositiveInteger(
+        "PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT",
+        "2",
+      ),
+    };
+
+    if (enabled) {
+      this.photoMediaPrimaryCredentials;
+      this.photoMediaRecoveryCredentials;
+      this.photoMediaClamAv;
+    }
+    return configuration;
+  }
+
+  get photoMediaPrimaryCredentials() {
+    return this.readPhotoMediaCredentials("PRIMARY");
+  }
+
+  get photoMediaRecoveryCredentials() {
+    const recovery = this.readPhotoMediaCredentials("RECOVERY");
+    if (
+      this.photoMediaStorageEnabled &&
+      recovery.accessKeyId === this.photoMediaPrimaryCredentials.accessKeyId
+    ) {
+      throw new Error("Photo media primary and recovery require separate bucket-scoped credentials");
+    }
+    return recovery;
+  }
+
+  get photoMediaClamAv() {
+    const host = this.readOptionalString("PHOTO_MEDIA_CLAMAV_HOST");
+    const port = this.readOptionalString("PHOTO_MEDIA_CLAMAV_PORT");
+    if (this.photoMediaStorageEnabled && !host) {
+      throw new Error("PHOTO_MEDIA_CLAMAV_HOST must be configured when photo media storage is enabled");
+    }
+    if (this.photoMediaStorageEnabled && !port) {
+      throw new Error("PHOTO_MEDIA_CLAMAV_PORT must be configured when photo media storage is enabled");
+    }
+    return {
+      host: host ?? "127.0.0.1",
+      port: this.readPositiveInteger("PHOTO_MEDIA_CLAMAV_PORT", "3310"),
+      timeoutMs: this.readPositiveInteger("PHOTO_MEDIA_CLAMAV_TIMEOUT_MS", "10000"),
+    };
+  }
+
   get trustProxyHops(): number {
     return this.readRequiredProductionNonNegativeInteger("TRUST_PROXY_HOPS", "0");
   }
@@ -694,6 +799,18 @@ export class AppConfigService {
     }
 
     return value.replace(/\\n/g, "\n");
+  }
+
+  private readPhotoMediaCredentials(role: "PRIMARY" | "RECOVERY") {
+    const accessKeyId = this.readOptionalString(`PHOTO_MEDIA_${role}_ACCESS_KEY_ID`);
+    const secretAccessKey = this.readOptionalString(`PHOTO_MEDIA_${role}_SECRET_ACCESS_KEY`);
+    if (this.photoMediaStorageEnabled && !accessKeyId) {
+      throw new Error(`PHOTO_MEDIA_${role}_ACCESS_KEY_ID must be configured when photo media storage is enabled`);
+    }
+    if (this.photoMediaStorageEnabled && !secretAccessKey) {
+      throw new Error(`PHOTO_MEDIA_${role}_SECRET_ACCESS_KEY must be configured when photo media storage is enabled`);
+    }
+    return { accessKeyId: accessKeyId ?? "", secretAccessKey: secretAccessKey ?? "" };
   }
 
   private validateBrowserSessionSecret(
