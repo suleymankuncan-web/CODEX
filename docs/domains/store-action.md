@@ -20,6 +20,7 @@ Use these first:
 - `docs/plans/store-action-coaching-loop-v1.md`
 - `docs/plans/store-action-checklist-remediation-v1.md`
 - `docs/plans/store-action-checklist-remediation-implementation-v1.md`
+- `docs/plans/checklist-photo-evidence-and-vm-visual-assessment-plan-v1.md`
 - `docs/plans/store-action-target-projection-v1.md`
 - `docs/plans/store-action-v1b-persisted-action-plan-design-v1.md`
 - `docs/evidence/store-action-test-hygiene-and-visibility-v1.md`
@@ -63,6 +64,10 @@ Use these first:
 - Comments, attachments, notifications, escalation, assignment transfer, AI
   coaching, and non-KPI source families.
 - Reopen/delete behavior for terminal action plans.
+
+The photo-evidence and VM visual-assessment plan linked above locks a future R5
+boundary for checklist remediation evidence and human review. It does not
+unpark attachments, AI, provider work, or runtime implementation by itself.
 
 Open those only with a source decision, auth/action-scope evidence, and a
 separate go/no-go note.
