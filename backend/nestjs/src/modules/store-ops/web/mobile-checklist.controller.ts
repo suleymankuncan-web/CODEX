@@ -147,7 +147,6 @@ export class MobileChecklistController {
   @Post("instances/:checklistInstanceId/items/:templateItemId/evidence")
   @ApiCreatedResponse({ schema: checklistEvidenceCommandResponseSchema })
   @RequireScope("authenticated")
-  @RequireActionScope("store")
   @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async linkEvidence(
     @Param("checklistInstanceId", new ParseUUIDPipe()) checklistInstanceId: string,
@@ -187,7 +186,6 @@ export class MobileChecklistController {
     },
   })
   @RequireScope("authenticated")
-  @RequireActionScope("store")
   @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   @UseInterceptors(new PhotoMediaUploadBufferGuardInterceptor(), FileInterceptor("file", {
     limits: { fileSize: 15 * 1024 * 1024, files: 1, fields: 0 },
@@ -228,7 +226,6 @@ export class MobileChecklistController {
     },
   })
   @RequireScope("authenticated")
-  @RequireActionScope("store")
   @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async finalizeApprovedSyntheticEvidence(
     @Param("checklistInstanceId", new ParseUUIDPipe()) checklistInstanceId: string,
@@ -250,7 +247,6 @@ export class MobileChecklistController {
   @Delete("instances/:checklistInstanceId/items/:templateItemId/evidence/:mediaAssetId")
   @ApiOkResponse({ schema: checklistEvidenceCommandResponseSchema })
   @RequireScope("authenticated")
-  @RequireActionScope("store")
   @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async unlinkEvidence(
     @Param("checklistInstanceId", new ParseUUIDPipe()) checklistInstanceId: string,
@@ -284,7 +280,6 @@ export class MobileChecklistController {
     },
   })
   @RequireScope("authenticated")
-  @RequireActionScope("store")
   @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async readEvidence(
     @Param("checklistInstanceId", new ParseUUIDPipe()) checklistInstanceId: string,
@@ -311,7 +306,6 @@ export class MobileChecklistController {
   })
   @Header("Cache-Control", "private, no-store")
   @RequireScope("authenticated")
-  @RequireActionScope("store")
   @RequireRoles("REGION_MANAGER", "VISUAL_MERCHANDISER", "SUPER_ADMIN")
   async readEvidenceContent(
     @Param("checklistInstanceId", new ParseUUIDPipe()) checklistInstanceId: string,

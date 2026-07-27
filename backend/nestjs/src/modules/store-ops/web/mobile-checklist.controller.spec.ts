@@ -12,4 +12,21 @@ describe("MobileChecklistController", () => {
     expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, handler)).toBe("authenticated");
     expect(Reflect.getMetadata(REQUIRED_ACTION_SCOPE_KEY, handler)).toBe("store");
   });
+
+  it.each([
+    "linkEvidence",
+    "uploadApprovedSyntheticEvidence",
+    "finalizeApprovedSyntheticEvidence",
+    "unlinkEvidence",
+    "readEvidence",
+    "readEvidenceContent",
+  ] as const)(
+    "derives store action scope from server records for %s",
+    (methodName) => {
+      const handler = MobileChecklistController.prototype[methodName];
+
+      expect(Reflect.getMetadata(REQUIRED_SCOPE_KEY, handler)).toBe("authenticated");
+      expect(Reflect.getMetadata(REQUIRED_ACTION_SCOPE_KEY, handler)).toBeUndefined();
+    },
+  );
 });
