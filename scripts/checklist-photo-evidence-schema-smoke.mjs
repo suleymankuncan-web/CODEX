@@ -15,6 +15,18 @@ const rollbackSqlPath = join(
   "preflight",
   "checklist-photo-evidence-foundation-v1-rollback.sql",
 );
+const storageSmokeSqlPath = join(
+  workspaceRoot,
+  "db",
+  "preflight",
+  "checklist-photo-media-storage-recovery-v1-smoke.sql",
+);
+const storageRollbackSqlPath = join(
+  workspaceRoot,
+  "db",
+  "preflight",
+  "checklist-photo-media-storage-recovery-v1-rollback.sql",
+);
 const backendDir = join(workspaceRoot, "backend", "nestjs");
 const containerName =
   process.env.MIGRATION_SMOKE_POSTGRES_CONTAINER ?? "store-ops-live-postgres";
@@ -34,12 +46,14 @@ if (!/^store_ops_fresh_migration_smoke(_[a-z0-9_]+)?$/.test(databaseName)) {
 
 runNpm(["run", "smoke:migration:fresh-db"]);
 
+runPsql(readFileSync(storageRollbackSqlPath, "utf8"));
 runPsql(readFileSync(rollbackSqlPath, "utf8"));
 
 const rollbackResidual = Number(
   queryScalar(`
     SELECT
       (to_regclass('ops.media_asset') IS NOT NULL)::int
+      + (to_regclass('ops.media_asset_replica') IS NOT NULL)::int
       + (EXISTS (
           SELECT 1
           FROM information_schema.columns
@@ -51,6 +65,11 @@ const rollbackResidual = Number(
           SELECT 1
           FROM audit.schema_migration
           WHERE migration_name = '062_checklist_photo_evidence_foundation_v1.sql'
+        ))::int
+      + (EXISTS (
+          SELECT 1
+          FROM audit.schema_migration
+          WHERE migration_name = '063_checklist_photo_media_storage_recovery_v1.sql'
         ))::int;
   `),
 );
@@ -64,10 +83,18 @@ const forwardReapply = queryScalar(`
   SELECT CASE WHEN
     to_regclass('ops.media_asset') IS NOT NULL
     AND to_regclass('ops.visual_campaign_submission') IS NOT NULL
+    AND to_regclass('ops.media_asset_replica') IS NOT NULL
+    AND to_regclass('audit.photo_media_reconciliation_run') IS NOT NULL
     AND EXISTS (
       SELECT 1
       FROM audit.schema_migration
       WHERE migration_name = '062_checklist_photo_evidence_foundation_v1.sql'
+        AND status = 'succeeded'
+    )
+    AND EXISTS (
+      SELECT 1
+      FROM audit.schema_migration
+      WHERE migration_name = '063_checklist_photo_media_storage_recovery_v1.sql'
         AND status = 'succeeded'
     )
   THEN 'passed' ELSE 'failed' END;
@@ -77,6 +104,7 @@ if (forwardReapply !== "passed") {
 }
 
 const smokeOutput = runPsql(readFileSync(smokeSqlPath, "utf8"));
+const storageSmokeOutput = runPsql(readFileSync(storageSmokeSqlPath, "utf8"));
 
 const receiptLine = smokeOutput
   .split(/\r?\n/)
@@ -105,6 +133,30 @@ if (
   receipt.rolled_back !== true
 ) {
   fail("Photo evidence rollback-only smoke receipt was not exact.");
+}
+
+const storageReceiptLine = storageSmokeOutput
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .find(
+    (line) =>
+      line.startsWith("{") &&
+      line.includes("checklist_photo_media_storage_recovery_smoke.completed"),
+  );
+if (!storageReceiptLine) {
+  fail("Photo media storage recovery smoke did not emit its sanitized receipt.");
+}
+const storageReceipt = JSON.parse(storageReceiptLine);
+if (
+  storageReceipt.event !== "checklist_photo_media_storage_recovery_smoke.completed" ||
+  storageReceipt.recovery_required_before_ready !== true ||
+  storageReceipt.post_ready_identity_immutable !== true ||
+  storageReceipt.active_cleanup_lease_hold_immutable !== true ||
+  storageReceipt.verified_replica_immutable !== true ||
+  storageReceipt.reconciliation_receipt_append_only !== true ||
+  storageReceipt.rolled_back !== true
+) {
+  fail("Photo media storage recovery smoke receipt was not exact.");
 }
 
 const residualFixtureRows = Number(
@@ -137,6 +189,8 @@ console.log(
     immutableHistory: "passed",
     checklistEvidenceLifecycle: "passed",
     privateObjectIdentity: "passed",
+    recoveryBeforeReady: "passed",
+    reconciliationReceipt: "append-only",
     preUseRollback: "verified",
     retentionHistory: "immutable",
     residualFixtureRows,

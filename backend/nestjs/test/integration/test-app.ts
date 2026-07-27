@@ -31,6 +31,30 @@ const DEFAULT_TEST_DATABASE_CONFIG = {
   dbSslCa: undefined,
   dbSslMode: "disable",
   dbStatementTimeoutMs: 60_000,
+  photoMediaClamAv: {
+    host: "127.0.0.1",
+    port: 3310,
+    timeoutMs: 10_000,
+  },
+  photoMediaStorageConfiguration: {
+    enabled: false,
+    syntheticOnly: true,
+    provider: "r2",
+    jurisdiction: "eu",
+    primaryBucket: "",
+    recoveryBucket: "",
+    primaryEndpoint: "",
+    recoveryEndpoint: "",
+    publicDeliveryEnabled: false,
+    aggregateBytesHardLimit: 8 * 1024 * 1024 * 1024,
+    monthlyClassAHardLimit: 750_000,
+    monthlyClassBHardLimit: 7_500_000,
+    signedReadTtlSeconds: 120,
+    lockSafetyDays: 30,
+    perUserDailyBytesHardLimit: 100 * 1024 * 1024,
+    perStoreDailyBytesHardLimit: 250 * 1024 * 1024,
+    concurrentProcessingHardLimit: 2,
+  },
 };
 
 export async function createIntegrationApp(overrides?: {

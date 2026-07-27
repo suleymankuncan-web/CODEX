@@ -6,6 +6,7 @@ import { StoreOpsIncentiveModule } from "./store-ops-incentive.module";
 import { StoreOpsReportingModule } from "./store-ops-reporting.module";
 import { StoreOpsTargetsModule } from "./store-ops-targets.module";
 import { StoreOpsTaskCommandReadModule } from "./store-ops-task-command-read.module";
+import { StoreOpsPhotoMediaModule } from "./store-ops-photo-media.module";
 
 const storeOpsInternalModules = [
   StoreOpsReportingModule,
@@ -16,7 +17,12 @@ const storeOpsInternalModules = [
 ];
 
 @Module({
-  imports: [AuthModule, ...storeOpsInternalModules, StoreOpsTaskCommandReadModule],
+  imports: [
+    AuthModule,
+    ...storeOpsInternalModules,
+    StoreOpsTaskCommandReadModule,
+    StoreOpsPhotoMediaModule,
+  ],
   exports: storeOpsInternalModules,
 })
 export class StoreOpsModule {}

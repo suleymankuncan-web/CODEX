@@ -6440,6 +6440,270 @@
           "TaskCommandWorkspace"
         ]
       }
+    },
+    "/api/internal/photo-media/uploads/initiate": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_initiate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitiateSyntheticPhotoMediaUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/uploads/{mediaAssetId}/finalize": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_finalize",
+        "parameters": [
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/assets/{mediaAssetId}/read-url": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_readUrl",
+        "parameters": [
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaReadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/reconcile": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_reconcile",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/restore-rehearsal": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_restoreRehearsal",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/cleanup-expired": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_cleanupExpired",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaMaintenanceBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/cleanup-partials": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_cleanupPartials",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaMaintenanceBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/uploads/{mediaAssetId}/quarantine/dispose": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_disposeQuarantine",
+        "parameters": [
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DisposeSyntheticPhotoMediaQuarantineDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/assets/{mediaAssetId}/restore": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_restoreAsset",
+        "parameters": [
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
+    },
+    "/api/internal/photo-media/maintenance/cleanup-ready-raw": {
+      "post": {
+        "operationId": "PhotoMediaStorageController_cleanupReadyRaw",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaMaintenanceBatchDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "PhotoMediaStorage"
+        ]
+      }
     }
   },
   "info": {
@@ -24966,6 +25230,77 @@
             "$ref": "#/components/schemas/TaskCommandAuditPage"
           }
         }
+      },
+      "InitiateSyntheticPhotoMediaUploadDto": {
+        "type": "object",
+        "properties": {
+          "storeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "contentType": {
+            "type": "string",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ]
+          },
+          "contentLength": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 15728640
+          },
+          "syntheticFixtureAttestation": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "storeId",
+          "contentType",
+          "contentLength",
+          "syntheticFixtureAttestation"
+        ]
+      },
+      "PhotoMediaReadDto": {
+        "type": "object",
+        "properties": {
+          "variant": {
+            "enum": [
+              "canonical",
+              "thumbnail"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "variant"
+        ]
+      },
+      "PhotoMediaMaintenanceBatchDto": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "object",
+            "default": 25,
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "limit"
+        ]
+      },
+      "DisposeSyntheticPhotoMediaQuarantineDto": {
+        "type": "object",
+        "properties": {
+          "confirmed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "confirmed"
+        ]
       }
     }
   },
