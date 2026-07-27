@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Optional,
 } from "@nestjs/common";
 import { StoreOpsRepository } from "../infrastructure/store-ops.repository";
 import { buildCommandResponse } from "../../../shared/http/response-builders";
@@ -16,6 +17,8 @@ import {
 } from "./checklist.contract";
 import { extractChecklistRemediationFindings } from "./checklist-remediation-finding.extractor";
 import { StoreActionPlanService } from "./store-action-plan.service";
+import { AppConfigService } from "../../../shared/app-config.service";
+import { PhotoMediaStorageService } from "./photo-media-storage.service";
 
 @Injectable()
 export class ChecklistService {
@@ -24,11 +27,14 @@ export class ChecklistService {
     private readonly checklistAcknowledgementRepository: ChecklistAcknowledgementRepository,
     private readonly checklistRepository: ChecklistRepository,
     private readonly storeActionPlanService?: StoreActionPlanService,
+    @Optional() private readonly appConfigService?: AppConfigService,
+    @Optional() private readonly photoMediaStorageService?: PhotoMediaStorageService,
   ) {}
 
   async createChecklistTemplate(input: CreateChecklistTemplateInput) {
     this.assertCanManageTemplateCompany(input.companyId, input);
     this.assertValidEffectiveDateRange(input);
+    this.assertValidEvidencePolicies(input.items);
 
     return buildCommandResponse({
       status: "created",
@@ -50,6 +56,17 @@ export class ChecklistService {
 
     if (totalWeightCents !== 10_000) {
       throw new BadRequestException("Checklist template item weights must total 100");
+    }
+
+    if (draftTemplate.items.some((item) => item.evidencePolicy === "required")) {
+      const enforcementEnabled =
+        this.appConfigService?.checklistRequiredEvidenceEnforcementEnabled ?? false;
+      const capability = this.resolveEvidenceCaptureCapability();
+      if (!capability.captureAvailable || !enforcementEnabled) {
+        throw new BadRequestException(
+          "Required checklist evidence cannot be published while capture, enforcement, or storage is unavailable",
+        );
+      }
     }
 
     this.assertValidEffectiveDateRange({
@@ -115,15 +132,20 @@ export class ChecklistService {
   }) {
     const allowedTemplateTypes = this.resolveReadableTemplateTypes(input.actorRoleCodes ?? []);
 
-    return {
-      data: await this.checklistRepository.getMobileChecklistToday({
+    const data = await this.checklistRepository.getMobileChecklistToday({
         actorUserId: input.actorUserId,
         assignedStoreIds: input.actorActionScope?.assignedStoreIds ?? [],
         readStoreIds: input.actorScope.storeIds,
         readRegionIds: input.actorScope.regionIds ?? [],
         readCompanyIds: input.actorScope.companyIds ?? [],
         allowedTemplateTypes,
-      }),
+      });
+    const evidenceCapabilities = this.resolveEvidenceCaptureCapability();
+    return {
+      data: {
+        ...data,
+        evidenceCapabilities,
+      },
     };
   }
 
@@ -174,6 +196,8 @@ export class ChecklistService {
         checklistInstance: await this.checklistRepository.completeMobileChecklistInstance({
           checklistInstanceId: input.checklistInstanceId,
           actorUserId: input.actorUserId,
+          actorRoleCodes: input.actorRoleCodes ?? [],
+          actorActionScope: input.actorActionScope,
         }),
       },
     });
@@ -233,6 +257,7 @@ export class ChecklistService {
     checklistInstanceId: string;
     auditorEmployeeId: string;
     actorUserId: string;
+    actorRoleCodes: string[];
     actorActionScope?: {
       assignedStoreIds: string[];
     };
@@ -605,6 +630,207 @@ export class ChecklistService {
       throw new BadRequestException(
         "Checklist template effectiveTo must be on or after effectiveFrom",
       );
+    }
+  }
+
+  async linkMobileChecklistItemEvidence(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    mediaAssetId: string;
+    expectedEvidenceVersion: number;
+    idempotencyKey: string;
+    actorUserId: string;
+    actorRoleCodes: string[];
+    actorActionScope?: { assignedStoreIds: string[] };
+  }) {
+    this.assertEvidenceMutationEnabled();
+    await this.assertCanActOnMobileChecklistInstance(
+      input.checklistInstanceId,
+      input.actorActionScope,
+      input.actorRoleCodes,
+    );
+    return buildCommandResponse({
+      status: "linked",
+      message: "Checklist item evidence linked",
+      data: { evidence: await this.checklistRepository.linkMobileChecklistItemEvidence(input) },
+    });
+  }
+
+  async uploadApprovedSyntheticMobileChecklistItemEvidence(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    actorUserId: string;
+    actorRoleCodes: string[];
+    actorScope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
+    actorActionScope?: { assignedStoreIds: string[] };
+    contentType: string;
+    contentLength: number;
+    contentBody: Buffer;
+  }) {
+    this.assertEvidenceMutationEnabled();
+    if (!this.photoMediaStorageService) throw new BadRequestException("storage_unavailable");
+    const scope = await this.checklistRepository.getMobileChecklistItemEvidenceUploadScope(input);
+    const uploaded = await this.photoMediaStorageService.initiateApprovedSyntheticFixtureUpload({
+      actorUserId: input.actorUserId,
+      actorScope: {
+        companyIds: [scope.companyId],
+        regionIds: scope.regionId ? [scope.regionId] : [],
+        storeIds: [scope.storeId],
+      },
+      storeId: scope.storeId,
+      contentType: input.contentType,
+      contentLength: input.contentLength,
+      contentBody: input.contentBody,
+    });
+    await this.checklistRepository.recordMobileChecklistItemEvidenceUploadIntent({
+      mediaAssetId: uploaded.mediaAssetId,
+      checklistInstanceId: input.checklistInstanceId,
+      templateItemId: input.templateItemId,
+      actorUserId: input.actorUserId,
+    });
+    return uploaded;
+  }
+
+  async finalizeApprovedSyntheticMobileChecklistItemEvidence(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    mediaAssetId: string;
+    actorUserId: string;
+    actorRoleCodes: string[];
+    actorScope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
+    actorActionScope?: { assignedStoreIds: string[] };
+  }) {
+    this.assertEvidenceMutationEnabled();
+    if (!this.photoMediaStorageService) throw new BadRequestException("storage_unavailable");
+    await this.checklistRepository.assertMobileChecklistItemEvidenceUploadIntent(input);
+    return this.photoMediaStorageService.finalizeSyntheticUpload({
+      mediaAssetId: input.mediaAssetId,
+      actorUserId: input.actorUserId,
+      actorRoleCodes: input.actorRoleCodes,
+      actorScope: input.actorScope,
+      actorActionScope: input.actorActionScope ?? { assignedStoreIds: [] },
+    });
+  }
+
+  async unlinkMobileChecklistItemEvidence(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    mediaAssetId: string;
+    reason: string;
+    expectedEvidenceVersion: number;
+    idempotencyKey: string;
+    actorUserId: string;
+    actorRoleCodes: string[];
+    actorActionScope?: { assignedStoreIds: string[] };
+  }) {
+    this.assertEvidenceMutationEnabled();
+    await this.assertCanActOnMobileChecklistInstance(
+      input.checklistInstanceId,
+      input.actorActionScope,
+      input.actorRoleCodes,
+    );
+    return buildCommandResponse({
+      status: "unlinked",
+      message: "Checklist item evidence unlinked",
+      data: { evidence: await this.checklistRepository.unlinkMobileChecklistItemEvidence(input) },
+    });
+  }
+
+  async readMobileChecklistItemEvidence(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    mediaAssetId: string;
+    variant: "canonical" | "thumbnail";
+    actorUserId: string;
+    actorRoleCodes: string[];
+    actorScope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
+    actorActionScope?: { assignedStoreIds: string[] };
+  }) {
+    await this.assertCanActOnMobileChecklistInstance(
+      input.checklistInstanceId,
+      input.actorActionScope,
+      input.actorRoleCodes,
+    );
+    await this.checklistRepository.assertMobileChecklistItemEvidenceLink(input);
+    if (!this.photoMediaStorageService) {
+      throw new BadRequestException("storage_unavailable");
+    }
+    return this.photoMediaStorageService.createSignedRead({
+      mediaAssetId: input.mediaAssetId,
+      actorUserId: input.actorUserId,
+      actorScope: input.actorScope,
+      variant: input.variant,
+    });
+  }
+
+  async readMobileChecklistItemEvidenceContent(input: {
+    checklistInstanceId: string;
+    templateItemId: string;
+    mediaAssetId: string;
+    variant: "canonical" | "thumbnail";
+    actorUserId: string;
+    actorRoleCodes: string[];
+    actorScope: { companyIds: string[]; regionIds: string[]; storeIds: string[] };
+    actorActionScope?: { assignedStoreIds: string[] };
+  }) {
+    await this.assertCanActOnMobileChecklistInstance(
+      input.checklistInstanceId,
+      input.actorActionScope,
+      input.actorRoleCodes,
+    );
+    await this.checklistRepository.assertMobileChecklistItemEvidenceLink(input);
+    if (!this.photoMediaStorageService) {
+      throw new BadRequestException("storage_unavailable");
+    }
+    return this.photoMediaStorageService.readContent({
+      mediaAssetId: input.mediaAssetId,
+      actorUserId: input.actorUserId,
+      actorScope: input.actorScope,
+      variant: input.variant,
+    });
+  }
+
+  private assertValidEvidencePolicies(items: CreateChecklistTemplateInput["items"]) {
+    for (const item of items) {
+      const policy = item.evidencePolicy ?? "none";
+      const count = item.maxEvidenceCount ?? 0;
+      if (
+        !["none", "optional", "required"].includes(policy) ||
+        !Number.isInteger(count) ||
+        count < 0 ||
+        count > 10 ||
+        (policy === "none" && count !== 0) ||
+        (policy !== "none" && count < 1)
+      ) {
+        throw new BadRequestException("Checklist evidence policy and count are inconsistent");
+      }
+    }
+
+  }
+
+  private resolveEvidenceCaptureCapability() {
+    const captureEnabled = this.appConfigService?.checklistEvidenceCaptureEnabled ?? false;
+    const storageHealthy = this.appConfigService?.checklistEvidenceStorageHealthy ?? false;
+    const storageEnabled = this.appConfigService?.photoMediaStorageEnabled ?? false;
+    const syntheticFixtureConfigured =
+      (this.appConfigService?.photoMediaSyntheticFixtureSha256Allowlist.length ?? 0) > 0;
+    return {
+      captureAvailable:
+        captureEnabled && storageHealthy && storageEnabled && syntheticFixtureConfigured,
+      syntheticFixtureOnly: true,
+      unavailableReason: !captureEnabled
+        ? "feature_disabled" as const
+        : !storageHealthy || !storageEnabled
+          ? "storage_unavailable" as const
+          : !syntheticFixtureConfigured
+            ? "synthetic_fixture_unavailable" as const
+            : null,
+    };
+  }
+
+  private assertEvidenceMutationEnabled() {
+    if (!this.resolveEvidenceCaptureCapability().captureAvailable) {
+      throw new BadRequestException("feature_disabled");
     }
   }
 }

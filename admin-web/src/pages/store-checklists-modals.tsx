@@ -35,6 +35,11 @@ import {
 } from './store-checklists-score-policy'
 import { ChecklistBadge, ChecklistEmptyBlock } from './store-checklists-atoms'
 import { ChecklistResultModal } from './store-checklists-result-modal'
+import { ChecklistItemEvidenceControl } from '../features/checklist-workflow/ChecklistItemEvidenceControl'
+import {
+  applyChecklistEvidenceProjection,
+  countMissingRequiredChecklistEvidence,
+} from '../features/checklist-workflow/checklist-item-evidence-model'
 
 type ChecklistTemplateItem = ChecklistSession['template']['items'][number]
 type ChecklistVisitItemEntry = {
@@ -45,6 +50,7 @@ type ChecklistVisitItemEntry = {
 export function StoreChecklistsModals(input: {
   acknowledgementNote: string
   comments: Record<string, string>
+  evidenceCapabilities?: MobileChecklistToday['evidenceCapabilities']
   locale: AppLocale
   resultState: {
     acknowledging: boolean
@@ -75,6 +81,7 @@ export function StoreChecklistsModals(input: {
         <ChecklistVisitModal
           active={input.selectedSession.active}
           comments={input.comments}
+          captureAvailable={input.evidenceCapabilities?.captureAvailable ?? false}
           completeError={input.visitState.completeError}
           isCompleting={input.visitState.completing}
           isSaving={input.visitState.saving}
@@ -110,6 +117,7 @@ export function StoreChecklistsModals(input: {
 function ChecklistVisitModal(input: {
   active: MobileChecklistToday['activeInstances'][number] | undefined
   comments: Record<string, string>
+  captureAvailable: boolean
   completeError: unknown | null
   isCompleting: boolean
   isSaving: boolean
@@ -126,6 +134,8 @@ function ChecklistVisitModal(input: {
 }) {
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [confirmClose, setConfirmClose] = useState(false)
+  const [sessionEvidence, setSessionEvidence] = useState(() => input.active?.evidence ?? [])
+  const [evidenceVersion, setEvidenceVersion] = useState(input.active?.evidenceVersion ?? 0)
   const sections = useMemo(
     () => groupChecklistTemplateItems(input.session.template.items),
     [input.session.template.items],
@@ -167,12 +177,20 @@ function ChecklistVisitModal(input: {
       score: input.scores[item.templateItemId],
     }),
   ).length
+  const missingRequiredEvidenceCount = countMissingRequiredChecklistEvidence(
+    input.session.template.items,
+    sessionEvidence.reduce<Record<string, number>>((counts, evidence) => {
+      counts[evidence.templateItemId] = (counts[evidence.templateItemId] ?? 0) + 1
+      return counts
+    }, {}),
+  )
   const canComplete =
     Boolean(input.active) &&
     !input.isCompleting &&
     hasItems &&
     missingResponseCount === 0 &&
-    missingRequiredLowScoreNoteCount === 0
+    missingRequiredLowScoreNoteCount === 0 &&
+    missingRequiredEvidenceCount === 0
   const sessionStatus = input.active
     ? formatChecklistStatus(input.t, input.active.status)
     : input.t('storeChecklists.newVisit')
@@ -186,6 +204,8 @@ function ChecklistVisitModal(input: {
           ? input.t('storeChecklists.missingLowScoreNotesHint', {
               count: missingRequiredLowScoreNoteCount,
             })
+          : missingRequiredEvidenceCount > 0
+            ? `${missingRequiredEvidenceCount} zorunlu madde için fotoğraf kanıtı eksik.`
           : input.isSaving
             ? input.t('storeChecklists.autosaving')
             : input.t('storeChecklists.draftSaved')
@@ -314,6 +334,30 @@ function ChecklistVisitModal(input: {
                           }
                         />
                       </div>
+
+                      {input.active && entry.item.evidencePolicy !== 'none' ? (
+                        <ChecklistItemEvidenceControl
+                          active={input.active}
+                          captureAvailable={input.captureAvailable}
+                          {...(input.comments[entry.item.templateItemId]
+                            ? { comment: input.comments[entry.item.templateItemId] }
+                            : {})}
+                          disabled={input.isCompleting || input.isSaving}
+                          maxEvidenceCount={entry.item.maxEvidenceCount}
+                          policy={entry.item.evidencePolicy}
+                          score={score}
+                          templateItemId={entry.item.templateItemId}
+                          evidence={sessionEvidence.filter((item) => item.templateItemId === entry.item.templateItemId)}
+                          evidenceVersion={evidenceVersion}
+                          onProjectionChange={(projection) => {
+                            setSessionEvidence((current) => {
+                              const next = applyChecklistEvidenceProjection(current, projection)
+                              setEvidenceVersion(next.evidenceVersion)
+                              return next.evidence
+                            })
+                          }}
+                        />
+                      ) : null}
                     </article>
                   )
                 })}

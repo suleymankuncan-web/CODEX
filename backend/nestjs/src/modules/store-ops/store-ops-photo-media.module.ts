@@ -65,6 +65,6 @@ import { PhotoMediaMaintenanceService } from "./application/photo-media-maintena
       },
     },
   ],
-  exports: [PhotoMediaMaintenanceService],
+  exports: [PhotoMediaStorageService],
 })
 export class StoreOpsPhotoMediaModule {}

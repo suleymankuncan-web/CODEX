@@ -78,3 +78,21 @@ test("backend API installs the shared security headers middleware", () => {
   assert.match(middleware, /"Referrer-Policy": "strict-origin-when-cross-origin"/);
   assert.match(middleware, /"Permissions-Policy": "camera=\(\), microphone=\(\), geolocation=\(\), payment=\(\)"/);
 });
+
+test("checklist evidence previews stay same-origin instead of widening CSP to provider hosts", () => {
+  const control = readText(
+    "admin-web/src/features/checklist-workflow/ChecklistItemEvidenceControl.tsx",
+  );
+  const api = readText("admin-web/src/features/checklists/api.ts");
+  const controller = readText(
+    "backend/nestjs/src/modules/store-ops/web/mobile-checklist.controller.ts",
+  );
+
+  assert.match(control, /getMobileChecklistItemEvidenceContent/);
+  assert.doesNotMatch(control, /getMobileChecklistItemEvidenceReadUrl/);
+  assert.match(api, /fetchBlob\(/);
+  assert.match(controller, /Cache-Control", "private, no-store/);
+  assert.match(controller, /new StreamableFile/);
+  assert.doesNotMatch(readText("admin-web/vercel.json"), /r2\.cloudflarestorage\.com/);
+  assert.doesNotMatch(readText("admin-web/nginx.conf"), /r2\.cloudflarestorage\.com/);
+});

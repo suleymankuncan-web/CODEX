@@ -287,6 +287,27 @@ export class AppConfigService {
     return this.readBoolean("PHOTO_MEDIA_STORAGE_ENABLED", false);
   }
 
+  get checklistEvidenceCaptureEnabled(): boolean {
+    return this.readBoolean("CHECKLIST_EVIDENCE_CAPTURE_ENABLED", false);
+  }
+
+  get checklistRequiredEvidenceEnforcementEnabled(): boolean {
+    return this.readBoolean("CHECKLIST_REQUIRED_EVIDENCE_ENFORCEMENT_ENABLED", false);
+  }
+
+  get checklistEvidenceStorageHealthy(): boolean {
+    return this.readBoolean("CHECKLIST_EVIDENCE_STORAGE_HEALTHY", false);
+  }
+
+  get photoMediaSyntheticFixtureSha256Allowlist(): string[] {
+    const raw = this.readOptionalString("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST") ?? "";
+    const values = [...new Set(raw.split(",").map((value) => value.trim().toLowerCase()).filter(Boolean))];
+    if (values.length > 20 || values.some((value) => !/^[a-f0-9]{64}$/.test(value))) {
+      throw new Error("PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST must contain at most 20 comma-separated SHA-256 digests");
+    }
+    return values;
+  }
+
   get photoMediaStorageSyntheticOnly(): boolean {
     const value = this.readBoolean("PHOTO_MEDIA_SYNTHETIC_ONLY", true);
     if (this.photoMediaStorageEnabled && !value) {
@@ -347,6 +368,7 @@ export class AppConfigService {
         "PHOTO_MEDIA_CONCURRENT_PROCESSING_HARD_LIMIT",
         "2",
       ),
+      syntheticFixtureSha256Allowlist: this.photoMediaSyntheticFixtureSha256Allowlist,
     };
 
     if (enabled) {

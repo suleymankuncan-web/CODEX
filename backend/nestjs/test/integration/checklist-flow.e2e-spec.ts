@@ -154,6 +154,22 @@ describe("Checklist flow integration", () => {
 
   it("completes checklist instances for an assigned checklist instance store", async () => {
     const query = jest.fn(async (sql: string) => {
+      if (sql.includes("SELECT checklist_instance_id, status") && sql.includes("FOR UPDATE")) {
+        return {
+          rowCount: 1,
+          rows: [{
+            checklist_instance_id: checklistInstanceId,
+            status: "in_progress",
+            total_score: null,
+            compliance_rate: null,
+          }],
+        };
+      }
+
+      if (sql.includes("missing_required_evidence_count")) {
+        return { rowCount: 1, rows: [{ missing_required_evidence_count: "0" }] };
+      }
+
       if (
         sql.includes("SELECT checklist_instance_id, store_id") &&
         sql.includes("FROM ops.checklist_instance")

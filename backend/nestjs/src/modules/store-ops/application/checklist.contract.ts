@@ -2,6 +2,7 @@ export type ChecklistInstanceStatus = "planned" | "in_progress" | "completed" | 
 export type ChecklistTemplateStatus = "draft" | "published" | "archived";
 export type ChecklistTemplateType = "BM_STORE_VISIT" | "VM_STORE_VISIT" | string;
 export type ChecklistTemplateResponseType = "score" | "yes_no" | "partial" | "text";
+export type ChecklistEvidencePolicy = "none" | "optional" | "required";
 
 export type ChecklistTemplateItemInput = {
   sectionName: string;
@@ -11,6 +12,8 @@ export type ChecklistTemplateItemInput = {
   weight: number;
   maxScore: number;
   expectedValue?: string;
+  evidencePolicy?: ChecklistEvidencePolicy;
+  maxEvidenceCount?: number;
 };
 
 export type ChecklistTemplateActorScope = {
@@ -58,6 +61,8 @@ export type ChecklistTemplateSummary = {
 export type ChecklistTemplateDraftItem = {
   templateItemId: string;
   weight: number;
+  evidencePolicy: ChecklistEvidencePolicy;
+  maxEvidenceCount: number;
 };
 
 export type ChecklistTemplateDraftForPublish = {
@@ -69,6 +74,15 @@ export type ChecklistTemplateDraftForPublish = {
 };
 
 export type MobileChecklistToday = {
+  evidenceCapabilities?: {
+    captureAvailable: boolean;
+    syntheticFixtureOnly: boolean;
+    unavailableReason:
+      | "feature_disabled"
+      | "storage_unavailable"
+      | "synthetic_fixture_unavailable"
+      | null;
+  };
   stores: Array<{ storeId: string; storeName: string }>;
   templates: Array<{
     checklistTemplateId: string;
@@ -87,6 +101,8 @@ export type MobileChecklistToday = {
       minScore?: number;
       lowScoreThreshold?: number | null;
       requiresLowScoreNote?: boolean;
+      evidencePolicy: ChecklistEvidencePolicy;
+      maxEvidenceCount: number;
     }>;
   }>;
   activeInstances: Array<{
@@ -96,6 +112,14 @@ export type MobileChecklistToday = {
     status: ChecklistInstanceStatus;
     startedAt: string | null;
     updatedAt: string | null;
+    evidenceVersion: number;
+    evidence: Array<{
+      templateItemId: string;
+      mediaAssetId: string;
+      displayOrder: number;
+      captureSource: "camera" | "gallery" | "system_generated";
+      thumbnailAvailable: boolean;
+    }>;
     responses: Array<{
       templateItemId: string;
       scoreValue: number;

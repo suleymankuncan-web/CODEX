@@ -464,7 +464,7 @@ function AdminChecklistItemSettings({
   const { responseTypeLabels, t, updateItem } = model
 
   return (
-    <div className="tw:grid tw:grid-cols-2 tw:gap-2 tw:md:grid-cols-[1.1fr_repeat(4,0.72fr)]">
+    <div className="tw:grid tw:grid-cols-2 tw:gap-2 tw:md:grid-cols-[1.1fr_repeat(6,0.72fr)]">
       <FieldShell className="tw:col-span-2 tw:md:col-span-1" label={t('adminChecklists.responseType')}>
         <Select
           value={item.responseType}
@@ -485,6 +485,41 @@ function AdminChecklistItemSettings({
             ))}
           </SelectContent>
         </Select>
+      </FieldShell>
+      <FieldShell label="Fotoğraf kanıtı">
+        <Select
+          value={item.evidencePolicy ?? 'none'}
+          onValueChange={(value) =>
+            updateItem(sectionId, item.id, {
+              evidencePolicy: value as 'none' | 'optional' | 'required',
+              maxEvidenceCount: value === 'none' ? 0 : Math.max(1, item.maxEvidenceCount ?? 1),
+            })
+          }
+        >
+          <SelectTrigger aria-label="Fotoğraf kanıtı" className="tw:w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Yok</SelectItem>
+            <SelectItem value="optional">İsteğe bağlı</SelectItem>
+            <SelectItem value="required">Zorunlu</SelectItem>
+          </SelectContent>
+        </Select>
+      </FieldShell>
+      <FieldShell label="Kanıt sınırı">
+        <Input
+          aria-label="Kanıt sınırı"
+          disabled={(item.evidencePolicy ?? 'none') === 'none'}
+          type="number"
+          min={1}
+          max={10}
+          value={item.maxEvidenceCount ?? ((item.evidencePolicy ?? 'none') === 'none' ? 0 : 1)}
+          onChange={(event) =>
+            updateItem(sectionId, item.id, {
+              maxEvidenceCount: Math.min(10, Math.max(1, clampNumber(event.target.value, 1))),
+            })
+          }
+        />
       </FieldShell>
       <FieldShell label={t('adminChecklists.minScore')}>
         <Input
@@ -539,7 +574,7 @@ function AdminChecklistItemSettings({
           }
         />
       </FieldShell>
-      <label className="tw:col-span-2 tw:flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:px-3 tw:py-2 tw:text-sm tw:text-foreground tw:md:col-span-5">
+      <label className="tw:col-span-2 tw:flex tw:min-h-10 tw:items-center tw:gap-2 tw:rounded-lg tw:border tw:border-border tw:bg-background/60 tw:px-3 tw:py-2 tw:text-sm tw:text-foreground tw:md:col-span-7">
         <input
           type="checkbox"
           checked={item.requiresLowScoreNote}

@@ -6704,6 +6704,584 @@
           "PhotoMediaStorage"
         ]
       }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/items/{templateItemId}/evidence": {
+      "post": {
+        "operationId": "MobileChecklistController_linkEvidence",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkChecklistItemEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "command",
+                    "data"
+                  ],
+                  "properties": {
+                    "command": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "message"
+                      ],
+                      "properties": {
+                        "status": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "evidence"
+                      ],
+                      "properties": {
+                        "evidence": {
+                          "type": "object",
+                          "required": [
+                            "checklistInstanceId",
+                            "templateItemId",
+                            "evidenceVersion",
+                            "evidencePolicy",
+                            "maxEvidenceCount",
+                            "evidence",
+                            "idempotent"
+                          ],
+                          "properties": {
+                            "checklistInstanceId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "templateItemId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "evidenceVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "evidencePolicy": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "optional",
+                                "required"
+                              ]
+                            },
+                            "maxEvidenceCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "idempotent": {
+                              "type": "boolean"
+                            },
+                            "evidence": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "mediaAssetId",
+                                  "displayOrder",
+                                  "captureSource",
+                                  "thumbnailAvailable"
+                                ],
+                                "properties": {
+                                  "mediaAssetId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "displayOrder": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "captureSource": {
+                                    "type": "string",
+                                    "enum": [
+                                      "camera",
+                                      "gallery",
+                                      "system_generated"
+                                    ]
+                                  },
+                                  "thumbnailAvailable": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/items/{templateItemId}/evidence/{mediaAssetId}": {
+      "delete": {
+        "operationId": "MobileChecklistController_unlinkEvidence",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlinkChecklistItemEvidenceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "command",
+                    "data"
+                  ],
+                  "properties": {
+                    "command": {
+                      "type": "object",
+                      "required": [
+                        "status",
+                        "message"
+                      ],
+                      "properties": {
+                        "status": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "data": {
+                      "type": "object",
+                      "required": [
+                        "evidence"
+                      ],
+                      "properties": {
+                        "evidence": {
+                          "type": "object",
+                          "required": [
+                            "checklistInstanceId",
+                            "templateItemId",
+                            "evidenceVersion",
+                            "evidencePolicy",
+                            "maxEvidenceCount",
+                            "evidence",
+                            "idempotent"
+                          ],
+                          "properties": {
+                            "checklistInstanceId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "templateItemId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "evidenceVersion": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "evidencePolicy": {
+                              "type": "string",
+                              "enum": [
+                                "none",
+                                "optional",
+                                "required"
+                              ]
+                            },
+                            "maxEvidenceCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "idempotent": {
+                              "type": "boolean"
+                            },
+                            "evidence": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "required": [
+                                  "mediaAssetId",
+                                  "displayOrder",
+                                  "captureSource",
+                                  "thumbnailAvailable"
+                                ],
+                                "properties": {
+                                  "mediaAssetId": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                  },
+                                  "displayOrder": {
+                                    "type": "integer",
+                                    "minimum": 0
+                                  },
+                                  "captureSource": {
+                                    "type": "string",
+                                    "enum": [
+                                      "camera",
+                                      "gallery",
+                                      "system_generated"
+                                    ]
+                                  },
+                                  "thumbnailAvailable": {
+                                    "type": "boolean"
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/items/{templateItemId}/evidence/{mediaAssetId}/read-url": {
+      "post": {
+        "operationId": "MobileChecklistController_readEvidence",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PhotoMediaReadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "url",
+                    "expiresInSeconds"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "expiresInSeconds": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/items/{templateItemId}/evidence/uploads": {
+      "post": {
+        "operationId": "MobileChecklistController_uploadApprovedSyntheticEvidence",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "mediaAssetId",
+                    "state"
+                  ],
+                  "properties": {
+                    "mediaAssetId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "uploaded"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/items/{templateItemId}/evidence/uploads/{mediaAssetId}/finalize": {
+      "post": {
+        "operationId": "MobileChecklistController_finalizeApprovedSyntheticEvidence",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "mediaAssetId",
+                    "state",
+                    "rawDisposal"
+                  ],
+                  "properties": {
+                    "mediaAssetId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "ready"
+                      ]
+                    },
+                    "rawDisposal": {
+                      "type": "string",
+                      "enum": [
+                        "verified",
+                        "pending"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
+    },
+    "/api/mobile/checklists/instances/{checklistInstanceId}/items/{templateItemId}/evidence/{mediaAssetId}/content/{variant}": {
+      "get": {
+        "operationId": "MobileChecklistController_readEvidenceContent",
+        "parameters": [
+          {
+            "name": "checklistInstanceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "templateItemId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mediaAssetId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "variant",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "description": ""
+          }
+        },
+        "tags": [
+          "MobileChecklist"
+        ]
+      }
     }
   },
   "info": {
@@ -7238,6 +7816,19 @@
           },
           "expectedValue": {
             "type": "string"
+          },
+          "evidencePolicy": {
+            "type": "string",
+            "enum": [
+              "none",
+              "optional",
+              "required"
+            ]
+          },
+          "maxEvidenceCount": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
           }
         },
         "required": [
@@ -19839,6 +20430,7 @@
             "type": "object",
             "required": [
               "stores",
+              "evidenceCapabilities",
               "templates",
               "activeInstances",
               "completedThisMonth",
@@ -19846,6 +20438,31 @@
               "monthlySummaries"
             ],
             "properties": {
+              "evidenceCapabilities": {
+                "type": "object",
+                "required": [
+                  "captureAvailable",
+                  "syntheticFixtureOnly",
+                  "unavailableReason"
+                ],
+                "properties": {
+                  "captureAvailable": {
+                    "type": "boolean"
+                  },
+                  "syntheticFixtureOnly": {
+                    "type": "boolean"
+                  },
+                  "unavailableReason": {
+                    "type": "string",
+                    "enum": [
+                      "feature_disabled",
+                      "storage_unavailable",
+                      "synthetic_fixture_unavailable"
+                    ],
+                    "nullable": true
+                  }
+                }
+              },
               "stores": {
                 "type": "array",
                 "items": {
@@ -19903,7 +20520,9 @@
                           "itemText",
                           "responseType",
                           "weight",
-                          "maxScore"
+                          "maxScore",
+                          "evidencePolicy",
+                          "maxEvidenceCount"
                         ],
                         "properties": {
                           "templateItemId": {
@@ -19942,6 +20561,19 @@
                           },
                           "requiresLowScoreNote": {
                             "type": "boolean"
+                          },
+                          "evidencePolicy": {
+                            "type": "string",
+                            "enum": [
+                              "none",
+                              "optional",
+                              "required"
+                            ]
+                          },
+                          "maxEvidenceCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10
                           }
                         }
                       }
@@ -19960,6 +20592,8 @@
                     "status",
                     "startedAt",
                     "updatedAt",
+                    "evidenceVersion",
+                    "evidence",
                     "responses"
                   ],
                   "properties": {
@@ -19988,6 +20622,46 @@
                     "updatedAt": {
                       "type": "string",
                       "nullable": true
+                    },
+                    "evidenceVersion": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "templateItemId",
+                          "mediaAssetId",
+                          "displayOrder",
+                          "captureSource",
+                          "thumbnailAvailable"
+                        ],
+                        "properties": {
+                          "templateItemId": {
+                            "type": "string"
+                          },
+                          "mediaAssetId": {
+                            "type": "string"
+                          },
+                          "displayOrder": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "captureSource": {
+                            "type": "string",
+                            "enum": [
+                              "camera",
+                              "gallery",
+                              "system_generated"
+                            ]
+                          },
+                          "thumbnailAvailable": {
+                            "type": "boolean"
+                          }
+                        }
+                      }
                     },
                     "responses": {
                       "type": "array",
@@ -25300,6 +25974,47 @@
         },
         "required": [
           "confirmed"
+        ]
+      },
+      "LinkChecklistItemEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "mediaAssetId": {
+            "type": "string"
+          },
+          "expectedEvidenceVersion": {
+            "type": "number",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "mediaAssetId",
+          "expectedEvidenceVersion",
+          "idempotencyKey"
+        ]
+      },
+      "UnlinkChecklistItemEvidenceDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "expectedEvidenceVersion": {
+            "type": "number",
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "expectedEvidenceVersion",
+          "idempotencyKey"
         ]
       }
     }

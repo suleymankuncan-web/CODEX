@@ -222,6 +222,8 @@ export function useChecklistWorkflowController(input: {
           status: instance.status,
           startedAt: instance.created_at,
           updatedAt: instance.created_at,
+          evidenceVersion: 0,
+          evidence: [],
           responses: [],
         },
       })

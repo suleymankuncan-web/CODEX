@@ -76,6 +76,7 @@ describe("PhotoMediaStorageService", () => {
     perUserDailyBytesHardLimit: 100 * 1024 * 1024,
     perStoreDailyBytesHardLimit: 250 * 1024 * 1024,
     concurrentProcessingHardLimit: 2,
+    syntheticFixtureSha256Allowlist: [createHash("sha256").update(Buffer.from("approved-fixture")).digest("hex")],
   };
 
   function createService() {
@@ -174,6 +175,60 @@ describe("PhotoMediaStorageService", () => {
       contentLength: 1024,
       contentBody: Buffer.alloc(1024),
       syntheticFixtureAttestation: false,
+    })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repository.createInitiatedAsset).not.toHaveBeenCalled();
+  });
+
+  it("proxies scoped thumbnail bytes without exposing a provider URL", async () => {
+    const body = Buffer.from("synthetic-thumbnail");
+    primary.getObject.mockResolvedValueOnce(body);
+
+    await expect(createService().readContent({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [], regionIds: [], storeIds: [mediaAsset.storeId] },
+      variant: "thumbnail",
+    })).resolves.toEqual({ body, contentType: "image/webp" });
+
+    expect(primary.getObject).toHaveBeenCalledWith(mediaAsset.thumbnailObjectKey);
+    expect(primary.createSignedRead).not.toHaveBeenCalled();
+    expect(repository.recordAccessEvent).toHaveBeenCalledWith(expect.objectContaining({
+      mediaAssetId: mediaAsset.mediaAssetId,
+      variant: "thumbnail",
+    }));
+  });
+
+  it("accepts only a server-allowlisted synthetic fixture for checklist-scoped upload", async () => {
+    const approvedFixture = Buffer.from("approved-fixture");
+    repository.createInitiatedAsset.mockImplementationOnce(async (input) => ({
+      mediaAssetId: input.mediaAssetId,
+      companyId: mediaAsset.companyId,
+      regionId: mediaAsset.regionId,
+      storeId: mediaAsset.storeId,
+      state: "initiated",
+      rawObjectKey: input.rawObjectKey,
+    }));
+    primary.putObject.mockResolvedValueOnce(undefined);
+
+    await expect(createService().initiateApprovedSyntheticFixtureUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId,
+      contentType: "image/png",
+      contentLength: approvedFixture.byteLength,
+      contentBody: approvedFixture,
+    })).resolves.toMatchObject({ state: "uploaded" });
+  });
+
+  it("rejects a client-attested body whose digest is not on the server allowlist", async () => {
+    const unapproved = Buffer.from("not-approved");
+    await expect(createService().initiateApprovedSyntheticFixtureUpload({
+      actorUserId: "55555555-5555-4555-8555-555555555555",
+      actorScope: { companyIds: [mediaAsset.companyId], regionIds: [], storeIds: [mediaAsset.storeId] },
+      storeId: mediaAsset.storeId,
+      contentType: "image/png",
+      contentLength: unapproved.byteLength,
+      contentBody: unapproved,
     })).rejects.toBeInstanceOf(ForbiddenException);
     expect(repository.createInitiatedAsset).not.toHaveBeenCalled();
   });

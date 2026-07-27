@@ -874,4 +874,15 @@ describe("AppConfigService", () => {
       }).photoMediaStorageConfiguration,
     ).toThrow("synthetic-only");
   });
+
+  it("parses only bounded SHA-256 fixture allowlists and otherwise fails closed", () => {
+    const first = "a".repeat(64);
+    const second = "B".repeat(64);
+    expect(createConfig({
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: `${first}, ${second},${first}`,
+    }).photoMediaSyntheticFixtureSha256Allowlist).toEqual([first, second.toLowerCase()]);
+    expect(() => createConfig({
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: "not-a-digest",
+    }).photoMediaSyntheticFixtureSha256Allowlist).toThrow("at most 20 comma-separated SHA-256 digests");
+  });
 });

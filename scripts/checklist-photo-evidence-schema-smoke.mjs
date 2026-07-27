@@ -27,6 +27,18 @@ const storageRollbackSqlPath = join(
   "preflight",
   "checklist-photo-media-storage-recovery-v1-rollback.sql",
 );
+const checklistItemEvidenceSmokeSqlPath = join(
+  workspaceRoot,
+  "db",
+  "preflight",
+  "checklist-item-evidence-pr4-v1-smoke.sql",
+);
+const checklistItemEvidenceRollbackSqlPath = join(
+  workspaceRoot,
+  "db",
+  "preflight",
+  "checklist-item-evidence-pr4-v1-rollback.sql",
+);
 const backendDir = join(workspaceRoot, "backend", "nestjs");
 const containerName =
   process.env.MIGRATION_SMOKE_POSTGRES_CONTAINER ?? "store-ops-live-postgres";
@@ -46,6 +58,7 @@ if (!/^store_ops_fresh_migration_smoke(_[a-z0-9_]+)?$/.test(databaseName)) {
 
 runNpm(["run", "smoke:migration:fresh-db"]);
 
+runPsql(readFileSync(checklistItemEvidenceRollbackSqlPath, "utf8"));
 runPsql(readFileSync(storageRollbackSqlPath, "utf8"));
 runPsql(readFileSync(rollbackSqlPath, "utf8"));
 
@@ -70,6 +83,11 @@ const rollbackResidual = Number(
           SELECT 1
           FROM audit.schema_migration
           WHERE migration_name = '063_checklist_photo_media_storage_recovery_v1.sql'
+        ))::int
+      + (EXISTS (
+          SELECT 1
+          FROM audit.schema_migration
+          WHERE migration_name = '064_checklist_item_evidence_v1.sql'
         ))::int;
   `),
 );
@@ -97,6 +115,12 @@ const forwardReapply = queryScalar(`
       WHERE migration_name = '063_checklist_photo_media_storage_recovery_v1.sql'
         AND status = 'succeeded'
     )
+    AND EXISTS (
+      SELECT 1
+      FROM audit.schema_migration
+      WHERE migration_name = '064_checklist_item_evidence_v1.sql'
+        AND status = 'succeeded'
+    )
   THEN 'passed' ELSE 'failed' END;
 `);
 if (forwardReapply !== "passed") {
@@ -105,6 +129,7 @@ if (forwardReapply !== "passed") {
 
 const smokeOutput = runPsql(readFileSync(smokeSqlPath, "utf8"));
 const storageSmokeOutput = runPsql(readFileSync(storageSmokeSqlPath, "utf8"));
+const itemEvidenceSmokeOutput = runPsql(readFileSync(checklistItemEvidenceSmokeSqlPath, "utf8"));
 
 const receiptLine = smokeOutput
   .split(/\r?\n/)
@@ -157,6 +182,24 @@ if (
   storageReceipt.rolled_back !== true
 ) {
   fail("Photo media storage recovery smoke receipt was not exact.");
+}
+
+const itemEvidenceReceiptLine = itemEvidenceSmokeOutput
+  .split(/\r?\n/)
+  .map((line) => line.trim())
+  .find((line) => line.startsWith("{") && line.includes("checklist_item_evidence_pr4_smoke.completed"));
+if (!itemEvidenceReceiptLine) {
+  fail("Checklist item evidence smoke did not emit its sanitized receipt.");
+}
+const itemEvidenceReceipt = JSON.parse(itemEvidenceReceiptLine);
+if (
+  itemEvidenceReceipt.event !== "checklist_item_evidence_pr4_smoke.completed" ||
+  itemEvidenceReceipt.upload_intent !== "immutable" ||
+  itemEvidenceReceipt.receipt_result !== "deterministic_sanitized" ||
+  itemEvidenceReceipt.completion_event !== "typed" ||
+  itemEvidenceReceipt.rolled_back !== true
+) {
+  fail("Checklist item evidence smoke receipt was not exact.");
 }
 
 const residualFixtureRows = Number(

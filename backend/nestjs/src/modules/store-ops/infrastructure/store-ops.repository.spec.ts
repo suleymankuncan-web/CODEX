@@ -1,6 +1,57 @@
 import { StoreOpsRepository } from "./store-ops.repository";
 
 describe("StoreOpsRepository", () => {
+  it("fails closed before legacy completion when the locked instance is cancelled or unauthorized", async () => {
+    const client = { query: jest.fn().mockResolvedValueOnce({ rows: [{ status: "cancelled" }] }) };
+    const databaseService = {
+      withTransaction: jest.fn(async (work: (transactionClient: typeof client) => Promise<unknown>) => work(client)),
+    };
+    const repository = new StoreOpsRepository(databaseService as never);
+
+    await expect(repository.completeChecklistInstance({
+      checklistInstanceId: "00000000-0000-0000-0000-000000000001",
+      auditorEmployeeId: "00000000-0000-0000-0000-000000000002",
+      actorUserId: "00000000-0000-0000-0000-000000000003",
+      actorRoleCodes: ["AUDITOR"],
+      actorActionScope: { assignedStoreIds: ["00000000-0000-0000-0000-000000000004"] },
+    })).rejects.toThrow("Checklist instance cannot be completed");
+
+    expect(client.query).toHaveBeenCalledTimes(1);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.stringContaining("FOR UPDATE"),
+      [
+        "00000000-0000-0000-0000-000000000001",
+        ["00000000-0000-0000-0000-000000000004"],
+        ["AUDITOR"],
+      ],
+    );
+  });
+
+  it("returns the existing legacy completion state without duplicate audit writes", async () => {
+    const client = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [{
+          checklist_instance_id: "00000000-0000-0000-0000-000000000001",
+          status: "completed",
+          total_score: "91.00",
+          compliance_rate: "1.0000",
+        }],
+      }),
+    };
+    const databaseService = {
+      withTransaction: jest.fn(async (work: (transactionClient: typeof client) => Promise<unknown>) => work(client)),
+    };
+    const repository = new StoreOpsRepository(databaseService as never);
+
+    await expect(repository.completeChecklistInstance({
+      checklistInstanceId: "00000000-0000-0000-0000-000000000001",
+      auditorEmployeeId: "00000000-0000-0000-0000-000000000002",
+      actorUserId: "00000000-0000-0000-0000-000000000003",
+      actorRoleCodes: ["AUDITOR"],
+      actorActionScope: { assignedStoreIds: ["00000000-0000-0000-0000-000000000004"] },
+    })).resolves.toMatchObject({ status: "completed", total_score: "91.00" });
+    expect(client.query).toHaveBeenCalledTimes(1);
+  });
   it("does not let a requested store filter bypass an empty actor scope", async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
     const repository = new StoreOpsRepository({ query } as never);

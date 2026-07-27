@@ -417,6 +417,42 @@ describe("ChecklistService", () => {
     });
   });
 
+  it("reports capture unavailable when no approved synthetic fixture digest is configured", async () => {
+    const checklistRepository = {
+      getMobileChecklistToday: jest.fn().mockResolvedValue({
+        stores: [], templates: [], activeInstances: [], completedThisMonth: [],
+        pendingAcknowledgements: [], monthlySummaries: [],
+      }),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      checklistAcknowledgementRepository as never,
+      checklistRepository as never,
+      undefined,
+      {
+        checklistEvidenceCaptureEnabled: true,
+        checklistEvidenceStorageHealthy: true,
+        photoMediaStorageEnabled: true,
+        photoMediaSyntheticFixtureSha256Allowlist: [],
+      } as never,
+    );
+
+    await expect(service.getMobileChecklistToday({
+      actorUserId: "region-user-1",
+      actorScope: { companyIds: [], regionIds: [], storeIds: ["store-1"] },
+      actorActionScope: { assignedStoreIds: ["store-1"] },
+      actorRoleCodes: ["REGION_MANAGER"],
+    })).resolves.toMatchObject({
+      data: {
+        evidenceCapabilities: {
+          captureAvailable: false,
+          syntheticFixtureOnly: true,
+          unavailableReason: "synthetic_fixture_unavailable",
+        },
+      },
+    });
+  });
+
   it("limits visual merchandisers to VM checklist results", async () => {
     const acknowledgementRepository = {
       listChecklistAcknowledgements: jest.fn().mockResolvedValue({ items: [], total: 0 }),
@@ -531,6 +567,41 @@ describe("ChecklistService", () => {
       effectiveFrom: "2026-05-01",
       effectiveTo: "2026-12-31",
     });
+  });
+
+  it("rejects required evidence publication when no approved synthetic fixture is configured", async () => {
+    const requiredDraft = {
+      ...draftTemplate(),
+      items: draftTemplate().items.map((item) => ({
+        ...item,
+        evidencePolicy: "required" as const,
+        maxEvidenceCount: 1,
+      })),
+    };
+    const checklistRepository = {
+      getDraftTemplateForPublish: jest.fn().mockResolvedValue(requiredDraft),
+      publishTemplate: jest.fn(),
+    };
+    const service = new ChecklistService(
+      storeOpsRepository as never,
+      checklistAcknowledgementRepository as never,
+      checklistRepository as never,
+      undefined,
+      {
+        checklistEvidenceCaptureEnabled: true,
+        checklistRequiredEvidenceEnforcementEnabled: true,
+        checklistEvidenceStorageHealthy: true,
+        photoMediaStorageEnabled: true,
+        photoMediaSyntheticFixtureSha256Allowlist: [],
+      } as never,
+    );
+
+    await expect(service.publishChecklistTemplate({
+      checklistTemplateId: "template-1",
+      actorUserId: "user-1",
+      ...superAdminActor,
+    })).rejects.toThrow("Required checklist evidence cannot be published");
+    expect(checklistRepository.publishTemplate).not.toHaveBeenCalled();
   });
 
   it("rejects publishing when the provided effective date range is invalid", async () => {
@@ -775,7 +846,16 @@ describe("ChecklistService", () => {
           assignedStoreIds: ["store-1"],
         },
       }),
-    ).resolves.toEqual({ data: today });
+    ).resolves.toEqual({
+      data: {
+        ...today,
+        evidenceCapabilities: {
+          captureAvailable: false,
+          syntheticFixtureOnly: true,
+          unavailableReason: "feature_disabled",
+        },
+      },
+    });
 
     expect(checklistRepository.getMobileChecklistToday).toHaveBeenCalledWith({
       actorUserId: "user-1",
@@ -869,6 +949,8 @@ describe("ChecklistService", () => {
     expect(checklistRepository.completeMobileChecklistInstance).toHaveBeenCalledWith({
       checklistInstanceId: "instance-1",
       actorUserId: "user-1",
+      actorRoleCodes: ["REGION_MANAGER"],
+      actorActionScope: { assignedStoreIds: ["store-1"] },
     });
   });
 });

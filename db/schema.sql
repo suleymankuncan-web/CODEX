@@ -466,6 +466,14 @@ CREATE TABLE ops.checklist_template_item (
     weight NUMERIC(8,2) NOT NULL DEFAULT 1,
     max_score NUMERIC(10,2) NOT NULL DEFAULT 1,
     expected_value TEXT,
+    evidence_policy TEXT NOT NULL DEFAULT 'none',
+    max_evidence_count INTEGER NOT NULL DEFAULT 0,
+    CONSTRAINT ck_checklist_template_item_evidence_policy
+        CHECK (evidence_policy IN ('none', 'optional', 'required')),
+    CONSTRAINT ck_checklist_template_item_evidence_count CHECK (
+        (evidence_policy = 'none' AND max_evidence_count = 0)
+        OR (evidence_policy IN ('optional', 'required') AND max_evidence_count > 0)
+    ),
     UNIQUE (checklist_template_id, item_no)
 );
 
@@ -484,8 +492,10 @@ CREATE TABLE ops.checklist_instance (
     status TEXT NOT NULL DEFAULT 'planned',
     total_score NUMERIC(12,2),
     compliance_rate NUMERIC(7,4),
+    evidence_version_no INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled'))
+    CHECK (status IN ('planned', 'in_progress', 'completed', 'cancelled')),
+    CONSTRAINT ck_checklist_instance_evidence_version CHECK (evidence_version_no >= 0)
 );
 
 CREATE TABLE ops.checklist_response (
@@ -2214,6 +2224,81 @@ CREATE TABLE IF NOT EXISTS ops.checklist_response_media (
     CONSTRAINT ck_checklist_response_media_lock CHECK (locked_at IS NULL OR unlinked_at IS NULL)
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_checklist_instance_template_identity
+    ON ops.checklist_instance (checklist_instance_id, checklist_template_id);
+
+CREATE TABLE IF NOT EXISTS ops.checklist_instance_item_policy (
+    checklist_instance_id UUID NOT NULL,
+    checklist_template_id UUID NOT NULL,
+    template_item_id UUID NOT NULL,
+    evidence_policy TEXT NOT NULL,
+    max_evidence_count INTEGER NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (checklist_instance_id, template_item_id),
+    CONSTRAINT uq_checklist_instance_item_policy UNIQUE (checklist_instance_id, template_item_id),
+    CONSTRAINT fk_checklist_instance_item_policy_instance
+        FOREIGN KEY (checklist_instance_id, checklist_template_id)
+        REFERENCES ops.checklist_instance(checklist_instance_id, checklist_template_id) ON DELETE CASCADE,
+    CONSTRAINT fk_checklist_instance_item_policy_item
+        FOREIGN KEY (template_item_id, checklist_template_id)
+        REFERENCES ops.checklist_template_item(template_item_id, checklist_template_id),
+    CONSTRAINT ck_checklist_instance_item_policy_value
+        CHECK (evidence_policy IN ('none', 'optional', 'required')),
+    CONSTRAINT ck_checklist_instance_item_policy_count CHECK (
+        (evidence_policy = 'none' AND max_evidence_count = 0)
+        OR (evidence_policy IN ('optional', 'required') AND max_evidence_count > 0)
+    )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_checklist_response_media_global_asset
+  ON ops.checklist_response_media (media_asset_id);
+
+CREATE TABLE IF NOT EXISTS ops.checklist_item_evidence_upload_intent (
+  media_asset_id UUID PRIMARY KEY REFERENCES ops.media_asset(media_asset_id),
+  checklist_instance_id UUID NOT NULL,
+  template_item_id UUID NOT NULL,
+  uploaded_by_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_checklist_item_evidence_upload_intent_policy
+    FOREIGN KEY (checklist_instance_id, template_item_id)
+    REFERENCES ops.checklist_instance_item_policy(checklist_instance_id, template_item_id)
+);
+
+ALTER TABLE ops.checklist_response_media
+    ADD CONSTRAINT fk_checklist_response_media_instance_policy
+    FOREIGN KEY (checklist_instance_id, template_item_id)
+    REFERENCES ops.checklist_instance_item_policy(checklist_instance_id, template_item_id);
+
+CREATE TABLE IF NOT EXISTS ops.photo_evidence_command_receipt (
+    photo_evidence_command_receipt_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_user_id UUID NOT NULL REFERENCES ops.user_account(user_id),
+    idempotency_key UUID NOT NULL,
+    command_type TEXT NOT NULL,
+    command_digest CHAR(64) NOT NULL,
+    result_code TEXT NOT NULL,
+    result_entity_id UUID,
+    result_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_photo_evidence_command_receipt UNIQUE (actor_user_id, idempotency_key),
+    CONSTRAINT ck_photo_evidence_command_receipt_type
+        CHECK (command_type IN ('link', 'unlink')),
+    CONSTRAINT ck_photo_evidence_command_receipt_digest
+        CHECK (command_digest ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_photo_evidence_command_receipt_result
+      CHECK (length(btrim(result_code)) > 0),
+    CONSTRAINT ck_photo_evidence_command_receipt_result_json
+      CHECK (
+        jsonb_typeof(result_json) = 'object'
+        AND result_json ?& ARRAY[
+          'checklistInstanceId', 'templateItemId', 'evidenceVersion',
+          'evidencePolicy', 'maxEvidenceCount', 'evidence'
+        ]
+        AND result_json
+          - 'checklistInstanceId' - 'templateItemId' - 'evidenceVersion'
+          - 'evidencePolicy' - 'maxEvidenceCount' - 'evidence' = '{}'::jsonb
+      )
+);
+
 CREATE TABLE IF NOT EXISTS ops.store_action_solution_attempt (
     solution_attempt_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     store_action_plan_id UUID NOT NULL,
@@ -2712,6 +2797,7 @@ CREATE TABLE IF NOT EXISTS audit.photo_evidence_event (
         'checklist_photo_evidence.media.deletion_failed',
         'checklist_photo_evidence.checklist.linked',
         'checklist_photo_evidence.checklist.unlinked',
+        'checklist_photo_evidence.checklist.completed_locked',
         'checklist_photo_evidence.reference.draft_created',
         'checklist_photo_evidence.reference.published',
         'checklist_photo_evidence.reference.retired',
@@ -2928,6 +3014,79 @@ CREATE TRIGGER trg_photo_evidence_event_append_only
 COMMENT ON TABLE ops.evidence_retention_policy IS 'Company-scoped versioned retention policy; no provider or runtime activation.';
 COMMENT ON TABLE ops.media_asset IS 'Private provider-neutral media metadata with safe lifecycle, retention, holds, and tombstone state.';
 COMMENT ON TABLE ops.checklist_response_media IS 'Immutable exact checklist response/item evidence links.';
+COMMENT ON TABLE ops.checklist_instance_item_policy IS 'Immutable evidence-policy snapshot pinned to the exact checklist instance and template item.';
+COMMENT ON TABLE ops.photo_evidence_command_receipt IS 'Actor-scoped digest-bound idempotency receipts for checklist evidence commands.';
+
+CREATE OR REPLACE FUNCTION ops.snapshot_checklist_instance_item_policy()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO ops.checklist_instance_item_policy (
+        checklist_instance_id, checklist_template_id, template_item_id,
+        evidence_policy, max_evidence_count
+    )
+    SELECT NEW.checklist_instance_id, NEW.checklist_template_id,
+           item.template_item_id, item.evidence_policy, item.max_evidence_count
+    FROM ops.checklist_template_item item
+    WHERE item.checklist_template_id = NEW.checklist_template_id
+    ON CONFLICT (checklist_instance_id, template_item_id) DO NOTHING;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_checklist_instance_item_policy_snapshot ON ops.checklist_instance;
+CREATE TRIGGER trg_checklist_instance_item_policy_snapshot
+    AFTER INSERT ON ops.checklist_instance
+    FOR EACH ROW EXECUTE FUNCTION ops.snapshot_checklist_instance_item_policy();
+
+CREATE OR REPLACE FUNCTION ops.guard_checklist_instance_item_policy_immutable()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'checklist instance item policy is immutable';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_checklist_instance_item_policy_immutable ON ops.checklist_instance_item_policy;
+CREATE TRIGGER trg_checklist_instance_item_policy_immutable
+  BEFORE UPDATE OR DELETE ON ops.checklist_instance_item_policy
+  FOR EACH ROW EXECUTE FUNCTION ops.guard_checklist_instance_item_policy_immutable();
+
+DROP TRIGGER IF EXISTS trg_checklist_item_evidence_upload_intent_immutable
+  ON ops.checklist_item_evidence_upload_intent;
+CREATE TRIGGER trg_checklist_item_evidence_upload_intent_immutable
+  BEFORE UPDATE OR DELETE ON ops.checklist_item_evidence_upload_intent
+  FOR EACH ROW EXECUTE FUNCTION ops.guard_checklist_instance_item_policy_immutable();
+
+CREATE OR REPLACE FUNCTION ops.guard_published_checklist_item_evidence_policy()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        IF EXISTS (
+            SELECT 1 FROM ops.checklist_template template
+            WHERE template.checklist_template_id = OLD.checklist_template_id
+              AND template.status <> 'draft'
+        ) THEN
+            RAISE EXCEPTION 'published checklist item evidence policy is immutable';
+        END IF;
+        RETURN OLD;
+    END IF;
+    IF EXISTS (
+        SELECT 1 FROM ops.checklist_template template
+        WHERE template.checklist_template_id = OLD.checklist_template_id
+          AND template.status <> 'draft'
+    ) AND (
+        NEW.evidence_policy IS DISTINCT FROM OLD.evidence_policy
+        OR NEW.max_evidence_count IS DISTINCT FROM OLD.max_evidence_count
+    ) THEN
+        RAISE EXCEPTION 'published checklist item evidence policy is immutable';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_published_checklist_item_evidence_policy ON ops.checklist_template_item;
+CREATE TRIGGER trg_published_checklist_item_evidence_policy
+    BEFORE UPDATE OR DELETE ON ops.checklist_template_item
+    FOR EACH ROW EXECUTE FUNCTION ops.guard_published_checklist_item_evidence_policy();
 COMMENT ON TABLE ops.store_action_solution_attempt IS 'Immutable Store Manager solution submissions awaiting scoped Region Manager review.';
 COMMENT ON TABLE ops.store_action_plan_evidence IS 'Immutable finding or solution evidence linked to checklist-derived Store Action work.';
 COMMENT ON TABLE ops.store_action_solution_review IS 'Append-only Region Manager approval or rejection of one current solution attempt.';

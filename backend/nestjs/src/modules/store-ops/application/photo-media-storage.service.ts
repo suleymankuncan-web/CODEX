@@ -169,6 +169,29 @@ export class PhotoMediaStorageService {
     }
   }
 
+  async initiateApprovedSyntheticFixtureUpload(input: {
+    actorUserId: string;
+    actorScope: PhotoMediaActorScope;
+    storeId: string;
+    contentType: string;
+    contentLength: number;
+    contentBody: Buffer;
+  }) {
+    this.assertEnabled();
+    if (!this.configuration.syntheticOnly) {
+      throw new ForbiddenException("Real-photo processing is not authorized");
+    }
+    const digest = createHash("sha256").update(input.contentBody).digest("hex");
+    if (!(this.configuration.syntheticFixtureSha256Allowlist ?? []).includes(digest)) {
+      throw new ForbiddenException("Only an approved synthetic fixture is authorized");
+    }
+    return this.initiateSyntheticUpload({
+      ...input,
+      actorRoleCodes: ["SUPER_ADMIN"],
+      syntheticFixtureAttestation: true,
+    });
+  }
+
   async createSignedRead(input: {
     mediaAssetId: string;
     actorUserId: string;
@@ -210,6 +233,44 @@ export class PhotoMediaStorageService {
       variant: input.variant,
     });
     return signed;
+  }
+
+  async readContent(input: {
+    mediaAssetId: string;
+    actorUserId: string;
+    actorScope: PhotoMediaActorScope;
+    variant: "canonical" | "thumbnail";
+  }) {
+    this.assertEnabled();
+    const asset = await this.repository.findAssetForRead(input.mediaAssetId);
+    if (!asset || asset.state !== "ready") {
+      throw new NotFoundException("Photo media asset is not available");
+    }
+    if (!this.isInReadScope(asset, input.actorScope)) {
+      throw new ForbiddenException("Photo media asset is outside actor scope");
+    }
+    const objectKey = input.variant === "thumbnail"
+      ? asset.thumbnailObjectKey
+      : asset.canonicalObjectKey;
+    if (!objectKey) {
+      throw new ServiceUnavailableException("Photo media object is unavailable");
+    }
+    await this.repository.reserveProviderOperations({
+      classAOperations: 0,
+      classBOperations: 1,
+      monthlyClassAHardLimit: this.configuration.monthlyClassAHardLimit,
+      monthlyClassBHardLimit: this.configuration.monthlyClassBHardLimit,
+    });
+    const body = await this.primaryStorage.getObject(objectKey);
+    await this.repository.recordAccessEvent({
+      actorUserId: input.actorUserId,
+      mediaAssetId: asset.mediaAssetId,
+      companyId: asset.companyId,
+      regionId: asset.regionId,
+      storeId: asset.storeId,
+      variant: input.variant,
+    });
+    return { body, contentType: "image/webp" as const };
   }
 
   async finalizeSyntheticUpload(input: {
