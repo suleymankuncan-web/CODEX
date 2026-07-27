@@ -152,14 +152,14 @@ export function ChecklistItemEvidenceControl(input: {
           disabled={!canSelectFixture}
           onClick={() => galleryInputRef.current?.click()}
         >
-          <ImagePlus data-icon="inline-start" /> Sentetik test görseli seç
+          <ImagePlus data-icon="inline-start" /> Onaylı HR Axis test logosunu seç
         </Button>
         <input
           ref={galleryInputRef}
           className="tw:sr-only"
           type="file"
-          aria-label="Sentetik checklist kanÄ±t gÃ¶rseli seÃ§"
-          accept="image/jpeg,image/png,image/webp"
+          aria-label="Onaylı HR Axis test logosunu seç"
+          accept="image/png"
           disabled={!canSelectFixture}
           onChange={(event) => {
             const file = event.currentTarget.files?.[0]

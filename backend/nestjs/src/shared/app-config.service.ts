@@ -369,12 +369,17 @@ export class AppConfigService {
         "2",
       ),
       syntheticFixtureSha256Allowlist: this.photoMediaSyntheticFixtureSha256Allowlist,
+      safetyAssurance: "fixture_identity_only" as const,
     };
 
     if (enabled) {
+      if (configuration.syntheticFixtureSha256Allowlist.length !== 1) {
+        throw new Error(
+          "PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST must contain exactly one approved synthetic fixture digest when storage is enabled",
+        );
+      }
       this.photoMediaPrimaryCredentials;
       this.photoMediaRecoveryCredentials;
-      this.photoMediaClamAv;
     }
     return configuration;
   }
@@ -392,22 +397,6 @@ export class AppConfigService {
       throw new Error("Photo media primary and recovery require separate bucket-scoped credentials");
     }
     return recovery;
-  }
-
-  get photoMediaClamAv() {
-    const host = this.readOptionalString("PHOTO_MEDIA_CLAMAV_HOST");
-    const port = this.readOptionalString("PHOTO_MEDIA_CLAMAV_PORT");
-    if (this.photoMediaStorageEnabled && !host) {
-      throw new Error("PHOTO_MEDIA_CLAMAV_HOST must be configured when photo media storage is enabled");
-    }
-    if (this.photoMediaStorageEnabled && !port) {
-      throw new Error("PHOTO_MEDIA_CLAMAV_PORT must be configured when photo media storage is enabled");
-    }
-    return {
-      host: host ?? "127.0.0.1",
-      port: this.readPositiveInteger("PHOTO_MEDIA_CLAMAV_PORT", "3310"),
-      timeoutMs: this.readPositiveInteger("PHOTO_MEDIA_CLAMAV_TIMEOUT_MS", "10000"),
-    };
   }
 
   get trustProxyHops(): number {

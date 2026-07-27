@@ -23,6 +23,8 @@ describe("photo media storage contract", () => {
     perUserDailyBytesHardLimit: 100 * 1024 * 1024,
     perStoreDailyBytesHardLimit: 250 * 1024 * 1024,
     concurrentProcessingHardLimit: 2,
+    syntheticFixtureSha256Allowlist: ["a".repeat(64)],
+    safetyAssurance: "fixture_identity_only" as const,
   };
 
   it("accepts only the owner-approved private EU two-bucket posture", () => {
@@ -45,6 +47,21 @@ describe("photo media storage contract", () => {
         publicDeliveryEnabled: true,
       }),
     ).toThrow("public delivery");
+  });
+
+  it("confines fixture identity assurance to exactly one synthetic digest", () => {
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      syntheticFixtureSha256Allowlist: [],
+    })).toThrow("exactly one approved synthetic fixture digest");
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      syntheticFixtureSha256Allowlist: ["a".repeat(64), "b".repeat(64)],
+    })).toThrow("exactly one approved synthetic fixture digest");
+    expect(() => assertPhotoMediaStorageConfiguration({
+      ...validConfiguration,
+      safetyAssurance: "malware_scan",
+    })).toThrow("fixture identity assurance");
   });
 
   it("creates opaque server-owned keys without accepting user path input", () => {

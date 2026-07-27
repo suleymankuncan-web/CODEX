@@ -21,6 +21,13 @@ Capture UI and runtime commands remain independently feature-gated. The
 external authenticated staging and representative-device evidence remains a
 merge gate, not an assumption made by this spec.
 
+The owner additionally locked the PR-4 synthetic safety boundary on
+2026-07-27: exactly one byte-identical HR Axis fixture may pass a deterministic
+SHA-256 identity adapter. The server checks it before upload and after raw
+provider read. This is not malware scanning, cannot accept real media, and
+cannot satisfy a future real-media scanner capability. No Render ClamAV
+service or operational ClamAV environment variable is authorized by PR-4.
+
 ## Functional Requirements
 
 - **PR4-FR-01 / FR-01:** Draft template items MUST accept exactly `none`,
@@ -48,6 +55,10 @@ merge gate, not an assumption made by this spec.
 - **PR4-FR-10:** When real-photo permission is absent, non-synthetic upload
   MUST fail closed and UI capture MUST remain unavailable without relaxing a
   pinned required policy.
+- **PR4-FR-11:** Synthetic staging MUST accept exactly one configured fixture
+  digest, recheck raw provider bytes before finalization, and reject every
+  other byte sequence before processing, canonical/recovery writes, linking,
+  or readiness.
 
 ## Non-Functional Requirements
 
@@ -161,6 +172,13 @@ cannot accept real photos while `PHOTO_MEDIA_SYNTHETIC_ONLY=true`. The
 checklist-scoped synthetic path additionally requires the submitted body digest
 to exist in the server-owned `PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST`;
 client attestation alone never authorizes a fixture.
+
+For PR-4 the allowlist contains exactly one digest. Physical-device proof uses
+the byte-identical PNG through iOS Files and Android Downloads; Photos, editors,
+or any transcoding path are not grounds to expand the allowlist. Camera remains
+disabled. The receipt identifies the scanner assurance as
+`fixture_identity_only` and records no image bytes, signed URL, credential,
+bucket name, or private identifier.
 
 ## Data Models
 

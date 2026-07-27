@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from './test-fixtures'
 import { expectNoCriticalAxeViolations } from './axe-test-utils'
+import { resolve } from 'node:path'
 
 const storeId = '11111111-1111-4111-8111-111111111111'
 const templateId = '22222222-2222-4222-8222-222222222222'
@@ -104,11 +105,10 @@ test('synthetic evidence controls stay usable, scoped and accessible at 320px', 
   const evidence = dialog.locator('section[aria-label]:has(input[type="file"])')
   await expect(evidence).toBeVisible()
   await expect(evidence.getByRole('button', { name: 'Kamera' })).toBeDisabled()
-  await evidence.locator('input[type="file"]').setInputFiles({
-    name: 'approved-synthetic.webp',
-    mimeType: 'image/webp',
-    buffer: Buffer.from('approved-synthetic-fixture'),
-  })
+  await expect(evidence.locator('button', { hasText: 'Onaylı HR Axis test logosunu seç' })).toBeVisible()
+  await evidence.locator('input[type="file"]').setInputFiles(
+    resolve(process.cwd(), 'src/assets/hr-axis-06-mark-transparent.png'),
+  )
   await expect(evidence.getByText(/1\/2/)).toBeVisible()
   await evidence.getByRole('button', { name: /nizle/i }).click()
   await expect(evidence.locator('img')).toBeVisible()

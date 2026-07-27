@@ -67,6 +67,7 @@ export interface PhotoMediaSafetyScannerPort {
   scan(body: Buffer): Promise<{
     verdict: "clean" | "unsafe" | "unavailable";
     engine: string;
+    assurance: "fixture_identity_only" | "malware_scan";
     signatureVersion?: string;
     reasonCode?: string;
   }>;

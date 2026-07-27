@@ -814,7 +814,7 @@ describe("AppConfigService", () => {
     expect(config.photoMediaStorageConfiguration.enabled).toBe(false);
   });
 
-  it("requires the complete private EU two-bucket and scanner posture when photo media storage is enabled", () => {
+  it("requires the complete private EU two-bucket and single-fixture posture without ClamAV", () => {
     expect(() =>
       createConfig({
         PHOTO_MEDIA_STORAGE_ENABLED: "true",
@@ -831,8 +831,7 @@ describe("AppConfigService", () => {
       PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY: "primary-secret",
       PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID: "recovery-key",
       PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY: "recovery-secret",
-      PHOTO_MEDIA_CLAMAV_HOST: "clamav.internal",
-      PHOTO_MEDIA_CLAMAV_PORT: "3310",
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: "a".repeat(64),
     });
 
     expect(config.photoMediaStorageConfiguration).toMatchObject({
@@ -844,10 +843,10 @@ describe("AppConfigService", () => {
       monthlyClassAHardLimit: 750_000,
       monthlyClassBHardLimit: 7_500_000,
       lockSafetyDays: 30,
+      safetyAssurance: "fixture_identity_only",
     });
     expect(config.photoMediaPrimaryCredentials.accessKeyId).toBe("primary-key");
     expect(config.photoMediaRecoveryCredentials.accessKeyId).toBe("recovery-key");
-    expect(config.photoMediaClamAv).toEqual({ host: "clamav.internal", port: 3310, timeoutMs: 10_000 });
   });
 
   it("rejects shared recovery credentials and any attempt to enable real photos", () => {
@@ -861,8 +860,6 @@ describe("AppConfigService", () => {
       PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY: "primary-secret",
       PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID: "shared-key",
       PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY: "recovery-secret",
-      PHOTO_MEDIA_CLAMAV_HOST: "clamav.internal",
-      PHOTO_MEDIA_CLAMAV_PORT: "3310",
     };
 
     expect(() => createConfig(shared).photoMediaRecoveryCredentials).toThrow("separate bucket-scoped credentials");
@@ -884,5 +881,26 @@ describe("AppConfigService", () => {
     expect(() => createConfig({
       PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: "not-a-digest",
     }).photoMediaSyntheticFixtureSha256Allowlist).toThrow("at most 20 comma-separated SHA-256 digests");
+  });
+
+  it("requires exactly one approved fixture digest when synthetic storage is enabled", () => {
+    const enabledStorage = {
+      PHOTO_MEDIA_STORAGE_ENABLED: "true",
+      PHOTO_MEDIA_PRIMARY_BUCKET: "hr-axis-photo-primary",
+      PHOTO_MEDIA_RECOVERY_BUCKET: "hr-axis-photo-recovery",
+      PHOTO_MEDIA_PRIMARY_ENDPOINT: "https://account.eu.r2.cloudflarestorage.com",
+      PHOTO_MEDIA_RECOVERY_ENDPOINT: "https://account.eu.r2.cloudflarestorage.com",
+      PHOTO_MEDIA_PRIMARY_ACCESS_KEY_ID: "primary-key",
+      PHOTO_MEDIA_PRIMARY_SECRET_ACCESS_KEY: "primary-secret",
+      PHOTO_MEDIA_RECOVERY_ACCESS_KEY_ID: "recovery-key",
+      PHOTO_MEDIA_RECOVERY_SECRET_ACCESS_KEY: "recovery-secret",
+    };
+
+    expect(() => createConfig(enabledStorage).photoMediaStorageConfiguration)
+      .toThrow("exactly one approved synthetic fixture digest");
+    expect(() => createConfig({
+      ...enabledStorage,
+      PHOTO_MEDIA_SYNTHETIC_FIXTURE_SHA256_ALLOWLIST: `${"a".repeat(64)},${"b".repeat(64)}`,
+    }).photoMediaStorageConfiguration).toThrow("exactly one approved synthetic fixture digest");
   });
 });

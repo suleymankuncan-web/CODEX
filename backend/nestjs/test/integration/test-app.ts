@@ -31,11 +31,6 @@ const DEFAULT_TEST_DATABASE_CONFIG = {
   dbSslCa: undefined,
   dbSslMode: "disable",
   dbStatementTimeoutMs: 60_000,
-  photoMediaClamAv: {
-    host: "127.0.0.1",
-    port: 3310,
-    timeoutMs: 10_000,
-  },
   photoMediaStorageConfiguration: {
     enabled: false,
     syntheticOnly: true,

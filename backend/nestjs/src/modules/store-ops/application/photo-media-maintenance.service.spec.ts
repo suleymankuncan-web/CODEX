@@ -52,6 +52,7 @@ describe("PhotoMediaMaintenanceService", () => {
       perUserDailyBytesHardLimit: 100 * 1024 * 1024,
       perStoreDailyBytesHardLimit: 250 * 1024 * 1024,
       concurrentProcessingHardLimit: 2,
+      safetyAssurance: "fixture_identity_only",
     },
   );
 

@@ -73,6 +73,10 @@ export class PhotoMediaStorageService {
     if (input.contentBody.byteLength !== input.contentLength) {
       throw new BadRequestException("Photo media content length does not match the submitted body");
     }
+    const fixtureDigest = createHash("sha256").update(input.contentBody).digest("hex");
+    if (!(this.configuration.syntheticFixtureSha256Allowlist ?? []).includes(fixtureDigest)) {
+      throw new ForbiddenException("Only an approved synthetic fixture is authorized");
+    }
     if (input.actorScope.companyIds.length === 0) {
       throw new ForbiddenException("Photo media upload requires company scope");
     }
@@ -180,10 +184,6 @@ export class PhotoMediaStorageService {
     this.assertEnabled();
     if (!this.configuration.syntheticOnly) {
       throw new ForbiddenException("Real-photo processing is not authorized");
-    }
-    const digest = createHash("sha256").update(input.contentBody).digest("hex");
-    if (!(this.configuration.syntheticFixtureSha256Allowlist ?? []).includes(digest)) {
-      throw new ForbiddenException("Only an approved synthetic fixture is authorized");
     }
     return this.initiateSyntheticUpload({
       ...input,
@@ -323,6 +323,9 @@ export class PhotoMediaStorageService {
 
     const raw = await this.primaryStorage.getObject(asset.rawObjectKey!);
     const scan = await this.safetyScanner.scan(raw);
+    if (scan.assurance !== this.configuration.safetyAssurance) {
+      throw new ServiceUnavailableException("Photo media safety assurance does not match the configured mode");
+    }
     if (scan.verdict === "unavailable") {
       throw new ServiceUnavailableException("Photo media safety scanning is temporarily unavailable");
     }

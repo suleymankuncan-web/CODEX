@@ -75,6 +75,7 @@ export async function createPhotoMediaAsset(
         primaryEndpoint: "https://account.eu.r2.cloudflarestorage.com",
         recoveryEndpoint: "https://account.eu.r2.cloudflarestorage.com",
         publicDeliveryEnabled: false,
+        safetyAssurance: "fixture_identity_only",
         ...input.quota,
         signedReadTtlSeconds: 120,
       },

@@ -22,6 +22,7 @@ export type PhotoMediaStorageConfiguration = {
   perStoreDailyBytesHardLimit: number;
   concurrentProcessingHardLimit: number;
   syntheticFixtureSha256Allowlist?: string[];
+  safetyAssurance: "fixture_identity_only" | "malware_scan";
 };
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -68,6 +69,16 @@ export function assertPhotoMediaStorageConfiguration(
   }
   if (!configuration.syntheticOnly) {
     throw new Error("PR-3 photo media storage must remain synthetic-only");
+  }
+  if (configuration.safetyAssurance !== "fixture_identity_only") {
+    throw new Error("Synthetic photo media storage requires fixture identity assurance");
+  }
+  const fixtureDigests = configuration.syntheticFixtureSha256Allowlist ?? [];
+  if (
+    fixtureDigests.length !== 1 ||
+    !/^[a-f0-9]{64}$/.test(fixtureDigests[0])
+  ) {
+    throw new Error("Synthetic photo media storage requires exactly one approved synthetic fixture digest");
   }
   if (configuration.publicDeliveryEnabled) {
     throw new Error("Photo media storage public delivery must remain disabled");
